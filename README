@@ -3,4 +3,4 @@ This project is in a very early / experimental stage.
 It makes use of variadic templates, type inference and other features not included in the current language specification for C++.
 The only compiler known to work for the given sources is GCC in version >= 4.5.
 
-To compile the sources, you need to modify the Makefile by hand and set the path for your GCC binary.
+To compile the sources, you need to modify the Makefile by hand and set the path to your GCC binary.
