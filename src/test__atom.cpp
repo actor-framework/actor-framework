@@ -67,12 +67,12 @@ unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 
 unsigned int hash_of(const char* what, int what_length)
 {
-	return MurmurHash2(what, what_length, 0xDEADC0DE);
+	return MurmurHash2(what, what_length, 0x15091984);
 }
 
 unsigned int hash_of(const std::string& what)
 {
-	return MurmurHash2(what.c_str(), what.size(), 0xDEADC0DE);
+	return MurmurHash2(what.c_str(), what.size(), 0x15091984);
 }
 
 template<char... Str>
@@ -107,6 +107,10 @@ class atom_base
 	{
 	}
 
+	atom_base(atom_base&& rval) : m_str(std::move(rval.m_str)), m_hash(hash_of(m_str))
+	{
+	}
+
 	unsigned int hash() const
 	{
 		return m_hash;
@@ -119,45 +123,25 @@ class atom_base
 
 };
 
-/*
-template<char... Str>
-class atom : atom_base
-{
-	static std::string to_string()
-	{
-		std::string result;
-		_tostring<Str...>::_(result);
-		return result;
-	}
-
- public:
-
-	atom() : atom_base(to_string()) { }
-
-};
-*/
-
-/*
-bool operator==(const atom& lhs, const atom& rhs)
+bool operator==(const atom_base& lhs, const atom_base& rhs)
 {
 	return (lhs.hash() == rhs.hash()) && (lhs.value() == rhs.value());
 }
 
-bool operator!=(const atom& lhs, const atom& rhs)
+bool operator!=(const atom_base& lhs, const atom_base& rhs)
 {
 	return !(lhs == rhs);
 }
 
-bool operator!=(const atom& lhs, const std::string& rhs)
+bool operator!=(const atom_base& lhs, const std::string& rhs)
 {
 	return lhs.value() == rhs;
 }
 
-bool operator!=(const std::string& lhs, const atom& rhs)
+bool operator!=(const std::string& lhs, const atom_base& rhs)
 {
 	return lhs == rhs.value();
 }
-*/
 
 // template<char...>
 // atom<Str...> operator "" _atom();
@@ -175,6 +159,7 @@ class atom : public atom_base
  public:
 
 	atom() : atom_base(to_string()) { }
+	atom(atom&& rval) : atom_base(rval) { }
 
 };
 
@@ -184,8 +169,11 @@ void test__atom()
 	CPPA_TEST(test__atom);
 
 	atom<'f','o','o'>  a1;
+	atom_base a2("foo");
+	atom_base a3 = atom<'a','b','c'>();
 
-	cout << "a1 = " << a1.value() << endl;
+	CPPA_CHECK(a1 == a2);
+	CPPA_CHECK(a1 != a3);
 
 //	atom<"foobar"> a1;
 
