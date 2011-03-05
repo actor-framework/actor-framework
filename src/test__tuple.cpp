@@ -38,7 +38,7 @@ void fun(const std::string&)
 
 } // namespace <anonymous>
 
-void test__tuple()
+std::size_t test__tuple()
 {
 
 	CPPA_TEST(test__tuple);
@@ -215,5 +215,7 @@ void test__tuple()
 	CPPA_CHECK(t1_copy.get<2>() == t1.get<2>());
 	CPPA_CHECK(t1_copy.get<3>() == t1.get<3>());
 	CPPA_CHECK(t1 == t4);
+
+	return CPPA_TEST_RESULT;
 
 }

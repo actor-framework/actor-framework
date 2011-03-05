@@ -7,7 +7,7 @@
 using namespace cppa;
 using namespace cppa::util;
 
-void test__a_matches_b()
+std::size_t test__a_matches_b()
 {
 	CPPA_TEST(test__a_matches_b);
 
@@ -37,4 +37,7 @@ void test__a_matches_b()
 
 	CPPA_CHECK((a_matches_b<type_list<any_type*, float>,
 							type_list<int, int, float>>::value));
+
+	return CPPA_TEST_RESULT;
+
 }

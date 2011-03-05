@@ -77,3 +77,4 @@ src/untyped_tuple.cpp
 cppa/util/abstract_type_list.hpp
 cppa/detail/serialize_tuple.hpp
 src/test__atom.cpp
+src/test__queue_performance.cpp

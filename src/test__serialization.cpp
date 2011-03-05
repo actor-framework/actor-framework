@@ -395,7 +395,7 @@ deserializer& operator>>(deserializer& d, untyped_tuple& ut)
 	return d;
 }
 
-void test__serialization()
+std::size_t test__serialization()
 {
 
 	CPPA_TEST(test__serialization);
@@ -548,5 +548,7 @@ void test__serialization()
 			CPPA_CHECK_EQUAL(tv.get<4>(), 3);
 		}
 	}
+
+	return CPPA_TEST_RESULT;
 
 }

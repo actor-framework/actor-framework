@@ -1,3 +1,5 @@
+Homepage: http://libcppa.blogspot.com/
+
 This project is in a very early / experimental stage.
 
 It makes use of variadic templates, type inference and other features not included in the current language specification for C++.

@@ -107,7 +107,8 @@ class atom_base
 	{
 	}
 
-	atom_base(atom_base&& rval) : m_str(std::move(rval.m_str)), m_hash(hash_of(m_str))
+	atom_base(atom_base&& rval)
+		: m_str(std::move(rval.m_str)), m_hash(hash_of(m_str))
 	{
 	}
 
@@ -163,7 +164,7 @@ class atom : public atom_base
 
 };
 
-void test__atom()
+std::size_t test__atom()
 {
 
 	CPPA_TEST(test__atom);
@@ -178,5 +179,7 @@ void test__atom()
 //	atom<"foobar"> a1;
 
 //	CPPA_CHECK(a1 == a3);
+
+	return CPPA_TEST_RESULT;
 
 }

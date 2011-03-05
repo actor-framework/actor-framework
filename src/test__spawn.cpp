@@ -10,7 +10,7 @@ actor spawn(F)
 	return actor();
 }
 
-void test__spawn()
+std::size_t test__spawn()
 {
 
 	CPPA_TEST(test__spawn);
@@ -24,5 +24,7 @@ void test__spawn()
 	a0.send(42);
 
 	CPPA_CHECK(true);
+
+	return CPPA_TEST_RESULT;
 
 }

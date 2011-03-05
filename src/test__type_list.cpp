@@ -18,7 +18,7 @@ struct apply
 	typedef typename What<T>::type type;
 };
 
-void test__type_list()
+std::size_t test__type_list()
 {
 
 	CPPA_TEST(test__type_list);
@@ -44,5 +44,7 @@ void test__type_list()
 
 	CPPA_CHECK((is_same<int, l2::head_type>::value));
 	CPPA_CHECK((is_same<l1, l2::tail_type>::value));
+
+	return CPPA_TEST_RESULT;
 
 }

@@ -3,8 +3,8 @@
 
 CXX = /opt/local/bin/g++-mp-4.5
 #CXX = /opt/local/bin/g++-mp-4.6
-CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0
-LIBS =
+CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
+LIBS = -L/opt/local/lib -lboost_thread-mt
 INCLUDES = -I./
 HEADERS = cppa/actor.hpp \
 		  cppa/any_type.hpp \
@@ -62,6 +62,7 @@ SOURCES = src/decorated_tuple.cpp \
 		  src/test__a_matches_b.cpp \
 		  src/test__atom.cpp \
 		  src/test__intrusive_ptr.cpp \
+		  src/test__queue_performance.cpp \
 		  src/test__serialization.cpp \
 		  src/test__spawn.cpp \
 		  src/test__tuple.cpp \

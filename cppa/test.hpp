@@ -16,6 +16,8 @@ struct cppa_test_scope                                                         \
 } cppa_ts;                                                                     \
 std::size_t& error_count = cppa_ts.error_count
 
+#define CPPA_TEST_RESULT cppa_ts.error_count
+
 #define CPPA_CHECK(line_of_code)                                               \
 if (!(line_of_code))                                                           \
 {                                                                              \
@@ -32,12 +34,14 @@ if ((line_of_code) != expected)                                                \
 	++error_count;                                                             \
 } ((void) 0)
 
-void test__type_list();
-void test__a_matches_b();
-void test__atom();
-void test__tuple();
-void test__spawn();
-void test__intrusive_ptr();
-void test__serialization();
+std::size_t test__type_list();
+std::size_t test__a_matches_b();
+std::size_t test__atom();
+std::size_t test__tuple();
+std::size_t test__spawn();
+std::size_t test__intrusive_ptr();
+std::size_t test__serialization();
+
+void test__queue_performance();
 
 #endif // TEST_HPP

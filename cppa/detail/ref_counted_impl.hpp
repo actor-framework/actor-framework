@@ -23,7 +23,7 @@ class ref_counted_impl
 
 	inline bool deref() { return (--m_rc > 0); }
 
-	inline bool unique() { return (m_rc == 0); }
+	inline bool unique() { return (m_rc == 1); }
 
 };
 
