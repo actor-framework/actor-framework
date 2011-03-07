@@ -7,6 +7,10 @@
 #include <boost/thread.hpp>
 #include <boost/progress.hpp>
 
+#include "cppa/util/single_reader_queue.hpp"
+
+using cppa::util::single_reader_queue;
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -18,130 +22,55 @@ struct queue_element
 	queue_element(std::size_t val) : next(0), value(val) { }
 };
 
-/**
- * @brief An intrusive, thread safe queue implementation.
- */
 template<typename T>
-class single_reader_queue
+class singly_linked_list
 {
-
-	typedef boost::unique_lock<boost::mutex> lock_type;
-
- public:
 
 	typedef T element_type;
 
-	element_type* pop()
-	{
-		wait_for_data();
-		element_type* result = take_head();
-		return result;
-	}
-
-	element_type* try_pop()
-	{
-		return take_head();
-	}
-
-/*
-	element_type* front()
-	{
-		return (m_head || fetch_new_data()) ? m_head : 0;
-	}
-*/
-
-	void push(element_type* new_element)
-	{
-		element_type* e = m_tail.load();
-		for (;;)
-		{
-//			element_type* e = const_cast<element_type*>(m_tail);
-			new_element->next = e;
-			if (!e)
-			{
-				lock_type guard(m_mtx);
-//				if (atomic_cas(&m_tail, (element_type*) 0, new_element))
-				if (m_tail.compare_exchange_weak(e, new_element))
-				{
-					m_cv.notify_one();
-					return;
-				}
-			}
-			else
-			{
-//				if (atomic_cas(&m_tail, e, new_element))
-				if (m_tail.compare_exchange_weak(e, new_element))
-				{
-					return;
-				}
-			}
-		}
-	}
-
-	single_reader_queue() : m_tail(0), m_head(0) { }
-
- private:
-
-	// exposed to "outside" access
-
-	atomic<element_type*> m_tail;
-//	volatile element_type* m_tail;
-
-	// accessed only by the owner
 	element_type* m_head;
+	element_type* m_tail;
 
-	// locked on enqueue/dequeue operations to/from an empty list
-	boost::mutex m_mtx;
-	boost::condition_variable m_cv;
+ public:
 
-	void wait_for_data()
+	singly_linked_list() : m_head(0), m_tail(0) { }
+
+	singly_linked_list& operator=(singly_linked_list&& other)
 	{
-		if (!m_head && !(m_tail.load()))
+		m_head = other.m_head;
+		m_tail = other.m_tail;
+		other.m_head = 0;
+		other.m_tail = 0;
+		return *this;
+	}
+
+	inline bool empty() const { return m_head == 0; }
+
+	void push_back(element_type* e)
+	{
+		if (!m_head)
 		{
-			lock_type guard(m_mtx);
-			while (!(m_tail.load())) m_cv.wait(guard);
+			m_head = m_tail = e;
+		}
+		else
+		{
+			m_tail->next = e;
+			m_tail = e;
 		}
 	}
 
-	// atomically set public_tail to nullptr and enqueue all
-	bool fetch_new_data()
+	element_type* pop_front()
 	{
-		element_type* e = m_tail.load();
-		while (e)
+		element_type* result = m_head;
+		if (result)
 		{
-			if (m_tail.compare_exchange_weak(e, 0))
-//			if (atomic_cas(&m_tail, e, (element_type*) 0))
-			{
-				// public_tail (e) has LIFO order,
-				// but private_head requires FIFO order
-				while (e)
-				{
-					// next iteration element
-					element_type* next = e->next;
-					// enqueue e to private_head
-					e->next = m_head;
-					m_head = e;
-					// next iteration
-					e = next;
-				}
-				return true;
-			}
-			// next iteration
-//			e = const_cast<element_type*>(m_tail);
-		}
-		// !public_tail
-		return false;
-	}
-
-	element_type* take_head()
-	{
-		if (m_head || fetch_new_data())
-		{
-			element_type* result = m_head;
 			m_head = result->next;
-			return result;
+			if (!m_head)
+			{
+				m_tail = 0;
+			}
 		}
-		return 0;
+		return result;
 	}
 
 };
@@ -158,32 +87,42 @@ class locked_queue
 
 	element_type* pop()
 	{
-		lock_type guard(m_mtx);
-		element_type* result;
-		while (m_impl.empty())
+		if (!m_priv.empty())
 		{
-			m_cv.wait(guard);
+			return m_priv.pop_front();
 		}
-		result = m_impl.front();
-		m_impl.pop_front();
-		return result;
+		else
+		{
+			// lifetime scope of guard
+			{
+				lock_type guard(m_mtx);
+				while (m_pub.empty())
+				{
+					m_cv.wait(guard);
+				}
+				m_priv = std::move(m_pub);
+			}
+			// tail recursion
+			return pop();
+		}
 	}
 
 	void push(element_type* new_element)
 	{
 		lock_type guard(m_mtx);
-		if (m_impl.empty())
+		if (m_pub.empty())
 		{
 			m_cv.notify_one();
 		}
-		m_impl.push_back(new_element);
+		m_pub.push_back(new_element);
 	}
 
  private:
 
 	boost::mutex m_mtx;
 	boost::condition_variable m_cv;
-	std::list<element_type*> m_impl;
+	singly_linked_list<element_type> m_pub;
+	singly_linked_list<element_type> m_priv;
 
 };
 
@@ -206,7 +145,7 @@ void slave(Queue& q, std::size_t from, std::size_t to)
 {
 	for (std::size_t x = from; x < to; ++x)
 	{
-		q.push(new queue_element(x));
+		q.push_back(new queue_element(x));
 	}
 }
 
@@ -243,39 +182,64 @@ void master(Queue& q)
 			 << "min: " << min_val << endl
 			 << "max: " << max_val << endl;
 	}
-	cout << t0.elapsed() << " " << num_msgs << endl;
+	cout << t0.elapsed() << " " << num_slaves << endl;
 }
+
+namespace { const std::size_t slave_messages = 1000000; }
+
+template<std::size_t Pos, std::size_t Max, std::size_t Step,
+		 template<std::size_t> class Stmt>
+struct static_for
+{
+	template<typename... Args>
+	static inline void _(const Args&... args)
+	{
+		Stmt<Pos>::_(args...);
+		static_for<Pos + Step, Max, Step, Stmt>::_(args...);
+	}
+};
+
+template<std::size_t Max, std::size_t Step,
+		 template<std::size_t> class Stmt>
+struct static_for<Max, Max, Step, Stmt>
+{
+	template<typename... Args>
+	static inline void _(const Args&... args)
+	{
+		Stmt<Max>::_(args...);
+	}
+};
+
+template<typename What>
+struct type_token
+{
+	typedef What type;
+};
+
+template<std::size_t NumThreads>
+struct test_step
+{
+	template<typename QueueToken>
+	static inline void _(QueueToken)
+	{
+		typename QueueToken::type q;
+		boost::thread t0(master<typename QueueToken::type, NumThreads, slave_messages>, boost::ref(q));
+		t0.join();
+	}
+};
 
 template<typename Queue>
 void test_q_impl()
 {
-	typedef Queue queue_type;
-	{
-		queue_type q0;
-		boost::thread t0(master<queue_type, 10, 10000>, boost::ref(q0));
-		t0.join();
-	}
-	{
-		queue_type q0;
-		boost::thread t0(master<queue_type, 100, 10000>, boost::ref(q0));
-		t0.join();
-	}
-	{
-		queue_type q0;
-		boost::thread t0(master<queue_type, 1000, 10000>, boost::ref(q0));
-		t0.join();
-	}
-	{
-		queue_type q0;
-		boost::thread t0(master<queue_type, 10000, 10000>, boost::ref(q0));
-		t0.join();
-	}
+	typedef type_token<Queue> queue_token;
+	static_for<10, 50, 5, test_step>::_(queue_token());
 }
 
 void test__queue_performance()
 {
+	cout << "locked_queue:" << endl;
+//	test_q_impl<locked_queue<queue_element>>();
+	cout << endl;
 	cout << "single_reader_queue:" << endl;
 	test_q_impl<single_reader_queue<queue_element>>();
-	cout << endl << "locked_queue:" << endl;
-	test_q_impl<locked_queue<queue_element>>();
 }

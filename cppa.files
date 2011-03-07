@@ -78,3 +78,10 @@ cppa/util/abstract_type_list.hpp
 cppa/detail/serialize_tuple.hpp
 src/test__atom.cpp
 src/test__queue_performance.cpp
+cppa/detail/actor_public.hpp
+cppa/detail/comparable.hpp
+cppa/util/single_reader_queue.hpp
+cppa/util/singly_linked_list.hpp
+cppa/detail/spawn_impl.hpp
+cppa/detail/actor_private.hpp
+cppa/reply.hpp

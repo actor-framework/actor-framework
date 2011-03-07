@@ -26,11 +26,11 @@ if (!(line_of_code))                                                           \
 	++error_count;                                                             \
 } ((void) 0)
 
-#define CPPA_CHECK_EQUAL(line_of_code, expected)                               \
-if ((line_of_code) != expected)                                                \
+#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
+if ((lhs_loc) != (rhs_loc))                                                    \
 {                                                                              \
 	std::cerr << "ERROR in file " << __FILE__ << " on line " << __LINE__       \
-			  << " => " << #line_of_code << " != " << expected << std::endl;   \
+	<< " => " << #lhs_loc << " != " << #rhs_loc << std::endl;                  \
 	++error_count;                                                             \
 } ((void) 0)
 

@@ -1,6 +1,8 @@
 #ifndef INVOKE_RULES_HPP
 #define INVOKE_RULES_HPP
 
+#include <list>
+
 #include "cppa/invoke.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
