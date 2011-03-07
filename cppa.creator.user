@@ -10,7 +10,7 @@
  </data>
  <data>
   <variable>RunConfiguration0-Executable</variable>
-  <value type="QString">/Users/neverlord/Desktop/libcppa/test</value>
+  <value type="QString">/Users/neverlord/libcppa/test</value>
  </data>
  <data>
   <variable>RunConfiguration0-RunConfiguration.name</variable>
@@ -52,7 +52,7 @@
   <variable>buildConfiguration-all</variable>
   <valuemap type="QVariantMap">
    <value key="ProjectExplorer.BuildConfiguration.DisplayName" type="QString">all</value>
-   <value key="buildDirectory" type="QString">/Users/neverlord/Desktop/libcppa</value>
+   <value key="buildDirectory" type="QString">/Users/neverlord/libcppa</value>
   </valuemap>
  </data>
  <data>
@@ -60,15 +60,15 @@
   <valuemap type="QVariantMap">
    <value key="ProjectExplorer.BuildConfiguration.DisplayName" type="QString">all</value>
    <valuelist key="abstractProcess.Environment" type="QVariantList">
-    <value type="QString">Apple_PubSub_Socket_Render=/tmp/launch-Ii2KqP/Render</value>
+    <value type="QString">Apple_PubSub_Socket_Render=/tmp/launch-omyHKo/Render</value>
     <value type="QString">COMMAND_MODE=unix2003</value>
-    <value type="QString">DISPLAY=/tmp/launch-6FAyZP/org.x:0</value>
+    <value type="QString">DISPLAY=/tmp/launch-fg6icm/org.x:0</value>
     <value type="QString">HOME=/Users/neverlord</value>
     <value type="QString">LOGNAME=neverlord</value>
     <value type="QString">PATH=/usr/bin:/bin:/usr/sbin:/sbin</value>
     <value type="QString">SHELL=/bin/bash</value>
-    <value type="QString">SSH_AUTH_SOCK=/tmp/launch-vifjfO/Listeners</value>
-    <value type="QString">TMPDIR=/var/folders/1p/1p6iuPgbH7GoDkrjrT20tU+++TI/-Tmp-/</value>
+    <value type="QString">SSH_AUTH_SOCK=/tmp/launch-3s45KF/Listeners</value>
+    <value type="QString">TMPDIR=/var/folders/SE/SEReyCW0H-yDPCnNCe8mN++++TI/-Tmp-/</value>
     <value type="QString">USER=neverlord</value>
     <value type="QString">__CF_USER_TEXT_ENCODING=0x1F5:0:3</value>
    </valuelist>
@@ -77,7 +77,7 @@
    </valuelist>
    <value key="abstractProcess.command" type="QString">make</value>
    <value key="abstractProcess.enabled" type="bool">true</value>
-   <value key="abstractProcess.workingDirectory" type="QString">/Users/neverlord/Desktop/libcppa</value>
+   <value key="abstractProcess.workingDirectory" type="QString">/Users/neverlord/libcppa</value>
    <valuelist key="buildTargets" type="QVariantList">
     <value type="QString">all</value>
    </valuelist>
