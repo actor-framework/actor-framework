@@ -47,6 +47,12 @@ class actor
 		this_actor()->send(m_ptr.get(), args);
 	}
 
+	inline bool operator==(const actor& other) const
+	{
+		return m_ptr == other.m_ptr;
+	}
+
+
  private:
 
 	ptr_type m_ptr;

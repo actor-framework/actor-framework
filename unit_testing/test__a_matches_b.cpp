@@ -1,7 +1,7 @@
 #include <string>
 #include <typeinfo>
 
-#include "cppa/test.hpp"
+#include "test.hpp"
 #include "cppa/util.hpp"
 
 using namespace cppa;

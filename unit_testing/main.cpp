@@ -9,7 +9,8 @@
 #include <typeinfo>
 #include <iostream>
 
-#include "cppa/test.hpp"
+#include "test.hpp"
+
 #include "cppa/tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -59,6 +60,7 @@ int main(int argc, char** c_argv)
 		RUN_TEST(test__type_list);
 		RUN_TEST(test__serialization);
 		RUN_TEST(test__atom);
+		RUN_TEST(test__local_group);
 		cout << endl
 			 << "error(s) in all tests: " << errors
 			 << endl;

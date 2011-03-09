@@ -1,7 +1,7 @@
 #include <list>
 #include <atomic>
 #include <iostream>
-#include "cppa/test.hpp"
+#include "test.hpp"
 
 #include <boost/ref.hpp>
 #include <boost/thread.hpp>

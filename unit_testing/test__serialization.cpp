@@ -8,7 +8,8 @@
 #include <iostream>
 #include <type_traits>
 
-#include "cppa/test.hpp"
+#include "test.hpp"
+
 #include "cppa/util.hpp"
 #include "cppa/match.hpp"
 #include "cppa/tuple.hpp"

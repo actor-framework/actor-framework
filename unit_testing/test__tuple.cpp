@@ -5,9 +5,10 @@
 #include <typeinfo>
 #include <functional>
 
+#include "test.hpp"
+
 #include "cppa/on.hpp"
 #include "cppa/util.hpp"
-#include "cppa/test.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/match.hpp"
 #include "cppa/invoke.hpp"

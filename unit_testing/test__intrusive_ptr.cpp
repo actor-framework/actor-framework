@@ -1,7 +1,7 @@
 #include <list>
 #include <cstddef>
 
-#include "cppa/test.hpp"
+#include "test.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
 #include "cppa/detail/ref_counted_impl.hpp"

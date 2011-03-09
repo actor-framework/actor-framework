@@ -2,8 +2,9 @@
 #include <typeinfo>
 #include <type_traits>
 
+#include "test.hpp"
+
 #include "cppa/util.hpp"
-#include "cppa/test.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 using std::cout;

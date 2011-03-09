@@ -34,6 +34,10 @@ if ((lhs_loc) != (rhs_loc))                                                    \
 	++error_count;                                                             \
 } ((void) 0)
 
+unsigned int hash_of(const char* what, int what_length);
+
+unsigned int hash_of(const std::string& what);
+
 std::size_t test__type_list();
 std::size_t test__a_matches_b();
 std::size_t test__atom();
@@ -41,6 +45,7 @@ std::size_t test__tuple();
 std::size_t test__spawn();
 std::size_t test__intrusive_ptr();
 std::size_t test__serialization();
+std::size_t test__local_group();
 
 void test__queue_performance();
 
