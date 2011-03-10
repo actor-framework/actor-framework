@@ -5,6 +5,9 @@
 #include "cppa/tuple.hpp"
 #include "cppa/untyped_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/message_receiver.hpp"
+
+#include "cppa/detail/channel.hpp"
 
 namespace cppa {
 
@@ -16,13 +19,14 @@ class message
 	struct content : ref_counted
 	{
 		const actor sender;
-		const actor receiver;
+		const message_receiver receiver;
 		const untyped_tuple data;
-		content(const actor& s, const actor& r, const untyped_tuple& ut)
+		content(const actor& s, const message_receiver& r,
+				const untyped_tuple& ut)
 			: sender(s), receiver(r), data(ut)
 		{
 		}
-		content(const actor& s, const actor& r, untyped_tuple&& ut)
+		content(const actor& s, const message_receiver& r, untyped_tuple&& ut)
 			: sender(s), receiver(r), data(ut)
 		{
 		}
@@ -35,22 +39,22 @@ class message
  public:
 
 	template<typename... Args>
-	message(const actor& from, const actor& to, const Args&... args)
+	message(const actor& from, const message_receiver& to, const Args&... args)
 		: m_content(new content(from, to, tuple<Args...>(args...))) { }
 
-	message(const actor& from, const actor& to, const untyped_tuple& ut)
+	message(const actor& from, const message_receiver& to, const untyped_tuple& ut)
 		: m_content(new content(from, to, ut)) { }
 
-	message(const actor& from, const actor& to, untyped_tuple&& ut)
+	message(const actor& from, const message_receiver& to, untyped_tuple&& ut)
 		: m_content(new content(from, to, std::move(ut))) { }
 
-	message() : m_content(new content(actor(), actor(), tuple<int>(0))) { }
+	message() : m_content(new content(0, 0, tuple<int>(0))) { }
 
 	const actor& sender() const
 	{
 		return m_content->sender;
 	}
-	const actor& receiver() const
+	const message_receiver& receiver() const
 	{
 		return m_content->receiver;
 	}

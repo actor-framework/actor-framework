@@ -88,3 +88,8 @@ cppa/reply.hpp
 unit_testing/test__local_group.cpp
 unit_testing/hash_of.cpp
 cppa/spawn.hpp
+unit_testing/hash_of.hpp
+cppa/detail/channel.hpp
+cppa/message_receiver.hpp
+src/message_receiver.cpp
+src/actor.cpp

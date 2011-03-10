@@ -19,7 +19,7 @@ using std::endl;
 
 using namespace cppa;
 
-class group : public ref_counted
+class group : public detail::channel
 {
 
 	boost::mutex m_mtx;
@@ -58,20 +58,25 @@ class group : public ref_counted
 		}
 	}
 
-	template<typename... Args>
-	void send(const Args&... args)
+	void enqueue_msg(const message& msg)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
 		{
-			i->send(args...);
+			i->enqueue_msg(msg);
 		}
+	}
+
+	template<typename... Args>
+	void send(const Args&... args)
+	{
+		message msg(this_actor(), this, args...);
+		enqueue_msg(msg);
 	}
 
 };
 
 namespace {
-
 
 class group_bucket
 {

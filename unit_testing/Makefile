@@ -7,7 +7,8 @@ INCLUDES = -I./ -I../
 
 EXECUTABLE = ../test
 
-HEADERS = test.hpp
+HEADERS = hash_of.hpp \
+		  test.hpp
 
 SOURCES = hash_of.cpp \
 		  main.cpp \

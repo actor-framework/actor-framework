@@ -3,6 +3,8 @@
 
 #include "cppa/invoke_rules.hpp"
 #include "cppa/untyped_tuple.hpp"
+
+#include "cppa/detail/channel.hpp"
 #include "cppa/detail/actor_public.hpp"
 
 namespace cppa { class message; }
@@ -15,7 +17,7 @@ struct actor_private : public actor_public
 	virtual const message& receive() = 0;
 	virtual const message& last_dequeued() const = 0;
 	virtual void receive(invoke_rules&) = 0;
-	virtual void send(actor_public* whom, untyped_tuple&& what) = 0;
+	virtual void send(channel* whom, untyped_tuple&& what) = 0;
 };
 
 } } // namespace cppa::detail

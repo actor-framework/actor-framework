@@ -20,7 +20,6 @@ void cleanup_fun(actor_impl* what);
 
 boost::thread_specific_ptr<actor_impl> m_this_actor(cleanup_fun);
 
-
 struct actor_impl : cppa::detail::actor_private
 {
 
@@ -66,7 +65,7 @@ struct actor_impl : cppa::detail::actor_private
 		mailbox.prepend(std::move(buffer));
 	}
 
-	virtual void send(cppa::detail::actor_public* whom,
+	virtual void send(cppa::detail::channel* whom,
 					  cppa::untyped_tuple&& what)
 	{
 		if (whom) whom->enqueue_msg(cppa::message(this, whom, std::move(what)));

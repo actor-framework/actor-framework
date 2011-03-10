@@ -23,6 +23,7 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util.hpp \
 		  cppa/detail/abstract_tuple.hpp \
 		  cppa/detail/decorated_tuple.hpp \
+		  cppa/detail/channel.hpp \
 		  cppa/detail/intermediate.hpp \
 		  cppa/detail/invokable.hpp \
 		  cppa/detail/matcher.hpp \
@@ -53,8 +54,10 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/utype_iterator.hpp \
 		  cppa/util/void_type.hpp
 
-SOURCES = src/decorated_tuple.cpp \
+SOURCES = src/actor.cpp \
+		  src/decorated_tuple.cpp \
 		  src/deserializer.cpp \
+		  src/message_receiver.cpp \
 		  src/mock_scheduler.cpp \
 		  src/ref_counted.cpp \
 		  src/serializer.cpp \

@@ -1,15 +1,17 @@
 #ifndef ACTOR_HPP
 #define ACTOR_HPP
 
-#include "cppa/tuple.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/message_receiver.hpp"
+
 #include "cppa/detail/actor_public.hpp"
 #include "cppa/detail/actor_private.hpp"
 
 namespace cppa {
 
-class actor
+class actor : public message_receiver
 {
+
+	typedef message_receiver super;
 
  public:
 
@@ -17,55 +19,21 @@ class actor
 
 	actor() = default;
 
-	inline actor(detail::actor_public* ptr) : m_ptr(ptr) { }
+	inline actor(detail::actor_public* ptr) : super(ptr) { }
 
-	inline actor(const ptr_type& ptr) : m_ptr(ptr) { }
+	inline actor(const ptr_type& ptr) : super(ptr) { }
 
-	inline actor(ptr_type&& ptr) : m_ptr(ptr) { }
+	inline actor(ptr_type&& ptr) : super(ptr) { }
 
-	actor(const actor&) = default;
+	inline actor(const actor& other) : super(other) { }
 
-	inline actor(actor&& other) : m_ptr(std::move(other.m_ptr)) { }
+	inline actor(actor&& other) : super(other) { }
 
-	actor& operator=(const actor&) = default;
+	actor& operator=(const actor&);
 
-	actor& operator=(actor&& other)
-	{
-		m_ptr = std::move(other.m_ptr);
-		return *this;
-	}
-
-	template<typename... Args>
-	void send(const Args&... args)
-	{
-		this_actor()->send(m_ptr.get(), tuple<Args...>(args...));
-	}
-
-	template<typename... Args>
-	void send_tuple(const tuple<Args...>& args)
-	{
-		this_actor()->send(m_ptr.get(), args);
-	}
-
-	inline bool operator==(const actor& other) const
-	{
-		return m_ptr == other.m_ptr;
-	}
-
-
- private:
-
-	ptr_type m_ptr;
+	actor& operator=(actor&& other);
 
 };
-
-/*
-template<typename... Args>
-actor& operator<<(actor& whom, const tuple<Args...>& data)
-{
-	whom.send_tuple(data);
-}
-*/
 
 } // namespace cppa
 
