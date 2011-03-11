@@ -1,4 +1,5 @@
 #include "test.hpp"
+#include "hash_of.hpp"
 
 #include "cppa/on.hpp"
 #include "cppa/spawn.hpp"
@@ -124,11 +125,19 @@ group_table<100> m_groups;
 
 } // namespace <anonymous>
 
+
+namespace {
+
+intrusive_ptr<group> local_group = new group;
+
+}
+
 struct
 {
-	intrusive_ptr<group> operator/(const std::string& group_name)
+	intrusive_ptr<group> operator/(const std::string& /*group_name*/)
 	{
-		return m_groups[group_name];
+		return local_group;
+//		return m_groups[group_name];
 	}
 }
 local;
@@ -159,15 +168,29 @@ struct storage
 
 };
 
+template<typename... Args>
+void send(std::list<actor>& actors, const Args&... args)
+{
+	for (auto i = actors.begin(); i != actors.end(); ++i)
+	{
+		i->send(args...);
+	}
+}
+
 void foo_actor()
 {
-	auto x = (local/"foobar")->subscribe(this_actor());
-	receive(on<int, int, int>() >> []() {
-		reply(23.f);
-	});
-	receive(on<int>() >> [](int i) {
-		reply(i);
-	});
+//	auto x = (local/"foobar")->subscribe(this_actor());
+	auto rules = (
+		on<int, int, int>() >> []() {
+			reply(23.f);
+		},
+		on<int>() >> [](int i) {
+			reply(i);
+		}
+	);
+	receive(rules);
+	receive(rules);
+//	reply(1);
 }
 
 std::size_t test__local_group()
@@ -188,29 +211,32 @@ std::size_t test__local_group()
 
 	*/
 
-	auto g = local/"foobar";
+//	auto g = local/"foobar";
+
+	std::list<actor> m_slaves;
 
 	for (int i = 0; i < 5; ++i)
 	{
-		spawn(foo_actor).send(1, 2, 3);
+		m_slaves.push_back(spawn(foo_actor));
 	}
+
+	send(m_slaves, 1, 2, 3);
+	send(m_slaves, 1);
 
 	for (int i = 0; i < 5; ++i)
 	{
 		receive(on<float>() >> []() { });
 	}
 
-	g->send(1);
+//	g->send(1);
 
 	int result = 0;
 
-	auto rule = on<int>() >> [&result](int x) {
-		result += x;
-	};
-
 	for (int i = 0; i < 5; ++i)
 	{
-		receive(rule);
+		receive(on<int>() >> [&result](int x) {
+			result += x;
+		});
 	}
 
 	CPPA_CHECK_EQUAL(result, 5);

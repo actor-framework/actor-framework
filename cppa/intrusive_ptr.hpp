@@ -44,7 +44,13 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 		set_ptr(const_cast<Y*>(other.get()));
 	}
 
-	~intrusive_ptr() { if (m_ptr && !m_ptr->deref()) delete m_ptr; }
+	~intrusive_ptr()
+	{
+		if (m_ptr && !m_ptr->deref())
+		{
+			delete m_ptr;
+		}
+	}
 
 	T* get() { return m_ptr; }
 
@@ -71,8 +77,11 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 
 	intrusive_ptr& operator=(const intrusive_ptr& other)
 	{
-		intrusive_ptr tmp(other);
-		swap(tmp);
+		if (get() != other.get())
+		{
+			intrusive_ptr tmp(other);
+			swap(tmp);
+		}
 		return *this;
 	}
 

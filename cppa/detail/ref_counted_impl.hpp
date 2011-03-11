@@ -21,9 +21,9 @@ class ref_counted_impl
 
 	inline void ref() { ++m_rc; }
 
-	inline bool deref() { return (--m_rc > 0); }
+	inline bool deref() { return --m_rc > 0; }
 
-	inline bool unique() { return (m_rc == 1); }
+	inline bool unique() { return m_rc == 1; }
 
 };
 

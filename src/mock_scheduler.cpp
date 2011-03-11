@@ -11,7 +11,7 @@ struct actor_message
 {
 	actor_message* next;
 	cppa::message msg;
-	actor_message(const cppa::message& from) : msg(from) { }
+	actor_message(const cppa::message& from) : next(0), msg(from) { }
 };
 
 struct actor_impl;
@@ -30,6 +30,11 @@ struct actor_impl : cppa::detail::actor_private
 	cppa::detail::behavior* m_behavior;
 
 	actor_impl(cppa::detail::behavior* b = 0) : m_behavior(b) { }
+
+	~actor_impl()
+	{
+		if (m_behavior) delete m_behavior;
+	}
 
 	virtual void enqueue_msg(const cppa::message& msg)
 	{
@@ -98,7 +103,6 @@ struct actor_ptr
 {
 	cppa::intrusive_ptr<actor_impl> m_impl;
 	actor_ptr(actor_impl* ai) : m_impl(ai) { }
-	actor_ptr(actor_ptr&& other) : m_impl(std::move(other.m_impl)) { }
 	actor_ptr(const actor_ptr&) = default;
 	void operator()()
 	{
@@ -131,7 +135,8 @@ actor spawn_impl(behavior* actor_behavior)
 {
 	actor_ptr aptr(new actor_impl(actor_behavior));
 	boost::thread(aptr).detach();
-	return actor(std::move(aptr.m_impl));
+	return actor(aptr.m_impl);
+//	return actor(std::move(aptr.m_impl));
 }
 
 } } // namespace cppa::detail

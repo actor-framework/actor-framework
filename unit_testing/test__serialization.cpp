@@ -195,7 +195,7 @@ struct obj_types : util::abstract_type_list
 
 	~obj_types()
 	{
-		delete m_arr;
+		delete[] m_arr;
 	}
 
 	virtual std::size_t size() const { return m_size; }

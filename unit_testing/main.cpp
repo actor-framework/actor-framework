@@ -26,6 +26,7 @@ using std::endl;
 
 int main(int argc, char** c_argv)
 {
+
 	std::vector<std::string> argv;
 	for (int i = 1; i < argc; ++i)
 	{
