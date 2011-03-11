@@ -38,7 +38,8 @@ inline void receive(invoke_rules& rules)
 
 inline void receive(invoke_rules&& rules)
 {
-	this_actor()->receive(rules);
+	invoke_rules tmp(std::move(rules));
+	this_actor()->receive(tmp);
 }
 
 inline const message& last_dequeued()

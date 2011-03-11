@@ -26,10 +26,6 @@ class message
 			: sender(s), receiver(r), data(ut)
 		{
 		}
-		content(const actor& s, const message_receiver& r, untyped_tuple&& ut)
-			: sender(s), receiver(r), data(ut)
-		{
-		}
 	};
 
  private:

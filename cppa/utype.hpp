@@ -5,13 +5,15 @@
 #include <typeinfo>
 
 #include "cppa/object.hpp"
+#include "cppa/detail/comparable.hpp"
 
 namespace cppa {
 
 /**
  * @brief Uniform type information.
  */
-struct utype
+struct utype : detail::comparable<utype>,
+			   detail::comparable<utype, std::type_info>
 {
 
 	/**
@@ -29,6 +31,16 @@ struct utype
 	 * @brief Get the result of typeid(T) where T is the native type.
 	 */
 	virtual const std::type_info& native() const = 0;
+
+	inline bool equal_to(const std::type_info& what) const
+	{
+		return native() == what;
+	}
+
+	inline bool equal_to(const utype& what) const
+	{
+		return native() == what.native();
+	}
 
 };
 

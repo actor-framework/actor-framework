@@ -51,8 +51,8 @@ struct actor_impl : cppa::detail::actor_private
 
 	virtual void receive(cppa::invoke_rules& rules)
 	{
-		cppa::util::singly_linked_list<actor_message> buffer;
 		actor_message* amsg = mailbox.pop();
+		cppa::util::singly_linked_list<actor_message> buffer;
 		cppa::intrusive_ptr<cppa::detail::intermediate> imd;
 		while (!(imd = rules.get_intermediate(amsg->msg.data())))
 		{
@@ -60,9 +60,9 @@ struct actor_impl : cppa::detail::actor_private
 			amsg = mailbox.pop();
 		}
 		m_last_dequeued = amsg->msg;
-		delete amsg;
+		if (!buffer.empty()) mailbox.prepend(std::move(buffer));
 		imd->invoke();
-		mailbox.prepend(std::move(buffer));
+		delete amsg;
 	}
 
 	virtual void send(cppa::detail::channel* whom,

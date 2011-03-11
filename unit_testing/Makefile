@@ -1,8 +1,10 @@
-CXX = /opt/local/bin/g++-mp-4.5
+include ../Makefile.rules
+
+#CXX = /opt/local/bin/g++-mp-4.5
 #CXX = /opt/local/bin/g++-mp-4.6
 #CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
-CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/
-LIBS = -L/opt/local/lib -lboost_thread-mt -L../ -lcppa
+#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/
+#LIBS = -L/opt/local/lib -lboost_thread-mt -L../ -lcppa
 INCLUDES = -I./ -I../
 
 EXECUTABLE = ../test
@@ -28,7 +30,7 @@ OBJECTS = $(SOURCES:.cpp=.o)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(EXECUTABLE) : $(OBJECTS) $(HEADERS)
-	$(CXX) $(LIBS) -L./ -lcppa $(OBJECTS) -o $(EXECUTABLE)
+	$(CXX) $(LIBS) -L../ -lcppa $(OBJECTS) -o $(EXECUTABLE)
 
 all : $(EXECUTABLE)
 

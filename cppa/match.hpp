@@ -80,6 +80,19 @@ get_view(const Tuple<TupleTypes...>& t)
 	throw std::runtime_error("matcher did not return a valid mapping");
 }
 
+template<typename... MatchRules>
+typename tuple_view_type_from_type_list<typename util::filter_type_list<any_type, util::type_list<MatchRules...>>::type>::type
+get_view(const untyped_tuple& t)
+{
+	std::vector<std::size_t> mappings;
+	if (match<MatchRules...>(t, mappings))
+	{
+		return { t.vals(), std::move(mappings) };
+	}
+	// todo: throw nicer exception
+	throw std::runtime_error("doesn't match");
+}
+
 } // namespace cppa
 
 #endif // MATCH_HPP

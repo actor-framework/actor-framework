@@ -133,6 +133,32 @@ struct
 }
 local;
 
+struct storage
+{
+
+	std::map<std::string, intrusive_ptr<object>> m_map;
+
+ public:
+
+	template<typename T>
+	T& get(const std::string& key)
+	{
+		const utype& uti = uniform_type_info<T>();
+		auto i = m_map.find(key);
+		if (i == m_map.end())
+		{
+			i = m_map.insert(std::make_pair(key, uti.create())).first;
+		}
+		else if (uti != i->second->type())
+		{
+			// todo: throw nicer exception
+			throw std::runtime_error("invalid type");
+		}
+		return *reinterpret_cast<T*>(i->second->mutable_value());
+	}
+
+};
+
 void foo_actor()
 {
 	auto x = (local/"foobar")->subscribe(this_actor());
@@ -149,6 +175,19 @@ std::size_t test__local_group()
 
 	CPPA_TEST(test__local_group);
 
+	/*
+	storage st;
+
+	st.get<int>("foobaz") = 42;
+
+	CPPA_CHECK_EQUAL(st.get<int>("foobaz"), 42);
+
+	st.get<std::string>("_s") = "Hello World!";
+
+	CPPA_CHECK_EQUAL(st.get<std::string>("_s"), "Hello World!");
+
+	*/
+
 	auto g = local/"foobar";
 
 	for (int i = 0; i < 5; ++i)
@@ -158,17 +197,20 @@ std::size_t test__local_group()
 
 	for (int i = 0; i < 5; ++i)
 	{
-		receive(on<float>() >> [&]() { });
+		receive(on<float>() >> []() { });
 	}
 
 	g->send(1);
 
 	int result = 0;
+
+	auto rule = on<int>() >> [&result](int x) {
+		result += x;
+	};
+
 	for (int i = 0; i < 5; ++i)
 	{
-		receive(on<int>() >> [&](int x) {
-			result += x;
-		});
+		receive(rule);
 	}
 
 	CPPA_CHECK_EQUAL(result, 5);

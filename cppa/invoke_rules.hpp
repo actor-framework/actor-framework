@@ -20,6 +20,11 @@ struct invoke_rules
 
 	invoke_rules() { }
 
+	invoke_rules(invoke_rules&& other) : m_list(std::move(other.m_list))
+	{
+		other.m_list.clear();
+	}
+
 	invoke_rules(intrusive_ptr<detail::invokable>&& arg)
 	{
 		if (arg) m_list.push_back(arg);

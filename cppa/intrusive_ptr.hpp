@@ -10,7 +10,8 @@
 namespace cppa {
 
 template<typename T>
-class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>
+class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
+					  detail::comparable<intrusive_ptr<T>>
 {
 
 	T* m_ptr;
@@ -105,35 +106,24 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>
 		return get() == ptr;
 	}
 
-	template<typename Y>
-	inline bool equal_to(const Y* ptr) const
+	inline bool equal_to(const intrusive_ptr& other) const
 	{
-		return get() == ptr;
-	}
-
-	inline bool operator==(const intrusive_ptr& other) const
-	{
-		return equal_to(other.get());
-	}
-
-	template<typename Y>
-	inline bool operator==(const intrusive_ptr<Y>& other) const
-	{
-		return equal_to(other.get());
-	}
-
-	inline bool operator!=(const intrusive_ptr& other) const
-	{
-		return !(*this == other);
-	}
-
-	template<typename Y>
-	inline bool operator!=(const intrusive_ptr<Y>& other) const
-	{
-		return !(*this == other);
+		return get() == other.get();
 	}
 
 };
+
+template<typename X, typename Y>
+bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
+{
+	return lhs.get() == rhs.get();
+}
+
+template<typename X, typename Y>
+bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
+{
+	return lhs.get() != rhs.get();
+}
 
 } // namespace cppa
 

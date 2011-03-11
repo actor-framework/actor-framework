@@ -1,8 +1,8 @@
-CXX = /opt/local/bin/g++-mp-4.5
-#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
-CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/ -fPIC
-LIBS = -L/opt/local/lib -lboost_thread-mt
+include Makefile.rules
+
 INCLUDES = -I./
+
+#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/ -fPIC
 
 HEADERS = cppa/actor.hpp \
 		  cppa/any_type.hpp \
