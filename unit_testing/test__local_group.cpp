@@ -20,46 +20,62 @@ using std::endl;
 
 using namespace cppa;
 
-class group : public detail::channel
+namespace {
+
+struct group : detail::channel
+{
+
+	// NOT thread safe
+	class subscription : public detail::ref_counted_impl<std::size_t>
+	{
+
+		actor m_self;
+		intrusive_ptr<group> m_group;
+
+	 public:
+
+		subscription() = delete;
+		subscription(const subscription&) = delete;
+		subscription& operator=(const subscription&) = delete;
+
+		subscription(const actor& s, const intrusive_ptr<group>& g)
+			: m_self(s), m_group(g)
+		{
+		}
+
+		~subscription()
+		{
+			m_group->unsubscribe(m_self);
+		}
+
+	};
+
+	virtual intrusive_ptr<subscription> subscribe(const actor& who) = 0;
+
+	virtual void unsubscribe(const actor& who) = 0;
+
+	template<typename... Args>
+	void send(const Args&... args)
+	{
+		enqueue_msg(message(this_actor(), this, args...));
+	}
+
+};
+
+class local_group : public group
 {
 
 	boost::mutex m_mtx;
 	std::list<actor> m_subscribers;
 
+	inline std::list<actor>::iterator find(const actor& what)
+	{
+		return std::find(m_subscribers.begin(), m_subscribers.end(), what);
+	}
+
  public:
 
-	struct subscription
-	{
-		actor m_self;
-		intrusive_ptr<group> m_group;
-		subscription(const actor& s, const intrusive_ptr<group>& g)
-			: m_self(s), m_group(g)
-		{
-		}
-		~subscription()
-		{
-			m_group->unsubscribe(m_self);
-		}
-	};
-
-	subscription subscribe(const actor& who)
-	{
-		boost::mutex::scoped_lock guard(m_mtx);
-		m_subscribers.push_back(who);
-		return { who, this };
-	}
-
-	void unsubscribe(const actor& who)
-	{
-		boost::mutex::scoped_lock guard(m_mtx);
-		auto i = std::find(m_subscribers.begin(), m_subscribers.end(), who);
-		if (i != m_subscribers.end())
-		{
-			m_subscribers.erase(i);
-		}
-	}
-
-	void enqueue_msg(const message& msg)
+	virtual void enqueue_msg(const message& msg)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
@@ -68,79 +84,40 @@ class group : public detail::channel
 		}
 	}
 
-	template<typename... Args>
-	void send(const Args&... args)
-	{
-		message msg(this_actor(), this, args...);
-		enqueue_msg(msg);
-	}
-
-};
-
-namespace {
-
-class group_bucket
-{
-
-	boost::mutex m_mtx;
-	std::map<std::string, intrusive_ptr<group>> m_groups;
-
- public:
-
-	intrusive_ptr<group> get(const std::string& group_name)
+	virtual intrusive_ptr<group::subscription> subscribe(const actor& who)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
-		intrusive_ptr<group>& result = m_groups[group_name];
-		if (!result)
+		auto i = find(who);
+		if (i == m_subscribers.end())
 		{
-			result.reset(new group);
+			m_subscribers.push_back(who);
+			return new group::subscription(who, this);
 		}
-		return result;
+		return new group::subscription(0, 0);
+	}
+
+	virtual void unsubscribe(const actor& who)
+	{
+		boost::mutex::scoped_lock guard(m_mtx);
+		auto i = find(who);
+		if (i != m_subscribers.end())
+		{
+			m_subscribers.erase(i);
+		}
 	}
 
 };
 
-template<std::size_t NumBuckets>
-class group_table
+//local_group* m_local_group = new local_group;
+
+local_group m_local_group;
+
+group& local(const char*)
 {
-
-	group_bucket m_buckets[NumBuckets];
-
-	group_bucket& bucket(const std::string& group_name)
-	{
-		unsigned int gn_hash = hash_of(group_name);
-		return m_buckets[gn_hash % NumBuckets];
-	}
-
- public:
-
-	intrusive_ptr<group> operator[](const std::string& group_name)
-	{
-		return bucket(group_name).get(group_name);
-	}
-
-};
-
-group_table<100> m_groups;
+	return m_local_group;
+}
 
 } // namespace <anonymous>
-
-
-namespace {
-
-intrusive_ptr<group> local_group = new group;
-
-}
-
-struct
-{
-	intrusive_ptr<group> operator/(const std::string& /*group_name*/)
-	{
-		return local_group;
-//		return m_groups[group_name];
-	}
-}
-local;
 
 struct storage
 {
@@ -168,6 +145,7 @@ struct storage
 
 };
 
+/*
 template<typename... Args>
 void send(std::list<actor>& actors, const Args&... args)
 {
@@ -176,21 +154,13 @@ void send(std::list<actor>& actors, const Args&... args)
 		i->send(args...);
 	}
 }
+*/
 
 void foo_actor()
 {
-//	auto x = (local/"foobar")->subscribe(this_actor());
-	auto rules = (
-		on<int, int, int>() >> []() {
-			reply(23.f);
-		},
-		on<int>() >> [](int i) {
-			reply(i);
-		}
-	);
-	receive(rules);
-	receive(rules);
-//	reply(1);
+	receive(on<int>() >> [](int i) {
+		reply(i);
+	});
 }
 
 std::size_t test__local_group()
@@ -198,37 +168,15 @@ std::size_t test__local_group()
 
 	CPPA_TEST(test__local_group);
 
-	/*
-	storage st;
+	std::list<intrusive_ptr<group::subscription>> m_subscriptions;
 
-	st.get<int>("foobaz") = 42;
-
-	CPPA_CHECK_EQUAL(st.get<int>("foobaz"), 42);
-
-	st.get<std::string>("_s") = "Hello World!";
-
-	CPPA_CHECK_EQUAL(st.get<std::string>("_s"), "Hello World!");
-
-	*/
-
-//	auto g = local/"foobar";
-
-	std::list<actor> m_slaves;
-
+	group& lg = local("foobar");
 	for (int i = 0; i < 5; ++i)
 	{
-		m_slaves.push_back(spawn(foo_actor));
+		m_subscriptions.push_back(lg.subscribe(spawn(foo_actor)));
 	}
 
-	send(m_slaves, 1, 2, 3);
-	send(m_slaves, 1);
-
-	for (int i = 0; i < 5; ++i)
-	{
-		receive(on<float>() >> []() { });
-	}
-
-//	g->send(1);
+	lg.send(1);
 
 	int result = 0;
 

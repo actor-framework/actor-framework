@@ -8,6 +8,7 @@
 #include "cppa/tuple_view.hpp"
 #include "cppa/untyped_tuple.hpp"
 
+#include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/utype_iterator.hpp"
@@ -51,7 +52,8 @@ bool match(const untyped_tuple& what, const ValuesTuple& vals,
 	{
 		std::vector<std::size_t> tmp(mappings);
 		view_type view(what.vals(), std::move(tmp));
-		return view == vals;
+		return compare_first_elements(view, vals);
+//		return view == vals;
 	}
 	return false;
 }

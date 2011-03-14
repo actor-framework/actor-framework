@@ -33,6 +33,8 @@ class message_receiver :
 	{
 	}
 
+	virtual ~message_receiver();
+
 	message_receiver() = default;
 
 	message_receiver(message_receiver&&) = default;

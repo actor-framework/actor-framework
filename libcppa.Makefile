@@ -55,6 +55,7 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/void_type.hpp
 
 SOURCES = src/actor.cpp \
+		  src/actor_private.cpp \
 		  src/decorated_tuple.cpp \
 		  src/deserializer.cpp \
 		  src/message_receiver.cpp \

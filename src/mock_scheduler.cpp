@@ -134,7 +134,8 @@ namespace cppa { namespace detail {
 actor spawn_impl(behavior* actor_behavior)
 {
 	actor_ptr aptr(new actor_impl(actor_behavior));
-	boost::thread(aptr).detach();
+	aptr.m_impl->m_thread = new boost::thread(aptr);
+//	boost::thread(aptr).detach();
 	return actor(aptr.m_impl);
 //	return actor(std::move(aptr.m_impl));
 }

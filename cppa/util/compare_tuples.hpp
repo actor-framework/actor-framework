@@ -3,6 +3,7 @@
 
 #include "cppa/get.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/eval_type_lists.hpp"
 
@@ -34,6 +35,25 @@ struct cmp_helper<0, LhsTuple, RhsTuple>
 	}
 };
 
+template<bool ALessB, std::size_t A, std::size_t B>
+struct min_impl
+{
+	static const std::size_t value = A;
+};
+
+template<std::size_t A, std::size_t B>
+struct min_impl<false, A, B>
+{
+	static const std::size_t value = B;
+};
+
+template<std::size_t A, std::size_t B>
+struct min_
+{
+	static const std::size_t value = min_impl<(A < B), A, B>::value;
+};
+
+
 } } // namespace cppa::detail
 
 namespace cppa { namespace util {
@@ -51,6 +71,29 @@ bool compare_tuples(const LhsTuple<LhsTypes...>& lhs,
 										util::is_comparable>::value,
 				  "types of lhs are not comparable to the types of rhs");
 	return detail::cmp_helper<(LhsTuple<LhsTypes...>::type_list_size - 1),
+							  LhsTuple<LhsTypes...>,
+							  RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
+}
+
+template<template<typename...> class LhsTuple, typename... LhsTypes,
+		 template<typename...> class RhsTuple, typename... RhsTypes>
+bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
+							const RhsTuple<RhsTypes...>& rhs)
+{
+	typedef util::type_list<LhsTypes...> lhs_types;
+	typedef util::type_list<RhsTypes...> rhs_types;
+
+	static_assert(util::eval_first_n<detail::min_<lhs_types::type_list_size,
+												  rhs_types::type_list_size>
+												  ::value,
+									 lhs_types,
+									 rhs_types,
+									 util::is_comparable>::value,
+				  "types of lhs are not comparable to the types of rhs");
+
+	return detail::cmp_helper<(detail::min_<lhs_types::type_list_size,
+											rhs_types::type_list_size>
+											::value - 1),
 							  LhsTuple<LhsTypes...>,
 							  RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
 }

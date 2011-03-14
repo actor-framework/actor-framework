@@ -15,11 +15,13 @@ class actor : public message_receiver
 
  public:
 
-	typedef cppa::intrusive_ptr<detail::actor_public> ptr_type;
+	typedef cppa::intrusive_ptr<detail::actor_private> ptr_type;
 
 	actor() = default;
 
-	inline actor(detail::actor_public* ptr) : super(ptr) { }
+	~actor();
+
+	inline actor(detail::actor_private* ptr) : super(ptr) { }
 
 	inline actor(const ptr_type& ptr) : super(ptr) { }
 
