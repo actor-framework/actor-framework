@@ -18,6 +18,16 @@ class singly_linked_list
 
 	singly_linked_list() : m_head(0), m_tail(0) { }
 
+	~singly_linked_list()
+	{
+		while (m_head)
+		{
+			T* next = m_head->next;
+			delete m_head;
+			m_head = next;
+		}
+	}
+
 	inline bool empty() const { return m_head == 0; }
 
 	void push_back(element_type* what)

@@ -1,6 +1,8 @@
 #ifndef ACTOR_PRIVATE_HPP
 #define ACTOR_PRIVATE_HPP
 
+#include <boost/thread/thread.hpp>
+
 #include "cppa/invoke_rules.hpp"
 #include "cppa/untyped_tuple.hpp"
 
@@ -14,6 +16,9 @@ namespace cppa { namespace detail {
 // private part of the actor interface (callable only from this_actor())
 struct actor_private : public actor_public
 {
+	boost::thread* m_thread;
+	inline actor_private() : m_thread(0) { }
+	virtual ~actor_private();
 	virtual const message& receive() = 0;
 	virtual const message& last_dequeued() const = 0;
 	virtual void receive(invoke_rules&) = 0;

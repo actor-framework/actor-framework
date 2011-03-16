@@ -26,25 +26,39 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 
 	intrusive_ptr() : m_ptr(0) { }
 
-	template<typename Y>
-	intrusive_ptr(Y* raw_ptr) { set_ptr(raw_ptr); }
-
 	intrusive_ptr(T* raw_ptr) { set_ptr(raw_ptr); }
 
-	intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.m_ptr)
+	intrusive_ptr(const intrusive_ptr& other)
 	{
-		other.m_ptr = 0;
+		set_ptr(other.m_ptr);
 	}
 
-	intrusive_ptr(const intrusive_ptr& other) { set_ptr(other.m_ptr); }
+	intrusive_ptr(intrusive_ptr&& other) : m_ptr(0)
+	{
+		swap(other);
+	}
 
 	template<typename Y>
 	intrusive_ptr(const intrusive_ptr<Y>& other)
 	{
+		static_assert(std::is_convertible<Y*, T*>::value,
+					  "Y* is not assignable to T*");
 		set_ptr(const_cast<Y*>(other.get()));
 	}
 
-	~intrusive_ptr() { if (m_ptr && !m_ptr->deref()) delete m_ptr; }
+	template<typename Y>
+	intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(0)
+	{
+		swap(other);
+	}
+
+	~intrusive_ptr()
+	{
+		if (m_ptr && !m_ptr->deref())
+		{
+			delete m_ptr;
+		}
+	}
 
 	T* get() { return m_ptr; }
 
@@ -88,6 +102,16 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 	{
 		intrusive_ptr tmp(other);
 		swap(tmp);
+		return *this;
+	}
+
+	template<typename Y>
+	intrusive_ptr& operator=(intrusive_ptr<Y>&& other)
+	{
+		static_assert(std::is_convertible<Y*, T*>::value,
+					  "Y* is not assignable to T*");
+		m_ptr = other.m_ptr;
+		other.m_ptr = 0;
 		return *this;
 	}
 

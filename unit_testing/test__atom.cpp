@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "test.hpp"
+#include "hash_of.hpp"
 #include "cppa/util.hpp"
 
 using std::cout;

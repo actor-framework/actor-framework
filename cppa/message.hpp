@@ -23,7 +23,10 @@ class message
 		const untyped_tuple data;
 		content(const actor& s, const message_receiver& r,
 				const untyped_tuple& ut)
-			: sender(s), receiver(r), data(ut)
+			: ref_counted(), sender(s), receiver(r), data(ut)
+		{
+		}
+		~content()
 		{
 		}
 	};
@@ -41,8 +44,8 @@ class message
 	message(const actor& from, const message_receiver& to, const untyped_tuple& ut)
 		: m_content(new content(from, to, ut)) { }
 
-	message(const actor& from, const message_receiver& to, untyped_tuple&& ut)
-		: m_content(new content(from, to, std::move(ut))) { }
+//	message(const actor& from, const message_receiver& to, untyped_tuple&& ut)
+//		: m_content(new content(from, to, std::move(ut))) { }
 
 	message() : m_content(new content(0, 0, tuple<int>(0))) { }
 

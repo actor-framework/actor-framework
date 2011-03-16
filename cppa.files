@@ -93,3 +93,6 @@ cppa/detail/channel.hpp
 cppa/message_receiver.hpp
 src/message_receiver.cpp
 src/actor.cpp
+src/actor_private.cpp
+cppa/util/eval_first_n.hpp
+cppa/util/first_n.hpp

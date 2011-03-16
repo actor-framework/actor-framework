@@ -61,7 +61,7 @@ CPPA_ANNOUNCE(std::uint64_t);
 CPPA_ANNOUNCE(float);
 CPPA_ANNOUNCE(double);
 CPPA_ANNOUNCE(long double);
-*/
 CPPA_ANNOUNCE(std::string);
+*/
 
 #endif // UNIFORM_TYPE_INFO_HPP

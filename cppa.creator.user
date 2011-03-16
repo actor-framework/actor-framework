@@ -60,15 +60,15 @@
   <valuemap type="QVariantMap">
    <value key="ProjectExplorer.BuildConfiguration.DisplayName" type="QString">all</value>
    <valuelist key="abstractProcess.Environment" type="QVariantList">
-    <value type="QString">Apple_PubSub_Socket_Render=/tmp/launch-gSC9AO/Render</value>
+    <value type="QString">Apple_PubSub_Socket_Render=/tmp/launch-Ii2KqP/Render</value>
     <value type="QString">COMMAND_MODE=unix2003</value>
-    <value type="QString">DISPLAY=/tmp/launch-1vsPWG/org.x:0</value>
+    <value type="QString">DISPLAY=/tmp/launch-6FAyZP/org.x:0</value>
     <value type="QString">HOME=/Users/neverlord</value>
     <value type="QString">LOGNAME=neverlord</value>
     <value type="QString">PATH=/usr/bin:/bin:/usr/sbin:/sbin</value>
     <value type="QString">SHELL=/bin/bash</value>
-    <value type="QString">SSH_AUTH_SOCK=/tmp/launch-H5MBik/Listeners</value>
-    <value type="QString">TMPDIR=/var/folders/SE/SEReyCW0H-yDPCnNCe8mN++++TI/-Tmp-/</value>
+    <value type="QString">SSH_AUTH_SOCK=/tmp/launch-vifjfO/Listeners</value>
+    <value type="QString">TMPDIR=/var/folders/1p/1p6iuPgbH7GoDkrjrT20tU+++TI/-Tmp-/</value>
     <value type="QString">USER=neverlord</value>
     <value type="QString">__CF_USER_TEXT_ENCODING=0x1F5:0:3</value>
    </valuelist>

@@ -5,6 +5,7 @@
 #include "cppa/invoke_rules.hpp"
 #include "cppa/untyped_tuple.hpp"
 
+#include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/ref_counted_impl.hpp"
@@ -36,6 +37,12 @@ struct invoke_rule_builder
 	template<typename Arg0, typename... Args>
 	invoke_rule_builder(const Arg0& arg0, const Args&... args)
 	{
+		typedef util::type_list<Arg0, Args...> arg_types;
+
+		static_assert(arg_types::type_list_size
+					  <= filtered_types::type_list_size,
+					  "too much arguments");
+
 		class helper_impl : public irb_helper
 		{
 
@@ -44,7 +51,9 @@ struct invoke_rule_builder
 		 public:
 
 			helper_impl(const Arg0& arg0, const Args&... args)
-				: m_values(arg0, args...) { }
+				: m_values(arg0, args...)
+			{
+			}
 
 			virtual bool value_cmp(const untyped_tuple& t,
 								   std::vector<std::size_t>& v) const
@@ -56,10 +65,11 @@ struct invoke_rule_builder
 
 		m_helper = new helper_impl(arg0, args...);
 
-		static_assert(util::eval_type_lists<filtered_types,
-											util::type_list<Arg0, Args...>,
-											util::is_comparable>::value,
-					  "Wrong argument types");
+		static_assert(util::eval_first_n<arg_types::type_list_size,
+										 filtered_types,
+										 arg_types,
+										 util::is_comparable>::value,
+					  "wrong argument types (not comparable)");
 	}
 
 	typedef typename tuple_view_type_from_type_list<filtered_types>::type

@@ -74,6 +74,18 @@ std::size_t test__tuple()
 	CPPA_CHECK(tv2.get<1>() == "Hello World");
 
 	{
+		tuple<int> t1_sub1(42);
+		tuple<int, float> t1_sub2(42, .2f);
+		tuple<int, float, int> t1_sub3(42, .2f, 2);
+		CPPA_CHECK((util::compare_first_elements(t1, t1_sub1)));
+		CPPA_CHECK((match<int, any_type*>(t1, t1_sub1)));
+		CPPA_CHECK((util::compare_first_elements(t1, t1_sub2)));
+		CPPA_CHECK((match<int, any_type*, float, any_type*>(t1, t1_sub2)));
+		CPPA_CHECK((util::compare_first_elements(t1, t1_sub3)));
+		CPPA_CHECK((match<int, float, int, any_type>(t1, t1_sub3)));
+	}
+
+	{
 		std::vector<std::size_t> tv3_mappings;
 		match<any_type*, int, std::string>(t1, tv3_mappings);
 		CPPA_CHECK_EQUAL(tv3_mappings.size(), 2);

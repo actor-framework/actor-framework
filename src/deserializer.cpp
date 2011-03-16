@@ -18,6 +18,6 @@ cppa::deserializer& operator>>(cppa::deserializer& d, std::string& str)
 	d.read(str_size, cbuf);
 	cbuf[str_size] = 0;
 	str = cbuf;
-	delete cbuf;
+	delete[] cbuf;
 	return d;
 }
