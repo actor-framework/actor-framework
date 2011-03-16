@@ -25,7 +25,7 @@ template<std::size_t N, typename... Types>
 const typename util::type_at<N, util::type_list<Types...>>::type&
 get(const tuple_view<Types...>& t);
 
-// forward declarations of get(...)
+// forward declarations of get_ref(...)
 template<std::size_t N, typename... Types>
 typename util::type_at<N, util::type_list<Types...>>::type&
 get_ref(tuple<Types...>& t);

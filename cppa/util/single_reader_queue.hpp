@@ -59,7 +59,7 @@ class single_reader_queue
 	 * @warning call only from the reader (owner)
 	 */
 	template<typename List>
-	void prepend(List&& list)
+	void push_front(List&& list)
 	{
 		if (!list.empty())
 		{
@@ -101,6 +101,11 @@ class single_reader_queue
 				}
 			}
 		}
+	}
+
+	bool empty()
+	{
+		return !m_head && !(m_tail.load());
 	}
 
 	single_reader_queue() : m_tail(0), m_head(0) { }

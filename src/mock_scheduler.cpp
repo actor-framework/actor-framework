@@ -1,143 +1,181 @@
 #include <boost/thread.hpp>
 
+#include "cppa/message.hpp"
+#include "cppa/context.hpp"
+#include "cppa/invoke_rules.hpp"
 #include "cppa/detail/scheduler.hpp"
 
 #include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
+
+using namespace cppa;
 
 namespace {
 
 struct actor_message
 {
 	actor_message* next;
-	cppa::message msg;
-	actor_message(const cppa::message& from) : next(0), msg(from) { }
+	message msg;
+	actor_message(const message& from) : next(0), msg(from) { }
 };
 
 struct actor_impl;
 
-void cleanup_fun(actor_impl* what);
+void cleanup_fun(context* what);
 
-boost::thread_specific_ptr<actor_impl> m_this_actor(cleanup_fun);
+boost::thread_specific_ptr<context> m_this_context(cleanup_fun);
 
-struct actor_impl : cppa::detail::actor_private
+struct mbox : message_queue
 {
 
-	cppa::message m_last_dequeued;
+	message m_last_dequeued;
+	util::single_reader_queue<actor_message> m_impl;
 
-	cppa::util::single_reader_queue<actor_message> mailbox;
+	void enqueue(const message& msg)
+	{
+		m_impl.push_back(new actor_message(msg));
+	}
 
-	cppa::detail::behavior* m_behavior;
+	virtual const message& dequeue()
+	{
+		actor_message* msg = m_impl.pop();
+		m_last_dequeued = std::move(msg->msg);
+		delete msg;
+		return m_last_dequeued;
+	}
 
-	actor_impl(cppa::detail::behavior* b = 0) : m_behavior(b) { }
+	virtual void dequeue(invoke_rules& rules)
+	{
+		actor_message* amsg = m_impl.pop();
+		util::singly_linked_list<actor_message> buffer;
+		intrusive_ptr<detail::intermediate> imd;
+		while (!(imd = rules.get_intermediate(amsg->msg.data())))
+		{
+			buffer.push_back(amsg);
+			amsg = m_impl.pop();
+		}
+		m_last_dequeued = amsg->msg;
+		if (!buffer.empty()) m_impl.push_front(std::move(buffer));
+		imd->invoke();
+		delete amsg;
+	}
+
+	virtual bool try_dequeue(message& msg)
+	{
+		if (!m_impl.empty())
+		{
+			msg = dequeue();
+			return true;
+		}
+		return false;
+	}
+
+	virtual bool try_dequeue(invoke_rules& rules)
+	{
+		if (!m_impl.empty())
+		{
+			dequeue(rules);
+			return true;
+		}
+		return false;
+	}
+
+	virtual const message& last_dequeued()
+	{
+		return m_last_dequeued;
+	}
+
+};
+
+struct actor_impl : context
+{
+
+	mbox m_mbox;
+
+	actor_behavior* m_behavior;
+
+	actor_impl(actor_behavior* b = 0) : m_behavior(b) { }
 
 	~actor_impl()
 	{
 		if (m_behavior) delete m_behavior;
 	}
 
-	virtual void enqueue_msg(const cppa::message& msg)
+	virtual void enqueue(const message& msg)
 	{
-		mailbox.push_back(new actor_message(msg));
+		m_mbox.enqueue(msg);
 	}
 
-	virtual const cppa::message& receive()
-	{
-		actor_message* msg = mailbox.pop();
-		m_last_dequeued = std::move(msg->msg);
-		delete msg;
-		return m_last_dequeued;
-	}
+	virtual void link(const intrusive_ptr<actor>&) { }
 
-	virtual const cppa::message& last_dequeued() const
-	{
-		return m_last_dequeued;
-	}
+	virtual void unlink(const intrusive_ptr<actor>&) { }
 
-	virtual void receive(cppa::invoke_rules& rules)
+	virtual message_queue& mailbox()
 	{
-		actor_message* amsg = mailbox.pop();
-		cppa::util::singly_linked_list<actor_message> buffer;
-		cppa::intrusive_ptr<cppa::detail::intermediate> imd;
-		while (!(imd = rules.get_intermediate(amsg->msg.data())))
-		{
-			buffer.push_back(amsg);
-			amsg = mailbox.pop();
-		}
-		m_last_dequeued = amsg->msg;
-		if (!buffer.empty()) mailbox.prepend(std::move(buffer));
-		imd->invoke();
-		delete amsg;
-	}
-
-	virtual void send(cppa::detail::channel* whom,
-					  cppa::untyped_tuple&& what)
-	{
-		if (whom) whom->enqueue_msg(cppa::message(this, whom, std::move(what)));
-	}
-
-	void operator()()
-	{
-		if (m_behavior)
-		{
-			try
-			{
-				m_behavior->act();
-			}
-			catch (...) { }
-			m_behavior->on_exit();
-		}
+		return m_mbox;
 	}
 
 };
 
-void cleanup_fun(actor_impl* what)
+void cleanup_fun(context* what)
 {
-	if (what)
-	{
-		if (!what->deref()) delete what;
-	}
+	if (what && !what->deref()) delete what;
 }
 
-struct actor_ptr
+std::atomic<int> m_running_actors(0);
+boost::mutex m_ra_mtx;
+boost::condition_variable m_ra_cv;
+
+void run_actor_impl(intrusive_ptr<actor_impl> m_impl)
 {
-	cppa::intrusive_ptr<actor_impl> m_impl;
-	actor_ptr(actor_impl* ai) : m_impl(ai) { }
-	actor_ptr(const actor_ptr&) = default;
-	void operator()()
+	actor_behavior* ab = m_impl->m_behavior;
+	if (ab)
 	{
-		m_this_actor.reset(m_impl.get());
-		(*m_impl)();
+		try
+		{
+			ab->act();
+		}
+		catch(...) { }
+		ab->on_exit();
 	}
-};
+	if (--m_running_actors == 0)
+	{
+		boost::mutex::scoped_lock lock(m_ra_mtx);
+		m_ra_cv.notify_all();
+	}
+}
 
 } // namespace <anonymous>
 
-namespace cppa {
-
-detail::actor_private* this_actor()
-{
-	actor_impl* res = m_this_actor.get();
-	if (!res)
-	{
-		res = new actor_impl;
-		res->ref();
-		m_this_actor.reset(res);
-	}
-	return res;
-}
-
-} // namespace cppa
-
 namespace cppa { namespace detail {
 
-actor spawn_impl(behavior* actor_behavior)
+actor_ptr scheduler::spawn(actor_behavior* ab, scheduling_hint)
 {
-	actor_ptr aptr(new actor_impl(actor_behavior));
-	aptr.m_impl->m_thread = new boost::thread(aptr);
-//	boost::thread(aptr).detach();
-	return actor(aptr.m_impl);
-//	return actor(std::move(aptr.m_impl));
+	++m_running_actors;
+	intrusive_ptr<actor_impl> result(new actor_impl(ab));
+	boost::thread(run_actor_impl, result).detach();
+	return result;
 }
 
-} } // namespace cppa::detail
+context* scheduler::get_context()
+{
+	context* result = m_this_context.get();
+	if (!result)
+	{
+		result = new actor_impl;
+		result->ref();
+		m_this_context.reset(result);
+	}
+	return result;
+}
+
+void scheduler::await_all_done()
+{
+	boost::mutex::scoped_lock lock(m_ra_mtx);
+	while (m_running_actors.load() > 0)
+	{
+		m_ra_cv.wait(lock);
+	}
+}
+
+} } // namespace detail

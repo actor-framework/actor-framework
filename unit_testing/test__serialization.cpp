@@ -403,11 +403,11 @@ std::size_t test__serialization()
 
 	std::string str = "Hello World";
 
-	CPPA_CHECK_EQUAL(to_string(make_tuple(str)),
-					 "{ \"Hello World\" }");
+//	CPPA_CHECK_EQUAL(to_string(make_tuple(str)),
+//					 "{ \"Hello World\" }");
 
-	CPPA_CHECK_EQUAL(to_string(make_tuple(str, 42)),
-					 "{ \"Hello World\", 42 }");
+//	CPPA_CHECK_EQUAL(to_string(make_tuple(str, 42)),
+//					 "{ \"Hello World\", 42 }");
 
 	char  v0 = 0x11;
 	short v1 = 0x1122;

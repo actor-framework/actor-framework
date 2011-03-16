@@ -54,13 +54,11 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/utype_iterator.hpp \
 		  cppa/util/void_type.hpp
 
-SOURCES = src/actor.cpp \
-		  src/actor_private.cpp \
+SOURCES = src/actor_behavior.cpp \
+		  src/channel.cpp \
 		  src/decorated_tuple.cpp \
 		  src/deserializer.cpp \
-		  src/message_receiver.cpp \
 		  src/mock_scheduler.cpp \
-		  src/ref_counted.cpp \
 		  src/serializer.cpp \
 		  src/uniform_type_info.cpp \
 		  src/untyped_tuple.cpp

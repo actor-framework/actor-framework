@@ -2,8 +2,7 @@
 #include "hash_of.hpp"
 
 #include "cppa/on.hpp"
-#include "cppa/spawn.hpp"
-#include "cppa/reply.hpp"
+#include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -22,14 +21,14 @@ using namespace cppa;
 
 namespace {
 
-struct group : detail::channel
+struct group : channel
 {
 
 	// NOT thread safe
 	class subscription : public detail::ref_counted_impl<std::size_t>
 	{
 
-		actor m_self;
+		actor_ptr m_self;
 		intrusive_ptr<group> m_group;
 
 	 public:
@@ -38,7 +37,7 @@ struct group : detail::channel
 		subscription(const subscription&) = delete;
 		subscription& operator=(const subscription&) = delete;
 
-		subscription(const actor& s, const intrusive_ptr<group>& g)
+		subscription(const actor_ptr& s, const intrusive_ptr<group>& g)
 			: m_self(s), m_group(g)
 		{
 		}
@@ -50,15 +49,9 @@ struct group : detail::channel
 
 	};
 
-	virtual intrusive_ptr<subscription> subscribe(const actor& who) = 0;
+	virtual intrusive_ptr<subscription> subscribe(const actor_ptr& who) = 0;
 
-	virtual void unsubscribe(const actor& who) = 0;
-
-	template<typename... Args>
-	void send(const Args&... args)
-	{
-		enqueue_msg(message(this_actor(), this, args...));
-	}
+	virtual void unsubscribe(const actor_ptr& who) = 0;
 
 };
 
@@ -66,25 +59,25 @@ class local_group : public group
 {
 
 	boost::mutex m_mtx;
-	std::list<actor> m_subscribers;
+	std::list<actor_ptr> m_subscribers;
 
-	inline std::list<actor>::iterator find(const actor& what)
+	inline std::list<actor_ptr>::iterator find(const actor_ptr& what)
 	{
 		return std::find(m_subscribers.begin(), m_subscribers.end(), what);
 	}
 
  public:
 
-	virtual void enqueue_msg(const message& msg)
+	virtual void enqueue(const message& msg)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
 		{
-			i->enqueue_msg(msg);
+			(*i)->enqueue(msg);
 		}
 	}
 
-	virtual intrusive_ptr<group::subscription> subscribe(const actor& who)
+	virtual intrusive_ptr<group::subscription> subscribe(const actor_ptr& who)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		auto i = find(who);
@@ -96,7 +89,7 @@ class local_group : public group
 		return new group::subscription(0, 0);
 	}
 
-	virtual void unsubscribe(const actor& who)
+	virtual void unsubscribe(const actor_ptr& who)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		auto i = find(who);
@@ -110,9 +103,9 @@ class local_group : public group
 
 //local_group* m_local_group = new local_group;
 
-local_group m_local_group;
+intrusive_ptr<local_group> m_local_group;
 
-group& local(const char*)
+intrusive_ptr<local_group> local(const char*)
 {
 	return m_local_group;
 }
@@ -145,18 +138,7 @@ struct storage
 
 };
 
-/*
-template<typename... Args>
-void send(std::list<actor>& actors, const Args&... args)
-{
-	for (auto i = actors.begin(); i != actors.end(); ++i)
-	{
-		i->send(args...);
-	}
-}
-*/
-
-void foo_actor()
+void foo_actor_ptr()
 {
 	receive(on<int>() >> [](int i) {
 		reply(i);
@@ -170,13 +152,13 @@ std::size_t test__local_group()
 
 	std::list<intrusive_ptr<group::subscription>> m_subscriptions;
 
-	group& lg = local("foobar");
+	auto lg = local("foobar");
 	for (int i = 0; i < 5; ++i)
 	{
-		m_subscriptions.push_back(lg.subscribe(spawn(foo_actor)));
+		m_subscriptions.push_back(lg->subscribe(spawn(foo_actor_ptr)));
 	}
 
-	lg.send(1);
+	send(lg, 1);
 
 	int result = 0;
 
