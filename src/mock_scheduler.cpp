@@ -106,7 +106,7 @@ struct actor_impl : context
 		m_mbox.enqueue(msg);
 	}
 
-	virtual void link(const intrusive_ptr<actor>&) { }
+	virtual void link_to(const intrusive_ptr<actor>&) { }
 
 	virtual void unlink(const intrusive_ptr<actor>&) { }
 
@@ -128,6 +128,11 @@ boost::condition_variable m_ra_cv;
 
 void run_actor_impl(intrusive_ptr<actor_impl> m_impl)
 {
+	{
+		actor_impl* self_ptr = m_impl.get();
+		self_ptr->ref();
+		m_this_context.reset(self_ptr);
+	}
 	actor_behavior* ab = m_impl->m_behavior;
 	if (ab)
 	{

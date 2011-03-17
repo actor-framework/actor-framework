@@ -1,4 +1,4 @@
 CXX = /opt/local/bin/g++-mp-4.5
-#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/
-CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
+CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/
+#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
 LIBS = -L/opt/local/lib -lboost_thread-mt

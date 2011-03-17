@@ -103,7 +103,7 @@ class local_group : public group
 
 //local_group* m_local_group = new local_group;
 
-intrusive_ptr<local_group> m_local_group;
+intrusive_ptr<local_group> m_local_group(new local_group);
 
 intrusive_ptr<local_group> local(const char*)
 {
@@ -138,10 +138,22 @@ struct storage
 
 };
 
-void foo_actor_ptr()
+void consumer(actor_ptr main_actor)
 {
-	receive(on<int>() >> [](int i) {
-		reply(i);
+	int result = 0;
+	for (int i = 0; i < 5; ++i)
+	{
+		receive(on<int>() >> [&](int x) {
+			result += x;
+		});
+	}
+	send(main_actor, result);
+}
+
+void producer(actor_ptr consume_actor)
+{
+	receive(on<int>() >> [&](int i) {
+		send(consume_actor, i);
 	});
 }
 
@@ -152,24 +164,25 @@ std::size_t test__local_group()
 
 	std::list<intrusive_ptr<group::subscription>> m_subscriptions;
 
+	auto self_ptr = self();
+
+	auto consume_actor = spawn([=]() { consumer(self_ptr); });
+
 	auto lg = local("foobar");
 	for (int i = 0; i < 5; ++i)
 	{
-		m_subscriptions.push_back(lg->subscribe(spawn(foo_actor_ptr)));
+		auto fa = spawn([=]() { producer(consume_actor); });
+		auto sptr = lg->subscribe(fa);
+		m_subscriptions.push_back(sptr);
 	}
 
 	send(lg, 1);
 
-	int result = 0;
+	await_all_actors_done();
 
-	for (int i = 0; i < 5; ++i)
-	{
-		receive(on<int>() >> [&result](int x) {
-			result += x;
-		});
-	}
-
-	CPPA_CHECK_EQUAL(result, 5);
+	receive(on<int>() >> [&](int x) {
+		CPPA_CHECK_EQUAL(x, 5);
+	});
 
 	return CPPA_TEST_RESULT;
 

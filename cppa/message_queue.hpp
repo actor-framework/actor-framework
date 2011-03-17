@@ -8,11 +8,12 @@ namespace cppa { class invoke_rules; }
 
 namespace cppa {
 
-class message_queue : public channel
+class message_queue
 {
 
  public:
 
+	virtual void enqueue(const message&) = 0;
 	virtual const message& dequeue() = 0;
 	virtual void dequeue(invoke_rules&) = 0;
 	virtual bool try_dequeue(message&) = 0;

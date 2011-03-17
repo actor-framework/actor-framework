@@ -10,7 +10,7 @@ class actor : public channel
 
  public:
 
-	virtual void link(const intrusive_ptr<actor>& other) = 0;
+	virtual void link_to(const intrusive_ptr<actor>& other) = 0;
 
 };
 
