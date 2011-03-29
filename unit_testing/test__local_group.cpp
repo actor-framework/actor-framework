@@ -4,6 +4,7 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/group.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
@@ -21,47 +22,13 @@ using namespace cppa;
 
 namespace {
 
-struct group : channel
-{
-
-	// NOT thread safe
-	class subscription : public detail::ref_counted_impl<std::size_t>
-	{
-
-		actor_ptr m_self;
-		intrusive_ptr<group> m_group;
-
-	 public:
-
-		subscription() = delete;
-		subscription(const subscription&) = delete;
-		subscription& operator=(const subscription&) = delete;
-
-		subscription(const actor_ptr& s, const intrusive_ptr<group>& g)
-			: m_self(s), m_group(g)
-		{
-		}
-
-		~subscription()
-		{
-			m_group->unsubscribe(m_self);
-		}
-
-	};
-
-	virtual intrusive_ptr<subscription> subscribe(const actor_ptr& who) = 0;
-
-	virtual void unsubscribe(const actor_ptr& who) = 0;
-
-};
-
 class local_group : public group
 {
 
 	boost::mutex m_mtx;
-	std::list<actor_ptr> m_subscribers;
+	std::list<channel_ptr> m_subscribers;
 
-	inline std::list<actor_ptr>::iterator find(const actor_ptr& what)
+	inline std::list<channel_ptr>::iterator find(const channel_ptr& what)
 	{
 		return std::find(m_subscribers.begin(), m_subscribers.end(), what);
 	}
@@ -77,7 +44,7 @@ class local_group : public group
 		}
 	}
 
-	virtual intrusive_ptr<group::subscription> subscribe(const actor_ptr& who)
+	virtual intrusive_ptr<group::subscription> subscribe(const channel_ptr& who)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		auto i = find(who);
@@ -89,7 +56,7 @@ class local_group : public group
 		return new group::subscription(0, 0);
 	}
 
-	virtual void unsubscribe(const actor_ptr& who)
+	virtual void unsubscribe(const channel_ptr& who)
 	{
 		boost::mutex::scoped_lock guard(m_mtx);
 		auto i = find(who);
@@ -164,14 +131,14 @@ std::size_t test__local_group()
 
 	std::list<intrusive_ptr<group::subscription>> m_subscriptions;
 
-	auto self_ptr = self();
+	actor_ptr self_ptr = self();
 
-	auto consume_actor = spawn([=]() { consumer(self_ptr); });
+	auto consume_actor = spawn(consumer, self_ptr);
 
 	auto lg = local("foobar");
 	for (int i = 0; i < 5; ++i)
 	{
-		auto fa = spawn([=]() { producer(consume_actor); });
+		auto fa = spawn(producer, consume_actor);
 		auto sptr = lg->subscribe(fa);
 		m_subscriptions.push_back(sptr);
 	}

@@ -1,7 +1,9 @@
 #ifndef CPPA_HPP
 #define CPPA_HPP
 
+#include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
@@ -13,7 +15,7 @@
 namespace cppa {
 
 template<typename F>
-actor_ptr spawn(F fun, scheduling_hint hint = scheduled)
+actor_ptr spawn(scheduling_hint hint, F fun)
 {
 	struct fun_behavior : actor_behavior
 	{
@@ -27,9 +29,27 @@ actor_ptr spawn(F fun, scheduling_hint hint = scheduled)
 	return detail::scheduler::spawn(new fun_behavior(fun), hint);
 }
 
-inline actor_ptr spawn(actor_behavior* ab, scheduling_hint hint = scheduled)
+template<typename F, typename Arg0, typename... Args>
+actor_ptr spawn(scheduling_hint hint, F fun, const Arg0& arg0, const Args&... args)
+{
+	auto arg_tuple = make_tuple(arg0, args...);
+	return spawn(hint, [=]() { invoke(fun, arg_tuple); });
+}
+
+template<typename F, typename... Args>
+inline actor_ptr spawn(F fun, const Args&... args)
+{
+	return spawn(scheduled, fun, args...);
+}
+
+inline actor_ptr spawn(scheduling_hint hint, actor_behavior* ab)
 {
 	return detail::scheduler::spawn(ab, hint);
+}
+
+inline actor_ptr spawn(actor_behavior* ab)
+{
+	return detail::scheduler::spawn(ab, scheduled);
 }
 
 inline context* self()

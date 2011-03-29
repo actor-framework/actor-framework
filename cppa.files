@@ -96,3 +96,5 @@ cppa/message_queue.hpp
 cppa/cppa.hpp
 cppa/scheduling_hint.hpp
 src/actor_behavior.cpp
+cppa/group.hpp
+src/group.cpp

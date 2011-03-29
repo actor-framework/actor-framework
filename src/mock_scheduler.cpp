@@ -1,3 +1,6 @@
+#include <set>
+#include <map>
+
 #include <boost/thread.hpp>
 
 #include "cppa/message.hpp"
@@ -90,11 +93,17 @@ struct mbox : message_queue
 struct actor_impl : context
 {
 
+	actor_behavior* m_behavior;
+	bool m_exited;
+
+	// guards m_exited, m_grp_lst and m_links
+	boost::mutex m_mtx;
+	std::map<group_ptr, intrusive_ptr<group::subscription> > m_grp_lst;
+	std::set<actor_ptr> m_links;
+
 	mbox m_mbox;
 
-	actor_behavior* m_behavior;
-
-	actor_impl(actor_behavior* b = 0) : m_behavior(b) { }
+	actor_impl(actor_behavior* b = 0) : m_behavior(b), m_exited(false) { }
 
 	~actor_impl()
 	{
@@ -106,9 +115,59 @@ struct actor_impl : context
 		m_mbox.enqueue(msg);
 	}
 
-	virtual void link_to(const intrusive_ptr<actor>&) { }
+	virtual void link(intrusive_ptr<actor>& other)
+	{
+		boost::mutex::scoped_lock guard(m_mtx);
+		if (other && !m_exited && other->establish_backlink(this))
+		{
+			m_links.insert(other);
+		}
+	}
 
-	virtual void unlink(const intrusive_ptr<actor>&) { }
+	virtual bool remove_backlink(const intrusive_ptr<actor>& other)
+	{
+		if (other && other != this)
+		{
+			boost::mutex::scoped_lock guard(m_mtx);
+			return m_links.erase(other) > 0;
+		}
+		return false;
+	}
+
+
+	virtual bool establish_backlink(const intrusive_ptr<actor>& other)
+	{
+		if (other && other != this)
+		{
+			boost::mutex::scoped_lock guard(m_mtx);
+			return m_links.insert(other).second;
+		}
+		return false;
+	}
+
+	virtual void unlink(intrusive_ptr<actor>& other)
+	{
+		boost::mutex::scoped_lock guard(m_mtx);
+		if (other && !m_exited && other->remove_backlink(this))
+		{
+			m_links.erase(other);
+		}
+	}
+
+	virtual void join(group_ptr& what)
+	{
+		boost::mutex::scoped_lock guard(m_mtx);
+		if (!m_exited && m_grp_lst.count(what) == 0)
+		{
+			m_grp_lst[what] = what->subscribe(this);
+		}
+	}
+
+	virtual void leave(const group_ptr& what)
+	{
+		boost::mutex::scoped_lock guard(m_mtx);
+		m_grp_lst.erase(what);
+	}
 
 	virtual message_queue& mailbox()
 	{

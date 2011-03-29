@@ -9,22 +9,62 @@ class comparable
 
 	friend bool operator==(const Subclass& lhs, const T& rhs)
 	{
-		return lhs.equal_to(rhs);
+		return lhs.compare(rhs) == 0;
 	}
 
 	friend bool operator==(const T& lhs, const Subclass& rhs)
 	{
-		return rhs.equal_to(lhs);
+		return rhs.compare(lhs) == 0;
 	}
 
 	friend bool operator!=(const Subclass& lhs, const T& rhs)
 	{
-		return !lhs.equal_to(rhs);
+		return lhs.compare(rhs) != 0;
 	}
 
 	friend bool operator!=(const T& lhs, const Subclass& rhs)
 	{
-		return !rhs.equal_to(lhs);
+		return rhs.compare(lhs) != 0;
+	}
+
+	friend bool operator<(const Subclass& lhs, const T& rhs)
+	{
+		return lhs.compare(rhs) < 0;
+	}
+
+	friend bool operator>(const Subclass& lhs, const T& rhs)
+	{
+		return lhs.compare(rhs) > 0;
+	}
+
+	friend bool operator<(const T& lhs, const Subclass& rhs)
+	{
+		return rhs > lhs;
+	}
+
+	friend bool operator>(const T& lhs, const Subclass& rhs)
+	{
+		return rhs < lhs;
+	}
+
+	friend bool operator<=(const Subclass& lhs, const T& rhs)
+	{
+		return lhs.compare(rhs) <= 0;
+	}
+
+	friend bool operator>=(const Subclass& lhs, const T& rhs)
+	{
+		return lhs.compare(rhs) >= 0;
+	}
+
+	friend bool operator<=(const T& lhs, const Subclass& rhs)
+	{
+		return rhs >= lhs;
+	}
+
+	friend bool operator>=(const T& lhs, const Subclass& rhs)
+	{
+		return rhs <= lhs;
 	}
 
 };
@@ -35,12 +75,32 @@ class comparable<Subclass, Subclass>
 
 	friend bool operator==(const Subclass& lhs, const Subclass& rhs)
 	{
-		return lhs.equal_to(rhs);
+		return lhs.compare(rhs) == 0;
 	}
 
 	friend bool operator!=(const Subclass& lhs, const Subclass& rhs)
 	{
-		return !lhs.equal_to(rhs);
+		return lhs.compare(rhs) != 0;
+	}
+
+	friend bool operator<(const Subclass& lhs, const Subclass& rhs)
+	{
+		return lhs.compare(rhs) < 0;
+	}
+
+	friend bool operator<=(const Subclass& lhs, const Subclass& rhs)
+	{
+		return lhs.compare(rhs) <= 0;
+	}
+
+	friend bool operator>(const Subclass& lhs, const Subclass& rhs)
+	{
+		return lhs.compare(rhs) > 0;
+	}
+
+	friend bool operator>=(const Subclass& lhs, const Subclass& rhs)
+	{
+		return lhs.compare(rhs) >= 0;
 	}
 
 };

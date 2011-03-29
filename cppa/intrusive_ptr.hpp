@@ -1,6 +1,7 @@
 #ifndef INTRUSIVE_PTR_HPP
 #define INTRUSIVE_PTR_HPP
 
+#include <cstddef>
 #include <algorithm>
 #include <stdexcept>
 #include <type_traits>
@@ -125,6 +126,17 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 
 	inline explicit operator bool() const { return m_ptr != 0; }
 
+	inline ptrdiff_t compare(const T* ptr) const
+	{
+		return static_cast<ptrdiff_t>(get() - ptr);
+	}
+
+	inline ptrdiff_t compare(const intrusive_ptr& other) const
+	{
+		return compare(other.get());
+	}
+
+	/*
 	inline bool equal_to(const T* ptr) const
 	{
 		return get() == ptr;
@@ -134,6 +146,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 	{
 		return get() == other.get();
 	}
+	*/
 
 };
 

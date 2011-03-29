@@ -13,8 +13,6 @@ class context : public actor
 
 	virtual message_queue& mailbox() = 0;
 
-	virtual void unlink(const actor_ptr& other) = 0;
-
 };
 
 } // namespace cppa

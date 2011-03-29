@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include "cppa/actor.hpp"
 #include "cppa/deserializer.hpp"
 
 namespace cppa {
@@ -9,6 +10,11 @@ deserializer::deserializer(const intrusive_ptr<util::source>& src) : m_src(src)
 }
 
 } // namespace cppa
+
+cppa::deserializer& operator>>(cppa::deserializer& d, cppa::actor_ptr& aptr)
+{
+	return d;
+}
 
 cppa::deserializer& operator>>(cppa::deserializer& d, std::string& str)
 {
