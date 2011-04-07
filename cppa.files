@@ -98,3 +98,10 @@ cppa/scheduling_hint.hpp
 src/actor_behavior.cpp
 cppa/group.hpp
 src/group.cpp
+queue_performances/main.cpp
+queue_performances/sutter_list.hpp
+queue_performances/defines.hpp
+queue_performances/cached_stack.hpp
+queue_performances/blocking_cached_stack.hpp
+queue_performances/blocking_cached_stack2.hpp
+queue_performances/blocking_sutter_list.hpp

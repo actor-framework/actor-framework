@@ -2,3 +2,6 @@
 *.o
 *.dylib
 test
+*.png
+*.dat
+queue_test
