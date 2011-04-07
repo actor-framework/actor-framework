@@ -1,0 +1,19 @@
+set terminal png
+set output "graph.png"
+unset log
+unset label
+set xtic auto
+set ytic auto
+set xlabel "# messages (in 1,000,000)"
+set ylabel "time (s)"
+set format y "%8.2f"
+plot \
+	 "blocking_sutter_list.dat" using 1:2:3 title 'blocking sutter_list' lt 5 with errorbars, \
+     "blocking_sutter_list.dat" notitle lt 5 with lines, \
+	 "sutter_list.dat" using 1:2:3 title 'polling sutter_list' lt 3 with errorbars, \
+     "sutter_list.dat" notitle lt 3 with lines, \
+     "blocking_cached_stack.dat" using 1:2:3 title 'blocking cached_stack' lt 4 with errorbars, \
+	 "blocking_cached_stack.dat" notitle lt 4 with lines, \
+	 "cached_stack.dat" using 1:2:3 title 'polling cached_stack' lt 2 with errorbars, \
+	 "cached_stack.dat" notitle lt 2 with lines
+quit
