@@ -1,19 +1,42 @@
-set terminal png
-set output "graph.png"
+# Undefined variables: TITLE, FILE
+#
+# example:
+# gnuplot -e "FILE='graph.png';TITLE='foobaz'" gnuplot_file
+
+#set font "Arial"
+#set terminal png
+set terminal png font "Andale Mono"
+#set output "graph.png"
+set output FILE
 unset log
 unset label
-set xtic auto
+#set xtic auto
+set xtic 10
 set ytic auto
 set xlabel "# messages (in 1,000,000)"
-set ylabel "time (s)"
+set ylabel "time (in seconds)"
 set format y "%8.2f"
+set xrange [1:110]
+set yrange [0:120]
+set grid
+
+#set title "2.66 GHz i7 (dual core) with 8 producer threads"
+set title TITLE
+
+#	 "blocking_sutter_list.dat" using 1:2:3 title 'blocking sutter_list' lt 5 with errorbars, \
+#	 "blocking_sutter_list.dat" notitle lt 5 with lines, \
+#     "blocking_cached_stack.dat" using 1:2:3 title 'blocking cached_stack' lt 4 with errorbars, \
+#	 "blocking_cached_stack.dat" notitle lt 4 with lines, \
+#	 "sutter_list.dat" using 1:2:3 title 'sutter_list' lt 3 with errorbars, \
+#     "sutter_list.dat" notitle lt 3 with lines, \
+
 plot \
-	 "blocking_sutter_list.dat" using 1:2:3 title 'blocking sutter_list' lt 5 with errorbars, \
-     "blocking_sutter_list.dat" notitle lt 5 with lines, \
-	 "sutter_list.dat" using 1:2:3 title 'polling sutter_list' lt 3 with errorbars, \
-     "sutter_list.dat" notitle lt 3 with lines, \
-     "blocking_cached_stack.dat" using 1:2:3 title 'blocking cached_stack' lt 4 with errorbars, \
-	 "blocking_cached_stack.dat" notitle lt 4 with lines, \
-	 "cached_stack.dat" using 1:2:3 title 'polling cached_stack' lt 2 with errorbars, \
+	 "intrusive_sutter_list.dat" using 1:2:3 title 'spinlock list' lt 4 with errorbars, \
+     "intrusive_sutter_list.dat" notitle lt 4 with lines, \
+	 "lockfree_list.dat" using 1:2:3 title 'lockfree list' lt 1 with errorbars, \
+	 "lockfree_list.dat" notitle lt 1 with lines, \
+	 "michael_scott_lockfree.dat" using 1:2:3 title 'michael & scott' lt 3 with errorbars, \
+	 "michael_scott_lockfree.dat" notitle lt 3 with lines, \
+	 "cached_stack.dat" using 1:2:3 title 'cached stack' lt 2 with errorbars, \
 	 "cached_stack.dat" notitle lt 2 with lines
 quit

@@ -5,3 +5,5 @@ test
 *.png
 *.dat
 queue_test
+8threads
+4threads

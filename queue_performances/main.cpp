@@ -10,7 +10,9 @@
 
 #include "sutter_list.hpp"
 #include "cached_stack.hpp"
+#include "lockfree_list.hpp"
 #include "blocking_sutter_list.hpp"
+#include "intrusive_sutter_list.hpp"
 #include "blocking_cached_stack.hpp"
 #include "blocking_cached_stack2.hpp"
 
@@ -39,12 +41,13 @@ template<typename Queue, typename Processor>
 void consumer(Queue& q, Processor& p, size_t num_messages)
 {
 	// vector<bool> scales better (in memory) than bool[num_messages]
-	std::vector<bool> received(num_messages);
-	for (size_t i = 0; i < num_messages; ++i) received[i] = false;
+//	std::vector<bool> received(num_messages);
+//	for (size_t i = 0; i < num_messages; ++i) received[i] = false;
 	for (size_t i = 0; i < num_messages; ++i)
 	{
 		size_t value;
 		p(q.pop(), value);
+		/*
 		if (value >= num_messages)
 		{
 			throw std::runtime_error("value out of bounds");
@@ -56,6 +59,7 @@ void consumer(Queue& q, Processor& p, size_t num_messages)
 			throw std::runtime_error(oss.str());
 		}
 		received[value] = true;
+		*/
 	}
 	// done
 }
@@ -64,14 +68,15 @@ void usage()
 {
 	cout << "usage:" << endl
 		 << "queue_test [messages] [producer threads] "
-		 << "[list impl.] {format string}"
-		 << endl
+			"[list impl.] {format string}" << endl
 		 << "    available implementations:" << endl
 		 << "    - sutter_list" << endl
+		 << "    - intrusive_sutter_list" << endl
 		 << "    - blocking_sutter_list" << endl
 		 << "    - cached_stack" << endl
 		 << "    - blocking_cached_stack" << endl
 		 << "    - blocking_cached_stack2" << endl
+		 << "    - lockfree_list" << endl
 		 << endl
 		 << "    possible format string variables: " << endl
 		 << "    - $MESSAGES" << endl
@@ -155,6 +160,35 @@ int main(int argc, char** argv)
 				[] (size_t* value, size_t& storage) {
 					storage = *value;
 					delete value;
+				}
+			);
+	}
+	else if (list_name == "intrusive_sutter_list")
+	{
+		typedef intrusive_sutter_list<size_t> isl;
+		elapsed_time = run_test<isl>(
+				num_messages,
+				num_producers,
+				[] (size_t value) -> isl::node* {
+					return new isl::node(value);
+				},
+				[] (const size_t& value, size_t& storage) {
+					storage = value;
+				}
+			);
+	}
+
+	else if (list_name == "lockfree_list")
+	{
+		typedef lockfree_list<size_t> isl;
+		elapsed_time = run_test<isl>(
+				num_messages,
+				num_producers,
+				[] (size_t value) -> isl::node* {
+					return new isl::node(value);
+				},
+				[] (const size_t& value, size_t& storage) {
+					storage = value;
 				}
 			);
 	}
