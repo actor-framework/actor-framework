@@ -56,7 +56,6 @@ HEADERS = cppa/actor.hpp \
 
 SOURCES = src/actor_behavior.cpp \
 		  src/channel.cpp \
-		  src/decorated_tuple.cpp \
 		  src/deserializer.cpp \
 		  src/group.cpp \
 		  src/mock_scheduler.cpp \

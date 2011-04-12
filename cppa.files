@@ -23,7 +23,6 @@ cppa/util/utype_iterator.hpp
 cppa/detail/matcher.hpp
 cppa/detail/tuple_vals.hpp
 cppa/match.hpp
-src/decorated_tuple.cpp
 cppa/detail/decorated_tuple.hpp
 cppa/cow_ptr.hpp
 cppa/util/detach.hpp
@@ -107,3 +106,4 @@ queue_performances/blocking_cached_stack2.hpp
 queue_performances/blocking_sutter_list.hpp
 queue_performances/lockfree_list.hpp
 queue_performances/intrusive_sutter_list.hpp
+cppa/detail/cpp0x_thread_wrapper.hpp

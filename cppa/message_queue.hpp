@@ -3,12 +3,12 @@
 
 #include "cppa/channel.hpp"
 
-// forward declaration
-namespace cppa { class invoke_rules; }
-
 namespace cppa {
 
-class message_queue
+// forward declaration
+class invoke_rules;
+
+class message_queue : public channel
 {
 
  public:

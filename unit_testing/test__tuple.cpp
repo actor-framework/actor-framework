@@ -210,7 +210,7 @@ std::size_t test__tuple()
 	reset_invoke_states();
 
 	{
-		any_type* x = 0;
+		any_type* x = nullptr;
 		CPPA_CHECK(x == any_val);
 		CPPA_CHECK(any_val == x);
 		CPPA_CHECK(any_val == 42);

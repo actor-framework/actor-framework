@@ -70,7 +70,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 		std::swap(m_ptr, other.m_ptr);
 	}
 
-	void reset(T* new_value = 0)
+	void reset(T* new_value = nullptr)
 	{
 		if (m_ptr && !m_ptr->deref()) delete m_ptr;
 		set_ptr(new_value);
@@ -112,7 +112,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 		static_assert(std::is_convertible<Y*, T*>::value,
 					  "Y* is not assignable to T*");
 		m_ptr = other.m_ptr;
-		other.m_ptr = 0;
+		other.m_ptr = nullptr;
 		return *this;
 	}
 
@@ -124,7 +124,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
 
 	const T& operator*() const { return *m_ptr; }
 
-	inline explicit operator bool() const { return m_ptr != 0; }
+	inline explicit operator bool() const { return m_ptr != nullptr; }
 
 	inline ptrdiff_t compare(const T* ptr) const
 	{

@@ -78,7 +78,7 @@ struct int_helper<8, false>
 template<typename T>
 struct uniform_int : int_helper<sizeof(T), std::numeric_limits<T>::is_signed>{};
 
-std::map<std::string, cppa::utype*>* ut_map = 0;
+std::map<std::string, cppa::utype*>* ut_map = nullptr;
 
 #ifdef CPPA_GCC
 template<typename T>
@@ -95,13 +95,11 @@ std::string raw_name()
 }
 #elif defined(CPPA_WINDOWS)
 template<typename T>
-const char* raw_name()
+inline const char* raw_name()
 {
 	return typeid(T).name();
 }
 #endif
-
-//string_map* btm_ptr = 0;
 
 std::unique_ptr<string_map> btm_ptr;
 
@@ -215,6 +213,7 @@ std::string demangle_impl(const char* begin, const char* end, size_t size)
 				break;
 
 			case ' ':
+				// the VC++ compiler adds "class" and "struct" before type names
 				if (tmp == "class" || tmp == "struct")
 				{
 					tmp.clear();
@@ -243,7 +242,7 @@ std::string demangle(const char* decorated_type_name)
 	std::vector<std::string> needles;
 	needles.push_back("class ");
 	needles.push_back("struct ");
-	// the VC++ compiler adds "class " and "struct " before a type names
+	// the VC++ compiler adds "class " and "struct " before type names
 	for (size_t i = 0; i < needles.size(); ++i)
 	{
 		const std::string& needle = needles[i];

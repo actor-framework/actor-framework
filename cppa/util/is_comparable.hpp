@@ -19,15 +19,18 @@ class is_comparable
 
 	template<typename A, typename B>
 	static bool cmp_help_fun(const A* arg0, const B* arg1,
-							 decltype(*arg0 == *arg1)* = 0)
+							 decltype(*arg0 == *arg1)* = nullptr)
 	{
 		return true;
 	}
 
 	template<typename A, typename B>
-	static void cmp_help_fun(const A*, const B*, void* = 0) { }
+	static void cmp_help_fun(const A*, const B*, void* = nullptr) { }
 
-	typedef decltype(cmp_help_fun((T1*) 0, (T2*) 0, (bool*) 0)) result_type;
+	typedef decltype(cmp_help_fun(static_cast<T1*>(nullptr),
+								  static_cast<T2*>(nullptr),
+								  static_cast<bool*>(nullptr)))
+			result_type;
 
  public:
 

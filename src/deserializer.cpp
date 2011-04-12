@@ -11,7 +11,7 @@ deserializer::deserializer(const intrusive_ptr<util::source>& src) : m_src(src)
 
 } // namespace cppa
 
-cppa::deserializer& operator>>(cppa::deserializer& d, cppa::actor_ptr& aptr)
+cppa::deserializer& operator>>(cppa::deserializer& d, cppa::actor_ptr&)
 {
 	return d;
 }

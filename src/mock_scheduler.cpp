@@ -1,6 +1,14 @@
 #include <set>
 #include <map>
 
+#ifdef __APPLE__
+#include "cppa/detail/cpp0x_thread_wrapper.hpp"
+#else
+#include <thread>
+#endif
+
+// for thread_specific_ptr
+// needed unless the new keyword "thread_local" works in GCC
 #include <boost/thread.hpp>
 
 #include "cppa/message.hpp"
@@ -103,7 +111,7 @@ struct actor_impl : context
 
 	mbox m_mbox;
 
-	actor_impl(actor_behavior* b = 0) : m_behavior(b), m_exited(false) { }
+	actor_impl(actor_behavior* b = nullptr) : m_behavior(b), m_exited(false) { }
 
 	~actor_impl()
 	{

@@ -14,6 +14,7 @@ std::string demangle(const char*);
 
 std::map<std::string, utype*>& uniform_types();
 
+// default implementation of utype
 template<typename T>
 class utype_impl : public utype
 {

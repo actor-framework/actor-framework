@@ -15,7 +15,7 @@ struct matcher<Head, Tail...>
 {
 	static bool match(util::utype_iterator& begin,
 					  util::utype_iterator& end,
-					  std::vector<std::size_t>* res = 0,
+					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
 		if (begin != end)
@@ -40,7 +40,7 @@ struct matcher<any_type, Tail...>
 {
 	static bool match(util::utype_iterator &begin,
 					  util::utype_iterator &end,
-					  std::vector<std::size_t>* res = 0,
+					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
 		if (begin != end)
@@ -58,14 +58,14 @@ struct matcher<any_type*, Next, Tail...>
 {
 	static bool match(util::utype_iterator &begin,
 					  util::utype_iterator &end,
-					  std::vector<std::size_t>* res = 0,
+					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
 		bool result = false;
 		while (!result)
 		{
 			util::utype_iterator begin_cpy = begin;
-			result = matcher<Next, Tail...>::match(begin_cpy, end, 0, pos);
+			result = matcher<Next, Tail...>::match(begin_cpy,end,nullptr,pos);
 			if (!result)
 			{
 				++begin;
@@ -88,7 +88,7 @@ struct matcher<any_type*>
 {
 	static bool match(util::utype_iterator&,
 					  util::utype_iterator&,
-					  std::vector<std::size_t>* = 0,
+					  std::vector<std::size_t>* = nullptr,
 					  std::size_t = 0)
 	{
 		return true;
@@ -100,7 +100,7 @@ struct matcher<>
 {
 	static bool match(util::utype_iterator& begin,
 					  util::utype_iterator& end,
-					  std::vector<std::size_t>* = 0,
+					  std::vector<std::size_t>* = nullptr,
 					  std::size_t = 0)
 	{
 		return begin == end;

@@ -113,8 +113,7 @@ class single_reader_queue
  private:
 
 	// exposed to "outside" access
-
-	atomic<element_type*> m_tail;
+	std::atomic<element_type*> m_tail;
 
 	// accessed only by the owner
 	element_type* m_head;

@@ -68,7 +68,7 @@ class cow_ptr
 
 	const T& operator*() const { return *m_ptr.get(); }
 
-	explicit operator bool() const { return m_ptr.get() != 0; }
+	explicit operator bool() const { return m_ptr.get() != nullptr; }
 
 };
 

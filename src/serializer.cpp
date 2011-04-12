@@ -11,7 +11,7 @@ serializer::serializer(const intrusive_ptr<util::sink>& dsink) : m_sink(dsink)
 
 } // namespace cppa
 
-cppa::serializer& operator<<(cppa::serializer& s, const cppa::actor_ptr& aptr)
+cppa::serializer& operator<<(cppa::serializer& s, const cppa::actor_ptr&)
 {
 	return s;
 }
