@@ -1,5 +1,6 @@
 #include <map>
 #include <set>
+#include <locale>
 #include <string>
 #include <atomic>
 #include <limits>
@@ -14,19 +15,24 @@
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/default_object_base.hpp"
+#include "cppa/util/void_type.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/default_object_impl.hpp"
+#include "cppa/detail/default_uniform_type_info_impl.hpp"
+
+using cppa::util::void_type;
 
 namespace std {
 
-inline ostream& operator<<(ostream& o, const cppa::any_type&) { return o; }
-inline istream& operator>>(istream& i, cppa::any_type&) { return i; }
+ostream& operator<<(ostream& o, const cppa::any_type&) { return o; }
+istream& operator>>(istream& i, cppa::any_type&) { return i; }
 
-inline ostream& operator<<(ostream& o, const cppa::actor_ptr&) { return o; }
-inline istream& operator>>(istream& i, cppa::actor_ptr&) { return i; }
+ostream& operator<<(ostream& o, const cppa::actor_ptr&) { return o; }
+istream& operator>>(istream& i, cppa::actor_ptr&) { return i; }
+
+ostream& operator<<(ostream& o, const cppa::util::void_type&) { return o; }
+istream& operator>>(istream& i, cppa::util::void_type&) { return i; }
 
 } // namespace std
 
@@ -41,37 +47,78 @@ inline const char* raw_name(const std::type_info& tinfo)
 #endif
 }
 
-class wstring_obj : public cppa::util::default_object_base<std::wstring>
+class wstring_utype : public cppa::uniform_type_info
 {
 
-	typedef cppa::util::default_object_base<std::wstring> super;
+	typedef std::ctype<wchar_t> wchar_ctype;
+
+	inline std::wstring& to_ref(cppa::object& what) const
+	{
+		return *reinterpret_cast<std::wstring*>(this->value_of(what));
+	}
+
+	inline const std::wstring& to_ref(const cppa::object& what) const
+	{
+		return *reinterpret_cast<const std::wstring*>(this->value_of(what));
+	}
+
+	const wchar_ctype& m_facet;
+
+ protected:
+
+	cppa::object copy(const cppa::object& what) const
+	{
+		return { new std::wstring(to_ref(what)), this };
+	}
+
+	cppa::object from_string(const std::string& str) const
+	{
+		std::vector<wchar_t> wstr_buf(str.size());
+		m_facet.widen(str.data(), str.data() + str.size(), &wstr_buf[0]);
+		return { new std::wstring(&wstr_buf[0], wstr_buf.size()), this };
+	}
+
+	std::string to_string(const cppa::object& obj) const
+	{
+		const std::wstring& wstr = to_ref(obj);
+		std::string result(wstr.size(), ' ');
+		m_facet.narrow(wstr.c_str(), wstr.c_str() + wstr.size(), '?',
+					   &result[0]);
+		return std::move(result);
+	}
+
+	void destroy(cppa::object& what) const
+	{
+		delete reinterpret_cast<std::wstring*>(value_of(what));
+		value_of(what) = nullptr;
+	}
+
+	void deserialize(cppa::deserializer& d, cppa::object& what) const
+	{
+	}
+
+	bool equal(const cppa::object& lhs, const cppa::object& rhs) const
+	{
+		return (lhs.type() == *this && rhs.type() == *this)
+			   ? to_ref(lhs) == to_ref(rhs)
+			   : false;
+	}
+
+	void serialize(cppa::serializer& s, const cppa::object& what) const
+	{
+	}
 
  public:
 
-	wstring_obj(const cppa::uniform_type_info* uti) : super(uti) { }
-
-	void deserialize(cppa::deserializer&)
+	wstring_utype()
+		: cppa::uniform_type_info(typeid(std::wstring))
+		, m_facet(std::use_facet<wchar_ctype>(std::locale()))
 	{
-
 	}
 
-	void from_string(const std::string&)
+	cppa::object create() const
 	{
-
-	}
-
-	cppa::object* copy() const
-	{
-		return new wstring_obj(type());
-	}
-
-	std::string to_string() const
-	{
-		return "";
-	}
-
-	void serialize(cppa::serializer&) const
-	{
+		return { new std::wstring, this };
 	}
 
 };
@@ -126,15 +173,12 @@ class uniform_type_info_map
 	// maps uniform names to uniform type informations
 	uti_map m_by_uname;
 
-	template<typename ObjImpl>
-	void insert(const std::set<std::string>& tnames)
+	void insert(uniform_type_info* uti, const std::set<std::string>& tnames)
 	{
 		if (tnames.empty())
 		{
 			throw std::logic_error("tnames.empty()");
 		}
-		std::string uname = to_uniform_name(demangle(tnames.begin()->c_str()));
-		auto uti = new default_uniform_type_info_impl<ObjImpl>(uname);
 		for (const std::string& tname : tnames)
 		{
 			m_by_tname.insert(std::make_pair(tname, uti));
@@ -143,10 +187,15 @@ class uniform_type_info_map
 	}
 
 	template<typename T>
-	void insert()
+	inline void insert(const std::set<std::string>& tnames)
 	{
-		std::string tname(raw_name<T>());
-		insert<default_object_impl<T>>({tname});
+		insert(new default_uniform_type_info_impl<T>(), tnames);
+	}
+
+	template<typename T>
+	inline void insert()
+	{
+		insert<T>({ std::string(raw_name<T>()) });
 	}
 
  public:
@@ -154,13 +203,15 @@ class uniform_type_info_map
 	uniform_type_info_map()
 	{
 		insert<std::string>();
-		insert<wstring_obj>({std::string(raw_name<std::wstring>())});
+		//insert<wstring_obj>({std::string(raw_name<std::wstring>())});
+		insert(new wstring_utype, { std::string(raw_name<std::wstring>()) });
 		insert<float>();
+		insert<cppa::util::void_type>();
 		if (sizeof(double) == sizeof(long double))
 		{
 			std::string dbl = raw_name<double>();
 			std::string ldbl = raw_name<long double>();
-			insert<default_object_impl<double>>({ dbl, ldbl });
+			insert<double>({ dbl, ldbl });
 		}
 		else
 		{
@@ -196,15 +247,14 @@ class uniform_type_info_map
 			 wchar_t,
 			 char16_t,
 			 char32_t>(ints);
-		insert<default_object_impl<std::int8_t>>(ints[sizeof(std::int8_t)].first);
-		insert<default_object_impl<std::uint8_t>>(ints[sizeof(std::uint8_t)].second);
-		insert<default_object_impl<std::int16_t>>(ints[sizeof(std::int16_t)].first);
-		insert<default_object_impl<std::uint16_t>>(ints[sizeof(std::uint16_t)].second);
-		insert<default_object_impl<std::int32_t>>(ints[sizeof(std::int32_t)].first);
-		insert<default_object_impl<std::uint32_t>>(ints[sizeof(std::uint32_t)].second);
-		insert<default_object_impl<std::int64_t>>(ints[sizeof(std::int64_t)].first);
-		insert<default_object_impl<std::uint64_t>>(ints[sizeof(std::uint64_t)].second);
-		//insert<std::wstring>();
+		insert<std::int8_t>(ints[sizeof(std::int8_t)].first);
+		insert<std::uint8_t>(ints[sizeof(std::uint8_t)].second);
+		insert<std::int16_t>(ints[sizeof(std::int16_t)].first);
+		insert<std::uint16_t>(ints[sizeof(std::uint16_t)].second);
+		insert<std::int32_t>(ints[sizeof(std::int32_t)].first);
+		insert<std::uint32_t>(ints[sizeof(std::uint32_t)].second);
+		insert<std::int64_t>(ints[sizeof(std::int64_t)].first);
+		insert<std::uint64_t>(ints[sizeof(std::uint64_t)].second);
 	}
 
 	uniform_type_info* by_raw_name(const std::string& name)
@@ -277,8 +327,9 @@ inline int next_id() { return s_ids.fetch_add(1); }
 
 namespace cppa {
 
-uniform_type_info::uniform_type_info(const std::string& uniform_type_name)
-		: m_id(next_id()), m_name(uniform_type_name)
+uniform_type_info::uniform_type_info(const std::type_info& tinfo)
+	: m_id(next_id())
+	, m_name(detail::to_uniform_name(detail::demangle(raw_name(tinfo))))
 {
 }
 
@@ -319,9 +370,19 @@ bool uniform_type_info::announce(const std::type_info& plain_type,
 	return true;
 }
 
-std::vector<uniform_type_info*> uniform_type_info::get_all()
+std::vector<uniform_type_info*> uniform_type_info::instances()
 {
 	return detail::s_uniform_type_info_map().get_all();
+}
+
+uniform_type_info* uniform_typeid(const std::type_info& tinfo)
+{
+	return uniform_type_info::by_type_info(tinfo);
+}
+
+bool operator==(const uniform_type_info& lhs, const std::type_info& rhs)
+{
+	return lhs == *uniform_typeid(rhs);
 }
 
 } // namespace cppa

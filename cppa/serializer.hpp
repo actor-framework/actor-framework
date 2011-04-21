@@ -17,7 +17,7 @@ namespace cppa { namespace util {
 
 struct void_type;
 
-} } // namespace cppa::util
+} } // namespace util
 
 namespace cppa {
 
@@ -35,39 +35,44 @@ class serializer
 		m_sink->write(buf_size, buf);
 	}
 
+	template<typename T>
+	typename util::enable_if<std::is_integral<T>, void>::type
+	write_int(const T& value)
+	{
+		T tmp = detail::swap_bytes(value);
+		write(sizeof(T), &tmp);
+	}
+
 };
 
-} // namespace cppa
-
-cppa::serializer& operator<<(cppa::serializer&, const std::string&);
+serializer& operator<<(serializer&, const std::string&);
 
 template<typename T>
-typename cppa::util::enable_if<std::is_integral<T>, cppa::serializer&>::type
-operator<<(cppa::serializer& s, const T& value)
+typename util::enable_if<std::is_integral<T>, serializer&>::type
+operator<<(serializer& s, const T& value)
 {
-	T tmp = cppa::detail::swap_bytes(value);
-	s.write(sizeof(T), &tmp);
+	s.write_int(value);
 	return s;
 }
 
 template<typename T>
-typename cppa::util::enable_if<std::is_floating_point<T>,
-							   cppa::serializer&>::type
-operator<<(cppa::serializer& s, const T& value)
+typename util::enable_if<std::is_floating_point<T>, serializer&>::type
+operator<<(serializer& s, const T& value)
 {
 	s.write(sizeof(T), &value);
 	return s;
 }
 
-inline cppa::serializer& operator<<(cppa::serializer& s,
-									const cppa::util::void_type&)
+inline serializer& operator<<(serializer& s, const util::void_type&)
 {
 	return s;
 }
 
-inline cppa::serializer& operator<<(cppa::serializer& s, const cppa::any_type&)
+inline serializer& operator<<(serializer& s, const any_type&)
 {
 	return s;
 }
+
+} // namespace cppa
 
 #endif // SERIALIZER_HPP

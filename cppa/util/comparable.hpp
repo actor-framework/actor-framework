@@ -1,9 +1,17 @@
 #ifndef COMPARABLE_HPP
 #define COMPARABLE_HPP
 
-namespace cppa { namespace detail {
+namespace cppa { namespace util {
 
-// Barton–Nackman trick
+/**
+ * @brief Barton–Nackman trick implementation.
+ *
+ * @p Subclass must provide a @c compare member function that compares
+ * to instances of @p T and returns an integer @c x with:
+ * - <tt>x < 0</tt> if <tt>this < other</tt>
+ * - <tt>x > 0</tt> if <tt>this > other</tt>
+ * - <tt>x == 0</tt> if <tt>this == other</tt>
+ */
 template<typename Subclass, typename T = Subclass>
 class comparable
 {
@@ -106,6 +114,6 @@ class comparable<Subclass, Subclass>
 
 };
 
-} } // cppa::detail
+} } // cppa::util
 
 #endif // COMPARABLE_HPP

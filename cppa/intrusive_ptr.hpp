@@ -6,13 +6,13 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include <cppa/detail/comparable.hpp>
+#include <cppa/util/comparable.hpp>
 
 namespace cppa {
 
 template<typename T>
-class intrusive_ptr : detail::comparable<intrusive_ptr<T>, T*>,
-					  detail::comparable<intrusive_ptr<T>>
+class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
+					  util::comparable<intrusive_ptr<T>>
 {
 
 	T* m_ptr;

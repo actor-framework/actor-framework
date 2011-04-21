@@ -12,28 +12,28 @@ template<class C, typename Result, typename... Args>
 struct callable_trait<Result (C::*)(Args...) const>
 {
 	typedef Result result_type;
-	typedef util::type_list<Args...> arg_types;
+	typedef type_list<Args...> arg_types;
 };
 
 template<class C, typename Result, typename... Args>
 struct callable_trait<Result (C::*)(Args...)>
 {
 	typedef Result result_type;
-	typedef util::type_list<Args...> arg_types;
+	typedef type_list<Args...> arg_types;
 };
 
 template<typename Result, typename... Args>
 struct callable_trait<Result (Args...)>
 {
 	typedef Result result_type;
-	typedef util::type_list<Args...> arg_types;
+	typedef type_list<Args...> arg_types;
 };
 
 template<typename Result, typename... Args>
 struct callable_trait<Result (*)(Args...)>
 {
 	typedef Result result_type;
-	typedef util::type_list<Args...> arg_types;
+	typedef type_list<Args...> arg_types;
 };
 
 } } // namespace cppa::util

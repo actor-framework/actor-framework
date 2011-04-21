@@ -73,7 +73,6 @@ cppa/detail/serialize_tuple.hpp
 unit_testing/test__atom.cpp
 unit_testing/test__queue_performance.cpp
 cppa/detail/actor_public.hpp
-cppa/detail/comparable.hpp
 cppa/util/single_reader_queue.hpp
 cppa/util/singly_linked_list.hpp
 cppa/detail/actor_private.hpp
@@ -116,5 +115,6 @@ cppa/detail/demangle.hpp
 src/demangle.cpp
 cppa/detail/to_uniform_name.hpp
 src/to_uniform_name.cpp
-cppa/util/default_object_base.hpp
-cppa/detail/default_object_impl.hpp
+cppa/detail/default_uniform_type_info_impl.hpp
+src/object.cpp
+cppa/util/comparable.hpp

@@ -17,7 +17,7 @@ namespace cppa { namespace util {
 
 struct void_type;
 
-} } // namespace cppa::util
+} } // namespace util
 
 namespace cppa {
 
@@ -37,37 +37,35 @@ class deserializer
 
 };
 
+deserializer& operator>>(deserializer&, std::string&);
+
+template<typename T>
+typename util::enable_if<std::is_integral<T>, deserializer&>::type
+operator>>(deserializer& d, T& value)
+{
+	d.read(sizeof(T), &value);
+	value = detail::swap_bytes(value);
+	return d;
+}
+
+template<typename T>
+typename util::enable_if<std::is_floating_point<T>, deserializer&>::type
+operator>>(deserializer& d, T& value)
+{
+	d.read(sizeof(T), &value);
+	return d;
+}
+
+inline deserializer& operator>>(deserializer& d, util::void_type&)
+{
+	return d;
+}
+
+inline deserializer& operator>>(deserializer& d, any_type&)
+{
+	return d;
+}
+
 } // namespace cppa
-
-cppa::deserializer& operator>>(cppa::deserializer&, std::string&);
-
-template<typename T>
-typename cppa::util::enable_if<std::is_integral<T>, cppa::deserializer&>::type
-operator>>(cppa::deserializer& d, T& value)
-{
-	d.read(sizeof(T), &value);
-	value = cppa::detail::swap_bytes(value);
-	return d;
-}
-
-template<typename T>
-typename cppa::util::enable_if<std::is_floating_point<T>,
-							   cppa::deserializer&>::type
-operator>>(cppa::deserializer& d, T& value)
-{
-	d.read(sizeof(T), &value);
-	return d;
-}
-
-inline cppa::deserializer& operator>>(cppa::deserializer& d,
-									  cppa::util::void_type&)
-{
-	return d;
-}
-
-inline cppa::deserializer& operator>>(cppa::deserializer& d, cppa::any_type&)
-{
-	return d;
-}
 
 #endif // DESERIALIZER_HPP

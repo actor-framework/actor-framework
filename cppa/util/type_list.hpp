@@ -1,11 +1,20 @@
 #ifndef LIBCPPA_UTIL_TYPE_LIST_HPP
 #define LIBCPPA_UTIL_TYPE_LIST_HPP
 
+#include <typeinfo>
 #include "cppa/any_type.hpp"
-#include "cppa/uniform_type_info.hpp"
+//#include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/abstract_type_list.hpp"
+
+namespace cppa {
+
+// forward declarations
+class uniform_type_info;
+uniform_type_info* uniform_typeid(const std::type_info& tinfo);
+
+} // namespace cppa
 
 namespace cppa { namespace util {
 
@@ -54,7 +63,7 @@ struct type_list<Head, Tail...> : abstract_type_list
 	template<typename TypeList>
 	static void init(const uniform_type_info** what)
 	{
-		what[0] = uniform_typeid<typename TypeList::head_type>();
+		what[0] = uniform_typeid(typeid(typename TypeList::head_type));
 		if (TypeList::type_list_size > 1)
 		{
 			++what;

@@ -26,10 +26,10 @@ class actor : public channel
 
 typedef intrusive_ptr<actor> actor_ptr;
 
+serializer& operator<<(serializer&, const actor_ptr&);
+
+deserializer& operator>>(deserializer&, actor_ptr&);
+
 } // namespace cppa
-
-cppa::serializer& operator<<(cppa::serializer&, const cppa::actor_ptr&);
-
-cppa::deserializer& operator>>(cppa::deserializer&, cppa::actor_ptr&);
 
 #endif // ACTOR_HPP

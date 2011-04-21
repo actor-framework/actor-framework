@@ -18,6 +18,8 @@
 using std::cout;
 using std::endl;
 
+/*
+
 using namespace cppa;
 
 namespace {
@@ -150,6 +152,19 @@ std::size_t test__local_group()
 	receive(on<int>() >> [&](int x) {
 		CPPA_CHECK_EQUAL(x, 5);
 	});
+
+	return CPPA_TEST_RESULT;
+
+}
+*/
+
+
+std::size_t test__local_group()
+{
+
+	CPPA_TEST(test__local_group);
+
+	CPPA_CHECK_EQUAL(true, true);
 
 	return CPPA_TEST_RESULT;
 

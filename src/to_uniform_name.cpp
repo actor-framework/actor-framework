@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "cppa/util/void_type.hpp"
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 
@@ -74,6 +75,7 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
 	  { demangled<wchar_t>(), mapped_int_name<wchar_t>() },
 	  { demangled<char16_t>(), mapped_int_name<char16_t>() },
 	  { demangled<char32_t>(), mapped_int_name<char32_t>() },
+	  { demangled<cppa::util::void_type>(), "@0" },
 	  { demangled<std::wstring>(), "@wstr" },
 	  { demangled<std::string>(), "@str" }
 	};

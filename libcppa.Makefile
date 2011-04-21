@@ -72,6 +72,7 @@ SOURCES = src/actor_behavior.cpp \
 		  src/deserializer.cpp \
 		  src/group.cpp \
 		  src/mock_scheduler.cpp \
+		  src/object.cpp \
 		  src/scheduler.cpp \
 		  src/serializer.cpp \
 		  src/to_uniform_name.cpp \

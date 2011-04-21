@@ -9,14 +9,12 @@ deserializer::deserializer(const intrusive_ptr<util::source>& src) : m_src(src)
 {
 }
 
-} // namespace cppa
-
-cppa::deserializer& operator>>(cppa::deserializer& d, cppa::actor_ptr&)
+deserializer& operator>>(deserializer& d, actor_ptr&)
 {
 	return d;
 }
 
-cppa::deserializer& operator>>(cppa::deserializer& d, std::string& str)
+deserializer& operator>>(deserializer& d, std::string& str)
 {
 	std::uint32_t str_size;
 	d >> str_size;
@@ -27,3 +25,5 @@ cppa::deserializer& operator>>(cppa::deserializer& d, std::string& str)
 	delete[] cbuf;
 	return d;
 }
+
+} // namespace cppa

@@ -24,6 +24,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+/*
+
 using namespace cppa;
 using namespace cppa::util;
 
@@ -524,6 +526,19 @@ std::size_t test__serialization()
 			CPPA_CHECK_EQUAL(tv.get<4>(), 3);
 		}
 	}
+
+	return CPPA_TEST_RESULT;
+
+}
+
+*/
+
+std::size_t test__serialization()
+{
+
+	CPPA_TEST(test__serialization);
+
+	CPPA_CHECK_EQUAL(true, true);
 
 	return CPPA_TEST_RESULT;
 
