@@ -75,7 +75,7 @@ class tuple_vals : public abstract_tuple
 		return tdata_at(m_data, pos);
 	}
 
-	virtual const utype& utype_at(std::size_t pos) const
+	virtual const uniform_type_info* utype_at(std::size_t pos) const
 	{
 		return m_types.at(pos);
 	}

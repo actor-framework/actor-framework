@@ -89,11 +89,11 @@ struct storage
 	template<typename T>
 	T& get(const std::string& key)
 	{
-		const utype& uti = uniform_type_info<T>();
+		auto uti = uniform_type_info::by_type_info(typeid(T));
 		auto i = m_map.find(key);
 		if (i == m_map.end())
 		{
-			i = m_map.insert(std::make_pair(key, uti.create())).first;
+			i = m_map.insert(std::make_pair(key, uti->create())).first;
 		}
 		else if (uti != i->second->type())
 		{

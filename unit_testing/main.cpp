@@ -54,14 +54,15 @@ int main(int argc, char** c_argv)
 	{
 		std::cout << std::boolalpha;
 		std::size_t errors = 0;
-		RUN_TEST(test__a_matches_b);
+		RUN_TEST(test__uniform_type);
 		RUN_TEST(test__intrusive_ptr);
-		RUN_TEST(test__spawn);
-		RUN_TEST(test__tuple);
+		RUN_TEST(test__a_matches_b);
 		RUN_TEST(test__type_list);
+		RUN_TEST(test__tuple);
 		RUN_TEST(test__serialization);
-		RUN_TEST(test__atom);
+		RUN_TEST(test__spawn);
 		RUN_TEST(test__local_group);
+		RUN_TEST(test__atom);
 		cout << endl
 			 << "error(s) in all tests: " << errors
 			 << endl;

@@ -3,6 +3,7 @@
 
 namespace cppa { namespace detail {
 
+// Barton–Nackman trick
 template<typename Subclass, typename T = Subclass>
 class comparable
 {

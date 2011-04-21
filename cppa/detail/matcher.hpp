@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "cppa/any_type.hpp"
-#include "cppa/util/utype_iterator.hpp"
+#include "cppa/uniform_type_info.hpp"
+#include "cppa/util/abstract_type_list.hpp"
 
 namespace cppa { namespace detail {
 
@@ -13,14 +14,15 @@ template<typename... Types> struct matcher;
 template<typename Head, typename... Tail>
 struct matcher<Head, Tail...>
 {
-	static bool match(util::utype_iterator& begin,
-					  util::utype_iterator& end,
+	static bool match(util::abstract_type_list::const_iterator& begin,
+					  util::abstract_type_list::const_iterator& end,
 					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
+		auto head_uti = uniform_typeid<Head>();
 		if (begin != end)
 		{
-			if (begin->native() == typeid(Head))
+			if (*(*begin) == *head_uti)
 			{
 				if (res)
 				{
@@ -38,8 +40,8 @@ struct matcher<Head, Tail...>
 template<typename... Tail>
 struct matcher<any_type, Tail...>
 {
-	static bool match(util::utype_iterator &begin,
-					  util::utype_iterator &end,
+	static bool match(util::abstract_type_list::const_iterator& begin,
+					  util::abstract_type_list::const_iterator& end,
 					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
@@ -56,15 +58,15 @@ struct matcher<any_type, Tail...>
 template<typename Next, typename... Tail>
 struct matcher<any_type*, Next, Tail...>
 {
-	static bool match(util::utype_iterator &begin,
-					  util::utype_iterator &end,
+	static bool match(util::abstract_type_list::const_iterator& begin,
+					  util::abstract_type_list::const_iterator& end,
 					  std::vector<std::size_t>* res = nullptr,
 					  std::size_t pos = 0)
 	{
 		bool result = false;
 		while (!result)
 		{
-			util::utype_iterator begin_cpy = begin;
+			util::abstract_type_list::const_iterator begin_cpy = begin;
 			result = matcher<Next, Tail...>::match(begin_cpy,end,nullptr,pos);
 			if (!result)
 			{
@@ -86,8 +88,8 @@ struct matcher<any_type*, Next, Tail...>
 template<>
 struct matcher<any_type*>
 {
-	static bool match(util::utype_iterator&,
-					  util::utype_iterator&,
+	static bool match(util::abstract_type_list::const_iterator&,
+					  util::abstract_type_list::const_iterator&,
 					  std::vector<std::size_t>* = nullptr,
 					  std::size_t = 0)
 	{
@@ -98,8 +100,8 @@ struct matcher<any_type*>
 template<>
 struct matcher<>
 {
-	static bool match(util::utype_iterator& begin,
-					  util::utype_iterator& end,
+	static bool match(util::abstract_type_list::const_iterator& begin,
+					  util::abstract_type_list::const_iterator& end,
 					  std::vector<std::size_t>* = nullptr,
 					  std::size_t = 0)
 	{

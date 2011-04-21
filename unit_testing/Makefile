@@ -22,6 +22,7 @@ SOURCES = hash_of.cpp \
 		  test__serialization.cpp \
 		  test__spawn.cpp \
 		  test__tuple.cpp \
+		  test__uniform_type.cpp \
 		  test__type_list.cpp
 
 OBJECTS = $(SOURCES:.cpp=.o)

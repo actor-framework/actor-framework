@@ -41,14 +41,9 @@ struct type_list<Head, Tail...> : abstract_type_list
 		return m_arr + type_list_size;
 	}
 
-	const utype& operator[](std::size_t pos) const
+	virtual const uniform_type_info* at(std::size_t pos) const
 	{
-		return *m_arr[pos];
-	}
-
-	virtual const utype& at(std::size_t pos) const
-	{
-		return *m_arr[pos];
+		return m_arr[pos];
 	}
 
 	virtual type_list* copy() const
@@ -57,19 +52,27 @@ struct type_list<Head, Tail...> : abstract_type_list
 	}
 
 	template<typename TypeList>
-	static void init(const utype** what)
+	static void init(const uniform_type_info** what)
 	{
+		what[0] = uniform_typeid<typename TypeList::head_type>();
+		if (TypeList::type_list_size > 1)
+		{
+			++what;
+			init<typename TypeList::tail_type>(what);
+		}
+		/*
 		what[0] = &uniform_type_info<typename TypeList::head_type>();
 		if (TypeList::type_list_size > 1)
 		{
 			++what;
 			init<typename TypeList::tail_type>(what);
 		}
+	*/
 	}
 
  private:
 
-	const utype* m_arr[type_list_size];
+	const uniform_type_info* m_arr[type_list_size];
 
 };
 

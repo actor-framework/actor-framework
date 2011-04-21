@@ -27,21 +27,14 @@ using std::endl;
 using namespace cppa;
 using namespace cppa::util;
 
-class format_error : public std::exception
+class format_error : public std::runtime_error
 {
 
-	std::string m_what;
+	typedef std::runtime_error super;
 
  public:
 
-	format_error(const std::string& what_str) : m_what(what_str) { }
-
-	virtual const char* what() const throw()
-	{
-		return m_what.c_str();
-	}
-
-	virtual ~format_error() throw() { }
+	format_error(const std::string& what_str) : super(what_str) { }
 
 };
 
@@ -171,22 +164,22 @@ struct obj_types : util::abstract_type_list
 {
 
 	std::size_t m_size;
-	const utype** m_arr;
+	const uniform_type_info** m_arr;
 
  public:
 
 	obj_types(const std::vector<intrusive_ptr<object>>& objs) : m_size(objs.size())
 	{
-		m_arr = new const utype*[m_size];
+		m_arr = new const uniform_type_info*[m_size];
 		for (std::size_t i = 0; i != m_size; ++i)
 		{
-			m_arr[i] = &(objs[i]->type());
+			m_arr[i] = objs[i]->type();
 		}
 	}
 
 	obj_types(const obj_types& other) : m_size(other.size())
 	{
-		m_arr = new const utype*[m_size];
+		m_arr = new const uniform_type_info*[m_size];
 		for (std::size_t i = 0; i != m_size; ++i)
 		{
 			m_arr[i] = other.m_arr[i];
@@ -215,9 +208,9 @@ struct obj_types : util::abstract_type_list
 		return m_arr + m_size;
 	}
 
-	virtual const utype& at(std::size_t pos) const
+	virtual const uniform_type_info* at(std::size_t pos) const
 	{
-		return *m_arr[pos];
+		return m_arr[pos];
 	}
 
 };
@@ -258,7 +251,7 @@ class obj_tuple : public detail::abstract_tuple
 		return m_obj[pos]->value();
 	}
 
-	virtual const utype& utype_at(std::size_t pos) const
+	virtual const uniform_type_info* utype_at(std::size_t pos) const
 	{
 		return m_obj[pos]->type();
 	}
@@ -279,7 +272,7 @@ class obj_tuple : public detail::abstract_tuple
 		for (std::size_t i = 0; i < m_obj.size(); ++i)
 		{
 			decltype(m_obj[i]) o = m_obj[i];
-			s << o->type().name();
+			s << o->type()->name();
 			o->serialize(s);
 		}
 	}
@@ -342,7 +335,7 @@ struct serialize_tuple_at
 {
 	inline static void _(serializer& s, const Tuple& t)
 	{
-		s << uniform_type_info<typename type_at<Pos, Tuple>::type>().name()
+		s << uniform_typeid<typename type_at<Pos, Tuple>::type>()->name()
 		  << t.get<Pos>();
 		serialize_tuple_at<Pos + 1, Size, Tuple>::_(s, t);
 	}
@@ -365,15 +358,6 @@ serializer& operator<<(serializer& s, const tuple<Types...>& t)
 
 serializer& operator<<(serializer& s, const untyped_tuple& ut)
 {
-	/*
-	auto tsize = static_cast<std::uint8_t>(ut.size());
-	s << tsize;
-	for (std::size_t i = 0; i < ut.size(); ++i)
-	{
-		s << ut.utype_at(i).name();
-
-	}
-	*/
 	ut.vals()->serialize(s);
 	return s;
 }
@@ -387,7 +371,7 @@ deserializer& operator>>(deserializer& d, untyped_tuple& ut)
 	{
 		std::string type_name;
 		d >> type_name;
-		object* obj = uniform_type_info(type_name).create();
+		object* obj = uniform_type_info::by_uniform_name(type_name)->create();
 		obj->deserialize(d);
 		obj_vec.push_back(obj);
 	}
@@ -423,8 +407,8 @@ std::size_t test__serialization()
 
 	obj_vec.reserve(2);
 
-	obj_vec.push_back(uniform_type_info<std::string>().create());
-	obj_vec.push_back(uniform_type_info<int>().create());
+	obj_vec.push_back(uniform_typeid<std::string>()->create());
+	obj_vec.push_back(uniform_typeid<int>()->create());
 
 	cow_ptr<detail::abstract_tuple> vals(new obj_tuple(obj_vec));
 	untyped_tuple ut0(vals);
@@ -465,15 +449,6 @@ std::size_t test__serialization()
 		deserializer d(io1);
 		untyped_tuple ut3;
 		d >> ut3;
-/*
-		cout << "ut3 (size = " << ut3.size() << "): ";
-		for (std::size_t i = 0; i < ut3.size(); ++i)
-		{
-			if (i > 0) cout << ", ";
-			cout << ut3.utype_at(i).name();
-		}
-		cout << endl;
-*/
 		std::vector<std::size_t> mappings;
 		bool does_match = match<std::string, std::string, int, int, int>(ut3, mappings);
 		CPPA_CHECK_EQUAL(does_match, true);

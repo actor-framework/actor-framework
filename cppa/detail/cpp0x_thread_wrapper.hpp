@@ -1,6 +1,10 @@
 #ifndef CPPA_DETAIL_CPP0X_THREAD_WRAPPER_HPP
 #define CPPA_DETAIL_CPP0X_THREAD_WRAPPER_HPP
 
+// This header imports C++0x compatible parts of the boost threading library
+// to the std namespace. It's a workaround to the missing stl threading
+// library on GCC 4.6 under Mac OS X
+
 #include <boost/thread.hpp>
 
 namespace std {

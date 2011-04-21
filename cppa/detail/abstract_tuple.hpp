@@ -18,7 +18,7 @@ struct abstract_tuple : ref_counted
 	virtual std::size_t size() const = 0;
 	virtual abstract_tuple* copy() const = 0;
 	virtual const void* at(std::size_t pos) const = 0;
-	virtual const utype& utype_at(std::size_t pos) const = 0;
+	virtual const uniform_type_info* utype_at(std::size_t pos) const = 0;
 	virtual const util::abstract_type_list& types() const = 0;
 	virtual bool equal_to(const abstract_tuple& other) const = 0;
 	virtual void serialize(serializer&) const = 0;

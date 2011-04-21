@@ -19,7 +19,6 @@ cppa/detail/abstract_tuple.hpp
 cppa/tuple_view.hpp
 cppa/untyped_tuple.hpp
 cppa/any_type.hpp
-cppa/util/utype_iterator.hpp
 cppa/detail/matcher.hpp
 cppa/detail/tuple_vals.hpp
 cppa/match.hpp
@@ -28,7 +27,6 @@ cppa/cow_ptr.hpp
 cppa/util/detach.hpp
 cppa/detail/ref_counted_impl.hpp
 cppa/intrusive_ptr.hpp
-cppa/detail/scheduler.hpp
 unit_testing/test__spawn.cpp
 src/mock_scheduler.cpp
 cppa/actor.hpp
@@ -60,8 +58,6 @@ cppa/deserializer.hpp
 cppa/util/is_serializable.hpp
 cppa/util/enable_if.hpp
 cppa/object.hpp
-cppa/utype.hpp
-cppa/detail/utype_impl.hpp
 cppa/detail/object_impl.hpp
 cppa/detail/swap_bytes.hpp
 src/serializer.cpp
@@ -107,3 +103,18 @@ queue_performances/blocking_sutter_list.hpp
 queue_performances/lockfree_list.hpp
 queue_performances/intrusive_sutter_list.hpp
 cppa/detail/cpp0x_thread_wrapper.hpp
+src/context.cpp
+cppa/scheduler.hpp
+cppa/detail/mock_scheduler.hpp
+src/scheduler.cpp
+cppa/detail/blocking_message_queue.hpp
+src/blocking_message_queue.cpp
+cppa/detail/converted_thread_context.hpp
+src/converted_thread_context.cpp
+unit_testing/test__uniform_type.cpp
+cppa/detail/demangle.hpp
+src/demangle.cpp
+cppa/detail/to_uniform_name.hpp
+src/to_uniform_name.cpp
+cppa/util/default_object_base.hpp
+cppa/detail/default_object_impl.hpp

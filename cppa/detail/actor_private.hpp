@@ -1,6 +1,8 @@
 #ifndef ACTOR_PRIVATE_HPP
 #define ACTOR_PRIVATE_HPP
 
+/*
+
 #include <boost/thread/thread.hpp>
 
 #include "cppa/invoke_rules.hpp"
@@ -53,5 +55,7 @@ inline const message& last_dequeued()
 }
 
 } // namespace cppa
+
+*/
 
 #endif // ACTOR_PRIVATE_HPP

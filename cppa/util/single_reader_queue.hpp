@@ -66,14 +66,7 @@ class single_reader_queue
 			auto p = list.take();
 			if (p.first)
 			{
-				if (p.first == p.second)
-				{
-					push_front(p.first);
-				}
-				else
-				{
-					push_front(p.first, p.second);
-				}
+				push_front(p.first, p.second);
 			}
 		}
 	}
@@ -103,6 +96,9 @@ class single_reader_queue
 		}
 	}
 
+	/**
+	 * @warning call only from the reader (owner)
+	 */
 	bool empty()
 	{
 		return !m_head && !(m_tail.load());

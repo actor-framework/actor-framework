@@ -7,28 +7,38 @@ INCLUDES = -I./
 HEADERS = cppa/actor.hpp \
 		  cppa/any_type.hpp \
 		  cppa/config.hpp \
+		  cppa/context.hpp \
 		  cppa/cow_ptr.hpp \
+		  cppa/cppa.hpp \
+		  cppa/deserializer.hpp \
 		  cppa/get.hpp \
+		  cppa/group.hpp \
 		  cppa/intrusive_ptr.hpp \
 		  cppa/invoke.hpp \
 		  cppa/invoke_rules.hpp \
 		  cppa/match.hpp \
 		  cppa/message.hpp \
+		  cppa/message_queue.hpp \
+		  cppa/object.hpp \
 		  cppa/on.hpp \
 		  cppa/ref_counted.hpp \
+		  cppa/scheduler.hpp \
+		  cppa/scheduling_hint.hpp \
+		  cppa/serializer.hpp \
 		  cppa/tuple.hpp \
 		  cppa/tuple_view.hpp \
 		  cppa/uniform_type_info.hpp \
 		  cppa/untyped_tuple.hpp \
 		  cppa/util.hpp \
 		  cppa/detail/abstract_tuple.hpp \
+		  cppa/detail/blocking_message_queue.hpp \
+		  cppa/detail/converted_thread_context.hpp \
 		  cppa/detail/decorated_tuple.hpp \
 		  cppa/detail/channel.hpp \
 		  cppa/detail/intermediate.hpp \
 		  cppa/detail/invokable.hpp \
 		  cppa/detail/matcher.hpp \
 		  cppa/detail/ref_counted_impl.hpp \
-		  cppa/detail/scheduler.hpp \
 		  cppa/detail/tdata.hpp \
 		  cppa/detail/tuple_vals.hpp \
 		  cppa/util/a_matches_b.hpp \
@@ -51,15 +61,20 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/type_list.hpp \
 		  cppa/util/type_list_apply.hpp \
 		  cppa/util/type_list_pop_back.hpp \
-		  cppa/util/utype_iterator.hpp \
 		  cppa/util/void_type.hpp
 
 SOURCES = src/actor_behavior.cpp \
+		  src/blocking_message_queue.cpp \
 		  src/channel.cpp \
+		  src/context.cpp \
+		  src/converted_thread_context.cpp \
+		  src/demangle.cpp \
 		  src/deserializer.cpp \
 		  src/group.cpp \
 		  src/mock_scheduler.cpp \
+		  src/scheduler.cpp \
 		  src/serializer.cpp \
+		  src/to_uniform_name.cpp \
 		  src/uniform_type_info.cpp \
 		  src/untyped_tuple.cpp
 

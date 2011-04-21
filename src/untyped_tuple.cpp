@@ -14,7 +14,7 @@ struct empty_type_list : cppa::util::abstract_type_list
 
 	virtual const_iterator end() const { return 0; }
 
-	virtual const cppa::utype& at(std::size_t) const
+	virtual const cppa::uniform_type_info* at(std::size_t) const
 	{
 		throw std::range_error("empty_type_list::at()");
 	}
@@ -40,7 +40,7 @@ struct empty_tuple : cppa::detail::abstract_tuple
 		throw std::range_error("empty_tuple::at()");
 	}
 
-	virtual const cppa::utype& utype_at(std::size_t) const
+	virtual const cppa::uniform_type_info* utype_at(std::size_t) const
 	{
 		throw std::range_error("empty_tuple::utype_at()");
 	}

@@ -10,7 +10,7 @@
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
-#include "cppa/detail/scheduler.hpp"
+#include "cppa/scheduler.hpp"
 
 namespace cppa {
 
@@ -26,7 +26,7 @@ actor_ptr spawn(scheduling_hint hint, F fun)
 			m_fun();
 		}
 	};
-	return detail::scheduler::spawn(new fun_behavior(fun), hint);
+	return get_scheduler()->spawn(new fun_behavior(fun), hint);
 }
 
 template<typename F, typename Arg0, typename... Args>
@@ -44,17 +44,12 @@ inline actor_ptr spawn(F fun, const Args&... args)
 
 inline actor_ptr spawn(scheduling_hint hint, actor_behavior* ab)
 {
-	return detail::scheduler::spawn(ab, hint);
+	return get_scheduler()->spawn(ab, hint);
 }
 
 inline actor_ptr spawn(actor_behavior* ab)
 {
-	return detail::scheduler::spawn(ab, scheduled);
-}
-
-inline context* self()
-{
-	return detail::scheduler::get_context();
+	return get_scheduler()->spawn(ab, scheduled);
 }
 
 inline const message& receive()
@@ -103,7 +98,7 @@ void reply(const Arg0& arg0, const Args&... args)
 
 inline void await_all_actors_done()
 {
-	detail::scheduler::await_all_done();
+	get_scheduler()->await_all_done();
 }
 
 } // namespace cppa

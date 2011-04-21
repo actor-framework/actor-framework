@@ -32,7 +32,6 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/type_list_pop_back.hpp"
-#include "cppa/util/utype_iterator.hpp"
 #include "cppa/util/void_type.hpp"
 
 #endif // UTIL_HPP

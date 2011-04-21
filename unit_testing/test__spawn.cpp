@@ -6,7 +6,6 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/detail/scheduler.hpp"
 
 using std::cout;
 using std::endl;

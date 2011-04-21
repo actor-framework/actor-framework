@@ -7,6 +7,7 @@
 
 #if defined(__APPLE__)
 #  define CPPA_MACOS
+#  define _GLIBCXX_HAS_GTHREADS
 #elif defined(__GNUC__) && defined(__linux__)
 #  define CPPA_LINUX
 #elif defined(WIN32)

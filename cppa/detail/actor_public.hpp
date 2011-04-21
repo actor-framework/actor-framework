@@ -1,6 +1,8 @@
 #ifndef ACTOR_PUBLIC_HPP
 #define ACTOR_PUBLIC_HPP
 
+/*
+
 #include "cppa/detail/channel.hpp"
 
 namespace cppa { namespace detail {
@@ -12,5 +14,7 @@ struct actor_public : channel
 };
 
 } } // namespace cppa::detail
+
+*/
 
 #endif // ACTOR_PUBLIC_HPP

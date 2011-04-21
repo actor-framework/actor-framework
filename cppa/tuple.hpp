@@ -121,7 +121,7 @@ class tuple
 
 	const void* at(std::size_t p) const { return m_vals->at(p); }
 
-	const utype& utype_at(std::size_t p) const { return m_vals->utype_at(p); }
+	const uniform_type_info* utype_at(std::size_t p) const { return m_vals->utype_at(p); }
 
 	const util::abstract_type_list& types() const { return m_vals->types(); }
 
