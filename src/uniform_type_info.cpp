@@ -314,7 +314,7 @@ uniform_type_info_map& s_uniform_type_info_map()
 	return s_utimap;
 }
 
-} } } // namespace detail::<anonymous>
+} } } // namespace cppa::detail::<anonymous>
 
 
 namespace {

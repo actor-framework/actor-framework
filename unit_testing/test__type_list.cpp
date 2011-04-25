@@ -60,7 +60,6 @@ std::size_t test__type_list()
 	++i;
 	CPPA_CHECK((i == ifc.end()));
 
-
 	return CPPA_TEST_RESULT;
 
 }

@@ -4,17 +4,17 @@
 #include <string>
 #include <typeinfo>
 #include <stdexcept>
+#include <type_traits>
+
+#include "cppa/util/disjunction.hpp"
 
 namespace cppa {
 
+// forward declarations
 class object;
 class uniform_type_info;
-
-template<typename T>
-T& object_cast(object& obj);
-
-template<typename T>
-const T& object_cast(const object& obj);
+namespace detail { template<typename T> struct object_caster; }
+bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
 
 /**
  * @brief foobar.
@@ -25,10 +25,7 @@ class object
 	friend class uniform_type_info;
 
 	template<typename T>
-	friend T& object_cast(object& obj);
-
-	template<typename T>
-	friend const T& object_cast(const object& obj);
+	friend struct detail::object_caster;
 
 	void* m_value;
 	const uniform_type_info* m_type;
@@ -80,40 +77,102 @@ public:
 
 };
 
-// forward declaration of the == operator
-bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
-
-template<typename T>
-T& object_cast(object& obj)
+inline bool operator==(const object& lhs, const object& rhs)
 {
-//	if (!(obj.type() == typeid(T)))
-	if (!operator==(obj.type(), typeid(T)))
+	return lhs.equal(rhs);
+}
+
+inline bool operator!=(const object& lhs, const object& rhs)
+{
+	return !(lhs == rhs);
+}
+
+namespace detail {
+
+inline void assert_type(const object& obj, const std::type_info& tinfo)
+{
+	if (!(obj.type() == tinfo))
 	{
 		throw std::logic_error("object type doesnt match T");
 	}
-	return *reinterpret_cast<T*>(obj.m_value);
+}
+
+// get a const reference
+template<typename T>
+struct object_caster<const T&>
+{
+	static const T& _(const object& obj)
+	{
+		assert_type(obj, typeid(T));
+		return *reinterpret_cast<const T*>(obj.m_value);
+	}
+};
+
+// get a mutable reference
+template<typename T>
+struct object_caster<T&>
+{
+	static T& _(object& obj)
+	{
+		assert_type(obj, typeid(T));
+		return *reinterpret_cast<T*>(obj.m_value);
+	}
+};
+
+// get a const pointer
+template<typename T>
+struct object_caster<const T*>
+{
+	static const T* _(const object& obj)
+	{
+		assert_type(obj, typeid(T));
+		return reinterpret_cast<const T*>(obj.m_value);
+	}
+};
+
+// get a mutable pointer
+template<typename T>
+struct object_caster<T*>
+{
+	static T* _(object& obj)
+	{
+		assert_type(obj, typeid(T));
+		return reinterpret_cast<T*>(obj.m_value);
+	}
+};
+
+template<typename T>
+struct is_const_reference : std::false_type { };
+
+template<typename T>
+struct is_const_reference<const T&> : std::true_type { };
+
+template<typename T>
+struct is_const_pointer : std::false_type { };
+
+template<typename T>
+struct is_const_pointer<const T*> : std::true_type { };
+
+}
+
+template<typename T>
+T object_cast(object& obj)
+{
+	static_assert(util::disjunction<std::is_pointer<T>,
+									std::is_reference<T>>::value,
+				  "T is neither a reference nor a pointer type.");
+	return detail::object_caster<T>::_(obj);
 }
 
 template<typename T>
 const T& object_cast(const object& obj)
 {
-	if (!(obj.type() == typeid(T)))
-	{
-		throw std::logic_error("object type doesnt match T");
-	}
-	return *reinterpret_cast<const T*>(obj.m_value);
+	static_assert(util::disjunction<detail::is_const_pointer<T>,
+									detail::is_const_reference<T>>::value,
+				  "T is neither a const reference nor a const pointer type.");
+	return detail::object_caster<T>::_(obj);
 }
 
 } // namespace cppa
-
-inline bool operator==(const cppa::object& lhs, const cppa::object& rhs)
-{
-	return lhs.equal(rhs);
-}
-
-inline bool operator!=(const cppa::object& lhs, const cppa::object& rhs)
-{
-	return !(lhs == rhs);
-}
 
 #endif // OBJECT_HPP

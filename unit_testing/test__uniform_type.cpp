@@ -25,9 +25,6 @@
 using std::cout;
 using std::endl;
 
-using cppa::object;
-using cppa::uniform_type_info;
-
 namespace {
 
 struct foo
@@ -43,14 +40,16 @@ bool operator==(const foo& lhs, const foo& rhs)
 
 } // namespace <anonymous>
 
+using namespace cppa;
+
 namespace {
 
 static bool unused1 =
-		cppa::uniform_type_info::announce<foo>(
-			[] (cppa::serializer& s, const foo& f) {
+		uniform_type_info::announce<foo>(
+			[] (serializer& s, const foo& f) {
 				s << f.value;
 			},
-			[] (cppa::deserializer& d, foo& f) {
+			[] (deserializer& d, foo& f) {
 				d >> f.value;
 			},
 			[] (const foo& f) -> std::string {
@@ -65,9 +64,9 @@ static bool unused1 =
 				return new foo(tmp);
 			}
 		);
-bool unused2 = false;// = cppa::uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
-bool unused3 = false;//= cppa::uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
-bool unused4 = false;//= cppa::uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
+bool unused2 = false;// = uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
+bool unused3 = false;//= uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
+bool unused4 = false;//= uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
 
 } // namespace <anonymous>
 
@@ -77,18 +76,21 @@ std::size_t test__uniform_type()
 
 	{
 		//bar.create_object();
-		object obj1 = cppa::uniform_typeid<foo>()->create();
+		object obj1 = uniform_typeid<foo>()->create();
 		object obj2(obj1);
 		CPPA_CHECK_EQUAL(obj1, obj2);
 	}
 
 	{
-		object wstr_obj1 = cppa::uniform_typeid<std::wstring>()->create();
-		cppa::object_cast<std::wstring>(wstr_obj1) = L"hello wstring!";
-		object wstr_obj2 = cppa::uniform_typeid<std::wstring>()->from_string("hello wstring!");
+		object wstr_obj1 = uniform_typeid<std::wstring>()->create();
+		object_cast<std::wstring&>(wstr_obj1) = L"hello wstring!";
+		object wstr_obj2 = uniform_typeid<std::wstring>()->from_string("hello wstring!");
 		CPPA_CHECK_EQUAL(wstr_obj1, wstr_obj2);
+		const object& obj2_ref = wstr_obj2;
+		CPPA_CHECK_EQUAL(object_cast<std::wstring&>(wstr_obj1),
+						 object_cast<const std::wstring&>(obj2_ref));
 		// couldn't be converted to ASCII
-		cppa::object_cast<std::wstring>(wstr_obj1) = L"hello wstring\x05D4";
+		object_cast<std::wstring&>(wstr_obj1) = L"hello wstring\x05D4";
 		std::string narrowed = wstr_obj1.to_string();
 		CPPA_CHECK_EQUAL(narrowed, "hello wstring?");
 	}
@@ -102,15 +104,15 @@ std::size_t test__uniform_type()
 
 	// test foo_object implementation
 /*
-	obj_ptr o = cppa::uniform_typeid<foo>()->create();
+	obj_ptr o = uniform_typeid<foo>()->create();
 	o->from_string("123");
 	CPPA_CHECK_EQUAL(o->to_string(), "123");
 	int val = reinterpret_cast<const foo*>(o->value())->value;
 	CPPA_CHECK_EQUAL(val, 123);
 */
 
-	// these types (and only those) are present if the uniform_type_info
-	// implementation is correct
+	// these types (and only those) are present if
+	// the uniform_type_info implementation is correct
 	std::set<std::string> expected =
 	{
 		"@_::foo",						// name of <anonymous namespace>::foo
@@ -118,7 +120,7 @@ std::size_t test__uniform_type()
 		"@u8", "@u16", "@u32", "@u64",	// unsigned integer names
 		"@str", "@wstr",				// strings
 		"float", "double",				// floating points
-		"@0",							// cppa::util::void_type
+		"@0",							// util::void_type
 		// default announced cppa types
 		"cppa::any_type",
 		"cppa::intrusive_ptr<cppa::actor>"
@@ -134,8 +136,8 @@ std::size_t test__uniform_type()
 	std::set<std::string> found;
 
 	// fetch all available type names
-	auto types = cppa::uniform_type_info::instances();
-	for (cppa::uniform_type_info* tinfo : types)
+	auto types = uniform_type_info::instances();
+	for (uniform_type_info* tinfo : types)
 	{
 		found.insert(tinfo->name());
 	}
@@ -145,7 +147,23 @@ std::size_t test__uniform_type()
 
 	if (expected.size() == found.size())
 	{
-		CPPA_CHECK((std::equal(found.begin(), found.end(), expected.begin())));
+		bool expected_equals_found = std::equal(found.begin(),
+												found.end(),
+												expected.begin());
+		CPPA_CHECK(expected_equals_found);
+		if (!expected_equals_found)
+		{
+			cout << "found:" << endl;
+			for (const std::string& tname : found)
+			{
+				cout << "    - " << tname << endl;
+			}
+			cout << "expected: " << endl;
+			for (const std::string& tname : expected)
+			{
+				cout << "    - " << tname << endl;
+			}
+		}
 	}
 
 	return CPPA_TEST_RESULT;

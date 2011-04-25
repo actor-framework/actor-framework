@@ -72,7 +72,7 @@ class default_uniform_type_info_impl : public uniform_type_info
 
 	object create() const
 	{
-		return { new T, this };
+		return { new T(), this };
 	}
 
 };

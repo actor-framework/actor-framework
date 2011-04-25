@@ -8,32 +8,32 @@ namespace cppa { namespace util {
 template<typename Signature>
 struct callable_trait;
 
-template<class C, typename Result, typename... Args>
-struct callable_trait<Result (C::*)(Args...) const>
+template<class C, typename ResultType, typename... Args>
+struct callable_trait<ResultType (C::*)(Args...) const>
 {
-	typedef Result result_type;
-	typedef type_list<Args...> arg_types;
+    typedef ResultType result_type;
+    typedef type_list<Args...> arg_types;
 };
 
-template<class C, typename Result, typename... Args>
-struct callable_trait<Result (C::*)(Args...)>
+template<class C, typename ResultType, typename... Args>
+struct callable_trait<ResultType (C::*)(Args...)>
 {
-	typedef Result result_type;
-	typedef type_list<Args...> arg_types;
+    typedef ResultType result_type;
+    typedef type_list<Args...> arg_types;
 };
 
-template<typename Result, typename... Args>
-struct callable_trait<Result (Args...)>
+template<typename ResultType, typename... Args>
+struct callable_trait<ResultType (Args...)>
 {
-	typedef Result result_type;
-	typedef type_list<Args...> arg_types;
+    typedef ResultType result_type;
+    typedef type_list<Args...> arg_types;
 };
 
-template<typename Result, typename... Args>
-struct callable_trait<Result (*)(Args...)>
+template<typename ResultType, typename... Args>
+struct callable_trait<ResultType (*)(Args...)>
 {
-	typedef Result result_type;
-	typedef type_list<Args...> arg_types;
+    typedef ResultType result_type;
+    typedef type_list<Args...> arg_types;
 };
 
 } } // namespace cppa::util
