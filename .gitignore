@@ -6,5 +6,6 @@ test
 *.png
 *.dat
 queue_test
+cppa.creator.user.1.3
 8threads
 4threads

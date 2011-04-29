@@ -4,12 +4,14 @@
 namespace cppa { namespace util {
 
 template<bool Stmt, typename T = void>
-struct enable_if_c { };
+struct enable_if_c
+{
+};
 
 template<typename T>
 struct enable_if_c<true, T>
 {
-	typedef T type;
+    typedef T type;
 };
 
 template<class Trait, typename T = void>

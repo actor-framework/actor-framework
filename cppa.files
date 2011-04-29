@@ -118,3 +118,6 @@ src/to_uniform_name.cpp
 cppa/detail/default_uniform_type_info_impl.hpp
 src/object.cpp
 cppa/util/comparable.hpp
+cppa/util/disable_if.hpp
+cppa/util/if_else_type.hpp
+cppa/util/wrapped_type.hpp

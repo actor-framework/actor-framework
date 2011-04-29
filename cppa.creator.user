@@ -2,7 +2,7 @@
 <qtcreator>
  <data>
   <variable>GenericProjectManager.GenericProject.Toolchain</variable>
-  <value type="QString"></value>
+  <value type="QString">ProjectExplorer.ToolChain.Gcc:/opt/local/bin/g++-mp-4.6.x86-macos-generic-mach_o-64bit.</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -43,7 +43,7 @@
    <value key="ProjectExplorer.Target.ActiveRunConfiguration" type="int">0</value>
    <valuemap key="ProjectExplorer.Target.BuildConfiguration.0" type="QVariantMap">
     <value key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory" type="QString">/Users/neverlord/libcppa</value>
-    <value key="ProjectExplorer.BuildCOnfiguration.ToolChain" type="QString">INVALID</value>
+    <value key="ProjectExplorer.BuildCOnfiguration.ToolChain" type="QString">ProjectExplorer.ToolChain.Gcc:/usr/bin/g++.x86-macos-generic-mach_o-64bit.</value>
     <valuemap key="ProjectExplorer.BuildConfiguration.BuildStepList.0" type="QVariantMap">
      <valuemap key="ProjectExplorer.BuildStepList.Step.0" type="QVariantMap">
       <valuelist key="GenericProjectManager.GenericMakeStep.BuildTargets" type="QVariantList">
@@ -77,7 +77,7 @@
    <valuemap key="ProjectExplorer.Target.DeployConfiguration.0" type="QVariantMap">
     <valuemap key="ProjectExplorer.BuildConfiguration.BuildStepList.0" type="QVariantMap">
      <value key="ProjectExplorer.BuildStepList.StepsCount" type="int">0</value>
-     <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Deployment</value>
+     <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Deploy</value>
      <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString">Deploy</value>
      <value key="ProjectExplorer.ProjectConfiguration.Id" type="QString">ProjectExplorer.BuildSteps.Deploy</value>
     </valuemap>
@@ -115,7 +115,9 @@
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.BaseEnvironmentBase" type="int">2</value>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.Executable" type="QString">/Users/neverlord/libcppa/test</value>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal" type="bool">false</value>
-    <valuelist key="ProjectExplorer.CustomExecutableRunConfiguration.UserEnvironmentChanges" type="QVariantList"/>
+    <valuelist key="ProjectExplorer.CustomExecutableRunConfiguration.UserEnvironmentChanges" type="QVariantList">
+     <value type="QString">DYLD_LIBRARY_PATH=/Users/neverlord/libcppa</value>
+    </valuelist>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory" type="QString">%{buildDir}</value>
     <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Führe /Users/neverlord/libcppa/test aus</value>
     <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString">test</value>
@@ -133,7 +135,7 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-  <value type="QString">{349f52bc-ac64-4a14-898f-d44d989b22a2}</value>
+  <value type="QString">{07fcd197-092d-45a0-8500-3be614e6ae31}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>
