@@ -3,6 +3,7 @@
 
 #include "cppa/util/a_matches_b.hpp"
 #include "cppa/util/abstract_type_list.hpp"
+#include "cppa/util/apply.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/concat_type_lists.hpp"
@@ -20,7 +21,6 @@
 #include "cppa/util/is_copyable.hpp"
 #include "cppa/util/is_legal_tuple_type.hpp"
 #include "cppa/util/is_one_of.hpp"
-#include "cppa/util/is_serializable.hpp"
 #include "cppa/util/remove_const_reference.hpp"
 #include "cppa/util/replace_type.hpp"
 #include "cppa/util/reverse_type_list.hpp"

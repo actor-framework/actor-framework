@@ -2,7 +2,7 @@
 <qtcreator>
  <data>
   <variable>GenericProjectManager.GenericProject.Toolchain</variable>
-  <value type="QString">ProjectExplorer.ToolChain.Gcc:/opt/local/bin/g++-mp-4.6.x86-macos-generic-mach_o-64bit.</value>
+  <value type="QString"></value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>

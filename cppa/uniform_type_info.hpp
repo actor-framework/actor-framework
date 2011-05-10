@@ -21,10 +21,6 @@
 
 namespace cppa {
 
-class uniform_type_info;
-
-uniform_type_info* uniform_typeid(const std::type_info& tinfo);
-
 /**
  * @brief Provides a platform independent type name and (very primitive)
  *        reflection in combination with {@link cppa::object object}.
@@ -66,15 +62,13 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 
         identifier(int val) : m_value(val) { }
 
-        // enable copy and move constructors
-        identifier(identifier&&) = default;
-        identifier(const identifier&) = default;
-
         // disable assignment operators
-        identifier& operator=(identifier&&) = delete;
         identifier& operator=(const identifier&) = delete;
 
      public:
+
+        // enable copy constructor
+        identifier(const identifier&) = default;
 
         // needed by cppa::detail::comparable<identifier>
         inline int compare(const identifier& other) const
@@ -104,7 +98,7 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 
  protected:
 
-    explicit uniform_type_info(const std::type_info& tinfo);
+    explicit uniform_type_info(const std::string& uniform_name);
 
  public:
 
@@ -140,15 +134,14 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     {
         return id().compare(other.id());
     }
-
     /**
      * @brief Add a new type mapping to the libCPPA internal type system.
      * @return <code>true</code> if @p uniform_type was added as known
      *         instance (mapped to @p plain_type); otherwise @c false
      *         is returned and @p uniform_type was deleted.
      */
-    static bool announce(const std::type_info& plain_type,
-                         uniform_type_info* uniform_type);
+//    static bool announce(const std::type_info& plain_type,
+//                         uniform_type_info* uniform_type);
 
     /**
      * auto concept value_type<typename T>
@@ -158,183 +151,64 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
      *     bool operator==(const T&, const T&);
      * }
      */
-    template<typename T,
-             class SerializeFun, class DeserializeFun,
-             class ToStringFun, class FromStringFun>
-    static bool announce(const SerializeFun& sf, const DeserializeFun& df,
-                         const ToStringFun& ts, const FromStringFun& fs);
+//    template<typename T,
+//             class SerializeFun, class DeserializeFun,
+//             class ToStringFun, class FromStringFun>
+//    static bool announce(const SerializeFun& sf, const DeserializeFun& df,
+//                         const ToStringFun& ts, const FromStringFun& fs);
 
     /**
      * @brief Create an object of this type.
      */
-    virtual object create() const = 0;
+    object create() const;
 
-    virtual object from_string(const std::string& str) const = 0;
+    object deserialize(deserializer* from) const;
 
  protected:
 
-    // needed to implement subclasses
-    inline void*& value_of(object& obj) const { return obj.m_value; }
-    inline const void* value_of(const object& obj) const { return obj.m_value; }
+    /**
+     * @brief Compares two instances of this type.
+     */
+    virtual bool equal(const void* instance1, const void* instance2) const = 0;
 
-    // object creation
-    virtual object copy(const object& what) const = 0;
+    /**
+     * @brief Creates an instance of this type, either as a copy of
+     *        @p instance or initialized with the default constructor
+     *        if @p instance @c == @c nullptr.
+     */
+    virtual void* new_instance(const void* instance = nullptr) const = 0;
 
-    // object modification
-    virtual void destroy(object& what) const = 0;
-    virtual void deserialize(deserializer& d, object& what) const = 0;
+    /**
+     * @brief Cast @p instance to the native type and delete it.
+     */
+    virtual void delete_instance(void* instance) const = 0;
 
-    // object inspection
-    virtual std::string to_string(const object& obj) const = 0;
-    virtual bool equal(const object& lhs, const object& rhs) const = 0;
-    virtual void serialize(serializer& s, const object& what) const = 0;
+ public:
+
+    /**
+     * @brief Determines if this uniform_type_info describes the same
+     *        type than @p tinfo.
+     */
+    virtual bool equal(const std::type_info& tinfo) const = 0;
+
+    /**
+     * @brief Serializes @p instance to @p sink.
+     */
+    virtual void serialize(const void* instance, serializer* sink) const = 0;
+
+    /**
+     * @brief Deserializes @p instance from @p source.
+     */
+    virtual void deserialize(void* instance, deserializer* source) const = 0;
 
 };
+
+uniform_type_info* uniform_typeid(const std::type_info& tinfo);
 
 template<typename T>
 uniform_type_info* uniform_typeid()
 {
     return uniform_type_info::by_type_info(typeid(T));
-}
-
-template<typename T,
-         class SerializeFun, class DeserializeFun,
-         class ToStringFun, class FromStringFun>
-bool uniform_type_info::announce(const SerializeFun& sf,
-                                 const DeserializeFun& df,
-                                 const ToStringFun& ts,
-                                 const FromStringFun& fs)
-{
-    // check signature of SerializeFun::operator()
-    typedef
-        typename
-        util::callable_trait<decltype(&SerializeFun::operator())>::arg_types
-        sf_args;
-    // assert arg_types == { serializer&, const T& } || { serializer&, T }
-    static_assert(
-        util::disjunction<
-            std::is_same<sf_args, util::type_list<serializer&, const T&>>,
-            std::is_same<sf_args, util::type_list<serializer&, T>>
-        >::value,
-        "Invalid signature of &SerializeFun::operator()");
-
-    // check signature of DeserializeFun::operator()
-    typedef
-        typename
-        util::callable_trait<decltype(&DeserializeFun::operator())>::arg_types
-        df_args;
-    // assert arg_types == { deserializer&, T& }
-    static_assert(
-        std::is_same<df_args, util::type_list<deserializer&, T&>>::value,
-        "Invalid signature of &DeserializeFun::operator()");
-
-    // check signature of ToStringFun::operator()
-    typedef util::callable_trait<decltype(&ToStringFun::operator())> ts_sig;
-    typedef typename ts_sig::arg_types ts_args;
-    // assert result_type == std::string
-    static_assert(
-        std::is_same<std::string, typename ts_sig::result_type>::value,
-        "ToStringFun::operator() doesn't return a string");
-    // assert arg_types == { const T& } || { T }
-    static_assert(
-        util::disjunction<
-            std::is_same<ts_args, util::type_list<const T&>>,
-            std::is_same<ts_args, util::type_list<T>>
-        >::value,
-        "Invalid signature of &ToStringFun::operator()");
-
-    // check signature of ToStringFun::operator()
-    typedef util::callable_trait<decltype(&FromStringFun::operator())> fs_sig;
-    typedef typename fs_sig::arg_types fs_args;
-    // assert result_type == T*
-    static_assert(
-        std::is_same<T*, typename fs_sig::result_type>::value,
-        "FromStringFun::operator() doesn't return T*");
-    // assert arg_types == { const std::string& } || { std::string }
-    static_assert(
-        util::disjunction<
-            std::is_same<fs_args, util::type_list<const std::string&>>,
-            std::is_same<fs_args, util::type_list<std::string>>
-        >::value,
-        "Invalid signature of &FromStringFun::operator()");
-
-    // "on-the-fly" implementation of uniform_type_info
-    class utimpl : public uniform_type_info
-    {
-
-        SerializeFun m_serialize;
-        DeserializeFun m_deserialize;
-        ToStringFun m_to_string;
-        FromStringFun m_from_string;
-
-        inline T& to_ref(object& what) const
-        {
-            return *reinterpret_cast<T*>(this->value_of(what));
-        }
-
-        inline const T& to_ref(const object& what) const
-        {
-            return *reinterpret_cast<const T*>(this->value_of(what));
-        }
-
-     protected:
-
-        object copy(const object& what) const
-        {
-            return { new T(this->to_ref(what)), this };
-        }
-
-        object from_string(const std::string& str) const
-        {
-            return { m_from_string(str), this };
-        }
-
-        void destroy(object& what) const
-        {
-            delete reinterpret_cast<T*>(this->value_of(what));
-            this->value_of(what) = nullptr;
-        }
-
-        void deserialize(deserializer& d, object& what) const
-        {
-            m_deserialize(d, to_ref(what));
-        }
-
-        std::string to_string(const object& obj) const
-        {
-            return m_to_string(to_ref(obj));
-        }
-
-        bool equal(const object& lhs, const object& rhs) const
-        {
-            return (lhs.type() == *this && rhs.type() == *this)
-                   ? to_ref(lhs) == to_ref(rhs)
-                   : false;
-        }
-
-        void serialize(serializer& s, const object& what) const
-        {
-            m_serialize(s, to_ref(what));
-        }
-
-     public:
-
-        utimpl(const SerializeFun& sfun, const DeserializeFun dfun,
-               const ToStringFun tfun, const FromStringFun ffun)
-            : uniform_type_info(typeid(T))
-            , m_serialize(sfun), m_deserialize(dfun)
-            , m_to_string(tfun), m_from_string(ffun)
-        {
-        }
-
-        object create() const
-        {
-            return { new T, this };
-        }
-
-    };
-
-    return announce(typeid(T), new utimpl(sf, df, ts, fs));
 }
 
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);

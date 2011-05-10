@@ -14,15 +14,15 @@ namespace {
 
 constexpr const char* mapped_int_names[][2] =
 {
-    { nullptr,	nullptr	},	// sizeof 0 { invalid }
-    { "@i8",	"@u8"	},	// sizeof 1 -> signed / unsigned int8
-    { "@i16",	"@u16"	},	// sizeof 2 -> signed / unsigned int16
-    { nullptr,	nullptr	},	// sizeof 3 { invalid }
-    { "@i32",	"@u32"	},	// sizeof 4 -> signed / unsigned int32
-    { nullptr,	nullptr	},	// sizeof 5 { invalid }
-    { nullptr,	nullptr	},	// sizeof 6 { invalid }
-    { nullptr,	nullptr	},	// sizeof 7 { invalid }
-    { "@i64",	"@u64"	}	// sizeof 8 -> signed / unsigned int64
+    { nullptr, nullptr }, // sizeof 0 { invalid }
+    { "@i8",   "@u8"   }, // sizeof 1 -> signed / unsigned int8
+    { "@i16",  "@u16"  }, // sizeof 2 -> signed / unsigned int16
+    { nullptr, nullptr }, // sizeof 3 { invalid }
+    { "@i32",  "@u32"  }, // sizeof 4 -> signed / unsigned int32
+    { nullptr, nullptr }, // sizeof 5 { invalid }
+    { nullptr, nullptr }, // sizeof 6 { invalid }
+    { nullptr, nullptr }, // sizeof 7 { invalid }
+    { "@i64",  "@u64"  }  // sizeof 8 -> signed / unsigned int64
 };
 
 template<typename T>
@@ -72,12 +72,14 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<long long>(), mapped_int_name<long long>() },
       { demangled<signed long long>(), mapped_int_name<signed long long>() },
       { demangled<unsigned long long>(), mapped_int_name<unsigned long long>()},
-      { demangled<wchar_t>(), mapped_int_name<wchar_t>() },
+//      { demangled<wchar_t>(), mapped_int_name<wchar_t>() },
       { demangled<char16_t>(), mapped_int_name<char16_t>() },
       { demangled<char32_t>(), mapped_int_name<char32_t>() },
       { demangled<cppa::util::void_type>(), "@0" },
-      { demangled<std::wstring>(), "@wstr" },
-      { demangled<std::string>(), "@str" }
+//      { demangled<std::wstring>(), "@wstr" },
+      { demangled<std::string>(), "@str" },
+      { demangled<std::u16string>(), "@u16str" },
+      { demangled<std::u32string>(), "@u32str" }
     };
 
     // check if we could find the whole string in our lookup map

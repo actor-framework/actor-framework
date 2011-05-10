@@ -21,6 +21,8 @@ HEADERS = cppa/actor.hpp \
 		  cppa/message_queue.hpp \
 		  cppa/object.hpp \
 		  cppa/on.hpp \
+		  cppa/primitive_type.hpp \
+		  cppa/primitive_variant.hpp \
 		  cppa/ref_counted.hpp \
 		  cppa/scheduler.hpp \
 		  cppa/scheduling_hint.hpp \
@@ -64,6 +66,7 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/void_type.hpp
 
 SOURCES = src/actor_behavior.cpp \
+		  src/binary_serializer.cpp \
 		  src/blocking_message_queue.cpp \
 		  src/channel.cpp \
 		  src/context.cpp \
@@ -73,6 +76,7 @@ SOURCES = src/actor_behavior.cpp \
 		  src/group.cpp \
 		  src/mock_scheduler.cpp \
 		  src/object.cpp \
+		  src/primitive_variant.cpp \
 		  src/scheduler.cpp \
 		  src/serializer.cpp \
 		  src/to_uniform_name.cpp \

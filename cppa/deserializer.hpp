@@ -3,68 +3,44 @@
 
 #include <string>
 #include <cstddef>
-#include <type_traits>
 
-#include "cppa/any_type.hpp"
-#include "cppa/intrusive_ptr.hpp"
-
-#include "cppa/util/source.hpp"
-#include "cppa/util/enable_if.hpp"
-
-#include "cppa/detail/swap_bytes.hpp"
-
-namespace cppa { namespace util {
-
-struct void_type;
-
-} } // namespace util
+#include "cppa/primitive_type.hpp"
+#include "cppa/primitive_variant.hpp"
 
 namespace cppa {
 
 class deserializer
 {
 
-	intrusive_ptr<util::source> m_src;
-
  public:
 
-	deserializer(const intrusive_ptr<util::source>& data_source);
+    virtual ~deserializer();
 
-	inline void read(std::size_t buf_size, void* buf)
-	{
-		m_src->read(buf_size, buf);
-	}
+    /**
+     * @brief Seeks the beginning of the next object and return its
+     *        uniform type name.
+     */
+    virtual std::string seek_object() = 0;
+
+    /**
+     * @brief Equal to {@link seek_object()} but doesn't
+     *        modify the internal in-stream position.
+     */
+    virtual std::string peek_object() = 0;
+
+    virtual void begin_object(const std::string& type_name) = 0;
+    virtual void end_object() = 0;
+
+    virtual size_t begin_sequence() = 0;
+    virtual void end_sequence() = 0;
+
+    virtual primitive_variant read_value(primitive_type ptype) = 0;
+
+    virtual void read_tuple(size_t size,
+                            const primitive_type* ptypes,
+                            primitive_variant* storage   ) = 0;
 
 };
-
-deserializer& operator>>(deserializer&, std::string&);
-
-template<typename T>
-typename util::enable_if<std::is_integral<T>, deserializer&>::type
-operator>>(deserializer& d, T& value)
-{
-	d.read(sizeof(T), &value);
-	value = detail::swap_bytes(value);
-	return d;
-}
-
-template<typename T>
-typename util::enable_if<std::is_floating_point<T>, deserializer&>::type
-operator>>(deserializer& d, T& value)
-{
-	d.read(sizeof(T), &value);
-	return d;
-}
-
-inline deserializer& operator>>(deserializer& d, util::void_type&)
-{
-	return d;
-}
-
-inline deserializer& operator>>(deserializer& d, any_type&)
-{
-	return d;
-}
 
 } // namespace cppa
 
