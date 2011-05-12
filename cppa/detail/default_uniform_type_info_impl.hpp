@@ -79,16 +79,16 @@ struct has_default_uniform_type_info_impl
                               || is_stl_compliant_list<T>::value;
 };
 
-template<typename Struct>
-class default_uniform_type_info_impl : public util::uniform_type_info_base<Struct>
+template<typename T>
+class default_uniform_type_info_impl : public util::uniform_type_info_base<T>
 {
 
-    template<typename T>
+    template<typename X>
     struct is_invalid
     {
-        static const bool value =    !util::is_primitive<T>::value
-                                  && !is_stl_compliant_map<T>::value
-                                  && !is_stl_compliant_list<T>::value;
+        static const bool value =    !util::is_primitive<X>::value
+                                  && !is_stl_compliant_map<X>::value
+                                  && !is_stl_compliant_list<X>::value;
     };
 
     class member
@@ -124,8 +124,8 @@ class default_uniform_type_info_impl : public util::uniform_type_info_base<Struc
 
      public:
 
-        template<typename T, class C>
-        member(uniform_type_info* mtptr, T C::*mem_ptr) : m_meta(mtptr)
+        template<typename R, class C>
+        member(uniform_type_info* mtptr, R C::*mem_ptr) : m_meta(mtptr)
         {
             m_serialize = [mem_ptr] (const uniform_type_info* mt,
                                      const void* obj,
@@ -193,70 +193,70 @@ class default_uniform_type_info_impl : public util::uniform_type_info_base<Struc
 
     // pr.first = member pointer
     // pr.second = meta object to handle pr.first
-    template<typename T, class C, typename... Args>
-    void push_back(std::pair<T C::*, util::uniform_type_info_base<T>*> pr,
+    template<typename R, class C, typename... Args>
+    void push_back(std::pair<R C::*, util::uniform_type_info_base<R>*> pr,
                    const Args&... args)
     {
         m_members.push_back({ pr.second, pr.first });
         push_back(args...);
     }
 
-    template<class C, typename T, typename... Args>
-    typename util::enable_if<util::is_primitive<T> >::type
-    push_back(T C::*mem_ptr, const Args&... args)
+    template<typename R, class C, typename... Args>
+    typename util::enable_if<util::is_primitive<R> >::type
+    push_back(R C::*mem_ptr, const Args&... args)
     {
-        m_members.push_back({ new primitive_member<T>(), mem_ptr });
+        m_members.push_back({ new primitive_member<R>(), mem_ptr });
         push_back(args...);
     }
 
-    template<class C, typename T, typename... Args>
-    typename util::enable_if<is_stl_compliant_list<T> >::type
-    push_back(T C::*mem_ptr, const Args&... args)
+    template< typename R, class C,typename... Args>
+    typename util::enable_if<is_stl_compliant_list<R> >::type
+    push_back(R C::*mem_ptr, const Args&... args)
     {
-        m_members.push_back({ new list_member<T>(), mem_ptr });
+        m_members.push_back({ new list_member<R>(), mem_ptr });
         push_back(args...);
     }
 
-    template<class C, typename T, typename... Args>
-    typename util::enable_if<is_stl_compliant_map<T> >::type
-    push_back(T C::*mem_ptr, const Args&... args)
+    template<typename R, class C, typename... Args>
+    typename util::enable_if<is_stl_compliant_map<R> >::type
+    push_back(R C::*mem_ptr, const Args&... args)
     {
-        m_members.push_back({ new map_member<T>(), mem_ptr });
+        m_members.push_back({ new map_member<R>(), mem_ptr });
         push_back(args...);
     }
 
-    template<class C, typename T, typename... Args>
-    typename util::enable_if<is_invalid<T>>::type
-    push_back(T C::*mem_ptr, const Args&... args)
+    template<typename R, class C, typename... Args>
+    typename util::enable_if<is_invalid<R>>::type
+    push_back(R C::*mem_ptr, const Args&... args)
     {
-        static_assert(util::is_primitive<T>::value,
+        static_assert(util::is_primitive<R>::value,
                       "T is neither a primitive type nor a "
                       "stl-compliant list/map");
     }
 
-    template<typename T>
+    template<class C>
     void init_(typename
                util::enable_if<
-                   util::disjunction<std::is_same<T,util::void_type>,
-                                     std::is_same<T,any_type>>>::type* = 0)
+                   util::disjunction<std::is_same<C, util::void_type>,
+                                     std::is_same<C, any_type>>>::type* = 0)
     {
         // any_type doesn't have any fields (no serialization required)
     }
 
-    template<typename T>
-    void init_(typename util::enable_if<util::is_primitive<T>>::type* = 0)
+    template<typename P>
+    void init_(typename util::enable_if<util::is_primitive<P>>::type* = 0)
     {
-        m_members.push_back(member::fake_member(new primitive_member<T>()));
+        m_members.push_back(member::fake_member(new primitive_member<P>()));
     }
 
-    template<typename T>
+    template<typename X>
     void init_(typename
                util::disable_if<
-                   util::disjunction<util::is_primitive<T>,
-                                     std::is_same<T,util::void_type>,
-                                     std::is_same<T,any_type>>>::type* = 0)
+                   util::disjunction<util::is_primitive<X>,
+                                     std::is_same<X, util::void_type>,
+                                     std::is_same<X, any_type>>>::type* = 0)
     {
-        static_assert(util::is_primitive<T>::value,
+        static_assert(util::is_primitive<X>::value,
                       "T is neither a primitive type nor a "
                       "stl-compliant list/map");
     }
@@ -271,7 +271,7 @@ class default_uniform_type_info_impl : public util::uniform_type_info_base<Struc
 
     default_uniform_type_info_impl()
     {
-        init_<Struct>();
+        init_<T>();
     }
 
     void serialize(const void* obj, serializer* s) const

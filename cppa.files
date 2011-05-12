@@ -140,3 +140,6 @@ cppa/util/rm_ref.hpp
 cppa/util/is_iterable.hpp
 cppa/binary_serializer.hpp
 src/binary_serializer.cpp
+cppa/binary_deserializer.hpp
+src/binary_deserializer.cpp
+src/actor.cpp

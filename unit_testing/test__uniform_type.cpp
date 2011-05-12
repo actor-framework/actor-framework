@@ -83,21 +83,12 @@ std::size_t test__uniform_type()
         object obj1 = uniform_typeid<foo>()->create();
         object obj2(obj1);
         CPPA_CHECK_EQUAL(obj1, obj2);
+        get<foo>(obj1).value = 42;
+        CPPA_CHECK(obj1 != obj2);
+        CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
+        CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
     }
-
-    {
-        object wstr_obj1 = uniform_typeid<std::wstring>()->create();
-        object_cast<std::wstring&>(wstr_obj1) = L"hello wstring!";
-        object wstr_obj2 = uniform_typeid<std::wstring>()->from_string("hello wstring!");
-        CPPA_CHECK_EQUAL(wstr_obj1, wstr_obj2);
-        const object& obj2_ref = wstr_obj2;
-        CPPA_CHECK_EQUAL(object_cast<std::wstring&>(wstr_obj1),
-                         object_cast<const std::wstring&>(obj2_ref));
-        // couldn't be converted to ASCII
-        object_cast<std::wstring&>(wstr_obj1) = L"hello wstring\x05D4";
-        std::string narrowed = wstr_obj1.to_string();
-        CPPA_CHECK_EQUAL(narrowed, "hello wstring?");
-    }
+*/
 
     int successful_announces =   (unused1 ? 1 : 0)
                                + (unused2 ? 1 : 0)
@@ -110,12 +101,12 @@ std::size_t test__uniform_type()
     // the uniform_type_info implementation is correct
     std::set<std::string> expected =
     {
-        "@_::foo",						// name of <anonymous namespace>::foo
-        "@i8", "@i16", "@i32", "@i64",	// signed integer names
-        "@u8", "@u16", "@u32", "@u64",	// unsigned integer names
-        "@str", "@wstr",				// strings
-        "float", "double",				// floating points
-        "@0",							// util::void_type
+//        "@_::foo",                       // name of <anonymous namespace>::foo
+        "@i8", "@i16", "@i32", "@i64",   // signed integer names
+        "@u8", "@u16", "@u32", "@u64",   // unsigned integer names
+        "@str", "@u16str", "@u32str",    // strings
+        "float", "double",               // floating points
+        "@0",                            // util::void_type
         // default announced cppa types
         "cppa::any_type",
         "cppa::intrusive_ptr<cppa::actor>"
@@ -140,27 +131,27 @@ std::size_t test__uniform_type()
     // compare the two sets
     CPPA_CHECK_EQUAL(expected.size(), found.size());
 
+    bool expected_equals_found = false;
+
     if (expected.size() == found.size())
     {
-        bool expected_equals_found = std::equal(found.begin(),
-                                                found.end(),
-                                                expected.begin());
+        expected_equals_found = std::equal(found.begin(),
+                                           found.end(),
+                                           expected.begin());
         CPPA_CHECK(expected_equals_found);
-        if (!expected_equals_found)
+    }
+    if (!expected_equals_found)
+    {
+        cout << "found:" << endl;
+        for (const std::string& tname : found)
         {
-            cout << "found:" << endl;
-            for (const std::string& tname : found)
-            {
-                cout << "    - " << tname << endl;
-            }
-            cout << "expected: " << endl;
-            for (const std::string& tname : expected)
-            {
-                cout << "    - " << tname << endl;
-            }
+            cout << "    - " << tname << endl;
+        }
+        cout << "expected: " << endl;
+        for (const std::string& tname : expected)
+        {
+            cout << "    - " << tname << endl;
         }
     }
-*/
-
     return CPPA_TEST_RESULT;
 }

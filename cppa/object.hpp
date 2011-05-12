@@ -67,6 +67,7 @@ public:
      * @post {@code other.type() == nullptr}
      */
     object& operator=(object&& other);
+
     object& operator=(const object& other);
 
     bool equal(const object& other) const;
@@ -97,10 +98,14 @@ inline void assert_type(const object& obj, const std::type_info& tinfo)
     }
 }
 
-// get a const reference
 template<typename T>
-struct object_caster<const T&>
+struct object_caster
 {
+    static T& _(object& obj)
+    {
+        assert_type(obj, typeid(T));
+        return *reinterpret_cast<T*>(obj.m_value);
+    }
     static const T& _(const object& obj)
     {
         assert_type(obj, typeid(T));
@@ -108,68 +113,23 @@ struct object_caster<const T&>
     }
 };
 
-// get a mutable reference
-template<typename T>
-struct object_caster<T&>
-{
-    static T& _(object& obj)
-    {
-        assert_type(obj, typeid(T));
-        return *reinterpret_cast<T*>(obj.m_value);
-    }
-};
-
-// get a const pointer
-template<typename T>
-struct object_caster<const T*>
-{
-    static const T* _(const object& obj)
-    {
-        assert_type(obj, typeid(T));
-        return reinterpret_cast<const T*>(obj.m_value);
-    }
-};
-
-// get a mutable pointer
-template<typename T>
-struct object_caster<T*>
-{
-    static T* _(object& obj)
-    {
-        assert_type(obj, typeid(T));
-        return reinterpret_cast<T*>(obj.m_value);
-    }
-};
+} // namespace detail
 
 template<typename T>
-struct is_const_reference : std::false_type { };
-
-template<typename T>
-struct is_const_reference<const T&> : std::true_type { };
-
-template<typename T>
-struct is_const_pointer : std::false_type { };
-
-template<typename T>
-struct is_const_pointer<const T*> : std::true_type { };
-
-}
-
-template<typename T>
-T object_cast(object& obj)
+T& get(object& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
-                                    std::is_reference<T>>::value,
-                  "T is neither a reference nor a pointer type.");
+                                    std::is_reference<T>>::value == false,
+                  "T is a reference or a pointer type.");
     return detail::object_caster<T>::_(obj);
 }
 
 template<typename T>
-const T& object_cast(const object& obj)
+const T& get(const object& obj)
 {
-    static_assert(util::disjunction<detail::is_const_pointer<T>,
-                                    detail::is_const_reference<T>>::value,
-                  "T is neither a const reference nor a const pointer type.");
+    static_assert(util::disjunction<std::is_pointer<T>,
+                                    std::is_reference<T>>::value,
+                  "T is a reference a pointer type.");
     return detail::object_caster<T>::_(obj);
 }
 

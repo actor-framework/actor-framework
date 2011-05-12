@@ -21,17 +21,21 @@
 
 namespace cppa {
 
+class uniform_type_info;
+
+const uniform_type_info* uniform_typeid(const std::type_info&);
+
 /**
- * @brief Provides a platform independent type name and (very primitive)
- *        reflection in combination with {@link cppa::object object}.
+ * @brief Provides a platform independent type name and a (very primitive)
+ *        kind of reflection in combination with {@link cppa::object object}.
  *
  * The platform dependent type name (from GCC or Microsofts VC++ Compiler) is
  * translated to a (usually) shorter and platform independent name.
  *
- * This name is usually equal to the "in-sourcecode-name",
- * with a few exceptions:
+ * This name is equal to the "in-sourcecode-name" but with a few exceptions:
  * - @c std::string is named @c \@str
- * - @c std::wstring is named @c \@wstr
+ * - @c std::u16string is named @c \@u16str
+ * - @c std::u32string is named @c \@u32str
  * - @c integers are named <tt>\@(i|u)$size</tt>\n
  *   e.g.: @c \@i32 is a 32 bit signed integer; @c \@u16
  *   is a 16 bit unsigned integer
@@ -46,10 +50,7 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     friend class object;
 
     // needs access to by_type_info()
-    template<typename T>
-    friend uniform_type_info* uniform_typeid();
-
-    friend uniform_type_info* uniform_typeid(const std::type_info&);
+    friend const uniform_type_info* uniform_typeid(const std::type_info&);
 
  public:
 
@@ -94,11 +95,11 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     uniform_type_info& operator=(uniform_type_info&&) = delete;
     uniform_type_info& operator=(const uniform_type_info&) = delete;
 
-    static uniform_type_info* by_type_info(const std::type_info& tinfo);
+    static const uniform_type_info* by_type_info(const std::type_info& tinfo);
 
  protected:
 
-    explicit uniform_type_info(const std::string& uniform_name);
+    uniform_type_info(const std::string& uniform_name);
 
  public:
 
@@ -134,6 +135,7 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     {
         return id().compare(other.id());
     }
+
     /**
      * @brief Add a new type mapping to the libCPPA internal type system.
      * @return <code>true</code> if @p uniform_type was added as known
@@ -158,11 +160,14 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 //                         const ToStringFun& ts, const FromStringFun& fs);
 
     /**
-     * @brief Create an object of this type.
+     * @brief Creates an object of this type.
      */
     object create() const;
 
-    object deserialize(deserializer* from) const;
+    /**
+     * @brief Deserializes an object of this type from @p source.
+     */
+    object deserialize(deserializer* source) const;
 
  protected:
 
@@ -203,12 +208,10 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 
 };
 
-uniform_type_info* uniform_typeid(const std::type_info& tinfo);
-
 template<typename T>
-uniform_type_info* uniform_typeid()
+inline const uniform_type_info* uniform_typeid()
 {
-    return uniform_type_info::by_type_info(typeid(T));
+    return uniform_typeid(typeid(T));
 }
 
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);

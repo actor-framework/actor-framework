@@ -55,7 +55,7 @@ int main(int argc, char** c_argv)
         std::cout << std::boolalpha;
         std::size_t errors = 0;
         RUN_TEST(test__primitive_variant);
-//        RUN_TEST(test__uniform_type);
+        RUN_TEST(test__uniform_type);
         RUN_TEST(test__intrusive_ptr);
         RUN_TEST(test__a_matches_b);
         RUN_TEST(test__type_list);

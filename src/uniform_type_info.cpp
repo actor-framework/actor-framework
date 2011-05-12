@@ -48,6 +48,12 @@ inline const char* raw_name(const std::type_info& tinfo)
 }
 
 template<typename T>
+struct is_signed : std::integral_constant<bool,
+                                          std::numeric_limits<T>::is_signed>
+{
+};
+
+template<typename T>
 inline const char* raw_name()
 {
     return raw_name(typeid(T));
@@ -72,19 +78,46 @@ void push(std::map<int, std::pair<string_set, string_set>>& ints,
 template<typename Int>
 void push(std::map<int, std::pair<string_set, string_set>>& ints)
 {
-    push<Int>(ints, std::integral_constant<bool, std::numeric_limits<Int>::is_signed>());
+    push<Int>(ints, is_signed<Int>());
 }
 
 template<typename Int0, typename Int1, typename... Ints>
 void push(std::map<int, std::pair<string_set, string_set>>& ints)
 {
-    push<Int0>(ints, std::integral_constant<bool, std::numeric_limits<Int0>::is_signed>());
+    push<Int0>(ints, is_signed<Int0>());
     push<Int1, Ints...>(ints);
 }
 
 } // namespace <anonymous>
 
 namespace cppa { namespace detail { namespace {
+
+class actor_ptr_type_info_impl : public util::uniform_type_info_base<actor_ptr>
+{
+
+ protected:
+
+    void serialize(const void* ptr, serializer* sink) const
+    {
+        sink->begin_object(name());
+        sink->write_value((*reinterpret_cast<const actor_ptr*>(ptr))->id());
+        sink->end_object();
+    }
+
+    void deserialize(void* ptr, deserializer* source) const
+    {
+        std::string cname = source->seek_object();
+        if (cname != name())
+        {
+            throw std::logic_error("wrong type name found");
+        }
+        source->begin_object(cname);
+        auto id = get<std::uint32_t>(source->read_value(pt_uint32));
+        *reinterpret_cast<actor_ptr*>(ptr) = actor::by_id(id);
+        source->end_object();
+    }
+
+};
 
 class uniform_type_info_map
 {
@@ -127,8 +160,9 @@ class uniform_type_info_map
     uniform_type_info_map()
     {
         insert<std::string>();
-        //insert<wstring_obj>({std::string(raw_name<std::wstring>())});
-        //insert(new wstring_utype, { std::string(raw_name<std::wstring>()) });
+        insert<std::u16string>();
+        insert<std::u32string>();
+        insert(new actor_ptr_type_info_impl, { raw_name<actor_ptr>() });
         insert<float>();
         insert<cppa::util::void_type>();
         if (sizeof(double) == sizeof(long double))
@@ -213,7 +247,9 @@ class uniform_type_info_map
         {
             if (!m_by_rname.insert(std::make_pair(plain_name, what)).second)
             {
-                throw std::runtime_error(plain_name + " already mapped to an uniform_type_info");
+                std::string error_str = plain_name;
+                error_str += " already mapped to an uniform_type_info";
+                throw std::runtime_error(error_str);
             }
         }
         return true;
@@ -260,7 +296,13 @@ uniform_type_info::~uniform_type_info()
 {
 }
 
-uniform_type_info* uniform_type_info::by_type_info(const std::type_info& tinf)
+object uniform_type_info::create() const
+{
+    return { new_instance(), this };
+}
+
+const uniform_type_info*
+uniform_type_info::by_type_info(const std::type_info& tinf)
 {
     auto result = detail::s_uniform_type_info_map().by_raw_name(raw_name(tinf));
     if (!result)
@@ -281,20 +323,6 @@ uniform_type_info* uniform_type_info::by_uniform_name(const std::string& name)
     return result;
 }
 
-/*
-bool uniform_type_info::announce(const std::type_info& plain_type,
-                                 uniform_type_info* uniform_type)
-{
-    string_set tmp = { std::string(raw_name(plain_type)) };
-    if (!detail::s_uniform_type_info_map().insert(tmp, uniform_type))
-    {
-        delete uniform_type;
-        return false;
-    }
-    return true;
-}
-*/
-
 object uniform_type_info::deserialize(deserializer* from) const
 {
     auto ptr = new_instance();
@@ -307,7 +335,7 @@ std::vector<uniform_type_info*> uniform_type_info::instances()
     return detail::s_uniform_type_info_map().get_all();
 }
 
-uniform_type_info* uniform_typeid(const std::type_info& tinfo)
+const uniform_type_info* uniform_typeid(const std::type_info& tinfo)
 {
     return uniform_type_info::by_type_info(tinfo);
 }

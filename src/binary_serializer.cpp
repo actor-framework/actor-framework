@@ -52,9 +52,11 @@ class binary_writer
     }
 
     template<typename T>
-    void operator()(const T& value,
+    void operator()(const T&,
                     typename enable_if< std::is_floating_point<T> >::type* = 0)
     {
+        throw std::logic_error("binary_serializer::write_floating_point "
+                               "not implemented yet");
     }
 
     void operator()(const std::string& str)

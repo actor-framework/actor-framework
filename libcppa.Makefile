@@ -6,6 +6,9 @@ INCLUDES = -I./
 
 HEADERS = cppa/actor.hpp \
 		  cppa/any_type.hpp \
+		  cppa/binary_deserializer.hpp \
+		  cppa/binary_serializer.hpp \
+		  cppa/channel.hpp \
 		  cppa/config.hpp \
 		  cppa/context.hpp \
 		  cppa/cow_ptr.hpp \
@@ -65,7 +68,9 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/type_list_pop_back.hpp \
 		  cppa/util/void_type.hpp
 
-SOURCES = src/actor_behavior.cpp \
+SOURCES = src/actor.cpp \
+		  src/actor_behavior.cpp \
+		  src/binary_deserializer.cpp \
 		  src/binary_serializer.cpp \
 		  src/blocking_message_queue.cpp \
 		  src/channel.cpp \

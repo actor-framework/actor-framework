@@ -30,6 +30,7 @@
 #include "cppa/primitive_type.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
+#include "cppa/binary_deserializer.hpp"
 
 #include "cppa/util/apply.hpp"
 #include "cppa/util/pt_token.hpp"
@@ -188,229 +189,6 @@ class string_serializer : public serializer
             write_value(*values);
         }
         out << (m_after_value ? " }" : "}");
-    }
-
-};
-
-/*
-class xml_serializer : public serializer
-{
-
-    std::ostream& out;
-    std::string indentation;
-
-    inline void inc_indentation()
-    {
-        indentation.resize(indentation.size() + 4, ' ');
-    }
-
-    inline void dec_indentation()
-    {
-        auto isize = indentation.size();
-        indentation.resize((isize > 4) ? (isize - 4) : 0);
-    }
-
-    struct pt_writer
-    {
-
-        std::ostream& out;
-        const std::string& indentation;
-
-        pt_writer(std::ostream& ostr, const std::string& indent)
-            : out(ostr), indentation(indent)
-        {
-        }
-
-        template<typename T>
-        void operator()(const T& value)
-        {
-            out << indentation << "<value type=\""
-                << primitive_type_name(type_to_ptype<T>::ptype)
-                << "\">" << value << "</value>\n";
-        }
-
-        void operator()(const std::u16string&) { }
-
-        void operator()(const std::u32string&) { }
-
-    };
-
- public:
-
-    xml_serializer(std::ostream& ostr) : out(ostr), indentation("") { }
-
-    void begin_object(const std::string& type_name)
-    {
-        out << indentation << "<object type=\"" << type_name << "\">\n";
-        inc_indentation();
-    }
-    void end_object()
-    {
-        dec_indentation();
-        out << indentation << "</object>\n";
-    }
-
-    void begin_list(size_t)
-    {
-        out << indentation << "<list>\n";
-        inc_indentation();
-    }
-
-    void end_list()
-    {
-        dec_indentation();
-        out << indentation << "</list>\n";
-    }
-
-    void write_value(const pt_value& value)
-    {
-        value.apply(pt_writer(out, indentation));
-    }
-
-};
-*/
-
-class binary_deserializer : public deserializer
-{
-
-    const char* m_buf;
-    size_t m_rd_pos;
-    size_t m_buf_size;
-
-    void range_check(size_t read_size)
-    {
-        if (m_rd_pos + read_size >= m_buf_size)
-        {
-            std::out_of_range("binary_deserializer::read()");
-        }
-    }
-
-    template<typename T>
-    void read(T& storage, bool modify_rd_pos = true)
-    {
-        range_check(sizeof(T));
-        memcpy(&storage, m_buf + m_rd_pos, sizeof(T));
-        if (modify_rd_pos) m_rd_pos += sizeof(T);
-    }
-
-    void read(std::string& str, bool modify_rd_pos = true)
-    {
-        std::uint32_t str_size;
-        read(str_size, modify_rd_pos);
-        const char* cpy_begin;
-        if (modify_rd_pos)
-        {
-            range_check(str_size);
-            cpy_begin = m_buf + m_rd_pos;
-        }
-        else
-        {
-            range_check(sizeof(std::uint32_t) + str_size);
-            cpy_begin = m_buf + m_rd_pos + sizeof(std::uint32_t);
-        }
-        str.clear();
-        str.reserve(str_size);
-        const char* cpy_end = cpy_begin + str_size;
-        std::copy(cpy_begin, cpy_end, std::back_inserter(str));
-        if (modify_rd_pos) m_rd_pos += str_size;
-    }
-
-    template<typename CharType, typename StringType>
-    void read_unicode_string(StringType& str)
-    {
-        std::uint32_t str_size;
-        read(str_size);
-        str.reserve(str_size);
-        for (size_t i = 0; i < str_size; ++i)
-        {
-            CharType c;
-            read(c);
-            str += static_cast<typename StringType::value_type>(c);
-        }
-    }
-
-    void read(std::u16string& str)
-    {
-        // char16_t is guaranteed to has *at least* 16 bytes,
-        // but not to have *exactly* 16 bytes; thus use uint16_t
-        read_unicode_string<std::uint16_t>(str);
-    }
-
-    void read(std::u32string& str)
-    {
-        // char32_t is guaranteed to has *at least* 32 bytes,
-        // but not to have *exactly* 32 bytes; thus use uint32_t
-        read_unicode_string<std::uint32_t>(str);
-    }
-
-    struct pt_reader
-    {
-        binary_deserializer* self;
-        inline pt_reader(binary_deserializer* mself) : self(mself) { }
-        template<typename T>
-        inline void operator()(T& value)
-        {
-            self->read(value);
-        }
-    };
-
- public:
-
-    binary_deserializer(const char* buf, size_t buf_size)
-        : m_buf(buf), m_rd_pos(0), m_buf_size(buf_size)
-    {
-    }
-
-    std::string seek_object()
-    {
-        std::string result;
-        read(result);
-        return result;
-    }
-
-    std::string peek_object()
-    {
-        std::string result;
-        read(result, false);
-        return result;
-    }
-
-    void begin_object(const std::string&)
-    {
-    }
-
-    void end_object()
-    {
-    }
-
-    size_t begin_sequence()
-    {
-        std::uint32_t size;
-        read(size);
-        return size;
-    }
-
-    void end_sequence()
-    {
-    }
-
-    primitive_variant read_value(primitive_type ptype)
-    {
-        primitive_variant val(ptype);
-        val.apply(pt_reader(this));
-        return val;
-    }
-
-    void read_tuple(size_t size,
-                    const primitive_type* ptypes,
-                    primitive_variant* storage)
-    {
-        const primitive_type* end = ptypes + size;
-        for ( ; ptypes != end; ++ptypes)
-        {
-            *storage = std::move(read_value(*ptypes));
-            ++storage;
-        }
     }
 
 };
@@ -713,6 +491,12 @@ compound_member(C Parent::*c_ptr, const Args&... args)
     return std::make_pair(c_ptr, meta_object<C>(args...));
 }
 
+template<typename T, typename... Args>
+void announce(const Args&... args)
+{
+    announce(meta_object<T>(args...));
+}
+
 std::size_t test__serialization()
 {
     CPPA_TEST(test__serialization);
@@ -740,11 +524,11 @@ std::size_t test__serialization()
     // test serializers / deserializers with struct_b
     {
         // get meta object for struct_b
-        announce(meta_object<struct_b>(compound_member(&struct_b::a,
-                                                       &struct_a::x,
-                                                       &struct_a::y),
-                                       &struct_b::z,
-                                       &struct_b::ints));
+        announce<struct_b>(compound_member(&struct_b::a,
+                                           &struct_a::x,
+                                           &struct_a::y),
+                           &struct_b::z,
+                           &struct_b::ints);
         // testees
         struct_b b1 = { { 1, 2 }, 3, { 4, 5, 6, 7, 8, 9, 10 } };
         struct_b b2;
@@ -764,7 +548,7 @@ std::size_t test__serialization()
             binary_deserializer bd(bs.data(), bs.size());
             object res = root_object.deserialize(&bd);
             CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
-            b2 = object_cast<const struct_b&>(res);
+            b2 = get<struct_b>(res);
         }
         // cleanup
         delete buf.second;
@@ -776,33 +560,27 @@ std::size_t test__serialization()
             string_deserializer strd(b1str);
             auto res = root_object.deserialize(&strd);
             CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
-            b3 = object_cast<const struct_b&>(res);
+            b3 = get<struct_b>(res);
         }
         CPPA_CHECK_EQUAL(b1, b3);
     }
     // test serializers / deserializers with struct_c
     {
         // get meta type of struct_c and "announce"
-        announce(meta_object<struct_c>(&struct_c::strings,&struct_c::ints));
+        announce<struct_c>(&struct_c::strings, &struct_c::ints);
         // testees
         struct_c c1 = { { { "abc", u"cba" }, { "x", u"y" } }, { 9, 4, 5 } };
         struct_c c2;
-        // binary buffer
-        std::pair<size_t, char*> buf;
-        // serialize c1 to buf
         {
+            // serialize c1 to buf
             binary_serializer bs;
             root_object.serialize(c1, &bs);
-            buf = bs.take_buffer();
-        }
-        // serialize c2 from buf
-        {
-            binary_deserializer bd(buf.second, buf.first);
+            // serialize c2 from buf
+            binary_deserializer bd(bs.data(), bs.size());
             auto res = root_object.deserialize(&bd);
             CPPA_CHECK_EQUAL(res.type().name(), "struct_c");
-            c2 = object_cast<const struct_c&>(res);
+            c2 = get<struct_c>(res);
         }
-        delete buf.second;
         // verify result of serialization / deserialization
         CPPA_CHECK_EQUAL(c1, c2);
     }
