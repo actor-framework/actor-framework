@@ -44,13 +44,13 @@ std::size_t test__type_list()
     type_list<std::int32_t, float, char> ifc;
     auto i = ifc.begin();
     CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK(((*i)->name() == "@i32"));
+    CPPA_CHECK((i->name() == "@i32"));
     ++i;
     CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK(((*i)->name() == "float"));
+    CPPA_CHECK((i->name() == "float"));
     ++i;
     CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK(((*i)->name() == "@i8"));
+    CPPA_CHECK((i->name() == "@i8"));
     ++i;
     CPPA_CHECK((i == ifc.end()));
 

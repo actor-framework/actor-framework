@@ -12,15 +12,15 @@ struct reverse_type_list;
 template<typename HeadA, typename... TailA, typename... ListB>
 struct reverse_type_list<type_list<HeadA, TailA...>, type_list<ListB...>>
 {
-	typedef typename reverse_type_list<type_list<TailA...>,
-									   type_list<HeadA, ListB...>>::type
-			type;
+    typedef typename reverse_type_list<type_list<TailA...>,
+                                       type_list<HeadA, ListB...>>::type
+            type;
 };
 
 template<typename... Types>
 struct reverse_type_list<type_list<>, type_list<Types...>>
 {
-	typedef type_list<Types...> type;
+    typedef type_list<Types...> type;
 };
 
 } } // namespace cppa::util

@@ -9,8 +9,6 @@
 #include <type_traits>
 
 #include "cppa/object.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/deserializer.hpp"
 
 #include "cppa/util/comparable.hpp"
 #include "cppa/util/disjunction.hpp"
@@ -21,6 +19,8 @@
 
 namespace cppa {
 
+class serializer;
+class deserializer;
 class uniform_type_info;
 
 const uniform_type_info* uniform_typeid(const std::type_info&);
@@ -68,7 +68,7 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 
      public:
 
-        // enable copy constructor
+        // enable copy constructor (only)
         identifier(const identifier&) = default;
 
         // needed by cppa::detail::comparable<identifier>
@@ -135,29 +135,6 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     {
         return id().compare(other.id());
     }
-
-    /**
-     * @brief Add a new type mapping to the libCPPA internal type system.
-     * @return <code>true</code> if @p uniform_type was added as known
-     *         instance (mapped to @p plain_type); otherwise @c false
-     *         is returned and @p uniform_type was deleted.
-     */
-//    static bool announce(const std::type_info& plain_type,
-//                         uniform_type_info* uniform_type);
-
-    /**
-     * auto concept value_type<typename T>
-     * {
-     *     T();
-     *     T(const T&);
-     *     bool operator==(const T&, const T&);
-     * }
-     */
-//    template<typename T,
-//             class SerializeFun, class DeserializeFun,
-//             class ToStringFun, class FromStringFun>
-//    static bool announce(const SerializeFun& sf, const DeserializeFun& df,
-//                         const ToStringFun& ts, const FromStringFun& fs);
 
     /**
      * @brief Creates an object of this type.

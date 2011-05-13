@@ -15,36 +15,36 @@ namespace cppa { namespace detail {
 class converted_thread_context : public context
 {
 
-	// mailbox implementation
-	detail::blocking_message_queue m_mailbox;
+    // mailbox implementation
+    detail::blocking_message_queue m_mailbox;
 
-	// guards access to m_exited, m_subscriptions and m_links
-	std::mutex m_mtx;
+    // guards access to m_exited, m_subscriptions and m_links
+    std::mutex m_mtx;
 
-	// true if the associated thread has finished execution
-	bool m_exited;
+    // true if the associated thread has finished execution
+    bool m_exited;
 
-	// manages group subscriptions
-	std::map<group_ptr, intrusive_ptr<group::subscription>> m_subscriptions;
+    // manages group subscriptions
+    std::map<group_ptr, intrusive_ptr<group::subscription>> m_subscriptions;
 
-	// manages actor links
-	std::set<actor_ptr> m_links;
+    // manages actor links
+    std::set<actor_ptr> m_links;
 
  public:
 
-	message_queue& mailbox /*[[override]]*/ ();
+    message_queue& mailbox /*[[override]]*/ ();
 
-	void join /*[[override]]*/ (group_ptr& what);
+    void join /*[[override]]*/ (group_ptr& what);
 
-	void leave /*[[override]]*/ (const group_ptr& what);
+    void leave /*[[override]]*/ (const group_ptr& what);
 
-	void link /*[[override]]*/ (intrusive_ptr<actor>& other);
+    void link /*[[override]]*/ (intrusive_ptr<actor>& other);
 
-	void unlink /*[[override]]*/ (intrusive_ptr<actor>& other);
+    void unlink /*[[override]]*/ (intrusive_ptr<actor>& other);
 
-	bool remove_backlink /*[[override]]*/ (const intrusive_ptr<actor>& to);
+    bool remove_backlink /*[[override]]*/ (const intrusive_ptr<actor>& to);
 
-	bool establish_backlink /*[[override]]*/ (const intrusive_ptr<actor>& to);
+    bool establish_backlink /*[[override]]*/ (const intrusive_ptr<actor>& to);
 
 };
 

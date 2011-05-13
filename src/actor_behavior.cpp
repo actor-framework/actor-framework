@@ -2,6 +2,12 @@
 
 namespace cppa {
 
-void actor_behavior::on_exit() { }
+actor_behavior::~actor_behavior()
+{
+}
+
+void actor_behavior::on_exit()
+{
+}
 
 } // namespace cppa

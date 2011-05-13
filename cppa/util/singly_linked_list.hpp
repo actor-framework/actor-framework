@@ -9,48 +9,48 @@ template<typename T>
 class singly_linked_list
 {
 
-	T* m_head;
-	T* m_tail;
+    T* m_head;
+    T* m_tail;
 
  public:
 
-	typedef T element_type;
+    typedef T element_type;
 
-	singly_linked_list() : m_head(0), m_tail(0) { }
+    singly_linked_list() : m_head(0), m_tail(0) { }
 
-	~singly_linked_list()
-	{
-		while (m_head)
-		{
-			T* next = m_head->next;
-			delete m_head;
-			m_head = next;
-		}
-	}
+    ~singly_linked_list()
+    {
+        while (m_head)
+        {
+            T* next = m_head->next;
+            delete m_head;
+            m_head = next;
+        }
+    }
 
-	inline bool empty() const { return m_head == 0; }
+    inline bool empty() const { return m_head == 0; }
 
-	void push_back(element_type* what)
-	{
-		what->next = 0;
-		if (m_tail)
-		{
-			m_tail->next = what;
-			m_tail = what;
-		}
-		else
-		{
-			m_head = m_tail = what;
-		}
-	}
+    void push_back(element_type* what)
+    {
+        what->next = 0;
+        if (m_tail)
+        {
+            m_tail->next = what;
+            m_tail = what;
+        }
+        else
+        {
+            m_head = m_tail = what;
+        }
+    }
 
-	std::pair<element_type*, element_type*> take()
-	{
-		element_type* first = m_head;
-		element_type* last = m_tail;
-		m_head = m_tail = 0;
-		return { first, last };
-	}
+    std::pair<element_type*, element_type*> take()
+    {
+        element_type* first = m_head;
+        element_type* last = m_tail;
+        m_head = m_tail = 0;
+        return { first, last };
+    }
 
 };
 

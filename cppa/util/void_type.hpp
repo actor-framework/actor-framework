@@ -8,8 +8,8 @@ template<typename... Types> struct type_list;
 
 struct void_type
 {
-	typedef void_type head_type;
-	typedef type_list<> tail_type;
+    typedef void_type head_type;
+    typedef type_list<> tail_type;
 };
 
 inline bool operator==(const void_type&, const void_type&) { return true; }

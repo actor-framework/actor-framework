@@ -4,6 +4,9 @@
 #include <string>
 #include <cstddef> // size_t
 
+#include "cppa/uniform_type_info.hpp"
+#include "cppa/detail/to_uniform_name.hpp"
+
 namespace cppa {
 
 // forward declaration
@@ -35,6 +38,19 @@ class serializer
     virtual void write_tuple(size_t size, const primitive_variant* values) = 0;
 
 };
+
+template<typename T>
+serializer& operator<<(serializer& s, const T& what)
+{
+    auto mtype = uniform_typeid<T>();
+    if (mtype == nullptr)
+    {
+        throw std::logic_error(  "no uniform type info found for "
+                                 + cppa::detail::to_uniform_name(typeid(T)));
+    }
+    mtype->serialize(&what, &s);
+    return s;
+}
 
 } // namespace cppa
 

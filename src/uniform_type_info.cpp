@@ -11,6 +11,7 @@
 #include "cppa/config.hpp"
 
 #include "cppa/actor.hpp"
+#include "cppa/announce.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -48,8 +49,8 @@ inline const char* raw_name(const std::type_info& tinfo)
 }
 
 template<typename T>
-struct is_signed : std::integral_constant<bool,
-                                          std::numeric_limits<T>::is_signed>
+struct is_signed
+        : std::integral_constant<bool, std::numeric_limits<T>::is_signed>
 {
 };
 
@@ -177,7 +178,6 @@ class uniform_type_info_map
             insert<long double>();
         }
         insert<any_type>();
-//        insert<actor_ptr>();
         // first: signed
         // second: unsigned
         std::map<int, std::pair<string_set, string_set>> ints;
@@ -236,10 +236,11 @@ class uniform_type_info_map
     }
 
     bool insert(std::set<std::string> plain_names,
-                        uniform_type_info* what)
+                uniform_type_info* what)
     {
         if (m_by_uname.count(what->name()) > 0)
         {
+            delete what;
             return false;
         }
         m_by_uname.insert(std::make_pair(what->name(), what));
@@ -286,6 +287,11 @@ inline int next_id() { return s_ids.fetch_add(1); }
 } // namespace <anonymous>
 
 namespace cppa {
+
+bool announce(const std::type_info& tinfo, uniform_type_info* utype)
+{
+    return detail::s_uniform_type_info_map().insert({ raw_name(tinfo) }, utype);
+}
 
 uniform_type_info::uniform_type_info(const std::string& uname)
     : m_id(next_id()), m_name(uname)

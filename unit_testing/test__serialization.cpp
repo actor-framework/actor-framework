@@ -23,6 +23,7 @@
 
 #include "cppa/match.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/deserializer.hpp"
@@ -369,132 +370,16 @@ class string_deserializer : public deserializer
 
 };
 
-std::map<std::string, std::unique_ptr<uniform_type_info> > s_types;
-
-void announce(uniform_type_info* utype)
-{
-    const auto& uname = utype->name();
-    if (s_types.count(uname) == 0)
-    {
-        std::unique_ptr<uniform_type_info> uptr(utype);
-        s_types.insert(std::make_pair(uname, std::move(uptr)));
-    }
-    else
-    {
-        cerr << utype->name() << " already announced" << endl;
-        delete utype;
-    }
-}
-
-uniform_type_info* get_meta_type(const std::string& tname)
-{
-    auto i = s_types.find(tname);
-    return (i != s_types.end()) ? i->second.get() : nullptr;
-}
-
-uniform_type_info* get_meta_type(const std::type_info& tinfo)
-{
-    return get_meta_type(detail::to_uniform_name(tinfo));
-}
-
-template<typename T>
-uniform_type_info* get_meta_type()
-{
-    return get_meta_type(detail::to_uniform_name(typeid(T)));
-}
-
-template<int>
-inline void _announce_all() { }
-
-template<int, typename T0, typename... Tn>
-inline void _announce_all()
-{
-    announce(new detail::default_uniform_type_info_impl<T0>);
-    _announce_all<0, Tn...>();
-}
-
-template<typename... Tn>
-void announce_all()
-{
-    _announce_all<0, Tn...>();
-}
-
-namespace {
-
-class root_object_type
-{
-
- public:
-
-    root_object_type()
-    {
-        announce_all<std::int8_t, std::int16_t, std::int32_t, std::int64_t,
-                     std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t,
-                     float, double, long double,
-                     std::string, std::u16string, std::u32string>();
-    }
-
-    template<typename T>
-    void serialize(const T& what, serializer* where) const
-    {
-        uniform_type_info* mtype = get_meta_type(detail::to_uniform_name(typeid(T)));
-        if (!mtype)
-        {
-            throw std::logic_error("no meta found for "
-                                   + cppa::detail::to_uniform_name(typeid(T)));
-        }
-        mtype->serialize(&what, where);
-    }
-
-    /**
-     * @brief Deserializes a new object from @p source and returns the
-     *        new (deserialized) instance with its meta_type.
-     */
-    object deserialize(deserializer* source) const
-    {
-        std::string tname = source->peek_object();
-        uniform_type_info* mtype = get_meta_type(tname);
-        if (!mtype)
-        {
-            throw std::logic_error("no meta object found for " + tname);
-        }
-        return mtype->deserialize(source);
-    }
-
-}
-root_object;
-
-} // namespace <anonymous>
-
 template<typename T>
 std::string to_string(const T& what)
 {
     std::string tname = detail::to_uniform_name(typeid(T));
-    auto mobj = get_meta_type(tname);
+    auto mobj = uniform_typeid<T>();
     if (!mobj) throw std::logic_error(tname + " not found");
     std::ostringstream osstr;
     string_serializer strs(osstr);
     mobj->serialize(&what, &strs);
     return osstr.str();
-}
-
-template<typename T, typename... Args>
-uniform_type_info* meta_object(const Args&... args)
-{
-    return new detail::default_uniform_type_info_impl<T>(args...);
-}
-
-template<class C, class Parent, typename... Args>
-std::pair<C Parent::*, uniform_type_info_base<C>*>
-compound_member(C Parent::*c_ptr, const Args&... args)
-{
-    return std::make_pair(c_ptr, meta_object<C>(args...));
-}
-
-template<typename T, typename... Args>
-void announce(const Args&... args)
-{
-    announce(meta_object<T>(args...));
 }
 
 std::size_t test__serialization()
@@ -508,17 +393,14 @@ std::size_t test__serialization()
     CPPA_CHECK_EQUAL((is_iterable<std::map<int,int>>::value), true);
     // test meta_object implementation for primitive types
     {
-        auto meta_int = get_meta_type<std::uint32_t>();
+        auto meta_int = uniform_typeid<std::uint32_t>();
         CPPA_CHECK(meta_int != nullptr);
         if (meta_int)
         {
-            /*
             auto o = meta_int->create();
-            auto str = to_string(*i);
-            CPPA_CHECK_EQUAL(*i, 0);
-            CPPA_CHECK_EQUAL(str, "@u32 ( 0 )");
-            meta_int->delete_instance(i);
-            */
+            get_ref<std::uint32_t>(o) = 42;
+            auto str = to_string(get<std::uint32_t>(o));
+            CPPA_CHECK_EQUAL(str, "@u32 ( 42 )");
         }
     }
     // test serializers / deserializers with struct_b
@@ -538,27 +420,25 @@ std::size_t test__serialization()
                      "{ 4, 5, 6, 7, 8, 9, 10 } )";
         // verify
         CPPA_CHECK_EQUAL((to_string(b1)), b1str);
-        // binary buffer
-        std::pair<size_t, char*> buf;
         {
             // serialize b1 to buf
             binary_serializer bs;
-            root_object.serialize(b1, &bs);
+            bs << b1;
             // deserialize b2 from buf
             binary_deserializer bd(bs.data(), bs.size());
-            object res = root_object.deserialize(&bd);
+            object res;
+            bd >> res;
             CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
             b2 = get<struct_b>(res);
         }
-        // cleanup
-        delete buf.second;
         // verify result of serialization / deserialization
         CPPA_CHECK_EQUAL(b1, b2);
         CPPA_CHECK_EQUAL(to_string(b2), b1str);
         // deserialize b3 from string, using string_deserializer
         {
             string_deserializer strd(b1str);
-            auto res = root_object.deserialize(&strd);
+            object res;
+            strd >> res;
             CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
             b3 = get<struct_b>(res);
         }
@@ -574,10 +454,11 @@ std::size_t test__serialization()
         {
             // serialize c1 to buf
             binary_serializer bs;
-            root_object.serialize(c1, &bs);
+            bs << c1;
             // serialize c2 from buf
             binary_deserializer bd(bs.data(), bs.size());
-            auto res = root_object.deserialize(&bd);
+            object res;
+            bd >> res;
             CPPA_CHECK_EQUAL(res.type().name(), "struct_c");
             c2 = get<struct_c>(res);
         }

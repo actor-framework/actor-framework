@@ -8,8 +8,8 @@ namespace cppa { namespace util {
 template<typename T>
 struct is_legal_tuple_type
 {
-	static const bool value =    !std::is_pointer<T>::value
-							  && !std::is_reference<T>::value;
+    static const bool value =    std::is_pointer<T>::value == false
+                              && std::is_reference<T>::value == false;
 };
 
 } } // namespace cppa::util

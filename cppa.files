@@ -64,8 +64,6 @@ src/deserializer.cpp
 cppa/util/eval_type_list.hpp
 cppa/util/is_legal_tuple_type.hpp
 cppa/util/replace_type.hpp
-cppa/util/source.hpp
-cppa/util/sink.hpp
 src/untyped_tuple.cpp
 cppa/util/abstract_type_list.hpp
 cppa/detail/serialize_tuple.hpp
@@ -143,3 +141,5 @@ src/binary_serializer.cpp
 cppa/binary_deserializer.hpp
 src/binary_deserializer.cpp
 src/actor.cpp
+cppa/announce.hpp
+src/abstract_type_list.cpp

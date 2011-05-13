@@ -9,6 +9,8 @@
 
 namespace cppa {
 
+class object;
+
 class deserializer
 {
 
@@ -41,6 +43,8 @@ class deserializer
                             primitive_variant* storage   ) = 0;
 
 };
+
+deserializer& operator>>(deserializer& d, object& what);
 
 } // namespace cppa
 

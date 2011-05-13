@@ -8,9 +8,9 @@ class actor_behavior
 
  public:
 
-	virtual void act() = 0;
-
-	virtual void on_exit();
+    virtual ~actor_behavior();
+    virtual void on_exit();
+    virtual void act() = 0;
 
 };
 

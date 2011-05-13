@@ -116,7 +116,7 @@ struct object_caster
 } // namespace detail
 
 template<typename T>
-T& get(object& obj)
+T& get_ref(object& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
@@ -128,7 +128,7 @@ template<typename T>
 const T& get(const object& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
-                                    std::is_reference<T>>::value,
+                                    std::is_reference<T>>::value == false,
                   "T is a reference a pointer type.");
     return detail::object_caster<T>::_(obj);
 }

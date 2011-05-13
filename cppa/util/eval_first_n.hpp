@@ -10,21 +10,21 @@
 namespace cppa { namespace util {
 
 template <std::size_t N,
-		  class ListA, class ListB,
-		  template <typename, typename> class What>
+          class ListA, class ListB,
+          template <typename, typename> class What>
 struct eval_first_n;
 
 template <std::size_t N, typename... TypesA, typename... TypesB,
-		  template <typename, typename> class What>
+          template <typename, typename> class What>
 struct eval_first_n<N, type_list<TypesA...>, type_list<TypesB...>, What>
 {
-	typedef type_list<TypesA...> first_list;
-	typedef type_list<TypesB...> second_list;
+    typedef type_list<TypesA...> first_list;
+    typedef type_list<TypesB...> second_list;
 
-	typedef typename first_n<N, first_list>::type slist_a;
-	typedef typename first_n<N, second_list>::type slist_b;
+    typedef typename first_n<N, first_list>::type slist_a;
+    typedef typename first_n<N, second_list>::type slist_b;
 
-	static const bool value = eval_type_lists<slist_a, slist_b, What>::value;
+    static const bool value = eval_type_lists<slist_a, slist_b, What>::value;
 };
 
 } } // namespace cppa::util

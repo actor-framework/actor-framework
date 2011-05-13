@@ -10,7 +10,7 @@ struct disjunction;
 
 template<typename Head, typename... Tail>
 struct disjunction<Head, Tail...>
-	: std::integral_constant<bool, Head::value || disjunction<Tail...>::value>
+    : std::integral_constant<bool, Head::value || disjunction<Tail...>::value>
 {
 };
 

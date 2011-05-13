@@ -15,6 +15,7 @@
 
 #include "test.hpp"
 
+#include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -33,9 +34,14 @@ struct foo
     explicit foo(int val = 0) : value(val) { }
 };
 
-bool operator==(const foo& lhs, const foo& rhs)
+inline bool operator==(const foo& lhs, const foo& rhs)
 {
     return lhs.value == rhs.value;
+}
+
+inline bool operator!=(const foo& lhs, const foo& rhs)
+{
+    return !(lhs == rhs);
 }
 
 } // namespace <anonymous>
@@ -44,95 +50,60 @@ using namespace cppa;
 
 namespace {
 
-bool unused1 = true;
-/*
-bool unused1 =
-        uniform_type_info::announce<foo>(
-            [] (serializer& s, const foo& f) {
-                s << f.value;
-            },
-            [] (deserializer& d, foo& f) {
-                d >> f.value;
-            },
-            [] (const foo& f) -> std::string {
-                std::ostringstream ostr;
-                ostr << f.value;
-                return ostr.str();
-            },
-            [] (const std::string& str) -> foo* {
-                std::istringstream istr(str);
-                int tmp;
-                istr >> tmp;
-                return new foo(tmp);
-            }
-        );
-*/
-bool unused2 = false;// = uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
-bool unused3 = false;//= uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
-bool unused4 = false;//= uniform_type_info::announce(typeid(foo), new uti_impl<foo>);
+bool announce1 = announce<foo>(&foo::value);
+bool announce2 = announce<foo>(&foo::value);
+bool announce3 = announce<foo>(&foo::value);
+bool announce4 = announce<foo>(&foo::value);
 
 } // namespace <anonymous>
 
 std::size_t test__uniform_type()
 {
     CPPA_TEST(test__uniform_type);
-
-/*
     {
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
         object obj2(obj1);
         CPPA_CHECK_EQUAL(obj1, obj2);
-        get<foo>(obj1).value = 42;
+        get_ref<foo>(obj1).value = 42;
         CPPA_CHECK(obj1 != obj2);
         CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
         CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
     }
-*/
-
-    int successful_announces =   (unused1 ? 1 : 0)
-                               + (unused2 ? 1 : 0)
-                               + (unused3 ? 1 : 0)
-                               + (unused4 ? 1 : 0);
-
+    int successful_announces =   (announce1 ? 1 : 0)
+                               + (announce2 ? 1 : 0)
+                               + (announce3 ? 1 : 0)
+                               + (announce4 ? 1 : 0);
     CPPA_CHECK_EQUAL(successful_announces, 1);
-
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected =
     {
-//        "@_::foo",                       // name of <anonymous namespace>::foo
-        "@i8", "@i16", "@i32", "@i64",   // signed integer names
-        "@u8", "@u16", "@u32", "@u64",   // unsigned integer names
-        "@str", "@u16str", "@u32str",    // strings
-        "float", "double",               // floating points
-        "@0",                            // util::void_type
-        // default announced cppa types
-        "cppa::any_type",
-        "cppa::intrusive_ptr<cppa::actor>"
+        "@_::foo",                         // <anonymous namespace>::foo
+        "@i8", "@i16", "@i32", "@i64",     // signed integer names
+        "@u8", "@u16", "@u32", "@u64",     // unsigned integer names
+        "@str", "@u16str", "@u32str",      // strings
+        "float", "double",                 // floating points
+        "@0",                              // cppa::util::void_type
+        "cppa::any_type",                  // default announced cppa type
+        "cppa::intrusive_ptr<cppa::actor>" // default announced cppa type
     };
-
     if (sizeof(double) != sizeof(long double))
     {
         // long double is only present if it's not an alias for double
         expected.insert("long double");
     }
-
     // holds the type names we see at runtime
     std::set<std::string> found;
-
-    // fetch all available type names
+// fetch all available type names
     auto types = uniform_type_info::instances();
     for (uniform_type_info* tinfo : types)
     {
         found.insert(tinfo->name());
     }
-
     // compare the two sets
     CPPA_CHECK_EQUAL(expected.size(), found.size());
-
     bool expected_equals_found = false;
-
     if (expected.size() == found.size())
     {
         expected_equals_found = std::equal(found.begin(),

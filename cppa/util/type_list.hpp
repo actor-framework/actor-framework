@@ -3,7 +3,6 @@
 
 #include <typeinfo>
 #include "cppa/any_type.hpp"
-//#include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/abstract_type_list.hpp"
@@ -38,7 +37,10 @@ struct type_list<Head, Tail...> : abstract_type_list
 
     static const std::size_t type_list_size = tail_type::type_list_size + 1;
 
-    type_list() { init<type_list>(m_arr); }
+    type_list()
+    {
+        init<type_list>(m_arr);
+    }
 
     virtual const_iterator begin() const
     {
@@ -69,14 +71,6 @@ struct type_list<Head, Tail...> : abstract_type_list
             ++what;
             init<typename TypeList::tail_type>(what);
         }
-        /*
-        what[0] = &uniform_type_info<typename TypeList::head_type>();
-        if (TypeList::type_list_size > 1)
-        {
-            ++what;
-            init<typename TypeList::tail_type>(what);
-        }
-    */
     }
 
  private:

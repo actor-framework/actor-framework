@@ -11,7 +11,7 @@ struct is_one_of;
 
 template<typename T, typename X, typename... Types>
 struct is_one_of<T, X, Types...>
-	: disjunction<std::is_same<T, X>, is_one_of<T, Types...>>
+    : disjunction<std::is_same<T, X>, is_one_of<T, Types...>>
 {
 };
 

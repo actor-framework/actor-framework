@@ -14,27 +14,22 @@ using namespace cppa;
 
 void pong()
 {
-	receive(on<int>() >> [](int value) {
-		reply((value * 20) + 2);
-	});
+    receive(on<int>() >> [](int value) {
+        reply((value * 20) + 2);
+    });
 }
 
 std::size_t test__spawn()
 {
-
-	CPPA_TEST(test__spawn);
-
-	{
-		auto sl = spawn(pong);
-		send(sl, 23.f);
-		send(sl, 2);
-		receive(on<int>() >> [&](int value) {
-			CPPA_CHECK_EQUAL(value, 42);
-		});
-	}
-
-	await_all_actors_done();
-
-	return CPPA_TEST_RESULT;
-
+    CPPA_TEST(test__spawn);
+    {
+        auto sl = spawn(pong);
+        send(sl, 23.f);
+        send(sl, 2);
+        receive(on<int>() >> [&](int value) {
+            CPPA_CHECK_EQUAL(value, 42);
+        });
+    }
+    await_all_actors_done();
+    return CPPA_TEST_RESULT;
 }

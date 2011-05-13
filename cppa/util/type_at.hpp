@@ -11,13 +11,13 @@ namespace cppa { namespace util {
 template<std::size_t N, typename TypeList>
 struct type_at
 {
-	typedef typename type_at<N-1, typename TypeList::tail_type>::type type;
+    typedef typename type_at<N-1, typename TypeList::tail_type>::type type;
 };
 
 template<typename TypeList>
 struct type_at<0, TypeList>
 {
-	typedef typename TypeList::head_type type;
+    typedef typename TypeList::head_type type;
 };
 
 } } // namespace cppa::util

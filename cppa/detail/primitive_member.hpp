@@ -1,6 +1,8 @@
 #ifndef PRIMITIVE_MEMBER_HPP
 #define PRIMITIVE_MEMBER_HPP
 
+#include "cppa/serializer.hpp"
+#include "cppa/deserializer.hpp"
 #include "cppa/primitive_type.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/detail/type_to_ptype.hpp"

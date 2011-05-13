@@ -2,30 +2,45 @@
 #define SCHEDULER_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/context.hpp"
-#include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
 
 namespace cppa {
+
+class context;
+class actor_behavior;
 
 class scheduler
 {
 
  public:
 
-	virtual ~scheduler();
+    virtual ~scheduler();
 
-	/**
-	 * @brief Spawn a new actor that executes <code>behavior->act()</code>
-	 *        with the scheduling policy @p hint if possible.
-	 */
-	virtual actor_ptr spawn(actor_behavior* behavior,
-							scheduling_hint hint) = 0;
+    /**
+     * @brief Spawns a new actor that executes <code>behavior->act()</code>
+     *        with the scheduling policy @p hint if possible.
+     */
+    virtual actor_ptr spawn(actor_behavior* behavior,
+                            scheduling_hint hint) = 0;
 
-	/**
-	 * @brief Wait until all (other) actors finished execution.
-	 */
-	virtual void await_all_done() = 0;
+    /**
+     * @brief Informs the scheduler about a converted context
+     *        (a thread that acts as actor).
+     */
+    virtual void register_converted_context(context* what) = 0;
+
+    /**
+     * @brief Informs the scheduler that the convertex context @p what
+     *        finished execution.
+     */
+    virtual void unregister_converted_context(context* what) = 0;
+
+    /**
+     * @brief Wait until all other actors finished execution.
+     * @warning This function causes a deadlock if it's called from
+     *          more than one actor.
+     */
+    virtual void await_others_done() = 0;
 
 };
 

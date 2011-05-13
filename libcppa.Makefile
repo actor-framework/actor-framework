@@ -68,7 +68,8 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/type_list_pop_back.hpp \
 		  cppa/util/void_type.hpp
 
-SOURCES = src/actor.cpp \
+SOURCES = src/abstract_type_list.cpp \
+		  src/actor.cpp \
 		  src/actor_behavior.cpp \
 		  src/binary_deserializer.cpp \
 		  src/binary_serializer.cpp \

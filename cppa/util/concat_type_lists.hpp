@@ -11,7 +11,7 @@ struct concat_type_lists;
 template<typename... ListATypes, typename... ListBTypes>
 struct concat_type_lists<util::type_list<ListATypes...>, util::type_list<ListBTypes...>>
 {
-	typedef util::type_list<ListATypes..., ListBTypes...> type;
+    typedef util::type_list<ListATypes..., ListBTypes...> type;
 };
 
 } } // namespace cppa::util

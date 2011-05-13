@@ -12,18 +12,18 @@ namespace cppa { namespace util {
 template <class List, template <typename> class What>
 struct eval_type_list
 {
-	typedef typename List::head_type head_type;
-	typedef typename List::tail_type tail_type;
+    typedef typename List::head_type head_type;
+    typedef typename List::tail_type tail_type;
 
-	static const bool value =
-			   What<head_type>::value
-			&& eval_type_list<tail_type, What>::value;
+    static const bool value =
+               What<head_type>::value
+            && eval_type_list<tail_type, What>::value;
 };
 
 template <template <typename> class What>
 struct eval_type_list<type_list<>, What>
 {
-	static const bool value = true;
+    static const bool value = true;
 };
 
 } } // namespace cppa::util

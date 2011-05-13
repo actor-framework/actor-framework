@@ -9,8 +9,8 @@ namespace cppa { namespace util {
 template<typename List>
 struct type_list_pop_back
 {
-	typedef typename reverse_type_list<List>::type rlist;
-	typedef typename reverse_type_list<typename rlist::tail_type>::type type;
+    typedef typename reverse_type_list<List>::type rlist;
+    typedef typename reverse_type_list<typename rlist::tail_type>::type type;
 };
 
 } } // namespace cppa::util
