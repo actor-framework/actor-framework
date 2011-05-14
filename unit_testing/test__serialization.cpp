@@ -23,6 +23,7 @@
 
 #include "cppa/match.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/ref_counted.hpp"
@@ -37,10 +38,11 @@
 #include "cppa/util/pt_token.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
+#include "cppa/util/is_iterable.hpp"
 #include "cppa/util/if_else_type.hpp"
 #include "cppa/util/wrapped_type.hpp"
 #include "cppa/util/is_primitive.hpp"
-#include "cppa/util/is_iterable.hpp"
+#include "cppa/util/uniform_type_info_base.hpp"
 
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
@@ -370,21 +372,54 @@ class string_deserializer : public deserializer
 
 };
 
+class message_uti : public util::uniform_type_info_base<message>
+{
+
+ public:
+
+    virtual void serialize(const void* instance, serializer* sink) const
+    {
+        const message& msg = *reinterpret_cast<const message*>(instance);
+        const untyped_tuple& data = msg.data();
+        sink->begin_object("cppa::message");
+        sink->begin_sequence(data.size());
+        for (size_t i = 0; i < data.size(); ++i)
+        {
+            const uniform_type_info* ut = data.utype_at(i);
+            ut->serialize(data.at(i), sink);
+        }
+        sink->end_sequence();
+        sink->end_object();
+    }
+
+    virtual void deserialize(void* instance, deserializer* source) const
+    {
+    }
+
+};
+
 template<typename T>
 std::string to_string(const T& what)
 {
-    std::string tname = detail::to_uniform_name(typeid(T));
-    auto mobj = uniform_typeid<T>();
-    if (!mobj) throw std::logic_error(tname + " not found");
+    auto utype = uniform_typeid<T>();
+    if (!utype)
+    {
+        throw std::logic_error(  detail::to_uniform_name(typeid(T))
+                               + " not found");
+    }
     std::ostringstream osstr;
     string_serializer strs(osstr);
-    mobj->serialize(&what, &strs);
+    utype->serialize(&what, &strs);
     return osstr.str();
 }
 
 std::size_t test__serialization()
 {
     CPPA_TEST(test__serialization);
+    announce(typeid(message), new message_uti);
+
+    //message msg(0, 0, 42, std::string("Hello World"), 23.32);
+    //cout << to_string(msg) << endl;
 
     CPPA_CHECK_EQUAL((is_iterable<int>::value), false);
     // std::string is primitive and thus not identified by is_iterable

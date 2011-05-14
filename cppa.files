@@ -143,3 +143,7 @@ src/binary_deserializer.cpp
 src/actor.cpp
 cppa/announce.hpp
 src/abstract_type_list.cpp
+src/message.cpp
+cppa/util/shared_spinlock.hpp
+src/shared_spinlock.cpp
+cppa/util/shared_lock_guard.hpp

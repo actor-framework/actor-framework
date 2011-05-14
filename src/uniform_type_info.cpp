@@ -101,7 +101,8 @@ class actor_ptr_type_info_impl : public util::uniform_type_info_base<actor_ptr>
     void serialize(const void* ptr, serializer* sink) const
     {
         sink->begin_object(name());
-        sink->write_value((*reinterpret_cast<const actor_ptr*>(ptr))->id());
+        auto id = (*reinterpret_cast<const actor_ptr*>(ptr))->id();
+        sink->write_value(id);
         sink->end_object();
     }
 

@@ -59,8 +59,13 @@ HEADERS = cppa/actor.hpp \
 		  cppa/util/is_comparable.hpp \
 		  cppa/util/is_copyable.hpp \
 		  cppa/util/is_one_of.hpp \
+		  cppa/util/is_primitive.hpp \
+		  cppa/util/pt_token.hpp \
 		  cppa/util/remove_const_reference.hpp \
+		  cppa/util/replace_type.hpp \
 		  cppa/util/reverse_type_list.hpp \
+		  cppa/util/rm_ref.hpp \
+		  cppa/util/shared_spinlock.hpp \
 		  cppa/util/single_reader_queue.hpp \
 		  cppa/util/type_at.hpp \
 		  cppa/util/type_list.hpp \
@@ -80,11 +85,13 @@ SOURCES = src/abstract_type_list.cpp \
 		  src/demangle.cpp \
 		  src/deserializer.cpp \
 		  src/group.cpp \
+		  src/message.cpp \
 		  src/mock_scheduler.cpp \
 		  src/object.cpp \
 		  src/primitive_variant.cpp \
 		  src/scheduler.cpp \
 		  src/serializer.cpp \
+		  src/shared_spinlock.cpp \
 		  src/to_uniform_name.cpp \
 		  src/uniform_type_info.cpp \
 		  src/untyped_tuple.cpp

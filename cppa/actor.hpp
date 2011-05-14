@@ -22,6 +22,8 @@ class actor : public channel
 
  public:
 
+    ~actor();
+
     virtual void join(group_ptr& what) = 0;
     virtual void leave(const group_ptr& what) = 0;
     virtual void link(intrusive_ptr<actor>& other) = 0;

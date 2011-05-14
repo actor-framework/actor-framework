@@ -9,6 +9,9 @@ namespace cppa {
 class context;
 class actor_behavior;
 
+/**
+ * @brief
+ */
 class scheduler
 {
 
@@ -44,6 +47,10 @@ class scheduler
 
 };
 
+/**
+ * @brief Gets the actual used scheduler implementation.
+ * @return The active scheduler or @c nullptr.
+ */
 scheduler* get_scheduler();
 
 } // namespace cppa::detail

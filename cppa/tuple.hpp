@@ -22,14 +22,19 @@
 
 namespace cppa { namespace detail {
 
-template<typename T>
-struct is_char_array
+/**
+ * @brief <tt>is_array_of<T,U>::value == true</tt> if and only
+ *        if T is an array of U.
+ */
+template<typename T, typename U>
+struct is_array_of
 {
     typedef typename std::remove_all_extents<T>::type step1_type;
     typedef typename std::remove_cv<step1_type>::type step2_type;
     static const bool value =    std::is_array<T>::value
-                              && std::is_same<step2_type, char>::value;
+                              && std::is_same<step2_type, U>::value;
 };
+
 
 template<typename T>
 struct chars_to_string
@@ -37,7 +42,19 @@ struct chars_to_string
     typedef typename util::replace_type<T, std::string,
                                         std::is_same<T, const char*>,
                                         std::is_same<T, char*>,
-                                        is_char_array<T>>::type
+                                        is_array_of<T, char>>::type
+            subtype1;
+
+    typedef typename util::replace_type<subtype1, std::u16string,
+                                        std::is_same<subtype1, const char16_t*>,
+                                        std::is_same<subtype1, char16_t*>,
+                                        is_array_of<subtype1, char16_t>>::type
+            subtype2;
+
+    typedef typename util::replace_type<subtype2, std::u32string,
+                                        std::is_same<subtype2, const char32_t*>,
+                                        std::is_same<subtype2, char32_t*>,
+                                        is_array_of<subtype2, char32_t>>::type
             type;
 };
 
