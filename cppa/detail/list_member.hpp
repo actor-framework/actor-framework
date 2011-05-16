@@ -1,12 +1,12 @@
 #ifndef LIST_MEMBER_HPP
 #define LIST_MEMBER_HPP
 
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 
 namespace cppa { namespace detail {
 
 template<typename List>
-class list_member : public util::uniform_type_info_base<List>
+class list_member : public util::abstract_uniform_type_info<List>
 {
 
     typedef typename List::value_type value_type;

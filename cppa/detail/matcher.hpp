@@ -16,8 +16,8 @@ struct matcher<Head, Tail...>
 {
     static bool match(util::abstract_type_list::const_iterator& begin,
                       util::abstract_type_list::const_iterator& end,
-                      std::vector<std::size_t>* res = nullptr,
-                      std::size_t pos = 0)
+                      std::vector<size_t>* res = nullptr,
+                      size_t pos = 0)
     {
         auto head_uti = uniform_typeid<Head>();
         if (begin != end)
@@ -42,8 +42,8 @@ struct matcher<any_type, Tail...>
 {
     static bool match(util::abstract_type_list::const_iterator& begin,
                       util::abstract_type_list::const_iterator& end,
-                      std::vector<std::size_t>* res = nullptr,
-                      std::size_t pos = 0)
+                      std::vector<size_t>* res = nullptr,
+                      size_t pos = 0)
     {
         if (begin != end)
         {
@@ -60,8 +60,8 @@ struct matcher<any_type*, Next, Tail...>
 {
     static bool match(util::abstract_type_list::const_iterator& begin,
                       util::abstract_type_list::const_iterator& end,
-                      std::vector<std::size_t>* res = nullptr,
-                      std::size_t pos = 0)
+                      std::vector<size_t>* res = nullptr,
+                      size_t pos = 0)
     {
         bool result = false;
         while (!result)
@@ -90,8 +90,8 @@ struct matcher<any_type*>
 {
     static bool match(util::abstract_type_list::const_iterator&,
                       util::abstract_type_list::const_iterator&,
-                      std::vector<std::size_t>* = nullptr,
-                      std::size_t = 0)
+                      std::vector<size_t>* = nullptr,
+                      size_t = 0)
     {
         return true;
     }
@@ -102,8 +102,8 @@ struct matcher<>
 {
     static bool match(util::abstract_type_list::const_iterator& begin,
                       util::abstract_type_list::const_iterator& end,
-                      std::vector<std::size_t>* = nullptr,
-                      std::size_t = 0)
+                      std::vector<size_t>* = nullptr,
+                      size_t = 0)
     {
         return begin == end;
     }

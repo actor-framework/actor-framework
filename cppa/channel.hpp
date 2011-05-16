@@ -14,9 +14,9 @@ class channel : public ref_counted
 
  public:
 
-	virtual ~channel();
+    virtual ~channel();
 
-	virtual void enqueue(const message&) = 0;
+    virtual void enqueue(const message&) = 0;
 
 };
 

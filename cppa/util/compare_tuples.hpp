@@ -9,14 +9,14 @@
 
 namespace cppa { namespace detail {
 
-template<std::size_t N, template<typename...> class Tuple, typename... Types>
+template<size_t N, template<typename...> class Tuple, typename... Types>
 const typename util::type_at<N, util::type_list<Types...>>::type&
 do_get(const Tuple<Types...>& t)
 {
     return ::cppa::get<N, Types...>(t);
 }
 
-template<std::size_t N, typename LhsTuple, typename RhsTuple>
+template<size_t N, typename LhsTuple, typename RhsTuple>
 struct cmp_helper
 {
     inline static bool cmp(const LhsTuple& lhs, const RhsTuple& rhs)
@@ -35,22 +35,22 @@ struct cmp_helper<0, LhsTuple, RhsTuple>
     }
 };
 
-template<bool ALessB, std::size_t A, std::size_t B>
+template<bool ALessB, size_t A, size_t B>
 struct min_impl
 {
-    static const std::size_t value = A;
+    static const size_t value = A;
 };
 
-template<std::size_t A, std::size_t B>
+template<size_t A, size_t B>
 struct min_impl<false, A, B>
 {
-    static const std::size_t value = B;
+    static const size_t value = B;
 };
 
-template<std::size_t A, std::size_t B>
+template<size_t A, size_t B>
 struct min_
 {
-    static const std::size_t value = min_impl<(A < B), A, B>::value;
+    static const size_t value = min_impl<(A < B), A, B>::value;
 };
 
 } } // namespace cppa::detail

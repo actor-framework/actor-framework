@@ -2,8 +2,8 @@
 #define ON_HPP
 
 #include "cppa/match.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
-#include "cppa/untyped_tuple.hpp"
 
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/filter_type_list.hpp"
@@ -13,11 +13,11 @@
 namespace cppa { namespace detail {
 
 // irb_helper is not thread safe
-struct irb_helper : ref_counted_impl<std::size_t>
+struct irb_helper : ref_counted_impl<size_t>
 {
     virtual ~irb_helper() { }
-    virtual bool value_cmp(const untyped_tuple&,
-                           std::vector<std::size_t>&) const = 0;
+    virtual bool value_cmp(const any_tuple&,
+                           std::vector<size_t>&) const = 0;
 };
 
 template<typename... Types>
@@ -56,8 +56,8 @@ struct invoke_rule_builder
             {
             }
 
-            virtual bool value_cmp(const untyped_tuple& t,
-                                   std::vector<std::size_t>& v) const
+            virtual bool value_cmp(const any_tuple& t,
+                                   std::vector<size_t>& v) const
             {
                 return match<Types...>(t, m_values, v);
             }
@@ -85,9 +85,9 @@ struct invoke_rule_builder
         };
         if (!m_helper)
         {
-            auto inv = [f](const untyped_tuple& t) -> bool
+            auto inv = [f](const any_tuple& t) -> bool
             {
-                std::vector<std::size_t> mappings;
+                std::vector<size_t> mappings;
                 if (match<Types...>(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));
@@ -96,9 +96,9 @@ struct invoke_rule_builder
                 }
                 return false;
             };
-            auto gt = [sub_inv](const untyped_tuple& t) -> detail::intermediate*
+            auto gt = [sub_inv](const any_tuple& t) -> detail::intermediate*
             {
-                std::vector<std::size_t> mappings;
+                std::vector<size_t> mappings;
                 if (match<Types...>(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));
@@ -110,9 +110,9 @@ struct invoke_rule_builder
         }
         else
         {
-            auto inv = [f, m_helper](const untyped_tuple& t) -> bool
+            auto inv = [f, m_helper](const any_tuple& t) -> bool
             {
-                std::vector<std::size_t> mappings;
+                std::vector<size_t> mappings;
                 if (m_helper->value_cmp(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));
@@ -121,9 +121,9 @@ struct invoke_rule_builder
                 }
                 return false;
             };
-            auto gt = [sub_inv, m_helper](const untyped_tuple& t) -> detail::intermediate*
+            auto gt = [sub_inv, m_helper](const any_tuple& t) -> detail::intermediate*
             {
-                std::vector<std::size_t> mappings;
+                std::vector<size_t> mappings;
                 if (m_helper->value_cmp(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));

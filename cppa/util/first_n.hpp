@@ -22,7 +22,7 @@ struct if_t<true, IfType, ElseType>
     typedef IfType type;
 };
 
-template<std::size_t N, typename List>
+template<size_t N, typename List>
 struct n_
 {
 
@@ -48,10 +48,10 @@ struct n_<0, List>
 
 namespace cppa { namespace util {
 
-template<std::size_t N, typename List>
+template<size_t N, typename List>
 struct first_n;
 
-template<std::size_t N, typename... ListTypes>
+template<size_t N, typename... ListTypes>
 struct first_n<N, util::type_list<ListTypes...>>
 {
     typedef typename detail::n_<N, util::type_list<ListTypes...>>::type type;

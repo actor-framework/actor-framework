@@ -4,13 +4,13 @@
 #include <typeinfo>
 
 #include "cppa/uniform_type_info.hpp"
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 namespace cppa {
 
 template<class C, class Parent, typename... Args>
-std::pair<C Parent::*, util::uniform_type_info_base<C>*>
+std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
 compound_member(C Parent::*c_ptr, const Args&... args)
 {
     return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };

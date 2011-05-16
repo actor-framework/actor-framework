@@ -1,4 +1,5 @@
 all:
+	./create_libcppa_Makefile.sh > libcppa.Makefile
 	make -f libcppa.Makefile
 	make -C unit_testing
 	make -C queue_performances

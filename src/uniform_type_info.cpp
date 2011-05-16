@@ -11,14 +11,17 @@
 #include "cppa/config.hpp"
 
 #include "cppa/actor.hpp"
+#include "cppa/object.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_type.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/void_type.hpp"
 
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
@@ -93,7 +96,7 @@ void push(std::map<int, std::pair<string_set, string_set>>& ints)
 
 namespace cppa { namespace detail { namespace {
 
-class actor_ptr_type_info_impl : public util::uniform_type_info_base<actor_ptr>
+class actor_ptr_type_info : public util::abstract_uniform_type_info<actor_ptr>
 {
 
  protected:
@@ -117,6 +120,44 @@ class actor_ptr_type_info_impl : public util::uniform_type_info_base<actor_ptr>
         auto id = get<std::uint32_t>(source->read_value(pt_uint32));
         *reinterpret_cast<actor_ptr*>(ptr) = actor::by_id(id);
         source->end_object();
+    }
+
+};
+
+class any_tuple_type_info : public util::abstract_uniform_type_info<any_tuple>
+{
+
+ protected:
+
+    void serialize(const void* instance, serializer* sink) const
+    {
+        auto atup = reinterpret_cast<const any_tuple*>(instance);
+        sink->begin_object(name());
+        sink->begin_sequence(atup->size());
+        for (size_t i = 0; i < atup->size(); ++i)
+        {
+            atup->type_at(i).serialize(atup->at(i), sink);
+        }
+        sink->end_sequence();
+        sink->end_object();
+    }
+
+    void deserialize(void* instance, deserializer* source) const
+    {
+        auto result = new detail::object_array;
+        auto str = source->seek_object();
+        if (str != name()) throw std::logic_error("invalid type found: " + str);
+        source->begin_object(str);
+        size_t tuple_size = source->begin_sequence();
+        for (size_t i = 0; i < tuple_size; ++i)
+        {
+            auto tname = source->peek_object();
+            auto utype = uniform_type_info::by_uniform_name(tname);
+            result->push_back(utype->deserialize(source));
+        }
+        source->end_sequence();
+        source->end_object();
+        *reinterpret_cast<any_tuple*>(instance) = any_tuple(result);
     }
 
 };
@@ -164,7 +205,8 @@ class uniform_type_info_map
         insert<std::string>();
         insert<std::u16string>();
         insert<std::u32string>();
-        insert(new actor_ptr_type_info_impl, { raw_name<actor_ptr>() });
+        insert(new actor_ptr_type_info, { raw_name<actor_ptr>() });
+        insert(new any_tuple_type_info, { raw_name<any_tuple>() });
         insert<float>();
         insert<cppa::util::void_type>();
         if (sizeof(double) == sizeof(long double))
@@ -236,7 +278,7 @@ class uniform_type_info_map
         return nullptr;
     }
 
-    bool insert(std::set<std::string> plain_names,
+    bool insert(std::set<std::string> raw_names,
                 uniform_type_info* what)
     {
         if (m_by_uname.count(what->name()) > 0)
@@ -245,7 +287,7 @@ class uniform_type_info_map
             return false;
         }
         m_by_uname.insert(std::make_pair(what->name(), what));
-        for (const std::string& plain_name : plain_names)
+        for (const std::string& plain_name : raw_names)
         {
             if (!m_by_rname.insert(std::make_pair(plain_name, what)).second)
             {
@@ -277,7 +319,6 @@ uniform_type_info_map& s_uniform_type_info_map()
 }
 
 } } } // namespace cppa::detail::<anonymous>
-
 
 namespace {
 

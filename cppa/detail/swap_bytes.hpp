@@ -8,39 +8,39 @@ namespace cppa { namespace detail {
 template<typename T>
 struct byte_access
 {
-	union
-	{
-		T value;
-		unsigned char bytes[sizeof(T)];
-	};
-	inline byte_access(T val = 0) : value(val) { }
+    union
+    {
+        T value;
+        unsigned char bytes[sizeof(T)];
+    };
+    inline byte_access(T val = 0) : value(val) { }
 };
 
-template<std::size_t SizeOfT, typename T>
+template<size_t SizeOfT, typename T>
 struct byte_swapper
 {
-	static T _(byte_access<T> from)
-	{
-		byte_access<T> to;
-		auto i = SizeOfT - 1;
-		for (std::size_t j = 0 ; j < SizeOfT ; --i, ++j)
-		{
-			to.bytes[i] = from.bytes[j];
-		}
-		return to.value;
-	}
+    static T _(byte_access<T> from)
+    {
+        byte_access<T> to;
+        auto i = SizeOfT - 1;
+        for (size_t j = 0 ; j < SizeOfT ; --i, ++j)
+        {
+            to.bytes[i] = from.bytes[j];
+        }
+        return to.value;
+    }
 };
 
 template<typename T>
 struct byte_swapper<1, T>
 {
-	inline static T _(T what) { return what; }
+    inline static T _(T what) { return what; }
 };
 
 template<typename T>
 inline T swap_bytes(T what)
 {
-	return byte_swapper<sizeof(T), T>::_(what);
+    return byte_swapper<sizeof(T), T>::_(what);
 }
 
 } } // namespace cppa::detail

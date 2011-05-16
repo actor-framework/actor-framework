@@ -4,7 +4,7 @@
 
 using namespace cppa;
 
-std::size_t test__primitive_variant()
+size_t test__primitive_variant()
 {
     CPPA_TEST(test__primitive_variant);
     std::uint32_t forty_two = 42;

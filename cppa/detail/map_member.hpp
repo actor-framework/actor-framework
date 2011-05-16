@@ -1,7 +1,7 @@
 #ifndef MAP_MEMBER_HPP
 #define MAP_MEMBER_HPP
 
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 #include "cppa/detail/primitive_member.hpp"
 #include "cppa/detail/pair_member.hpp"
 
@@ -46,7 +46,7 @@ struct meta_value_type<std::pair<const T1, T2>>
 };
 
 template<typename Map>
-class map_member : public util::uniform_type_info_base<Map>
+class map_member : public util::abstract_uniform_type_info<Map>
 {
 
     typedef typename Map::key_type key_type;

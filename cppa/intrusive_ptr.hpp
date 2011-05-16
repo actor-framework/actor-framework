@@ -25,7 +25,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
 
  public:
 
-    intrusive_ptr() : m_ptr(0) { }
+    intrusive_ptr() : m_ptr(nullptr) { }
 
     intrusive_ptr(T* raw_ptr) { set_ptr(raw_ptr); }
 
@@ -34,7 +34,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
         set_ptr(other.m_ptr);
     }
 
-    intrusive_ptr(intrusive_ptr&& other) : m_ptr(0)
+    intrusive_ptr(intrusive_ptr&& other) : m_ptr(nullptr)
     {
         swap(other);
     }
@@ -48,7 +48,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
     }
 
     template<typename Y>
-    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(0)
+    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(nullptr)
     {
         swap(other);
     }

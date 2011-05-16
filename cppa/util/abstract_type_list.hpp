@@ -1,7 +1,7 @@
 #ifndef ABSTRACT_TYPE_LIST_HPP
 #define ABSTRACT_TYPE_LIST_HPP
 
-#include <iterator>
+#include <memory>
 
 // forward declaration
 namespace cppa { class uniform_type_info; }
@@ -11,67 +11,101 @@ namespace cppa { namespace util {
 struct abstract_type_list
 {
 
-    class const_iterator : public std::iterator<std::bidirectional_iterator_tag,
-                                                const uniform_type_info*>
+    class abstract_iterator
     {
-
-        const uniform_type_info* const* p;
 
      public:
 
-        inline const_iterator(const uniform_type_info* const* x = 0) : p(x) { }
+        virtual ~abstract_iterator();
 
-        const_iterator(const const_iterator&) = default;
+        /**
+         * @brief
+         * @return @c false if the iterator is at the end; otherwise @c true.
+         */
+        virtual bool next() = 0;
 
-        const_iterator& operator=(const const_iterator&) = default;
+        virtual const uniform_type_info& get() const = 0;
 
-        inline bool operator==(const const_iterator& other) const
+        virtual abstract_iterator* copy() const = 0;
+
+    };
+
+    class const_iterator
+    {
+
+        abstract_iterator* m_iter;
+
+     public:
+
+        const_iterator(abstract_iterator* x = 0) : m_iter(x) { }
+
+        const_iterator(const const_iterator& other)
+            : m_iter((other.m_iter) ? other.m_iter->copy() : nullptr)
         {
-            return p == other.p;
+        }
+
+        const_iterator(const_iterator&& other) : m_iter(other.m_iter)
+        {
+            other.m_iter = nullptr;
+        }
+
+        const_iterator& operator=(const const_iterator& other)
+        {
+            delete m_iter;
+            m_iter = (other.m_iter) ? other.m_iter->copy() : nullptr;
+            return *this;
+        }
+
+        const_iterator& operator=(const_iterator&& other)
+        {
+            delete m_iter;
+            m_iter = other.m_iter;
+            other.m_iter = nullptr;
+            return *this;
+        }
+
+        ~const_iterator()
+        {
+            delete m_iter;
+        }
+
+        bool operator==(const const_iterator& other) const
+        {
+            return m_iter == other.m_iter;
         }
 
         inline bool operator!=(const const_iterator& other) const
         {
-            return p != other.p;
+            return !(*this == other);
         }
 
-        inline const uniform_type_info& operator*() const
+        const uniform_type_info& operator*() const
         {
-            return *(*p);
+            return m_iter->get();
         }
 
-        inline const uniform_type_info* operator->() const
+        const uniform_type_info* operator->() const
         {
-            return *p;
+            return &(m_iter->get());
         }
 
-        inline const_iterator& operator++()
+        const_iterator& operator++()
         {
-            ++p;
+            if (!m_iter->next())
+            {
+                delete m_iter;
+                m_iter = nullptr;
+            }
             return *this;
         }
-
-        const_iterator operator++(int);
-
-        inline const_iterator& operator--()
-        {
-            --p;
-            return *this;
-        }
-
-        const_iterator operator--(int);
 
     };
 
     virtual ~abstract_type_list();
 
-    virtual abstract_type_list* copy() const = 0;
-
     virtual const_iterator begin() const = 0;
 
-    virtual const_iterator end() const = 0;
-
-    virtual const uniform_type_info* at(std::size_t pos) const = 0;
+    virtual const_iterator end() const;
 
 };
 

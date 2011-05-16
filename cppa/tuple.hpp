@@ -63,13 +63,16 @@ struct chars_to_string
 namespace cppa {
 
 // forward declaration
-class untyped_tuple;
+class any_tuple;
 
+/**
+ * @brief Describes a fixed-length tuple.
+ */
 template<typename... ElementTypes>
 class tuple
 {
 
-    friend class untyped_tuple;
+    friend class any_tuple;
 
  public:
 
@@ -110,29 +113,29 @@ class tuple
 
     typedef typename element_types::tail_type tail_type;
 
-    static const std::size_t type_list_size = element_types::type_list_size;
+    static const size_t type_list_size = element_types::type_list_size;
 
     tuple() : m_vals(new vals_t) { }
 
     tuple(const ElementTypes&... args) : m_vals(new vals_t(args...)) { }
 
-    template<std::size_t N>
+    template<size_t N>
     const typename util::type_at<N, element_types>::type& get() const
     {
         return detail::tdata_get<N>(m_vals->data());
     }
 
-    template<std::size_t N>
+    template<size_t N>
     typename util::type_at<N, element_types>::type& get_ref()
     {
         return detail::tdata_get_ref<N>(m_vals->data_ref());
     }
 
-    std::size_t size() const { return m_vals->size(); }
+    size_t size() const { return m_vals->size(); }
 
-    const void* at(std::size_t p) const { return m_vals->at(p); }
+    const void* at(size_t p) const { return m_vals->at(p); }
 
-    const uniform_type_info* utype_at(std::size_t p) const { return m_vals->utype_at(p); }
+    const uniform_type_info* utype_at(size_t p) const { return m_vals->type_at(p); }
 
     const util::abstract_type_list& types() const { return m_vals->types(); }
 
@@ -148,14 +151,14 @@ class tuple
 
 };
 
-template<std::size_t N, typename... Types>
+template<size_t N, typename... Types>
 const typename util::type_at<N, util::type_list<Types...>>::type&
 get(const tuple<Types...>& t)
 {
     return t.get<N>();
 }
 
-template<std::size_t N, typename... Types>
+template<size_t N, typename... Types>
 typename util::type_at<N, util::type_list<Types...>>::type&
 get_ref(tuple<Types...>& t)
 {

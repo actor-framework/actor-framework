@@ -6,20 +6,13 @@ abstract_type_list::~abstract_type_list()
 {
 }
 
-abstract_type_list::const_iterator
-abstract_type_list::const_iterator::operator++(int)
+abstract_type_list::const_iterator abstract_type_list::end() const
 {
-    const_iterator tmp(*this);
-    operator++();
-    return tmp;
+    return const_iterator(nullptr);
 }
 
-abstract_type_list::const_iterator
-abstract_type_list::const_iterator::operator--(int)
+abstract_type_list::abstract_iterator::~abstract_iterator()
 {
-    const_iterator tmp(*this);
-    operator--();
-    return tmp;
 }
 
 } } // namespace cppa::util

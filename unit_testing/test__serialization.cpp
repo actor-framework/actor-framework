@@ -25,10 +25,11 @@
 #include "cppa/tuple.hpp"
 #include "cppa/message.hpp"
 #include "cppa/announce.hpp"
+#include "cppa/get_view.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/deserializer.hpp"
-#include "cppa/untyped_tuple.hpp"
 #include "cppa/primitive_type.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
@@ -42,8 +43,9 @@
 #include "cppa/util/if_else_type.hpp"
 #include "cppa/util/wrapped_type.hpp"
 #include "cppa/util/is_primitive.hpp"
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 
+#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
@@ -372,7 +374,7 @@ class string_deserializer : public deserializer
 
 };
 
-class message_uti : public util::uniform_type_info_base<message>
+class message_uti : public util::abstract_uniform_type_info<message>
 {
 
  public:
@@ -380,20 +382,21 @@ class message_uti : public util::uniform_type_info_base<message>
     virtual void serialize(const void* instance, serializer* sink) const
     {
         const message& msg = *reinterpret_cast<const message*>(instance);
-        const untyped_tuple& data = msg.data();
-        sink->begin_object("cppa::message");
-        sink->begin_sequence(data.size());
-        for (size_t i = 0; i < data.size(); ++i)
-        {
-            const uniform_type_info* ut = data.utype_at(i);
-            ut->serialize(data.at(i), sink);
-        }
-        sink->end_sequence();
+        const any_tuple& data = msg.content();
+        sink->begin_object(name());
+        uniform_typeid<any_tuple>()->serialize(&data, sink);
         sink->end_object();
     }
 
     virtual void deserialize(void* instance, deserializer* source) const
     {
+        auto tname = source->seek_object();
+        if (tname != name()) throw 42;
+        source->begin_object(tname);
+        any_tuple content;
+        uniform_typeid<any_tuple>()->deserialize(&content, source);
+        source->end_object();
+        *reinterpret_cast<message*>(instance) = message(0, 0, content);
     }
 
 };
@@ -413,13 +416,71 @@ std::string to_string(const T& what)
     return osstr.str();
 }
 
-std::size_t test__serialization()
+size_t test__serialization()
 {
     CPPA_TEST(test__serialization);
     announce(typeid(message), new message_uti);
 
-    //message msg(0, 0, 42, std::string("Hello World"), 23.32);
-    //cout << to_string(msg) << endl;
+
+    auto oarr = new detail::object_array;
+    oarr->push_back(object(static_cast<std::uint32_t>(42)));
+    oarr->push_back(object(std::string("foo")));
+
+    any_tuple atuple1(oarr);
+    try
+    {
+        auto tv1 = get_view<std::uint32_t, std::string>(atuple1);
+        CPPA_CHECK_EQUAL(tv1.size(), 2);
+        CPPA_CHECK_EQUAL(get<0>(tv1), 42);
+        CPPA_CHECK_EQUAL(get<1>(tv1), "foo");
+    }
+    catch (std::exception& e)
+    {
+        CPPA_ERROR("exception: " << e.what());
+    }
+
+    {
+        // serialize b1 to buf
+        binary_serializer bs;
+        bs << atuple1;
+        // deserialize b2 from buf
+        binary_deserializer bd(bs.data(), bs.size());
+        any_tuple atuple2;
+        uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
+        try
+        {
+            auto tview = get_view<std::uint32_t, std::string>(atuple2);
+            CPPA_CHECK_EQUAL(tview.size(), 2);
+            CPPA_CHECK_EQUAL(get<0>(tview), 42);
+            CPPA_CHECK_EQUAL(get<1>(tview), "foo");
+        }
+        catch (std::exception& e)
+        {
+            CPPA_ERROR("exception: " << e.what());
+        }
+    }
+
+    {
+        message msg1(0, 0, 42, std::string("Hello World!"));
+        //cout << "msg = " << to_string(msg1) << endl;
+        binary_serializer bs;
+        bs << msg1;
+        binary_deserializer bd(bs.data(), bs.size());
+        object obj;
+        bd >> obj;
+        if (obj.type() == typeid(message))
+        {
+            auto& content = get<message>(obj).content();
+            auto cview = get_view<decltype(42), std::string>(content);
+            CPPA_CHECK_EQUAL(cview.size(), 2);
+            CPPA_CHECK_EQUAL(get<0>(cview), 42);
+            CPPA_CHECK_EQUAL(get<1>(cview), "Hello World!");
+        }
+        else
+        {
+            CPPA_ERROR("obj.type() != typeid(message)");
+        }
+    }
 
     CPPA_CHECK_EQUAL((is_iterable<int>::value), false);
     // std::string is primitive and thus not identified by is_iterable

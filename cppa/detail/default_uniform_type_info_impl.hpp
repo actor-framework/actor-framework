@@ -8,7 +8,7 @@
 #include "cppa/util/is_iterable.hpp"
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_forward_iterator.hpp"
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 
 #include "cppa/detail/map_member.hpp"
 #include "cppa/detail/list_member.hpp"
@@ -80,7 +80,7 @@ struct has_default_uniform_type_info_impl
 };
 
 template<typename T>
-class default_uniform_type_info_impl : public util::uniform_type_info_base<T>
+class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T>
 {
 
     template<typename X>
@@ -194,7 +194,7 @@ class default_uniform_type_info_impl : public util::uniform_type_info_base<T>
     // pr.first = member pointer
     // pr.second = meta object to handle pr.first
     template<typename R, class C, typename... Args>
-    void push_back(std::pair<R C::*, util::uniform_type_info_base<R>*> pr,
+    void push_back(std::pair<R C::*, util::abstract_uniform_type_info<R>*> pr,
                    const Args&... args)
     {
         m_members.push_back({ pr.second, pr.first });

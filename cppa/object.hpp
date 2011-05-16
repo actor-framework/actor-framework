@@ -13,9 +13,9 @@ namespace cppa {
 // forward declarations
 class object;
 class uniform_type_info;
+const uniform_type_info* uniform_typeid(const std::type_info&);
 namespace detail { template<typename T> struct object_caster; }
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
-
 /**
  * @brief foobar.
  */
@@ -34,6 +34,9 @@ class object
 
     object copy() const;
 
+    static void* new_instance(const uniform_type_info* type,
+                              const void* from);
+
 public:
 
     /**
@@ -44,21 +47,26 @@ public:
     object(void* val, const uniform_type_info* utinfo);
 
     /**
-     * @brief Create a void object.
-     * @post {@code type() == uniform_typeid<util::void_type>()}
+     * @brief Create an empty object.
+     * @post {@code empty() && type() == *uniform_typeid<util::void_type>()}
      */
     object();
+
+    template<typename T>
+    explicit object(const T& what);
 
     ~object();
 
     /**
-     * @brief Create an object and move type and value from @p other to this.
+     * @brief Creates an object and moves type and value
+     *        from @p other to @c this.
      * @post {@code other.type() == uniform_typeid<util::void_type>()}
      */
     object(object&& other);
 
     /**
-     * @brief Create a copy of @p other.
+     * @brief Creates a copy of @p other.
+     * @post {@code type() == other.type() && equal_to(other)}
      */
     object(const object& other);
 
@@ -70,17 +78,34 @@ public:
 
     object& operator=(const object& other);
 
-    bool equal(const object& other) const;
+    bool equal_to(const object& other) const;
 
     const uniform_type_info& type() const;
 
     std::string to_string() const;
 
+    const void* value() const;
+
+    void* mutable_value();
+
+    bool empty() const;
+
 };
+
+template<typename T>
+object::object(const T& what)
+{
+    m_type = uniform_typeid(typeid(T));
+    if (!m_type)
+    {
+        throw std::logic_error("unknown/unannounced type");
+    }
+    m_value = new_instance(m_type, &what);
+}
 
 inline bool operator==(const object& lhs, const object& rhs)
 {
-    return lhs.equal(rhs);
+    return lhs.equal_to(rhs);
 }
 
 inline bool operator!=(const object& lhs, const object& rhs)
@@ -98,21 +123,6 @@ inline void assert_type(const object& obj, const std::type_info& tinfo)
     }
 }
 
-template<typename T>
-struct object_caster
-{
-    static T& _(object& obj)
-    {
-        assert_type(obj, typeid(T));
-        return *reinterpret_cast<T*>(obj.m_value);
-    }
-    static const T& _(const object& obj)
-    {
-        assert_type(obj, typeid(T));
-        return *reinterpret_cast<const T*>(obj.m_value);
-    }
-};
-
 } // namespace detail
 
 template<typename T>
@@ -121,7 +131,8 @@ T& get_ref(object& obj)
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
                   "T is a reference or a pointer type.");
-    return detail::object_caster<T>::_(obj);
+    detail::assert_type(obj, typeid(T));
+    return *reinterpret_cast<T*>(obj.mutable_value());
 }
 
 template<typename T>
@@ -130,7 +141,8 @@ const T& get(const object& obj)
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
                   "T is a reference a pointer type.");
-    return detail::object_caster<T>::_(obj);
+    detail::assert_type(obj, typeid(T));
+    return *reinterpret_cast<const T*>(obj.value());
 }
 
 } // namespace cppa

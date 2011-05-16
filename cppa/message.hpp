@@ -4,7 +4,8 @@
 #include "cppa/actor.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/untyped_tuple.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
 #include "cppa/detail/channel.hpp"
@@ -14,32 +15,29 @@ namespace cppa {
 class message
 {
 
-    struct content : ref_counted
+    struct msg_content : ref_counted
     {
         const actor_ptr sender;
         const channel_ptr receiver;
-        const untyped_tuple data;
-        inline content(const actor_ptr& s,
-                       const channel_ptr& r,
-                       const untyped_tuple& ut)
+        const any_tuple data;
+        inline msg_content(const actor_ptr& s,
+                           const channel_ptr& r,
+                           const any_tuple& ut)
             : ref_counted(), sender(s), receiver(r), data(ut)
         {
         }
     };
 
-    intrusive_ptr<content> m_content;
+    intrusive_ptr<msg_content> m_content;
 
  public:
 
     template<typename... Args>
-    message(const actor_ptr& from, const channel_ptr& to, const Args&... args)
-        : m_content(new content(from, to, tuple<Args...>(args...)))
-    {
-    }
+    message(const actor_ptr& from, const channel_ptr& to, const Args&... args);
 
     message(const actor_ptr& from,
             const channel_ptr& to,
-            const untyped_tuple& ut);
+            const any_tuple& ut);
 
     message();
 
@@ -61,12 +59,18 @@ class message
         return m_content->receiver;
     }
 
-    inline const untyped_tuple& data() const
+    inline const any_tuple& content() const
     {
         return m_content->data;
     }
 
 };
+
+template<typename... Args>
+message::message(const actor_ptr& from, const channel_ptr& to, const Args&... args)
+    : m_content(new msg_content(from, to, any_tuple(tuple<Args...>(args...))))
+{
+}
 
 bool operator==(const message& lhs, const message& rhs);
 

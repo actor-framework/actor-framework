@@ -10,23 +10,23 @@ namespace cppa { class serializer; }
 
 namespace cppa { namespace detail {
 
-template<typename List, std::size_t Pos = 0>
+template<typename List, size_t Pos = 0>
 struct serialize_tuple
 {
-	template<typename T>
-	inline static void _(serializer& s, const T* self)
-	{
-		s << uniform_typeid<typename List::head_type>()->name()
-		  << *reinterpret_cast<const typename List::head_type*>(self->at(Pos));
-		serialize_tuple<typename List::tail_type, Pos + 1>::_(s, self);
-	}
+    template<typename T>
+    inline static void _(serializer& s, const T* self)
+    {
+        s << uniform_typeid<typename List::head_type>()->name()
+          << *reinterpret_cast<const typename List::head_type*>(self->at(Pos));
+        serialize_tuple<typename List::tail_type, Pos + 1>::_(s, self);
+    }
 };
 
-template<std::size_t Pos>
+template<size_t Pos>
 struct serialize_tuple<util::type_list<>, Pos>
 {
-	template<typename T>
-	inline static void _(serializer&, const T*) { }
+    template<typename T>
+    inline static void _(serializer&, const T*) { }
 };
 
 } } // namespace cppa::detail

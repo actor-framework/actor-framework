@@ -1,5 +1,5 @@
-#ifndef UNIFORM_TYPE_INFO_BASE_HPP
-#define UNIFORM_TYPE_INFO_BASE_HPP
+#ifndef ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#define ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -11,7 +11,7 @@ namespace cppa { namespace util {
  *        except serialize() and deserialize().
  */
 template<typename T>
-class uniform_type_info_base : public uniform_type_info
+class abstract_uniform_type_info : public uniform_type_info
 {
 
     inline static const T& deref(const void* ptr)
@@ -26,7 +26,7 @@ class uniform_type_info_base : public uniform_type_info
 
  protected:
 
-    uniform_type_info_base(const std::string& uname
+    abstract_uniform_type_info(const std::string& uname
                            = detail::to_uniform_name(typeid(T)))
         : uniform_type_info(uname)
     {
@@ -58,4 +58,4 @@ class uniform_type_info_base : public uniform_type_info
 
 } }
 
-#endif // UNIFORM_TYPE_INFO_BASE_HPP
+#endif // ABSTRACT_UNIFORM_TYPE_INFO_HPP

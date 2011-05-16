@@ -15,6 +15,7 @@
 
 #include "test.hpp"
 
+#include "cppa/get_view.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
@@ -57,7 +58,7 @@ bool announce4 = announce<foo>(&foo::value);
 
 } // namespace <anonymous>
 
-std::size_t test__uniform_type()
+size_t test__uniform_type()
 {
     CPPA_TEST(test__uniform_type);
     {
@@ -79,14 +80,16 @@ std::size_t test__uniform_type()
     // the uniform_type_info implementation is correct
     std::set<std::string> expected =
     {
-        "@_::foo",                         // <anonymous namespace>::foo
-        "@i8", "@i16", "@i32", "@i64",     // signed integer names
-        "@u8", "@u16", "@u32", "@u64",     // unsigned integer names
-        "@str", "@u16str", "@u32str",      // strings
-        "float", "double",                 // floating points
-        "@0",                              // cppa::util::void_type
-        "cppa::any_type",                  // default announced cppa type
-        "cppa::intrusive_ptr<cppa::actor>" // default announced cppa type
+        "@_::foo",                      // <anonymous namespace>::foo
+        "@i8", "@i16", "@i32", "@i64",  // signed integer names
+        "@u8", "@u16", "@u32", "@u64",  // unsigned integer names
+        "@str", "@u16str", "@u32str",   // strings
+        "float", "double",              // floating points
+        "@0",                           // cppa::util::void_type
+        // default announced cppa types
+        "cppa::any_type",
+        "cppa::any_tuple",
+        "cppa::intrusive_ptr<cppa::actor>"
     };
     if (sizeof(double) != sizeof(long double))
     {

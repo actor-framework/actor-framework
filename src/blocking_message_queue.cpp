@@ -25,7 +25,7 @@ void blocking_message_queue::dequeue(invoke_rules& rules)
 	queue_node* amsg = m_queue.pop();
 	util::singly_linked_list<queue_node> buffer;
 	intrusive_ptr<detail::intermediate> imd;
-	while (!(imd = rules.get_intermediate(amsg->msg.data())))
+	while (!(imd = rules.get_intermediate(amsg->msg.content())))
 	{
 		buffer.push_back(amsg);
 		amsg = m_queue.pop();

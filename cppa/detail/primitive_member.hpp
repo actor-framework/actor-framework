@@ -6,13 +6,13 @@
 #include "cppa/primitive_type.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
-#include "cppa/util/uniform_type_info_base.hpp"
+#include "cppa/util/abstract_uniform_type_info.hpp"
 
 namespace cppa { namespace detail {
 
 // uniform_type_info implementation for primitive data types.
 template<typename T>
-class primitive_member : public util::uniform_type_info_base<T>
+class primitive_member : public util::abstract_uniform_type_info<T>
 {
 
     static constexpr primitive_type ptype = type_to_ptype<T>::ptype;

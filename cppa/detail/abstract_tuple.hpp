@@ -12,15 +12,15 @@ struct abstract_tuple : ref_counted
 {
 
     // mutators
-    virtual void* mutable_at(std::size_t pos) = 0;
+    virtual void* mutable_at(size_t pos) = 0;
 
     // accessors
-    virtual std::size_t size() const = 0;
+    virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
-    virtual const void* at(std::size_t pos) const = 0;
+    virtual const void* at(size_t pos) const = 0;
     virtual const util::abstract_type_list& types() const = 0;
     virtual bool equal_to(const abstract_tuple& other) const = 0;
-    virtual const uniform_type_info* utype_at(std::size_t pos) const = 0;
+    virtual const uniform_type_info& type_at(size_t pos) const = 0;
 
 };
 

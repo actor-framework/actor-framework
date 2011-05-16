@@ -36,7 +36,7 @@ struct invoke_rules
 		if (arg) m_list.push_back(arg);
 	}
 
-	bool operator()(const untyped_tuple& t) const
+	bool operator()(const any_tuple& t) const
 	{
 		for (auto i = m_list.begin(); i != m_list.end(); ++i)
 		{
@@ -45,7 +45,7 @@ struct invoke_rules
 		return false;
 	}
 
-	intrusive_ptr<detail::intermediate> get_intermediate(const untyped_tuple& t) const
+	intrusive_ptr<detail::intermediate> get_intermediate(const any_tuple& t) const
 	{
 		detail::intermediate* result;
 		for (auto i = m_list.begin(); i != m_list.end(); ++i)

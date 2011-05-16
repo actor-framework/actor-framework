@@ -9,12 +9,12 @@
 
 namespace cppa { namespace util {
 
-template <std::size_t N,
+template <size_t N,
           class ListA, class ListB,
           template <typename, typename> class What>
 struct eval_first_n;
 
-template <std::size_t N, typename... TypesA, typename... TypesB,
+template <size_t N, typename... TypesA, typename... TypesB,
           template <typename, typename> class What>
 struct eval_first_n<N, type_list<TypesA...>, type_list<TypesB...>, What>
 {

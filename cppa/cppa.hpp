@@ -124,7 +124,7 @@ void reply(const Arg0& arg0, const Args&... args)
     if (whom) whom->enqueue(message(sptr, whom, arg0, args...));
 }
 
-inline void await_all_actors_done()
+inline void await_all_others_done()
 {
     get_scheduler()->await_others_done();
 }

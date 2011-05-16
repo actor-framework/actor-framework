@@ -19,7 +19,7 @@ void pong()
     });
 }
 
-std::size_t test__spawn()
+size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
     {
@@ -30,6 +30,6 @@ std::size_t test__spawn()
             CPPA_CHECK_EQUAL(value, 42);
         });
     }
-    await_all_actors_done();
+    await_all_others_done();
     return CPPA_TEST_RESULT;
 }

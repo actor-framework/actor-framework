@@ -19,12 +19,16 @@ void object::swap(object& other)
     std::swap(m_type, other.m_type);
 }
 
+void* object::new_instance(const uniform_type_info* type, const void* from)
+{
+    return type->new_instance(from);
+}
+
 object object::copy() const
 {
     return (m_value != &s_void) ? object(m_type->new_instance(m_value), m_type)
                                 : object();
 }
-
 
 object::object(void* val, const uniform_type_info* utype)
     : m_value(val), m_type(utype)
@@ -70,7 +74,7 @@ object& object::operator=(const object& other)
     return *this;
 }
 
-bool object::equal(const object& other) const
+bool object::equal_to(const object& other) const
 {
     if (m_type == other.m_type)
     {
@@ -88,6 +92,21 @@ const uniform_type_info& object::type() const
 std::string object::to_string() const
 {
     return "";
+}
+
+bool object::empty() const
+{
+    return m_value == &s_void;
+}
+
+const void* object::value() const
+{
+    return m_value;
+}
+
+void* object::mutable_value()
+{
+    return m_value;
 }
 
 } // namespace cppa

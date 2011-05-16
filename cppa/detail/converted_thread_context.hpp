@@ -25,7 +25,7 @@ class converted_thread_context : public context
     bool m_exited;
 
     // manages group subscriptions
-    std::map<group_ptr, intrusive_ptr<group::subscription>> m_subscriptions;
+    std::map<group_ptr, group::subscription> m_subscriptions;
 
     // manages actor links
     std::set<actor_ptr> m_links;

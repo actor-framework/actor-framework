@@ -146,12 +146,17 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
      */
     object deserialize(deserializer* source) const;
 
- protected:
-
     /**
      * @brief Compares two instances of this type.
      */
     virtual bool equal(const void* instance1, const void* instance2) const = 0;
+
+ protected:
+
+    /**
+     * @brief Cast @p instance to the native type and delete it.
+     */
+    virtual void delete_instance(void* instance) const = 0;
 
     /**
      * @brief Creates an instance of this type, either as a copy of
@@ -159,11 +164,6 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
      *        if @p instance @c == @c nullptr.
      */
     virtual void* new_instance(const void* instance = nullptr) const = 0;
-
-    /**
-     * @brief Cast @p instance to the native type and delete it.
-     */
-    virtual void delete_instance(void* instance) const = 0;
 
  public:
 

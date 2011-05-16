@@ -17,7 +17,6 @@ cppa/config.hpp
 unit_testing/test__tuple.cpp
 cppa/detail/abstract_tuple.hpp
 cppa/tuple_view.hpp
-cppa/untyped_tuple.hpp
 cppa/any_type.hpp
 cppa/detail/matcher.hpp
 cppa/detail/tuple_vals.hpp
@@ -64,15 +63,12 @@ src/deserializer.cpp
 cppa/util/eval_type_list.hpp
 cppa/util/is_legal_tuple_type.hpp
 cppa/util/replace_type.hpp
-src/untyped_tuple.cpp
 cppa/util/abstract_type_list.hpp
 cppa/detail/serialize_tuple.hpp
 unit_testing/test__atom.cpp
 unit_testing/test__queue_performance.cpp
-cppa/detail/actor_public.hpp
 cppa/util/single_reader_queue.hpp
 cppa/util/singly_linked_list.hpp
-cppa/detail/actor_private.hpp
 unit_testing/test__local_group.cpp
 unit_testing/hash_of.cpp
 unit_testing/hash_of.hpp
@@ -128,7 +124,6 @@ cppa/util/is_primitive.hpp
 cppa/util/is_iterable.hpp
 src/primitive_variant.cpp
 unit_testing/test__primitive_variant.cpp
-cppa/util/uniform_type_info_base.hpp
 cppa/detail/primitive_member.hpp
 cppa/detail/list_member.hpp
 cppa/detail/pair_member.hpp
@@ -147,3 +142,9 @@ src/message.cpp
 cppa/util/shared_spinlock.hpp
 src/shared_spinlock.cpp
 cppa/util/shared_lock_guard.hpp
+cppa/get_view.hpp
+cppa/detail/object_array.hpp
+src/object_array.cpp
+cppa/any_tuple.hpp
+src/any_tuple.cpp
+cppa/util/abstract_uniform_type_info.hpp
