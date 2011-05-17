@@ -6,11 +6,20 @@
 
 namespace cppa {
 
-// forward declaration
+// forward declarations
+class actor;
+class group;
 class message;
 
 class channel : public ref_counted
 {
+
+    friend class actor;
+    friend class group;
+
+    // channel is a sealed class and the only
+    // allowed subclasses are actor and group.
+    channel() = default;
 
  public:
 

@@ -1,6 +1,7 @@
 #include <new>
 #include <set>
 #include <list>
+#include <stack>
 #include <locale>
 #include <memory>
 #include <string>
@@ -129,7 +130,13 @@ class string_serializer : public serializer
 
         void operator()(const std::string& str)
         {
-            out << "\"" << str << "\"";
+            out << "\"";// << str << "\"";
+            for (char c : str)
+            {
+                if (c == '"') out << "\\\"";
+                else out << c;
+            }
+            out << '"';
         }
 
         void operator()(const std::u16string&) { }
@@ -140,6 +147,7 @@ class string_serializer : public serializer
 
     int m_open_objects;
     bool m_after_value;
+    bool m_obj_just_opened;
 
     inline void clear()
     {
@@ -148,22 +156,39 @@ class string_serializer : public serializer
             out << ", ";
             m_after_value = false;
         }
+        else if (m_obj_just_opened)
+        {
+            out << " ( ";
+            m_obj_just_opened = false;
+        }
     }
 
  public:
 
     string_serializer(std::ostream& mout)
-        : out(mout), m_open_objects(0), m_after_value(false) { }
+        : out(mout), m_open_objects(0)
+        , m_after_value(false), m_obj_just_opened(false)
+    {
+    }
 
     void begin_object(const std::string& type_name)
     {
         clear();
         ++m_open_objects;
-        out << type_name << " ( ";
+        out << type_name;// << " ( ";
+        m_obj_just_opened = true;
     }
     void end_object()
     {
-        out << " )";
+        if (m_obj_just_opened)
+        {
+            m_obj_just_opened = false;
+        }
+        else
+        {
+            out << (m_after_value ? " )" : ")");
+        }
+        m_after_value = true;
     }
 
     void begin_sequence(size_t)
@@ -204,6 +229,7 @@ class string_deserializer : public deserializer
     std::string m_str;
     std::string::iterator m_pos;
     size_t m_obj_count;
+    std::stack<bool> m_obj_had_left_parenthesis;
 
     void skip_space_and_comma()
     {
@@ -231,6 +257,17 @@ class string_deserializer : public deserializer
         ++m_pos;
     }
 
+    bool try_consume(char c)
+    {
+        skip_space_and_comma();
+        if (*m_pos == c)
+        {
+            ++m_pos;
+            return true;
+        }
+        return false;
+    }
+
     inline std::string::iterator next_delimiter()
     {
         return std::find_if(m_pos, m_str.end(), [] (char c) -> bool {
@@ -245,6 +282,19 @@ class string_deserializer : public deserializer
              default : return false;
             }
         });
+    }
+
+    void integrity_check()
+    {
+        if (m_obj_had_left_parenthesis.empty())
+        {
+            throw_malformed("missing begin_object()");
+        }
+        else if (m_obj_had_left_parenthesis.top() == false)
+        {
+            throw_malformed("expected left parenthesis after "
+                            "begin_object call or void value");
+        }
     }
 
  public:
@@ -265,15 +315,14 @@ class string_deserializer : public deserializer
     {
         skip_space_and_comma();
         auto substr_end = next_delimiter();
-        // next delimiter must eiter be '(' or "\w+\("
-        if (substr_end == m_str.end() ||  *substr_end != '(')
+        if (m_pos == substr_end)
         {
-            auto peeker = substr_end;
-            while (peeker != m_str.end() && *peeker == ' ') ++peeker;
-            if (peeker == m_str.end() ||  *peeker != '(')
+            if (m_pos != m_str.end())
             {
-                throw_malformed("type name not followed by '('");
+                std::string remain(m_pos, m_str.end());
+                cout << remain << endl;
             }
+            throw_malformed("wtf?");
         }
         std::string result(m_pos, substr_end);
         m_pos = substr_end;
@@ -292,12 +341,24 @@ class string_deserializer : public deserializer
     {
         ++m_obj_count;
         skip_space_and_comma();
-        consume('(');
+        m_obj_had_left_parenthesis.push(try_consume('('));
+        //consume('(');
     }
 
     void end_object()
     {
-        consume(')');
+        if (m_obj_had_left_parenthesis.empty())
+        {
+            throw_malformed("missing begin_object()");
+        }
+        else
+        {
+            if (m_obj_had_left_parenthesis.top() == true)
+            {
+                consume(')');
+            }
+            m_obj_had_left_parenthesis.pop();
+        }
         if (--m_obj_count == 0)
         {
             skip_space_and_comma();
@@ -310,6 +371,7 @@ class string_deserializer : public deserializer
 
     size_t begin_sequence()
     {
+        integrity_check();
         consume('{');
         auto list_end = std::find(m_pos, m_str.end(), '}');
         return std::count(m_pos, list_end, ',') + 1;
@@ -340,8 +402,11 @@ class string_deserializer : public deserializer
 
     primitive_variant read_value(primitive_type ptype)
     {
+        integrity_check();
         skip_space_and_comma();
-        auto substr_end = std::find_if(m_pos, m_str.end(), [] (char c) -> bool {
+        std::string::iterator substr_end;
+        auto find_if_cond = [] (char c) -> bool
+        {
             switch (c)
             {
              case ')':
@@ -350,11 +415,87 @@ class string_deserializer : public deserializer
              case ',': return true;
              default : return false;
             }
-        });
+        };
+        if (ptype == pt_u8string)
+        {
+            if (*m_pos == '"')
+            {
+                // skip leading "
+                ++m_pos;
+                char last_char = '"';
+                auto find_if_str_cond = [&last_char] (char c) -> bool
+                {
+                    if (c == '"' && last_char != '\\')
+                    {
+                        return true;
+                    }
+                    last_char = c;
+                    return false;
+                };
+                substr_end = std::find_if(m_pos, m_str.end(), find_if_str_cond);
+            }
+            else
+            {
+                substr_end = std::find_if(m_pos, m_str.end(), find_if_cond);
+            }
+        }
+        else
+        {
+            substr_end = std::find_if(m_pos, m_str.end(), find_if_cond);
+        }
+        if (substr_end == m_str.end())
+        {
+            throw std::logic_error("malformed string (unterminated value)");
+        }
         std::string substr(m_pos, substr_end);
+        m_pos += substr.size();
+        if (ptype == pt_u8string)
+        {
+            // skip trailing "
+            if (*m_pos != '"')
+            {
+                std::string error_msg;
+                error_msg  = "malformed string, expected '\"' found '";
+                error_msg += *m_pos;
+                error_msg += "'";
+                throw std::logic_error(error_msg);
+            }
+            ++m_pos;
+            // replace '\"' by '"'
+            char last_char = ' ';
+            auto cond = [&last_char] (char c) -> bool
+            {
+                if (c == '"' && last_char == '\\')
+                {
+                    return true;
+                }
+                last_char = c;
+                return false;
+            };
+            std::string tmp;
+            auto sbegin = substr.begin();
+            auto send = substr.end();
+            for (auto i = std::find_if(sbegin, send, cond);
+                 i != send;
+                 i = std::find_if(i, send, cond))
+            {
+                --i;
+                tmp.append(sbegin, i);
+                tmp += '"';
+                i += 2;
+                sbegin = i;
+            }
+            if (sbegin != substr.begin())
+            {
+                tmp.append(sbegin, send);
+            }
+            if (!tmp.empty())
+            {
+                substr = std::move(tmp);
+            }
+        }
         primitive_variant result(ptype);
         result.apply(from_string(substr));
-        m_pos += substr.size();
         return result;
     }
 
@@ -362,6 +503,7 @@ class string_deserializer : public deserializer
 
     void read_tuple(size_t size, const primitive_type* begin, primitive_variant* storage)
     {
+        integrity_check();
         consume('{');
         const primitive_type* end = begin + size;
         for ( ; begin != end; ++begin)
@@ -374,7 +516,7 @@ class string_deserializer : public deserializer
 
 };
 
-class message_uti : public util::abstract_uniform_type_info<message>
+class message_tinfo : public util::abstract_uniform_type_info<message>
 {
 
  public:
@@ -384,6 +526,8 @@ class message_uti : public util::abstract_uniform_type_info<message>
         const message& msg = *reinterpret_cast<const message*>(instance);
         const any_tuple& data = msg.content();
         sink->begin_object(name());
+        uniform_typeid<actor_ptr>()->serialize(&(msg.sender()), sink);
+        uniform_typeid<channel_ptr>()->serialize(&(msg.receiver()), sink);
         uniform_typeid<any_tuple>()->serialize(&data, sink);
         sink->end_object();
     }
@@ -393,10 +537,16 @@ class message_uti : public util::abstract_uniform_type_info<message>
         auto tname = source->seek_object();
         if (tname != name()) throw 42;
         source->begin_object(tname);
+        actor_ptr sender;
+        channel_ptr receiver;
         any_tuple content;
+        uniform_typeid<actor_ptr>()->deserialize(&sender, source);
+        uniform_typeid<channel_ptr>()->deserialize(&receiver, source);
         uniform_typeid<any_tuple>()->deserialize(&content, source);
         source->end_object();
-        *reinterpret_cast<message*>(instance) = message(0, 0, content);
+        *reinterpret_cast<message*>(instance) = message(sender,
+                                                        receiver,
+                                                        content);
     }
 
 };
@@ -419,7 +569,7 @@ std::string to_string(const T& what)
 size_t test__serialization()
 {
     CPPA_TEST(test__serialization);
-    announce(typeid(message), new message_uti);
+    announce(typeid(message), new message_tinfo);
 
 
     auto oarr = new detail::object_array;
@@ -461,20 +611,29 @@ size_t test__serialization()
     }
 
     {
-        message msg1(0, 0, 42, std::string("Hello World!"));
-        //cout << "msg = " << to_string(msg1) << endl;
+        message msg1(0, 0, 42, std::string("Hello \"World\"!"));
+        cout << "msg = " << to_string(msg1) << endl;
         binary_serializer bs;
         bs << msg1;
         binary_deserializer bd(bs.data(), bs.size());
-        object obj;
-        bd >> obj;
-        if (obj.type() == typeid(message))
+        string_deserializer sd(to_string(msg1));
+        object obj1;
+        bd >> obj1;
+        object obj2;
+        sd >> obj2;
+        CPPA_CHECK_EQUAL(obj1, obj2);
+        if (obj1.type() == typeid(message) && obj2.type() == obj1.type())
         {
-            auto& content = get<message>(obj).content();
-            auto cview = get_view<decltype(42), std::string>(content);
-            CPPA_CHECK_EQUAL(cview.size(), 2);
-            CPPA_CHECK_EQUAL(get<0>(cview), 42);
-            CPPA_CHECK_EQUAL(get<1>(cview), "Hello World!");
+            auto& content1 = get<message>(obj1).content();
+            auto& content2 = get<message>(obj2).content();
+            auto cview1 = get_view<decltype(42), std::string>(content1);
+            auto cview2 = get_view<decltype(42), std::string>(content2);
+            CPPA_CHECK_EQUAL(cview1.size(), 2);
+            CPPA_CHECK_EQUAL(cview2.size(), 2);
+            CPPA_CHECK_EQUAL(get<0>(cview1), 42);
+            CPPA_CHECK_EQUAL(get<0>(cview2), 42);
+            CPPA_CHECK_EQUAL(get<1>(cview1), "Hello \"World\"!");
+            CPPA_CHECK_EQUAL(get<1>(cview2), "Hello \"World\"!");
         }
         else
         {

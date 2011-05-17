@@ -65,6 +65,13 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
 
     const T* get() const { return m_ptr; }
 
+    T* take()
+    {
+        auto result = m_ptr;
+        m_ptr = nullptr;
+        return result;
+    }
+
     void swap(intrusive_ptr& other)
     {
         std::swap(m_ptr, other.m_ptr);
@@ -111,8 +118,8 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
     {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
-        m_ptr = other.m_ptr;
-        other.m_ptr = nullptr;
+        reset();
+        m_ptr = other.take();
         return *this;
     }
 

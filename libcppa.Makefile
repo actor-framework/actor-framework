@@ -15,6 +15,7 @@ HEADERS = \
           cppa/cow_ptr.hpp \
           cppa/cppa.hpp \
           cppa/deserializer.hpp \
+          cppa/exit_signal.hpp \
           cppa/get.hpp \
           cppa/get_view.hpp \
           cppa/group.hpp \
@@ -102,6 +103,7 @@ HEADERS = \
           cppa/util/type_list.hpp \
           cppa/util/type_list_apply.hpp \
           cppa/util/type_list_pop_back.hpp \
+          cppa/util/upgrade_lock_guard.hpp \
           cppa/util/void_type.hpp \
           cppa/util/wrapped_type.hpp
 
@@ -118,6 +120,7 @@ SOURCES = \
           src/converted_thread_context.cpp \
           src/demangle.cpp \
           src/deserializer.cpp \
+          src/exit_signal.cpp \
           src/group.cpp \
           src/message.cpp \
           src/mock_scheduler.cpp \

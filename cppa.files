@@ -148,3 +148,6 @@ src/object_array.cpp
 cppa/any_tuple.hpp
 src/any_tuple.cpp
 cppa/util/abstract_uniform_type_info.hpp
+cppa/util/upgrade_lock_guard.hpp
+cppa/exit_signal.hpp
+src/exit_signal.cpp

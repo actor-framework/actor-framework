@@ -15,14 +15,14 @@ namespace cppa { namespace detail {
 class converted_thread_context : public context
 {
 
+    // true if the associated thread has finished execution
+    bool m_exited;
+
     // mailbox implementation
     detail::blocking_message_queue m_mailbox;
 
     // guards access to m_exited, m_subscriptions and m_links
     std::mutex m_mtx;
-
-    // true if the associated thread has finished execution
-    bool m_exited;
 
     // manages group subscriptions
     std::map<group_ptr, group::subscription> m_subscriptions;
@@ -31,6 +31,8 @@ class converted_thread_context : public context
     std::set<actor_ptr> m_links;
 
  public:
+
+    converted_thread_context();
 
     message_queue& mailbox /*[[override]]*/ ();
 

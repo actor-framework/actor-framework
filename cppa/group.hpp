@@ -11,7 +11,14 @@ namespace cppa {
 class group : public channel
 {
 
+    std::string m_identifier;
+    std::string m_module_name;
+
  protected:
+
+    group(std::string&& id, std::string&& mod_name);
+
+    group(const std::string& id, const std::string& mod_name);
 
     virtual void unsubscribe(const channel_ptr& who) = 0;
 
@@ -33,6 +40,11 @@ class group : public channel
 
      public:
 
+        inline explicit operator bool()
+        {
+            return m_self != nullptr && m_group != nullptr;
+        }
+
         subscription(const channel_ptr& s, const intrusive_ptr<group>& g);
         subscription(subscription&& other);
         ~subscription();
@@ -48,6 +60,10 @@ class group : public channel
         virtual intrusive_ptr<group> get(const std::string& group_name) = 0;
 
     };
+
+    const std::string& identifier() const;
+
+    const std::string& module_name() const;
 
     virtual subscription subscribe(const channel_ptr& who) = 0;
 

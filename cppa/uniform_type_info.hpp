@@ -29,18 +29,16 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
  * @brief Provides a platform independent type name and a (very primitive)
  *        kind of reflection in combination with {@link cppa::object object}.
  *
- * The platform dependent type name (from GCC or Microsofts VC++ Compiler) is
- * translated to a (usually) shorter and platform independent name.
- *
- * This name is equal to the "in-sourcecode-name" but with a few exceptions:
+ * The platform independent name is equal to the "in-sourcecode-name"
+ * with a few exceptions:
  * - @c std::string is named @c \@str
  * - @c std::u16string is named @c \@u16str
  * - @c std::u32string is named @c \@u32str
  * - @c integers are named <tt>\@(i|u)$size</tt>\n
  *   e.g.: @c \@i32 is a 32 bit signed integer; @c \@u16
  *   is a 16 bit unsigned integer
- * - the <em>anonymous namespace</em> is named @c \@_\n
- *   e.g.: @code namespace { class foo { }; } @endcode is mapped to
+ * - the <em>anonymous namespace</em> is named @c \@_ \n
+ *   e.g.: <tt>namespace { class foo { }; }</tt> is mapped to
  *   @c \@_::foo
  * - {@link cppa::util::void_type} is named @c \@0
  */

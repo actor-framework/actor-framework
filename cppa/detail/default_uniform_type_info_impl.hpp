@@ -2,8 +2,10 @@
 #define DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 
 #include "cppa/any_type.hpp"
-#include "cppa/util/void_type.hpp"
 
+#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/void_type.hpp"
+#include "cppa/util/conjunction.hpp"
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/is_iterable.hpp"
 #include "cppa/util/is_primitive.hpp"
@@ -98,11 +100,11 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
         std::function<void (const uniform_type_info*,
                             const void*,
-                            serializer*      )> m_serialize;
+                            serializer*              )> m_serialize;
 
         std::function<void (const uniform_type_info*,
                             void*,
-                            deserializer*    )> m_deserialize;
+                            deserializer*            )> m_deserialize;
 
         member(const member&) = delete;
         member& operator=(const member&) = delete;
@@ -138,6 +140,32 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
                                        deserializer* d)
             {
                 mt->deserialize(&(*reinterpret_cast<C*>(obj).*mem_ptr), d);
+            };
+        }
+
+        template<typename GRes, typename SRes, typename SArg, class C>
+        member(uniform_type_info* mtptr,
+               GRes (C::*getter)() const,
+               SRes (C::*setter)(SArg)) : m_meta(mtptr)
+        {
+            typedef typename util::rm_ref<GRes>::type getter_result;
+            typedef typename util::rm_ref<SArg>::type setter_arg;
+            static_assert(std::is_same<getter_result, setter_arg>::value,
+                          "getter result doesn't match setter argument");
+            m_serialize = [getter] (const uniform_type_info* mt,
+                                    const void* obj,
+                                    serializer* s)
+            {
+                GRes v = (*reinterpret_cast<const C*>(obj).*getter)();
+                mt->serialize(&v, s);
+            };
+            m_deserialize = [setter] (const uniform_type_info* mt,
+                                      void* obj,
+                                      deserializer* d)
+            {
+                setter_arg value;
+                mt->deserialize(&value, d);
+                (*reinterpret_cast<C*>(obj).*setter)(value);
             };
         }
 
@@ -199,6 +227,16 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     {
         m_members.push_back({ pr.second, pr.first });
         push_back(args...);
+    }
+
+    // pr.first = getter member function pointer
+    // pr.second = setter member function pointer
+    template<typename GRes, typename SRes, typename SArg, class C>
+    typename util::enable_if<util::is_primitive<typename util::rm_ref<GRes>::type> >::type
+    push_back(std::pair<GRes (C::*)() const, SRes (C::*)(SArg)> pr)
+    {
+        typedef typename util::rm_ref<GRes>::type memtype;
+        m_members.push_back({ new primitive_member<memtype>(), pr.first, pr.second });
     }
 
     template<typename R, class C, typename... Args>

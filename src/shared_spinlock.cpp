@@ -35,6 +35,28 @@ void shared_spinlock::lock()
     }
 }
 
+void shared_spinlock::lock_upgrade()
+{
+    unlock_shared();
+    lock();
+    /*
+    long v = m_flag.load();
+    for (;;)
+    {
+        if (v != 1)
+        {
+            //std::this_thread::yield();
+            v = m_flag.load();
+        }
+        else if (m_flag.compare_exchange_weak(v, min_long))
+        {
+            return;
+        }
+        // else: next iteration
+    }
+    */
+}
+
 void shared_spinlock::unlock()
 {
     m_flag.store(0);

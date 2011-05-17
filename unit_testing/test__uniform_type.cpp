@@ -89,7 +89,10 @@ size_t test__uniform_type()
         // default announced cppa types
         "cppa::any_type",
         "cppa::any_tuple",
-        "cppa::intrusive_ptr<cppa::actor>"
+        "cppa::exit_reason",
+        "cppa::intrusive_ptr<cppa::actor>",
+        "cppa::intrusive_ptr<cppa::group>",
+        "cppa::intrusive_ptr<cppa::channel>"
     };
     if (sizeof(double) != sizeof(long double))
     {

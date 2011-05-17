@@ -7,20 +7,31 @@ template<typename SharedLockable>
 class shared_lock_guard
 {
 
-    SharedLockable& m_lockable;
+    SharedLockable* m_lockable;
 
  public:
 
-    shared_lock_guard(SharedLockable& lockable) : m_lockable(lockable)
+    explicit shared_lock_guard(SharedLockable& lockable) : m_lockable(&lockable)
     {
-        m_lockable.lock_shared();
+        m_lockable->lock_shared();
     }
 
     ~shared_lock_guard()
     {
-        m_lockable.unlock_shared();
+        if (m_lockable) m_lockable->unlock_shared();
     }
 
+    bool owns_lock() const
+    {
+        return m_lockable != nullptr;
+    }
+
+    SharedLockable* release()
+    {
+        auto result = m_lockable;
+        m_lockable = nullptr;
+        return result;
+    }
 };
 
 } } // namespace cppa::util
