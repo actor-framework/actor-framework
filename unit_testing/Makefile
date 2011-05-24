@@ -1,11 +1,8 @@
 include ../Makefile.rules
 
-#CXX = /opt/local/bin/g++-mp-4.5
-#CXX = /opt/local/bin/g++-mp-4.6
-#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/
-#CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -O2 -I/opt/local/include/
-#LIBS = -L/opt/local/lib -lboost_thread-mt -L../ -lcppa
-INCLUDES = -I./ -I../
+INCLUDE_FLAGS = $(INCLUDES) -I../ ./
+
+LIB_FLAGS = $(LIBS) -L../ -lcppa
 
 EXECUTABLE = ../test
 
@@ -28,11 +25,11 @@ SOURCES = hash_of.cpp \
 
 OBJECTS = $(SOURCES:.cpp=.o)
 
-%.o : %.cpp $(HEADERS) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+%.o : %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
 $(EXECUTABLE) : $(OBJECTS) $(HEADERS)
-	$(CXX) $(LIBS) -L../ -lcppa $(OBJECTS) -o $(EXECUTABLE)
+	$(CXX) $(LIB_FLAGS) $(OBJECTS) -o $(EXECUTABLE)
 
 all : $(EXECUTABLE)
 
