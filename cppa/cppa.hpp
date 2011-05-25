@@ -13,7 +13,7 @@
  *                                                                            *
  * This file is part of libcppa.                                              *
  * libcppa is free software: you can redistribute it and/or modify it under   *
- * the terms of the GNU Lesser General Public License as  published by the    *
+ * the terms of the GNU Lesser General Public License as published by the     *
  * Free Software Foundation, either version 3 of the License                  *
  * or (at your option) any later version.                                     *
  *                                                                            *
@@ -29,21 +29,119 @@
 #ifndef CPPA_HPP
 #define CPPA_HPP
 
+#include <tuple>
+#include <type_traits>
+
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
-#include "cppa/scheduler.hpp"
+
+#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
 
 namespace cppa {
 
+namespace detail {
+
+template<bool IsFunctionPtr, typename F>
+class fun_behavior : public actor_behavior
+{
+
+    F m_fun;
+
+ public:
+
+    fun_behavior(F ptr) : m_fun(ptr) { }
+
+    virtual void act()
+    {
+        m_fun();
+    }
+
+};
+
 template<typename F>
-actor_ptr spawn(scheduling_hint hint, F fun)
+class fun_behavior<false, F> : public actor_behavior
+{
+
+    F m_fun;
+
+ public:
+
+    fun_behavior(const F& arg) : m_fun(arg) { }
+
+    fun_behavior(F&& arg) : m_fun(std::move(arg)) { }
+
+    virtual void act()
+    {
+        m_fun();
+    }
+
+};
+
+template<typename R>
+actor_behavior* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
+{
+    return new fun_behavior<true, R (*)()>(fptr);
+}
+
+template<typename F>
+actor_behavior* get_behavior(std::integral_constant<bool,false>, F&& ftor)
+{
+    typedef typename util::rm_ref<F>::type ftype;
+    return new fun_behavior<false, ftype>(std::forward<F>(ftor));
+}
+
+template<typename F, typename Arg0, typename... Args>
+actor_behavior* get_behavior(std::integral_constant<bool,true>,
+                             F fptr,
+                             const Arg0& arg0,
+                             const Args&... args)
+{
+    auto arg_tuple = std::make_tuple(arg0, args...);
+    auto lambda = [fptr, arg_tuple]() { invoke(fptr, arg_tuple); };
+    return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
+}
+
+template<typename F, typename Arg0, typename... Args>
+actor_behavior* get_behavior(std::integral_constant<bool,false>,
+                             F ftor,
+                             const Arg0& arg0,
+                             const Args&... args)
+{
+    auto arg_tuple = std::make_tuple(arg0, args...);
+    auto lambda = [ftor, arg_tuple]() { invoke(ftor, arg_tuple); };
+    return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
+}
+
+} // namespace detail
+
+template<scheduling_hint Hint, typename F, typename... Args>
+actor_ptr spawn(F&& what, const Args&... args)
+{
+    typedef typename util::rm_ref<F>::type ftype;
+    std::integral_constant<bool, std::is_function<ftype>::value> is_fun;
+    auto ptr = detail::get_behavior(is_fun, std::forward<F>(what), args...);
+    return get_scheduler()->spawn(ptr, Hint);
+}
+
+template<typename F, typename... Args>
+actor_ptr spawn(F&& what, const Args&... args)
+{
+    return spawn<scheduled>(std::forward<F>(what), args...);
+}
+
+/*
+template<typename F>
+actor_ptr spawn(scheduling_hint hint, const F& fun)
 {
     struct fun_behavior : actor_behavior
     {
@@ -54,31 +152,22 @@ actor_ptr spawn(scheduling_hint hint, F fun)
             m_fun();
         }
     };
-    return get_scheduler()->spawn(new fun_behavior(fun), hint);
+    return spawn(hint, new fun_behavior(fun));
 }
 
 template<typename F, typename Arg0, typename... Args>
-actor_ptr spawn(scheduling_hint hint, F fun, const Arg0& arg0, const Args&... args)
+actor_ptr spawn(scheduling_hint hint, const F& fun, const Arg0& arg0, const Args&... args)
 {
     auto arg_tuple = make_tuple(arg0, args...);
     return spawn(hint, [=]() { invoke(fun, arg_tuple); });
 }
 
 template<typename F, typename... Args>
-inline actor_ptr spawn(F fun, const Args&... args)
+inline actor_ptr spawn(const F& fun, const Args&... args)
 {
     return spawn(scheduled, fun, args...);
 }
-
-inline actor_ptr spawn(scheduling_hint hint, actor_behavior* ab)
-{
-    return get_scheduler()->spawn(ab, hint);
-}
-
-inline actor_ptr spawn(actor_behavior* ab)
-{
-    return get_scheduler()->spawn(ab, scheduled);
-}
+*/
 
 inline const message& receive()
 {
@@ -124,6 +213,12 @@ void reply(const Arg0& arg0, const Args&... args)
     if (whom) whom->enqueue(message(sptr, whom, arg0, args...));
 }
 
+/**
+ * @brief Blocks execution of this actor until all
+ *        other actors finished execution.
+ * @warning This function will cause a deadlock if
+ *          called from multiple actors.
+ */
 inline void await_all_others_done()
 {
     get_scheduler()->await_others_done();

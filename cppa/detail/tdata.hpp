@@ -14,14 +14,6 @@ template<>
 struct tdata<>
 {
 
-    typedef util::type_list<> element_types;
-
-    typedef typename element_types::head_type head_type;
-
-    typedef typename element_types::tail_type tail_type;
-
-    static const size_t type_list_size = element_types::type_list_size;
-
     util::void_type head;
 
     tdata<>& tail()
@@ -46,14 +38,6 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 {
 
     typedef tdata<Tail...> super;
-
-    typedef util::type_list<Head, Tail...> element_types;
-
-    typedef typename element_types::head_type head_type;
-
-    typedef typename element_types::tail_type tail_type;
-
-    static const size_t type_list_size = element_types::type_list_size;
 
     Head head;
 
@@ -99,8 +83,7 @@ template<size_t N, typename... ElementTypes>
 const typename util::type_at<N, util::type_list<ElementTypes...>>::type&
 tdata_get(const tdata<ElementTypes...>& tv)
 {
-    static_assert(N < util::type_list<ElementTypes...>::type_list_size,
-                  "N < tv.size()");
+    static_assert(N < sizeof...(ElementTypes), "N >= tv.size()");
     return static_cast<const typename tdata_upcast_helper<N, ElementTypes...>::type&>(tv).head;
 }
 
@@ -108,8 +91,7 @@ template<size_t N, typename... ElementTypes>
 typename util::type_at<N, util::type_list<ElementTypes...>>::type&
 tdata_get_ref(tdata<ElementTypes...>& tv)
 {
-    static_assert(N < util::type_list<ElementTypes...>::type_list_size,
-                  "N >= tv.size()");
+    static_assert(N < sizeof...(ElementTypes), "N >= tv.size()");
     return static_cast<typename tdata_upcast_helper<N, ElementTypes...>::type &>(tv).head;
 }
 

@@ -61,7 +61,7 @@ class exit_signal
      *        <tt>reason() == @p r</tt>.
      * @pre {@code r >= exit_reason::user_defined}.
      */
-    exit_signal(std::uint32_t r);
+    explicit exit_signal(std::uint32_t r);
 
     /**
      * @brief Reads the exit reason.
@@ -85,6 +85,16 @@ class exit_signal
     void set_reason(exit_reason value);
 
 };
+
+inline bool operator==(const exit_signal& lhs, const exit_signal& rhs)
+{
+    return lhs.reason() == rhs.reason();
+}
+
+inline bool operator!=(const exit_signal& lhs, const exit_signal& rhs)
+{
+    return !(lhs == rhs);
+}
 
 } // namespace cppa
 

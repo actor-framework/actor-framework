@@ -80,7 +80,7 @@ class tuple
 
  private:
 
-    static_assert(element_types::type_list_size > 0, "tuple is empty");
+    static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
 
     static_assert(util::eval_type_list<element_types,
                                        util::is_legal_tuple_type>::value,
@@ -113,8 +113,6 @@ class tuple
 
     typedef typename element_types::tail_type tail_type;
 
-    static const size_t type_list_size = element_types::type_list_size;
-
     tuple() : m_vals(new vals_t) { }
 
     tuple(const ElementTypes&... args) : m_vals(new vals_t(args...)) { }
@@ -144,7 +142,7 @@ class tuple
     template<typename... Args>
     bool equal_to(const tuple<Args...>& other) const
     {
-        static_assert(type_list_size == tuple<Args...>::type_list_size,
+        static_assert(sizeof...(ElementTypes) == sizeof...(Args),
                       "Can't compare tuples of different size");
         return compare_vals(vals()->data(), other.vals()->data());
     }

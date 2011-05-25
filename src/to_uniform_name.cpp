@@ -6,7 +6,16 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "cppa/actor.hpp"
+#include "cppa/group.hpp"
+#include "cppa/channel.hpp"
+#include "cppa/message.hpp"
+#include "cppa/any_type.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/exit_signal.hpp"
+
 #include "cppa/util/void_type.hpp"
+
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 
@@ -51,6 +60,7 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     // all integer type names as uniform representation
     static std::map<std::string, std::string> mapped_demangled_names =
     {
+      // integer types
       { demangled<char>(), mapped_int_name<char>() },
       { demangled<signed char>(), mapped_int_name<signed char>() },
       { demangled<unsigned char>(), mapped_int_name<unsigned char>() },
@@ -72,14 +82,21 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<long long>(), mapped_int_name<long long>() },
       { demangled<signed long long>(), mapped_int_name<signed long long>() },
       { demangled<unsigned long long>(), mapped_int_name<unsigned long long>()},
-//      { demangled<wchar_t>(), mapped_int_name<wchar_t>() },
       { demangled<char16_t>(), mapped_int_name<char16_t>() },
       { demangled<char32_t>(), mapped_int_name<char32_t>() },
-      { demangled<cppa::util::void_type>(), "@0" },
-//      { demangled<std::wstring>(), "@wstr" },
+      // string types
       { demangled<std::string>(), "@str" },
       { demangled<std::u16string>(), "@u16str" },
-      { demangled<std::u32string>(), "@u32str" }
+      { demangled<std::u32string>(), "@u32str" },
+      // cppa types
+      { demangled<cppa::any_type>(), "@*" },
+      { demangled<cppa::util::void_type>(), "@0" },
+      { demangled<cppa::any_tuple>(), "@<>" },
+      { demangled<cppa::exit_signal>(), "@exit" },
+      { demangled<cppa::actor_ptr>(), "@actor" },
+      { demangled<cppa::group_ptr>(), "@group" },
+      { demangled<cppa::channel_ptr>(), "@channel" },
+      { demangled<cppa::message>(), "@msg" }
     };
 
     // check if we could find the whole string in our lookup map

@@ -62,14 +62,13 @@ template<template<typename...> class LhsTuple, typename... LhsTypes,
 bool compare_tuples(const LhsTuple<LhsTypes...>& lhs,
                     const RhsTuple<RhsTypes...>& rhs)
 {
-    static_assert(   LhsTuple<LhsTypes...>::type_list_size
-                  == RhsTuple<RhsTypes...>::type_list_size,
+    static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
                   "could not compare tuples of different size");
     static_assert(util::eval_type_lists<util::type_list<LhsTypes...>,
                                         util::type_list<RhsTypes...>,
                                         util::is_comparable>::value,
                   "types of lhs are not comparable to the types of rhs");
-    return detail::cmp_helper<(LhsTuple<LhsTypes...>::type_list_size - 1),
+    return detail::cmp_helper<(sizeof...(LhsTypes) - 1),
                               LhsTuple<LhsTypes...>,
                               RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
 }
@@ -82,8 +81,8 @@ bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
     typedef util::type_list<LhsTypes...> lhs_types;
     typedef util::type_list<RhsTypes...> rhs_types;
 
-    static_assert(util::eval_first_n<detail::min_<lhs_types::type_list_size,
-                                                  rhs_types::type_list_size>
+    static_assert(util::eval_first_n<detail::min_<sizeof...(LhsTypes),
+                                                  sizeof...(RhsTypes)>
                                                   ::value,
                                      lhs_types,
                                      rhs_types,

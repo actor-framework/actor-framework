@@ -40,8 +40,9 @@ struct invoke_rule_builder
     {
         typedef util::type_list<Arg0, Args...> arg_types;
 
-        static_assert(arg_types::type_list_size
-                      <= filtered_types::type_list_size,
+        static constexpr size_t num_args = sizeof...(Args) + 1;
+
+        static_assert(num_args <= filtered_types::type_list_size,
                       "too much arguments");
 
         class helper_impl : public irb_helper
@@ -66,7 +67,7 @@ struct invoke_rule_builder
 
         m_helper = new helper_impl(arg0, args...);
 
-        static_assert(util::eval_first_n<arg_types::type_list_size,
+        static_assert(util::eval_first_n<num_args,
                                          filtered_types,
                                          arg_types,
                                          util::is_comparable>::value,

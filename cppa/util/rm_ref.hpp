@@ -16,6 +16,9 @@ struct rm_ref<const T&> { typedef T type; };
 template<typename T>
 struct rm_ref<T&> { typedef T type; };
 
+template<typename T>
+struct rm_ref<T&&> { typedef T type; };
+
 template<>
 struct rm_ref<void> { };
 

@@ -87,12 +87,13 @@ size_t test__uniform_type()
         "float", "double",              // floating points
         "@0",                           // cppa::util::void_type
         // default announced cppa types
-        "cppa::any_type",
-        "cppa::any_tuple",
-        "cppa::exit_reason",
-        "cppa::intrusive_ptr<cppa::actor>",
-        "cppa::intrusive_ptr<cppa::group>",
-        "cppa::intrusive_ptr<cppa::channel>"
+        "@*",                           // cppa::any_type
+        "@<>",                          // cppa::any_tuple
+        "@msg",                         // cppa::message
+        "@exit",                        // cppa::exit_signal
+        "@actor",                       // cppa::actor_ptr
+        "@group",                       // cppa::group_ptr
+        "@channel"                      // cppa::channel_ptr
     };
     if (sizeof(double) != sizeof(long double))
     {

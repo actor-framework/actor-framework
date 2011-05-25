@@ -27,7 +27,8 @@ struct invoke_helper
         static_assert(std::is_convertible<tuple_val_type, back_type>::value,
                       "tuple element is not convertible to expected argument");
         invoke_helper<N - 1, F, Tuple, next_list, tuple_val_type, Args...>
-                ::_(f, t, t.get<N>(), args...);
+                //::_(f, t, t.get<N>(), args...);
+                ::_(f, t, get<N>(t), args...);
     }
 };
 
@@ -40,33 +41,40 @@ struct invoke_helper<N, F, Tuple, util::type_list<>, Args...>
     }
 };
 
-template<bool HasCallableTrait, typename Tuple, typename F>
-struct invoke_impl
+template<bool HasCallableTrati, typename F, class Tuple>
+struct invoke_impl;
+
+template<typename F, template<typename...> class Tuple, typename... TTypes>
+struct invoke_impl<true, F, Tuple<TTypes...> >
 {
+
+    static_assert(sizeof...(TTypes) > 0, "empty tuple type");
 
     typedef typename util::callable_trait<F>::arg_types arg_types;
 
-    static const size_t tuple_size = Tuple::type_list_size - 1;
+    typedef Tuple<TTypes...> tuple_type;
 
-    inline static void _(F& f, const Tuple& t)
+    inline static void _(F& f, const tuple_type& t)
     {
-        invoke_helper<tuple_size, F, Tuple, arg_types>::_(f, t);
+        invoke_helper<sizeof...(TTypes) - 1, F, tuple_type, arg_types>::_(f, t);
     }
 
 };
 
-template<typename Tuple, typename F>
-struct invoke_impl<false, Tuple, F>
+template<typename F, template<typename...> class Tuple, typename... TTypes>
+struct invoke_impl<false, F, Tuple<TTypes...> >
 {
+
+    static_assert(sizeof...(TTypes) > 0, "empty tuple type");
 
     typedef typename util::callable_trait<decltype(&F::operator())>::arg_types
             arg_types;
 
-    static const size_t tuple_size = Tuple::type_list_size - 1;
+    typedef Tuple<TTypes...> tuple_type;
 
-    inline static void _(F& f, const Tuple& t)
+    inline static void _(F& f, const tuple_type& t)
     {
-        invoke_helper<tuple_size, F, Tuple, arg_types>::_(f, t);
+        invoke_helper<sizeof...(TTypes) - 1, F, tuple_type, arg_types>::_(f, t);
     }
 
 };
@@ -79,7 +87,7 @@ template<typename Tuple, typename F>
 void invoke(F what, const Tuple& args)
 {
     typedef typename std::remove_pointer<F>::type f_type;
-    detail::invoke_impl<std::is_function<f_type>::value, Tuple, F>::_(what, args);
+    detail::invoke_impl<std::is_function<f_type>::value, F, Tuple>::_(what, args);
 }
 
 } // namespace cppa

@@ -51,7 +51,7 @@ bool match(const any_tuple& what, const ValuesTuple& vals,
     {
         std::vector<size_t> tmp(mappings);
         view_type view(what.vals(), std::move(tmp));
-        return compare_first_elements(view, vals);
+        return util::compare_first_elements(view, vals);
     }
     return false;
 }

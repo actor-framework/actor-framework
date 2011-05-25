@@ -29,7 +29,7 @@ class tuple_view
 
     typedef util::type_list<ElementTypes...> element_types;
 
-    static_assert(element_types::type_list_size > 0,
+    static_assert(sizeof...(ElementTypes) > 0,
                   "could not declare an empty tuple_view");
 
     typedef cow_ptr<detail::abstract_tuple> vals_t;
@@ -51,21 +51,19 @@ class tuple_view
 
     typedef typename element_types::tail_type tail_type;
 
-    static const size_t type_list_size = element_types::type_list_size;
-
     const element_types& types() const { return m_types; }
 
     template<size_t N>
     const typename util::type_at<N, element_types>::type& get() const
     {
-        static_assert(N < element_types::type_list_size, "N >= size()");
+        static_assert(N < sizeof...(ElementTypes), "N >= size()");
         return *reinterpret_cast<const typename util::type_at<N, element_types>::type*>(m_vals->at(N));
     }
 
     template<size_t N>
     typename util::type_at<N, element_types>::type& get_ref()
     {
-        static_assert(N < element_types::type_list_size, "N >= size()");
+        static_assert(N < sizeof...(ElementTypes), "N >= size()");
         return *reinterpret_cast<typename util::type_at<N, element_types>::type*>(m_vals->mutable_at(N));
     }
 
@@ -82,14 +80,20 @@ template<size_t N, typename... Types>
 const typename util::type_at<N, util::type_list<Types...>>::type&
 get(const tuple_view<Types...>& t)
 {
-    return t.get<N>();
+    static_assert(N < sizeof...(Types), "N >= t.size()");
+    typedef typename util::type_at<N, util::type_list<Types...>>::type result_t;
+    return *reinterpret_cast<const result_t*>(t.vals()->at(N));
+    //return t.get<N>();
 }
 
 template<size_t N, typename... Types>
 typename util::type_at<N, util::type_list<Types...>>::type&
 get_ref(tuple_view<Types...>& t)
 {
-    return t.get_ref<N>();
+    static_assert(N < sizeof...(Types), "N >= t.size()");
+    typedef typename util::type_at<N, util::type_list<Types...>>::type result_t;
+    return *reinterpret_cast<result_t*>(t.vals()->mutable_at(N));
+    //return t.get_ref<N>();
 }
 
 template<typename TypeList>

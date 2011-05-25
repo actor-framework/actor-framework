@@ -1,6 +1,6 @@
 include ../Makefile.rules
 
-INCLUDE_FLAGS = $(INCLUDES) -I../ ./
+INCLUDE_FLAGS = $(INCLUDES) -I../ -I./
 
 LIB_FLAGS = $(LIBS) -L../ -lcppa
 

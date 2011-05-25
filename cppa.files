@@ -94,7 +94,6 @@ queue_performances/blocking_cached_stack2.hpp
 queue_performances/blocking_sutter_list.hpp
 queue_performances/lockfree_list.hpp
 queue_performances/intrusive_sutter_list.hpp
-cppa/detail/cpp0x_thread_wrapper.hpp
 src/context.cpp
 cppa/scheduler.hpp
 cppa/detail/mock_scheduler.hpp
@@ -151,3 +150,6 @@ cppa/util/abstract_uniform_type_info.hpp
 cppa/util/upgrade_lock_guard.hpp
 cppa/exit_signal.hpp
 src/exit_signal.cpp
+cppa/to_string.hpp
+src/string_serialization.cpp
+cppa/from_string.hpp

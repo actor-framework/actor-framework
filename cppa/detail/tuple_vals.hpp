@@ -39,12 +39,6 @@ class tuple_vals : public abstract_tuple
 
  public:
 
-    typedef typename element_types::head_type head_type;
-
-    typedef typename element_types::tail_type tail_type;
-
-    static const size_t type_list_size = element_types::type_list_size;
-
     tuple_vals(const tuple_vals& other) : super(), m_data(other.m_data) { }
 
     tuple_vals() : m_data() { }
@@ -62,7 +56,7 @@ class tuple_vals : public abstract_tuple
 
     virtual size_t size() const
     {
-        return element_types::type_list_size;
+        return sizeof...(ElementTypes);
     }
 
     virtual tuple_vals* copy() const

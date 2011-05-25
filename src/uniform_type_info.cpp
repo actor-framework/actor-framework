@@ -12,6 +12,7 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/object.hpp"
+#include "cppa/message.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
@@ -178,8 +179,9 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
 
  public:
 
-    static void s_serialize(const group* ptr, serializer* sink,
-                            const std::string name)
+    static void s_serialize(const group* ptr,
+                            serializer* sink,
+                            const std::string& name)
     {
         if (!ptr)
         {
@@ -194,8 +196,9 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
         }
     }
 
-    static void s_deserialize(group_ptr& ptrref, deserializer* source,
-                              const std::string name)
+    static void s_deserialize(group_ptr& ptrref,
+                              deserializer* source,
+                              const std::string& name)
     {
         std::string cname = source->seek_object();
         if (cname != name)
@@ -243,12 +246,15 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
     std::string group_ptr_name;
     std::string actor_ptr_name;
 
- protected:
+ public:
 
-    void serialize(const void* instance, serializer* sink) const
+    static void s_serialize(const channel* ptr,
+                            serializer* sink,
+                            const std::string& channel_type_name,
+                            const std::string& actor_ptr_type_name,
+                            const std::string& group_ptr_type_name)
     {
-        sink->begin_object(name());
-        auto ptr = reinterpret_cast<const channel_ptr*>(instance)->get();
+        sink->begin_object(channel_type_name);
         if (!ptr)
         {
             serialize_nullptr(sink);
@@ -259,11 +265,11 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
             auto aptr = dynamic_cast<const actor*>(ptr);
             if (aptr)
             {
-                actor_ptr_tinfo::s_serialize(aptr, sink, actor_ptr_name);
+                actor_ptr_tinfo::s_serialize(aptr, sink, actor_ptr_type_name);
             }
             else if ((gptr = dynamic_cast<const group*>(ptr)) != nullptr)
             {
-                group_ptr_tinfo::s_serialize(gptr, sink, group_ptr_name);
+                group_ptr_tinfo::s_serialize(gptr, sink, group_ptr_type_name);
             }
             else
             {
@@ -274,39 +280,62 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
         sink->end_object();
     }
 
-    void deserialize(void* instance, deserializer* source) const
+    static void s_deserialize(channel_ptr& ptrref,
+                              deserializer* source,
+                              const std::string& name,
+                              const std::string& actor_ptr_type_name,
+                              const std::string& group_ptr_type_name)
     {
         std::string cname = source->seek_object();
-        if (cname != name())
+        if (cname != name)
         {
             throw std::logic_error("wrong type name found");
         }
         source->begin_object(cname);
         std::string subobj = source->peek_object();
-        if (subobj == actor_ptr_name)
+        if (subobj == actor_ptr_type_name)
         {
             actor_ptr tmp;
-            actor_ptr_tinfo::s_deserialize(tmp, source, actor_ptr_name);
-            *reinterpret_cast<channel_ptr*>(instance) = tmp;
+            actor_ptr_tinfo::s_deserialize(tmp, source, actor_ptr_type_name);
+            ptrref = tmp;
         }
-        else if (subobj == group_ptr_name)
+        else if (subobj == group_ptr_type_name)
         {
             group_ptr tmp;
-            group_ptr_tinfo::s_deserialize(tmp, source, group_ptr_name);
-            *reinterpret_cast<channel_ptr*>(instance) = tmp;
+            group_ptr_tinfo::s_deserialize(tmp, source, group_ptr_type_name);
+            ptrref = tmp;
         }
         else if (subobj == nullptr_type_name)
         {
             (void) source->seek_object();
             deserialize_nullptr(source);
-            reinterpret_cast<channel_ptr*>(instance)->reset();
+            ptrref.reset();
         }
         else
         {
             throw std::logic_error("unexpected type name: " + subobj);
-
         }
         source->end_object();
+    }
+
+ protected:
+
+    void serialize(const void* instance, serializer* sink) const
+    {
+        s_serialize(reinterpret_cast<const channel_ptr*>(instance)->get(),
+                    sink,
+                    name(),
+                    actor_ptr_name,
+                    group_ptr_name);
+    }
+
+    void deserialize(void* instance, deserializer* source) const
+    {
+        s_deserialize(*reinterpret_cast<channel_ptr*>(instance),
+                      source,
+                      name(),
+                      actor_ptr_name,
+                      group_ptr_name);
     }
 
  public:
@@ -321,26 +350,29 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
 class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
 {
 
- protected:
+ public:
 
-    void serialize(const void* instance, serializer* sink) const
+    static void s_serialize(const any_tuple& atup,
+                            serializer* sink,
+                            const std::string& name)
     {
-        auto atup = reinterpret_cast<const any_tuple*>(instance);
-        sink->begin_object(name());
-        sink->begin_sequence(atup->size());
-        for (size_t i = 0; i < atup->size(); ++i)
+        sink->begin_object(name);
+        sink->begin_sequence(atup.size());
+        for (size_t i = 0; i < atup.size(); ++i)
         {
-            atup->type_at(i).serialize(atup->at(i), sink);
+            atup.type_at(i).serialize(atup.at(i), sink);
         }
         sink->end_sequence();
         sink->end_object();
     }
 
-    void deserialize(void* instance, deserializer* source) const
+    static void s_deserialize(any_tuple& atref,
+                              deserializer* source,
+                              const std::string& name)
     {
         auto result = new detail::object_array;
         auto str = source->seek_object();
-        if (str != name()) throw std::logic_error("invalid type found: " + str);
+        if (str != name) throw std::logic_error("invalid type found: " + str);
         source->begin_object(str);
         size_t tuple_size = source->begin_sequence();
         for (size_t i = 0; i < tuple_size; ++i)
@@ -351,7 +383,80 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
         }
         source->end_sequence();
         source->end_object();
-        *reinterpret_cast<any_tuple*>(instance) = any_tuple(result);
+        atref = any_tuple(result);
+    }
+
+ protected:
+
+    void serialize(const void* instance, serializer* sink) const
+    {
+        s_serialize(*reinterpret_cast<const any_tuple*>(instance),sink,name());
+    }
+
+    void deserialize(void* instance, deserializer* source) const
+    {
+        s_deserialize(*reinterpret_cast<any_tuple*>(instance), source, name());
+    }
+
+};
+
+class message_tinfo : public util::abstract_uniform_type_info<message>
+{
+
+    std::string any_tuple_name;
+    std::string actor_ptr_name;
+    std::string group_ptr_name;
+    std::string ch_ptr_name;
+
+ public:
+
+    virtual void serialize(const void* instance, serializer* sink) const
+    {
+        const message& msg = *reinterpret_cast<const message*>(instance);
+        const any_tuple& data = msg.content();
+        sink->begin_object(name());
+        actor_ptr_tinfo::s_serialize(msg.sender().get(), sink, actor_ptr_name);
+        channel_ptr_tinfo::s_serialize(msg.receiver().get(),
+                                       sink,
+                                       ch_ptr_name,
+                                       actor_ptr_name,
+                                       group_ptr_name);
+        any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
+        //uniform_typeid<actor_ptr>()->serialize(&(msg.sender()), sink);
+        //uniform_typeid<channel_ptr>()->serialize(&(msg.receiver()), sink);
+        //uniform_typeid<any_tuple>()->serialize(&data, sink);
+        sink->end_object();
+    }
+
+    virtual void deserialize(void* instance, deserializer* source) const
+    {
+        auto tname = source->seek_object();
+        if (tname != name()) throw 42;
+        source->begin_object(tname);
+        actor_ptr sender;
+        channel_ptr receiver;
+        any_tuple content;
+        actor_ptr_tinfo::s_deserialize(sender, source, actor_ptr_name);
+        channel_ptr_tinfo::s_deserialize(receiver,
+                                         source,
+                                         ch_ptr_name,
+                                         actor_ptr_name,
+                                         group_ptr_name);
+        any_tuple_tinfo::s_deserialize(content, source, any_tuple_name);
+        //uniform_typeid<actor_ptr>()->deserialize(&sender, source);
+        //uniform_typeid<channel_ptr>()->deserialize(&receiver, source);
+        //uniform_typeid<any_tuple>()->deserialize(&content, source);
+        source->end_object();
+        *reinterpret_cast<message*>(instance) = message(sender,
+                                                        receiver,
+                                                        content);
+    }
+
+    message_tinfo() : any_tuple_name(to_uniform_name(typeid(any_tuple)))
+                    , actor_ptr_name(to_uniform_name(typeid(actor_ptr)))
+                    , group_ptr_name(to_uniform_name(typeid(group_ptr)))
+                    , ch_ptr_name(to_uniform_name(typeid(channel_ptr)))
+    {
     }
 
 };
@@ -399,7 +504,7 @@ class uniform_type_info_map
         insert<std::string>();
         insert<std::u16string>();
         insert<std::u32string>();
-        insert(new default_uniform_type_info_impl<exit_reason>(
+        insert(new default_uniform_type_info_impl<exit_signal>(
                    std::make_pair(&exit_signal::reason,
                                   &exit_signal::set_uint_reason)),
                { raw_name<exit_signal>() });
@@ -407,6 +512,7 @@ class uniform_type_info_map
         insert(new actor_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(new group_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(new channel_ptr_tinfo, { raw_name<channel_ptr>() });
+        insert(new message_tinfo, { raw_name<message>() });
         insert<float>();
         insert<cppa::util::void_type>();
         if (sizeof(double) == sizeof(long double))

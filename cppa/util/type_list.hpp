@@ -70,7 +70,7 @@ struct type_list<Head, Tail...> : abstract_type_list
 
     typedef type_list<Tail...> tail_type;
 
-    static const size_t type_list_size = tail_type::type_list_size + 1;
+    static const size_t type_list_size =  sizeof...(Tail) + 1;
 
     type_list()
     {
