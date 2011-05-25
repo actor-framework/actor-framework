@@ -360,7 +360,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
         sink->begin_sequence(atup.size());
         for (size_t i = 0; i < atup.size(); ++i)
         {
-            atup.type_at(i).serialize(atup.at(i), sink);
+            atup.type_info_at(i).serialize(atup.at(i), sink);
         }
         sink->end_sequence();
         sink->end_object();

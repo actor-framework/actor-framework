@@ -59,7 +59,7 @@ struct type_list<>
 {
     typedef void_type head_type;
     typedef type_list<> tail_type;
-    static const size_t type_list_size = 0;
+    static const size_t size = 0;
 };
 
 template<typename Head, typename... Tail>
@@ -70,7 +70,7 @@ struct type_list<Head, Tail...> : abstract_type_list
 
     typedef type_list<Tail...> tail_type;
 
-    static const size_t type_list_size =  sizeof...(Tail) + 1;
+    static const size_t size =  sizeof...(Tail) + 1;
 
     type_list()
     {
@@ -79,7 +79,7 @@ struct type_list<Head, Tail...> : abstract_type_list
 
     virtual const_iterator begin() const
     {
-        return new type_list_iterator(m_arr, m_arr + type_list_size);
+        return new type_list_iterator(m_arr, m_arr + size);
     }
 
     virtual const uniform_type_info& at(size_t pos) const
@@ -96,7 +96,7 @@ struct type_list<Head, Tail...> : abstract_type_list
     static void init(const uniform_type_info** what)
     {
         what[0] = uniform_typeid(typeid(typename TypeList::head_type));
-        if (TypeList::type_list_size > 1)
+        if (TypeList::size > 1)
         {
             ++what;
             init<typename TypeList::tail_type>(what);
@@ -105,7 +105,7 @@ struct type_list<Head, Tail...> : abstract_type_list
 
  private:
 
-    const uniform_type_info* m_arr[type_list_size];
+    const uniform_type_info* m_arr[size];
 
 };
 

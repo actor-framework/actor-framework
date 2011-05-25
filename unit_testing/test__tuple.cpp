@@ -68,11 +68,11 @@ size_t test__tuple()
 
 //	any_tuple ut1 = tv0;
 
-    CPPA_CHECK(t6.get<0>() == 0);
-    CPPA_CHECK(tv2.get<0>() == t1.get<0>());
-    CPPA_CHECK(tv2.get<1>() == t1.get<3>());
+    CPPA_CHECK(get<0>(t6) == 0);
+    CPPA_CHECK(get<0>(tv2) == get<0>(t1));
+    CPPA_CHECK(get<1>(tv2) == get<3>(t1));
 
-    CPPA_CHECK(tv2.get<1>() == "Hello World");
+    CPPA_CHECK(get<1>(tv2) == "Hello World");
 
     {
         tuple<int> t1_sub1(42);
@@ -94,8 +94,8 @@ size_t test__tuple()
         CPPA_CHECK(tv3_mappings[1] == 3);
     }
 
-    CPPA_CHECK(tv3.get<0>() == t1.get<2>());
-    CPPA_CHECK(tv3.get<1>() == t1.get<3>());
+    CPPA_CHECK(get<0>(tv3) == get<2>(t1));
+    CPPA_CHECK(get<1>(tv3) == get<3>(t1));
 
     CPPA_CHECK(!(tv2 == tv3));
 
@@ -111,21 +111,21 @@ size_t test__tuple()
 
 //	CPPA_CHECK(ut0 == t1);
 
-    CPPA_CHECK(tv0.get<0>() == .2f);
-    CPPA_CHECK(tv0.get<1>() == 2);
+    CPPA_CHECK(get<0>(tv0) == .2f);
+    CPPA_CHECK(get<1>(tv0) == 2);
 
-    CPPA_CHECK(tv1.get<0>() == 2);
+    CPPA_CHECK(get<0>(tv1) == 2);
 
-    CPPA_CHECK((tv1.get<0>() == tv0.get<1>()));
-    CPPA_CHECK((&(tv1.get<0>()) == &(tv0.get<1>())));
+    CPPA_CHECK((get<0>(tv1) == get<1>(tv0)));
+    CPPA_CHECK((&(get<0>(tv1)) == &(get<1>(tv0))));
 
     // force detaching of tv1 from tv0 (and t1)
-    tv1.get_ref<0>() = 20;
+    get_ref<0>(tv1) = 20;
 
-    CPPA_CHECK(tv0.get<1>() == 2);
-    CPPA_CHECK(tv1.get<0>() == 20);
-    CPPA_CHECK((&(tv1.get<0>()) != &(tv0.get<1>())));
-    CPPA_CHECK((&(t1.get<1>()) == &(tv0.get<0>())));
+    CPPA_CHECK(get<1>(tv0) == 2);
+    CPPA_CHECK(get<0>(tv1) == 20);
+    CPPA_CHECK((&(get<0>(tv1)) != &(get<1>(tv0))));
+    CPPA_CHECK((&(get<1>(t1)) == &(get<0>(tv0))));
 
     bool l1_invoked = false;
     bool l2_invoked = false;
@@ -137,21 +137,21 @@ size_t test__tuple()
 
     auto l1 = [&](int v0, float v1, int v2, const std::string& v3) {
         l1_invoked = true;
-        CPPA_CHECK((t1.get<0>() == v0));
-        CPPA_CHECK((t1.get<1>() == v1));
-        CPPA_CHECK((t1.get<2>() == v2));
-        CPPA_CHECK((t1.get<3>() == v3));
+        CPPA_CHECK((get<0>(t1) == v0));
+        CPPA_CHECK((get<1>(t1) == v1));
+        CPPA_CHECK((get<2>(t1) == v2));
+        CPPA_CHECK((get<3>(t1) == v3));
     };
 
     auto l2 = [&](float v0, int v1) {
         l2_invoked = true;
-        CPPA_CHECK((tv0.get<0>() == v0));
-        CPPA_CHECK((tv0.get<1>() == v1));
+        CPPA_CHECK((get<0>(tv0) == v0));
+        CPPA_CHECK((get<1>(tv0) == v1));
     };
 
     auto l3 = [&](const std::string& v0) {
         l3_invoked = true;
-        CPPA_CHECK((t2.get<0>() == v0));
+        CPPA_CHECK((get<0>(t2) == v0));
     };
 
     invoke(l1, t1);
@@ -221,13 +221,13 @@ size_t test__tuple()
     // test detaching of tuples
     auto t1_copy = t1;
 
-    CPPA_CHECK((&(t1_copy.get<0>()) == &(t1.get<0>())));
-    t1_copy.get_ref<0>() = 24; // this detaches t4 from t1
-    CPPA_CHECK((&(t1_copy.get<0>()) != &(t1.get<0>())));
-    CPPA_CHECK(t1_copy.get<0>() != t1.get<0>());
-    CPPA_CHECK(t1_copy.get<1>() == t1.get<1>());
-    CPPA_CHECK(t1_copy.get<2>() == t1.get<2>());
-    CPPA_CHECK(t1_copy.get<3>() == t1.get<3>());
+    CPPA_CHECK((&(get<0>(t1_copy)) == &(get<0>(t1))));
+    get_ref<0>(t1_copy) = 24; // this detaches t4 from t1
+    CPPA_CHECK((&(get<0>(t1_copy)) != &(get<0>(t1))));
+    CPPA_CHECK(get<0>(t1_copy) != get<0>(t1));
+    CPPA_CHECK(get<1>(t1_copy) == get<1>(t1));
+    CPPA_CHECK(get<2>(t1_copy) == get<2>(t1));
+    CPPA_CHECK(get<3>(t1_copy) == get<3>(t1));
     CPPA_CHECK(t1 == t4);
 
     return CPPA_TEST_RESULT;

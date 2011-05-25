@@ -50,9 +50,9 @@ class decorated_tuple : public abstract_tuple
         return m_decorated->at(m_mappings[pos]);
     }
 
-    virtual const uniform_type_info& type_at(size_t pos) const
+    virtual const uniform_type_info& utype_info_at(size_t pos) const
     {
-        return m_decorated->type_at(m_mappings[pos]);
+        return m_decorated->utype_info_at(m_mappings[pos]);
     }
 
     virtual const util::abstract_type_list& types() const

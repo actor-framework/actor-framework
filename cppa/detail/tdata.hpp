@@ -1,13 +1,18 @@
 #ifndef TDATA_HPP
 #define TDATA_HPP
 
+#include "cppa/get.hpp"
+#include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {
 
-template<typename... ElementTypes>
+/*
+ * just like std::tuple (but derives from ref_counted?)
+ */
+template<typename...>
 struct tdata;
 
 template<>
@@ -64,7 +69,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
 };
 
-template<size_t N, typename... ElementTypes>
+template<size_t N, typename... Tn>
 struct tdata_upcast_helper;
 
 template<size_t N, typename Head, typename... Tail>
@@ -79,22 +84,23 @@ struct tdata_upcast_helper<0, Head, Tail...>
     typedef tdata<Head, Tail...> type;
 };
 
-template<size_t N, typename... ElementTypes>
-const typename util::type_at<N, util::type_list<ElementTypes...>>::type&
-tdata_get(const tdata<ElementTypes...>& tv)
+
+} // namespace detail
+
+template<size_t N, typename... Tn>
+const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv)
 {
-    static_assert(N < sizeof...(ElementTypes), "N >= tv.size()");
-    return static_cast<const typename tdata_upcast_helper<N, ElementTypes...>::type&>(tv).head;
+    static_assert(N < sizeof...(Tn), "N >= tv.size()");
+    return static_cast<const typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
 }
 
-template<size_t N, typename... ElementTypes>
-typename util::type_at<N, util::type_list<ElementTypes...>>::type&
-tdata_get_ref(tdata<ElementTypes...>& tv)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv)
 {
-    static_assert(N < sizeof...(ElementTypes), "N >= tv.size()");
-    return static_cast<typename tdata_upcast_helper<N, ElementTypes...>::type &>(tv).head;
+    static_assert(N < sizeof...(Tn), "N >= tv.size()");
+    return static_cast<typename detail::tdata_upcast_helper<N, Tn...>::type &>(tv).head;
 }
 
-} } // namespace cppa::detail
+} // namespace cppa::detail
 
 #endif // TDATA_HPP

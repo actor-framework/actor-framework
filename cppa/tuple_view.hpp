@@ -5,6 +5,7 @@
 
 #include "cppa/tuple.hpp"
 
+#include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/a_matches_b.hpp"
 #include "cppa/util/compare_tuples.hpp"
@@ -47,6 +48,8 @@ class tuple_view
 
     const vals_t& vals() const { return m_vals; }
 
+    vals_t& vals_ref() { return m_vals; }
+
     typedef typename element_types::head_type head_type;
 
     typedef typename element_types::tail_type tail_type;
@@ -54,17 +57,19 @@ class tuple_view
     const element_types& types() const { return m_types; }
 
     template<size_t N>
-    const typename util::type_at<N, element_types>::type& get() const
+    const typename util::at<N, ElementTypes...>::type& get() const
     {
         static_assert(N < sizeof...(ElementTypes), "N >= size()");
-        return *reinterpret_cast<const typename util::type_at<N, element_types>::type*>(m_vals->at(N));
+        typedef typename util::at<N, ElementTypes...>::type result_t;
+        return *reinterpret_cast<const result_t*>(m_vals->at(N));
     }
 
     template<size_t N>
-    typename util::type_at<N, element_types>::type& get_ref()
+    typename util::at<N, ElementTypes...>::type& get_ref()
     {
         static_assert(N < sizeof...(ElementTypes), "N >= size()");
-        return *reinterpret_cast<typename util::type_at<N, element_types>::type*>(m_vals->mutable_at(N));
+        typedef typename util::at<N, ElementTypes...>::type result_t;
+        return *reinterpret_cast<result_t*>(m_vals->mutable_at(N));
     }
 
     size_t size() const { return m_vals->size(); }
@@ -77,22 +82,22 @@ class tuple_view
 };
 
 template<size_t N, typename... Types>
-const typename util::type_at<N, util::type_list<Types...>>::type&
+const typename util::at<N, Types...>::type&
 get(const tuple_view<Types...>& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
-    typedef typename util::type_at<N, util::type_list<Types...>>::type result_t;
+    typedef typename util::at<N, Types...>::type result_t;
     return *reinterpret_cast<const result_t*>(t.vals()->at(N));
     //return t.get<N>();
 }
 
 template<size_t N, typename... Types>
-typename util::type_at<N, util::type_list<Types...>>::type&
+typename util::at<N, Types...>::type&
 get_ref(tuple_view<Types...>& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
-    typedef typename util::type_at<N, util::type_list<Types...>>::type result_t;
-    return *reinterpret_cast<result_t*>(t.vals()->mutable_at(N));
+    typedef typename util::at<N, Types...>::type result_t;
+    return *reinterpret_cast<result_t*>(t.vals_ref()->mutable_at(N));
     //return t.get_ref<N>();
 }
 

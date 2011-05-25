@@ -47,7 +47,7 @@ struct empty_tuple : cppa::detail::abstract_tuple
         throw std::range_error("empty_tuple::at()");
     }
 
-    virtual const cppa::uniform_type_info& type_at(size_t) const
+    virtual const cppa::uniform_type_info& utype_info_at(size_t) const
     {
         throw std::range_error("empty_tuple::type_at()");
     }
@@ -109,9 +109,9 @@ const void* any_tuple::at(size_t p) const
     return m_vals->at(p);
 }
 
-const uniform_type_info& any_tuple::type_at(size_t p) const
+const uniform_type_info& any_tuple::type_info_at(size_t p) const
 {
-    return m_vals->type_at(p);
+    return m_vals->utype_info_at(p);
 }
 
 const util::abstract_type_list& any_tuple::types() const

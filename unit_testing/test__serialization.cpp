@@ -45,7 +45,6 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/is_iterable.hpp"
-#include "cppa/util/if_else_type.hpp"
 #include "cppa/util/wrapped_type.hpp"
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"

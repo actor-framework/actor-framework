@@ -11,6 +11,7 @@
 #include "cppa/util/pt_token.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
+#include "cppa/util/pt_dispatch.hpp"
 #include "cppa/util/is_primitive.hpp"
 
 #include "cppa/detail/type_to_ptype.hpp"

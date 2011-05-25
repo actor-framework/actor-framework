@@ -3,7 +3,6 @@ cppa/tuple.hpp
 unit_testing/main.cpp
 cppa/util/void_type.hpp
 cppa/util/type_list.hpp
-cppa/util/type_at.hpp
 cppa/util/a_matches_b.hpp
 cppa/util.hpp
 cppa/util/is_one_of.hpp
@@ -48,7 +47,6 @@ cppa/util/has_copy_member_fun.hpp
 cppa/detail/intermediate.hpp
 cppa/detail/invokable.hpp
 cppa/invoke_rules.hpp
-cppa/util/type_list_pop_back.hpp
 cppa/invoke.hpp
 cppa/on.hpp
 unit_testing/test__serialization.cpp
@@ -111,7 +109,6 @@ cppa/detail/default_uniform_type_info_impl.hpp
 src/object.cpp
 cppa/util/comparable.hpp
 cppa/util/disable_if.hpp
-cppa/util/if_else_type.hpp
 cppa/util/wrapped_type.hpp
 cppa/util/apply.hpp
 cppa/primitive_variant.hpp
@@ -153,3 +150,8 @@ src/exit_signal.cpp
 cppa/to_string.hpp
 src/string_serialization.cpp
 cppa/from_string.hpp
+cppa/util/at.hpp
+cppa/util/element_at.hpp
+cppa/util/if_else.hpp
+cppa/util/pop_back.hpp
+cppa/util/pt_dispatch.hpp

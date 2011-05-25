@@ -3,38 +3,43 @@
 
 #include <cstddef>
 
-#include "cppa/util/type_at.hpp"
+#include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
 
 namespace cppa {
 
+// forward declaration of detail::tdata
+namespace detail { template<typename...> class tdata; }
+
 // forward declaration of tuple
-template<typename... ElementTypes>
-class tuple;
+template<typename...> class tuple;
 
 // forward declaration of tuple_view
-template<typename... ElementTypes>
-class tuple_view;
+template<typename...> class tuple_view;
 
-// forward declarations of get(const tuple<...>&...)
-template<size_t N, typename... Types>
-const typename util::type_at<N, util::type_list<Types...>>::type&
-get(const tuple<Types...>& t);
+// forward declaration of get(const detail::tdata<...>&)
+template<size_t N, typename... Tn>
+const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>&);
 
-// forward declarations of get(const tuple_view<...>&...)
-template<size_t N, typename... Types>
-const typename util::type_at<N, util::type_list<Types...>>::type&
-get(const tuple_view<Types...>& t);
+// forward declarations of get(const tuple<...>&)
+template<size_t N, typename... Tn>
+const typename util::at<N, Tn...>::type& get(const tuple<Tn...>&);
 
-// forward declarations of get_ref(tuple<...>&...)
-template<size_t N, typename... Types>
-typename util::type_at<N, util::type_list<Types...>>::type&
-get_ref(tuple<Types...>& t);
+// forward declarations of get(const tuple_view<...>&)
+template<size_t N, typename... Tn>
+const typename util::at<N, Tn...>::type& get(const tuple_view<Tn...>&);
 
-// forward declarations of get_ref(tuple_view<...>&...)
-template<size_t N, typename... Types>
-typename util::type_at<N, util::type_list<Types...>>::type&
-get_ref(tuple_view<Types...>& t);
+// forward declarations of get_ref(detail::tdata<...>&)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
+
+// forward declarations of get_ref(tuple<...>&)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type& get_ref(tuple<Tn...>&);
+
+// forward declarations of get_ref(tuple_view<...>&)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type& get_ref(tuple_view<Tn...>&);
 
 } // namespace cppa
 

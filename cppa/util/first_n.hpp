@@ -4,33 +4,23 @@
 #include <cstddef>
 #include <type_traits>
 
-#include "cppa/util/type_at.hpp"
+#include "cppa/util/at.hpp"
+#include "cppa/util/if_else.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/element_at.hpp"
 #include "cppa/util/concat_type_lists.hpp"
 
 namespace cppa { namespace detail {
-
-template<bool Stmt, typename IfType, typename ElseType>
-struct if_t
-{
-    typedef ElseType type;
-};
-
-template<typename IfType, typename ElseType>
-struct if_t<true, IfType, ElseType>
-{
-    typedef IfType type;
-};
 
 template<size_t N, typename List>
 struct n_
 {
 
-    typedef typename util::type_at<N - 1, List>::type head_type;
+    typedef typename util::element_at<N - 1, List>::type head_type;
 
-    typedef typename if_t<std::is_same<util::void_type, head_type>::value,
-                          util::type_list<>,
-                          util::type_list<head_type>>::type
+    typedef typename util::if_else<std::is_same<util::void_type, head_type>,
+                                   util::type_list<>,
+                                   util::wrapped_type<util::type_list<head_type>>>::type
             head_list;
 
     typedef typename n_<N - 1, List>::type tail_list;

@@ -2,6 +2,7 @@
 #define COMPARE_TUPLES_HPP
 
 #include "cppa/get.hpp"
+#include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/is_comparable.hpp"
@@ -10,7 +11,7 @@
 namespace cppa { namespace detail {
 
 template<size_t N, template<typename...> class Tuple, typename... Types>
-const typename util::type_at<N, util::type_list<Types...>>::type&
+const typename util::at<N, Types...>::type&
 do_get(const Tuple<Types...>& t)
 {
     return ::cppa::get<N, Types...>(t);
@@ -33,24 +34,6 @@ struct cmp_helper<0, LhsTuple, RhsTuple>
     {
         return do_get<0>(lhs) == do_get<0>(rhs);
     }
-};
-
-template<bool ALessB, size_t A, size_t B>
-struct min_impl
-{
-    static const size_t value = A;
-};
-
-template<size_t A, size_t B>
-struct min_impl<false, A, B>
-{
-    static const size_t value = B;
-};
-
-template<size_t A, size_t B>
-struct min_
-{
-    static const size_t value = min_impl<(A < B), A, B>::value;
 };
 
 } } // namespace cppa::detail
@@ -81,17 +64,19 @@ bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
     typedef util::type_list<LhsTypes...> lhs_types;
     typedef util::type_list<RhsTypes...> rhs_types;
 
-    static_assert(util::eval_first_n<detail::min_<sizeof...(LhsTypes),
-                                                  sizeof...(RhsTypes)>
-                                                  ::value,
+    static constexpr size_t lhs_size = sizeof...(LhsTypes);
+    static constexpr size_t rhs_size = sizeof...(RhsTypes);
+    static constexpr size_t cmp_size = (lhs_size < rhs_size)
+                                       ? lhs_size
+                                       : rhs_size;
+
+    static_assert(util::eval_first_n<cmp_size,
                                      lhs_types,
                                      rhs_types,
                                      util::is_comparable>::value,
                   "types of lhs are not comparable to the types of rhs");
 
-    return detail::cmp_helper<(detail::min_<lhs_types::type_list_size,
-                                            rhs_types::type_list_size>
-                                            ::value - 1),
+    return detail::cmp_helper<(cmp_size - 1),
                               LhsTuple<LhsTypes...>,
                               RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
 }

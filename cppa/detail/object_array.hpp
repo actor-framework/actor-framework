@@ -42,7 +42,7 @@ class object_array : public detail::abstract_tuple
 
     bool equal_to(const cppa::detail::abstract_tuple&) const;
 
-    const uniform_type_info& type_at(size_t pos) const;
+    const uniform_type_info& utype_info_at(size_t pos) const;
 
     util::abstract_type_list::const_iterator begin() const;
 

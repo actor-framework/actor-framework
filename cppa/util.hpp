@@ -26,10 +26,8 @@
 #include "cppa/util/reverse_type_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 #include "cppa/util/singly_linked_list.hpp"
-#include "cppa/util/type_at.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_list_apply.hpp"
-#include "cppa/util/type_list_pop_back.hpp"
 #include "cppa/util/void_type.hpp"
 
 #endif // UTIL_HPP

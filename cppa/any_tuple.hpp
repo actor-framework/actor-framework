@@ -48,7 +48,7 @@ class any_tuple
 
     const void* at(size_t p) const;
 
-    const uniform_type_info& type_at(size_t p) const;
+    const uniform_type_info& type_info_at(size_t p) const;
 
     const util::abstract_type_list& types() const;
 

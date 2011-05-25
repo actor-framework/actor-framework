@@ -49,7 +49,7 @@
       <valuelist key="GenericProjectManager.GenericMakeStep.BuildTargets" type="QVariantList">
        <value type="QString">all</value>
       </valuelist>
-      <value key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QString"></value>
+      <value key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QString">-j 2</value>
       <value key="GenericProjectManager.GenericMakeStep.MakeCommand" type="QString"></value>
       <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Make</value>
       <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString"></value>
@@ -135,7 +135,7 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-  <value type="QString">{23902c37-f07e-47cd-bb19-c366b9f708db}</value>
+  <value type="QString">{07fcd197-092d-45a0-8500-3be614e6ae31}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>

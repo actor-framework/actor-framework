@@ -42,7 +42,7 @@ struct invoke_rule_builder
 
         static constexpr size_t num_args = sizeof...(Args) + 1;
 
-        static_assert(num_args <= filtered_types::type_list_size,
+        static_assert(num_args <= filtered_types::size,
                       "too much arguments");
 
         class helper_impl : public irb_helper

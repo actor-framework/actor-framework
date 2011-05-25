@@ -19,6 +19,4 @@ struct disable_if : disable_if_c<Trait::value, T>
 
 } } // namespace cppa::util
 
-
-
 #endif // DISABLE_IF_HPP

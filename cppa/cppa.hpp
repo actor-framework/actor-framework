@@ -47,6 +47,8 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 
+#include "cppa/detail/tdata.hpp"
+
 namespace cppa {
 
 namespace detail {
@@ -106,7 +108,7 @@ actor_behavior* get_behavior(std::integral_constant<bool,true>,
                              const Arg0& arg0,
                              const Args&... args)
 {
-    auto arg_tuple = std::make_tuple(arg0, args...);
+    detail::tdata<Arg0, Args...> arg_tuple(arg0, args...);
     auto lambda = [fptr, arg_tuple]() { invoke(fptr, arg_tuple); };
     return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
 }
@@ -117,7 +119,7 @@ actor_behavior* get_behavior(std::integral_constant<bool,false>,
                              const Arg0& arg0,
                              const Args&... args)
 {
-    auto arg_tuple = std::make_tuple(arg0, args...);
+    detail::tdata<Arg0, Args...> arg_tuple(arg0, args...);
     auto lambda = [ftor, arg_tuple]() { invoke(ftor, arg_tuple); };
     return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
 }

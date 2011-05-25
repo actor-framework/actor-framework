@@ -10,7 +10,7 @@
 #include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 
-#include "cppa/util/type_at.hpp"
+#include "cppa/util/at.hpp"
 #include "cppa/util/replace_type.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
@@ -117,27 +117,31 @@ class tuple
 
     tuple(const ElementTypes&... args) : m_vals(new vals_t(args...)) { }
 
+    /*
     template<size_t N>
-    const typename util::type_at<N, element_types>::type& get() const
+    const typename util::at<N, ElementTypes...>::type& get() const
     {
-        return detail::tdata_get<N>(m_vals->data());
+        return get<N>(m_vals->data());
     }
 
     template<size_t N>
-    typename util::type_at<N, element_types>::type& get_ref()
+    typename util::at<N, ElementTypes...>::type& get_ref()
     {
-        return detail::tdata_get_ref<N>(m_vals->data_ref());
+        return get_ref<N>(m_vals->data_ref());
     }
+    */
 
     size_t size() const { return m_vals->size(); }
 
     const void* at(size_t p) const { return m_vals->at(p); }
 
-    const uniform_type_info* utype_at(size_t p) const { return m_vals->type_at(p); }
+    const uniform_type_info* utype_at(size_t p) const { return m_vals->utype_info_at(p); }
 
     const util::abstract_type_list& types() const { return m_vals->types(); }
 
-    cow_ptr<vals_t> vals() const { return m_vals; }
+    const cow_ptr<vals_t>& vals() const { return m_vals; }
+
+    cow_ptr<vals_t>& vals_ref() { return m_vals; }
 
     template<typename... Args>
     bool equal_to(const tuple<Args...>& other) const
@@ -150,17 +154,20 @@ class tuple
 };
 
 template<size_t N, typename... Types>
-const typename util::type_at<N, util::type_list<Types...>>::type&
+const typename util::at<N, Types...>::type&
 get(const tuple<Types...>& t)
 {
-    return t.get<N>();
+    return get<N>(t.vals()->data());
+    //return get<N>(m_vals->data());
+    //return t.get<N>();
 }
 
 template<size_t N, typename... Types>
-typename util::type_at<N, util::type_list<Types...>>::type&
+typename util::at<N, Types...>::type&
 get_ref(tuple<Types...>& t)
 {
-    return t.get_ref<N>();
+    return get_ref<N>(t.vals_ref()->data_ref());
+    //return t.get_ref<N>();
 }
 
 template<typename TypeList>
