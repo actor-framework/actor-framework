@@ -47,84 +47,9 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 
-#include "cppa/detail/tdata.hpp"
+#include "cppa/detail/get_behavior.hpp"
 
 namespace cppa {
-
-namespace detail {
-
-template<bool IsFunctionPtr, typename F>
-class fun_behavior : public actor_behavior
-{
-
-    F m_fun;
-
- public:
-
-    fun_behavior(F ptr) : m_fun(ptr) { }
-
-    virtual void act()
-    {
-        m_fun();
-    }
-
-};
-
-template<typename F>
-class fun_behavior<false, F> : public actor_behavior
-{
-
-    F m_fun;
-
- public:
-
-    fun_behavior(const F& arg) : m_fun(arg) { }
-
-    fun_behavior(F&& arg) : m_fun(std::move(arg)) { }
-
-    virtual void act()
-    {
-        m_fun();
-    }
-
-};
-
-template<typename R>
-actor_behavior* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
-{
-    return new fun_behavior<true, R (*)()>(fptr);
-}
-
-template<typename F>
-actor_behavior* get_behavior(std::integral_constant<bool,false>, F&& ftor)
-{
-    typedef typename util::rm_ref<F>::type ftype;
-    return new fun_behavior<false, ftype>(std::forward<F>(ftor));
-}
-
-template<typename F, typename Arg0, typename... Args>
-actor_behavior* get_behavior(std::integral_constant<bool,true>,
-                             F fptr,
-                             const Arg0& arg0,
-                             const Args&... args)
-{
-    detail::tdata<Arg0, Args...> arg_tuple(arg0, args...);
-    auto lambda = [fptr, arg_tuple]() { invoke(fptr, arg_tuple); };
-    return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
-}
-
-template<typename F, typename Arg0, typename... Args>
-actor_behavior* get_behavior(std::integral_constant<bool,false>,
-                             F ftor,
-                             const Arg0& arg0,
-                             const Args&... args)
-{
-    detail::tdata<Arg0, Args...> arg_tuple(arg0, args...);
-    auto lambda = [ftor, arg_tuple]() { invoke(ftor, arg_tuple); };
-    return new fun_behavior<false, decltype(lambda)>(std::move(lambda));
-}
-
-} // namespace detail
 
 template<scheduling_hint Hint, typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
@@ -140,36 +65,6 @@ actor_ptr spawn(F&& what, const Args&... args)
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
-
-/*
-template<typename F>
-actor_ptr spawn(scheduling_hint hint, const F& fun)
-{
-    struct fun_behavior : actor_behavior
-    {
-        F m_fun;
-        fun_behavior(const F& fun_arg) : m_fun(fun_arg) { }
-        virtual void act()
-        {
-            m_fun();
-        }
-    };
-    return spawn(hint, new fun_behavior(fun));
-}
-
-template<typename F, typename Arg0, typename... Args>
-actor_ptr spawn(scheduling_hint hint, const F& fun, const Arg0& arg0, const Args&... args)
-{
-    auto arg_tuple = make_tuple(arg0, args...);
-    return spawn(hint, [=]() { invoke(fun, arg_tuple); });
-}
-
-template<typename F, typename... Args>
-inline actor_ptr spawn(const F& fun, const Args&... args)
-{
-    return spawn(scheduled, fun, args...);
-}
-*/
 
 inline const message& receive()
 {
@@ -201,10 +96,50 @@ inline const message& last_received()
     return self()->mailbox().last_dequeued();
 }
 
-template<typename Arg0, typename... Args>
-void send(channel_ptr whom, const Arg0& arg0, const Args&... args)
+template<class C, typename Arg0, typename... Args>
+typename util::enable_if<std::is_base_of<channel, C>, void>::type
+send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
 {
     if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+}
+
+template<class C, typename Arg0, typename... Args>
+typename util::enable_if<std::is_base_of<channel, C>, void>::type
+send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
+{
+    if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
+operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
+{
+    if (whom) whom->enqueue(message(self(), whom, what));
+    return whom;
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&&>::type
+operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
+{
+    if (whom) whom->enqueue(message(self(), whom, what));
+    return std::move(whom);
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
+operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
+{
+    if (whom) whom->enqueue(message(self(), whom, std::move(what)));
+    return whom;
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&&>::type
+operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
+{
+    if (whom) whom->enqueue(message(self(), whom, std::move(what)));
+    return std::move(whom);
 }
 
 template<typename Arg0, typename... Args>

@@ -5,6 +5,7 @@
 #include "cppa/tuple.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/tuple_view.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
@@ -26,6 +27,12 @@ class message
             : ref_counted(), sender(s), receiver(r), data(ut)
         {
         }
+        inline msg_content(const actor_ptr& s,
+                           const channel_ptr& r,
+                           any_tuple&& ut)
+            : ref_counted(), sender(s), receiver(r), data(std::move(ut))
+        {
+        }
     };
 
     intrusive_ptr<msg_content> m_content;
@@ -38,6 +45,10 @@ class message
     message(const actor_ptr& from,
             const channel_ptr& to,
             const any_tuple& ut);
+
+    message(const actor_ptr& from,
+            const channel_ptr& to,
+            any_tuple&& ut);
 
     message();
 
@@ -68,7 +79,7 @@ class message
 
 template<typename... Args>
 message::message(const actor_ptr& from, const channel_ptr& to, const Args&... args)
-    : m_content(new msg_content(from, to, any_tuple(tuple<Args...>(args...))))
+    : m_content(new msg_content(from, to, tuple<Args...>(args...)))
 {
 }
 

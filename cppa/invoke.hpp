@@ -21,7 +21,8 @@ template<size_t N, typename F, class Tuple,
          typename ArgTypeList, typename... Args>
 struct invoke_helper
 {
-    typedef typename util::reverse_type_list<ArgTypeList>::type::head_type back_type;
+    typedef typename util::reverse_type_list<ArgTypeList>::type rlist;
+    typedef typename rlist::head_type back_type;
     typedef typename util::element_at<N, Tuple>::type tuple_val_type;
     typedef typename util::pop_back<ArgTypeList>::type next_list;
     inline static void _(F& f, const Tuple& t, const Args&... args)
@@ -42,7 +43,7 @@ struct invoke_helper<N, F, Tuple, util::type_list<>, Args...>
     }
 };
 
-template<bool HasCallableTrati, typename F, class Tuple>
+template<bool HasCallableTrait, typename F, class Tuple>
 struct invoke_impl;
 
 template<typename F, template<typename...> class Tuple, typename... TTypes>
@@ -88,7 +89,8 @@ template<typename F, class Tuple>
 void invoke(F what, const Tuple& args)
 {
     typedef typename std::remove_pointer<F>::type f_type;
-    detail::invoke_impl<std::is_function<f_type>::value, F, Tuple>::_(what, args);
+    static constexpr bool is_fun = std::is_function<f_type>::value;
+    detail::invoke_impl<is_fun, F, Tuple>::_(what, args);
 }
 
 } // namespace cppa

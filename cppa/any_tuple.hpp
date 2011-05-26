@@ -30,9 +30,7 @@ class any_tuple
     template<typename... Args>
     any_tuple(const tuple_view<Args...>& t) : m_vals(t.vals()) { }
 
-    any_tuple(vals_ptr&& vals);
-
-    any_tuple(const vals_ptr& vals);
+    explicit any_tuple(detail::abstract_tuple*);
 
     any_tuple(any_tuple&&);
 
@@ -48,7 +46,7 @@ class any_tuple
 
     const void* at(size_t p) const;
 
-    const uniform_type_info& type_info_at(size_t p) const;
+    const uniform_type_info& utype_info_at(size_t p) const;
 
     const util::abstract_type_list& types() const;
 

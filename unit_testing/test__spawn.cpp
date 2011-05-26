@@ -29,10 +29,10 @@ size_t test__spawn()
     CPPA_TEST(test__spawn);
     actor_ptr self_ptr = self();
     {
-        auto sl = spawn(pong);
         spawn(echo, self_ptr, 1);
-        send(sl, 23.f);
-        send(sl, 2);
+        spawn(pong) << make_tuple(23.f) << make_tuple(2);
+        //send(sl, 23.f);
+        //send(sl, 2);
         bool received_pong = false;
         bool received_echo = false;
         auto rules = (on<int>(42) >> [&]() { received_pong = true; },

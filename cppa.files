@@ -155,3 +155,4 @@ cppa/util/element_at.hpp
 cppa/util/if_else.hpp
 cppa/util/pop_back.hpp
 cppa/util/pt_dispatch.hpp
+cppa/detail/get_behavior.hpp

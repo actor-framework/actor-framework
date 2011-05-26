@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "cppa/get.hpp"
 #include "cppa/tuple.hpp"
 
 #include "cppa/util/at.hpp"
@@ -14,11 +15,6 @@
 
 namespace cppa {
 
-// forward declaration
-class any_tuple;
-// needed to implement constructor
-const cow_ptr<detail::abstract_tuple>& vals_of(const any_tuple&);
-
 /**
  * @brief Describes a view of an fixed-length tuple.
  */
@@ -26,9 +22,16 @@ template<typename... ElementTypes>
 class tuple_view
 {
 
+    template<size_t N, typename... Types>
+    friend typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>&);
+
  public:
 
     typedef util::type_list<ElementTypes...> element_types;
+
+    // enable use of tuple_view as type_list
+    typedef typename element_types::head_type head_type;
+    typedef typename element_types::tail_type tail_type;
 
     static_assert(sizeof...(ElementTypes) > 0,
                   "could not declare an empty tuple_view");
@@ -42,37 +45,20 @@ class tuple_view
 
     tuple_view(const tuple_view&) = default;
 
-    tuple_view(tuple_view&& other) : m_vals(std::move(other.m_vals))
+    inline const vals_t& vals() const
     {
+        return m_vals;
     }
 
-    const vals_t& vals() const { return m_vals; }
-
-    vals_t& vals_ref() { return m_vals; }
-
-    typedef typename element_types::head_type head_type;
-
-    typedef typename element_types::tail_type tail_type;
-
-    const element_types& types() const { return m_types; }
-
-    template<size_t N>
-    const typename util::at<N, ElementTypes...>::type& get() const
+    inline const element_types& types() const
     {
-        static_assert(N < sizeof...(ElementTypes), "N >= size()");
-        typedef typename util::at<N, ElementTypes...>::type result_t;
-        return *reinterpret_cast<const result_t*>(m_vals->at(N));
+        return m_types;
     }
 
-    template<size_t N>
-    typename util::at<N, ElementTypes...>::type& get_ref()
+    inline size_t size() const
     {
-        static_assert(N < sizeof...(ElementTypes), "N >= size()");
-        typedef typename util::at<N, ElementTypes...>::type result_t;
-        return *reinterpret_cast<result_t*>(m_vals->mutable_at(N));
+        return m_vals->size();
     }
-
-    size_t size() const { return m_vals->size(); }
 
  private:
 
@@ -88,7 +74,6 @@ get(const tuple_view<Types...>& t)
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;
     return *reinterpret_cast<const result_t*>(t.vals()->at(N));
-    //return t.get<N>();
 }
 
 template<size_t N, typename... Types>
@@ -97,8 +82,7 @@ get_ref(tuple_view<Types...>& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;
-    return *reinterpret_cast<result_t*>(t.vals_ref()->mutable_at(N));
-    //return t.get_ref<N>();
+    return *reinterpret_cast<result_t*>(t.m_vals->mutable_at(N));
 }
 
 template<typename TypeList>

@@ -72,7 +72,11 @@ template<typename... ElementTypes>
 class tuple
 {
 
-    friend class any_tuple;
+    //friend class any_tuple;
+
+    template<size_t N, typename... Types>
+    friend typename util::at<N, Types...>::type& get_ref(tuple<Types...>&);
+
 
  public:
 
@@ -109,39 +113,42 @@ class tuple
 
  public:
 
+    // enable use of tuple as type_list
     typedef typename element_types::head_type head_type;
-
     typedef typename element_types::tail_type tail_type;
 
-    tuple() : m_vals(new vals_t) { }
-
-    tuple(const ElementTypes&... args) : m_vals(new vals_t(args...)) { }
-
-    /*
-    template<size_t N>
-    const typename util::at<N, ElementTypes...>::type& get() const
+    tuple() : m_vals(new vals_t)
     {
-        return get<N>(m_vals->data());
     }
 
-    template<size_t N>
-    typename util::at<N, ElementTypes...>::type& get_ref()
+    tuple(const ElementTypes&... args) : m_vals(new vals_t(args...))
     {
-        return get_ref<N>(m_vals->data_ref());
     }
-    */
 
-    size_t size() const { return m_vals->size(); }
+    size_t size() const
+    {
+        return m_vals->size();
+    }
 
-    const void* at(size_t p) const { return m_vals->at(p); }
+    const void* at(size_t p) const
+    {
+        return m_vals->at(p);
+    }
 
-    const uniform_type_info* utype_at(size_t p) const { return m_vals->utype_info_at(p); }
+    const uniform_type_info* utype_at(size_t p) const
+    {
+        return m_vals->utype_info_at(p);
+    }
 
-    const util::abstract_type_list& types() const { return m_vals->types(); }
+    const util::abstract_type_list& types() const
+    {
+        return m_vals->types();
+    }
 
-    const cow_ptr<vals_t>& vals() const { return m_vals; }
-
-    cow_ptr<vals_t>& vals_ref() { return m_vals; }
+    const cow_ptr<vals_t>& vals() const
+    {
+        return m_vals;
+    }
 
     template<typename... Args>
     bool equal_to(const tuple<Args...>& other) const
@@ -158,16 +165,13 @@ const typename util::at<N, Types...>::type&
 get(const tuple<Types...>& t)
 {
     return get<N>(t.vals()->data());
-    //return get<N>(m_vals->data());
-    //return t.get<N>();
 }
 
 template<size_t N, typename... Types>
 typename util::at<N, Types...>::type&
 get_ref(tuple<Types...>& t)
 {
-    return get_ref<N>(t.vals_ref()->data_ref());
-    //return t.get_ref<N>();
+    return get_ref<N>(t.m_vals->data_ref());
 }
 
 template<typename TypeList>

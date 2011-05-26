@@ -62,35 +62,34 @@ struct empty_tuple : cppa::detail::abstract_tuple
         return other.size() == 0;
     }
 
-    virtual void serialize(cppa::serializer&) const
-    {
-    }
-
 };
+
+const cppa::cow_ptr<cppa::detail::abstract_tuple>& s_empty_tuple()
+{
+    static cppa::cow_ptr<cppa::detail::abstract_tuple> ptr(new empty_tuple);
+    return ptr;
+}
 
 } // namespace <anonymous>
 
 namespace cppa {
 
-any_tuple::any_tuple() : m_vals(new empty_tuple)
+any_tuple::any_tuple() : m_vals(s_empty_tuple())
 {
 }
 
-any_tuple::any_tuple(const vals_ptr& vals) : m_vals(vals)
+any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr)
 {
 }
 
-any_tuple::any_tuple(vals_ptr&& vals) : m_vals(std::move(vals))
+any_tuple::any_tuple(any_tuple&& other) : m_vals(s_empty_tuple())
 {
-}
-
-any_tuple::any_tuple(any_tuple&& other) : m_vals(std::move(other.m_vals))
-{
+    m_vals.swap(other.m_vals);
 }
 
 any_tuple& any_tuple::operator=(any_tuple&& other)
 {
-    m_vals = std::move(other.m_vals);
+    m_vals.swap(other.m_vals);
     return *this;
 }
 
@@ -109,7 +108,7 @@ const void* any_tuple::at(size_t p) const
     return m_vals->at(p);
 }
 
-const uniform_type_info& any_tuple::type_info_at(size_t p) const
+const uniform_type_info& any_tuple::utype_info_at(size_t p) const
 {
     return m_vals->utype_info_at(p);
 }

@@ -9,6 +9,13 @@ message::message(const actor_ptr& from,
 {
 }
 
+message::message(const actor_ptr& from,
+                 const channel_ptr& to,
+                 any_tuple&& ut)
+    : m_content(new msg_content(from, to, std::move(ut)))
+{
+}
+
 message::message() : m_content(new msg_content(0, 0, tuple<int>(0)))
 {
 }
