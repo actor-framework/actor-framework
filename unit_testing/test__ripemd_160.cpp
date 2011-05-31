@@ -2,14 +2,24 @@
 #include <iostream>
 
 #include "test.hpp"
-#include "hash_of.hpp"
+
+#include "cppa/util/ripemd_160.hpp"
+
+using cppa::util::ripemd_160;
 
 namespace {
 
 std::string str_hash(const std::string& what)
 {
+    auto hash = ripemd_160(what);
     std::ostringstream oss;
-    oss << ripemd_160(what);
+    oss << std::hex;
+    for (auto i : hash)
+    {
+        oss.width(2);
+        oss.fill('0');
+        oss << static_cast<std::uint32_t>(i);
+    }
     return oss.str();
 }
 

@@ -39,6 +39,7 @@
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/exit_signal.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
@@ -74,6 +75,16 @@ template<typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
+}
+
+inline void quit(std::uint32_t reason)
+{
+    self()->quit(reason);
+}
+
+inline void quit(exit_reason reason)
+{
+    self()->quit(reason);
 }
 
 inline const message& receive()

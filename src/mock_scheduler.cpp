@@ -32,6 +32,7 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
         catch(...) { }
         try { behavior->on_exit(); }
         catch(...) { }
+        delete behavior;
     }
     if (--m_running_actors <= 1)
     {
@@ -46,10 +47,14 @@ namespace cppa { namespace detail {
 
 actor_ptr mock_scheduler::spawn(actor_behavior* ab, scheduling_hint)
 {
-    ++m_running_actors;
-    intrusive_ptr<context> ctx(new detail::converted_thread_context);
-    boost::thread(run_actor, ctx, ab).detach();
-    return ctx;
+    if (ab)
+    {
+        ++m_running_actors;
+        intrusive_ptr<context> ctx(new detail::converted_thread_context);
+        boost::thread(run_actor, ctx, ab).detach();
+        return ctx;
+    }
+    return nullptr;
 }
 
 void mock_scheduler::register_converted_context(context*)
@@ -68,8 +73,9 @@ void mock_scheduler::unregister_converted_context(context*)
 
 void mock_scheduler::await_others_done()
 {
+    auto expected = (unchecked_self() == nullptr) ? 0 : 1;
     boost::mutex::scoped_lock lock(m_ra_mtx);
-    while (m_running_actors.load() > 1)
+    while (m_running_actors.load() > expected)
     {
         m_ra_cv.wait(lock);
     }

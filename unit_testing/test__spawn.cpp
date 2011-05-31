@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include <iostream>
 #include <functional>
 
@@ -6,6 +8,7 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/to_string.hpp"
 
 using std::cout;
 using std::endl;
@@ -17,24 +20,32 @@ using namespace cppa;
 void pong(actor_ptr ping_actor)
 {
     link(ping_actor);
-    bool quit = false;
+    bool done = false;
     // kickoff
     ping_actor << make_tuple(0); // or: send(ping_actor, 0);
     // invoke rules
-    auto rules = (on<std::int32_t>(9) >> [&]() { quit = true; },
+    auto rules = (on<std::int32_t>(9) >> [&]() { done = true; },
                   on<std::int32_t>() >> [](int v) { reply(v+1); });
     // loop
-    while (!quit) receive(rules);
+    while (!done) receive(rules);
+    // terminate with non-normal exit reason to
+    // force ping actor to quit
+    quit(user_defined_exit_reason);
 }
 
 void ping()
 {
     // invoke rule
-    auto rule = on<std::int32_t>() >> [](std::int32_t v)
-    {
-        ++pings;
-        reply(v+1);
-    };
+    auto rule = (on<std::int32_t>() >> [](std::int32_t v)
+                                       {
+                                           ++pings;
+                                           reply(v+1);
+                                       },
+                 others() >> []()
+                             {
+                                 cout << to_string(last_received())
+                                      << endl;
+                             });
     // loop
     for (;;) receive(rule);
 }

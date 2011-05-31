@@ -42,9 +42,6 @@ baz;
 size_t test__local_group()
 {
     CPPA_TEST(test__local_group);
-    /*
-    baz << make_tuple(1, 2, 3);
-
     auto foo_group = group::get("local", "foo");
     for (int i = 0; i < 5; ++i)
     {
@@ -60,6 +57,5 @@ size_t test__local_group()
     }
     CPPA_CHECK_EQUAL(result, 10);
     await_all_others_done();
-    */
     return CPPA_TEST_RESULT;
 }

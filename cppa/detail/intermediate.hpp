@@ -19,7 +19,7 @@ class intermediate : public ref_counted_impl<size_t>
 
 };
 
-template<typename Impl, typename View>
+template<typename Impl, typename View = void>
 class intermediate_impl : public intermediate
 {
 
@@ -36,6 +36,23 @@ class intermediate_impl : public intermediate
     virtual void invoke()
     {
         m_impl(m_view);
+    }
+
+};
+
+template<typename Impl>
+class intermediate_impl<Impl, void> : public intermediate
+{
+
+    Impl m_impl;
+
+ public:
+
+    intermediate_impl(const Impl& impl) : m_impl(impl) { }
+
+    virtual void invoke()
+    {
+        m_impl();
     }
 
 };

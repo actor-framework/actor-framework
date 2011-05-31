@@ -15,6 +15,13 @@ class actor_behavior;
 class scheduler
 {
 
+ protected:
+
+    /**
+     * @brief Calls {@link context::exit(std::uint32_t) context::exit}.
+     */
+    void exit_context(context* ctx, std::uint32_t reason);
+
  public:
 
     virtual ~scheduler();

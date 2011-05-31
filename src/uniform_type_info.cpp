@@ -157,7 +157,6 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
         }
     }
 
-
  protected:
 
     void serialize(const void* ptr, serializer* sink) const

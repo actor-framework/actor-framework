@@ -28,6 +28,9 @@ enum class exit_reason : std::uint32_t
 
 };
 
+static constexpr std::uint32_t user_defined_exit_reason
+        = static_cast<std::uint32_t>(exit_reason::user_defined);
+
 /**
  * @brief Converts {@link exit_reason} to @c std::uint32_t.
  */

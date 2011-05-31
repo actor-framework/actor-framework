@@ -28,6 +28,11 @@ void context::enqueue(const message& msg)
     mailbox().enqueue(msg);
 }
 
+context* unchecked_self()
+{
+    return m_this_context.get();
+}
+
 context* self()
 {
     context* result = m_this_context.get();

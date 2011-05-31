@@ -4,12 +4,14 @@
 #include <string>
 #include <cstdint>
 
+#include "cppa/util/comparable.hpp"
+
 namespace cppa {
 
 /**
  * @brief Identifies a process.
  */
-struct process_information
+struct process_information : util::comparable<process_information>
 {
 
     /**
@@ -35,6 +37,9 @@ struct process_information
      * @return
      */
     static const process_information& get();
+
+    // "inherited" from comparable<process_information>
+    int compare(const process_information& other) const;
 
 };
 

@@ -4,7 +4,7 @@
 #include "cppa/config.hpp"
 
 #include <map>
-#include <set>
+#include <list>
 #include <mutex>
 
 #include "cppa/context.hpp"
@@ -28,7 +28,7 @@ class converted_thread_context : public context
     std::map<group_ptr, group::subscription> m_subscriptions;
 
     // manages actor links
-    std::set<actor_ptr> m_links;
+    std::list<actor_ptr> m_links;
 
  public:
 
@@ -37,6 +37,8 @@ class converted_thread_context : public context
     message_queue& mailbox /*[[override]]*/ ();
 
     void join /*[[override]]*/ (group_ptr& what);
+
+    void quit /*[[override]]*/ (std::uint32_t reason);
 
     void leave /*[[override]]*/ (const group_ptr& what);
 

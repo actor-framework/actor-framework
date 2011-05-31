@@ -16,13 +16,14 @@ namespace cppa { namespace detail {
 struct irb_helper : ref_counted_impl<size_t>
 {
     virtual ~irb_helper() { }
-    virtual bool value_cmp(const any_tuple&,
-                           std::vector<size_t>&) const = 0;
+    virtual bool value_cmp(const any_tuple&, std::vector<size_t>&) const = 0;
 };
 
 template<typename... Types>
 struct invoke_rule_builder
 {
+
+ private:
 
     typedef util::type_list<Types...> types_list;
 
@@ -84,7 +85,7 @@ struct invoke_rule_builder
         {
             invoke(f, tv);
         };
-        if (!m_helper)
+        if (!m_helper) // don't match on values
         {
             auto inv = [f](const any_tuple& t) -> bool
             {
@@ -97,19 +98,22 @@ struct invoke_rule_builder
                 }
                 return false;
             };
-            auto gt = [sub_inv](const any_tuple& t) -> detail::intermediate*
+            auto gt = [sub_inv](const any_tuple& t) -> intermediate*
             {
                 std::vector<size_t> mappings;
                 if (match<Types...>(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));
-                    return new detail::intermediate_impl<decltype(sub_inv), tuple_view_type>(sub_inv, tv);
+                    typedef intermediate_impl<decltype(sub_inv),tuple_view_type>
+                            timpl;
+                    return new timpl(sub_inv, tv);
                 }
                 return 0;
             };
-            return invoke_rules(new detail::invokable_impl<decltype(inv), decltype(gt)>(std::move(inv), std::move(gt)));
+            typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
+            return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
         }
-        else
+        else // m_helper matches on values
         {
             auto inv = [f, m_helper](const any_tuple& t) -> bool
             {
@@ -122,18 +126,43 @@ struct invoke_rule_builder
                 }
                 return false;
             };
-            auto gt = [sub_inv, m_helper](const any_tuple& t) -> detail::intermediate*
+            auto gt = [sub_inv, m_helper](const any_tuple& t) -> intermediate*
             {
                 std::vector<size_t> mappings;
                 if (m_helper->value_cmp(t, mappings))
                 {
                     tuple_view_type tv(t.vals(), std::move(mappings));
-                    return new detail::intermediate_impl<decltype(sub_inv), tuple_view_type>(sub_inv, tv);
+                    typedef intermediate_impl<decltype(sub_inv),tuple_view_type>
+                            timpl;
+                    return new timpl(sub_inv, tv);
                 }
                 return 0;
             };
-            return invoke_rules(new detail::invokable_impl<decltype(inv), decltype(gt)>(std::move(inv), std::move(gt)));
+            typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
+            return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
         }
+    }
+
+};
+
+template<>
+struct invoke_rule_builder<any_type*>
+{
+
+    template<typename F>
+    invoke_rules operator>>(F f)
+    {
+        auto inv = [f](const any_tuple&) -> bool
+        {
+            f();
+            return true;
+        };
+        auto gt = [f](const any_tuple&) -> intermediate*
+        {
+            return new intermediate_impl<decltype(f)>(f);
+        };
+        typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
+        return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
     }
 
 };
@@ -148,8 +177,14 @@ inline detail::invoke_rule_builder<Types...> on()
     return detail::invoke_rule_builder<Types...>();
 }
 
+inline detail::invoke_rule_builder<any_type*> others()
+{
+    return on<any_type*>();
+}
+
 template<typename... Types, typename Arg0, typename... Args>
-inline detail::invoke_rule_builder<Types...> on(const Arg0& arg0, const Args&... args)
+inline detail::invoke_rule_builder<Types...> on(const Arg0& arg0,
+                                                const Args&... args)
 {
     return detail::invoke_rule_builder<Types...>(arg0, args...);
 }
