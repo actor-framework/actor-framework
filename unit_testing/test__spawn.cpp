@@ -10,13 +10,39 @@
 using std::cout;
 using std::endl;
 
+namespace { int pings = 0; }
+
 using namespace cppa;
 
-void pong()
+void pong(actor_ptr ping_actor)
 {
-    receive(on<int>() >> [](int value) {
-        reply((value * 20) + 2);
-    });
+    link(ping_actor);
+    bool quit = false;
+    // kickoff
+    ping_actor << make_tuple(0); // or: send(ping_actor, 0);
+    // invoke rules
+    auto rules = (on<std::int32_t>(9) >> [&]() { quit = true; },
+                  on<std::int32_t>() >> [](int v) { reply(v+1); });
+    // loop
+    while (!quit) receive(rules);
+}
+
+void ping()
+{
+    // invoke rule
+    auto rule = on<std::int32_t>() >> [](std::int32_t v)
+    {
+        ++pings;
+        reply(v+1);
+    };
+    // loop
+    for (;;) receive(rule);
+}
+
+void pong_example()
+{
+    spawn(pong, spawn(ping));
+    await_all_others_done();
 }
 
 void echo(actor_ptr whom, int what)
@@ -27,6 +53,9 @@ void echo(actor_ptr whom, int what)
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
+    pong_example();
+    CPPA_CHECK_EQUAL(pings, 5);
+    /*
     actor_ptr self_ptr = self();
     {
         spawn(echo, self_ptr, 1);
@@ -63,5 +92,6 @@ size_t test__spawn()
         CPPA_CHECK(received_echo);
     }
     await_all_others_done();
+    */
     return CPPA_TEST_RESULT;
 }

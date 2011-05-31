@@ -156,3 +156,6 @@ cppa/util/if_else.hpp
 cppa/util/pop_back.hpp
 cppa/util/pt_dispatch.hpp
 cppa/detail/get_behavior.hpp
+unit_testing/test__ripemd_160.cpp
+cppa/process_information.hpp
+src/process_information.cpp

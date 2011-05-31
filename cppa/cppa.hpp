@@ -51,6 +51,16 @@
 
 namespace cppa {
 
+inline void link(actor_ptr& other)
+{
+    self()->link(other);
+}
+
+inline void link(actor_ptr&& other)
+{
+    self()->link(other);
+}
+
 template<scheduling_hint Hint, typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
 {

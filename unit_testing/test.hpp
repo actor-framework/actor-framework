@@ -46,6 +46,7 @@ std::cerr << err_msg << std::endl;                                             \
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) == (rhs_loc)))
 
+size_t test__ripemd_160();
 size_t test__uniform_type();
 size_t test__type_list();
 size_t test__a_matches_b();

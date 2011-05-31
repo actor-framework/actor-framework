@@ -17,6 +17,7 @@ SOURCES = hash_of.cpp \
 		  test__local_group.cpp \
 		  test__primitive_variant.cpp \
 		  test__queue_performance.cpp \
+		  test__ripemd_160.cpp \
 		  test__serialization.cpp \
 		  test__spawn.cpp \
 		  test__tuple.cpp \
