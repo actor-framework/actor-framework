@@ -30,6 +30,7 @@
 #define CPPA_HPP
 
 #include <tuple>
+#include <cstdint>
 #include <type_traits>
 
 #include "cppa/tuple.hpp"
@@ -52,16 +53,30 @@
 
 namespace cppa {
 
+/**
+ * @brief Links the calling actor to @p other.
+ */
 inline void link(actor_ptr& other)
 {
     self()->link(other);
 }
 
+/**
+ * @brief Links the calling actor to @p other.
+ */
 inline void link(actor_ptr&& other)
 {
     self()->link(other);
 }
 
+inline void trap_exit(bool new_value)
+{
+    self()->trap_exit(new_value);
+}
+
+/**
+ * @brief Spawns a new actor that executes @p what with given arguments.
+ */
 template<scheduling_hint Hint, typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
 {
@@ -71,27 +86,43 @@ actor_ptr spawn(F&& what, const Args&... args)
     return get_scheduler()->spawn(ptr, Hint);
 }
 
+/**
+ * @brief Alias for <tt>spawn<scheduled>(what, args...)</tt>.
+ */
 template<typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
 
+/**
+ * @brief Quits execution of the calling actor.
+ */
 inline void quit(std::uint32_t reason)
 {
     self()->quit(reason);
 }
 
+/**
+ * @brief Quits execution of the calling actor.
+ */
 inline void quit(exit_reason reason)
 {
     self()->quit(reason);
 }
 
+/**
+ * @brief Dequeues the next message from the mailbox.
+ */
 inline const message& receive()
 {
     return self()->mailbox().dequeue();
 }
 
+/**
+ * @brief Dequeues the next message from the mailbox that's matched
+ *        by @p rules and executes the corresponding callback.
+ */
 inline void receive(invoke_rules& rules)
 {
     self()->mailbox().dequeue(rules);
@@ -112,6 +143,10 @@ inline bool try_receive(invoke_rules& rules)
     return self()->mailbox().try_dequeue(rules);
 }
 
+/**
+ * @brief Reads the last dequeued message from the mailbox.
+ * @return The last dequeued message from the mailbox.
+ */
 inline const message& last_received()
 {
     return self()->mailbox().last_dequeued();
@@ -181,6 +216,16 @@ inline void await_all_others_done()
 {
     get_scheduler()->await_others_done();
 }
+
+/**
+ * @brief Publishes @p whom at given @p port.
+ */
+void publish(const actor_ptr& whom, std::uint16_t port);
+
+/**
+ * @brief Establish a new connection to the actor at @p host on given @p port.
+ */
+actor_ptr remote_actor(const char* host, std::uint16_t port);
 
 } // namespace cppa
 

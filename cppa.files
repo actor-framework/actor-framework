@@ -161,3 +161,6 @@ cppa/process_information.hpp
 src/process_information.cpp
 cppa/util/ripemd_160.hpp
 src/ripemd_160.cpp
+src/unicast_network.cpp
+cppa/actor_exited.hpp
+src/actor_exited.cpp

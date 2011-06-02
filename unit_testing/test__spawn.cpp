@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include <iostream>
 #include <functional>
 
@@ -28,8 +26,8 @@ void pong(actor_ptr ping_actor)
                   on<std::int32_t>() >> [](int v) { reply(v+1); });
     // loop
     while (!done) receive(rules);
-    // terminate with non-normal exit reason to
-    // force ping actor to quit
+    // terminate with non-normal exit reason
+    // to force ping actor to quit
     quit(user_defined_exit_reason);
 }
 

@@ -47,14 +47,10 @@ namespace cppa { namespace detail {
 
 actor_ptr mock_scheduler::spawn(actor_behavior* ab, scheduling_hint)
 {
-    if (ab)
-    {
-        ++m_running_actors;
-        intrusive_ptr<context> ctx(new detail::converted_thread_context);
-        boost::thread(run_actor, ctx, ab).detach();
-        return ctx;
-    }
-    return nullptr;
+    ++m_running_actors;
+    intrusive_ptr<context> ctx(new detail::converted_thread_context);
+    boost::thread(run_actor, ctx, ab).detach();
+    return ctx;
 }
 
 void mock_scheduler::register_converted_context(context*)

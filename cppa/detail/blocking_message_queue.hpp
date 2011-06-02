@@ -11,29 +11,34 @@ namespace cppa { namespace detail {
 class blocking_message_queue : public message_queue
 {
 
-	struct queue_node
-	{
-		queue_node* next;
-		message msg;
-		queue_node(const message& from) : next(0), msg(from) { }
-	};
+    struct queue_node
+    {
+        queue_node* next;
+        message msg;
+        queue_node(const message& from) : next(0), msg(from) { }
+    };
 
-	message m_last_dequeued;
-	util::single_reader_queue<queue_node> m_queue;
+    bool m_trap_exit;
+    message m_last_dequeued;
+    util::single_reader_queue<queue_node> m_queue;
 
  public:
 
-	virtual void enqueue /*[[override]]*/ (const message& msg);
+    blocking_message_queue();
 
-	virtual const message& dequeue /*[[override]]*/ ();
+    virtual void trap_exit(bool new_value);
 
-	virtual void dequeue /*[[override]]*/ (invoke_rules& rules);
+    virtual void enqueue /*[[override]]*/ (const message& msg);
 
-	virtual bool try_dequeue /*[[override]]*/ (message& msg);
+    virtual const message& dequeue /*[[override]]*/ ();
 
-	virtual bool try_dequeue /*[[override]]*/ (invoke_rules& rules);
+    virtual void dequeue /*[[override]]*/ (invoke_rules& rules);
 
-	virtual const message& last_dequeued /*[[override]]*/ ();
+    virtual bool try_dequeue /*[[override]]*/ (message& msg);
+
+    virtual bool try_dequeue /*[[override]]*/ (invoke_rules& rules);
+
+    virtual const message& last_dequeued /*[[override]]*/ ();
 
 };
 

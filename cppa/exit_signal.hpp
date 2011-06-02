@@ -11,13 +11,20 @@ enum class exit_reason : std::uint32_t
     /**
      * @brief Indicates that an actor finished execution.
      */
-    normal = 0x00,
+    normal = 0x00000,
 
     /**
      * @brief Indicates that an actor finished execution
      *        because of an unhandled exception.
      */
-    unhandled_exception = 0x01,
+    unhandled_exception = 0x00001,
+
+    /**
+     * @brief Indicates that an actor finishied execution
+     *        because a connection to a remote link was
+     *        closed unexpectedly.
+     */
+    remote_link_unreachable = 0x00101,
 
     /**
      * @brief Any user defined exit reason should have a

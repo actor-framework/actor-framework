@@ -41,4 +41,11 @@ intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
     return nullptr;
 }
 
+const process_information& actor::parent_process() const
+{
+    // default implementation assumes that the actor belongs to
+    // the running process
+    return process_information::get();
+}
+
 } // namespace cppa

@@ -102,7 +102,7 @@ binary_serializer::~binary_serializer()
 
 void binary_serializer::acquire(size_t num_bytes)
 {
-    if (m_begin == nullptr)
+    if (!m_begin)
     {
         size_t new_size = chunk_size;
         while (new_size <= num_bytes)
@@ -190,6 +190,11 @@ size_t binary_serializer::size() const
 const char* binary_serializer::data() const
 {
     return m_begin;
+}
+
+void binary_serializer::reset()
+{
+    m_wr_pos = m_begin;
 }
 
 } // namespace cppa

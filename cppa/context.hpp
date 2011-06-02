@@ -43,6 +43,8 @@ class context : public actor
      */
     virtual void enqueue /*[[override]]*/ (const message& msg);
 
+    void trap_exit(bool new_value);
+
 };
 
 /**

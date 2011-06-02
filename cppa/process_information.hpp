@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 
+#include "cppa/ref_counted.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
@@ -11,8 +12,19 @@ namespace cppa {
 /**
  * @brief Identifies a process.
  */
-struct process_information : util::comparable<process_information>
+class process_information : public ref_counted,
+                            util::comparable<process_information>
 {
+
+ public:
+
+    static constexpr size_t node_id_size = 20;
+
+    process_information();
+
+    process_information(const process_information& other);
+
+    process_information& operator=(const process_information& other);
 
     /**
      * @brief Identifies the running process.
@@ -25,7 +37,7 @@ struct process_information : util::comparable<process_information>
      * A hash build from the MAC address of the first network device
      * and the serial number from the root HD (mounted in "/" or "C:").
      */
-    std::uint8_t node_id[20];
+    std::uint8_t node_id[node_id_size];
 
     /**
      * @brief Converts {@link node_id} to an hexadecimal string.

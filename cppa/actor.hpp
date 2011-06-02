@@ -5,6 +5,7 @@
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/process_information.hpp"
 
 namespace cppa {
 
@@ -58,6 +59,11 @@ class actor : public channel
      * @return
      */
     virtual bool establish_backlink(const intrusive_ptr<actor>& to) = 0;
+
+    /**
+     * @brief Gets the {@link process_information} of the parent process.
+     */
+    virtual const process_information& parent_process() const;
 
     /**
      * @brief

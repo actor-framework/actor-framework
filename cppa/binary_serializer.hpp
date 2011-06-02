@@ -17,7 +17,7 @@ class binary_serializer : public serializer
     char* m_end;
     char* m_wr_pos;
 
-    // make that it's safe to write num_bytes bytes to m_wr_pos
+    // make sure that it's safe to write num_bytes bytes to m_wr_pos
     void acquire(size_t num_bytes);
 
  public:
@@ -53,6 +53,11 @@ class binary_serializer : public serializer
      * @brief Returns a pointer to the internal buffer.
      */
     const char* data() const;
+
+    /**
+     * @brief Resets the internal buffer.
+     */
+    void reset();
 
 };
 

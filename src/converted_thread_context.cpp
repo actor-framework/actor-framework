@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "cppa/exit_signal.hpp"
+#include "cppa/actor_exited.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
@@ -64,6 +65,7 @@ void converted_thread_context::quit(std::uint32_t reason)
 
         aptr->enqueue(message(mself, aptr, exit_signal(reason)));
     }
+    throw actor_exited(reason);
 }
 
 void converted_thread_context::link(intrusive_ptr<actor>& other)

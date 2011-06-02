@@ -1,11 +1,10 @@
-#include "cppa/context.hpp"
-#include "cppa/message.hpp"
-
-#include "cppa/detail/converted_thread_context.hpp"
-
 #include <boost/thread.hpp>
 
+#include "cppa/context.hpp"
+#include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
+
+#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
@@ -26,6 +25,11 @@ namespace cppa {
 void context::enqueue(const message& msg)
 {
     mailbox().enqueue(msg);
+}
+
+void context::trap_exit(bool new_value)
+{
+    mailbox().trap_exit(new_value);
 }
 
 context* unchecked_self()

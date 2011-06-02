@@ -13,6 +13,7 @@ class message_queue : public ref_counted
 
  public:
 
+    virtual void trap_exit(bool) = 0;
     virtual void enqueue(const message&) = 0;
     virtual const message& dequeue() = 0;
     virtual void dequeue(invoke_rules&) = 0;

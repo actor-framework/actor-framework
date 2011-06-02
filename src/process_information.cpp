@@ -49,7 +49,7 @@ cppa::process_information compute_proc_info()
     pclose(cmd);
     erase_trailing_newline(first_mac_addr);
     auto tmp = cppa::util::ripemd_160(first_mac_addr + hd_serial);
-    memcpy(result.node_id, tmp.data(), 20);
+    memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);
     return result;
 }
 
@@ -57,12 +57,36 @@ cppa::process_information compute_proc_info()
 
 namespace cppa {
 
+process_information::process_information() : process_id(0)
+{
+    memset(node_id, 0, node_id_size);
+}
+
+process_information::process_information(const process_information& other)
+    : ref_counted(), process_id(other.process_id)
+{
+    memcpy(node_id, other.node_id, node_id_size);
+}
+
+process_information&
+process_information::operator=(const process_information& other)
+{
+    // prevent self-assignment
+    if (this != &other)
+    {
+        process_id = other.process_id;
+        memcpy(node_id, other.node_id, node_id_size);
+    }
+    return *this;
+}
+
+
 std::string process_information::node_id_as_string() const
 {
     std::ostringstream oss;
     oss << std::hex;
     oss.fill('0');
-    for (size_t i = 0; i < 20; ++i)
+    for (size_t i = 0; i < node_id_size; ++i)
     {
         oss.width(2);
         oss << static_cast<std::uint32_t>(node_id[i]);
@@ -79,7 +103,8 @@ const process_information& process_information::get()
 int process_information::compare(const process_information& other) const
 {
     int tmp = strncmp(reinterpret_cast<const char*>(node_id),
-                      reinterpret_cast<const char*>(other.node_id), 20);
+                      reinterpret_cast<const char*>(other.node_id),
+                      node_id_size);
     if (tmp == 0)
     {
         if (process_id < other.process_id) return -1;
