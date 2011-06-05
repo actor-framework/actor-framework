@@ -82,7 +82,12 @@ class atom
 
     constexpr atom(const atom& other) : m_value(other.m_value) { }
 
-    constexpr atom(const char* str) : m_value(atom_val(str)) { }
+    template<size_t Size>
+    constexpr atom(const char (&str) [Size]) : m_value(atom_val(str))
+    {
+        // 11 because the last character is the NULL terminator
+        static_assert(Size <= 11, "only 10 characters are allowed");
+    }
 
     template<char... Str>
     static constexpr atom get()
@@ -138,6 +143,8 @@ size_t test__atom()
     cout << "cppa:exit = " << get_atom_value<'c','p','p','a',':','e','x','i','t'>::_(0) << endl;
     cout << "cppa::exit = " << get_atom_value<'c','p','p','a',':',':','e','x','i','t'>::_(0) << endl;
 
+    atom a1 = "cppa::exit";
+    cout << "a1 = " << to_string(a1) << endl;
     atom a3 = atom::get<'a','b','c'>();
     cout << "to_string(a3) = " << to_string(a3) << endl;
 
