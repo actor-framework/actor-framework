@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "cppa/on.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
@@ -58,7 +59,7 @@ namespace cppa {
  */
 inline void link(actor_ptr& other)
 {
-    self()->link(other);
+    self()->link_to(other);
 }
 
 /**
@@ -66,7 +67,7 @@ inline void link(actor_ptr& other)
  */
 inline void link(actor_ptr&& other)
 {
-    self()->link(other);
+    self()->link_to(other);
 }
 
 inline void trap_exit(bool new_value)
@@ -99,14 +100,6 @@ actor_ptr spawn(F&& what, const Args&... args)
  * @brief Quits execution of the calling actor.
  */
 inline void quit(std::uint32_t reason)
-{
-    self()->quit(reason);
-}
-
-/**
- * @brief Quits execution of the calling actor.
- */
-inline void quit(exit_reason reason)
 {
     self()->quit(reason);
 }
@@ -220,7 +213,9 @@ inline void await_all_others_done()
 /**
  * @brief Publishes @p whom at given @p port.
  */
-void publish(const actor_ptr& whom, std::uint16_t port);
+void publish(actor_ptr& whom, std::uint16_t port);
+
+void publish(actor_ptr&& whom, std::uint16_t port);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.

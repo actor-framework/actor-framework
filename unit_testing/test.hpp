@@ -1,6 +1,8 @@
 #ifndef TEST_HPP
 #define TEST_HPP
 
+#include <vector>
+#include <string>
 #include <cstddef>
 #include <iostream>
 
@@ -46,6 +48,8 @@ std::cerr << err_msg << std::endl;                                             \
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) == (rhs_loc)))
 
+size_t test__remote_actor(const char* app_path, bool is_client,
+                          const std::vector<std::string>& argv);
 size_t test__ripemd_160();
 size_t test__uniform_type();
 size_t test__type_list();

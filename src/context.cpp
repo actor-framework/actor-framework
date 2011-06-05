@@ -6,13 +6,20 @@
 
 #include "cppa/detail/converted_thread_context.hpp"
 
+using cppa::detail::converted_thread_context;
+
 namespace {
 
 void cleanup_fun(cppa::context* what)
 {
-    if (what && !what->deref())
+    if (what)
     {
-        delete what;
+        auto converted = dynamic_cast<converted_thread_context*>(what);
+        if (converted)
+        {
+            converted->cleanup();
+        }
+        if (!what->deref()) delete what;
     }
 }
 
@@ -42,7 +49,7 @@ context* self()
     context* result = m_this_context.get();
     if (!result)
     {
-        result = new detail::converted_thread_context;
+        result = new converted_thread_context;
         result->ref();
         get_scheduler()->register_converted_context(result);
         m_this_context.reset(result);

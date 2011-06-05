@@ -1,7 +1,8 @@
+#include <memory>
 #include <algorithm>
 
+#include "cppa/exception.hpp"
 #include "cppa/exit_signal.hpp"
-#include "cppa/actor_exited.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
@@ -40,38 +41,77 @@ int erase_all(List& lst, const Element& e)
 
 namespace cppa { namespace detail {
 
-converted_thread_context::converted_thread_context() : m_exited(false)
+converted_thread_context::converted_thread_context()
+    : m_exit_reason(exit_reason::not_exited)
 {
 }
 
-void converted_thread_context::quit(std::uint32_t reason)
+bool converted_thread_context::attach(attachable* ptr)
 {
+    std::unique_ptr<attachable> uptr(ptr);
+    if (!ptr)
+    {
+         std::lock_guard<std::mutex> guard(m_mtx);
+         return m_exit_reason == exit_reason::not_exited;
+    }
+    else
+    {
+        std::uint32_t reason;
+        // lifetime scope of guard
+        {
+            std::lock_guard<std::mutex> guard(m_mtx);
+            reason = m_exit_reason;
+            if (reason == exit_reason::not_exited)
+            {
+                m_attachables.push_back(std::move(uptr));
+                return true;
+            }
+        }
+        uptr->detach(reason);
+        return false;
+    }
+}
+
+void converted_thread_context::cleanup(std::uint32_t reason)
+{
+    if (reason == exit_reason::not_exited) return;
     decltype(m_links) mlinks;
     decltype(m_subscriptions) msubscriptions;
+    decltype(m_attachables) mattachables;
     // lifetime scope of guard
     {
         std::lock_guard<std::mutex> guard(m_mtx);
-        m_exited = true;
+        m_exit_reason = reason;
         mlinks = std::move(m_links);
         msubscriptions = std::move(m_subscriptions);
-        // make sure m_links and m_subscriptions definitely are empty
+        mattachables = std::move(m_attachables);
+        // make sure lists are definitely empty
         m_links.clear();
         m_subscriptions.clear();
+        m_attachables.clear();
     }
     actor_ptr mself = self();
     // send exit messages
     for (actor_ptr& aptr : mlinks)
     {
-
         aptr->enqueue(message(mself, aptr, exit_signal(reason)));
     }
+    for (std::unique_ptr<attachable>& ptr : mattachables)
+    {
+        ptr->detach(reason);
+    }
+}
+
+void converted_thread_context::quit(std::uint32_t reason)
+{
+    cleanup(reason);
     throw actor_exited(reason);
 }
 
-void converted_thread_context::link(intrusive_ptr<actor>& other)
+void converted_thread_context::link_to(intrusive_ptr<actor>& other)
 {
     std::lock_guard<std::mutex> guard(m_mtx);
-    if (other && !m_exited && other->establish_backlink(this))
+    if (other && !exited() && other->establish_backlink(this))
     {
         m_links.push_back(other);
         //m_links.insert(other);
@@ -97,7 +137,7 @@ bool converted_thread_context::establish_backlink(const intrusive_ptr<actor>& ot
         // lifetime scope of guard
         {
             std::lock_guard<std::mutex> guard(m_mtx);
-            if (!m_exited)
+            if (!exited())
             {
                 result = unique_insert(m_links, other);
                 //result = m_links.insert(other).second;
@@ -115,10 +155,10 @@ bool converted_thread_context::establish_backlink(const intrusive_ptr<actor>& ot
     return result;
 }
 
-void converted_thread_context::unlink(intrusive_ptr<actor>& other)
+void converted_thread_context::unlink_from(intrusive_ptr<actor>& other)
 {
     std::lock_guard<std::mutex> guard(m_mtx);
-    if (other && !m_exited && other->remove_backlink(this))
+    if (other && !exited() && other->remove_backlink(this))
     {
         erase_all(m_links, other);
         //m_links.erase(other);
@@ -128,7 +168,7 @@ void converted_thread_context::unlink(intrusive_ptr<actor>& other)
 void converted_thread_context::join(group_ptr& what)
 {
     std::lock_guard<std::mutex> guard(m_mtx);
-    if (!m_exited && m_subscriptions.count(what) == 0)
+    if (!exited() && m_subscriptions.count(what) == 0)
     {
         auto s = what->subscribe(this);
         // insert only valid subscriptions

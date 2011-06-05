@@ -162,5 +162,14 @@ src/process_information.cpp
 cppa/util/ripemd_160.hpp
 src/ripemd_160.cpp
 src/unicast_network.cpp
-cppa/actor_exited.hpp
-src/actor_exited.cpp
+unit_testing/test__remote_actor.cpp
+unit_testing/ping_pong.hpp
+unit_testing/ping_pong.cpp
+cppa/exception.hpp
+src/exception.cpp
+cppa/actor_proxy.hpp
+src/actor_proxy.cpp
+cppa/detail/actor_proxy_cache.hpp
+src/actor_proxy_cache.cpp
+src/attachable.cpp
+cppa/attachable.hpp

@@ -71,6 +71,9 @@ class single_reader_queue
         }
     }
 
+    /**
+     * @reentrant
+     */
     void push_back(element_type* new_element)
     {
         element_type* e = m_tail.load();

@@ -7,16 +7,19 @@ LIB_FLAGS = $(LIBS) -L../ -lcppa
 EXECUTABLE = ../test
 
 HEADERS = hash_of.hpp \
-		  test.hpp
+		  test.hpp \
+		  ping_pong.hpp
 
 SOURCES = hash_of.cpp \
 		  main.cpp \
+		  ping_pong.cpp \
 		  test__a_matches_b.cpp \
 		  test__atom.cpp \
 		  test__intrusive_ptr.cpp \
 		  test__local_group.cpp \
 		  test__primitive_variant.cpp \
 		  test__queue_performance.cpp \
+		  test__remote_actor.cpp \
 		  test__ripemd_160.cpp \
 		  test__serialization.cpp \
 		  test__spawn.cpp \

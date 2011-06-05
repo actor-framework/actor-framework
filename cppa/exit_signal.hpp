@@ -5,45 +5,39 @@
 
 namespace cppa {
 
-enum class exit_reason : std::uint32_t
+namespace exit_reason
 {
+
+    /**
+     * @brief Indicates that the actor is still alive.
+     */
+    static constexpr std::uint32_t not_exited = 0x00000;
 
     /**
      * @brief Indicates that an actor finished execution.
      */
-    normal = 0x00000,
+    static constexpr std::uint32_t normal = 0x00001;
 
     /**
      * @brief Indicates that an actor finished execution
      *        because of an unhandled exception.
      */
-    unhandled_exception = 0x00001,
+    static constexpr std::uint32_t unhandled_exception = 0x00002;
 
     /**
      * @brief Indicates that an actor finishied execution
      *        because a connection to a remote link was
      *        closed unexpectedly.
      */
-    remote_link_unreachable = 0x00101,
+    static constexpr std::uint32_t remote_link_unreachable = 0x00101;
 
     /**
      * @brief Any user defined exit reason should have a
      *        value greater or equal to prevent collisions
      *        with default defined exit reasons.
      */
-    user_defined = 0x10000
+    static constexpr std::uint32_t user_defined = 0x10000;
 
-};
-
-static constexpr std::uint32_t user_defined_exit_reason
-        = static_cast<std::uint32_t>(exit_reason::user_defined);
-
-/**
- * @brief Converts {@link exit_reason} to @c std::uint32_t.
- */
-constexpr std::uint32_t to_uint(exit_reason r)
-{
-    return static_cast<std::uint32_t>(r);
 }
 
 class exit_signal
@@ -62,13 +56,6 @@ class exit_signal
     /**
      * @brief Creates an exit signal with
      *        <tt>reason() == @p r</tt>.
-     * @pre {@code r != exit_reason::user_defined}.
-     */
-    exit_signal(exit_reason r);
-
-    /**
-     * @brief Creates an exit signal with
-     *        <tt>reason() == @p r</tt>.
      * @pre {@code r >= exit_reason::user_defined}.
      */
     explicit exit_signal(std::uint32_t r);
@@ -81,18 +68,10 @@ class exit_signal
         return m_reason;
     }
 
-    // an unambiguous member function
-    void set_uint_reason(std::uint32_t value);
-
     /**
      * @brief Sets the exit reason to @p value.
      */
     void set_reason(std::uint32_t value);
-
-    /**
-     * @brief Sets the exit reason to @p value.
-     */
-    void set_reason(exit_reason value);
 
 };
 

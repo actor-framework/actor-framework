@@ -48,8 +48,8 @@ cppa::process_information compute_proc_info()
     }
     pclose(cmd);
     erase_trailing_newline(first_mac_addr);
-    auto tmp = cppa::util::ripemd_160(first_mac_addr + hd_serial);
-    memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);
+    result.node_id = cppa::util::ripemd_160(first_mac_addr + hd_serial);
+    //memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);
     return result;
 }
 
@@ -59,13 +59,18 @@ namespace cppa {
 
 process_information::process_information() : process_id(0)
 {
-    memset(node_id, 0, node_id_size);
+    memset(node_id.data(), 0, node_id_size);
 }
 
 process_information::process_information(const process_information& other)
-    : ref_counted(), process_id(other.process_id)
+    : ref_counted(), process_id(other.process_id), node_id(other.node_id)
 {
-    memcpy(node_id, other.node_id, node_id_size);
+    //memcpy(node_id, other.node_id, node_id_size);
+}
+
+process_information::process_information(std::uint32_t a, const node_id_type& b)
+    : ref_counted(), process_id(a), node_id(b)
+{
 }
 
 process_information&
@@ -75,7 +80,8 @@ process_information::operator=(const process_information& other)
     if (this != &other)
     {
         process_id = other.process_id;
-        memcpy(node_id, other.node_id, node_id_size);
+        node_id = other.node_id;
+        //memcpy(node_id, other.node_id, node_id_size);
     }
     return *this;
 }
@@ -102,8 +108,8 @@ const process_information& process_information::get()
 
 int process_information::compare(const process_information& other) const
 {
-    int tmp = strncmp(reinterpret_cast<const char*>(node_id),
-                      reinterpret_cast<const char*>(other.node_id),
+    int tmp = strncmp(reinterpret_cast<const char*>(node_id.data()),
+                      reinterpret_cast<const char*>(other.node_id.data()),
                       node_id_size);
     if (tmp == 0)
     {
@@ -112,6 +118,53 @@ int process_information::compare(const process_information& other) const
         return 1;
     }
     return tmp;
+}
+
+void process_information::node_id_from_string(const std::string& str,
+                                      process_information::node_id_type& arr)
+{
+    if (str.size() != (arr.size() * 2))
+    {
+        throw std::logic_error("str is not a node id hash");
+    }
+    auto j = str.begin();
+    for (size_t i = 0; i < arr.size(); ++i)
+    {
+        auto& val = arr[i];
+        val = 0;
+        for (int tmp = 0; tmp < 2; ++tmp)
+        {
+            char c = *j;
+            ++j;
+            if (isdigit(c))
+            {
+                val |= static_cast<std::uint8_t>(c - '0');
+            }
+            else if (isalpha(c))
+            {
+                if (c >= 'a' && c <= 'f')
+                {
+                    val |= static_cast<std::uint8_t>((c - 'a') + 10);
+                }
+                else if (c >= 'A' && c <= 'F')
+                {
+                    val |= static_cast<std::uint8_t>((c - 'A') + 10);
+                }
+                else
+                {
+                    throw std::logic_error(std::string("illegal character: ") + c);
+                }
+            }
+            else
+            {
+                throw std::logic_error(std::string("illegal character: ") + c);
+            }
+            if (tmp == 0)
+            {
+                val <<= 4;
+            }
+        }
+    }
 }
 
 } // namespace cppa

@@ -18,7 +18,11 @@ cppa::util::shared_spinlock s_instances_mtx;
 
 namespace cppa {
 
-actor::actor() : m_id(s_ids.fetch_add(1))
+actor::actor(std::uint32_t aid) : m_is_proxy(true), m_id(aid)
+{
+}
+
+actor::actor() : m_is_proxy(false), m_id(s_ids.fetch_add(1))
 {
     std::lock_guard<util::shared_spinlock> guard(s_instances_mtx);
     s_instances.insert(std::make_pair(m_id, this));
@@ -26,8 +30,11 @@ actor::actor() : m_id(s_ids.fetch_add(1))
 
 actor::~actor()
 {
-    std::lock_guard<util::shared_spinlock> guard(s_instances_mtx);
-    s_instances.erase(m_id);
+    if (!m_is_proxy)
+    {
+        std::lock_guard<util::shared_spinlock> guard(s_instances_mtx);
+        s_instances.erase(m_id);
+    }
 }
 
 intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)

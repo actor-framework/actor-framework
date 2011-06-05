@@ -6,6 +6,7 @@
 #include <limits>
 #include <cstdint>
 #include <sstream>
+#include <iostream>
 #include <type_traits>
 
 #include "cppa/config.hpp"
@@ -25,8 +26,11 @@
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
+using std::cout;
+using std::endl;
 using cppa::util::void_type;
 
 namespace std {
@@ -126,8 +130,12 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
         }
         else
         {
+            primitive_variant ptup[3];
+            ptup[0] = ptr->id();
+            ptup[1] = ptr->parent_process().process_id;
+            ptup[2] = ptr->parent_process().node_id_as_string();
             sink->begin_object(name);
-            sink->write_value(ptr->id());
+            sink->write_tuple(3, ptup);
             sink->end_object();
         }
     }
@@ -150,10 +158,27 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
         }
         else
         {
+            primitive_variant ptup[3];
+            primitive_type ptypes[] = { pt_uint32, pt_uint32, pt_u8string };
             source->begin_object(cname);
-            auto id = get<std::uint32_t>(source->read_value(pt_uint32));
-            ptrref = actor::by_id(id);
+            source->read_tuple(3, ptypes, ptup);
             source->end_object();
+            const std::string& nstr = get<std::string>(ptup[2]);
+            // local actor?
+            auto& pinf = process_information::get();
+            if (   pinf.process_id == get<std::uint32_t>(ptup[1])
+                && pinf.node_id_as_string() == nstr)
+            {
+                ptrref = actor::by_id(get<std::uint32_t>(ptup[0]));
+            }
+            else
+            {
+                actor_proxy_cache::key_tuple key;
+                std::get<0>(key) = get<std::uint32_t>(ptup[0]);
+                std::get<1>(key) = get<std::uint32_t>(ptup[1]);
+                process_information::node_id_from_string(nstr,std::get<2>(key));
+                ptrref = detail::get_actor_proxy_cache().get(key);
+            }
         }
     }
 
@@ -505,7 +530,7 @@ class uniform_type_info_map
         insert<std::u32string>();
         insert(new default_uniform_type_info_impl<exit_signal>(
                    std::make_pair(&exit_signal::reason,
-                                  &exit_signal::set_uint_reason)),
+                                  &exit_signal::set_reason)),
                { raw_name<exit_signal>() });
         insert(new any_tuple_tinfo, { raw_name<any_tuple>() });
         insert(new actor_ptr_tinfo, { raw_name<actor_ptr>() });

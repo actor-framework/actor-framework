@@ -25,11 +25,6 @@ class context : public actor
      */
     virtual void quit(std::uint32_t reason) = 0;
 
-    inline void quit(exit_reason reason)
-    {
-        quit(static_cast<std::uint32_t>(reason));
-    }
-
     /**
      * @brief
      */

@@ -2,6 +2,7 @@
 #include <functional>
 
 #include "test.hpp"
+#include "ping_pong.hpp"
 
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
@@ -11,59 +12,14 @@
 using std::cout;
 using std::endl;
 
-namespace { int pings = 0; }
-
 using namespace cppa;
-
-void pong(actor_ptr ping_actor)
-{
-    link(ping_actor);
-    bool done = false;
-    // kickoff
-    ping_actor << make_tuple(0); // or: send(ping_actor, 0);
-    // invoke rules
-    auto rules = (on<std::int32_t>(9) >> [&]() { done = true; },
-                  on<std::int32_t>() >> [](int v) { reply(v+1); });
-    // loop
-    while (!done) receive(rules);
-    // terminate with non-normal exit reason
-    // to force ping actor to quit
-    quit(user_defined_exit_reason);
-}
-
-void ping()
-{
-    // invoke rule
-    auto rule = (on<std::int32_t>() >> [](std::int32_t v)
-                                       {
-                                           ++pings;
-                                           reply(v+1);
-                                       },
-                 others() >> []()
-                             {
-                                 cout << to_string(last_received())
-                                      << endl;
-                             });
-    // loop
-    for (;;) receive(rule);
-}
-
-void pong_example()
-{
-    spawn(pong, spawn(ping));
-    await_all_others_done();
-}
-
-void echo(actor_ptr whom, int what)
-{
-    send(whom, what);
-}
 
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
-    pong_example();
-    CPPA_CHECK_EQUAL(pings, 5);
+    spawn(pong, spawn(ping));
+    await_all_others_done();
+    CPPA_CHECK_EQUAL(pongs(), 5);
     /*
     actor_ptr self_ptr = self();
     {

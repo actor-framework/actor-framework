@@ -5,11 +5,13 @@
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/attachable.hpp"
 #include "cppa/process_information.hpp"
 
 namespace cppa {
 
 class serializer;
+class actor_proxy;
 class deserializer;
 
 /**
@@ -18,7 +20,12 @@ class deserializer;
 class actor : public channel
 {
 
+    friend class actor_proxy;
+
+    bool m_is_proxy;
     std::uint32_t m_id;
+
+    actor(std::uint32_t aid);
 
  protected:
 
@@ -27,6 +34,18 @@ class actor : public channel
  public:
 
     ~actor();
+
+    /**
+     * @brief Attaches @p ptr to this actor.
+     *
+     * @p ptr will be deleted if actor finished execution of immediately
+     * if the actor already exited.
+     *
+     * @return @c true if @p ptr was successfully attached to the actor;
+     *         otherwise (actor already exited) @p false.
+     *
+     */
+    virtual bool attach(attachable* ptr) = 0;
 
     /**
      * @brief
@@ -41,12 +60,12 @@ class actor : public channel
     /**
      * @brief
      */
-    virtual void link(intrusive_ptr<actor>& other) = 0;
+    virtual void link_to(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief
      */
-    virtual void unlink(intrusive_ptr<actor>& other) = 0;
+    virtual void unlink_from(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief
