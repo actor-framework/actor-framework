@@ -116,7 +116,7 @@ class string_serializer : public serializer
     void write_tuple(size_t size, const primitive_variant* values)
     {
         clear();
-        out << " {";
+        out << "{";
         const primitive_variant* end = values + size;
         for ( ; values != end; ++values)
         {
