@@ -4,6 +4,7 @@
 #include <utility>
 #include <stdexcept>
 
+#include "cppa/atom.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_view.hpp"
@@ -18,6 +19,7 @@
 
 namespace cppa {
 
+// match types only; don't calculate view mapping
 template<typename... MatchRules>
 bool match(const any_tuple& what)
 {
@@ -26,6 +28,7 @@ bool match(const any_tuple& what)
     return detail::matcher<MatchRules...>::match(begin, end);
 }
 
+// match types only; calculate view mapping
 template<typename... MatchRules>
 bool match(const any_tuple& what, std::vector<size_t>& mappings)
 {
@@ -34,6 +37,7 @@ bool match(const any_tuple& what, std::vector<size_t>& mappings)
     return detail::matcher<MatchRules...>::match(begin, end, &mappings);
 }
 
+// match types and values; calculate view mapping
 template<typename... MatchRules, class ValuesTuple>
 bool match(const any_tuple& what, const ValuesTuple& vals,
            std::vector<size_t>& mappings)
@@ -44,7 +48,8 @@ bool match(const any_tuple& what, const ValuesTuple& vals,
     typedef typename tuple_view_type_from_type_list<filtered_rules>::type
             view_type;
     static_assert(util::eval_type_lists<filtered_rules,
-                                        ValuesTuple,
+                                        view_type,
+                                        //ValuesTuple,
                                         util::is_comparable>::value,
                   "given values are not comparable to matched types");
     if (match<MatchRules...>(what, mappings))
@@ -56,11 +61,18 @@ bool match(const any_tuple& what, const ValuesTuple& vals,
     return false;
 }
 
+// match types and values; don't calculate view mapping
 template<typename... MatchRules, class ValuesTuple>
 bool match(const any_tuple& what, const ValuesTuple& vals)
 {
     std::vector<size_t> mappings;
     return match<MatchRules...>(what, vals, mappings);
+}
+
+template<atom_value A0, typename... MatchRules>
+bool match(const any_tuple& what)
+{
+    return match<atom_value, MatchRules...>(what, make_tdata(A0));
 }
 
 } // namespace cppa

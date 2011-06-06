@@ -51,15 +51,13 @@ class local_group : public group
 
     virtual group::subscription subscribe(const channel_ptr& who)
     {
+        group::subscription result;
         exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second)
         {
-            return { who, this };
+            result.reset(new group::unsubscriber(who, this));
         }
-        else
-        {
-            return { nullptr, nullptr };
-        }
+        return result;
     }
 
     virtual void unsubscribe(const channel_ptr& who)
@@ -171,20 +169,24 @@ void group::add_module(group::module* ptr)
 
 }
 
-group::subscription::subscription(const channel_ptr& s,
+group::unsubscriber::unsubscriber(const channel_ptr& s,
                                   const intrusive_ptr<group>& g)
     : m_self(s), m_group(g)
 {
 }
 
-group::subscription::subscription(group::subscription&& other)
-    : m_self(std::move(other.m_self)), m_group(std::move(other.m_group))
-{
-}
-
-group::subscription::~subscription()
+group::unsubscriber::~unsubscriber()
 {
     if (m_group) m_group->unsubscribe(m_self);
+}
+
+bool group::unsubscriber::matches(const attachable::token& what)
+{
+    if (what.subtype == typeid(group::unsubscriber))
+    {
+        return m_group == reinterpret_cast<const group*>(what.ptr);
+    }
+    return false;
 }
 
 group::group(std::string&& id, std::string&& mod_name)

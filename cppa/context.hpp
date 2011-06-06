@@ -2,7 +2,6 @@
 #define CONTEXT_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/exit_signal.hpp"
 #include "cppa/message_queue.hpp"
 
 namespace cppa {

@@ -145,8 +145,6 @@ cppa/any_tuple.hpp
 src/any_tuple.cpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/upgrade_lock_guard.hpp
-cppa/exit_signal.hpp
-src/exit_signal.cpp
 cppa/to_string.hpp
 src/string_serialization.cpp
 cppa/from_string.hpp
@@ -173,3 +171,8 @@ cppa/detail/actor_proxy_cache.hpp
 src/actor_proxy_cache.cpp
 src/attachable.cpp
 cppa/attachable.hpp
+cppa/atom.hpp
+cppa/detail/atom_val.hpp
+src/atom.cpp
+src/cppa.cpp
+cppa/exit_reason.hpp

@@ -1,3 +1,5 @@
+#include "cppa/config.hpp"
+
 #include <map>
 #include <set>
 #include <locale>
@@ -9,15 +11,13 @@
 #include <iostream>
 #include <type_traits>
 
-#include "cppa/config.hpp"
-
+#include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/object.hpp"
 #include "cppa/message.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/exit_signal.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 
@@ -485,6 +485,32 @@ class message_tinfo : public util::abstract_uniform_type_info<message>
 
 };
 
+class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
+{
+
+ public:
+
+    virtual void serialize(const void* instance, serializer* sink) const
+    {
+        auto val = reinterpret_cast<const atom_value*>(instance);
+        sink->begin_object(name());
+        sink->write_value(static_cast<std::uint64_t>(*val));
+        sink->end_object();
+    }
+
+    virtual void deserialize(void* instance, deserializer* source) const
+    {
+        auto val = reinterpret_cast<atom_value*>(instance);
+        auto tname = source->seek_object();
+        if (tname != name()) throw 42;
+        source->begin_object(tname);
+        auto ptval = source->read_value(pt_uint64);
+        source->end_object();
+        *val = static_cast<atom_value>(get<std::uint64_t>(ptval));
+    }
+
+};
+
 class uniform_type_info_map
 {
 
@@ -528,15 +554,12 @@ class uniform_type_info_map
         insert<std::string>();
         insert<std::u16string>();
         insert<std::u32string>();
-        insert(new default_uniform_type_info_impl<exit_signal>(
-                   std::make_pair(&exit_signal::reason,
-                                  &exit_signal::set_reason)),
-               { raw_name<exit_signal>() });
         insert(new any_tuple_tinfo, { raw_name<any_tuple>() });
         insert(new actor_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(new group_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(new channel_ptr_tinfo, { raw_name<channel_ptr>() });
         insert(new message_tinfo, { raw_name<message>() });
+        insert(new atom_value_tinfo, { raw_name<atom_value>() });
         insert<float>();
         insert<cppa::util::void_type>();
         if (sizeof(double) == sizeof(long double))

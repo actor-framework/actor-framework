@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "cppa/context.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/detail/blocking_message_queue.hpp"
 
 namespace cppa { namespace detail {
@@ -25,9 +26,6 @@ class converted_thread_context : public context
 
     // guards access to m_exited, m_subscriptions and m_links
     std::mutex m_mtx;
-
-    // manages group subscriptions
-    std::map<group_ptr, group::subscription> m_subscriptions;
 
     // manages actor links
     std::list<actor_ptr> m_links;
@@ -51,11 +49,9 @@ class converted_thread_context : public context
 
     bool attach /*[[override]]*/ (attachable* ptr);
 
-    void join /*[[override]]*/ (group_ptr& what);
+    void detach /*[[override]]*/ (const attachable::token&);
 
     void quit /*[[override]]*/ (std::uint32_t reason);
-
-    void leave /*[[override]]*/ (const group_ptr& what);
 
     void link_to /*[[override]]*/ (intrusive_ptr<actor>& other);
 

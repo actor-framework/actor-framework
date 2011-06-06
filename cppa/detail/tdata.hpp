@@ -85,7 +85,15 @@ struct tdata_upcast_helper<0, Head, Tail...>
 };
 
 
-} // namespace detail
+} } // namespace cppa::detail
+
+namespace cppa {
+
+template<typename... Tn>
+inline detail::tdata<Tn...> make_tdata(const Tn&... args)
+{
+    return detail::tdata<Tn...>(args...);
+}
 
 template<size_t N, typename... Tn>
 const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv)
@@ -101,6 +109,6 @@ typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv)
     return static_cast<typename detail::tdata_upcast_helper<N, Tn...>::type &>(tv).head;
 }
 
-} // namespace cppa::detail
+} // namespace cppa
 
 #endif // TDATA_HPP

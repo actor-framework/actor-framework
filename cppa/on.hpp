@@ -1,6 +1,7 @@
 #ifndef ON_HPP
 #define ON_HPP
 
+#include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
@@ -187,6 +188,24 @@ inline detail::invoke_rule_builder<Types...> on(const Arg0& arg0,
                                                 const Args&... args)
 {
     return detail::invoke_rule_builder<Types...>(arg0, args...);
+}
+
+template<atom_value A0, typename... Types, typename... Args>
+inline auto on(const Args&... args) -> decltype(on<atom_value, Types...>(A0, args...))
+{
+    return on<atom_value, Types...>(A0, args...);
+}
+
+template<atom_value A0, atom_value A1, typename... Types, typename... Args>
+inline auto on(const Args&... args) -> decltype(on<atom_value, atom_value, Types...>(A0, A1, args...))
+{
+    return on<atom_value, atom_value, Types...>(A0, A1, args...);
+}
+
+template<atom_value A0, atom_value A1, atom_value A2, typename... Types, typename... Args>
+inline auto on(const Args&... args) -> decltype(on<atom_value, atom_value, atom_value, Types...>(A0, A1, A2, args...))
+{
+    return on<atom_value, atom_value, atom_value, Types...>(A0, A1, A2, args...);
 }
 
 } // namespace cppa

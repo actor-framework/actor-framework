@@ -18,6 +18,8 @@ class actor_proxy : public actor
 
     bool attach(attachable* ptr);
 
+    void detach(const attachable::token&);
+
     void enqueue(const message& msg);
 
     void join(group_ptr& what);

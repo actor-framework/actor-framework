@@ -2,6 +2,7 @@
 #define ATTACHABLE_HPP
 
 #include <cstdint>
+#include <typeinfo>
 
 namespace cppa {
 
@@ -20,6 +21,16 @@ class attachable
 
  public:
 
+    struct token
+    {
+        const std::type_info& subtype;
+        const void* ptr;
+        inline token(const std::type_info& msubtype, const void* mptr)
+            : subtype(msubtype), ptr(mptr)
+        {
+        }
+    };
+
     virtual ~attachable();
 
     /**
@@ -29,6 +40,8 @@ class attachable
      * The default implementation does nothing.
      */
     virtual void detach(std::uint32_t reason);
+
+    virtual bool matches(const token&);
 
 };
 

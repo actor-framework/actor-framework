@@ -2,8 +2,10 @@
 #define GROUP_HPP
 
 #include <string>
+#include <memory>
 
 #include "cppa/channel.hpp"
+#include "cppa/attachable.hpp"
 #include "cppa/ref_counted.hpp"
 
 namespace cppa {
@@ -24,32 +26,35 @@ class group : public channel
 
  public:
 
-    class subscription;
+    class unsubscriber;
 
-    friend class subscription;
+    friend class unsubscriber;
 
-    class subscription
+    // unsubscribes its channel from the group on destruction
+    class unsubscriber : public attachable
     {
+
+        friend class group;
 
         channel_ptr m_self;
         intrusive_ptr<group> m_group;
 
-        subscription() = delete;
-        subscription(const subscription&) = delete;
-        subscription& operator=(const subscription&) = delete;
+        unsubscriber() = delete;
+        unsubscriber(const unsubscriber&) = delete;
+        unsubscriber& operator=(const unsubscriber&) = delete;
 
      public:
 
-        inline explicit operator bool()
-        {
-            return m_self != nullptr && m_group != nullptr;
-        }
+        unsubscriber(const channel_ptr& s, const intrusive_ptr<group>& g);
 
-        subscription(const channel_ptr& s, const intrusive_ptr<group>& g);
-        subscription(subscription&& other);
-        ~subscription();
+        // matches on group
+        bool matches(const attachable::token& what);
+
+        virtual ~unsubscriber();
 
     };
+
+    typedef std::unique_ptr<unsubscriber> subscription;
 
     class module
     {

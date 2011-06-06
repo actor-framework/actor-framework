@@ -14,9 +14,11 @@
 #include <boost/thread.hpp>
 
 #include "cppa/cppa.hpp"
+#include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 #include "cppa/util/single_reader_queue.hpp"
@@ -202,7 +204,7 @@ void fake_exits_from_disconnected_links(link_map& links)
         for (auto& rem_actor : remote_actors)
         {
             message msg(rem_actor, local_actor,
-                        exit_signal(exit_reason::remote_link_unreachable));
+                        atom(":Exit"), exit_reason::remote_link_unreachable);
             local_actor->enqueue(msg);
         }
     }
@@ -250,7 +252,7 @@ void mailman_loop()
             mailman_send_job& sjob = job->send_job();
             // keep track about link states of local actors
             // (remove link states between local and remote actors if needed)
-            if (match<exit_signal>(sjob.original_message.content()))
+            if (match<atom(":Exit"), std::uint32_t>(sjob.original_message.content()))
             {
                 auto sender = sjob.original_message.sender();
                 if (pself == sender->parent_process())

@@ -6,13 +6,13 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/message.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/exit_signal.hpp"
 
 #include "cppa/util/void_type.hpp"
 
@@ -90,9 +90,9 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<std::u32string>(), "@u32str" },
       // cppa types
       { demangled<cppa::any_type>(), "@*" },
+      { demangled<cppa::atom_value>(), "@atom" },
       { demangled<cppa::util::void_type>(), "@0" },
       { demangled<cppa::any_tuple>(), "@<>" },
-      { demangled<cppa::exit_signal>(), "@exit" },
       { demangled<cppa::actor_ptr>(), "@actor" },
       { demangled<cppa::group_ptr>(), "@group" },
       { demangled<cppa::channel_ptr>(), "@channel" },

@@ -25,6 +25,10 @@ bool actor_proxy::attach(attachable* ptr)
     return false;
 }
 
+void actor_proxy::detach(const attachable::token&)
+{
+}
+
 void actor_proxy::join(group_ptr& what)
 {
 }

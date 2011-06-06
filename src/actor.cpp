@@ -55,4 +55,17 @@ const process_information& actor::parent_process() const
     return process_information::get();
 }
 
+void actor::join(group_ptr& what)
+{
+    if (!what) return;
+    attach(what->subscribe(this));
+}
+
+void actor::leave(const group_ptr& what)
+{
+    if (!what) return;
+    attachable::token group_token(typeid(group::unsubscriber), what.get());
+    detach(group_token);
+}
+
 } // namespace cppa

@@ -1,12 +1,16 @@
 #ifndef ACTOR_HPP
 #define ACTOR_HPP
 
+#include <memory>
 #include <cstdint>
+#include <type_traits>
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/process_information.hpp"
+
+#include "cppa/util/enable_if.hpp"
 
 namespace cppa {
 
@@ -48,14 +52,25 @@ class actor : public channel
     virtual bool attach(attachable* ptr) = 0;
 
     /**
-     * @brief
+     * @brief Detaches the first attached object that matches @p what.
      */
-    virtual void join(group_ptr& what) = 0;
+    virtual void detach(const attachable::token& what) = 0;
+
+    template<typename T>
+    bool attach(std::unique_ptr<T>&& ptr,
+            typename util::enable_if<std::is_base_of<attachable,T>>::type* = 0);
 
     /**
-     * @brief
+     * @brief Forces this actor to subscribe to the group @p what.
+     *
+     * The group will be unsubscribed if the actor exits.
      */
-    virtual void leave(const group_ptr& what) = 0;
+    void join(group_ptr& what);
+
+    /**
+     * @brief Forces this actor to leave the group @p what.
+     */
+    void leave(const group_ptr& what);
 
     /**
      * @brief
@@ -103,6 +118,15 @@ typedef intrusive_ptr<actor> actor_ptr;
 serializer& operator<<(serializer&, const actor_ptr&);
 
 deserializer& operator>>(deserializer&, actor_ptr&);
+
+template<typename T>
+bool actor::attach(std::unique_ptr<T>&& ptr,
+                typename util::enable_if<std::is_base_of<attachable,T>>::type*)
+{
+    return attach(static_cast<attachable*>(ptr.release()));
+}
+
+
 
 } // namespace cppa
 

@@ -1,8 +1,9 @@
 #include <vector>
 
+#include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/context.hpp"
-#include "cppa/exit_signal.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 
 #include "cppa/util/singly_linked_list.hpp"
@@ -10,7 +11,7 @@
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/blocking_message_queue.hpp"
 
-namespace {
+namespace cppa { namespace {
 
 enum throw_on_exit_result
 {
@@ -18,15 +19,12 @@ enum throw_on_exit_result
     normal_exit_signal
 };
 
-throw_on_exit_result throw_on_exit(const cppa::message& msg)
+throw_on_exit_result throw_on_exit(const message& msg)
 {
-    std::vector<size_t> mappings;
-    if (cppa::match<cppa::exit_signal>(msg.content(), mappings))
+    if (match<atom(":Exit"), std::uint32_t>(msg.content()))
     {
-        cppa::tuple_view<cppa::exit_signal> tview(msg.content().vals(),
-                                                  std::move(mappings));
-        auto reason = cppa::get<0>(tview).reason();
-        if (reason != static_cast<std::uint32_t>(cppa::exit_reason::normal))
+        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        if (reason != exit_reason::normal)
         {
             // throws
             cppa::self()->quit(reason);
@@ -39,7 +37,7 @@ throw_on_exit_result throw_on_exit(const cppa::message& msg)
     return not_an_exit_signal;
 }
 
-} // namespace <anonymous>
+} } // namespace cppa::<anonymous>
 
 namespace cppa { namespace detail {
 

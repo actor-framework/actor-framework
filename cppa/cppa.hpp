@@ -34,6 +34,7 @@
 #include <type_traits>
 
 #include "cppa/on.hpp"
+#include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
@@ -41,7 +42,7 @@
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/exit_signal.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
@@ -159,6 +160,13 @@ send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
     if (whom) whom->enqueue(message(self(), whom, arg0, args...));
 }
 
+// 'matches' send(self(), ...);
+template<typename Arg0, typename... Args>
+void send(context* whom, const Arg0& arg0, const Args&... args)
+{
+    if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+}
+
 template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
@@ -190,6 +198,12 @@ operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
     if (whom) whom->enqueue(message(self(), whom, std::move(what)));
     return std::move(whom);
 }
+
+// matches self() << make_tuple(...)
+context* operator<<(context* whom, const any_tuple& what);
+
+// matches self() << make_tuple(...)
+context* operator<<(context* whom, any_tuple&& what);
 
 template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)

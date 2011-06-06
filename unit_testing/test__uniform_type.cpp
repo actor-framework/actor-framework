@@ -87,10 +87,10 @@ size_t test__uniform_type()
         "float", "double",              // floating points
         "@0",                           // cppa::util::void_type
         // default announced cppa types
+        "@atom",                        // cppa::atom_value
         "@*",                           // cppa::any_type
         "@<>",                          // cppa::any_tuple
         "@msg",                         // cppa::message
-        "@exit",                        // cppa::exit_signal
         "@actor",                       // cppa::actor_ptr
         "@group",                       // cppa::group_ptr
         "@channel"                      // cppa::channel_ptr

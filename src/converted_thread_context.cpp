@@ -1,8 +1,8 @@
 #include <memory>
 #include <algorithm>
 
+#include "cppa/atom.hpp"
 #include "cppa/exception.hpp"
-#include "cppa/exit_signal.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
@@ -72,29 +72,39 @@ bool converted_thread_context::attach(attachable* ptr)
     }
 }
 
+void converted_thread_context::detach(const attachable::token& what)
+{
+    std::lock_guard<std::mutex> guard(m_mtx);
+    for (auto i = m_attachables.begin(); i != m_attachables.end(); ++i)
+    {
+        if ((*i)->matches(what))
+        {
+            m_attachables.erase(i);
+            return;
+        }
+    }
+}
+
 void converted_thread_context::cleanup(std::uint32_t reason)
 {
     if (reason == exit_reason::not_exited) return;
     decltype(m_links) mlinks;
-    decltype(m_subscriptions) msubscriptions;
     decltype(m_attachables) mattachables;
     // lifetime scope of guard
     {
         std::lock_guard<std::mutex> guard(m_mtx);
         m_exit_reason = reason;
         mlinks = std::move(m_links);
-        msubscriptions = std::move(m_subscriptions);
         mattachables = std::move(m_attachables);
         // make sure lists are definitely empty
         m_links.clear();
-        m_subscriptions.clear();
         m_attachables.clear();
     }
     actor_ptr mself = self();
     // send exit messages
     for (actor_ptr& aptr : mlinks)
     {
-        aptr->enqueue(message(mself, aptr, exit_signal(reason)));
+        aptr->enqueue(message(mself, aptr, atom(":Exit"), reason));
     }
     for (std::unique_ptr<attachable>& ptr : mattachables)
     {
@@ -163,24 +173,6 @@ void converted_thread_context::unlink_from(intrusive_ptr<actor>& other)
         erase_all(m_links, other);
         //m_links.erase(other);
     }
-}
-
-void converted_thread_context::join(group_ptr& what)
-{
-    std::lock_guard<std::mutex> guard(m_mtx);
-    if (!exited() && m_subscriptions.count(what) == 0)
-    {
-        auto s = what->subscribe(this);
-        // insert only valid subscriptions
-        // (a subscription is invalid if this actor already joined the group)
-        if (s) m_subscriptions.insert(std::make_pair(what, std::move(s)));
-    }
-}
-
-void converted_thread_context::leave(const group_ptr& what)
-{
-    std::lock_guard<std::mutex> guard(m_mtx);
-    m_subscriptions.erase(what);
 }
 
 message_queue& converted_thread_context::mailbox()

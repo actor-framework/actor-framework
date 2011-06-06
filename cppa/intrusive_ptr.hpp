@@ -11,7 +11,7 @@
 namespace cppa {
 
 template<typename T>
-class intrusive_ptr : util::comparable<intrusive_ptr<T>, T*>,
+class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
                       util::comparable<intrusive_ptr<T>>
 {
 
