@@ -6,8 +6,10 @@
 #include <map>
 #include <list>
 #include <mutex>
+#include <atomic>
 #include <vector>
 #include <memory>
+#include <cstdint>
 
 #include "cppa/context.hpp"
 #include "cppa/exit_reason.hpp"
@@ -19,7 +21,7 @@ class converted_thread_context : public context
 {
 
     // true if the associated thread has finished execution
-    std::uint32_t m_exit_reason;
+    std::atomic<std::uint32_t> m_exit_reason;
 
     // mailbox implementation
     detail::blocking_message_queue m_mailbox;
@@ -30,7 +32,7 @@ class converted_thread_context : public context
     // manages actor links
     std::list<actor_ptr> m_links;
 
-    std::vector<std::unique_ptr<attachable>> m_attachables;
+    std::vector<unique_attachable_ptr> m_attachables;
 
     // @pre m_mtx is locked
     inline bool exited() const

@@ -1,6 +1,15 @@
 #ifndef ACTOR_PROXY_HPP
 #define ACTOR_PROXY_HPP
 
+#include "cppa/config.hpp"
+
+#include <list>
+#include <mutex>
+#include <atomic>
+#include <vector>
+#include <memory>
+#include <cstdint>
+
 #include "cppa/actor.hpp"
 
 namespace cppa {
@@ -9,6 +18,10 @@ class actor_proxy : public actor
 {
 
     process_information_ptr m_parent;
+    std::atomic<std::uint32_t> m_exit_reason;
+
+    std::mutex m_mtx;
+    std::vector<unique_attachable_ptr> m_attachables;
 
  public:
 
@@ -20,11 +33,8 @@ class actor_proxy : public actor
 
     void detach(const attachable::token&);
 
+    // implemented in unicast_network.cpp
     void enqueue(const message& msg);
-
-    void join(group_ptr& what);
-
-    void leave(const group_ptr& what);
 
     void link_to(intrusive_ptr<actor>& other);
 

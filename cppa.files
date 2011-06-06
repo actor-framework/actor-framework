@@ -176,3 +176,4 @@ cppa/detail/atom_val.hpp
 src/atom.cpp
 src/cppa.cpp
 cppa/exit_reason.hpp
+cppa/detail/actor_impl_util.hpp

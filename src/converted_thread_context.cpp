@@ -3,6 +3,7 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/detail/actor_impl_util.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
@@ -37,6 +38,8 @@ int erase_all(List& lst, const Element& e)
     return erase_all(lst, lst.begin(), lst.end(), e);
 }
 
+typedef std::lock_guard<std::mutex> guard_type;
+
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
@@ -48,41 +51,15 @@ converted_thread_context::converted_thread_context()
 
 bool converted_thread_context::attach(attachable* ptr)
 {
-    std::unique_ptr<attachable> uptr(ptr);
-    if (!ptr)
-    {
-         std::lock_guard<std::mutex> guard(m_mtx);
-         return m_exit_reason == exit_reason::not_exited;
-    }
-    else
-    {
-        std::uint32_t reason;
-        // lifetime scope of guard
-        {
-            std::lock_guard<std::mutex> guard(m_mtx);
-            reason = m_exit_reason;
-            if (reason == exit_reason::not_exited)
-            {
-                m_attachables.push_back(std::move(uptr));
-                return true;
-            }
-        }
-        uptr->detach(reason);
-        return false;
-    }
+    return detail::do_attach<guard_type>(m_exit_reason,
+                                         unique_attachable_ptr(ptr),
+                                         m_attachables,
+                                         m_mtx);
 }
 
 void converted_thread_context::detach(const attachable::token& what)
 {
-    std::lock_guard<std::mutex> guard(m_mtx);
-    for (auto i = m_attachables.begin(); i != m_attachables.end(); ++i)
-    {
-        if ((*i)->matches(what))
-        {
-            m_attachables.erase(i);
-            return;
-        }
-    }
+    detail::do_detach<guard_type>(what, m_attachables, m_mtx);
 }
 
 void converted_thread_context::cleanup(std::uint32_t reason)

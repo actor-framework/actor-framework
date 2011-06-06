@@ -235,14 +235,12 @@ void remove_link(link_map& links,
 // handles *all* outgoing messages
 void mailman_loop()
 {
-
-    cout << "mailman_loop()" << endl;
-
-    link_map links;
+    //cout << "mailman_loop()" << endl;
+    //link_map links;
     int flags = 0;
     binary_serializer bs;
     mailman_job* job = nullptr;
-    const auto& pself = process_information::get();
+    //const auto& pself = process_information::get();
     std::map<process_information, native_socket_t> peers;
     for (;;)
     {
@@ -250,21 +248,24 @@ void mailman_loop()
         if (job->is_send_job())
         {
             mailman_send_job& sjob = job->send_job();
+            const message& out_msg = sjob.original_message;
+            /*
             // keep track about link states of local actors
             // (remove link states between local and remote actors if needed)
-            if (match<atom(":Exit"), std::uint32_t>(sjob.original_message.content()))
+            if (match<atom(":Exit"), std::uint32_t>(out_msg.content()))
             {
-                auto sender = sjob.original_message.sender();
+                auto sender = out_msg.sender();
                 if (pself == sender->parent_process())
                 {
-                    // local to remote
-                    sjob.client->unlink_from(sender);
+                    // local to remote (local actor just died)
+                    //sjob.client->unlink_from(sender);
                 }
                 else
                 {
                     // remote to remote (ignored)
                 }
             }
+            */
             // forward message to receiver peer
             auto peer_element = peers.find(sjob.client->parent_process());
             if (peer_element != peers.end())
@@ -272,9 +273,9 @@ void mailman_loop()
                 auto peer = peer_element->second;
                 try
                 {
-                    bs << sjob.original_message;
+                    bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-cout << "--> " << to_string(sjob.original_message) << endl;
+                    //cout << "--> " << to_string(out_msg) << endl;
                     auto sent = ::send(peer, &size32, sizeof(size32), flags);
                     if (sent != -1)
                     {
@@ -303,8 +304,8 @@ cout << "--> " << to_string(sjob.original_message) << endl;
             auto i = peers.find(*(pjob.pinfo));
             if (i == peers.end())
             {
-cout << "mailman added " << pjob.pinfo->process_id << "@"
-     << pjob.pinfo->node_id_as_string() << endl;
+                //cout << "mailman added " << pjob.pinfo->process_id << "@"
+                //     << pjob.pinfo->node_id_as_string() << endl;
                 peers.insert(std::make_pair(*(pjob.pinfo), pjob.sockfd));
             }
             else
@@ -345,7 +346,7 @@ void read_from_socket(native_socket_t sfd, void* buf, size_t buf_size)
 // handles *one* socket
 void post_office_loop(native_socket_t socket_fd, const actor_proxy_ptr& aptr)
 {
-cout << "--> post_office_loop" << endl;
+    //cout << "--> post_office_loop" << endl;
     if (aptr) detail::get_actor_proxy_cache().add(aptr);
     auto meta_msg = uniform_typeid<message>();
     if (!meta_msg)
@@ -378,20 +379,21 @@ cout << "--> post_office_loop" << endl;
             read_from_socket(socket_fd, buf, buf_size);
             binary_deserializer bd(buf, buf_size);
             meta_msg->deserialize(&msg, &bd);
-cout << "<-- " << to_string(msg) << endl;
+            //cout << "<-- " << to_string(msg) << endl;
             auto r = msg.receiver();
             if (r) r->enqueue(msg);
         }
     }
     catch (std::ios_base::failure& e)
     {
-cout << "std::ios_base::failure: " << e.what() << endl;
+        //cout << "std::ios_base::failure: " << e.what() << endl;
     }
     catch (std::exception& e)
     {
-cout << detail::to_uniform_name(typeid(e)) << ": " << e.what() << endl;
+        //cout << detail::to_uniform_name(typeid(e)) << ": "
+        //     << e.what() << endl;
     }
-cout << "<-- post_office_loop" << endl;
+    //cout << "<-- post_office_loop" << endl;
 }
 
 struct mm_worker
@@ -436,10 +438,10 @@ struct mm_handle : attachable
 
     virtual ~mm_handle()
     {
-cout << "--> ~mm_handle()" << endl;
+        //cout << "--> ~mm_handle()" << endl;
         closesocket(m_sockfd);
         if (m_barrier) m_barrier->wait();
-cout << "<-- ~mm_handle()" << endl;
+        //cout << "<-- ~mm_handle()" << endl;
     }
 };
 
@@ -463,7 +465,7 @@ void middle_man_loop(native_socket_t server_socket_fd,
             {
                 throw std::ios_base::failure("invalid socket accepted");
             }
-cout << "socket accepted" << endl;
+            //cout << "socket accepted" << endl;
             ::send(sockfd, &id, sizeof(id), 0);
             ::send(sockfd, &(pinf.process_id), sizeof(pinf.process_id), 0);
             ::send(sockfd, pinf.node_id.data(), pinf.node_id.size(), 0);
@@ -477,7 +479,7 @@ cout << "socket accepted" << endl;
             s_mailman_queue().push_back(new mailman_job(sockfd, peer_pinf));
             // todo: check if connected peer is compatible
             children.push_back(child_ptr(new mm_worker(sockfd)));
-cout << "client connection done" << endl;
+            //cout << "client connection done" << endl;
         }
     }
     catch (...)
