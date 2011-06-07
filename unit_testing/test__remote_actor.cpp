@@ -24,6 +24,7 @@ void client_part(const std::vector<std::string>& argv)
     catch (...)
     {
     }
+    await_all_others_done();
 }
 
 } // namespace <anonymous>
@@ -56,7 +57,7 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     std::string cmd;
     {
         std::ostringstream oss;
-        oss << app_path << " test__remote_actor " << port;// << " &>/dev/null";
+        oss << app_path << " test__remote_actor " << port << " &>/dev/null";
         cmd = oss.str();
     }
     // execute client_part() in a separate process,

@@ -257,11 +257,17 @@ class remote_observer : public attachable
     void detach(std::uint32_t reason)
     {
         actor_ptr self_ptr = self();
-        message msg(self_ptr, self_ptr, make_tuple(atom(":KillProxy"), reason));
+        message msg(self_ptr, self_ptr, atom(":KillProxy"), reason);
         s_mailman_queue().push_back(new mailman_job(peer, msg));
     }
 
 };
+
+template<typename T>
+T& operator<<(T& o, const process_information& pinfo)
+{
+    return (o << pinfo.process_id << "@" << pinfo.node_id_as_string());
+}
 
 // handles *all* outgoing messages
 void mailman_loop()
@@ -280,23 +286,6 @@ void mailman_loop()
         {
             mailman_send_job& sjob = job->send_job();
             const message& out_msg = sjob.original_message;
-            /*
-            // keep track about link states of local actors
-            // (remove link states between local and remote actors if needed)
-            if (match<atom(":Exit"), std::uint32_t>(out_msg.content()))
-            {
-                auto sender = out_msg.sender();
-                if (pself == sender->parent_process())
-                {
-                    // local to remote (local actor just died)
-                    //sjob.client->unlink_from(sender);
-                }
-                else
-                {
-                    // remote to remote (ignored)
-                }
-            }
-            */
             // forward message to receiver peer
             auto peer_element = peers.find(*(sjob.target_peer));
             if (peer_element != peers.end())
@@ -315,6 +304,7 @@ cout << "--> " << to_string(out_msg) << endl;
                     if (sent == -1)
                     {
                         // peer unreachable
+cout << "peer " << *(sjob.target_peer) << " unreachable" << endl;
                         peers.erase(*(sjob.target_peer));
                     }
                 }
@@ -374,22 +364,16 @@ void read_from_socket(native_socket_t sfd, void* buf, size_t buf_size)
     while (urres < left);
 }
 
-template<typename T>
-T& operator<<(T& o, const process_information& pinfo)
-{
-    return (o << pinfo.process_id << "@" << pinfo.node_id_as_string());
-}
-
 // handles *one* socket / peer
 void post_office_loop(native_socket_t socket_fd,
                       process_information_ptr peer,
                       actor_proxy_ptr aptr)
 {
-cout << "--> post_office_loop; self() = "
-     << process_information::get()
-     << ", peer = "
-     << *peer
-     << endl;
+    //cout << "--> post_office_loop; self() = "
+    //     << process_information::get()
+    //     << ", peer = "
+    //     << *peer
+    //     << endl;
     if (aptr) detail::get_actor_proxy_cache().add(aptr);
     message msg;
     std::uint32_t rsize;
@@ -417,7 +401,7 @@ cout << "--> post_office_loop; self() = "
                 buf = new char[buf_allocated];
             }
             buf_size = rsize;
-cout << "[" << pinfo << "] " << "received " << rsize << " bytes" << endl;
+            //cout << "[" << pinfo << "] read " << rsize << " bytes" << endl;
             read_from_socket(socket_fd, buf, buf_size);
             binary_deserializer bd(buf, buf_size);
             meta_msg->deserialize(&msg, &bd);
@@ -430,8 +414,8 @@ cout << "<-- " << to_string(msg) << endl;
                 actor_ptr sender = msg.sender();
                 if (sender->parent_process() == pinfo)
                 {
-cout << pinfo.process_id << "@" << pinfo.node_id_as_string()
-     << " :Monitor; actor id = " << sender->id() << endl;
+                    cout << pinfo << " ':Monitor'; actor id = "
+                         << sender->id() << endl;
                     // local actor?
                     // this message was send from a proxy
                     sender->attach(new remote_observer(peer));
@@ -453,7 +437,8 @@ cout << pinfo.process_id << "@" << pinfo.node_id_as_string()
              << detail::to_uniform_name(typeid(e)) << ": "
              << e.what() << endl;
     }
-cout << "<-- post_office_loop" << endl;
+    cout << "[" << process_information::get() << "] ~post_office_loop" << endl;
+    //cout << "<-- post_office_loop" << endl;
 }
 
 struct mm_worker

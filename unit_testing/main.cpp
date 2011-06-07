@@ -77,7 +77,6 @@ int main(int argc, char** c_argv)
         else if (argv.size() == 2 && argv.front() == "test__remote_actor")
         {
             test__remote_actor(c_argv[0], true, argv);
-            cout << "BLABLUBB" << endl;
             return 0;
         }
         else

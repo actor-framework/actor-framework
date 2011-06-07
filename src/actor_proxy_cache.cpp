@@ -34,8 +34,7 @@ actor_proxy_ptr actor_proxy_cache::get(const key_tuple& key)
         return i->second;
     }
     actor_proxy_ptr result(new actor_proxy(std::get<0>(key), get_pinfo(key)));
-    result->enqueue(message(result, nullptr, make_tuple(atom(":Monitor"),
-                                                        result)));
+    result->enqueue(message(result, nullptr, atom(":Monitor")));
     add(result);
     return result;
 }

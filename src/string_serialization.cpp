@@ -2,6 +2,7 @@
 #include <sstream>
 #include <algorithm>
 
+#include "cppa/atom.hpp"
 #include "cppa/object.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
@@ -49,9 +50,9 @@ class string_serializer : public serializer
 
     };
 
-    int m_open_objects;
     bool m_after_value;
     bool m_obj_just_opened;
+    std::stack<std::string> m_open_objects;
 
     inline void clear()
     {
@@ -70,15 +71,14 @@ class string_serializer : public serializer
  public:
 
     string_serializer(std::ostream& mout)
-        : out(mout), m_open_objects(0)
-        , m_after_value(false), m_obj_just_opened(false)
+        : out(mout), m_after_value(false), m_obj_just_opened(false)
     {
     }
 
     void begin_object(const std::string& type_name)
     {
         clear();
-        ++m_open_objects;
+        m_open_objects.push(type_name);
         out << type_name;// << " ( ";
         m_obj_just_opened = true;
     }
@@ -86,6 +86,7 @@ class string_serializer : public serializer
     {
         if (m_obj_just_opened)
         {
+            // no open brackets to close
             m_obj_just_opened = false;
         }
         else
@@ -93,6 +94,10 @@ class string_serializer : public serializer
             out << (m_after_value ? " )" : ")");
         }
         m_after_value = true;
+        if (!m_open_objects.empty())
+        {
+            m_open_objects.pop();
+        }
     }
 
     void begin_sequence(size_t)
@@ -109,7 +114,24 @@ class string_serializer : public serializer
     void write_value(const primitive_variant& value)
     {
         clear();
-        value.apply(pt_writer(out));
+        if (m_open_objects.empty())
+        {
+            throw std::runtime_error("write_value(): m_open_objects.empty()");
+        }
+        if (m_open_objects.top() == "@atom")
+        {
+            if (value.ptype() != pt_uint64)
+            {
+                throw std::runtime_error("expected uint64 value after @atom");
+            }
+            // write atoms as strings instead of integer values
+            auto av = static_cast<atom_value>(get<std::uint64_t>(value));
+            (pt_writer(out))(to_string(av));
+        }
+        else
+        {
+            value.apply(pt_writer(out));
+        }
         m_after_value = true;
     }
 
@@ -132,8 +154,9 @@ class string_deserializer : public deserializer
 
     std::string m_str;
     std::string::iterator m_pos;
-    size_t m_obj_count;
+    //size_t m_obj_count;
     std::stack<bool> m_obj_had_left_parenthesis;
+    std::stack<std::string> m_open_objects;
 
     void skip_space_and_comma()
     {
@@ -190,11 +213,11 @@ class string_deserializer : public deserializer
 
     void integrity_check()
     {
-        if (m_obj_had_left_parenthesis.empty())
+        if (m_open_objects.empty() || m_obj_had_left_parenthesis.empty())
         {
             throw_malformed("missing begin_object()");
         }
-        else if (m_obj_had_left_parenthesis.top() == false)
+        if (m_obj_had_left_parenthesis.top() == false)
         {
             throw_malformed("expected left parenthesis after "
                             "begin_object call or void value");
@@ -206,13 +229,11 @@ class string_deserializer : public deserializer
     string_deserializer(const std::string& str) : m_str(str)
     {
         m_pos = m_str.begin();
-        m_obj_count = 0;
     }
 
     string_deserializer(std::string&& str) : m_str(std::move(str))
     {
         m_pos = m_str.begin();
-        m_obj_count = 0;
     }
 
     std::string seek_object()
@@ -236,9 +257,10 @@ class string_deserializer : public deserializer
         return result;
     }
 
-    void begin_object(const std::string&)
+    void begin_object(const std::string& type_name)
     {
-        ++m_obj_count;
+        m_open_objects.push(type_name);
+        //++m_obj_count;
         skip_space_and_comma();
         m_obj_had_left_parenthesis.push(try_consume('('));
         //consume('(');
@@ -258,7 +280,12 @@ class string_deserializer : public deserializer
             }
             m_obj_had_left_parenthesis.pop();
         }
-        if (--m_obj_count == 0)
+        if (m_open_objects.empty())
+        {
+            throw std::runtime_error("no object to end");
+        }
+        m_open_objects.pop();
+        if (m_open_objects.empty())
         {
             skip_space_and_comma();
             if (m_pos != m_str.end())
@@ -302,6 +329,19 @@ class string_deserializer : public deserializer
     primitive_variant read_value(primitive_type ptype)
     {
         integrity_check();
+        if (m_open_objects.top() == "@atom")
+        {
+            if (ptype != pt_uint64)
+            {
+                throw_malformed("expected read of pt_uint64 after @atom");
+            }
+            auto str_val = get<std::string>(read_value(pt_u8string));
+            if (str_val.size() > 10)
+            {
+                throw_malformed("atom string size > 10");
+            }
+            return detail::atom_val(str_val.c_str());
+        }
         skip_space_and_comma();
         std::string::iterator substr_end;
         auto find_if_cond = [] (char c) -> bool
