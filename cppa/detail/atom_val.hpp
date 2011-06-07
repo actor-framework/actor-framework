@@ -29,8 +29,8 @@ inline constexpr std::uint64_t next_interim(std::uint64_t tmp, size_t char_code)
 
 constexpr std::uint64_t atom_val(const char* str, std::uint64_t interim = 0)
 {
-    return (*str == '\0') ? interim
-                          : atom_val(str + 1, next_interim(interim, *str));
+    return (*str <= 0) ? interim
+                       : atom_val(str + 1, next_interim(interim, *str));
 }
 
 } } } // namespace cppa::detail::<anonymous>

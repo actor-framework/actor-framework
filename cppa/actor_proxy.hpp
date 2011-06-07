@@ -17,12 +17,6 @@ namespace cppa {
 class actor_proxy : public actor
 {
 
-    process_information_ptr m_parent;
-    std::atomic<std::uint32_t> m_exit_reason;
-
-    std::mutex m_mtx;
-    std::vector<unique_attachable_ptr> m_attachables;
-
  public:
 
     actor_proxy(std::uint32_t mid, process_information_ptr&& parent);
@@ -47,6 +41,17 @@ class actor_proxy : public actor
     const process_information& parent_process() const;
 
     process_information_ptr parent_process_ptr() const;
+
+ private:
+
+    // implemented in unicast_network.cpp
+    static void forward_message(const process_information_ptr&, const message&);
+
+    process_information_ptr m_parent;
+    std::atomic<std::uint32_t> m_exit_reason;
+
+    std::mutex m_mtx;
+    std::vector<unique_attachable_ptr> m_attachables;
 
 };
 

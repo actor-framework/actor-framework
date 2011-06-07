@@ -47,10 +47,14 @@ namespace {
 
 struct mailman_send_job
 {
-    actor_proxy_ptr client;
+    process_information_ptr target_peer;
     message original_message;
-    mailman_send_job(actor_proxy_ptr apptr, message omsg)
-        : client(apptr), original_message(omsg)
+    mailman_send_job(actor_proxy_ptr apptr, message msg)
+        : target_peer(apptr->parent_process_ptr()), original_message(msg)
+    {
+    }
+    mailman_send_job(process_information_ptr peer, message msg)
+        : target_peer(peer), original_message(msg)
     {
     }
 };
@@ -96,7 +100,13 @@ class mailman_job
 
  public:
 
-    mailman_job(actor_proxy_ptr apptr, message omsg)
+    mailman_job(process_information_ptr piptr, const message& omsg)
+        : next(0), m_type(send_job_type)
+    {
+        new (&m_send_job) mailman_send_job(piptr, omsg);
+    }
+
+    mailman_job(actor_proxy_ptr apptr, const message& omsg)
         : next(0), m_type(send_job_type)
     {
         new (&m_send_job) mailman_send_job(apptr, omsg);
@@ -189,7 +199,7 @@ s_mailman_manager;
 
 util::single_reader_queue<mailman_job>& s_mailman_queue()
 {
-    return *s_mailman_manager.m_queue;
+    return *(s_mailman_manager.m_queue);
 }
 
 // a map that manages links between local actors and remote actors (proxies)
@@ -204,7 +214,8 @@ void fake_exits_from_disconnected_links(link_map& links)
         for (auto& rem_actor : remote_actors)
         {
             message msg(rem_actor, local_actor,
-                        atom(":Exit"), exit_reason::remote_link_unreachable);
+                        atom(":KillProxy"),
+                        exit_reason::remote_link_unreachable);
             local_actor->enqueue(msg);
         }
     }
@@ -231,6 +242,26 @@ void remove_link(link_map& links,
         if (link_list.empty()) links.erase(local_actor);
     }
 }
+
+class remote_observer : public attachable
+{
+
+    process_information_ptr peer;
+
+ public:
+
+    remote_observer(const process_information_ptr& piptr) : peer(piptr)
+    {
+    }
+
+    void detach(std::uint32_t reason)
+    {
+        actor_ptr self_ptr = self();
+        message msg(self_ptr, self_ptr, make_tuple(atom(":KillProxy"), reason));
+        s_mailman_queue().push_back(new mailman_job(peer, msg));
+    }
+
+};
 
 // handles *all* outgoing messages
 void mailman_loop()
@@ -267,7 +298,7 @@ void mailman_loop()
             }
             */
             // forward message to receiver peer
-            auto peer_element = peers.find(sjob.client->parent_process());
+            auto peer_element = peers.find(*(sjob.target_peer));
             if (peer_element != peers.end())
             {
                 auto peer = peer_element->second;
@@ -275,7 +306,7 @@ void mailman_loop()
                 {
                     bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-                    //cout << "--> " << to_string(out_msg) << endl;
+cout << "--> " << to_string(out_msg) << endl;
                     auto sent = ::send(peer, &size32, sizeof(size32), flags);
                     if (sent != -1)
                     {
@@ -284,7 +315,7 @@ void mailman_loop()
                     if (sent == -1)
                     {
                         // peer unreachable
-                        peers.erase(sjob.client->parent_process());
+                        peers.erase(*(sjob.target_peer));
                     }
                 }
                 catch (...)
@@ -343,21 +374,31 @@ void read_from_socket(native_socket_t sfd, void* buf, size_t buf_size)
     while (urres < left);
 }
 
-// handles *one* socket
-void post_office_loop(native_socket_t socket_fd, const actor_proxy_ptr& aptr)
+template<typename T>
+T& operator<<(T& o, const process_information& pinfo)
 {
-    //cout << "--> post_office_loop" << endl;
+    return (o << pinfo.process_id << "@" << pinfo.node_id_as_string());
+}
+
+// handles *one* socket / peer
+void post_office_loop(native_socket_t socket_fd,
+                      process_information_ptr peer,
+                      actor_proxy_ptr aptr)
+{
+cout << "--> post_office_loop; self() = "
+     << process_information::get()
+     << ", peer = "
+     << *peer
+     << endl;
     if (aptr) detail::get_actor_proxy_cache().add(aptr);
-    auto meta_msg = uniform_typeid<message>();
-    if (!meta_msg)
-    {
-        throw std::logic_error("meta_msg == nullptr");
-    }
     message msg;
     std::uint32_t rsize;
     char* buf = nullptr;
     size_t buf_size = 0;
     size_t buf_allocated = 0;
+    auto meta_msg = uniform_typeid<message>();
+    const std::type_info& atom_tinfo = typeid(atom_value);
+    auto& pinfo = process_information::get();
     try
     {
         for (;;)
@@ -376,24 +417,43 @@ void post_office_loop(native_socket_t socket_fd, const actor_proxy_ptr& aptr)
                 buf = new char[buf_allocated];
             }
             buf_size = rsize;
+cout << "[" << pinfo << "] " << "received " << rsize << " bytes" << endl;
             read_from_socket(socket_fd, buf, buf_size);
             binary_deserializer bd(buf, buf_size);
             meta_msg->deserialize(&msg, &bd);
-            //cout << "<-- " << to_string(msg) << endl;
+cout << "<-- " << to_string(msg) << endl;
+            if (   msg.content().size() == 1
+                && msg.content().utype_info_at(0) == atom_tinfo
+                && *reinterpret_cast<const atom_value*>(msg.content().at(0))
+                   == atom(":Monitor"))
+            {
+                actor_ptr sender = msg.sender();
+                if (sender->parent_process() == pinfo)
+                {
+cout << pinfo.process_id << "@" << pinfo.node_id_as_string()
+     << " :Monitor; actor id = " << sender->id() << endl;
+                    // local actor?
+                    // this message was send from a proxy
+                    sender->attach(new remote_observer(peer));
+                }
+                // don't "deliver" message
+                continue;
+            }
             auto r = msg.receiver();
             if (r) r->enqueue(msg);
         }
     }
     catch (std::ios_base::failure& e)
     {
-        //cout << "std::ios_base::failure: " << e.what() << endl;
+        cout << "std::ios_base::failure: " << e.what() << endl;
     }
     catch (std::exception& e)
     {
-        //cout << detail::to_uniform_name(typeid(e)) << ": "
-        //     << e.what() << endl;
+        cout << "[" << process_information::get() << "] "
+             << detail::to_uniform_name(typeid(e)) << ": "
+             << e.what() << endl;
     }
-    //cout << "<-- post_office_loop" << endl;
+cout << "<-- post_office_loop" << endl;
 }
 
 struct mm_worker
@@ -402,10 +462,11 @@ struct mm_worker
     native_socket_t m_sockfd;
     boost::thread m_thread;
 
-    mm_worker(native_socket_t sockfd) : m_sockfd(sockfd)
-                                      , m_thread(post_office_loop,
-                                                 sockfd,
-                                                 actor_proxy_ptr())
+    mm_worker(native_socket_t sockfd, process_information_ptr peer)
+        : m_sockfd(sockfd), m_thread(post_office_loop,
+                                     sockfd,
+                                     peer,
+                                     actor_proxy_ptr())
     {
     }
 
@@ -469,16 +530,16 @@ void middle_man_loop(native_socket_t server_socket_fd,
             ::send(sockfd, &id, sizeof(id), 0);
             ::send(sockfd, &(pinf.process_id), sizeof(pinf.process_id), 0);
             ::send(sockfd, pinf.node_id.data(), pinf.node_id.size(), 0);
-            auto peer_pinf = new process_information;
+            process_information_ptr peer(new process_information);
             read_from_socket(sockfd,
-                             &(peer_pinf->process_id),
+                             &(peer->process_id),
                              sizeof(std::uint32_t));
             read_from_socket(sockfd,
-                             peer_pinf->node_id.data(),
+                             peer->node_id.data(),
                              process_information::node_id_size);
-            s_mailman_queue().push_back(new mailman_job(sockfd, peer_pinf));
+            s_mailman_queue().push_back(new mailman_job(sockfd, peer));
             // todo: check if connected peer is compatible
-            children.push_back(child_ptr(new mm_worker(sockfd)));
+            children.push_back(child_ptr(new mm_worker(sockfd, peer)));
             //cout << "client connection done" << endl;
         }
     }
@@ -493,9 +554,10 @@ void middle_man_loop(native_socket_t server_socket_fd,
 
 } // namespace <anonmyous>
 
-void actor_proxy::enqueue(const message& msg)
+void actor_proxy::forward_message(const process_information_ptr& piptr,
+                                  const message& msg)
 {
-    s_mailman_queue().push_back(new mailman_job(this, msg));
+    s_mailman_queue().push_back(new mailman_job(piptr, msg));
 }
 
 void publish(actor_ptr& whom, std::uint16_t port)
@@ -570,7 +632,7 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     process_information_ptr pinfptr(peer_pinf);
     actor_proxy_ptr result(new actor_proxy(remote_actor_id, pinfptr));
     s_mailman_queue().push_back(new mailman_job(sockfd, pinfptr));
-    boost::thread(post_office_loop, sockfd, result).detach();
+    boost::thread(post_office_loop, sockfd, peer_pinf, result).detach();
     return result;
 }
 

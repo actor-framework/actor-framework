@@ -22,6 +22,7 @@ class actor_proxy_cache
     std::map<key_tuple, actor_proxy_ptr> m_proxies;
 
     process_information_ptr get_pinfo(const key_tuple& key);
+    void add(const actor_proxy_ptr& pptr, const key_tuple& key);
 
  public:
 

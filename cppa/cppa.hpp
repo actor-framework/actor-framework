@@ -71,6 +71,14 @@ inline void link(actor_ptr&& other)
     self()->link_to(other);
 }
 
+void monitor(actor_ptr& whom);
+
+void monitor(actor_ptr&& whom);
+
+void demonitor(actor_ptr& whom);
+
+void demonitor(actor_ptr&& whom);
+
 inline void trap_exit(bool new_value)
 {
     self()->trap_exit(new_value);

@@ -708,8 +708,10 @@ uniform_type_info::by_type_info(const std::type_info& tinf)
     auto result = detail::s_uniform_type_info_map().by_raw_name(raw_name(tinf));
     if (!result)
     {
-        throw std::runtime_error(std::string(raw_name(tinf))
-                                 + " is an unknown typeid name");
+        std::string error = "uniform_type_info::by_type_info(): ";
+        error += detail::to_uniform_name(tinf);
+        error += " is an unknown typeid name";
+        throw std::runtime_error(error);
     }
     return result;
 }

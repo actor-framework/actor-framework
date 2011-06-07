@@ -70,9 +70,23 @@ bool match(const any_tuple& what, const ValuesTuple& vals)
 }
 
 template<atom_value A0, typename... MatchRules>
-bool match(const any_tuple& what)
+inline bool match(const any_tuple& what)
 {
     return match<atom_value, MatchRules...>(what, make_tdata(A0));
+}
+
+template<atom_value A0, atom_value A1, typename... MatchRules>
+inline bool match(const any_tuple& what)
+{
+    return match<atom_value, atom_value, MatchRules...>(what,
+                                                        make_tdata(A0, A1));
+}
+
+template<atom_value A0, atom_value A1, atom_value A2, typename... MatchRules>
+bool match(const any_tuple& what)
+{
+    auto vals = make_tdata(A0, A1, A2);
+    return match<atom_value, atom_value, atom_value, MatchRules...>(what, vals);
 }
 
 } // namespace cppa
