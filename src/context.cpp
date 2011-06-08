@@ -1,3 +1,7 @@
+#include <iostream>
+
+// for thread_specific_ptr
+// needed unless the new keyword "thread_local" works in GCC
 #include <boost/thread.hpp>
 
 #include "cppa/context.hpp"
@@ -6,24 +10,19 @@
 
 #include "cppa/detail/converted_thread_context.hpp"
 
+using std::cout;
+using std::endl;
+
 using cppa::detail::converted_thread_context;
 
 namespace {
 
 void cleanup_fun(cppa::context* what)
 {
-    if (what)
-    {
-        auto converted = dynamic_cast<converted_thread_context*>(what);
-        if (converted)
-        {
-            converted->cleanup();
-        }
-        if (!what->deref()) delete what;
-    }
+    if (what && !what->deref()) delete what;
 }
 
-boost::thread_specific_ptr<cppa::context> m_this_context(cleanup_fun);
+boost::thread_specific_ptr<cppa::context> s_this_context(cleanup_fun);
 
 } // namespace <anonymous>
 
@@ -41,18 +40,19 @@ void context::trap_exit(bool new_value)
 
 context* unchecked_self()
 {
-    return m_this_context.get();
+    return s_this_context.get();
 }
 
 context* self()
 {
-    context* result = m_this_context.get();
-    if (!result)
+    context* result = s_this_context.get();
+    if (result == nullptr)
     {
+cout << "converted a native thread to an actor" << endl;
         result = new converted_thread_context;
         result->ref();
         get_scheduler()->register_converted_context(result);
-        m_this_context.reset(result);
+        s_this_context.reset(result);
     }
     return result;
 }
@@ -60,12 +60,9 @@ context* self()
 void set_self(context* ctx)
 {
     if (ctx) ctx->ref();
-    context* old = m_this_context.get();
-    m_this_context.reset(ctx);
-    if (old)
-    {
-        cleanup_fun(ctx);
-    }
+    context* old = s_this_context.get();
+    s_this_context.reset(ctx);
+    cleanup_fun(old);
 }
 
 } // namespace cppa

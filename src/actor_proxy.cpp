@@ -2,27 +2,17 @@
 #include "cppa/message.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/detail/actor_impl_util.hpp"
-
-using cppa::exit_reason::not_exited;
-
-namespace {
-
-constexpr auto s_kp = cppa::atom(":KillProxy");
-typedef std::lock_guard<std::mutex> guard_type;
-
-} // namespace <anonymous>
 
 namespace cppa {
 
 actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
-    : actor(mid), m_parent(pptr), m_exit_reason(not_exited)
+    : super(mid), m_parent(pptr)
 {
     if (!m_parent) throw std::runtime_error("parent == nullptr");
 }
 
 actor_proxy::actor_proxy(std::uint32_t mid, process_information_ptr&& pptr)
-    : actor(mid), m_parent(std::move(pptr)), m_exit_reason(not_exited)
+    : super(mid), m_parent(std::move(pptr))
 {
     if (!m_parent) throw std::runtime_error("parent == nullptr");
 }
@@ -30,60 +20,80 @@ actor_proxy::actor_proxy(std::uint32_t mid, process_information_ptr&& pptr)
 void actor_proxy::enqueue(const message& msg)
 {
     const any_tuple& content = msg.content();
-    if (   content.size() == 2
-        && content.utype_info_at(0) == typeid(atom_value)
-        && *reinterpret_cast<const atom_value*>(content.at(0)) == s_kp
-        && content.utype_info_at(1) == typeid(std::uint32_t))
+    if (   content.size() > 0
+        && content.utype_info_at(0) == typeid(atom_value))
     {
-        decltype(m_attachables) mattachables;
-        auto r = *reinterpret_cast<const std::uint32_t*>(content.at(1));
-        // lifetime scope of guard
+        auto val = *reinterpret_cast<const atom_value*>(content.at(0));
+        switch(val)
         {
-            guard_type guard(m_mtx);
-            m_exit_reason = r;
-            mattachables = std::move(m_attachables);
-            m_attachables.clear();
-        }
-        for (auto i = mattachables.begin(); i != mattachables.end(); ++i)
-        {
-            (*i)->detach(r);
+            case atom(":Link"):
+            {
+                auto s = msg.sender();
+                link_to(s);
+                return;
+            }
+            case atom(":Unlink"):
+            {
+                auto s = msg.sender();
+                unlink_from(s);
+                return;
+            }
+            case atom(":KillProxy"):
+            {
+                if (   content.size() == 2
+                    && content.utype_info_at(1) == typeid(std::uint32_t))
+                {
+                    const void* reason = content.at(1);
+                    cleanup(*reinterpret_cast<const std::uint32_t*>(reason));
+                }
+                return;
+            }
+            default: break;
         }
     }
-    else
-    {
-        forward_message(m_parent, msg);
-    }
-}
-
-bool actor_proxy::attach(attachable* ptr)
-{
-    return detail::do_attach<guard_type>(m_exit_reason,
-                                         unique_attachable_ptr(ptr),
-                                         m_attachables,
-                                         m_mtx);
-}
-
-void actor_proxy::detach(const attachable::token& what)
-{
-    detail::do_detach<guard_type>(what, m_attachables, m_mtx);
+    forward_message(m_parent, msg);
 }
 
 void actor_proxy::link_to(intrusive_ptr<actor>& other)
 {
+    if (link_to_impl(other))
+    {
+        // causes remote actor to link to (proxy of) other
+        forward_message(m_parent, message(this, other, atom(":Link")));
+        //enqueue(message(this, other, atom(":Link")));
+    }
 }
 
 void actor_proxy::unlink_from(intrusive_ptr<actor>& other)
 {
+    if (unlink_from_impl(other))
+    {
+        // causes remote actor to unlink from (proxy of) other
+        forward_message(m_parent, message(this, other, atom(":Unlink")));
+        //enqueue(message(this, other, atom(":Unlink")));
+    }
 }
 
-bool actor_proxy::remove_backlink(const intrusive_ptr<actor>& to)
+bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other)
 {
-    return true;
+    bool result = super::establish_backlink(other);
+    if (result)
+    {
+        forward_message(m_parent, message(this, other, atom(":Link")));
+    }
+    //enqueue(message(to, this, atom(":Link")));
+    return result;
 }
 
-bool actor_proxy::establish_backlink(const intrusive_ptr<actor>& to)
+bool actor_proxy::remove_backlink(intrusive_ptr<actor>& other)
 {
-    return true;
+    bool result = super::remove_backlink(other);
+    if (result)
+    {
+        forward_message(m_parent, message(this, other, atom(":Unlink")));
+    }
+    //enqueue(message(to, this, atom(":Unlink")));
+    return result;
 }
 
 const process_information& actor_proxy::parent_process() const

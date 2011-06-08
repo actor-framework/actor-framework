@@ -143,6 +143,20 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         return compare(other.get());
     }
 
+    template<class C>
+    intrusive_ptr<C> downcast() const
+    {
+        if (m_ptr) return dynamic_cast<C*>(const_cast<T*>(m_ptr));
+        return nullptr;
+    }
+
+    template<class C>
+    intrusive_ptr<C> upcast() const
+    {
+        if (m_ptr) return static_cast<C*>(const_cast<T*>(m_ptr));
+        return nullptr;
+    }
+
 };
 
 template<typename X, typename Y>

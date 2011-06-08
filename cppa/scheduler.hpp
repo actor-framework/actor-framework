@@ -43,7 +43,7 @@ class scheduler
      * @brief Informs the scheduler that the convertex context @p what
      *        finished execution.
      */
-    virtual void unregister_converted_context(context* what) = 0;
+    //virtual void unregister_converted_context(context* what) = 0;
 
     /**
      * @brief Wait until all other actors finished execution.

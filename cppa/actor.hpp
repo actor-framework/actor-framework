@@ -15,7 +15,6 @@
 namespace cppa {
 
 class serializer;
-class actor_proxy;
 class deserializer;
 
 /**
@@ -24,16 +23,13 @@ class deserializer;
 class actor : public channel
 {
 
-    friend class actor_proxy;
-
     bool m_is_proxy;
     std::uint32_t m_id;
-
-    actor(std::uint32_t aid);
 
  protected:
 
     actor();
+    actor(std::uint32_t aid);
 
  public:
 
@@ -86,13 +82,18 @@ class actor : public channel
      * @brief
      * @return
      */
-    virtual bool remove_backlink(const intrusive_ptr<actor>& to) = 0;
+    virtual bool remove_backlink(intrusive_ptr<actor>& to) = 0;
 
     /**
      * @brief
      * @return
      */
-    virtual bool establish_backlink(const intrusive_ptr<actor>& to) = 0;
+    virtual bool establish_backlink(intrusive_ptr<actor>& to) = 0;
+
+    void link_to(intrusive_ptr<actor>&& other);
+    void unlink_from(intrusive_ptr<actor>&& other);
+    bool remove_backlink(intrusive_ptr<actor>&& to);
+    bool establish_backlink(intrusive_ptr<actor>&& to);
 
     /**
      * @brief Gets the {@link process_information} of the parent process.

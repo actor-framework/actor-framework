@@ -1,7 +1,6 @@
 #ifndef ATTACHABLE_HPP
 #define ATTACHABLE_HPP
 
-#include <memory>
 #include <cstdint>
 #include <typeinfo>
 
@@ -45,8 +44,6 @@ class attachable
     virtual bool matches(const token&);
 
 };
-
-typedef std::unique_ptr<attachable> unique_attachable_ptr;
 
 } // namespace cppa
 

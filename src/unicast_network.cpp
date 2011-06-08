@@ -25,7 +25,6 @@
 #include "cppa/detail/actor_proxy_cache.hpp"
 
 using std::cout;
-using std::cerr;
 using std::endl;
 
 using cppa::detail::get_actor_proxy_cache;
@@ -295,7 +294,7 @@ void mailman_loop()
                 {
                     bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-cout << "--> " << to_string(out_msg) << endl;
+cout << "--> " << (to_string(out_msg) + "\n");
                     auto sent = ::send(peer, &size32, sizeof(size32), flags);
                     if (sent != -1)
                     {
@@ -405,7 +404,7 @@ void post_office_loop(native_socket_t socket_fd,
             read_from_socket(socket_fd, buf, buf_size);
             binary_deserializer bd(buf, buf_size);
             meta_msg->deserialize(&msg, &bd);
-cout << "<-- " << to_string(msg) << endl;
+cout << "<-- " << (to_string(msg) + "\n");
             if (   msg.content().size() == 1
                 && msg.content().utype_info_at(0) == atom_tinfo
                 && *reinterpret_cast<const atom_value*>(msg.content().at(0))
@@ -420,11 +419,12 @@ cout << "<-- " << to_string(msg) << endl;
                     // this message was send from a proxy
                     sender->attach(new remote_observer(peer));
                 }
-                // don't "deliver" message
-                continue;
             }
-            auto r = msg.receiver();
-            if (r) r->enqueue(msg);
+            else
+            {
+                auto r = msg.receiver();
+                if (r) r->enqueue(msg);
+            }
         }
     }
     catch (std::ios_base::failure& e)
@@ -535,6 +535,7 @@ void middle_man_loop(native_socket_t server_socket_fd,
     children.clear();
     // wait for handshake
     barrier->wait();
+    //cout << "middle_man_loop finished\n";
 }
 
 } // namespace <anonmyous>

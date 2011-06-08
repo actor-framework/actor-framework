@@ -1,21 +1,20 @@
 #ifndef ACTOR_PROXY_HPP
 #define ACTOR_PROXY_HPP
 
-#include "cppa/config.hpp"
-
-#include <list>
-#include <mutex>
-#include <atomic>
-#include <vector>
-#include <memory>
-#include <cstdint>
-
 #include "cppa/actor.hpp"
+#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa {
 
-class actor_proxy : public actor
+class actor_proxy : public detail::abstract_actor<actor>
 {
+
+    typedef detail::abstract_actor<actor> super;
+
+    // implemented in unicast_network.cpp
+    static void forward_message(const process_information_ptr&, const message&);
+
+    process_information_ptr m_parent;
 
  public:
 
@@ -23,35 +22,19 @@ class actor_proxy : public actor
 
     actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
 
-    bool attach(attachable* ptr);
-
-    void detach(const attachable::token&);
-
-    // implemented in unicast_network.cpp
     void enqueue(const message& msg);
 
     void link_to(intrusive_ptr<actor>& other);
 
     void unlink_from(intrusive_ptr<actor>& other);
 
-    bool remove_backlink(const intrusive_ptr<actor>& to);
+    bool remove_backlink(intrusive_ptr<actor>& to);
 
-    bool establish_backlink(const intrusive_ptr<actor>& to);
+    bool establish_backlink(intrusive_ptr<actor>& to);
 
     const process_information& parent_process() const;
 
     process_information_ptr parent_process_ptr() const;
-
- private:
-
-    // implemented in unicast_network.cpp
-    static void forward_message(const process_information_ptr&, const message&);
-
-    process_information_ptr m_parent;
-    std::atomic<std::uint32_t> m_exit_reason;
-
-    std::mutex m_mtx;
-    std::vector<unique_attachable_ptr> m_attachables;
 
 };
 

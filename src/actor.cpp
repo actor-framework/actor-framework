@@ -68,4 +68,24 @@ void actor::leave(const group_ptr& what)
     detach(group_token);
 }
 
+void actor::link_to(intrusive_ptr<actor>&& other)
+{
+    link_to(static_cast<actor_ptr&>(other));
+}
+
+void actor::unlink_from(intrusive_ptr<actor>&& other)
+{
+    unlink_from(static_cast<actor_ptr&>(other));
+}
+
+bool actor::remove_backlink(intrusive_ptr<actor>&& to)
+{
+    return remove_backlink(static_cast<actor_ptr&>(to));
+}
+
+bool actor::establish_backlink(intrusive_ptr<actor>&& to)
+{
+    return establish_backlink(static_cast<actor_ptr&>(to));
+}
+
 } // namespace cppa

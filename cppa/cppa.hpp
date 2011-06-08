@@ -71,6 +71,16 @@ inline void link(actor_ptr&& other)
     self()->link_to(other);
 }
 
+inline void link(actor_ptr& lhs, actor_ptr& rhs)
+{
+    if (lhs && rhs) lhs->link_to(rhs);
+}
+
+inline void unlink(actor_ptr& lhs, actor_ptr& rhs)
+{
+    if (lhs && rhs) lhs->unlink_from(rhs);
+}
+
 void monitor(actor_ptr& whom);
 
 void monitor(actor_ptr&& whom);
