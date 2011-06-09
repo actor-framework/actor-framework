@@ -1,3 +1,5 @@
+#include "cppa/config.hpp"
+
 #include <cstdio>
 #include <cstring>
 #include <sstream>
@@ -19,6 +21,26 @@ void erase_trailing_newline(std::string& str)
     }
 }
 
+#ifdef CPPA_MACOS
+const char* s_get_uuid =
+    "/usr/sbin/diskutil info / | "
+    "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
+const char* s_get_mac =
+    "/usr/sbin/system_profiler SPNetworkDataType | "
+    "/usr/bin/grep -Fw MAC | "
+    "/usr/bin/grep -o '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}' | "
+    "/usr/bin/head -n1";
+#elif CPPA_LINUX
+const char* s_get_uuid =
+    "/bin/egrep -o 'UUID=(([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3})\s+/\s+' "
+                  "/etc/fstab | "
+    "/bin/egrep -o '([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3}'";
+const char* s_get_mac =
+    "/sbin/ifconfig | "
+    "/bin/egrep -o '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}' | "
+    "head -n1";
+#endif
+
 cppa::process_information compute_proc_info()
 {
     cppa::process_information result;
@@ -26,9 +48,7 @@ cppa::process_information compute_proc_info()
     char cbuf[100];
     // fetch hd serial
     std::string hd_serial;
-    FILE* cmd = popen("/usr/sbin/diskutil info / | "
-                      "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'",
-                      "r");
+    FILE* cmd = popen(s_get_uuid, "r");
     while (fgets(cbuf, 100, cmd) != 0)
     {
         hd_serial += cbuf;
@@ -37,11 +57,7 @@ cppa::process_information compute_proc_info()
     erase_trailing_newline(hd_serial);
     // fetch mac address of first network device
     std::string first_mac_addr;
-    cmd = popen("/usr/sbin/system_profiler SPNetworkDataType | "
-                "/usr/bin/grep -Fw MAC | "
-                "/usr/bin/grep -o \"..:..:..:..:..:..\" | "
-                "/usr/bin/head -n1",
-                "r");
+    cmd = popen(s_get_mac, "r");
     while (fgets(cbuf, 100, cmd) != 0)
     {
         first_mac_addr += cbuf;
