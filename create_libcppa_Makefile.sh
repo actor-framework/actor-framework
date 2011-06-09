@@ -39,14 +39,17 @@ echo
 echo "%.o : %.cpp \$(HEADERS)"
 printf "%b\n" "\t\$(CXX) \$(CXXFLAGS) \$(INCLUDE_FLAGS) -fPIC -c \$< -o \$@"
 echo
-echo "\$(LIB_NAME) : \$(OBJECTS) \$(HEADERS)"
+echo "\$libcppa : \$(OBJECTS) \$(HEADERS)"
 if test "$(uname)" "=" "Darwin" ; then
 	printf "%b\n" "\t\$(CXX) \$(LIBS) -dynamiclib -o libcppa.dylib \$(OBJECTS)"
 else
 	printf "%b\n" "\t\$(CXX) \$(LIBS) -shared -Wl,-soname,libcppa.so.0 -o libcppa.so.0.0.0 \$(OBJECTS)"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so.0.0"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so.0"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so"
 fi
 echo
-echo "all : \$(LIB_NAME) \$(OBJECTS)"
+echo "all : libcppa \$(OBJECTS)"
 echo
 echo "clean:"
 printf "%b\n" "\trm -f \$(LIB_NAME) \$(OBJECTS)"

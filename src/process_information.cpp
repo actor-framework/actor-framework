@@ -30,9 +30,9 @@ const char* s_get_mac =
     "/usr/bin/grep -Fw MAC | "
     "/usr/bin/grep -o '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}' | "
     "/usr/bin/head -n1";
-#elif CPPA_LINUX
+#elif defined(CPPA_LINUX)
 const char* s_get_uuid =
-    "/bin/egrep -o 'UUID=(([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3})\s+/\s+' "
+    "/bin/egrep -o 'UUID=(([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3})\\s+/\\s+' "
                   "/etc/fstab | "
     "/bin/egrep -o '([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3}'";
 const char* s_get_mac =
