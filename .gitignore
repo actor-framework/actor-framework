@@ -15,3 +15,4 @@ cpp0x_test.dSYM/
 Makefile
 Makefile.rules
 libcppa.Makefile
+libcppa.so*

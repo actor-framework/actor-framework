@@ -63,7 +63,7 @@ printf "%b\n" "CXXFLAGS = $gcc_flags"
 if test $(uname) = "Darwin" ; then
     printf "%b\n" "LIBS = -L/opt/local/lib -lboost_thread-mt"
 else
-    printf "%b\n" "LIBS = "
+    printf "%b\n" "LIBS = -lboost_thread"
 fi
 # redirect stdout to libcppa.Makefile
 exec >libcppa.Makefile
@@ -85,7 +85,7 @@ printf "\n"
 printf "%b\n" "%.o : %.cpp \$(HEADERS)"
 printf "%b\n" "\t\$(CXX) \$(CXXFLAGS) \$(INCLUDE_FLAGS) -fPIC -c \$< -o \$@"
 printf "\n"
-printf "%b\n" "\$libcppa : \$(OBJECTS) \$(HEADERS)"
+printf "%b\n" "libcppa.so.0.0.0 : \$(OBJECTS) \$(HEADERS)"
 if test "$(uname)" "=" "Darwin" ; then
 	printf "%b\n" "\t\$(CXX) \$(LIBS) -dynamiclib -o libcppa.dylib \$(OBJECTS)"
 else
@@ -95,7 +95,7 @@ else
 	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so"
 fi
 printf "\n"
-printf "%b\n" "all : libcppa \$(OBJECTS)"
+printf "%b\n" "all : libcppa.so.0.0.0 \$(OBJECTS)"
 printf "\n"
 printf "%b\n" "clean:"
 printf "%b\n" "\trm -f \$(LIB_NAME) \$(OBJECTS)"
