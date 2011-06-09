@@ -25,12 +25,6 @@ append_hpp_from "cppa/util"
 
 append_cpp_from "src"
 
-if test "$(uname)" = "Darwin"; then
-	LIB_NAME="libcppa.dylib"
-else
-	LIB_NAME="libcppa.so"
-fi
-
 echo "include Makefile.rules"
 echo "INCLUDE_FLAGS = \$(INCLUDES) -I./"
 echo
@@ -46,7 +40,11 @@ echo "%.o : %.cpp \$(HEADERS)"
 printf "%b\n" "\t\$(CXX) \$(CXXFLAGS) \$(INCLUDE_FLAGS) -fPIC -c \$< -o \$@"
 echo
 echo "\$(LIB_NAME) : \$(OBJECTS) \$(HEADERS)"
-printf "%b\n" "\t\$(CXX) \$(LIBS) -dynamiclib -o \$(LIB_NAME) \$(OBJECTS)"
+if test "$(uname)" "=" "Darwin" ; then
+	printf "%b\n" "\t\$(CXX) \$(LIBS) -dynamiclib -o libcppa.dylib \$(OBJECTS)"
+else
+	printf "%b\n" "\t\$(CXX) \$(LIBS) -shared -Wl,-soname,libcppa.so.0 -o libcppa.so.0.0.0 \$(OBJECTS)"
+fi
 echo
 echo "all : \$(LIB_NAME) \$(OBJECTS)"
 echo
