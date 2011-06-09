@@ -1,11 +1,31 @@
 #!/bin/bash
 
+# some neede variables to create 'Makefile.rules'
+HEADERS=""
+SOURCES=""
+NLINE="\\n"
+BSLASH="\\\\"
+# appends *.hpp from $1 to $HEADERS
+function append_hpp_from()
+{
+	for i in "$1"/*.hpp ; do
+		HEADERS="$HEADERS ${BSLASH}${NLINE}          $i"
+	done
+}
+# appends *.cpp from $1 to $SOURCES
+function append_cpp_from()
+{
+	for i in "$1/"*.cpp ; do
+		SOURCES="$SOURCES ${BSLASH}${NLINE}          $i"
+	done
+}
+# default flags
 gcc_flags="-std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/ -fpermissive"
-
+# get all g++ binaries
 gcc_found=$(find /bin/ /usr/bin /opt/bin /opt/local/bin -regex "^.*g\+\+.*$" 2>/dev/null)
-
+# holds the finally selected g++ binary
 gcc_selected=""
-
+# checks if g++ binary $1 is able to compile cpp0x_test.cpp
 function compatibility_test()
 {
 	if $1 $gcc_flags -o cpp0x_test cpp0x_test.cpp &>/dev/null ; then
@@ -16,7 +36,7 @@ function compatibility_test()
 		fi
 	fi
 }
-
+# iterates over all found g++ binaries until a suitable binary is found
 for i in $gcc_found ; do
 	version=$($i -v 2>&1 | grep -oE "gcc version [0-9](\.[0-9]){2}" | grep -oE "[0-9](\.[0-9]){2}")
 	if test "!" $version "<" 4.6.0 ; then
@@ -26,19 +46,73 @@ for i in $gcc_found ; do
 		fi
 	fi
 done
-
+# did we found a suitable g++ binary?
 if test -z "$gcc_selected" ; then
 	echo "no GCC >= 4.6.0 found ... quit"
 	exit
 fi
+echo "chosen g++ binary: $gcc_selected"
+# ok, write makefiles now
+echo "build Makefiles..."
+# link file descriptor #6 to stdout
+exec 6>&1
+# redirect stdout to Makefile.rules
+exec >Makefile.rules
+printf "%b\n" "CXX = $gcc_selected"
+printf "%b\n" "CXXFLAGS = $gcc_flags"
+if test $(uname) = "Darwin" ; then
+    printf "%b\n" "LIBS = -L/opt/local/lib -lboost_thread-mt"
+else
+    printf "%b\n" "LIBS = "
+fi
+# redirect stdout to libcppa.Makefile
+exec >libcppa.Makefile
+append_hpp_from "cppa"
+append_hpp_from "cppa/detail"
+append_hpp_from "cppa/util"
+append_cpp_from "src"
+printf "%b\n" "include Makefile.rules"
+printf "%b\n" "INCLUDE_FLAGS = \$(INCLUDES) -I./"
+printf "\n"
+printf "%b\n" "HEADERS =$HEADERS"
+printf "\n"
+printf "%b\n" "SOURCES =$SOURCES"
+printf "\n"
+printf "%b\n" "OBJECTS = \$(SOURCES:.cpp=.o)"
+printf "\n"
+printf "%b\n" "LIB_NAME = $LIB_NAME"
+printf "\n"
+printf "%b\n" "%.o : %.cpp \$(HEADERS)"
+printf "%b\n" "\t\$(CXX) \$(CXXFLAGS) \$(INCLUDE_FLAGS) -fPIC -c \$< -o \$@"
+printf "\n"
+printf "%b\n" "\$libcppa : \$(OBJECTS) \$(HEADERS)"
+if test "$(uname)" "=" "Darwin" ; then
+	printf "%b\n" "\t\$(CXX) \$(LIBS) -dynamiclib -o libcppa.dylib \$(OBJECTS)"
+else
+	printf "%b\n" "\t\$(CXX) \$(LIBS) -shared -Wl,-soname,libcppa.so.0 -o libcppa.so.0.0.0 \$(OBJECTS)"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so.0.0"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so.0"
+	printf "%b\n" "\tln -s libcppa.so.0.0.0 libcppa.so"
+fi
+printf "\n"
+printf "%b\n" "all : libcppa \$(OBJECTS)"
+printf "\n"
+printf "%b\n" "clean:"
+printf "%b\n" "\trm -f \$(LIB_NAME) \$(OBJECTS)"
+# redirect stdout to Makefile
+exec >Makefile
+printf "%b\n" "all:"
+printf "%b\n" "\t./create_libcppa_Makefile.sh > libcppa.Makefile"
+printf "%b\n" "\tmake -f libcppa.Makefile"
+printf "%b\n" "\tmake -C unit_testing"
+printf "%b\n" "\tmake -C queue_performances"
+printf "\n"
+printf "%b\n" "clean:"
+printf "%b\n" "\tmake -f libcppa.Makefile clean"
+printf "%b\n" "\tmake -C unit_testing clean"
+printf "%b\n" "\tmake -C queue_performances clean"
 
-echo "selected = $gcc_selected"
-
-#echo "GCC = $GCC"
-
-rm -f Makefile.rules &>/dev/null
-echo "CXX = $gcc_selected" >> Makefile.rules
-echo "CXXFLAGS = $gcc_flags" >> Makefile.rules
-echo "LIBS = -L/opt/local/lib -lboost_thread-mt" >> Makefile.rules
+# restore stdout
+exec 1>&6
 
 echo "done"

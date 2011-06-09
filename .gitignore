@@ -12,3 +12,6 @@ cppa.creator.user.1.3
 libcppa.Makefile
 cpp0x_test
 cpp0x_test.dSYM/
+Makefile
+Makefile.rules
+libcppa.Makefile
