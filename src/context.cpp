@@ -1,5 +1,3 @@
-#include <iostream>
-
 // for thread_specific_ptr
 // needed unless the new keyword "thread_local" works in GCC
 #include <boost/thread.hpp>
@@ -9,9 +7,6 @@
 #include "cppa/scheduler.hpp"
 
 #include "cppa/detail/converted_thread_context.hpp"
-
-using std::cout;
-using std::endl;
 
 using cppa::detail::converted_thread_context;
 
@@ -48,7 +43,6 @@ context* self()
     context* result = s_this_context.get();
     if (result == nullptr)
     {
-cout << "converted a native thread to an actor" << endl;
         result = new converted_thread_context;
         result->ref();
         get_scheduler()->register_converted_context(result);

@@ -1,5 +1,4 @@
 #include <string>
-#include <iostream>
 #include <boost/thread.hpp>
 
 #include "test.hpp"
@@ -59,7 +58,7 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     std::string cmd;
     {
         std::ostringstream oss;
-        oss << app_path << " test__remote_actor " << port;// << " &>/dev/null";
+        oss << app_path << " test__remote_actor " << port << " &>/dev/null";
         cmd = oss.str();
     }
     // execute client_part() in a separate process,
@@ -68,7 +67,6 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     await_all_others_done();
     CPPA_CHECK_EQUAL(pongs(), 5);
     // wait until separate process (in sep. thread) finished execution
-std::cout << "child.join()" << std::endl;
     child.join();
     return CPPA_TEST_RESULT;
 }

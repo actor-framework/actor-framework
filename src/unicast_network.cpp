@@ -294,7 +294,7 @@ void mailman_loop()
                 {
                     bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-cout << "--> " << (to_string(out_msg) + "\n");
+                    //cout << "--> " << (to_string(out_msg) + "\n");
                     auto sent = ::send(peer, &size32, sizeof(size32), flags);
                     if (sent != -1)
                     {
@@ -303,7 +303,8 @@ cout << "--> " << (to_string(out_msg) + "\n");
                     if (sent == -1)
                     {
                         // peer unreachable
-cout << "peer " << *(sjob.target_peer) << " unreachable" << endl;
+                        //cout << "peer " << *(sjob.target_peer)
+                        //     << " unreachable" << endl;
                         peers.erase(*(sjob.target_peer));
                     }
                 }
@@ -404,7 +405,7 @@ void post_office_loop(native_socket_t socket_fd,
             read_from_socket(socket_fd, buf, buf_size);
             binary_deserializer bd(buf, buf_size);
             meta_msg->deserialize(&msg, &bd);
-cout << "<-- " << (to_string(msg) + "\n");
+            //cout << "<-- " << (to_string(msg) + "\n");
             if (   msg.content().size() == 1
                 && msg.content().utype_info_at(0) == atom_tinfo
                 && *reinterpret_cast<const atom_value*>(msg.content().at(0))
@@ -413,8 +414,8 @@ cout << "<-- " << (to_string(msg) + "\n");
                 actor_ptr sender = msg.sender();
                 if (sender->parent_process() == pinfo)
                 {
-                    cout << pinfo << " ':Monitor'; actor id = "
-                         << sender->id() << endl;
+                    //cout << pinfo << " ':Monitor'; actor id = "
+                    //     << sender->id() << endl;
                     // local actor?
                     // this message was send from a proxy
                     sender->attach(new remote_observer(peer));
@@ -429,16 +430,16 @@ cout << "<-- " << (to_string(msg) + "\n");
     }
     catch (std::ios_base::failure& e)
     {
-        cout << "std::ios_base::failure: " << e.what() << endl;
+        //cout << "std::ios_base::failure: " << e.what() << endl;
     }
     catch (std::exception& e)
     {
-        cout << "[" << process_information::get() << "] "
-             << detail::to_uniform_name(typeid(e)) << ": "
-             << e.what() << endl;
+        //cout << "[" << process_information::get() << "] "
+        //     << detail::to_uniform_name(typeid(e)) << ": "
+        //     << e.what() << endl;
     }
-    cout << "[" << process_information::get() << "] ~post_office_loop" << endl;
-    //cout << "<-- post_office_loop" << endl;
+    //cout << "[" << process_information::get() << "] ~post_office_loop"
+    //     << endl;
 }
 
 struct mm_worker
