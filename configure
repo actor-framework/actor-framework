@@ -102,7 +102,6 @@ printf "%b\n" "\trm -f \$(LIB_NAME) \$(OBJECTS)"
 # redirect stdout to Makefile
 exec >Makefile
 printf "%b\n" "all:"
-printf "%b\n" "\t./create_libcppa_Makefile.sh > libcppa.Makefile"
 printf "%b\n" "\tmake -f libcppa.Makefile"
 printf "%b\n" "\tmake -C unit_testing"
 printf "%b\n" "\tmake -C queue_performances"
