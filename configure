@@ -98,7 +98,7 @@ printf "\n"
 printf "%b\n" "all : libcppa.so.0.0.0 \$(OBJECTS)"
 printf "\n"
 printf "%b\n" "clean:"
-printf "%b\n" "\trm -f \$(LIB_NAME) \$(OBJECTS)"
+printf "%b\n" "\trm -f libcppa.so libcppa.so.0 libcppa.so.0.0 libcppa.so.0.0.0 \$(OBJECTS)"
 # redirect stdout to Makefile
 exec >Makefile
 printf "%b\n" "all:"
