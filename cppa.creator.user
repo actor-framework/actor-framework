@@ -42,14 +42,12 @@
    <value key="ProjectExplorer.Target.ActiveDeployConfiguration" type="int">0</value>
    <value key="ProjectExplorer.Target.ActiveRunConfiguration" type="int">0</value>
    <valuemap key="ProjectExplorer.Target.BuildConfiguration.0" type="QVariantMap">
-    <value key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory" type="QString">/Users/neverlord/libcppa</value>
-    <value key="ProjectExplorer.BuildCOnfiguration.ToolChain" type="QString">ProjectExplorer.ToolChain.Gcc:/usr/bin/g++.x86-macos-generic-mach_o-64bit.</value>
+    <value key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory" type="QString">/home/neverlord/libcppa</value>
+    <value key="ProjectExplorer.BuildCOnfiguration.ToolChain" type="QString">INVALID</value>
     <valuemap key="ProjectExplorer.BuildConfiguration.BuildStepList.0" type="QVariantMap">
      <valuemap key="ProjectExplorer.BuildStepList.Step.0" type="QVariantMap">
-      <valuelist key="GenericProjectManager.GenericMakeStep.BuildTargets" type="QVariantList">
-       <value type="QString">all</value>
-      </valuelist>
-      <value key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QString">-j 2</value>
+      <valuelist key="GenericProjectManager.GenericMakeStep.BuildTargets" type="QVariantList"/>
+      <value key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QString"></value>
       <value key="GenericProjectManager.GenericMakeStep.MakeCommand" type="QString"></value>
       <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Make</value>
       <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString"></value>
@@ -135,7 +133,7 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-  <value type="QString">{07fcd197-092d-45a0-8500-3be614e6ae31}</value>
+  <value type="QString">{00861904-8afe-4186-b958-756209cdf248}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>

@@ -33,9 +33,11 @@ actor_proxy_ptr actor_proxy_cache::get(const key_tuple& key)
     {
         return i->second;
     }
+    // get_pinfo(key) also inserts to m_pinfos
     actor_proxy_ptr result(new actor_proxy(std::get<0>(key), get_pinfo(key)));
+    // insert to m_proxies
+    m_proxies.insert(std::make_pair(key, result));
     result->enqueue(message(result, nullptr, atom(":Monitor")));
-    add(result);
     return result;
 }
 
@@ -50,6 +52,11 @@ void actor_proxy_cache::add(const actor_proxy_ptr& pptr)
     auto pinfo = pptr->parent_process_ptr();
     key_tuple key(pptr->id(), pinfo->process_id, pinfo->node_id);
     add(pptr, key);
+}
+
+size_t actor_proxy_cache::size() const
+{
+    return m_proxies.size();
 }
 
 actor_proxy_cache& get_actor_proxy_cache()

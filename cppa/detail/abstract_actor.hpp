@@ -77,7 +77,10 @@ class abstract_actor /*[[base_check]]*/ : public Base
     //abstract_actor() : Base() { }
 
     template<typename... Args>
-    abstract_actor(const Args&... args) : Base(args...), m_exit_reason(0) { }
+    abstract_actor(const Args&... args) : Base(args...)
+                                        , m_exit_reason(exit_reason::not_exited)
+    {
+    }
 
     void cleanup(std::uint32_t reason)
     {

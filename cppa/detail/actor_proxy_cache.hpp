@@ -29,6 +29,17 @@ class actor_proxy_cache
     actor_proxy_ptr get(const key_tuple& key);
     void add(const actor_proxy_ptr& pptr);
 
+    size_t size() const;
+
+    template<typename F>
+    void for_each(F&& fun)
+    {
+        for (auto i = m_proxies.begin(); i != m_proxies.end(); ++i)
+        {
+            fun(i->second);
+        }
+    }
+
 };
 
 // get the thread-local cache object

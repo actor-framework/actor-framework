@@ -1,7 +1,10 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 
+#include <memory>
+
 #include "cppa/actor.hpp"
+#include "cppa/attachable.hpp"
 #include "cppa/scheduling_hint.hpp"
 
 namespace cppa {
@@ -38,6 +41,14 @@ class scheduler
      *        (a thread that acts as actor).
      */
     virtual void register_converted_context(context* what) = 0;
+
+    /**
+     * @brief Informs the scheduler about a hidden (non-actor)
+     *        context that should be counted by await_others_done().
+     * @return An {@link attachable} that the hidden context has to destroy
+     *         if his lifetime ends.
+     */
+    virtual std::unique_ptr<attachable> register_hidden_context() = 0;
 
     /**
      * @brief Informs the scheduler that the convertex context @p what
