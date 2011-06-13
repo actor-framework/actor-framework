@@ -1,7 +1,9 @@
 #include "cppa/atom.hpp"
 #include "cppa/message.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/detail/mailman.hpp"
 
 namespace cppa {
 
@@ -9,12 +11,20 @@ actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
     : super(mid), m_parent(pptr)
 {
     if (!m_parent) throw std::runtime_error("parent == nullptr");
+    attach(get_scheduler()->register_hidden_context());
 }
 
 actor_proxy::actor_proxy(std::uint32_t mid, process_information_ptr&& pptr)
     : super(mid), m_parent(std::move(pptr))
 {
     if (!m_parent) throw std::runtime_error("parent == nullptr");
+    attach(get_scheduler()->register_hidden_context());
+}
+
+void actor_proxy::forward_message(const process_information_ptr& piptr,
+                                  const message& msg)
+{
+    detail::mailman_queue().push_back(new detail::mailman_job(piptr, msg));
 }
 
 void actor_proxy::enqueue(const message& msg)

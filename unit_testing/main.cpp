@@ -101,7 +101,7 @@ int main(int argc, char** c_argv)
         RUN_TEST(test__spawn);
         RUN_TEST(test__local_group);
         RUN_TEST(test__atom);
-        RUN_TEST_A3(test__remote_actor, c_argv[0], false, argv);
+        //RUN_TEST_A3(test__remote_actor, c_argv[0], false, argv);
         cout << endl
              << "error(s) in all tests: " << errors
              << endl;

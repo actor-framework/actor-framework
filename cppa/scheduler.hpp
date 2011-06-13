@@ -48,13 +48,7 @@ class scheduler
      * @return An {@link attachable} that the hidden context has to destroy
      *         if his lifetime ends.
      */
-    virtual std::unique_ptr<attachable> register_hidden_context() = 0;
-
-    /**
-     * @brief Informs the scheduler that the convertex context @p what
-     *        finished execution.
-     */
-    //virtual void unregister_converted_context(context* what) = 0;
+    virtual attachable* register_hidden_context() = 0;
 
     /**
      * @brief Wait until all other actors finished execution.

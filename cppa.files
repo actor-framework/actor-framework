@@ -181,3 +181,6 @@ cppa/detail/mailman.hpp
 src/mailman.cpp
 cppa/detail/native_socket.hpp
 src/native_socket.cpp
+cppa/detail/post_office.hpp
+src/post_office.cpp
+cppa/detail/buffer.hpp

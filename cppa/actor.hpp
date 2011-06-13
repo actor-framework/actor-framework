@@ -10,6 +10,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/process_information.hpp"
 
+#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/enable_if.hpp"
 
 namespace cppa {
@@ -36,16 +37,19 @@ class actor : public channel
     ~actor();
 
     /**
-     * @brief Attaches @p ptr to this actor.
+     * @brief Attaches @p ptr to this actor
+     *        (the actor takes ownership of @p ptr).
      *
-     * @p ptr will be deleted if actor finished execution of immediately
-     * if the actor already exited.
+     * The actor will call <tt>ptr->detach(...)</tt> on exit or immediately
+     * if he already exited.
      *
      * @return @c true if @p ptr was successfully attached to the actor;
      *         otherwise (actor already exited) @p false.
-     *
      */
     virtual bool attach(attachable* ptr) = 0;
+
+    template<typename F>
+    bool attach_functor(F&& ftor);
 
     /**
      * @brief Detaches the first attached object that matches @p what.
@@ -127,6 +131,30 @@ bool actor::attach(std::unique_ptr<T>&& ptr,
     return attach(static_cast<attachable*>(ptr.release()));
 }
 
+template<class F>
+class functor_attachable : public attachable
+{
+
+    F m_functor;
+
+ public:
+
+    template<class FArg>
+    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg)) { }
+
+    virtual void detach(std::uint32_t reason)
+    {
+        m_functor(reason);
+    }
+
+};
+
+template<typename F>
+bool actor::attach_functor(F&& ftor)
+{
+    typedef typename util::rm_ref<F>::type f_type;
+    return attach(new functor_attachable<f_type>(std::forward<F>(ftor)));
+}
 
 
 } // namespace cppa

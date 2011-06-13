@@ -14,7 +14,7 @@ class mock_scheduler : public scheduler
     void register_converted_context(context*);
     //void unregister_converted_context(context*);
     actor_ptr spawn(actor_behavior*, scheduling_hint);
-    std::unique_ptr<attachable> register_hidden_context();
+    attachable* register_hidden_context();
 
 };
 

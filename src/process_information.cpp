@@ -183,4 +183,11 @@ void process_information::node_id_from_string(const std::string& str,
     }
 }
 
+std::string to_string(const process_information& what)
+{
+    std::ostringstream oss;
+    oss << what.process_id << "@" << what.node_id_as_string();
+    return oss.str();
+}
+
 } // namespace cppa

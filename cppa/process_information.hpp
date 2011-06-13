@@ -64,6 +64,8 @@ class process_information : public ref_counted,
 
 };
 
+std::string to_string(const process_information& what);
+
 typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa

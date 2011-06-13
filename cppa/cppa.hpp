@@ -244,6 +244,8 @@ inline void await_all_others_done()
 
 /**
  * @brief Publishes @p whom at given @p port.
+ *
+ * The connection is automatically closed if the lifetime of @p whom ends.
  */
 void publish(actor_ptr& whom, std::uint16_t port);
 

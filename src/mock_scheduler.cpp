@@ -85,10 +85,10 @@ void mock_scheduler::register_converted_context(context* ctx)
     }
 }
 
-std::unique_ptr<attachable> mock_scheduler::register_hidden_context()
+attachable* mock_scheduler::register_hidden_context()
 {
     inc_actor_count();
-    return std::unique_ptr<attachable>(new exit_observer);
+    return new exit_observer;
 }
 
 void mock_scheduler::await_others_done()

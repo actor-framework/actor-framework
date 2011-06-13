@@ -1,3 +1,5 @@
+#include "cppa/config.hpp"
+
 #include <ios> // ios_base::failure
 #include <errno.h>
 #include <sstream>

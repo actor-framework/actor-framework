@@ -1,5 +1,11 @@
+#include <iostream>
+
+#include "cppa/to_string.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/binary_serializer.hpp"
+#include "cppa/detail/post_office.hpp"
+
+#define DEBUG(arg) std::cout << arg << std::endl
 
 // forward declaration
 namespace cppa { namespace detail { namespace { void mailman_loop(); } } }
@@ -82,13 +88,21 @@ mailman_job::~mailman_job()
 {
     switch (m_type)
     {
-     case send_job_type:
-        m_send_job.~mailman_send_job();
-        break;
-     case add_peer_type:
-        m_add_socket.~mailman_add_peer();
-        break;
-    default: break;
+        case send_job_type:
+        {
+            m_send_job.~mailman_send_job();
+            break;
+        }
+        case add_peer_type:
+        {
+            m_add_socket.~mailman_add_peer();
+            break;
+        }
+        case kill_type:
+        {
+            // union doesn't contain a valid object
+            break;
+        }
     }
 }
 
@@ -102,8 +116,6 @@ util::single_reader_queue<mailman_job>& mailman_queue()
 namespace cppa { namespace detail { namespace {
 void mailman_loop()
 {
-    // send() flags
-    int flags = 0;
     // serializes outgoing messages
     binary_serializer bs;
     // current active job
@@ -129,28 +141,54 @@ void mailman_loop()
                 {
                     bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-//cout << pself.process_id << " --> " << (to_string(out_msg) + "\n");
+                    DEBUG("--> " << to_string(out_msg));
                     // write size of serialized message
-                    auto sent = ::send(peer, &size32, sizeof(size32), flags);
-                    if (sent <= 0)
+                    auto sent = ::send(peer, &size32, sizeof(std::uint32_t), 0);
+                    if (sent > 0)
                     {
                         // write message
-                        sent = ::send(peer, bs.data(), bs.size(), flags);
+                        sent = ::send(peer, bs.data(), bs.size(), 0);
                     }
                     // disconnect peer if send() failed
-                    disconnect_peer = (sent > 0);
+                    disconnect_peer = (sent <= 0);
+                    if (sent <= 0)
+                    {
+                        if (sent == 0)
+                        {
+                            DEBUG("remote socket closed");
+                        }
+                        else
+                        {
+                            DEBUG("send() returned -1");
+                            perror("send()");
+                        }
+                    }
+                    else
+                    {
+                        if (sent != size32)
+                        {
+                            throw std::logic_error("WTF?!?");
+                        }
+                    }
                 }
                 // something went wrong; close connection to this peer
-                catch (...)
+                catch (std::exception& e)
                 {
+                    DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
                     disconnect_peer = true;
                 }
                 if (disconnect_peer)
                 {
-                    closesocket(peer);
+                    DEBUG("peer disconnected (error during send)");
+                    //closesocket(peer);
+                    post_office_close_socket(peer);
                     peers.erase(peer_element);
                 }
                 bs.reset();
+            }
+            else
+            {
+                DEBUG("message to an unknown peer");
             }
             // else: unknown peer
         }
