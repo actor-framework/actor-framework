@@ -93,6 +93,8 @@ class mailman_job
 
 };
 
+void mailman_loop();
+
 util::single_reader_queue<mailman_job>& mailman_queue();
 
 }} // namespace cppa::detail

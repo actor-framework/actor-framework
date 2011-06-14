@@ -1,24 +1,26 @@
+#include <atomic>
 #include <iostream>
+#include <boost/thread.hpp> // boost::barrier
 
 #include "cppa/to_string.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/detail/post_office.hpp"
 
-#define DEBUG(arg) std::cout << arg << std::endl
+//#define DEBUG(arg) std::cout << arg << std::endl
+#define DEBUG(unused) //
 
-// forward declaration
-namespace cppa { namespace detail { namespace { void mailman_loop(); } } }
-
-// static helper
+// static queue helper
 namespace {
+/*
 struct mailman_manager
 {
 
     typedef cppa::util::single_reader_queue<cppa::detail::mailman_job> queue_t;
 
-    boost::thread* m_loop;
-    queue_t* m_queue;
+    boost::barrier m_init_handshake;
+    boost::barrier m_shutdown_handshake;
+    queue_t m_queue;
 
     mailman_manager()
     {
@@ -36,6 +38,7 @@ struct mailman_manager
 
 }
 s_mailman_manager;
+*/
 } // namespace <anonymous>
 
 // implementation of mailman.hpp
@@ -106,16 +109,18 @@ mailman_job::~mailman_job()
     }
 }
 
+/*
+// implemented in post_office.cpp
 util::single_reader_queue<mailman_job>& mailman_queue()
 {
-    return *(s_mailman_manager.m_queue);
+    return *s_queue;
+    //return *(s_mailman_manager.m_queue);
 }
+*/
 
-} } // namespace cppa::detail
-
-namespace cppa { namespace detail { namespace {
 void mailman_loop()
 {
+    // delete s_queue if mailman_loop exits
     // serializes outgoing messages
     binary_serializer bs;
     // current active job
@@ -215,4 +220,5 @@ void mailman_loop()
         delete job;
     }
 }
-} } } // namespace cppa::detail::<anonymous>
+
+} } // namespace cppa::detail
