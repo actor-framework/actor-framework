@@ -48,21 +48,21 @@ cppa::process_information compute_proc_info()
     char cbuf[100];
     // fetch hd serial
     std::string hd_serial;
-    FILE* cmd = popen(s_get_uuid, "r");
-    while (fgets(cbuf, 100, cmd) != 0)
+    FILE* get_uuid_cmd = popen(s_get_uuid, "r");
+    while (fgets(cbuf, 100, get_uuid_cmd) != 0)
     {
         hd_serial += cbuf;
     }
-    pclose(cmd);
+    pclose(get_uuid_cmd);
     erase_trailing_newline(hd_serial);
     // fetch mac address of first network device
     std::string first_mac_addr;
-    cmd = popen(s_get_mac, "r");
-    while (fgets(cbuf, 100, cmd) != 0)
+    FILE* get_mac_cmd = popen(s_get_mac, "r");
+    while (fgets(cbuf, 100, get_mac_cmd) != 0)
     {
         first_mac_addr += cbuf;
     }
-    pclose(cmd);
+    pclose(get_mac_cmd);
     erase_trailing_newline(first_mac_addr);
     result.node_id = cppa::util::ripemd_160(first_mac_addr + hd_serial);
     //memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);

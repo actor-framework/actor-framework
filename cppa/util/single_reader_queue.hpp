@@ -107,7 +107,21 @@ class single_reader_queue
         return !m_head && !(m_tail.load());
     }
 
-    single_reader_queue() : m_tail(0), m_head(0) { }
+    single_reader_queue() : m_tail(nullptr), m_head(nullptr)
+    {
+    }
+
+    ~single_reader_queue()
+    {
+        fetch_new_data();
+        element_type* e = m_head;
+        while (e)
+        {
+            element_type* tmp = e;
+            e = e->next;
+            delete tmp;
+        }
+    }
 
  private:
 

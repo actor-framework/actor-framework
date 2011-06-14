@@ -90,6 +90,11 @@ class abstract_actor /*[[base_check]]*/ : public Base
         // lifetime scope of guard
         {
             std::lock_guard<std::mutex> guard(m_mtx);
+            if (m_exit_reason != exit_reason::not_exited)
+            {
+                // already exited
+                return;
+            }
             m_exit_reason = reason;
             mlinks = std::move(m_links);
             mattachables = std::move(m_attachables);

@@ -102,16 +102,8 @@ class local_group_module : public group::module
             {
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(std::make_pair(group_name, tmp));
-                if (p.second == false)
-                {
-                    // someone preempt us
-                    return p.first->second;
-                }
-                else
-                {
-                    // ok, inserted tmp
-                    return tmp;
-                }
+                // someone might preempt us
+                return p.first->second;
             }
         }
     }

@@ -611,6 +611,17 @@ class uniform_type_info_map
         insert<std::uint64_t>(ints[sizeof(std::uint64_t)].second);
     }
 
+    ~uniform_type_info_map()
+    {
+        m_by_rname.clear();
+        for (auto& kvp : m_by_uname)
+        {
+            delete kvp.second;
+            kvp.second = nullptr;
+        }
+        m_by_uname.clear();
+    }
+
     uniform_type_info* by_raw_name(const std::string& name)
     {
         auto i = m_by_rname.find(name);
