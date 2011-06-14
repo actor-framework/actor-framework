@@ -60,7 +60,7 @@ size_t test__remote_actor(const char* app_path, bool is_client,
         }
     }
     while (!success);
-    cout << "port = " << port << endl;
+    //cout << "port = " << port << endl;
     std::string cmd;
     {
         std::ostringstream oss;
@@ -69,14 +69,10 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     }
     // execute client_part() in a separate process,
     // connected via localhost socket
-    //boost::thread child([&cmd]() { system(cmd.c_str()); });
-cout << __LINE__ << endl;
+    boost::thread child([&cmd]() { system(cmd.c_str()); });
     await_all_others_done();
-cout << __LINE__ << endl;
     CPPA_CHECK_EQUAL(pongs(), 5);
     // wait until separate process (in sep. thread) finished execution
-cout << __LINE__ << endl;
-    //child.join();
-cout << __LINE__ << endl;
+    child.join();
     return CPPA_TEST_RESULT;
 }
