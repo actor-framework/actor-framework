@@ -18,19 +18,20 @@ namespace {
 
 typedef std::map< std::string, std::unique_ptr<group::module> > modules_map;
 
-typedef std::lock_guard<util::shared_spinlock> exclusive_guard;
-typedef util::shared_lock_guard<util::shared_spinlock> shared_guard;
-typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
+typedef util::shared_spinlock shared_mutex_type;
+typedef std::lock_guard<shared_mutex_type> exclusive_guard;
+typedef util::shared_lock_guard<shared_mutex_type> shared_guard;
+typedef util::upgrade_lock_guard<shared_mutex_type> upgrade_guard;
 
-std::mutex s_mtx;
 modules_map s_mmap;
+std::mutex s_mmap_mtx;
 
 class local_group : public group
 {
 
     friend class local_group_module;
 
-    util::shared_spinlock m_mtx;
+    shared_mutex_type m_shared_mtx;
     std::set<channel_ptr> m_subscribers;
 
     // allow access to local_group_module only
@@ -42,7 +43,7 @@ class local_group : public group
 
     virtual void enqueue(const message& msg)
     {
-        shared_guard guard(m_mtx);
+        shared_guard guard(m_shared_mtx);
         for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
         {
             const_cast<channel_ptr&>(*i)->enqueue(msg);
@@ -52,7 +53,7 @@ class local_group : public group
     virtual group::subscription subscribe(const channel_ptr& who)
     {
         group::subscription result;
-        exclusive_guard guard(m_mtx);
+        exclusive_guard guard(m_shared_mtx);
         if (m_subscribers.insert(who).second)
         {
             result.reset(new group::unsubscriber(who, this));
@@ -62,7 +63,7 @@ class local_group : public group
 
     virtual void unsubscribe(const channel_ptr& who)
     {
-        exclusive_guard guard(m_mtx);
+        exclusive_guard guard(m_shared_mtx);
         m_subscribers.erase(who);
     }
 
@@ -71,20 +72,16 @@ class local_group : public group
 class local_group_module : public group::module
 {
 
-    std::string m_name;
+    typedef group::module super;
+
     util::shared_spinlock m_mtx;
     std::map<std::string, group_ptr> m_instances;
 
 
  public:
 
-    local_group_module() : m_name("local")
+    local_group_module() : super("local")
     {
-    }
-
-    const std::string& name()
-    {
-        return m_name;
     }
 
     group_ptr get(const std::string& group_name)
@@ -110,6 +107,7 @@ class local_group_module : public group::module
 
 };
 
+// @pre: s_mmap_mtx is locked
 modules_map& mmap()
 {
     if (s_mmap.empty())
@@ -128,7 +126,7 @@ intrusive_ptr<group> group::get(const std::string& module_name,
 {
     // lifetime scope of guard
     {
-        std::lock_guard<std::mutex> guard(s_mtx);
+        std::lock_guard<std::mutex> guard(s_mmap_mtx);
         auto& mmref = mmap();
         auto i = mmref.find(module_name);
         if (i != mmref.end())
@@ -148,7 +146,7 @@ void group::add_module(group::module* ptr)
     std::unique_ptr<group::module> mptr(ptr);
     // lifetime scope of guard
     {
-        std::lock_guard<std::mutex> guard(s_mtx);
+        std::lock_guard<std::mutex> guard(s_mmap_mtx);
         if (mmap().insert(std::make_pair(mname, std::move(mptr))).second)
         {
             return; // success; don't throw exception
@@ -170,6 +168,19 @@ group::unsubscriber::unsubscriber(const channel_ptr& s,
 group::unsubscriber::~unsubscriber()
 {
     if (m_group) m_group->unsubscribe(m_self);
+}
+
+group::module::module(const std::string& name) : m_name(name)
+{
+}
+
+group::module::module(std::string&& name) : m_name(std::move(name))
+{
+}
+
+const std::string& group::module::name()
+{
+    return m_name;
 }
 
 bool group::unsubscriber::matches(const attachable::token& what)

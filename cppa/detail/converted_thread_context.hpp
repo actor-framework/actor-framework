@@ -28,12 +28,12 @@ class converted_thread_context : public abstract_actor<context>
 
  public:
 
-    message_queue& mailbox /*[[override]]*/ ();
+    message_queue& mailbox() /*override*/;
 
     // called if the converted thread finished execution
     void cleanup(std::uint32_t reason = exit_reason::normal);
 
-    void quit /*[[override]]*/ (std::uint32_t reason);
+    void quit(std::uint32_t reason) /*override*/;
 
 };
 

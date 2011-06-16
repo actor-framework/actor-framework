@@ -35,7 +35,7 @@ class context : public actor
      *
      * Calls <code>mailbox().enqueue(msg)</code>.
      */
-    virtual void enqueue /*[[override]]*/ (const message& msg);
+    virtual void enqueue(const message& msg) /*override*/;
 
     void trap_exit(bool new_value);
 

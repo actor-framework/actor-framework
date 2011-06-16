@@ -8,7 +8,6 @@
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/concat_type_lists.hpp"
 #include "cppa/util/conjunction.hpp"
-#include "cppa/util/detach.hpp"
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/eval_first_n.hpp"

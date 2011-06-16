@@ -22,7 +22,6 @@ cppa/detail/tuple_vals.hpp
 cppa/match.hpp
 cppa/detail/decorated_tuple.hpp
 cppa/cow_ptr.hpp
-cppa/util/detach.hpp
 cppa/detail/ref_counted_impl.hpp
 cppa/intrusive_ptr.hpp
 unit_testing/test__spawn.cpp
@@ -184,3 +183,7 @@ src/native_socket.cpp
 cppa/detail/post_office.hpp
 src/post_office.cpp
 cppa/detail/buffer.hpp
+cppa/detail/task_scheduler.hpp
+src/task_scheduler.cpp
+cppa/detail/actor_count.hpp
+src/actor_count.cpp

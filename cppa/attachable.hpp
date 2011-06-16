@@ -15,6 +15,9 @@ namespace cppa {
 class attachable
 {
 
+    attachable(const attachable&) = delete;
+    attachable& operator=(const attachable&) = delete;
+
  protected:
 
     attachable() = default;

@@ -43,13 +43,8 @@ class is_copyable_<true, T>
 namespace cppa { namespace util {
 
 template<typename T>
-struct is_copyable
+struct is_copyable : std::integral_constant<bool, detail::is_copyable_<std::is_abstract<T>::value, T>::value>
 {
-
- public:
-
-    static const bool value = detail::is_copyable_<std::is_abstract<T>::value, T>::value;
-
 };
 
 } } // namespace cppa::util

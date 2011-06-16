@@ -140,7 +140,7 @@ class abstract_actor /*[[base_check]]*/ : public Base
 
  public:
 
-    bool attach /*[[override]]*/ (attachable* ptr)
+    bool attach(attachable* ptr) /*override*/
     {
         if (ptr == nullptr)
         {
@@ -166,7 +166,7 @@ class abstract_actor /*[[base_check]]*/ : public Base
         }
     }
 
-    void detach /*[[override]]*/ (const attachable::token& what)
+    void detach(const attachable::token& what) /*override*/
     {
         attachable_ptr uptr;
         // lifetime scope of guard
@@ -186,17 +186,17 @@ class abstract_actor /*[[base_check]]*/ : public Base
         // uptr will be destroyed here, without locked mutex
     }
 
-    void link_to /*[[override]]*/ (intrusive_ptr<actor>& other)
+    void link_to(intrusive_ptr<actor>& other) /*override*/
     {
         (void) link_to_impl(other);
     }
 
-    void unlink_from /*[[override]]*/ (intrusive_ptr<actor>& other)
+    void unlink_from(intrusive_ptr<actor>& other) /*override*/
     {
         (void) unlink_from_impl(other);
     }
 
-    bool remove_backlink /*[[override]]*/ (intrusive_ptr<actor>& other)
+    bool remove_backlink(intrusive_ptr<actor>& other) /*override*/
     {
         if (other && other != this)
         {
@@ -206,7 +206,7 @@ class abstract_actor /*[[base_check]]*/ : public Base
         return false;
     }
 
-    bool establish_backlink /*[[override]]*/ (intrusive_ptr<actor>& other)
+    bool establish_backlink(intrusive_ptr<actor>& other) /*override*/
     {
         bool result = false;
         std::uint32_t reason = exit_reason::not_exited;

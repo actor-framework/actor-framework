@@ -61,9 +61,9 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         }
     }
 
-    T* get() { return m_ptr; }
+    inline T* get() { return m_ptr; }
 
-    const T* get() const { return m_ptr; }
+    inline const T* get() const { return m_ptr; }
 
     T* take()
     {
@@ -123,13 +123,13 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         return *this;
     }
 
-    T* operator->() { return m_ptr; }
+    inline T* operator->() { return m_ptr; }
 
-    T& operator*() { return *m_ptr; }
+    inline T& operator*() { return *m_ptr; }
 
-    const T* operator->() const { return m_ptr; }
+    inline const T* operator->() const { return m_ptr; }
 
-    const T& operator*() const { return *m_ptr; }
+    inline const T& operator*() const { return *m_ptr; }
 
     inline explicit operator bool() const { return m_ptr != nullptr; }
 
@@ -166,9 +166,9 @@ bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
 }
 
 template<typename X, typename Y>
-bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
+inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
 {
-    return lhs.get() != rhs.get();
+    return !(lhs == rhs);
 }
 
 } // namespace cppa

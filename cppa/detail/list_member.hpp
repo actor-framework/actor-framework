@@ -35,7 +35,7 @@ class list_member : public util::abstract_uniform_type_info<List>
         for (size_t i = 0; i < ls_size; ++i)
         {
             primitive_variant val = d->read_value(vptype);
-            ls.push_back(std::move(get<value_type>(val)));
+            ls.push_back(std::move(get_ref<value_type>(val)));
         }
         d->end_sequence();
     }

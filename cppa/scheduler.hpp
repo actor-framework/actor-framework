@@ -39,6 +39,7 @@ class scheduler
     /**
      * @brief Informs the scheduler about a converted context
      *        (a thread that acts as actor).
+     * @note Calls <tt>what->attach(...)</tt>.
      */
     virtual void register_converted_context(context* what) = 0;
 
@@ -61,7 +62,7 @@ class scheduler
 
 /**
  * @brief Gets the actual used scheduler implementation.
- * @return The active scheduler or @c nullptr.
+ * @return The active scheduler (default constructed).
  */
 scheduler* get_scheduler();
 

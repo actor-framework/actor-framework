@@ -28,17 +28,17 @@ class blocking_message_queue : public message_queue
 
     virtual void trap_exit(bool new_value);
 
-    virtual void enqueue /*[[override]]*/ (const message& msg);
+    virtual void enqueue(const message& msg) /*override*/;
 
-    virtual const message& dequeue /*[[override]]*/ ();
+    virtual const message& dequeue() /*override*/;
 
-    virtual void dequeue /*[[override]]*/ (invoke_rules& rules);
+    virtual void dequeue(invoke_rules& rules) /*override*/;
 
-    virtual bool try_dequeue /*[[override]]*/ (message& msg);
+    virtual bool try_dequeue(message& msg) /*override*/;
 
-    virtual bool try_dequeue /*[[override]]*/ (invoke_rules& rules);
+    virtual bool try_dequeue(invoke_rules& rules) /*override*/;
 
-    virtual const message& last_dequeued /*[[override]]*/ ();
+    virtual const message& last_dequeued() /*override*/;
 
 };
 

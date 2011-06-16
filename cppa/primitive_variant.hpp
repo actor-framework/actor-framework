@@ -245,6 +245,20 @@ const typename detail::ptype_to_type<PT>::type& get(const primitive_variant& pv)
 }
 
 template<typename T>
+T& get_ref(primitive_variant& pv)
+{
+    static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
+    return pv.get_as<ptype>();
+}
+
+template<primitive_type PT>
+typename detail::ptype_to_type<PT>::type& get_ref(primitive_variant& pv)
+{
+    static_assert(PT != pt_null, "PT == pt_null");
+    return pv.get_as<PT>();
+}
+
+template<typename T>
 typename util::enable_if<util::is_primitive<T>, bool>::type
 operator==(const T& lhs, const primitive_variant& rhs)
 {

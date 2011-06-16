@@ -12,6 +12,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
+#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
@@ -20,26 +21,6 @@ using std::cout;
 using std::endl;
 
 namespace {
-
-boost::mutex s_ra_mtx;
-boost::condition_variable s_ra_cv;
-std::atomic<int> s_running_actors(0);
-
-typedef boost::unique_lock<boost::mutex> guard_type;
-
-void inc_actor_count()
-{
-     ++s_running_actors;
-}
-
-void dec_actor_count()
-{
-    if (--s_running_actors <= 1)
-    {
-        guard_type guard(s_ra_mtx);
-        s_ra_cv.notify_all();
-    }
-}
 
 void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
                cppa::actor_behavior* behavior)
@@ -53,14 +34,14 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
         catch (...) { }
         delete behavior;
     }
-    dec_actor_count();
+    cppa::detail::dec_actor_count();
 }
 
 struct exit_observer : cppa::attachable
 {
     ~exit_observer()
     {
-        dec_actor_count();
+        cppa::detail::dec_actor_count();
     }
 };
 
@@ -93,12 +74,7 @@ attachable* mock_scheduler::register_hidden_context()
 
 void mock_scheduler::await_others_done()
 {
-    auto expected = (unchecked_self() == nullptr) ? 0 : 1;
-    guard_type lock(s_ra_mtx);
-    while (s_running_actors.load() != expected)
-    {
-        s_ra_cv.wait(lock);
-    }
+    actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
 }
 
 } } // namespace detail
