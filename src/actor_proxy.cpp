@@ -42,8 +42,7 @@ void actor_proxy::enqueue(const message& msg)
     if (   content.size() > 0
         && content.utype_info_at(0) == typeid(atom_value))
     {
-        auto val = *reinterpret_cast<const atom_value*>(content.at(0));
-        switch(to_int(val))
+        switch (to_int(*reinterpret_cast<const atom_value*>(content.at(0))))
         {
             case to_int(atom(":Link")):
             {
