@@ -12,7 +12,7 @@ inline constexpr std::uint64_t to_int(cppa::atom_value value)
     return static_cast<std::uint64_t>(value);
 }
 
-}
+} // namespace <anonymous>
 
 namespace cppa {
 
