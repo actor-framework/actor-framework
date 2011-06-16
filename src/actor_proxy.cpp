@@ -5,6 +5,15 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/mailman.hpp"
 
+namespace {
+
+inline constexpr std::uint64_t to_int(cppa::atom_value value)
+{
+    return static_cast<std::uint64_t>(value);
+}
+
+}
+
 namespace cppa {
 
 actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
@@ -34,21 +43,21 @@ void actor_proxy::enqueue(const message& msg)
         && content.utype_info_at(0) == typeid(atom_value))
     {
         auto val = *reinterpret_cast<const atom_value*>(content.at(0));
-        switch(val)
+        switch(to_int(val))
         {
-            case atom(":Link"):
+            case to_int(atom(":Link")):
             {
                 auto s = msg.sender();
                 link_to(s);
                 return;
             }
-            case atom(":Unlink"):
+            case to_int(atom(":Unlink")):
             {
                 auto s = msg.sender();
                 unlink_from(s);
                 return;
             }
-            case atom(":KillProxy"):
+            case to_int(atom(":KillProxy")):
             {
                 if (   content.size() == 2
                     && content.utype_info_at(1) == typeid(std::uint32_t))
