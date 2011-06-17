@@ -121,7 +121,8 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 
  public:
 
-    static void s_serialize(const actor* ptr, serializer* sink,
+    static void s_serialize(const actor* ptr,
+                            serializer* sink,
                             const std::string name)
     {
         if (!ptr)
@@ -140,7 +141,8 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
         }
     }
 
-    static void s_deserialize(actor_ptr& ptrref, deserializer* source,
+    static void s_deserialize(actor_ptr& ptrref,
+                              deserializer* source,
                               const std::string name)
     {
         std::string cname = source->seek_object();

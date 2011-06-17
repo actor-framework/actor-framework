@@ -82,8 +82,6 @@ public:
 
     const uniform_type_info& type() const;
 
-    std::string to_string() const;
-
     const void* value() const;
 
     void* mutable_value();

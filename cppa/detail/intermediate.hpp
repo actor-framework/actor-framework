@@ -28,12 +28,15 @@ class intermediate_impl : public intermediate
 
  public:
 
-    intermediate_impl(const Impl& impl, const View& view)
-        : intermediate(), m_impl(impl), m_view(view)
+    template<typename Arg0, typename Arg1>
+    intermediate_impl(Arg0&& impl, Arg1&& view)
+        : intermediate()
+        , m_impl(std::forward<Arg0>(impl))
+        , m_view(std::forward<Arg1>(view))
     {
     }
 
-    virtual void invoke()
+    virtual void invoke() /*override*/
     {
         m_impl(m_view);
     }
@@ -50,7 +53,9 @@ class intermediate_impl<Impl, void> : public intermediate
 
     intermediate_impl(const Impl& impl) : m_impl(impl) { }
 
-    virtual void invoke()
+    intermediate_impl(Impl&& impl) : m_impl(std::move(impl)) { }
+
+    virtual void invoke() /*override*/
     {
         m_impl();
     }

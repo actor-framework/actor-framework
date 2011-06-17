@@ -15,7 +15,7 @@ using std::string;
 using namespace cppa;
 using namespace cppa::util;
 
-static constexpr auto s_foo = atom("FooBar");
+namespace { constexpr auto s_foo = atom("FooBar"); }
 
 template<atom_value AtomValue, typename... Types>
 void foo()

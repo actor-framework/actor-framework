@@ -13,18 +13,17 @@
 
 namespace cppa { namespace detail {
 
-// irb_helper is not thread safe
-struct irb_helper : ref_counted_impl<size_t>
-{
-    virtual ~irb_helper() { }
-    virtual bool value_cmp(const any_tuple&, std::vector<size_t>&) const = 0;
-};
-
 template<typename... Types>
-struct invoke_rule_builder
+class invoke_rule_builder
 {
 
- private:
+    // matches for values; not thread safe
+    struct irb_helper : ref_counted_impl<size_t>
+    {
+        virtual ~irb_helper() { }
+        virtual bool value_cmp(const any_tuple&,std::vector<size_t>&) const = 0;
+    };
+
 
     typedef util::type_list<Types...> types_list;
 

@@ -118,9 +118,9 @@ util::single_reader_queue<mailman_job>& mailman_queue()
 }
 */
 
+// known issues: send() should be asynchronous and select() should be used
 void mailman_loop()
 {
-    // delete s_queue if mailman_loop exits
     // serializes outgoing messages
     binary_serializer bs;
     // current active job
@@ -156,24 +156,10 @@ void mailman_loop()
                     }
                     // disconnect peer if send() failed
                     disconnect_peer = (sent <= 0);
-                    if (sent <= 0)
+                    // make sure all bytes are written
+                    if (sent != size32)
                     {
-                        if (sent == 0)
-                        {
-                            DEBUG("remote socket closed");
-                        }
-                        else
-                        {
-                            DEBUG("send() returned -1");
-                            perror("send()");
-                        }
-                    }
-                    else
-                    {
-                        if (sent != size32)
-                        {
-                            throw std::logic_error("WTF?!?");
-                        }
+                        throw std::logic_error("send() not a synchronous socket");
                     }
                 }
                 // something went wrong; close connection to this peer

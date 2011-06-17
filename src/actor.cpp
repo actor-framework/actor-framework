@@ -14,6 +14,9 @@ std::atomic<std::uint32_t> s_ids(1);
 std::map<std::uint32_t, cppa::actor*> s_instances;
 cppa::util::shared_spinlock s_instances_mtx;
 
+typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
+typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
+
 } // namespace <anonmyous>
 
 namespace cppa {
@@ -24,7 +27,7 @@ actor::actor(std::uint32_t aid) : m_is_proxy(true), m_id(aid)
 
 actor::actor() : m_is_proxy(false), m_id(s_ids.fetch_add(1))
 {
-    std::lock_guard<util::shared_spinlock> guard(s_instances_mtx);
+    exclusive_guard guard(s_instances_mtx);
     s_instances.insert(std::make_pair(m_id, this));
 }
 
@@ -32,14 +35,14 @@ actor::~actor()
 {
     if (!m_is_proxy)
     {
-        std::lock_guard<util::shared_spinlock> guard(s_instances_mtx);
+        exclusive_guard guard(s_instances_mtx);
         s_instances.erase(m_id);
     }
 }
 
 intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
 {
-    util::shared_lock_guard<util::shared_spinlock> guard(s_instances_mtx);
+    shared_guard guard(s_instances_mtx);
     auto i = s_instances.find(actor_id);
     if (i != s_instances.end())
     {

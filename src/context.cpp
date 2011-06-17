@@ -17,7 +17,7 @@ void cleanup_fun(cppa::context* what)
     if (what && !what->deref()) delete what;
 }
 
-boost::thread_specific_ptr<cppa::context> s_this_context(cleanup_fun);
+boost::thread_specific_ptr<cppa::context> t_this_context(cleanup_fun);
 
 } // namespace <anonymous>
 
@@ -35,18 +35,18 @@ void context::trap_exit(bool new_value)
 
 context* unchecked_self()
 {
-    return s_this_context.get();
+    return t_this_context.get();
 }
 
 context* self()
 {
-    context* result = s_this_context.get();
+    context* result = t_this_context.get();
     if (result == nullptr)
     {
         result = new converted_thread_context;
         result->ref();
         get_scheduler()->register_converted_context(result);
-        s_this_context.reset(result);
+        t_this_context.reset(result);
     }
     return result;
 }
@@ -54,9 +54,7 @@ context* self()
 void set_self(context* ctx)
 {
     if (ctx) ctx->ref();
-    context* old = s_this_context.get();
-    s_this_context.reset(ctx);
-    cleanup_fun(old);
+    t_this_context.reset(ctx);
 }
 
 } // namespace cppa

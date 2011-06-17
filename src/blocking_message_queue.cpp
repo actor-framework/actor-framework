@@ -1,4 +1,5 @@
 #include <vector>
+#include <memory>
 
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
@@ -57,9 +58,9 @@ void blocking_message_queue::enqueue(const message& msg)
 
 const message& blocking_message_queue::dequeue()
 {
-    queue_node* msg = m_queue.pop();
-    m_last_dequeued = std::move(msg->msg);
-    delete msg;
+    queue_node* node = m_queue.pop();
+    m_last_dequeued = std::move(node->msg);
+    delete node;
     if (!m_trap_exit)
     {
         if (throw_on_exit(m_last_dequeued) == normal_exit_signal)
@@ -74,40 +75,41 @@ const message& blocking_message_queue::dequeue()
 
 void blocking_message_queue::dequeue(invoke_rules& rules)
 {
-    queue_node* amsg = nullptr;//= m_queue.pop();
+    std::unique_ptr<queue_node> node;// = nullptr;//= m_queue.pop();
     util::singly_linked_list<queue_node> buffer;
     intrusive_ptr<detail::intermediate> imd;
     bool done = false;
     do
     {
-        amsg = m_queue.pop();
+        node.reset(m_queue.pop());
         if (!m_trap_exit)
         {
-            if (throw_on_exit(amsg->msg) == normal_exit_signal)
+            if (throw_on_exit(node->msg) == normal_exit_signal)
             {
                 // ignored by default
-                delete amsg;
-                amsg = nullptr;
+                node.reset();
+                //delete node;
+                //node = nullptr;
             }
         }
-        if (amsg)
+        if (node)
         {
-            imd = rules.get_intermediate(amsg->msg.content());
+            imd = rules.get_intermediate(node->msg.content());
             if (imd)
             {
                 done = true;
             }
             else
             {
-                buffer.push_back(amsg);
+                buffer.push_back(node.release());
             }
         }
     }
     while (!done);
-    m_last_dequeued = amsg->msg;
+    m_last_dequeued = std::move(node->msg);
     if (!buffer.empty()) m_queue.push_front(std::move(buffer));
     imd->invoke();
-    delete amsg;
+    //delete node;
 }
 
 bool blocking_message_queue::try_dequeue(message& msg)

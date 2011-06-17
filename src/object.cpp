@@ -89,11 +89,6 @@ const uniform_type_info& object::type() const
     return *m_type;
 }
 
-std::string object::to_string() const
-{
-    return "";
-}
-
 bool object::empty() const
 {
     return m_value == &s_void;

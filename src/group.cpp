@@ -39,6 +39,10 @@ class local_group : public group
     {
     }
 
+    local_group(const std::string& gname) : group(gname, "local")
+    {
+    }
+
  public:
 
     virtual void enqueue(const message& msg)
@@ -94,7 +98,7 @@ class local_group_module : public group::module
         }
         else
         {
-            group_ptr tmp(new local_group(std::string(group_name)));
+            group_ptr tmp(new local_group(group_name));
             // lifetime scope of uguard
             {
                 upgrade_guard uguard(guard);
