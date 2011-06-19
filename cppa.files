@@ -187,3 +187,15 @@ cppa/detail/task_scheduler.hpp
 src/task_scheduler.cpp
 cppa/detail/actor_count.hpp
 src/actor_count.cpp
+cppa/util/fiber.hpp
+src/fiber.cpp
+cppa/detail/yield_interface.hpp
+src/yield_interface.cpp
+cppa/detail/yielding_message_queue.hpp
+src/yielding_message_queue.cpp
+cppa/detail/scheduled_actor.hpp
+src/scheduled_actor.cpp
+src/intermediate.cpp
+cppa/detail/abstract_message_queue.hpp
+src/message_queue.cpp
+src/invokable.cpp

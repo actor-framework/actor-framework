@@ -25,7 +25,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
 
  public:
 
-    intrusive_ptr() : m_ptr(nullptr) { }
+    constexpr intrusive_ptr() : m_ptr(nullptr) { }
 
     intrusive_ptr(T* raw_ptr) { set_ptr(raw_ptr); }
 

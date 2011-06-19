@@ -37,6 +37,11 @@ class single_reader_queue
         return take_head();
     }
 
+    //element_type* peek()
+    //{
+    //    return (m_head || fetch_new_data()) ? m_head : nullptr;
+    //}
+
     /**
      * @warning call only from the reader (owner)
      */
@@ -67,6 +72,30 @@ class single_reader_queue
             if (p.first)
             {
                 push_front(p.first, p.second);
+            }
+        }
+    }
+
+    // returns true if the queue was empty
+    bool _push_back(element_type* new_element)
+    {
+        element_type* e = m_tail.load();
+        for (;;)
+        {
+            new_element->next = e;
+            if (!e)
+            {
+                if (m_tail.compare_exchange_weak(e, new_element))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (m_tail.compare_exchange_weak(e, new_element))
+                {
+                    return false;
+                }
             }
         }
     }

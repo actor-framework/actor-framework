@@ -19,6 +19,7 @@
 #include "cppa/config.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
+#include "cppa/detail/task_scheduler.hpp"
 
 #define RUN_TEST(fun_name)                                                     \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
@@ -59,8 +60,7 @@ void print_node_id()
 
 int main(int argc, char** c_argv)
 {
-    //return 0;
-
+    std::string sched_option = "scheduler=";
     std::vector<std::string> argv;
     for (int i = 1; i < argc; ++i)
     {
@@ -68,43 +68,56 @@ int main(int argc, char** c_argv)
     }
     if (!argv.empty())
     {
-        if (argv.size() == 1 && argv.front() == "performance_test")
+        if (argv.size() == 1 && argv[0] == "performance_test")
         {
             cout << endl << "run queue performance test ... " << endl;
             test__queue_performance();
             return 0;
         }
-        else if (argv.size() == 2 && argv.front() == "test__remote_actor")
+        else if (argv.size() == 2 && argv[0] == "test__remote_actor")
         {
             test__remote_actor(c_argv[0], true, argv);
             return 0;
         }
+        else if (   argv.size() == 1
+                 && argv[0].compare(0, sched_option.size(), sched_option) == 0)
+        {
+            std::string sched = argv[0].substr(sched_option.size());
+            if (sched == "task_scheduler")
+            {
+                cout << "using task_scheduler" << endl;
+                cppa::set_scheduler(new cppa::detail::task_scheduler);
+            }
+            else
+            {
+                cerr << "unknown scheduler: " << sched << endl;
+                return 1;
+            }
+        }
         else
         {
             cerr << "usage: test [performance_test]" << endl;
+            return 1;
         }
     }
-    else
-    {
-        print_node_id();
-        cout << endl << endl;
-        std::cout << std::boolalpha;
-        size_t errors = 0;
-        RUN_TEST(test__ripemd_160);
-        RUN_TEST(test__primitive_variant);
-        RUN_TEST(test__uniform_type);
-        RUN_TEST(test__intrusive_ptr);
-        RUN_TEST(test__a_matches_b);
-        RUN_TEST(test__type_list);
-        RUN_TEST(test__tuple);
-        RUN_TEST(test__serialization);
-        RUN_TEST(test__spawn);
-        RUN_TEST(test__local_group);
-        RUN_TEST(test__atom);
-        RUN_TEST_A3(test__remote_actor, c_argv[0], false, argv);
-        cout << endl
-             << "error(s) in all tests: " << errors
-             << endl;
-    }
+    print_node_id();
+    cout << endl << endl;
+    std::cout << std::boolalpha;
+    size_t errors = 0;
+    RUN_TEST(test__ripemd_160);
+    RUN_TEST(test__primitive_variant);
+    RUN_TEST(test__uniform_type);
+    RUN_TEST(test__intrusive_ptr);
+    RUN_TEST(test__a_matches_b);
+    RUN_TEST(test__type_list);
+    RUN_TEST(test__tuple);
+    RUN_TEST(test__serialization);
+    RUN_TEST(test__spawn);
+    RUN_TEST(test__local_group);
+    RUN_TEST(test__atom);
+    RUN_TEST_A3(test__remote_actor, c_argv[0], false, argv);
+    cout << endl
+         << "error(s) in all tests: " << errors
+         << endl;
     return 0;
 }

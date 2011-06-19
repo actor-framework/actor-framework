@@ -19,7 +19,7 @@
 namespace cppa { namespace detail {
 
 template<class Base>
-class abstract_actor /*[[base_check]]*/ : public Base
+class abstract_actor : public Base
 {
 
     typedef std::lock_guard<std::mutex> guard_type;

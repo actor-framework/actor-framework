@@ -1,12 +1,11 @@
 #ifndef INTERMEDIATE_HPP
 #define INTERMEDIATE_HPP
 
-#include "cppa/detail/ref_counted_impl.hpp"
+#include <utility>
 
 namespace cppa { namespace detail {
 
-// intermediate is NOT thread safe
-class intermediate : public ref_counted_impl<size_t>
+class intermediate
 {
 
     intermediate(const intermediate&) = delete;
@@ -15,6 +14,9 @@ class intermediate : public ref_counted_impl<size_t>
  public:
 
     intermediate() = default;
+
+    virtual ~intermediate();
+
     virtual void invoke() = 0;
 
 };

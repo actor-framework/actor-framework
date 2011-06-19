@@ -8,7 +8,6 @@
 #if defined(__APPLE__)
 #  define CPPA_MACOS
 #  define _GLIBCXX_HAS_GTHREADS
-#  define _GLIBCXX_HAS_GTHREADS
 #elif defined(__GNUC__) && defined(__linux__)
 #  define CPPA_LINUX
 #elif defined(WIN32)
@@ -19,6 +18,13 @@
 
 #if defined(__amd64__) || defined(__LP64__)
 #  define CPPA_64BIT
+#endif
+
+#ifdef CPPA_MACOS
+#   include <libkern/OSAtomic.h>
+#   define CPPA_MEMORY_BARRIER() OSMemoryBarrier()
+#elif defined(CPPA_LINUX)
+#   define CPPA_MEMORY_BARRIER() __sync_synchronize()
 #endif
 
 #endif // CPPA_CONFIG_HPP

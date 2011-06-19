@@ -24,7 +24,7 @@ class converted_thread_context : public abstract_actor<context>
     typedef abstract_actor<context> super;
 
     // mailbox implementation
-    detail::blocking_message_queue m_mailbox;
+    blocking_message_queue m_mailbox;
 
  public:
 

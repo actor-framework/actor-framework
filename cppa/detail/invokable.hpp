@@ -1,14 +1,15 @@
 #ifndef INVOKABLE_HPP
 #define INVOKABLE_HPP
 
-#include "cppa/detail/ref_counted_impl.hpp"
+// forward declaration
+namespace cppa { class any_tuple; }
 
 namespace cppa { namespace detail {
 
 class intermediate;
 
 // invokable  is NOT thread safe
-class invokable : public ref_counted_impl<size_t>
+class invokable// : public ref_counted_impl<size_t>
 {
 
     invokable(const invokable&) = delete;
@@ -17,6 +18,7 @@ class invokable : public ref_counted_impl<size_t>
  public:
 
     invokable() = default;
+    virtual ~invokable();
     virtual bool invoke(const any_tuple&) const = 0;
     virtual intermediate* get_intermediate(const any_tuple&) const = 0;
 

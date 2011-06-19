@@ -61,6 +61,12 @@ class scheduler
 };
 
 /**
+ * @brief Sets the scheduler to @p sched;
+ * @throws std::runtime_error if there's already a scheduler defined.
+ */
+void set_scheduler(scheduler* sched);
+
+/**
  * @brief Gets the actual used scheduler implementation.
  * @return The active scheduler (default constructed).
  */

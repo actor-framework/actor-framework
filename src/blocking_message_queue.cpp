@@ -42,99 +42,57 @@ throw_on_exit_result throw_on_exit(const message& msg)
 
 namespace cppa { namespace detail {
 
-blocking_message_queue::blocking_message_queue() : m_trap_exit(false)
+blocking_message_queue_impl::queue_node::queue_node(const message& from)
+    : next(nullptr), msg(from)
 {
 }
 
-void blocking_message_queue::trap_exit(bool new_value)
-{
-    m_trap_exit = new_value;
-}
-
-void blocking_message_queue::enqueue(const message& msg)
+void blocking_message_queue_impl::enqueue(const message& msg)
 {
     m_queue.push_back(new queue_node(msg));
 }
 
-const message& blocking_message_queue::dequeue()
+bool blocking_message_queue_impl::dequeue_impl(message& storage)
 {
-    queue_node* node = m_queue.pop();
-    m_last_dequeued = std::move(node->msg);
-    delete node;
+    std::unique_ptr<queue_node> node(m_queue.pop());
     if (!m_trap_exit)
     {
-        if (throw_on_exit(m_last_dequeued) == normal_exit_signal)
+        if (throw_on_exit(node->msg) == normal_exit_signal)
         {
             // exit_reason::normal is ignored by default,
             // dequeue next message
-            return dequeue();
+            return false;
         }
     }
-    return m_last_dequeued;
+    storage = std::move(node->msg);
+    return true;
 }
 
-void blocking_message_queue::dequeue(invoke_rules& rules)
+bool blocking_message_queue_impl::dequeue_impl(invoke_rules& rules,
+                                               queue_node_buffer& buffer)
 {
-    std::unique_ptr<queue_node> node;// = nullptr;//= m_queue.pop();
-    util::singly_linked_list<queue_node> buffer;
-    intrusive_ptr<detail::intermediate> imd;
-    bool done = false;
-    do
+    std::unique_ptr<queue_node> node(m_queue.pop());
+    if (!m_trap_exit)
     {
-        node.reset(m_queue.pop());
-        if (!m_trap_exit)
+        if (throw_on_exit(node->msg) == normal_exit_signal)
         {
-            if (throw_on_exit(node->msg) == normal_exit_signal)
-            {
-                // ignored by default
-                node.reset();
-                //delete node;
-                //node = nullptr;
-            }
-        }
-        if (node)
-        {
-            imd = rules.get_intermediate(node->msg.content());
-            if (imd)
-            {
-                done = true;
-            }
-            else
-            {
-                buffer.push_back(node.release());
-            }
+            return false;
         }
     }
-    while (!done);
-    m_last_dequeued = std::move(node->msg);
-    if (!buffer.empty()) m_queue.push_front(std::move(buffer));
-    imd->invoke();
-    //delete node;
-}
-
-bool blocking_message_queue::try_dequeue(message& msg)
-{
-    if (!m_queue.empty())
+    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg.content()));
+    if (imd)
     {
-        msg = dequeue();
+        m_last_dequeued = node->msg;
+        // restore mailbox before invoking imd
+        if (!buffer.empty()) m_queue.push_front(std::move(buffer));
+        imd->invoke();
         return true;
     }
-    return false;
-}
-
-bool blocking_message_queue::try_dequeue(invoke_rules& rules)
-{
-    if (!m_queue.empty())
+    else
     {
-        dequeue(rules);
-        return true;
+        buffer.push_back(node.release());
+        return false;
     }
-    return false;
-}
-
-const message& blocking_message_queue::last_dequeued()
-{
-    return m_last_dequeued;
 }
 
 } } // namespace hamcast::detail

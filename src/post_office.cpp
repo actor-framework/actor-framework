@@ -579,6 +579,54 @@ struct mailman_worker
     }
 };
 
+/*
+// complexity: O(n)
+// pred only evaluates values
+template<typename K, typename V, typename Predicate>
+void remove_if_value(std::map<K,V>& haystack, Predicate&& pred)
+{
+    auto i = haystack.begin();
+    auto end = haystack.end();
+    while (i != end)
+    {
+        if (pred(i->second))
+        {
+            haystack.erase(i++);
+        }
+        else
+        {
+            ++i;
+        }
+    }
+}
+
+template<typename K, typename V, typename Predicate>
+typename std::map<K,V>::iterator
+find_if_value(std::map<K,V>& haystack, Predicate&& pred)
+{
+    auto end = haystack.end();
+    for (auto i = haystack.begin(); i != end; ++i)
+    {
+        if (pred(i->second)) return i;
+    }
+    return end;
+}
+
+template<typename K, typename V, typename Predicate>
+typename std::map<K,V>::const_iterator
+find_if_value(const std::map<K,V>& haystack, Predicate&& pred)
+{
+    auto end = haystack.end();
+    for (auto i = haystack.begin(); i != end; ++i)
+    {
+        if (pred(i->second)) return i;
+    }
+    return end;
+}
+
+typedef std::map<process_information, po_peer> peer_map;
+*/
+
 void post_office_loop(int pipe_read_handle)
 {
     mailman_worker mworker;
