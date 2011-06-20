@@ -5,6 +5,7 @@
 
 #include "cppa/context.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 
 namespace {
@@ -35,6 +36,26 @@ namespace cppa {
 
 scheduler::~scheduler()
 {
+}
+
+void scheduler::await_others_done()
+{
+    detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
+}
+
+void scheduler::register_converted_context(context* what)
+{
+    if (what)
+    {
+        detail::inc_actor_count();
+        what->attach(new detail::exit_observer);
+    }
+}
+
+attachable* task_scheduler::register_hidden_context()
+{
+    inc_actor_count();
+    return new exit_observer;
 }
 
 void scheduler::exit_context(context* ctx, std::uint32_t reason)

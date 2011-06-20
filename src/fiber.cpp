@@ -31,6 +31,7 @@ struct stack_node
                                          -1,
                                          0))
     {
+        //memset(s, 0, STACK_SIZE);
     }
 
     ~stack_node()
@@ -163,23 +164,41 @@ namespace cppa { namespace util {
 struct fiber_impl
 {
 
+    bool m_initialized;
     stack_node* m_node;
+    void (*m_func)(void*);
+    void* m_arg;
     ucontext_t m_ctx;
 
-    fiber_impl() throw() : m_node(nullptr)
+    fiber_impl() throw() : m_initialized(true), m_node(0), m_func(0), m_arg(0)
     {
         memset(&m_ctx, 0, sizeof(ucontext_t));
         getcontext(&m_ctx);
     }
 
-    fiber_impl(void (*func)(void*), void* arg) : m_node(get_stack_node())
+    fiber_impl(void (*func)(void*), void* arg)
+        : m_initialized(false)
+        , m_node(nullptr)
+        , m_func(func)
+        , m_arg(arg)
     {
+    }
+
+    void initialize()
+    {
+        m_initialized = true;
+        m_node = get_stack_node();
         memset(&m_ctx, 0, sizeof(ucontext_t));
         getcontext(&m_ctx);
         m_ctx.uc_stack.ss_sp = m_node->s;
         m_ctx.uc_stack.ss_size = STACK_SIZE;
         m_ctx.uc_link = nullptr;
-        trampoline<sizeof(void*)>::prepare(&m_ctx, func, arg);
+        trampoline<sizeof(void*)>::prepare(&m_ctx, m_func, m_arg);
+    }
+
+    inline void lazy_init()
+    {
+        if (!m_initialized) initialize();
     }
 
     ~fiber_impl()
@@ -205,6 +224,7 @@ fiber::~fiber()
 
 void fiber::swap(fiber& from, fiber& to)
 {
+    to.m_impl->lazy_init();
     swapcontext(&(from.m_impl->m_ctx), &(to.m_impl->m_ctx));
 }
 

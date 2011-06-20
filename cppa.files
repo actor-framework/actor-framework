@@ -199,3 +199,5 @@ src/intermediate.cpp
 cppa/detail/abstract_message_queue.hpp
 src/message_queue.cpp
 src/invokable.cpp
+cppa/detail/thread_pool_scheduler.hpp
+src/thread_pool_scheduler.cpp

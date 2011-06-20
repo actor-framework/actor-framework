@@ -45,4 +45,9 @@ void actor_count_wait_until(size_t expected)
     }
 }
 
+exit_observer::~exit_observer()
+{
+    cppa::detail::dec_actor_count();
+}
+
 } } // namespace cppa::detail

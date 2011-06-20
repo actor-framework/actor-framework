@@ -37,14 +37,6 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
     cppa::detail::dec_actor_count();
 }
 
-struct exit_observer : cppa::attachable
-{
-    ~exit_observer()
-    {
-        cppa::detail::dec_actor_count();
-    }
-};
-
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
@@ -55,26 +47,6 @@ actor_ptr mock_scheduler::spawn(actor_behavior* ab, scheduling_hint)
     intrusive_ptr<context> ctx(new detail::converted_thread_context);
     boost::thread(run_actor, ctx, ab).detach();
     return ctx;
-}
-
-void mock_scheduler::register_converted_context(context* ctx)
-{
-    if (ctx)
-    {
-        inc_actor_count();
-        ctx->attach(new exit_observer);
-    }
-}
-
-attachable* mock_scheduler::register_hidden_context()
-{
-    inc_actor_count();
-    return new exit_observer;
-}
-
-void mock_scheduler::await_others_done()
-{
-    actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
 }
 
 } } // namespace detail

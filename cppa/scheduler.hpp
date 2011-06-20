@@ -41,7 +41,7 @@ class scheduler
      *        (a thread that acts as actor).
      * @note Calls <tt>what->attach(...)</tt>.
      */
-    virtual void register_converted_context(context* what) = 0;
+    virtual void register_converted_context(context* what);
 
     /**
      * @brief Informs the scheduler about a hidden (non-actor)
@@ -49,14 +49,14 @@ class scheduler
      * @return An {@link attachable} that the hidden context has to destroy
      *         if his lifetime ends.
      */
-    virtual attachable* register_hidden_context() = 0;
+    virtual attachable* register_hidden_context();
 
     /**
      * @brief Wait until all other actors finished execution.
      * @warning This function causes a deadlock if it's called from
      *          more than one actor.
      */
-    virtual void await_others_done() = 0;
+    virtual void await_others_done();
 
 };
 

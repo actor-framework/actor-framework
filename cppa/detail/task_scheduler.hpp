@@ -27,11 +27,7 @@ class task_scheduler : public scheduler
 
     void schedule(scheduled_actor* what);
 
-    void await_others_done();
-    void register_converted_context(context*);
-    //void unregister_converted_context(context*);
     actor_ptr spawn(actor_behavior*, scheduling_hint);
-    attachable* register_hidden_context();
 
 };
 
