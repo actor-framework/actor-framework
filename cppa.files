@@ -201,3 +201,5 @@ src/message_queue.cpp
 src/invokable.cpp
 cppa/detail/thread_pool_scheduler.hpp
 src/thread_pool_scheduler.cpp
+cppa/detail/delegate.hpp
+src/delegate.cpp

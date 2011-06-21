@@ -8,23 +8,16 @@
 using std::cout;
 using std::endl;
 
+namespace { void dummy_enqueue(void*, cppa::detail::scheduled_actor*) { } }
+
 namespace cppa { namespace detail {
 
 scheduled_actor::scheduled_actor()
     : next(nullptr)
     , m_fiber()
     , m_behavior(nullptr)
-    , m_scheduler(nullptr)
     , m_mailbox(this)
-{
-}
-
-scheduled_actor::scheduled_actor(actor_behavior* ab, task_scheduler* sched)
-    : next(nullptr)
-    , m_fiber(&scheduled_actor::run, this)
-    , m_behavior(ab)
-    , m_scheduler(sched)
-    , m_mailbox(this)
+    , m_enqueue_to_scheduler(dummy_enqueue, static_cast<void*>(nullptr), this)
 {
 }
 
@@ -57,11 +50,6 @@ void scheduled_actor::quit(std::uint32_t reason)
 message_queue& scheduled_actor::mailbox()
 {
     return m_mailbox;
-}
-
-void scheduled_actor::enqueue_to_scheduler()
-{
-    m_scheduler->schedule(this);
 }
 
 } } // namespace cppa::detail

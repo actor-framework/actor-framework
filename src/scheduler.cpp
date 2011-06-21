@@ -52,10 +52,10 @@ void scheduler::register_converted_context(context* what)
     }
 }
 
-attachable* task_scheduler::register_hidden_context()
+attachable* scheduler::register_hidden_context()
 {
-    inc_actor_count();
-    return new exit_observer;
+    detail::inc_actor_count();
+    return new detail::exit_observer;
 }
 
 void scheduler::exit_context(context* ctx, std::uint32_t reason)

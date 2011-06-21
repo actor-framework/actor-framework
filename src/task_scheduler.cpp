@@ -14,6 +14,16 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+namespace {
+
+void enqueue_fun(cppa::detail::task_scheduler* where,
+                 cppa::detail::scheduled_actor* what)
+{
+    where->schedule(what);
+}
+
+} // namespace <anonmyous>
+
 namespace cppa { namespace detail {
 
 void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
@@ -26,72 +36,12 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
         {
             return;
         }
-        cppa::set_self(job);
-        call(&(job->m_fiber), &fself);
-        yield_state ystate = yielded_state();
-        while (ystate == yield_state::ready)
+        scheduled_actor::execute(job, fself, [&]()
         {
-            call(&(job->m_fiber), &fself);
-            ystate = yielded_state();
-        }
-        switch (ystate)
-        {
-            case yield_state::blocked:
-            {
-                // wait until someone re-schedules that actor
-                int s = job->state().load();
-                while (s == about_to_block)
-                {
-                    if (job->state().compare_exchange_weak(s, blocked))
-                    {
-                        s = blocked;
-                    }
-                }
-                switch (s)
-                {
-                    case ready:
-                    {
-                        // someone just interleaved "blocking process"
-                        jq->push_back(job);
-                        break;
-                    }
-                    case done:
-                    {
-                        // must not happen
-                        cerr << "state == done after about_to_block" << endl;
-                        exit(7);
-                    }
-                    case about_to_block:
-                    {
-                        cerr << "state == about_to_block after "
-                                "setting to blocked" << endl;
-                        exit(7);
-                    }
-                    case blocked:
-                    {
-                        break;
-                    }
-                    default:
-                    {
-                        cerr << "illegal state" << endl;
-                        exit(7);
-                    }
-                }
-                break;
-            }
-            case yield_state::done:
-            case yield_state::killed:
-            {
-                if (!job->deref()) delete job;
-                CPPA_MEMORY_BARRIER();
-                dec_actor_count();
-                break;
-            }
-            default:
-            {
-                exit(7);
-            }
-        }
+            if (!job->deref()) delete job;
+            CPPA_MEMORY_BARRIER();
+            dec_actor_count();
+        });
     }
 }
 
@@ -126,7 +76,9 @@ void task_scheduler::schedule(scheduled_actor* what)
 actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
 {
     inc_actor_count();
-    intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior, this));
+    intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
+                                                           enqueue_fun,
+                                                           this));
     // add an implicit reference to ctx
     ctx->ref();
     m_queue.push_back(ctx.get());

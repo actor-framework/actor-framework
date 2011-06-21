@@ -11,13 +11,15 @@ namespace cppa { namespace detail {
 class thread_pool_scheduler : public scheduler
 {
 
+    struct worker;
+
     typedef util::single_reader_queue<scheduled_actor> job_queue;
 
     job_queue m_queue;
     scheduled_actor m_dummy;
     boost::thread m_supervisor;
 
-    static void worker_loop();
+    static void worker_loop(worker*);
     static void supervisor_loop(job_queue*, scheduled_actor*);
 
  public:
@@ -27,10 +29,7 @@ class thread_pool_scheduler : public scheduler
 
     void schedule(scheduled_actor* what);
 
-    void await_others_done();
-    void register_converted_context(context*);
     actor_ptr spawn(actor_behavior* behavior, scheduling_hint hint);
-    attachable* register_hidden_context();
 
 };
 
