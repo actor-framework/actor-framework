@@ -64,7 +64,7 @@ cppa::process_information compute_proc_info()
     }
     pclose(get_mac_cmd);
     erase_trailing_newline(first_mac_addr);
-    result.node_id = cppa::util::ripemd_160(first_mac_addr + hd_serial);
+    cppa::util::ripemd_160(result.node_id, first_mac_addr + hd_serial);
     //memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);
     return result;
 }

@@ -11,7 +11,8 @@ namespace {
 
 std::string str_hash(const std::string& what)
 {
-    auto hash = ripemd_160(what);
+    std::array<std::uint8_t, 20> hash;
+    ripemd_160(hash, what);
     std::ostringstream oss;
     oss << std::hex;
     for (auto i : hash)

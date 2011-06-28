@@ -359,7 +359,7 @@ void MDfinish(dword *MDbuf, const byte *strptr, dword lswlen, dword mswlen)
 
 namespace cppa { namespace util {
 
-std::array<std::uint8_t, 20> ripemd_160(const std::string& data)
+void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data)
 {
     dword         MDbuf[5];   /* contains (A, B, C, D(, E))   */
     dword         X[16];               /* current 16-word chunk        */
@@ -386,15 +386,13 @@ std::array<std::uint8_t, 20> ripemd_160(const std::string& data)
     /* finish: */
     MDfinish(MDbuf, message, length, 0);
 
-    std::array<std::uint8_t, 20> result;
-    for (size_t i = 0; i < result.size(); i += 4)
+    for (size_t i = 0; i < storage.size(); i += 4)
     {
-        result[i]   =  MDbuf[i>>2];         /* implicit cast to byte  */
-        result[i+1] = (MDbuf[i>>2] >>  8);  /*  extracts the 8 least  */
-        result[i+2] = (MDbuf[i>>2] >> 16);  /*  significant bits.     */
-        result[i+3] = (MDbuf[i>>2] >> 24);
+        storage[i]   =  MDbuf[i>>2];         /* implicit cast to byte  */
+        storage[i+1] = (MDbuf[i>>2] >>  8);  /*  extracts the 8 least  */
+        storage[i+2] = (MDbuf[i>>2] >> 16);  /*  significant bits.     */
+        storage[i+3] = (MDbuf[i>>2] >> 24);
     }
-    return result;
 }
 
 } } // namespace cppa::util
