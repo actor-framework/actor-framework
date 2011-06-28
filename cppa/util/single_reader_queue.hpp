@@ -37,6 +37,17 @@ class single_reader_queue
         return take_head();
     }
 
+    element_type* try_pop(unsigned long ms_timeout)
+    {
+        boost::system_time st = boost::get_system_time();
+        st += boost::posix_time::milliseconds(ms_timeout);
+        if (timed_wait_for_data(st))
+        {
+            return try_pop();
+        }
+        return nullptr;
+    }
+
     //element_type* peek()
     //{
     //    return (m_head || fetch_new_data()) ? m_head : nullptr;
@@ -163,6 +174,22 @@ class single_reader_queue
     // locked on enqueue/dequeue operations to/from an empty list
     boost::mutex m_mtx;
     boost::condition_variable m_cv;
+
+    bool timed_wait_for_data(const boost::system_time& timeout)
+    {
+        if (!m_head && !(m_tail.load()))
+        {
+            lock_type guard(m_mtx);
+            while (!(m_tail.load()))
+            {
+                if (!m_cv.timed_wait(guard, timeout))
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
     void wait_for_data()
     {

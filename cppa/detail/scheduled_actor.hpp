@@ -85,7 +85,7 @@ class scheduled_actor : public abstract_actor<context>
                         StillReadyHandler&& still_ready_handler,
                         DoneHandler&& done_handler);
 
-    template<typename StillReadyHandler, typename DoneHandler>
+    template<typename DoneHandler>
     inline static void execute(scheduled_actor* what,
                                util::fiber& from,
                                DoneHandler&& done_handler)
