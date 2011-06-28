@@ -104,7 +104,6 @@ void scheduled_actor::execute(scheduled_actor* what,
                               DoneHandler&& done_handler)
 {
     set_self(what);
-    yield_state ystate;
     for (;;)
     {
         call(&(what->m_fiber), &from);

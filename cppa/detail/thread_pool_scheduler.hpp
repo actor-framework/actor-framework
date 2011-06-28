@@ -11,7 +11,6 @@ namespace cppa { namespace detail {
 class thread_pool_scheduler : public scheduler
 {
 
-    struct worker;
 
     typedef util::single_reader_queue<scheduled_actor> job_queue;
 
@@ -19,10 +18,9 @@ class thread_pool_scheduler : public scheduler
     scheduled_actor m_dummy;
     boost::thread m_supervisor;
 
-    static void worker_loop(worker*);
-    static void supervisor_loop(job_queue*, scheduled_actor*);
-
  public:
+
+    struct worker;
 
     thread_pool_scheduler();
     ~thread_pool_scheduler();
@@ -30,6 +28,11 @@ class thread_pool_scheduler : public scheduler
     void schedule(scheduled_actor* what);
 
     actor_ptr spawn(actor_behavior* behavior, scheduling_hint hint);
+
+ private:
+
+    static void worker_loop(worker*);
+    static void supervisor_loop(job_queue*, scheduled_actor*);
 
 };
 

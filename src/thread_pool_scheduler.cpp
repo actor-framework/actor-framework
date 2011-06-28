@@ -12,6 +12,7 @@ void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
 }
 
 typedef boost::unique_lock<boost::mutex> guard_type;
+typedef std::unique_ptr<cppa::detail::thread_pool_scheduler::worker> worker_ptr;
 
 } // namespace <anonmyous>
 
@@ -22,14 +23,15 @@ struct thread_pool_scheduler::worker
 
     worker* next;
     bool m_done;
+    job_queue* m_job_queue;
     scheduled_actor* m_job;
     util::single_reader_queue<worker>* m_supervisor_queue;
     boost::thread m_thread;
     boost::mutex m_mtx;
     boost::condition_variable m_cv;
 
-    worker(util::single_reader_queue<worker>* supervisor_queue)
-        : next(nullptr), m_done(false), m_job(nullptr)
+    worker(util::single_reader_queue<worker>* supervisor_queue, job_queue* jq)
+        : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
         , m_supervisor_queue(supervisor_queue)
         , m_thread(&thread_pool_scheduler::worker_loop, this)
     {
@@ -41,6 +43,7 @@ struct thread_pool_scheduler::worker
 
     void operator()()
     {
+        m_supervisor_queue->push_back(this);
         // loop
         util::fiber fself;
         for (;;)
@@ -54,9 +57,34 @@ struct thread_pool_scheduler::worker
                 }
                 if (m_done) return;
             }
-            scheduled_actor::execute(m_job, fself, []()
+            // run actor up to 300ms
+            bool reschedule = false;
+            boost::system_time tout = boost::get_system_time();
+            tout += boost::posix_time::milliseconds(300);
+            scheduled_actor::execute(m_job,
+                                     fself,
+                                     [&]() -> bool
+                                     {
+                                         if (tout >= boost::get_system_time())
+                                         {
+                                             reschedule = true;
+                                             return false;
+                                         }
+                                         return true;
+                                     },
+                                     [m_job]()
+                                     {
+                                         if (!m_job->deref()) delete m_job;
+                                         CPPA_MEMORY_BARRIER();
+                                         dec_actor_count();
+                                     });
+            if (reschedule)
             {
-            });
+                m_job_queue->push_back(m_job);
+            }
+            m_job = nullptr;
+            CPPA_MEMORY_BARRIER();
+            m_supervisor_queue->push_back(this);
         }
     }
 
@@ -71,36 +99,45 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jq,
                                             scheduled_actor* dummy)
 {
     util::single_reader_queue<worker> worker_queue;
-    std::vector<std::unique_ptr<worker>> workers;
+    std::vector<worker_ptr> workers;
     // init
     size_t num_workers = std::max(boost::thread::hardware_concurrency(),
                                   static_cast<unsigned>(1));
     for (size_t i = 0; i < num_workers; ++i)
     {
-        workers.push_back(std::unique_ptr<worker>(new worker(&worker_queue)));
+        workers.push_back(worker_ptr(new worker(&worker_queue, jq)));
     }
+    bool done = false;
     // loop
-    for (;;)
+    do
     {
         // fetch job
         scheduled_actor* job = jq->pop();
-        // fetch waiting worker (wait up to 500ms)
-        worker* w = nullptr;
-        while (!w)
+        if (job == dummy)
         {
-            w = worker_queue.try_pop(500);
-            if (!w)
+            done = true;
+        }
+        else
+        {
+            // fetch waiting worker (wait up to 500ms)
+            worker* w = nullptr;
+            while (!w)
             {
-                workers.push_back(std::unique_ptr<worker>(new worker(&worker_queue)));
+                w = worker_queue.try_pop(500);
+                if (!w)
+                {
+                    workers.push_back(worker_ptr(new worker(&worker_queue,jq)));
+                }
+            }
+            // lifetime scope of guard
+            {
+                guard_type guard(w->m_mtx);
+                w->m_job = job;
+                w->m_cv.notify_one();
             }
         }
-        // lifetime scope of guard
-        {
-            guard_type guard(w->m_mtx);
-            w->m_job = job;
-            w->m_cv.notify_one();
-        }
     }
+    while (!done);
     // quit
     for (auto& w : workers)
     {
@@ -113,6 +150,8 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jq,
     {
         w->m_thread.join();
     }
+    // "clear" worker_queue
+    while (worker_queue.try_pop() != nullptr) { }
 }
 
 thread_pool_scheduler::thread_pool_scheduler()
@@ -124,6 +163,8 @@ thread_pool_scheduler::thread_pool_scheduler()
 
 thread_pool_scheduler::~thread_pool_scheduler()
 {
+    m_queue.push_back(&m_dummy);
+    m_supervisor.join();
 }
 
 void thread_pool_scheduler::schedule(scheduled_actor* what)

@@ -20,6 +20,7 @@
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/task_scheduler.hpp"
+#include "cppa/detail/thread_pool_scheduler.hpp"
 
 #define RUN_TEST(fun_name)                                                     \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
@@ -87,6 +88,11 @@ int main(int argc, char** c_argv)
             {
                 cout << "using task_scheduler" << endl;
                 cppa::set_scheduler(new cppa::detail::task_scheduler);
+            }
+            else if (sched == "thread_pool_scheduler")
+            {
+                cout << "using thread_pool_scheduler" << endl;
+                cppa::set_scheduler(new cppa::detail::thread_pool_scheduler);
             }
             else
             {
