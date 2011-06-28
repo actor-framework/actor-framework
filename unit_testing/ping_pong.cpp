@@ -11,7 +11,8 @@ void pong(actor_ptr ping_actor)
 {
     link(ping_actor);
     // kickoff
-    ping_actor << make_tuple(atom("Pong"), 0); // or: send(ping_actor, 0);
+    ping_actor << make_tuple(atom("Pong"), static_cast<std::int32_t>(0));
+    // or: send(ping_actor, static_cast<std::int32_t>(0));
     // invoke rules
     auto pattern =
     (
@@ -21,9 +22,9 @@ void pong(actor_ptr ping_actor)
             // to force ping actor to quit
             quit(exit_reason::user_defined);
         },
-        on<atom("Ping"), std::int32_t>() >> [](int v)
+        on<atom("Ping"), std::int32_t>() >> [](int value)
         {
-            reply(atom("Pong"), v+1);
+            reply(atom("Pong"), value + 1);
         }
     );
     // loop
