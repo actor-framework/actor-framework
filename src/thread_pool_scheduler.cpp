@@ -1,7 +1,10 @@
 #include <cstdint>
 #include <cstddef>
 #include "cppa/detail/actor_count.hpp"
+#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
+
+namespace cppa { namespace detail {
 
 namespace {
 
@@ -12,11 +15,10 @@ void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
 }
 
 typedef boost::unique_lock<boost::mutex> guard_type;
-typedef std::unique_ptr<cppa::detail::thread_pool_scheduler::worker> worker_ptr;
+typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
+typedef util::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
 } // namespace <anonmyous>
-
-namespace cppa { namespace detail {
 
 struct thread_pool_scheduler::worker
 {
@@ -25,12 +27,12 @@ struct thread_pool_scheduler::worker
     bool m_done;
     job_queue* m_job_queue;
     scheduled_actor* m_job;
-    util::single_reader_queue<worker>* m_supervisor_queue;
+    worker_queue* m_supervisor_queue;
     boost::thread m_thread;
     boost::mutex m_mtx;
     boost::condition_variable m_cv;
 
-    worker(util::single_reader_queue<worker>* supervisor_queue, job_queue* jq)
+    worker(worker_queue* supervisor_queue, job_queue* jq)
         : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
         , m_supervisor_queue(supervisor_queue)
         , m_thread(&thread_pool_scheduler::worker_loop, this)
@@ -95,24 +97,24 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
     (*w)();
 }
 
-void thread_pool_scheduler::supervisor_loop(job_queue* jq,
+void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             scheduled_actor* dummy)
 {
-    util::single_reader_queue<worker> worker_queue;
+    worker_queue wqueue;
     std::vector<worker_ptr> workers;
     // init
     size_t num_workers = std::max(boost::thread::hardware_concurrency(),
                                   static_cast<unsigned>(1));
     for (size_t i = 0; i < num_workers; ++i)
     {
-        workers.push_back(worker_ptr(new worker(&worker_queue, jq)));
+        workers.push_back(worker_ptr(new worker(&wqueue, jqueue)));
     }
     bool done = false;
     // loop
     do
     {
         // fetch job
-        scheduled_actor* job = jq->pop();
+        scheduled_actor* job = jqueue->pop();
         if (job == dummy)
         {
             done = true;
@@ -123,10 +125,11 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jq,
             worker* w = nullptr;
             while (!w)
             {
-                w = worker_queue.try_pop(500);
+                w = wqueue.try_pop(500);
+                // all workers are blocked since 500ms, start a new one
                 if (!w)
                 {
-                    workers.push_back(worker_ptr(new worker(&worker_queue,jq)));
+                    workers.push_back(worker_ptr(new worker(&wqueue,jqueue)));
                 }
             }
             // lifetime scope of guard
@@ -151,7 +154,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jq,
         w->m_thread.join();
     }
     // "clear" worker_queue
-    while (worker_queue.try_pop() != nullptr) { }
+    while (wqueue.try_pop() != nullptr) { }
 }
 
 thread_pool_scheduler::thread_pool_scheduler()
@@ -175,13 +178,21 @@ void thread_pool_scheduler::schedule(scheduled_actor* what)
 actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
                                        scheduling_hint hint)
 {
-    inc_actor_count();
-    intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
-                                                           enqueue_fun,
-                                                           this));
-    ctx->ref();
-    m_queue.push_back(ctx.get());
-    return ctx;
+    if (hint == scheduled)
+    {
+        return mock_scheduler::spawn(behavior);
+    }
+    else
+    {
+        inc_actor_count();
+        CPPA_MEMORY_BARRIER();
+        intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
+                                                               enqueue_fun,
+                                                               this));
+        ctx->ref();
+        m_queue.push_back(ctx.get());
+        return ctx;
+    }
 }
 
 } } // namespace cppa::detail

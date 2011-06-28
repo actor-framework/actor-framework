@@ -41,12 +41,18 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
 
 namespace cppa { namespace detail {
 
-actor_ptr mock_scheduler::spawn(actor_behavior* ab, scheduling_hint)
+actor_ptr mock_scheduler::spawn(actor_behavior* behavior)
 {
     inc_actor_count();
+    CPPA_MEMORY_BARRIER();
     intrusive_ptr<context> ctx(new detail::converted_thread_context);
-    boost::thread(run_actor, ctx, ab).detach();
+    boost::thread(run_actor, ctx, behavior).detach();
     return ctx;
+}
+
+actor_ptr mock_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
+{
+    return spawn(behavior);
 }
 
 } } // namespace detail

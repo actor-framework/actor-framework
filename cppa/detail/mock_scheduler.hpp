@@ -12,6 +12,8 @@ class mock_scheduler : public scheduler
 
     actor_ptr spawn(actor_behavior*, scheduling_hint);
 
+    static actor_ptr spawn(actor_behavior*);
+
 };
 
 } } // namespace cppa::detail
