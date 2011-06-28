@@ -19,6 +19,7 @@
 #include "cppa/config.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
+#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
@@ -59,31 +60,70 @@ void print_node_id()
                                  << endl;
 }
 
-int main(int argc, char** c_argv)
+char* find_char_or_end(char* cstr, const char what)
 {
-    std::string sched_option = "scheduler=";
-    std::vector<std::string> argv;
-    for (int i = 1; i < argc; ++i)
+    for (char c = *cstr; (c != '\0' && c != what); c = *(++cstr)) { }
+    return cstr;
+}
+
+std::map<std::string, std::string>
+get_kv_pairs(int argc, char** argv, int begin = 1)
+{
+    std::map<std::string, std::string> result;
+    for (int i = begin; i < argc; ++i)
     {
-        argv.push_back(c_argv[i]);
+        char* pos = find_char_or_end(argv[i], '=');
+        if (*pos == '=')
+        {
+            char* pos2 = find_char_or_end(pos + 1, '=');
+            if (*pos2 == '\0')
+            {
+                std::pair<std::string, std::string> kvp;
+                kvp.first = std::string(argv[i], pos);
+                kvp.second = std::string(pos + 1, pos2);
+                if (result.insert(std::move(kvp)).second == false)
+                {
+                    std::string err = "key \"";
+                    err += std::string(argv[i], pos);
+                    err += "\" already defined";
+                    throw std::runtime_error(err);
+                }
+            }
+        }
     }
-    if (!argv.empty())
+    return std::move(result);
+}
+
+template<typename Iterator, class Container, typename Key>
+inline bool found_key(Iterator& i, Container& cont, Key&& key)
+{
+    return (i = cont.find(std::forward<Key>(key))) != cont.end();
+}
+
+int main(int argc, char** argv)
+{
+    auto args = get_kv_pairs(argc, argv);
+    if (!args.empty())
     {
-        if (argv.size() == 1 && argv[0] == "performance_test")
+        decltype(args.find("")) i;
+        if (found_key(i, args, "run"))
         {
-            cout << endl << "run queue performance test ... " << endl;
-            test__queue_performance();
-            return 0;
+            auto& what = i->second;
+            if (what == "performance_test")
+            {
+                cout << endl << "run queue performance test ... " << endl;
+                test__queue_performance();
+                return 0;
+            }
+            else if (what == "remote_actor")
+            {
+                test__remote_actor(argv[0], true, args);
+                return 0;
+            }
         }
-        else if (argv.size() == 2 && argv[0] == "test__remote_actor")
+        else if (found_key(i, args, "scheduler"))
         {
-            test__remote_actor(c_argv[0], true, argv);
-            return 0;
-        }
-        else if (   argv.size() == 1
-                 && argv[0].compare(0, sched_option.size(), sched_option) == 0)
-        {
-            std::string sched = argv[0].substr(sched_option.size());
+            auto& sched = i->second;
             if (sched == "task_scheduler")
             {
                 cout << "using task_scheduler" << endl;
@@ -94,20 +134,20 @@ int main(int argc, char** c_argv)
                 cout << "using thread_pool_scheduler" << endl;
                 cppa::set_scheduler(new cppa::detail::thread_pool_scheduler);
             }
+            else if (sched == "mock_scheduler")
+            {
+                cout << "using mock_scheduler" << endl;
+                cppa::set_scheduler(new cppa::detail::mock_scheduler);
+            }
             else
             {
                 cerr << "unknown scheduler: " << sched << endl;
                 return 1;
             }
         }
-        else
-        {
-            cerr << "usage: test [performance_test]" << endl;
-            return 1;
-        }
     }
-    print_node_id();
-    cout << endl << endl;
+    //print_node_id();
+    //cout << endl << endl;
     std::cout << std::boolalpha;
     size_t errors = 0;
     RUN_TEST(test__ripemd_160);
@@ -121,7 +161,7 @@ int main(int argc, char** c_argv)
     RUN_TEST(test__spawn);
     RUN_TEST(test__local_group);
     RUN_TEST(test__atom);
-    RUN_TEST_A3(test__remote_actor, c_argv[0], false, argv);
+    RUN_TEST_A3(test__remote_actor, argv[0], false, args);
     cout << endl
          << "error(s) in all tests: " << errors
          << endl;

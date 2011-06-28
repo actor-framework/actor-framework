@@ -14,11 +14,15 @@ using namespace cppa;
 
 namespace {
 
-void client_part(const std::vector<std::string>& argv)
+void client_part(const std::map<std::string, std::string>& args)
 {
-    if (argv.size() != 2) throw std::logic_error("argv.size() != 2");
-    (void) self();
-    std::istringstream iss(argv[1]);
+    auto i = args.find("port");
+    if (i == args.end())
+    {
+        throw std::runtime_error("no port specified");
+    }
+    //(void) self();
+    std::istringstream iss(i->second);
     std::uint16_t port;
     iss >> port;
     auto ping_actor = remote_actor("localhost", port);
@@ -26,7 +30,7 @@ void client_part(const std::vector<std::string>& argv)
     {
         pong(ping_actor);
     }
-    catch (...)
+    catch (cppa::actor_exited&)
     {
     }
     await_all_others_done();
@@ -35,11 +39,11 @@ void client_part(const std::vector<std::string>& argv)
 } // namespace <anonymous>
 
 size_t test__remote_actor(const char* app_path, bool is_client,
-                          const std::vector<std::string>& argv)
+                          const std::map<std::string, std::string>& args)
 {
     if (is_client)
     {
-        client_part(argv);
+        client_part(args);
         return 0;
     }
     CPPA_TEST(test__remote_actor);
@@ -64,7 +68,7 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     std::string cmd;
     {
         std::ostringstream oss;
-        oss << app_path << " test__remote_actor " << port << " &>/dev/null";
+        oss << app_path << " run=remote_actor port=" << port;// << " &>/dev/null";
         cmd = oss.str();
     }
     // execute client_part() in a separate process,
