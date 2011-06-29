@@ -14,11 +14,7 @@ class actor_proxy : public detail::abstract_actor<actor>
     // implemented in unicast_network.cpp
     static void forward_message(const process_information_ptr&, const message&);
 
-    process_information_ptr m_parent;
-
  public:
-
-    actor_proxy(std::uint32_t mid, process_information_ptr&& parent);
 
     actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
 
@@ -31,10 +27,6 @@ class actor_proxy : public detail::abstract_actor<actor>
     bool remove_backlink(intrusive_ptr<actor>& to);
 
     bool establish_backlink(intrusive_ptr<actor>& to);
-
-    const process_information& parent_process() const;
-
-    process_information_ptr parent_process_ptr() const;
 
 };
 

@@ -26,11 +26,14 @@ class actor : public channel
 
     bool m_is_proxy;
     std::uint32_t m_id;
+    process_information_ptr m_parent_process;
 
  protected:
 
-    actor();
-    actor(std::uint32_t aid);
+    actor(const process_information_ptr& parent = process_information::get());
+
+    actor(std::uint32_t aid,
+          const process_information_ptr& parent = process_information::get());
 
  public:
 
@@ -102,7 +105,9 @@ class actor : public channel
     /**
      * @brief Gets the {@link process_information} of the parent process.
      */
-    virtual const process_information& parent_process() const;
+    inline const process_information& parent_process() const;
+
+    inline process_information_ptr parent_process_ptr() const;
 
     /**
      * @brief
@@ -117,6 +122,16 @@ class actor : public channel
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 
 };
+
+inline const process_information& actor::parent_process() const
+{
+    return *m_parent_process;
+}
+
+inline process_information_ptr actor::parent_process_ptr() const
+{
+    return m_parent_process;
+}
 
 typedef intrusive_ptr<actor> actor_ptr;
 

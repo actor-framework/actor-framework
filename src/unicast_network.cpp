@@ -28,134 +28,11 @@
 using std::cout;
 using std::endl;
 
-//using cppa::detail::mailman_job;
-//using cppa::detail::mailman_queue;
-using cppa::detail::native_socket_t;
-//using cppa::detail::get_actor_proxy_cache;
-
 namespace cppa {
 
 namespace {
 
-/*
-
-// a map that manages links between local actors and remote actors (proxies)
-typedef std::map<actor_ptr, std::list<actor_proxy_ptr> > link_map;
-
-std::string pid_as_string(const process_information& pinf)
-{
-    return to_string(pinf);
-}
-
-std::string pid_as_string()
-{
-    return pid_as_string(process_information::get());
-}
-
-struct mm_worker
-{
-
-    native_socket_t m_sockfd;
-    boost::thread m_thread;
-
-    mm_worker(native_socket_t sockfd, process_information_ptr peer)
-        : m_sockfd(sockfd), m_thread(post_office_loop,
-                                     sockfd,
-                                     peer,
-                                     actor_proxy_ptr(),
-                                     static_cast<attachable*>(nullptr))
-    {
-    }
-
-    ~mm_worker()
-    {
-        cout << "=> [" << pid_as_string() << "]::~mm_worker()" << endl;
-        detail::closesocket(m_sockfd);
-        m_thread.join();
-        cout << "<= [" << pid_as_string() << "]::~mm_worker()" << endl;
-    }
-
-};
-
-struct shared_barrier : ref_counted
-{
-    boost::barrier m_barrier;
-    shared_barrier() : m_barrier(2) { }
-    ~shared_barrier() { }
-    void wait() { m_barrier.wait(); }
-};
-
-struct mm_handle : attachable
-{
-    native_socket_t m_sockfd;
-    intrusive_ptr<shared_barrier> m_barrier;
-
-    mm_handle(native_socket_t sockfd,
-              const intrusive_ptr<shared_barrier>& mbarrier)
-        : m_sockfd(sockfd), m_barrier(mbarrier)
-    {
-    }
-
-    virtual ~mm_handle()
-    {
-        //cout << "--> ~mm_handle()" << endl;
-cout << "=> [" << process_information::get() << "]::~mm_worker()" << endl;
-        detail::closesocket(m_sockfd);
-        if (m_barrier) m_barrier->wait();
-cout << "<= [" << process_information::get() << "]::~mm_worker()" << endl;
-        //cout << "<-- ~mm_handle()" << endl;
-    }
-};
-
-void middle_man_loop(native_socket_t server_socket_fd,
-                     const actor_ptr& published_actor,
-                     intrusive_ptr<shared_barrier> barrier)
-{
-    if (!published_actor) return;
-    sockaddr addr;
-    socklen_t addrlen;
-    typedef std::unique_ptr<mm_worker> child_ptr;
-    std::vector<child_ptr> children;
-    auto id = published_actor->id();
-    const process_information& pinf = process_information::get();
-    try
-    {
-        for (;;)
-        {
-            auto sockfd = accept(server_socket_fd, &addr, &addrlen);
-            if (sockfd < 0)
-            {
-                throw std::ios_base::failure("invalid socket accepted");
-            }
-            //cout << "socket accepted" << endl;
-            ::send(sockfd, &id, sizeof(id), 0);
-            ::send(sockfd, &(pinf.process_id), sizeof(pinf.process_id), 0);
-            ::send(sockfd, pinf.node_id.data(), pinf.node_id.size(), 0);
-            process_information_ptr peer(new process_information);
-            read_from_socket(sockfd,
-                             &(peer->process_id),
-                             sizeof(std::uint32_t));
-            read_from_socket(sockfd,
-                             peer->node_id.data(),
-                             process_information::node_id_size);
-            mailman_queue().push_back(new mailman_job(sockfd, peer));
-            // todo: check if connected peer is compatible
-            children.push_back(child_ptr(new mm_worker(sockfd, peer)));
-            //cout << "client connection done" << endl;
-        }
-    }
-    catch (...)
-    {
-    }
-    // calls destructors of all children
-    children.clear();
-    // wait for handshake
-    barrier->wait();
-    //cout << "middle_man_loop finished\n";
-}
-*/
-
-void read_from_socket(native_socket_t sfd, void* buf, size_t buf_size)
+void read_from_socket(detail::native_socket_t sfd, void* buf, size_t buf_size)
 {
     char* cbuf = reinterpret_cast<char*>(buf);
     size_t read_bytes = 0;
@@ -205,7 +82,7 @@ struct socket_guard
 void publish(actor_ptr& whom, std::uint16_t port)
 {
     if (!whom) return;
-    native_socket_t sockfd;
+    detail::native_socket_t sockfd;
     struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -250,7 +127,7 @@ void publish(actor_ptr&& whom, std::uint16_t port)
 
 actor_ptr remote_actor(const char* host, std::uint16_t port)
 {
-    native_socket_t sockfd;
+    detail::native_socket_t sockfd;
     struct sockaddr_in serv_addr;
     struct hostent* server;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -273,9 +150,9 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     {
         throw network_exception("could not connect to host");
     }
-    auto& pinf = process_information::get();
-    ::send(sockfd, &(pinf.process_id), sizeof(pinf.process_id), 0);
-    ::send(sockfd, pinf.node_id.data(), pinf.node_id.size(), 0);
+    auto pinf = process_information::get();
+    ::send(sockfd, &(pinf->process_id), sizeof(pinf->process_id), 0);
+    ::send(sockfd, pinf->node_id.data(), pinf->node_id.size(), 0);
     auto peer_pinf = new process_information;
     std::uint32_t remote_actor_id;
     read_from_socket(sockfd, &remote_actor_id, sizeof(remote_actor_id));

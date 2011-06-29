@@ -3,6 +3,7 @@
 #include <map>
 #include <mutex>
 #include <atomic>
+#include <stdexcept>
 
 #include "cppa/actor.hpp"
 #include "cppa/util/shared_spinlock.hpp"
@@ -21,14 +22,27 @@ typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
 namespace cppa {
 
-actor::actor(std::uint32_t aid) : m_is_proxy(true), m_id(aid)
+actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
+    : m_is_proxy(true), m_id(aid), m_parent_process(pptr)
 {
+    if (!pptr)
+    {
+        throw std::logic_error("parent == nullptr");
+    }
 }
 
-actor::actor() : m_is_proxy(false), m_id(s_ids.fetch_add(1))
+actor::actor(const process_information_ptr& pptr)
+    : m_is_proxy(false), m_id(s_ids.fetch_add(1)), m_parent_process(pptr)
 {
-    exclusive_guard guard(s_instances_mtx);
-    s_instances.insert(std::make_pair(m_id, this));
+    if (!pptr)
+    {
+        throw std::logic_error("parent == nullptr");
+    }
+    else
+    {
+        exclusive_guard guard(s_instances_mtx);
+        s_instances.insert(std::make_pair(m_id, this));
+    }
 }
 
 actor::~actor()
@@ -49,13 +63,6 @@ intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
         return i->second;
     }
     return nullptr;
-}
-
-const process_information& actor::parent_process() const
-{
-    // default implementation assumes that the actor belongs to
-    // the running process
-    return process_information::get();
 }
 
 void actor::join(group_ptr& what)

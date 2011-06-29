@@ -31,7 +31,7 @@
 #include "cppa/detail/actor_proxy_cache.hpp"
 
 //#define DEBUG(arg) std::cout << arg << std::endl
-#define DEBUG(unused) //
+#define DEBUG(unused) ((void) 0)
 
 namespace cppa { namespace detail { namespace {
 
@@ -227,12 +227,15 @@ class post_office_worker
     size_t m_rc;
     native_socket_t m_parent;
 
+    post_office_worker(const post_office_worker&) = delete;
+    post_office_worker& operator=(const post_office_worker&) = delete;
+
  protected:
 
     native_socket_t m_socket;
 
     // caches process_information::get()
-    const process_information& m_pself;
+    process_information_ptr m_pself;
 
     post_office_worker(native_socket_t fd, native_socket_t parent_fd = -1)
         : m_rc((parent_fd != -1) ? 1 : 0)
@@ -466,7 +469,7 @@ class po_peer : public post_office_worker
                        == atom(":Monitor"))
                 {
                     actor_ptr sender = msg.sender();
-                    if (sender->parent_process() == process_information::get())
+                    if (sender->parent_process() == *process_information::get())
                     {
                         //cout << pinfo << " ':Monitor'; actor id = "
                         //     << sender->id() << endl;
@@ -556,8 +559,8 @@ class po_doorman : public post_office_worker
         }
         auto id = published_actor->id();
         ::send(sfd, &id, sizeof(std::uint32_t), 0);
-        ::send(sfd, &(m_pself.process_id), sizeof(std::uint32_t), 0);
-        ::send(sfd, m_pself.node_id.data(), m_pself.node_id.size(), 0);
+        ::send(sfd, &(m_pself->process_id), sizeof(std::uint32_t), 0);
+        ::send(sfd, m_pself->node_id.data(), m_pself->node_id.size(), 0);
         m_peers->push_back(po_peer(sfd, m_socket));
         DEBUG("socket accepted; published actor: " << id);
         return true;
@@ -729,6 +732,7 @@ void post_office_loop(int pipe_read_handle)
                     post_office_msg* pom = s_po_manager.m_queue.pop();
                     if (pom->is_add_peer_msg())
                     {
+                        //DEBUG("pom->is_add_peer_msg()");
                         auto& apm = pom->as_add_peer_msg();
                         actor_proxy_ptr pptr = apm.first_peer_actor;
                         po_peer pd(apm);
@@ -744,6 +748,7 @@ void post_office_loop(int pipe_read_handle)
                     }
                     else
                     {
+                        //DEBUG("pom->is_add_peer_msg() == false");
                         auto& assm = pom->as_add_server_socket_msg();
                         auto& pactor = assm.published_actor;
                         if (pactor)
@@ -760,7 +765,6 @@ void post_office_loop(int pipe_read_handle)
                                 dm.push_back(po_doorman(assm, &peers));
                                 DEBUG("new doorman");
                             }
-                            // else: actor already exited!
                         }
                         else
                         {
@@ -869,14 +873,16 @@ void post_office_add_peer(native_socket_t a0,
 void post_office_publish(native_socket_t server_socket,
                          const actor_ptr& published_actor)
 {
+    DEBUG("post_office_publish(" << published_actor->id() << ")");
     s_po_manager.m_queue.push_back(new post_office_msg(server_socket,
-                                                        published_actor));
+                                                       published_actor));
     pipe_msg msg = { rd_queue_event, 0 };
     write(s_po_manager.write_handle(), msg, pipe_msg_size);
 }
 
 void post_office_unpublish(std::uint32_t actor_id)
 {
+    DEBUG("post_office_unpublish(" << actor_id << ")");
     pipe_msg msg = { unpublish_actor_event, actor_id };
     write(s_po_manager.write_handle(), msg, pipe_msg_size);
 }

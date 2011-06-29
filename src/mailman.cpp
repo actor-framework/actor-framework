@@ -8,38 +8,7 @@
 #include "cppa/detail/post_office.hpp"
 
 //#define DEBUG(arg) std::cout << arg << std::endl
-#define DEBUG(unused) //
-
-// static queue helper
-namespace {
-/*
-struct mailman_manager
-{
-
-    typedef cppa::util::single_reader_queue<cppa::detail::mailman_job> queue_t;
-
-    boost::barrier m_init_handshake;
-    boost::barrier m_shutdown_handshake;
-    queue_t m_queue;
-
-    mailman_manager()
-    {
-        m_queue = new queue_t;
-        m_loop = new boost::thread(cppa::detail::mailman_loop);
-    }
-
-    ~mailman_manager()
-    {
-        m_queue->push_back(cppa::detail::mailman_job::kill_job());
-        m_loop->join();
-        delete m_loop;
-        delete m_queue;
-    }
-
-}
-s_mailman_manager;
-*/
-} // namespace <anonymous>
+#define DEBUG(unused) ((void) 0)
 
 // implementation of mailman.hpp
 namespace cppa { namespace detail {

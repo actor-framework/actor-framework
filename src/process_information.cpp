@@ -41,10 +41,10 @@ const char* s_get_mac =
     "head -n1";
 #endif
 
-cppa::process_information compute_proc_info()
+cppa::process_information* compute_proc_info()
 {
-    cppa::process_information result;
-    result.process_id = getpid();
+    auto result = new cppa::process_information;
+    result->process_id = getpid();
     char cbuf[100];
     // fetch hd serial
     std::string hd_serial;
@@ -64,10 +64,36 @@ cppa::process_information compute_proc_info()
     }
     pclose(get_mac_cmd);
     erase_trailing_newline(first_mac_addr);
-    cppa::util::ripemd_160(result.node_id, first_mac_addr + hd_serial);
+    cppa::util::ripemd_160(result->node_id, first_mac_addr + hd_serial);
     //memcpy(result.node_id, tmp.data(), cppa::process_information::node_id_size);
     return result;
 }
+
+cppa::process_information* s_pinfo = nullptr;
+
+struct pinfo_manager
+{
+
+    pinfo_manager()
+    {
+        if (s_pinfo == nullptr)
+        {
+            s_pinfo = compute_proc_info();
+            s_pinfo->ref();
+        }
+    }
+
+    ~pinfo_manager()
+    {
+        if (s_pinfo && !s_pinfo->deref())
+        {
+            delete s_pinfo;
+            s_pinfo = nullptr;
+        }
+    }
+
+}
+s_pinfo_manager;
 
 } // namespace <anonymous>
 
@@ -116,10 +142,9 @@ std::string process_information::node_id_as_string() const
     return oss.str();
 }
 
-const process_information& process_information::get()
+intrusive_ptr<process_information> process_information::get()
 {
-    static auto s_proc_info = compute_proc_info();
-    return s_proc_info;
+    return s_pinfo;
 }
 
 int process_information::compare(const process_information& other) const

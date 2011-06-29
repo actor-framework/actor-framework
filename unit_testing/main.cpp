@@ -49,12 +49,12 @@ using std::endl;
 
 void print_node_id()
 {
-    const auto& pinfo = cppa::process_information::get();
-    auto node_id_hash = pinfo.node_id_as_string();
+    auto pinfo = cppa::process_information::get();
+    auto node_id_hash = pinfo->node_id_as_string();
     cout << "node id: " << node_id_hash << endl;
-    cout << "process id: " << pinfo.process_id << endl;
+    cout << "process id: " << pinfo->process_id << endl;
     cout << "actor id format: {process id}.{actor id}@{node id}" << endl;
-    cout << "example actor id: " << pinfo.process_id
+    cout << "example actor id: " << pinfo->process_id
                                  << ".42@"
                                  << node_id_hash
                                  << endl;

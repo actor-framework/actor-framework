@@ -167,9 +167,9 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
             source->end_object();
             const std::string& nstr = get<std::string>(ptup[2]);
             // local actor?
-            auto& pinf = process_information::get();
-            if (   pinf.process_id == get<std::uint32_t>(ptup[1])
-                && pinf.node_id_as_string() == nstr)
+            auto pinf = process_information::get();
+            if (   pinf->process_id == get<std::uint32_t>(ptup[1])
+                && pinf->node_id_as_string() == nstr)
             {
                 ptrref = actor::by_id(get<std::uint32_t>(ptup[0]));
             }

@@ -55,7 +55,7 @@ class process_information : public ref_counted,
      * @brief Returns the proccess_information for the running process.
      * @return
      */
-    static const process_information& get();
+    static intrusive_ptr<process_information> get();
 
     static void node_id_from_string(const std::string& str, node_id_type& storage);
 
