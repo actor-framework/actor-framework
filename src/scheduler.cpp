@@ -6,7 +6,8 @@
 #include "cppa/context.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/detail/actor_count.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
+//#include "cppa/detail/mock_scheduler.hpp"
+#include "cppa/detail/thread_pool_scheduler.hpp"
 
 namespace {
 
@@ -77,7 +78,7 @@ scheduler* get_scheduler()
     scheduler* result = m_instance.load();
     while (result == nullptr)
     {
-        scheduler* new_instance = new detail::mock_scheduler;
+        scheduler* new_instance = new detail::thread_pool_scheduler;
         if (m_instance.compare_exchange_weak(result, new_instance))
         {
             result = new_instance;
