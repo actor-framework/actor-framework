@@ -111,7 +111,7 @@ void node_id_from_string(const std::string& hash,
     {
         throw std::invalid_argument("string argument is not a node id hash");
     }
-    auto j = hash.begin();
+    auto j = hash.c_str();
     for (size_t i = 0; i < node_id.size(); ++i)
     {
         // read two characters, each representing 4 bytes
@@ -128,7 +128,7 @@ bool equal(const std::string& hash,
     {
         return false;
     }
-    auto j = hash.begin();
+    auto j = hash.c_str();
     try
     {
         for (size_t i = 0; i < node_id.size(); ++i)
