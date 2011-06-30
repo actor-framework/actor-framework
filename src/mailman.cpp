@@ -158,8 +158,8 @@ void mailman_loop()
             auto i = peers.find(*(pjob.pinfo));
             if (i == peers.end())
             {
-                //cout << "mailman added " << pjob.pinfo->process_id << "@"
-                //     << pjob.pinfo->node_id_as_string() << endl;
+                //cout << "mailman added " << pjob.pinfo->process_id() << "@"
+                //     << to_string(pjob.pinfo->node_id()) << endl;
                 peers.insert(std::make_pair(*(pjob.pinfo), pjob.sockfd));
             }
             else

@@ -471,7 +471,7 @@ object from_string(const std::string& what)
 
 namespace detail {
 
-std::string to_string(const void *what, const uniform_type_info *utype)
+std::string to_string_impl(const void *what, const uniform_type_info *utype)
 {
     std::ostringstream osstr;
     string_serializer strs(osstr);

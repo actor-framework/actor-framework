@@ -15,15 +15,15 @@ class ref_counted_impl
 
  public:
 
-	virtual ~ref_counted_impl() { }
+    virtual ~ref_counted_impl() { }
 
-	inline ref_counted_impl() : m_rc(0) { }
+    inline ref_counted_impl() : m_rc(0) { }
 
-	inline void ref() { ++m_rc; }
+    inline void ref() { ++m_rc; }
 
-	inline bool deref() { return --m_rc > 0; }
+    inline bool deref() { return --m_rc > 0; }
 
-	inline bool unique() { return m_rc == 1; }
+    inline bool unique() { return m_rc == 1; }
 
 };
 

@@ -151,17 +151,16 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
         throw network_exception("could not connect to host");
     }
     auto pinf = process_information::get();
-    ::send(sockfd, &(pinf->process_id), sizeof(pinf->process_id), 0);
-    ::send(sockfd, pinf->node_id.data(), pinf->node_id.size(), 0);
-    auto peer_pinf = new process_information;
+    std::uint32_t process_id = pinf->process_id();
+    ::send(sockfd, &process_id, sizeof(std::uint32_t), 0);
+    ::send(sockfd, pinf->node_id().data(), pinf->node_id().size(), 0);
     std::uint32_t remote_actor_id;
+    std::uint32_t peer_pid;
+    process_information::node_id_type peer_node_id;
     read_from_socket(sockfd, &remote_actor_id, sizeof(remote_actor_id));
-    read_from_socket(sockfd,
-                     &(peer_pinf->process_id),
-                     sizeof(std::uint32_t));
-    read_from_socket(sockfd,
-                     peer_pinf->node_id.data(),
-                     peer_pinf->node_id.size());
+    read_from_socket(sockfd, &peer_pid, sizeof(std::uint32_t));
+    read_from_socket(sockfd, peer_node_id.data(), peer_node_id.size());
+    auto peer_pinf = new process_information(peer_pid, peer_node_id);
     process_information_ptr pinfptr(peer_pinf);
     actor_proxy_ptr result(new actor_proxy(remote_actor_id, pinfptr));
     detail::mailman_queue().push_back(new detail::mailman_job(sockfd, pinfptr));

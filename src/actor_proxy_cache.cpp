@@ -45,7 +45,7 @@ actor_proxy_ptr actor_proxy_cache::get(const key_tuple& key)
 void actor_proxy_cache::add(actor_proxy_ptr& pptr)
 {
     auto pinfo = pptr->parent_process_ptr();
-    key_tuple key(pptr->id(), pinfo->process_id, pinfo->node_id);
+    key_tuple key(pptr->id(), pinfo->process_id(), pinfo->node_id());
     m_pinfos.insert(std::make_pair(key, pptr->parent_process_ptr()));
     m_proxies.insert(std::make_pair(key, pptr));
     if (m_new_cb) m_new_cb(pptr);
@@ -54,7 +54,7 @@ void actor_proxy_cache::add(actor_proxy_ptr& pptr)
 void actor_proxy_cache::erase(const actor_proxy_ptr& pptr)
 {
     auto pinfo = pptr->parent_process_ptr();
-    key_tuple key(pptr->id(), pinfo->process_id, pinfo->node_id);
+    key_tuple key(pptr->id(), pinfo->process_id(), pinfo->node_id());
     m_proxies.erase(key);
 }
 

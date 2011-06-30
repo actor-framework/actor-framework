@@ -7,7 +7,7 @@ namespace cppa {
 
 namespace detail {
 
-std::string to_string(const void* what, const uniform_type_info* utype);
+std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
 } // namespace detail
 
@@ -20,7 +20,7 @@ std::string to_string(const T& what)
         throw std::logic_error(  detail::to_uniform_name(typeid(T))
                                + " is not announced");
     }
-    return detail::to_string(&what, utype);
+    return detail::to_string_impl(&what, utype);
 }
 
 } // namespace cppa

@@ -398,22 +398,22 @@ class po_peer : public post_office_worker
                 }
                 else
                 {
-                    m_peer.reset(new process_information);
+                    std::uint32_t process_id;
+                    memcpy(&process_id, m_rdbuf.data(), sizeof(std::uint32_t));
+                    process_information::node_id_type node_id;
+                    memcpy(node_id.data(),
+                           m_rdbuf.data() + sizeof(std::uint32_t),
+                           process_information::node_id_size);
+                    m_peer.reset(new process_information(process_id, node_id));
                     // inform mailman about new peer
                     mailman_queue().push_back(new mailman_job(m_socket,
                                                               m_peer));
-                    memcpy(&(m_peer->process_id),
-                           m_rdbuf.data(),
-                           sizeof(std::uint32_t));
-                    memcpy(m_peer->node_id.data(),
-                           m_rdbuf.data() + sizeof(std::uint32_t),
-                           process_information::node_id_size);
                     m_rdbuf.reset();
                     m_state = wait_for_msg_size;
                     DEBUG("pinfo read: "
                           << m_peer->process_id
                           << "@"
-                          << m_peer->node_id_as_string());
+                          << to_string(m_peer->node_id));
                     // fall through and try to read more from socket
                 }
             }
@@ -558,9 +558,10 @@ class po_doorman : public post_office_worker
             }
         }
         auto id = published_actor->id();
+        std::uint32_t process_id = m_pself->process_id();
         ::send(sfd, &id, sizeof(std::uint32_t), 0);
-        ::send(sfd, &(m_pself->process_id), sizeof(std::uint32_t), 0);
-        ::send(sfd, m_pself->node_id.data(), m_pself->node_id.size(), 0);
+        ::send(sfd, &process_id, sizeof(std::uint32_t), 0);
+        ::send(sfd, m_pself->node_id().data(), m_pself->node_id().size(), 0);
         m_peers->push_back(po_peer(sfd, m_socket));
         DEBUG("socket accepted; published actor: " << id);
         return true;

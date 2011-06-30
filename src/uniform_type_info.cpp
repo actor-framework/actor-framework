@@ -133,8 +133,8 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
         {
             primitive_variant ptup[3];
             ptup[0] = ptr->id();
-            ptup[1] = ptr->parent_process().process_id;
-            ptup[2] = ptr->parent_process().node_id_as_string();
+            ptup[1] = ptr->parent_process().process_id();
+            ptup[2] = to_string(ptr->parent_process().node_id());
             sink->begin_object(name);
             sink->write_tuple(3, ptup);
             sink->end_object();
@@ -168,8 +168,8 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
             const std::string& nstr = get<std::string>(ptup[2]);
             // local actor?
             auto pinf = process_information::get();
-            if (   pinf->process_id == get<std::uint32_t>(ptup[1])
-                && pinf->node_id_as_string() == nstr)
+            if (   pinf->process_id() == get<std::uint32_t>(ptup[1])
+                && cppa::equal(nstr, pinf->node_id()))
             {
                 ptrref = actor::by_id(get<std::uint32_t>(ptup[0]));
             }
@@ -178,7 +178,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
                 actor_proxy_cache::key_tuple key;
                 std::get<0>(key) = get<std::uint32_t>(ptup[0]);
                 std::get<1>(key) = get<std::uint32_t>(ptup[1]);
-                process_information::node_id_from_string(nstr,std::get<2>(key));
+                node_id_from_string(nstr, std::get<2>(key));
                 ptrref = detail::get_actor_proxy_cache().get(key);
             }
         }
