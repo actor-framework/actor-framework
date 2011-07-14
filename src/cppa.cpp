@@ -66,4 +66,13 @@ void demonitor(actor_ptr&& whom)
     demonitor(static_cast<actor_ptr&>(whom));
 }
 
+void receive_loop(invoke_rules& rules)
+{
+    auto& mbox = self()->mailbox();
+    for (;;)
+    {
+        mbox.dequeue(rules);
+    }
+}
+
 } // namespace cppa

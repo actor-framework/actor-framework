@@ -123,6 +123,27 @@ inline void quit(std::uint32_t reason)
     self()->quit(reason);
 }
 
+void receive_loop(invoke_rules& rules);
+
+inline void receive_loop(invoke_rules&& rules)
+{
+    invoke_rules tmp(std::move(rules));
+    receive_loop(tmp);
+}
+
+template<typename Head, typename... Tail>
+void receive_loop(invoke_rules&& rules, Head&& head, Tail... tail)
+{
+    invoke_rules tmp(std::move(rules));
+    receive_loop(tmp.append(std::forward<Head>(head)), tail...);
+}
+
+template<typename Head, typename... Tail>
+void receive_loop(invoke_rules& rules, Head&& head, Tail... tail)
+{
+    receive_loop(rules.append(std::forward<Head>(head)), tail...);
+}
+
 /**
  * @brief Dequeues the next message from the mailbox.
  */

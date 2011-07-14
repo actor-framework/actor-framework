@@ -14,7 +14,7 @@ void pong(actor_ptr ping_actor)
     ping_actor << make_tuple(atom("Pong"), static_cast<std::int32_t>(0));
     // or: send(ping_actor, static_cast<std::int32_t>(0));
     // invoke rules
-    auto pattern =
+    receive_loop
     (
         on<atom("Ping"), std::int32_t>(9) >> []()
         {
@@ -27,15 +27,13 @@ void pong(actor_ptr ping_actor)
             reply(atom("Pong"), value + 1);
         }
     );
-    // loop
-    for (;;) receive(pattern);
 }
 
 void ping()
 {
     s_pongs = 0;
     // invoke rule
-    auto pattern =
+    receive_loop
     (
         on<atom("Pong"), std::int32_t>() >> [](std::int32_t value)
         {
@@ -47,10 +45,7 @@ void ping()
             throw std::runtime_error(  "unexpected message: "
                                      + to_string(last_received()));
         }
-
     );
-    // loop
-    for (;;) receive(pattern);
 }
 
 int pongs()

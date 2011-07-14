@@ -62,6 +62,12 @@ struct invoke_rules
         return nullptr;
     }
 
+    invoke_rules& append(invoke_rules&& other)
+    {
+        m_list.splice(m_list.end(), other.m_list);
+        return *this;
+    }
+
     invoke_rules operator,(invoke_rules&& other)
     {
         m_list.splice(m_list.end(), other.m_list);
