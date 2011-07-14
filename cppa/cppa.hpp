@@ -52,42 +52,49 @@
 #include "cppa/util/disable_if.hpp"
 
 #include "cppa/detail/get_behavior.hpp"
+#include "cppa/detail/receive_loop_helper.hpp"
 
+/**
+ * @brief The root namespace of libcppa.
+ */
 namespace cppa {
 
 /**
  * @brief Links the calling actor to @p other.
  */
-inline void link(actor_ptr& other)
-{
-    self()->link_to(other);
-}
+void link(actor_ptr& other);
+
+void link(actor_ptr&& other);
 
 /**
- * @brief Links the calling actor to @p other.
+ * @brief Links @p lhs and @p rhs;
  */
-inline void link(actor_ptr&& other)
-{
-    self()->link_to(other);
-}
+void link(actor_ptr&  lhs, actor_ptr&  rhs);
 
-inline void link(actor_ptr& lhs, actor_ptr& rhs)
-{
-    if (lhs && rhs) lhs->link_to(rhs);
-}
+// enable link(spawn(...), spawn(...)), etc.
+void link(actor_ptr&& lhs, actor_ptr&  rhs);
+void link(actor_ptr&& lhs, actor_ptr&& rhs);
+void link(actor_ptr&  lhs, actor_ptr&& rhs);
 
-inline void unlink(actor_ptr& lhs, actor_ptr& rhs)
-{
-    if (lhs && rhs) lhs->unlink_from(rhs);
-}
+/**
+ * @brief Unlinks @p lhs and @p rhs;
+ */
+void unlink(actor_ptr& lhs, actor_ptr& rhs);
 
+/**
+ * @brief Adds a monitor to @p whom.
+ *
+ * Sends a ":Down" message if @p whom exited.
+ */
 void monitor(actor_ptr& whom);
 
+// enable monitor(spawn(...))
 void monitor(actor_ptr&& whom);
 
+/**
+ * @brief Removes a monitor from @p whom.
+ */
 void demonitor(actor_ptr& whom);
-
-void demonitor(actor_ptr&& whom);
 
 inline void trap_exit(bool new_value)
 {
@@ -123,6 +130,14 @@ inline void quit(std::uint32_t reason)
     self()->quit(reason);
 }
 
+/**
+ * @brief Receives messages in an endless loop.
+ *
+ * Equal to:
+ * @code
+ * for (;;) { receive(rules); }
+ * @endcode
+ */
 void receive_loop(invoke_rules& rules);
 
 inline void receive_loop(invoke_rules&& rules)
@@ -135,13 +150,47 @@ template<typename Head, typename... Tail>
 void receive_loop(invoke_rules&& rules, Head&& head, Tail... tail)
 {
     invoke_rules tmp(std::move(rules));
-    receive_loop(tmp.append(std::forward<Head>(head)), tail...);
+    receive_loop(tmp.splice(std::forward<Head>(head)), tail...);
 }
 
 template<typename Head, typename... Tail>
 void receive_loop(invoke_rules& rules, Head&& head, Tail... tail)
 {
-    receive_loop(rules.append(std::forward<Head>(head)), tail...);
+    receive_loop(rules.splice(std::forward<Head>(head)), tail...);
+}
+
+/**
+ * @brief Receives messages as long as @p stmt returns true.
+ *
+ * Equal to:
+ * @code
+ * while (stmt()) { receive(...); }
+ * @endcode
+ */
+template<typename Statement>
+detail::receive_loop_helper<Statement, detail::receive_while_loop<Statement> >
+receive_while(Statement&& stmt)
+{
+    static_assert(std::is_same<bool, decltype(stmt())>::value,
+                  "statement is not a functor / lambda expression");
+    return std::move(stmt);
+}
+
+/**
+ * @brief Receives messages until @p stmt returns true.
+ *
+ * Equal to:
+ * @code
+ * do { receive(...); } while (stmt() == false);
+ * @endcode
+ */
+template<typename Statement>
+detail::receive_loop_helper<Statement, detail::receive_until_loop<Statement> >
+receive_until(Statement&& stmt)
+{
+    static_assert(std::is_same<bool, decltype(stmt())>::value,
+                  "statement is not a functor / lambda expression");
+    return std::move(stmt);
 }
 
 /**
@@ -166,18 +215,28 @@ inline void receive(invoke_rules&& rules)
     self()->mailbox().dequeue(rules);
 }
 
+/**
+ * @brief Tries to dequeue the next message from the mailbox.
+ * @return @p true if a messages was dequeued;
+ *         @p false if the mailbox is empty
+ */
 inline bool try_receive(message& msg)
 {
     return self()->mailbox().try_dequeue(msg);
 }
 
+/**
+ * @brief Tries to dequeue the next message from the mailbox.
+ * @return @p true if a messages was dequeued;
+ *         @p false if the mailbox is empty
+ */
 inline bool try_receive(invoke_rules& rules)
 {
     return self()->mailbox().try_dequeue(rules);
 }
 
 /**
- * @brief Reads the last dequeued message from the mailbox.
+ * @brief Gets the last dequeued message from the mailbox.
  * @return The last dequeued message from the mailbox.
  */
 inline const message& last_received()

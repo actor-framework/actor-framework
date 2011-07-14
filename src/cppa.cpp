@@ -45,6 +45,46 @@ context* operator<<(context* whom, any_tuple&& what)
     return whom;
 }
 
+void link(actor_ptr& other)
+{
+    if (other) self()->link_to(other);
+}
+
+void link(actor_ptr&& other)
+{
+    actor_ptr tmp(std::move(other));
+    link(tmp);
+}
+
+void link(actor_ptr& lhs, actor_ptr& rhs)
+{
+    if (lhs && rhs) lhs->link_to(rhs);
+}
+
+void link(actor_ptr&& lhs, actor_ptr& rhs)
+{
+    actor_ptr tmp(std::move(lhs));
+    link(tmp, rhs);
+}
+
+void link(actor_ptr&& lhs, actor_ptr&& rhs)
+{
+    actor_ptr tmp1(std::move(lhs));
+    actor_ptr tmp2(std::move(rhs));
+    link(tmp1, tmp2);
+}
+
+void link(actor_ptr& lhs, actor_ptr&& rhs)
+{
+    actor_ptr tmp(std::move(rhs));
+    link(lhs, tmp);
+}
+
+void unlink(actor_ptr& lhs, actor_ptr& rhs)
+{
+    if (lhs && rhs) lhs->unlink_from(rhs);
+}
+
 void monitor(actor_ptr& whom)
 {
     if (whom) whom->attach(new observer(self()));
@@ -52,18 +92,14 @@ void monitor(actor_ptr& whom)
 
 void monitor(actor_ptr&& whom)
 {
-    monitor(static_cast<actor_ptr&>(whom));
+    actor_ptr tmp(std::move(whom));
+    monitor(tmp);
 }
 
 void demonitor(actor_ptr& whom)
 {
     attachable::token mtoken(typeid(observer), self());
     if (whom) whom->detach(mtoken);
-}
-
-void demonitor(actor_ptr&& whom)
-{
-    demonitor(static_cast<actor_ptr&>(whom));
 }
 
 void receive_loop(invoke_rules& rules)

@@ -5,6 +5,8 @@ html/
 test
 *.png
 *.dat
+*.ii
+*.s
 queue_test
 cppa.creator.user
 8threads

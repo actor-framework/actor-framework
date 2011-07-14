@@ -21,41 +21,24 @@ using std::endl;
 
 using namespace cppa;
 
-void worker()
-{
-    receive(on<int>() >> [](int value) {
-        reply(value);
-    });
-}
-
-struct baz_t
-{
-    template<typename... Args>
-    baz_t& operator<<(const cppa::tuple<Args...>& tup)
-    {
-        cout << "baz { " << get<0>(tup) << ", ... }" << endl;
-        return *this;
-    }
-}
-baz;
-
 size_t test__local_group()
 {
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
     for (int i = 0; i < 5; ++i)
     {
-        // spawn workers and let them join local/foo
-        spawn(worker)->join(foo_group);
+        // spawn five workers and let them join local/foo
+        auto w = spawn([]() { receive(on<int>() >> [](int v) { reply(v); }); });
+        w->join(foo_group);
     }
     foo_group << make_tuple(2);
-    //send(foo_group, 2);
     int result = 0;
-    for (int i = 0; i < 5; ++i)
-    {
-        receive(on<int>() >> [&result](int value) { result += value; });
-    }
-    CPPA_CHECK_EQUAL(result, 10);
+    receive_until([&result]() { return result == 10; })
+    (
+        on<int>() >> [&result](int value) { result += value; }
+    );
     await_all_others_done();
+    message tmp;
+    CPPA_CHECK_EQUAL(try_receive(tmp), false);
     return CPPA_TEST_RESULT;
 }

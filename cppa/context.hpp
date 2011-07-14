@@ -37,9 +37,21 @@ class context : public actor
      */
     virtual void enqueue(const message& msg) /*override*/;
 
-    void trap_exit(bool new_value);
+    inline bool trap_exit() const;
+
+    inline void trap_exit(bool new_value);
 
 };
+
+inline bool context::trap_exit() const
+{
+    return mailbox().trap_exit();
+}
+
+inline void context::trap_exit(bool new_value)
+{
+    mailbox().trap_exit(new_value);
+}
 
 /**
  * @brief Get a pointer to the current active context.

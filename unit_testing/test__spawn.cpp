@@ -19,7 +19,7 @@ using namespace cppa;
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
-    auto report_unexpected = [&] ()
+    auto report_unexpected = [&]()
     {
         cerr << "unexpected message: " << to_string(last_received()) << endl;
         CPPA_CHECK(false);
@@ -28,25 +28,25 @@ size_t test__spawn()
     auto pong_actor = spawn(pong, spawn(ping));
     monitor(pong_actor);
     link(pong_actor);
-    auto pattern =
+    int i = 0;
+    // wait for :Down and :Exit messages of pong
+    receive_while([&i]() { return (++i <= 2); })
     (
-        on<atom(":Exit"), std::uint32_t>() >> [&] (std::uint32_t reason)
+        on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             CPPA_CHECK_EQUAL(last_received().sender(), pong_actor);
         },
-        on<atom(":Down"), std::uint32_t>() >> [&] (std::uint32_t reason)
+        on<atom(":Down"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             CPPA_CHECK_EQUAL(last_received().sender(), pong_actor);
         },
-        others() >> [&] ()
+        others() >> [&]()
         {
             report_unexpected();
         }
     );
-    // wait for :Down and :Exit messages of pong
-    for (auto i = 0; i < 2; ++i) receive(pattern);
     // wait for termination of all spawned actors
     await_all_others_done();
     // mailbox has to be empty

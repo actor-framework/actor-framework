@@ -77,8 +77,8 @@ class abstract_actor : public Base
     //abstract_actor() : Base() { }
 
     template<typename... Args>
-    abstract_actor(const Args&... args) : Base(args...)
-                                        , m_exit_reason(exit_reason::not_exited)
+    abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
+                                   , m_exit_reason(exit_reason::not_exited)
     {
     }
 

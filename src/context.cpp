@@ -28,11 +28,6 @@ void context::enqueue(const message& msg)
     mailbox().enqueue(msg);
 }
 
-void context::trap_exit(bool new_value)
-{
-    mailbox().trap_exit(new_value);
-}
-
 context* unchecked_self()
 {
     return t_this_context.get();

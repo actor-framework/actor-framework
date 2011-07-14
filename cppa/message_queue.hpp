@@ -27,10 +27,16 @@ class message_queue : public ref_counted
     virtual bool try_dequeue(message&) = 0;
     virtual bool try_dequeue(invoke_rules&) = 0;
 
+    inline bool trap_exit() const;
     inline void trap_exit(bool value);
     inline const message& last_dequeued();
 
 };
+
+inline bool message_queue::trap_exit() const
+{
+    return m_trap_exit;
+}
 
 inline void message_queue::trap_exit(bool value)
 {

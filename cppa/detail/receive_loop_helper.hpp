@@ -26,84 +26,66 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#ifndef INVOKE_RULES_HPP
-#define INVOKE_RULES_HPP
+#ifndef RECEIVE_LOOP_HELPER_HPP
+#define RECEIVE_LOOP_HELPER_HPP
 
-#include <list>
-#include <memory>
+#include "cppa/invoke_rules.hpp"
 
-#include "cppa/invoke.hpp"
-#include "cppa/intrusive_ptr.hpp"
+// forward declaration
+namespace cppa { void receive(invoke_rules&); }
 
-#include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
+namespace cppa { namespace detail {
 
-namespace cppa {
-
-struct invoke_rules
+template<typename Statement>
+void receive_while_loop(Statement& stmt, invoke_rules& rules)
 {
+    while (stmt())
+    {
+        receive(rules);
+    }
+}
 
-    typedef std::list< std::unique_ptr<detail::invokable> > list_type;
+template<typename Statement>
+void receive_until_loop(Statement& stmt, invoke_rules& rules)
+{
+    do
+    {
+        receive(rules);
+    }
+    while (stmt() == false);
+}
 
-    list_type m_list;
-
-    invoke_rules(const invoke_rules&) = delete;
-    invoke_rules& operator=(const invoke_rules&) = delete;
-
-    invoke_rules(list_type&& ll) : m_list(std::move(ll)) { }
-
- public:
-
-    invoke_rules() { }
-
-    invoke_rules(invoke_rules&& other) : m_list(std::move(other.m_list))
+template<typename Statement, void (*Loop)(Statement&, invoke_rules&)>
+struct receive_loop_helper
+{
+    Statement m_stmt;
+    receive_loop_helper(Statement&& stmt) : m_stmt(std::move(stmt))
     {
     }
-
-    invoke_rules(detail::invokable* arg)
+    void operator()(invoke_rules& rules)
     {
-        if (arg) m_list.push_back(std::unique_ptr<detail::invokable>(arg));
+        Loop(m_stmt, rules);
     }
-
-    invoke_rules(std::unique_ptr<detail::invokable>&& arg)
+    void operator()(invoke_rules&& rules)
     {
-        if (arg) m_list.push_back(std::move(arg));
+        invoke_rules tmp(std::move(rules));
+        (*this)(tmp);
     }
-
-    bool operator()(const any_tuple& t) const
+    template<typename Arg0, typename... Args>
+    void operator()(invoke_rules& rules, Arg0&& arg0, Args&&... args)
     {
-        for (auto i = m_list.begin(); i != m_list.end(); ++i)
-        {
-            if ((*i)->invoke(t)) return true;
-        }
-        return false;
+        (*this)(rules.splice(std::forward<Arg0>(arg0)),
+                std::forward<Args>(args)...);
     }
-
-    detail::intermediate* get_intermediate(const any_tuple& t) const
+    template<typename Arg0, typename... Args>
+    void operator()(invoke_rules&& rules, Arg0&& arg0, Args&&... args)
     {
-        detail::intermediate* result;
-        for (auto i = m_list.begin(); i != m_list.end(); ++i)
-        {
-            result = (*i)->get_intermediate(t);
-            if (result != nullptr) return result;
-        }
-        return nullptr;
+        invoke_rules tmp(std::move(rules));
+        (*this)(tmp.splice(std::forward<Arg0>(arg0)),
+                std::forward<Args>(args)...);
     }
-
-    invoke_rules& splice(invoke_rules&& other)
-    {
-        m_list.splice(m_list.end(), other.m_list);
-        return *this;
-    }
-
-    invoke_rules operator,(invoke_rules&& other)
-    {
-        m_list.splice(m_list.end(), other.m_list);
-        return std::move(m_list);
-    }
-
 };
 
-} // namespace cppa
+} } // namespace cppa::detail
 
-#endif // INVOKE_RULES_HPP
+#endif // RECEIVE_LOOP_HELPER_HPP
