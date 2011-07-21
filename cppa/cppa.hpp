@@ -255,7 +255,8 @@ template<class C, typename Arg0, typename... Args>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+    intrusive_ptr<C> tmp(std::move(whom));
+    if (tmp) tmp->enqueue(message(self(), whom, arg0, args...));
 }
 
 // 'matches' send(self(), ...);
@@ -274,11 +275,12 @@ operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&&>::type
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, what));
-    return std::move(whom);
+    intrusive_ptr<C> tmp(std::move(whom));
+    if (tmp) tmp->enqueue(message(self(), tmp, what));
+    return std::move(tmp);
 }
 
 template<class C>
@@ -290,11 +292,12 @@ operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&&>::type
+typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, std::move(what)));
-    return std::move(whom);
+    intrusive_ptr<C> tmp(std::move(whom));
+    if (tmp) tmp->enqueue(message(self(), tmp, std::move(what)));
+    return std::move(tmp);
 }
 
 // matches self() << make_tuple(...)

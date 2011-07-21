@@ -11,8 +11,7 @@ void pong(actor_ptr ping_actor)
 {
     link(ping_actor);
     // kickoff
-    ping_actor << make_tuple(atom("Pong"), static_cast<std::int32_t>(0));
-    // or: send(ping_actor, static_cast<std::int32_t>(0));
+    send(ping_actor, atom("Pong"), static_cast<std::int32_t>(0));
     // invoke rules
     receive_loop
     (
@@ -39,11 +38,6 @@ void ping()
         {
             ++s_pongs;
             reply(atom("Ping"), value + 1);
-        },
-        others() >> []()
-        {
-            throw std::runtime_error(  "unexpected message: "
-                                     + to_string(last_received()));
         }
     );
 }

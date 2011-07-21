@@ -72,7 +72,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         return result;
     }
 
-    void swap(intrusive_ptr& other)
+    inline void swap(intrusive_ptr& other)
     {
         std::swap(m_ptr, other.m_ptr);
     }

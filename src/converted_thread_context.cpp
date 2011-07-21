@@ -26,4 +26,9 @@ message_queue& converted_thread_context::mailbox()
     return m_mailbox;
 }
 
+const message_queue& converted_thread_context::mailbox() const
+{
+    return m_mailbox;
+}
+
 } } // namespace cppa::detail

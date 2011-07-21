@@ -30,6 +30,8 @@ class converted_thread_context : public abstract_actor<context>
 
     message_queue& mailbox() /*override*/;
 
+    const message_queue& mailbox() const /*override*/;
+
     // called if the converted thread finished execution
     void cleanup(std::uint32_t reason = exit_reason::normal);
 

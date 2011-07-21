@@ -29,6 +29,8 @@ class context : public actor
      */
     virtual message_queue& mailbox() = 0;
 
+    virtual const message_queue& mailbox() const = 0;
+
     /**
      * @brief Default implementation of
      *        {@link channel::enqueue(const message&)}.

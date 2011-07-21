@@ -61,6 +61,8 @@ class scheduled_actor : public abstract_actor<context>
 
     message_queue& mailbox() /*override*/;
 
+    const message_queue& mailbox() const /*override*/;
+
     inline std::atomic<int>& state() { return m_mailbox.m_state; }
 
     inline int compare_exchange_state(int expected, int new_value) volatile

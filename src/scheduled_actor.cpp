@@ -52,4 +52,9 @@ message_queue& scheduled_actor::mailbox()
     return m_mailbox;
 }
 
+const message_queue& scheduled_actor::mailbox() const
+{
+    return m_mailbox;
+}
+
 } } // namespace cppa::detail
