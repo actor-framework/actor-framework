@@ -42,6 +42,7 @@
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
@@ -168,13 +169,15 @@ void receive_loop(invoke_rules& rules, Head&& head, Tail... tail)
  * @endcode
  */
 template<typename Statement>
-detail::receive_loop_helper<Statement, detail::receive_while_loop<Statement> >
+detail::receive_while_helper<Statement>
 receive_while(Statement&& stmt)
 {
     static_assert(std::is_same<bool, decltype(stmt())>::value,
-                  "statement is not a functor / lambda expression");
+                  "functor or function does not return a boolean");
     return std::move(stmt);
 }
+
+
 
 /**
  * @brief Receives messages until @p stmt returns true.
@@ -184,13 +187,10 @@ receive_while(Statement&& stmt)
  * do { receive(...); } while (stmt() == false);
  * @endcode
  */
-template<typename Statement>
-detail::receive_loop_helper<Statement, detail::receive_until_loop<Statement> >
-receive_until(Statement&& stmt)
+template<typename... Args>
+detail::do_receive_helper do_receive(Args&&... args)
 {
-    static_assert(std::is_same<bool, decltype(stmt())>::value,
-                  "statement is not a functor / lambda expression");
-    return std::move(stmt);
+    return detail::do_receive_helper(std::forward<Args>(args)...);
 }
 
 /**

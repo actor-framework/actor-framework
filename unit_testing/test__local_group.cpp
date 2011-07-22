@@ -33,10 +33,12 @@ size_t test__local_group()
     }
     send(foo_group, 2);
     int result = 0;
-    receive_until([&result]() { return result == 10; })
+    //receive_until([&result]() { return result == 10; })
+    do_receive
     (
         on<int>() >> [&result](int value) { result += value; }
-    );
+    )
+    .until([&result]() { return result == 10; });
     await_all_others_done();
     message tmp;
     CPPA_CHECK_EQUAL(try_receive(tmp), false);

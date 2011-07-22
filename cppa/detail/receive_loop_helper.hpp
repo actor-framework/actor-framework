@@ -37,34 +37,18 @@ namespace cppa { void receive(invoke_rules&); }
 namespace cppa { namespace detail {
 
 template<typename Statement>
-void receive_while_loop(Statement& stmt, invoke_rules& rules)
-{
-    while (stmt())
-    {
-        receive(rules);
-    }
-}
-
-template<typename Statement>
-void receive_until_loop(Statement& stmt, invoke_rules& rules)
-{
-    do
-    {
-        receive(rules);
-    }
-    while (stmt() == false);
-}
-
-template<typename Statement, void (*Loop)(Statement&, invoke_rules&)>
-struct receive_loop_helper
+struct receive_while_helper
 {
     Statement m_stmt;
-    receive_loop_helper(Statement&& stmt) : m_stmt(std::move(stmt))
+    receive_while_helper(Statement&& stmt) : m_stmt(std::move(stmt))
     {
     }
     void operator()(invoke_rules& rules)
     {
-        Loop(m_stmt, rules);
+        while (m_stmt())
+        {
+            receive(rules);
+        }
     }
     void operator()(invoke_rules&& rules)
     {
@@ -84,6 +68,47 @@ struct receive_loop_helper
         (*this)(tmp.splice(std::forward<Arg0>(arg0)),
                 std::forward<Args>(args)...);
     }
+};
+
+class do_receive_helper
+{
+
+    invoke_rules m_rules;
+
+    inline void init(invoke_rules&) { }
+
+    template<typename Arg0, typename... Args>
+    inline void init(invoke_rules& rules, Arg0&& arg0, Args&&... args)
+    {
+        init(rules.splice(arg0), std::forward<Args>(args)...);
+    }
+
+ public:
+
+    //template<typename... Args>
+    //do_receive_helper(invoke_rules& rules, Args&&... args) : m_rules(std::move(rules))
+    //{
+    //    init(m_rules, std::forward<Args>(args)...);
+    //}
+
+    template<typename... Args>
+    do_receive_helper(invoke_rules&& rules, Args&&... args) : m_rules(std::move(rules))
+    {
+        init(m_rules, std::forward<Args>(args)...);
+    }
+
+    template<typename Statement>
+    void until(Statement&& stmt)
+    {
+        static_assert(std::is_same<bool, decltype(stmt())>::value,
+                      "functor or function does not return a boolean");
+        do
+        {
+            receive(m_rules);
+        }
+        while (stmt() == false);
+    }
+
 };
 
 } } // namespace cppa::detail

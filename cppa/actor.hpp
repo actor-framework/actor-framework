@@ -118,7 +118,7 @@ class actor : public channel
      * @brief
      * @return
      */
-    inline std::uint32_t id();
+    inline std::uint32_t id() const;
 
     /**
      * @brief

@@ -92,13 +92,13 @@ void actor::unlink_from(intrusive_ptr<actor>&& other)
 
 bool actor::remove_backlink(intrusive_ptr<actor>&& to)
 {
-    intrusive_ptr<actor> tmp(std::move(other));
+    intrusive_ptr<actor> tmp(std::move(to));
     return remove_backlink(tmp);
 }
 
 bool actor::establish_backlink(intrusive_ptr<actor>&& to)
 {
-    intrusive_ptr<actor> tmp(std::move(other));
+    intrusive_ptr<actor> tmp(std::move(to));
     return establish_backlink(tmp);
 }
 
