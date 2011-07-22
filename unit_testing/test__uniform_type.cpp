@@ -71,10 +71,11 @@ size_t test__uniform_type()
         CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
         CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
     }
-    int successful_announces =   (announce1 ? 1 : 0)
-                               + (announce2 ? 1 : 0)
-                               + (announce3 ? 1 : 0)
-                               + (announce4 ? 1 : 0);
+    auto int_val = [](bool val) { return val ? 1 : 0; };
+    int successful_announces =   int_val(announce1)
+                               + int_val(announce2)
+                               + int_val(announce3)
+                               + int_val(announce4);
     CPPA_CHECK_EQUAL(successful_announces, 1);
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
@@ -102,7 +103,7 @@ size_t test__uniform_type()
     }
     // holds the type names we see at runtime
     std::set<std::string> found;
-// fetch all available type names
+    // fetch all available type names
     auto types = uniform_type_info::instances();
     for (uniform_type_info* tinfo : types)
     {

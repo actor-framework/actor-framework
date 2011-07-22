@@ -97,6 +97,7 @@ class actor : public channel
      */
     virtual bool establish_backlink(intrusive_ptr<actor>& to) = 0;
 
+    // rvalue support
     void link_to(intrusive_ptr<actor>&& other);
     void unlink_from(intrusive_ptr<actor>&& other);
     bool remove_backlink(intrusive_ptr<actor>&& to);
@@ -107,13 +108,17 @@ class actor : public channel
      */
     inline const process_information& parent_process() const;
 
+    /**
+     * @brief Gets the {@link process_information} pointer
+     *        of the parent process.
+     */
     inline process_information_ptr parent_process_ptr() const;
 
     /**
      * @brief
      * @return
      */
-    inline std::uint32_t id() const { return m_id; }
+    inline std::uint32_t id();
 
     /**
      * @brief
@@ -122,6 +127,16 @@ class actor : public channel
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 
 };
+
+typedef intrusive_ptr<actor> actor_ptr;
+
+serializer& operator<<(serializer&, const actor_ptr&);
+
+deserializer& operator>>(deserializer&, actor_ptr&);
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
 
 inline const process_information& actor::parent_process() const
 {
@@ -133,11 +148,10 @@ inline process_information_ptr actor::parent_process_ptr() const
     return m_parent_process;
 }
 
-typedef intrusive_ptr<actor> actor_ptr;
-
-serializer& operator<<(serializer&, const actor_ptr&);
-
-deserializer& operator>>(deserializer&, actor_ptr&);
+inline std::uint32_t actor::id() const
+{
+    return m_id;
+}
 
 template<typename T>
 bool actor::attach(std::unique_ptr<T>&& ptr,
@@ -155,7 +169,9 @@ class functor_attachable : public attachable
  public:
 
     template<class FArg>
-    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg)) { }
+    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg))
+    {
+    }
 
     virtual void detach(std::uint32_t reason)
     {
@@ -170,7 +186,6 @@ bool actor::attach_functor(F&& ftor)
     typedef typename util::rm_ref<F>::type f_type;
     return attach(new functor_attachable<f_type>(std::forward<F>(ftor)));
 }
-
 
 } // namespace cppa
 

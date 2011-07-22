@@ -80,22 +80,26 @@ void actor::leave(const group_ptr& what)
 
 void actor::link_to(intrusive_ptr<actor>&& other)
 {
-    link_to(static_cast<actor_ptr&>(other));
+    intrusive_ptr<actor> tmp(std::move(other));
+    link_to(tmp);
 }
 
 void actor::unlink_from(intrusive_ptr<actor>&& other)
 {
-    unlink_from(static_cast<actor_ptr&>(other));
+    intrusive_ptr<actor> tmp(std::move(other));
+    unlink_from(tmp);
 }
 
 bool actor::remove_backlink(intrusive_ptr<actor>&& to)
 {
-    return remove_backlink(static_cast<actor_ptr&>(to));
+    intrusive_ptr<actor> tmp(std::move(other));
+    return remove_backlink(tmp);
 }
 
 bool actor::establish_backlink(intrusive_ptr<actor>&& to)
 {
-    return establish_backlink(static_cast<actor_ptr&>(to));
+    intrusive_ptr<actor> tmp(std::move(other));
+    return establish_backlink(tmp);
 }
 
 } // namespace cppa

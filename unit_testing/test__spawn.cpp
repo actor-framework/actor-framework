@@ -30,7 +30,7 @@ size_t test__spawn()
     link(pong_actor);
     int i = 0;
     // wait for :Down and :Exit messages of pong
-    receive_while([&i]() { return (++i <= 2); })
+    receive_while([&i]() { return ++i <= 2; })
     (
         on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {

@@ -36,7 +36,8 @@ size_t test__atom()
            << make_tuple(atom(":Attach"), atom(":Baz"), "cstring")
            << make_tuple(atom("b"), atom("a"), atom("c"), 23.f)
            << make_tuple(atom("a"), atom("b"), atom("c"), 23.f);
-    auto pattern =
+    int i = 0;
+    receive_while([&i]() { return ++i <= 3; })
     (
         on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value)
         {
@@ -54,7 +55,6 @@ size_t test__atom()
             CPPA_CHECK_EQUAL(value, 23.f);
         }
     );
-    for (auto i = 0; i < 3; ++i) receive(pattern);
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
     message msg = receive();
     CPPA_CHECK((match<atom("b"), atom("a"), atom("c"), float>(msg.content())));

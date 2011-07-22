@@ -31,7 +31,7 @@ size_t test__local_group()
         auto w = spawn([]() { receive(on<int>() >> [](int v) { reply(v); }); });
         w->join(foo_group);
     }
-    foo_group << make_tuple(2);
+    send(foo_group, 2);
     int result = 0;
     receive_until([&result]() { return result == 10; })
     (
