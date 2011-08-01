@@ -98,6 +98,18 @@ void monitor(actor_ptr&& whom);
  */
 void demonitor(actor_ptr& whom);
 
+/**
+ * @brief
+ * @return
+ */
+inline bool trap_exit()
+{
+    return self()->trap_exit();
+}
+
+/**
+ * @brief
+ */
 inline void trap_exit(bool new_value)
 {
     self()->trap_exit(new_value);
@@ -215,7 +227,8 @@ inline void receive(invoke_rules& rules)
 
 inline void receive(invoke_rules&& rules)
 {
-    self()->mailbox().dequeue(rules);
+    invoke_rules tmp(std::move(rules));
+    self()->mailbox().dequeue(tmp);
 }
 
 /**
