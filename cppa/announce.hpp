@@ -9,6 +9,57 @@
 
 namespace cppa {
 
+/**
+ * @brief A simple example for @c announce with public accessible members.
+ *
+ * The output of this example program is:
+ *
+ * <tt>
+ * foo(1,2)<br>
+ * foo_pair(3,4)
+ * </tt>
+ * @example announce_example_1
+ */
+
+/**
+ * @brief An example for @c announce with getter and setter member functions.
+ *
+ * The output of this example program is:
+ *
+ * <tt>foo(1,2)</tt>
+ * @example announce_example_2
+ */
+
+/**
+ * @brief An example for @c announce with overloaded
+ *        getter and setter member functions.
+ *
+ * The output of this example program is:
+ *
+ * <tt>foo(1,2)</tt>
+ * @example announce_example_3
+ */
+
+/**
+ * @brief An example for @c announce with non-primitive members.
+ *
+ * The output of this example program is:
+ *
+ * <tt>bar(foo(1,2),3)</tt>
+ * @example announce_example_4
+ */
+
+/**
+ * @brief Adds a new type mapping to the type system.
+ * @return @c true if @p uniform_type was added as known
+ *         instance (mapped to @p plain_type); otherwise @c false
+ *         is returned and @p uniform_type was deleted.
+ */
+bool announce(const std::type_info& tinfo, uniform_type_info* utype);
+
+/**
+ *
+ */
 template<class C, class Parent, typename... Args>
 std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
 compound_member(C Parent::*c_ptr, const Args&... args)
@@ -17,13 +68,8 @@ compound_member(C Parent::*c_ptr, const Args&... args)
 }
 
 /**
- * @brief Add a new type mapping to the libCPPA internal type system.
- * @return <code>true</code> if @p uniform_type was added as known
- *         instance (mapped to @p plain_type); otherwise @c false
- *         is returned and @p uniform_type was deleted.
+ * @brief Adds a mapping for @p T to the type system.
  */
-bool announce(const std::type_info& tinfo, uniform_type_info* utype);
-
 template<typename T, typename... Args>
 inline bool announce(const Args&... args)
 {

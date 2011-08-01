@@ -82,6 +82,10 @@ std::string to_string(const process_information& what);
  */
 std::string to_string(const process_information::node_id_type& node_id);
 
+/**
+ * @brief A smart pointer type that manages instances of
+ *        {@link process_information}.
+ */
 typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa

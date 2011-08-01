@@ -10,6 +10,10 @@
 
 namespace cppa {
 
+/**
+ * @brief An intrusive, reference counting smart pointer impelementation.
+ * @relates ref_counted
+ */
 template<typename T>
 class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
                       util::comparable<intrusive_ptr<T>>

@@ -11,6 +11,12 @@ class actor;
 class group;
 class message;
 
+/**
+ * @brief The base interface for all message receivers.
+ *
+ * This interface is implemented by {@link actor} and {@link group} and
+ * describes an entity that can receive messages.
+ */
 class channel : public ref_counted
 {
 
@@ -25,10 +31,16 @@ class channel : public ref_counted
 
     virtual ~channel();
 
-    virtual void enqueue(const message&) = 0;
+    /**
+     * @brief Enqueues @p msg to the list of received messages.
+     */
+    virtual void enqueue(const message& msg) = 0;
 
 };
 
+/**
+ * @brief A smart pointer type that manages instances of {@link channel}.
+ */
 typedef intrusive_ptr<channel> channel_ptr;
 
 } // namespace cppa

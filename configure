@@ -20,7 +20,7 @@ function append_cpp_from()
 	done
 }
 # default flags
-gcc_flags="-std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/ -fpermissive"
+gcc_flags="-std=c++0x -pedantic -Wall -Wextra -g -O0 -I/opt/local/include/ -fpermissive -Wno-deprecated-declarations"
 # get all g++ binaries
 gcc_found=$(find /bin/ /usr/bin /opt/bin /opt/local/bin -regex "^.*/g\+\+.*$" 2>/dev/null)
 # holds the finally selected g++ binary

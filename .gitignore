@@ -7,6 +7,8 @@ test
 *.dat
 *.ii
 *.s
+*.tmp
+a.out*
 queue_test
 cppa.creator.user
 8threads

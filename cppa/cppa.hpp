@@ -41,6 +41,7 @@
 #include "cppa/channel.hpp"
 #include "cppa/context.hpp"
 #include "cppa/message.hpp"
+#include "cppa/announce.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
@@ -148,16 +149,18 @@ inline void receive_loop(invoke_rules&& rules)
 }
 
 template<typename Head, typename... Tail>
-void receive_loop(invoke_rules&& rules, Head&& head, Tail... tail)
+void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
 {
     invoke_rules tmp(std::move(rules));
-    receive_loop(tmp.splice(std::forward<Head>(head)), tail...);
+    receive_loop(tmp.splice(std::forward<Head>(head)),
+                 std::forward<Tail>(tail)...);
 }
 
 template<typename Head, typename... Tail>
-void receive_loop(invoke_rules& rules, Head&& head, Tail... tail)
+void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
 {
-    receive_loop(rules.splice(std::forward<Head>(head)), tail...);
+    receive_loop(rules.splice(std::forward<Head>(head)),
+                 std::forward<Tail>(tail)...);
 }
 
 /**

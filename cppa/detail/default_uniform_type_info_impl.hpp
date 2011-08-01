@@ -223,49 +223,51 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     // pr.second = meta object to handle pr.first
     template<typename R, class C, typename... Args>
     void push_back(std::pair<R C::*, util::abstract_uniform_type_info<R>*> pr,
-                   const Args&... args)
+                   Args&&... args)
     {
         m_members.push_back({ pr.second, pr.first });
-        push_back(args...);
+        push_back(std::forward<Args>(args)...);
     }
 
-    // pr.first = getter member function pointer
+    // pr.first = getter member const function pointer
     // pr.second = setter member function pointer
-    template<typename GRes, typename SRes, typename SArg, class C>
+    template<typename GRes, typename SRes, typename SArg, class C, typename... Args>
     typename util::enable_if<util::is_primitive<typename util::rm_ref<GRes>::type> >::type
-    push_back(std::pair<GRes (C::*)() const, SRes (C::*)(SArg)> pr)
+    push_back(const std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>& pr,
+              Args&&... args)
     {
         typedef typename util::rm_ref<GRes>::type memtype;
         m_members.push_back({ new primitive_member<memtype>(), pr.first, pr.second });
+        push_back(std::forward<Args>(args)...);
     }
 
     template<typename R, class C, typename... Args>
     typename util::enable_if<util::is_primitive<R> >::type
-    push_back(R C::*mem_ptr, const Args&... args)
+    push_back(R C::*mem_ptr, Args&&... args)
     {
         m_members.push_back({ new primitive_member<R>(), mem_ptr });
-        push_back(args...);
+        push_back(std::forward<Args>(args)...);
     }
 
     template< typename R, class C,typename... Args>
     typename util::enable_if<is_stl_compliant_list<R> >::type
-    push_back(R C::*mem_ptr, const Args&... args)
+    push_back(R C::*mem_ptr, Args&&... args)
     {
         m_members.push_back({ new list_member<R>(), mem_ptr });
-        push_back(args...);
+        push_back(std::forward<Args>(args)...);
     }
 
     template<typename R, class C, typename... Args>
     typename util::enable_if<is_stl_compliant_map<R> >::type
-    push_back(R C::*mem_ptr, const Args&... args)
+    push_back(R C::*mem_ptr, Args&&... args)
     {
         m_members.push_back({ new map_member<R>(), mem_ptr });
-        push_back(args...);
+        push_back(std::forward<Args>(args)...);
     }
 
     template<typename R, class C, typename... Args>
     typename util::enable_if<is_invalid<R>>::type
-    push_back(R C::*mem_ptr, const Args&... args)
+    push_back(R C::*mem_ptr, Args&&... args)
     {
         static_assert(util::is_primitive<R>::value,
                       "T is neither a primitive type nor a "
@@ -301,10 +303,18 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
  public:
 
+    /*
     template<typename... Args>
     default_uniform_type_info_impl(const Args&... args)
     {
         push_back(args...);
+    }
+    */
+
+    template<typename... Args>
+    default_uniform_type_info_impl(Args&&... args)
+    {
+        push_back(std::forward<Args>(args)...);
     }
 
     default_uniform_type_info_impl()
