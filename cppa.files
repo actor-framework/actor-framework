@@ -208,3 +208,5 @@ cppa/util/any_tuple_iterator.hpp
 src/any_tuple_iterator.cpp
 cppa/detail/boxed.hpp
 cppa/detail/unboxed.hpp
+cppa/detail/matcher_arguments.hpp
+src/matcher_arguments.cpp
