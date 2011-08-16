@@ -8,8 +8,7 @@ namespace cppa { namespace detail {
 
 class intermediate;
 
-// invokable  is NOT thread safe
-class invokable// : public ref_counted_impl<size_t>
+class invokable
 {
 
     invokable(const invokable&) = delete;

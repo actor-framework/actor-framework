@@ -6,7 +6,7 @@ namespace cppa {
 struct any_type
 {
     constexpr any_type() { }
-    inline operator any_type*() { return 0; }
+    constexpr inline operator any_type*() { return nullptr; }
 };
 
 inline bool operator==(const any_type&, const any_type&) { return true; }

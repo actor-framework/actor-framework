@@ -15,6 +15,9 @@
 
 namespace cppa {
 
+template<size_t N, typename... Types>
+typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t);
+
 /**
  * @brief Describes a view of an fixed-length tuple.
  */
@@ -43,6 +46,11 @@ class tuple_view
     {
     }
 
+    tuple_view(tuple_view&& other) : m_vals(std::move(other.m_vals))
+                                   , m_types(std::move(other.m_types))
+    {
+    }
+
     tuple_view(const tuple_view&) = default;
 
     inline const vals_t& vals() const
@@ -68,8 +76,7 @@ class tuple_view
 };
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type&
-get(const tuple_view<Types...>& t)
+const typename util::at<N, Types...>::type& get(const tuple_view<Types...>& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;
@@ -77,8 +84,7 @@ get(const tuple_view<Types...>& t)
 }
 
 template<size_t N, typename... Types>
-typename util::at<N, Types...>::type&
-get_ref(tuple_view<Types...>& t)
+typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;

@@ -108,7 +108,6 @@ cppa/detail/default_uniform_type_info_impl.hpp
 src/object.cpp
 cppa/util/comparable.hpp
 cppa/util/disable_if.hpp
-cppa/util/wrapped_type.hpp
 cppa/util/apply.hpp
 cppa/primitive_variant.hpp
 cppa/primitive_type.hpp
@@ -204,3 +203,8 @@ src/thread_pool_scheduler.cpp
 cppa/detail/delegate.hpp
 src/delegate.cpp
 cppa/detail/receive_loop_helper.hpp
+cppa/util/wrapped.hpp
+cppa/util/any_tuple_iterator.hpp
+src/any_tuple_iterator.cpp
+cppa/detail/boxed.hpp
+cppa/detail/unboxed.hpp

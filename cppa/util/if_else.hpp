@@ -1,7 +1,7 @@
 #ifndef IF_ELSE_HPP
 #define IF_ELSE_HPP
 
-#include "cppa/util/wrapped_type.hpp"
+#include "cppa/util/wrapped.hpp"
 
 namespace cppa { namespace util {
 

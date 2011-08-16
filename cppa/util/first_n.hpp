@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/wrapped.hpp"
 #include "cppa/util/if_else.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/element_at.hpp"
@@ -20,7 +21,7 @@ struct n_
 
     typedef typename util::if_else<std::is_same<util::void_type, head_type>,
                                    util::type_list<>,
-                                   util::wrapped_type<util::type_list<head_type>>>::type
+                                   util::wrapped<util::type_list<head_type>>>::type
             head_list;
 
     typedef typename n_<N - 1, List>::type tail_list;

@@ -6,7 +6,7 @@
 #include "cppa/primitive_type.hpp"
 
 #include "cppa/util/if_else.hpp"
-#include "cppa/util/wrapped_type.hpp"
+#include "cppa/util/wrapped.hpp"
 
 namespace cppa { namespace detail {
 
@@ -32,7 +32,7 @@ struct ptype_to_type :
     util::if_else_c<PT == pt_u16string, std::u16string,
     util::if_else_c<PT == pt_u32string, std::u32string,
     // default case
-    util::wrapped_type<void> > > > > > > > > > > > > > >
+    util::wrapped<void> > > > > > > > > > > > > > >
 {
 };
 
