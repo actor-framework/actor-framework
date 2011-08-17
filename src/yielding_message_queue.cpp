@@ -30,7 +30,8 @@ enum yield_on_exit_result
 
 yield_on_exit_result yield_on_exit_msg(const cppa::message& msg)
 {
-    if (cppa::match<cppa::atom(":Exit"), std::uint32_t>(msg.content()))
+    if (cppa::match<cppa::atom_value, std::uint32_t>(msg.content(), nullptr,
+                                                     cppa::atom(":Exit")))
     {
         auto reason = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
         if (reason != cppa::exit_reason::normal)

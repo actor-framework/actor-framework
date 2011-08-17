@@ -79,19 +79,19 @@ size_t test__tuple()
         tuple<int, float> t1_sub2(42, .2f);
         tuple<int, float, int> t1_sub3(42, .2f, 2);
         CPPA_CHECK((util::compare_first_elements(t1, t1_sub1)));
-        CPPA_CHECK((match<int, any_type*>(t1, t1_sub1)));
+        CPPA_CHECK((match<int, any_type*>(t1)));
         CPPA_CHECK((util::compare_first_elements(t1, t1_sub2)));
-        CPPA_CHECK((match<int, any_type*, float, any_type*>(t1, t1_sub2)));
+        CPPA_CHECK((match<int, any_type*, float, any_type*>(t1)));
         CPPA_CHECK((util::compare_first_elements(t1, t1_sub3)));
-        CPPA_CHECK((match<int, float, int, any_type>(t1, t1_sub3)));
+        CPPA_CHECK((match<int, float, int, any_type>(t1)));
     }
 
     {
         std::vector<size_t> tv3_mappings;
-        match<any_type*, int, std::string>(t1, tv3_mappings);
-        CPPA_CHECK_EQUAL(tv3_mappings.size(), 2);
-        CPPA_CHECK(tv3_mappings[0] == 2);
-        CPPA_CHECK(tv3_mappings[1] == 3);
+        match<any_type*, int, std::string>(t1, &tv3_mappings);
+        CPPA_CHECK((   tv3_mappings.size() == 2
+                    && tv3_mappings[0] == 2
+                    && tv3_mappings[1] == 3));
     }
 
     CPPA_CHECK(get<0>(tv3) == get<2>(t1));
@@ -199,11 +199,13 @@ size_t test__tuple()
     };
 
     auto inv2 = (
-        on<any_type*, float, any_type*, int, any_type>(.1f, 2) >> l4,
-        on<any_type*, float, any_type*, int, any_type>(any_val, 2) >> l2
+        on(any_vals, .1f, any_vals, 2, val<>()) >> l4,
+        //on<any_type*, float, any_type*, int, any_type>(.1f, 2) >> l4,
+        on(any_vals, val<float>(), any_vals, 2, val<>()) >> l2
+        //on<any_type*, float, any_type*, int, any_type>(any_val, 2) >> l2
     );
 
-    CPPA_CHECK((match<any_type*, float, any_type*, int, any_type>(t1, tv0)));
+    CPPA_CHECK((match<any_type*, float, any_type*, int, any_type>(t1)));
 
     CPPA_CHECK(inv2(t1));
     CPPA_CHECK(!l4_invoked);
@@ -212,10 +214,10 @@ size_t test__tuple()
 
     {
         any_type* x = nullptr;
-        CPPA_CHECK(x == any_val);
-        CPPA_CHECK(any_val == x);
-        CPPA_CHECK(any_val == 42);
-        CPPA_CHECK(any_val == 24);
+        CPPA_CHECK(x == val<>());
+        CPPA_CHECK(val<>() == x);
+        CPPA_CHECK(val<>() == 42);
+        CPPA_CHECK(val<>() == 24);
     }
 
     // test detaching of tuples

@@ -25,11 +25,13 @@ inline bool operator!=(const T&, const any_type&) { return false; }
 template<typename T>
 inline bool operator!=(const any_type&, const T&) { return false; }
 
+/*
 #ifdef __GNUC__
 static constexpr any_type any_val __attribute__ ((unused));
 #else
 static constexpr any_type any_val;
 #endif
+*/
 
 } // namespace cppa
 

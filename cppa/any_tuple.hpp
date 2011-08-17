@@ -20,7 +20,7 @@ class any_tuple
 
  public:
 
-    typedef cow_ptr<detail::abstract_tuple> vals_ptr;
+    //typedef cow_ptr<detail::abstract_tuple> vals_ptr;
 
     any_tuple();
 

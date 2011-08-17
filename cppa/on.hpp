@@ -3,208 +3,181 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
+#include "cppa/invoke.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
 
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
+#include "cppa/detail/boxed.hpp"
+#include "cppa/detail/unboxed.hpp"
 #include "cppa/detail/ref_counted_impl.hpp"
 
 namespace cppa { namespace detail {
 
-template<typename... Types>
+template<typename... TypeList>
 class invoke_rule_builder
 {
 
-    // matches for values; not thread safe
-    struct irb_helper : ref_counted_impl<size_t>
-    {
-        virtual ~irb_helper() { }
-        virtual bool value_cmp(const any_tuple&,std::vector<size_t>&) const = 0;
-    };
+    typedef std::function<bool (const any_tuple&, std::vector<size_t>*)>
+            match_function;
 
+    match_function m_fun;
 
-    typedef util::type_list<Types...> types_list;
+    typedef cppa::util::type_list<TypeList...> plain_types;
 
-    typedef typename util::filter_type_list<any_type, types_list>::type
+    typedef typename cppa::util::filter_type_list<any_type, plain_types>::type
             filtered_types;
 
-    intrusive_ptr<irb_helper> m_helper;
+    typedef typename cppa::tuple_view_type_from_type_list<filtered_types>::type
+            tuple_view_type;
 
  public:
 
-    invoke_rule_builder() { }
-
-    template<typename Arg0, typename... Args>
-    invoke_rule_builder(const Arg0& arg0, const Args&... args)
-    {
-        typedef util::type_list<Arg0, Args...> arg_types;
-
-        static constexpr size_t num_args = sizeof...(Args) + 1;
-
-        static_assert(num_args <= filtered_types::size,
-                      "too much arguments");
-
-        class helper_impl : public irb_helper
-        {
-
-            tuple<Arg0, Args...> m_values;
-
-         public:
-
-            helper_impl(const Arg0& arg0, const Args&... args)
-                : m_values(arg0, args...)
-            {
-            }
-
-            virtual bool value_cmp(const any_tuple& t,
-                                   std::vector<size_t>& v) const
-            {
-                return match<Types...>(t, m_values, v);
-            }
-
-        };
-
-        m_helper = new helper_impl(arg0, args...);
-
-        static_assert(util::eval_first_n<num_args,
-                                         filtered_types,
-                                         arg_types,
-                                         util::is_comparable>::value,
-                      "wrong argument types (not comparable)");
-    }
-
-    typedef typename tuple_view_type_from_type_list<filtered_types>::type
-            tuple_view_type;
+    invoke_rule_builder(match_function&& fun) : m_fun(std::move(fun)) { }
 
     template<typename F>
-    invoke_rules operator>>(F f)
+    cppa::invoke_rules operator>>(F&& f)
     {
-        auto sub_inv = [f](const tuple_view_type& tv)
-        {
-            invoke(f, tv);
-        };
-        if (!m_helper) // don't match on values
-        {
-            auto inv = [f](const any_tuple& t) -> bool
-            {
-                std::vector<size_t> mappings;
-                if (match<Types...>(t, mappings))
-                {
-                    tuple_view_type tv(t.vals(), std::move(mappings));
-                    invoke(f, tv);
-                    return true;
-                }
-                return false;
-            };
-            auto gt = [sub_inv](const any_tuple& t) -> intermediate*
-            {
-                std::vector<size_t> mappings;
-                if (match<Types...>(t, mappings))
-                {
-                    tuple_view_type tv(t.vals(), std::move(mappings));
-                    typedef intermediate_impl<decltype(sub_inv),tuple_view_type>
-                            timpl;
-                    return new timpl(sub_inv, tv);
-                }
-                return 0;
-            };
-            typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
-            return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
-        }
-        else // m_helper matches on values
-        {
-            auto inv = [f, m_helper](const any_tuple& t) -> bool
-            {
-                std::vector<size_t> mappings;
-                if (m_helper->value_cmp(t, mappings))
-                {
-                    tuple_view_type tv(t.vals(), std::move(mappings));
-                    invoke(f, tv);
-                    return true;
-                }
-                return false;
-            };
-            auto gt = [sub_inv, m_helper](const any_tuple& t) -> intermediate*
-            {
-                std::vector<size_t> mappings;
-                if (m_helper->value_cmp(t, mappings))
-                {
-                    tuple_view_type tv(t.vals(), std::move(mappings));
-                    typedef intermediate_impl<decltype(sub_inv),tuple_view_type>
-                            timpl;
-                    return new timpl(sub_inv, tv);
-                }
-                return 0;
-            };
-            typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
-            return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
-        }
+        typedef invokable_impl<tuple_view_type, match_function, F> impl;
+        return { new impl(std::move(m_fun), std::forward<F>(f)) };
     }
 
 };
 
-template<>
-struct invoke_rule_builder<any_type*>
+template<class MatchedTypes, class ArgTypes>
+struct match_util;
+
+template<typename... MatchedTypes, typename... ArgTypes>
+struct match_util<util::type_list<MatchedTypes...>,
+                  util::type_list<ArgTypes...>>
 {
-
-    template<typename F>
-    invoke_rules operator>>(F f)
+    static bool _(const any_tuple& data, std::vector<size_t>* mapping,
+                  const ArgTypes&... args)
     {
-        auto inv = [f](const any_tuple&) -> bool
-        {
-            f();
-            return true;
-        };
-        auto gt = [f](const any_tuple&) -> intermediate*
-        {
-            return new intermediate_impl<decltype(f)>(f);
-        };
-        typedef invokable_impl<decltype(inv), decltype(gt)> iimpl;
-        return invoke_rules(new iimpl(std::move(inv), std::move(gt)));
+        return match<MatchedTypes...>(data, mapping, args...);
     }
-
 };
 
 } } // cppa::detail
 
 namespace cppa {
 
-template<typename... Types>
-inline detail::invoke_rule_builder<Types...> on()
+template<typename T = any_type>
+constexpr typename detail::boxed<T>::type val()
 {
-    return detail::invoke_rule_builder<Types...>();
+    return typename detail::boxed<T>::type();
+}
+
+#ifdef __GNUC__
+constexpr any_type* any_vals __attribute__ ((unused)) = nullptr;
+#else
+constexpr any_type* any_vals = nullptr;
+#endif
+
+template<typename Arg0, typename... Args>
+detail::invoke_rule_builder<typename detail::unboxed<Arg0>::type,
+                            typename detail::unboxed<Args>::type...>
+on(const Arg0& arg0, const Args&... args)
+{
+    typedef util::type_list<typename detail::unboxed<Arg0>::type,
+                            typename detail::unboxed<Args>::type...> mt;
+
+    typedef util::type_list<Arg0, Args...> vt;
+
+    typedef detail::tdata<any_tuple, std::vector<size_t>*, Arg0 , Args...>
+            arg_tuple_type;
+
+    arg_tuple_type arg_tuple(any_tuple(), nullptr, arg0, args...);
+
+    return
+    {
+        [arg_tuple](const any_tuple& data, std::vector<size_t>* mapping) -> bool
+        {
+            arg_tuple_type& tref = const_cast<arg_tuple_type&>(arg_tuple);
+            cppa::get_ref<0>(tref) = data;
+            cppa::get_ref<1>(tref) = mapping;
+            return invoke(&detail::match_util<mt,vt>::_, tref);
+        }
+    };
+}
+
+template<typename... TypeList>
+detail::invoke_rule_builder<TypeList...> on()
+{
+    return
+    {
+        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
+        {
+            return match<TypeList...>(data, mv);
+        }
+    };
+}
+
+template<atom_value A0, typename... TypeList>
+detail::invoke_rule_builder<atom_value, TypeList...> on()
+{
+    return
+    {
+        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
+        {
+            return match<atom_value, TypeList...>(data, mv, A0);
+        }
+    };
+}
+
+template<atom_value A0, atom_value A1, typename... TypeList>
+detail::invoke_rule_builder<atom_value, atom_value, TypeList...> on()
+{
+    return
+    {
+        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
+        {
+            return match<atom_value, atom_value, TypeList...>(data, mv, A0, A1);
+        }
+    };
+}
+
+template<atom_value A0, atom_value A1, atom_value A2, typename... TypeList>
+detail::invoke_rule_builder<atom_value, atom_value,
+                            atom_value, TypeList...> on()
+{
+    return
+    {
+        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
+        {
+            return match<atom_value, atom_value,
+                         atom_value, TypeList...>(data, mv, A0, A1, A2);
+        }
+    };
+}
+
+template<atom_value A0, atom_value A1,
+         atom_value A2, atom_value A3,
+         typename... TypeList>
+detail::invoke_rule_builder<atom_value, atom_value, atom_value,
+                            atom_value, TypeList...> on()
+{
+    return
+    {
+        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
+        {
+            return match<atom_value, atom_value, atom_value,
+                         atom_value, TypeList...>(data, mv, A0, A1, A2, A3);
+        }
+    };
 }
 
 inline detail::invoke_rule_builder<any_type*> others()
 {
-    return on<any_type*>();
-}
-
-template<typename... Types, typename Arg0, typename... Args>
-inline detail::invoke_rule_builder<Types...> on(const Arg0& arg0,
-                                                const Args&... args)
-{
-    return detail::invoke_rule_builder<Types...>(arg0, args...);
-}
-
-template<atom_value A0, typename... Types, typename... Args>
-inline auto on(const Args&... args) -> decltype(on<atom_value, Types...>(A0, args...))
-{
-    return on<atom_value, Types...>(A0, args...);
-}
-
-template<atom_value A0, atom_value A1, typename... Types, typename... Args>
-inline auto on(const Args&... args) -> decltype(on<atom_value, atom_value, Types...>(A0, A1, args...))
-{
-    return on<atom_value, atom_value, Types...>(A0, A1, args...);
-}
-
-template<atom_value A0, atom_value A1, atom_value A2, typename... Types, typename... Args>
-inline auto on(const Args&... args) -> decltype(on<atom_value, atom_value, atom_value, Types...>(A0, A1, A2, args...))
-{
-    return on<atom_value, atom_value, atom_value, Types...>(A0, A1, A2, args...);
+    return
+    {
+        [](const any_tuple&, std::vector<size_t>*) -> bool
+        {
+            return true;
+        }
+    };
 }
 
 } // namespace cppa

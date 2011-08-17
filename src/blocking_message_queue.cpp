@@ -22,7 +22,7 @@ enum throw_on_exit_result
 
 throw_on_exit_result throw_on_exit(const message& msg)
 {
-    if (match<atom(":Exit"), std::uint32_t>(msg.content()))
+    if (match<atom_value, std::uint32_t>(msg.content(), nullptr, atom(":Exit")))
     {
         auto reason = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
         if (reason != exit_reason::normal)

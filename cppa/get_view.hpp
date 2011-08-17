@@ -12,6 +12,7 @@
 
 namespace cppa {
 
+/*
 template<typename... MatchRules, template <typename...> class Tuple, typename... TupleTypes>
 typename tuple_view_type_from_type_list<typename util::filter_type_list<any_type, util::type_list<MatchRules...>>::type>::type
 get_view(const Tuple<TupleTypes...>& t)
@@ -28,13 +29,14 @@ get_view(const Tuple<TupleTypes...>& t)
     }
     throw std::runtime_error("matcher did not return a valid mapping");
 }
+*/
 
 template<typename... MatchRules>
 typename tuple_view_type_from_type_list<typename util::filter_type_list<any_type, util::type_list<MatchRules...>>::type>::type
 get_view(const any_tuple& ut)
 {
     std::vector<size_t> mappings;
-    if (match<MatchRules...>(ut, mappings))
+    if (match<MatchRules...>(ut, &mappings))
     {
         return { ut.vals(), std::move(mappings) };
     }
