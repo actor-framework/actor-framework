@@ -17,7 +17,9 @@ class context : public actor
     friend class scheduler;
 
  public:
-
+ 
+    context(registry& registry);
+ 
     /**
      * @brief Cause this context to send an exit signal to all of its linked
      *        linked actors and set its state to @c exited.
@@ -54,17 +56,6 @@ inline void context::trap_exit(bool new_value)
 {
     mailbox().trap_exit(new_value);
 }
-
-/**
- * @brief Get a pointer to the current active context.
- */
-context* self();
-
-// "private" function
-void set_self(context*);
-
-// "private" function, returns active context (without creating it if needed)
-context* unchecked_self();
 
 } // namespace cppa
 

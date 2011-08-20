@@ -27,6 +27,8 @@ class converted_thread_context : public abstract_actor<context>
     blocking_message_queue m_mailbox;
 
  public:
+ 
+    converted_thread_context(registry& registry);
 
     message_queue& mailbox() /*override*/;
 

@@ -37,6 +37,7 @@ libcppa_la_SOURCES = \
   src/post_office.cpp \
   src/primitive_variant.cpp \
   src/process_information.cpp \
+  src/registry.cpp \
   src/ripemd_160.cpp \
   src/scheduled_actor.cpp \
   src/scheduler.cpp \
@@ -131,6 +132,7 @@ nobase_include_HEADERS = \
   cppa/primitive_variant.hpp \
   cppa/process_information.hpp \
   cppa/ref_counted.hpp \
+  cppa/registry.hpp \
   cppa/scheduler.hpp \
   cppa/scheduling_hint.hpp \
   cppa/serializer.hpp \

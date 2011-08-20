@@ -28,7 +28,8 @@ throw_on_exit_result throw_on_exit(const message& msg)
         if (reason != exit_reason::normal)
         {
             // throws
-            cppa::self()->quit(reason);
+            // cppa::self()->quit(reason);
+            throw std::logic_error("TODO: handle termination");
         }
         else
         {

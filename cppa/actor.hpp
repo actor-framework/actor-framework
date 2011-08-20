@@ -15,6 +15,7 @@
 
 namespace cppa {
 
+class registry;
 class serializer;
 class deserializer;
 
@@ -24,7 +25,7 @@ class deserializer;
 class actor : public channel
 {
 
-    bool m_is_proxy;
+    registry* m_registry;
     std::uint32_t m_id;
     process_information_ptr m_parent_process;
 #ifdef DEBUG
@@ -35,8 +36,15 @@ class actor : public channel
 
  protected:
 
-    actor(const process_information_ptr& parent = process_information::get());
+    /**
+     * @brief Creates normal actor.
+     */
+    actor(registry& registry,
+          const process_information_ptr& parent = process_information::get());
 
+    /**
+     * @brief Creates proxy actor.
+     */
     actor(std::uint32_t aid,
           const process_information_ptr& parent = process_information::get());
 
@@ -137,13 +145,11 @@ class actor : public channel
      * @return The unique identifier of this actor.
      */
     inline std::uint32_t id() const;
-
+    
     /**
-     * @brief Get the actor that has the unique identifier @p actor_id.
-     * @return A pointer to the requestet actor or @c nullptr if no
-     *         running actor with the ID @p actor_id was found.
+     * @return Registry with which this actor is associated.
      */
-    static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
+    inline registry& parent_registry() const;
 
 };
 
@@ -173,6 +179,15 @@ inline process_information_ptr actor::parent_process_ptr() const
 inline std::uint32_t actor::id() const
 {
     return m_id;
+}
+
+inline registry& actor::parent_registry() const
+{
+    if(!m_registry)
+    {
+        throw std::logic_error("Proxy actors are not associated with registries");
+    }
+    return *m_registry;
 }
 
 template<typename T>

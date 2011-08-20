@@ -2,29 +2,15 @@
 
 #include <assert.h>
 #include <map>
-#include <mutex>
-#include <atomic>
 #include <stdexcept>
 
 #include "cppa/actor.hpp"
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-
-namespace {
-
-std::atomic<std::uint32_t> s_ids(1);
-std::map<std::uint32_t, cppa::actor*> s_instances;
-cppa::util::shared_spinlock s_instances_mtx;
-
-typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
-typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
-
-} // namespace <anonmyous>
+#include "cppa/registry.hpp"
 
 namespace cppa {
 
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
-    : m_is_proxy(true), m_id(aid), m_parent_process(pptr)
+    : m_registry(nullptr), m_id(aid), m_parent_process(pptr)
 {
 #ifdef DEBUG
     m_sig = ACTOR_SIG_ALIVE;
@@ -33,10 +19,11 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
     {
         throw std::logic_error("parent == nullptr");
     }
+    // Do not register proxy actor.
 }
 
-actor::actor(const process_information_ptr& pptr)
-    : m_is_proxy(false), m_id(s_ids.fetch_add(1)), m_parent_process(pptr)
+actor::actor(registry& registry, const process_information_ptr& pptr)
+    : m_registry(&registry), m_id(registry.next_id()), m_parent_process(pptr)
 {
 #ifdef DEBUG
     m_sig = ACTOR_SIG_ALIVE;
@@ -45,11 +32,8 @@ actor::actor(const process_information_ptr& pptr)
     {
         throw std::logic_error("parent == nullptr");
     }
-    else
-    {
-        exclusive_guard guard(s_instances_mtx);
-        s_instances.insert(std::make_pair(m_id, this));
-    }
+	// Register actor.
+	m_registry->add(*this);
 }
 
 actor::~actor()
@@ -67,22 +51,11 @@ actor::~actor()
 	  break;
 	}
 #endif
-    if (!m_is_proxy)
+    if (m_registry)
     {
-        exclusive_guard guard(s_instances_mtx);
-        s_instances.erase(m_id);
+		// Unregister actor.
+		m_registry->remove(*this);
     }
-}
-
-intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
-{
-    shared_guard guard(s_instances_mtx);
-    auto i = s_instances.find(actor_id);
-    if (i != s_instances.end())
-    {
-        return i->second;
-    }
-    return nullptr;
 }
 
 void actor::join(group_ptr& what)
