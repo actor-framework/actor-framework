@@ -11,16 +11,66 @@
 
 namespace {
 
-std::atomic<std::uint32_t> s_ids(1);
-std::map<std::uint32_t, cppa::actor*> s_instances;
-cppa::util::shared_spinlock s_instances_mtx;
-
 typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
 typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
 } // namespace <anonmyous>
 
 namespace cppa {
+    
+class actors_registry
+{
+
+public:
+
+    actors_registry() : m_ids(1)
+    {
+    }
+  
+    void add(actor& act)
+    {
+        exclusive_guard guard(m_instances_mtx);
+        m_instances.insert(std::make_pair(act.id(), &act));
+    }
+  
+    void remove(actor& act)
+    {
+        exclusive_guard guard(m_instances_mtx);
+        m_instances.erase(act.id());
+    }
+  
+    intrusive_ptr<actor> find(std::uint32_t actor_id)
+    {
+        shared_guard guard(m_instances_mtx);
+        auto i = m_instances.find(actor_id);
+        if (i != m_instances.end())
+        {
+            return i->second;
+        }
+        return nullptr;
+    }
+
+    std::uint32_t next_id()
+    {
+        return m_ids.fetch_add(1);
+    }
+    
+    static actors_registry* s_instance;
+  
+    static inline actors_registry& get()
+    {
+        return *s_instance;
+    }
+
+private:
+
+    std::atomic<std::uint32_t> m_ids;
+    std::map<std::uint32_t, cppa::actor*> m_instances;
+    cppa::util::shared_spinlock m_instances_mtx;
+
+};
+
+actors_registry* actors_registry::s_instance = new actors_registry();
 
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
     : m_is_proxy(true), m_id(aid), m_parent_process(pptr)
@@ -32,7 +82,7 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
 }
 
 actor::actor(const process_information_ptr& pptr)
-    : m_is_proxy(false), m_id(s_ids.fetch_add(1)), m_parent_process(pptr)
+    : m_is_proxy(false), m_id(actors_registry::get().next_id()), m_parent_process(pptr)
 {
     if (!pptr)
     {
@@ -40,8 +90,7 @@ actor::actor(const process_information_ptr& pptr)
     }
     else
     {
-        exclusive_guard guard(s_instances_mtx);
-        s_instances.insert(std::make_pair(m_id, this));
+        actors_registry::get().add(*this);
     }
 }
 
@@ -49,20 +98,13 @@ actor::~actor()
 {
     if (!m_is_proxy)
     {
-        exclusive_guard guard(s_instances_mtx);
-        s_instances.erase(m_id);
+        actors_registry::get().remove(*this);
     }
 }
 
 intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
 {
-    shared_guard guard(s_instances_mtx);
-    auto i = s_instances.find(actor_id);
-    if (i != s_instances.end())
-    {
-        return i->second;
-    }
-    return nullptr;
+    return actors_registry::get().find(actor_id);
 }
 
 void actor::join(group_ptr& what)
