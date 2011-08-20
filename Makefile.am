@@ -187,5 +187,5 @@ nobase_include_HEADERS = \
   cppa/util/void_type.hpp \
   cppa/util/wrapped.hpp
 
-libcppa_la_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra -Werror
+libcppa_la_CPPFLAGS = --std=c++0x -pedantic -Wall -Wextra -Werror
 libcppa_la_LDFLAGS = -lboost_thread

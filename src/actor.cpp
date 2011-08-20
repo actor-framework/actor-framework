@@ -1,5 +1,6 @@
 #include "cppa/config.hpp"
 
+#include <assert.h>
 #include <map>
 #include <mutex>
 #include <atomic>
@@ -25,6 +26,9 @@ namespace cppa {
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
     : m_is_proxy(true), m_id(aid), m_parent_process(pptr)
 {
+#ifdef DEBUG
+    m_sig = ACTOR_SIG_ALIVE;
+#endif
     if (!pptr)
     {
         throw std::logic_error("parent == nullptr");
@@ -34,6 +38,9 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
 actor::actor(const process_information_ptr& pptr)
     : m_is_proxy(false), m_id(s_ids.fetch_add(1)), m_parent_process(pptr)
 {
+#ifdef DEBUG
+    m_sig = ACTOR_SIG_ALIVE;
+#endif
     if (!pptr)
     {
         throw std::logic_error("parent == nullptr");
@@ -47,6 +54,19 @@ actor::actor(const process_information_ptr& pptr)
 
 actor::~actor()
 {
+#ifdef DEBUG
+    switch(m_sig) {
+	case ACTOR_SIG_ALIVE:
+	  m_sig = ACTOR_SIG_DEAD;
+	  break;
+	case ACTOR_SIG_DEAD:
+	  assert("Actor is already destroyed" && false);
+	  break;
+	default:
+	  assert("Invalid actor" && false);
+	  break;
+	}
+#endif
     if (!m_is_proxy)
     {
         exclusive_guard guard(s_instances_mtx);

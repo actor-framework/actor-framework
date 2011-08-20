@@ -27,6 +27,11 @@ class actor : public channel
     bool m_is_proxy;
     std::uint32_t m_id;
     process_information_ptr m_parent_process;
+#ifdef DEBUG
+#define ACTOR_SIG_ALIVE 0x11111111
+#define ACTOR_SIG_DEAD  0x22222222
+    unsigned int m_sig;
+#endif
 
  protected:
 

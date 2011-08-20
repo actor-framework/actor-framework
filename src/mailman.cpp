@@ -7,8 +7,8 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/detail/post_office.hpp"
 
-//#define DEBUG(arg) std::cout << arg << std::endl
-#define DEBUG(unused) ((void) 0)
+//#define DEBUG_PRINT(arg) std::cout << arg << std::endl
+#define DEBUG_PRINT(unused) ((void) 0)
 
 // implementation of mailman.hpp
 namespace cppa { namespace detail {
@@ -115,7 +115,7 @@ void mailman_loop()
                 {
                     bs << out_msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-                    DEBUG("--> " << to_string(out_msg));
+                    DEBUG_PRINT("--> " << to_string(out_msg));
                     // write size of serialized message
                     auto sent = ::send(peer, &size32, sizeof(std::uint32_t), 0);
                     if (sent > 0)
@@ -134,12 +134,12 @@ void mailman_loop()
                 // something went wrong; close connection to this peer
                 catch (std::exception& e)
                 {
-                    DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
+                    DEBUG_PRINT(to_uniform_name(typeid(e)) << ": " << e.what());
                     disconnect_peer = true;
                 }
                 if (disconnect_peer)
                 {
-                    DEBUG("peer disconnected (error during send)");
+                    DEBUG_PRINT("peer disconnected (error during send)");
                     //closesocket(peer);
                     post_office_close_socket(peer);
                     peers.erase(peer_element);
@@ -148,7 +148,7 @@ void mailman_loop()
             }
             else
             {
-                DEBUG("message to an unknown peer");
+                DEBUG_PRINT("message to an unknown peer");
             }
             // else: unknown peer
         }
