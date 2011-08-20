@@ -1,6 +1,8 @@
 #include <atomic>
 
+#ifndef _GLIBCXX_HAS_GTHREADS
 #define _GLIBCXX_HAS_GTHREADS
+#endif
 #include <mutex>
 
 #include "cppa/context.hpp"
