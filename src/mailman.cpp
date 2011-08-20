@@ -126,7 +126,7 @@ void mailman_loop()
                     // disconnect peer if send() failed
                     disconnect_peer = (sent <= 0);
                     // make sure all bytes are written
-                    if (sent != size32)
+                    if (static_cast<std::uint32_t>(sent) != size32)
                     {
                         throw std::logic_error("send() not a synchronous socket");
                     }

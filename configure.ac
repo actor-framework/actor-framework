@@ -5,7 +5,8 @@ AC_PROG_CXX
 AC_PROG_LIBTOOL
 
 AC_LANG([C++])
-CPPFLAGS="-Werror --std=c++0x"
+ORIGINAL_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS -Werror --std=c++0x"
 
 AC_CACHE_CHECK(
   [whether C++ compiler supports variadic templates],
@@ -26,6 +27,9 @@ AS_IF(
    test "x$ac_cv_cpp_nullptr" = "xyes"],
   [],
   [AC_MSG_ERROR([at least one required C++ compiler feature is not supported])])
+
+
+CPPFLAGS="$ORIGINAL_CPPFLAGS"
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

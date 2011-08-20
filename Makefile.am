@@ -51,7 +51,7 @@ libcppa_la_SOURCES = \
   src/yielding_message_queue.cpp \
   src/yield_interface.cpp
 
-include_HEADERS = \
+nobase_include_HEADERS = \
   cppa/actor_behavior.hpp \
   cppa/actor.hpp \
   cppa/actor_proxy.hpp \
@@ -187,4 +187,5 @@ include_HEADERS = \
   cppa/util/void_type.hpp \
   cppa/util/wrapped.hpp
 
-libcppa_la_CXXFLAGS = -Werror --std=c++0x
+libcppa_la_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra -Werror
+libcppa_la_LDFLAGS = -lboost_thread
