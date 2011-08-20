@@ -4,13 +4,36 @@
 #include "cppa/message.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 
-namespace {
-
-boost::thread_specific_ptr<cppa::detail::actor_proxy_cache> t_proxy_cache;
-
-} // namespace <anonymous>
-
 namespace cppa { namespace detail {
+
+class actor_proxy_caches {
+
+public:
+
+    actor_proxy_cache& get_actor_proxy_cache()
+    {
+        if (m_proxy_cache.get() == nullptr)
+        {
+            m_proxy_cache.reset(new actor_proxy_cache);
+        }
+        return *m_proxy_cache.get();
+    }
+
+    static actor_proxy_caches& get()
+    {
+        return *s_instance;
+    }
+
+private:
+
+    static actor_proxy_caches* s_instance;
+
+    boost::thread_specific_ptr<cppa::detail::actor_proxy_cache> m_proxy_cache;
+
+};
+
+// TODO: free
+actor_proxy_caches* actor_proxy_caches::s_instance = new actor_proxy_caches();
 
 process_information_ptr
 actor_proxy_cache::get_pinfo(const actor_proxy_cache::key_tuple& key)
@@ -65,11 +88,7 @@ size_t actor_proxy_cache::size() const
 
 actor_proxy_cache& get_actor_proxy_cache()
 {
-    if (t_proxy_cache.get() == nullptr)
-    {
-        t_proxy_cache.reset(new actor_proxy_cache);
-    }
-    return *t_proxy_cache.get();
+    return actor_proxy_caches::get().get_actor_proxy_cache();
 }
 
 } } // namespace cppa::detail

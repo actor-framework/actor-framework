@@ -70,6 +70,7 @@ private:
 
 };
 
+// TODO: free
 actors_registry* actors_registry::s_instance = new actors_registry();
 
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
