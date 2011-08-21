@@ -34,7 +34,7 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
         catch (...) { }
         delete behavior;
     }
-    cppa::detail::dec_actor_count();
+    cppa::detail::actor_count::get().dec();
 }
 
 } // namespace <anonymous>
@@ -43,7 +43,7 @@ namespace cppa { namespace detail {
 
 actor_ptr mock_scheduler::spawn(actor_behavior* behavior)
 {
-    inc_actor_count();
+    actor_count::get().inc();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<context> ctx(new detail::converted_thread_context);
     boost::thread(run_actor, ctx, behavior).detach();

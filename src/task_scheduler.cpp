@@ -40,7 +40,7 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
         {
             if (!job->deref()) delete job;
             CPPA_MEMORY_BARRIER();
-            dec_actor_count();
+            actor_count::get().dec();
         });
     }
 }
@@ -75,7 +75,7 @@ void task_scheduler::schedule(scheduled_actor* what)
 
 actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
 {
-    inc_actor_count();
+    actor_count::get().inc();
     intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
                                                            enqueue_fun,
                                                            this));
