@@ -78,7 +78,7 @@ struct thread_pool_scheduler::worker
                                      {
                                          if (!m_job->deref()) delete m_job;
                                          CPPA_MEMORY_BARRIER();
-                                         dec_actor_count();
+                                         actor_count::get().dec();
                                      });
             if (reschedule)
             {
@@ -184,7 +184,7 @@ actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
     }
     else
     {
-        inc_actor_count();
+        actor_count::get().inc();
         CPPA_MEMORY_BARRIER();
         intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
                                                                enqueue_fun,
