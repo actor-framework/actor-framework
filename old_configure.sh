@@ -29,7 +29,7 @@ gcc_selected=""
 function compatibility_test()
 {
 	if $1 $gcc_flags -o variadic_templates_test variadic_templates_test.cpp &>/dev/null ; then
-		if test x"$(./variadic_templates_test)" "!=" "xyes" ; then
+		if test "x$(./variadic_templates_test)" "!=" "xyes" ; then
 			return -1
 		else
 			return 0
