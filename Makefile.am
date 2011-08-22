@@ -196,4 +196,5 @@ library_include_HEADERS = \
 libcppa_la_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
 libcppa_la_LDFLAGS = -release 0.1 $(BOOST_CPPFLAGS)
 
-SUBDIRS = unit_testing
+SUBDIRS = . unit_testing
+
