@@ -1,7 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-#INCLUDES = -I$(top_srcdir)/hamcast
-
 lib_LTLIBRARIES = libcppa.la
 
 libcppa_la_SOURCES = \
