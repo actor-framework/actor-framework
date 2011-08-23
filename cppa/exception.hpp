@@ -32,7 +32,7 @@ class actor_exited : public exception
  public:
 
     actor_exited(std::uint32_t exit_reason);
-    std::uint32_t reason() const throw();
+    inline std::uint32_t reason() const throw();
 
 };
 
@@ -58,6 +58,11 @@ class bind_failure : public network_exception
     int error_code() const throw();
 
 };
+
+inline std::uint32_t exception::reason() const throw()
+{
+    return m_reason;
+}
 
 } // namespace cppa
 
