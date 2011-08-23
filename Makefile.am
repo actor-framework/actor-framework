@@ -53,7 +53,11 @@ libcppa_la_SOURCES = \
   src/yielding_message_queue.cpp \
   src/yield_interface.cpp
 
-library_includedir = $(includedir)/cppa/0.1/
+if VERSIONED_INCLUDE_DIR
+library_includedir = $(includedir)/cppa/$(PACKAGE_VERSION)/
+else
+library_includedir = $(includedir)/
+endif
 
 nobase_library_include_HEADERS = \
   cppa/actor_behavior.hpp \
