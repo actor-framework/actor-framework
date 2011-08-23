@@ -53,9 +53,9 @@ libcppa_la_SOURCES = \
   src/yielding_message_queue.cpp \
   src/yield_interface.cpp
 
-library_includedir = $(includedir)/cppa-0.1/cppa
+library_includedir = $(includedir)/cppa/0.1/
 
-library_include_HEADERS = \
+nobase_library_include_HEADERS = \
   cppa/actor_behavior.hpp \
   cppa/actor.hpp \
   cppa/actor_proxy.hpp \
@@ -195,4 +195,3 @@ libcppa_la_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
 libcppa_la_LDFLAGS = -release 0.1 $(BOOST_CPPFLAGS)
 
 SUBDIRS = . unit_testing
-
