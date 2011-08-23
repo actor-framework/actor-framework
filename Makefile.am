@@ -192,6 +192,9 @@ nobase_library_include_HEADERS = \
   cppa/util/wrapped.hpp
 
 libcppa_la_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
-libcppa_la_LDFLAGS = -release 0.1 $(BOOST_CPPFLAGS)
+libcppa_la_LDFLAGS = -release $(PACKAGE_VERSION) $(BOOST_CPPFLAGS)
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libcppa.pc
 
 SUBDIRS = . unit_testing
