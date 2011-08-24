@@ -1,0 +1,66 @@
+#include <iostream>
+#include "cppa/cppa.hpp"
+#include "cppa/to_string.hpp"
+#include "cppa/scheduler.hpp"
+#include "cppa/detail/task_scheduler.hpp"
+#include <boost/progress.hpp>
+
+using std::cout;
+using std::endl;
+using boost::timer;
+using namespace cppa;
+
+void counter_actor()
+{
+    long count = 0;
+    receive_loop
+    (
+        on<atom("Get")>() >> [&]()
+        {
+            reply(count);
+            count = 0;
+        },
+        on<atom("AddCount"), long>() >> [&](long val)
+        {
+            count += val;
+        }
+    );
+}
+
+long the_test(int msg_count)
+{
+    constexpr long val = 100;
+    auto counter = spawn(counter_actor);
+    for (int i = 0; i < msg_count; ++i)
+    {
+        send(counter, atom("AddCount"), val);
+    }
+    send(counter, atom("Get"));
+    long result = 0;
+    receive
+    (
+        on<long>() >> [&](long value)
+        {
+            result = value;
+        }
+    );
+    send(counter, atom(":Exit"), exit_reason::user_defined);
+    return result;
+}
+
+void run_test(int msg_count)
+{
+    timer t0;
+    long count = the_test(msg_count);
+    auto elapsed = t0.elapsed();
+    cout << "Count is " << count << endl
+         << "Test took " << elapsed << " seconds" << endl
+         << "Throughput = " << (msg_count / elapsed) << " per sec" << endl;
+}
+
+int main()
+{
+    run_test(3000000);
+    return 0;
+}
+
