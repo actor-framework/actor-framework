@@ -1,5 +1,5 @@
 AC_PREREQ([2.6])
-AC_INIT([hamcast], [0.4])
+AC_INIT([libcppa], [0.1])
 AM_INIT_AUTOMAKE(@PACKAGE_NAME@, @PACKAGE_VERSION@)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src])
@@ -39,5 +39,9 @@ AS_IF(
 
 CPPFLAGS="$ORIGINAL_CPPFLAGS"
 
-AC_CONFIG_FILES([Makefile unit_testing/Makefile])
+# environment
+AC_ARG_VAR([NO_VERSIONED_INCLUDE_DIR], [set this to 1 in order to install headers into <prefix>/cppa/ rather than into <prefix>/cppa/<version>/cppa/])
+AM_CONDITIONAL([VERSIONED_INCLUDE_DIR], [test "x$NO_VERSIONED_INCLUDE_DIR" != "x1"])
+
+AC_CONFIG_FILES([Makefile unit_testing/Makefile libcppa.pc])
 AC_OUTPUT

@@ -20,7 +20,7 @@ unit_tests_SOURCES =    hash_of.cpp \
                         test__type_list.cpp \
                         test__uniform_type.cpp
 
-unit_tests_DEPENDENCIES = ../.libs/libcppa.dylib
+unit_tests_DEPENDENCIES = ../.libs/libcppa.la
 
 AM_CPPFLAGS = -I../
 unit_tests_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
