@@ -59,7 +59,7 @@ class bind_failure : public network_exception
 
 };
 
-inline std::uint32_t exception::reason() const throw()
+inline std::uint32_t actor_exited::reason() const throw()
 {
     return m_reason;
 }
