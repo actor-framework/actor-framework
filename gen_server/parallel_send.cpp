@@ -1,8 +1,5 @@
 #include <iostream>
 #include "cppa/cppa.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/detail/task_scheduler.hpp"
 #include <boost/progress.hpp>
 
 using std::cout;
@@ -44,7 +41,7 @@ long the_test(int msg_count)
     auto counter = spawn(counter_actor);
     for (int i = 1; i < (msg_count / 1000); ++i)
     {
-        monitor(spawn(send_range, counter, self_ptr, (i-1)*1000, i*1000));
+        spawn(send_range, counter, self_ptr, (i-1)*1000, i*1000);
     }
     auto rule = on<atom("Done"), any_type*>() >> []() { };
     for (int i = 1; i < (msg_count / 1000); ++i)
@@ -77,6 +74,7 @@ void run_test(int msg_count)
 int main()
 {
     run_test(3000000);
+    await_all_others_done();
     return 0;
 }
 

@@ -1,8 +1,5 @@
 #include <iostream>
 #include "cppa/cppa.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/detail/task_scheduler.hpp"
 #include <boost/progress.hpp>
 
 using std::cout;
@@ -55,12 +52,14 @@ void run_test(int msg_count)
     auto elapsed = t0.elapsed();
     cout << "Count is " << count << endl
          << "Test took " << elapsed << " seconds" << endl
-         << "Throughput = " << (msg_count / elapsed) << " per sec" << endl;
+         << "Throughput = " << (msg_count / elapsed)
+                            << " per sec" << endl;
 }
 
 int main()
 {
     run_test(3000000);
+    await_all_others_done();
     return 0;
 }
 
