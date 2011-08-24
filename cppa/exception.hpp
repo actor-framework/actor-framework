@@ -55,13 +55,18 @@ class bind_failure : public network_exception
 
     bind_failure(int bind_errno);
 
-    int error_code() const throw();
+    inline int error_code() const throw();
 
 };
 
 inline std::uint32_t actor_exited::reason() const throw()
 {
     return m_reason;
+}
+
+inline int bind_failure::error_code() const throw()
+{
+    return m_errno;
 }
 
 } // namespace cppa

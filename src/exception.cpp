@@ -71,9 +71,4 @@ bind_failure::bind_failure(int err_code) : network_exception(be_what(err_code))
     m_errno = err_code;
 }
 
-int bind_failure::error_code() const throw()
-{
-    return m_errno;
-}
-
 } // namespace cppa
