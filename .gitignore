@@ -16,6 +16,9 @@ libcppa.pc
 Makefile.in
 aclocal.m4
 autom4te.cache/
+gen_server/parallel_send
+gen_server/sequential_send
+gen_server/test.dSYM/
 depcomp
 install-sh
 libtool
