@@ -2,9 +2,6 @@ Blog: http://libcppa.blogspot.com
 
 This project is in an early / experimental stage.
 
-It makes use of variadic templates, unrestricted unions, type inference and
-other features not included in the current language specification for C++.
+It makes use of variadic templates, unrestricted unions,
+type inference and other C++11 features.
 Thus, GCC in version >= 4.6 is required to compile libcppa.
-
-You can modify the file "Makefile.rules" to set the path to your GCC binary
-and/or to compile libcppa with different compiler flags.
