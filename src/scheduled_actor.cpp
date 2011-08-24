@@ -27,14 +27,26 @@ scheduled_actor::~scheduled_actor()
     delete m_behavior;
 }
 
-void scheduled_actor::run(void* _this)
+void scheduled_actor::run(void* ptr_arg)
 {
-    auto m_behavior = reinterpret_cast<scheduled_actor*>(_this)->m_behavior;
-    if (m_behavior)
+    auto this_ptr = reinterpret_cast<scheduled_actor*>(ptr_arg);
+    auto behavior_ptr = this_ptr->m_behavior;
+    if (behavior_ptr)
     {
-        try { m_behavior->act(); }
-        catch (...) { }
-        try { m_behavior->on_exit(); }
+        bool cleanup_called = false;
+        try { behavior_ptr->act(); }
+        catch (actor_exited&)
+        {
+            // cleanup already called by scheduled_actor::quit
+            cleanup_called = true;
+        }
+        catch (...)
+        {
+            this_ptr->cleanup(exit_reason::unhandled_exception);
+            cleanup_called = true;
+        }
+        if (!cleanup_called) this_ptr->cleanup(exit_reason::normal);
+        try { behavior_ptr->on_exit(); }
         catch (...) { }
     }
     yield(yield_state::done);
@@ -42,7 +54,7 @@ void scheduled_actor::run(void* _this)
 
 void scheduled_actor::quit(std::uint32_t reason)
 {
-    super::cleanup(reason);
+    cleanup(reason);
     throw actor_exited(reason);
     //yield(yield_state::done);
 }
