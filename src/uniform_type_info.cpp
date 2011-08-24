@@ -6,6 +6,7 @@
 #include <string>
 #include <atomic>
 #include <limits>
+#include <cstring>
 #include <cstdint>
 #include <sstream>
 #include <iostream>
@@ -513,6 +514,30 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
 
 };
 
+const std::map<int, std::pair<string_set, string_set>>& int_names();
+
+template<typename T>
+class int_tinfo : public detail::default_uniform_type_info_impl<T>
+{
+
+ public:
+
+    bool equal(const std::type_info& tinfo) const
+    {
+        // TODO: string comparsion sucks & is slow; find a nicer solution
+        auto map_iter = int_names().find(sizeof(T));
+        const string_set& st = is_signed<T>::value ? map_iter->second.first
+                                                   : map_iter->second.second;
+        auto end = st.end();
+        for (auto i = st.begin(); i != end; ++i)
+        {
+            if ((*i) == raw_name(tinfo)) return true;
+        }
+        return false;
+    }
+
+};
+
 class uniform_type_info_map
 {
 
@@ -523,6 +548,8 @@ class uniform_type_info_map
 
     // maps uniform names to uniform type informations
     uti_map m_by_uname;
+
+    std::map<int, std::pair<string_set, string_set>> m_ints;
 
     void insert(uniform_type_info* uti, const std::set<std::string>& tnames)
     {
@@ -540,7 +567,8 @@ class uniform_type_info_map
     template<typename T>
     inline void insert(const std::set<std::string>& tnames)
     {
-        insert(new default_uniform_type_info_impl<T>(), tnames);
+        //insert(new default_uniform_type_info_impl<T>(), tnames);
+        insert(new int_tinfo<T>, tnames);
     }
 
     template<typename T>
@@ -578,7 +606,6 @@ class uniform_type_info_map
         insert<any_type>();
         // first: signed
         // second: unsigned
-        std::map<int, std::pair<string_set, string_set>> ints;
         push<char,
              signed char,
              unsigned char,
@@ -602,15 +629,15 @@ class uniform_type_info_map
              unsigned long long,
              wchar_t,
              char16_t,
-             char32_t>(ints);
-        insert<std::int8_t>(ints[sizeof(std::int8_t)].first);
-        insert<std::uint8_t>(ints[sizeof(std::uint8_t)].second);
-        insert<std::int16_t>(ints[sizeof(std::int16_t)].first);
-        insert<std::uint16_t>(ints[sizeof(std::uint16_t)].second);
-        insert<std::int32_t>(ints[sizeof(std::int32_t)].first);
-        insert<std::uint32_t>(ints[sizeof(std::uint32_t)].second);
-        insert<std::int64_t>(ints[sizeof(std::int64_t)].first);
-        insert<std::uint64_t>(ints[sizeof(std::uint64_t)].second);
+             char32_t>(m_ints);
+        insert<std::int8_t>(m_ints[sizeof(std::int8_t)].first);
+        insert<std::uint8_t>(m_ints[sizeof(std::uint8_t)].second);
+        insert<std::int16_t>(m_ints[sizeof(std::int16_t)].first);
+        insert<std::uint16_t>(m_ints[sizeof(std::uint16_t)].second);
+        insert<std::int32_t>(m_ints[sizeof(std::int32_t)].first);
+        insert<std::uint32_t>(m_ints[sizeof(std::uint32_t)].second);
+        insert<std::int64_t>(m_ints[sizeof(std::int64_t)].first);
+        insert<std::uint64_t>(m_ints[sizeof(std::uint64_t)].second);
     }
 
     ~uniform_type_info_map()
@@ -623,6 +650,12 @@ class uniform_type_info_map
         }
         m_by_uname.clear();
     }
+
+    const std::map<int, std::pair<string_set, string_set>>& int_names() const
+    {
+        return m_ints;
+    }
+
 
     uniform_type_info* by_raw_name(const std::string& name)
     {
@@ -682,6 +715,11 @@ uniform_type_info_map& s_uniform_type_info_map()
 {
     static uniform_type_info_map s_utimap;
     return s_utimap;
+}
+
+const std::map<int, std::pair<string_set, string_set>>& int_names()
+{
+    return s_uniform_type_info_map().int_names();
 }
 
 } } } // namespace cppa::detail::<anonymous>
