@@ -231,6 +231,21 @@ inline void receive(invoke_rules&& rules)
     self()->mailbox().dequeue(tmp);
 }
 
+template<typename Head, typename... Tail>
+void receive(invoke_rules&& rules, Head&& head, Tail&&... tail)
+{
+    invoke_rules tmp(std::move(rules));
+    receive(tmp.splice(std::forward<Head>(head)),
+            std::forward<Tail>(tail)...);
+}
+
+template<typename Head, typename... Tail>
+void receive(invoke_rules& rules, Head&& head, Tail&&... tail)
+{
+    receive(rules.splice(std::forward<Head>(head)),
+            std::forward<Tail>(tail)...);
+}
+
 /**
  * @brief Tries to dequeue the next message from the mailbox.
  * @return @p true if a messages was dequeued;
