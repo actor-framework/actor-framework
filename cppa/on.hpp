@@ -12,6 +12,7 @@
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/ref_counted_impl.hpp"
 
 namespace cppa { namespace detail {

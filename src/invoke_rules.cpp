@@ -26,7 +26,9 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
+#include "cppa/invoke.hpp"
 #include "cppa/invoke_rules.hpp"
+#include "cppa/detail/invokable.hpp"
 
 namespace cppa {
 

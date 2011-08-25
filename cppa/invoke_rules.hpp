@@ -32,13 +32,11 @@
 #include <list>
 #include <memory>
 
-#include "cppa/invoke.hpp"
-#include "cppa/intrusive_ptr.hpp"
-
-#include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
+namespace cppa { namespace detail { class invokable; class intermediate; } }
 
 namespace cppa {
+
+class any_tuple;
 
 struct invoke_rules
 {
