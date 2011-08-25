@@ -6,9 +6,6 @@
 
 namespace cppa {
 
-// utilty class;
-// provides a virtual destructor that's executed after an actor
-// finished execution
 /**
  * @brief Callback utility class.
  */
