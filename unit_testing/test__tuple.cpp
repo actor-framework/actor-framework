@@ -60,13 +60,16 @@ size_t test__tuple()
     tuple<int> t6;
     // untyped tuples under test
     any_tuple ut0 = t1;
+
+    tuple<int, long, double> t7;
+
+    CPPA_CHECK((match<int, long, double>(t7)));
+
     // tuple views under test
     auto tv0 = get_view<any_type*, float, any_type*, int, any_type>(t1);
     auto tv1 = get_view<any_type*, int, any_type*>(tv0);
     auto tv2 = get_view<int, any_type*, std::string>(t1);
     auto tv3 = get_view<any_type*, int, std::string>(t1);
-
-//	any_tuple ut1 = tv0;
 
     CPPA_CHECK(get<0>(t6) == 0);
     CPPA_CHECK(get<0>(tv2) == get<0>(t1));

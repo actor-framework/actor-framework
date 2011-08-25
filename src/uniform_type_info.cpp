@@ -23,6 +23,8 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/void_type.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
@@ -565,10 +567,18 @@ class uniform_type_info_map
     }
 
     template<typename T>
-    inline void insert(const std::set<std::string>& tnames)
+    inline void insert(const std::set<std::string>& tnames,
+                       typename util::enable_if<std::is_integral<T>>::type* = 0)
     {
         //insert(new default_uniform_type_info_impl<T>(), tnames);
         insert(new int_tinfo<T>, tnames);
+    }
+
+    template<typename T>
+    inline void insert(const std::set<std::string>& tnames,
+                       typename util::disable_if<std::is_integral<T>>::type* = 0)
+    {
+        insert(new default_uniform_type_info_impl<T>(), tnames);
     }
 
     template<typename T>
