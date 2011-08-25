@@ -9,8 +9,6 @@
 
 namespace cppa { namespace detail {
 
-class intermediate;
-
 // blocks if single_reader_queue blocks
 class blocking_message_queue_impl : public message_queue
 {
