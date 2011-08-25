@@ -15,7 +15,12 @@ class primitive_variant;
 class serializer
 {
 
+    serializer(const serializer&) = delete;
+    serializer& operator=(const serializer&) = delete;
+
  public:
+
+    serializer() = default;
 
     virtual ~serializer();
 
