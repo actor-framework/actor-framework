@@ -210,3 +210,4 @@ cppa/detail/boxed.hpp
 cppa/detail/unboxed.hpp
 cppa/detail/matcher_arguments.hpp
 src/matcher_arguments.cpp
+src/invoke_rules.cpp

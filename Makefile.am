@@ -28,6 +28,7 @@ libcppa_la_SOURCES = \
   src/group.cpp \
   src/intermediate.cpp \
   src/invokable.cpp \
+  src/invoke_rules.cpp \
   src/mailman.cpp \
   src/matcher_arguments.cpp \
   src/message.cpp \

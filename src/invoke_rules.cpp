@@ -26,52 +26,60 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#ifndef INVOKE_RULES_HPP
-#define INVOKE_RULES_HPP
-
-#include <list>
-#include <memory>
-
-#include "cppa/invoke.hpp"
-#include "cppa/intrusive_ptr.hpp"
-
-#include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
+#include "cppa/invoke_rules.hpp"
 
 namespace cppa {
 
-struct invoke_rules
+invoke_rules::invoke_rules(list_type&& ll) : m_list(std::move(ll))
 {
+}
 
-    typedef std::list< std::unique_ptr<detail::invokable> > list_type;
+invoke_rules::invoke_rules(invoke_rules&& other)
+    : m_list(std::move(other.m_list))
+{
+}
 
-    list_type m_list;
+invoke_rules::invoke_rules(detail::invokable* arg)
+{
+    if (arg) m_list.push_back(std::unique_ptr<detail::invokable>(arg));
+}
 
-    invoke_rules(const invoke_rules&) = delete;
-    invoke_rules& operator=(const invoke_rules&) = delete;
+invoke_rules::invoke_rules(std::unique_ptr<detail::invokable>&& arg)
+{
+    if (arg) m_list.push_back(std::move(arg));
+}
 
-    invoke_rules(list_type&& ll);
+bool invoke_rules::operator()(const any_tuple& t) const
+{
+    for (auto i = m_list.begin(); i != m_list.end(); ++i)
+    {
+        if ((*i)->invoke(t)) return true;
+    }
+    return false;
+}
 
- public:
+detail::intermediate* invoke_rules::get_intermediate(const any_tuple& t) const
+{
+    detail::intermediate* result;
+    for (auto i = m_list.begin(); i != m_list.end(); ++i)
+    {
+        result = (*i)->get_intermediate(t);
+        if (result != nullptr) return result;
+    }
+    return nullptr;
+}
 
-    invoke_rules() = default;
+invoke_rules& invoke_rules::splice(invoke_rules&& other)
+{
+    m_list.splice(m_list.end(), other.m_list);
+    return *this;
+}
 
-    invoke_rules(invoke_rules&& other);
+invoke_rules invoke_rules::operator,(invoke_rules&& other)
+{
+    m_list.splice(m_list.end(), other.m_list);
+    return std::move(m_list);
+}
 
-    invoke_rules(detail::invokable* arg);
-
-    invoke_rules(std::unique_ptr<detail::invokable>&& arg);
-
-    bool operator()(const any_tuple& t) const;
-
-    detail::intermediate* get_intermediate(const any_tuple& t) const;
-
-    invoke_rules& splice(invoke_rules&& other);
-
-    invoke_rules operator,(invoke_rules&& other);
-
-};
 
 } // namespace cppa
-
-#endif // INVOKE_RULES_HPP
