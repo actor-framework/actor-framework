@@ -14,7 +14,12 @@ class object;
 class deserializer
 {
 
+    deserializer(const deserializer&) = delete;
+    deserializer& operator=(const deserializer&) = delete;
+
  public:
+
+    deserializer() = default;
 
     virtual ~deserializer();
 
