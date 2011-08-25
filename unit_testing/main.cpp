@@ -17,30 +17,45 @@
 
 #include "cppa/tuple.hpp"
 #include "cppa/config.hpp"
+#include "cppa/detail/demangle.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
+#define CPPA_TEST_CATCH_BLOCK()                                                \
+catch (std::exception& e)                                                      \
+{                                                                              \
+    std::cerr << "test exited after throwing an instance of \""                \
+              << ::cppa::detail::demangle(typeid(e).name())                    \
+              << "\"\n what(): " << e.what() << std::endl;                     \
+    errors += 1;                                                               \
+}                                                                              \
+catch (...)                                                                    \
+{                                                                              \
+    std::cerr << "test exited because of an unknown exception" << std::endl;   \
+    errors += 1;                                                               \
+}
+
 #define RUN_TEST(fun_name)                                                     \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
-errors += fun_name ();                                                         \
+try { errors += fun_name (); } CPPA_TEST_CATCH_BLOCK()                         \
 std::cout << std::endl
 
 #define RUN_TEST_A1(fun_name, arg1)                                            \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
-errors += fun_name ((arg1));                                                   \
+try { errors += fun_name ((arg1)); } CPPA_TEST_CATCH_BLOCK()                   \
 std::cout << std::endl
 
 #define RUN_TEST_A2(fun_name, arg1, arg2)                                      \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
-errors += fun_name ((arg1), (arg2));                                           \
+try { errors += fun_name ((arg1), (arg2)); } CPPA_TEST_CATCH_BLOCK()           \
 std::cout << std::endl
 
 #define RUN_TEST_A3(fun_name, arg1, arg2, arg3)                                \
 std::cout << "run " << #fun_name << " ..." << std::endl;                       \
-errors += fun_name ((arg1), (arg2), (arg3));                                   \
+try { errors += fun_name ((arg1), (arg2), (arg3));  } CPPA_TEST_CATCH_BLOCK()  \
 std::cout << std::endl
 
 using std::cout;
