@@ -29,7 +29,7 @@ class message_queue : public ref_counted
 
     inline bool trap_exit() const;
     inline void trap_exit(bool value);
-    inline const message& last_dequeued();
+    inline const message& last_dequeued() const;
 
 };
 
@@ -43,7 +43,7 @@ inline void message_queue::trap_exit(bool value)
     m_trap_exit = value;
 }
 
-inline const message& message_queue::last_dequeued()
+inline const message& message_queue::last_dequeued() const
 {
     return m_last_dequeued;
 }
