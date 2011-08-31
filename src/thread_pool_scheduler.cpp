@@ -178,7 +178,7 @@ void thread_pool_scheduler::schedule(scheduled_actor* what)
 actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
                                        scheduling_hint hint)
 {
-    if (hint == scheduled)
+    if (hint == detached)
     {
         return mock_scheduler::spawn(behavior);
     }
