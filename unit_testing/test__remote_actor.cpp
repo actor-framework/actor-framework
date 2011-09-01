@@ -1,11 +1,12 @@
 #include <string>
+#include <sstream>
 #include <iostream>
-#include <boost/thread.hpp>
 
 #include "test.hpp"
 #include "ping_pong.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/detail/thread.hpp"
 
 using std::cout;
 using std::endl;
@@ -73,7 +74,7 @@ size_t test__remote_actor(const char* app_path, bool is_client,
     }
     // execute client_part() in a separate process,
     // connected via localhost socket
-    boost::thread child([&cmd]() { system(cmd.c_str()); });
+    detail::thread child([&cmd]() { system(cmd.c_str()); });
     await_all_others_done();
     CPPA_CHECK_EQUAL(pongs(), 5);
     // wait until separate process (in sep. thread) finished execution

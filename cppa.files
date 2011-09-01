@@ -215,3 +215,4 @@ src/abstract_tuple.cpp
 cppa/util/duration.hpp
 src/duration.cpp
 cppa/receive.hpp
+cppa/detail/thread.hpp

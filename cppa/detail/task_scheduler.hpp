@@ -1,9 +1,8 @@
 #ifndef TASK_SCHEDULER_HPP
 #define TASK_SCHEDULER_HPP
 
-#include <boost/thread.hpp>
-
 #include "cppa/scheduler.hpp"
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/scheduled_actor.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 
@@ -16,7 +15,7 @@ class task_scheduler : public scheduler
 
     job_queue m_queue;
     scheduled_actor m_dummy;
-    boost::thread m_worker;
+    thread m_worker;
 
     static void worker_loop(job_queue*, scheduled_actor* dummy);
 

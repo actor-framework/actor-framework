@@ -1,9 +1,8 @@
 #ifndef THREAD_POOL_SCHEDULER_HPP
 #define THREAD_POOL_SCHEDULER_HPP
 
-#include <boost/thread.hpp>
-
 #include "cppa/scheduler.hpp"
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
@@ -16,7 +15,7 @@ class thread_pool_scheduler : public scheduler
 
     job_queue m_queue;
     scheduled_actor m_dummy;
-    boost::thread m_supervisor;
+    thread m_supervisor;
 
  public:
 

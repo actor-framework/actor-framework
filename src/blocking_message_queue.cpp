@@ -1,8 +1,6 @@
 #include <vector>
 #include <memory>
 
-#include <boost/thread.hpp>
-
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/context.hpp"
@@ -102,7 +100,7 @@ bool blocking_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,
     std::unique_ptr<queue_node> node(m_queue.try_pop());
     if (!node)
     {
-        boost::system_time timeout = boost::get_system_time();
+        auto timeout = now();
         timeout += rules.timeout();
         node.reset(m_queue.try_pop(timeout));
         if (!node)

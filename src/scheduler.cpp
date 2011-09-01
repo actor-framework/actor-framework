@@ -1,10 +1,4 @@
 #include <atomic>
-
-#ifndef _GLIBCXX_HAS_GTHREADS
-#define _GLIBCXX_HAS_GTHREADS
-#endif
-#include <mutex>
-
 #include <iostream>
 
 #include "cppa/on.hpp"
@@ -12,6 +6,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -42,6 +37,14 @@ struct static_cleanup_helper
 s_cleanup_helper;
 */
 
+struct exit_observer : cppa::attachable
+{
+    ~exit_observer()
+    {
+        cppa::detail::dec_actor_count();
+    }
+};
+
 } // namespace <anonymous>
 
 namespace cppa {
@@ -54,15 +57,13 @@ struct scheduler_helper
     scheduler_helper() : m_worker(new detail::converted_thread_context)
     {
         // do NOT increase actor count; worker is "invisible"
-        boost::thread(&scheduler_helper::time_emitter, m_worker).detach();
+        detail::thread(&scheduler_helper::time_emitter, m_worker).detach();
     }
 
     ~scheduler_helper()
     {
         m_worker->enqueue(message(m_worker, m_worker, atom(":_DIE")));
     }
-
-    //std::multimap<boost::system_time, cppa::any_tuple> m_messages;
 
     ptr_type m_worker;
 
@@ -78,9 +79,9 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     set_self(m_self.get());
     auto& queue = m_self->m_mailbox.queue();
     typedef std::pair<cppa::actor_ptr, cppa::any_tuple> future_msg;
-    std::multimap<boost::system_time, future_msg> messages;
+    std::multimap<decltype(detail::now()), future_msg> messages;
     decltype(queue.pop()) msg_ptr = nullptr;
-    boost::system_time now;
+    decltype(detail::now()) now;
     bool done = false;
     // message handling rules
     auto rules =
@@ -91,25 +92,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
             if (!tup.empty())
             {
                 // calculate timeout
-                boost::system_time timeout = boost::get_system_time();
-                switch (d.unit)
-                {
-                    case util::time_unit::seconds:
-                        timeout += boost::posix_time::seconds(d.count);
-                        break;
-
-                    case util::time_unit::milliseconds:
-                        timeout += boost::posix_time::milliseconds(d.count);
-                        break;
-
-                    case util::time_unit::microseconds:
-                        timeout += boost::posix_time::microseconds(d.count);
-                        break;
-
-                    default:
-                        // unsupported duration type
-                        return;
-                }
+                auto timeout = detail::now();
+                timeout += d;
                 future_msg fmsg(msg_ptr->msg.sender(), tup);
                 messages.insert(std::make_pair(std::move(timeout),
                                                std::move(fmsg)));
@@ -131,7 +115,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
             }
             else
             {
-                now = boost::get_system_time();
+                now = detail::now();
                 // handle timeouts (send messages)
                 auto it = messages.begin();
                 while (it != messages.end() && (it->first) <= now)
@@ -171,22 +155,22 @@ channel* scheduler::future_send_helper()
 
 void scheduler::await_others_done()
 {
-    detail::actor_count::get().wait_until((unchecked_self() == nullptr) ? 0 : 1);
+    detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
 }
 
 void scheduler::register_converted_context(context* what)
 {
     if (what)
     {
-        detail::actor_count::get().inc();
-        what->attach(new detail::exit_observer);
+        detail::inc_actor_count();
+        what->attach(new exit_observer);
     }
 }
 
 attachable* scheduler::register_hidden_context()
 {
-    detail::actor_count::get().inc();
-    return new detail::exit_observer;
+    detail::inc_actor_count();
+    return new exit_observer;
 }
 
 void scheduler::exit_context(context* ctx, std::uint32_t reason)

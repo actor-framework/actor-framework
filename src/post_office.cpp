@@ -8,6 +8,7 @@
 #include <exception>    // std::logic_error
 #include <algorithm>    // std::find_if
 #include <stdexcept>    // std::underflow_error
+#include <sstream>
 
 #include <cstdio>
 #include <fcntl.h>
@@ -24,6 +25,7 @@
 #include "cppa/util/single_reader_queue.hpp"
 
 // used cppa details
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/buffer.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
@@ -171,7 +173,7 @@ struct post_office_manager
 
     int m_pipe[2];                      // m_pipe[0]: read; m_pipe[1]: write
     queue_t m_queue;                    // post office queue
-    boost::thread* m_loop;              // post office thread
+    thread* m_loop;                     // post office thread
     mailman_queue_t m_mailman_queue;    // mailman queue
 
     post_office_manager()
@@ -184,7 +186,7 @@ struct post_office_manager
             free(error_cstr);
             throw std::logic_error(error_str);
         }
-        m_loop = new boost::thread(post_office_loop, m_pipe[0]);
+        m_loop = new thread(post_office_loop, m_pipe[0]);
     }
 
     int write_handle()
@@ -572,7 +574,7 @@ class po_doorman : public post_office_worker
 // starts and stops mailman_loop
 struct mailman_worker
 {
-    boost::thread m_thread;
+    thread m_thread;
     mailman_worker() : m_thread(mailman_loop)
     {
     }
@@ -582,54 +584,6 @@ struct mailman_worker
         m_thread.join();
     }
 };
-
-/*
-// complexity: O(n)
-// pred only evaluates values
-template<typename K, typename V, typename Predicate>
-void remove_if_value(std::map<K,V>& haystack, Predicate&& pred)
-{
-    auto i = haystack.begin();
-    auto end = haystack.end();
-    while (i != end)
-    {
-        if (pred(i->second))
-        {
-            haystack.erase(i++);
-        }
-        else
-        {
-            ++i;
-        }
-    }
-}
-
-template<typename K, typename V, typename Predicate>
-typename std::map<K,V>::iterator
-find_if_value(std::map<K,V>& haystack, Predicate&& pred)
-{
-    auto end = haystack.end();
-    for (auto i = haystack.begin(); i != end; ++i)
-    {
-        if (pred(i->second)) return i;
-    }
-    return end;
-}
-
-template<typename K, typename V, typename Predicate>
-typename std::map<K,V>::const_iterator
-find_if_value(const std::map<K,V>& haystack, Predicate&& pred)
-{
-    auto end = haystack.end();
-    for (auto i = haystack.begin(); i != end; ++i)
-    {
-        if (pred(i->second)) return i;
-    }
-    return end;
-}
-
-typedef std::map<process_information, po_peer> peer_map;
-*/
 
 void post_office_loop(int pipe_read_handle)
 {
@@ -649,7 +603,7 @@ void post_office_loop(int pipe_read_handle)
     // keeps track about what peer we are iterating at this time
     po_peer* selected_peer = nullptr;
     // thread id of post_office
-    auto thread_id = boost::this_thread::get_id();
+    auto thread_id = this_thread::get_id();
     // if an actor calls its quit() handler in this thread,
     // we 'catch' the released socket here
     std::vector<native_socket_t> released_socks;
@@ -677,7 +631,7 @@ void post_office_loop(int pipe_read_handle)
         auto msock = selected_peer->get_socket();
         pptr->attach_functor([msock, thread_id, &released_socks](std::uint32_t)
         {
-            if (boost::this_thread::get_id() == thread_id)
+            if (this_thread::get_id() == thread_id)
             {
                 released_socks.push_back(msock);
             }

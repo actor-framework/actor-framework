@@ -1,6 +1,5 @@
 #include <atomic>
 #include <iostream>
-#include <boost/thread.hpp> // boost::barrier
 
 #include "cppa/to_string.hpp"
 #include "cppa/detail/mailman.hpp"

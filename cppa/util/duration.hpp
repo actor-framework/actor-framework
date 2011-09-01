@@ -4,8 +4,6 @@
 #include <chrono>
 #include <cstdint>
 
-#include <boost/thread/thread_time.hpp>
-
 namespace cppa { namespace util {
 
 enum class time_unit : std::uint32_t
@@ -66,10 +64,28 @@ inline bool operator!=(const duration& lhs, const duration& rhs)
 
 } } // namespace cppa::util
 
-namespace boost {
+template<class Clock, class Duration>
+std::chrono::time_point<Clock, Duration>&
+operator+=(std::chrono::time_point<Clock, Duration>& lhs,
+           const cppa::util::duration& rhs)
+{
+    switch (rhs.unit)
+    {
+        case cppa::util::time_unit::seconds:
+            lhs += std::chrono::seconds(rhs.count);
+            break;
 
-system_time& operator+=(system_time& lhs, const cppa::util::duration& d);
+        case cppa::util::time_unit::milliseconds:
+            lhs += std::chrono::milliseconds(rhs.count);
+            break;
 
-} // namespace boost
+        case cppa::util::time_unit::microseconds:
+            lhs += std::chrono::microseconds(rhs.count);
+            break;
+
+        default: break;
+    }
+    return lhs;
+}
 
 #endif // DURATION_HPP

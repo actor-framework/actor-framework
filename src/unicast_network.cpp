@@ -3,11 +3,11 @@
 #include <ios> // ios_base::failure
 #include <list>
 #include <memory>
+#include <cstring>    // memset
 #include <iostream>
 #include <stdexcept>
 
 #include <fcntl.h>
-//#include <boost/thread.hpp>
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
@@ -115,9 +115,6 @@ void publish(actor_ptr& whom, std::uint16_t port)
     // ok, no exceptions
     sguard.release();
     detail::post_office_publish(sockfd, whom);
-    //intrusive_ptr<shared_barrier> barrier_ptr(new shared_barrier);
-    //boost::thread(middle_man_loop, sockfd, whom, barrier_ptr).detach();
-    //whom->attach(new mm_handle(sockfd, barrier_ptr));
 }
 
 void publish(actor_ptr&& whom, std::uint16_t port)
@@ -167,8 +164,6 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     detail::post_office_add_peer(sockfd, pinfptr, result,
                                  std::unique_ptr<attachable>());
     //auto ptr = get_scheduler()->register_hidden_context();
-    //boost::thread(post_office_loop, sockfd,
-    //              peer_pinf, result, ptr.release()).detach();
     return result;
 }
 

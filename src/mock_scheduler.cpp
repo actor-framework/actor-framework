@@ -3,8 +3,6 @@
 #include <atomic>
 #include <iostream>
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
 
 #include "cppa/message.hpp"
 #include "cppa/context.hpp"
@@ -12,6 +10,8 @@
 #include "cppa/attachable.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
+
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -34,7 +34,7 @@ void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
         catch (...) { }
         delete behavior;
     }
-    cppa::detail::actor_count::get().dec();
+    cppa::detail::dec_actor_count();
 }
 
 } // namespace <anonymous>
@@ -43,10 +43,10 @@ namespace cppa { namespace detail {
 
 actor_ptr mock_scheduler::spawn(actor_behavior* behavior)
 {
-    actor_count::get().inc();
+    inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<context> ctx(new detail::converted_thread_context);
-    boost::thread(run_actor, ctx, behavior).detach();
+    thread(run_actor, ctx, behavior).detach();
     return ctx;
 }
 

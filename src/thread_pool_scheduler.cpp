@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstddef>
+
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -14,7 +15,7 @@ void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
     where->schedule(what);
 }
 
-typedef boost::unique_lock<boost::mutex> guard_type;
+typedef std::unique_lock<std::mutex> guard_type;
 typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
 typedef util::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
@@ -28,9 +29,9 @@ struct thread_pool_scheduler::worker
     job_queue* m_job_queue;
     scheduled_actor* m_job;
     worker_queue* m_supervisor_queue;
-    boost::thread m_thread;
-    boost::mutex m_mtx;
-    boost::condition_variable m_cv;
+    std::thread m_thread;
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
 
     worker(worker_queue* supervisor_queue, job_queue* jq)
         : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
@@ -61,13 +62,13 @@ struct thread_pool_scheduler::worker
             }
             // run actor up to 300ms
             bool reschedule = false;
-            boost::system_time tout = boost::get_system_time();
-            tout += boost::posix_time::milliseconds(300);
+            auto tout = now();
+            tout += std::chrono::milliseconds(300);
             scheduled_actor::execute(m_job,
                                      fself,
                                      [&]() -> bool
                                      {
-                                         if (tout >= boost::get_system_time())
+                                         if (tout >= now())
                                          {
                                              reschedule = true;
                                              return false;
@@ -78,7 +79,7 @@ struct thread_pool_scheduler::worker
                                      {
                                          if (!m_job->deref()) delete m_job;
                                          CPPA_MEMORY_BARRIER();
-                                         actor_count::get().dec();
+                                         dec_actor_count();
                                      });
             if (reschedule)
             {
@@ -103,13 +104,12 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
     // init
-    size_t num_workers = std::max(boost::thread::hardware_concurrency(),
+    size_t num_workers = std::max(std::thread::hardware_concurrency(),
                                   static_cast<unsigned>(1));
     for (size_t i = 0; i < num_workers; ++i)
     {
         workers.push_back(worker_ptr(new worker(&wqueue, jqueue)));
     }
-    boost::system_time timeout;
     bool done = false;
     // loop
     do
@@ -124,8 +124,8 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         {
             // fetch waiting worker (wait up to 500ms)
             worker* w = nullptr;
-            timeout  = boost::get_system_time();
-            timeout += boost::posix_time::milliseconds(500);
+            auto timeout = now();
+            timeout += std::chrono::milliseconds(500);
             while (!w)
             {
                 w = wqueue.try_pop(timeout);
@@ -187,7 +187,7 @@ actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
     }
     else
     {
-        actor_count::get().inc();
+        inc_actor_count();
         CPPA_MEMORY_BARRIER();
         intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
                                                                enqueue_fun,

@@ -1,8 +1,10 @@
-#include <boost/thread.hpp>
-
 #include "cppa/atom.hpp"
 #include "cppa/message.hpp"
+#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
+
+// thread_specific_ptr
+#include <boost/thread.hpp>
 
 namespace cppa { namespace detail {
 

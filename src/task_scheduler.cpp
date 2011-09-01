@@ -1,5 +1,4 @@
 #include <iostream>
-#include <boost/thread.hpp>
 
 #include "cppa/config.hpp"
 #include "cppa/context.hpp"
@@ -40,7 +39,7 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
         {
             if (!job->deref()) delete job;
             CPPA_MEMORY_BARRIER();
-            actor_count::get().dec();
+            dec_actor_count();
         });
     }
 }
@@ -49,7 +48,7 @@ task_scheduler::task_scheduler()
     : m_queue()
     , m_dummy()
 {
-    m_worker = boost::thread(worker_loop, &m_queue, &m_dummy);
+    m_worker = std::thread(worker_loop, &m_queue, &m_dummy);
 }
 
 task_scheduler::~task_scheduler()
@@ -62,7 +61,7 @@ void task_scheduler::schedule(scheduled_actor* what)
 {
     if (what)
     {
-        if (boost::this_thread::get_id() == m_worker.get_id())
+        if (std::this_thread::get_id() == m_worker.get_id())
         {
             m_queue._push_back(what);
         }
@@ -75,7 +74,7 @@ void task_scheduler::schedule(scheduled_actor* what)
 
 actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
 {
-    actor_count::get().inc();
+    inc_actor_count();
     intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
                                                            enqueue_fun,
                                                            this));
