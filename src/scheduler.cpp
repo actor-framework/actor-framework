@@ -8,8 +8,9 @@
 #include "cppa/context.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/detail/actor_count.hpp"
-//#include "cppa/detail/mock_scheduler.hpp"
+#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
+#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
@@ -38,8 +39,40 @@ s_cleanup_helper;
 
 namespace cppa {
 
+class scheduler_helper
+{
+
+    cppa::intrusive_ptr<cppa::context> m_worker;
+
+    static void worker_loop(cppa::intrusive_ptr<cppa::context> m_self);
+
+ public:
+
+    scheduler_helper() : m_worker(new detail::converted_thread_context)
+    {
+        // do NOT increase actor count; worker is "invisible"
+        boost::thread(&scheduler_helper::worker_loop, m_worker).detach();
+    }
+
+    ~scheduler_helper()
+    {
+        m_worker->enqueue(message(m_worker, m_worker, atom(":_DIE")));
+    }
+
+};
+
+void scheduler_helper::worker_loop(cppa::intrusive_ptr<cppa::context> m_self)
+{
+    set_self(m_self.get());
+}
+
+scheduler::scheduler() : m_helper(new scheduler_helper)
+{
+}
+
 scheduler::~scheduler()
 {
+    delete m_helper;
 }
 
 void scheduler::await_others_done()

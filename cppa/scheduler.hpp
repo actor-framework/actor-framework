@@ -11,6 +11,7 @@ namespace cppa {
 
 class context;
 class actor_behavior;
+class scheduler_helper;
 
 /**
  * @brief
@@ -18,7 +19,11 @@ class actor_behavior;
 class scheduler
 {
 
+    scheduler_helper* m_helper;
+
  protected:
+
+    scheduler();
 
     /**
      * @brief Calls {@link context::exit(std::uint32_t) context::exit}.
