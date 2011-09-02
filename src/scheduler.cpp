@@ -13,9 +13,9 @@
 
 namespace {
 
-//std::mutex m_instance_mtx;
 std::atomic<cppa::scheduler*> m_instance;
 
+/*
 struct static_cleanup_helper
 {
     ~static_cleanup_helper()
@@ -32,6 +32,7 @@ struct static_cleanup_helper
     }
 }
 s_cleanup_helper;
+*/
 
 } // namespace <anonymous>
 
@@ -71,7 +72,7 @@ void set_scheduler(scheduler* sched)
     scheduler* s = nullptr;
     if (m_instance.compare_exchange_weak(s, sched) == false)
     {
-        throw std::runtime_error("cannot set scheduler");
+        throw std::runtime_error("scheduler already set");
     }
 }
 
