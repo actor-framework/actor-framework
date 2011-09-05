@@ -1,17 +1,27 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 
+#include <chrono>
 #include <memory>
+#include <cstdint>
 
+#include "cppa/atom.hpp"
+#include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/scheduling_hint.hpp"
 
+#include "cppa/util/duration.hpp"
+
 namespace cppa {
+
+// forward declarations
 
 class context;
 class actor_behavior;
 class scheduler_helper;
+
+context* self();
 
 /**
  * @brief
@@ -20,6 +30,8 @@ class scheduler
 {
 
     scheduler_helper* m_helper;
+
+    channel* future_send_helper();
 
  protected:
 
@@ -62,6 +74,14 @@ class scheduler
      *          more than one actor.
      */
     virtual void await_others_done();
+
+    template<typename Duration, typename... Data>
+    void future_send(actor_ptr whom, const Duration& d, const Data&... data)
+    {
+        static_assert(sizeof...(Data) > 0, "no message to send");
+        any_tuple tup = make_tuple(util::duration(d), data...);
+        future_send_helper()->enqueue(message(whom, whom, tup));
+    }
 
 };
 

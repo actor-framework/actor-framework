@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <functional>
 
@@ -7,6 +8,7 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 
@@ -29,18 +31,27 @@ size_t test__spawn()
     monitor(pong_actor);
     link(pong_actor);
     int i = 0;
+    int flags = 0;
+    get_scheduler()->future_send(self(), std::chrono::seconds(1),
+                                 atom("FooBar"));
     // wait for :Down and :Exit messages of pong
-    receive_while([&i]() { return ++i <= 2; })
+    receive_while([&i]() { return ++i <= 3; })
     (
         on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             CPPA_CHECK_EQUAL(last_received().sender(), pong_actor);
+            flags |= 0x01;
         },
         on<atom(":Down"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             CPPA_CHECK_EQUAL(last_received().sender(), pong_actor);
+            flags |= 0x02;
+        },
+        on<atom("FooBar")>() >> [&]()
+        {
+            flags |= 0x04;
         },
         others() >> [&]()
         {
@@ -49,6 +60,7 @@ size_t test__spawn()
     );
     // wait for termination of all spawned actors
     await_all_others_done();
+    CPPA_CHECK_EQUAL(flags, 0x07);
     // mailbox has to be empty
     message msg;
     while (try_receive(msg))

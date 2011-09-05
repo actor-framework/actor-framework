@@ -23,10 +23,10 @@ class converted_thread_context : public abstract_actor<context>
 
     typedef abstract_actor<context> super;
 
+ public:
+
     // mailbox implementation
     blocking_message_queue m_mailbox;
-
- public:
 
     message_queue& mailbox() /*override*/;
 

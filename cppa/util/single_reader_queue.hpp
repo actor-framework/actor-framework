@@ -37,6 +37,12 @@ class single_reader_queue
         return take_head();
     }
 
+    element_type* try_pop(boost::system_time timeout)
+    {
+        return (timed_wait_for_data(timeout)) ? take_head() : nullptr;
+    }
+
+    /*
     element_type* try_pop(unsigned long ms_timeout)
     {
         boost::system_time st = boost::get_system_time();
@@ -47,11 +53,7 @@ class single_reader_queue
         }
         return nullptr;
     }
-
-    //element_type* peek()
-    //{
-    //    return (m_head || fetch_new_data()) ? m_head : nullptr;
-    //}
+    */
 
     /**
      * @warning call only from the reader (owner)
@@ -94,19 +96,9 @@ class single_reader_queue
         for (;;)
         {
             new_element->next = e;
-            if (!e)
+            if (m_tail.compare_exchange_weak(e, new_element))
             {
-                if (m_tail.compare_exchange_weak(e, new_element))
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                if (m_tail.compare_exchange_weak(e, new_element))
-                {
-                    return false;
-                }
+                return (e == nullptr);
             }
         }
     }

@@ -13,6 +13,8 @@ namespace cppa { namespace detail {
 class blocking_message_queue_impl : public message_queue
 {
 
+ public:
+
     struct queue_node
     {
         queue_node* next;
@@ -20,7 +22,11 @@ class blocking_message_queue_impl : public message_queue
         queue_node(const message& from);
     };
 
-    util::single_reader_queue<queue_node> m_queue;
+    typedef util::single_reader_queue<queue_node> queue_type;
+
+ private:
+
+    queue_type m_queue;
 
  protected:
 
@@ -43,6 +49,16 @@ class blocking_message_queue_impl : public message_queue
     bool dequeue_impl(invoke_rules&, queue_node_buffer&);
 
  public:
+
+    inline queue_type& queue()
+    {
+        return m_queue;
+    }
+
+    inline const queue_type& queue() const
+    {
+        return m_queue;
+    }
 
     virtual void enqueue(const message& msg) /*override*/;
 };

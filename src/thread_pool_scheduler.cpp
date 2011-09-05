@@ -109,6 +109,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     {
         workers.push_back(worker_ptr(new worker(&wqueue, jqueue)));
     }
+    boost::system_time timeout;
     bool done = false;
     // loop
     do
@@ -123,9 +124,11 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         {
             // fetch waiting worker (wait up to 500ms)
             worker* w = nullptr;
+            timeout  = boost::get_system_time();
+            timeout += boost::posix_time::milliseconds(500);
             while (!w)
             {
-                w = wqueue.try_pop(500);
+                w = wqueue.try_pop(timeout);
                 // all workers are blocked since 500ms, start a new one
                 if (!w)
                 {

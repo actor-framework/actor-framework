@@ -5,14 +5,21 @@
 #endif
 #include <mutex>
 
+#include <iostream>
+
+#include "cppa/on.hpp"
 #include "cppa/context.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/to_string.hpp"
+
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
+
+typedef std::uint32_t ui32;
 
 std::atomic<cppa::scheduler*> m_instance;
 
@@ -39,19 +46,15 @@ s_cleanup_helper;
 
 namespace cppa {
 
-class scheduler_helper
+struct scheduler_helper
 {
 
-    cppa::intrusive_ptr<cppa::context> m_worker;
-
-    static void worker_loop(cppa::intrusive_ptr<cppa::context> m_self);
-
- public:
+    typedef intrusive_ptr<detail::converted_thread_context> ptr_type;
 
     scheduler_helper() : m_worker(new detail::converted_thread_context)
     {
         // do NOT increase actor count; worker is "invisible"
-        boost::thread(&scheduler_helper::worker_loop, m_worker).detach();
+        boost::thread(&scheduler_helper::time_emitter, m_worker).detach();
     }
 
     ~scheduler_helper()
@@ -59,11 +62,97 @@ class scheduler_helper
         m_worker->enqueue(message(m_worker, m_worker, atom(":_DIE")));
     }
 
+    //std::multimap<boost::system_time, cppa::any_tuple> m_messages;
+
+    ptr_type m_worker;
+
+ private:
+
+    static void time_emitter(ptr_type m_self);
+
 };
 
-void scheduler_helper::worker_loop(cppa::intrusive_ptr<cppa::context> m_self)
+void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
+    // setup & local variables
     set_self(m_self.get());
+    auto& queue = m_self->m_mailbox.queue();
+    typedef std::pair<cppa::actor_ptr, cppa::any_tuple> future_msg;
+    std::multimap<boost::system_time, future_msg> messages;
+    decltype(queue.pop()) msg_ptr = nullptr;
+    boost::system_time now;
+    bool done = false;
+    // message handling rules
+    auto rules =
+    (
+        on<util::duration, any_type*>() >> [&](util::duration d)
+        {
+            any_tuple tup = msg_ptr->msg.content().tail(1);
+            if (!tup.empty())
+            {
+                // calculate timeout
+                boost::system_time timeout = boost::get_system_time();
+                switch (d.unit)
+                {
+                    case util::time_unit::seconds:
+                        timeout += boost::posix_time::seconds(d.count);
+                        break;
+
+                    case util::time_unit::milliseconds:
+                        timeout += boost::posix_time::milliseconds(d.count);
+                        break;
+
+                    case util::time_unit::microseconds:
+                        timeout += boost::posix_time::microseconds(d.count);
+                        break;
+
+                    default:
+                        // unsupported duration type
+                        return;
+                }
+                future_msg fmsg(msg_ptr->msg.sender(), tup);
+                messages.insert(std::make_pair(std::move(timeout),
+                                               std::move(fmsg)));
+            }
+        },
+        on<atom(":_DIE")>() >> [&]()
+        {
+            done = true;
+        }
+    );
+    // loop
+    while (!done)
+    {
+        while (msg_ptr == nullptr)
+        {
+            if (messages.empty())
+            {
+                msg_ptr = queue.pop();
+            }
+            else
+            {
+                now = boost::get_system_time();
+                // handle timeouts (send messages)
+                auto it = messages.begin();
+                while (it != messages.end() && (it->first) <= now)
+                {
+                    auto& whom = (it->second).first;
+                    auto& what = (it->second).second;
+                    whom->enqueue(message(whom, whom, what));
+                    messages.erase(it);
+                    it = messages.begin();
+                }
+                // wait for next message or next timeout
+                if (it != messages.end())
+                {
+                    msg_ptr = queue.try_pop(it->first);
+                }
+            }
+        }
+        rules(msg_ptr->msg.content());
+        delete msg_ptr;
+        msg_ptr = nullptr;
+    }
 }
 
 scheduler::scheduler() : m_helper(new scheduler_helper)
@@ -73,6 +162,11 @@ scheduler::scheduler() : m_helper(new scheduler_helper)
 scheduler::~scheduler()
 {
     delete m_helper;
+}
+
+channel* scheduler::future_send_helper()
+{
+    return m_helper->m_worker.get();
 }
 
 void scheduler::await_others_done()
