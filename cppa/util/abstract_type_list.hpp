@@ -37,7 +37,7 @@ struct abstract_type_list
 
      public:
 
-        const_iterator(abstract_iterator* x = 0) : m_iter(x) { }
+        const_iterator(abstract_iterator* x = nullptr) : m_iter(x) { }
 
         const_iterator(const const_iterator& other)
             : m_iter((other.m_iter) ? other.m_iter->copy() : nullptr)
