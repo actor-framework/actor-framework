@@ -24,6 +24,7 @@ libcppa_la_SOURCES = \
   src/delegate.cpp \
   src/demangle.cpp \
   src/deserializer.cpp \
+  src/duration.cpp \
   src/exception.cpp \
   src/fiber.cpp \
   src/group.cpp \
@@ -161,6 +162,7 @@ nobase_library_include_HEADERS = \
   cppa/util/conjunction.hpp \
   cppa/util/disable_if.hpp \
   cppa/util/disjunction.hpp \
+  cppa/util/duration.hpp \
   cppa/util/element_at.hpp \
   cppa/util/enable_if.hpp \
   cppa/util/eval_first_n.hpp \
