@@ -94,7 +94,8 @@ size_t test__uniform_type()
         "@msg",                         // cppa::message
         "@actor",                       // cppa::actor_ptr
         "@group",                       // cppa::group_ptr
-        "@channel"                      // cppa::channel_ptr
+        "@channel",                     // cppa::channel_ptr
+        "cppa::util::duration"
     };
     if (sizeof(double) != sizeof(long double))
     {
