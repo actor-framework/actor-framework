@@ -14,6 +14,7 @@
 #include "cppa/invoke.hpp"
 #include "cppa/get_view.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/tuple_view.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -234,6 +235,19 @@ size_t test__tuple()
     CPPA_CHECK(get<2>(t1_copy) == get<2>(t1));
     CPPA_CHECK(get<3>(t1_copy) == get<3>(t1));
     CPPA_CHECK(t1 == t4);
+
+    // test any_tuple::tail
+
+    any_tuple at1 = make_tuple(1, 2, 3, 4.0, "5");
+    any_tuple at2 = make_tuple(2, 3, 4.0, "5");
+
+    any_tuple at1_tail = at1.tail();
+    CPPA_CHECK_EQUAL(at1.size(), (at1_tail.size() + 1));
+    CPPA_CHECK_EQUAL(at1_tail.size(), at2.size());
+    CPPA_CHECK_EQUAL(at1_tail.utype_info_at(0), at2.utype_info_at(0));
+    CPPA_CHECK((at2.utype_info_at(0).equal(at1_tail.at(0), at2.at(0))));
+    CPPA_CHECK_EQUAL(at2, at1_tail);
+    CPPA_CHECK_EQUAL(at1_tail, at2);
 
     return CPPA_TEST_RESULT;
 

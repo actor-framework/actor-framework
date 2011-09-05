@@ -49,44 +49,45 @@ class tuple_vals : public abstract_tuple
 
     inline data_type& data_ref() { return m_data; }
 
-    virtual void* mutable_at(size_t pos)
+    void* mutable_at(size_t pos)
     {
         return tdata_mutable_at(m_data, pos);
     }
 
-    virtual size_t size() const
+    size_t size() const
     {
         return sizeof...(ElementTypes);
     }
 
-    virtual tuple_vals* copy() const
+    tuple_vals* copy() const
     {
         return new tuple_vals(*this);
     }
 
-    virtual const void* at(size_t pos) const
+    const void* at(size_t pos) const
     {
         return tdata_at(m_data, pos);
     }
 
-    virtual const uniform_type_info& utype_info_at(size_t pos) const
+    const uniform_type_info& utype_info_at(size_t pos) const
     {
         return m_types.at(pos);
     }
 
-    virtual const util::abstract_type_list& types() const
+    const util::abstract_type_list& types() const
     {
         return m_types;
     }
 
-    virtual bool equal_to(const abstract_tuple& other) const
+    bool equal_to(const abstract_tuple& other) const
     {
+        if (size() != other.size()) return false;
         const tuple_vals* o = dynamic_cast<const tuple_vals*>(&other);
         if (o)
         {
             return m_data == (o->m_data);
         }
-        return false;
+        return abstract_tuple::equal_to(other);
     }
 
 };

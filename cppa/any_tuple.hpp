@@ -18,6 +18,8 @@ class any_tuple
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
+    explicit any_tuple(const cow_ptr<detail::abstract_tuple>& vals);
+
  public:
 
     //typedef cow_ptr<detail::abstract_tuple> vals_ptr;
@@ -53,6 +55,8 @@ class any_tuple
     const cow_ptr<detail::abstract_tuple>& vals() const;
 
     bool equal_to(const any_tuple& other) const;
+
+    any_tuple tail() const;
 
 };
 

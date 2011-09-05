@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 lib_LTLIBRARIES = libcppa.la
 
 libcppa_la_SOURCES = \
+  src/abstract_tuple.cpp \
   src/abstract_type_list.cpp \
   src/actor_behavior.cpp \
   src/actor_count.cpp \
