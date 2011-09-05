@@ -99,29 +99,31 @@ struct offset_decorator : cppa::detail::abstract_tuple
 
     typedef cppa::cow_ptr<cppa::detail::abstract_tuple> ptr_type;
 
-    offset_decorator(const ptr_type& decorated)
-        : m_decorated(decorated), m_type_list(decorated->types())
+    offset_decorator(const ptr_type& decorated, size_t offset)
+        : m_offset(offset)
+        , m_decorated(decorated)
+        , m_type_list(decorated->types())
     {
     }
 
     void* mutable_at(size_t pos)
     {
-        return m_decorated->mutable_at(pos + 1);
+        return m_decorated->mutable_at(pos + m_offset);
     }
 
     size_t size() const
     {
-        return m_decorated->size() - 1;
+        return m_decorated->size() - m_offset;
     }
 
     abstract_tuple* copy() const
     {
-        return new offset_decorator(m_decorated);
+        return new offset_decorator(m_decorated, m_offset);
     }
 
     const void* at(size_t pos) const
     {
-        return m_decorated->at(pos + 1);
+        return m_decorated->at(pos + m_offset);
     }
 
     const cppa::util::abstract_type_list& types() const
@@ -131,11 +133,12 @@ struct offset_decorator : cppa::detail::abstract_tuple
 
     const cppa::uniform_type_info& utype_info_at(size_t pos) const
     {
-        return m_decorated->utype_info_at(pos + 1);
+        return m_decorated->utype_info_at(pos + m_offset);
     }
 
  private:
 
+    size_t m_offset;
     ptr_type m_decorated;
     offset_type_list m_type_list;
 
@@ -168,10 +171,11 @@ any_tuple& any_tuple::operator=(any_tuple&& other)
     return *this;
 }
 
-any_tuple any_tuple::tail() const
+any_tuple any_tuple::tail(size_t offset) const
 {
-    if (size() <= 1) return any_tuple(s_empty_tuple());
-    return any_tuple(new offset_decorator(m_vals));
+    if (offset == 0) return *this;
+    if (size() <= offset) return any_tuple(s_empty_tuple());
+    return any_tuple(new offset_decorator(m_vals, offset));
 }
 
 size_t any_tuple::size() const

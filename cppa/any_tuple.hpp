@@ -56,7 +56,12 @@ class any_tuple
 
     bool equal_to(const any_tuple& other) const;
 
-    any_tuple tail() const;
+    any_tuple tail(size_t offset = 1) const;
+
+    inline bool empty() const
+    {
+        return size() == 0;
+    }
 
 };
 
