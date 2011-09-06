@@ -1,6 +1,8 @@
 #ifndef YIELDING_MESSAGE_QUEUE_HPP
 #define YIELDING_MESSAGE_QUEUE_HPP
 
+#include <cstdint>
+
 #include "cppa/message.hpp"
 #include "cppa/message_queue.hpp"
 #include "cppa/util/shared_spinlock.hpp"
@@ -8,6 +10,8 @@
 #include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 #include "cppa/detail/abstract_message_queue.hpp"
+
+namespace cppa { class invoke_rules_base; }
 
 namespace cppa { namespace detail {
 
@@ -34,11 +38,30 @@ class yielding_message_queue_impl : public message_queue
         queue_node(const message& from);
     };
 
+    bool m_has_pending_timeout_request;
+    std::uint32_t m_active_timeout_id;
     scheduled_actor* m_parent;
     std::atomic<int> m_state;
     util::single_reader_queue<queue_node> m_queue;
 
     void yield_until_not_empty();
+
+    enum dq_result
+    {
+        done,
+        indeterminate,
+        timeout_occured
+    };
+
+    enum filter_result
+    {
+        normal_exit_signal,
+        expired_timeout_message,
+        timeout_message,
+        ordinary_message
+    };
+
+    filter_result filter_msg(const message& msg);
 
  protected:
 
@@ -54,11 +77,17 @@ class yielding_message_queue_impl : public message_queue
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
     }
 
+    auto dq(std::unique_ptr<queue_node>&,
+            invoke_rules_base&,
+            queue_node_buffer&)           -> dq_result;
+
     // conputes the next message, returns true if the computed message
     // was not ignored (e.g. because it's an exit message with reason = normal)
     bool dequeue_impl(message& storage);
 
     bool dequeue_impl(invoke_rules&, queue_node_buffer&);
+
+    bool dequeue_impl(timed_invoke_rules&, queue_node_buffer&);
 
  public:
 

@@ -37,6 +37,8 @@ class message
 
     intrusive_ptr<msg_content> m_content;
 
+    static msg_content* s_dummy;
+
  public:
 
     template<typename... Args>
@@ -74,6 +76,10 @@ class message
     {
         return m_content->data;
     }
+
+    bool empty() const;
+
+    static msg_content* create_dummy();
 
 };
 

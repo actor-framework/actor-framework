@@ -1,12 +1,15 @@
 #include <vector>
 #include <memory>
 
+#include <boost/thread.hpp>
+
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/context.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 
+#include "cppa/util/duration.hpp"
 #include "cppa/util/singly_linked_list.hpp"
 
 #include "cppa/detail/intermediate.hpp"
@@ -68,16 +71,13 @@ bool blocking_message_queue_impl::dequeue_impl(message& storage)
     return true;
 }
 
-bool blocking_message_queue_impl::dequeue_impl(invoke_rules& rules,
-                                               queue_node_buffer& buffer)
+bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
+                                     invoke_rules_base& rules,
+                                     queue_node_buffer& buffer)
 {
-    std::unique_ptr<queue_node> node(m_queue.pop());
-    if (!m_trap_exit)
+    if (!m_trap_exit && throw_on_exit(node->msg) == normal_exit_signal)
     {
-        if (throw_on_exit(node->msg) == normal_exit_signal)
-        {
-            return false;
-        }
+        return false;
     }
     std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg.content()));
     if (imd)
@@ -93,6 +93,33 @@ bool blocking_message_queue_impl::dequeue_impl(invoke_rules& rules,
         buffer.push_back(node.release());
         return false;
     }
+
+}
+
+bool blocking_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,
+                                               queue_node_buffer& buffer)
+{
+    std::unique_ptr<queue_node> node(m_queue.try_pop());
+    if (!node)
+    {
+        boost::system_time timeout = boost::get_system_time();
+        timeout += rules.timeout();
+        node.reset(m_queue.try_pop(timeout));
+        if (!node)
+        {
+            if (!buffer.empty()) m_queue.push_front(std::move(buffer));
+            rules.handle_timeout();
+            return true;
+        }
+    }
+    return dq(node, rules, buffer);
+}
+
+bool blocking_message_queue_impl::dequeue_impl(invoke_rules& rules,
+                                               queue_node_buffer& buffer)
+{
+    std::unique_ptr<queue_node> node(m_queue.pop());
+    return dq(node, rules, buffer);
 }
 
 } } // namespace hamcast::detail

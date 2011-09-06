@@ -111,4 +111,13 @@ void receive_loop(invoke_rules& rules)
     }
 }
 
+void receive_loop(timed_invoke_rules& rules)
+{
+    auto& mbox = self()->mailbox();
+    for (;;)
+    {
+        mbox.dequeue(rules);
+    }
+}
+
 } // namespace cppa

@@ -6,8 +6,10 @@
 
 #include "cppa/match.hpp"
 #include "cppa/context.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
+
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/scheduled_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
@@ -22,31 +24,6 @@ namespace {
 typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
 typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
-enum yield_on_exit_result
-{
-    normal_exit_signal,
-    not_an_exit_signal
-};
-
-yield_on_exit_result yield_on_exit_msg(const cppa::message& msg)
-{
-    if (cppa::match<cppa::atom_value, std::uint32_t>(msg.content(), nullptr,
-                                                     cppa::atom(":Exit")))
-    {
-        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
-        if (reason != cppa::exit_reason::normal)
-        {
-            // yields
-            cppa::self()->quit(reason);
-        }
-        else
-        {
-            return normal_exit_signal;
-        }
-    }
-    return not_an_exit_signal;
-}
-
 } // namespace <anonmyous>
 
 namespace cppa { namespace detail {
@@ -57,13 +34,48 @@ yielding_message_queue_impl::queue_node::queue_node(const message& from)
 }
 
 yielding_message_queue_impl::yielding_message_queue_impl(scheduled_actor* p)
-    : m_parent(p)
-    , m_state(ready)
+    : m_has_pending_timeout_request(false), m_active_timeout_id(0)
+    , m_parent(p), m_state(ready)
 {
 }
 
 yielding_message_queue_impl::~yielding_message_queue_impl()
 {
+}
+
+enum filter_result
+{
+    normal_exit_signal,
+    expired_timeout_message,
+    timeout_message,
+    ordinary_message
+};
+
+yielding_message_queue_impl::filter_result
+yielding_message_queue_impl::filter_msg(const message& msg)
+{
+    if (   m_trap_exit == false
+        && match<atom_value, std::uint32_t>(msg.content(),
+                                            nullptr,
+                                            atom(":Exit")))
+    {
+        auto why = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        if (why != cppa::exit_reason::normal)
+        {
+            // yields
+            cppa::self()->quit(why);
+        }
+        return normal_exit_signal;
+    }
+    if (match<atom_value, std::uint32_t>(msg.content(),
+                                         nullptr,
+                                         atom(":Timeout")))
+    {
+        auto id = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        return (id == m_active_timeout_id) ? timeout_message
+                                           : expired_timeout_message;
+    }
+    return ordinary_message;
 }
 
 void yielding_message_queue_impl::enqueue(const message& msg)
@@ -122,30 +134,31 @@ bool yielding_message_queue_impl::dequeue_impl(message& storage)
 {
     yield_until_not_empty();
     std::unique_ptr<queue_node> node(m_queue.pop());
-    if (!m_trap_exit)
+    if (filter_msg(node->msg) != ordinary_message)
     {
-        if (yield_on_exit_msg(node->msg) == normal_exit_signal)
-        {
-            // exit_reason::normal is ignored by default,
-            // dequeue next message
-            return false;
-        }
+        // dequeue next message
+        return false;
     }
     storage = std::move(node->msg);
     return true;
 }
 
-bool yielding_message_queue_impl::dequeue_impl(invoke_rules& rules,
-                                               queue_node_buffer& buffer)
+yielding_message_queue_impl::dq_result
+yielding_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
+                                invoke_rules_base& rules,
+                                queue_node_buffer& buffer)
 {
-    yield_until_not_empty();
-    std::unique_ptr<queue_node> node(m_queue.pop());
-    if (!m_trap_exit)
+    switch (filter_msg(node->msg))
     {
-        if (yield_on_exit_msg(node->msg) == normal_exit_signal)
-        {
-            return false;
-        }
+        case normal_exit_signal:
+        case expired_timeout_message:
+            // discard message
+            return indeterminate;
+
+        case timeout_message:
+            return timeout_occured;
+
+        default: break;
     }
     std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg.content()));
     if (imd)
@@ -154,13 +167,53 @@ bool yielding_message_queue_impl::dequeue_impl(invoke_rules& rules,
         // restore mailbox before invoking imd
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
         imd->invoke();
-        return true;
+        return done;
     }
     else
     {
         buffer.push_back(node.release());
-        return false;
+        return indeterminate;
     }
+}
+
+bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules, queue_node_buffer& buffer)
+{
+    if (m_queue.empty() && !m_has_pending_timeout_request)
+    {
+        get_scheduler()->future_send(self(), rules.timeout(),
+                                     atom(":Timeout"), ++m_active_timeout_id);
+        m_has_pending_timeout_request = true;
+    }
+    yield_until_not_empty();
+    std::unique_ptr<queue_node> node(m_queue.pop());
+    switch (dq(node, rules, buffer))
+    {
+        case done:
+            if (m_has_pending_timeout_request)
+            {
+                // expire pending request
+                ++m_active_timeout_id;
+                m_has_pending_timeout_request = false;
+            }
+            return true;
+
+        case timeout_occured:
+            rules.handle_timeout();
+            m_has_pending_timeout_request = false;
+            return true;
+
+        case indeterminate:
+            return false;
+    }
+    return false;
+}
+
+bool yielding_message_queue_impl::dequeue_impl(invoke_rules& rules,
+                                               queue_node_buffer& buffer)
+{
+    yield_until_not_empty();
+    std::unique_ptr<queue_node> node(m_queue.pop());
+    return dq(node, rules, buffer) != indeterminate;
 }
 
 } } // namespace cppa::detail

@@ -32,6 +32,18 @@ class abstract_message_queue : public Super
         }
     }
 
+    void dequeue(timed_invoke_rules& rules)
+    {
+        typename Super::queue_node_buffer buffer;
+        for (;;)
+        {
+            if (Super::dequeue_impl(rules, buffer))
+            {
+                return;
+            }
+        }
+    }
+
     void dequeue(invoke_rules& rules) /*override*/
     {
         typename Super::queue_node_buffer buffer;

@@ -2,8 +2,12 @@
 
 namespace cppa { namespace detail {
 
-invokable::~invokable()
+invokable_base::~invokable_base()
 {
 }
 
-} }
+timed_invokable::timed_invokable(const util::duration& d) : m_timeout(d)
+{
+}
+
+} } // namespace cppa::detail

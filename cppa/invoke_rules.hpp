@@ -32,23 +32,87 @@
 #include <list>
 #include <memory>
 
-namespace cppa { namespace detail { class invokable; class intermediate; } }
+namespace cppa { namespace detail {
+
+class invokable;
+class intermediate;
+class timed_invokable;
+
+typedef std::unique_ptr<detail::invokable> invokable_ptr;
+typedef std::unique_ptr<detail::timed_invokable> timed_invokable_ptr;
+
+} } // namespace cppa::detail
+
+namespace cppa { namespace util { class duration; } }
 
 namespace cppa {
 
 class any_tuple;
+class invoke_rules;
 
-struct invoke_rules
+typedef std::list<detail::invokable_ptr> invokable_list;
+
+class invoke_rules_base
 {
 
-    typedef std::list< std::unique_ptr<detail::invokable> > list_type;
+ protected:
 
-    list_type m_list;
+    invokable_list m_list;
+
+    invoke_rules_base() = default;
+
+    invoke_rules_base(invokable_list&& ilist);
+
+    invoke_rules_base(invoke_rules_base&& other);
+
+ public:
+
+    virtual ~invoke_rules_base();
+
+    bool operator()(const any_tuple& t) const;
+
+    detail::intermediate* get_intermediate(const any_tuple& t) const;
+
+};
+
+class timed_invoke_rules : public invoke_rules_base
+{
+
+    typedef invoke_rules_base super;
+
+    friend class invoke_rules;
+
+    timed_invoke_rules() = delete;
+    timed_invoke_rules(const timed_invoke_rules&) = delete;
+    timed_invoke_rules& operator=(const timed_invoke_rules&) = delete;
+
+    timed_invoke_rules(invokable_list&& prepended_list,
+                       timed_invoke_rules&& other);
+
+public:
+
+    timed_invoke_rules(timed_invoke_rules&& arg);
+    timed_invoke_rules(detail::timed_invokable_ptr&& arg);
+
+    const util::duration& timeout() const;
+
+    void handle_timeout() const;
+
+ private:
+
+    detail::timed_invokable_ptr m_ti;
+
+};
+
+class invoke_rules : public invoke_rules_base
+{
+
+    typedef invoke_rules_base super;
+
+    friend class timed_invoke_rules;
 
     invoke_rules(const invoke_rules&) = delete;
     invoke_rules& operator=(const invoke_rules&) = delete;
-
-    invoke_rules(list_type&& ll);
 
  public:
 
@@ -56,17 +120,21 @@ struct invoke_rules
 
     invoke_rules(invoke_rules&& other);
 
-    invoke_rules(detail::invokable* arg);
-
     invoke_rules(std::unique_ptr<detail::invokable>&& arg);
-
-    bool operator()(const any_tuple& t) const;
-
-    detail::intermediate* get_intermediate(const any_tuple& t) const;
 
     invoke_rules& splice(invoke_rules&& other);
 
+    timed_invoke_rules splice(timed_invoke_rules&& other);
+
     invoke_rules operator,(invoke_rules&& other);
+
+    timed_invoke_rules operator,(timed_invoke_rules&& other);
+
+ private:
+
+    invoke_rules(invokable_list&& ll);
+
+    invoke_rules& splice(invokable_list&& ilist);
 
 };
 

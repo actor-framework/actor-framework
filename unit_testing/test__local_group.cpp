@@ -36,7 +36,15 @@ size_t test__local_group()
     //receive_until([&result]() { return result == 10; })
     do_receive
     (
-        on<int>() >> [&result](int value) { result += value; }
+        on<int>() >> [&result](int value)
+        {
+            result += value;
+        },
+        after(std::chrono::seconds(2)) >> [&]()
+        {
+            CPPA_CHECK(false);
+        }
+
     )
     .until([&result]() { return result == 10; });
     await_all_others_done();

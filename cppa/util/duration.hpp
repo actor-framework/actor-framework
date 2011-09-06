@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstdint>
 
+#include <boost/thread/thread_time.hpp>
+
 namespace cppa { namespace util {
 
 enum class time_unit : std::uint32_t
@@ -63,5 +65,11 @@ inline bool operator!=(const duration& lhs, const duration& rhs)
 }
 
 } } // namespace cppa::util
+
+namespace boost {
+
+system_time& operator+=(system_time& lhs, const cppa::util::duration& d);
+
+} // namespace boost
 
 #endif // DURATION_HPP

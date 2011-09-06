@@ -7,6 +7,8 @@
 #include "cppa/util/single_reader_queue.hpp"
 #include "cppa/detail/abstract_message_queue.hpp"
 
+namespace cppa { class invoke_rules_base; }
+
 namespace cppa { namespace detail {
 
 // blocks if single_reader_queue blocks
@@ -24,9 +26,17 @@ class blocking_message_queue_impl : public message_queue
 
     typedef util::single_reader_queue<queue_node> queue_type;
 
- private:
+    inline queue_type& queue()
+    {
+        return m_queue;
+    }
 
-    queue_type m_queue;
+    inline const queue_type& queue() const
+    {
+        return m_queue;
+    }
+
+    virtual void enqueue(const message& msg) /*override*/;
 
  protected:
 
@@ -42,25 +52,21 @@ class blocking_message_queue_impl : public message_queue
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
     }
 
-    // conputes the next message, returns true if the computed message
+    // computes the next message, returns true if the computed message
     // was not ignored (e.g. because it's an exit message with reason = normal)
     bool dequeue_impl(message& storage);
 
     bool dequeue_impl(invoke_rules&, queue_node_buffer&);
 
- public:
+    bool dequeue_impl(timed_invoke_rules&, queue_node_buffer&);
 
-    inline queue_type& queue()
-    {
-        return m_queue;
-    }
+ private:
 
-    inline const queue_type& queue() const
-    {
-        return m_queue;
-    }
 
-    virtual void enqueue(const message& msg) /*override*/;
+    bool dq(std::unique_ptr<queue_node>&,invoke_rules_base&,queue_node_buffer&);
+
+   queue_type m_queue;
+
 };
 
 typedef abstract_message_queue<blocking_message_queue_impl>

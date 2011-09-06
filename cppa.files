@@ -214,3 +214,4 @@ src/invoke_rules.cpp
 src/abstract_tuple.cpp
 cppa/util/duration.hpp
 src/duration.cpp
+cppa/receive.hpp

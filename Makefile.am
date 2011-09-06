@@ -141,6 +141,7 @@ nobase_library_include_HEADERS = \
   cppa/primitive_type.hpp \
   cppa/primitive_variant.hpp \
   cppa/process_information.hpp \
+  cppa/receive.hpp \
   cppa/ref_counted.hpp \
   cppa/scheduler.hpp \
   cppa/scheduling_hint.hpp \

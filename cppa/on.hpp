@@ -1,12 +1,15 @@
 #ifndef ON_HPP
 #define ON_HPP
 
+#include <chrono>
+
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
 #include "cppa/invoke.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
 
+#include "cppa/util/duration.hpp"
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
@@ -16,6 +19,26 @@
 #include "cppa/detail/ref_counted_impl.hpp"
 
 namespace cppa { namespace detail {
+
+class timed_invoke_rule_builder
+{
+
+    util::duration m_timeout;
+
+ public:
+
+    constexpr timed_invoke_rule_builder(const util::duration& d) : m_timeout(d)
+    {
+    }
+
+    template<typename F>
+    timed_invoke_rules operator>>(F&& f)
+    {
+        typedef timed_invokable_impl<F> impl;
+        return timed_invokable_ptr(new impl(m_timeout, std::forward<F>(f)));
+    }
+
+};
 
 template<typename... TypeList>
 class invoke_rule_builder
@@ -39,10 +62,10 @@ class invoke_rule_builder
     invoke_rule_builder(match_function&& fun) : m_fun(std::move(fun)) { }
 
     template<typename F>
-    cppa::invoke_rules operator>>(F&& f)
+    invoke_rules operator>>(F&& f)
     {
         typedef invokable_impl<tuple_view_type, match_function, F> impl;
-        return { new impl(std::move(m_fun), std::forward<F>(f)) };
+        return invokable_ptr(new impl(std::move(m_fun), std::forward<F>(f)));
     }
 
 };
@@ -168,6 +191,13 @@ detail::invoke_rule_builder<atom_value, atom_value, atom_value,
                          atom_value, TypeList...>(data, mv, A0, A1, A2, A3);
         }
     };
+}
+
+template<class Rep, class Period>
+inline constexpr detail::timed_invoke_rule_builder
+after(const std::chrono::duration<Rep, Period>& d)
+{
+    return { util::duration(d) };
 }
 
 inline detail::invoke_rule_builder<any_type*> others()
