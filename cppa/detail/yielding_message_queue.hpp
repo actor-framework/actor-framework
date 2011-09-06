@@ -77,9 +77,9 @@ class yielding_message_queue_impl : public message_queue
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
     }
 
-    auto dq(std::unique_ptr<queue_node>&,
-            invoke_rules_base&,
-            queue_node_buffer&)           -> dq_result;
+    dq_result dq(std::unique_ptr<queue_node>&,
+                 invoke_rules_base&,
+                 queue_node_buffer&);
 
     // conputes the next message, returns true if the computed message
     // was not ignored (e.g. because it's an exit message with reason = normal)
