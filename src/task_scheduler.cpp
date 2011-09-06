@@ -48,7 +48,7 @@ task_scheduler::task_scheduler()
     : m_queue()
     , m_dummy()
 {
-    m_worker = std::thread(worker_loop, &m_queue, &m_dummy);
+    m_worker = thread(worker_loop, &m_queue, &m_dummy);
 }
 
 task_scheduler::~task_scheduler()
@@ -61,7 +61,7 @@ void task_scheduler::schedule(scheduled_actor* what)
 {
     if (what)
     {
-        if (std::this_thread::get_id() == m_worker.get_id())
+        if (this_thread::get_id() == m_worker.get_id())
         {
             m_queue._push_back(what);
         }

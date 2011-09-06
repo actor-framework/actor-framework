@@ -15,7 +15,7 @@ void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
     where->schedule(what);
 }
 
-typedef std::unique_lock<std::mutex> guard_type;
+typedef unique_lock<mutex> guard_type;
 typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
 typedef util::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
@@ -29,9 +29,9 @@ struct thread_pool_scheduler::worker
     job_queue* m_job_queue;
     scheduled_actor* m_job;
     worker_queue* m_supervisor_queue;
-    std::thread m_thread;
-    std::mutex m_mtx;
-    std::condition_variable m_cv;
+    thread m_thread;
+    mutex m_mtx;
+    condition_variable m_cv;
 
     worker(worker_queue* supervisor_queue, job_queue* jq)
         : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
@@ -104,7 +104,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
     // init
-    size_t num_workers = std::max(std::thread::hardware_concurrency(),
+    size_t num_workers = std::max(thread::hardware_concurrency(),
                                   static_cast<unsigned>(1));
     for (size_t i = 0; i < num_workers; ++i)
     {
