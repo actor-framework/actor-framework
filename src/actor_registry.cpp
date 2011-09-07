@@ -7,7 +7,7 @@
 
 namespace {
 
-typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
+typedef cppa::detail::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
 typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
 } // namespace <anonymous>
