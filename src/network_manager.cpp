@@ -24,10 +24,11 @@ struct network_manager_impl : network_manager
     typedef util::single_reader_queue<mailman_job> mailman_queue_t;
 
     int m_pipe[2]; // m_pipe[0]: read; m_pipe[1]: write
-    thread m_loop; // post office thread
 
     mailman_queue_t m_mailman_queue;
     post_office_queue_t m_post_office_queue;
+
+    thread m_loop; // post office thread
 
     void start() /*override*/
     {

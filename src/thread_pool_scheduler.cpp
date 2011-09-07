@@ -30,9 +30,9 @@ struct thread_pool_scheduler::worker
     job_queue* m_job_queue;
     scheduled_actor* m_job;
     worker_queue* m_supervisor_queue;
-    thread m_thread;
     mutex m_mtx;
     condition_variable m_cv;
+    thread m_thread;
 
     worker(worker_queue* supervisor_queue, job_queue* jq)
         : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
