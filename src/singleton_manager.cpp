@@ -1,4 +1,5 @@
 #include <atomic>
+#include <iostream>
 
 #include "cppa/message.hpp"
 #include "cppa/context.hpp"
@@ -19,8 +20,6 @@ namespace {
 
 using namespace cppa;
 using namespace cppa::detail;
-
-
 
 struct singleton_container
 {
@@ -67,12 +66,15 @@ struct singleton_container
         // wait for all running actors to quit
         m_actor_registry->await_running_count_equal(0);
         // shutdown scheduler
+        // TODO: figure out why the ... Mac OS dies with a segfault here
+#       ifndef __APPLE__
         auto s = m_scheduler.load();
         if (s)
         {
             s->stop();
             delete s;
         }
+#       endif
         // it's safe now to delete all other singletons
         delete m_group_manager;
         if (!m_msg_dummy->deref()) delete m_msg_dummy;
