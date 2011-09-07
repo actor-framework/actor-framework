@@ -13,31 +13,27 @@
 
 namespace cppa {
 
+struct msg_content : ref_counted
+{
+    const actor_ptr sender;
+    const channel_ptr receiver;
+    const any_tuple data;
+    inline msg_content(const actor_ptr& s,
+                       const channel_ptr& r,
+                       const any_tuple& ut)
+        : ref_counted(), sender(s), receiver(r), data(ut)
+    {
+    }
+    inline msg_content(const actor_ptr& s,
+                       const channel_ptr& r,
+                       any_tuple&& ut)
+        : ref_counted(), sender(s), receiver(r), data(std::move(ut))
+    {
+    }
+};
+
 class message
 {
-
-    struct msg_content : ref_counted
-    {
-        const actor_ptr sender;
-        const channel_ptr receiver;
-        const any_tuple data;
-        inline msg_content(const actor_ptr& s,
-                           const channel_ptr& r,
-                           const any_tuple& ut)
-            : ref_counted(), sender(s), receiver(r), data(ut)
-        {
-        }
-        inline msg_content(const actor_ptr& s,
-                           const channel_ptr& r,
-                           any_tuple&& ut)
-            : ref_counted(), sender(s), receiver(r), data(std::move(ut))
-        {
-        }
-    };
-
-    intrusive_ptr<msg_content> m_content;
-
-    static msg_content* s_dummy;
 
  public:
 
@@ -79,7 +75,9 @@ class message
 
     bool empty() const;
 
-    static msg_content* create_dummy();
+ private:
+
+    intrusive_ptr<msg_content> m_content;
 
 };
 

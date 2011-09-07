@@ -30,6 +30,9 @@
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/native_socket.hpp"
+#include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/post_office_msg.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 
 //#define DEBUG(arg) std::cout << arg << std::endl
@@ -51,172 +54,13 @@ static_assert(sizeof(native_socket_t) == sizeof(std::uint32_t),
 
 constexpr int s_rdflag = MSG_DONTWAIT;
 
-constexpr std::uint32_t rd_queue_event = 0x00;
-constexpr std::uint32_t unpublish_actor_event = 0x01;
-constexpr std::uint32_t dec_socket_ref_event = 0x02;
-constexpr std::uint32_t close_socket_event = 0x03;
-constexpr std::uint32_t shutdown_event = 0x04;
-
-typedef std::uint32_t pipe_msg[2];
-constexpr size_t pipe_msg_size = 2 * sizeof(std::uint32_t);
-
-struct add_peer_msg
-{
-
-    native_socket_t sockfd;
-    process_information_ptr peer;
-    actor_proxy_ptr first_peer_actor;
-    std::unique_ptr<attachable> attachable_ptr;
-
-    add_peer_msg(native_socket_t peer_socket,
-                 const process_information_ptr& peer_ptr,
-                 const actor_proxy_ptr& peer_actor_ptr,
-                 std::unique_ptr<attachable>&& peer_observer)
-        : sockfd(peer_socket)
-        , peer(peer_ptr)
-        , first_peer_actor(peer_actor_ptr)
-        , attachable_ptr(std::move(peer_observer))
-    {
-    }
-
-};
-
-struct add_server_socket_msg
-{
-
-    native_socket_t server_sockfd;
-    actor_ptr published_actor;
-
-    add_server_socket_msg(native_socket_t ssockfd,
-                          const actor_ptr& pub_actor)
-        : server_sockfd(ssockfd)
-        , published_actor(pub_actor)
-    {
-    }
-
-};
-
-class post_office_msg
-{
-
-    friend class util::single_reader_queue<post_office_msg>;
-
-    post_office_msg* next;
-
-    bool m_is_add_peer_msg;
-
-    union
-    {
-        add_peer_msg m_add_peer_msg;
-        add_server_socket_msg m_add_server_socket;
-    };
-
- public:
-
-    post_office_msg(native_socket_t arg0,
-                    const process_information_ptr& arg1,
-                    const actor_proxy_ptr& arg2,
-                    std::unique_ptr<attachable>&& arg3)
-        : next(nullptr), m_is_add_peer_msg(true)
-    {
-        new (&m_add_peer_msg) add_peer_msg (arg0, arg1, arg2, std::move(arg3));
-    }
-
-    post_office_msg(native_socket_t arg0, const actor_ptr& arg1)
-        : next(nullptr), m_is_add_peer_msg(false)
-    {
-        new (&m_add_server_socket) add_server_socket_msg(arg0, arg1);
-    }
-
-    inline bool is_add_peer_msg() const
-    {
-        return m_is_add_peer_msg;
-    }
-
-    inline bool is_add_server_socket_msg() const
-    {
-        return !m_is_add_peer_msg;
-    }
-
-    inline add_peer_msg& as_add_peer_msg()
-    {
-        return m_add_peer_msg;
-    }
-
-    inline add_server_socket_msg& as_add_server_socket_msg()
-    {
-        return m_add_server_socket;
-    }
-
-    ~post_office_msg()
-    {
-        if (m_is_add_peer_msg)
-        {
-            m_add_peer_msg.~add_peer_msg();
-        }
-        else
-        {
-            m_add_server_socket.~add_server_socket_msg();
-        }
-    }
-
-};
-
-void post_office_loop(int pipe_read_handle);
-
-// static initialization and destruction
-struct post_office_manager
-{
-
-    typedef util::single_reader_queue<post_office_msg> queue_t;
-    typedef util::single_reader_queue<mailman_job> mailman_queue_t;
-
-    int m_pipe[2];                      // m_pipe[0]: read; m_pipe[1]: write
-    queue_t m_queue;                    // post office queue
-    thread* m_loop;                     // post office thread
-    mailman_queue_t m_mailman_queue;    // mailman queue
-
-    post_office_manager()
-    {
-        if (pipe(m_pipe) != 0)
-        {
-            char* error_cstr = strerror(errno);
-            std::string error_str = "pipe(): ";
-            error_str += error_cstr;
-            free(error_cstr);
-            throw std::logic_error(error_str);
-        }
-        m_loop = new thread(post_office_loop, m_pipe[0]);
-    }
-
-    int write_handle()
-    {
-        return m_pipe[1];
-    }
-
-    ~post_office_manager()
-    {
-        DEBUG("~post_office_manager() ...");
-        pipe_msg msg = { shutdown_event, 0 };
-        write(write_handle(), msg, pipe_msg_size);
-        // m_loop calls close(m_pipe[0])
-        m_loop->join();
-        delete m_loop;
-        close(m_pipe[0]);
-        close(m_pipe[1]);
-        DEBUG("~post_office_manager() ... done");
-    }
-
-}
-s_po_manager;
-
 } } } // namespace cppa::detail::<anonmyous>
 
 namespace cppa { namespace detail {
 
 util::single_reader_queue<mailman_job>& mailman_queue()
 {
-    return s_po_manager.m_mailman_queue;
+    return singleton_manager::get_network_manager()->mailman_queue();
 }
 
 } } // namespace cppa::detail
@@ -340,7 +184,7 @@ class po_peer : public post_office_worker
 
  public:
 
-    explicit po_peer(add_peer_msg& from)
+    explicit po_peer(post_office_msg::add_peer& from)
         : super(from.sockfd)
         , m_state(wait_for_msg_size)
         , m_peer(std::move(from.peer))
@@ -522,7 +366,8 @@ class po_doorman : public post_office_worker
 
  public:
 
-    explicit po_doorman(add_server_socket_msg& assm, std::list<po_peer>* peers)
+    explicit po_doorman(post_office_msg::add_server_socket& assm,
+                        std::list<po_peer>* peers)
         : super(assm.server_sockfd)
         , published_actor(assm.published_actor)
         , m_peers(peers)
@@ -585,7 +430,11 @@ struct mailman_worker
     }
 };
 
-void post_office_loop(int pipe_read_handle)
+} } } // namespace cppa::detail::<anonmyous>
+
+namespace cppa { namespace detail {
+
+void post_office_loop(int pipe_read_handle, int pipe_write_handle)
 {
     mailman_worker mworker;
     // map of all published actors (actor_id => list<doorman>)
@@ -607,6 +456,7 @@ void post_office_loop(int pipe_read_handle)
     // if an actor calls its quit() handler in this thread,
     // we 'catch' the released socket here
     std::vector<native_socket_t> released_socks;
+    auto& msg_queue = singleton_manager::get_network_manager()->post_office_queue();
     // functor that releases a socket descriptor
     // returns true if an element was removed from peers
     auto release_socket = [&](native_socket_t sockfd)
@@ -629,7 +479,9 @@ void post_office_loop(int pipe_read_handle)
         selected_peer->add_child(pptr);
         selected_peer->inc_ref_count();
         auto msock = selected_peer->get_socket();
-        pptr->attach_functor([msock, thread_id, &released_socks](std::uint32_t)
+        pptr->attach_functor([msock, thread_id,
+                              &released_socks,
+                              pipe_write_handle] (std::uint32_t)
         {
             if (this_thread::get_id() == thread_id)
             {
@@ -639,7 +491,7 @@ void post_office_loop(int pipe_read_handle)
             {
                 pipe_msg msg = { dec_socket_ref_event,
                                  static_cast<std::uint32_t>(msock) };
-                write(s_po_manager.write_handle(), msg, pipe_msg_size);
+                write(pipe_write_handle, msg, pipe_msg_size);
             }
         });
     });
@@ -684,7 +536,7 @@ void post_office_loop(int pipe_read_handle)
                 case rd_queue_event:
                 {
                     DEBUG("rd_queue_event");
-                    post_office_msg* pom = s_po_manager.m_queue.pop();
+                    post_office_msg* pom = msg_queue.pop();
                     if (pom->is_add_peer_msg())
                     {
                         //DEBUG("pom->is_add_peer_msg()");
@@ -810,42 +662,42 @@ void post_office_loop(int pipe_read_handle)
     }
 }
 
-} } } // namespace cppa::detail::<anonmyous>
-
-namespace cppa { namespace detail {
-
 void post_office_add_peer(native_socket_t a0,
                           const process_information_ptr& a1,
                           const actor_proxy_ptr& a2,
                           std::unique_ptr<attachable>&& a3)
 {
-    s_po_manager.m_queue.push_back(new post_office_msg(a0, a1, a2,
-                                                       std::move(a3)));
+    auto nm = singleton_manager::get_network_manager();
+    nm->post_office_queue().push_back(new post_office_msg(a0, a1, a2,
+                                                          std::move(a3)));
     pipe_msg msg = { rd_queue_event, 0 };
-    write(s_po_manager.write_handle(), msg, pipe_msg_size);
+    write(nm->write_handle(), msg, pipe_msg_size);
 }
 
 void post_office_publish(native_socket_t server_socket,
                          const actor_ptr& published_actor)
 {
     DEBUG("post_office_publish(" << published_actor->id() << ")");
-    s_po_manager.m_queue.push_back(new post_office_msg(server_socket,
-                                                       published_actor));
+    auto nm = singleton_manager::get_network_manager();
+    nm->post_office_queue().push_back(new post_office_msg(server_socket,
+                                                          published_actor));
     pipe_msg msg = { rd_queue_event, 0 };
-    write(s_po_manager.write_handle(), msg, pipe_msg_size);
+    write(nm->write_handle(), msg, pipe_msg_size);
 }
 
 void post_office_unpublish(std::uint32_t actor_id)
 {
     DEBUG("post_office_unpublish(" << actor_id << ")");
+    auto nm = singleton_manager::get_network_manager();
     pipe_msg msg = { unpublish_actor_event, actor_id };
-    write(s_po_manager.write_handle(), msg, pipe_msg_size);
+    write(nm->write_handle(), msg, pipe_msg_size);
 }
 
 void post_office_close_socket(native_socket_t sfd)
 {
+    auto nm = singleton_manager::get_network_manager();
     pipe_msg msg = { close_socket_event, static_cast<std::uint32_t>(sfd) };
-    write(s_po_manager.write_handle(), msg, pipe_msg_size);
+    write(nm->write_handle(), msg, pipe_msg_size);
 }
 
 } } // namespace cppa::detail

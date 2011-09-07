@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstddef>
+#include <iostream>
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
@@ -36,8 +37,12 @@ struct thread_pool_scheduler::worker
     worker(worker_queue* supervisor_queue, job_queue* jq)
         : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
         , m_supervisor_queue(supervisor_queue)
-        , m_thread(&thread_pool_scheduler::worker_loop, this)
     {
+    }
+
+    void start()
+    {
+        m_thread = thread(&thread_pool_scheduler::worker_loop, this);
     }
 
     worker(const worker&) = delete;
@@ -104,11 +109,16 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
     // init
-    size_t num_workers = std::max(thread::hardware_concurrency(),
-                                  static_cast<unsigned>(1));
+    size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 1);
+    auto new_worker = [&]()
+    {
+        worker_ptr wptr(new worker(&wqueue, jqueue));
+        wptr->start();
+        workers.push_back(std::move(wptr));
+    };
     for (size_t i = 0; i < num_workers; ++i)
     {
-        workers.push_back(worker_ptr(new worker(&wqueue, jqueue)));
+        new_worker();
     }
     bool done = false;
     // loop
@@ -132,7 +142,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                 // all workers are blocked since 500ms, start a new one
                 if (!w)
                 {
-                    workers.push_back(worker_ptr(new worker(&wqueue,jqueue)));
+                    new_worker();
                 }
             }
             // lifetime scope of guard
@@ -160,17 +170,18 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     while (wqueue.try_pop() != nullptr) { }
 }
 
-thread_pool_scheduler::thread_pool_scheduler()
-    : m_queue()
-    , m_dummy()
-    , m_supervisor(&thread_pool_scheduler::supervisor_loop, &m_queue, &m_dummy)
+void thread_pool_scheduler::start()
 {
+    m_supervisor = thread(&thread_pool_scheduler::supervisor_loop,
+                          &m_queue, &m_dummy);
+    super::start();
 }
 
-thread_pool_scheduler::~thread_pool_scheduler()
+void thread_pool_scheduler::stop()
 {
     m_queue.push_back(&m_dummy);
     m_supervisor.join();
+    super::stop();
 }
 
 void thread_pool_scheduler::schedule(scheduled_actor* what)

@@ -187,8 +187,9 @@ size_t test__tuple()
     reset_invoke_states();
 
     auto intmd = inv.get_intermediate(t1);
-    CPPA_CHECK(intmd != (reinterpret_cast<detail::intermediate*>(0)));
+    CPPA_CHECK(intmd != nullptr);
     if (intmd) intmd->invoke();
+    delete intmd;
     CPPA_CHECK(!l1_invoked && l2_invoked && !l3_invoked);
     reset_invoke_states();
 

@@ -14,6 +14,12 @@ namespace {
 
 void cleanup_fun(cppa::context* what)
 {
+    auto ptr = dynamic_cast<converted_thread_context*>(what);
+    if (ptr)
+    {
+        // make sure "unspawned" actors quit properly
+        ptr->cleanup(cppa::exit_reason::normal);
+    }
     if (what && !what->deref()) delete what;
 }
 

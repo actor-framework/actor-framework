@@ -10,6 +10,7 @@ libcppa_la_SOURCES = \
   src/actor.cpp \
   src/actor_proxy_cache.cpp \
   src/actor_proxy.cpp \
+  src/actor_registry.cpp \
   src/any_tuple.cpp \
   src/any_tuple_iterator.cpp \
   src/atom.cpp \
@@ -25,9 +26,11 @@ libcppa_la_SOURCES = \
   src/demangle.cpp \
   src/deserializer.cpp \
   src/duration.cpp \
+  src/empty_tuple.cpp \
   src/exception.cpp \
   src/fiber.cpp \
   src/group.cpp \
+  src/group_manager.cpp \
   src/intermediate.cpp \
   src/invokable.cpp \
   src/invoke_rules.cpp \
@@ -37,9 +40,11 @@ libcppa_la_SOURCES = \
   src/message_queue.cpp \
   src/mock_scheduler.cpp \
   src/native_socket.cpp \
+  src/network_manager.cpp \
   src/object_array.cpp \
   src/object.cpp \
   src/post_office.cpp \
+  src/post_office_msg.cpp \
   src/primitive_variant.cpp \
   src/process_information.cpp \
   src/ripemd_160.cpp \
@@ -47,6 +52,7 @@ libcppa_la_SOURCES = \
   src/scheduler.cpp \
   src/serializer.cpp \
   src/shared_spinlock.cpp \
+  src/singleton_manager.cpp \
   src/string_serialization.cpp \
   src/task_scheduler.cpp \
   src/thread_pool_scheduler.cpp \
@@ -84,6 +90,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \
   cppa/detail/actor_proxy_cache.hpp \
+  cppa/detail/actor_registry.hpp \
   cppa/detail/atom_val.hpp \
   cppa/detail/blocking_message_queue.hpp \
   cppa/detail/boxed.hpp \
@@ -94,7 +101,9 @@ nobase_library_include_HEADERS = \
   cppa/detail/default_uniform_type_info_impl.hpp \
   cppa/detail/delegate.hpp \
   cppa/detail/demangle.hpp \
+  cppa/detail/empty_tuple.hpp \
   cppa/detail/get_behavior.hpp \
+  cppa/detail/group_manager.hpp \
   cppa/detail/intermediate.hpp \
   cppa/detail/invokable.hpp \
   cppa/detail/list_member.hpp \
@@ -104,16 +113,19 @@ nobase_library_include_HEADERS = \
   cppa/detail/matcher.hpp \
   cppa/detail/mock_scheduler.hpp \
   cppa/detail/native_socket.hpp \
+  cppa/detail/network_manager.hpp \
   cppa/detail/object_array.hpp \
   cppa/detail/object_impl.hpp \
   cppa/detail/pair_member.hpp \
   cppa/detail/post_office.hpp \
+  cppa/detail/post_office_msg.hpp \
   cppa/detail/primitive_member.hpp \
   cppa/detail/ptype_to_type.hpp \
   cppa/detail/receive_loop_helper.hpp \
   cppa/detail/ref_counted_impl.hpp \
   cppa/detail/scheduled_actor.hpp \
   cppa/detail/serialize_tuple.hpp \
+  cppa/detail/singleton_manager.hpp \
   cppa/detail/swap_bytes.hpp \
   cppa/detail/task_scheduler.hpp \
   cppa/detail/tdata.hpp \
@@ -122,6 +134,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/tuple_vals.hpp \
   cppa/detail/type_to_ptype.hpp \
   cppa/detail/unboxed.hpp \
+  cppa/detail/uniform_type_info_map.hpp \
   cppa/detail/yielding_message_queue.hpp \
   cppa/detail/yield_interface.hpp \
   cppa/exception.hpp \

@@ -30,7 +30,9 @@
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
+#include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 using std::cout;
@@ -51,6 +53,15 @@ istream& operator>>(istream& i, cppa::util::void_type&) { return i; }
 } // namespace std
 
 namespace {
+
+std::atomic<int> s_ids;
+
+inline int next_id() { return s_ids.fetch_add(1); }
+
+inline cppa::detail::uniform_type_info_map& uti_map()
+{
+    return *(cppa::detail::singleton_manager::get_uniform_type_info_map());
+}
 
 inline const char* raw_name(const std::type_info& tinfo)
 {
@@ -561,8 +572,6 @@ class duration_tinfo : public util::abstract_uniform_type_info<util::duration>
 
 };
 
-const std::map<int, std::pair<string_set, string_set>>& int_names();
-
 template<typename T>
 class int_tinfo : public detail::default_uniform_type_info_impl<T>
 {
@@ -572,7 +581,7 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
     bool equal(const std::type_info& tinfo) const
     {
         // TODO: string comparsion sucks & is slow; find a nicer solution
-        auto map_iter = int_names().find(sizeof(T));
+        auto map_iter = uti_map().int_names().find(sizeof(T));
         const string_set& st = is_signed<T>::value ? map_iter->second.first
                                                    : map_iter->second.second;
         auto end = st.end();
@@ -585,20 +594,23 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 
 };
 
-class uniform_type_info_map
+} } } // namespace cppa::detail::<anonymous>
+
+namespace cppa { namespace detail {
+
+using std::is_integral;
+using util::enable_if;
+using util::disable_if;
+
+class uniform_type_info_map_helper
 {
 
-    typedef std::map<std::string, uniform_type_info*> uti_map;
+    friend class uniform_type_info_map;
 
-    // maps raw typeid names to uniform type informations
-    uti_map m_by_rname;
+    typedef uniform_type_info_map* this_ptr;
 
-    // maps uniform names to uniform type informations
-    uti_map m_by_uname;
-
-    std::map<int, std::pair<string_set, string_set>> m_ints;
-
-    void insert(uniform_type_info* uti, const std::set<std::string>& tnames)
+    static void insert(this_ptr d, uniform_type_info* uti,
+                       const std::set<std::string>& tnames)
     {
         if (tnames.empty())
         {
@@ -606,60 +618,60 @@ class uniform_type_info_map
         }
         for (const std::string& tname : tnames)
         {
-            m_by_rname.insert(std::make_pair(tname, uti));
+            d->m_by_rname.insert(std::make_pair(tname, uti));
         }
-        m_by_uname.insert(std::make_pair(uti->name(), uti));
+        d->m_by_uname.insert(std::make_pair(uti->name(), uti));
     }
 
     template<typename T>
-    inline void insert(const std::set<std::string>& tnames,
-                       typename util::enable_if<std::is_integral<T>>::type* = 0)
+    static inline void insert(this_ptr d,
+                              const std::set<std::string>& tnames,
+                              typename enable_if<is_integral<T>>::type* = 0)
     {
         //insert(new default_uniform_type_info_impl<T>(), tnames);
-        insert(new int_tinfo<T>, tnames);
+        insert(d, new int_tinfo<T>, tnames);
     }
 
     template<typename T>
-    inline void insert(const std::set<std::string>& tnames,
-                       typename util::disable_if<std::is_integral<T>>::type* = 0)
+    static inline void insert(this_ptr d,
+                              const std::set<std::string>& tnames,
+                              typename disable_if<is_integral<T>>::type* = 0)
     {
-        insert(new default_uniform_type_info_impl<T>(), tnames);
+        insert(d, new default_uniform_type_info_impl<T>(), tnames);
     }
 
     template<typename T>
-    inline void insert()
+    static inline void insert(this_ptr d)
     {
-        insert<T>({ std::string(raw_name<T>()) });
+        insert<T>(d, { std::string(raw_name<T>()) });
     }
 
- public:
-
-    uniform_type_info_map()
+    static void init(this_ptr d)
     {
-        insert<std::string>();
-        insert<std::u16string>();
-        insert<std::u32string>();
-        insert(new duration_tinfo, { raw_name<util::duration>() });
-        insert(new any_tuple_tinfo, { raw_name<any_tuple>() });
-        insert(new actor_ptr_tinfo, { raw_name<actor_ptr>() });
-        insert(new group_ptr_tinfo, { raw_name<actor_ptr>() });
-        insert(new channel_ptr_tinfo, { raw_name<channel_ptr>() });
-        insert(new message_tinfo, { raw_name<message>() });
-        insert(new atom_value_tinfo, { raw_name<atom_value>() });
-        insert<float>();
-        insert<cppa::util::void_type>();
+        insert<std::string>(d);
+        insert<std::u16string>(d);
+        insert<std::u32string>(d);
+        insert(d, new duration_tinfo, { raw_name<util::duration>() });
+        insert(d, new any_tuple_tinfo, { raw_name<any_tuple>() });
+        insert(d, new actor_ptr_tinfo, { raw_name<actor_ptr>() });
+        insert(d, new group_ptr_tinfo, { raw_name<actor_ptr>() });
+        insert(d, new channel_ptr_tinfo, { raw_name<channel_ptr>() });
+        insert(d, new message_tinfo, { raw_name<message>() });
+        insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
+        insert<float>(d);
+        insert<cppa::util::void_type>(d);
         if (sizeof(double) == sizeof(long double))
         {
             std::string dbl = raw_name<double>();
             std::string ldbl = raw_name<long double>();
-            insert<double>({ dbl, ldbl });
+            insert<double>(d, { dbl, ldbl });
         }
         else
         {
-            insert<double>();
-            insert<long double>();
+            insert<double>(d);
+            insert<long double>(d);
         }
-        insert<any_type>();
+        insert<any_type>(d);
         // first: signed
         // second: unsigned
         push<char,
@@ -685,114 +697,94 @@ class uniform_type_info_map
              unsigned long long,
              wchar_t,
              char16_t,
-             char32_t>(m_ints);
-        insert<std::int8_t>(m_ints[sizeof(std::int8_t)].first);
-        insert<std::uint8_t>(m_ints[sizeof(std::uint8_t)].second);
-        insert<std::int16_t>(m_ints[sizeof(std::int16_t)].first);
-        insert<std::uint16_t>(m_ints[sizeof(std::uint16_t)].second);
-        insert<std::int32_t>(m_ints[sizeof(std::int32_t)].first);
-        insert<std::uint32_t>(m_ints[sizeof(std::uint32_t)].second);
-        insert<std::int64_t>(m_ints[sizeof(std::int64_t)].first);
-        insert<std::uint64_t>(m_ints[sizeof(std::uint64_t)].second);
-    }
-
-    ~uniform_type_info_map()
-    {
-        m_by_rname.clear();
-        for (auto& kvp : m_by_uname)
-        {
-            delete kvp.second;
-            kvp.second = nullptr;
-        }
-        m_by_uname.clear();
-    }
-
-    const std::map<int, std::pair<string_set, string_set>>& int_names() const
-    {
-        return m_ints;
-    }
-
-
-    uniform_type_info* by_raw_name(const std::string& name)
-    {
-        auto i = m_by_rname.find(name);
-        if (i != m_by_rname.end())
-        {
-            return i->second;
-        }
-        return nullptr;
-    }
-
-    uniform_type_info* by_uniform_name(const std::string& name)
-    {
-        auto i = m_by_uname.find(name);
-        if (i != m_by_uname.end())
-        {
-            return i->second;
-        }
-        return nullptr;
-    }
-
-    bool insert(std::set<std::string> raw_names,
-                uniform_type_info* what)
-    {
-        if (m_by_uname.count(what->name()) > 0)
-        {
-            delete what;
-            return false;
-        }
-        m_by_uname.insert(std::make_pair(what->name(), what));
-        for (const std::string& plain_name : raw_names)
-        {
-            if (!m_by_rname.insert(std::make_pair(plain_name, what)).second)
-            {
-                std::string error_str = plain_name;
-                error_str += " already mapped to an uniform_type_info";
-                throw std::runtime_error(error_str);
-            }
-        }
-        return true;
-    }
-
-    std::vector<uniform_type_info*> get_all()
-    {
-        std::vector<uniform_type_info*> result;
-        result.reserve(m_by_uname.size());
-        for (const uti_map::value_type& i : m_by_uname)
-        {
-            result.push_back(i.second);
-        }
-        return std::move(result);
+             char32_t>(d->m_ints);
+        insert<std::int8_t>(d, d->m_ints[sizeof(std::int8_t)].first);
+        insert<std::uint8_t>(d, d->m_ints[sizeof(std::uint8_t)].second);
+        insert<std::int16_t>(d, d->m_ints[sizeof(std::int16_t)].first);
+        insert<std::uint16_t>(d, d->m_ints[sizeof(std::uint16_t)].second);
+        insert<std::int32_t>(d, d->m_ints[sizeof(std::int32_t)].first);
+        insert<std::uint32_t>(d, d->m_ints[sizeof(std::uint32_t)].second);
+        insert<std::int64_t>(d, d->m_ints[sizeof(std::int64_t)].first);
+        insert<std::uint64_t>(d, d->m_ints[sizeof(std::uint64_t)].second);
     }
 
 };
 
-uniform_type_info_map& s_uniform_type_info_map()
+uniform_type_info_map::uniform_type_info_map()
 {
-    static uniform_type_info_map s_utimap;
-    return s_utimap;
+    uniform_type_info_map_helper::init(this);
 }
 
-const std::map<int, std::pair<string_set, string_set>>& int_names()
+uniform_type_info_map::~uniform_type_info_map()
 {
-    return s_uniform_type_info_map().int_names();
+    m_by_rname.clear();
+    for (auto& kvp : m_by_uname)
+    {
+        delete kvp.second;
+        kvp.second = nullptr;
+    }
+    m_by_uname.clear();
 }
 
-} } } // namespace cppa::detail::<anonymous>
+uniform_type_info* uniform_type_info_map::by_raw_name(const std::string& name) const
+{
+    auto i = m_by_rname.find(name);
+    if (i != m_by_rname.end())
+    {
+        return i->second;
+    }
+    return nullptr;
+}
 
-namespace {
+uniform_type_info* uniform_type_info_map::by_uniform_name(const std::string& name) const
+{
+    auto i = m_by_uname.find(name);
+    if (i != m_by_uname.end())
+    {
+        return i->second;
+    }
+    return nullptr;
+}
 
-std::atomic<int> s_ids;
+bool uniform_type_info_map::insert(const std::set<std::string>& raw_names,
+                                   uniform_type_info* what)
+{
+    if (m_by_uname.count(what->name()) > 0)
+    {
+        delete what;
+        return false;
+    }
+    m_by_uname.insert(std::make_pair(what->name(), what));
+    for (const std::string& plain_name : raw_names)
+    {
+        if (!m_by_rname.insert(std::make_pair(plain_name, what)).second)
+        {
+            std::string error_str = plain_name;
+            error_str += " already mapped to an uniform_type_info";
+            throw std::runtime_error(error_str);
+        }
+    }
+    return true;
+}
 
-inline int next_id() { return s_ids.fetch_add(1); }
+std::vector<uniform_type_info*> uniform_type_info_map::get_all() const
+{
+    std::vector<uniform_type_info*> result;
+    result.reserve(m_by_uname.size());
+    for (const uti_map::value_type& i : m_by_uname)
+    {
+        result.push_back(i.second);
+    }
+    return std::move(result);
+}
 
-} // namespace <anonymous>
+} } // namespace cppa::detail
 
 namespace cppa {
 
 bool announce(const std::type_info& tinfo, uniform_type_info* utype)
 {
-    return detail::s_uniform_type_info_map().insert({ raw_name(tinfo) }, utype);
+    return uti_map().insert({ raw_name(tinfo) }, utype);
 }
 
 uniform_type_info::uniform_type_info(const std::string& uname)
@@ -812,7 +804,7 @@ object uniform_type_info::create() const
 const uniform_type_info*
 uniform_type_info::by_type_info(const std::type_info& tinf)
 {
-    auto result = detail::s_uniform_type_info_map().by_raw_name(raw_name(tinf));
+    auto result = uti_map().by_raw_name(raw_name(tinf));
     if (!result)
     {
         std::string error = "uniform_type_info::by_type_info(): ";
@@ -825,7 +817,7 @@ uniform_type_info::by_type_info(const std::type_info& tinf)
 
 uniform_type_info* uniform_type_info::by_uniform_name(const std::string& name)
 {
-    auto result = detail::s_uniform_type_info_map().by_uniform_name(name);
+    auto result = uti_map().by_uniform_name(name);
     if (!result)
     {
         throw std::runtime_error(name + " is an unknown typeid name");
@@ -842,7 +834,7 @@ object uniform_type_info::deserialize(deserializer* from) const
 
 std::vector<uniform_type_info*> uniform_type_info::instances()
 {
-    return detail::s_uniform_type_info_map().get_all();
+    return uti_map().get_all();
 }
 
 const uniform_type_info* uniform_typeid(const std::type_info& tinfo)

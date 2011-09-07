@@ -8,6 +8,8 @@
 #include "cppa/attachable.hpp"
 #include "cppa/ref_counted.hpp"
 
+namespace cppa { namespace detail { class group_manager; } }
+
 namespace cppa {
 
 /**
@@ -15,6 +17,8 @@ namespace cppa {
  */
 class group : public channel
 {
+
+    friend class detail::group_manager;
 
     std::string m_identifier;
     std::string m_module_name;

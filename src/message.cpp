@@ -1,15 +1,7 @@
 #include "cppa/message.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
-
-message::msg_content* message::create_dummy()
-{
-    msg_content* result = new msg_content(0, 0, tuple<int>(0));
-    result->ref();
-    return result;
-}
-
-message::msg_content* message::s_dummy = message::create_dummy();
 
 message::message(const actor_ptr& from,
                  const channel_ptr& to,
@@ -25,13 +17,13 @@ message::message(const actor_ptr& from,
 {
 }
 
-message::message() : m_content(s_dummy)
+message::message() : m_content(detail::singleton_manager::get_message_dummy())
 {
 }
 
 bool message::empty() const
 {
-    return m_content.get() == s_dummy;
+    return m_content.get() == detail::singleton_manager::get_message_dummy();
 }
 
 bool operator==(const message& lhs, const message& rhs)

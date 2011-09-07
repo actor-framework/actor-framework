@@ -6,36 +6,22 @@
 // thread_specific_ptr
 #include <boost/thread.hpp>
 
+namespace {
+
+boost::thread_specific_ptr<cppa::detail::actor_proxy_cache> s_proxy_cache;
+
+} // namespace <anonmyous>
+
 namespace cppa { namespace detail {
 
-class actor_proxy_caches {
-
-public:
-
-    actor_proxy_cache& get_actor_proxy_cache()
+actor_proxy_cache& get_actor_proxy_cache()
+{
+    if (s_proxy_cache.get() == nullptr)
     {
-        if (m_proxy_cache.get() == nullptr)
-        {
-            m_proxy_cache.reset(new actor_proxy_cache);
-        }
-        return *m_proxy_cache.get();
+        s_proxy_cache.reset(new actor_proxy_cache);
     }
-
-    static actor_proxy_caches& get()
-    {
-        return *s_instance;
-    }
-
-private:
-
-    static actor_proxy_caches* s_instance;
-
-    boost::thread_specific_ptr<cppa::detail::actor_proxy_cache> m_proxy_cache;
-
-};
-
-// TODO: free
-actor_proxy_caches* actor_proxy_caches::s_instance = new actor_proxy_caches();
+    return *s_proxy_cache;
+}
 
 process_information_ptr
 actor_proxy_cache::get_pinfo(const actor_proxy_cache::key_tuple& key)
@@ -86,11 +72,6 @@ void actor_proxy_cache::erase(const actor_proxy_ptr& pptr)
 size_t actor_proxy_cache::size() const
 {
     return m_proxies.size();
-}
-
-actor_proxy_cache& get_actor_proxy_cache()
-{
-    return actor_proxy_caches::get().get_actor_proxy_cache();
 }
 
 } } // namespace cppa::detail

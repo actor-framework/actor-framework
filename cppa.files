@@ -216,3 +216,16 @@ cppa/util/duration.hpp
 src/duration.cpp
 cppa/receive.hpp
 cppa/detail/thread.hpp
+cppa/detail/singleton_manager.hpp
+src/singleton_manager.cpp
+cppa/detail/actor_registry.hpp
+src/actor_registry.cpp
+cppa/detail/uniform_type_info_map.hpp
+cppa/detail/network_manager.hpp
+src/network_manager.cpp
+cppa/detail/post_office_msg.hpp
+src/post_office_msg.cpp
+cppa/detail/group_manager.hpp
+src/group_manager.cpp
+cppa/detail/empty_tuple.hpp
+src/empty_tuple.cpp

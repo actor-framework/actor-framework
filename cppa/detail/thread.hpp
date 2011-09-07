@@ -10,6 +10,7 @@ namespace cppa { namespace detail {
 
 using boost::mutex;
 using boost::thread;
+using boost::lock_guard;
 using boost::unique_lock;
 using boost::condition_variable;
 
@@ -61,8 +62,9 @@ namespace cppa { namespace detail {
 
 using std::mutex;
 using std::thread;
-using std::condition_variable;
+using std::lock_guard;
 using std::unique_lock;
+using std::condition_variable;
 
 namespace this_thread { using namespace std::this_thread; }
 

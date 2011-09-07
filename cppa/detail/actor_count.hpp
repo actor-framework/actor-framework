@@ -1,7 +1,7 @@
 #ifndef ACTOR_COUNT_HPP
 #define ACTOR_COUNT_HPP
 
-//#include "cppa/attachable.hpp"
+#include <cstddef>
 
 namespace cppa { namespace detail {
 
@@ -12,13 +12,6 @@ void dec_actor_count();
  * @pre @p expected <= 1
  */
 void actor_count_wait_until(size_t expected);
-
-/*
-struct exit_observer : cppa::attachable
-{
-    virtual ~exit_observer();
-};
-*/
 
 } } // namespace cppa::detail
 

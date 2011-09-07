@@ -47,6 +47,16 @@ class scheduler
     virtual ~scheduler();
 
     /**
+     * @warning Always call super::start on overriding.
+     */
+    virtual void start();
+
+    /**
+     * @warning Always call super::stop on overriding.
+     */
+    virtual void stop();
+
+    /**
      * @brief Spawns a new actor that executes <code>behavior->act()</code>
      *        with the scheduling policy @p hint if possible.
      */

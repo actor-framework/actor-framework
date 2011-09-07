@@ -9,33 +9,13 @@
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
 typedef std::uint32_t ui32;
-
-std::atomic<cppa::scheduler*> m_instance;
-
-/*
-struct static_cleanup_helper
-{
-    ~static_cleanup_helper()
-    {
-        auto i = m_instance.load();
-        while (i)
-        {
-            if (m_instance.compare_exchange_weak(i, nullptr))
-            {
-                delete i;
-                i = nullptr;
-            }
-        }
-    }
-}
-s_cleanup_helper;
-*/
 
 struct exit_observer : cppa::attachable
 {
@@ -56,16 +36,24 @@ struct scheduler_helper
 
     scheduler_helper() : m_worker(new detail::converted_thread_context)
     {
-        // do NOT increase actor count; worker is "invisible"
-        detail::thread(&scheduler_helper::time_emitter, m_worker).detach();
     }
 
-    ~scheduler_helper()
+    void start()
     {
-        m_worker->enqueue(message(m_worker, m_worker, atom(":_DIE")));
+        m_thread = detail::thread(&scheduler_helper::time_emitter, m_worker);
+    }
+
+    void stop()
+    {
+        {
+            any_tuple content = make_tuple(atom(":_DIE"));
+            m_worker->enqueue(message(m_worker, m_worker, content));
+        }
+        m_thread.join();
     }
 
     ptr_type m_worker;
+    detail::thread m_thread;
 
  private:
 
@@ -143,6 +131,16 @@ scheduler::scheduler() : m_helper(new scheduler_helper)
 {
 }
 
+void scheduler::start()
+{
+    m_helper->start();
+}
+
+void scheduler::stop()
+{
+    m_helper->stop();
+}
+
 scheduler::~scheduler()
 {
     delete m_helper;
@@ -180,8 +178,7 @@ void scheduler::exit_context(context* ctx, std::uint32_t reason)
 
 void set_scheduler(scheduler* sched)
 {
-    scheduler* s = nullptr;
-    if (m_instance.compare_exchange_weak(s, sched) == false)
+    if (detail::singleton_manager::set_scheduler(sched) == false)
     {
         throw std::runtime_error("scheduler already set");
     }
@@ -189,17 +186,18 @@ void set_scheduler(scheduler* sched)
 
 scheduler* get_scheduler()
 {
-    scheduler* result = m_instance.load();
-    while (result == nullptr)
+    scheduler* result = detail::singleton_manager::get_scheduler();
+    if (result == nullptr)
     {
-        scheduler* new_instance = new detail::thread_pool_scheduler;
-        if (m_instance.compare_exchange_weak(result, new_instance))
+        result = new detail::thread_pool_scheduler;
+        try
         {
-            result = new_instance;
+            set_scheduler(result);
         }
-        else
+        catch (std::runtime_error&)
         {
-            delete new_instance;
+            delete result;
+            return detail::singleton_manager::get_scheduler();
         }
     }
     return result;
