@@ -42,7 +42,8 @@ struct chars_to_string
     typedef typename util::replace_type<T, std::string,
                                         std::is_same<T, const char*>,
                                         std::is_same<T, char*>,
-                                        is_array_of<T, char>>::type
+                                        is_array_of<T, char>,
+                                        is_array_of<T, const char> >::type
             subtype1;
 
     typedef typename util::replace_type<subtype1, std::u16string,

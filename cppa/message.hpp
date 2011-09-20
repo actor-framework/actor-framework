@@ -83,7 +83,7 @@ class message
 
 template<typename... Args>
 message::message(const actor_ptr& from, const channel_ptr& to, const Args&... args)
-    : m_content(new msg_content(from, to, tuple<Args...>(args...)))
+    : m_content(new msg_content(from, to, make_tuple(args...)))//tuple<Args...>(args...)))
 {
 }
 
