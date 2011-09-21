@@ -4,6 +4,7 @@
 #include <atomic>
 #include <iostream>
 
+#include "cppa/cppa.hpp"
 #include "cppa/match.hpp"
 #include "cppa/context.hpp"
 #include "cppa/scheduler.hpp"
@@ -180,8 +181,8 @@ bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules, queue_
 {
     if (m_queue.empty() && !m_has_pending_timeout_request)
     {
-        get_scheduler()->future_send(self(), rules.timeout(),
-                                     atom(":Timeout"), ++m_active_timeout_id);
+        future_send(self(), rules.timeout(),
+                    atom(":Timeout"), ++m_active_timeout_id);
         m_has_pending_timeout_request = true;
     }
     yield_until_not_empty();

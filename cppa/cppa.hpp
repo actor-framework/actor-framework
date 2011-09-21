@@ -298,6 +298,28 @@ void reply(const Arg0& arg0, const Args&... args)
 }
 
 /**
+ * @brief Send a message that is delayed by @p rel_time.
+ */
+template<typename Duration, typename... Data>
+void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
+{
+    get_scheduler()->future_send(self(), whom, rel_time, data...);
+}
+
+/**
+ *
+ */
+template<typename Duration, typename... Data>
+void delayed_reply(const Duration& rel_time, const Data&... data)
+{
+    auto whom = last_received().sender();
+    if (whom)
+    {
+        get_scheduler()->future_send(self(), whom, rel_time, data...);
+    }
+}
+
+/**
  * @brief Blocks execution of this actor until all
  *        other actors finished execution.
  * @warning This function will cause a deadlock if
