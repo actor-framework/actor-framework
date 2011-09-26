@@ -150,7 +150,6 @@ size_t test__spawn()
             CPPA_CHECK(false);
         }
     );
-    spawn(dancing_kirby);
     await_all_others_done();
     return CPPA_TEST_RESULT;
 }
