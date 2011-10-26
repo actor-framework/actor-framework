@@ -1,7 +1,7 @@
 #ifndef SCHEDULED_ACTOR_HPP
 #define SCHEDULED_ACTOR_HPP
 
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/util/fiber.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/util/single_reader_queue.hpp"
@@ -14,10 +14,10 @@ namespace cppa { namespace detail {
 
 class task_scheduler;
 
-class scheduled_actor : public abstract_actor<context>
+class scheduled_actor : public abstract_actor<local_actor>
 {
 
-    typedef abstract_actor<context> super;
+    typedef abstract_actor<local_actor> super;
 
     friend class task_scheduler;
     friend class util::single_reader_queue<scheduled_actor>;

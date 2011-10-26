@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 
@@ -156,7 +156,7 @@ void scheduler::await_others_done()
     detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
 }
 
-void scheduler::register_converted_context(context* what)
+void scheduler::register_converted_context(local_actor* what)
 {
     if (what)
     {
@@ -171,7 +171,7 @@ attachable* scheduler::register_hidden_context()
     return new exit_observer;
 }
 
-void scheduler::exit_context(context* ctx, std::uint32_t reason)
+void scheduler::exit_context(local_actor* ctx, std::uint32_t reason)
 {
     ctx->quit(reason);
 }

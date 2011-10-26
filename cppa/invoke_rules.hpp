@@ -49,11 +49,26 @@ namespace cppa {
 
 class any_tuple;
 class invoke_rules;
+class timed_invoke_rules;
 
 typedef std::list<detail::invokable_ptr> invokable_list;
 
+/**
+ * @brief Base of {@link timed_invoke_rules} and {@link invoke_rules}.
+ */
 class invoke_rules_base
 {
+
+    friend class invoke_rules;
+    friend class timed_invoke_rules;
+
+ private:
+
+    invoke_rules_base() = default;
+
+    invoke_rules_base(invokable_list&& ilist);
+
+    invoke_rules_base(invoke_rules_base&& other);
 
  protected:
 
@@ -69,12 +84,29 @@ class invoke_rules_base
 
     virtual ~invoke_rules_base();
 
-    bool operator()(const any_tuple& t) const;
+    /**
+     * @brief Tries to match @p data with one of the stored patterns.
+     *
+     * If a pattern matched @p data, the corresponding callback is invoked.
+     * @param data Data tuple that should be matched.
+     * @returns @p true if a pattern matched @p data;
+     *          otherwise @p false.
+     */
+    bool operator()(const any_tuple& data) const;
 
-    detail::intermediate* get_intermediate(const any_tuple& t) const;
+    /**
+     * @brief Tries to match @p data with one of the stored patterns.
+     * @param data Data tuple that should be matched.
+     * @returns An {@link intermediate} instance that could invoke
+     *          the corresponding callback; otherwise @p nullptr.
+     */
+    detail::intermediate* get_intermediate(const any_tuple& data) const;
 
 };
 
+/**
+ * @brief Invoke rules with timeout.
+ */
 class timed_invoke_rules : public invoke_rules_base
 {
 
@@ -104,6 +136,9 @@ public:
 
 };
 
+/**
+ * @brief Invoke rules without timeout.
+ */
 class invoke_rules : public invoke_rules_base
 {
 

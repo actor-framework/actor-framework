@@ -7,6 +7,9 @@
 
 namespace cppa {
 
+/**
+ * @brief Base class for libcppa exceptions.
+ */
 class exception : public std::exception
 {
 
@@ -14,16 +17,33 @@ class exception : public std::exception
 
  protected:
 
+    /**
+     * @brief Creates an exception with the error string @p what_str.
+     * @param what_str Error message as rvalue string.
+     */
     exception(std::string&& what_str);
+
+    /**
+     * @brief Creates an exception with the error string @p what_str.
+     * @param what_str Error message as string.
+     */
     exception(const std::string& what_str);
 
  public:
 
     ~exception() throw();
+
+    /**
+     * @brief Returns the error message.
+     * @returns The error message as C-string.
+     */
     const char* what() const throw();
 
 };
 
+/**
+ * @brief Thrown if an Actor finished execution.
+ */
 class actor_exited : public exception
 {
 
@@ -32,6 +52,10 @@ class actor_exited : public exception
  public:
 
     actor_exited(std::uint32_t exit_reason);
+
+    /**
+     *
+     */
     inline std::uint32_t reason() const throw();
 
 };

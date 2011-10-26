@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "cppa/config.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/util/fiber.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/detail/actor_count.hpp"

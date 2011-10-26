@@ -5,7 +5,7 @@
 
 
 #include "cppa/message.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/invoke_rules.hpp"
@@ -22,7 +22,7 @@ using std::endl;
 
 namespace {
 
-void run_actor(cppa::intrusive_ptr<cppa::context> m_self,
+void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
                cppa::actor_behavior* behavior)
 {
     cppa::set_self(m_self.get());
@@ -45,7 +45,7 @@ actor_ptr mock_scheduler::spawn(actor_behavior* behavior)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
-    intrusive_ptr<context> ctx(new detail::converted_thread_context);
+    intrusive_ptr<local_actor> ctx(new detail::converted_thread_context);
     thread(run_actor, ctx, behavior).detach();
     return ctx;
 }

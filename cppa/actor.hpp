@@ -19,7 +19,7 @@ class serializer;
 class deserializer;
 
 /**
- * @brief The base class for all actor implementations.
+ * @brief Base class for all actor implementations.
  */
 class actor : public channel
 {
@@ -46,8 +46,8 @@ class actor : public channel
      * The actor will call <tt>ptr->detach(...)</tt> on exit or immediately
      * if he already exited.
      *
-     * @return @c true if @p ptr was successfully attached to the actor;
-     *         otherwise (actor already exited) @p false.
+     * @returns @c true if @p ptr was successfully attached to the actor;
+     *          otherwise (actor already exited) @p false.
      */
     virtual bool attach(attachable* ptr) = 0;
 
@@ -56,8 +56,8 @@ class actor : public channel
      *
      * The actor executes <tt>ftor()</tt> on exit or immediatley if he
      * already exited.
-     * @return @c true if @p ftor was successfully attached to the actor;
-     *         otherwise (actor already exited) @p false.
+     * @returns @c true if @p ftor was successfully attached to the actor;
+     *          otherwise (actor already exited) @p false.
      */
     template<typename F>
     bool attach_functor(F&& ftor);
@@ -95,15 +95,15 @@ class actor : public channel
 
     /**
      * @brief Establishes a link relation between this actor and @p other.
-     * @return @c true if this actor is running and added @p other to its
-     *         list of linked actors.
+     * @returns @c true if this actor is running and added @p other to its
+     *          list of linked actors.
      */
     virtual bool establish_backlink(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief Removes a link relation between this actor and @p other.
-     * @return @c true if this actor is running and removed @p other
-     *         from its list of linked actors.
+     * @returns @c true if this actor is running and removed @p other
+     *          from its list of linked actors.
      */
     virtual bool remove_backlink(intrusive_ptr<actor>& other) = 0;
 
@@ -115,28 +115,28 @@ class actor : public channel
 
     /**
      * @brief Gets the {@link process_information} of the parent process.
-     * @return The {@link process_information} of the parent process.
+     * @returns The {@link process_information} of the parent process.
      */
     inline const process_information& parent_process() const;
 
     /**
      * @brief Gets the {@link process_information} pointer
      *        of the parent process.
-     * @return A pointer to the {@link process_information}
-     *         of the parent process.
+     * @returns A pointer to the {@link process_information}
+     *          of the parent process.
      */
     inline process_information_ptr parent_process_ptr() const;
 
     /**
      * @brief Get the unique identifier of this actor.
-     * @return The unique identifier of this actor.
+     * @returns The unique identifier of this actor.
      */
     inline std::uint32_t id() const;
 
     /**
      * @brief Get the actor that has the unique identifier @p actor_id.
-     * @return A pointer to the requestet actor or @c nullptr if no
-     *         running actor with the ID @p actor_id was found.
+     * @returns A pointer to the requestet actor or @c nullptr if no
+     *          running actor with the ID @p actor_id was found.
      */
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 

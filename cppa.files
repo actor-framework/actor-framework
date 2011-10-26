@@ -72,7 +72,7 @@ unit_testing/hash_of.hpp
 cppa/detail/channel.hpp
 cppa/util/first_n.hpp
 cppa/util/eval_first_n.hpp
-cppa/context.hpp
+cppa/local_actor.hpp
 cppa/channel.hpp
 src/channel.cpp
 cppa/actor_behavior.hpp
@@ -91,7 +91,7 @@ queue_performances/blocking_cached_stack2.hpp
 queue_performances/blocking_sutter_list.hpp
 queue_performances/lockfree_list.hpp
 queue_performances/intrusive_sutter_list.hpp
-src/context.cpp
+src/local_actor.cpp
 cppa/scheduler.hpp
 cppa/detail/mock_scheduler.hpp
 src/scheduler.cpp

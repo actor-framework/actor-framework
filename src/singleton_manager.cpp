@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "cppa/message.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/exception.hpp"
 

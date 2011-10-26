@@ -49,7 +49,7 @@ class process_information : public ref_counted,
 
     /**
      * @brief Returns the proccess_information for the running process.
-     * @return
+     * @returnss
      */
     static const intrusive_ptr<process_information>& get();
 

@@ -17,11 +17,11 @@ namespace cppa {
 
 // forward declarations
 
-class context;
+class local_actor;
 class actor_behavior;
 class scheduler_helper;
 
-context* self();
+local_actor* self();
 
 /**
  * @brief
@@ -40,7 +40,7 @@ class scheduler
     /**
      * @brief Calls {@link context::exit(std::uint32_t) context::exit}.
      */
-    void exit_context(context* ctx, std::uint32_t reason);
+    void exit_context(local_actor* ctx, std::uint32_t reason);
 
  public:
 
@@ -68,12 +68,12 @@ class scheduler
      *        (a thread that acts as actor).
      * @note Calls <tt>what->attach(...)</tt>.
      */
-    virtual void register_converted_context(context* what);
+    virtual void register_converted_context(local_actor* what);
 
     /**
      * @brief Informs the scheduler about a hidden (non-actor)
      *        context that should be counted by await_others_done().
-     * @return An {@link attachable} that the hidden context has to destroy
+     * @returnss An {@link attachable} that the hidden context has to destroy
      *         if his lifetime ends.
      */
     virtual attachable* register_hidden_context();
@@ -104,7 +104,7 @@ void set_scheduler(scheduler* sched);
 
 /**
  * @brief Gets the actual used scheduler implementation.
- * @return The active scheduler (default constructed).
+ * @returnss The active scheduler (default constructed).
  */
 scheduler* get_scheduler();
 

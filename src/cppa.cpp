@@ -20,7 +20,7 @@ class observer : public cppa::attachable
     {
         if (match_token.subtype == typeid(observer))
         {
-            auto ptr = reinterpret_cast<const cppa::context*>(match_token.ptr);
+            auto ptr = reinterpret_cast<const cppa::local_actor*>(match_token.ptr);
             return m_client == ptr;
         }
         return false;
@@ -32,14 +32,14 @@ class observer : public cppa::attachable
 
 namespace cppa {
 
-context* operator<<(context* whom, const any_tuple& what)
+local_actor* operator<<(local_actor* whom, const any_tuple& what)
 {
     if (whom) whom->enqueue(message(self(), whom, what));
     return whom;
 }
 
 // matches self() << make_tuple(...)
-context* operator<<(context* whom, any_tuple&& what)
+local_actor* operator<<(local_actor* whom, any_tuple&& what)
 {
     if (whom) whom->enqueue(message(self(), whom, std::move(what)));
     return whom;

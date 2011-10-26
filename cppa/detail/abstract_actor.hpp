@@ -12,7 +12,7 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
 

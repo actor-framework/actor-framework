@@ -11,17 +11,17 @@
 #include <memory>
 #include <cstdint>
 
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/abstract_actor.hpp"
 #include "cppa/detail/blocking_message_queue.hpp"
 
 namespace cppa { namespace detail {
 
-class converted_thread_context : public abstract_actor<context>
+class converted_thread_context : public abstract_actor<local_actor>
 {
 
-    typedef abstract_actor<context> super;
+    typedef abstract_actor<local_actor> super;
 
  public:
 

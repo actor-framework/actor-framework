@@ -1,7 +1,7 @@
 #ifndef RECEIVE_HPP
 #define RECEIVE_HPP
 
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 
 namespace cppa {
 
@@ -56,7 +56,7 @@ void receive(invoke_rules& rules, Head&& head, Tail&&... tail)
 
 /**
  * @brief Tries to dequeue the next message from the mailbox.
- * @return @p true if a messages was dequeued;
+ * @returnss @p true if a messages was dequeued;
  *         @p false if the mailbox is empty
  */
 inline bool try_receive(message& msg)
@@ -66,7 +66,7 @@ inline bool try_receive(message& msg)
 
 /**
  * @brief Tries to dequeue the next message from the mailbox.
- * @return @p true if a messages was dequeued;
+ * @returnss @p true if a messages was dequeued;
  *         @p false if the mailbox is empty
  */
 inline bool try_receive(invoke_rules& rules)

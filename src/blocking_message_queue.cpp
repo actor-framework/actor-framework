@@ -3,7 +3,7 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 

@@ -16,8 +16,10 @@ class uniform_type_info;
 const uniform_type_info* uniform_typeid(const std::type_info&);
 namespace detail { template<typename T> struct object_caster; }
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
+
 /**
- * @brief foobar.
+ * @brief A wrapper around a void pointer that stores type informations
+ *        and provides copy, move and comparsion operations.
  */
 class object
 {
@@ -32,6 +34,10 @@ class object
 
     void swap(object& other);
 
+    /*
+     * @brief Copies this object.
+     * @returns A (deep) copy of this object.
+     */
     object copy() const;
 
     static void* new_instance(const uniform_type_info* type,
@@ -40,18 +46,22 @@ class object
 public:
 
     /**
-     * @brief Create an object of type @p utinfo with value @p val.
+     * @brief Creates an object of type @p utinfo with value @p val.
      * @warning {@link object} takes ownership of @p val.
      * @pre {@code val != nullptr && utinfo != nullptr}
      */
     object(void* val, const uniform_type_info* utinfo);
 
     /**
-     * @brief Create an empty object.
+     * @brief Creates an empty object.
      * @post {@code empty() && type() == *uniform_typeid<util::void_type>()}
      */
     object();
 
+    /**
+     * @brief Creates an object with a copy of @p what.
+     * @post {@code empty() == false && type() == *uniform_typeid<T>()}
+     */
     template<typename T>
     explicit object(const T& what);
 
@@ -60,7 +70,7 @@ public:
     /**
      * @brief Creates an object and moves type and value
      *        from @p other to @c this.
-     * @post {@code other.type() == uniform_typeid<util::void_type>()}
+     * @post {@code other.empty() == true}
      */
     object(object&& other);
 
@@ -71,11 +81,15 @@ public:
     object(const object& other);
 
     /**
-     * @brief Move the content from @p other to this.
-     * @post {@code other.type() == nullptr}
+     * @brief Moves the content from @p other to this.
+     * @returns @p *this
+     * @post {@code other.empty() == true}
      */
     object& operator=(object&& other);
 
+    /**
+     *
+     */
     object& operator=(const object& other);
 
     bool equal_to(const object& other) const;

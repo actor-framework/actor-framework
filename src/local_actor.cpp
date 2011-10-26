@@ -2,7 +2,7 @@
 // needed unless the new keyword "thread_local" works in GCC
 #include <boost/thread.hpp>
 
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
 
@@ -12,7 +12,7 @@ using cppa::detail::converted_thread_context;
 
 namespace {
 
-void cleanup_fun(cppa::context* what)
+void cleanup_fun(cppa::local_actor* what)
 {
     auto ptr = dynamic_cast<converted_thread_context*>(what);
     if (ptr)
@@ -23,25 +23,25 @@ void cleanup_fun(cppa::context* what)
     if (what && !what->deref()) delete what;
 }
 
-boost::thread_specific_ptr<cppa::context> t_this_context(cleanup_fun);
+boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
 
 } // namespace <anonymous>
 
 namespace cppa {
 
-void context::enqueue(const message& msg)
+void local_actor::enqueue(const message& msg)
 {
     mailbox().enqueue(msg);
 }
 
-context* unchecked_self()
+local_actor* unchecked_self()
 {
     return t_this_context.get();
 }
 
-context* self()
+local_actor* self()
 {
-    context* result = t_this_context.get();
+    local_actor* result = t_this_context.get();
     if (result == nullptr)
     {
         result = new converted_thread_context;
@@ -52,7 +52,7 @@ context* self()
     return result;
 }
 
-void set_self(context* ctx)
+void set_self(local_actor* ctx)
 {
     if (ctx) ctx->ref();
     t_this_context.reset(ctx);

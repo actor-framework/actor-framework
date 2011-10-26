@@ -12,10 +12,10 @@ class group;
 class message;
 
 /**
- * @brief The base interface for all message receivers.
+ * @brief Interface for all message receivers.
  *
- * This interface is implemented by {@link actor} and {@link group} and
- * describes an entity that can receive messages.
+ * This interface describes an entity that can receive messages
+ * and is implemented by {@link actor} and {@link group}.
  */
 class channel : public ref_counted
 {

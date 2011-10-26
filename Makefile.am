@@ -19,7 +19,7 @@ libcppa_la_SOURCES = \
   src/binary_serializer.cpp \
   src/blocking_message_queue.cpp \
   src/channel.cpp \
-  src/context.cpp \
+  src/local_actor.cpp \
   src/converted_thread_context.cpp \
   src/cppa.cpp \
   src/delegate.cpp \
@@ -81,7 +81,7 @@ nobase_library_include_HEADERS = \
   cppa/binary_serializer.hpp \
   cppa/channel.hpp \
   cppa/config.hpp \
-  cppa/context.hpp \
+  cppa/local_actor.hpp \
   cppa/cow_ptr.hpp \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \

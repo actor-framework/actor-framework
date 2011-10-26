@@ -138,7 +138,7 @@ class post_office_worker
         return m_parent;
     }
 
-    // @return new reference count
+    // @returnss new reference count
     size_t parent_exited(native_socket_t parent_socket)
     {
         if (has_parent() && parent() == parent_socket)
@@ -230,7 +230,7 @@ class po_peer : public post_office_worker
         }
     }
 
-    // @return false if an error occured; otherwise true
+    // @returnss false if an error occured; otherwise true
     bool read_and_continue()
     {
         switch (m_state)
@@ -381,7 +381,7 @@ class po_doorman : public post_office_worker
     {
     }
 
-    // @return false if an error occured; otherwise true
+    // @returnss false if an error occured; otherwise true
     bool read_and_continue()
     {
         sockaddr addr;

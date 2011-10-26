@@ -9,9 +9,9 @@ namespace cppa {
 class scheduler;
 
 /**
- *
+ * @brief Base class for local running Actors.
  */
-class context : public actor
+class local_actor : public actor
 {
 
     friend class scheduler;
@@ -19,8 +19,12 @@ class context : public actor
  public:
 
     /**
-     * @brief Cause this context to send an exit signal to all of its linked
-     *        linked actors and set its state to @c exited.
+     * @brief Finishes execution of this actor.
+     *
+     * Cause this actor to send an exit signal to all of its
+     * linked actors, sets its state to @c exited and throws
+     * {@link actor_exited} to cleanup the stack.
+     * @throws actor_exited
      */
     virtual void quit(std::uint32_t reason) = 0;
 
@@ -45,12 +49,12 @@ class context : public actor
 
 };
 
-inline bool context::trap_exit() const
+inline bool local_actor::trap_exit() const
 {
     return mailbox().trap_exit();
 }
 
-inline void context::trap_exit(bool new_value)
+inline void local_actor::trap_exit(bool new_value)
 {
     mailbox().trap_exit(new_value);
 }
@@ -58,13 +62,13 @@ inline void context::trap_exit(bool new_value)
 /**
  * @brief Get a pointer to the current active context.
  */
-context* self();
+local_actor* self();
 
 // "private" function
-void set_self(context*);
+void set_self(local_actor*);
 
 // "private" function, returns active context (without creating it if needed)
-context* unchecked_self();
+local_actor* unchecked_self();
 
 } // namespace cppa
 

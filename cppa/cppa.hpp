@@ -39,7 +39,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/context.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/message.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/scheduler.hpp"
@@ -57,8 +57,35 @@
 #include "cppa/detail/receive_loop_helper.hpp"
 
 /**
- * @brief The root namespace of libcppa.
+ * @author Dominik Charousset <dominik.charousset\@haw-hamburg.de>
+ *
+ * @mainpage libcppa
+ *
+ * @section Intro Introduction
+ *
+ * This library provides an implementation of the Actor model for C++.
+ *
+ * @section GettingStarted Getting started with libcppa
+ *
+ * @namespace cppa
+ * @brief This is the root namespace of libcppa.
+ *
+ * Thie @b cppa namespace contains all functions and classes to
+ * implement Actor based applications.
+ *
+ * @namespace cppa::util
+ * @brief This namespace contains utility classes and meta programming
+ *        utilities used by the libcppa implementation.
+ *
+ * @defgroup ReceiveMessages Receive messages
+ * @brief
+ *
+ * @section UsingOwnTypes Using own types in messages
+ * @brief
+ *
  */
+
+
 namespace cppa {
 
 /**
@@ -95,12 +122,13 @@ void monitor(actor_ptr&& whom);
 
 /**
  * @brief Removes a monitor from @p whom.
+ * @param whom Monitored Actor.
  */
 void demonitor(actor_ptr& whom);
 
 /**
  * @brief
- * @return
+ * @returns
  */
 inline bool trap_exit()
 {
@@ -137,7 +165,9 @@ actor_ptr spawn(F&& what, const Args&... args)
 }
 
 /**
- * @brief Quits execution of the calling actor.
+ * @copydoc context::quit(std::uint32_t)
+ *
+ * Alias for <tt>self()->quit(reason);</tt>
  */
 inline void quit(std::uint32_t reason)
 {
@@ -200,8 +230,6 @@ receive_while(Statement&& stmt)
     return std::move(stmt);
 }
 
-
-
 /**
  * @brief Receives messages until @p stmt returns true.
  *
@@ -209,6 +237,7 @@ receive_while(Statement&& stmt)
  * @code
  * do { receive(...); } while (stmt() == false);
  * @endcode
+ * @param args
  */
 template<typename... Args>
 detail::do_receive_helper do_receive(Args&&... args)
@@ -216,11 +245,9 @@ detail::do_receive_helper do_receive(Args&&... args)
     return detail::do_receive_helper(std::forward<Args>(args)...);
 }
 
-
-
 /**
  * @brief Gets the last dequeued message from the mailbox.
- * @return The last dequeued message from the mailbox.
+ * @returns The last dequeued message from the mailbox.
  */
 inline const message& last_received()
 {
@@ -244,7 +271,7 @@ send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 
 // 'matches' send(self(), ...);
 template<typename Arg0, typename... Args>
-void send(context* whom, const Arg0& arg0, const Args&... args)
+void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
     if (whom) whom->enqueue(message(self(), whom, arg0, args...));
 }
@@ -284,15 +311,15 @@ operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 }
 
 // matches self() << make_tuple(...)
-context* operator<<(context* whom, const any_tuple& what);
+local_actor* operator<<(local_actor* whom, const any_tuple& what);
 
 // matches self() << make_tuple(...)
-context* operator<<(context* whom, any_tuple&& what);
+local_actor* operator<<(local_actor* whom, any_tuple&& what);
 
 template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)
 {
-    context* sptr = self();
+    local_actor* sptr = self();
     actor_ptr whom = sptr->mailbox().last_dequeued().sender();
     if (whom) whom->enqueue(message(sptr, whom, arg0, args...));
 }
