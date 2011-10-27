@@ -73,7 +73,7 @@ class scheduler
     /**
      * @brief Informs the scheduler about a hidden (non-actor)
      *        context that should be counted by await_others_done().
-     * @returnss An {@link attachable} that the hidden context has to destroy
+     * @returns An {@link attachable} that the hidden context has to destroy
      *         if his lifetime ends.
      */
     virtual attachable* register_hidden_context();
@@ -104,7 +104,7 @@ void set_scheduler(scheduler* sched);
 
 /**
  * @brief Gets the actual used scheduler implementation.
- * @returnss The active scheduler (default constructed).
+ * @returns The active scheduler (default constructed).
  */
 scheduler* get_scheduler();
 

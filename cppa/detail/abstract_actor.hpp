@@ -18,6 +18,9 @@
 
 namespace cppa { namespace detail {
 
+/**
+ * @brief Implements.
+ */
 template<class Base>
 class abstract_actor : public Base
 {

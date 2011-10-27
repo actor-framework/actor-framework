@@ -20,7 +20,7 @@ struct abstract_type_list
 
         /**
          * @brief Increases the iterator position.
-         * @returnss @c false if the iterator is at the end; otherwise @c true.
+         * @returns @c false if the iterator is at the end; otherwise @c true.
          */
         virtual bool next() = 0;
 

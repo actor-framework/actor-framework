@@ -77,6 +77,11 @@
  * @brief This namespace contains utility classes and meta programming
  *        utilities used by the libcppa implementation.
  *
+ * @namespace cppa::detail
+ * @brief This namespace contains implementation details. Classes and
+ *        functions of this namespace could change even in minor
+ *        updates of the library and should not be used by outside of libcppa.
+ *
  * @defgroup ReceiveMessages Receive messages
  * @brief
  *
@@ -90,19 +95,40 @@ namespace cppa {
 
 /**
  * @brief Links the calling actor to @p other.
+ * @param other An Actor that is related with the calling Actor.
  */
 void link(actor_ptr& other);
 
+/**
+ * @copydoc link(actor_ptr&)
+ * Support for rvalue references.
+ */
 void link(actor_ptr&& other);
 
 /**
  * @brief Links @p lhs and @p rhs;
+ * @param lhs First Actor instance.
+ * @param rhs Second Actor instance.
+ * @pre <tt>lhs != rhs</tt>
  */
 void link(actor_ptr&  lhs, actor_ptr&  rhs);
 
-// enable link(spawn(...), spawn(...)), etc.
+/**
+ * @copydoc link(actor_ptr&,actor_ptr&)
+ * Support for rvalue references.
+ */
 void link(actor_ptr&& lhs, actor_ptr&  rhs);
+
+/**
+ * @copydoc link(actor_ptr&,actor_ptr&)
+ * Support for rvalue references.
+ */
 void link(actor_ptr&& lhs, actor_ptr&& rhs);
+
+/**
+ * @copydoc link(actor_ptr&,actor_ptr&)
+ * Support for rvalue references.
+ */
 void link(actor_ptr&  lhs, actor_ptr&& rhs);
 
 /**
@@ -113,11 +139,15 @@ void unlink(actor_ptr& lhs, actor_ptr& rhs);
 /**
  * @brief Adds a monitor to @p whom.
  *
- * Sends a ":Down" message if @p whom exited.
+ * Sends a ":Down" message to the calling Actor if @p whom exited.
+ * @param whom Actor instance that should be monitored by the calling Actor.
  */
 void monitor(actor_ptr& whom);
 
-// enable monitor(spawn(...))
+/**
+ * @copydoc monitor(actor_ptr&)
+ * Support for rvalue references.
+ */
 void monitor(actor_ptr&& whom);
 
 /**
@@ -127,8 +157,10 @@ void monitor(actor_ptr&& whom);
 void demonitor(actor_ptr& whom);
 
 /**
- * @brief
- * @returns
+ * @brief Gets the @c trap_exit state of the calling Actor.
+ * @returns @c true if the Actor explicitly handles Exit messages;
+ *          @c false if the Actor uses the default behavior (finish execution
+ *          if an Exit message with non-normal exit reason was received).
  */
 inline bool trap_exit()
 {
@@ -136,7 +168,11 @@ inline bool trap_exit()
 }
 
 /**
- * @brief
+ * @brief Sets the @c trap_exit state of the calling Actor.
+ * @param new_value  Set this to @c true if you want to explicitly handle Exit
+ *                   messages. The default is @c false, causing an Actor to
+ *                   finish execution if an Exit message with non-normal
+ *                   exit reason was received.
  */
 inline void trap_exit(bool new_value)
 {
@@ -145,6 +181,10 @@ inline void trap_exit(bool new_value)
 
 /**
  * @brief Spawns a new actor that executes @p what with given arguments.
+ * @param Hint Hint to the scheduler for the best scheduling strategy.
+ * @param what Function or functor that the spawned Actor should execute.
+ * @param args Arguments needed to invoke @p what.
+ * @returns A pointer to the newly created {@link actor Actor}.
  */
 template<scheduling_hint Hint, typename F, typename... Args>
 actor_ptr spawn(F&& what, const Args&... args)
@@ -157,9 +197,12 @@ actor_ptr spawn(F&& what, const Args&... args)
 
 /**
  * @brief Alias for <tt>spawn<scheduled>(what, args...)</tt>.
+ * @param what Function or functor that the spawned Actor should execute.
+ * @param args Arguments needed to invoke @p what.
+ * @returns A pointer to the newly created {@link actor Actor}.
  */
 template<typename F, typename... Args>
-actor_ptr spawn(F&& what, const Args&... args)
+inline actor_ptr spawn(F&& what, const Args&... args)
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
@@ -177,35 +220,49 @@ inline void quit(std::uint32_t reason)
 /**
  * @brief Receives messages in an endless loop.
  *
- * Equal to:
- * @code
- * for (;;) { receive(rules); }
- * @endcode
+ * Semantically equal to: <tt>for (;;) { receive(rules); }</tt>
+ * @param rules Invoke rules to receive and handle messages.
  */
 void receive_loop(invoke_rules& rules);
 
+/**
+ * @copydoc receive_loop(invoke_rules&)
+ * Support for invoke rules with timeout.
+ */
 void receive_loop(timed_invoke_rules& rules);
 
+/**
+ * @copydoc receive_loop(invoke_rules&)
+ * Support for rvalue references.
+ */
 inline void receive_loop(invoke_rules&& rules)
 {
     invoke_rules tmp(std::move(rules));
     receive_loop(tmp);
 }
 
+/**
+ * @copydoc receive_loop(invoke_rules&)
+ * Support for rvalue references and timeout.
+ */
 inline void receive_loop(timed_invoke_rules&& rules)
 {
     timed_invoke_rules tmp(std::move(rules));
     receive_loop(tmp);
 }
 
-template<typename Head, typename... Tail>
-void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
-{
-    invoke_rules tmp(std::move(rules));
-    receive_loop(tmp.splice(std::forward<Head>(head)),
-                 std::forward<Tail>(tail)...);
-}
-
+/**
+ * @brief Receives messages in an endless loop.
+ *
+ * This function overload provides a simple way to define a receive loop
+ * with on-the-fly {@link invoke_rules}.
+ *
+ * @b Example:
+ * @code
+ * receive_loop(on<int>() >> int_fun, on<float>() >> float_fun);
+ * @endcode
+ * @see receive_loop(invoke_rules&)
+ */
 template<typename Head, typename... Tail>
 void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
 {
@@ -214,12 +271,43 @@ void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
 }
 
 /**
+ * @brief Receives messages in an endless loop.
+ *
+ * This function overload provides a simple way to define a receive loop
+ * with on-the-fly {@link invoke_rules}.
+ *
+ * @b Example:
+ * @code
+ * receive_loop(on<int>() >> int_fun, on<float>() >> float_fun);
+ * @endcode
+ * @see receive_loop(invoke_rules&)
+ *
+ * Support for rvalue references.
+ */
+template<typename Head, typename... Tail>
+void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
+{
+    invoke_rules tmp(std::move(rules));
+    receive_loop(tmp.splice(std::forward<Head>(head)),
+                 std::forward<Tail>(tail)...);
+}
+
+/**
  * @brief Receives messages as long as @p stmt returns true.
  *
- * Equal to:
+ * Semantically equal to: <tt>while (stmt()) { receive(...); }</tt>.
+ *
+ * <b>Usage example:</b>
  * @code
- * while (stmt()) { receive(...); }
+ * int i = 0;
+ * receive_while([&]() { return (++i < 10); })
+ * (
+ *     on<int>() >> int_fun,
+ *     on<float>() >> float_fun
+ * );
  * @endcode
+ * @param stmt Lambda expression, functor or function returning a @c bool.
+ * @returns A functor that takes invoke rules.
  */
 template<typename Statement>
 detail::receive_while_helper<Statement>
@@ -233,11 +321,20 @@ receive_while(Statement&& stmt)
 /**
  * @brief Receives messages until @p stmt returns true.
  *
- * Equal to:
+ * Semantically equal to: <tt>do { receive(...); } while (stmt() == false);</tt>
+ *
+ * <b>Usage example:</b>
  * @code
- * do { receive(...); } while (stmt() == false);
+ * int i = 0;
+ * do_receive
+ * (
+ *     on<int>() >> int_fun,
+ *     on<float>() >> float_fun
+ * )
+ * .until([&]() { return (++i >= 10); };
  * @endcode
- * @param args
+ * @param args Invoke rules to handle received messages.
+ * @returns A functor providing the @c until function.
  */
 template<typename... Args>
 detail::do_receive_helper do_receive(Args&&... args)
@@ -254,6 +351,35 @@ inline const message& last_received()
     return self()->mailbox().last_dequeued();
 }
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @brief Send a message to @p whom.
+ *
+ * Sends the tuple <tt>{ arg0, args... }</tt> as a message to @p whom.
+ * @param whom Receiver of the message.
+ * @param arg0 First value for the message content.
+ * @param args Any number of values for the message content.
+ */
+template<typename Arg0, typename... Args>
+void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
+
+/**
+ * @brief Send a message to @p whom.
+ *
+ * <b>Usage example:</b>
+ * @code
+ * self() << make_tuple(1, 2, 3);
+ * @endcode
+ *
+ * Sends the tuple @what as a message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Content of the message.
+ */
+channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
+
+#else
+
 template<class C, typename Arg0, typename... Args>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
@@ -269,7 +395,7 @@ send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
     if (tmp) tmp->enqueue(message(self(), whom, arg0, args...));
 }
 
-// 'matches' send(self(), ...);
+// matches send(self(), ...);
 template<typename Arg0, typename... Args>
 void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
@@ -316,6 +442,13 @@ local_actor* operator<<(local_actor* whom, const any_tuple& what);
 // matches self() << make_tuple(...)
 local_actor* operator<<(local_actor* whom, any_tuple&& what);
 
+#endif
+
+/**
+ * @brief Replies to the last received message.
+ * @param arg0 First value for the message content.
+ * @param args Any number of values for the message content.
+ */
 template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)
 {
@@ -325,7 +458,10 @@ void reply(const Arg0& arg0, const Args&... args)
 }
 
 /**
- * @brief Send a message that is delayed by @p rel_time.
+ * @brief Sends a message to @p whom that is delayed by @p rel_time.
+ * @param whom Receiver of the message.
+ * @param rel_time Relative time duration to delay the message.
+ * @param data Any number of values for the message content.
  */
 template<typename Duration, typename... Data>
 void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
@@ -334,7 +470,9 @@ void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
 }
 
 /**
- *
+ * @brief Replies to the last received message with @p rel_time delay.
+ * @param rel_time Relative time duration to delay the message.
+ * @param data Any number of values for the message content.
  */
 template<typename Duration, typename... Data>
 void delayed_reply(const Duration& rel_time, const Data&... data)
@@ -361,13 +499,23 @@ inline void await_all_others_done()
  * @brief Publishes @p whom at given @p port.
  *
  * The connection is automatically closed if the lifetime of @p whom ends.
+ * @param whom Actor that should be published at given @p port.
+ * @param port Unused TCP port.
+ * @throws bind_failure
  */
 void publish(actor_ptr& whom, std::uint16_t port);
 
+/**
+ * @copydoc publish(actor_ptr&,std::uint16_t)
+ * Support for rvalue references.
+ */
 void publish(actor_ptr&& whom, std::uint16_t port);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.
+ * @param host Valid hostname or IP address.
+ * @param port TCP port.
+ * @returns A pointer to the proxy instance that represents the remote Actor.
  */
 actor_ptr remote_actor(const char* host, std::uint16_t port);
 

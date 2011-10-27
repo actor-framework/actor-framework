@@ -104,13 +104,13 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
     /**
      * @brief Get instance by uniform name.
      * @param uniform_name The libCPPA internal name for a type.
-     * @returnss The instance associated to @p uniform_name.
+     * @returns The instance associated to @p uniform_name.
      */
     static uniform_type_info* by_uniform_name(const std::string& uniform_name);
 
     /**
      * @brief Get all instances.
-     * @returnss A vector with all known (announced) instances.
+     * @returns A vector with all known (announced) instances.
      */
     static std::vector<uniform_type_info*> instances();
 
@@ -118,13 +118,13 @@ class uniform_type_info : cppa::util::comparable<uniform_type_info>
 
     /**
      * @brief Get the internal libCPPA name for this type.
-     * @returnss A string describing the libCPPA internal type name.
+     * @returns A string describing the libCPPA internal type name.
      */
     inline const std::string& name() const { return m_name; }
 
     /**
      * @brief Get the unique identifier of this instance.
-     * @returnss The unique identifier of this instance.
+     * @returns The unique identifier of this instance.
      */
     inline const identifier& id() const { return m_id; }
 

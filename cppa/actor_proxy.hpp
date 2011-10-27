@@ -6,6 +6,9 @@
 
 namespace cppa {
 
+/**
+ * @brief Represents a remote Actor.
+ */
 class actor_proxy : public detail::abstract_actor<actor>
 {
 

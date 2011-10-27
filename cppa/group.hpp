@@ -77,7 +77,7 @@ class group : public channel
 
         /**
          * @brief Get the name of this module implementation.
-         * @returnss The name of this module implementation.
+         * @returns The name of this module implementation.
          * @threadsafe
          */
         const std::string& name();
@@ -93,20 +93,20 @@ class group : public channel
 
     /**
      * @brief A string representation of the group identifier.
-     * @returnss The group identifier as string (e.g. "224.0.0.1" for IPv4
+     * @returns The group identifier as string (e.g. "224.0.0.1" for IPv4
      *         multicast or a user-defined string for local groups).
      */
     const std::string& identifier() const;
 
     /**
      * @brief The name of the module.
-     * @returnss The module name of this group (e.g. "local").
+     * @returns The module name of this group (e.g. "local").
      */
     const std::string& module_name() const;
 
     /**
      * @brief Subscribe @p who to this group.
-     * @returnss A {@link subscription} object that unsubscribes @p who
+     * @returns A {@link subscription} object that unsubscribes @p who
      *         if the lifetime of @p who ends.
      */
     virtual subscription subscribe(const channel_ptr& who) = 0;

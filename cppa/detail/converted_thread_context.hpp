@@ -18,6 +18,9 @@
 
 namespace cppa { namespace detail {
 
+/**
+ * @brief Represents a thread that was converted to an Actor.
+ */
 class converted_thread_context : public abstract_actor<local_actor>
 {
 

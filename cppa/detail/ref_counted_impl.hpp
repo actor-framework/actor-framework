@@ -7,11 +7,11 @@ template<typename T>
 class ref_counted_impl
 {
 
-	T m_rc;
+    T m_rc;
 
-	ref_counted_impl(const ref_counted_impl&) = delete;
+    ref_counted_impl(const ref_counted_impl&) = delete;
 
-	ref_counted_impl& operator=(const ref_counted_impl&) = delete;
+    ref_counted_impl& operator=(const ref_counted_impl&) = delete;
 
  public:
 

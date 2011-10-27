@@ -24,7 +24,7 @@ inline void range_check(iterator begin, iterator end, size_t read_size)
     }
 }
 
-// @returnss the next iterator position
+// @returns the next iterator position
 template<typename T>
 iterator read(iterator, iterator, T&,
               typename enable_if< std::is_floating_point<T> >::type* = 0)

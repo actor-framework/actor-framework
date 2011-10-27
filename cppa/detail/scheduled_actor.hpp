@@ -14,6 +14,9 @@ namespace cppa { namespace detail {
 
 class task_scheduler;
 
+/**
+ * @brief A spawned, scheduled Actor.
+ */
 class scheduled_actor : public abstract_actor<local_actor>
 {
 

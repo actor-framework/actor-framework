@@ -74,43 +74,72 @@ class actor : public channel
     /**
      * @brief Forces this actor to subscribe to the group @p what.
      *
-     * The group will be unsubscribed if the actor exits.
+     * The group will be unsubscribed if the actor finishes execution.
+     * @param what Group instance that should be joined.
      */
     void join(group_ptr& what);
 
     /**
      * @brief Forces this actor to leave the group @p what.
+     * @param what Joined group that should be leaved.
+     * @note Groups are leaved automatically if the Actor finishes
+     *       execution.
      */
     void leave(const group_ptr& what);
 
     /**
      * @brief Links this actor to @p other.
+     * @param other Actor instance that whose execution is coupled to the
+     *              execution of this Actor.
      */
     virtual void link_to(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief Unlinks this actor from @p other.
+     * @param oter Linked Actor.
+     * @note Links are automatically removed if the Actor finishes execution.
      */
     virtual void unlink_from(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief Establishes a link relation between this actor and @p other.
+     * @param other Actor instance that wants to link against this Actor.
      * @returns @c true if this actor is running and added @p other to its
-     *          list of linked actors.
+     *          list of linked actors; otherwise @c false.
      */
     virtual bool establish_backlink(intrusive_ptr<actor>& other) = 0;
 
     /**
      * @brief Removes a link relation between this actor and @p other.
+     * @param other Actor instance that wants to unlink from this Actor.
      * @returns @c true if this actor is running and removed @p other
-     *          from its list of linked actors.
+     *          from its list of linked actors; otherwise @c false.
      */
     virtual bool remove_backlink(intrusive_ptr<actor>& other) = 0;
 
     // rvalue support
+    /**
+     * @copydoc link_to(intrusive_ptr<actor>&)
+     * Support for rvalue references.
+     */
     void link_to(intrusive_ptr<actor>&& other);
+
+    /**
+     * @copydoc unlink_from(intrusive_ptr<actor>&)
+     * Support for rvalue references.
+     */
     void unlink_from(intrusive_ptr<actor>&& other);
+
+    /**
+     * @copydoc remove_backlink(intrusive_ptr<actor>&)
+     * Support for rvalue references.
+     */
     bool remove_backlink(intrusive_ptr<actor>&& to);
+
+    /**
+     * @copydoc establish_backlink(intrusive_ptr<actor>&)
+     * Support for rvalue references.
+     */
     bool establish_backlink(intrusive_ptr<actor>&& to);
 
     /**
@@ -128,7 +157,8 @@ class actor : public channel
     inline process_information_ptr parent_process_ptr() const;
 
     /**
-     * @brief Get the unique identifier of this actor.
+     * @brief Gets an integer value that uniquely identifies this Actor in
+     *        the process it's executed in.
      * @returns The unique identifier of this actor.
      */
     inline std::uint32_t id() const;
@@ -136,7 +166,7 @@ class actor : public channel
     /**
      * @brief Get the actor that has the unique identifier @p actor_id.
      * @returns A pointer to the requestet actor or @c nullptr if no
-     *          running actor with the ID @p actor_id was found.
+     *          running actor with the ID @p actor_id was found in this process.
      */
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 
