@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/message_queue.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -34,8 +34,8 @@ class yielding_message_queue_impl : public message_queue
     struct queue_node
     {
         queue_node* next;
-        message msg;
-        queue_node(const message& from);
+        any_tuple msg;
+        queue_node(const any_tuple& from);
     };
 
     bool m_has_pending_timeout_request;
@@ -61,7 +61,7 @@ class yielding_message_queue_impl : public message_queue
         ordinary_message
     };
 
-    filter_result filter_msg(const message& msg);
+    filter_result filter_msg(const any_tuple& msg);
 
  protected:
 
@@ -83,7 +83,7 @@ class yielding_message_queue_impl : public message_queue
 
     // conputes the next message, returns true if the computed message
     // was not ignored (e.g. because it's an exit message with reason = normal)
-    bool dequeue_impl(message& storage);
+    bool dequeue_impl(any_tuple& storage);
 
     bool dequeue_impl(invoke_rules&, queue_node_buffer&);
 
@@ -95,7 +95,7 @@ class yielding_message_queue_impl : public message_queue
 
     ~yielding_message_queue_impl();
 
-    virtual void enqueue(const message& msg) /*override*/;
+    virtual void enqueue(const any_tuple& msg) /*override*/;
 
 };
 

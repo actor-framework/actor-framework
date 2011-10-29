@@ -24,9 +24,9 @@ void testee1()
     (
         others() >> []()
         {
-            message msg = last_received();
+            any_tuple msg = last_received();
             actor_ptr sender = msg.sender();
-            sender->enqueue(message(self(), sender, msg.content()));
+            sender->enqueue(any_tuple(self(), sender, msg.content()));
         },
         after(std::chrono::milliseconds(10)) >> []()
         {
@@ -87,16 +87,18 @@ size_t test__spawn()
     // wait for :Down and :Exit messages of pong
     receive_while([&i]() { return ++i <= 4; })
     (
-        on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
+        on<atom(":Exit"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
+                                                             std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
-            CPPA_CHECK_EQUAL(last_received().sender(), pong_actor);
+            CPPA_CHECK_EQUAL(who, pong_actor);
             flags |= 0x01;
         },
-        on<atom(":Down"), std::uint32_t>() >> [&](std::uint32_t reason)
+        on<atom(":Down"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
+                                                             std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
-            if (last_received().sender() == pong_actor)
+            if (who == pong_actor)
             {
                 flags |= 0x02;
             }
@@ -125,7 +127,7 @@ size_t test__spawn()
     await_all_others_done();
     CPPA_CHECK_EQUAL(flags, 0x0F);
     // mailbox has to be empty
-    message msg;
+    any_tuple msg;
     while (try_receive(msg))
     {
         report_unexpected();

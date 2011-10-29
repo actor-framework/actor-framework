@@ -74,12 +74,6 @@ class invoke_rules_base
 
     invokable_list m_list;
 
-    invoke_rules_base() = default;
-
-    invoke_rules_base(invokable_list&& ilist);
-
-    invoke_rules_base(invoke_rules_base&& other);
-
  public:
 
     virtual ~invoke_rules_base();

@@ -1,7 +1,7 @@
 #ifndef MAILMAN_HPP
 #define MAILMAN_HPP
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/native_socket.hpp"
@@ -12,9 +12,9 @@ namespace cppa { namespace detail {
 struct mailman_send_job
 {
     process_information_ptr target_peer;
-    message original_message;
-    mailman_send_job(actor_proxy_ptr apptr, message msg);
-    mailman_send_job(process_information_ptr peer, message msg);
+    any_tuple original_message;
+    mailman_send_job(actor_proxy_ptr apptr, any_tuple msg);
+    mailman_send_job(process_information_ptr peer, any_tuple msg);
 };
 
 struct mailman_add_peer
@@ -38,9 +38,9 @@ class mailman_job
         kill_type
     };
 
-    mailman_job(process_information_ptr piptr, const message& omsg);
+    mailman_job(process_information_ptr piptr, const any_tuple& omsg);
 
-    mailman_job(actor_proxy_ptr apptr, const message& omsg);
+    mailman_job(actor_proxy_ptr apptr, const any_tuple& omsg);
 
     mailman_job(native_socket_t sockfd, const process_information_ptr& pinfo);
 

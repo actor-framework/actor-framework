@@ -10,7 +10,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
 
@@ -96,7 +96,7 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<cppa::actor_ptr>(), "@actor" },
       { demangled<cppa::group_ptr>(), "@group" },
       { demangled<cppa::channel_ptr>(), "@channel" },
-      { demangled<cppa::message>(), "@msg" }
+      { demangled<cppa::any_tuple>(), "@msg" }
     };
 
     // check if we could find the whole string in our lookup map

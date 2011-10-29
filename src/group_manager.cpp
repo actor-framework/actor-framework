@@ -35,7 +35,7 @@ class local_group : public group
 
  public:
 
-    virtual void enqueue(const message& msg)
+    virtual void enqueue(const any_tuple& msg)
     {
         shared_guard guard(m_shared_mtx);
         for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)

@@ -189,14 +189,14 @@ class po_peer : public post_office_worker
         , m_state(wait_for_msg_size)
         , m_peer(std::move(from.peer))
         , m_observer(std::move(from.attachable_ptr))
-        , m_meta_msg(uniform_typeid<message>())
+        , m_meta_msg(uniform_typeid<any_tuple>())
     {
     }
 
     explicit po_peer(native_socket_t sockfd, native_socket_t parent_socket)
         : super(sockfd, parent_socket)
         , m_state(wait_for_process_info)
-        , m_meta_msg(uniform_typeid<message>())
+        , m_meta_msg(uniform_typeid<any_tuple>())
     {
         m_rdbuf.reset(  sizeof(std::uint32_t)
                       + process_information::node_id_size);
@@ -209,7 +209,7 @@ class po_peer : public post_office_worker
         , m_observer(std::move(other.m_observer))
         , m_rdbuf(std::move(other.m_rdbuf))
         , m_children(std::move(other.m_children))
-        , m_meta_msg(uniform_typeid<message>())
+        , m_meta_msg(uniform_typeid<any_tuple>())
     {
     }
 
@@ -224,8 +224,8 @@ class po_peer : public post_office_worker
         {
             for (actor_proxy_ptr& pptr : m_children)
             {
-                pptr->enqueue(message(nullptr, nullptr, atom(":KillProxy"),
-                                      exit_reason::remote_link_unreachable));
+                pptr->enqueue(make_tuple(atom(":KillProxy"),
+                                         exit_reason::remote_link_unreachable));
             }
         }
     }
@@ -296,7 +296,7 @@ class po_peer : public post_office_worker
                     // wait for new data
                     break;
                 }
-                message msg;
+                any_tuple msg;
                 binary_deserializer bd(m_rdbuf.data(), m_rdbuf.size());
                 try
                 {
@@ -308,13 +308,12 @@ class po_peer : public post_office_worker
                     DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
                     return false;
                 }
-                auto& content = msg.content();
-                if (   content.size() == 1
-                    && content.utype_info_at(0) == typeid(atom_value)
-                    && *reinterpret_cast<const atom_value*>(content.at(0))
-                       == atom(":Monitor"))
+                if (   msg.size() == 2
+                    && msg.utype_info_at(0) == typeid(atom_value)
+                    && msg.get_as<atom_value>(0) == atom(":Monitor")
+                    && msg.utype_info_at(1) == typeid(actor_ptr))
                 {
-                    actor_ptr sender = msg.sender();
+                    actor_ptr sender = msg.get_as<actor_ptr>(1);
                     if (sender->parent_process() == *process_information::get())
                     {
                         //cout << pinfo << " ':Monitor'; actor id = "
@@ -323,8 +322,8 @@ class po_peer : public post_office_worker
                         // this message was send from a proxy
                         sender->attach_functor([=](std::uint32_t reason)
                         {
-                            message msg(sender, sender,
-                                        atom(":KillProxy"), reason);
+                            any_tuple msg = make_tuple(atom(":KillProxy"),
+                                                       reason);
                             auto mjob = new detail::mailman_job(m_peer, msg);
                             detail::mailman_queue().push_back(mjob);
                         });
@@ -471,7 +470,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
     // initialize proxy cache
     get_actor_proxy_cache().set_callback([&](actor_proxy_ptr& pptr)
     {
-        pptr->enqueue(message(pptr, nullptr, atom(":Monitor")));
+        pptr->enqueue(make_tuple(atom(":Monitor"), pptr));
         if (selected_peer == nullptr)
         {
             throw std::logic_error("selected_peer == nullptr");

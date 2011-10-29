@@ -21,11 +21,11 @@ enum throw_on_exit_result
     normal_exit_signal
 };
 
-throw_on_exit_result throw_on_exit(const message& msg)
+throw_on_exit_result throw_on_exit(const any_tuple& msg)
 {
-    if (match<atom_value, std::uint32_t>(msg.content(), nullptr, atom(":Exit")))
+    if (match<atom_value, actor_ptr, std::uint32_t>(msg, 0, atom(":Exit")))
     {
-        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
         if (reason != exit_reason::normal)
         {
             // throws
@@ -43,17 +43,17 @@ throw_on_exit_result throw_on_exit(const message& msg)
 
 namespace cppa { namespace detail {
 
-blocking_message_queue_impl::queue_node::queue_node(const message& from)
+blocking_message_queue_impl::queue_node::queue_node(const any_tuple& from)
     : next(nullptr), msg(from)
 {
 }
 
-void blocking_message_queue_impl::enqueue(const message& msg)
+void blocking_message_queue_impl::enqueue(const any_tuple& msg)
 {
     m_queue.push_back(new queue_node(msg));
 }
 
-bool blocking_message_queue_impl::dequeue_impl(message& storage)
+bool blocking_message_queue_impl::dequeue_impl(any_tuple& storage)
 {
     std::unique_ptr<queue_node> node(m_queue.pop());
     if (!m_trap_exit)
@@ -77,7 +77,7 @@ bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
     {
         return false;
     }
-    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg.content()));
+    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg));
     if (imd)
     {
         m_last_dequeued = node->msg;

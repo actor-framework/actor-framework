@@ -3,7 +3,7 @@
 #include <boost/thread.hpp>
 
 #include "cppa/local_actor.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 
 #include "cppa/detail/converted_thread_context.hpp"
@@ -29,7 +29,7 @@ boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
 
 namespace cppa {
 
-void local_actor::enqueue(const message& msg)
+void local_actor::enqueue(const any_tuple& msg)
 {
     mailbox().enqueue(msg);
 }

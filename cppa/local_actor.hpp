@@ -41,7 +41,7 @@ class local_actor : public actor
      *
      * Calls <code>mailbox().enqueue(msg)</code>.
      */
-    virtual void enqueue(const message& msg) /*override*/;
+    virtual void enqueue(const any_tuple& msg) /*override*/;
 
     inline bool trap_exit() const;
 

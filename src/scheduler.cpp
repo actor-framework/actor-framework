@@ -47,7 +47,7 @@ struct scheduler_helper
     {
         {
             any_tuple content = make_tuple(atom(":_DIE"));
-            m_worker->enqueue(message(m_worker, m_worker, content));
+            m_worker->enqueue(any_tuple(m_worker, m_worker, content));
         }
         m_thread.join();
     }
@@ -110,7 +110,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 {
                     auto& whom = (it->second).first;
                     auto& what = (it->second).second;
-                    whom->enqueue(message(whom, whom, what));
+                    whom->enqueue(any_tuple(whom, whom, what));
                     messages.erase(it);
                     it = messages.begin();
                 }

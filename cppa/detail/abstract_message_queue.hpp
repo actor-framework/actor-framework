@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/message_queue.hpp"
 
 namespace cppa { namespace detail {
@@ -12,7 +12,7 @@ template<class Super>
 class abstract_message_queue : public Super
 {
 
-    message m_last_dequeued;
+    any_tuple m_last_dequeued;
 
  public:
 
@@ -21,7 +21,7 @@ class abstract_message_queue : public Super
     {
     }
 
-    const message& dequeue() /*override*/
+    const any_tuple& dequeue() /*override*/
     {
         for (;;)
         {
@@ -56,7 +56,7 @@ class abstract_message_queue : public Super
         }
     }
 
-    bool try_dequeue(message& msg) /*override*/
+    bool try_dequeue(any_tuple& msg) /*override*/
     {
         for (;;)
         {
@@ -89,7 +89,7 @@ class abstract_message_queue : public Super
         }
     }
 
-    const message& last_dequeued() /*override*/
+    const any_tuple& last_dequeued() /*override*/
     {
         return m_last_dequeued;
     }

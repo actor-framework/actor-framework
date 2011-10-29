@@ -27,7 +27,6 @@ cppa/intrusive_ptr.hpp
 unit_testing/test__spawn.cpp
 src/mock_scheduler.cpp
 cppa/actor.hpp
-cppa/message.hpp
 unit_testing/test__intrusive_ptr.cpp
 cppa/util/concat_type_lists.hpp
 cppa/util/filter_type_list.hpp
@@ -132,7 +131,6 @@ src/binary_deserializer.cpp
 src/actor.cpp
 cppa/announce.hpp
 src/abstract_type_list.cpp
-src/message.cpp
 cppa/util/shared_spinlock.hpp
 src/shared_spinlock.cpp
 cppa/util/shared_lock_guard.hpp

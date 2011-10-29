@@ -12,12 +12,12 @@
 // implementation of mailman.hpp
 namespace cppa { namespace detail {
 
-mailman_send_job::mailman_send_job(actor_proxy_ptr apptr, message msg)
+mailman_send_job::mailman_send_job(actor_proxy_ptr apptr, any_tuple msg)
     : target_peer(apptr->parent_process_ptr()), original_message(msg)
 {
 }
 
-mailman_send_job::mailman_send_job(process_information_ptr peer, message msg)
+mailman_send_job::mailman_send_job(process_information_ptr peer, any_tuple msg)
     : target_peer(peer), original_message(msg)
 {
 }
@@ -32,13 +32,13 @@ mailman_job::mailman_job(job_type jt) : next(0), m_type(jt)
 {
 }
 
-mailman_job::mailman_job(process_information_ptr piptr, const message& omsg)
+mailman_job::mailman_job(process_information_ptr piptr, const any_tuple& omsg)
     : next(0), m_type(send_job_type)
 {
     new (&m_send_job) mailman_send_job(piptr, omsg);
 }
 
-mailman_job::mailman_job(actor_proxy_ptr apptr, const message& omsg)
+mailman_job::mailman_job(actor_proxy_ptr apptr, const any_tuple& omsg)
     : next(0), m_type(send_job_type)
 {
     new (&m_send_job) mailman_send_job(apptr, omsg);
@@ -103,7 +103,7 @@ void mailman_loop()
         if (job->is_send_job())
         {
             mailman_send_job& sjob = job->send_job();
-            const message& out_msg = sjob.original_message;
+            const any_tuple& out_msg = sjob.original_message;
             // forward message to receiver peer
             auto peer_element = peers.find(*(sjob.target_peer));
             if (peer_element != peers.end())

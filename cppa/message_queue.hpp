@@ -1,7 +1,7 @@
 #ifndef MESSAGE_QUEUE_HPP
 #define MESSAGE_QUEUE_HPP
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 
 namespace cppa {
@@ -19,7 +19,7 @@ class message_queue : public ref_counted
  protected:
 
     bool m_trap_exit;
-    message m_last_dequeued;
+    any_tuple m_last_dequeued;
 
  public:
 
@@ -32,14 +32,14 @@ class message_queue : public ref_counted
      * @brief Enqueues a new element to the message queue.
      * @param msg The new message.
      */
-    virtual void enqueue(const message& msg) = 0;
+    virtual void enqueue(const any_tuple& msg) = 0;
 
     /**
      * @brief Dequeues the oldest message (FIFO order) from the message queue.
      * @returns The oldest message from the queue.
      * @warning Call only from the owner of the queue.
      */
-    virtual const message& dequeue() = 0;
+    virtual const any_tuple& dequeue() = 0;
 
     /**
      * @brief Removes the first element from the queue that is matched
@@ -60,7 +60,7 @@ class message_queue : public ref_counted
      *
      * @warning Call only from the owner of the queue.
      */
-    virtual bool try_dequeue(message&) = 0;
+    virtual bool try_dequeue(any_tuple&) = 0;
 
     /**
      *
@@ -86,7 +86,7 @@ class message_queue : public ref_counted
      *          by a dequeue() or try_dequeue() member function call.
      * @warning Call only from the owner of the queue.
      */
-    inline const message& last_dequeued() const;
+    inline const any_tuple& last_dequeued() const;
 
 };
 
@@ -104,7 +104,7 @@ inline void message_queue::trap_exit(bool value)
     m_trap_exit = value;
 }
 
-inline const message& message_queue::last_dequeued() const
+inline const any_tuple& message_queue::last_dequeued() const
 {
     return m_last_dequeued;
 }

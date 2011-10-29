@@ -26,7 +26,7 @@
 
 #include "cppa/match.hpp"
 #include "cppa/tuple.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/get_view.hpp"
 #include "cppa/any_tuple.hpp"
@@ -157,7 +157,7 @@ size_t test__serialization()
     }
 
     {
-        message msg1(0, 0, 42, std::string("Hello \"World\"!"));
+        any_tuple msg1(0, 0, 42, std::string("Hello \"World\"!"));
         CPPA_CHECK_EQUAL(msg1str, to_string(msg1));
         binary_serializer bs;
         bs << msg1;
@@ -166,10 +166,10 @@ size_t test__serialization()
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
         CPPA_CHECK_EQUAL(obj1, obj2);
-        if (obj1.type() == typeid(message) && obj2.type() == obj1.type())
+        if (obj1.type() == typeid(any_tuple) && obj2.type() == obj1.type())
         {
-            auto& content1 = get<message>(obj1).content();
-            auto& content2 = get<message>(obj2).content();
+            auto& content1 = get<any_tuple>(obj1).content();
+            auto& content2 = get<any_tuple>(obj2).content();
             auto cview1 = get_view<decltype(42), std::string>(content1);
             auto cview2 = get_view<decltype(42), std::string>(content2);
             CPPA_CHECK_EQUAL(cview1.size(), 2);

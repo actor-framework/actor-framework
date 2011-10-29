@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/attachable.hpp"

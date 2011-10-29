@@ -40,7 +40,7 @@
 #include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
@@ -346,7 +346,7 @@ detail::do_receive_helper do_receive(Args&&... args)
  * @brief Gets the last dequeued message from the mailbox.
  * @returns The last dequeued message from the mailbox.
  */
-inline const message& last_received()
+inline const any_tuple& last_received()
 {
     return self()->mailbox().last_dequeued();
 }
@@ -384,7 +384,7 @@ template<class C, typename Arg0, typename... Args>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+    if (whom) whom->enqueue(make_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
@@ -392,21 +392,21 @@ typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(message(self(), whom, arg0, args...));
+    if (tmp) tmp->enqueue(make_tuple(arg0, args...));
 }
 
 // matches send(self(), ...);
 template<typename Arg0, typename... Args>
 void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(message(self(), whom, arg0, args...));
+    if (whom) whom->enqueue(make_tuple(arg0, args...));
 }
 
 template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, what));
+    if (whom) whom->enqueue(what);
     return whom;
 }
 
@@ -415,7 +415,7 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(message(self(), tmp, what));
+    if (tmp) tmp->enqueue(what);
     return std::move(tmp);
 }
 
@@ -423,7 +423,7 @@ template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, std::move(what)));
+    if (whom) whom->enqueue(std::move(what));
     return whom;
 }
 
@@ -432,7 +432,7 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(message(self(), tmp, std::move(what)));
+    if (tmp) tmp->enqueue(std::move(what));
     return std::move(tmp);
 }
 
@@ -445,19 +445,6 @@ local_actor* operator<<(local_actor* whom, any_tuple&& what);
 #endif
 
 /**
- * @brief Replies to the last received message.
- * @param arg0 First value for the message content.
- * @param args Any number of values for the message content.
- */
-template<typename Arg0, typename... Args>
-void reply(const Arg0& arg0, const Args&... args)
-{
-    local_actor* sptr = self();
-    actor_ptr whom = sptr->mailbox().last_dequeued().sender();
-    if (whom) whom->enqueue(message(sptr, whom, arg0, args...));
-}
-
-/**
  * @brief Sends a message to @p whom that is delayed by @p rel_time.
  * @param whom Receiver of the message.
  * @param rel_time Relative time duration to delay the message.
@@ -467,21 +454,6 @@ template<typename Duration, typename... Data>
 void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
 {
     get_scheduler()->future_send(self(), whom, rel_time, data...);
-}
-
-/**
- * @brief Replies to the last received message with @p rel_time delay.
- * @param rel_time Relative time duration to delay the message.
- * @param data Any number of values for the message content.
- */
-template<typename Duration, typename... Data>
-void delayed_reply(const Duration& rel_time, const Data&... data)
-{
-    auto whom = last_received().sender();
-    if (whom)
-    {
-        get_scheduler()->future_send(self(), whom, rel_time, data...);
-    }
 }
 
 /**

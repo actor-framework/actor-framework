@@ -29,7 +29,7 @@ typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
 namespace cppa { namespace detail {
 
-yielding_message_queue_impl::queue_node::queue_node(const message& from)
+yielding_message_queue_impl::queue_node::queue_node(const any_tuple& from)
     : next(0), msg(from)
 {
 }
@@ -53,12 +53,12 @@ enum filter_result
 };
 
 yielding_message_queue_impl::filter_result
-yielding_message_queue_impl::filter_msg(const message& msg)
+yielding_message_queue_impl::filter_msg(const any_tuple& msg)
 {
     if (   m_trap_exit == false
-        && match<atom_value, std::uint32_t>(msg.content(),
-                                            nullptr,
-                                            atom(":Exit")))
+        && match<atom_value, actor_ptr, std::uint32_t>(msg,
+                                                       nullptr,
+                                                       atom(":Exit")))
     {
         auto why = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
         if (why != cppa::exit_reason::normal)
@@ -79,7 +79,7 @@ yielding_message_queue_impl::filter_msg(const message& msg)
     return ordinary_message;
 }
 
-void yielding_message_queue_impl::enqueue(const message& msg)
+void yielding_message_queue_impl::enqueue(const any_tuple& msg)
 {
     if (m_queue._push_back(new queue_node(msg)))
     {
@@ -131,7 +131,7 @@ void yielding_message_queue_impl::yield_until_not_empty()
     }
 }
 
-bool yielding_message_queue_impl::dequeue_impl(message& storage)
+bool yielding_message_queue_impl::dequeue_impl(any_tuple& storage)
 {
     yield_until_not_empty();
     std::unique_ptr<queue_node> node(m_queue.pop());

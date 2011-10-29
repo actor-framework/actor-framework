@@ -15,7 +15,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/object.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
@@ -441,7 +441,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
 
 };
 
-class message_tinfo : public util::abstract_uniform_type_info<message>
+class message_tinfo : public util::abstract_uniform_type_info<any_tuple>
 {
 
     std::string any_tuple_name;
@@ -453,7 +453,7 @@ class message_tinfo : public util::abstract_uniform_type_info<message>
 
     virtual void serialize(const void* instance, serializer* sink) const
     {
-        const message& msg = *reinterpret_cast<const message*>(instance);
+        const any_tuple& msg = *reinterpret_cast<const any_tuple*>(instance);
         const any_tuple& data = msg.content();
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(msg.sender().get(), sink, actor_ptr_name);
@@ -488,7 +488,7 @@ class message_tinfo : public util::abstract_uniform_type_info<message>
         //uniform_typeid<channel_ptr>()->deserialize(&receiver, source);
         //uniform_typeid<any_tuple>()->deserialize(&content, source);
         source->end_object();
-        *reinterpret_cast<message*>(instance) = message(sender,
+        *reinterpret_cast<any_tuple*>(instance) = any_tuple(sender,
                                                         receiver,
                                                         content);
     }
@@ -656,7 +656,7 @@ class uniform_type_info_map_helper
         insert(d, new actor_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(d, new group_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(d, new channel_ptr_tinfo, { raw_name<channel_ptr>() });
-        insert(d, new message_tinfo, { raw_name<message>() });
+        insert(d, new message_tinfo, { raw_name<any_tuple>() });
         insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
         insert<float>(d);
         insert<cppa::util::void_type>(d);

@@ -48,7 +48,7 @@ size_t test__local_group()
     )
     .until([&result]() { return result == 10; });
     await_all_others_done();
-    message tmp;
+    any_tuple tmp;
     CPPA_CHECK_EQUAL(try_receive(tmp), false);
     return CPPA_TEST_RESULT;
 }

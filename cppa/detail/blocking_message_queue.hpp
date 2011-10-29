@@ -1,7 +1,7 @@
 #ifndef BLOCKING_MESSAGE_QUEUE_HPP
 #define BLOCKING_MESSAGE_QUEUE_HPP
 
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/message_queue.hpp"
 #include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
@@ -20,8 +20,8 @@ class blocking_message_queue_impl : public message_queue
     struct queue_node
     {
         queue_node* next;
-        message msg;
-        queue_node(const message& from);
+        any_tuple msg;
+        queue_node(const any_tuple& from);
     };
 
     typedef util::single_reader_queue<queue_node> queue_type;
@@ -36,7 +36,7 @@ class blocking_message_queue_impl : public message_queue
         return m_queue;
     }
 
-    virtual void enqueue(const message& msg) /*override*/;
+    virtual void enqueue(const any_tuple& msg) /*override*/;
 
  protected:
 
@@ -54,7 +54,7 @@ class blocking_message_queue_impl : public message_queue
 
     // computes the next message, returns true if the computed message
     // was not ignored (e.g. because it's an exit message with reason = normal)
-    bool dequeue_impl(message& storage);
+    bool dequeue_impl(any_tuple& storage);
 
     bool dequeue_impl(invoke_rules&, queue_node_buffer&);
 

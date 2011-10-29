@@ -91,7 +91,7 @@ class scheduler
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple tup = make_tuple(util::duration(rel_time), data...);
-        future_send_helper()->enqueue(message(from, to, tup));
+        future_send_helper()->enqueue(any_tuple(from, to, tup));
     }
 
 };

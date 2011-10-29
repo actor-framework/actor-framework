@@ -1,5 +1,5 @@
 #include "cppa/atom.hpp"
-#include "cppa/message.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 

@@ -63,6 +63,12 @@ class any_tuple
         return size() == 0;
     }
 
+    template<typename T>
+    inline const T& get_as(size_t p) const;
+
+    template<typename T>
+    inline T& get_mutable_as(size_t p);
+
 };
 
 inline bool operator==(const any_tuple& lhs, const any_tuple& rhs)
@@ -74,6 +80,19 @@ inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs)
 {
     return !(lhs == rhs);
 }
+
+template<typename T>
+inline const T& any_tuple::get_as(size_t p) const
+{
+    return *reinterpret_cast<const T*>(at(p));
+}
+
+template<typename T>
+inline T& any_tuple::get_mutable_as(size_t p)
+{
+    return *reinterpret_cast<T*>(mutable_at(p));
+}
+
 
 } // namespace cppa
 

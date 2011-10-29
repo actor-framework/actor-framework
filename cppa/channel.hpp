@@ -9,7 +9,7 @@ namespace cppa {
 // forward declarations
 class actor;
 class group;
-class message;
+class any_tuple;
 
 /**
  * @brief Interface for all message receivers.
@@ -34,7 +34,7 @@ class channel : public ref_counted
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
-    virtual void enqueue(const message& msg) = 0;
+    virtual void enqueue(const any_tuple& msg) = 0;
 
 };
 

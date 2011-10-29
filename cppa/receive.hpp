@@ -8,7 +8,7 @@ namespace cppa {
 /**
  * @brief Dequeues the next message from the mailbox.
  */
-inline const message& receive()
+inline const any_tuple& receive()
 {
     return self()->mailbox().dequeue();
 }
@@ -59,7 +59,7 @@ void receive(invoke_rules& rules, Head&& head, Tail&&... tail)
  * @returns @p true if a messages was dequeued;
  *         @p false if the mailbox is empty
  */
-inline bool try_receive(message& msg)
+inline bool try_receive(any_tuple& msg)
 {
     return self()->mailbox().try_dequeue(msg);
 }

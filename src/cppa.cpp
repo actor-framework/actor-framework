@@ -1,4 +1,5 @@
 #include "cppa/cppa.hpp"
+#include "cppa/local_actor.hpp"
 
 namespace {
 
@@ -13,7 +14,8 @@ class observer : public cppa::attachable
 
     void detach(std::uint32_t reason)
     {
-        cppa::send(m_client, cppa::atom(":Down"), reason);
+        using namespace cppa;
+        send(m_client, atom(":Down"), actor_ptr(self()), reason);
     }
 
     bool matches(const cppa::attachable::token& match_token)
@@ -34,14 +36,14 @@ namespace cppa {
 
 local_actor* operator<<(local_actor* whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, what));
+    if (whom) whom->enqueue(what);
     return whom;
 }
 
 // matches self() << make_tuple(...)
 local_actor* operator<<(local_actor* whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(message(self(), whom, std::move(what)));
+    if (whom) whom->enqueue(std::move(what));
     return whom;
 }
 
