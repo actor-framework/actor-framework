@@ -18,6 +18,8 @@ namespace cppa {
 class serializer;
 class deserializer;
 
+typedef std::uint32_t actor_id;
+
 /**
  * @brief Base class for all actor implementations.
  */

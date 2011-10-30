@@ -227,3 +227,5 @@ cppa/detail/group_manager.hpp
 src/group_manager.cpp
 cppa/detail/empty_tuple.hpp
 src/empty_tuple.cpp
+cppa/detail/addressed_message.hpp
+src/addressed_message.cpp

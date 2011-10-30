@@ -112,7 +112,7 @@ bool operator!=(const struct_c& lhs, const struct_c& rhs)
     return !(lhs == rhs);
 }
 
-static const char* msg1str = u8R"__(@msg ( @0, @channel ( @0 ), @<> ( { @i32 ( 42 ), @str ( "Hello \"World\"!" ) } ) ))__";
+static const char* msg1str = u8R"__(@<> ( { @i32 ( 42 ), @str ( "Hello \"World\"!" ) } ))__";
 
 size_t test__serialization()
 {
@@ -157,8 +157,13 @@ size_t test__serialization()
     }
 
     {
-        any_tuple msg1(0, 0, 42, std::string("Hello \"World\"!"));
-        CPPA_CHECK_EQUAL(msg1str, to_string(msg1));
+        any_tuple msg1 = cppa::make_tuple(42, std::string("Hello \"World\"!"));
+        auto msg1_tostring = to_string(msg1);
+        if (msg1str != msg1_tostring)
+        {
+            CPPA_ERROR("msg1str != to_string(msg1)");
+            cerr << "to_string(msg1) = " << msg1_tostring << endl;
+        }
         binary_serializer bs;
         bs << msg1;
         binary_deserializer bd(bs.data(), bs.size());
@@ -168,8 +173,8 @@ size_t test__serialization()
         CPPA_CHECK_EQUAL(obj1, obj2);
         if (obj1.type() == typeid(any_tuple) && obj2.type() == obj1.type())
         {
-            auto& content1 = get<any_tuple>(obj1).content();
-            auto& content2 = get<any_tuple>(obj2).content();
+            auto& content1 = get<any_tuple>(obj1);
+            auto& content2 = get<any_tuple>(obj2);
             auto cview1 = get_view<decltype(42), std::string>(content1);
             auto cview2 = get_view<decltype(42), std::string>(content2);
             CPPA_CHECK_EQUAL(cview1.size(), 2);

@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "cppa/get.hpp"
+#include "cppa/actor.hpp"
 #include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 
@@ -19,6 +20,8 @@
 #include "cppa/util/is_legal_tuple_type.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
+
+namespace cppa { class local_actor; }
 
 namespace cppa { namespace detail {
 
@@ -56,6 +59,11 @@ struct chars_to_string
                                         std::is_same<subtype2, const char32_t*>,
                                         std::is_same<subtype2, char32_t*>,
                                         is_array_of<subtype2, char32_t>>::type
+            subtype3;
+
+    typedef typename util::replace_type<subtype3, actor_ptr,
+                                        std::is_same<actor*,T>,
+                                        std::is_same<local_actor*,T>>::type
             type;
 };
 

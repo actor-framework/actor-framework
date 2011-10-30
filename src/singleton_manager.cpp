@@ -30,7 +30,6 @@ struct singleton_container
     uniform_type_info_map* m_uniform_type_info_map;
     actor_registry* m_actor_registry;
     group_manager* m_group_manager;
-    msg_content* m_msg_dummy;
     empty_tuple* m_empty_tuple;
 
     singleton_container() : m_scheduler(nullptr), m_network_manager(nullptr)
@@ -38,8 +37,6 @@ struct singleton_container
         m_uniform_type_info_map = new uniform_type_info_map;
         m_actor_registry = new actor_registry;
         m_group_manager = new group_manager;
-        m_msg_dummy = new msg_content(0, 0, tuple<int>(0));
-        m_msg_dummy->ref();
         m_empty_tuple = new empty_tuple;
         m_empty_tuple->ref();
     }
@@ -77,7 +74,6 @@ struct singleton_container
 #       endif
         // it's safe now to delete all other singletons
         delete m_group_manager;
-        if (!m_msg_dummy->deref()) delete m_msg_dummy;
         if (!m_empty_tuple->deref()) delete m_empty_tuple;
         delete m_actor_registry;
         delete m_uniform_type_info_map;
@@ -137,11 +133,6 @@ network_manager* singleton_manager::get_network_manager()
         return get_network_manager();
     }
     return result;
-}
-
-msg_content* singleton_manager::get_message_dummy()
-{
-    return s_container.m_msg_dummy;
 }
 
 empty_tuple* singleton_manager::get_empty_tuple()

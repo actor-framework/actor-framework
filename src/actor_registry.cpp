@@ -30,13 +30,13 @@ void actor_registry::remove(actor* whom)
     m_instances.erase(whom->id());
 }
 
-actor_ptr actor_registry::find(std::uint32_t actor_id)
+actor_ptr actor_registry::find(actor_id whom)
 {
     actor_ptr result;
     // lifetime scope of guard
     {
         shared_guard guard(m_instances_mtx);
-        auto i = m_instances.find(actor_id);
+        auto i = m_instances.find(whom);
         if (i != m_instances.end())
         {
             result.reset(i->second);

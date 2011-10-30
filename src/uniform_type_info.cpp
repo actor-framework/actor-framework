@@ -30,6 +30,7 @@
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/detail/addressed_message.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
@@ -115,7 +116,7 @@ void push(std::map<int, std::pair<string_set, string_set>>& ints)
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail { namespace {
+namespace cppa { namespace detail { //namespace {
 
 const std::string nullptr_type_name = "@0";
 
@@ -441,6 +442,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
 
 };
 
+/*
 class message_tinfo : public util::abstract_uniform_type_info<any_tuple>
 {
 
@@ -501,6 +503,7 @@ class message_tinfo : public util::abstract_uniform_type_info<any_tuple>
     }
 
 };
+*/
 
 class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
 {
@@ -594,9 +597,34 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 
 };
 
-} } } // namespace cppa::detail::<anonymous>
+struct addr_msg_tinfo : util::abstract_uniform_type_info<addressed_message>
+{
 
-namespace cppa { namespace detail {
+ protected:
+
+    void serialize(const void* ptr, serializer* sink) const
+    {
+        sink->begin_object(name());
+        reinterpret_cast<const addressed_message*>(ptr)->serialize_to(sink);
+        sink->end_object();
+    }
+
+    void deserialize(void* ptr, deserializer* source) const
+    {
+        std::string cname = source->seek_object();
+        if (cname != name())
+        {
+            throw std::logic_error("wrong type name found");
+        }
+        source->begin_object(name());
+        reinterpret_cast<addressed_message*>(ptr)->deserialize_from(source);
+        source->end_object();
+    }
+
+};
+
+//} } } // namespace cppa::detail::<anonymous>
+//namespace cppa { namespace detail {
 
 using std::is_integral;
 using util::enable_if;
@@ -656,8 +684,9 @@ class uniform_type_info_map_helper
         insert(d, new actor_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(d, new group_ptr_tinfo, { raw_name<actor_ptr>() });
         insert(d, new channel_ptr_tinfo, { raw_name<channel_ptr>() });
-        insert(d, new message_tinfo, { raw_name<any_tuple>() });
+        //insert(d, new message_tinfo, { raw_name<any_tuple>() });
         insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
+        insert(d, new addr_msg_tinfo, { raw_name<addr_msg_tinfo>() });
         insert<float>(d);
         insert<cppa::util::void_type>(d);
         if (sizeof(double) == sizeof(long double))

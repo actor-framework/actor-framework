@@ -18,6 +18,7 @@
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/detail/addressed_message.hpp"
 
 namespace {
 
@@ -96,7 +97,7 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<cppa::actor_ptr>(), "@actor" },
       { demangled<cppa::group_ptr>(), "@group" },
       { demangled<cppa::channel_ptr>(), "@channel" },
-      { demangled<cppa::any_tuple>(), "@msg" }
+      { demangled<cppa::detail::addressed_message>(), "@msg" }
     };
 
     // check if we could find the whole string in our lookup map

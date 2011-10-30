@@ -54,9 +54,9 @@ actor::~actor()
     }
 }
 
-intrusive_ptr<actor> actor::by_id(std::uint32_t actor_id)
+intrusive_ptr<actor> actor::by_id(actor_id whom)
 {
-    return registry().find(actor_id);
+    return registry().find(whom);
 }
 
 void actor::join(group_ptr& what)

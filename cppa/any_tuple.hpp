@@ -10,8 +10,7 @@
 namespace cppa {
 
 /**
- * @brief Describes a fixed-length tuple (or tuple view)
- *        with elements of any type.
+ * @brief Describes a fixed-length tuple with elements of any type.
  */
 class any_tuple
 {

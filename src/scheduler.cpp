@@ -45,10 +45,7 @@ struct scheduler_helper
 
     void stop()
     {
-        {
-            any_tuple content = make_tuple(atom(":_DIE"));
-            m_worker->enqueue(any_tuple(m_worker, m_worker, content));
-        }
+        m_worker->enqueue(make_tuple(atom(":_DIE")));
         m_thread.join();
     }
 
@@ -74,15 +71,16 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     // message handling rules
     auto rules =
     (
-        on<util::duration, any_type*>() >> [&](util::duration d)
+        on<util::duration,actor_ptr,any_type*>() >> [&](const util::duration& d,
+                                                        const actor_ptr& whom)
         {
-            any_tuple tup = msg_ptr->msg.content().tail(1);
-            if (!tup.empty())
+            any_tuple msg = msg_ptr->msg.tail(2);
+            if (!msg.empty())
             {
                 // calculate timeout
                 auto timeout = detail::now();
                 timeout += d;
-                future_msg fmsg(msg_ptr->msg.sender(), tup);
+                future_msg fmsg(whom, msg);
                 messages.insert(std::make_pair(std::move(timeout),
                                                std::move(fmsg)));
             }
@@ -110,7 +108,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 {
                     auto& whom = (it->second).first;
                     auto& what = (it->second).second;
-                    whom->enqueue(any_tuple(whom, whom, what));
+                    whom->enqueue(what);
                     messages.erase(it);
                     it = messages.begin();
                 }
@@ -121,7 +119,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 }
             }
         }
-        rules(msg_ptr->msg.content());
+        rules(msg_ptr->msg);
         delete msg_ptr;
         msg_ptr = nullptr;
     }

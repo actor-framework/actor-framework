@@ -15,17 +15,18 @@ void pong(actor_ptr ping_actor)
     // invoke rules
     receive_loop
     (
-        on(atom("Ping"), std::int32_t(9)) >> []()
+        on(atom("Ping"), val<actor_ptr>(), std::int32_t(9)) >> []()
         //on<atom("Ping"), std::int32_t>(9) >> []()
         {
             // terminate with non-normal exit reason
             // to force ping actor to quit
             quit(exit_reason::user_defined);
         },
-        on(atom("Ping"), val<std::int32_t>()) >> [](std::int32_t value)
+        on<atom("Ping"), actor_ptr, std::int32_t>() >> [](actor_ptr teammate,
+                                                          std::int32_t value)
         //on<atom("Ping"), std::int32_t>() >> [](int value)
         {
-            reply(atom("Pong"), value + 1);
+            send(teammate, atom("Ping"), self(), value + 1);
         }
     );
 }
@@ -36,10 +37,11 @@ void ping()
     // invoke rule
     receive_loop
     (
-        on<atom("Pong"), std::int32_t>() >> [](std::int32_t value)
+        on<atom("Pong"), actor_ptr, std::int32_t>() >> [](actor_ptr teammate,
+                                                          std::int32_t value)
         {
             ++s_pongs;
-            reply(atom("Ping"), value + 1);
+            send(teammate, atom("Ping"), self(), value + 1);
         }
     );
 }

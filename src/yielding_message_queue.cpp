@@ -60,7 +60,7 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
                                                        nullptr,
                                                        atom(":Exit")))
     {
-        auto why = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
         if (why != cppa::exit_reason::normal)
         {
             // yields
@@ -68,11 +68,11 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
         }
         return normal_exit_signal;
     }
-    if (match<atom_value, std::uint32_t>(msg.content(),
+    if (match<atom_value, std::uint32_t>(msg,
                                          nullptr,
                                          atom(":Timeout")))
     {
-        auto id = *reinterpret_cast<const std::uint32_t*>(msg.content().at(1));
+        auto id = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
         return (id == m_active_timeout_id) ? timeout_message
                                            : expired_timeout_message;
     }
@@ -161,7 +161,7 @@ yielding_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
 
         default: break;
     }
-    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg.content()));
+    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg));
     if (imd)
     {
         m_last_dequeued = node->msg;
@@ -177,7 +177,8 @@ yielding_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
     }
 }
 
-bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules, queue_node_buffer& buffer)
+bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,
+                                               queue_node_buffer& buffer)
 {
     if (m_queue.empty() && !m_has_pending_timeout_request)
     {

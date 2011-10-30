@@ -25,10 +25,17 @@ size_t test__local_group()
 {
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
+    actor_ptr master = self();
     for (int i = 0; i < 5; ++i)
     {
         // spawn five workers and let them join local/foo
-        auto w = spawn([]() { receive(on<int>() >> [](int v) { reply(v); }); });
+        auto w = spawn([&master]()
+                       {
+                           receive(on<int>() >> [&master](int v)
+                           {
+                               send(master, v);
+                           });
+                       });
         w->join(foo_group);
     }
     send(foo_group, 2);

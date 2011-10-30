@@ -86,12 +86,12 @@ class scheduler
     virtual void await_others_done();
 
     template<typename Duration, typename... Data>
-    void future_send(actor_ptr from, actor_ptr to,
+    void future_send(const actor_ptr& to,
                      const Duration& rel_time, const Data&... data)
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        any_tuple tup = make_tuple(util::duration(rel_time), data...);
-        future_send_helper()->enqueue(any_tuple(from, to, tup));
+        any_tuple tup = make_tuple(util::duration(rel_time), to, data...);
+        future_send_helper()->enqueue(std::move(tup));
     }
 
 };

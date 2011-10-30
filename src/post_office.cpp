@@ -4,7 +4,7 @@
 #include <vector>       // std::vector
 #include <cstring>      // strerror
 #include <cstdint>      // std::uint32_t, std::uint64_t
-#include <iostream>     // std::cout, std::endl
+#include <iostream>     // std::cout, std::cerr, std::endl
 #include <exception>    // std::logic_error
 #include <algorithm>    // std::find_if
 #include <stdexcept>    // std::underflow_error
@@ -30,13 +30,18 @@
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/native_socket.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/post_office_msg.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
+#include "cppa/detail/addressed_message.hpp"
 
 //#define DEBUG(arg) std::cout << arg << std::endl
 #define DEBUG(unused) ((void) 0)
+
+using std::cerr;
+using std::endl;
 
 namespace cppa { namespace detail { namespace {
 
@@ -209,7 +214,7 @@ class po_peer : public post_office_worker
         , m_observer(std::move(other.m_observer))
         , m_rdbuf(std::move(other.m_rdbuf))
         , m_children(std::move(other.m_children))
-        , m_meta_msg(uniform_typeid<any_tuple>())
+        , m_meta_msg(uniform_typeid<addressed_message>())
     {
     }
 
@@ -296,7 +301,7 @@ class po_peer : public post_office_worker
                     // wait for new data
                     break;
                 }
-                any_tuple msg;
+                addressed_message msg;
                 binary_deserializer bd(m_rdbuf.data(), m_rdbuf.size());
                 try
                 {
@@ -308,12 +313,13 @@ class po_peer : public post_office_worker
                     DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
                     return false;
                 }
-                if (   msg.size() == 2
-                    && msg.utype_info_at(0) == typeid(atom_value)
-                    && msg.get_as<atom_value>(0) == atom(":Monitor")
-                    && msg.utype_info_at(1) == typeid(actor_ptr))
+                auto& content = msg.content();
+                if (   content.size() == 2
+                    && content.utype_info_at(0) == typeid(atom_value)
+                    && content.get_as<atom_value>(0) == atom(":Monitor")
+                    && content.utype_info_at(1) == typeid(actor_ptr))
                 {
-                    actor_ptr sender = msg.get_as<actor_ptr>(1);
+                    actor_ptr sender = content.get_as<actor_ptr>(1);
                     if (sender->parent_process() == *process_information::get())
                     {
                         //cout << pinfo << " ':Monitor'; actor id = "
@@ -322,9 +328,9 @@ class po_peer : public post_office_worker
                         // this message was send from a proxy
                         sender->attach_functor([=](std::uint32_t reason)
                         {
-                            any_tuple msg = make_tuple(atom(":KillProxy"),
-                                                       reason);
-                            auto mjob = new detail::mailman_job(m_peer, msg);
+                            any_tuple kmsg = make_tuple(atom(":KillProxy"),
+                                                        reason);
+                            auto mjob = new detail::mailman_job(m_peer, kmsg);
                             detail::mailman_queue().push_back(mjob);
                         });
                     }
@@ -335,9 +341,29 @@ class po_peer : public post_office_worker
                 }
                 else
                 {
-                    DEBUG("<-- " << to_string(msg));
-                    auto r = msg.receiver();
-                    if (r) r->enqueue(msg);
+                    DEBUG("<-- " << to_string(content));
+                    auto& rmap = msg.receivers();
+                    for (auto i = rmap.begin(); i != rmap.end(); ++i)
+                    {
+                        if (*(i->first) == *process_information::get())
+                        {
+                            auto& vec = i->second;
+                            for (auto j = vec.begin(); j != vec.end(); ++j)
+                            {
+                                auto registry = singleton_manager::get_actor_registry();
+                                auto receiver = registry->find(*j);
+                                if (receiver)
+                                {
+                                    receiver->enqueue(msg.content());
+                                }
+                            }
+                        }
+                        else
+                        {
+                            cerr << "NOT IMPLEMENTED YET; post_office line "
+                                 << __LINE__ << endl;
+                        }
+                    }
                 }
                 m_rdbuf.reset();
                 m_state = wait_for_msg_size;
@@ -559,15 +585,15 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
                         auto& pactor = assm.published_actor;
                         if (pactor)
                         {
-                            auto actor_id = pactor->id();
-                            auto callback = [actor_id](std::uint32_t)
+                            auto aid = pactor->id();
+                            auto callback = [aid](std::uint32_t)
                             {
                                 DEBUG("call post_office_unpublish() ...");
-                                post_office_unpublish(actor_id);
+                                post_office_unpublish(aid);
                             };
                             if (pactor->attach_functor(std::move(callback)))
                             {
-                                auto& dm = doormen[actor_id];
+                                auto& dm = doormen[aid];
                                 dm.push_back(po_doorman(assm, &peers));
                                 DEBUG("new doorman");
                             }
@@ -684,11 +710,11 @@ void post_office_publish(native_socket_t server_socket,
     write(nm->write_handle(), msg, pipe_msg_size);
 }
 
-void post_office_unpublish(std::uint32_t actor_id)
+void post_office_unpublish(actor_id whom)
 {
-    DEBUG("post_office_unpublish(" << actor_id << ")");
+    DEBUG("post_office_unpublish(" << whom << ")");
     auto nm = singleton_manager::get_network_manager();
-    pipe_msg msg = { unpublish_actor_event, actor_id };
+    pipe_msg msg = { unpublish_actor_event, whom };
     write(nm->write_handle(), msg, pipe_msg_size);
 }
 

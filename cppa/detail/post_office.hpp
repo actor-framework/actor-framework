@@ -18,7 +18,7 @@ void post_office_add_peer(native_socket_t peer_socket,
 void post_office_publish(native_socket_t server_socket,
                          const actor_ptr& published_actor);
 
-void post_office_unpublish(std::uint32_t actor_id);
+void post_office_unpublish(actor_id whom);
 
 void post_office_close_socket(native_socket_t sfd);
 

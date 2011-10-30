@@ -11,6 +11,7 @@ libcppa_la_SOURCES = \
   src/actor_proxy_cache.cpp \
   src/actor_proxy.cpp \
   src/actor_registry.cpp \
+  src/addressed_message.cpp \
   src/any_tuple.cpp \
   src/any_tuple_iterator.cpp \
   src/atom.cpp \
@@ -90,6 +91,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/actor_count.hpp \
   cppa/detail/actor_proxy_cache.hpp \
   cppa/detail/actor_registry.hpp \
+  cppa/detail/addressed_message.hpp \
   cppa/detail/atom_val.hpp \
   cppa/detail/blocking_message_queue.hpp \
   cppa/detail/boxed.hpp \

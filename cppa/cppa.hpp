@@ -453,7 +453,7 @@ local_actor* operator<<(local_actor* whom, any_tuple&& what);
 template<typename Duration, typename... Data>
 void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
 {
-    get_scheduler()->future_send(self(), whom, rel_time, data...);
+    get_scheduler()->future_send(whom, rel_time, data...);
 }
 
 /**

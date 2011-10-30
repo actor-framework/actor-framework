@@ -24,11 +24,11 @@ class actor_registry
     // removes @p whom from the list of known actors
     void remove(actor* whom);
 
-    // looks for an actor with id @actor_id in the list of known actors
-    actor_ptr find(std::uint32_t actor_id);
+    // looks for an actor with id @p whom in the list of known actors
+    actor_ptr find(actor_id whom);
 
     // gets the next free actor id
-    std::uint32_t next_id();
+    actor_id next_id();
 
     // increases running-actors-count by one
     void inc_running();

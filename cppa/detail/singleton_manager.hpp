@@ -38,8 +38,6 @@ class singleton_manager
 
     static uniform_type_info_map* get_uniform_type_info_map();
 
-    static msg_content* get_message_dummy();
-
     static abstract_tuple* get_tuple_dummy();
 
     static empty_tuple* get_empty_tuple();
