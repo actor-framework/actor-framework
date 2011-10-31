@@ -49,18 +49,13 @@ inline bool operator!=(const foo& lhs, const foo& rhs)
 
 using namespace cppa;
 
-namespace {
-
-bool announce1 = announce<foo>(&foo::value);
-bool announce2 = announce<foo>(&foo::value);
-bool announce3 = announce<foo>(&foo::value);
-bool announce4 = announce<foo>(&foo::value);
-
-} // namespace <anonymous>
-
 size_t test__uniform_type()
 {
     CPPA_TEST(test__uniform_type);
+    bool announce1 = announce<foo>(&foo::value);
+    bool announce2 = announce<foo>(&foo::value);
+    bool announce3 = announce<foo>(&foo::value);
+    bool announce4 = announce<foo>(&foo::value);
     {
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
