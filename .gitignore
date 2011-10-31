@@ -43,3 +43,4 @@ variadic_templates_test.dSYM/
 Makefile
 unit_testing/Makefile
 libcppa.so*
+blob/cppatest
