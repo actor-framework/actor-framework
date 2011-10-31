@@ -69,7 +69,6 @@ cppatest_SOURCES = \
   ../unit_testing/test__intrusive_ptr.cpp \
   ../unit_testing/test__local_group.cpp \
   ../unit_testing/test__primitive_variant.cpp \
-  ../unit_testing/test__queue_performance.cpp \
   ../unit_testing/test__remote_actor.cpp \
   ../unit_testing/test__ripemd_160.cpp \
   ../unit_testing/test__serialization.cpp \
@@ -80,5 +79,5 @@ cppatest_SOURCES = \
 
 AM_CPPFLAGS = -I../
 cppatest_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
-AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
-
+#AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
+cppatest_LDADD = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)

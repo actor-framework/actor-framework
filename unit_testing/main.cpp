@@ -144,13 +144,13 @@ int main(int argc, char** argv)
         if (found_key(i, args, "run"))
         {
             auto& what = i->second;
-            if (what == "performance_test")
+/*            if (what == "performance_test")
             {
                 cout << endl << "run queue performance test ... " << endl;
                 test__queue_performance();
                 return 0;
             }
-            else if (what == "remote_actor")
+            else*/ if (what == "remote_actor")
             {
                 test__remote_actor(argv[0], true, args);
                 return 0;

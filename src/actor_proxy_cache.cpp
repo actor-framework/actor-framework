@@ -4,7 +4,7 @@
 #include "cppa/detail/actor_proxy_cache.hpp"
 
 // thread_specific_ptr
-#include <boost/thread.hpp>
+#include <boost/thread/tss.hpp>
 
 namespace {
 

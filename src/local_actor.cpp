@@ -1,6 +1,6 @@
 // for thread_specific_ptr
 // needed unless the new keyword "thread_local" works in GCC
-#include <boost/thread.hpp>
+#include <boost/thread/tss.hpp>
 
 #include "cppa/local_actor.hpp"
 #include "cppa/any_tuple.hpp"
