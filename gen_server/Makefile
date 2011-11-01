@@ -1,7 +1,8 @@
 CXX = /opt/local/bin/g++-mp-4.6
-CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -I/opt/local/include/ -I/Users/neverlord/libcppa -fpermissive -O2
-LIBS = -L/opt/local/lib -lboost_thread-mt  -L/Users/neverlord/libcppa/.libs/ -lcppa
+#CXX = /usr/bin/g++-4.6
+CXXFLAGS = -std=c++0x -pedantic -Wall -Wextra -I/opt/local/include/ -I../ -fpermissive -O2
+LIBS = -L../.libs/ -lcppa -L/opt/local/lib -L/usr/lib -lboost_thread-mt
 
 all:
-	$(CXX) $(CXXFLAGS) $(LIBS) -o sequential_send sequential_send.cpp
-	$(CXX) $(CXXFLAGS) $(LIBS) -o parallel_send parallel_send.cpp
+	$(CXX) $(CXXFLAGS) -o sequential_send sequential_send.cpp $(LIBS)
+	$(CXX) $(CXXFLAGS) -o parallel_send parallel_send.cpp $(LIBS)

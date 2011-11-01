@@ -12,9 +12,9 @@ void counter_actor()
     long count = 0;
     receive_loop
     (
-        on<atom("Get")>() >> [&]()
+        on<atom("Get"), actor_ptr>() >> [&](actor_ptr client)
         {
-            reply(count);
+            send(client, count);
             count = 0;
         },
         on<atom("AddCount"), long>() >> [&](long val)
@@ -48,7 +48,7 @@ long the_test(int msg_count)
     {
         receive(rule);
     }
-    send(counter, atom("Get"));
+    send(counter, atom("Get"), self());
     long result = 0;
     receive
     (
