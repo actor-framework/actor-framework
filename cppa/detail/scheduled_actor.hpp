@@ -55,6 +55,8 @@ class scheduled_actor : public abstract_actor<local_actor>
 
     ~scheduled_actor();
 
+    inline util::fiber* fiber_ptr() { return &m_fiber; }
+
     void quit(std::uint32_t reason);
 
     inline void enqueue_to_scheduler()
@@ -68,7 +70,7 @@ class scheduled_actor : public abstract_actor<local_actor>
 
     inline std::atomic<int>& state() { return m_mailbox.m_state; }
 
-    inline int compare_exchange_state(int expected, int new_value) volatile
+    inline int compare_exchange_state(int expected, int new_value)
     {
         int e = expected;
         do
@@ -145,6 +147,7 @@ void scheduled_actor::execute(scheduled_actor* what,
                         exit(7);
                     }
                 }
+                break;
             }
             default:
             {
