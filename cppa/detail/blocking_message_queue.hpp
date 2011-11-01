@@ -21,7 +21,8 @@ class blocking_message_queue_impl : public message_queue
     {
         queue_node* next;
         any_tuple msg;
-        queue_node(const any_tuple& from);
+        queue_node(any_tuple&& content);
+        queue_node(const any_tuple& content);
     };
 
     typedef util::single_reader_queue<queue_node> queue_type;
@@ -35,6 +36,8 @@ class blocking_message_queue_impl : public message_queue
     {
         return m_queue;
     }
+
+    virtual void enqueue(any_tuple&& msg) /*override*/;
 
     virtual void enqueue(const any_tuple& msg) /*override*/;
 

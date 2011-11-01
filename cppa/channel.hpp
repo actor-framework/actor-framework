@@ -36,6 +36,8 @@ class channel : public ref_counted
      */
     virtual void enqueue(const any_tuple& msg) = 0;
 
+    virtual void enqueue(any_tuple&& msg) = 0;
+
 };
 
 /**

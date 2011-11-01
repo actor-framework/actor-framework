@@ -43,9 +43,19 @@ throw_on_exit_result throw_on_exit(const any_tuple& msg)
 
 namespace cppa { namespace detail {
 
-blocking_message_queue_impl::queue_node::queue_node(const any_tuple& from)
-    : next(nullptr), msg(from)
+blocking_message_queue_impl::queue_node::queue_node(any_tuple&& content)
+    : next(nullptr), msg(std::move(content))
 {
+}
+
+blocking_message_queue_impl::queue_node::queue_node(const any_tuple& content)
+    : next(nullptr), msg(content)
+{
+}
+
+void blocking_message_queue_impl::enqueue(any_tuple&& msg)
+{
+    m_queue.push_back(new queue_node(std::move(msg)));
 }
 
 void blocking_message_queue_impl::enqueue(const any_tuple& msg)

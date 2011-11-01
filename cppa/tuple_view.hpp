@@ -41,6 +41,16 @@ class tuple_view
 
     typedef cow_ptr<detail::abstract_tuple> vals_t;
 
+    static tuple_view from(const vals_t& vals)
+    {
+        return tuple_view(vals);
+    }
+
+    static tuple_view from(vals_t&& vals)
+    {
+        return tuple_view(std::move(vals));
+    }
+
     tuple_view(const vals_t& vals, std::vector<size_t>&& mappings)
         : m_vals(new detail::decorated_tuple<ElementTypes...>(vals, mappings))
     {
@@ -69,6 +79,14 @@ class tuple_view
     }
 
  private:
+
+    explicit tuple_view(const vals_t& vals) : m_vals(vals)
+    {
+    }
+
+    explicit tuple_view(vals_t&& vals) : m_vals(std::move(vals))
+    {
+    }
 
     vals_t m_vals;
     element_types m_types;

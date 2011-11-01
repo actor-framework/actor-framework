@@ -43,6 +43,8 @@ class local_actor : public actor
      */
     virtual void enqueue(const any_tuple& msg) /*override*/;
 
+    virtual void enqueue(any_tuple&& msg);
+
     inline bool trap_exit() const;
 
     inline void trap_exit(bool new_value);

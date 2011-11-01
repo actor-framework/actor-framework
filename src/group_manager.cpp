@@ -1,6 +1,7 @@
 #include <set>
 #include <stdexcept>
 
+#include "cppa/any_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -42,6 +43,12 @@ class local_group : public group
         {
             const_cast<channel_ptr&>(*i)->enqueue(msg);
         }
+    }
+
+    virtual void enqueue(any_tuple&& msg)
+    {
+        any_tuple tmp(std::move(msg));
+        enqueue(tmp);
     }
 
     virtual group::subscription subscribe(const channel_ptr& who)

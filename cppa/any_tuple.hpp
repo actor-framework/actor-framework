@@ -9,11 +9,17 @@
 
 namespace cppa {
 
+template<typename... Types>
+tuple_view<Types...> tuple_cast(any_tuple&& tup);
+
 /**
  * @brief Describes a fixed-length tuple with elements of any type.
  */
 class any_tuple
 {
+
+    template<typename... Types>
+    friend tuple_view<Types...> tuple_cast(any_tuple&& tup);
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
@@ -92,6 +98,17 @@ inline T& any_tuple::get_mutable_as(size_t p)
     return *reinterpret_cast<T*>(mutable_at(p));
 }
 
+template<typename... Types>
+tuple_view<Types...> tuple_cast(const any_tuple& tup)
+{
+    return tuple_view<Types...>::from(tup.vals());
+}
+
+template<typename... Types>
+tuple_view<Types...> tuple_cast(any_tuple&& tup)
+{
+    return tuple_view<Types...>::from(std::move(tup.m_vals));
+}
 
 } // namespace cppa
 

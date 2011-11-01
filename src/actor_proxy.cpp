@@ -28,6 +28,12 @@ void actor_proxy::forward_message(const process_information_ptr& piptr,
     detail::mailman_queue().push_back(new detail::mailman_job(piptr, msg));
 }
 
+void actor_proxy::enqueue(any_tuple&& msg)
+{
+    any_tuple tmp(std::move(msg));
+    enqueue(tmp);
+}
+
 void actor_proxy::enqueue(const any_tuple& msg)
 {
     if (msg.size() > 0 && msg.utype_info_at(0) == typeid(atom_value))

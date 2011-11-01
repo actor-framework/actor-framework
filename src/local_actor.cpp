@@ -29,6 +29,11 @@ boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
 
 namespace cppa {
 
+void local_actor::enqueue(any_tuple&& msg)
+{
+    mailbox().enqueue(std::move(msg));
+}
+
 void local_actor::enqueue(const any_tuple& msg)
 {
     mailbox().enqueue(msg);

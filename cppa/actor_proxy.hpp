@@ -21,6 +21,8 @@ class actor_proxy : public detail::abstract_actor<actor>
 
     actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
 
+    void enqueue(any_tuple&& msg);
+
     void enqueue(const any_tuple& msg);
 
     void link_to(intrusive_ptr<actor>& other);

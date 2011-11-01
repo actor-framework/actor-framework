@@ -35,7 +35,8 @@ class yielding_message_queue_impl : public message_queue
     {
         queue_node* next;
         any_tuple msg;
-        queue_node(const any_tuple& from);
+        queue_node(any_tuple&& content);
+        queue_node(const any_tuple& content);
     };
 
     bool m_has_pending_timeout_request;
@@ -45,6 +46,8 @@ class yielding_message_queue_impl : public message_queue
     util::single_reader_queue<queue_node> m_queue;
 
     void yield_until_not_empty();
+
+    void enqueue_node(queue_node*);
 
     enum dq_result
     {
@@ -94,6 +97,8 @@ class yielding_message_queue_impl : public message_queue
     yielding_message_queue_impl(scheduled_actor* parent);
 
     ~yielding_message_queue_impl();
+
+    virtual void enqueue(any_tuple&& msg) /*override*/;
 
     virtual void enqueue(const any_tuple& msg) /*override*/;
 

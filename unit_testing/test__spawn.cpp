@@ -70,7 +70,6 @@ void testee3(actor_ptr parent)
 
 size_t test__spawn()
 {
-    return 0;
     CPPA_TEST(test__spawn);
     auto report_unexpected = [&]()
     {
@@ -81,12 +80,12 @@ size_t test__spawn()
     auto pong_actor = spawn(pong, spawn(ping));
     monitor(pong_actor);
     link(pong_actor);
-    monitor(spawn(testee2, spawn(testee1)));
+//    monitor(spawn(testee2, spawn(testee1)));
     int i = 0;
     int flags = 0;
     future_send(self(), std::chrono::seconds(1), atom("FooBar"));
     // wait for :Down and :Exit messages of pong
-    receive_while([&i]() { return ++i <= 4; })
+    receive_while([&i]() { return ++i <= 3 /*4*/; })
     (
         on<atom(":Exit"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
                                                              std::uint32_t reason)
@@ -103,14 +102,10 @@ size_t test__spawn()
             {
                 flags |= 0x02;
             }
-            else
-            {
-                flags |= 0x04;
-            }
         },
         on<atom("FooBar")>() >> [&]()
         {
-            flags |= 0x08;
+            flags |= 0x04;
         },
         others() >> [&]()
         {
@@ -126,7 +121,7 @@ size_t test__spawn()
     );
     // wait for termination of all spawned actors
     await_all_others_done();
-    CPPA_CHECK_EQUAL(flags, 0x0F);
+    CPPA_CHECK_EQUAL(flags, 0x07);
     // mailbox has to be empty
     any_tuple msg;
     while (try_receive(msg))
@@ -135,6 +130,7 @@ size_t test__spawn()
     }
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 5);
+    /*
     spawn(testee3, self());
     i = 0;
     // testee3 sends 5 { "Push", int } messages in a 50 milliseconds interval;
@@ -154,5 +150,6 @@ size_t test__spawn()
         }
     );
     await_all_others_done();
+    */
     return CPPA_TEST_RESULT;
 }

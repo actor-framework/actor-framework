@@ -346,7 +346,7 @@ detail::do_receive_helper do_receive(Args&&... args)
  * @brief Gets the last dequeued message from the mailbox.
  * @returns The last dequeued message from the mailbox.
  */
-inline const any_tuple& last_received()
+inline any_tuple& last_received()
 {
     return self()->mailbox().last_dequeued();
 }

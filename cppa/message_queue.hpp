@@ -28,6 +28,8 @@ class message_queue : public ref_counted
      */
     message_queue();
 
+    virtual void enqueue(any_tuple&& msg) = 0;
+
     /**
      * @brief Enqueues a new element to the message queue.
      * @param msg The new message.
@@ -86,7 +88,7 @@ class message_queue : public ref_counted
      *          by a dequeue() or try_dequeue() member function call.
      * @warning Call only from the owner of the queue.
      */
-    inline const any_tuple& last_dequeued() const;
+    inline any_tuple& last_dequeued();
 
 };
 
@@ -104,7 +106,7 @@ inline void message_queue::trap_exit(bool value)
     m_trap_exit = value;
 }
 
-inline const any_tuple& message_queue::last_dequeued() const
+inline any_tuple& message_queue::last_dequeued()
 {
     return m_last_dequeued;
 }
