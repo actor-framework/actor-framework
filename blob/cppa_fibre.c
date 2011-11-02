@@ -2,24 +2,20 @@
 #define _XOPEN_SOURCE
 #endif
 
-#include <stdio.h>
-
 #include <ucontext.h>
 #include <sys/mman.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "cppa_fibre.h"
 
-/*
-struct cppa_fibre_struct
-{
-    int m_initialized;
-    ucontext_t m_context;
-    void (*m_fun)();
-    void* m_init_arg;
-};
-*/
+__thread void* s_switch_arg;
+__thread int s_yield_value;
+__thread ucontext_t* s_caller;
+__thread ucontext_t* s_callee;
 
 void cppa_fibre_ctor(cppa_fibre* instance)
 {
@@ -51,34 +47,39 @@ void cppa_fibre_initialize(cppa_fibre* instance)
                                                   0);
         instance->m_context.uc_stack.ss_size = SIGSTKSZ;
         makecontext(&(instance->m_context), instance->m_fun, 0);
+        s_switch_arg = instance->m_init_arg;
     }
 }
 
 void cppa_fibre_dtor(cppa_fibre* instance)
 {
-
+    if (instance->m_state == 2)
+    {
+        munmap(instance->m_context.uc_stack.ss_sp, SIGSTKSZ);
+    }
 }
 
-/*
- * @brief Returns
- */
-void* cppa_fibre_init_switch_arg();
-
-void cppa_fibre_switch(cppa_fibre* from, cppa_fibre* to);
-
-/*
- * Switches back to the calling fibre.
- */
-void cppa_fibre_yield(int value);
-
-/*
- * Gets the yielded value of the client fibre.
- */
-int cppa_fibre_yielded_value();
-
-#ifdef __cplusplus
+void* cppa_fibre_init_switch_arg()
+{
+    return s_switch_arg;
 }
-#endif
 
-#endif
+void cppa_fibre_switch(cppa_fibre* from, cppa_fibre* to)
+{
+    ucontext_t* ctx_from = &(from->m_context);
+    ucontext_t* ctx_to = &(to->m_context);
+    s_caller = ctx_from;
+    s_callee = ctx_to;
+    swapcontext(ctx_from, ctx_to);
+}
 
+void cppa_fibre_yield(int value)
+{
+    s_yield_value = value;
+    swapcontext(s_callee, s_caller);
+}
+
+int cppa_fibre_yielded_value()
+{
+    return s_yield_value;
+}

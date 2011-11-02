@@ -10,11 +10,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-
 #include <ucontext.h>
-#include <sys/mman.h>
-#include <signal.h>
-#include <stddef.h>
 
 struct cppa_fibre_struct
 {
@@ -27,7 +23,7 @@ struct cppa_fibre_struct
     void* m_init_arg;
 };
 
-typedef cppa_fibre_struct cppa_fibre;
+typedef struct cppa_fibre_struct cppa_fibre;
 
 void cppa_fibre_ctor(cppa_fibre* instance);
 
@@ -43,6 +39,9 @@ void cppa_fibre_ctor2(cppa_fibre* instance,
                       void (*fun)(),
                       void* switch_arg);
 
+/*
+ * @warning call directly before the first switch
+ */
 void cppa_fibre_initialize(cppa_fibre* instance);
 
 void cppa_fibre_dtor(cppa_fibre* instance);

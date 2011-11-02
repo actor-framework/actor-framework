@@ -11,31 +11,6 @@
 
 #include "cppa_fibre.h"
 
-static ucontext_t ctx[2];
-
-__thread int m_count = 0;
-
-struct cppa_fibre
-{
-    ucontext_t m_context;
-};
-
-void cppa_fibre_ctor(cppa_fibre* instance);
-
-void cppa_fibre_ctor(cppa_fibre* instance, void (*fun)());
-
-void cppa_fibre_dtor(cppa_fibre* instance);
-
-void cppa_fibre_switch(cppa_fibre* from, cppa_fibre* to);
-
-void cppa_fibre_yield(int value);
-
-int cppa_fibre_yielded_value();
-
-typedef struct fibre_wrapper* fibre_ptr;
-
-fibre_ptr get_fibre();
-
 void coroutine()
 {
     for (;;)
