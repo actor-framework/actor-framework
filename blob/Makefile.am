@@ -75,7 +75,8 @@ cppatest_SOURCES = \
   ../unit_testing/test__spawn.cpp \
   ../unit_testing/test__tuple.cpp \
   ../unit_testing/test__type_list.cpp \
-  ../unit_testing/test__uniform_type.cpp
+  ../unit_testing/test__uniform_type.cpp \
+  ../unit_testing/test__yield_interface.cpp
 
 AM_CPPFLAGS = -I../
 cppatest_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra

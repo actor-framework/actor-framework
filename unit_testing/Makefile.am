@@ -18,7 +18,8 @@ unit_tests_SOURCES =    hash_of.cpp \
                         test__spawn.cpp \
                         test__tuple.cpp \
                         test__type_list.cpp \
-                        test__uniform_type.cpp
+                        test__uniform_type.cpp \
+                        test__yield_interface.cpp
 
 unit_tests_DEPENDENCIES = ../.libs/libcppa.la
 

@@ -115,28 +115,8 @@ inline bool found_key(Iterator& i, Container& cont, Key&& key)
     return (i = cont.find(std::forward<Key>(key))) != cont.end();
 }
 
-void print_terminator()
-{
-    if (std::uncaught_exception())
-    {
-        try { throw; }
-        catch (std::exception& e)
-        {
-            cerr << "terminate called with an active exception:\n"
-                 << typeid(e).name() << "; what(): " << e.what() << endl;
-        }
-        catch (...)
-        {
-            cerr << "terminate called with a non-std exception" << endl;
-        }
-    }
-    abort();
-}
-
 int main(int argc, char** argv)
 {
-    std::set_terminate(print_terminator);
-
     auto args = get_kv_pairs(argc, argv);
     if (!args.empty())
     {
@@ -185,6 +165,7 @@ int main(int argc, char** argv)
     //cout << endl << endl;
     std::cout << std::boolalpha;
     size_t errors = 0;
+    RUN_TEST(test__yield_interface);
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);
     RUN_TEST(test__uniform_type);

@@ -11,6 +11,8 @@ namespace cppa { namespace detail {
 class task_scheduler : public scheduler
 {
 
+    typedef scheduler super;
+
     typedef util::single_reader_queue<scheduled_actor> job_queue;
 
     job_queue m_queue;
@@ -21,8 +23,9 @@ class task_scheduler : public scheduler
 
  public:
 
-    task_scheduler();
-    ~task_scheduler();
+    virtual void start();
+
+    virtual void stop();
 
     void schedule(scheduled_actor* what);
 

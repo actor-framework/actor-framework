@@ -6,6 +6,9 @@
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
+using std::cout;
+using std::endl;
+
 namespace cppa { namespace detail {
 
 namespace {
@@ -28,7 +31,7 @@ struct thread_pool_scheduler::worker
     worker* next;
     bool m_done;
     job_queue* m_job_queue;
-    scheduled_actor* m_job;
+    volatile scheduled_actor* m_job;
     worker_queue* m_supervisor_queue;
     mutex m_mtx;
     condition_variable m_cv;
@@ -51,6 +54,7 @@ struct thread_pool_scheduler::worker
 
     void operator()()
     {
+        // enqueue as idle worker
         m_supervisor_queue->push_back(this);
         // loop
         util::fiber fself;
@@ -65,10 +69,84 @@ struct thread_pool_scheduler::worker
                 }
                 if (m_done) return;
             }
+            auto job = const_cast<scheduled_actor*>(m_job);
             // run actor up to 300ms
             bool reschedule = false;
             auto tout = now();
             tout += std::chrono::milliseconds(300);
+            set_self(job);
+            CPPA_MEMORY_BARRIER();
+            bool job_done = false;
+            do
+            {
+cout << "switch context\n";
+                call(job->fiber_ptr(), &fself);
+                CPPA_MEMORY_BARRIER();
+                switch (yielded_state())
+                {
+                    case yield_state::done:
+                    case yield_state::killed:
+                    {
+cout << "done | killed\n";
+                        if (!job->deref()) delete job;
+                        CPPA_MEMORY_BARRIER();
+                        dec_actor_count();
+                        job = nullptr;
+                        job_done = true;
+                        break;
+                    }
+                    case yield_state::ready:
+                    {
+cout << "ready\n";
+                        if (tout >= now())
+                        {
+                            reschedule = true;
+                            job_done = true;
+                        }
+                        break;
+                    }
+                    case yield_state::blocked:
+                    {
+cout << "blocked\n";
+cout << "job addr: " << std::hex << job << endl;
+                        switch (job->compare_exchange_state(about_to_block,
+                                                            blocked))
+                        {
+                            case ready:
+                            {
+cout << "blocked -> ready\n";
+                                if (tout >= now())
+                                {
+                                    reschedule = true;
+                                    job_done = true;
+                                }
+                                break;
+                            }
+                            case blocked:
+                            {
+cout << "blocked -> blocked\n";
+                                // wait until someone re-schedules that actor
+                                break;
+                            }
+                            default:
+                            {
+cout << "blocked -> illegal state\n";
+                                // illegal state
+                                exit(7);
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                    {
+cout << "illegal state\n";
+                        // illegal state
+                        exit(8);
+                    }
+                }
+            }
+            while (job_done == false);
+            /*
             scheduled_actor::execute(m_job,
                                      fself,
                                      [&]() -> bool
@@ -86,11 +164,13 @@ struct thread_pool_scheduler::worker
                                          CPPA_MEMORY_BARRIER();
                                          dec_actor_count();
                                      });
-            if (reschedule)
+            */
+            if (reschedule && job)
             {
-                m_job_queue->push_back(m_job);
+                m_job_queue->push_back(job);
             }
             m_job = nullptr;
+cout << "wait for next job\n";
             CPPA_MEMORY_BARRIER();
             m_supervisor_queue->push_back(this);
         }
@@ -108,8 +188,8 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
 {
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
-    // init
-    size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 1);
+    // init with at least two workers
+    size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 2);
     auto new_worker = [&]()
     {
         worker_ptr wptr(new worker(&wqueue, jqueue));
@@ -124,7 +204,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     // loop
     do
     {
-        // fetch job
+        // fetch next job
         scheduled_actor* job = jqueue->pop();
         if (job == dummy)
         {
@@ -132,7 +212,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         }
         else
         {
-            // fetch waiting worker (wait up to 500ms)
+            // fetch next idle worker (wait up to 500ms)
             worker* w = nullptr;
             auto timeout = now();
             timeout += std::chrono::milliseconds(500);
@@ -154,6 +234,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         }
     }
     while (!done);
+cout << "supervisor_loop is done\n";
     // quit
     for (auto& w : workers)
     {

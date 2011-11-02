@@ -22,12 +22,6 @@ void testee1()
 {
     receive_loop
     (
-        others() >> []()
-        {
-            any_tuple msg = last_received();
-            //actor_ptr sender = msg.sender();
-            //sender->enqueue(any_tuple(self(), sender, msg.content()));
-        },
         after(std::chrono::milliseconds(10)) >> []()
         {
             quit(exit_reason::user_defined);
@@ -71,6 +65,17 @@ void testee3(actor_ptr parent)
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
+
+    spawn(testee1);
+    await_all_others_done();
+
+    return CPPA_TEST_RESULT;
+
+
+
+
+
+
     auto report_unexpected = [&]()
     {
         cerr << "unexpected message: " << to_string(last_received()) << endl;

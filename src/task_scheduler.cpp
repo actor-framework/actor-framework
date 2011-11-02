@@ -44,17 +44,17 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
     }
 }
 
-task_scheduler::task_scheduler()
-    : m_queue()
-    , m_dummy()
+void task_scheduler::start()
 {
+    super::start();
     m_worker = thread(worker_loop, &m_queue, &m_dummy);
 }
 
-task_scheduler::~task_scheduler()
+void task_scheduler::stop()
 {
     m_queue.push_back(&m_dummy);
     m_worker.join();
+    super::stop();
 }
 
 void task_scheduler::schedule(scheduled_actor* what)

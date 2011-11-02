@@ -229,3 +229,4 @@ cppa/detail/empty_tuple.hpp
 src/empty_tuple.cpp
 cppa/detail/addressed_message.hpp
 src/addressed_message.cpp
+unit_testing/test__yield_interface.cpp

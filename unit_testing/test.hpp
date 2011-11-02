@@ -48,6 +48,7 @@ std::cerr << err_msg << std::endl;                                             \
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) == (rhs_loc)))
 
+size_t test__yield_interface();
 size_t test__remote_actor(const char* app_path, bool is_client,
                           const std::map<std::string, std::string>& args);
 size_t test__ripemd_160();
