@@ -9,7 +9,9 @@
 #include <signal.h>
 #include <stddef.h>
 
-#include "cppa_fibre.h"
+static ucontext_t ctx[2];
+
+__thread int m_count = 0;
 
 void coroutine()
 {
@@ -41,7 +43,7 @@ int main(int argc, char** argv)
     ctx[1].uc_link = &ctx[0];
     makecontext(&ctx[1], coroutine, 0);
 
-    for (i = 0; i < 11; ++i)
+    for (i = 1; i < 11; ++i)
     {
         printf("i = %i\n", i);
         swapcontext(&ctx[0], &ctx[1]);

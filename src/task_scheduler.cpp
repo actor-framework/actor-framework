@@ -28,19 +28,22 @@ namespace cppa { namespace detail {
 void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
 {
     cppa::util::fiber fself;
+    scheduled_actor* job = nullptr;
+    auto still_ready_cb = []() { return true; };
+    auto done_cb = [&]()
+    {
+        if (!job->deref()) delete job;
+        CPPA_MEMORY_BARRIER();
+        dec_actor_count();
+    };
     for (;;)
     {
-        scheduled_actor* job = jq->pop();
+        job = jq->pop();
         if (job == dummy)
         {
             return;
         }
-        scheduled_actor::execute(job, fself, [&]()
-        {
-            if (!job->deref()) delete job;
-            CPPA_MEMORY_BARRIER();
-            dec_actor_count();
-        });
+        scheduled_actor::execute(job, &fself, still_ready_cb, done_cb);
     }
 }
 

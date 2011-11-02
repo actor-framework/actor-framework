@@ -58,6 +58,25 @@ struct thread_pool_scheduler::worker
         m_supervisor_queue->push_back(this);
         // loop
         util::fiber fself;
+        auto tout = now();
+        bool reschedule = false;
+        auto still_ready_cb = [&]() -> bool
+        {
+            if (tout >= now())
+            {
+                reschedule = true;
+                return false;
+            }
+            return true;
+        };
+        scheduled_actor* job;
+        auto done_cb = [&]()
+        {
+            if (!job->deref()) delete job;
+            CPPA_MEMORY_BARRIER();
+            dec_actor_count();
+            job = nullptr;
+        };
         for (;;)
         {
             // lifetime scope of guard (wait for new job)
@@ -71,106 +90,15 @@ struct thread_pool_scheduler::worker
             }
             auto job = const_cast<scheduled_actor*>(m_job);
             // run actor up to 300ms
-            bool reschedule = false;
-            auto tout = now();
+            reschedule = false;
+            tout = now();
             tout += std::chrono::milliseconds(300);
-            set_self(job);
-            CPPA_MEMORY_BARRIER();
-            bool job_done = false;
-            do
-            {
-cout << "switch context\n";
-                call(job->fiber_ptr(), &fself);
-                CPPA_MEMORY_BARRIER();
-                switch (yielded_state())
-                {
-                    case yield_state::done:
-                    case yield_state::killed:
-                    {
-cout << "done | killed\n";
-                        if (!job->deref()) delete job;
-                        CPPA_MEMORY_BARRIER();
-                        dec_actor_count();
-                        job = nullptr;
-                        job_done = true;
-                        break;
-                    }
-                    case yield_state::ready:
-                    {
-cout << "ready\n";
-                        if (tout >= now())
-                        {
-                            reschedule = true;
-                            job_done = true;
-                        }
-                        break;
-                    }
-                    case yield_state::blocked:
-                    {
-cout << "blocked\n";
-cout << "job addr: " << std::hex << job << endl;
-                        switch (job->compare_exchange_state(about_to_block,
-                                                            blocked))
-                        {
-                            case ready:
-                            {
-cout << "blocked -> ready\n";
-                                if (tout >= now())
-                                {
-                                    reschedule = true;
-                                    job_done = true;
-                                }
-                                break;
-                            }
-                            case blocked:
-                            {
-cout << "blocked -> blocked\n";
-                                // wait until someone re-schedules that actor
-                                break;
-                            }
-                            default:
-                            {
-cout << "blocked -> illegal state\n";
-                                // illegal state
-                                exit(7);
-                            }
-                        }
-                        break;
-                    }
-                    default:
-                    {
-cout << "illegal state\n";
-                        // illegal state
-                        exit(8);
-                    }
-                }
-            }
-            while (job_done == false);
-            /*
-            scheduled_actor::execute(m_job,
-                                     fself,
-                                     [&]() -> bool
-                                     {
-                                         if (tout >= now())
-                                         {
-                                             reschedule = true;
-                                             return false;
-                                         }
-                                         return true;
-                                     },
-                                     [m_job]()
-                                     {
-                                         if (!m_job->deref()) delete m_job;
-                                         CPPA_MEMORY_BARRIER();
-                                         dec_actor_count();
-                                     });
-            */
+            scheduled_actor::execute(job, &fself, still_ready_cb, done_cb);
             if (reschedule && job)
             {
                 m_job_queue->push_back(job);
             }
             m_job = nullptr;
-cout << "wait for next job\n";
             CPPA_MEMORY_BARRIER();
             m_supervisor_queue->push_back(this);
         }

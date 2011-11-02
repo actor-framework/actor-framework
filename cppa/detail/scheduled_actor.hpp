@@ -88,32 +88,22 @@ class scheduled_actor : public abstract_actor<local_actor>
     // otherwise false
     template<typename StillReadyHandler, typename DoneHandler>
     static void execute(scheduled_actor* what,
-                        util::fiber& from,
-                        StillReadyHandler&& still_ready_handler,
-                        DoneHandler&& done_handler);
-
-    template<typename DoneHandler>
-    inline static void execute(scheduled_actor* what,
-                               util::fiber& from,
-                               DoneHandler&& done_handler)
-    {
-        execute(what, from,
-                []() -> bool { return true; },
-                std::forward<DoneHandler>(done_handler));
-    }
+                        util::fiber* from,
+                        StillReadyHandler& still_ready_handler,
+                        DoneHandler& done_handler);
 
 };
 
 template<typename StillReadyHandler, typename DoneHandler>
 void scheduled_actor::execute(scheduled_actor* what,
-                              util::fiber& from,
-                              StillReadyHandler&& still_ready_handler,
-                              DoneHandler&& done_handler)
+                              util::fiber* from,
+                              StillReadyHandler& still_ready_handler,
+                              DoneHandler& done_handler)
 {
     set_self(what);
     for (;;)
     {
-        call(&(what->m_fiber), &from);
+        call(&(what->m_fiber), from);
         switch (yielded_state())
         {
             case yield_state::done:
@@ -152,7 +142,7 @@ void scheduled_actor::execute(scheduled_actor* what,
             default:
             {
                 // illegal state
-                exit(7);
+                exit(8);
             }
         }
     }
