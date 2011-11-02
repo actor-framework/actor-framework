@@ -75,7 +75,7 @@ class invokable : public invokable_base
 
  public:
 
-    virtual intermediate* get_intermediate(const any_tuple&) const = 0;
+    virtual intermediate* get_intermediate(const any_tuple&) = 0;
 
 };
 
@@ -83,13 +83,31 @@ template<class TupleView, class MatchFunction, class TargetFun>
 class invokable_impl : public invokable
 {
 
+    struct iimpl : intermediate
+    {
+
+        const TargetFun& m_target;
+        TupleView m_args;
+
+        iimpl(const TargetFun& tf) : m_target(tf)
+        {
+        }
+
+        void invoke() // override
+        {
+            cppa::invoke(m_target, m_args);
+        }
+
+    };
+
     MatchFunction m_match;
     TargetFun m_target;
+    iimpl m_iimpl;
 
  public:
 
     invokable_impl(MatchFunction&& mm, const TargetFun& mt)
-        : m_match(std::move(mm)), m_target(mt)
+        : m_match(std::move(mm)), m_target(mt), m_iimpl(m_target)
     {
     }
 
@@ -105,29 +123,15 @@ class invokable_impl : public invokable
         return false;
     }
 
-    intermediate* get_intermediate(const any_tuple& data) const
+    intermediate* get_intermediate(const any_tuple& data)
     {
-        struct iimpl : intermediate
-        {
-            TupleView m_args;
-            const TargetFun& m_target;
-
-            iimpl(TupleView&& tv, const TargetFun& tf)
-                : m_args(std::move(tv)), m_target(tf)
-            {
-            }
-
-            void invoke() // override
-            {
-                cppa::invoke(m_target, m_args);
-            }
-
-        };
         std::vector<size_t> mv;
-        return (m_match(data, &mv)) ? new iimpl(TupleView(data.vals(),
-                                                          std::move(mv)),
-                                                m_target)
-                                    : nullptr;
+        if (m_match(data, &mv))
+        {
+            m_iimpl.m_args = TupleView(data.vals(), std::move(mv));
+            return &m_iimpl;
+        }
+        return nullptr;
     }
 
 };
@@ -136,13 +140,28 @@ template<template<class...> class TupleClass, class MatchFunction, class TargetF
 class invokable_impl<TupleClass<>, MatchFunction, TargetFun> : public invokable
 {
 
+    struct iimpl : intermediate
+    {
+        const TargetFun& m_target;
+
+        iimpl(const TargetFun& tf) : m_target(tf)
+        {
+        }
+
+        void invoke()
+        {
+            m_target();
+        }
+    };
+
     MatchFunction m_match;
     TargetFun m_target;
+    iimpl m_iimpl;
 
  public:
 
     invokable_impl(MatchFunction&& mm, const TargetFun& mt)
-        : m_match(std::move(mm)), m_target(mt)
+        : m_match(std::move(mm)), m_target(mt), m_iimpl(m_target)
     {
     }
 
@@ -156,22 +175,9 @@ class invokable_impl<TupleClass<>, MatchFunction, TargetFun> : public invokable
         return false;
     }
 
-    intermediate* get_intermediate(const any_tuple& data) const
+    intermediate* get_intermediate(const any_tuple& data)
     {
-        struct iimpl : intermediate
-        {
-            const TargetFun& m_target;
-
-            iimpl(const TargetFun& tf) : m_target(tf)
-            {
-            }
-
-            void invoke()
-            {
-                m_target();
-            }
-        };
-        return m_match(data, nullptr) ? new iimpl(m_target) : nullptr;
+        return m_match(data, nullptr) ? &m_iimpl : nullptr;
     }
 };
 

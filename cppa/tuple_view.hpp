@@ -41,6 +41,8 @@ class tuple_view
 
     typedef cow_ptr<detail::abstract_tuple> vals_t;
 
+    tuple_view() : m_vals(tuple<ElementTypes...>().vals()) { }
+
     static tuple_view from(const vals_t& vals)
     {
         return tuple_view(vals);
@@ -59,6 +61,18 @@ class tuple_view
     tuple_view(tuple_view&& other) : m_vals(std::move(other.m_vals))
                                    , m_types(std::move(other.m_types))
     {
+    }
+
+    tuple_view& operator=(const tuple_view& other)
+    {
+        m_vals = other.m_vals;
+        return *this;
+    }
+
+    tuple_view& operator=(tuple_view&& other)
+    {
+        m_vals = std::move(other.m_vals);
+        return *this;
     }
 
     tuple_view(const tuple_view&) = default;

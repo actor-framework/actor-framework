@@ -12,14 +12,14 @@ void counter_actor()
     long count = 0;
     receive_loop
     (
+        on<atom("AddCount"), long>() >> [&](long val)
+        {
+            count += val;
+        },
         on<atom("Get"), actor_ptr>() >> [&](actor_ptr client)
         {
             send(client, count);
             count = 0;
-        },
-        on<atom("AddCount"), long>() >> [&](long val)
-        {
-            count += val;
         }
     );
 }
@@ -28,9 +28,11 @@ long the_test(int msg_count)
 {
     constexpr long val = 100;
     auto counter = spawn(counter_actor);
+    auto msg = make_tuple(atom("AddCount"), val);
     for (int i = 0; i < msg_count; ++i)
     {
-        send(counter, atom("AddCount"), val);
+        counter->enqueue(msg);
+        //send(counter, atom("AddCount"), val);
     }
     send(counter, atom("Get"), self());
     long result = 0;
@@ -41,7 +43,7 @@ long the_test(int msg_count)
             result = value;
         }
     );
-    send(counter, atom(":Exit"), exit_reason::user_defined);
+    send(counter, atom(":Exit"), self(), exit_reason::user_defined);
     return result;
 }
 
@@ -62,4 +64,3 @@ int main()
     await_all_others_done();
     return 0;
 }
-

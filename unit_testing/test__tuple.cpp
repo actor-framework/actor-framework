@@ -189,7 +189,6 @@ size_t test__tuple()
     auto intmd = inv.get_intermediate(t1);
     CPPA_CHECK(intmd != nullptr);
     if (intmd) intmd->invoke();
-    delete intmd;
     CPPA_CHECK(!l1_invoked && l2_invoked && !l3_invoked);
     reset_invoke_states();
 

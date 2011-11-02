@@ -22,8 +22,6 @@ using namespace cppa;
 using namespace cppa::util;
 using namespace cppa::detail;
 
-namespace { ucontext_t ctx[2]; }
-
 struct pseudo_worker
 {
 
@@ -36,70 +34,38 @@ struct pseudo_worker
         for (;;)
         {
             ++m_count;
-            swapcontext(&ctx[1], &ctx[0]);
+            yield(m_count < 10 ? yield_state::ready : yield_state::done);
         }
     }
 
 };
 
-__thread pseudo_worker* t_worker = nullptr;
-
-void coroutine()
+void coroutine(void* worker)
 {
-    (*t_worker)();
+    (*reinterpret_cast<pseudo_worker*>(worker))();
 }
 
 size_t test__yield_interface()
 {
     CPPA_TEST(test__yield_interface);
 
-    void* coroutine_stack = mmap(0,
-                                 SIGSTKSZ,
-                                 PROT_EXEC | PROT_READ | PROT_WRITE,
-                                 MAP_PRIVATE | MAP_ANON,
-                                 -1,
-                                 0);
-
     pseudo_worker worker;
-    t_worker = &worker;
 
-    memset(&ctx[0], 0, sizeof(ucontext_t));
-    getcontext(&ctx[0]);
+    fiber fself;
+    fiber fcoroutine(coroutine, &worker);
 
-    memset(&ctx[1], 0, sizeof(ucontext_t));
-    getcontext(&ctx[1]);
-    ctx[1].uc_stack.ss_sp = coroutine_stack;
-    ctx[1].uc_stack.ss_size = SIGSTKSZ;
-    ctx[1].uc_link = &ctx[0];
-    makecontext(&ctx[1], coroutine, 0);
-
-    auto do_switch = []() { swapcontext(&ctx[0], &ctx[1]); };
-
-    //fiber fself;
-    //fiber fcoroutine(coroutine, nullptr);
-    /*
     auto do_switch = [&]() { call(&fcoroutine, &fself); };
-    do_switch();
-    CPPA_CHECK(yielded_state() == yield_state::invalid);
-    do_switch();
-    CPPA_CHECK(yielded_state() == yield_state::ready);
-    do_switch();
-    CPPA_CHECK(yielded_state() == yield_state::blocked);
-    do_switch();
-    CPPA_CHECK(yielded_state() == yield_state::done);
-    do_switch();
-    CPPA_CHECK(yielded_state() == yield_state::killed);
-    */
 
-    //for (int i = 1 ; i < 11; ++i)
-    while (worker.m_count < 11)
+    int i = 0;
+    do
     {
         do_switch();
+        ++i;
     }
+    while (yielded_state() != yield_state::done && i < 10);
 
-    CPPA_CHECK_EQUAL(worker.m_count, 10);
-
-    munmap(coroutine_stack, SIGSTKSZ);
+    CPPA_CHECK_EQUAL(yielded_state(), yield_state::done);
+    CPPA_CHECK_EQUAL(i, 10);
 
     return CPPA_TEST_RESULT;
 }

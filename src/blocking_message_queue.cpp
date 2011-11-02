@@ -87,7 +87,7 @@ bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
     {
         return false;
     }
-    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg));
+    auto imd = rules.get_intermediate(node->msg);
     if (imd)
     {
         m_last_dequeued = node->msg;
@@ -101,7 +101,6 @@ bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
         buffer.push_back(node.release());
         return false;
     }
-
 }
 
 bool blocking_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,

@@ -88,7 +88,7 @@ struct thread_pool_scheduler::worker
                 }
                 if (m_done) return;
             }
-            auto job = const_cast<scheduled_actor*>(m_job);
+            job = const_cast<scheduled_actor*>(m_job);
             // run actor up to 300ms
             reschedule = false;
             tout = now();
@@ -162,7 +162,6 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         }
     }
     while (!done);
-cout << "supervisor_loop is done\n";
     // quit
     for (auto& w : workers)
     {

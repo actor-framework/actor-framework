@@ -25,19 +25,20 @@ struct stack_node
     stack_node* next;
     void* s;
 
-    stack_node(): next(NULL) , s(/*mmap(0, STACK_SIZE,
+    stack_node(): next(NULL) , s(mmap(0, STACK_SIZE,
                                          PROT_EXEC | PROT_READ | PROT_WRITE,
                                          MAP_PRIVATE | MAP_ANON,
                                          -1,
-                                         0)*/ new char[STACK_SIZE])
+                                         0))
+                                 //new char[STACK_SIZE])
     {
         //memset(s, 0, STACK_SIZE);
     }
 
     ~stack_node()
     {
-        //munmap(s, STACK_SIZE);
-        delete[] reinterpret_cast<char*>(s);
+        munmap(s, STACK_SIZE);
+        //delete[] reinterpret_cast<char*>(s);
     }
 };
 

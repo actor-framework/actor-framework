@@ -141,7 +141,7 @@ void yielding_message_queue_impl::yield_until_not_empty()
         else
         {
             yield(yield_state::blocked);
-            CPPA_MEMORY_BARRIER();
+            //CPPA_MEMORY_BARRIER();
         }
     }
 }
@@ -176,7 +176,7 @@ yielding_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
 
         default: break;
     }
-    std::unique_ptr<intermediate> imd(rules.get_intermediate(node->msg));
+    auto imd = rules.get_intermediate(node->msg);
     if (imd)
     {
         m_last_dequeued = node->msg;
