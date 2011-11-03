@@ -700,7 +700,7 @@ class uniform_type_info_map_helper
             insert<double>(d);
             insert<long double>(d);
         }
-        insert<any_type>(d);
+        //insert<any_type>(d);
         // first: signed
         // second: unsigned
         push<char,

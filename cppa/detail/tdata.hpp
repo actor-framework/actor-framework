@@ -31,6 +31,11 @@ struct tdata<>
         throw std::out_of_range("");
     }
 
+    inline const void* at(size_t) const
+    {
+        throw std::out_of_range("");
+    }
+
     inline bool operator==(const tdata&) const
     {
         return true;
@@ -48,7 +53,10 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline tdata() : super(), head() { }
 
-    tdata(const Head& v0, const Tail&... vals) : super(vals...), head(v0) { }
+    //tdata(const Head& v0, const Tail&... vals) : super(vals...), head(v0) { }
+
+    template<typename... Args>
+    tdata(const Head& v0, const Args&... vals) : super(vals...), head(v0) { }
 
     inline tdata<Tail...>& tail()
     {
@@ -65,6 +73,11 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     inline bool operator==(const tdata& other) const
     {
         return head == other.head && tail() == other.tail();
+    }
+
+    inline const void* at(size_t pos) const
+    {
+        return (pos == 0) ? &head : super::at(pos - 1);
     }
 
 };

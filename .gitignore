@@ -44,3 +44,4 @@ Makefile
 unit_testing/Makefile
 libcppa.so*
 blob/cppatest
+callgrind.out.*

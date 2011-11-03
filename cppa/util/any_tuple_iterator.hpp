@@ -20,6 +20,8 @@ class any_tuple_iterator
     template<typename T>
     inline const T& value() const;
 
+    inline const void* value_ptr() const;
+
     inline const cppa::uniform_type_info& type() const;
 
     inline size_t position() const;
@@ -42,6 +44,11 @@ inline const T& any_tuple_iterator::value() const
 inline const uniform_type_info& any_tuple_iterator::type() const
 {
     return m_data.utype_info_at(m_pos);
+}
+
+inline const void* any_tuple_iterator::value_ptr() const
+{
+    return m_data.at(m_pos);
 }
 
 inline size_t any_tuple_iterator::position() const

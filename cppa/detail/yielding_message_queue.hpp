@@ -43,6 +43,9 @@ class yielding_message_queue_impl : public message_queue
     std::uint32_t m_active_timeout_id;
     scheduled_actor* m_parent;
     std::atomic<int> m_state;
+    const uniform_type_info* m_atom_value_uti;
+    const uniform_type_info* m_ui32_uti;
+    const uniform_type_info* m_actor_ptr_uti;
     util::single_reader_queue<queue_node> m_queue;
 
     void yield_until_not_empty();

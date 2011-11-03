@@ -42,6 +42,9 @@ yielding_message_queue_impl::queue_node::queue_node(const any_tuple& content)
 yielding_message_queue_impl::yielding_message_queue_impl(scheduled_actor* p)
     : m_has_pending_timeout_request(false), m_active_timeout_id(0)
     , m_parent(p), m_state(ready)
+    , m_atom_value_uti(uniform_typeid<atom_value>())
+    , m_ui32_uti(uniform_typeid<std::uint32_t>())
+    , m_actor_ptr_uti(uniform_typeid<actor_ptr>())
 {
 }
 
@@ -60,6 +63,36 @@ enum filter_result
 yielding_message_queue_impl::filter_result
 yielding_message_queue_impl::filter_msg(const any_tuple& msg)
 {
+    if (   m_trap_exit == false
+        && msg.size() == 3
+        && m_atom_value_uti == &(msg.utype_info_at(0)))
+    {
+        if (*reinterpret_cast<const atom_value*>(msg.at(0)) == atom(":Exit"))
+        {
+            if (   m_actor_ptr_uti == &(msg.utype_info_at(1))
+                && m_ui32_uti == &(msg.utype_info_at(2)))
+            {
+                auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+                if (why != exit_reason::normal)
+                {
+                    self()->quit(why);
+                }
+                return normal_exit_signal;
+            }
+        }
+    }
+    if (   msg.size() == 2
+        && m_atom_value_uti == &(msg.utype_info_at(0))
+        && atom(":Timeout") == *reinterpret_cast<const atom_value*>(msg.at(0)))
+    {
+        if (m_ui32_uti == &(msg.utype_info_at(1)))
+        {
+            auto id = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+            return (id == m_active_timeout_id) ? timeout_message
+                                               : expired_timeout_message;
+        }
+    }
+    /*
     if (   m_trap_exit == false
         && match<atom_value, actor_ptr, std::uint32_t>(msg,
                                                        nullptr,
@@ -81,6 +114,7 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
         return (id == m_active_timeout_id) ? timeout_message
                                            : expired_timeout_message;
     }
+    */
     return ordinary_message;
 }
 

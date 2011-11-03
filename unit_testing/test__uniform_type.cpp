@@ -84,7 +84,7 @@ size_t test__uniform_type()
         "@0",                           // cppa::util::void_type
         // default announced cppa types
         "@atom",                        // cppa::atom_value
-        "@*",                           // cppa::any_type
+        //"@*",                           // cppa::any_type
         "@<>",                          // cppa::any_tuple
         "@msg",                         // cppa::message
         "@actor",                       // cppa::actor_ptr
