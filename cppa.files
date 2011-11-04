@@ -229,6 +229,6 @@ src/addressed_message.cpp
 unit_testing/test__yield_interface.cpp
 cppa/anything.hpp
 cppa/pattern.hpp
-src/pattern.cpp
 cppa/detail/pattern_details.hpp
 unit_testing/test__pattern.cpp
+cppa/util/fixed_vector.hpp

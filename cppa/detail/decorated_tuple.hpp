@@ -8,6 +8,7 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/fixed_vector.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/serialize_tuple.hpp"
@@ -20,12 +21,13 @@ class decorated_tuple : public abstract_tuple
 
  public:
 
+    typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
+
     typedef util::type_list<ElementTypes...> element_types;
 
     typedef cow_ptr<abstract_tuple> ptr_type;
 
-    decorated_tuple(const ptr_type& d,
-                    const std::vector<size_t>& v)
+    decorated_tuple(const ptr_type& d, const vector_type& v)
         : m_decorated(d), m_mappings(v)
     {
     }
@@ -68,7 +70,7 @@ class decorated_tuple : public abstract_tuple
  private:
 
     ptr_type m_decorated;
-    std::vector<size_t> m_mappings;
+    vector_type m_mappings;
     element_types m_types;
 
     decorated_tuple(const decorated_tuple& other)

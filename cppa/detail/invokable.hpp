@@ -8,6 +8,7 @@
 #include "cppa/invoke.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/util/duration.hpp"
+#include "cppa/util/fixed_vector.hpp"
 #include "cppa/detail/intermediate.hpp"
 
 // forward declaration
@@ -100,6 +101,8 @@ class invokable_impl : public invokable
 
     };
 
+    typedef util::fixed_vector<size_t, TupleView::num_elements> vector_type;
+
     std::unique_ptr<Pattern> m_pattern;
     TargetFun m_target;
     iimpl m_iimpl;
@@ -113,7 +116,8 @@ class invokable_impl : public invokable
 
     bool invoke(const any_tuple& data) const
     {
-        std::vector<size_t> mv;
+
+        vector_type mv;
         if ((*m_pattern)(data, &mv))
         {
             if (mv.size() == data.size())
@@ -125,7 +129,7 @@ class invokable_impl : public invokable
             else
             {
                 // mapping needed
-                TupleView tv(data.vals(), std::move(mv));
+                TupleView tv(data.vals(), mv);
                 cppa::invoke(m_target, tv);
             }
             return true;
@@ -135,7 +139,7 @@ class invokable_impl : public invokable
 
     intermediate* get_intermediate(const any_tuple& data)
     {
-        std::vector<size_t> mv;
+        vector_type mv;
         if ((*m_pattern)(data, &mv))
         {
             if (mv.size() == data.size())
@@ -145,7 +149,7 @@ class invokable_impl : public invokable
             }
             else
             {
-                m_iimpl.m_args = TupleView(data.vals(), std::move(mv));
+                m_iimpl.m_args = TupleView(data.vals(), mv);
             }
             return &m_iimpl;
         }

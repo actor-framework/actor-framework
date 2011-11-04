@@ -42,7 +42,6 @@ libcppa_la_SOURCES = \
   src/native_socket.cpp \
   src/network_manager.cpp \
   src/object_array.cpp \
-  src/pattern.cpp \
   src/object.cpp \
   src/post_office.cpp \
   src/post_office_msg.cpp \
@@ -186,6 +185,7 @@ nobase_library_include_HEADERS = \
   cppa/util/fiber.hpp \
   cppa/util/filter_type_list.hpp \
   cppa/util/first_n.hpp \
+  cppa/util/fixed_vector.hpp \
   cppa/util/has_copy_member_fun.hpp \
   cppa/util.hpp \
   cppa/util/if_else.hpp \

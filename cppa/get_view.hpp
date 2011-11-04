@@ -17,11 +17,11 @@ template<typename... MatchRules>
 typename tuple_view_type_from_type_list<typename util::filter_type_list<anything, util::type_list<MatchRules...>>::type>::type
 get_view(const any_tuple& ut)
 {
-    std::vector<size_t> mappings;
     pattern<MatchRules...> p;
-    if (p(ut, &mappings))
+    typename pattern<MatchRules...>::mapping_vector mapping;
+    if (p(ut, &mapping))
     {
-        return { ut.vals(), std::move(mappings) };
+        return { ut.vals(), mapping };
     }
     // todo: throw nicer exception
     throw std::runtime_error("doesn't match");

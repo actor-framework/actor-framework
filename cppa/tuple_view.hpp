@@ -9,6 +9,7 @@
 #include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/a_matches_b.hpp"
+#include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/compare_tuples.hpp"
 
 #include "cppa/detail/decorated_tuple.hpp"
@@ -25,21 +26,19 @@ template<typename... ElementTypes>
 class tuple_view
 {
 
+    //static_assert(sizeof...(ElementTypes) > 0,
+    //              "could not declare an empty tuple_view");
+
     template<size_t N, typename... Types>
     friend typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>&);
 
  public:
 
-    typedef util::type_list<ElementTypes...> element_types;
-
-    // enable use of tuple_view as type_list
-    typedef typename element_types::head_type head_type;
-    typedef typename element_types::tail_type tail_type;
-
-    static_assert(sizeof...(ElementTypes) > 0,
-                  "could not declare an empty tuple_view");
-
     typedef cow_ptr<detail::abstract_tuple> vals_t;
+
+    static constexpr size_t num_elements = sizeof...(ElementTypes);
+
+    typedef util::fixed_vector<size_t, num_elements> mapping_vector;
 
     tuple_view() : m_vals(tuple<ElementTypes...>().vals()) { }
 
@@ -53,8 +52,8 @@ class tuple_view
         return tuple_view(std::move(vals));
     }
 
-    tuple_view(const vals_t& vals, std::vector<size_t>&& mappings)
-        : m_vals(new detail::decorated_tuple<ElementTypes...>(vals, mappings))
+    tuple_view(const vals_t& vals, mapping_vector& mapping)
+        : m_vals(new detail::decorated_tuple<ElementTypes...>(vals, mapping))
     {
     }
 
@@ -81,14 +80,10 @@ class tuple_view
         return m_vals;
     }
 
-    /*inline const element_types& types() const
-    {
-        //return m_types;
-    }*/
-
     inline size_t size() const
     {
-        return m_vals->size();
+        return sizeof...(ElementTypes);
+        //return m_vals->size();
     }
 
  private:

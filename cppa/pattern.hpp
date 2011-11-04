@@ -33,6 +33,11 @@ class pattern<T0, Tn...>
     typedef typename util::filter_type_list<anything, tpl_args>::type
             filtered_tpl_args;
 
+    typedef typename tuple_view_type_from_type_list<filtered_tpl_args>::type
+            tuple_view_type;
+
+    typedef typename tuple_view_type::mapping_vector mapping_vector;
+
     //typedef typename detail::tdata_from_type_list<filtered_tpl_args>::type
     //        data_type;
 
@@ -54,11 +59,12 @@ class pattern<T0, Tn...>
                                                        m_utis, m_data_ptr);
     }
 
+    // todo: calculate expected vector type
     bool operator()(const cppa::any_tuple& msg,
-                    std::vector<size_t>* mapping = nullptr) const
+                    mapping_vector* mapping = nullptr) const
     {
         detail::pattern_arg arg0(size, m_data_ptr, m_utis);
-        detail::tuple_iterator_arg arg1(msg, mapping);
+        detail::tuple_iterator_arg<mapping_vector> arg1(msg, mapping);
         return detail::do_match(arg0, arg1);
     }
 
