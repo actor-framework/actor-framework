@@ -1,6 +1,7 @@
 #ifndef CPPA_UTIL_A_MATCHES_B_HPP
 #define CPPA_UTIL_A_MATCHES_B_HPP
 
+/*
 #include <type_traits>
 
 #include "cppa/any_type.hpp"
@@ -66,5 +67,6 @@ struct a_matches_b : detail::amb_helper<typename ListA::head_type,
 };
 
 } } // namespace cppa::util
+*/
 
 #endif // CPPA_UTIL_A_MATCHES_B_HPP

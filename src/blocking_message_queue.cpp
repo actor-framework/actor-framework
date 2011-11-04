@@ -2,7 +2,6 @@
 #include <memory>
 
 #include "cppa/atom.hpp"
-#include "cppa/match.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
@@ -21,11 +20,12 @@ enum throw_on_exit_result
     normal_exit_signal
 };
 
-throw_on_exit_result throw_on_exit(const any_tuple& msg)
+template<class Pattern>
+throw_on_exit_result throw_on_exit(Pattern& exit_pattern, const any_tuple& msg)
 {
-    if (match<atom_value, actor_ptr, std::uint32_t>(msg, 0, atom(":Exit")))
+    if (exit_pattern(msg))
     {
-        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.at(2));
         if (reason != exit_reason::normal)
         {
             // throws
@@ -53,6 +53,11 @@ blocking_message_queue_impl::queue_node::queue_node(const any_tuple& content)
 {
 }
 
+blocking_message_queue_impl::blocking_message_queue_impl()
+    : m_exit_msg_pattern(atom("Exit"))
+{
+}
+
 void blocking_message_queue_impl::enqueue(any_tuple&& msg)
 {
     m_queue.push_back(new queue_node(std::move(msg)));
@@ -68,7 +73,7 @@ bool blocking_message_queue_impl::dequeue_impl(any_tuple& storage)
     std::unique_ptr<queue_node> node(m_queue.pop());
     if (!m_trap_exit)
     {
-        if (throw_on_exit(node->msg) == normal_exit_signal)
+        if (throw_on_exit(m_exit_msg_pattern, node->msg) == normal_exit_signal)
         {
             // exit_reason::normal is ignored by default,
             // dequeue next message
@@ -83,7 +88,8 @@ bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
                                      invoke_rules_base& rules,
                                      queue_node_buffer& buffer)
 {
-    if (!m_trap_exit && throw_on_exit(node->msg) == normal_exit_signal)
+    if (   m_trap_exit == false
+        && throw_on_exit(m_exit_msg_pattern, node->msg) == normal_exit_signal)
     {
         return false;
     }

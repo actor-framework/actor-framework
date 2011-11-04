@@ -58,6 +58,7 @@ size_t test__a_matches_b();
 size_t test__atom();
 size_t test__tuple();
 size_t test__spawn();
+size_t test__pattern();
 size_t test__intrusive_ptr();
 size_t test__serialization();
 size_t test__local_group();

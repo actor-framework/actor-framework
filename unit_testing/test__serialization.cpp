@@ -24,7 +24,6 @@
 
 #include "test.hpp"
 
-#include "cppa/match.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"

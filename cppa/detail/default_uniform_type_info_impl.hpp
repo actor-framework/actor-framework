@@ -1,7 +1,7 @@
 #ifndef DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 #define DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 
-#include "cppa/any_type.hpp"
+#include "cppa/anything.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
@@ -278,9 +278,9 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     void init_(typename
                util::enable_if<
                    util::disjunction<std::is_same<C, util::void_type>,
-                                     std::is_same<C, any_type>>>::type* = 0)
+                                     std::is_same<C, anything>>>::type* = 0)
     {
-        // any_type doesn't have any fields (no serialization required)
+        // anything doesn't have any fields (no serialization required)
     }
 
     template<typename P>
@@ -294,7 +294,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
                util::disable_if<
                    util::disjunction<util::is_primitive<X>,
                                      std::is_same<X, util::void_type>,
-                                     std::is_same<X, any_type>>>::type* = 0)
+                                     std::is_same<X, anything>>>::type* = 0)
     {
         static_assert(util::is_primitive<X>::value,
                       "T is neither a primitive type nor a "
@@ -346,7 +346,6 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         }
         d->end_object();
     }
-
 
 };
 

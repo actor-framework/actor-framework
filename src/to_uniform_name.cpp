@@ -11,7 +11,6 @@
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
 
 #include "cppa/util/void_type.hpp"
@@ -90,7 +89,6 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<std::u16string>(), "@u16str" },
       { demangled<std::u32string>(), "@u32str" },
       // cppa types
-      { demangled<cppa::any_type>(), "@*" },
       { demangled<cppa::atom_value>(), "@atom" },
       { demangled<cppa::util::void_type>(), "@0" },
       { demangled<cppa::any_tuple>(), "@<>" },

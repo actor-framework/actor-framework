@@ -10,6 +10,7 @@ unit_tests_SOURCES =    hash_of.cpp \
                         test__atom.cpp \
                         test__intrusive_ptr.cpp \
                         test__local_group.cpp \
+                        test__pattern.cpp \
                         test__primitive_variant.cpp \
                         test__queue_performance.cpp \
                         test__remote_actor.cpp \

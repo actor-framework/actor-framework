@@ -59,7 +59,6 @@ class tuple_view
     }
 
     tuple_view(tuple_view&& other) : m_vals(std::move(other.m_vals))
-                                   , m_types(std::move(other.m_types))
     {
     }
 
@@ -82,10 +81,10 @@ class tuple_view
         return m_vals;
     }
 
-    inline const element_types& types() const
+    /*inline const element_types& types() const
     {
-        return m_types;
-    }
+        //return m_types;
+    }*/
 
     inline size_t size() const
     {
@@ -103,7 +102,6 @@ class tuple_view
     }
 
     vals_t m_vals;
-    element_types m_types;
 
 };
 

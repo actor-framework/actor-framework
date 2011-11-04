@@ -79,7 +79,7 @@ class invokable : public invokable_base
 
 };
 
-template<class TupleView, class MatchFunction, class TargetFun>
+template<class TupleView, class Pattern, class TargetFun>
 class invokable_impl : public invokable
 {
 
@@ -100,24 +100,34 @@ class invokable_impl : public invokable
 
     };
 
-    MatchFunction m_match;
+    std::unique_ptr<Pattern> m_pattern;
     TargetFun m_target;
     iimpl m_iimpl;
 
  public:
 
-    invokable_impl(MatchFunction&& mm, const TargetFun& mt)
-        : m_match(std::move(mm)), m_target(mt), m_iimpl(m_target)
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, const TargetFun& mt)
+        : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
     {
     }
 
     bool invoke(const any_tuple& data) const
     {
         std::vector<size_t> mv;
-        if (m_match(data, &mv))
+        if ((*m_pattern)(data, &mv))
         {
-            TupleView tv(data.vals(), std::move(mv));
-            cppa::invoke(m_target, tv);
+            if (mv.size() == data.size())
+            {
+                // "perfect" match; no mapping needed at all
+                TupleView tv = TupleView::from(data.vals());
+                cppa::invoke(m_target, tv);
+            }
+            else
+            {
+                // mapping needed
+                TupleView tv(data.vals(), std::move(mv));
+                cppa::invoke(m_target, tv);
+            }
             return true;
         }
         return false;
@@ -126,9 +136,17 @@ class invokable_impl : public invokable
     intermediate* get_intermediate(const any_tuple& data)
     {
         std::vector<size_t> mv;
-        if (m_match(data, &mv))
+        if ((*m_pattern)(data, &mv))
         {
-            m_iimpl.m_args = TupleView(data.vals(), std::move(mv));
+            if (mv.size() == data.size())
+            {
+                // perfect match
+                m_iimpl.m_args = TupleView::from(data.vals());
+            }
+            else
+            {
+                m_iimpl.m_args = TupleView(data.vals(), std::move(mv));
+            }
             return &m_iimpl;
         }
         return nullptr;
@@ -136,8 +154,8 @@ class invokable_impl : public invokable
 
 };
 
-template<template<class...> class TupleClass, class MatchFunction, class TargetFun>
-class invokable_impl<TupleClass<>, MatchFunction, TargetFun> : public invokable
+template<template<class...> class TupleClass, class Pattern, class TargetFun>
+class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 {
 
     struct iimpl : intermediate
@@ -154,20 +172,20 @@ class invokable_impl<TupleClass<>, MatchFunction, TargetFun> : public invokable
         }
     };
 
-    MatchFunction m_match;
+    std::unique_ptr<Pattern> m_pattern;
     TargetFun m_target;
     iimpl m_iimpl;
 
  public:
 
-    invokable_impl(MatchFunction&& mm, const TargetFun& mt)
-        : m_match(std::move(mm)), m_target(mt), m_iimpl(m_target)
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, const TargetFun& mt)
+        : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
     {
     }
 
     bool invoke(const any_tuple& data) const
     {
-        if (m_match(data, nullptr))
+        if ((*m_pattern)(data, nullptr))
         {
             m_target();
             return true;
@@ -177,8 +195,9 @@ class invokable_impl<TupleClass<>, MatchFunction, TargetFun> : public invokable
 
     intermediate* get_intermediate(const any_tuple& data)
     {
-        return m_match(data, nullptr) ? &m_iimpl : nullptr;
+        return ((*m_pattern)(data, nullptr)) ? &m_iimpl : nullptr;
     }
+
 };
 
 } } // namespace cppa::detail

@@ -42,6 +42,7 @@ libcppa_la_SOURCES = \
   src/native_socket.cpp \
   src/network_manager.cpp \
   src/object_array.cpp \
+  src/pattern.cpp \
   src/object.cpp \
   src/post_office.cpp \
   src/post_office_msg.cpp \
@@ -74,7 +75,7 @@ nobase_library_include_HEADERS = \
   cppa/actor_proxy.hpp \
   cppa/announce.hpp \
   cppa/any_tuple.hpp \
-  cppa/any_type.hpp \
+  cppa/anything.hpp \
   cppa/atom.hpp \
   cppa/attachable.hpp \
   cppa/binary_deserializer.hpp \
@@ -111,13 +112,13 @@ nobase_library_include_HEADERS = \
   cppa/detail/mailman.hpp \
   cppa/detail/map_member.hpp \
   cppa/detail/matcher_arguments.hpp \
-  cppa/detail/matcher.hpp \
   cppa/detail/mock_scheduler.hpp \
   cppa/detail/native_socket.hpp \
   cppa/detail/network_manager.hpp \
   cppa/detail/object_array.hpp \
   cppa/detail/object_impl.hpp \
   cppa/detail/pair_member.hpp \
+  cppa/detail/pattern_details.hpp \
   cppa/detail/post_office.hpp \
   cppa/detail/post_office_msg.hpp \
   cppa/detail/primitive_member.hpp \
@@ -147,10 +148,10 @@ nobase_library_include_HEADERS = \
   cppa/intrusive_ptr.hpp \
   cppa/invoke.hpp \
   cppa/invoke_rules.hpp \
-  cppa/match.hpp \
   cppa/message_queue.hpp \
   cppa/object.hpp \
   cppa/on.hpp \
+  cppa/pattern.hpp \
   cppa/primitive_type.hpp \
   cppa/primitive_variant.hpp \
   cppa/process_information.hpp \

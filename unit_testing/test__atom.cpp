@@ -57,7 +57,6 @@ size_t test__atom()
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
     any_tuple msg = receive();
-    CPPA_CHECK((match<atom_value, atom_value, atom_value, float>(msg, nullptr, atom("b"), atom("a"), atom("c"))));
     CPPA_CHECK(try_receive(msg) == false);
     return CPPA_TEST_RESULT;
 }

@@ -1,6 +1,7 @@
 #ifndef BLOCKING_MESSAGE_QUEUE_HPP
 #define BLOCKING_MESSAGE_QUEUE_HPP
 
+#include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_queue.hpp"
 #include "cppa/util/singly_linked_list.hpp"
@@ -45,6 +46,8 @@ class blocking_message_queue_impl : public message_queue
 
     typedef util::singly_linked_list<queue_node> queue_node_buffer;
 
+    blocking_message_queue_impl();
+
     inline bool empty()
     {
         return m_queue.empty();
@@ -68,7 +71,8 @@ class blocking_message_queue_impl : public message_queue
 
     bool dq(std::unique_ptr<queue_node>&,invoke_rules_base&,queue_node_buffer&);
 
-   queue_type m_queue;
+    pattern<atom_value, actor_ptr, std::uint32_t> m_exit_msg_pattern;
+    queue_type m_queue;
 
 };
 

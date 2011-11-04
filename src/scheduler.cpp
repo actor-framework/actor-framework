@@ -2,9 +2,10 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/scheduler.hpp"
+#include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
+#include "cppa/scheduler.hpp"
+#include "cppa/local_actor.hpp"
 
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
@@ -71,7 +72,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     // message handling rules
     auto rules =
     (
-        on<util::duration,actor_ptr,any_type*>() >> [&](const util::duration& d,
+        on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
                                                         const actor_ptr& whom)
         {
             any_tuple msg = msg_ptr->msg.tail(2);

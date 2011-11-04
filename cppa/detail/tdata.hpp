@@ -2,8 +2,10 @@
 #define TDATA_HPP
 
 #include "cppa/get.hpp"
+
 #include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
 
@@ -55,6 +57,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     //tdata(const Head& v0, const Tail&... vals) : super(vals...), head(v0) { }
 
+    // allow partial initialization
     template<typename... Args>
     tdata(const Head& v0, const Args&... vals) : super(vals...), head(v0) { }
 
@@ -97,6 +100,14 @@ struct tdata_upcast_helper<0, Head, Tail...>
     typedef tdata<Head, Tail...> type;
 };
 
+template<typename T>
+struct tdata_from_type_list;
+
+template<typename... T>
+struct tdata_from_type_list<cppa::util::type_list<T...>>
+{
+    typedef cppa::detail::tdata<T...> type;
+};
 
 } } // namespace cppa::detail
 

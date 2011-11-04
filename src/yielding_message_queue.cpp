@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "cppa/cppa.hpp"
-#include "cppa/match.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/exit_reason.hpp"

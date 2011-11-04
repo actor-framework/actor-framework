@@ -11,7 +11,6 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/match.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/exit_reason.hpp"

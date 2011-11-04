@@ -1,7 +1,7 @@
 #ifndef BOXED_HPP
 #define BOXED_HPP
 
-#include "cppa/any_type.hpp"
+#include "cppa/anything.hpp"
 #include "cppa/util/wrapped.hpp"
 
 namespace cppa { namespace detail {
@@ -19,15 +19,9 @@ struct boxed< util::wrapped<T> >
 };
 
 template<>
-struct boxed<any_type>
+struct boxed<anything>
 {
-    typedef any_type type;
-};
-
-template<>
-struct boxed<any_type*>
-{
-    typedef any_type* type;
+    typedef anything type;
 };
 
 } } // namespace cppa::detail

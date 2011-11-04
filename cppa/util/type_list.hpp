@@ -2,7 +2,6 @@
 #define LIBCPPA_UTIL_TYPE_LIST_HPP
 
 #include <typeinfo>
-#include "cppa/any_type.hpp"
 
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/abstract_type_list.hpp"

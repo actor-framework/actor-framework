@@ -16,10 +16,7 @@ cppa/config.hpp
 unit_testing/test__tuple.cpp
 cppa/detail/abstract_tuple.hpp
 cppa/tuple_view.hpp
-cppa/any_type.hpp
-cppa/detail/matcher.hpp
 cppa/detail/tuple_vals.hpp
-cppa/match.hpp
 cppa/detail/decorated_tuple.hpp
 cppa/cow_ptr.hpp
 cppa/detail/ref_counted_impl.hpp
@@ -230,3 +227,8 @@ src/empty_tuple.cpp
 cppa/detail/addressed_message.hpp
 src/addressed_message.cpp
 unit_testing/test__yield_interface.cpp
+cppa/anything.hpp
+cppa/pattern.hpp
+src/pattern.cpp
+cppa/detail/pattern_details.hpp
+unit_testing/test__pattern.cpp

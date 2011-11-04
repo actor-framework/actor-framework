@@ -17,7 +17,6 @@
 #include "cppa/object.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
-#include "cppa/any_type.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -41,9 +40,6 @@ using std::endl;
 using cppa::util::void_type;
 
 namespace std {
-
-ostream& operator<<(ostream& o, const cppa::any_type&) { return o; }
-istream& operator>>(istream& i, cppa::any_type&) { return i; }
 
 ostream& operator<<(ostream& o, const cppa::actor_ptr&) { return o; }
 istream& operator>>(istream& i, cppa::actor_ptr&) { return i; }
@@ -700,7 +696,6 @@ class uniform_type_info_map_helper
             insert<double>(d);
             insert<long double>(d);
         }
-        //insert<any_type>(d);
         // first: signed
         // second: unsigned
         push<char,
