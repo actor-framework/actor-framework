@@ -4,7 +4,6 @@
 #include <typeinfo>
 
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/abstract_type_list.hpp"
 
 namespace cppa {
 
@@ -15,41 +14,6 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace util {
-
-class type_list_iterator : public abstract_type_list::abstract_iterator
-{
-
- public:
-
-    typedef const uniform_type_info* const* ptr_type;
-
-    type_list_iterator(ptr_type begin, ptr_type end) : m_pos(begin), m_end(end)
-    {
-    }
-
-    type_list_iterator(const type_list_iterator&) = default;
-
-    bool next()
-    {
-        return ++m_pos != m_end;
-    }
-
-    const uniform_type_info& get() const
-    {
-        return *(*m_pos);
-    }
-
-    abstract_type_list::abstract_iterator* copy() const
-    {
-        return new type_list_iterator(*this);
-    }
-
- private:
-
-    const uniform_type_info* const* m_pos;
-    const uniform_type_info* const* m_end;
-
-};
 
 template<typename... Types> struct type_list;
 
@@ -62,7 +26,7 @@ struct type_list<>
 };
 
 template<typename Head, typename... Tail>
-struct type_list<Head, Tail...> : abstract_type_list
+struct type_list<Head, Tail...>
 {
 
     typedef Head head_type;
@@ -76,19 +40,9 @@ struct type_list<Head, Tail...> : abstract_type_list
         init<type_list>(m_arr);
     }
 
-    virtual const_iterator begin() const
-    {
-        return new type_list_iterator(m_arr, m_arr + size);
-    }
-
-    virtual const uniform_type_info& at(size_t pos) const
+    inline const uniform_type_info& at(size_t pos) const
     {
         return *m_arr[pos];
-    }
-
-    virtual type_list* copy() const
-    {
-        return new type_list;
     }
 
     template<typename TypeList>

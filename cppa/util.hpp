@@ -2,7 +2,6 @@
 #define UTIL_HPP
 
 #include "cppa/util/a_matches_b.hpp"
-#include "cppa/util/abstract_type_list.hpp"
 #include "cppa/util/apply.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/compare_tuples.hpp"

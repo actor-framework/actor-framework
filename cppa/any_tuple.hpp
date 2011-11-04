@@ -55,8 +55,6 @@ class any_tuple
 
     const uniform_type_info& utype_info_at(size_t p) const;
 
-    const util::abstract_type_list& types() const;
-
     const cow_ptr<detail::abstract_tuple>& vals() const;
 
     bool equal_to(const any_tuple& other) const;

@@ -56,7 +56,6 @@ src/deserializer.cpp
 cppa/util/eval_type_list.hpp
 cppa/util/is_legal_tuple_type.hpp
 cppa/util/replace_type.hpp
-cppa/util/abstract_type_list.hpp
 cppa/detail/serialize_tuple.hpp
 unit_testing/test__atom.cpp
 unit_testing/test__queue_performance.cpp
@@ -127,7 +126,6 @@ cppa/binary_deserializer.hpp
 src/binary_deserializer.cpp
 src/actor.cpp
 cppa/announce.hpp
-src/abstract_type_list.cpp
 cppa/util/shared_spinlock.hpp
 src/shared_spinlock.cpp
 cppa/util/shared_lock_guard.hpp

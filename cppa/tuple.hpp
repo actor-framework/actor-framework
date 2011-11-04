@@ -149,11 +149,6 @@ class tuple
         return m_vals->utype_info_at(p);
     }
 
-    const util::abstract_type_list& types() const
-    {
-        return m_vals->types();
-    }
-
     const cow_ptr<vals_t>& vals() const
     {
         return m_vals;

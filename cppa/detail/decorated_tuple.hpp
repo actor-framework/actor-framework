@@ -57,11 +57,6 @@ class decorated_tuple : public abstract_tuple
         return m_decorated->utype_info_at(m_mappings[pos]);
     }
 
-    virtual const util::abstract_type_list& types() const
-    {
-        return m_types;
-    }
-
     virtual bool equal_to(const abstract_tuple&) const
     {
         return false;
@@ -71,7 +66,6 @@ class decorated_tuple : public abstract_tuple
 
     ptr_type m_decorated;
     vector_type m_mappings;
-    element_types m_types;
 
     decorated_tuple(const decorated_tuple& other)
         : abstract_tuple()

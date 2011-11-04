@@ -4,7 +4,6 @@ lib_LTLIBRARIES = libcppa.la
 
 libcppa_la_SOURCES = \
   src/abstract_tuple.cpp \
-  src/abstract_type_list.cpp \
   src/actor_behavior.cpp \
   src/actor_count.cpp \
   src/actor.cpp \
@@ -163,7 +162,6 @@ nobase_library_include_HEADERS = \
   cppa/tuple.hpp \
   cppa/tuple_view.hpp \
   cppa/uniform_type_info.hpp \
-  cppa/util/abstract_type_list.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
   cppa/util/a_matches_b.hpp \
   cppa/util/any_tuple_iterator.hpp \

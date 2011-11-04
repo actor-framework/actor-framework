@@ -74,11 +74,6 @@ class tuple_vals : public abstract_tuple
         return m_types.at(pos);
     }
 
-    const util::abstract_type_list& types() const
-    {
-        return m_types;
-    }
-
     bool equal_to(const abstract_tuple& other) const
     {
         if (size() != other.size()) return false;

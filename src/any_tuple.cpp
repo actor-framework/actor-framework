@@ -4,30 +4,6 @@
 
 namespace {
 
-struct offset_type_list : cppa::util::abstract_type_list
-{
-
-    const_iterator begin() const
-    {
-        return m_begin;
-    }
-
-    offset_type_list(const cppa::util::abstract_type_list& decorated)
-    {
-        auto i = decorated.begin();
-        if (i != decorated.end())
-        {
-            ++i;
-        }
-        m_begin = i;
-    }
-
- private:
-
-    cppa::util::abstract_type_list::const_iterator m_begin;
-
-};
-
 struct offset_decorator : cppa::detail::abstract_tuple
 {
 
@@ -36,7 +12,6 @@ struct offset_decorator : cppa::detail::abstract_tuple
     offset_decorator(const ptr_type& decorated, size_t offset)
         : m_offset(offset)
         , m_decorated(decorated)
-        , m_type_list(decorated->types())
     {
     }
 
@@ -60,11 +35,6 @@ struct offset_decorator : cppa::detail::abstract_tuple
         return m_decorated->at(pos + m_offset);
     }
 
-    const cppa::util::abstract_type_list& types() const
-    {
-        return m_type_list;
-    }
-
     const cppa::uniform_type_info& utype_info_at(size_t pos) const
     {
         return m_decorated->utype_info_at(pos + m_offset);
@@ -74,7 +44,6 @@ struct offset_decorator : cppa::detail::abstract_tuple
 
     size_t m_offset;
     ptr_type m_decorated;
-    offset_type_list m_type_list;
 
 };
 
@@ -135,11 +104,6 @@ const void* any_tuple::at(size_t p) const
 const uniform_type_info& any_tuple::utype_info_at(size_t p) const
 {
     return m_vals->utype_info_at(p);
-}
-
-const util::abstract_type_list& any_tuple::types() const
-{
-    return m_vals->types();
 }
 
 const cow_ptr<detail::abstract_tuple>& any_tuple::vals() const

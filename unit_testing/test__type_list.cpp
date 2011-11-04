@@ -43,19 +43,6 @@ size_t test__type_list()
     CPPA_CHECK((is_same<int, l2::head_type>::value));
     CPPA_CHECK((is_same<l1, l2::tail_type>::value));
 
-    type_list<std::int32_t, float, char> ifc;
-    auto i = ifc.begin();
-    CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK((i->name() == "@i32"));
-    ++i;
-    CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK((i->name() == "float"));
-    ++i;
-    CPPA_CHECK((i != ifc.end()));
-    CPPA_CHECK((i->name() == "@i8"));
-    ++i;
-    CPPA_CHECK((i == ifc.end()));
-
     return CPPA_TEST_RESULT;
 
 }
