@@ -67,7 +67,7 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
     {
         switch ((std::uint64_t) *reinterpret_cast<const atom_value*>(msg.at(0)))
         {
-            case atom(":Exit"):
+            case static_cast<std::uint64_t>(atom(":Exit")):
             {
                 if (m_trap_exit == false)
                 {
@@ -83,7 +83,7 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
                 }
                 break;
             }
-            case atom(":Timeout"):
+            case static_cast<std::uint64_t>(atom(":Timeout")):
             {
                 if (m_ui32_uti == &(msg.utype_info_at(1)))
                 {
