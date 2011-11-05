@@ -34,9 +34,10 @@ class yielding_message_queue_impl : public message_queue
     struct queue_node
     {
         queue_node* next;
+        actor_ptr sender;
         any_tuple msg;
-        queue_node(any_tuple&& content);
-        queue_node(const any_tuple& content);
+        queue_node(actor* from, any_tuple&& content);
+        queue_node(actor* from, const any_tuple& content);
     };
 
     bool m_has_pending_timeout_request;
@@ -101,9 +102,9 @@ class yielding_message_queue_impl : public message_queue
 
     ~yielding_message_queue_impl();
 
-    virtual void enqueue(any_tuple&& msg) /*override*/;
+    void enqueue(actor* sender, any_tuple&& msg) /*override*/;
 
-    virtual void enqueue(const any_tuple& msg) /*override*/;
+    void enqueue(actor* sender, const any_tuple& msg) /*override*/;
 
 };
 

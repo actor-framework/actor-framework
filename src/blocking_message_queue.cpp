@@ -43,13 +43,15 @@ throw_on_exit_result throw_on_exit(Pattern& exit_pattern, const any_tuple& msg)
 
 namespace cppa { namespace detail {
 
-blocking_message_queue_impl::queue_node::queue_node(any_tuple&& content)
-    : next(nullptr), msg(std::move(content))
+blocking_message_queue_impl::queue_node::queue_node(actor* from,
+                                                    any_tuple&& content)
+    : next(nullptr), sender(from), msg(std::move(content))
 {
 }
 
-blocking_message_queue_impl::queue_node::queue_node(const any_tuple& content)
-    : next(nullptr), msg(content)
+blocking_message_queue_impl::queue_node::queue_node(actor* from,
+                                                    const any_tuple& content)
+    : next(nullptr), sender(from), msg(content)
 {
 }
 
@@ -58,14 +60,14 @@ blocking_message_queue_impl::blocking_message_queue_impl()
 {
 }
 
-void blocking_message_queue_impl::enqueue(any_tuple&& msg)
+void blocking_message_queue_impl::enqueue(actor* sender, any_tuple&& msg)
 {
-    m_queue.push_back(new queue_node(std::move(msg)));
+    m_queue.push_back(new queue_node(sender, std::move(msg)));
 }
 
-void blocking_message_queue_impl::enqueue(const any_tuple& msg)
+void blocking_message_queue_impl::enqueue(actor* sender, const any_tuple& msg)
 {
-    m_queue.push_back(new queue_node(msg));
+    m_queue.push_back(new queue_node(sender, msg));
 }
 
 bool blocking_message_queue_impl::dequeue_impl(any_tuple& storage)
@@ -80,7 +82,9 @@ bool blocking_message_queue_impl::dequeue_impl(any_tuple& storage)
             return false;
         }
     }
-    storage = std::move(node->msg);
+    m_last_dequeued = std::move(node->msg);
+    m_last_sender = std::move(node->sender);
+    storage = m_last_dequeued;
     return true;
 }
 
@@ -96,7 +100,8 @@ bool blocking_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
     auto imd = rules.get_intermediate(node->msg);
     if (imd)
     {
-        m_last_dequeued = node->msg;
+        m_last_dequeued = std::move(node->msg);
+        m_last_sender = std::move(node->sender);
         // restore mailbox before invoking imd
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
         imd->invoke();

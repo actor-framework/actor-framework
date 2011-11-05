@@ -107,11 +107,10 @@ class abstract_actor : public Base
         }
         if (!mlinks.empty())
         {
-            actor_ptr mself = this;
             // send exit messages
             for (actor_ptr& aptr : mlinks)
             {
-                aptr->enqueue(make_tuple(atom(":Exit"), mself, reason));
+                aptr->enqueue(this, make_tuple(atom(":Exit"), reason));
             }
         }
         for (attachable_ptr& ptr : mattachables)
@@ -228,7 +227,7 @@ class abstract_actor : public Base
         }
         if (reason != exit_reason::not_exited)
         {
-            other->enqueue(make_tuple(atom(":Exit"), actor_ptr(this), reason));
+            other->enqueue(this, make_tuple(atom(":Exit"), reason));
         }
         return result;
     }

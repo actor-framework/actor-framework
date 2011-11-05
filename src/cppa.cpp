@@ -36,14 +36,14 @@ namespace cppa {
 
 local_actor* operator<<(local_actor* whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(what);
+    if (whom) whom->enqueue(self(), what);
     return whom;
 }
 
 // matches self() << make_tuple(...)
 local_actor* operator<<(local_actor* whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(std::move(what));
+    if (whom) whom->enqueue(self(), std::move(what));
     return whom;
 }
 

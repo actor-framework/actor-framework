@@ -34,9 +34,9 @@ class channel : public ref_counted
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
-    virtual void enqueue(const any_tuple& msg) = 0;
+    virtual void enqueue(actor* sender, const any_tuple& msg) = 0;
 
-    virtual void enqueue(any_tuple&& msg) = 0;
+    virtual void enqueue(actor* sender, any_tuple&& msg) = 0;
 
 };
 

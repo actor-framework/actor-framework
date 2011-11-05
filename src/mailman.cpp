@@ -12,42 +12,19 @@
 // implementation of mailman.hpp
 namespace cppa { namespace detail {
 
-mailman_send_job::mailman_send_job(actor_proxy_ptr apptr, any_tuple msg)
-    : target_peer(apptr->parent_process_ptr()), original_message(msg)
+mailman_job::mailman_job(process_information_ptr piptr,
+                         const actor_ptr& from,
+                         const channel_ptr& to,
+                         const any_tuple& content)
+    : next(nullptr), m_type(send_job_type)
 {
-}
-
-mailman_send_job::mailman_send_job(process_information_ptr peer, any_tuple msg)
-    : target_peer(peer), original_message(msg)
-{
-}
-
-mailman_add_peer::mailman_add_peer(native_socket_t sfd,
-                                   const process_information_ptr& pinf)
-    : sockfd(sfd), pinfo(pinf)
-{
-}
-
-mailman_job::mailman_job(job_type jt) : next(0), m_type(jt)
-{
-}
-
-mailman_job::mailman_job(process_information_ptr piptr, const any_tuple& omsg)
-    : next(0), m_type(send_job_type)
-{
-    new (&m_send_job) mailman_send_job(piptr, omsg);
-}
-
-mailman_job::mailman_job(actor_proxy_ptr apptr, const any_tuple& omsg)
-    : next(0), m_type(send_job_type)
-{
-    new (&m_send_job) mailman_send_job(apptr, omsg);
+    new (&m_send_job) mailman_send_job (piptr, from, to, content);
 }
 
 mailman_job::mailman_job(native_socket_t sockfd, const process_information_ptr& pinfo)
     : next(0), m_type(add_peer_type)
 {
-    new (&m_add_socket) mailman_add_peer(sockfd, pinfo);
+    new (&m_add_socket) mailman_add_peer (sockfd, pinfo);
 }
 
 mailman_job* mailman_job::kill_job()
@@ -103,7 +80,6 @@ void mailman_loop()
         if (job->is_send_job())
         {
             mailman_send_job& sjob = job->send_job();
-            const any_tuple& out_msg = sjob.original_message;
             // forward message to receiver peer
             auto peer_element = peers.find(*(sjob.target_peer));
             if (peer_element != peers.end())
@@ -112,9 +88,9 @@ void mailman_loop()
                 auto peer = peer_element->second;
                 try
                 {
-                    bs << out_msg;
+                    bs << sjob.msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
-                    DEBUG("--> " << to_string(out_msg));
+                    DEBUG("--> " << to_string(sjob.msg));
                     // write size of serialized message
                     auto sent = ::send(peer, &size32, sizeof(std::uint32_t), 0);
                     if (sent > 0)

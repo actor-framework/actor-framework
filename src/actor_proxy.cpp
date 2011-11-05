@@ -23,18 +23,20 @@ actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
 }
 
 void actor_proxy::forward_message(const process_information_ptr& piptr,
+                                  actor* sender,
                                   const any_tuple& msg)
 {
-    detail::mailman_queue().push_back(new detail::mailman_job(piptr, msg));
+    auto mailman_msg = new detail::mailman_job(piptr, sender, this, msg);
+    detail::mailman_queue().push_back(mailman_msg);
 }
 
-void actor_proxy::enqueue(any_tuple&& msg)
+void actor_proxy::enqueue(actor* sender, any_tuple&& msg)
 {
     any_tuple tmp(std::move(msg));
-    enqueue(tmp);
+    enqueue(sender, tmp);
 }
 
-void actor_proxy::enqueue(const any_tuple& msg)
+void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
 {
     if (msg.size() > 0 && msg.utype_info_at(0) == typeid(atom_value))
     {
@@ -65,7 +67,7 @@ void actor_proxy::enqueue(const any_tuple& msg)
             return;
         }
     }
-    forward_message(parent_process_ptr(), msg);
+    forward_message(parent_process_ptr(), sender, msg);
 }
 
 void actor_proxy::link_to(intrusive_ptr<actor>& other)
@@ -74,6 +76,7 @@ void actor_proxy::link_to(intrusive_ptr<actor>& other)
     {
         // causes remote actor to link to (proxy of) other
         forward_message(parent_process_ptr(),
+                        other.get(),
                         make_tuple(atom(":Link"), actor_ptr(this)));
     }
 }
@@ -84,6 +87,7 @@ void actor_proxy::unlink_from(intrusive_ptr<actor>& other)
     {
         // causes remote actor to unlink from (proxy of) other
         forward_message(parent_process_ptr(),
+                        other.get(),
                         make_tuple(atom(":Unlink"), actor_ptr(this)));
     }
 }
@@ -94,6 +98,7 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other)
     if (result)
     {
         forward_message(parent_process_ptr(),
+                        other.get(),
                         make_tuple(atom(":Link"), actor_ptr(this)));
     }
     return result;
@@ -105,6 +110,7 @@ bool actor_proxy::remove_backlink(intrusive_ptr<actor>& other)
     if (result)
     {
         forward_message(parent_process_ptr(),
+                        nullptr,
                         make_tuple(atom(":Unlink"), actor_ptr(this)));
     }
     return result;

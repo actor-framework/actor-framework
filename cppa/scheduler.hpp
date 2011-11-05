@@ -8,6 +8,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/scheduling_hint.hpp"
 
@@ -17,11 +18,11 @@ namespace cppa {
 
 // forward declarations
 
-class local_actor;
+//class local_actor;
 class actor_behavior;
 class scheduler_helper;
 
-local_actor* self();
+//local_actor* self();
 
 /**
  * @brief
@@ -91,7 +92,7 @@ class scheduler
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple tup = make_tuple(util::duration(rel_time), to, data...);
-        future_send_helper()->enqueue(std::move(tup));
+        future_send_helper()->enqueue(self(), std::move(tup));
     }
 
 };

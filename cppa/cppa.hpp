@@ -351,6 +351,15 @@ inline any_tuple& last_received()
     return self()->mailbox().last_dequeued();
 }
 
+/**
+ * @brief Gets the sender of the last received message.
+ * @returns An {@link actor_ptr} to the sender of the last received message.
+ */
+inline actor_ptr& last_sender()
+{
+    return self()->mailbox().last_sender();
+}
+
 #ifdef CPPA_DOCUMENTATION
 
 /**
@@ -384,7 +393,7 @@ template<class C, typename Arg0, typename... Args>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(make_tuple(arg0, args...));
+    if (whom) whom->enqueue(self(), make_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
@@ -392,21 +401,42 @@ typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(make_tuple(arg0, args...));
+    if (tmp) tmp->enqueue(self(), make_tuple(arg0, args...));
 }
 
 // matches send(self(), ...);
 template<typename Arg0, typename... Args>
 void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(make_tuple(arg0, args...));
+    if (whom) whom->enqueue(self(), make_tuple(arg0, args...));
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, void>::type
+send_tuple(intrusive_ptr<C>& whom, const any_tuple& what)
+{
+    if (whom) whom->enqueue(self(), what);
+}
+
+template<class C>
+typename util::enable_if<std::is_base_of<channel, C>, void>::type
+send_tuple(intrusive_ptr<C>&& whom, const any_tuple& what)
+{
+    intrusive_ptr<C> tmp(std::move(whom));
+    if (tmp) tmp->enqueue(self(), what);
+}
+
+// matches send(self(), ...);
+inline void send_tuple(local_actor* whom, const any_tuple& what)
+{
+    if (whom) whom->enqueue(self(), what);
 }
 
 template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(what);
+    if (whom) whom->enqueue(self(), what);
     return whom;
 }
 
@@ -415,7 +445,7 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(what);
+    if (tmp) tmp->enqueue(self(), what);
     return std::move(tmp);
 }
 
@@ -423,7 +453,7 @@ template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(std::move(what));
+    if (whom) whom->enqueue(self(), std::move(what));
     return whom;
 }
 
@@ -432,7 +462,7 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(std::move(what));
+    if (tmp) tmp->enqueue(self(), std::move(what));
     return std::move(tmp);
 }
 
@@ -443,6 +473,17 @@ local_actor* operator<<(local_actor* whom, const any_tuple& what);
 local_actor* operator<<(local_actor* whom, any_tuple&& what);
 
 #endif
+
+template<class C, typename Arg0, typename... Args>
+void reply(const Arg0& arg0, const Args&... args)
+{
+    send(self()->mailbox().last_sender(), arg0, args...);
+}
+
+inline void reply_tuple(const any_tuple& what)
+{
+    send_tuple(self()->mailbox().last_sender(), what);
+}
 
 /**
  * @brief Sends a message to @p whom that is delayed by @p rel_time.

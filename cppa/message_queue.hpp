@@ -19,6 +19,7 @@ class message_queue : public ref_counted
  protected:
 
     bool m_trap_exit;
+    actor_ptr m_last_sender;
     any_tuple m_last_dequeued;
 
  public:
@@ -28,13 +29,13 @@ class message_queue : public ref_counted
      */
     message_queue();
 
-    virtual void enqueue(any_tuple&& msg) = 0;
+    virtual void enqueue(actor* sender, any_tuple&& msg) = 0;
 
     /**
      * @brief Enqueues a new element to the message queue.
      * @param msg The new message.
      */
-    virtual void enqueue(const any_tuple& msg) = 0;
+    virtual void enqueue(actor* sender, const any_tuple& msg) = 0;
 
     /**
      * @brief Dequeues the oldest message (FIFO order) from the message queue.
@@ -90,6 +91,13 @@ class message_queue : public ref_counted
      */
     inline any_tuple& last_dequeued();
 
+    /**
+     * @brief Gets the sender of the last dequeued message.
+     * @returns An {@link actor_ptr} to the sender of the last dequeued message.
+     * @warning Call only from the owner of the queue.
+     */
+    inline actor_ptr& last_sender();
+
 };
 
 /******************************************************************************
@@ -109,6 +117,11 @@ inline void message_queue::trap_exit(bool value)
 inline any_tuple& message_queue::last_dequeued()
 {
     return m_last_dequeued;
+}
+
+inline actor_ptr& message_queue::last_sender()
+{
+    return m_last_sender;
 }
 
 } // namespace cppa

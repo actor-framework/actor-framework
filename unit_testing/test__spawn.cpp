@@ -92,11 +92,10 @@ size_t test__spawn()
     // wait for :Down and :Exit messages of pong
     receive_while([&i]() { return ++i <= 3 /*4*/; })
     (
-        on<atom(":Exit"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
-                                                             std::uint32_t reason)
+        on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
-            CPPA_CHECK_EQUAL(who, pong_actor);
+            //CPPA_CHECK_EQUAL(who, pong_actor);
             flags |= 0x01;
         },
         on<atom(":Down"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,

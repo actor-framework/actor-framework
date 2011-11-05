@@ -28,13 +28,14 @@ typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 
 namespace cppa { namespace detail {
 
-yielding_message_queue_impl::queue_node::queue_node(any_tuple&& content)
-    : next(0), msg(std::move(content))
+yielding_message_queue_impl::queue_node::queue_node(actor* ptr, any_tuple&& tup)
+    : next(0), sender(ptr), msg(std::move(tup))
 {
 }
 
-yielding_message_queue_impl::queue_node::queue_node(const any_tuple& content)
-    : next(0), msg(content)
+yielding_message_queue_impl::queue_node::queue_node(actor* ptr,
+                                                    const any_tuple& tup)
+    : next(0), sender(ptr), msg(tup)
 {
 }
 
@@ -63,13 +64,12 @@ yielding_message_queue_impl::filter_result
 yielding_message_queue_impl::filter_msg(const any_tuple& msg)
 {
     if (   m_trap_exit == false
-        && msg.size() == 3
+        && msg.size() == 2
         && m_atom_value_uti == &(msg.utype_info_at(0)))
     {
         if (*reinterpret_cast<const atom_value*>(msg.at(0)) == atom(":Exit"))
         {
-            if (   m_actor_ptr_uti == &(msg.utype_info_at(1))
-                && m_ui32_uti == &(msg.utype_info_at(2)))
+            if (m_ui32_uti == &(msg.utype_info_at(1)))
             {
                 auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
                 if (why != exit_reason::normal)
@@ -91,29 +91,6 @@ yielding_message_queue_impl::filter_msg(const any_tuple& msg)
                                                : expired_timeout_message;
         }
     }
-    /*
-    if (   m_trap_exit == false
-        && match<atom_value, actor_ptr, std::uint32_t>(msg,
-                                                       nullptr,
-                                                       atom(":Exit")))
-    {
-        auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-        if (why != cppa::exit_reason::normal)
-        {
-            // yields
-            cppa::self()->quit(why);
-        }
-        return normal_exit_signal;
-    }
-    if (match<atom_value, std::uint32_t>(msg,
-                                         nullptr,
-                                         atom(":Timeout")))
-    {
-        auto id = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-        return (id == m_active_timeout_id) ? timeout_message
-                                           : expired_timeout_message;
-    }
-    */
     return ordinary_message;
 }
 
@@ -147,14 +124,14 @@ void yielding_message_queue_impl::enqueue_node(queue_node* node)
     }
 }
 
-void yielding_message_queue_impl::enqueue(any_tuple&& msg)
+void yielding_message_queue_impl::enqueue(actor* sender, any_tuple&& msg)
 {
-    enqueue_node(new queue_node(std::move(msg)));
+    enqueue_node(new queue_node(sender, std::move(msg)));
 }
 
-void yielding_message_queue_impl::enqueue(const any_tuple& msg)
+void yielding_message_queue_impl::enqueue(actor* sender, const any_tuple& msg)
 {
-    enqueue_node(new queue_node(msg));
+    enqueue_node(new queue_node(sender, msg));
 }
 
 void yielding_message_queue_impl::yield_until_not_empty()

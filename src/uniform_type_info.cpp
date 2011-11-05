@@ -438,32 +438,28 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
 
 };
 
-/*
-class message_tinfo : public util::abstract_uniform_type_info<any_tuple>
+class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message>
 {
 
     std::string any_tuple_name;
     std::string actor_ptr_name;
     std::string group_ptr_name;
-    std::string ch_ptr_name;
+    std::string channel_ptr_name;
 
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const
     {
-        const any_tuple& msg = *reinterpret_cast<const any_tuple*>(instance);
+        const addressed_message& msg = *reinterpret_cast<const addressed_message*>(instance);
         const any_tuple& data = msg.content();
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(msg.sender().get(), sink, actor_ptr_name);
         channel_ptr_tinfo::s_serialize(msg.receiver().get(),
                                        sink,
-                                       ch_ptr_name,
+                                       channel_ptr_name,
                                        actor_ptr_name,
                                        group_ptr_name);
         any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
-        //uniform_typeid<actor_ptr>()->serialize(&(msg.sender()), sink);
-        //uniform_typeid<channel_ptr>()->serialize(&(msg.receiver()), sink);
-        //uniform_typeid<any_tuple>()->serialize(&data, sink);
         sink->end_object();
     }
 
@@ -472,34 +468,31 @@ class message_tinfo : public util::abstract_uniform_type_info<any_tuple>
         auto tname = source->seek_object();
         if (tname != name()) throw 42;
         source->begin_object(tname);
-        actor_ptr sender;
-        channel_ptr receiver;
-        any_tuple content;
-        actor_ptr_tinfo::s_deserialize(sender, source, actor_ptr_name);
-        channel_ptr_tinfo::s_deserialize(receiver,
+        addressed_message& msg = *reinterpret_cast<addressed_message*>(instance);
+        //actor_ptr sender;
+        //channel_ptr receiver;
+        //any_tuple content;
+        actor_ptr_tinfo::s_deserialize(msg.sender(), source, actor_ptr_name);
+        channel_ptr_tinfo::s_deserialize(msg.receiver(),
                                          source,
-                                         ch_ptr_name,
+                                         channel_ptr_name,
                                          actor_ptr_name,
                                          group_ptr_name);
-        any_tuple_tinfo::s_deserialize(content, source, any_tuple_name);
-        //uniform_typeid<actor_ptr>()->deserialize(&sender, source);
-        //uniform_typeid<channel_ptr>()->deserialize(&receiver, source);
-        //uniform_typeid<any_tuple>()->deserialize(&content, source);
+        any_tuple_tinfo::s_deserialize(msg.content(), source, any_tuple_name);
         source->end_object();
-        *reinterpret_cast<any_tuple*>(instance) = any_tuple(sender,
-                                                        receiver,
-                                                        content);
+        //*reinterpret_cast<any_tuple*>(instance) = any_tuple(sender,
+        //                                                    receiver,
+        //                                                    content);
     }
 
-    message_tinfo() : any_tuple_name(to_uniform_name(typeid(any_tuple)))
-                    , actor_ptr_name(to_uniform_name(typeid(actor_ptr)))
-                    , group_ptr_name(to_uniform_name(typeid(group_ptr)))
-                    , ch_ptr_name(to_uniform_name(typeid(channel_ptr)))
+    addr_msg_tinfo() : any_tuple_name(to_uniform_name(typeid(any_tuple)))
+                     , actor_ptr_name(to_uniform_name(typeid(actor_ptr)))
+                     , group_ptr_name(to_uniform_name(typeid(group_ptr)))
+                     , channel_ptr_name(to_uniform_name(typeid(channel_ptr)))
     {
     }
 
 };
-*/
 
 class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
 {
@@ -589,32 +582,6 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
             if ((*i) == raw_name(tinfo)) return true;
         }
         return false;
-    }
-
-};
-
-struct addr_msg_tinfo : util::abstract_uniform_type_info<addressed_message>
-{
-
- protected:
-
-    void serialize(const void* ptr, serializer* sink) const
-    {
-        sink->begin_object(name());
-        reinterpret_cast<const addressed_message*>(ptr)->serialize_to(sink);
-        sink->end_object();
-    }
-
-    void deserialize(void* ptr, deserializer* source) const
-    {
-        std::string cname = source->seek_object();
-        if (cname != name())
-        {
-            throw std::logic_error("wrong type name found");
-        }
-        source->begin_object(name());
-        reinterpret_cast<addressed_message*>(ptr)->deserialize_from(source);
-        source->end_object();
     }
 
 };

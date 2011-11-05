@@ -29,14 +29,14 @@ boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
 
 namespace cppa {
 
-void local_actor::enqueue(any_tuple&& msg)
+void local_actor::enqueue(actor* sender, any_tuple&& msg)
 {
-    mailbox().enqueue(std::move(msg));
+    mailbox().enqueue(sender, std::move(msg));
 }
 
-void local_actor::enqueue(const any_tuple& msg)
+void local_actor::enqueue(actor* sender, const any_tuple& msg)
 {
-    mailbox().enqueue(msg);
+    mailbox().enqueue(sender, msg);
 }
 
 local_actor* unchecked_self()

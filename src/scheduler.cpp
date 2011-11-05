@@ -46,7 +46,7 @@ struct scheduler_helper
 
     void stop()
     {
-        m_worker->enqueue(make_tuple(atom(":_DIE")));
+        m_worker->enqueue(nullptr, make_tuple(atom(":_DIE")));
         m_thread.join();
     }
 
@@ -64,8 +64,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     // setup & local variables
     set_self(m_self.get());
     auto& queue = m_self->m_mailbox.queue();
-    typedef std::pair<cppa::actor_ptr, cppa::any_tuple> future_msg;
-    std::multimap<decltype(detail::now()), future_msg> messages;
+    //typedef std::pair<cppa::actor_ptr, decltype(queue.pop())> future_msg;
+    std::multimap<decltype(detail::now()), decltype(queue.pop())> messages;
     decltype(queue.pop()) msg_ptr = nullptr;
     decltype(detail::now()) now;
     bool done = false;
@@ -73,23 +73,21 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     auto rules =
     (
         on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
-                                                        const actor_ptr& whom)
+                                                       const actor_ptr&)
+//        on<util::duration,anything>() >> [&](const util::duration& d)
         {
-            any_tuple msg = msg_ptr->msg.tail(2);
-            if (!msg.empty())
-            {
-                // calculate timeout
-                auto timeout = detail::now();
-                timeout += d;
-                future_msg fmsg(whom, msg);
-                messages.insert(std::make_pair(std::move(timeout),
-                                               std::move(fmsg)));
-            }
+            //any_tuple msg = msg_ptr->msg.tail();
+            // calculate timeout
+            auto timeout = detail::now();
+            timeout += d;
+            messages.insert(std::make_pair(std::move(timeout),
+                                           std::move(msg_ptr)));
         },
         on<atom(":_DIE")>() >> [&]()
         {
             done = true;
-        }
+        },
+        others() >> []() { }
     );
     // loop
     while (!done)
@@ -107,11 +105,16 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 auto it = messages.begin();
                 while (it != messages.end() && (it->first) <= now)
                 {
-                    auto& whom = (it->second).first;
-                    auto& what = (it->second).second;
-                    whom->enqueue(what);
+                    auto ptr = it->second;
+                    auto whom = const_cast<actor_ptr*>(reinterpret_cast<const actor_ptr*>(ptr->msg.at(1)));
+                    if (*whom)
+                    {
+                        auto msg = ptr->msg.tail(2);
+                        (*whom)->enqueue(ptr->sender.get(), std::move(msg));
+                    }
                     messages.erase(it);
                     it = messages.begin();
+                    delete ptr;
                 }
                 // wait for next message or next timeout
                 if (it != messages.end())
@@ -121,7 +124,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
             }
         }
         rules(msg_ptr->msg);
-        delete msg_ptr;
+        //delete msg_ptr;
         msg_ptr = nullptr;
     }
 }

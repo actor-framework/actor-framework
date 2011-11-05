@@ -12,8 +12,6 @@ template<class Super>
 class abstract_message_queue : public Super
 {
 
-    any_tuple m_last_dequeued;
-
  public:
 
     template<typename... Args>
@@ -25,9 +23,9 @@ class abstract_message_queue : public Super
     {
         for (;;)
         {
-            if (Super::dequeue_impl(m_last_dequeued))
+            if (Super::dequeue_impl(this->m_last_dequeued))
             {
-                return m_last_dequeued;
+                return this->m_last_dequeued;
             }
         }
     }
@@ -64,9 +62,8 @@ class abstract_message_queue : public Super
             {
                 return false;
             }
-            else if (Super::dequeue_impl(m_last_dequeued))
+            else if (Super::dequeue_impl(msg))
             {
-                msg = m_last_dequeued;
                 return true;
             }
         }
@@ -87,11 +84,6 @@ class abstract_message_queue : public Super
                 return true;
             }
         }
-    }
-
-    const any_tuple& last_dequeued() /*override*/
-    {
-        return m_last_dequeued;
     }
 
 };

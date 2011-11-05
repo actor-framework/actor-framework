@@ -229,7 +229,8 @@ class po_peer : public post_office_worker
         {
             for (actor_proxy_ptr& pptr : m_children)
             {
-                pptr->enqueue(make_tuple(atom(":KillProxy"),
+                pptr->enqueue(self(),
+                              make_tuple(atom(":KillProxy"),
                                          exit_reason::remote_link_unreachable));
             }
         }
@@ -319,6 +320,7 @@ class po_peer : public post_office_worker
                     && content.get_as<atom_value>(0) == atom(":Monitor")
                     && content.utype_info_at(1) == typeid(actor_ptr))
                 {
+                    /*
                     actor_ptr sender = content.get_as<actor_ptr>(1);
                     if (sender->parent_process() == *process_information::get())
                     {
@@ -338,32 +340,15 @@ class po_peer : public post_office_worker
                     {
                         DEBUG(":Monitor received for an remote actor");
                     }
+                    */
+                    cerr << "NOT IMPLEMENTED YET; post_office line "
+                         << __LINE__ << endl;
                 }
                 else
                 {
                     DEBUG("<-- " << to_string(content));
-                    auto& rmap = msg.receivers();
-                    for (auto i = rmap.begin(); i != rmap.end(); ++i)
-                    {
-                        if (*(i->first) == *process_information::get())
-                        {
-                            auto& vec = i->second;
-                            for (auto j = vec.begin(); j != vec.end(); ++j)
-                            {
-                                auto registry = singleton_manager::get_actor_registry();
-                                auto receiver = registry->find(*j);
-                                if (receiver)
-                                {
-                                    receiver->enqueue(msg.content());
-                                }
-                            }
-                        }
-                        else
-                        {
-                            cerr << "NOT IMPLEMENTED YET; post_office line "
-                                 << __LINE__ << endl;
-                        }
-                    }
+                    msg.receiver()->enqueue(msg.sender().get(),
+                                            std::move(msg.content()));
                 }
                 m_rdbuf.reset();
                 m_state = wait_for_msg_size;
@@ -496,7 +481,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
     // initialize proxy cache
     get_actor_proxy_cache().set_callback([&](actor_proxy_ptr& pptr)
     {
-        pptr->enqueue(make_tuple(atom(":Monitor"), pptr));
+        pptr->enqueue(nullptr, make_tuple(atom(":Monitor"), pptr));
         if (selected_peer == nullptr)
         {
             throw std::logic_error("selected_peer == nullptr");

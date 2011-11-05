@@ -36,19 +36,19 @@ class local_group : public group
 
  public:
 
-    virtual void enqueue(const any_tuple& msg)
+    void enqueue(actor* sender, const any_tuple& msg) /*override*/
     {
         shared_guard guard(m_shared_mtx);
         for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
         {
-            const_cast<channel_ptr&>(*i)->enqueue(msg);
+            const_cast<channel_ptr&>(*i)->enqueue(sender, msg);
         }
     }
 
-    virtual void enqueue(any_tuple&& msg)
+    void enqueue(actor* sender, any_tuple&& msg) /*override*/
     {
         any_tuple tmp(std::move(msg));
-        enqueue(tmp);
+        enqueue(sender, tmp);
     }
 
     virtual group::subscription subscribe(const channel_ptr& who)

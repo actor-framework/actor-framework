@@ -6,22 +6,32 @@
 #include "cppa/process_information.hpp"
 #include "cppa/detail/native_socket.hpp"
 #include "cppa/util/single_reader_queue.hpp"
+#include "cppa/detail/addressed_message.hpp"
 
 namespace cppa { namespace detail {
 
 struct mailman_send_job
 {
     process_information_ptr target_peer;
-    any_tuple original_message;
-    mailman_send_job(actor_proxy_ptr apptr, any_tuple msg);
-    mailman_send_job(process_information_ptr peer, any_tuple msg);
+    addressed_message msg;
+    inline mailman_send_job(process_information_ptr piptr,
+                            const actor_ptr& from,
+                            const channel_ptr& to,
+                            const any_tuple& content)
+        : target_peer(piptr), msg(from, to, content)
+    {
+    }
 };
 
 struct mailman_add_peer
 {
     native_socket_t sockfd;
     process_information_ptr pinfo;
-    mailman_add_peer(native_socket_t sfd, const process_information_ptr& pinf);
+    inline mailman_add_peer(native_socket_t fd,
+                            const process_information_ptr& piptr)
+        : sockfd(fd), pinfo(piptr)
+    {
+    }
 };
 
 class mailman_job
@@ -38,9 +48,10 @@ class mailman_job
         kill_type
     };
 
-    mailman_job(process_information_ptr piptr, const any_tuple& omsg);
-
-    mailman_job(actor_proxy_ptr apptr, const any_tuple& omsg);
+    mailman_job(process_information_ptr piptr,
+                const actor_ptr& from,
+                const channel_ptr& to,
+                const any_tuple& omsg);
 
     mailman_job(native_socket_t sockfd, const process_information_ptr& pinfo);
 
@@ -89,7 +100,7 @@ class mailman_job
         mailman_add_peer m_add_socket;
     };
 
-    mailman_job(job_type jt);
+    constexpr mailman_job(job_type jt) : next(nullptr), m_type(jt) { }
 
 };
 
