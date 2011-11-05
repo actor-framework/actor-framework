@@ -31,7 +31,7 @@ long the_test(int msg_count)
     auto msg = make_tuple(atom("AddCount"), val);
     for (int i = 0; i < msg_count; ++i)
     {
-        counter->enqueue(msg);
+        send_tuple(counter, msg);
         //send(counter, atom("AddCount"), val);
     }
     send(counter, atom("Get"), self());
@@ -43,7 +43,7 @@ long the_test(int msg_count)
             result = value;
         }
     );
-    send(counter, atom(":Exit"), self(), exit_reason::user_defined);
+    send(counter, atom(":Exit"), exit_reason::user_defined);
     return result;
 }
 
@@ -54,7 +54,7 @@ void run_test(int msg_count)
     auto elapsed = t0.elapsed();
     cout << "Count is " << count << endl
          << "Test took " << elapsed << " seconds" << endl
-         << "Throughput = " << (msg_count / elapsed)
+         << "Throughput = " << static_cast<unsigned long>(msg_count / elapsed)
                             << " per sec" << endl;
 }
 
