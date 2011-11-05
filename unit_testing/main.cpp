@@ -29,7 +29,6 @@
 // header for experimental stuff
 #include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/any_tuple_iterator.hpp"
-#include "cppa/detail/matcher_arguments.hpp"
 
 #define CPPA_TEST_CATCH_BLOCK()                                                \
 catch (std::exception& e)                                                      \

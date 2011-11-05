@@ -35,7 +35,6 @@ libcppa_la_SOURCES = \
   src/invokable.cpp \
   src/invoke_rules.cpp \
   src/mailman.cpp \
-  src/matcher_arguments.cpp \
   src/message_queue.cpp \
   src/mock_scheduler.cpp \
   src/native_socket.cpp \
@@ -109,7 +108,6 @@ nobase_library_include_HEADERS = \
   cppa/detail/list_member.hpp \
   cppa/detail/mailman.hpp \
   cppa/detail/map_member.hpp \
-  cppa/detail/matcher_arguments.hpp \
   cppa/detail/mock_scheduler.hpp \
   cppa/detail/native_socket.hpp \
   cppa/detail/network_manager.hpp \

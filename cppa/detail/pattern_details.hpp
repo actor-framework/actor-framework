@@ -187,57 +187,70 @@ struct tuple_iterator_arg
 template<typename VectorType>
 bool do_match(pattern_arg& pargs, tuple_iterator_arg<VectorType>& targs)
 {
-    if (pargs.at_end() && targs.at_end())
+    for (;;)
     {
-        return true;
-    }
-    if (pargs.type() == nullptr) // nullptr == wildcard
-    {
-        // perform submatching
-        pargs.next();
-        if (pargs.at_end())
+        if (pargs.at_end() && targs.at_end())
         {
-            // always true at the end of the pattern
             return true;
         }
-        auto pargs_copy = pargs;
-        VectorType mv;
-        auto mv_ptr = (targs.mapping) ? &mv : nullptr;
-        // iterate over tu_args until we found a match
-        while (targs.at_end() == false)
+        else if (pargs.type() == nullptr) // nullptr == wildcard (anything)
         {
-            tuple_iterator_arg<VectorType> targs_copy(targs.iter, mv_ptr);
-            if (do_match(pargs_copy, targs_copy))
+            // perform submatching
+            pargs.next();
+            if (pargs.at_end())
             {
-                if (mv_ptr)
-                {
-                    targs.mapping->insert(targs.mapping->end(),
-                                          mv.begin(),
-                                          mv.end());
-                }
+                // always true at the end of the pattern
                 return true;
             }
-            // next iteration
-            mv.clear();
-            targs.next();
+            auto pargs_copy = pargs;
+            VectorType mv;
+            auto mv_ptr = (targs.mapping) ? &mv : nullptr;
+            // iterate over tu_args until we found a match
+            while (targs.at_end() == false)
+            {
+                tuple_iterator_arg<VectorType> targs_copy(targs.iter, mv_ptr);
+                if (do_match(pargs_copy, targs_copy))
+                {
+                    if (mv_ptr)
+                    {
+                        targs.mapping->insert(targs.mapping->end(),
+                                              mv.begin(),
+                                              mv.end());
+                    }
+                    return true;
+                }
+                // next iteration
+                mv.clear();
+                targs.next();
+            }
+            // no successfull submatch found
+            return false;
         }
-    }
-    else
-    {
         // compare types
-        if (targs.at_end() == false && pargs.type() == targs.type())
+        else if (targs.at_end() == false && pargs.type() == targs.type())
         {
             // compare values if needed
             if (   pargs.has_value() == false
                 || pargs.type()->equal(pargs.value(), targs.value()))
             {
                 targs.push_mapping();
-                // submatch
-                return do_match(pargs.next(), targs.next());
+                // ok, go to next iteration
+            }
+            else
+            {
+                // values didn't match
+                return false;
             }
         }
+        else
+        {
+            // no match
+            return false;
+        }
+        // next iteration
+        pargs.next();
+        targs.next();
     }
-    return false;
 }
 
 } } // namespace cppa::detail

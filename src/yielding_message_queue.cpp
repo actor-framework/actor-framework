@@ -170,7 +170,9 @@ bool yielding_message_queue_impl::dequeue_impl(any_tuple& storage)
         // dequeue next message
         return false;
     }
-    storage = std::move(node->msg);
+    m_last_dequeued = std::move(node->msg);
+    m_last_sender = std::move(node->sender);
+    storage = m_last_dequeued;
     return true;
 }
 
@@ -194,7 +196,8 @@ yielding_message_queue_impl::dq(std::unique_ptr<queue_node>& node,
     auto imd = rules.get_intermediate(node->msg);
     if (imd)
     {
-        m_last_dequeued = node->msg;
+        m_last_dequeued = std::move(node->msg);
+        m_last_sender = std::move(node->sender);
         // restore mailbox before invoking imd
         if (!buffer.empty()) m_queue.push_front(std::move(buffer));
         imd->invoke();
@@ -221,6 +224,7 @@ bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,
     switch (dq(node, rules, buffer))
     {
         case done:
+        {
             if (m_has_pending_timeout_request)
             {
                 // expire pending request
@@ -228,14 +232,14 @@ bool yielding_message_queue_impl::dequeue_impl(timed_invoke_rules& rules,
                 m_has_pending_timeout_request = false;
             }
             return true;
-
+        }
         case timeout_occured:
-            rules.handle_timeout();
+        {
             m_has_pending_timeout_request = false;
+            rules.handle_timeout();
             return true;
-
-        case indeterminate:
-            return false;
+        }
+        default: break;
     }
     return false;
 }
