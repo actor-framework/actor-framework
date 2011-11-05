@@ -63,32 +63,37 @@ enum filter_result
 yielding_message_queue_impl::filter_result
 yielding_message_queue_impl::filter_msg(const any_tuple& msg)
 {
-    if (   m_trap_exit == false
-        && msg.size() == 2
-        && m_atom_value_uti == &(msg.utype_info_at(0)))
+    if (msg.size() == 2 && m_atom_value_uti == &(msg.utype_info_at(0)))
     {
-        if (*reinterpret_cast<const atom_value*>(msg.at(0)) == atom(":Exit"))
+        switch ((std::uint64_t) *reinterpret_cast<const atom_value*>(msg.at(0)))
         {
-            if (m_ui32_uti == &(msg.utype_info_at(1)))
+            case atom(":Exit"):
             {
-                auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-                if (why != exit_reason::normal)
+                if (m_trap_exit == false)
                 {
-                    self()->quit(why);
+                    if (m_ui32_uti == &(msg.utype_info_at(1)))
+                    {
+                        auto why = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+                        if (why != exit_reason::normal)
+                        {
+                            self()->quit(why);
+                        }
+                        return normal_exit_signal;
+                    }
                 }
-                return normal_exit_signal;
+                break;
             }
-        }
-    }
-    if (   msg.size() == 2
-        && m_atom_value_uti == &(msg.utype_info_at(0))
-        && atom(":Timeout") == *reinterpret_cast<const atom_value*>(msg.at(0)))
-    {
-        if (m_ui32_uti == &(msg.utype_info_at(1)))
-        {
-            auto id = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-            return (id == m_active_timeout_id) ? timeout_message
-                                               : expired_timeout_message;
+            case atom(":Timeout"):
+            {
+                if (m_ui32_uti == &(msg.utype_info_at(1)))
+                {
+                    auto id = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+                    return (id == m_active_timeout_id) ? timeout_message
+                                                       : expired_timeout_message;
+                }
+                break;
+            }
+            default: break; /* nop */
         }
     }
     return ordinary_message;
