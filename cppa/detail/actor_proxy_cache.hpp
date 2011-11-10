@@ -32,8 +32,9 @@ class actor_proxy_cache
 
  public:
 
+    // this callback is called if a new proxy instance is created
     template<typename F>
-    void set_callback(F&& cb)
+    void set_new_proxy_callback(F&& cb)
     {
         m_new_cb = std::forward<F>(cb);
     }

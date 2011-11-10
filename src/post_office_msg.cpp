@@ -25,27 +25,45 @@ post_office_msg::post_office_msg(native_socket_t arg0,
                                  const actor_proxy_ptr& arg2,
                                  std::unique_ptr<attachable>&& arg3)
     : next(nullptr)
-    , m_is_add_peer_msg(true)
+    , m_type(add_peer_type)
 {
     new (&m_add_peer_msg) add_peer(arg0, arg1, arg2, std::move(arg3));
 }
 
 post_office_msg::post_office_msg(native_socket_t arg0, const actor_ptr& arg1)
     : next(nullptr)
-    , m_is_add_peer_msg(false)
+    , m_type(add_server_socket_type)
 {
     new (&m_add_server_socket) add_server_socket(arg0, arg1);
 }
 
+post_office_msg::post_office_msg(const actor_proxy_ptr& proxy_ptr)
+    : next(nullptr)
+    , m_type(proxy_exited_type)
+{
+    new (&m_proxy_exited) proxy_exited(proxy_ptr);
+}
+
 post_office_msg::~post_office_msg()
 {
-    if (m_is_add_peer_msg)
+    switch (m_type)
     {
-        m_add_peer_msg.~add_peer();
-    }
-    else
-    {
-        m_add_server_socket.~add_server_socket();
+        case add_peer_type:
+        {
+            m_add_peer_msg.~add_peer();
+            break;
+        }
+        case add_server_socket_type:
+        {
+            m_add_server_socket.~add_server_socket();
+            break;
+        }
+        case proxy_exited_type:
+        {
+            m_proxy_exited.~proxy_exited();
+            break;
+        }
+        default: throw std::logic_error("invalid post_office_msg type");
     }
 }
 

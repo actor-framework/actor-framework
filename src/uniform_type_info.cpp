@@ -649,7 +649,7 @@ class uniform_type_info_map_helper
         insert(d, new channel_ptr_tinfo, { raw_name<channel_ptr>() });
         //insert(d, new message_tinfo, { raw_name<any_tuple>() });
         insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
-        insert(d, new addr_msg_tinfo, { raw_name<addr_msg_tinfo>() });
+        insert(d, new addr_msg_tinfo, {raw_name<detail::addressed_message>()});
         insert<float>(d);
         insert<cppa::util::void_type>(d);
         if (sizeof(double) == sizeof(long double))

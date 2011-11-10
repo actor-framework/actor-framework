@@ -56,11 +56,7 @@ mailman_job::~mailman_job()
 
 /*
 // implemented in post_office.cpp
-util::single_reader_queue<mailman_job>& mailman_queue()
-{
-    return *s_queue;
-    //return *(s_mailman_manager.m_queue);
-}
+util::single_reader_queue<mailman_job>& mailman_queue();
 */
 
 // known issues: send() should be asynchronous and select() should be used

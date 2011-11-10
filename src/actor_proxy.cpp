@@ -38,22 +38,27 @@ void actor_proxy::enqueue(actor* sender, any_tuple&& msg)
 
 void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
 {
+    /*
     if (msg.size() > 0 && msg.utype_info_at(0) == typeid(atom_value))
     {
         if (msg.size() == 2 && msg.utype_info_at(1) == typeid(actor_ptr))
         {
             switch (to_int(msg.get_as<atom_value>(0)))
             {
+                // received via post_office
                 case to_int(atom(":Link")):
                 {
                     auto s = msg.get_as<actor_ptr>(1);
-                    link_to(s);
+                    (void) link_to_impl(s);
+                    //link_to(s);
                     return;
                 }
+                // received via post_office
                 case to_int(atom(":Unlink")):
                 {
                     auto s = msg.get_as<actor_ptr>(1);
-                    unlink_from(s);
+                    (void) unlink_from_impl(s);
+                    //unlink_from(s);
                     return;
                 }
                 default: break;
@@ -66,6 +71,15 @@ void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
             cleanup(msg.get_as<std::uint32_t>(1));
             return;
         }
+    }
+    */
+    if (   msg.size() == 2
+        && msg.utype_info_at(0) == typeid(atom_value)
+        && msg.get_as<atom_value>(0) == atom(":KillProxy")
+        && msg.utype_info_at(1) == typeid(std::uint32_t))
+    {
+        cleanup(msg.get_as<std::uint32_t>(1));
+        return;
     }
     forward_message(parent_process_ptr(), sender, msg);
 }

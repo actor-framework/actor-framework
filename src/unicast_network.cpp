@@ -88,7 +88,7 @@ void publish(actor_ptr& whom, std::uint16_t port)
     {
         throw network_exception("could not create server socket");
     }
-    // closes the socket if an exception occurs
+    // sguard closes the socket if an exception occurs
     socket_guard sguard(sockfd);
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;

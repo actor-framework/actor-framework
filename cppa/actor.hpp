@@ -172,6 +172,8 @@ class actor : public channel
      */
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 
+    inline bool is_proxy() const { return m_is_proxy; }
+
 };
 
 /**
