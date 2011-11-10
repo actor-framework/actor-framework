@@ -44,6 +44,57 @@ size_t test__tuple()
 {
 
     CPPA_TEST(test__tuple);
+
+    bool p1_invoked = false;
+    bool p2_invoked = false;
+    bool p3_invoked = false;
+    bool p4_invoked = false;
+
+    auto reset_invoke_states = [&]() {
+        p1_invoked = p2_invoked = p3_invoked = p4_invoked = false;
+    };
+
+    auto patterns =
+    (
+        on<int, anything, int>() >> [&](int v1, int v2)
+        {
+            CPPA_CHECK_EQUAL(v1, 1);
+            CPPA_CHECK_EQUAL(v2, 3);
+            p1_invoked = true;
+        },
+        on<std::string>() >> [&](const std::string& str)
+        {
+            CPPA_CHECK_EQUAL(str, "hello foo");
+            p2_invoked = true;
+        },
+        on(std::string("1"), val<int>(), any_vals) >> [&]()
+        {
+            p3_invoked = true;
+        },
+        //on<int, std::string, anything>() >> [&](const std::string& str)
+        on(1, val<std::string>(), any_vals) >> [&](const std::string& str)
+        {
+            CPPA_CHECK_EQUAL(str, "2");
+            p4_invoked = true;
+        }
+    );
+
+    patterns(make_tuple(1, "2", 3));
+    CPPA_CHECK(p1_invoked);
+    reset_invoke_states();
+
+    patterns(make_tuple("hello foo"));
+    CPPA_CHECK(p2_invoked);
+    reset_invoke_states();
+
+    patterns(make_tuple("1", 2, 3));
+    CPPA_CHECK(p3_invoked);
+    reset_invoke_states();
+
+    patterns(make_tuple(1, "2", "3"));
+    CPPA_CHECK(p4_invoked);
+    reset_invoke_states();
+
 /*
     // test of filter_type_list
     typedef filter_type_list<any_type,

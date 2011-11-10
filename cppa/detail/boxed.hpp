@@ -24,6 +24,20 @@ struct boxed<anything>
     typedef anything type;
 };
 
+template<typename T>
+struct is_boxed
+{
+    static const bool value = false;
+};
+
+template<typename T>
+struct is_boxed< util::wrapped<T> >
+{
+    static const bool value = true;
+};
+
+
+
 } } // namespace cppa::detail
 
 #endif // BOXED_HPP

@@ -28,25 +28,36 @@ void fill_uti_vec(OutputIterator& ii)
     fill_uti_vec<OutputIterator, T1, Tn...>(++ii);
 }
 
-template<typename DataTuple, typename T0>
+template<typename T0>
 struct fill_vecs_util
 {
+    template<typename DataTuple>
     inline static void _(size_t pos,
                          size_t dt_size,
+                         bool* dt_invalids,
                          const DataTuple& dt,
                          const cppa::uniform_type_info** utis,
                          const void** data_ptrs)
     {
         utis[pos] = uniform_typeid<T0>();
-        data_ptrs[pos] = (pos < dt_size) ? dt.at(pos) : nullptr;
+        if (pos < dt_size && dt_invalids[pos] == false)
+        {
+            data_ptrs[pos] = dt.at(pos);
+        }
+        else
+        {
+            data_ptrs[pos] = nullptr;
+        }
     }
 };
 
-template<typename DataTuple>
-struct fill_vecs_util<DataTuple, anything>
+template<>
+struct fill_vecs_util<anything>
 {
+    template<typename DataTuple>
     inline static void _(size_t pos,
                          size_t,
+                         bool*,
                          const DataTuple&,
                          const cppa::uniform_type_info** utis,
                          const void** data_ptrs)
@@ -57,38 +68,28 @@ struct fill_vecs_util<DataTuple, anything>
 };
 
 template<typename DataTuple, typename T0>
-struct fill_vecs_util<DataTuple, util::wrapped<T0>>
-{
-    inline static void _(size_t pos,
-                         size_t,
-                         const DataTuple&,
-                         const cppa::uniform_type_info** utis,
-                         const void** data_ptrs)
-    {
-        utis[pos] = uniform_typeid<T0>();
-        data_ptrs[pos] = nullptr;
-    }
-};
-
-template<typename DataTuple, typename T0>
 void fill_vecs(size_t pos,
                size_t dt_size,
+               bool* dt_invalids,
                const DataTuple& dt,
                const cppa::uniform_type_info** utis,
                const void** data_ptrs)
 {
-    fill_vecs_util<DataTuple, T0>::_(pos, dt_size, dt, utis, data_ptrs);
+    fill_vecs_util<T0>::_(pos, dt_size, dt_invalids, dt, utis, data_ptrs);
 }
 
 template<typename DataTuple, typename T0, typename T1, typename... Tn>
 void fill_vecs(size_t pos,
                size_t dt_size,
+               bool* dt_invalids,
                const DataTuple& dt,
                const cppa::uniform_type_info** utis,
                const void** data_ptrs)
 {
-    fill_vecs_util<DataTuple, T0>::_(pos, dt_size, dt, utis, data_ptrs);
-    fill_vecs<DataTuple, T1, Tn...>(pos + 1, dt_size, dt, utis, data_ptrs);
+    fill_vecs_util<T0>::_(pos, dt_size, dt_invalids,
+                          dt, utis, data_ptrs);
+    fill_vecs<DataTuple, T1, Tn...>(pos + 1, dt_size, dt_invalids,
+                                    dt, utis, data_ptrs);
 }
 
 struct pattern_arg

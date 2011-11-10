@@ -51,6 +51,9 @@ class invoke_rule_builder
 
     pattern_ptr_type m_pattern;
 
+    typedef typename pattern_type::tuple_view_type tuple_view_type;
+
+/*
     typedef cppa::util::type_list<TypeList...> plain_types;
 
     typedef typename cppa::util::filter_type_list<anything, plain_types>::type
@@ -58,6 +61,7 @@ class invoke_rule_builder
 
     typedef typename cppa::tuple_view_type_from_type_list<filtered_types>::type
             tuple_view_type;
+*/
 
  public:
 
@@ -86,79 +90,33 @@ constexpr typename detail::boxed<T>::type val()
     return typename detail::boxed<T>::type();
 }
 
+//constexpr detail::boxed<anything> any_vals = detail::boxed<anything>();
+constexpr anything any_vals = anything();
+
 template<typename Arg0, typename... Args>
 detail::invoke_rule_builder<typename detail::unboxed<Arg0>::type,
                             typename detail::unboxed<Args>::type...>
 on(const Arg0& arg0, const Args&... args)
 {
     return { arg0, args... };
-    /*
-    typedef util::type_list<typename detail::unboxed<Arg0>::type,
-                            typename detail::unboxed<Args>::type...> mt;
-
-    typedef util::type_list<Arg0, Args...> vt;
-
-    typedef detail::tdata<any_tuple, std::vector<size_t>*, Arg0 , Args...>
-            arg_tuple_type;
-
-    arg_tuple_type arg_tuple(any_tuple(), nullptr, arg0, args...);
-
-    return
-    {
-        [arg_tuple](const any_tuple& data, std::vector<size_t>* mapping) -> bool
-        {
-            arg_tuple_type& tref = const_cast<arg_tuple_type&>(arg_tuple);
-            cppa::get_ref<0>(tref) = data;
-            cppa::get_ref<1>(tref) = mapping;
-            return invoke(&detail::match_util<mt,vt>::_, tref);
-        }
-    };
-    */
 }
 
 template<typename... TypeList>
 detail::invoke_rule_builder<TypeList...> on()
 {
     return { };
-    /*
-    return
-    {
-        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
-        {
-            return match<TypeList...>(data, mv);
-        }
-    };
-    */
 }
 
 template<atom_value A0, typename... TypeList>
 detail::invoke_rule_builder<atom_value, TypeList...> on()
 {
     return { A0 };
-    /*
-    return
-    {
-        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
-        {
-            return match<atom_value, TypeList...>(data, mv, A0);
-        }
-    };
-    */
 }
 
 template<atom_value A0, atom_value A1, typename... TypeList>
 detail::invoke_rule_builder<atom_value, atom_value, TypeList...> on()
 {
     return { A0, A1 };
-    /*
-    return
-    {
-        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
-        {
-            return match<atom_value, atom_value, TypeList...>(data, mv, A0, A1);
-        }
-    };
-    */
 }
 
 template<atom_value A0, atom_value A1, atom_value A2, typename... TypeList>
@@ -166,16 +124,6 @@ detail::invoke_rule_builder<atom_value, atom_value,
                             atom_value, TypeList...> on()
 {
     return { A0, A1, A2 };
-    /*
-    return
-    {
-        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
-        {
-            return match<atom_value, atom_value,
-                         atom_value, TypeList...>(data, mv, A0, A1, A2);
-        }
-    };
-    */
 }
 
 template<atom_value A0, atom_value A1,
@@ -185,17 +133,6 @@ detail::invoke_rule_builder<atom_value, atom_value, atom_value,
                             atom_value, TypeList...> on()
 {
     return { A0, A1, A2, A3 };
-    /*
-
-    return
-    {
-        [](const any_tuple& data, std::vector<size_t>* mv) -> bool
-        {
-            return match<atom_value, atom_value, atom_value,
-                         atom_value, TypeList...>(data, mv, A0, A1, A2, A3);
-        }
-    };
-    */
 }
 
 template<class Rep, class Period>

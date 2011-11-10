@@ -54,7 +54,11 @@ class pattern<T0, Tn...>
     template<typename Arg0, typename... Args>
     pattern(const Arg0& arg0, const Args&... args) : m_data(arg0, args...)
     {
-        detail::fill_vecs<decltype(m_data), T0, Tn...>(0, sizeof...(Args) + 1,
+        bool invalid_args[] = { detail::is_boxed<Arg0>::value,
+                                detail::is_boxed<Args>::value... };
+        detail::fill_vecs<decltype(m_data), T0, Tn...>(0,
+                                                       sizeof...(Args) + 1,
+                                                       invalid_args,
                                                        m_data,
                                                        m_utis, m_data_ptr);
     }

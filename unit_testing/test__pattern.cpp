@@ -14,7 +14,7 @@ size_t test__pattern()
 
     auto x = make_tuple(atom("FooBar"), 42, "hello world");
 
-    pattern<atom_value, int, std::string> p0;
+    pattern<atom_value, int, std::string> p0{util::wrapped<atom_value>()};
     pattern<atom_value, int, std::string> p1(atom("FooBar"));
     pattern<atom_value, int, std::string> p2(atom("FooBar"), 42);
     pattern<atom_value, int, std::string> p3(atom("FooBar"), 42, "hello world");

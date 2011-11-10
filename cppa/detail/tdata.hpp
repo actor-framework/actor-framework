@@ -4,6 +4,7 @@
 #include "cppa/get.hpp"
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
@@ -60,6 +61,13 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     // allow partial initialization
     template<typename... Args>
     tdata(const Head& v0, const Args&... vals) : super(vals...), head(v0) { }
+
+    // allow initialization with wrapped<Head> (uses the default constructor)
+    template<typename... Args>
+    tdata(const util::wrapped<Head>&, const Args&... vals)
+        : super(vals...), head()
+    {
+    }
 
     inline tdata<Tail...>& tail()
     {
