@@ -228,3 +228,5 @@ cppa/pattern.hpp
 cppa/detail/pattern_details.hpp
 unit_testing/test__pattern.cpp
 cppa/util/fixed_vector.hpp
+cppa/detail/implicit_conversions.hpp
+cppa/util/is_array_of.hpp

@@ -20,59 +20,13 @@
 #include "cppa/util/is_legal_tuple_type.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
-
-namespace cppa { class local_actor; }
-
-namespace cppa { namespace detail {
-
-/**
- * @brief <tt>is_array_of<T,U>::value == true</tt> if and only
- *        if T is an array of U.
- */
-template<typename T, typename U>
-struct is_array_of
-{
-    typedef typename std::remove_all_extents<T>::type step1_type;
-    typedef typename std::remove_cv<step1_type>::type step2_type;
-    static const bool value =    std::is_array<T>::value
-                              && std::is_same<step2_type, U>::value;
-};
-
-
-template<typename T>
-struct chars_to_string
-{
-    typedef typename util::replace_type<T, std::string,
-                                        std::is_same<T, const char*>,
-                                        std::is_same<T, char*>,
-                                        is_array_of<T, char>,
-                                        is_array_of<T, const char> >::type
-            subtype1;
-
-    typedef typename util::replace_type<subtype1, std::u16string,
-                                        std::is_same<subtype1, const char16_t*>,
-                                        std::is_same<subtype1, char16_t*>,
-                                        is_array_of<subtype1, char16_t>>::type
-            subtype2;
-
-    typedef typename util::replace_type<subtype2, std::u32string,
-                                        std::is_same<subtype2, const char32_t*>,
-                                        std::is_same<subtype2, char32_t*>,
-                                        is_array_of<subtype2, char32_t>>::type
-            subtype3;
-
-    typedef typename util::replace_type<subtype3, actor_ptr,
-                                        std::is_same<actor*,T>,
-                                        std::is_same<local_actor*,T>>::type
-            type;
-};
-
-} } // namespace cppa::detail
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 
 // forward declaration
 class any_tuple;
+class local_actor;
 
 /**
  * @brief Describes a fixed-length tuple.
@@ -189,8 +143,8 @@ struct tuple_type_from_type_list<util::type_list<Types...>>
 
 template<typename... Types>
 typename tuple_type_from_type_list<
-        typename util::type_list_apply<util::type_list<Types...>,
-                                       detail::chars_to_string>::type>::type
+    typename util::type_list_apply<util::type_list<Types...>,
+                                   detail::implicit_conversions>::type>::type
 make_tuple(const Types&... args)
 {
     return { args... };

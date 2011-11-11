@@ -103,6 +103,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/empty_tuple.hpp \
   cppa/detail/get_behavior.hpp \
   cppa/detail/group_manager.hpp \
+  cppa/detail/implicit_conversions.hpp \
   cppa/detail/intermediate.hpp \
   cppa/detail/invokable.hpp \
   cppa/detail/list_member.hpp \
@@ -184,6 +185,7 @@ nobase_library_include_HEADERS = \
   cppa/util/fixed_vector.hpp \
   cppa/util/has_copy_member_fun.hpp \
   cppa/util.hpp \
+  cppa/util/is_array_of.hpp \
   cppa/util/if_else.hpp \
   cppa/util/is_comparable.hpp \
   cppa/util/is_copyable.hpp \

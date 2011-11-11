@@ -42,57 +42,75 @@ void fun(const std::string&)
 
 size_t test__tuple()
 {
-
     CPPA_TEST(test__tuple);
-
-    bool p1_invoked = false;
-    bool p2_invoked = false;
-    bool p3_invoked = false;
-    bool p4_invoked = false;
-
-    auto reset_invoke_states = [&]() {
-        p1_invoked = p2_invoked = p3_invoked = p4_invoked = false;
+    constexpr size_t num_patterns = 6;
+    bool pattern_invoked[num_patterns];
+    auto reset_invoke_states = [&]()
+    {
+        for (size_t i = 0; i < num_patterns; ++i)
+        {
+            pattern_invoked[i] = false;
+        }
     };
-
+    reset_invoke_states();
     auto patterns =
     (
         on<int, anything, int>() >> [&](int v1, int v2)
         {
             CPPA_CHECK_EQUAL(v1, 1);
             CPPA_CHECK_EQUAL(v2, 3);
-            p1_invoked = true;
+            pattern_invoked[0] = true;
         },
         on<std::string>() >> [&](const std::string& str)
         {
             CPPA_CHECK_EQUAL(str, "hello foo");
-            p2_invoked = true;
+            pattern_invoked[1] = true;
         },
-        on(std::string("1"), val<int>(), any_vals) >> [&]()
+        on("1", val<int>(), any_vals) >> [&](int value)
         {
-            p3_invoked = true;
+            CPPA_CHECK_EQUAL(value, 2);
+            pattern_invoked[2] = true;
         },
-        //on<int, std::string, anything>() >> [&](const std::string& str)
         on(1, val<std::string>(), any_vals) >> [&](const std::string& str)
         {
             CPPA_CHECK_EQUAL(str, "2");
-            p4_invoked = true;
+            pattern_invoked[3] = true;
+        },
+        on<atom("Foo"), int>() >> [&](int value)
+        {
+            CPPA_CHECK_EQUAL(value, 1);
+            pattern_invoked[4] = true;
+        },
+        on_param_match() >> [&](double v1, const float& v2)
+        {
+            CPPA_CHECK_EQUAL(v1, 1.0);
+            CPPA_CHECK_EQUAL(v2, 2.0f);
+            pattern_invoked[5] = true;
         }
     );
 
     patterns(make_tuple(1, "2", 3));
-    CPPA_CHECK(p1_invoked);
+    CPPA_CHECK(pattern_invoked[0]);
     reset_invoke_states();
 
     patterns(make_tuple("hello foo"));
-    CPPA_CHECK(p2_invoked);
+    CPPA_CHECK(pattern_invoked[1]);
     reset_invoke_states();
 
     patterns(make_tuple("1", 2, 3));
-    CPPA_CHECK(p3_invoked);
+    CPPA_CHECK(pattern_invoked[2]);
     reset_invoke_states();
 
     patterns(make_tuple(1, "2", "3"));
-    CPPA_CHECK(p4_invoked);
+    CPPA_CHECK(pattern_invoked[3]);
+    reset_invoke_states();
+
+    patterns(make_tuple(atom("Foo"), 1));
+    CPPA_CHECK(pattern_invoked[4]);
+    reset_invoke_states();
+
+    patterns(make_tuple(1.0, 2.0f));
+    CPPA_CHECK(pattern_invoked[5]);
     reset_invoke_states();
 
 /*

@@ -11,14 +11,18 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
 
+#include "cppa/util/type_list.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/eval_first_n.hpp"
+#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/ref_counted_impl.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa { namespace detail {
 
@@ -46,22 +50,19 @@ template<typename... TypeList>
 class invoke_rule_builder
 {
 
-    typedef pattern<TypeList...> pattern_type;
+    typedef typename util::type_list_apply<util::type_list<TypeList...>,
+                                           detail::implicit_conversions>::type
+            converted_type_list;
+
+    typedef typename pattern_type_from_type_list<converted_type_list>::type
+            pattern_type;
+
+    //typedef pattern<TypeList...> pattern_type;
     typedef std::unique_ptr<pattern_type> pattern_ptr_type;
 
     pattern_ptr_type m_pattern;
 
     typedef typename pattern_type::tuple_view_type tuple_view_type;
-
-/*
-    typedef cppa::util::type_list<TypeList...> plain_types;
-
-    typedef typename cppa::util::filter_type_list<anything, plain_types>::type
-            filtered_types;
-
-    typedef typename cppa::tuple_view_type_from_type_list<filtered_types>::type
-            tuple_view_type;
-*/
 
  public:
 
@@ -80,6 +81,29 @@ class invoke_rule_builder
 
 };
 
+class on_the_fly_invoke_rule_builder
+{
+
+ public:
+
+    template<typename F>
+    invoke_rules operator>>(F&& f)
+    {
+        typedef typename util::get_callable_trait<F>::type ctrait;
+        typedef typename ctrait::arg_types raw_types;
+        static_assert(raw_types::size > 0, "functor has no arguments");
+        typedef typename util::type_list_apply<raw_types, util::rm_ref>::type
+                types;
+        typedef typename pattern_type_from_type_list<types>::type
+                pattern_type;
+        typedef typename pattern_type::tuple_view_type tuple_view_type;
+        typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
+        std::unique_ptr<pattern_type> pptr(new pattern_type);
+        return invokable_ptr(new impl(std::move(pptr), std::forward<F>(f)));
+    }
+
+};
+
 } } // cppa::detail
 
 namespace cppa {
@@ -92,6 +116,11 @@ constexpr typename detail::boxed<T>::type val()
 
 //constexpr detail::boxed<anything> any_vals = detail::boxed<anything>();
 constexpr anything any_vals = anything();
+
+constexpr detail::on_the_fly_invoke_rule_builder on_param_match()
+{
+    return { };
+}
 
 template<typename Arg0, typename... Args>
 detail::invoke_rule_builder<typename detail::unboxed<Arg0>::type,

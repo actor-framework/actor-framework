@@ -9,6 +9,9 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/type_list.hpp"
+#include "cppa/util/type_list_apply.hpp"
+
 #include "cppa/detail/tdata.hpp"
 #include "cppa/detail/pattern_details.hpp"
 
@@ -79,6 +82,15 @@ class pattern<T0, Tn...>
     const cppa::uniform_type_info* m_utis[size];
     const void* m_data_ptr[size];
 
+};
+
+template<typename TypeList>
+struct pattern_type_from_type_list;
+
+template<typename... Types>
+struct pattern_type_from_type_list<util::type_list<Types...>>
+{
+    typedef pattern<Types...> type;
 };
 
 } // namespace cppa
