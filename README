@@ -5,3 +5,11 @@ This project is in an early / experimental stage.
 It makes use of variadic templates, unrestricted unions,
 type inference and other C++11 features.
 Thus, GCC in version >= 4.6 is required to compile libcppa.
+You'll also need automake and the boost thread library.
+
+
+Building libcppa:
+
+* autoreconf -i
+* ./configure
+* make
