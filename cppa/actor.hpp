@@ -172,7 +172,7 @@ class actor : public channel
      */
     static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
 
-    inline bool is_proxy() const { return m_is_proxy; }
+    inline bool is_proxy() const;
 
 };
 
@@ -180,10 +180,6 @@ class actor : public channel
  * @brief A smart pointer type that manages instances of {@link actor}.
  */
 typedef intrusive_ptr<actor> actor_ptr;
-
-serializer& operator<<(serializer&, const actor_ptr&);
-
-deserializer& operator>>(deserializer&, actor_ptr&);
 
 /******************************************************************************
  *             inline and template member function implementations            *
@@ -202,6 +198,11 @@ inline process_information_ptr actor::parent_process_ptr() const
 inline std::uint32_t actor::id() const
 {
     return m_id;
+}
+
+inline bool actor::is_proxy() const
+{
+    return m_is_proxy;
 }
 
 template<typename T>

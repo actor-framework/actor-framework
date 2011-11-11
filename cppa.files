@@ -9,7 +9,6 @@ cppa/util/is_one_of.hpp
 cppa/util/conjunction.hpp
 cppa/util/disjunction.hpp
 unit_testing/test.hpp
-unit_testing/test__a_matches_b.cpp
 cppa/uniform_type_info.hpp
 src/uniform_type_info.cpp
 cppa/config.hpp

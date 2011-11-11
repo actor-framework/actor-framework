@@ -57,7 +57,7 @@
 #include "cppa/detail/receive_loop_helper.hpp"
 
 /**
- * @author Dominik Charousset <dominik.charousset\@haw-hamburg.de>
+ * @author Dominik Charousset <dominik.charousset (at) haw-hamburg.de>
  *
  * @mainpage libcppa
  *
@@ -82,12 +82,70 @@
  *        functions of this namespace could change even in minor
  *        updates of the library and should not be used by outside of libcppa.
  *
- * @defgroup ReceiveMessages Receive messages
- * @brief
+ * @defgroup CopyOnWrite Copy-on-write optimization.
+ * @p libcppa uses a copy-on-write optimization for its message
+ * passing implementation.
+ *
+ * {@link tuple Tuples} should @b always be used used with by-value semantic,
+ * since tuples use a copy-on-write smart pointer internally. Let's assume two
+ * tuple @p x and @p y, whereas @p y is a copy of @p x:
+ *
+ * @code
+ * auto x = make_tuple(1, 2, 3);
+ * auto y = x;
+ * @endcode
+ *
+ * Those two tuples initially point to the same data (the addresses of the
+ * first element of @p x is equal to the address of the first element
+ * of @p y):
+ *
+ * @code
+ * assert(&(get<0>(x)) == &(get<0>(y)));
+ * @endcode
+ *
+ * <tt>get<0>(x)</tt> returns a const-reference to the first element of @p x.
+ * The function @p get does not have a const-overload to avoid
+ * unintended copies. The function @p get_ref could be used to
+ * modify tuple elements. A call to this function detaches
+ * the tuple by copying the data before modifying it if there are two or more
+ * references to the data:
+ *
+ * @code
+ * // detaches x from y
+ * get_ref<0>(x) = 42;
+ * // x and y no longer point to the same data
+ * assert(&(get<0>(x)) != &(get<0>(y)));
+ * @endcode
+ *
+ * @defgroup MessageHandling Send and receive messages
  *
  * @section UsingOwnTypes Using own types in messages
- * @brief
  *
+ * @defgroup ImplicitConversion Implicit type conversions.
+ *
+ * The message passing of @p libcppa prohibits pointers in messages because
+ * it enforces network transparent messaging.
+ * Unfortunately, string literals in @p C++ have the type <tt>const char*</tt>,
+ * resp. <tt>const char[]</tt>. Since @p libcppa is a user-friendly library,
+ * it silently converts string literals and C-strings to @p std::string objects.
+ * It also converts unicode literals to the corresponding STL container.
+ *
+ * A few examples:
+ * @code
+ * // sends an std::string containing "hello actor!" to itself
+ * send(self(), "hello actor!");
+ *
+ * const char* cstring = "cstring";
+ * // sends an std::string containing "cstring" to itself
+ * send(self(), cstring);
+ *
+ * // sends an std::u16string containing the UTF16 string "hello unicode world!"
+ * send(self(), u"hello unicode world!");
+ *
+ * // x has the type tuple<std::string, std::string>
+ * auto x = make_tuple("hello", "tuple");
+ *
+ * @endcode
  */
 
 

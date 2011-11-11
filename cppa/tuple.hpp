@@ -29,17 +29,15 @@ class any_tuple;
 class local_actor;
 
 /**
- * @brief Describes a fixed-length tuple.
+ * @ingroup CopyOnWrite
+ * @brief A fixed-length copy-on-write tuple.
  */
 template<typename... ElementTypes>
 class tuple
 {
 
-    //friend class any_tuple;
-
     template<size_t N, typename... Types>
     friend typename util::at<N, Types...>::type& get_ref(tuple<Types...>&);
-
 
  public:
 
@@ -58,79 +56,66 @@ class tuple
 
     cow_ptr<vals_t> m_vals;
 
-    static bool compare_vals(const detail::tdata<>& v0,
-                             const detail::tdata<>& v1)
-    {
-        return true;
-    }
-
-    template<typename Vals0, typename Vals1>
-    static bool compare_vals(const Vals0& v0, const Vals1& v1)
-    {
-        typedef typename Vals0::head_type lhs_type;
-        typedef typename Vals1::head_type rhs_type;
-        static_assert(util::is_comparable<lhs_type, rhs_type>::value,
-                      "Types are not comparable");
-        return v0.head == v1.head && compare_vals(v0.tail(), v1.tail());
-    }
-
  public:
 
-    // enable use of tuple as type_list
-    typedef typename element_types::head_type head_type;
-    typedef typename element_types::tail_type tail_type;
-
+    /**
+     * @brief Initializes each element with its default constructor.
+     */
     tuple() : m_vals(new vals_t)
     {
     }
 
+    /**
+     * @brief Initializes the tuple with @p args.
+     * @param args Initialization values.
+     */
     tuple(const ElementTypes&... args) : m_vals(new vals_t(args...))
     {
     }
 
-    size_t size() const
+    /**
+     * @brief Gets the size of this tuple.
+     * @returns <tt>sizeof...(ElementTypes)</tt>.
+     */
+    inline size_t size() const
     {
-        return m_vals->size();
+        return sizeof...(ElementTypes);
+        //return m_vals->size();
     }
 
-    const void* at(size_t p) const
+    /**
+     * @brief Gets a pointer to the internal data.
+     * @returns A const void pointer to the <tt>N</tt>th element.
+     */
+    inline const void* at(size_t p) const
     {
         return m_vals->at(p);
     }
 
-    const uniform_type_info* utype_at(size_t p) const
+    /**
+     * @brief Gets {@link uniform_type_info uniform type information}
+     *        of an element.
+     * @returns The uniform type of the <tt>N</tt>th element.
+     */
+    inline const uniform_type_info* utype_at(size_t p) const
     {
         return m_vals->utype_info_at(p);
     }
 
-    const cow_ptr<vals_t>& vals() const
+#   ifdef CPPA_DOCUMENTATION
+    /**
+     * @brief Gets the internal data.
+     * @returns A pointer to the internal data representation.
+     */
+    cow_ptr<InternalData> vals() const;
+#   else
+    inline const cow_ptr<vals_t>& vals() const
     {
         return m_vals;
     }
-
-    template<typename... Args>
-    bool equal_to(const tuple<Args...>& other) const
-    {
-        static_assert(sizeof...(ElementTypes) == sizeof...(Args),
-                      "Can't compare tuples of different size");
-        return compare_vals(vals()->data(), other.vals()->data());
-    }
+#   endif
 
 };
-
-template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type&
-get(const tuple<Types...>& t)
-{
-    return get<N>(t.vals()->data());
-}
-
-template<size_t N, typename... Types>
-typename util::at<N, Types...>::type&
-get_ref(tuple<Types...>& t)
-{
-    return get_ref<N>(t.m_vals->data_ref());
-}
 
 template<typename TypeList>
 struct tuple_type_from_type_list;
@@ -141,6 +126,55 @@ struct tuple_type_from_type_list<util::type_list<Types...>>
     typedef tuple<Types...> type;
 };
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @ingroup CopyOnWrite
+ * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.
+ * @param tup The tuple object.
+ * @returns A const-reference of type T, whereas T is the type of the
+ *          <tt>N</tt>th element of @p tup.
+ * @relates tuple
+ */
+template<size_t N, typename T>
+const T& get(const tuple<...>& tup);
+
+/**
+ * @ingroup CopyOnWrite
+ * @brief Gets a reference to the <tt>N</tt>th element of @p tup.
+ * @param tup The tuple object.
+ * @returns A reference of type T, whereas T is the type of the
+ *          <tt>N</tt>th element of @p tup.
+ * @note Detaches @p tup if there are two or more references to the tuple data.
+ * @relates tuple
+ */
+template<size_t N, typename T>
+T& get_ref(tuple<...>& tup);
+
+/**
+ * @ingroup ImplicitConversion
+ * @brief Creates a new tuple from @p args.
+ * @param args Values for the tuple elements.
+ * @returns A tuple object containing the values @p args.
+ * @relates tuple
+ */
+template<typename... Types>
+tuple<Types...> make_tuple(const Types&... args);
+
+#else
+
+template<size_t N, typename... Types>
+const typename util::at<N, Types...>::type& get(const tuple<Types...>& tup)
+{
+    return get<N>(tup.vals()->data());
+}
+
+template<size_t N, typename... Types>
+typename util::at<N, Types...>::type& get_ref(tuple<Types...>& tup)
+{
+    return get_ref<N>(tup.m_vals->data_ref());
+}
+
 template<typename... Types>
 typename tuple_type_from_type_list<
     typename util::type_list_apply<util::type_list<Types...>,
@@ -150,6 +184,15 @@ make_tuple(const Types&... args)
     return { args... };
 }
 
+#endif
+
+/**
+ * @brief Compares two tuples.
+ * @param lhs First tuple object.
+ * @param rhs Second tuple object.
+ * @returns @p true if @p lhs and @p rhs are equal; otherwise @p false.
+ * @relates tuple
+ */
 template<typename... LhsTypes, typename... RhsTypes>
 inline bool operator==(const tuple<LhsTypes...>& lhs,
                        const tuple<RhsTypes...>& rhs)
@@ -157,6 +200,13 @@ inline bool operator==(const tuple<LhsTypes...>& lhs,
     return util::compare_tuples(lhs, rhs);
 }
 
+/**
+ * @brief Compares two tuples.
+ * @param lhs First tuple object.
+ * @param rhs Second tuple object.
+ * @returns @p true if @p lhs and @p rhs are not equal; otherwise @p false.
+ * @relates tuple
+ */
 template<typename... LhsTypes, typename... RhsTypes>
 inline bool operator!=(const tuple<LhsTypes...>& lhs,
                        const tuple<RhsTypes...>& rhs)

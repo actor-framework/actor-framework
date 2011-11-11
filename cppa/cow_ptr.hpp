@@ -37,6 +37,10 @@ T* copy_of(const T* what, std::integral_constant<int, 2>)
 
 namespace cppa {
 
+/**
+ * @ingroup CopyOnWrite
+ * @brief A copy-on-write smart pointer implementation.
+ */
 template<typename T>
 class cow_ptr
 {

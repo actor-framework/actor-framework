@@ -47,6 +47,7 @@ std::cerr << err_msg << std::endl;                                             \
 ++cppa_ts.error_count
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) == (rhs_loc)))
+#define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) != (rhs_loc)))
 
 size_t test__yield_interface();
 size_t test__remote_actor(const char* app_path, bool is_client,
@@ -54,7 +55,6 @@ size_t test__remote_actor(const char* app_path, bool is_client,
 size_t test__ripemd_160();
 size_t test__uniform_type();
 size_t test__type_list();
-size_t test__a_matches_b();
 size_t test__atom();
 size_t test__tuple();
 size_t test__spawn();

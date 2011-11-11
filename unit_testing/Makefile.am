@@ -6,7 +6,6 @@ noinst_PROGRAMS = unit_tests
 unit_tests_SOURCES =    hash_of.cpp \
                         main.cpp \
                         ping_pong.cpp \
-                        test__a_matches_b.cpp \
                         test__atom.cpp \
                         test__intrusive_ptr.cpp \
                         test__local_group.cpp \
