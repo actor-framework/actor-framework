@@ -9,6 +9,7 @@ using std::make_pair;
 
 using namespace cppa;
 
+// a simple class using getter and setter member functions
 class foo
 {
 
@@ -35,39 +36,30 @@ class foo
 
 };
 
+// announce requires foo to have the equal operator implemented
 bool operator==(const foo& lhs, const foo& rhs)
 {
     return    lhs.a() == rhs.a()
            && lhs.b() == rhs.b();
 }
 
-struct bar
-{
-    foo f;
-    int i;
-};
-
-bool operator==(const bar& lhs, const bar& rhs)
-{
-    return    lhs.f == rhs.f
-           && lhs.i == rhs.i;
-}
-
 int main(int, char**)
 {
-    announce<bar>(compound_member(&bar::f,
-                                  make_pair(&foo::a, &foo::set_a),
-                                  make_pair(&foo::b, &foo::set_b)),
-                  &bar::i);
-    send(self(), bar{foo{1,2},3});
+    // if a class uses getter and setter member functions,
+    // we pass those to the announce function as { getter, setter } pairs.
+    announce<foo>(make_pair(&foo::a, &foo::set_a),
+                  make_pair(&foo::b, &foo::set_b));
+
+    // send a foo to ourselves ...
+    send(self(), foo{1,2});
     receive
     (
-        on<bar>() >> [](const bar& val)
+        // ... and receive it
+        on<foo>() >> [](const foo& val)
         {
-            cout << "bar(foo("
-                 << val.f.a() << ","
-                 << val.f.b() << "),"
-                 << val.i << ")"
+            cout << "foo("
+                 << val.a() << ","
+                 << val.b() << ")"
                  << endl;
         }
     );

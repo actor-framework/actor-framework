@@ -59,8 +59,9 @@ namespace cppa {
  */
 bool announce(const std::type_info& tinfo, uniform_type_info* utype);
 
+// deals with member pointer
 /**
- * @brief Creates meta informations for a non-trivial member.
+ * @brief Creates meta informations for a non-trivial member @p C.
  * @param c_ptr Pointer to the non-trivial member.
  * @param args "Sub-members" of @p c_ptr
  * @see {@link announce_example_4.cpp announce example 4}
@@ -72,6 +73,26 @@ compound_member(C Parent::*c_ptr, const Args&... args)
 {
     return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
 }
+
+// deals with getter returning a mutable reference
+template<class C, class Parent, typename... Args>
+std::pair<C& (Parent::*)(), util::abstract_uniform_type_info<C>*>
+compound_member(C& (Parent::*c_ptr)(), const Args&... args)
+{
+    return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
+}
+
+// deals with getter/setter pair
+template<class Parent, typename GRes,
+         typename SRes, typename SArg, typename... Args>
+std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
+          util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>
+compound_member(const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>& gspair,
+                const Args&... args)
+{
+    return { gspair, new detail::default_uniform_type_info_impl<typename util::rm_ref<GRes>::type>(args...) };
+}
+
 
 /**
  * @brief Adds a new type mapping for @p T to the libcppa type system.

@@ -43,5 +43,5 @@ CPPFLAGS="$ORIGINAL_CPPFLAGS"
 AC_ARG_VAR([NO_VERSIONED_INCLUDE_DIR], [set this to 1 in order to install headers into <prefix>/cppa/ rather than into <prefix>/cppa/<version>/cppa/])
 AM_CONDITIONAL([VERSIONED_INCLUDE_DIR], [test "x$NO_VERSIONED_INCLUDE_DIR" != "x1"])
 
-AC_CONFIG_FILES([Makefile unit_testing/Makefile libcppa.pc])
+AC_CONFIG_FILES([Makefile unit_testing/Makefile examples/Makefile libcppa.pc])
 AC_OUTPUT

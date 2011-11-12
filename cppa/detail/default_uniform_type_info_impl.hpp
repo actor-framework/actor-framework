@@ -229,6 +229,16 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         push_back(std::forward<Args>(args)...);
     }
 
+    // pr.first = getter / setter pair
+    // pr.second = meta object to handle pr.first
+    template<typename GRes, typename SRes, typename SArg, typename C, typename... Args>
+    void push_back(const std::pair<std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>, util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>& pr,
+                   Args&&... args)
+    {
+        m_members.push_back({ pr.second, pr.first.first, pr.first.second });
+        push_back(std::forward<Args>(args)...);
+    }
+
     // pr.first = getter member const function pointer
     // pr.second = setter member function pointer
     template<typename GRes, typename SRes, typename SArg, class C, typename... Args>
@@ -302,14 +312,6 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
  public:
-
-    /*
-    template<typename... Args>
-    default_uniform_type_info_impl(const Args&... args)
-    {
-        push_back(args...);
-    }
-    */
 
     template<typename... Args>
     default_uniform_type_info_impl(Args&&... args)
