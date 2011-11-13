@@ -44,4 +44,10 @@ Makefile
 unit_testing/Makefile
 libcppa.so*
 blob/cppatest
-callgrind.out.*
+callgrind.out*
+examples/announce_example_1
+examples/announce_example_2
+examples/announce_example_3
+examples/announce_example_4
+examples/announce_example_5
+examples/hello_world_example

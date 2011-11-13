@@ -234,3 +234,4 @@ examples/announce_example_2.cpp
 examples/announce_example_3.cpp
 examples/announce_example_4.cpp
 examples/announce_example_5.cpp
+examples/hello_world_example.cpp

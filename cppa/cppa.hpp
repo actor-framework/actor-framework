@@ -64,6 +64,19 @@
  * @section Intro Introduction
  *
  * This library provides an implementation of the Actor model for C++.
+ * It uses a network transparent messaging system to ease development
+ * of both concurrent and distributed software using C++.
+ *
+ * @p libcppa uses a thread pool to schedule actors by default.
+ * Individual actors can be spawned (created) with a special flag to run in
+ * an own thread if needed.
+ *
+ * In @p libcppa, each context is an actor. Even main is implicitly
+ * converted to an actor if needed.
+ *
+ * @subsection IntroHelloWorld Hello World Example
+ *
+ * @include hello_world_example.cpp
  *
  * @section GettingStarted Getting started with libcppa
  *
@@ -86,7 +99,7 @@
  * @p libcppa uses a copy-on-write optimization for its message
  * passing implementation.
  *
- * {@link tuple Tuples} should @b always be used used with by-value semantic,
+ * {@link tuple Tuples} should @b always be used with by-value semantic,
  * since tuples use a copy-on-write smart pointer internally. Let's assume two
  * tuple @p x and @p y, whereas @p y is a copy of @p x:
  *
@@ -145,6 +158,11 @@
  * // x has the type tuple<std::string, std::string>
  * auto x = make_tuple("hello", "tuple");
  *
+ * receive
+ * (
+ *     // equal to on(std::string("hello actor!"))
+ *     on("hello actor!") >> []() { }
+ * );
  * @endcode
  */
 
@@ -532,7 +550,7 @@ local_actor* operator<<(local_actor* whom, any_tuple&& what);
 
 #endif
 
-template<class C, typename Arg0, typename... Args>
+template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)
 {
     send(self()->mailbox().last_sender(), arg0, args...);
