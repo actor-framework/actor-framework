@@ -99,7 +99,7 @@
  * @p libcppa uses a copy-on-write optimization for its message
  * passing implementation.
  *
- * {@link tuple Tuples} should @b always be used with by-value semantic,
+ * {@link cppa::tuple Tuples} should @b always be used with by-value semantic,
  * since tuples use a copy-on-write smart pointer internally. Let's assume two
  * tuple @p x and @p y, whereas @p y is a copy of @p x:
  *
@@ -376,14 +376,14 @@ void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
  * <b>Usage example:</b>
  * @code
  * int i = 0;
- * receive_while([&]() { return (++i < 10); })
+ * receive_while([&]() { return (++i <= 10); })
  * (
  *     on<int>() >> int_fun,
  *     on<float>() >> float_fun
  * );
  * @endcode
  * @param stmt Lambda expression, functor or function returning a @c bool.
- * @returns A functor that takes invoke rules.
+ * @returns A functor implementing the loop.
  */
 template<typename Statement>
 detail::receive_while_helper<Statement>
@@ -410,7 +410,7 @@ receive_while(Statement&& stmt)
  * .until([&]() { return (++i >= 10); };
  * @endcode
  * @param args Invoke rules to handle received messages.
- * @returns A functor providing the @c until function.
+ * @returns A functor providing the @c until member function.
  */
 template<typename... Args>
 detail::do_receive_helper do_receive(Args&&... args)
@@ -439,7 +439,7 @@ inline actor_ptr& last_sender()
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Send a message to @p whom.
+ * @brief Sends a message to @p whom.
  *
  * Sends the tuple <tt>{ arg0, args... }</tt> as a message to @p whom.
  * @param whom Receiver of the message.
@@ -457,9 +457,10 @@ void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
  * self() << make_tuple(1, 2, 3);
  * @endcode
  *
- * Sends the tuple @what as a message to @p whom.
+ * Sends the tuple @p what as a message to @p whom.
  * @param whom Receiver of the message.
  * @param what Content of the message.
+ * @returns @p whom.
  */
 channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
 
