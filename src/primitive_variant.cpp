@@ -57,7 +57,7 @@ struct comparator
     {
         if (rhs.ptype() == PT)
         {
-            result = (lhs.get_as<PT>() == rhs.get_as<PT>());
+            result = (get<PT>(lhs) == get<PT>(rhs));
         }
     }
 };
@@ -72,7 +72,7 @@ struct initializer
     inline void operator()(util::pt_token<PT>)
     {
         typedef typename detail::ptype_to_type<PT>::type T;
-        lhs.set(T());
+        lhs = T();
     }
 };
 
@@ -85,7 +85,7 @@ struct setter
     template<typename T>
     inline void operator()(const T& rhs)
     {
-        lhs.set(rhs);
+        lhs = rhs;
     }
 };
 
@@ -98,7 +98,7 @@ struct mover
     template<typename T>
     inline void operator()(T& rhs)
     {
-        lhs.set(std::move(rhs));
+        lhs = std::move(rhs);
     }
 };
 
@@ -135,10 +135,10 @@ primitive_variant& primitive_variant::operator=(primitive_variant&& other)
     return *this;
 }
 
-bool primitive_variant::operator==(const primitive_variant& other) const
+bool operator==(const primitive_variant& lhs, const primitive_variant& rhs)
 {
-    comparator cmp(*this, other);
-    util::pt_dispatch(m_ptype, cmp);
+    comparator cmp(lhs, rhs);
+    util::pt_dispatch(lhs.m_ptype, cmp);
     return cmp.result;
 }
 
@@ -146,7 +146,7 @@ const std::type_info& primitive_variant::type() const
 {
     type_reader tr;
     apply(tr);
-    return (tr.tinfo) ? *tr.tinfo : typeid(void);
+    return (tr.tinfo == nullptr) ? typeid(void) : *tr.tinfo;
 }
 
 primitive_variant::~primitive_variant()

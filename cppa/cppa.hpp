@@ -303,7 +303,7 @@ inline actor_ptr spawn(F&& what, const Args&... args)
 }
 
 /**
- * @copydoc context::quit(std::uint32_t)
+ * @copydoc local_actor::quit()
  *
  * Alias for <tt>self()->quit(reason);</tt>
  */

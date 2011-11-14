@@ -97,8 +97,6 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
  * an unsupported data structure, you have to implement serialize/deserialize
  * by yourself. {@link announce_example_5.cpp Example 5} shows, how to
  * announce a tree data structure to the @p libcppa type system.
- * Make sure to read the @ref Serialize "serialization section" of
- * this documentation before.
  */
 
 /**

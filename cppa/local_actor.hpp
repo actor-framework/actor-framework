@@ -24,6 +24,7 @@ class local_actor : public actor
      * Cause this actor to send an exit signal to all of its
      * linked actors, sets its state to @c exited and throws
      * {@link actor_exited} to cleanup the stack.
+     * @param reason Exit reason that will be send to linked actors.
      * @throws actor_exited
      */
     virtual void quit(std::uint32_t reason) = 0;

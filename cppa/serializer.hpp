@@ -9,15 +9,11 @@
 
 namespace cppa {
 
-/**
- * @defgroup Serialize Serialization of custom data types.
- */
-
 // forward declaration
 class primitive_variant;
 
 /**
- * @ingroup Serialize
+ * @ingroup TypeSystem
  * @brief Technology-independent serialization interface.
  */
 class serializer

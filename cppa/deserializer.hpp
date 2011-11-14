@@ -12,7 +12,7 @@ namespace cppa {
 class object;
 
 /**
- * @ingroup Serialize
+ * @ingroup TypeSystem
  * @brief Technology-independent deserialization interface.
  */
 class deserializer
@@ -72,7 +72,7 @@ class deserializer
      * @brief Reads a tuple of primitive values from the data
      *        source of the types @p ptypes.
      * @param num The size of the tuple.
-     * @param ptype Array of expected primitive data types.
+     * @param ptypes Array of expected primitive data types.
      * @param storage Array of size @p num, storing the result of this function.
      */
     virtual void read_tuple(size_t num,

@@ -31,12 +31,29 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 
 namespace cppa {
 
+class primitive_variant;
+
+template<typename T>
+const T& get(const primitive_variant& pv);
+
+template<typename T>
+T& get_ref(primitive_variant& pv);
+
 /**
- * @brief A stack-based union container for
- *        {@link primitive_type primitive data types}.
+ * @ingroup TypeSystem
+ * @brief An union container for primitive data types.
  */
 class primitive_variant
 {
+
+    friend bool operator==(const primitive_variant& lhs,
+                           const primitive_variant& rhs);
+
+    template<typename T>
+    friend const T& get(const primitive_variant& pv);
+
+    template<typename T>
+    friend T& get_ref(primitive_variant& pv);
 
     primitive_type m_ptype;
 
@@ -58,7 +75,7 @@ class primitive_variant
         std::u32string s32;
     };
 
-    // use static call dispatching to select member variable
+    // use static call dispatching to select member
     inline decltype(i8)&    get(util::pt_token<pt_int8>)        { return i8;  }
     inline decltype(i16)&   get(util::pt_token<pt_int16>)       { return i16; }
     inline decltype(i32)&   get(util::pt_token<pt_int32>)       { return i32; }
@@ -103,18 +120,6 @@ class primitive_variant
         if (m_ptype != PT) throw std::logic_error("type check failed");
     }
 
- public:
-
-    template<typename V>
-    void set(V&& value)
-    {
-        static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
-        util::pt_token<ptype> token;
-        static_assert(ptype != pt_null, "T is not a primitive type");
-        destroy();
-        detail::ptv_set<ptype>(m_ptype, get(token), std::forward<V>(value));
-    }
-
     template<primitive_type PT>
     typename detail::ptype_to_type<PT>::type& get_as()
     {
@@ -133,21 +138,7 @@ class primitive_variant
         return const_cast<primitive_variant*>(this)->get(token);
     }
 
-    template<typename T>
-    explicit operator T()
-    {
-        static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
-        static_assert(ptype != pt_null, "V is not a primitive type");
-        return get_as<ptype>();
-    }
-
-    template<typename T>
-    explicit operator T() const
-    {
-        static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
-        static_assert(ptype != pt_null, "V is not a primitive type");
-        return get_as<ptype>();
-    }
+ public:
 
     template<typename Fun>
     void apply(Fun&& f)
@@ -162,8 +153,17 @@ class primitive_variant
                           applier<const primitive_variant, Fun>(this, f));
     }
 
+    /**
+     * @brief Creates an empty variant.
+     * @post <tt>ptype() == pt_null && type() == typeid(void)</tt>.
+     */
     primitive_variant();
 
+    /**
+     * @brief Creates a variant from @p value.
+     * @param value A primitive value.
+     * @pre @p value does have a primitive type.
+     */
     template<typename V>
     primitive_variant(V&& value) : m_ptype(pt_null)
     {
@@ -174,55 +174,90 @@ class primitive_variant
                                std::forward<V>(value));
     }
 
-    primitive_variant(primitive_type ptype);
+    /**
+     * @brief Creates a variant with type pt.
+     * @param pt Requestet type.
+     * @post <tt>ptype() == pt</tt>.
+     */
+    primitive_variant(primitive_type pt);
 
+    /**
+     * @brief Creates a copy from @p other.
+     * @param other A primitive variant.
+     */
     primitive_variant(const primitive_variant& other);
 
+    /**
+     * @brief Creates a new variant and move the value from @p other to it.
+     * @param other A primitive variant rvalue.
+     */
     primitive_variant(primitive_variant&& other);
 
+    /**
+     * @brief Moves @p value to this variant if @p value is an rvalue;
+     *        otherwise copies the value of @p value.
+     * @param value A primitive value.
+     * @returns <tt>*this</tt>.
+     */
     template<typename V>
     primitive_variant& operator=(V&& value)
     {
         static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
         static_assert(ptype != pt_null, "V is not a primitive type");
+        util::pt_token<ptype> token;
         if (ptype == m_ptype)
         {
-            util::pt_token<ptype> token;
             get(token) = std::forward<V>(value);
         }
         else
         {
-            set(std::forward<V>(value));
+            destroy();
+            detail::ptv_set<ptype>(m_ptype, get(token), std::forward<V>(value));
+            //set(std::forward<V>(value));
         }
         return *this;
     }
 
+    /**
+     * @brief Copies the content of @p other to @p this.
+     * @param other A primitive variant.
+     * @returns <tt>*this</tt>.
+     */
     primitive_variant& operator=(const primitive_variant& other);
 
+    /**
+     * @brief Moves the content of @p other to @p this.
+     * @param other A primitive variant rvalue.
+     * @returns <tt>*this</tt>.
+     */
     primitive_variant& operator=(primitive_variant&& other);
 
-    bool operator==(const primitive_variant& other) const;
-
-    inline bool operator!=(const primitive_variant& other) const
-    {
-        return !(*this == other);
-    }
-
+    /**
+     * @brief Gets the {@link primitive_type type} of @p this.
+     * @returns The {@link primitive_type type} of @p this.
+     */
     inline primitive_type ptype() const { return m_ptype; }
 
+    /**
+     * @brief Gets the RTTI type of @p this.
+     * @returns <tt>typeid(void)</tt> if <tt>ptype() == pt_null</tt>;
+     *          otherwise typeid(T) is returned, where T is the C++ type
+     *          of @p this.
+     */
     const std::type_info& type() const;
 
     ~primitive_variant();
 
 };
 
-template<typename T>
-T& get(primitive_variant& pv)
-{
-    static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
-    return pv.get_as<ptype>();
-}
-
+/**
+ * @ingroup TypeSystem
+ * @brief Casts a primitive variant to its C++ type.
+ * @relates primitive_variant
+ * @param pv A primitive variant of type @p T.
+ * @returns A const reference to the value of @p pv of type @p T.
+ * @throws <tt>std::logic_error</tt> if @p pv is not of type @p T.
+ */
 template<typename T>
 const T& get(const primitive_variant& pv)
 {
@@ -230,20 +265,14 @@ const T& get(const primitive_variant& pv)
     return pv.get_as<ptype>();
 }
 
-template<primitive_type PT>
-typename detail::ptype_to_type<PT>::type& get(primitive_variant& pv)
-{
-    static_assert(PT != pt_null, "PT == pt_null");
-    return pv.get_as<PT>();
-}
-
-template<primitive_type PT>
-const typename detail::ptype_to_type<PT>::type& get(const primitive_variant& pv)
-{
-    static_assert(PT != pt_null, "PT == pt_null");
-    return pv.get_as<PT>();
-}
-
+/**
+ * @ingroup TypeSystem
+ * @brief Casts a non-const primitive variant to its C++ type.
+ * @relates primitive_variant
+ * @param pv A primitive variant of type @p T.
+ * @returns A reference to the value of @p pv of type @p T.
+ * @throws <tt>std::logic_error</tt> if @p pv is not of type @p T.
+ */
 template<typename T>
 T& get_ref(primitive_variant& pv)
 {
@@ -251,11 +280,56 @@ T& get_ref(primitive_variant& pv)
     return pv.get_as<ptype>();
 }
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @ingroup TypeSystem
+ * @brief Casts a primitive variant to its C++ type.
+ * @relates primitive_variant
+ * @tparam T C++ type equivalent of @p PT.
+ * @param pv A primitive variant of type @p T.
+ * @returns A const reference to the value of @p pv of type @p T.
+ */
 template<primitive_type PT>
-typename detail::ptype_to_type<PT>::type& get_ref(primitive_variant& pv)
+const T& get_ref(const primitive_variant& pv);
+
+/**
+ * @ingroup TypeSystem
+ * @brief Casts a non-const primitive variant to its C++ type.
+ * @relates primitive_variant
+ * @tparam T C++ type equivalent of @p PT.
+ * @param pv A primitive variant of type @p T.
+ * @returns A reference to the value of @p pv of type @p T.
+ */
+template<primitive_type PT>
+T& get_ref(primitive_variant& pv);
+
+#else
+
+template<primitive_type PT>
+inline const typename detail::ptype_to_type<PT>::type&
+get(const primitive_variant& pv)
 {
     static_assert(PT != pt_null, "PT == pt_null");
-    return pv.get_as<PT>();
+    return get<typename detail::ptype_to_type<PT>::type>(pv);
+}
+
+template<primitive_type PT>
+inline typename detail::ptype_to_type<PT>::type&
+get_ref(primitive_variant& pv)
+{
+    static_assert(PT != pt_null, "PT == pt_null");
+    return get_ref<typename detail::ptype_to_type<PT>::type>(pv);
+}
+
+#endif
+
+bool operator==(const primitive_variant& lhs, const primitive_variant& rhs);
+
+inline
+bool operator!=(const primitive_variant& lhs, const primitive_variant& rhs)
+{
+    return !(lhs == rhs);
 }
 
 template<typename T>
@@ -263,7 +337,7 @@ typename util::enable_if<util::is_primitive<T>, bool>::type
 operator==(const T& lhs, const primitive_variant& rhs)
 {
     static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
-    static_assert(ptype != pt_null, "T couldn't be mapped to an ptype");
+    static_assert(ptype != pt_null, "T is an incompatible type");
     return (rhs.ptype() == ptype) ? lhs == get<ptype>(rhs) : false;
 }
 
