@@ -2,7 +2,7 @@
  * This example shows how to implement serialize/deserialize to announce      *
  * non-trivial data structures to the libcppa type system.                    *
  *                                                                            *
- * However, announce() auto-detects STL compliant containers and provides     *
+ * Announce() auto-detects STL compliant containers and provides              *
  * an easy way to tell libcppa how to serialize user defined types.           *
  * See announce_example 1-4 for usage examples.                               *
  *                                                                            *
@@ -78,7 +78,7 @@ struct tree
 
 };
 
-// tree node are equals if values and all values of all children are equal
+// tree nodes are equals if values and all values of all children are equal
 bool operator==(const tree_node& lhs, const tree_node& rhs)
 {
     if (lhs.value == rhs.value && lhs.children.size() == rhs.children.size())
@@ -145,26 +145,27 @@ class tree_type_info : public util::abstract_uniform_type_info<tree>
     void serialize_node(const tree_node& node, serializer* sink) const
     {
         // serialize { value, number of children } ... children ...
-        std::uint32_t num_children = node.children.size();
         sink->write_value(node.value);
-        sink->write_value(num_children);
+        sink->begin_sequence(node.children.size());
         for (const tree_node& subnode : node.children)
         {
             serialize_node(subnode, sink);
         }
+        sink->end_sequence();
     }
 
     void deserialize_node(tree_node& node, deserializer* source) const
     {
         // deserialize { value, number of children } ... children ...
         auto value = get<std::uint32_t>(source->read_value(pt_uint32));
-        auto num_children = get<std::uint32_t>(source->read_value(pt_uint32));
         node.value = value;
-        for (std::uint32_t i = 0; i < num_children; ++i)
+        auto num_children = source->begin_sequence();
+        for (size_t i = 0; i < num_children; ++i)
         {
             node.add_child();
             deserialize_node(node.children.back(), source);
         }
+        source->end_sequence();
     }
 
 };
@@ -203,10 +204,12 @@ int main()
         on<tree>() >> [](const tree& tmsg)
         {
             // prints the tree in its serialized format:
-            // @<> ( { tree ( 0, 2, 10, 3, 11, 0, 12, 0, 13, 0, 20, 2, 21, 0, 22, 0 ) } )
-            cout << "to_string(last_received()): " << to_string(last_received())
+            // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
+            cout << "to_string(last_received()): "
+                 << to_string(last_received())
                  << endl;
-            // prints: 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
+            // prints the tree using the print member function:
+            // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
             tmsg.print();
         }
     );

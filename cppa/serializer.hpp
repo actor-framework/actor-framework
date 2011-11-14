@@ -9,9 +9,17 @@
 
 namespace cppa {
 
+/**
+ * @defgroup Serialize Serialization of custom data types.
+ */
+
 // forward declaration
 class primitive_variant;
 
+/**
+ * @ingroup Serialize
+ * @brief Technology-independent serialization interface.
+ */
 class serializer
 {
 
@@ -24,23 +32,40 @@ class serializer
 
     virtual ~serializer();
 
+    /**
+     * @brief Begins serialization of an object of the type
+     *        named @p type_name.
+     * @param type_name The platform-independent @p libcppa type name.
+     */
     virtual void begin_object(const std::string& type_name) = 0;
 
+    /**
+     * @brief Ends serialization of an object.
+     */
     virtual void end_object() = 0;
 
-    virtual void begin_sequence(size_t size) = 0;
+    /**
+     * @brief Begins serialization of a sequence of size @p num.
+     */
+    virtual void begin_sequence(size_t num) = 0;
 
+    /**
+     * @brief Ends serialization of a sequence.
+     */
     virtual void end_sequence() = 0;
 
     /**
-     * @brief Writes a single value.
+     * @brief Writes a single value to the data sink.
+     * @param value A primitive data value.
      */
     virtual void write_value(const primitive_variant& value) = 0;
 
     /**
-     * @brief Writes @p size values.
+     * @brief Writes @p num values as a tuple to the data sink.
+     * @param num Size of the array @p values.
+     * @param values An array of size @p num of primitive data values.
      */
-    virtual void write_tuple(size_t size, const primitive_variant* values) = 0;
+    virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
 
 };
 

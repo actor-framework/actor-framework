@@ -109,6 +109,7 @@ class string_serializer : public serializer
     void end_sequence()
     {
         out << (m_after_value ? " }" : "}");
+        m_after_value = true;
     }
 
     void write_value(const primitive_variant& value)

@@ -14,7 +14,7 @@ void echo_actor()
         {
             // prints "Hello World!"
             std::cout << what << std::endl;
-            // reply "!dlroW olleH"
+            // replies "!dlroW olleH"
             reply(std::string(what.rbegin(), what.rend()));
         }
     );
@@ -32,6 +32,7 @@ int main()
     (
         on<std::string>() >> [](const std::string& what)
         {
+            // prints "!dlroW olleH"
             std::cout << what << std::endl;
         }
     );

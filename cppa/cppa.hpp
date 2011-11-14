@@ -63,22 +63,42 @@
  *
  * @section Intro Introduction
  *
- * This library provides an implementation of the Actor model for C++.
+ * This library provides an implementation of the actor model for C++.
  * It uses a network transparent messaging system to ease development
  * of both concurrent and distributed software using C++.
  *
  * @p libcppa uses a thread pool to schedule actors by default.
+ * A scheduled actor should not call blocking functions.
  * Individual actors can be spawned (created) with a special flag to run in
- * an own thread if needed.
+ * an own thread if one needs to make use of blocking APIs.
  *
- * In @p libcppa, each context is an actor. Even main is implicitly
- * converted to an actor if needed.
+ * Writing applications in @p libcppa requires a minimum of gluecode.
+ * You don't have to derive a particular class to implement an actor and
+ * each context <i>is</i> an actor. Even main is implicitly
+ * converted to an actor if needed, as the following example shows:
  *
  * @subsection IntroHelloWorld Hello World Example
  *
  * @include hello_world_example.cpp
  *
- * @section GettingStarted Getting started with libcppa
+ * @section GettingStarted Getting Started
+ *
+ * To build @p libcppa, you need <tt>GCC >= 4.6</tt>, @p Automake
+ * and the <tt>Boost.Thread</tt> library.
+ *
+ * The usual build steps on Linux and Mac OS X are:
+ *
+ * - <tt>autoreconf -i</tt>
+ * - <tt>./configure</tt>
+ * - <tt>make</tt>
+ * - <tt>make install</tt> (as root, optionally)
+ *
+ * Use <tt>./configure --help</tt> if the script doesn't auto-select
+ * the correct @p GCC binary or doesn't find your <tt>Boost.Thread</tt>
+ * installation.
+ *
+ * Windows is not supported yet, because MVSC++ doesn't implement the
+ * C++11 features needed to compile @p libcppa.
  *
  * @namespace cppa
  * @brief This is the root namespace of libcppa.
@@ -160,12 +180,11 @@
  *
  * receive
  * (
- *     // equal to on(std::string("hello actor!"))
+ *     // equal to: on(std::string("hello actor!"))
  *     on("hello actor!") >> []() { }
  * );
  * @endcode
  */
-
 
 namespace cppa {
 

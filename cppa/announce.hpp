@@ -10,6 +10,11 @@
 namespace cppa {
 
 /**
+ * @addtogroup TypeSystem
+ * @{
+ */
+
+/**
  * @brief A simple example for @c announce with public accessible members.
  *
  * The output of this example program is:
@@ -47,6 +52,12 @@ namespace cppa {
  *
  * <tt>bar(foo(1,2),3)</tt>
  * @example announce_example_4.cpp
+ */
+
+/**
+ * @brief An advanced example for @c announce implementing serialization
+ *        for a user-defined tree data type.
+ * @example announce_example_5.cpp
  */
 
 /**
@@ -106,6 +117,10 @@ inline bool announce(const Args&... args)
     return announce(typeid(T),
                     new detail::default_uniform_type_info_impl<T>(args...));
 }
+
+/**
+ * @}
+ */
 
 } // namespace cppa
 
