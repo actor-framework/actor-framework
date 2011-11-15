@@ -53,6 +53,7 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 
+#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
 #include "cppa/detail/receive_loop_helper.hpp"
 
@@ -601,7 +602,7 @@ void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
  */
 inline void await_all_others_done()
 {
-    get_scheduler()->await_others_done();
+    detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
 }
 
 /**

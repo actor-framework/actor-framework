@@ -16,13 +16,9 @@
 
 namespace cppa {
 
-// forward declarations
-
 //class local_actor;
 class actor_behavior;
 class scheduler_helper;
-
-//local_actor* self();
 
 /**
  * @brief
@@ -38,22 +34,17 @@ class scheduler
 
     scheduler();
 
-    /**
-     * @brief Calls {@link context::exit(std::uint32_t) context::exit}.
-     */
-    void exit_context(local_actor* ctx, std::uint32_t reason);
-
  public:
 
     virtual ~scheduler();
 
     /**
-     * @warning Always call super::start on overriding.
+     * @warning Always call scheduler::start on overriding.
      */
     virtual void start();
 
     /**
-     * @warning Always call super::stop on overriding.
+     * @warning Always call scheduler::stop on overriding.
      */
     virtual void stop();
 
@@ -78,13 +69,6 @@ class scheduler
      *         if his lifetime ends.
      */
     virtual attachable* register_hidden_context();
-
-    /**
-     * @brief Wait until all other actors finished execution.
-     * @warning This function causes a deadlock if it's called from
-     *          more than one actor.
-     */
-    virtual void await_others_done();
 
     template<typename Duration, typename... Data>
     void future_send(const actor_ptr& to,

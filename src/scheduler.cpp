@@ -153,11 +153,6 @@ channel* scheduler::future_send_helper()
     return m_helper->m_worker.get();
 }
 
-void scheduler::await_others_done()
-{
-    detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
-}
-
 void scheduler::register_converted_context(local_actor* what)
 {
     if (what)
@@ -171,11 +166,6 @@ attachable* scheduler::register_hidden_context()
 {
     detail::inc_actor_count();
     return new exit_observer;
-}
-
-void scheduler::exit_context(local_actor* ctx, std::uint32_t reason)
-{
-    ctx->quit(reason);
 }
 
 void set_scheduler(scheduler* sched)
