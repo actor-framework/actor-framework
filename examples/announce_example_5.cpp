@@ -81,15 +81,7 @@ struct tree
 // tree nodes are equals if values and all values of all children are equal
 bool operator==(const tree_node& lhs, const tree_node& rhs)
 {
-    if (lhs.value == rhs.value && lhs.children.size() == rhs.children.size())
-    {
-        for (std::uint32_t i = 0; i < lhs.children.size(); ++i)
-        {
-            if (!(lhs.children[i] == rhs.children[i])) return false;
-        }
-        return true;
-    }
-    return false;
+    return (lhs.value == rhs.value) && (lhs.children == rhs.children);
 }
 
 bool operator==(const tree& lhs, const tree& rhs)
@@ -144,7 +136,7 @@ class tree_type_info : public util::abstract_uniform_type_info<tree>
 
     void serialize_node(const tree_node& node, serializer* sink) const
     {
-        // serialize { value, number of children } ... children ...
+        // value, ... children ...
         sink->write_value(node.value);
         sink->begin_sequence(node.children.size());
         for (const tree_node& subnode : node.children)
@@ -156,7 +148,7 @@ class tree_type_info : public util::abstract_uniform_type_info<tree>
 
     void deserialize_node(tree_node& node, deserializer* source) const
     {
-        // deserialize { value, number of children } ... children ...
+        // value, ... children ...
         auto value = get<std::uint32_t>(source->read_value(pt_uint32));
         node.value = value;
         auto num_children = source->begin_sequence();

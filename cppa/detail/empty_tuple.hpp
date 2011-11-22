@@ -12,7 +12,7 @@ struct empty_tuple : cppa::detail::abstract_tuple
     void* mutable_at(size_t);
     abstract_tuple* copy() const;
     const void* at(size_t) const;
-    bool equal_to(const abstract_tuple& other) const;
+    bool equals(const abstract_tuple& other) const;
     const uniform_type_info& utype_info_at(size_t) const;
 
 };

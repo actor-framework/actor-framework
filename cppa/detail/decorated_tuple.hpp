@@ -57,7 +57,7 @@ class decorated_tuple : public abstract_tuple
         return m_decorated->utype_info_at(m_mappings[pos]);
     }
 
-    virtual bool equal_to(const abstract_tuple&) const
+    virtual bool equals(const abstract_tuple&) const
     {
         return false;
     }

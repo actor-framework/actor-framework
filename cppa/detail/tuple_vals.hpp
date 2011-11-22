@@ -74,7 +74,7 @@ class tuple_vals : public abstract_tuple
         return m_types.at(pos);
     }
 
-    bool equal_to(const abstract_tuple& other) const
+    bool equals(const abstract_tuple& other) const
     {
         if (size() != other.size()) return false;
         const tuple_vals* o = dynamic_cast<const tuple_vals*>(&other);
@@ -82,7 +82,7 @@ class tuple_vals : public abstract_tuple
         {
             return m_data == (o->m_data);
         }
-        return abstract_tuple::equal_to(other);
+        return abstract_tuple::equals(other);
     }
 
 };

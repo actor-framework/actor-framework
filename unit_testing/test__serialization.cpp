@@ -118,8 +118,8 @@ size_t test__serialization()
     CPPA_TEST(test__serialization);
 
     auto oarr = new detail::object_array;
-    oarr->push_back(object(static_cast<std::uint32_t>(42)));
-    oarr->push_back(object(std::string("foo")));
+    oarr->push_back(object::from(static_cast<std::uint32_t>(42)));
+    oarr->push_back(object::from("foo"  ));
 
     any_tuple atuple1(oarr);
     try

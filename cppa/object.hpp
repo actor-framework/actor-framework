@@ -6,44 +6,53 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/exception.hpp"
+#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/disjunction.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 
 // forward declarations
 class object;
+bool operator==(const object& lhs, const object& rhs);
+
 class uniform_type_info;
 const uniform_type_info* uniform_typeid(const std::type_info&);
-namespace detail { template<typename T> struct object_caster; }
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
 
 /**
- * @brief A wrapper around a void pointer that stores type informations
- *        and provides copy, move and comparsion operations.
+ * @brief Grants mutable access to the stored value of @p obj.
+ * @param obj {@link object Object} with <tt>obj.type() == typeid(T)</tt>.
+ * @returns A mutable reference to the value stored in @p obj.
+ * @relates object
+ * @throws std::invalid_argument if <tt>obj.type() != typeid(T)</tt>
+ */
+template<typename T>
+T& get_ref(object& obj);
+
+/**
+ * @brief Grants const access to the stored value of @p obj.
+ * @param obj {@link object Object} with <tt>obj.type() == typeid(T)</tt>.
+ * @returns A const reference to the value stored in @p obj.
+ * @relates object
+ * @throws std::invalid_argument if <tt>obj.type() != typeid(T)</tt>
+ */
+template<typename T>
+const T& get(const object& obj);
+
+/**
+ * @brief An abstraction class that stores an instance of
+ *        an announced type.
  */
 class object
 {
 
-    friend class uniform_type_info;
+    friend bool operator==(const object& lhs, const object& rhs);
 
-    template<typename T>
-    friend struct detail::object_caster;
+ public:
 
-    void* m_value;
-    const uniform_type_info* m_type;
-
-    void swap(object& other);
-
-    /*
-     * @brief Copies this object.
-     * @returns A (deep) copy of this object.
-     */
-    object copy() const;
-
-    static void* new_instance(const uniform_type_info* type,
-                              const void* from);
-
-public:
+    ~object();
 
     /**
      * @brief Creates an object of type @p utinfo with value @p val.
@@ -54,70 +63,81 @@ public:
 
     /**
      * @brief Creates an empty object.
-     * @post {@code empty() && type() == *uniform_typeid<util::void_type>()}
+     * @post {type() == *uniform_typeid<util::void_type>()}
      */
     object();
 
     /**
-     * @brief Creates an object with a copy of @p what.
-     * @post {@code empty() == false && type() == *uniform_typeid<T>()}
-     */
-    template<typename T>
-    explicit object(const T& what);
-
-    ~object();
-
-    /**
      * @brief Creates an object and moves type and value
      *        from @p other to @c this.
-     * @post {@code other.empty() == true}
      */
     object(object&& other);
 
     /**
-     * @brief Creates a copy of @p other.
-     * @post {@code type() == other.type() && equal_to(other)}
+     * @brief Creates a (deep) copy of @p other.
+     * @post {*this == other}
      */
     object(const object& other);
 
     /**
      * @brief Moves the content from @p other to this.
      * @returns @p *this
-     * @post {@code other.empty() == true}
      */
     object& operator=(object&& other);
 
     /**
-     *
+     * @brief Creates a (deep) copy of @p other and assigns it to @p this.
+     * @return @p *this
      */
     object& operator=(const object& other);
 
-    bool equal_to(const object& other) const;
-
+    /**
+     * @brief Gets the RTTI of this object.
+     * @returns A {@link uniform_type_info} describing the current
+     *          type of @p this.
+     */
     const uniform_type_info& type() const;
 
+    /**
+     * @brief Gets the stored value.
+     * @returns A const pointer to the currently stored value.
+     * @see get(const object&)
+     */
     const void* value() const;
 
+    /**
+     * @brief Gets the stored value.
+     * @returns A mutable pointer to the currently stored value.
+     * @see get_ref(object&)
+     */
     void* mutable_value();
 
-    bool empty() const;
+    /**
+     * @brief Creates an object from @p what.
+     * @param what Value of an announced type.
+     * @returns An object whose value was initialized with @p what.
+     * @post {@code type() == *uniform_typeid<T>()}
+     * @throws std::runtime_error if @p T is not announced.
+     */
+    template<typename T>
+    static object from(T&& what);
+
+ private:
+
+    void* m_value;
+    const uniform_type_info* m_type;
+
+    void swap(object& other);
 
 };
 
 template<typename T>
-object::object(const T& what)
+object object::from(T&& what)
 {
-    m_type = uniform_typeid(typeid(T));
-    if (!m_type)
-    {
-        throw std::logic_error("unknown/unannounced type");
-    }
-    m_value = new_instance(m_type, &what);
-}
-
-inline bool operator==(const object& lhs, const object& rhs)
-{
-    return lhs.equal_to(rhs);
+    typedef typename util::rm_ref<T>::type plain_type;
+    typedef typename detail::implicit_conversions<plain_type>::type value_type;
+    auto rtti = uniform_typeid(typeid(value_type)); // throws on error
+    return { new value_type(std::forward<T>(what)), rtti };
 }
 
 inline bool operator!=(const object& lhs, const object& rhs)
@@ -125,25 +145,16 @@ inline bool operator!=(const object& lhs, const object& rhs)
     return !(lhs == rhs);
 }
 
-namespace detail {
-
-inline void assert_type(const object& obj, const std::type_info& tinfo)
-{
-    if (!(obj.type() == tinfo))
-    {
-        throw std::logic_error("object type doesnt match T");
-    }
-}
-
-} // namespace detail
-
 template<typename T>
 T& get_ref(object& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
                   "T is a reference or a pointer type.");
-    detail::assert_type(obj, typeid(T));
+    if (!(obj.type() == typeid(T)))
+    {
+        throw std::invalid_argument("obj.type() != typeid(T)");
+    }
     return *reinterpret_cast<T*>(obj.mutable_value());
 }
 
@@ -152,8 +163,11 @@ const T& get(const object& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
-                  "T is a reference a pointer type.");
-    detail::assert_type(obj, typeid(T));
+                  "T is a reference or a pointer type.");
+    if (!(obj.type() == typeid(T)))
+    {
+        throw std::invalid_argument("obj.type() != typeid(T)");
+    }
     return *reinterpret_cast<const T*>(obj.value());
 }
 

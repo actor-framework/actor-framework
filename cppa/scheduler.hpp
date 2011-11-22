@@ -82,14 +82,16 @@ class scheduler
 };
 
 /**
- * @brief Sets the scheduler to @p sched;
+ * @brief Sets the scheduler to @p sched.
+ * @param sched A user-defined scheduler implementation.
+ * @pre <tt>sched != nullptr</tt>.
  * @throws std::runtime_error if there's already a scheduler defined.
  */
 void set_scheduler(scheduler* sched);
 
 /**
  * @brief Gets the actual used scheduler implementation.
- * @returns The active scheduler (default constructed).
+ * @returns The active scheduler (usually default constructed).
  */
 scheduler* get_scheduler();
 

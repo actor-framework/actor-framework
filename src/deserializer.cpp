@@ -14,7 +14,7 @@ deserializer::~deserializer()
 deserializer& operator>>(deserializer& d, object& what)
 {
     std::string tname = d.peek_object();
-    auto mtype = uniform_type_info::by_uniform_name(tname);
+    auto mtype = uniform_type_info::from(tname);
     if (mtype == nullptr)
     {
         throw std::logic_error("no uniform type info found for " + tname);

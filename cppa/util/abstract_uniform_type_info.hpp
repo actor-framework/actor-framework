@@ -32,7 +32,7 @@ class abstract_uniform_type_info : public uniform_type_info
     {
     }
 
-    bool equal(const void* lhs, const void* rhs) const
+    bool equals(const void* lhs, const void* rhs) const
     {
         return deref(lhs) == deref(rhs);
     }
@@ -49,7 +49,7 @@ class abstract_uniform_type_info : public uniform_type_info
 
  public:
 
-    bool equal(const std::type_info& tinfo) const
+    bool equals(const std::type_info& tinfo) const
     {
         return typeid(T) == tinfo;
     }

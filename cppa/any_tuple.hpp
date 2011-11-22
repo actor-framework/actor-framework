@@ -57,7 +57,7 @@ class any_tuple
 
     const cow_ptr<detail::abstract_tuple>& vals() const;
 
-    bool equal_to(const any_tuple& other) const;
+    bool equals(const any_tuple& other) const;
 
     any_tuple tail(size_t offset = 1) const;
 
@@ -76,7 +76,7 @@ class any_tuple
 
 inline bool operator==(const any_tuple& lhs, const any_tuple& rhs)
 {
-    return lhs.equal_to(rhs);
+    return lhs.equals(rhs);
 }
 
 inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs)

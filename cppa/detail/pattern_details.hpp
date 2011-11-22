@@ -232,7 +232,7 @@ bool do_match(pattern_arg& pargs, tuple_iterator_arg<VectorType>& targs)
         {
             // compare values if needed
             if (   pargs.has_value() == false
-                || pargs.type()->equal(pargs.value(), targs.value()))
+                || pargs.type()->equals(pargs.value(), targs.value()))
             {
                 targs.push_mapping();
                 // ok, go to next iteration

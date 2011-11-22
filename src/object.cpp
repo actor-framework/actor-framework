@@ -19,17 +19,6 @@ void object::swap(object& other)
     std::swap(m_type, other.m_type);
 }
 
-void* object::new_instance(const uniform_type_info* type, const void* from)
-{
-    return type->new_instance(from);
-}
-
-object object::copy() const
-{
-    return (m_value != &s_void) ? object(m_type->new_instance(m_value), m_type)
-                                : object();
-}
-
 object::object(void* val, const uniform_type_info* utype)
     : m_value(val), m_type(utype)
 {
@@ -51,8 +40,11 @@ object::~object()
 
 object::object(const object& other) : m_value(&s_void), m_type(uniform_typeid<util::void_type>())
 {
-    object tmp = other.copy();
-    swap(tmp);
+    if (other.value() != &s_void)
+    {
+        m_value = other.m_type->new_instance(other.m_value);
+        m_type = other.m_type;
+    }
 }
 
 object::object(object&& other) : m_value(&s_void), m_type(uniform_typeid<util::void_type>())
@@ -69,17 +61,19 @@ object& object::operator=(object&& other)
 
 object& object::operator=(const object& other)
 {
-    object tmp = other.copy();
+    // use copy ctor and then swap
+    object tmp(other);
     swap(tmp);
     return *this;
 }
 
-bool object::equal_to(const object& other) const
+bool operator==(const object& lhs, const object& rhs)
 {
-    if (m_type == other.m_type)
+    if (lhs.type() == rhs.type())
     {
-        return (m_value != &s_void) ? m_type->equal(m_value, other.m_value)
-                                    : true;
+        // values might both point to s_void if lhs and rhs are "empty"
+        return    lhs.value() == rhs.value()
+               || lhs.type().equals(lhs.value(), rhs.value());
     }
     return false;
 }
@@ -87,11 +81,6 @@ bool object::equal_to(const object& other) const
 const uniform_type_info& object::type() const
 {
     return *m_type;
-}
-
-bool object::empty() const
-{
-    return m_value == &s_void;
 }
 
 const void* object::value() const

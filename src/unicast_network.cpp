@@ -86,7 +86,7 @@ void publish(actor_ptr& whom, std::uint16_t port)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
-        throw network_exception("could not create server socket");
+        throw network_error("could not create server socket");
     }
     // sguard closes the socket if an exception occurs
     socket_guard sguard(sockfd);
@@ -97,11 +97,11 @@ void publish(actor_ptr& whom, std::uint16_t port)
     int flags = fcntl(sockfd, F_GETFL, 0);
     if (flags == -1)
     {
-        throw network_exception("unable to get socket flags");
+        throw network_error("unable to get socket flags");
     }
     if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
     {
-        throw network_exception("unable to set socket to nonblocking");
+        throw network_error("unable to set socket to nonblocking");
     }
     if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
@@ -109,7 +109,7 @@ void publish(actor_ptr& whom, std::uint16_t port)
     }
     if (listen(sockfd, 10) != 0)
     {
-        throw network_exception("listen() failed");
+        throw network_error("listen() failed");
     }
     // ok, no exceptions
     sguard.release();
@@ -129,14 +129,14 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
-        throw network_exception("socket creation failed");
+        throw network_error("socket creation failed");
     }
     server = gethostbyname(host);
     if (!server)
     {
         std::string errstr = "no such host: ";
         errstr += host;
-        throw network_exception(std::move(errstr));
+        throw network_error(std::move(errstr));
     }
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -144,7 +144,7 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     serv_addr.sin_port = htons(port);
     if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
-        throw network_exception("could not connect to host");
+        throw network_error("could not connect to host");
     }
     auto pinf = process_information::get();
     std::uint32_t process_id = pinf->process_id();

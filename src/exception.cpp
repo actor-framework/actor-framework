@@ -57,16 +57,16 @@ actor_exited::actor_exited(std::uint32_t reason) : exception(ae_what(reason))
     m_reason = reason;
 }
 
-network_exception::network_exception(const std::string& str) : exception(str)
+network_error::network_error(const std::string& str) : exception(str)
 {
 }
 
-network_exception::network_exception(std::string&& str)
+network_error::network_error(std::string&& str)
     : exception(std::move(str))
 {
 }
 
-bind_failure::bind_failure(int err_code) : network_exception(be_what(err_code))
+bind_failure::bind_failure(int err_code) : network_error(be_what(err_code))
 {
     m_errno = err_code;
 }

@@ -36,7 +36,7 @@ class object_array : public detail::abstract_tuple
 
     const void* at(size_t pos) const;
 
-    bool equal_to(const cppa::detail::abstract_tuple&) const;
+    bool equals(const cppa::detail::abstract_tuple&) const;
 
     const uniform_type_info& utype_info_at(size_t pos) const;
 

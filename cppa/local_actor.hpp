@@ -64,6 +64,7 @@ inline void local_actor::trap_exit(bool new_value)
 
 /**
  * @brief Get a pointer to the current active context.
+ * @returns A pointer that identifies the calling actor.
  */
 local_actor* self();
 

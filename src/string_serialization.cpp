@@ -462,7 +462,7 @@ object from_string(const std::string& what)
 {
     string_deserializer strd(what);
     std::string uname = strd.peek_object();
-    auto utype = uniform_type_info::by_uniform_name(uname);
+    auto utype = uniform_type_info::from(uname);
     if (utype == nullptr)
     {
         throw std::logic_error(uname + " is not announced");

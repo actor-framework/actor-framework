@@ -28,7 +28,7 @@ const uniform_type_info& empty_tuple::utype_info_at(size_t) const
     throw std::range_error("empty_tuple::type_at()");
 }
 
-bool empty_tuple::equal_to(const abstract_tuple& other) const
+bool empty_tuple::equals(const abstract_tuple& other) const
 {
     return other.size() == 0;
 }

@@ -111,9 +111,9 @@ const cow_ptr<detail::abstract_tuple>& any_tuple::vals() const
     return m_vals;
 }
 
-bool any_tuple::equal_to(const any_tuple& other) const
+bool any_tuple::equals(const any_tuple& other) const
 {
-    return m_vals->equal_to(*other.vals());
+    return m_vals->equals(*other.vals());
 }
 
 } // namespace cppa

@@ -46,7 +46,7 @@ const void* object_array::at(size_t pos) const
     return m_elements[pos].value();
 }
 
-bool object_array::equal_to(const cppa::detail::abstract_tuple& ut) const
+bool object_array::equals(const cppa::detail::abstract_tuple& ut) const
 {
     if (size() == ut.size())
     {
@@ -55,7 +55,7 @@ bool object_array::equal_to(const cppa::detail::abstract_tuple& ut) const
             const uniform_type_info& utype = utype_info_at(i);
             if (utype == ut.utype_info_at(i))
             {
-                if (!utype.equal(at(i), ut.at(i))) return false;
+                if (!utype.equals(at(i), ut.at(i))) return false;
             }
             else
             {

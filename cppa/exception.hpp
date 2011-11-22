@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <exception>
+#include <stdexcept>
 
 namespace cppa {
 
@@ -13,7 +14,15 @@ namespace cppa {
 class exception : public std::exception
 {
 
-    std::string m_what;
+ public:
+
+    ~exception() throw();
+
+    /**
+     * @brief Returns the error message.
+     * @returns The error message as C-string.
+     */
+    const char* what() const throw();
 
  protected:
 
@@ -29,57 +38,69 @@ class exception : public std::exception
      */
     exception(const std::string& what_str);
 
- public:
+ private:
 
-    ~exception() throw();
-
-    /**
-     * @brief Returns the error message.
-     * @returns The error message as C-string.
-     */
-    const char* what() const throw();
+    std::string m_what;
 
 };
 
 /**
- * @brief Thrown if an Actor finished execution.
+ * @brief Thrown if an actor finished execution.
  */
 class actor_exited : public exception
 {
-
-    std::uint32_t m_reason;
 
  public:
 
     actor_exited(std::uint32_t exit_reason);
 
     /**
-     *
+     * @brief Gets the exit reason.
+     * @returns The exit reason of the terminating actor either set via
+     *          {@link quit} or by a special (exit) message.
      */
     inline std::uint32_t reason() const throw();
 
+ private:
+
+    std::uint32_t m_reason;
+
 };
 
-class network_exception : public exception
+/**
+ * @brief Thrown to indicate that either an actor publishing failed or
+ *        @p libcppa was unable to connect to a remote host.
+ */
+class network_error : public exception
 {
 
  public:
 
-    network_exception(std::string&& what_str);
-    network_exception(const std::string& what_str);
+    network_error(std::string&& what_str);
+    network_error(const std::string& what_str);
 
 };
 
-class bind_failure : public network_exception
+/**
+ * @brief Thrown to indicate that an actor publishing failed because
+ *        the requested port could not be used.
+ */
+class bind_failure : public network_error
 {
-
-    int m_errno;
 
  public:
 
     bind_failure(int bind_errno);
 
+    /**
+     * @brief Gets the socket API error code.
+     * @returns The errno set by <tt>bind()</tt>.
+     */
     inline int error_code() const throw();
+
+ private:
+
+    int m_errno;
 
 };
 

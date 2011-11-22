@@ -51,10 +51,6 @@ istream& operator>>(istream& i, cppa::util::void_type&) { return i; }
 
 namespace {
 
-std::atomic<int> s_ids;
-
-inline int next_id() { return s_ids.fetch_add(1); }
-
 inline cppa::detail::uniform_type_info_map& uti_map()
 {
     return *(cppa::detail::singleton_manager::get_uniform_type_info_map());
@@ -416,7 +412,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
         for (size_t i = 0; i < tuple_size; ++i)
         {
             auto tname = source->peek_object();
-            auto utype = uniform_type_info::by_uniform_name(tname);
+            auto utype = uniform_type_info::from(tname);
             result->push_back(utype->deserialize(source));
         }
         source->end_sequence();
@@ -570,7 +566,7 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 
  public:
 
-    bool equal(const std::type_info& tinfo) const
+    bool equals(const std::type_info& tinfo) const
     {
         // TODO: string comparsion sucks & is slow; find a nicer solution
         auto map_iter = uti_map().int_names().find(sizeof(T));
@@ -778,8 +774,7 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype)
     return uti_map().insert({ raw_name(tinfo) }, utype);
 }
 
-uniform_type_info::uniform_type_info(const std::string& uname)
-    : m_id(next_id()), m_name(uname)
+uniform_type_info::uniform_type_info(const std::string& uname) : m_name(uname)
 {
 }
 
@@ -793,7 +788,7 @@ object uniform_type_info::create() const
 }
 
 const uniform_type_info*
-uniform_type_info::by_type_info(const std::type_info& tinf)
+uniform_type_info::from(const std::type_info& tinf)
 {
     auto result = uti_map().by_raw_name(raw_name(tinf));
     if (!result)
@@ -806,7 +801,7 @@ uniform_type_info::by_type_info(const std::type_info& tinf)
     return result;
 }
 
-uniform_type_info* uniform_type_info::by_uniform_name(const std::string& name)
+uniform_type_info* uniform_type_info::from(const std::string& name)
 {
     auto result = uti_map().by_uniform_name(name);
     if (!result)
@@ -830,12 +825,7 @@ std::vector<uniform_type_info*> uniform_type_info::instances()
 
 const uniform_type_info* uniform_typeid(const std::type_info& tinfo)
 {
-    return uniform_type_info::by_type_info(tinfo);
-}
-
-bool operator==(const uniform_type_info& lhs, const std::type_info& rhs)
-{
-    return lhs.equal(rhs);
+    return uniform_type_info::from(tinfo);
 }
 
 } // namespace cppa

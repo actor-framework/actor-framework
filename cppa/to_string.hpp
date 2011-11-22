@@ -11,6 +11,11 @@ std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
 } // namespace detail
 
+/**
+ * @brief Serializes a value to a string.
+ * @param what A value of an announced type.
+ * @returns A string representation of @p what.
+ */
 template<typename T>
 std::string to_string(const T& what)
 {

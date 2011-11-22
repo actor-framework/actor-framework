@@ -2,7 +2,7 @@
 
 namespace cppa { namespace detail {
 
-bool abstract_tuple::equal_to(const abstract_tuple &other) const
+bool abstract_tuple::equals(const abstract_tuple &other) const
 {
     if (this == &other) return true;
     if (size() != other.size()) return false;
@@ -13,7 +13,7 @@ bool abstract_tuple::equal_to(const abstract_tuple &other) const
         auto lhs = at(i);
         auto rhs = other.at(i);
         // compare first addresses, then values
-        if (lhs != rhs && !(uti.equal(lhs, rhs))) return false;
+        if (lhs != rhs && !(uti.equals(lhs, rhs))) return false;
     }
     return true;
 }
