@@ -1,3 +1,4 @@
+#include <vector>
 #include <cassert>
 #include <utility>
 #include <iostream>
@@ -9,10 +10,10 @@ using std::endl;
 
 using namespace cppa;
 
-// POD struct - pair of two ints
+// POD struct
 struct foo
 {
-    int a;
+    std::vector<int> a;
     int b;
 };
 
@@ -23,9 +24,10 @@ bool operator==(const foo& lhs, const foo& rhs)
            && lhs.b == rhs.b;
 }
 
-// another pair of two ints
+// a pair of two ints
 typedef std::pair<int,int> foo_pair;
 
+// another pair of two ints
 typedef std::pair<int,int> foo_pair2;
 
 int main(int, char**)
@@ -44,11 +46,15 @@ int main(int, char**)
     assert(announce<foo_pair2>(&foo_pair2::first, &foo_pair2::second) == false);
 
     // send a foo to ourselves
-    send(self(), foo{1,2});
+    send(self(), foo{ { 1, 2, 3, 4 }, 5 });
     // send a foo_pair2 to ourselves
-    send(self(), foo_pair2{3,4});
+    send(self(), foo_pair2{3, 4});
     // quits the program
     send(self(), atom("done"));
+
+    // libcppa returns the same uniform_type_info
+    // instance for foo_pair and foo_pair2
+    assert(uniform_typeid<foo_pair>() == uniform_typeid<foo_pair2>());
 
     // receive two messages
     int i = 0;
@@ -65,10 +71,18 @@ int main(int, char**)
         },
         on<foo>() >> [](const foo& val)
         {
-            cout << "foo("
-                 << val.a << ","
-                 << val.b << ")"
-                 << endl;
+            cout << "foo({";
+            auto i = val.a.begin();
+            auto end = val.a.end();
+            if (i != end)
+            {
+                cout << *i;
+                while (++i != end)
+                {
+                    cout << "," << *i;
+                }
+            }
+            cout << "}," << val.b << ")" << endl;
         }
     );
     return 0;

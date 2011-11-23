@@ -151,7 +151,13 @@
  * assert(&(get<0>(x)) != &(get<0>(y)));
  * @endcode
  *
- * @defgroup MessageHandling Send and receive messages
+ * @defgroup MessageHandling Message handling.
+ *
+ * This is the beating heart of @p libcppa. Actor programming is all about
+ * message handling.
+ *
+ * A message in @p libcppa is a n-tuple of values (with size >= 1). You can use
+ * almost every type in messages.
  *
  * @section UsingOwnTypes Using own types in messages
  *

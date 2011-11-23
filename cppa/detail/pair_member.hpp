@@ -2,6 +2,11 @@
 #define PAIR_MEMBER_HPP
 
 #include <utility>
+
+#include "cppa/serializer.hpp"
+#include "cppa/deserializer.hpp"
+#include "cppa/primitive_variant.hpp"
+#include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
 namespace cppa { namespace detail {

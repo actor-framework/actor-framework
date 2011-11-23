@@ -190,7 +190,17 @@ int main()
     // send a tree to ourselves ...
     send(self(), t);
 
-    receive
+    // send a vector of trees to ourselves
+    typedef std::vector<tree> tree_vector;
+    announce<tree_vector>();
+    tree_vector tvec;
+    tvec.push_back(t);
+    tvec.push_back(t);
+    send(self(), tvec);
+
+    // receive both messages
+    int i = 0;
+    receive_while([&]() { return ++i <= 2; })
     (
         // ... and receive it
         on<tree>() >> [](const tree& tmsg)
@@ -203,6 +213,19 @@ int main()
             // prints the tree using the print member function:
             // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
             tmsg.print();
+        },
+        on<tree_vector>() >> [](const tree_vector& trees)
+        {
+            // prints "received 2 trees"
+            cout << "received " << trees.size() << " trees" << endl;
+            // prints:
+            // @<> ( {
+            //   std::vector<tree,std::allocator<tree>> ( {
+            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ),
+            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
+            //   )
+            // } )
+            cout << "to_string: " << to_string(last_received()) << endl;
         }
     );
 

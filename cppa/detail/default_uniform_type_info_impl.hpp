@@ -14,6 +14,7 @@
 
 #include "cppa/detail/map_member.hpp"
 #include "cppa/detail/list_member.hpp"
+#include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/primitive_member.hpp"
 
 namespace cppa { namespace detail {
@@ -71,14 +72,6 @@ class is_stl_compliant_map
     static const bool value =    util::is_iterable<T>::value
                               && std::is_same<bool, result_type>::value;
 
-};
-
-template<typename T>
-struct has_default_uniform_type_info_impl
-{
-    static const bool value =    util::is_primitive<T>::value
-                              || is_stl_compliant_map<T>::value
-                              || is_stl_compliant_list<T>::value;
 };
 
 template<typename T>
@@ -175,7 +168,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         }
 
         // a member that's not a member at all, but "forwards"
-        // the 'self' pointer to make use *_member implementations
+        // the 'self' pointer to make use of *_member implementations
         static member fake_member(uniform_type_info* mtptr)
         {
             return {
@@ -284,28 +277,29 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
                       "stl-compliant list/map");
     }
 
-    template<class C>
-    void init_(typename
-               util::enable_if<
-                   util::disjunction<std::is_same<C, util::void_type>,
-                                     std::is_same<C, anything>>>::type* = 0)
-    {
-        // anything doesn't have any fields (no serialization required)
-    }
-
     template<typename P>
     void init_(typename util::enable_if<util::is_primitive<P>>::type* = 0)
     {
         m_members.push_back(member::fake_member(new primitive_member<P>()));
     }
 
-    template<typename X>
-    void init_(typename
-               util::disable_if<
-                   util::disjunction<util::is_primitive<X>,
-                                     std::is_same<X, util::void_type>,
-                                     std::is_same<X, anything>>>::type* = 0)
+    template<typename Map>
+    void init_(typename util::enable_if<is_stl_compliant_map<Map>>::type* = 0)
     {
+        m_members.push_back(member::fake_member(new map_member<Map>));
+    }
+
+    template<typename List>
+    void init_(typename util::enable_if<is_stl_compliant_list<List>>::type* = 0)
+    {
+        m_members.push_back(member::fake_member(new list_member<List>));
+    }
+
+    template<typename X>
+    void init_(typename util::enable_if<is_invalid<X>>::type* = 0)
+    {
+        // T is neither primitive nor a STL compliant list/map,
+        // so it has to be an announced type
         static_assert(util::is_primitive<X>::value,
                       "T is neither a primitive type nor a "
                       "stl-compliant list/map");
@@ -322,6 +316,10 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     default_uniform_type_info_impl()
     {
         init_<T>();
+        if (m_members.size() != 1)
+        {
+            throw std::logic_error("no fake member added");
+        }
     }
 
     void serialize(const void* obj, serializer* s) const
