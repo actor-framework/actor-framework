@@ -180,6 +180,11 @@ class string_deserializer : public deserializer
             error += "' found '";
             error += *m_pos;
             error += "'";
+            if (m_open_objects.empty() == false)
+            {
+                error += "during deserialization an instance of ";
+                error += m_open_objects.top();
+            }
             throw_malformed(error);
         }
         ++m_pos;
@@ -306,6 +311,7 @@ class string_deserializer : public deserializer
 
     void end_sequence()
     {
+        integrity_check();
         consume('}');
     }
 

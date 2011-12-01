@@ -28,6 +28,7 @@ struct list_member_util
         {
             list.push_back(get<value_type>(d->read_value(vptype)));
         }
+        d->end_sequence();
     }
 };
 
@@ -49,6 +50,7 @@ struct list_member_util<List, false>
         {
             m_value_type->serialize(&(*i), s);
         }
+        s->end_sequence();
     }
 
     void operator()(List& list, deserializer* d) const
@@ -61,6 +63,7 @@ struct list_member_util<List, false>
             m_value_type->deserialize(&tmp, d);
             list.push_back(tmp);
         }
+        d->end_sequence();
     }
 };
 

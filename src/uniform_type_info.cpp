@@ -124,6 +124,28 @@ void deserialize_nullptr(deserializer* source)
     source->end_object();
 }
 
+class void_type_tinfo : public util::abstract_uniform_type_info<void_type>
+{
+
+ protected:
+
+    void serialize(const void*, serializer* sink) const
+    {
+        serialize_nullptr(sink);
+    }
+
+    void deserialize(void*, deserializer* source) const
+    {
+        std::string cname = source->seek_object();
+        if (cname != name())
+        {
+            throw std::logic_error("wrong type name found");
+        }
+        deserialize_nullptr(source);
+    }
+
+};
+
 class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 {
 
@@ -645,7 +667,8 @@ class uniform_type_info_map_helper
         insert(d, new channel_ptr_tinfo, { raw_name<channel_ptr>() });
         //insert(d, new message_tinfo, { raw_name<any_tuple>() });
         insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
-        insert(d, new addr_msg_tinfo, {raw_name<detail::addressed_message>()});
+        insert(d, new addr_msg_tinfo, {raw_name<detail::addressed_message>() });
+        insert(d, new void_type_tinfo, { raw_name<void_type>() });
         insert<float>(d);
         if (sizeof(double) == sizeof(long double))
         {
