@@ -78,6 +78,10 @@
  * each context <i>is</i> an actor. Even main is implicitly
  * converted to an actor if needed, as the following example shows:
  *
+ * It's recommended to read at least the
+ * {@link MessageHandling message handling}
+ * section of this documentation.
+ *
  * @subsection IntroHelloWorld Hello World Example
  *
  * @include hello_world_example.cpp
@@ -157,9 +161,183 @@
  * message handling.
  *
  * A message in @p libcppa is a n-tuple of values (with size >= 1). You can use
- * almost every type in messages.
+ * almost every type in a messages.
  *
- * @section UsingOwnTypes Using own types in messages
+ * @section Send Send messages
+ *
+ * The function @p send could be used to send a message to an actor.
+ * The first argument is the receiver of the message followed by any number
+ * of values. @p send creates a tuple from the given values and enqueues the
+ * tuple to the receivers mailbox. Thus, send should @b not be used to send
+ * a message to multiple receivers. You should use the @p enqueue
+ * member function of the receivers instead as in the following example:
+ *
+ * @code
+ * // spawn some actors
+ * auto a1 = spawn(...);
+ * auto a2 = spawn(...);
+ * auto a3 = spawn(...);
+ *
+ * // send a message to a1
+ * send(a1, atom("hello"), "hello a1!");
+ *
+ * // send a message to a1, a2 and a3
+ * auto msg = make_tuple(atom("compute"), 1, 2, 3);
+ * auto s = self(); // cache self() pointer
+ * // note: this is more efficient then using send() three times because
+ * //       send() would create a new tuple each time;
+ * //       this safes both time and memory thanks to libcppa's copy-on-write
+ * a1->enqueue(s, msg);
+ * a2->enqueue(s, msg);
+ * a3->enqueue(s, msg);
+ *
+ * // modify msg and send it again
+ * // (msg becomes detached due to copy-on-write optimization)
+ * get_ref<1>(msg) = 10; // msg is now { atom("compute"), 10, 2, 3 }
+ * a1->enqueue(s, msg);
+ * a2->enqueue(s, msg);
+ * a3->enqueue(s, msg);
+ * @endcode
+ *
+ * @section Receive Receive messages
+ *
+ * The function @p receive takes a @i behavior as argument. The behavior
+ * is a list of { pattern >> callback } rules.
+ *
+ * @code
+ * receive
+ * (
+ *     on<atom("hello"), std::string>() >> [](const std::string& msg)
+ *     {
+ *         cout << "received hello message: " << msg << endl;
+ *     },
+ *     on<atom("compute"), int, int, int>() >> [](int i0, int i1, int i2)
+ *     {
+ *         // send our result back to the sender of this messages
+ *         reply(atom("result"), i0 + i1 + i2);
+ *     }
+ * );
+ * @endcode
+ *
+ * The function @p on creates a pattern.
+ * It provides two ways of defining patterns:
+ * either by template parameters (prefixed by up to four atoms) or by arguments.
+ * The first way matches for types only (exept for the prefixing atoms).
+ * The second way compares values.
+ * Use the template function @p val to match for the type only.
+ *
+ * This example is equivalent to the previous one but uses the second way
+ * to define patterns:
+ *
+ * @code
+ * receive
+ * (
+ *     on(atom("hello"), val<std::string>()) >> [](const std::string& msg)
+ *     {
+ *         cout << "received hello message: " << msg << endl;
+ *     },
+ *     on(atom("compute"), val<int>(), val<int>(), val<int>()>() >> [](int i0, int i1, int i2)
+ *     {
+ *         // send our result back to the sender of this messages
+ *         reply(atom("result"), i0 + i1 + i2);
+ *     }
+ * );
+ * @endcode
+ *
+ * @section Atoms Atoms
+ *
+ * Atoms are a nice way to add semantic informations to a message.
+ * Assuming an actor wants to provide a "math sevice" for integers. It
+ * could provide operations such as addition, subtraction, etc.
+ * This operations all have two operands. Thus, the actor does not know
+ * what operation the sender of a message wanted by receiving just two integers.
+ *
+ * Example actor:
+ * @code
+ * void math_actor()
+ * {
+ *     receive_loop
+ *     (
+ *         on<atom("plus"), int, int>() >> [](int a, int b)
+ *         {
+ *             reply(atom("result"), a + b);
+ *         },
+ *         on<atom("minus"), int, int>() >> [](int a, int b)
+ *         {
+ *             reply(atom("result"), a - b);
+ *         }
+ *     );
+ * }
+ * @endcode
+ *
+ * @section ReceiveLoops Receive loops
+ *
+ * Previous examples using @p receive create behavior on-the-fly.
+ * This is inefficient in a loop since the argument passed to receive
+ * is created in each iteration again. Its possible to store the behavior
+ * in a variable and pass that variable to receive. This fixes the issue
+ * of re-creation each iteration but rips apart definition and usage.
+ *
+ * There are three convenience function implementing receive loops to
+ * declare patterns and behavior where they belong without unnecessary
+ * copies: @p receive_loop, @p receive_while and @p do_receive.
+ *
+ * @p receive_loop is analogous to @p receive and loops "forever" (until the
+ * actor finishes execution).
+ *
+ * @p receive_while creates a functor evaluating a lambda expression.
+ * The loop continues until the given returns false. A simple example:
+ *
+ * @code
+ * // receive two ints
+ * vector<int> received_values;
+ * receive_while([&]() { return received_values.size() < 2; })
+ * (
+ *     on<int>() >> [](int value)
+ *     {
+ *         received_values.push_back(value);
+ *     }
+ * );
+ * // ...
+ * @endcode
+ *
+ * @p do_receive returns a functor providing the function @p until that
+ * takes a lambda expression. The loop continues until the given lambda
+ * returns true. Example:
+ *
+ * @code
+ * // receive ints until zero was received
+ * vector<int> received_values;
+ * do_receive
+ * (
+ *     on<int>() >> [](int value)
+ *     {
+ *         received_values.push_back(value);
+ *     }
+ * )
+ * .until([&]() { return received_values.back() == 0 });
+ * // ...
+ * @endcode
+ *
+ * @section FutureSend Send delayed messages
+ *
+ * The function @p future_send provides a simple way to delay a message.
+ * This is particularly useful for recurring events, e.g., periodical polling.
+ * Usage example:
+ *
+ * @code
+ * future_send(self(), std::chrono::seconds(1), atom("poll"));
+ * receive_loop
+ * (
+ *     // ...
+ *     on<atom("poll")>() >> []()
+ *     {
+ *         // ... poll something ...
+ *         // and do it again after 1sec
+ *         future_send(self(), std::chrono::seconds(1), atom("poll"));
+ *     }
+ * );
+ * @endcode
  *
  * @defgroup ImplicitConversion Implicit type conversions.
  *
@@ -182,7 +360,7 @@
  * // sends an std::u16string containing the UTF16 string "hello unicode world!"
  * send(self(), u"hello unicode world!");
  *
- * // x has the type tuple<std::string, std::string>
+ * // x has the type cppa::tuple<std::string, std::string>
  * auto x = make_tuple("hello", "tuple");
  *
  * receive
