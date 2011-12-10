@@ -21,7 +21,7 @@ class local_actor : public actor
     /**
      * @brief Finishes execution of this actor.
      *
-     * Cause this actor to send an exit signal to all of its
+     * Causes this actor to send an exit signal to all of its
      * linked actors, sets its state to @c exited and throws
      * {@link actor_exited} to cleanup the stack.
      * @param reason Exit reason that will be send to linked actors.
