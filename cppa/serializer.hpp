@@ -72,7 +72,7 @@ serializer& operator<<(serializer& s, const T& what)
     if (mtype == nullptr)
     {
         throw std::logic_error(  "no uniform type info found for "
-                                 + cppa::detail::to_uniform_name(typeid(T)));
+                               + cppa::detail::to_uniform_name(typeid(T)));
     }
     mtype->serialize(&what, &s);
     return s;

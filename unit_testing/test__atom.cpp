@@ -56,7 +56,7 @@ size_t test__atom()
         }
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
-    any_tuple msg = receive();
-    CPPA_CHECK(try_receive(msg) == false);
+    any_tuple msg = self()->mailbox().dequeue();
+    CPPA_CHECK(self()->mailbox().try_dequeue(msg) == false);
     return CPPA_TEST_RESULT;
 }

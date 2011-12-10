@@ -5,13 +5,13 @@
 
 namespace cppa {
 
-/**
+/*
  * @brief Dequeues the next message from the mailbox.
  */
-inline const any_tuple& receive()
-{
-    return self()->mailbox().dequeue();
-}
+//inline const any_tuple& receive()
+//{
+//    return self()->mailbox().dequeue();
+//}
 
 /**
  * @brief Dequeues the next message from the mailbox that's matched
@@ -54,25 +54,25 @@ void receive(invoke_rules& rules, Head&& head, Tail&&... tail)
             std::forward<Tail>(tail)...);
 }
 
-/**
+/*
  * @brief Tries to dequeue the next message from the mailbox.
  * @returns @p true if a messages was dequeued;
  *         @p false if the mailbox is empty
  */
-inline bool try_receive(any_tuple& msg)
-{
-    return self()->mailbox().try_dequeue(msg);
-}
+//inline bool try_receive(any_tuple& msg)
+//{
+//    return self()->mailbox().try_dequeue(msg);
+//}
 
-/**
+/*
  * @brief Tries to dequeue the next message from the mailbox.
  * @returns @p true if a messages was dequeued;
  *         @p false if the mailbox is empty
  */
-inline bool try_receive(invoke_rules& rules)
-{
-    return self()->mailbox().try_dequeue(rules);
-}
+//inline bool try_receive(invoke_rules& rules)
+//{
+//    return self()->mailbox().try_dequeue(rules);
+//}
 
 } // namespace cppa
 

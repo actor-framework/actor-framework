@@ -159,6 +159,8 @@ class invoke_rules : public invoke_rules_base
 
     timed_invoke_rules operator,(timed_invoke_rules&& other);
 
+    invoke_rules& operator=(invoke_rules&& other);
+
  private:
 
     invoke_rules(invokable_list&& ll);

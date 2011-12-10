@@ -137,4 +137,11 @@ invoke_rules invoke_rules::operator,(invoke_rules&& other)
     return std::move(m_list);
 }
 
+invoke_rules& invoke_rules::operator=(invoke_rules&& other)
+{
+    m_list = std::move(other.m_list);
+    other.m_list.clear();
+    return *this;
+}
+
 } // namespace cppa

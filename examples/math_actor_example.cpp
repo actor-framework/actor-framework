@@ -2,6 +2,8 @@
 #include <iostream>
 #include "cppa/cppa.hpp"
 
+using std::cout;
+using std::endl;
 using namespace cppa;
 
 void math_actor()

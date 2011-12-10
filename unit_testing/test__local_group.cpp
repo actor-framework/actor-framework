@@ -19,6 +19,7 @@
 using std::cout;
 using std::endl;
 
+using std::string;
 using namespace cppa;
 
 size_t test__local_group()
@@ -56,6 +57,6 @@ size_t test__local_group()
     .until([&result]() { return result == 10; });
     await_all_others_done();
     any_tuple tmp;
-    CPPA_CHECK_EQUAL(try_receive(tmp), false);
+    CPPA_CHECK_EQUAL(self()->mailbox().try_dequeue(tmp), false);
     return CPPA_TEST_RESULT;
 }

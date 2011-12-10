@@ -1,3 +1,4 @@
+#include <stack>
 #include <chrono>
 #include <iostream>
 #include <functional>
@@ -17,6 +18,130 @@ using std::cout;
 using std::endl;
 
 using namespace cppa;
+
+namespace { const any_tuple* s_lm = nullptr; }
+
+class event_actor
+{
+
+    std::stack<invoke_rules> m_behavior;
+    invoke_rules m_next_behavior;
+
+    invoke_rules* m_behavior_ptr;
+
+ public:
+
+    event_actor(invoke_rules&& behavior)
+    {
+        m_behavior.push(std::move(behavior));
+        m_behavior_ptr = &(m_behavior.top());
+    }
+
+    void become(invoke_rules&& behavior)
+    {
+        m_behavior.push(std::move(behavior));
+        m_behavior_ptr = &(m_behavior.top());
+    }
+
+    void set_next_behavior(invoke_rules&& behavior)
+    {
+        m_next_behavior = std::move(behavior);
+        m_behavior_ptr = &m_next_behavior;
+    }
+
+    void unbecome()
+    {
+        if (!m_behavior.empty())
+        {
+            if (m_behavior_ptr == &(m_behavior.top()))
+            {
+                m_behavior.pop();
+                m_behavior_ptr = m_behavior.empty() ? nullptr
+                                                    : &(m_behavior.top());
+            }
+            else
+            {
+                m_behavior.pop();
+            }
+        }
+    }
+
+    void operator()(const any_tuple& msg)
+    {
+        if (m_behavior_ptr != nullptr)
+        {
+            s_lm = &msg;
+            auto ptr = m_behavior_ptr;
+            (*ptr)(msg);
+            // execute m_next_behavior at most once
+            if (ptr == m_behavior_ptr && ptr == &m_next_behavior)
+            {
+                m_behavior_ptr = m_behavior.empty() ? nullptr
+                                                    : &m_behavior.top();
+            }
+        }
+    }
+
+};
+
+namespace { event_actor* s_event_actor_self = nullptr; }
+
+void set_next_behavior(invoke_rules&& behavior)
+{
+    s_event_actor_self->set_next_behavior(std::move(behavior));
+}
+
+void become(invoke_rules&& behavior)
+{
+    s_event_actor_self->become(std::move(behavior));
+}
+
+void unbecome()
+{
+    s_event_actor_self->unbecome();
+}
+
+event_actor* event_testee()
+{
+    return new event_actor
+    {(
+        on<int>() >> [](int i)
+        {
+            // do NOT call receive() here!
+            // this would hijack the worker thread
+            set_next_behavior
+            ((
+                on<int>() >> [=](int i2)
+                {
+                    cout << "event testee: (" << i << ", " << i2 << ")" << endl;
+                },
+                on<float>() >> [=](float f)
+                {
+                    cout << "event testee: (" << i << ", " << f << ")" << endl;
+                    become
+                    ((
+                        on<float>() >> []()
+                        {
+                            unbecome();
+                        },
+                        others() >> []()
+                        {
+                            cout << "event testee[line " << __LINE__ << "]: "
+                                 << to_string(*s_lm)
+                                 << endl;
+                        }
+                    ));
+                }
+            ));
+        },
+        others() >> []()
+        {
+            cout << "event testee[line " << __LINE__ << "]: "
+                 << to_string(*s_lm)
+                 << endl;
+        }
+    )};
+}
 
 void testee1()
 {
@@ -68,6 +193,18 @@ size_t test__spawn()
 
     spawn(testee1);
     await_all_others_done();
+
+    auto et = event_testee();
+    s_event_actor_self = et;
+    (*et)(make_tuple(42));
+    (*et)(make_tuple(24));
+    (*et)(make_tuple(42));
+    (*et)(make_tuple(.24f));
+    (*et)(make_tuple("hello event actor"));
+    (*et)(make_tuple(42));
+    (*et)(make_tuple(.24f));
+    (*et)(make_tuple("hello event actor"));
+    delete et;
 
     return CPPA_TEST_RESULT;
 
@@ -128,7 +265,7 @@ size_t test__spawn()
     CPPA_CHECK_EQUAL(flags, 0x07);
     // mailbox has to be empty
     any_tuple msg;
-    while (try_receive(msg))
+    while (self()->mailbox().try_dequeue(msg))
     {
         report_unexpected();
     }

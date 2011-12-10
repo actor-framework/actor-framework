@@ -6,7 +6,6 @@
 
 namespace cppa { namespace detail {
 
-// note: implemented in post_office.cpp
 class network_manager
 {
 
