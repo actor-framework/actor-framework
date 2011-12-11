@@ -2,7 +2,9 @@
 #define CONTEXT_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/message_queue.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/invoke_rules.hpp"
+#include "cppa/util/single_reader_queue.hpp"
 
 namespace cppa {
 
@@ -16,7 +18,15 @@ class local_actor : public actor
 
     friend class scheduler;
 
+ protected:
+
+    bool m_trap_exit;
+    actor_ptr m_last_sender;
+    any_tuple m_last_dequeued;
+
  public:
+
+    local_actor();
 
     /**
      * @brief Finishes execution of this actor.
@@ -30,37 +40,50 @@ class local_actor : public actor
     virtual void quit(std::uint32_t reason) = 0;
 
     /**
-     * @brief
+     * @brief Removes the first element from the queue that is matched
+     *        by @p rules and invokes the corresponding callback.
+     * @param rules
+     * @warning Call only from the owner of the queue.
      */
-    virtual message_queue& mailbox() = 0;
-
-    virtual const message_queue& mailbox() const = 0;
+    virtual void dequeue(invoke_rules& rules) = 0;
 
     /**
-     * @brief Default implementation of
-     *        {@link channel::enqueue(const message&)}.
-     *
-     * Calls <code>mailbox().enqueue(msg)</code>.
+     * @brief
+     * @param rules
+     * @warning Call only from the owner of the queue.
      */
-    void enqueue(actor* sender, const any_tuple& msg) /*override*/;
-
-    void enqueue(actor* sender, any_tuple&& msg) /*override*/;
+    virtual void dequeue(timed_invoke_rules& rules) = 0;
 
     inline bool trap_exit() const;
 
     inline void trap_exit(bool new_value);
 
+    inline any_tuple& last_dequeued();
+
+    inline actor_ptr& last_sender();
+
 };
 
 inline bool local_actor::trap_exit() const
 {
-    return mailbox().trap_exit();
+    return m_trap_exit;
 }
 
 inline void local_actor::trap_exit(bool new_value)
 {
-    mailbox().trap_exit(new_value);
+    m_trap_exit = new_value;
 }
+
+inline any_tuple& local_actor::last_dequeued()
+{
+    return m_last_dequeued;
+}
+
+inline actor_ptr& local_actor::last_sender()
+{
+    return m_last_sender;
+}
+
 
 /**
  * @brief Get a pointer to the current active context.

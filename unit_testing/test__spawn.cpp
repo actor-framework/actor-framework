@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -263,12 +265,6 @@ size_t test__spawn()
     // wait for termination of all spawned actors
     await_all_others_done();
     CPPA_CHECK_EQUAL(flags, 0x07);
-    // mailbox has to be empty
-    any_tuple msg;
-    while (self()->mailbox().try_dequeue(msg))
-    {
-        report_unexpected();
-    }
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 5);
     /*

@@ -4,6 +4,7 @@
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
+#include "cppa/detail/yielding_actor.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 using std::cout;
@@ -54,29 +55,36 @@ struct thread_pool_scheduler::worker
 
     void operator()()
     {
+        typedef decltype(now()) time_type;
         // enqueue as idle worker
         m_supervisor_queue->push_back(this);
-        // loop
         util::fiber fself;
-        auto tout = now();
-        bool reschedule = false;
-        auto still_ready_cb = [&]() -> bool
+        struct handler : scheduled_actor::resume_callback
         {
-            if (tout >= now())
+            time_type timeout;
+            bool reschedule;
+            scheduled_actor* job;
+            handler() : timeout(now()), reschedule(false), job(nullptr)
             {
-                reschedule = true;
-                return false;
             }
-            return true;
+            bool still_ready()
+            {
+                if (timeout >= now())
+                {
+                    reschedule = true;
+                    return false;
+                }
+                return true;
+            }
+            void exec_done()
+            {
+                if (!job->deref()) delete job;
+                CPPA_MEMORY_BARRIER();
+                dec_actor_count();
+                job = nullptr;
+            }
         };
-        scheduled_actor* job;
-        auto done_cb = [&]()
-        {
-            if (!job->deref()) delete job;
-            CPPA_MEMORY_BARRIER();
-            dec_actor_count();
-            job = nullptr;
-        };
+        handler h;
         for (;;)
         {
             // lifetime scope of guard (wait for new job)
@@ -88,15 +96,15 @@ struct thread_pool_scheduler::worker
                 }
                 if (m_done) return;
             }
-            job = const_cast<scheduled_actor*>(m_job);
+            h.job = const_cast<scheduled_actor*>(m_job);
             // run actor up to 300ms
-            reschedule = false;
-            tout = now();
-            tout += std::chrono::milliseconds(300);
-            scheduled_actor::execute(job, &fself, still_ready_cb, done_cb);
-            if (reschedule && job)
+            h.reschedule = false;
+            h.timeout = now();
+            h.timeout += std::chrono::milliseconds(300);
+            h.job->resume(&fself, &h);
+            if (h.reschedule && h.job)
             {
-                m_job_queue->push_back(job);
+                m_job_queue->push_back(h.job);
             }
             m_job = nullptr;
             CPPA_MEMORY_BARRIER();
@@ -208,9 +216,9 @@ actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
     {
         inc_actor_count();
         CPPA_MEMORY_BARRIER();
-        intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
-                                                               enqueue_fun,
-                                                               this));
+        intrusive_ptr<scheduled_actor> ctx(new yielding_actor(behavior,
+                                                              enqueue_fun,
+                                                              this));
         ctx->ref();
         m_queue.push_back(ctx.get());
         return ctx;

@@ -29,7 +29,7 @@ class thread_pool_scheduler : public scheduler
     typedef util::single_reader_queue<scheduled_actor> job_queue;
 
     job_queue m_queue;
-    scheduled_actor m_dummy;
+    scheduled_actor_dummy m_dummy;
     thread m_supervisor;
 
     static void worker_loop(worker*);

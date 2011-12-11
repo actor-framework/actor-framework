@@ -7,8 +7,6 @@
 #include "cppa/util/single_reader_queue.hpp"
 #include "cppa/detail/delegate.hpp"
 #include "cppa/detail/abstract_actor.hpp"
-#include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/yielding_message_queue.hpp"
 
 namespace cppa { namespace detail {
 
@@ -20,133 +18,78 @@ class task_scheduler;
 class scheduled_actor : public abstract_actor<local_actor>
 {
 
-    typedef abstract_actor<local_actor> super;
-
     friend class task_scheduler;
     friend class util::single_reader_queue<scheduled_actor>;
 
-    // intrusive next pointer (single_reader_queue)
-    scheduled_actor* next;
+    scheduled_actor* next;    // intrusive next pointer (single_reader_queue)
 
-    util::fiber m_fiber;
-    actor_behavior* m_behavior;
-    yielding_message_queue m_mailbox;
+    void enqueue_node(queue_node* node);
 
+ protected:
+
+    std::atomic<int> m_state;
     delegate m_enqueue_to_scheduler;
 
-    static void run(void* _this);
+    typedef abstract_actor<local_actor> super;
+    typedef super::queue_node queue_node;
 
  public:
 
-    // creates an invalid actor
+    static constexpr int ready          = 0x00;
+    static constexpr int done           = 0x01;
+    static constexpr int blocked        = 0x02;
+    static constexpr int about_to_block = 0x04;
+
     scheduled_actor();
 
     template<typename Scheduler>
-    scheduled_actor(actor_behavior* behavior,
-                    void (*enqueue_fun)(Scheduler*, scheduled_actor*),
+    scheduled_actor(void (*enqueue_fun)(Scheduler*, scheduled_actor*),
                     Scheduler* sched)
         : next(nullptr)
-        , m_fiber(&scheduled_actor::run, this)
-        , m_behavior(behavior)
-        , m_mailbox(this)
+        , m_state(ready)
         , m_enqueue_to_scheduler(enqueue_fun, sched, this)
     {
     }
 
-    ~scheduled_actor();
-
-    inline util::fiber* fiber_ptr() { return &m_fiber; }
-
     void quit(std::uint32_t reason);
 
-    inline void enqueue_to_scheduler()
+    void enqueue(actor* sender, any_tuple&& msg);
+
+    void enqueue(actor* sender, const any_tuple& msg);
+
+    //inline std::atomic<int>& state() { return m_mailbox.m_state; }
+
+    int compare_exchange_state(int expected, int new_value);
+
+    struct resume_callback
     {
-        m_enqueue_to_scheduler();
-    }
+        virtual ~resume_callback();
+        // actor could continue computation
+        // - if false: actor interrupts
+        // - if true: actor continues
+        virtual bool still_ready() = 0;
+        // called if an actor finished execution
+        virtual void exec_done() = 0;
+    };
 
-    message_queue& mailbox() /*override*/;
-
-    const message_queue& mailbox() const /*override*/;
-
-    inline std::atomic<int>& state() { return m_mailbox.m_state; }
-
-    inline int compare_exchange_state(int expected, int new_value)
-    {
-        int e = expected;
-        do
-        {
-            if (m_mailbox.m_state.compare_exchange_weak(e, new_value))
-            {
-                return new_value;
-            }
-        }
-        while (e == expected);
-        return e;
-    }
-
-    // still_ready_handler returns true if execution should be continued;
-    // otherwise false
-    template<typename StillReadyHandler, typename DoneHandler>
-    static void execute(scheduled_actor* what,
-                        util::fiber* from,
-                        StillReadyHandler& still_ready_handler,
-                        DoneHandler& done_handler);
+    // from = calling worker
+    virtual void resume(util::fiber* from, resume_callback* callback) = 0;
 
 };
 
-template<typename StillReadyHandler, typename DoneHandler>
-void scheduled_actor::execute(scheduled_actor* what,
-                              util::fiber* from,
-                              StillReadyHandler& still_ready_handler,
-                              DoneHandler& done_handler)
+struct scheduled_actor_dummy : scheduled_actor
 {
-    set_self(what);
-    for (;;)
-    {
-        call(&(what->m_fiber), from);
-        switch (yielded_state())
-        {
-            case yield_state::done:
-            case yield_state::killed:
-            {
-                done_handler();
-                return;
-            }
-            case yield_state::ready:
-            {
-                if (still_ready_handler()) break;
-                else return;
-            }
-            case yield_state::blocked:
-            {
-                switch (what->compare_exchange_state(about_to_block, blocked))
-                {
-                    case ready:
-                    {
-                        if (still_ready_handler()) break;
-                        else return;
-                    }
-                    case blocked:
-                    {
-                        // wait until someone re-schedules that actor
-                        return;
-                    }
-                    default:
-                    {
-                        // illegal state
-                        exit(7);
-                    }
-                }
-                break;
-            }
-            default:
-            {
-                // illegal state
-                exit(8);
-            }
-        }
-    }
-}
+    void resume(util::fiber*, resume_callback*);
+    void quit(std::uint32_t);
+    void dequeue(invoke_rules&);
+    void dequeue(timed_invoke_rules&);
+    void link_to(intrusive_ptr<actor>&);
+    void unlink_from(intrusive_ptr<actor>&);
+    bool establish_backlink(intrusive_ptr<actor>&);
+    bool remove_backlink(intrusive_ptr<actor>&);
+    void detach(const attachable::token&);
+    bool attach(attachable*);
+};
 
 } } // namespace cppa::detail
 

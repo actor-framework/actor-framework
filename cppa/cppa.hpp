@@ -628,7 +628,7 @@ detail::do_receive_helper do_receive(Args&&... args)
  */
 inline any_tuple& last_received()
 {
-    return self()->mailbox().last_dequeued();
+    return self()->last_dequeued();
 }
 
 /**
@@ -637,7 +637,7 @@ inline any_tuple& last_received()
  */
 inline actor_ptr& last_sender()
 {
-    return self()->mailbox().last_sender();
+    return self()->last_sender();
 }
 
 #ifdef CPPA_DOCUMENTATION
@@ -758,12 +758,12 @@ local_actor* operator<<(local_actor* whom, any_tuple&& what);
 template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)
 {
-    send(self()->mailbox().last_sender(), arg0, args...);
+    send(self()->last_sender(), arg0, args...);
 }
 
 inline void reply_tuple(const any_tuple& what)
 {
-    send_tuple(self()->mailbox().last_sender(), what);
+    send_tuple(self()->last_sender(), what);
 }
 
 /**

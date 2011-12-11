@@ -106,19 +106,19 @@ void demonitor(actor_ptr& whom)
 
 void receive_loop(invoke_rules& rules)
 {
-    auto& mbox = self()->mailbox();
+    auto sptr = self();
     for (;;)
     {
-        mbox.dequeue(rules);
+        sptr->dequeue(rules);
     }
 }
 
 void receive_loop(timed_invoke_rules& rules)
 {
-    auto& mbox = self()->mailbox();
+    auto sptr = self();
     for (;;)
     {
-        mbox.dequeue(rules);
+        sptr->dequeue(rules);
     }
 }
 

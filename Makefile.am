@@ -17,7 +17,6 @@ libcppa_la_SOURCES = \
   src/attachable.cpp \
   src/binary_deserializer.cpp \
   src/binary_serializer.cpp \
-  src/blocking_message_queue.cpp \
   src/channel.cpp \
   src/local_actor.cpp \
   src/converted_thread_context.cpp \
@@ -35,7 +34,6 @@ libcppa_la_SOURCES = \
   src/invokable.cpp \
   src/invoke_rules.cpp \
   src/mailman.cpp \
-  src/message_queue.cpp \
   src/mock_scheduler.cpp \
   src/native_socket.cpp \
   src/network_manager.cpp \
@@ -57,8 +55,8 @@ libcppa_la_SOURCES = \
   src/to_uniform_name.cpp \
   src/unicast_network.cpp \
   src/uniform_type_info.cpp \
-  src/yielding_message_queue.cpp \
-  src/yield_interface.cpp
+  src/yield_interface.cpp \
+  src/yielding_actor.cpp
 
 if VERSIONED_INCLUDE_DIR
 library_includedir = $(includedir)/cppa/$(PACKAGE_VERSION)/
@@ -84,14 +82,12 @@ nobase_library_include_HEADERS = \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
   cppa/detail/abstract_actor.hpp \
-  cppa/detail/abstract_message_queue.hpp \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \
   cppa/detail/actor_proxy_cache.hpp \
   cppa/detail/actor_registry.hpp \
   cppa/detail/addressed_message.hpp \
   cppa/detail/atom_val.hpp \
-  cppa/detail/blocking_message_queue.hpp \
   cppa/detail/boxed.hpp \
   cppa/detail/buffer.hpp \
   cppa/detail/channel.hpp \
@@ -134,8 +130,8 @@ nobase_library_include_HEADERS = \
   cppa/detail/type_to_ptype.hpp \
   cppa/detail/unboxed.hpp \
   cppa/detail/uniform_type_info_map.hpp \
-  cppa/detail/yielding_message_queue.hpp \
   cppa/detail/yield_interface.hpp \
+  cppa/detail/yielding_actor.hpp \
   cppa/exception.hpp \
   cppa/exit_reason.hpp \
   cppa/from_string.hpp \
@@ -145,7 +141,6 @@ nobase_library_include_HEADERS = \
   cppa/intrusive_ptr.hpp \
   cppa/invoke.hpp \
   cppa/invoke_rules.hpp \
-  cppa/message_queue.hpp \
   cppa/object.hpp \
   cppa/on.hpp \
   cppa/pattern.hpp \

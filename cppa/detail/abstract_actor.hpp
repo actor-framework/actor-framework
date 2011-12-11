@@ -18,9 +18,7 @@
 
 namespace cppa { namespace detail {
 
-/**
- * @brief Implements.
- */
+// implements linking and monitoring for actors
 template<class Base>
 class abstract_actor : public Base
 {
@@ -38,6 +36,31 @@ class abstract_actor : public Base
     std::list<actor_ptr> m_links;
 
     std::vector<attachable_ptr> m_attachables;
+
+ protected:
+
+    struct queue_node
+    {
+        queue_node* next;
+        actor_ptr sender;
+        any_tuple msg;
+
+        queue_node(actor* from, any_tuple&& content)
+            : next(nullptr), sender(from), msg(std::move(content))
+        {
+
+        }
+
+        queue_node(actor* from, const any_tuple& content)
+            : next(nullptr), sender(from), msg(content)
+        {
+
+        }
+    };
+
+    util::single_reader_queue<queue_node> m_mailbox;
+
+ private:
 
     // @pre m_mtx.locked()
     bool exited() const

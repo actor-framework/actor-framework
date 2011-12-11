@@ -63,7 +63,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
     // setup & local variables
     set_self(m_self.get());
-    auto& queue = m_self->m_mailbox.queue();
+    auto& queue = m_self->mailbox();
     //typedef std::pair<cppa::actor_ptr, decltype(queue.pop())> future_msg;
     std::multimap<decltype(detail::now()), decltype(queue.pop())> messages;
     decltype(queue.pop()) msg_ptr = nullptr;

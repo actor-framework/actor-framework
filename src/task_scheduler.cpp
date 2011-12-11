@@ -6,6 +6,7 @@
 #include "cppa/actor_behavior.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/task_scheduler.hpp"
+#include "cppa/detail/yielding_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
@@ -29,13 +30,23 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
 {
     cppa::util::fiber fself;
     scheduled_actor* job = nullptr;
-    auto still_ready_cb = []() { return true; };
-    auto done_cb = [&]()
+    struct handler : scheduled_actor::resume_callback
     {
-        if (!job->deref()) delete job;
-        CPPA_MEMORY_BARRIER();
-        dec_actor_count();
+        scheduled_actor** job_ptr;
+        handler(scheduled_actor** jptr) : job_ptr(jptr) { }
+        bool still_ready()
+        {
+            return true;
+        }
+        void exec_done()
+        {
+            auto job = *job_ptr;
+            if (!job->deref()) delete job;
+            CPPA_MEMORY_BARRIER();
+            dec_actor_count();
+        }
     };
+    handler h(&job);
     for (;;)
     {
         job = jq->pop();
@@ -43,7 +54,7 @@ void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
         {
             return;
         }
-        scheduled_actor::execute(job, &fself, still_ready_cb, done_cb);
+        job->resume(&fself, &h);
     }
 }
 
@@ -78,9 +89,9 @@ void task_scheduler::schedule(scheduled_actor* what)
 actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
 {
     inc_actor_count();
-    intrusive_ptr<scheduled_actor> ctx(new scheduled_actor(behavior,
-                                                           enqueue_fun,
-                                                           this));
+    intrusive_ptr<scheduled_actor> ctx(new yielding_actor(behavior,
+                                                          enqueue_fun,
+                                                          this));
     // add an implicit reference to ctx
     ctx->ref();
     m_queue.push_back(ctx.get());
