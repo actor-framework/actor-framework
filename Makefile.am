@@ -51,6 +51,7 @@ libcppa_la_SOURCES = \
   src/serializer.cpp \
   src/shared_spinlock.cpp \
   src/singleton_manager.cpp \
+  src/stacked_event_based_actor.cpp \
   src/string_serialization.cpp \
   src/task_scheduler.cpp \
   src/thread_pool_scheduler.cpp \
@@ -84,8 +85,9 @@ nobase_library_include_HEADERS = \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
   cppa/event_based_actor.hpp \
+  cppa/event_based_actor_mixin.hpp \
   cppa/detail/abstract_actor.hpp \
-  cppa/detail/abstract_event_based_actor.hpp \
+  cppa/abstract_event_based_actor.hpp \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \
   cppa/detail/actor_proxy_cache.hpp \
@@ -156,6 +158,7 @@ nobase_library_include_HEADERS = \
   cppa/scheduler.hpp \
   cppa/scheduling_hint.hpp \
   cppa/serializer.hpp \
+  cppa/stacked_event_based_actor.hpp \
   cppa/to_string.hpp \
   cppa/tuple.hpp \
   cppa/tuple_view.hpp \

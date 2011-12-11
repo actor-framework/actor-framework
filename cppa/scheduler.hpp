@@ -11,7 +11,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "cppa/abstract_event_based_actor.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -59,7 +59,7 @@ class scheduler
     /**
      * @brief Spawns a new event-based actor.
      */
-    virtual actor_ptr spawn(event_based_actor* what) = 0;
+    virtual actor_ptr spawn(abstract_event_based_actor* what) = 0;
 
     /**
      * @brief Informs the scheduler about a converted context

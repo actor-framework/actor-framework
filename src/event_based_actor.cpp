@@ -2,25 +2,25 @@
 
 namespace cppa {
 
-void event_based_actor::on_exit()
-{
-}
-
-void event_based_actor::unbecome()
+void event_based_actor::clear()
 {
     if (!m_loop_stack.empty()) m_loop_stack.pop();
 }
 
-void event_based_actor::become(invoke_rules&& behavior)
+void event_based_actor::do_become(invoke_rules* behavior,
+                                  bool has_ownership)
 {
+    clear();
     reset_timeout();
-    m_loop_stack.push(std::move(behavior));
+    m_loop_stack.push(stack_element(behavior, has_ownership));
 }
 
-void event_based_actor::become(timed_invoke_rules&& behavior)
+void event_based_actor::do_become(timed_invoke_rules* behavior,
+                                  bool has_ownership)
 {
-    request_timeout(behavior.timeout());
-    m_loop_stack.push(std::move(behavior));
+    clear();
+    request_timeout(behavior->timeout());
+    m_loop_stack.push(stack_element(behavior, has_ownership));
 }
 
 } // namespace cppa

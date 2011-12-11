@@ -113,15 +113,17 @@ class timed_invoke_rules : public invoke_rules_base
 
     friend class invoke_rules;
 
-    timed_invoke_rules() = delete;
     timed_invoke_rules(const timed_invoke_rules&) = delete;
     timed_invoke_rules& operator=(const timed_invoke_rules&) = delete;
 
     timed_invoke_rules(invokable_list&& prepended_list,
                        timed_invoke_rules&& other);
 
+    static util::duration default_timeout;
+
 public:
 
+    timed_invoke_rules();
     timed_invoke_rules(timed_invoke_rules&& arg);
     timed_invoke_rules(detail::timed_invokable_ptr&& arg);
 

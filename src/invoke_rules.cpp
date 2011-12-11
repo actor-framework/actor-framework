@@ -33,6 +33,7 @@
 
 namespace cppa {
 
+util::duration timed_invoke_rules::default_timeout;
 // invoke_rules_base
 
 invoke_rules_base::invoke_rules_base(invoke_rules_base&& other)
@@ -72,6 +73,10 @@ invoke_rules_base::get_intermediate(const any_tuple& t) const
 
 // timed_invoke_rules
 
+timed_invoke_rules::timed_invoke_rules()
+{
+}
+
 timed_invoke_rules::timed_invoke_rules(timed_invoke_rules&& other)
     : super(std::move(other)), m_ti(std::move(other.m_ti))
 {
@@ -99,13 +104,13 @@ timed_invoke_rules& timed_invoke_rules::operator=(timed_invoke_rules&& other)
 
 const util::duration& timed_invoke_rules::timeout() const
 {
-    return m_ti->timeout();
+    return (m_ti != nullptr) ? m_ti->timeout() : default_timeout;
 }
 
 void timed_invoke_rules::handle_timeout() const
 {
     // safe, because timed_invokable ignores the given argument
-    m_ti->invoke(*static_cast<any_tuple*>(nullptr));
+    if (m_ti != nullptr) m_ti->invoke(*static_cast<any_tuple*>(nullptr));
 }
 
 // invoke_rules
@@ -143,6 +148,11 @@ invoke_rules invoke_rules::operator,(invoke_rules&& other)
 {
     m_list.splice(m_list.end(), other.m_list);
     return std::move(m_list);
+}
+
+timed_invoke_rules invoke_rules::operator,(timed_invoke_rules&& other)
+{
+    return timed_invoke_rules(std::move(m_list), std::move(other));
 }
 
 invoke_rules& invoke_rules::operator=(invoke_rules&& other)

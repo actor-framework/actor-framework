@@ -10,7 +10,7 @@ class mock_scheduler : public scheduler
 
  public:
 
-    actor_ptr spawn(event_based_actor* what);
+    actor_ptr spawn(abstract_event_based_actor* what);
 
     actor_ptr spawn(actor_behavior*, scheduling_hint);
 

@@ -217,7 +217,7 @@ actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what)
 }
 
 
-actor_ptr thread_pool_scheduler::spawn(event_based_actor* what)
+actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
 {
     return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
 }

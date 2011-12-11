@@ -232,7 +232,10 @@ examples/math_actor_example.cpp
 cppa/detail/yielding_actor.hpp
 src/yielding_actor.cpp
 cppa/util/either.hpp
-cppa/detail/abstract_event_based_actor.hpp
+cppa/abstract_event_based_actor.hpp
 src/abstract_event_based_actor.cpp
 cppa/event_based_actor.hpp
 src/event_based_actor.cpp
+cppa/stacked_event_based_actor.hpp
+src/stacked_event_based_actor.cpp
+cppa/event_based_actor_mixin.hpp

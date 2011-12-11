@@ -15,6 +15,7 @@
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/event_based_actor.hpp"
+#include "cppa/stacked_event_based_actor.hpp"
 
 using std::cerr;
 using std::cout;
@@ -22,37 +23,64 @@ using std::endl;
 
 using namespace cppa;
 
+// GCC 4.7 supports non-static member initialization
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
+
 class event_testee : public event_based_actor
 {
 
-    invoke_rules wait4string()
-    {
-        return on<std::string>() >> [=](const std::string& value)
+    invoke_rules wait4string =
+    (
+        on<std::string>() >> [=](const std::string& value)
         {
             cout << "event_testee[string]: " << value << endl;
             // switch back to wait4int
             unbecome();
             unbecome();
-        };
-    }
+        }
+    );
 
-    invoke_rules wait4float()
-    {
-        return on<float>() >> [=](float value)
+    invoke_rules wait4float =
+    (
+        on<float>() >> [=](float value)
         {
             cout << "event_testee[float]: " << value << endl;
-            become(wait4string());
-        };
-    }
+            become(wait4string);
+        }
+    );
 
-    invoke_rules wait4int()
-    {
-        return on<int>() >> [=](int value)
+    invoke_rules wait4int =
+    (
+        on<int>() >> [=](int value)
         {
             cout << "event_testee[int]: " << value << endl;
-            become(wait4float());
-        };
+            become(wait4float);
+        }
+    );
+
+ public:
+
+    void on_exit()
+    {
+        cout << "event_testee[GCC47]::on_exit()" << endl;
     }
+
+    void init()
+    {
+        cout << "event_testee[GCC47]::init()" << endl;
+        become(wait4int);
+    }
+
+};
+
+#else
+
+class event_testee : public event_based_actor
+{
+
+    invoke_rules wait4string;
+    invoke_rules wait4float;
+    invoke_rules wait4int;
 
  public:
 
@@ -63,21 +91,52 @@ class event_testee : public event_based_actor
 
     void init()
     {
+        wait4string =
+        (
+            on<std::string>() >> [=](const std::string& value)
+            {
+                cout << "event_testee[string]: " << value << endl;
+                become(&wait4int);
+            }
+        );
+        wait4float =
+        (
+            on<float>() >> [=](float value)
+            {
+                cout << "event_testee[float]: " << value << endl;
+                become(&wait4string);
+            }
+        );
+        wait4int =
+        (
+            on<int>() >> [=](int value)
+            {
+                cout << "event_testee[int]: " << value << endl;
+                become(&wait4float);
+            }
+        );
         cout << "event_testee::init()" << endl;
-        become(wait4int());
+        become(&wait4int);
     }
 
 };
 
-event_based_actor* event_testee2()
+#endif
+
+abstract_event_based_actor* event_testee2()
 {
     struct impl : event_based_actor
     {
         int num_timeouts;
         impl() : num_timeouts(0) { }
+
+        timed_invoke_rules state;
+
         void init()
         {
-            become
+            cout << "event_testee2::impl::init()" << endl;
+            state =
+            //become
             (
                 others() >> []()
                 {
@@ -85,13 +144,17 @@ event_based_actor* event_testee2()
                          << to_string(last_received())
                          << endl;
                 },
-                after(std::chrono::milliseconds(50)) >> [this]()
+                after(std::chrono::milliseconds(50)) >> [=]()
                 {
                     cout << "testee2 received timeout nr. "
                          << (num_timeouts + 1) << endl;
-                    if (++num_timeouts >= 5) unbecome();
+                    if (++num_timeouts >= 5)
+                    {
+                        quit(exit_reason::normal);
+                    }
                 }
             );
+            become(&state);
         }
     };
     return new impl;
@@ -142,6 +205,7 @@ void testee1()
     (
         after(std::chrono::milliseconds(10)) >> []()
         {
+            cout << "testee1::quit" << endl;
             quit(exit_reason::user_defined);
         }
     );
@@ -205,13 +269,9 @@ size_t test__spawn()
     CPPA_TEST(test__spawn);
 
     //spawn(testee1);
-    //spawn(new testee_behavior);
+    spawn(event_testee2());
 
-    //await_all_others_done();
-
-    //spawn(event_testee2());
-
-    //auto et = spawn(new event_testee);
+    await_all_others_done();
 
     behavior_test<testee_behavior>();
     behavior_test<event_testee>();

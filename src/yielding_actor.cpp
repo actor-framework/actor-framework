@@ -74,12 +74,13 @@ void yielding_actor::dequeue(timed_invoke_rules& rules)
 {
     queue_node_buffer buffer;
     // try until a message was successfully dequeued
+    request_timeout(rules.timeout());
     for (;;)
     {
-        if (m_mailbox.empty() && has_pending_timeout() == false)
-        {
-            request_timeout(rules.timeout());
-        }
+        //if (m_mailbox.empty() && has_pending_timeout() == false)
+        //{
+        //    request_timeout(rules.timeout());
+        //}
         yield_until_not_empty();
         std::unique_ptr<queue_node> node(m_mailbox.pop());
         switch (dq(node, rules, buffer))

@@ -100,7 +100,7 @@ class mailman_job
         mailman_add_peer m_add_socket;
     };
 
-    constexpr mailman_job(job_type jt) : next(nullptr), m_type(jt) { }
+    inline mailman_job(job_type jt) : next(nullptr), m_type(jt) { }
 
 };
 

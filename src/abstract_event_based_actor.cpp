@@ -1,7 +1,7 @@
 #include "cppa/detail/invokable.hpp"
-#include "cppa/detail/abstract_event_based_actor.hpp"
+#include "cppa/abstract_event_based_actor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
 void abstract_event_based_actor::dequeue(invoke_rules&)
 {
@@ -91,8 +91,22 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
             }
             else
             {
-                // nothing to do
-                return;
+                // nothing to do (wait for new messages)
+                switch (compare_exchange_state(scheduled_actor::about_to_block,
+                                               scheduled_actor::blocked))
+                {
+                    case scheduled_actor::ready:
+                    {
+                        // got a new job
+                        break;
+                    }
+                    case scheduled_actor::blocked:
+                    {
+                        // done
+                        return;
+                    }
+                    default: exit(7); // illegal state
+                };
             }
         }
         node.reset(m_mailbox.pop());
@@ -119,4 +133,8 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     while (callback->still_ready());
 }
 
-} } // namespace cppa::detail
+void abstract_event_based_actor::on_exit()
+{
+}
+
+} // namespace cppa

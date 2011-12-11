@@ -28,12 +28,6 @@ void scheduled_actor::quit(std::uint32_t reason)
     //yield(yield_state::done);
 }
 
-void scheduled_actor::request_timeout(const util::duration& d)
-{
-    future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
-    m_has_pending_timeout_request = true;
-}
-
 void scheduled_actor::enqueue_node(queue_node* node)
 {
     if (m_mailbox._push_back(node))
@@ -88,6 +82,12 @@ int scheduled_actor::compare_exchange_state(int expected, int new_value)
     }
     while (e == expected);
     return e;
+}
+
+void scheduled_actor::request_timeout(const util::duration& d)
+{
+    future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
+    m_has_pending_timeout_request = true;
 }
 
 scheduled_actor::filter_result scheduled_actor::filter_msg(const any_tuple& msg)

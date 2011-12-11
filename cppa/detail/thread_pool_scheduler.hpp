@@ -22,7 +22,7 @@ class thread_pool_scheduler : public scheduler
 
     void schedule(scheduled_actor* what) /*override*/;
 
-    actor_ptr spawn(event_based_actor* what);
+    actor_ptr spawn(abstract_event_based_actor* what);
 
     actor_ptr spawn(actor_behavior* behavior, scheduling_hint hint);
 

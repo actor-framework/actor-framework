@@ -50,7 +50,7 @@ actor_ptr mock_scheduler::spawn(actor_behavior* behavior)
     return ctx;
 }
 
-actor_ptr mock_scheduler::spawn(event_based_actor* what)
+actor_ptr mock_scheduler::spawn(abstract_event_based_actor* what)
 {
     // TODO: don't delete what :)
     delete what;

@@ -472,7 +472,7 @@ inline actor_ptr spawn(actor_behavior* what)
     return get_scheduler()->spawn(what, Hint);
 }
 
-inline actor_ptr spawn(event_based_actor* what)
+inline actor_ptr spawn(abstract_event_based_actor* what)
 {
     return get_scheduler()->spawn(what);
 }
