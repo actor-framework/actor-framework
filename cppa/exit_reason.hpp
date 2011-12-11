@@ -22,6 +22,12 @@ static constexpr std::uint32_t normal = 0x00001;
 static constexpr std::uint32_t unhandled_exception = 0x00002;
 
 /**
+ * @brief Indicates that an event-based actor
+ *        tried to use receive().
+ */
+static constexpr std::uint32_t unallowed_function_call = 0x00003;
+
+/**
  * @brief Indicates that an actor finishied execution
  *        because a connection to a remote link was
  *        closed unexpectedly.

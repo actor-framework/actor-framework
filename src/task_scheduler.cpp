@@ -4,6 +4,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/util/fiber.hpp"
 #include "cppa/actor_behavior.hpp"
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/yielding_actor.hpp"
@@ -86,16 +87,26 @@ void task_scheduler::schedule(scheduled_actor* what)
     }
 }
 
-actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
+actor_ptr task_scheduler::spawn_impl(scheduled_actor* what)
 {
     inc_actor_count();
-    intrusive_ptr<scheduled_actor> ctx(new yielding_actor(behavior,
-                                                          enqueue_fun,
-                                                          this));
+    CPPA_MEMORY_BARRIER();
+    intrusive_ptr<scheduled_actor> ctx(what);
     // add an implicit reference to ctx
     ctx->ref();
     m_queue.push_back(ctx.get());
-    return ctx;
+    return std::move(ctx);
+}
+
+
+actor_ptr task_scheduler::spawn(event_based_actor* what)
+{
+    return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
+}
+
+actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
+{
+    return spawn_impl(new yielding_actor(behavior, enqueue_fun, this));
 }
 
 } } // namespace cppa::detail

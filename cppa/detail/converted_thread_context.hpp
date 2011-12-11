@@ -6,6 +6,7 @@
 #include <map>
 #include <list>
 #include <mutex>
+#include <stack>
 #include <atomic>
 #include <vector>
 #include <memory>
@@ -15,7 +16,10 @@
 #include "cppa/pattern.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
+
 #include "cppa/detail/abstract_actor.hpp"
+
+#include "cppa/util/either.hpp"
 #include "cppa/util/singly_linked_list.hpp"
 
 namespace cppa { namespace detail {

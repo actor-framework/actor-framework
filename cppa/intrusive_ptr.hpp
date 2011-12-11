@@ -38,9 +38,8 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         set_ptr(other.m_ptr);
     }
 
-    intrusive_ptr(intrusive_ptr&& other) : m_ptr(nullptr)
+    intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.take())
     {
-        swap(other);
     }
 
     template<typename Y>
@@ -52,9 +51,10 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
     }
 
     template<typename Y>
-    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(nullptr)
+    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(other.take())
     {
-        swap(other);
+        static_assert(std::is_convertible<Y*, T*>::value,
+                      "Y* is not assignable to T*");
     }
 
     ~intrusive_ptr()

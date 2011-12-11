@@ -1,4 +1,5 @@
 #include "cppa/cppa.hpp"
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/yielding_actor.hpp"
 
@@ -57,77 +58,6 @@ void yielding_actor::yield_until_not_empty()
     }
 }
 
-yielding_actor::filter_result yielding_actor::filter_msg(const any_tuple& msg)
-{
-    if (m_pattern(msg))
-    {
-        auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
-        auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-        if (v0 == atom(":Exit"))
-        {
-            if (m_trap_exit == false)
-            {
-                if (v1 != exit_reason::normal)
-                {
-                    quit(v1);
-                }
-                return normal_exit_signal;
-            }
-        }
-        else if (v0 == atom(":Timeout"))
-        {
-            return (v1 == m_active_timeout_id) ? timeout_message
-                                               : expired_timeout_message;
-        }
-    }
-    return ordinary_message;
-}
-
-yielding_actor::dq_result yielding_actor::dq(std::unique_ptr<queue_node>& node,
-                                             invoke_rules_base& rules,
-                                             queue_node_buffer& buffer)
-{
-    switch (filter_msg(node->msg))
-    {
-        case normal_exit_signal:
-        case expired_timeout_message:
-        {
-            // skip message
-            return dq_indeterminate;
-        }
-        case timeout_message:
-        {
-            // m_active_timeout_id is already invalid
-            m_has_pending_timeout_request = false;
-            // restore mailbox before calling client
-            if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
-            return dq_timeout_occured;
-        }
-        default: break;
-    }
-    auto imd = rules.get_intermediate(node->msg);
-    if (imd)
-    {
-        m_last_dequeued = std::move(node->msg);
-        m_last_sender = std::move(node->sender);
-        // restore mailbox before invoking imd
-        if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
-        // expire pending request
-        if (m_has_pending_timeout_request)
-        {
-            ++m_active_timeout_id;
-            m_has_pending_timeout_request = false;
-        }
-        imd->invoke();
-        return dq_done;
-    }
-    else
-    {
-        buffer.push_back(node.release());
-        return dq_indeterminate;
-    }
-}
-
 void yielding_actor::dequeue(invoke_rules& rules)
 {
     queue_node_buffer buffer;
@@ -146,13 +76,9 @@ void yielding_actor::dequeue(timed_invoke_rules& rules)
     // try until a message was successfully dequeued
     for (;;)
     {
-        if (m_mailbox.empty() && m_has_pending_timeout_request == false)
+        if (m_mailbox.empty() && has_pending_timeout() == false)
         {
-            future_send(this,
-                        rules.timeout(),
-                        atom(":Timeout"),
-                        ++m_active_timeout_id);
-            m_has_pending_timeout_request = true;
+            request_timeout(rules.timeout());
         }
         yield_until_not_empty();
         std::unique_ptr<queue_node> node(m_mailbox.pop());

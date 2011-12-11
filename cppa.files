@@ -231,3 +231,8 @@ examples/hello_world_example.cpp
 examples/math_actor_example.cpp
 cppa/detail/yielding_actor.hpp
 src/yielding_actor.cpp
+cppa/util/either.hpp
+cppa/detail/abstract_event_based_actor.hpp
+src/abstract_event_based_actor.cpp
+cppa/event_based_actor.hpp
+src/event_based_actor.cpp

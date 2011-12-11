@@ -14,6 +14,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/event_based_actor.hpp"
 
 using std::cerr;
 using std::cout;
@@ -21,129 +22,81 @@ using std::endl;
 
 using namespace cppa;
 
-namespace { const any_tuple* s_lm = nullptr; }
-
-class event_actor
+class event_testee : public event_based_actor
 {
-
-    std::stack<invoke_rules> m_behavior;
-    invoke_rules m_next_behavior;
-
-    invoke_rules* m_behavior_ptr;
 
  public:
 
-    event_actor(invoke_rules&& behavior)
+    void init()
     {
-        m_behavior.push(std::move(behavior));
-        m_behavior_ptr = &(m_behavior.top());
-    }
-
-    void become(invoke_rules&& behavior)
-    {
-        m_behavior.push(std::move(behavior));
-        m_behavior_ptr = &(m_behavior.top());
-    }
-
-    void set_next_behavior(invoke_rules&& behavior)
-    {
-        m_next_behavior = std::move(behavior);
-        m_behavior_ptr = &m_next_behavior;
-    }
-
-    void unbecome()
-    {
-        if (!m_behavior.empty())
-        {
-            if (m_behavior_ptr == &(m_behavior.top()))
+        become
+        (
+            on<int>() >> [&](int i)
             {
-                m_behavior.pop();
-                m_behavior_ptr = m_behavior.empty() ? nullptr
-                                                    : &(m_behavior.top());
-            }
-            else
+                // do NOT call receive() here!
+                // this would hijack the worker thread
+                become
+                (
+                    on<int>() >> [&](int i2)
+                    {
+                        cout << "event testee: (" << i << ", " << i2 << ")" << endl;
+                        unbecome();
+                    },
+                    on<float>() >> [&](float f)
+                    {
+                        cout << "event testee: (" << i << ", " << f << ")" << endl;
+                        become
+                        (
+                            on<float>() >> [&]()
+                            {
+                                // switch back to the outer behavior
+                                unbecome();
+                                unbecome();
+                            },
+                            others() >> []()
+                            {
+                                cout << "event testee[line " << __LINE__ << "]: "
+                                     << to_string(last_received())
+                                     << endl;
+                            }
+                        );
+                    }
+                );
+            },
+            others() >> []()
             {
-                m_behavior.pop();
+                cout << "event testee[line " << __LINE__ << "]: "
+                     << to_string(last_received())
+                     << endl;
             }
-        }
-    }
-
-    void operator()(const any_tuple& msg)
-    {
-        if (m_behavior_ptr != nullptr)
-        {
-            s_lm = &msg;
-            auto ptr = m_behavior_ptr;
-            (*ptr)(msg);
-            // execute m_next_behavior at most once
-            if (ptr == m_behavior_ptr && ptr == &m_next_behavior)
-            {
-                m_behavior_ptr = m_behavior.empty() ? nullptr
-                                                    : &m_behavior.top();
-            }
-        }
+        );
     }
 
 };
 
-namespace { event_actor* s_event_actor_self = nullptr; }
-
-void set_next_behavior(invoke_rules&& behavior)
+class testee_behavior : public actor_behavior
 {
-    s_event_actor_self->set_next_behavior(std::move(behavior));
-}
 
-void become(invoke_rules&& behavior)
-{
-    s_event_actor_self->become(std::move(behavior));
-}
+ public:
 
-void unbecome()
-{
-    s_event_actor_self->unbecome();
-}
+    void act()
+    {
+        cout << "testee_behavior::act()" << endl;
+        receive_loop
+        (
+            after(std::chrono::milliseconds(10)) >> []()
+            {
+                quit(exit_reason::user_defined);
+            }
+        );
+    }
 
-event_actor* event_testee()
-{
-    return new event_actor
-    {(
-        on<int>() >> [](int i)
-        {
-            // do NOT call receive() here!
-            // this would hijack the worker thread
-            set_next_behavior
-            ((
-                on<int>() >> [=](int i2)
-                {
-                    cout << "event testee: (" << i << ", " << i2 << ")" << endl;
-                },
-                on<float>() >> [=](float f)
-                {
-                    cout << "event testee: (" << i << ", " << f << ")" << endl;
-                    become
-                    ((
-                        on<float>() >> []()
-                        {
-                            unbecome();
-                        },
-                        others() >> []()
-                        {
-                            cout << "event testee[line " << __LINE__ << "]: "
-                                 << to_string(*s_lm)
-                                 << endl;
-                        }
-                    ));
-                }
-            ));
-        },
-        others() >> []()
-        {
-            cout << "event testee[line " << __LINE__ << "]: "
-                 << to_string(*s_lm)
-                 << endl;
-        }
-    )};
-}
+    void on_exit()
+    {
+        cout << "testee_behavior::on_exit()" << endl;
+    }
+
+};
 
 void testee1()
 {
@@ -194,19 +147,22 @@ size_t test__spawn()
     CPPA_TEST(test__spawn);
 
     spawn(testee1);
+    spawn(new testee_behavior);
+
     await_all_others_done();
 
-    auto et = event_testee();
-    s_event_actor_self = et;
-    (*et)(make_tuple(42));
-    (*et)(make_tuple(24));
-    (*et)(make_tuple(42));
-    (*et)(make_tuple(.24f));
-    (*et)(make_tuple("hello event actor"));
-    (*et)(make_tuple(42));
-    (*et)(make_tuple(.24f));
-    (*et)(make_tuple("hello event actor"));
-    delete et;
+    auto et = spawn(new event_testee);
+    send(et, 42);
+    send(et, 24);
+    send(et, 42);
+    send(et, .24f);
+    send(et, "hello event actor");
+    send(et, 42);
+    send(et, 24.f);
+    send(et, "hello event actor");
+    send(et, atom(":Exit"), exit_reason::user_defined);
+
+    await_all_others_done();
 
     return CPPA_TEST_RESULT;
 

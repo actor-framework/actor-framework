@@ -2,9 +2,12 @@
 #define SCHEDULED_ACTOR_HPP
 
 #include "cppa/local_actor.hpp"
-#include "cppa/util/fiber.hpp"
 #include "cppa/actor_behavior.hpp"
+
+#include "cppa/util/fiber.hpp"
+#include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
+
 #include "cppa/detail/delegate.hpp"
 #include "cppa/detail/abstract_actor.hpp"
 
@@ -32,6 +35,41 @@ class scheduled_actor : public abstract_actor<local_actor>
 
     typedef abstract_actor<local_actor> super;
     typedef super::queue_node queue_node;
+    typedef util::singly_linked_list<queue_node> queue_node_buffer;
+
+    enum dq_result
+    {
+        dq_done,
+        dq_indeterminate,
+        dq_timeout_occured
+    };
+
+    enum filter_result
+    {
+        normal_exit_signal,
+        expired_timeout_message,
+        timeout_message,
+        ordinary_message
+    };
+
+    filter_result filter_msg(const any_tuple& msg);
+
+    dq_result dq(std::unique_ptr<queue_node>& node,
+                 invoke_rules_base& rules,
+                 queue_node_buffer& buffer);
+
+    bool has_pending_timeout()
+    {
+        return m_has_pending_timeout_request;
+    }
+
+    void request_timeout(const util::duration& d);
+
+ private:
+
+    bool m_has_pending_timeout_request;
+    std::uint32_t m_active_timeout_id;
+    pattern<atom_value, std::uint32_t> m_pattern;
 
  public:
 
@@ -48,6 +86,8 @@ class scheduled_actor : public abstract_actor<local_actor>
         : next(nullptr)
         , m_state(ready)
         , m_enqueue_to_scheduler(enqueue_fun, sched, this)
+        , m_has_pending_timeout_request(false)
+        , m_active_timeout_id(0)
     {
     }
 

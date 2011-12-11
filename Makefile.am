@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 lib_LTLIBRARIES = libcppa.la
 
 libcppa_la_SOURCES = \
+  src/abstract_event_based_actor.cpp \
   src/abstract_tuple.cpp \
   src/actor_behavior.cpp \
   src/actor_count.cpp \
@@ -21,6 +22,7 @@ libcppa_la_SOURCES = \
   src/local_actor.cpp \
   src/converted_thread_context.cpp \
   src/cppa.cpp \
+  src/event_based_actor.cpp \
   src/delegate.cpp \
   src/demangle.cpp \
   src/deserializer.cpp \
@@ -81,7 +83,9 @@ nobase_library_include_HEADERS = \
   cppa/cow_ptr.hpp \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
+  cppa/event_based_actor.hpp \
   cppa/detail/abstract_actor.hpp \
+  cppa/detail/abstract_event_based_actor.hpp \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \
   cppa/detail/actor_proxy_cache.hpp \
@@ -169,6 +173,7 @@ nobase_library_include_HEADERS = \
   cppa/util/disable_if.hpp \
   cppa/util/disjunction.hpp \
   cppa/util/duration.hpp \
+  cppa/util/either.hpp \
   cppa/util/element_at.hpp \
   cppa/util/enable_if.hpp \
   cppa/util/eval_first_n.hpp \

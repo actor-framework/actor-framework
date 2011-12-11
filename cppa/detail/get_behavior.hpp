@@ -1,6 +1,8 @@
 #ifndef GET_BEHAVIOR_HPP
 #define GET_BEHAVIOR_HPP
 
+#include <type_traits>
+
 #include "cppa/invoke.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/detail/tdata.hpp"
@@ -83,12 +85,20 @@ class ftor_behavior<false, true, F, Args...>  : public actor_behavior
 template<typename R>
 actor_behavior* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
 {
+    static_assert(std::is_convertible<R, actor_behavior*>::value == false,
+                  "Spawning a function returning an actor_behavior? "
+                  "Are you sure that you do not want to spawn the behavior "
+                  "returned by that function?");
     return new ftor_behavior<true, false, R (*)()>(fptr);
 }
 
 template<typename F>
 actor_behavior* get_behavior(std::integral_constant<bool,false>, F&& ftor)
 {
+    static_assert(std::is_convertible<decltype(ftor()), actor_behavior*>::value == false,
+                  "Spawning a functor returning an actor_behavior? "
+                  "Are you sure that you do not want to spawn the behavior "
+                  "returned by that functor?");
     typedef typename util::rm_ref<F>::type ftype;
     return new ftor_behavior<false, false, ftype>(std::forward<F>(ftor));
 }
@@ -99,6 +109,10 @@ actor_behavior* get_behavior(std::integral_constant<bool,true>,
                              const Arg0& arg0,
                              const Args&... args)
 {
+    static_assert(std::is_convertible<decltype(fptr(arg0, args...)), actor_behavior*>::value == false,
+                  "Spawning a function returning an actor_behavior? "
+                  "Are you sure that you do not want to spawn the behavior "
+                  "returned by that function?");
     typedef ftor_behavior<true, true, F, Arg0, Args...> impl;
     return new impl(fptr, arg0, args...);
 }
@@ -109,6 +123,10 @@ actor_behavior* get_behavior(std::integral_constant<bool,false>,
                              const Arg0& arg0,
                              const Args&... args)
 {
+    static_assert(std::is_convertible<decltype(ftor(arg0, args...)), actor_behavior*>::value == false,
+                  "Spawning a functor returning an actor_behavior? "
+                  "Are you sure that you do not want to spawn the behavior "
+                  "returned by that functor?");
     typedef typename util::rm_ref<F>::type ftype;
     typedef ftor_behavior<false, true, ftype, Arg0, Args...> impl;
     return new impl(std::forward<F>(ftor), arg0, args...);

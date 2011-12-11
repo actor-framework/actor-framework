@@ -32,11 +32,16 @@
 #include <list>
 #include <memory>
 
+#include "cppa/detail/invokable.hpp"
+#include "cppa/detail/intermediate.hpp"
+
 namespace cppa { namespace detail {
 
+/*
 class invokable;
 class intermediate;
 class timed_invokable;
+*/
 
 typedef std::unique_ptr<detail::invokable> invokable_ptr;
 typedef std::unique_ptr<detail::timed_invokable> timed_invokable_ptr;
@@ -119,6 +124,8 @@ public:
 
     timed_invoke_rules(timed_invoke_rules&& arg);
     timed_invoke_rules(detail::timed_invokable_ptr&& arg);
+
+    timed_invoke_rules& operator=(timed_invoke_rules&&);
 
     const util::duration& timeout() const;
 

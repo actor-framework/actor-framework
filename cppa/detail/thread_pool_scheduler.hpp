@@ -22,6 +22,8 @@ class thread_pool_scheduler : public scheduler
 
     void schedule(scheduled_actor* what) /*override*/;
 
+    actor_ptr spawn(event_based_actor* what);
+
     actor_ptr spawn(actor_behavior* behavior, scheduling_hint hint);
 
  private:
@@ -31,6 +33,8 @@ class thread_pool_scheduler : public scheduler
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;
     thread m_supervisor;
+
+    actor_ptr spawn_impl(scheduled_actor* what);
 
     static void worker_loop(worker*);
     static void supervisor_loop(job_queue*, scheduled_actor*);

@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iostream>
 
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/yielding_actor.hpp"
@@ -205,6 +206,22 @@ void thread_pool_scheduler::schedule(scheduled_actor* what)
     m_queue.push_back(what);
 }
 
+actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what)
+{
+    inc_actor_count();
+    CPPA_MEMORY_BARRIER();
+    intrusive_ptr<scheduled_actor> ctx(what);
+    ctx->ref();
+    m_queue.push_back(ctx.get());
+    return std::move(ctx);
+}
+
+
+actor_ptr thread_pool_scheduler::spawn(event_based_actor* what)
+{
+    return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
+}
+
 actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
                                        scheduling_hint hint)
 {
@@ -214,14 +231,9 @@ actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
     }
     else
     {
-        inc_actor_count();
-        CPPA_MEMORY_BARRIER();
-        intrusive_ptr<scheduled_actor> ctx(new yielding_actor(behavior,
-                                                              enqueue_fun,
-                                                              this));
-        ctx->ref();
-        m_queue.push_back(ctx.get());
-        return ctx;
+        return spawn_impl(new yielding_actor(behavior,
+                                             enqueue_fun,
+                                             this));
     }
 }
 

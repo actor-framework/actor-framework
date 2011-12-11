@@ -1,3 +1,4 @@
+#include "cppa/cppa.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/scheduled_actor.hpp"
@@ -11,6 +12,8 @@ scheduled_actor::scheduled_actor()
     : next(nullptr)
     , m_state(scheduled_actor::done)
     , m_enqueue_to_scheduler(dummy_enqueue, static_cast<void*>(nullptr), this)
+    , m_has_pending_timeout_request(false)
+    , m_active_timeout_id(0)
 {
 }
 
@@ -23,6 +26,12 @@ void scheduled_actor::quit(std::uint32_t reason)
     cleanup(reason);
     throw actor_exited(reason);
     //yield(yield_state::done);
+}
+
+void scheduled_actor::request_timeout(const util::duration& d)
+{
+    future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
+    m_has_pending_timeout_request = true;
 }
 
 void scheduled_actor::enqueue_node(queue_node* node)
@@ -79,6 +88,77 @@ int scheduled_actor::compare_exchange_state(int expected, int new_value)
     }
     while (e == expected);
     return e;
+}
+
+scheduled_actor::filter_result scheduled_actor::filter_msg(const any_tuple& msg)
+{
+    if (m_pattern(msg))
+    {
+        auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
+        auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+        if (v0 == atom(":Exit"))
+        {
+            if (m_trap_exit == false)
+            {
+                if (v1 != exit_reason::normal)
+                {
+                    quit(v1);
+                }
+                return normal_exit_signal;
+            }
+        }
+        else if (v0 == atom(":Timeout"))
+        {
+            return (v1 == m_active_timeout_id) ? timeout_message
+                                               : expired_timeout_message;
+        }
+    }
+    return ordinary_message;
+}
+
+scheduled_actor::dq_result scheduled_actor::dq(std::unique_ptr<queue_node>& node,
+                                               invoke_rules_base& rules,
+                                               queue_node_buffer& buffer)
+{
+    switch (filter_msg(node->msg))
+    {
+        case normal_exit_signal:
+        case expired_timeout_message:
+        {
+            // skip message
+            return dq_indeterminate;
+        }
+        case timeout_message:
+        {
+            // m_active_timeout_id is already invalid
+            m_has_pending_timeout_request = false;
+            // restore mailbox before calling client
+            if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
+            return dq_timeout_occured;
+        }
+        default: break;
+    }
+    auto imd = rules.get_intermediate(node->msg);
+    if (imd)
+    {
+        m_last_dequeued = std::move(node->msg);
+        m_last_sender = std::move(node->sender);
+        // restore mailbox before invoking imd
+        if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
+        // expire pending request
+        if (m_has_pending_timeout_request)
+        {
+            ++m_active_timeout_id;
+            m_has_pending_timeout_request = false;
+        }
+        imd->invoke();
+        return dq_done;
+    }
+    else
+    {
+        buffer.push_back(node.release());
+        return dq_indeterminate;
+    }
 }
 
 // dummy

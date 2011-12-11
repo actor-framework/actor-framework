@@ -29,7 +29,13 @@ class task_scheduler : public scheduler
 
     void schedule(scheduled_actor* what);
 
+    actor_ptr spawn(event_based_actor* what);
+
     actor_ptr spawn(actor_behavior*, scheduling_hint);
+
+ private:
+
+    actor_ptr spawn_impl(scheduled_actor* what);
 
 };
 

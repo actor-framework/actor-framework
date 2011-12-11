@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "cppa/exception.hpp"
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 

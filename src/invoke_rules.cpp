@@ -89,6 +89,14 @@ timed_invoke_rules::timed_invoke_rules(invokable_list&& lhs,
     m_list.splice(m_list.begin(), rhs.m_list);
 }
 
+timed_invoke_rules& timed_invoke_rules::operator=(timed_invoke_rules&& other)
+{
+    m_list = std::move(other.m_list);
+    other.m_list.clear();
+    std::swap(m_ti, other.m_ti);
+    return *this;
+}
+
 const util::duration& timed_invoke_rules::timeout() const
 {
     return m_ti->timeout();

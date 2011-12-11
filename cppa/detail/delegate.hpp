@@ -22,6 +22,14 @@ class delegate
     {
     }
 
+    template<typename Arg1, typename Arg2, typename Function>
+    void reset(Function* fun, Arg1* a1, Arg2* a2)
+    {
+        m_fun = reinterpret_cast<void_fun>(fun);
+        m_arg1 = reinterpret_cast<void*>(a1);
+        m_arg2 = reinterpret_cast<void*>(a2);
+    }
+
     void operator()();
 
 };

@@ -39,15 +39,17 @@
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/receive.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/actor_behavior.hpp"
 #include "cppa/scheduling_hint.hpp"
+#include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/enable_if.hpp"
@@ -459,6 +461,22 @@ inline void trap_exit(bool new_value)
     self()->trap_exit(new_value);
 }
 
+inline actor_ptr spawn(actor_behavior* what)
+{
+    return get_scheduler()->spawn(what, scheduled);
+}
+
+template<scheduling_hint Hint>
+inline actor_ptr spawn(actor_behavior* what)
+{
+    return get_scheduler()->spawn(what, Hint);
+}
+
+inline actor_ptr spawn(event_based_actor* what)
+{
+    return get_scheduler()->spawn(what);
+}
+
 /**
  * @brief Spawns a new actor that executes @p what with given arguments.
  * @param Hint Hint to the scheduler for the best scheduling strategy.
@@ -467,7 +485,11 @@ inline void trap_exit(bool new_value)
  * @returns A pointer to the newly created {@link actor Actor}.
  */
 template<scheduling_hint Hint, typename F, typename... Args>
-actor_ptr spawn(F&& what, const Args&... args)
+auto //actor_ptr
+spawn(F&& what, const Args&... args)
+-> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, actor_behavior*>::value
+                               || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
+                               actor_ptr>::type
 {
     typedef typename util::rm_ref<F>::type ftype;
     std::integral_constant<bool, std::is_function<ftype>::value> is_fun;
@@ -482,7 +504,11 @@ actor_ptr spawn(F&& what, const Args&... args)
  * @returns A pointer to the newly created {@link actor Actor}.
  */
 template<typename F, typename... Args>
-inline actor_ptr spawn(F&& what, const Args&... args)
+auto // actor_ptr
+spawn(F&& what, const Args&... args)
+-> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, actor_behavior*>::value
+                               || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
+                               actor_ptr>::type
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
