@@ -31,6 +31,8 @@ class abstract_event_based_actor : public scheduled_actor
 
     void resume(util::fiber*, resume_callback* callback) /*override*/;
 
+    virtual void on_exit() = 0;
+
  private:
 
     void handle_message(std::unique_ptr<queue_node>& node,

@@ -14,25 +14,34 @@ void abstract_event_based_actor::dequeue(timed_invoke_rules&)
 }
 
 void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node,
-                                        invoke_rules& behavior)
+                                                invoke_rules& behavior)
 {
     // no need to handle result
     (void) dq(node, behavior, m_buffer);
 }
 
 void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node,
-                                        timed_invoke_rules& behavior)
+                                                timed_invoke_rules& behavior)
 {
-    // request timeout only if we're running short on messages
-    if (m_mailbox.empty() && has_pending_timeout() == false)
-    {
-        request_timeout(behavior.timeout());
-    }
     switch (dq(node, behavior, m_buffer))
     {
         case dq_timeout_occured:
         {
             behavior.handle_timeout();
+            // fall through
+        }
+        case dq_done:
+        {
+            // callback might have called become()/unbecome()
+            // request next timeout if needed
+            if (!m_loop_stack.empty())
+            {
+                if (m_loop_stack.top().is_right())
+                {
+                    request_timeout(m_loop_stack.top().right().timeout());
+                }
+            }
+            break;
         }
         default: break;
     }
@@ -52,10 +61,12 @@ void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& nod
 
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
+    set_self(this);
     auto done_cb = [&]()
     {
         m_state.store(scheduled_actor::done);
         while (!m_loop_stack.empty()) m_loop_stack.pop();
+        on_exit();
         callback->exec_done();
     };
 

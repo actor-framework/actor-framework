@@ -25,54 +25,77 @@ using namespace cppa;
 class event_testee : public event_based_actor
 {
 
+    invoke_rules wait4string()
+    {
+        return on<std::string>() >> [=](const std::string& value)
+        {
+            cout << "event_testee[string]: " << value << endl;
+            // switch back to wait4int
+            unbecome();
+            unbecome();
+        };
+    }
+
+    invoke_rules wait4float()
+    {
+        return on<float>() >> [=](float value)
+        {
+            cout << "event_testee[float]: " << value << endl;
+            become(wait4string());
+        };
+    }
+
+    invoke_rules wait4int()
+    {
+        return on<int>() >> [=](int value)
+        {
+            cout << "event_testee[int]: " << value << endl;
+            become(wait4float());
+        };
+    }
+
  public:
+
+    void on_exit()
+    {
+        cout << "event_testee::on_exit()" << endl;
+    }
 
     void init()
     {
-        become
-        (
-            on<int>() >> [&](int i)
-            {
-                // do NOT call receive() here!
-                // this would hijack the worker thread
-                become
-                (
-                    on<int>() >> [&](int i2)
-                    {
-                        cout << "event testee: (" << i << ", " << i2 << ")" << endl;
-                        unbecome();
-                    },
-                    on<float>() >> [&](float f)
-                    {
-                        cout << "event testee: (" << i << ", " << f << ")" << endl;
-                        become
-                        (
-                            on<float>() >> [&]()
-                            {
-                                // switch back to the outer behavior
-                                unbecome();
-                                unbecome();
-                            },
-                            others() >> []()
-                            {
-                                cout << "event testee[line " << __LINE__ << "]: "
-                                     << to_string(last_received())
-                                     << endl;
-                            }
-                        );
-                    }
-                );
-            },
-            others() >> []()
-            {
-                cout << "event testee[line " << __LINE__ << "]: "
-                     << to_string(last_received())
-                     << endl;
-            }
-        );
+        cout << "event_testee::init()" << endl;
+        become(wait4int());
     }
 
 };
+
+event_based_actor* event_testee2()
+{
+    struct impl : event_based_actor
+    {
+        int num_timeouts;
+        impl() : num_timeouts(0) { }
+        void init()
+        {
+            become
+            (
+                others() >> []()
+                {
+                    cout << "event testee2: "
+                         << to_string(last_received())
+                         << endl;
+                },
+                after(std::chrono::milliseconds(50)) >> [this]()
+                {
+                    cout << "testee2 received timeout nr. "
+                         << (num_timeouts + 1) << endl;
+                    if (++num_timeouts >= 5) unbecome();
+                }
+            );
+        }
+    };
+    return new impl;
+}
 
 class testee_behavior : public actor_behavior
 {
@@ -81,12 +104,27 @@ class testee_behavior : public actor_behavior
 
     void act()
     {
-        cout << "testee_behavior::act()" << endl;
         receive_loop
         (
-            after(std::chrono::milliseconds(10)) >> []()
+            on<int>() >> [&](int i)
             {
-                quit(exit_reason::user_defined);
+                cout << "testee_behavior[int]: " << i << endl;
+                receive
+                (
+                    on<float>() >> [&](float f)
+                    {
+                        cout << "testee_behavior[float]: " << f << endl;
+                        receive
+                        (
+                            on<std::string>() >> [&](const std::string& str)
+                            {
+                                cout << "testee_behavior[string]: "
+                                     << str
+                                     << endl;
+                            }
+                        );
+                    }
+                );
             }
         );
     }
@@ -142,27 +180,41 @@ void testee3(actor_ptr parent)
     );
 }
 
+template<class Testee>
+void behavior_test()
+{
+    std::string testee_name = detail::to_uniform_name(typeid(Testee));
+    cout << "behavior_test<" << testee_name << ">()" << endl;
+    auto et = spawn(new Testee);
+    send(et, 1);
+    send(et, 2);
+    send(et, 3);
+    send(et, .1f);
+    send(et, "hello " + testee_name);
+    send(et, .2f);
+    send(et, .3f);
+    send(et, "hello again " + testee_name);
+    send(et, "goodbye " + testee_name);
+    send(et, atom(":Exit"), exit_reason::user_defined);
+    await_all_others_done();
+    cout << endl;
+}
+
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
 
-    spawn(testee1);
-    spawn(new testee_behavior);
+    //spawn(testee1);
+    //spawn(new testee_behavior);
 
-    await_all_others_done();
+    //await_all_others_done();
 
-    auto et = spawn(new event_testee);
-    send(et, 42);
-    send(et, 24);
-    send(et, 42);
-    send(et, .24f);
-    send(et, "hello event actor");
-    send(et, 42);
-    send(et, 24.f);
-    send(et, "hello event actor");
-    send(et, atom(":Exit"), exit_reason::user_defined);
+    //spawn(event_testee2());
 
-    await_all_others_done();
+    //auto et = spawn(new event_testee);
+
+    behavior_test<testee_behavior>();
+    behavior_test<event_testee>();
 
     return CPPA_TEST_RESULT;
 

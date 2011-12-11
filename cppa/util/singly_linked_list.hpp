@@ -16,23 +16,18 @@ class singly_linked_list
 
     typedef T element_type;
 
-    singly_linked_list() : m_head(0), m_tail(0) { }
+    singly_linked_list() : m_head(nullptr), m_tail(nullptr) { }
 
     ~singly_linked_list()
     {
-        while (m_head)
-        {
-            T* next = m_head->next;
-            delete m_head;
-            m_head = next;
-        }
+        clear();
     }
 
-    inline bool empty() const { return m_head == 0; }
+    inline bool empty() const { return m_head == nullptr; }
 
     void push_back(element_type* what)
     {
-        what->next = 0;
+        what->next = nullptr;
         if (m_tail)
         {
             m_tail->next = what;
@@ -48,8 +43,19 @@ class singly_linked_list
     {
         element_type* first = m_head;
         element_type* last = m_tail;
-        m_head = m_tail = 0;
+        m_head = m_tail = nullptr;
         return { first, last };
+    }
+
+    void clear()
+    {
+        while (m_head)
+        {
+            T* next = m_head->next;
+            delete m_head;
+            m_head = next;
+        }
+        m_head = m_tail = nullptr;
     }
 
 };

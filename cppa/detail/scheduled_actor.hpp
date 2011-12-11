@@ -65,6 +65,15 @@ class scheduled_actor : public abstract_actor<local_actor>
 
     void request_timeout(const util::duration& d);
 
+    void reset_timeout()
+    {
+        if (m_has_pending_timeout_request)
+        {
+            ++m_active_timeout_id;
+            m_has_pending_timeout_request = false;
+        }
+    }
+
  private:
 
     bool m_has_pending_timeout_request;

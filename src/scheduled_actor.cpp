@@ -133,7 +133,11 @@ scheduled_actor::dq_result scheduled_actor::dq(std::unique_ptr<queue_node>& node
             // m_active_timeout_id is already invalid
             m_has_pending_timeout_request = false;
             // restore mailbox before calling client
-            if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
+            if (!buffer.empty())
+            {
+                m_mailbox.push_front(std::move(buffer));
+                buffer.clear();
+            }
             return dq_timeout_occured;
         }
         default: break;
@@ -144,7 +148,11 @@ scheduled_actor::dq_result scheduled_actor::dq(std::unique_ptr<queue_node>& node
         m_last_dequeued = std::move(node->msg);
         m_last_sender = std::move(node->sender);
         // restore mailbox before invoking imd
-        if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
+        if (!buffer.empty())
+        {
+            m_mailbox.push_front(std::move(buffer));
+            buffer.clear();
+        }
         // expire pending request
         if (m_has_pending_timeout_request)
         {

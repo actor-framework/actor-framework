@@ -141,6 +141,35 @@ class either
         return *this;
     }
 
+    either& operator=(either&& other)
+    {
+        if (m_is_left == other.m_is_left)
+        {
+            if (m_is_left)
+            {
+                left() = std::move(other.left());
+            }
+            else
+            {
+                right() = std::move(other.right());
+            }
+        }
+        else
+        {
+            destroy();
+            m_is_left = other.m_is_left;
+            if (other.m_is_left)
+            {
+                cr_left(std::move(other.left()));
+            }
+            else
+            {
+                cr_right(std::move(other.right()));
+            }
+        }
+        return *this;
+    }
+
     inline bool is_left() const
     {
         return m_is_left;
@@ -153,21 +182,25 @@ class either
 
     Left& left()
     {
+        check_flag(true, "left");
         return m_left;
     }
 
     const Left& left() const
     {
+        check_flag(true, "left");
         return m_left;
     }
 
     Right& right()
     {
+        check_flag(false, "right");
         return m_right;
     }
 
     const Right& right() const
     {
+        check_flag(false, "right");
         return m_right;
     }
 

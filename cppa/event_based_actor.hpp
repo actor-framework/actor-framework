@@ -13,7 +13,7 @@ class event_based_actor : public detail::abstract_event_based_actor
         become(std::move(rules));
     }
 
-    inline void become_impl(timed_invoke_rules& rules)
+    inline void become_impl(timed_invoke_rules&& rules)
     {
         become(std::move(rules));
     }
@@ -27,11 +27,11 @@ class event_based_actor : public detail::abstract_event_based_actor
 
  protected:
 
-    void unbecome() /*override*/;
+    void unbecome();
 
-    void become(invoke_rules&& behavior) /*override*/;
+    void become(invoke_rules&& behavior);
 
-    void become(timed_invoke_rules&& behavior) /*override*/;
+    void become(timed_invoke_rules&& behavior);
 
     template<typename Head, typename... Tail>
     void become(invoke_rules&& rules, Head&& head, Tail&&... tail)
@@ -45,6 +45,8 @@ class event_based_actor : public detail::abstract_event_based_actor
 
     virtual void init() = 0;
 
+    virtual void on_exit();
+
     template<typename Scheduler>
     abstract_event_based_actor*
     attach_to_scheduler(void (*enqueue_fun)(Scheduler*, scheduled_actor*),
@@ -55,21 +57,35 @@ class event_based_actor : public detail::abstract_event_based_actor
         return this;
     }
 
- private:
+ protected:
 
     // provoke compiler errors for usage of receive() and related functions
 
     template<typename... Args>
-    void receive(Args&&... rules);
+    void receive(Args&&...)
+    {
+        static_assert(sizeof...(Args) < 0,
+                      "You shall not use receive in an event-based actor. "
+                      "Use become()/unbecome() instead.");
+    }
 
     template<typename... Args>
-    void receive_loop(Args&&... rules);
-
-    template<typename Statement>
-    void receive_while(Statement&& stmt);
+    void receive_loop(Args&&... args)
+    {
+        receive(std::forward<Args>(args)...);
+    }
 
     template<typename... Args>
-    void do_receive(Args&&... args);
+    void receive_while(Args&&... args)
+    {
+        receive(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    void do_receive(Args&&... args)
+    {
+        receive(std::forward<Args>(args)...);
+    }
 
 };
 
