@@ -19,7 +19,7 @@ announce_example_5_SOURCES = announce_example_5.cpp
 hello_world_example_SOURCES = hello_world_example.cpp
 math_actor_example_SOURCES = math_actor_example.cpp
 
-EXAMPLES_LIBS = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) -L../.libs/ -lcppa
+EXAMPLES_LIBS = -L../.libs/ -lcppa $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
 
 announce_example_1_LDADD = $(EXAMPLES_LIBS)
 announce_example_2_LDADD = $(EXAMPLES_LIBS)
