@@ -95,7 +95,7 @@ class cached_stack
 		T* result = try_pop();
 		while (!result)
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 			result = try_pop();
 		}
 		return result;

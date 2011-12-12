@@ -62,7 +62,7 @@ class intrusive_sutter_list
 		// acquire exclusivity
 		while (m_producer_lock.exchange(true))
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 		}
 		// publish & swing last forward
 		m_last->next = tmp;
@@ -97,7 +97,7 @@ class intrusive_sutter_list
 		T result;
 		while (!try_pop(result))
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 		}
 		return result;
 	}

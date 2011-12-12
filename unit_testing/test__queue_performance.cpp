@@ -9,6 +9,19 @@
 
 #include "cppa/util/single_reader_queue.hpp"
 
+//#define DEBUG_RESULTS
+
+// "config"
+
+namespace {
+
+const size_t slave_messages = 1000000;
+const size_t trials = 10;
+
+} // namespace <anonymous>
+
+
+
 using cppa::util::single_reader_queue;
 
 using std::cout;
@@ -107,7 +120,7 @@ class locked_queue
         }
     }
 
-    void push(element_type* new_element)
+    void push_back(element_type* new_element)
     {
         lock_type guard(m_mtx);
         if (m_pub.empty())
@@ -150,42 +163,74 @@ void slave(Queue& q, size_t from, size_t to)
 }
 
 template<typename Queue, size_t num_slaves, size_t num_slave_msgs>
-void master(Queue& q)
+void master()
 {
 
     static const size_t num_msgs = (num_slaves) * (num_slave_msgs);
 
     static const size_t calc_result = ((num_msgs)*(num_msgs + 1)) / 2;
 
-    boost::timer t0;
-    for (size_t i = 0; i < num_slaves; ++i)
-    {
-        size_t from = (i * num_slave_msgs) + 1;
-        size_t to = from + num_slave_msgs;
-        boost::thread(slave<Queue>, boost::ref(q), from, to).detach();
-    }
-    size_t result = 0;
-    size_t min_val = calc_result;
-    size_t max_val = 0;
-    for (size_t i = 0; i < num_msgs; ++i)
-    {
-        queue_element* e = q.pop();
-        result += e->value;
-        min_val = std::min(min_val, e->value);
-        max_val = std::max(max_val, e->value);
-        delete e;
-    }
-    if (result != calc_result)
-    {
-        cerr << "ERROR: result = " << result
-             << " (should be: " << calc_result << ")" << endl
-             << "min: " << min_val << endl
-             << "max: " << max_val << endl;
-    }
-    cout << t0.elapsed() << " " << num_slaves << endl;
-}
 
-namespace { const size_t slave_messages = 1000000; }
+    //cout << num_slaves << " workers; running test";
+    //cout.flush();
+
+    double elapsed[trials];
+
+    for (size_t i = 0; i < trials; ++i)
+    {
+
+        //cout << " ... " << (i + 1);
+        //cout.flush();
+
+        Queue q;
+
+        boost::timer t0;
+        for (size_t j = 0; j < num_slaves; ++j)
+        {
+            size_t from = (j * num_slave_msgs) + 1;
+            size_t to = from + num_slave_msgs;
+            boost::thread(slave<Queue>, boost::ref(q), from, to).detach();
+        }
+        size_t result = 0;
+#       ifdef DEBUG_RESULTS
+        size_t min_val = calc_result;
+        size_t max_val = 0;
+#       endif
+        for (size_t j = 0; j < num_msgs; ++j)
+        {
+            queue_element* e = q.pop();
+            result += e->value;
+#           ifdef DEBUG_RESULTS
+            min_val = std::min(min_val, e->value);
+            max_val = std::max(max_val, e->value);
+#           endif
+            delete e;
+        }
+        if (result != calc_result)
+        {
+            cerr << "ERROR: result = " << result
+                 << " (should be: " << calc_result << ")"
+#               ifdef DEBUG_RESULTS
+                 << endl << "min: " << min_val
+                 << endl << "max: " << max_val
+#               endif
+                 << endl;
+        }
+        elapsed[i] = t0.elapsed();
+        //cout << t0.elapsed() << " " << num_slaves << endl;
+    }
+    //cout << endl;
+    double sum = 0;
+    //cout << "runtimes = { ";
+    for (size_t i = 0; i < trials; ++i)
+    {
+         //cout << (i == 0 ? "" : ", ") << elapsed[i];
+         sum += elapsed[i];
+    }
+    //cout << " }" << endl;
+    //cout << "AVG = " << (sum / trials) << endl;
+    cout << (sum / trials) << " " << num_slaves << endl;
+}
 
 template<size_t Pos, size_t Max, size_t Step,
          template<size_t> class Stmt>
@@ -222,8 +267,7 @@ struct test_step
     template<typename QueueToken>
     static inline void _(QueueToken)
     {
-        typename QueueToken::type q;
-        boost::thread t0(master<typename QueueToken::type, NumThreads, slave_messages>, boost::ref(q));
+        boost::thread t0(master<typename QueueToken::type, NumThreads, slave_messages>);
         t0.join();
     }
 };
@@ -237,8 +281,13 @@ void test_q_impl()
 
 void test__queue_performance()
 {
+    cout << "Format: "
+            "(average value of 10 runs) "
+//            "(standard deviation) "
+            "(number of worker threads)"
+         << endl;
     cout << "locked_queue:" << endl;
-//	test_q_impl<locked_queue<queue_element>>();
+    test_q_impl<locked_queue<queue_element>>();
     cout << endl;
     cout << "single_reader_queue:" << endl;
     test_q_impl<single_reader_queue<queue_element>>();

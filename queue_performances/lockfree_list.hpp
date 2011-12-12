@@ -90,7 +90,7 @@ class lockfree_list
 		T result;
 		while (!try_pop(result))
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 		}
 		return result;
 	}

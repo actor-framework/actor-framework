@@ -59,7 +59,7 @@ class sutter_list
 		// acquire exclusivity
 		while (m_producer_lock.exchange(true))
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 		}
 		// publish & swing last forward
 		m_last->next = tmp;
@@ -96,7 +96,7 @@ class sutter_list
 		T* result = try_pop();
 		while (!result)
 		{
-			boost::this_thread::yield();
+			std::this_thread::yield();
 			result = try_pop();
 		}
 		return result;
