@@ -73,8 +73,6 @@ class invoke_rules_base
 
     invoke_rules_base(invokable_list&& ilist);
 
-    invoke_rules_base(invoke_rules_base&& other);
-
  protected:
 
     invokable_list m_list;

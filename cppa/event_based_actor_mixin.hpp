@@ -3,6 +3,10 @@
 
 #include "cppa/abstract_event_based_actor.hpp"
 
+#include <iostream>
+using std::cout;
+using std::endl;
+
 namespace cppa {
 
 template<typename Derived>

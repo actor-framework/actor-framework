@@ -4,9 +4,9 @@
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
-namespace { void dummy_enqueue(void*, cppa::detail::abstract_scheduled_actor*) { } }
-
 namespace cppa { namespace detail {
+
+namespace { void dummy_enqueue(void*, abstract_scheduled_actor*) { } }
 
 abstract_scheduled_actor::abstract_scheduled_actor()
     : next(nullptr)
@@ -25,7 +25,6 @@ void abstract_scheduled_actor::quit(std::uint32_t reason)
 {
     cleanup(reason);
     throw actor_exited(reason);
-    //yield(yield_state::done);
 }
 
 void abstract_scheduled_actor::enqueue_node(queue_node* node)
@@ -70,7 +69,8 @@ void abstract_scheduled_actor::enqueue(actor* sender, const any_tuple& msg)
     enqueue_node(new queue_node(sender, msg));
 }
 
-int abstract_scheduled_actor::compare_exchange_state(int expected, int new_value)
+int abstract_scheduled_actor::compare_exchange_state(int expected,
+                                                     int new_value)
 {
     int e = expected;
     do
@@ -90,7 +90,7 @@ void abstract_scheduled_actor::request_timeout(const util::duration& d)
     m_has_pending_timeout_request = true;
 }
 
-abstract_scheduled_actor::filter_result abstract_scheduled_actor::filter_msg(const any_tuple& msg)
+auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
 {
     if (m_pattern(msg))
     {
@@ -116,9 +116,9 @@ abstract_scheduled_actor::filter_result abstract_scheduled_actor::filter_msg(con
     return ordinary_message;
 }
 
-abstract_scheduled_actor::dq_result abstract_scheduled_actor::dq(std::unique_ptr<queue_node>& node,
-                                               invoke_rules_base& rules,
-                                               queue_node_buffer& buffer)
+auto abstract_scheduled_actor::dq(std::unique_ptr<queue_node>& node,
+                                  invoke_rules_base& rules,
+                                  queue_node_buffer& buffer) -> dq_result
 {
     switch (filter_msg(node->msg))
     {

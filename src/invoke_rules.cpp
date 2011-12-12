@@ -36,11 +36,6 @@ namespace cppa {
 util::duration timed_invoke_rules::default_timeout;
 // invoke_rules_base
 
-invoke_rules_base::invoke_rules_base(invoke_rules_base&& other)
-    : m_list(std::move(other.m_list))
-{
-}
-
 invoke_rules_base::invoke_rules_base(invokable_list&& ilist)
     : m_list(std::move(ilist))
 {
@@ -78,7 +73,7 @@ timed_invoke_rules::timed_invoke_rules()
 }
 
 timed_invoke_rules::timed_invoke_rules(timed_invoke_rules&& other)
-    : super(std::move(other)), m_ti(std::move(other.m_ti))
+    : super(std::move(other.m_list)), m_ti(std::move(other.m_ti))
 {
 }
 
@@ -119,7 +114,7 @@ invoke_rules::invoke_rules(invokable_list&& ll) : super(std::move(ll))
 {
 }
 
-invoke_rules::invoke_rules(invoke_rules&& other) : super(std::move(other))
+invoke_rules::invoke_rules(invoke_rules&& other) : super(std::move(other.m_list))
 {
 }
 

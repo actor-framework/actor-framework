@@ -61,16 +61,38 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     struct stack_element
     {
+
+        stack_element() = delete;
+        stack_element(const stack_element&) = delete;
+        stack_element& operator=(const stack_element&) = delete;
+
         util::either<invoke_rules*, timed_invoke_rules*> m_ptr;
         bool m_ownership;
+
         inline stack_element(invoke_rules* ptr, bool take_ownership)
             : m_ptr(ptr), m_ownership(take_ownership)
         {
         }
+
         inline stack_element(timed_invoke_rules* ptr, bool take_ownership)
             : m_ptr(ptr), m_ownership(take_ownership)
         {
         }
+
+        inline stack_element(stack_element&& other)
+            : m_ptr(other.m_ptr), m_ownership(other.m_ownership)
+        {
+            other.m_ownership = false;
+        }
+
+        inline stack_element& operator=(stack_element&& other)
+        {
+            m_ptr = other.m_ptr;
+            m_ownership = other.m_ownership;
+            other.m_ownership = false;
+            return *this;
+        }
+
         inline ~stack_element()
         {
             if (m_ownership)
@@ -95,11 +117,15 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
         }
         inline invoke_rules& left()
         {
-            return *(m_ptr.left());
+            auto ptr = m_ptr.left();
+            if (ptr == nullptr) throw std::runtime_error("nullptr");
+            return *(ptr);
         }
         inline timed_invoke_rules& right()
         {
-            return *(m_ptr.right());
+            auto ptr = m_ptr.right();
+            if (ptr == nullptr) throw std::runtime_error("nullptr");
+            return *(ptr);
         }
     };
 

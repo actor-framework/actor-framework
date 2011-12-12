@@ -87,11 +87,11 @@ class either
     {
         if (other.m_is_left)
         {
-            cr_left(other.left());
+            cr_left(other.m_left);
         }
         else
         {
-            cr_right(other.right());
+            cr_right(other.m_right);
         }
     }
 
@@ -99,11 +99,11 @@ class either
     {
         if (other.m_is_left)
         {
-            cr_left(std::move(other.left()));
+            cr_left(std::move(other.m_left));
         }
         else
         {
-            cr_right(std::move(other.right()));
+            cr_right(std::move(other.m_right));
         }
     }
 
@@ -118,11 +118,11 @@ class either
         {
             if (m_is_left)
             {
-                left() = other.left();
+                m_left = other.m_left;
             }
             else
             {
-                right() = other.right();
+                m_right = other.m_right;
             }
         }
         else
@@ -131,11 +131,11 @@ class either
             m_is_left = other.m_is_left;
             if (other.m_is_left)
             {
-                cr_left(other.left());
+                cr_left(other.m_left);
             }
             else
             {
-                cr_right(other.right());
+                cr_right(other.m_right);
             }
         }
         return *this;
@@ -147,11 +147,11 @@ class either
         {
             if (m_is_left)
             {
-                left() = std::move(other.left());
+                m_left = std::move(other.m_left);
             }
             else
             {
-                right() = std::move(other.right());
+                m_right = std::move(other.m_right);
             }
         }
         else
@@ -160,11 +160,11 @@ class either
             m_is_left = other.m_is_left;
             if (other.m_is_left)
             {
-                cr_left(std::move(other.left()));
+                cr_left(std::move(other.m_left));
             }
             else
             {
-                cr_right(std::move(other.right()));
+                cr_right(std::move(other.m_right));
             }
         }
         return *this;
