@@ -6,7 +6,7 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/delegate.hpp"
-#include "cppa/detail/scheduled_actor.hpp"
+#include "cppa/detail/abstract_scheduled_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
 #include "cppa/util/either.hpp"
@@ -14,15 +14,15 @@
 
 namespace cppa { namespace detail {
 
-class yielding_actor : public scheduled_actor
+class yielding_actor : public abstract_scheduled_actor
 {
 
-    typedef scheduled_actor super;
+    typedef abstract_scheduled_actor super;
     typedef super::queue_node queue_node;
     typedef util::singly_linked_list<queue_node> queue_node_buffer;
 
     util::fiber m_fiber;
-    actor_behavior* m_behavior;
+    scheduled_actor* m_behavior;
 
     static void run(void* _this);
 
@@ -33,8 +33,8 @@ class yielding_actor : public scheduled_actor
  public:
 
     template<typename Scheduler>
-    yielding_actor(actor_behavior* behavior,
-                    void (*enqueue_fun)(Scheduler*, scheduled_actor*),
+    yielding_actor(scheduled_actor* behavior,
+                    void (*enqueue_fun)(Scheduler*, abstract_scheduled_actor*),
                     Scheduler* sched)
         : super(enqueue_fun, sched)
         , m_fiber(&yielding_actor::run, this)

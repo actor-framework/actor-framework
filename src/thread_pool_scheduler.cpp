@@ -16,7 +16,7 @@ namespace cppa { namespace detail {
 namespace {
 
 void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
-                 cppa::detail::scheduled_actor* what)
+                 cppa::detail::abstract_scheduled_actor* what)
 {
     where->schedule(what);
 }
@@ -33,7 +33,7 @@ struct thread_pool_scheduler::worker
     worker* next;
     bool m_done;
     job_queue* m_job_queue;
-    volatile scheduled_actor* m_job;
+    volatile abstract_scheduled_actor* m_job;
     worker_queue* m_supervisor_queue;
     mutex m_mtx;
     condition_variable m_cv;
@@ -60,11 +60,11 @@ struct thread_pool_scheduler::worker
         // enqueue as idle worker
         m_supervisor_queue->push_back(this);
         util::fiber fself;
-        struct handler : scheduled_actor::resume_callback
+        struct handler : abstract_scheduled_actor::resume_callback
         {
             time_type timeout;
             bool reschedule;
-            scheduled_actor* job;
+            abstract_scheduled_actor* job;
             handler() : timeout(now()), reschedule(false), job(nullptr)
             {
             }
@@ -97,7 +97,7 @@ struct thread_pool_scheduler::worker
                 }
                 if (m_done) return;
             }
-            h.job = const_cast<scheduled_actor*>(m_job);
+            h.job = const_cast<abstract_scheduled_actor*>(m_job);
             // run actor up to 300ms
             h.reschedule = false;
             h.timeout = now();
@@ -121,7 +121,7 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
 }
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
-                                            scheduled_actor* dummy)
+                                            abstract_scheduled_actor* dummy)
 {
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
@@ -142,7 +142,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     do
     {
         // fetch next job
-        scheduled_actor* job = jqueue->pop();
+        abstract_scheduled_actor* job = jqueue->pop();
         if (job == dummy)
         {
             done = true;
@@ -201,16 +201,16 @@ void thread_pool_scheduler::stop()
     super::stop();
 }
 
-void thread_pool_scheduler::schedule(scheduled_actor* what)
+void thread_pool_scheduler::schedule(abstract_scheduled_actor* what)
 {
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what)
+actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
-    intrusive_ptr<scheduled_actor> ctx(what);
+    intrusive_ptr<abstract_scheduled_actor> ctx(what);
     ctx->ref();
     m_queue.push_back(ctx.get());
     return std::move(ctx);
@@ -222,7 +222,7 @@ actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
     return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
 }
 
-actor_ptr thread_pool_scheduler::spawn(actor_behavior* behavior,
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* behavior,
                                        scheduling_hint hint)
 {
     if (hint == detached)

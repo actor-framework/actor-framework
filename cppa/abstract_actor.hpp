@@ -16,7 +16,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
 // implements linking and monitoring for actors
 template<class Base>
@@ -257,6 +257,6 @@ class abstract_actor : public Base
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
 #endif // ABSTRACT_ACTOR_HPP

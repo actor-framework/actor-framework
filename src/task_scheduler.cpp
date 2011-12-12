@@ -3,7 +3,7 @@
 #include "cppa/config.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/util/fiber.hpp"
-#include "cppa/actor_behavior.hpp"
+#include "cppa/scheduled_actor.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/task_scheduler.hpp"
@@ -18,7 +18,7 @@ using std::endl;
 namespace {
 
 void enqueue_fun(cppa::detail::task_scheduler* where,
-                 cppa::detail::scheduled_actor* what)
+                 cppa::detail::abstract_scheduled_actor* what)
 {
     where->schedule(what);
 }
@@ -27,14 +27,14 @@ void enqueue_fun(cppa::detail::task_scheduler* where,
 
 namespace cppa { namespace detail {
 
-void task_scheduler::worker_loop(job_queue* jq, scheduled_actor* dummy)
+void task_scheduler::worker_loop(job_queue* jq, abstract_scheduled_actor* dummy)
 {
     cppa::util::fiber fself;
-    scheduled_actor* job = nullptr;
-    struct handler : scheduled_actor::resume_callback
+    abstract_scheduled_actor* job = nullptr;
+    struct handler : abstract_scheduled_actor::resume_callback
     {
-        scheduled_actor** job_ptr;
-        handler(scheduled_actor** jptr) : job_ptr(jptr) { }
+        abstract_scheduled_actor** job_ptr;
+        handler(abstract_scheduled_actor** jptr) : job_ptr(jptr) { }
         bool still_ready()
         {
             return true;
@@ -72,7 +72,7 @@ void task_scheduler::stop()
     super::stop();
 }
 
-void task_scheduler::schedule(scheduled_actor* what)
+void task_scheduler::schedule(abstract_scheduled_actor* what)
 {
     if (what)
     {
@@ -87,11 +87,11 @@ void task_scheduler::schedule(scheduled_actor* what)
     }
 }
 
-actor_ptr task_scheduler::spawn_impl(scheduled_actor* what)
+actor_ptr task_scheduler::spawn_impl(abstract_scheduled_actor* what)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
-    intrusive_ptr<scheduled_actor> ctx(what);
+    intrusive_ptr<abstract_scheduled_actor> ctx(what);
     // add an implicit reference to ctx
     ctx->ref();
     m_queue.push_back(ctx.get());
@@ -104,7 +104,7 @@ actor_ptr task_scheduler::spawn(abstract_event_based_actor* what)
     return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
 }
 
-actor_ptr task_scheduler::spawn(actor_behavior* behavior, scheduling_hint)
+actor_ptr task_scheduler::spawn(scheduled_actor* behavior, scheduling_hint)
 {
     return spawn_impl(new yielding_actor(behavior, enqueue_fun, this));
 }

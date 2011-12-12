@@ -2,17 +2,17 @@
 #define ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/detail/abstract_actor.hpp"
+#include "cppa/abstract_actor.hpp"
 
 namespace cppa {
 
 /**
  * @brief Represents a remote Actor.
  */
-class actor_proxy : public detail::abstract_actor<actor>
+class actor_proxy : public abstract_actor<actor>
 {
 
-    typedef detail::abstract_actor<actor> super;
+    typedef abstract_actor<actor> super;
 
     void forward_message(const process_information_ptr&,
                          actor*, const any_tuple&);

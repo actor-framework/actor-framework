@@ -47,7 +47,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/invoke_rules.hpp"
-#include "cppa/actor_behavior.hpp"
+#include "cppa/scheduled_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
 #include "cppa/event_based_actor.hpp"
 
@@ -461,13 +461,13 @@ inline void trap_exit(bool new_value)
     self()->trap_exit(new_value);
 }
 
-inline actor_ptr spawn(actor_behavior* what)
+inline actor_ptr spawn(scheduled_actor* what)
 {
     return get_scheduler()->spawn(what, scheduled);
 }
 
 template<scheduling_hint Hint>
-inline actor_ptr spawn(actor_behavior* what)
+inline actor_ptr spawn(scheduled_actor* what)
 {
     return get_scheduler()->spawn(what, Hint);
 }
@@ -487,7 +487,7 @@ inline actor_ptr spawn(abstract_event_based_actor* what)
 template<scheduling_hint Hint, typename F, typename... Args>
 auto //actor_ptr
 spawn(F&& what, const Args&... args)
--> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, actor_behavior*>::value
+-> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
                                || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
                                actor_ptr>::type
 {
@@ -506,7 +506,7 @@ spawn(F&& what, const Args&... args)
 template<typename F, typename... Args>
 auto // actor_ptr
 spawn(F&& what, const Args&... args)
--> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, actor_behavior*>::value
+-> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
                                || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
                                actor_ptr>::type
 {

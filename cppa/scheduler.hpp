@@ -18,7 +18,7 @@
 namespace cppa {
 
 //class local_actor;
-class actor_behavior;
+class scheduled_actor;
 class scheduler_helper;
 
 /**
@@ -53,7 +53,7 @@ class scheduler
      * @brief Spawns a new actor that executes <code>behavior->act()</code>
      *        with the scheduling policy @p hint if possible.
      */
-    virtual actor_ptr spawn(actor_behavior* behavior,
+    virtual actor_ptr spawn(scheduled_actor* behavior,
                             scheduling_hint hint) = 0;
 
     /**

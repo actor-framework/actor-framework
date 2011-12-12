@@ -8,16 +8,54 @@
 #include "cppa/pattern.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/util/either.hpp"
-#include "cppa/detail/scheduled_actor.hpp"
+#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
 
-class abstract_event_based_actor : public detail::scheduled_actor
+class abstract_event_based_actor : public detail::abstract_scheduled_actor
 {
 
-    typedef detail::scheduled_actor super;
+    typedef detail::abstract_scheduled_actor super;
     typedef super::queue_node queue_node;
     typedef super::queue_node_buffer queue_node_buffer;
+
+ public:
+
+    void dequeue(invoke_rules&) /*override*/;
+
+    void dequeue(timed_invoke_rules&) /*override*/;
+
+    void resume(util::fiber*, resume_callback* callback) /*override*/;
+
+    /**
+     *
+     */
+    virtual void init() = 0;
+
+    /**
+     *
+     */
+    virtual void on_exit();
+
+    template<typename Scheduler>
+    abstract_event_based_actor*
+    attach_to_scheduler(void (*enqueue_fun)(Scheduler*, abstract_scheduled_actor*),
+                        Scheduler* sched)
+    {
+        m_enqueue_to_scheduler.reset(enqueue_fun, sched, this);
+        this->init();
+        return this;
+    }
+
+ private:
+
+    void handle_message(std::unique_ptr<queue_node>& node,
+                        invoke_rules& behavior);
+
+    void handle_message(std::unique_ptr<queue_node>& node,
+                        timed_invoke_rules& behavior);
+
+    void handle_message(std::unique_ptr<queue_node>& node);
 
  protected:
 
@@ -29,16 +67,8 @@ class abstract_event_based_actor : public detail::scheduled_actor
             : m_ptr(ptr), m_ownership(take_ownership)
         {
         }
-        inline stack_element(invoke_rules&& from)
-            : m_ptr(new invoke_rules(std::move(from))), m_ownership(true)
-        {
-        }
         inline stack_element(timed_invoke_rules* ptr, bool take_ownership)
             : m_ptr(ptr), m_ownership(take_ownership)
-        {
-        }
-        inline stack_element(timed_invoke_rules&& from)
-            : m_ptr(new timed_invoke_rules(std::move(from))), m_ownership(true)
         {
         }
         inline ~stack_element()
@@ -75,40 +105,6 @@ class abstract_event_based_actor : public detail::scheduled_actor
 
     queue_node_buffer m_buffer;
     std::stack<stack_element, std::vector<stack_element> > m_loop_stack;
-
- public:
-
-    void dequeue(invoke_rules&) /*override*/;
-
-    void dequeue(timed_invoke_rules&) /*override*/;
-
-    void resume(util::fiber*, resume_callback* callback) /*override*/;
-
-    virtual void init() = 0;
-
-    virtual void on_exit();
-
-    template<typename Scheduler>
-    abstract_event_based_actor*
-    attach_to_scheduler(void (*enqueue_fun)(Scheduler*, scheduled_actor*),
-                        Scheduler* sched)
-    {
-        m_enqueue_to_scheduler.reset(enqueue_fun, sched, this);
-        this->init();
-        return this;
-    }
-
- private:
-
-    void handle_message(std::unique_ptr<queue_node>& node,
-                        invoke_rules& behavior);
-
-    void handle_message(std::unique_ptr<queue_node>& node,
-                        timed_invoke_rules& behavior);
-
-    void handle_message(std::unique_ptr<queue_node>& node);
-
-protected:
 
     // provoke compiler errors for usage of receive() and related functions
 

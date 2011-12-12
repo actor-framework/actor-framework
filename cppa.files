@@ -69,10 +69,10 @@ cppa/util/eval_first_n.hpp
 cppa/local_actor.hpp
 cppa/channel.hpp
 src/channel.cpp
-cppa/actor_behavior.hpp
+cppa/scheduled_actor.hpp
 cppa/cppa.hpp
 cppa/scheduling_hint.hpp
-src/actor_behavior.cpp
+src/scheduled_actor.cpp
 cppa/group.hpp
 src/group.cpp
 queue_performances/main.cpp
@@ -163,7 +163,7 @@ cppa/detail/atom_val.hpp
 src/atom.cpp
 src/cppa.cpp
 cppa/exit_reason.hpp
-cppa/detail/abstract_actor.hpp
+cppa/abstract_actor.hpp
 cppa/detail/mailman.hpp
 src/mailman.cpp
 cppa/detail/native_socket.hpp
@@ -179,8 +179,8 @@ cppa/util/fiber.hpp
 src/fiber.cpp
 cppa/detail/yield_interface.hpp
 src/yield_interface.cpp
-cppa/detail/scheduled_actor.hpp
-src/scheduled_actor.cpp
+cppa/detail/abstract_scheduled_actor.hpp
+src/abstract_scheduled_actor.cpp
 src/intermediate.cpp
 src/invokable.cpp
 cppa/detail/thread_pool_scheduler.hpp
@@ -239,3 +239,4 @@ src/event_based_actor.cpp
 cppa/stacked_event_based_actor.hpp
 src/stacked_event_based_actor.cpp
 cppa/event_based_actor_mixin.hpp
+cppa/fsm_actor.hpp

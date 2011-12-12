@@ -40,7 +40,7 @@ void yielding_actor::yield_until_not_empty()
 {
     while (m_mailbox.empty())
     {
-        m_state.store(scheduled_actor::about_to_block);
+        m_state.store(abstract_scheduled_actor::about_to_block);
         CPPA_MEMORY_BARRIER();
         // make sure mailbox is empty
         if (!m_mailbox.empty())
@@ -48,7 +48,7 @@ void yielding_actor::yield_until_not_empty()
             // someone preempt us
             //compare_exchange_state(scheduled_actor::about_to_block,
             //                       scheduled_actor::ready);
-            m_state.store(scheduled_actor::ready);
+            m_state.store(abstract_scheduled_actor::ready);
             return;
         }
         else
@@ -120,15 +120,15 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
             }
             case yield_state::blocked:
             {
-                switch (compare_exchange_state(scheduled_actor::about_to_block,
-                                               scheduled_actor::blocked))
+                switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                               abstract_scheduled_actor::blocked))
                 {
-                    case scheduled_actor::ready:
+                    case abstract_scheduled_actor::ready:
                     {
                         if (callback->still_ready()) break;
                         else return;
                     }
-                    case scheduled_actor::blocked:
+                    case abstract_scheduled_actor::blocked:
                     {
                         // wait until someone re-schedules that actor
                         return;

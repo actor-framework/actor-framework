@@ -5,7 +5,7 @@ lib_LTLIBRARIES = libcppa.la
 libcppa_la_SOURCES = \
   src/abstract_event_based_actor.cpp \
   src/abstract_tuple.cpp \
-  src/actor_behavior.cpp \
+  src/scheduled_actor.cpp \
   src/actor_count.cpp \
   src/actor.cpp \
   src/actor_proxy_cache.cpp \
@@ -46,7 +46,7 @@ libcppa_la_SOURCES = \
   src/primitive_variant.cpp \
   src/process_information.cpp \
   src/ripemd_160.cpp \
-  src/scheduled_actor.cpp \
+  src/abstract_scheduled_actor.cpp \
   src/scheduler.cpp \
   src/serializer.cpp \
   src/shared_spinlock.cpp \
@@ -68,7 +68,8 @@ library_includedir = $(includedir)/
 endif
 
 nobase_library_include_HEADERS = \
-  cppa/actor_behavior.hpp \
+  cppa/abstract_actor.hpp \
+  cppa/scheduled_actor.hpp \
   cppa/actor.hpp \
   cppa/actor_proxy.hpp \
   cppa/announce.hpp \
@@ -86,7 +87,6 @@ nobase_library_include_HEADERS = \
   cppa/deserializer.hpp \
   cppa/event_based_actor.hpp \
   cppa/event_based_actor_mixin.hpp \
-  cppa/detail/abstract_actor.hpp \
   cppa/abstract_event_based_actor.hpp \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \
@@ -124,7 +124,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/ptype_to_type.hpp \
   cppa/detail/receive_loop_helper.hpp \
   cppa/detail/ref_counted_impl.hpp \
-  cppa/detail/scheduled_actor.hpp \
+  cppa/detail/abstract_scheduled_actor.hpp \
   cppa/detail/serialize_tuple.hpp \
   cppa/detail/singleton_manager.hpp \
   cppa/detail/swap_bytes.hpp \
@@ -141,6 +141,7 @@ nobase_library_include_HEADERS = \
   cppa/exception.hpp \
   cppa/exit_reason.hpp \
   cppa/from_string.hpp \
+  cppa/fsm_actor.hpp \
   cppa/get.hpp \
   cppa/get_view.hpp \
   cppa/group.hpp \

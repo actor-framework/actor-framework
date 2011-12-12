@@ -2,14 +2,14 @@
 #define SCHEDULED_ACTOR_HPP
 
 #include "cppa/local_actor.hpp"
-#include "cppa/actor_behavior.hpp"
+#include "cppa/scheduled_actor.hpp"
+#include "cppa/abstract_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
 #include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 
 #include "cppa/detail/delegate.hpp"
-#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa { namespace detail {
 
@@ -18,13 +18,13 @@ class task_scheduler;
 /**
  * @brief A spawned, scheduled Actor.
  */
-class scheduled_actor : public abstract_actor<local_actor>
+class abstract_scheduled_actor : public abstract_actor<local_actor>
 {
 
     friend class task_scheduler;
-    friend class util::single_reader_queue<scheduled_actor>;
+    friend class util::single_reader_queue<abstract_scheduled_actor>;
 
-    scheduled_actor* next;    // intrusive next pointer (single_reader_queue)
+    abstract_scheduled_actor* next; // intrusive next pointer (single_reader_queue)
 
     void enqueue_node(queue_node* node);
 
@@ -33,7 +33,7 @@ class scheduled_actor : public abstract_actor<local_actor>
     std::atomic<int> m_state;
     delegate m_enqueue_to_scheduler;
 
-    typedef abstract_actor<local_actor> super;
+    typedef abstract_actor super;
     typedef super::queue_node queue_node;
     typedef util::singly_linked_list<queue_node> queue_node_buffer;
 
@@ -87,10 +87,11 @@ class scheduled_actor : public abstract_actor<local_actor>
     static constexpr int blocked        = 0x02;
     static constexpr int about_to_block = 0x04;
 
-    scheduled_actor();
+    abstract_scheduled_actor();
 
     template<typename Scheduler>
-    scheduled_actor(void (*enqueue_fun)(Scheduler*, scheduled_actor*),
+    abstract_scheduled_actor(void (*enqueue_fun)(Scheduler*,
+                                                 abstract_scheduled_actor*),
                     Scheduler* sched)
         : next(nullptr)
         , m_state(ready)
@@ -105,8 +106,6 @@ class scheduled_actor : public abstract_actor<local_actor>
     void enqueue(actor* sender, any_tuple&& msg);
 
     void enqueue(actor* sender, const any_tuple& msg);
-
-    //inline std::atomic<int>& state() { return m_mailbox.m_state; }
 
     int compare_exchange_state(int expected, int new_value);
 
@@ -126,7 +125,7 @@ class scheduled_actor : public abstract_actor<local_actor>
 
 };
 
-struct scheduled_actor_dummy : scheduled_actor
+struct scheduled_actor_dummy : abstract_scheduled_actor
 {
     void resume(util::fiber*, resume_callback*);
     void quit(std::uint32_t);

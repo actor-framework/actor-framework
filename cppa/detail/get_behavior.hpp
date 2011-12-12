@@ -6,13 +6,13 @@
 #include "cppa/invoke.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/detail/tdata.hpp"
-#include "cppa/actor_behavior.hpp"
+#include "cppa/scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
 // default: <true, false, F>
 template<bool IsFunctionPtr, bool HasArguments, typename F, typename... Args>
-class ftor_behavior : public actor_behavior
+class ftor_behavior : public scheduled_actor
 {
 
     F m_fun;
@@ -26,7 +26,7 @@ class ftor_behavior : public actor_behavior
 };
 
 template<typename F, typename... Args>
-class ftor_behavior<true, true, F, Args...>  : public actor_behavior
+class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
 {
 
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
@@ -43,7 +43,7 @@ class ftor_behavior<true, true, F, Args...>  : public actor_behavior
 };
 
 template<typename F>
-class ftor_behavior<false, false, F> : public actor_behavior
+class ftor_behavior<false, false, F> : public scheduled_actor
 {
 
     F m_fun;
@@ -59,7 +59,7 @@ class ftor_behavior<false, false, F> : public actor_behavior
 };
 
 template<typename F, typename... Args>
-class ftor_behavior<false, true, F, Args...>  : public actor_behavior
+class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
 {
 
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
@@ -83,9 +83,9 @@ class ftor_behavior<false, true, F, Args...>  : public actor_behavior
 };
 
 template<typename R>
-actor_behavior* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
+scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
 {
-    static_assert(std::is_convertible<R, actor_behavior*>::value == false,
+    static_assert(std::is_convertible<R, scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that function?");
@@ -93,9 +93,9 @@ actor_behavior* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
 }
 
 template<typename F>
-actor_behavior* get_behavior(std::integral_constant<bool,false>, F&& ftor)
+scheduled_actor* get_behavior(std::integral_constant<bool,false>, F&& ftor)
 {
-    static_assert(std::is_convertible<decltype(ftor()), actor_behavior*>::value == false,
+    static_assert(std::is_convertible<decltype(ftor()), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that functor?");
@@ -104,12 +104,12 @@ actor_behavior* get_behavior(std::integral_constant<bool,false>, F&& ftor)
 }
 
 template<typename F, typename Arg0, typename... Args>
-actor_behavior* get_behavior(std::integral_constant<bool,true>,
+scheduled_actor* get_behavior(std::integral_constant<bool,true>,
                              F fptr,
                              const Arg0& arg0,
                              const Args&... args)
 {
-    static_assert(std::is_convertible<decltype(fptr(arg0, args...)), actor_behavior*>::value == false,
+    static_assert(std::is_convertible<decltype(fptr(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that function?");
@@ -118,12 +118,12 @@ actor_behavior* get_behavior(std::integral_constant<bool,true>,
 }
 
 template<typename F, typename Arg0, typename... Args>
-actor_behavior* get_behavior(std::integral_constant<bool,false>,
+scheduled_actor* get_behavior(std::integral_constant<bool,false>,
                              F ftor,
                              const Arg0& arg0,
                              const Args&... args)
 {
-    static_assert(std::is_convertible<decltype(ftor(arg0, args...)), actor_behavior*>::value == false,
+    static_assert(std::is_convertible<decltype(ftor(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that functor?");

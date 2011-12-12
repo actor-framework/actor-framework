@@ -64,7 +64,7 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     set_self(this);
     auto done_cb = [&]()
     {
-        m_state.store(scheduled_actor::done);
+        m_state.store(abstract_scheduled_actor::done);
         while (!m_loop_stack.empty()) m_loop_stack.pop();
         on_exit();
         callback->exec_done();
@@ -82,25 +82,25 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         }
         else if (m_mailbox.empty())
         {
-            m_state.store(scheduled_actor::about_to_block);
+            m_state.store(abstract_scheduled_actor::about_to_block);
             CPPA_MEMORY_BARRIER();
             if (!m_mailbox.empty())
             {
                 // someone preempt us
-                m_state.store(scheduled_actor::ready);
+                m_state.store(abstract_scheduled_actor::ready);
             }
             else
             {
                 // nothing to do (wait for new messages)
-                switch (compare_exchange_state(scheduled_actor::about_to_block,
-                                               scheduled_actor::blocked))
+                switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                               abstract_scheduled_actor::blocked))
                 {
-                    case scheduled_actor::ready:
+                    case abstract_scheduled_actor::ready:
                     {
                         // got a new job
                         break;
                     }
-                    case scheduled_actor::blocked:
+                    case abstract_scheduled_actor::blocked:
                     {
                         // done
                         return;

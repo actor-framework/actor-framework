@@ -3,12 +3,12 @@
 
 namespace cppa {
 
-class actor_behavior
+class scheduled_actor
 {
 
  public:
 
-    virtual ~actor_behavior();
+    virtual ~scheduled_actor();
     virtual void on_exit();
     virtual void act() = 0;
 

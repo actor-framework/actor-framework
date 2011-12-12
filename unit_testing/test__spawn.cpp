@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -12,6 +10,7 @@
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/fsm_actor.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/event_based_actor.hpp"
@@ -26,117 +25,126 @@ using namespace cppa;
 // GCC 4.7 supports non-static member initialization
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
 
-class event_testee : public event_based_actor
+class event_testee : public fsm_actor<event_testee>
 {
+
+    friend class fsm_actor<event_testee>;
 
     invoke_rules wait4string =
     (
-        on<std::string>() >> [=](const std::string& value)
+        on<std::string>() >> [=]()
         {
-            cout << "event_testee[string]: " << value << endl;
-            // switch back to wait4int
-            unbecome();
-            unbecome();
+            become(&init_state);
+        },
+        on<atom("GetState")>() >> [=]()
+        {
+            reply("wait4string");
         }
     );
 
     invoke_rules wait4float =
     (
-        on<float>() >> [=](float value)
+        on<float>() >> [=]()
         {
-            cout << "event_testee[float]: " << value << endl;
-            become(wait4string);
+            become(&wait4string);
+        },
+        on<atom("GetState")>() >> [=]()
+        {
+            reply("wait4float");
         }
     );
 
-    invoke_rules wait4int =
+    invoke_rules init_state =
     (
-        on<int>() >> [=](int value)
+        on<int>() >> [=]()
         {
-            cout << "event_testee[int]: " << value << endl;
-            become(wait4float);
+            become(&wait4float);
+        },
+        on<atom("GetState")>() >> [=]()
+        {
+            reply("init_state");
         }
     );
-
- public:
-
-    void on_exit()
-    {
-        cout << "event_testee[GCC47]::on_exit()" << endl;
-    }
-
-    void init()
-    {
-        cout << "event_testee[GCC47]::init()" << endl;
-        become(wait4int);
-    }
 
 };
 
 #else
 
-class event_testee : public event_based_actor
+class event_testee : public fsm_actor<event_testee>
 {
+
+    friend class fsm_actor<event_testee>;
 
     invoke_rules wait4string;
     invoke_rules wait4float;
-    invoke_rules wait4int;
+    invoke_rules init_state;
 
  public:
 
-    void on_exit()
-    {
-        cout << "event_testee::on_exit()" << endl;
-    }
-
-    void init()
+    event_testee()
     {
         wait4string =
         (
-            on<std::string>() >> [=](const std::string& value)
+            on<std::string>() >> [=]()
             {
-                cout << "event_testee[string]: " << value << endl;
-                become(&wait4int);
+                become(&init_state);
+            },
+            on<atom("GetState")>() >> [=]()
+            {
+                reply("wait4string");
             }
         );
+
         wait4float =
         (
-            on<float>() >> [=](float value)
+            on<float>() >> [=]()
             {
-                cout << "event_testee[float]: " << value << endl;
-                become(&wait4string);
+                //become(&wait4string);
+                become
+                (
+                    on<std::string>() >> [=]()
+                    {
+                        become(&init_state);
+                    },
+                    on<atom("GetState")>() >> []()
+                    {
+                        reply("wait4string");
+                    }
+                );
+            },
+            on<atom("GetState")>() >> [=]()
+            {
+                reply("wait4float");
             }
         );
-        wait4int =
+
+        init_state =
         (
-            on<int>() >> [=](int value)
+            on<int>() >> [=]()
             {
-                cout << "event_testee[int]: " << value << endl;
                 become(&wait4float);
+            },
+            on<atom("GetState")>() >> [=]()
+            {
+                reply("init_state");
             }
         );
-        cout << "event_testee::init()" << endl;
-        become(&wait4int);
     }
 
 };
 
 #endif
 
+// quits after 5 timeouts
 abstract_event_based_actor* event_testee2()
 {
-    struct impl : event_based_actor
+    struct impl : fsm_actor<impl>
     {
         int num_timeouts;
-        impl() : num_timeouts(0) { }
-
-        timed_invoke_rules state;
-
-        void init()
+        timed_invoke_rules init_state;
+        impl() : num_timeouts(0)
         {
-            cout << "event_testee2::impl::init()" << endl;
-            state =
-            //become
+            init_state =
             (
                 others() >> []()
                 {
@@ -146,22 +154,52 @@ abstract_event_based_actor* event_testee2()
                 },
                 after(std::chrono::milliseconds(50)) >> [=]()
                 {
-                    cout << "testee2 received timeout nr. "
-                         << (num_timeouts + 1) << endl;
                     if (++num_timeouts >= 5)
                     {
                         quit(exit_reason::normal);
                     }
                 }
             );
-            become(&state);
         }
     };
     return new impl;
 }
 
-class testee_behavior : public actor_behavior
+class testee_actor : public scheduled_actor
 {
+
+    void wait4string()
+    {
+        bool string_received = false;
+        receive_while([&]() { return !string_received; })
+        (
+            on<std::string>() >> [&]()
+            {
+                string_received = true;
+            },
+            on<atom("GetState")>() >> [&]()
+            {
+                reply("wait4string");
+            }
+        );
+    }
+
+    void wait4float()
+    {
+        bool float_received = false;
+        receive_while([&]() { return !float_received; })
+        (
+            on<float>() >> [&]()
+            {
+                float_received = true;
+                wait4string();
+            },
+            on<atom("GetState")>() >> [&]()
+            {
+                reply("wait4float");
+            }
+        );
+    }
 
  public:
 
@@ -169,43 +207,26 @@ class testee_behavior : public actor_behavior
     {
         receive_loop
         (
-            on<int>() >> [&](int i)
+            on<int>() >> [&]()
             {
-                cout << "testee_behavior[int]: " << i << endl;
-                receive
-                (
-                    on<float>() >> [&](float f)
-                    {
-                        cout << "testee_behavior[float]: " << f << endl;
-                        receive
-                        (
-                            on<std::string>() >> [&](const std::string& str)
-                            {
-                                cout << "testee_behavior[string]: "
-                                     << str
-                                     << endl;
-                            }
-                        );
-                    }
-                );
+                wait4float();
+            },
+            on<atom("GetState")>() >> [&]()
+            {
+                reply("init_state");
             }
         );
     }
 
-    void on_exit()
-    {
-        cout << "testee_behavior::on_exit()" << endl;
-    }
-
 };
 
+// receives one timeout and quits
 void testee1()
 {
     receive_loop
     (
         after(std::chrono::milliseconds(10)) >> []()
         {
-            cout << "testee1::quit" << endl;
             quit(exit_reason::user_defined);
         }
     );
@@ -245,10 +266,10 @@ void testee3(actor_ptr parent)
 }
 
 template<class Testee>
-void behavior_test()
+std::string behavior_test()
 {
+    std::string result;
     std::string testee_name = detail::to_uniform_name(typeid(Testee));
-    cout << "behavior_test<" << testee_name << ">()" << endl;
     auto et = spawn(new Testee);
     send(et, 1);
     send(et, 2);
@@ -259,22 +280,34 @@ void behavior_test()
     send(et, .3f);
     send(et, "hello again " + testee_name);
     send(et, "goodbye " + testee_name);
+    send(et, atom("GetState"));
+    receive
+    (
+        on<std::string>() >> [&](const std::string& str)
+        {
+            result = str;
+        },
+        after(std::chrono::seconds(2)) >> [&]()
+        {
+            throw std::runtime_error(testee_name + " does not reply");
+        }
+    );
     send(et, atom(":Exit"), exit_reason::user_defined);
     await_all_others_done();
-    cout << endl;
+    return result;
 }
 
 size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
 
-    //spawn(testee1);
+    spawn(testee1);
     spawn(event_testee2());
 
     await_all_others_done();
 
-    behavior_test<testee_behavior>();
-    behavior_test<event_testee>();
+    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "init_state");
+    CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "init_state");
 
     return CPPA_TEST_RESULT;
 
