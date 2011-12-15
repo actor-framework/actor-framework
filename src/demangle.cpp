@@ -7,6 +7,8 @@
 #include <cxxabi.h>
 #endif
 
+#include <stdlib.h>
+
 namespace cppa { namespace detail {
 
 std::string demangle(const char* decorated)
