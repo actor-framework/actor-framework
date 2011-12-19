@@ -5,6 +5,7 @@
 #include <memory>
 #include <cstdint>
 
+#include "cppa/self.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
@@ -82,7 +83,7 @@ class scheduler
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple tup = make_tuple(util::duration(rel_time), to, data...);
-        future_send_helper()->enqueue(self(), std::move(tup));
+        future_send_helper()->enqueue(self, std::move(tup));
     }
 
 };

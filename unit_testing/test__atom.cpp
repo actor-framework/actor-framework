@@ -32,10 +32,10 @@ size_t test__atom()
     bool matched_pattern[3] = { false, false, false };
     CPPA_TEST(test__atom);
     CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
-    self() << make_tuple(atom("foo"), static_cast<std::uint32_t>(42))
-           << make_tuple(atom(":Attach"), atom(":Baz"), "cstring")
-           << make_tuple(atom("b"), atom("a"), atom("c"), 23.f)
-           << make_tuple(atom("a"), atom("b"), atom("c"), 23.f);
+    self << make_tuple(atom("foo"), static_cast<std::uint32_t>(42))
+         << make_tuple(atom(":Attach"), atom(":Baz"), "cstring")
+         << make_tuple(atom("b"), atom("a"), atom("c"), 23.f)
+         << make_tuple(atom("a"), atom("b"), atom("c"), 23.f);
     int i = 0;
     receive_while([&i]() { return ++i <= 3; })
     (

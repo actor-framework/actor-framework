@@ -110,9 +110,9 @@ int main(int, char**)
                                   &bar::i));
 
     // send a bar to ourselves
-    send(self(), bar{foo{1,2},3});
+    send(self, bar{foo{1,2},3});
     // send a baz to ourselves
-    send(self(), baz{foo{1,2},bar{foo{3,4},5}});
+    send(self, baz{foo{1,2},bar{foo{3,4},5}});
 
     // receive two messages
     int i = 0;

@@ -22,7 +22,6 @@ void client_part(const std::map<std::string, std::string>& args)
     {
         throw std::runtime_error("no port specified");
     }
-    //(void) self();
     std::istringstream iss(i->second);
     std::uint16_t port;
     iss >> port;

@@ -102,13 +102,13 @@ class primitive_variant
     template<class Self, typename Fun>
     struct applier
     {
-        Self* m_self;
+        Self* m_parent;
         Fun& m_f;
-        applier(Self* self, Fun& f) : m_self(self), m_f(f) { }
+        applier(Self* parent, Fun& f) : m_parent(parent), m_f(f) { }
         template<primitive_type FT>
         inline void operator()(util::pt_token<FT> token)
         {
-            m_f(m_self->get(token));
+            m_f(m_parent->get(token));
         }
     };
 

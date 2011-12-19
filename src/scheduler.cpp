@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
+#include "cppa/self.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
@@ -69,7 +70,8 @@ struct scheduler_helper
 void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
     // setup & local variables
-    set_self(m_self.get());
+    self.set(m_self.get());
+    //set_self(m_self.get());
     auto& queue = m_self->mailbox();
     //typedef std::pair<cppa::actor_ptr, decltype(queue.pop())> future_msg;
     std::multimap<decltype(detail::now()), decltype(queue.pop())> messages;

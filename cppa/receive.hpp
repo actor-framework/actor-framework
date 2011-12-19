@@ -1,6 +1,7 @@
 #ifndef RECEIVE_HPP
 #define RECEIVE_HPP
 
+#include "cppa/self.hpp"
 #include "cppa/local_actor.hpp"
 
 namespace cppa {
@@ -11,24 +12,24 @@ namespace cppa {
  */
 inline void receive(invoke_rules& rules)
 {
-    self()->dequeue(rules);
+    self->dequeue(rules);
 }
 
 inline void receive(timed_invoke_rules& rules)
 {
-    self()->dequeue(rules);
+    self->dequeue(rules);
 }
 
 inline void receive(timed_invoke_rules&& rules)
 {
     timed_invoke_rules tmp(std::move(rules));
-    self()->dequeue(tmp);
+    self->dequeue(tmp);
 }
 
 inline void receive(invoke_rules&& rules)
 {
     invoke_rules tmp(std::move(rules));
-    self()->dequeue(tmp);
+    self->dequeue(tmp);
 }
 
 template<typename Head, typename... Tail>

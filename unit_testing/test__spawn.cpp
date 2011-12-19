@@ -30,7 +30,7 @@ struct event_testee : public fsm_actor<event_testee>
 
     invoke_rules wait4string =
     (
-        on<std::string>() >> [=]()
+        on<std::string>() >> [this]()
         {
             become(&init_state);
         },
@@ -248,7 +248,7 @@ void testee2(actor_ptr other)
 void testee3(actor_ptr parent)
 {
     // test a future_send / delayed_reply based loop
-    future_send(self(), std::chrono::milliseconds(50), atom("Poll"));
+    future_send(self, std::chrono::milliseconds(50), atom("Poll"));
     int polls = 0;
     receive_while([&polls]() { return ++polls <= 5; })
     (
@@ -326,7 +326,7 @@ size_t test__spawn()
 //    monitor(spawn(testee2, spawn(testee1)));
     int i = 0;
     int flags = 0;
-    future_send(self(), std::chrono::seconds(1), atom("FooBar"));
+    future_send(self, std::chrono::seconds(1), atom("FooBar"));
     // wait for :Down and :Exit messages of pong
     receive_while([&i]() { return ++i <= 3 /*4*/; })
     (
@@ -367,7 +367,7 @@ size_t test__spawn()
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 5);
     /*
-    spawn(testee3, self());
+    spawn(testee3, self);
     i = 0;
     // testee3 sends 5 { "Push", int } messages in a 50 milliseconds interval;
     // allow for a maximum error of 5ms

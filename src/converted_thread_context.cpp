@@ -1,6 +1,7 @@
 #include <memory>
 #include <algorithm>
 
+#include "cppa/self.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
@@ -17,8 +18,9 @@ void converted_thread_context::quit(std::uint32_t reason)
 {
     try { super::cleanup(reason); } catch(...) { }
     // actor_exited should not be catched, but if anyone does,
-    // the next call to self() must return a newly created instance
-    set_self(nullptr);
+    // self must point to a newly created instance
+    self.set(nullptr);
+    //set_self(nullptr);
     throw actor_exited(reason);
 }
 

@@ -6,9 +6,19 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include <cppa/util/comparable.hpp>
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
+
+template<class From, class To>
+struct convertible
+{
+    To convert() const
+    {
+        return static_cast<const From*>(this)->do_convert();
+    }
+};
 
 /**
  * @brief An intrusive, reference counting smart pointer impelementation.
@@ -40,6 +50,12 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
 
     intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.take())
     {
+    }
+
+    template<typename From>
+    intrusive_ptr(const convertible<From, T*>& from)
+    {
+        set_ptr(from.convert());
     }
 
     template<typename Y>
@@ -87,12 +103,10 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
         set_ptr(new_value);
     }
 
-    template<typename Y>
-    void reset(Y* new_value)
+    intrusive_ptr& operator=(T* ptr)
     {
-        static_assert(std::is_convertible<Y*, T*>::value,
-                      "Y* is not assignable to T*");
-        reset(static_cast<T*>(new_value));
+        reset(ptr);
+        return *this;
     }
 
     intrusive_ptr& operator=(const intrusive_ptr& other)
@@ -112,8 +126,17 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
     template<typename Y>
     intrusive_ptr& operator=(const intrusive_ptr<Y>& other)
     {
+        static_assert(std::is_convertible<Y*, T*>::value,
+                      "Y* is not assignable to T*");
         intrusive_ptr tmp(other);
         swap(tmp);
+        return *this;
+    }
+
+    template<typename From>
+    intrusive_ptr& operator=(const convertible<From, T*>& from)
+    {
+        reset(from.convert());
         return *this;
     }
 
@@ -145,20 +168,6 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, const T*>,
     inline ptrdiff_t compare(const intrusive_ptr& other) const
     {
         return compare(other.get());
-    }
-
-    template<class C>
-    intrusive_ptr<C> downcast() const
-    {
-        if (m_ptr) return dynamic_cast<C*>(const_cast<T*>(m_ptr));
-        return nullptr;
-    }
-
-    template<class C>
-    intrusive_ptr<C> upcast() const
-    {
-        if (m_ptr) return static_cast<C*>(const_cast<T*>(m_ptr));
-        return nullptr;
     }
 
 };

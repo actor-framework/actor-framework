@@ -84,18 +84,7 @@ inline actor_ptr& local_actor::last_sender()
     return m_last_sender;
 }
 
-
-/**
- * @brief Get a pointer to the current active context.
- * @returns A pointer that identifies the calling actor.
- */
-local_actor* self();
-
-// "private" function
-void set_self(local_actor*);
-
-// "private" function, returns active context (without creating it if needed)
-local_actor* unchecked_self();
+typedef intrusive_ptr<local_actor> local_actor_ptr;
 
 } // namespace cppa
 

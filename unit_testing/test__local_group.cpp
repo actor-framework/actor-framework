@@ -10,6 +10,7 @@
 #include "hash_of.hpp"
 
 #include "cppa/on.hpp"
+#include "cppa/self.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
@@ -26,7 +27,7 @@ size_t test__local_group()
 {
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
-    actor_ptr master = self();
+    actor_ptr master = self;
     for (int i = 0; i < 5; ++i)
     {
         // spawn five workers and let them join local/foo

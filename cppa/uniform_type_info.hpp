@@ -62,7 +62,7 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
  *
  * int main()
  * {
- *     send(self(), foo{1,2});
+ *     send(self, foo{1,2});
  *     return 0;
  * }
  * @endcode

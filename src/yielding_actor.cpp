@@ -1,4 +1,5 @@
 #include "cppa/cppa.hpp"
+#include "cppa/self.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/yielding_actor.hpp"
@@ -101,7 +102,8 @@ void yielding_actor::dequeue(timed_invoke_rules& rules)
 
 void yielding_actor::resume(util::fiber* from, resume_callback* callback)
 {
-    set_self(this);
+    self.set(this);
+    //set_self(this);
     for (;;)
     {
         call(&m_fiber, from);

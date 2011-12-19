@@ -188,7 +188,7 @@ int main()
     */
 
     // send a tree to ourselves ...
-    send(self(), t);
+    send(self, t);
 
     // send a vector of trees to ourselves
     typedef std::vector<tree> tree_vector;
@@ -196,7 +196,7 @@ int main()
     tree_vector tvec;
     tvec.push_back(t);
     tvec.push_back(t);
-    send(self(), tvec);
+    send(self, tvec);
 
     // receive both messages
     int i = 0;

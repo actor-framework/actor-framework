@@ -51,7 +51,7 @@ int main(int, char**)
                   make_pair(&foo::b, &foo::set_b));
 
     // send a foo to ourselves ...
-    send(self(), foo{1,2});
+    send(self, foo{1,2});
     receive
     (
         // ... and receive it

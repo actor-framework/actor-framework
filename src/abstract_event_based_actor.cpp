@@ -1,3 +1,4 @@
+#include "cppa/self.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
 
@@ -61,7 +62,8 @@ void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& nod
 
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
-    set_self(this);
+    self.set(this);
+    //set_self(this);
     auto done_cb = [&]()
     {
         m_state.store(abstract_scheduled_actor::done);

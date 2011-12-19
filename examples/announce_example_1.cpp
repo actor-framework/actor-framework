@@ -46,11 +46,11 @@ int main(int, char**)
     assert(announce<foo_pair2>(&foo_pair2::first, &foo_pair2::second) == false);
 
     // send a foo to ourselves
-    send(self(), foo{ { 1, 2, 3, 4 }, 5 });
+    send(self, foo{ { 1, 2, 3, 4 }, 5 });
     // send a foo_pair2 to ourselves
-    send(self(), foo_pair2{3, 4});
+    send(self, foo_pair2{3, 4});
     // quits the program
-    send(self(), atom("done"));
+    send(self, atom("done"));
 
     // libcppa returns the same uniform_type_info
     // instance for foo_pair and foo_pair2

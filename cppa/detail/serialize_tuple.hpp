@@ -14,11 +14,11 @@ template<typename List, size_t Pos = 0>
 struct serialize_tuple
 {
     template<typename T>
-    inline static void _(serializer& s, const T* self)
+    inline static void _(serializer& s, const T* tup)
     {
         s << uniform_typeid<typename List::head_type>()->name()
-          << *reinterpret_cast<const typename List::head_type*>(self->at(Pos));
-        serialize_tuple<typename List::tail_type, Pos + 1>::_(s, self);
+          << *reinterpret_cast<const typename List::head_type*>(tup->at(Pos));
+        serialize_tuple<typename List::tail_type, Pos + 1>::_(s, tup);
     }
 };
 

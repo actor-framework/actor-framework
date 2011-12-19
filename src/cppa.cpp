@@ -15,7 +15,7 @@ class observer : public cppa::attachable
     void detach(std::uint32_t reason)
     {
         using namespace cppa;
-        send(m_client, atom(":Down"), actor_ptr(self()), reason);
+        send(m_client, atom(":Down"), actor_ptr(self), reason);
     }
 
     bool matches(const cppa::attachable::token& match_token)
@@ -36,20 +36,20 @@ namespace cppa {
 
 local_actor* operator<<(local_actor* whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(self(), what);
+    if (whom) whom->enqueue(self, what);
     return whom;
 }
 
-// matches self() << make_tuple(...)
+// matches self << make_tuple(...)
 local_actor* operator<<(local_actor* whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(self(), std::move(what));
+    if (whom) whom->enqueue(self, std::move(what));
     return whom;
 }
 
 void link(actor_ptr& other)
 {
-    if (other) self()->link_to(other);
+    if (other) self->link_to(other);
 }
 
 void link(actor_ptr&& other)
@@ -89,7 +89,7 @@ void unlink(actor_ptr& lhs, actor_ptr& rhs)
 
 void monitor(actor_ptr& whom)
 {
-    if (whom) whom->attach(new observer(self()));
+    if (whom) whom->attach(new observer(actor_ptr(self)));
 }
 
 void monitor(actor_ptr&& whom)
@@ -100,13 +100,13 @@ void monitor(actor_ptr&& whom)
 
 void demonitor(actor_ptr& whom)
 {
-    attachable::token mtoken(typeid(observer), self());
+    attachable::token mtoken(typeid(observer), self);
     if (whom) whom->detach(mtoken);
 }
 
 void receive_loop(invoke_rules& rules)
 {
-    auto sptr = self();
+    local_actor* sptr = self;
     for (;;)
     {
         sptr->dequeue(rules);
@@ -115,7 +115,7 @@ void receive_loop(invoke_rules& rules)
 
 void receive_loop(timed_invoke_rules& rules)
 {
-    auto sptr = self();
+    local_actor* sptr = self;
     for (;;)
     {
         sptr->dequeue(rules);

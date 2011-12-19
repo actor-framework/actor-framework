@@ -35,6 +35,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/self.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/invoke.hpp"
@@ -185,7 +186,7 @@
  *
  * // send a message to a1, a2 and a3
  * auto msg = make_tuple(atom("compute"), 1, 2, 3);
- * auto s = self(); // cache self() pointer
+ * auto s = self; // cache self pointer
  * // note: this is more efficient then using send() three times because
  * //       send() would create a new tuple each time;
  * //       this safes both time and memory thanks to libcppa's copy-on-write
@@ -328,7 +329,7 @@
  * Usage example:
  *
  * @code
- * future_send(self(), std::chrono::seconds(1), atom("poll"));
+ * future_send(self, std::chrono::seconds(1), atom("poll"));
  * receive_loop
  * (
  *     // ...
@@ -336,7 +337,7 @@
  *     {
  *         // ... poll something ...
  *         // and do it again after 1sec
- *         future_send(self(), std::chrono::seconds(1), atom("poll"));
+ *         future_send(self, std::chrono::seconds(1), atom("poll"));
  *     }
  * );
  * @endcode
@@ -353,14 +354,14 @@
  * A few examples:
  * @code
  * // sends an std::string containing "hello actor!" to itself
- * send(self(), "hello actor!");
+ * send(self, "hello actor!");
  *
  * const char* cstring = "cstring";
  * // sends an std::string containing "cstring" to itself
- * send(self(), cstring);
+ * send(self, cstring);
  *
  * // sends an std::u16string containing the UTF16 string "hello unicode world!"
- * send(self(), u"hello unicode world!");
+ * send(self, u"hello unicode world!");
  *
  * // x has the type cppa::tuple<std::string, std::string>
  * auto x = make_tuple("hello", "tuple");
@@ -446,7 +447,7 @@ void demonitor(actor_ptr& whom);
  */
 inline bool trap_exit()
 {
-    return self()->trap_exit();
+    return self->trap_exit();
 }
 
 /**
@@ -458,7 +459,7 @@ inline bool trap_exit()
  */
 inline void trap_exit(bool new_value)
 {
-    self()->trap_exit(new_value);
+    self->trap_exit(new_value);
 }
 
 inline actor_ptr spawn(scheduled_actor* what)
@@ -516,11 +517,11 @@ spawn(F&& what, const Args&... args)
 /**
  * @copydoc local_actor::quit()
  *
- * Alias for <tt>self()->quit(reason);</tt>
+ * Alias for <tt>self->quit(reason);</tt>
  */
 inline void quit(std::uint32_t reason)
 {
-    self()->quit(reason);
+    self->quit(reason);
 }
 
 /**
@@ -654,7 +655,7 @@ detail::do_receive_helper do_receive(Args&&... args)
  */
 inline any_tuple& last_received()
 {
-    return self()->last_dequeued();
+    return self->last_dequeued();
 }
 
 /**
@@ -663,7 +664,7 @@ inline any_tuple& last_received()
  */
 inline actor_ptr& last_sender()
 {
-    return self()->last_sender();
+    return self->last_sender();
 }
 
 #ifdef CPPA_DOCUMENTATION
@@ -684,7 +685,7 @@ void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
  *
  * <b>Usage example:</b>
  * @code
- * self() << make_tuple(1, 2, 3);
+ * self << make_tuple(1, 2, 3);
  * @endcode
  *
  * Sends the tuple @p what as a message to @p whom.
@@ -700,7 +701,7 @@ template<class C, typename Arg0, typename... Args>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(self(), make_tuple(arg0, args...));
+    if (whom) whom->enqueue(self, make_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
@@ -708,21 +709,21 @@ typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self(), make_tuple(arg0, args...));
+    if (tmp) tmp->enqueue(self, make_tuple(arg0, args...));
 }
 
-// matches send(self(), ...);
+// matches send(self, ...);
 template<typename Arg0, typename... Args>
 void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
-    if (whom) whom->enqueue(self(), make_tuple(arg0, args...));
+    if (whom) whom->enqueue(self, make_tuple(arg0, args...));
 }
 
 template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send_tuple(intrusive_ptr<C>& whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(self(), what);
+    if (whom) whom->enqueue(self, what);
 }
 
 template<class C>
@@ -730,20 +731,20 @@ typename util::enable_if<std::is_base_of<channel, C>, void>::type
 send_tuple(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self(), what);
+    if (tmp) tmp->enqueue(self, what);
 }
 
-// matches send(self(), ...);
+// matches send(self, ...);
 inline void send_tuple(local_actor* whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(self(), what);
+    if (whom) whom->enqueue(self, what);
 }
 
 template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
 {
-    if (whom) whom->enqueue(self(), what);
+    if (whom) whom->enqueue(self, what);
     return whom;
 }
 
@@ -752,7 +753,7 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self(), what);
+    if (tmp) tmp->enqueue(self, what);
     return std::move(tmp);
 }
 
@@ -760,7 +761,7 @@ template<class C>
 typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
 operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(self(), std::move(what));
+    if (whom) whom->enqueue(self, std::move(what));
     return whom;
 }
 
@@ -769,14 +770,14 @@ typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self(), std::move(what));
+    if (tmp) tmp->enqueue(self, std::move(what));
     return std::move(tmp);
 }
 
-// matches self() << make_tuple(...)
+// matches self << make_tuple(...)
 local_actor* operator<<(local_actor* whom, const any_tuple& what);
 
-// matches self() << make_tuple(...)
+// matches self << make_tuple(...)
 local_actor* operator<<(local_actor* whom, any_tuple&& what);
 
 #endif
@@ -784,12 +785,12 @@ local_actor* operator<<(local_actor* whom, any_tuple&& what);
 template<typename Arg0, typename... Args>
 void reply(const Arg0& arg0, const Args&... args)
 {
-    send(self()->last_sender(), arg0, args...);
+    send(self->last_sender(), arg0, args...);
 }
 
 inline void reply_tuple(const any_tuple& what)
 {
-    send_tuple(self()->last_sender(), what);
+    send_tuple(self->last_sender(), what);
 }
 
 /**
@@ -812,7 +813,7 @@ void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
  */
 inline void await_all_others_done()
 {
-    detail::actor_count_wait_until((unchecked_self() == nullptr) ? 0 : 1);
+    detail::actor_count_wait_until((self.unchecked() == nullptr) ? 0 : 1);
 }
 
 /**

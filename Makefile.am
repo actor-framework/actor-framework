@@ -48,6 +48,7 @@ libcppa_la_SOURCES = \
   src/ripemd_160.cpp \
   src/abstract_scheduled_actor.cpp \
   src/scheduler.cpp \
+  src/self.cpp \
   src/serializer.cpp \
   src/shared_spinlock.cpp \
   src/singleton_manager.cpp \
@@ -158,6 +159,7 @@ nobase_library_include_HEADERS = \
   cppa/ref_counted.hpp \
   cppa/scheduler.hpp \
   cppa/scheduling_hint.hpp \
+  cppa/self.hpp \
   cppa/serializer.hpp \
   cppa/stacked_event_based_actor.hpp \
   cppa/to_string.hpp \

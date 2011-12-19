@@ -69,7 +69,7 @@ int main(int, char**)
                             static_cast<foo_setter>(&foo::b)));
 
     // send a foo to ourselves ...
-    send(self(), foo{1,2});
+    send(self, foo{1,2});
     receive
     (
         // ... and receive it

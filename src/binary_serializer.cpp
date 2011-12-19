@@ -22,33 +22,33 @@ namespace detail {
 class binary_writer
 {
 
-    binary_serializer* self;
+    binary_serializer* m_serializer;
 
  public:
 
-    binary_writer(binary_serializer* s) : self(s) { }
+    binary_writer(binary_serializer* s) : m_serializer(s) { }
 
     template<typename T>
-    inline static void write_int(binary_serializer* self, const T& value)
+    inline static void write_int(binary_serializer* bs, const T& value)
     {
-        memcpy(self->m_wr_pos, &value, sizeof(T));
-        self->m_wr_pos += sizeof(T);
+        memcpy(bs->m_wr_pos, &value, sizeof(T));
+        bs->m_wr_pos += sizeof(T);
     }
 
-    inline static void write_string(binary_serializer* self,
+    inline static void write_string(binary_serializer* bs,
                                     const std::string& str)
     {
-        write_int(self, static_cast<std::uint32_t>(str.size()));
-        memcpy(self->m_wr_pos, str.c_str(), str.size());
-        self->m_wr_pos += str.size();
+        write_int(bs, static_cast<std::uint32_t>(str.size()));
+        memcpy(bs->m_wr_pos, str.c_str(), str.size());
+        bs->m_wr_pos += str.size();
     }
 
     template<typename T>
     void operator()(const T& value,
                     typename enable_if< std::is_integral<T> >::type* = 0)
     {
-        self->acquire(sizeof(T));
-        write_int(self, value);
+        m_serializer->acquire(sizeof(T));
+        write_int(m_serializer, value);
     }
 
     template<typename T>
@@ -61,29 +61,29 @@ class binary_writer
 
     void operator()(const std::string& str)
     {
-        self->acquire(sizeof(std::uint32_t) + str.size());
-        write_string(self, str);
+        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
+        write_string(m_serializer, str);
     }
 
     void operator()(const std::u16string& str)
     {
-        self->acquire(sizeof(std::uint32_t) + str.size());
-        write_int(self, static_cast<std::uint32_t>(str.size()));
+        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
+        write_int(m_serializer, static_cast<std::uint32_t>(str.size()));
         for (char16_t c : str)
         {
             // force writer to use exactly 16 bit
-            write_int(self, static_cast<std::uint16_t>(c));
+            write_int(m_serializer, static_cast<std::uint16_t>(c));
         }
     }
 
     void operator()(const std::u32string& str)
     {
-        self->acquire(sizeof(std::uint32_t) + str.size());
-        write_int(self, static_cast<std::uint32_t>(str.size()));
+        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
+        write_int(m_serializer, static_cast<std::uint32_t>(str.size()));
         for (char32_t c : str)
         {
             // force writer to use exactly 32 bit
-            write_int(self, static_cast<std::uint32_t>(c));
+            write_int(m_serializer, static_cast<std::uint32_t>(c));
         }
     }
 

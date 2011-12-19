@@ -3,7 +3,7 @@
 #include <atomic>
 #include <iostream>
 
-
+#include "cppa/self.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
@@ -25,7 +25,8 @@ namespace {
 void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
                cppa::scheduled_actor* behavior)
 {
-    cppa::set_self(m_self.get());
+    cppa::self.set(m_self.get());
+    //cppa::set_self(m_self.get());
     if (behavior)
     {
         try { behavior->act(); }

@@ -50,11 +50,11 @@ struct singleton_container
             delete m_network_manager;
         }
         // run actor specific cleanup if needed
-        if (unchecked_self() != nullptr)
+        if (self.unchecked() != nullptr)
         {
             try
             {
-                unchecked_self()->quit(exit_reason::normal);
+                self.unchecked()->quit(exit_reason::normal);
             }
             catch (actor_exited&)
             {
