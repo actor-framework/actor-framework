@@ -51,10 +51,12 @@ class group : public channel
 
         unsubscriber(const channel_ptr& s, const intrusive_ptr<group>& g);
 
+        ~unsubscriber();
+
+        void detach(std::uint32_t);
+
         // matches on m_group
         bool matches(const attachable::token& what);
-
-        virtual ~unsubscriber();
 
     };
 

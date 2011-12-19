@@ -27,7 +27,21 @@ group::unsubscriber::unsubscriber(const channel_ptr& s,
 
 group::unsubscriber::~unsubscriber()
 {
-    if (m_group) m_group->unsubscribe(m_self);
+    if (m_group && m_self) m_group->unsubscribe(m_self);
+}
+
+void group::unsubscriber::detach(std::uint32_t)
+{
+    // unsubscription is done in destructor
+}
+
+bool group::unsubscriber::matches(const attachable::token& what)
+{
+    if (what.subtype == typeid(group::unsubscriber))
+    {
+        return m_group == reinterpret_cast<const group*>(what.ptr);
+    }
+    return false;
 }
 
 group::module::module(const std::string& name) : m_name(name)
@@ -41,15 +55,6 @@ group::module::module(std::string&& name) : m_name(std::move(name))
 const std::string& group::module::name()
 {
     return m_name;
-}
-
-bool group::unsubscriber::matches(const attachable::token& what)
-{
-    if (what.subtype == typeid(group::unsubscriber))
-    {
-        return m_group == reinterpret_cast<const group*>(what.ptr);
-    }
-    return false;
 }
 
 group::group(std::string&& id, std::string&& mod_name)

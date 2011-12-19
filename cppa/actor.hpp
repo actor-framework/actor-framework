@@ -225,9 +225,14 @@ class functor_attachable : public attachable
     {
     }
 
-    virtual void detach(std::uint32_t reason)
+    void detach(std::uint32_t reason)
     {
         m_functor(reason);
+    }
+
+    bool matches(const attachable::token&)
+    {
+        return false;
     }
 
 };

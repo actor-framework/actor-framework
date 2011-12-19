@@ -25,10 +25,8 @@ using namespace cppa;
 // GCC 4.7 supports non-static member initialization
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
 
-class event_testee : public fsm_actor<event_testee>
+struct event_testee : public fsm_actor<event_testee>
 {
-
-    friend class fsm_actor<event_testee>;
 
     invoke_rules wait4string =
     (

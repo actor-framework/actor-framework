@@ -6,13 +6,13 @@ attachable::~attachable()
 {
 }
 
-void attachable::detach(std::uint32_t)
-{
-}
+//void attachable::detach(std::uint32_t)
+//{
+//}
 
-bool attachable::matches(const attachable::token&)
-{
-    return false;
-}
+//bool attachable::matches(const attachable::token&)
+//{
+//    return false;
+//}
 
 } // namespace cppa::detail

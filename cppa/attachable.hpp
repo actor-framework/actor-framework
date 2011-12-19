@@ -39,9 +39,9 @@ class attachable
      *
      * The default implementation does nothing.
      */
-    virtual void detach(std::uint32_t reason);
+    virtual void detach(std::uint32_t reason) = 0;
 
-    virtual bool matches(const token&);
+    virtual bool matches(const token&) = 0;
 
 };
 
