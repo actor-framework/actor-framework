@@ -7,6 +7,17 @@
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @brief Always points to the current actor. Similar to @c this in
+ *        an object-oriented context.
+ */
+extern local_actor* self;
+
+#else
+
+// convertible<...> enables "actor_ptr this_actor = self;"
 class self_type : public convertible<self_type, actor*>
 {
 
@@ -16,21 +27,26 @@ class self_type : public convertible<self_type, actor*>
 
     static local_actor* get_impl();
 
+    self_type(const self_type&) = delete;
+    self_type& operator=(const self_type&) = delete;
+
  public:
 
+    constexpr self_type() { }
+
+    // "inherited" from convertible<...>
     inline local_actor* do_convert() const
     {
         return get_impl();
     }
 
-    constexpr self_type() { }
-
+    // allow "self" wherever an local_actor or actor pointer is expected
     inline operator local_actor*() const
     {
         return get_impl();
     }
 
-    inline local_actor* operator->()
+    inline local_actor* operator->() const
     {
         return get_impl();
     }
@@ -42,31 +58,25 @@ class self_type : public convertible<self_type, actor*>
     }
 
     // @pre get_unchecked() == nullptr
-    inline void set(local_actor* ptr)
+    inline void set(local_actor* ptr) const
     {
         set_impl(ptr);
     }
 
     // @returns The current value without converting the calling context
     //          to an actor on-the-fly.
-    inline local_actor* unchecked()
+    inline local_actor* unchecked() const
     {
         return get_unchecked_impl();
     }
 
 };
 
-#ifdef CPPA_DOCUMENTATION
-
-/**
- * @brief Always points to the current actor. Similar to @c this in
- *        an object-oriented context.
+/*
+ * "self" emulates a new keyword. The object itself is useless, all it does
+ * is to provide syntactic sugar like "self->trap_exit(true)".
  */
-extern local_actor* self;
-
-#else
-
-extern self_type self;
+constexpr self_type self;
 
 #endif
 

@@ -53,7 +53,7 @@ class group : public channel
 
         ~unsubscriber();
 
-        void detach(std::uint32_t);
+        void actor_exited(std::uint32_t);
 
         // matches on m_group
         bool matches(const attachable::token& what);

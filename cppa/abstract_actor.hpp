@@ -138,7 +138,7 @@ class abstract_actor : public Base
         }
         for (attachable_ptr& ptr : mattachables)
         {
-            ptr->detach(reason);
+            ptr->actor_exited(reason);
         }
     }
 
@@ -186,7 +186,7 @@ class abstract_actor : public Base
                     return true;
                 }
             }
-            uptr->detach(reason);
+            uptr->actor_exited(reason);
             return false;
         }
     }

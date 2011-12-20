@@ -29,7 +29,7 @@ boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
 
 namespace cppa {
 
-self_type self;
+//self_type self;
 
 void self_type::set_impl(local_actor* ptr)
 {

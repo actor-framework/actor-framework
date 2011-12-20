@@ -25,7 +25,7 @@ struct exit_observer : cppa::attachable
     {
         cppa::detail::dec_actor_count();
     }
-    void detach(std::uint32_t)
+    void actor_exited(std::uint32_t)
     {
     }
     bool matches(const token&)

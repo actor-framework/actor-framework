@@ -307,6 +307,15 @@ size_t test__spawn()
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "init_state");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "init_state");
 
+    // create one million actors linked to one single actor
+    // and kill them all through killing the link
+    auto my_link = spawn(new event_testee);
+    for (int i = 0; i < 20000; ++i)
+    {
+        link(my_link, spawn(new event_testee));
+    }
+    send(my_link, atom(":Exit"), exit_reason::user_defined);
+
     return CPPA_TEST_RESULT;
 
 

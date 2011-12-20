@@ -30,7 +30,7 @@ group::unsubscriber::~unsubscriber()
     if (m_group && m_self) m_group->unsubscribe(m_self);
 }
 
-void group::unsubscriber::detach(std::uint32_t)
+void group::unsubscriber::actor_exited(std::uint32_t)
 {
     // unsubscription is done in destructor
 }

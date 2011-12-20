@@ -225,7 +225,7 @@ class functor_attachable : public attachable
     {
     }
 
-    void detach(std::uint32_t reason)
+    void actor_exited(std::uint32_t reason)
     {
         m_functor(reason);
     }

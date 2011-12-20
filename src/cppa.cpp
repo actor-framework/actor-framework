@@ -12,7 +12,7 @@ class observer : public cppa::attachable
 
     observer(cppa::actor_ptr&& client) : m_client(std::move(client)) { }
 
-    void detach(std::uint32_t reason)
+    void actor_exited(std::uint32_t reason)
     {
         using namespace cppa;
         send(m_client, atom(":Down"), actor_ptr(self), reason);

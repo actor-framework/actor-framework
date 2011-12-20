@@ -39,7 +39,7 @@ class attachable
      *
      * The default implementation does nothing.
      */
-    virtual void detach(std::uint32_t reason) = 0;
+    virtual void actor_exited(std::uint32_t reason) = 0;
 
     virtual bool matches(const token&) = 0;
 
