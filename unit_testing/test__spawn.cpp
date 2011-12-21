@@ -28,11 +28,26 @@ using namespace cppa;
 struct event_testee : public fsm_actor<event_testee>
 {
 
+    behavior* w4str()
+    {
+        return &wait4string;
+    }
+
+    behavior* w4float()
+    {
+        return &wait4float;
+    }
+
+    behavior* w4int()
+    {
+        return &init_state;
+    }
+
     behavior wait4string =
     (
         on<std::string>() >> [this]()
         {
-            become(&init_state);
+            become(w4int());
         },
         on<atom("GetState")>() >> [=]()
         {
@@ -44,7 +59,7 @@ struct event_testee : public fsm_actor<event_testee>
     (
         on<float>() >> [=]()
         {
-            become(&wait4string);
+            become(w4str());
         },
         on<atom("GetState")>() >> [=]()
         {
@@ -56,7 +71,7 @@ struct event_testee : public fsm_actor<event_testee>
     (
         on<int>() >> [=]()
         {
-            become(&wait4float);
+            become(w4float());
         },
         on<atom("GetState")>() >> [=]()
         {
