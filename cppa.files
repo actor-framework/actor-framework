@@ -242,3 +242,4 @@ cppa/event_based_actor_mixin.hpp
 cppa/fsm_actor.hpp
 cppa/self.hpp
 src/self.cpp
+cppa/behavior.hpp

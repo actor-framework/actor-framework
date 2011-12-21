@@ -27,7 +27,7 @@ class actor : public channel
 {
 
     bool m_is_proxy;
-    std::uint32_t m_id;
+    actor_id m_id;
     process_information_ptr m_parent_process;
 
  protected:
@@ -163,14 +163,14 @@ class actor : public channel
      *        the process it's executed in.
      * @returns The unique identifier of this actor.
      */
-    inline std::uint32_t id() const;
+    inline actor_id id() const;
 
     /**
-     * @brief Get the actor that has the unique identifier @p actor_id.
+     * @brief Get the actor that has the unique identifier @p needle.
      * @returns A pointer to the requestet actor or @c nullptr if no
      *          running actor with the ID @p actor_id was found in this process.
      */
-    static intrusive_ptr<actor> by_id(std::uint32_t actor_id);
+    static intrusive_ptr<actor> by_id(actor_id needle);
 
     inline bool is_proxy() const;
 

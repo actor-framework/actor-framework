@@ -28,7 +28,7 @@ using namespace cppa;
 struct event_testee : public fsm_actor<event_testee>
 {
 
-    invoke_rules wait4string =
+    behavior wait4string =
     (
         on<std::string>() >> [this]()
         {
@@ -40,7 +40,7 @@ struct event_testee : public fsm_actor<event_testee>
         }
     );
 
-    invoke_rules wait4float =
+    behavior wait4float =
     (
         on<float>() >> [=]()
         {
@@ -52,7 +52,7 @@ struct event_testee : public fsm_actor<event_testee>
         }
     );
 
-    invoke_rules init_state =
+    behavior init_state =
     (
         on<int>() >> [=]()
         {
@@ -73,9 +73,9 @@ class event_testee : public fsm_actor<event_testee>
 
     friend class fsm_actor<event_testee>;
 
-    invoke_rules wait4string;
-    invoke_rules wait4float;
-    invoke_rules init_state;
+    behavior wait4string;
+    behavior wait4float;
+    behavior init_state;
 
  public:
 
@@ -125,7 +125,12 @@ class event_testee : public fsm_actor<event_testee>
             on<atom("GetState")>() >> [=]()
             {
                 reply("init_state");
+            },
+            after(std::chrono::seconds(5)) >> [=]()
+            {
+                quit(exit_reason::user_defined);
             }
+
         );
     }
 
@@ -307,14 +312,14 @@ size_t test__spawn()
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "init_state");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "init_state");
 
-    // create one million actors linked to one single actor
+    // create 20,000 actors linked to one single actor
     // and kill them all through killing the link
-    auto my_link = spawn(new event_testee);
-    for (int i = 0; i < 20000; ++i)
-    {
-        link(my_link, spawn(new event_testee));
-    }
-    send(my_link, atom(":Exit"), exit_reason::user_defined);
+//    auto my_link = spawn(new event_testee);
+//    for (int i = 0; i < 20000; ++i)
+//    {
+//        link(my_link, spawn(new event_testee));
+//    }
+//    send(my_link, atom(":Exit"), exit_reason::user_defined);
 
     return CPPA_TEST_RESULT;
 

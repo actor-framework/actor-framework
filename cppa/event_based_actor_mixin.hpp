@@ -1,11 +1,8 @@
 #ifndef EVENT_BASED_ACTOR_MIXIN_HPP
 #define EVENT_BASED_ACTOR_MIXIN_HPP
 
+#include "cppa/behavior.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
-
-#include <iostream>
-using std::cout;
-using std::endl;
 
 namespace cppa {
 
@@ -36,22 +33,27 @@ class event_based_actor_mixin : public abstract_event_based_actor
 
  protected:
 
-    void become(invoke_rules* behavior)
+    inline void become(behavior* bhvr)
+    {
+        d_this()->do_become(bhvr);
+    }
+
+    inline void become(invoke_rules* behavior)
     {
         d_this()->do_become(behavior, false);
     }
 
-    void become(timed_invoke_rules* behavior)
+    inline void become(timed_invoke_rules* behavior)
     {
         d_this()->do_become(behavior, false);
     }
 
-    void become(invoke_rules&& behavior)
+    inline void become(invoke_rules&& behavior)
     {
         d_this()->do_become(new invoke_rules(std::move(behavior)), true);
     }
 
-    void become(timed_invoke_rules&& behavior)
+    inline void become(timed_invoke_rules&& behavior)
     {
         d_this()->do_become(new timed_invoke_rules(std::move(behavior)), true);
     }

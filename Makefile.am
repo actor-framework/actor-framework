@@ -78,6 +78,7 @@ nobase_library_include_HEADERS = \
   cppa/anything.hpp \
   cppa/atom.hpp \
   cppa/attachable.hpp \
+  cppa/behavior.hpp \
   cppa/binary_deserializer.hpp \
   cppa/binary_serializer.hpp \
   cppa/channel.hpp \
