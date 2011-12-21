@@ -30,7 +30,7 @@ struct tree_node
     {
     }
 
-    tree_node& add_child(int v = 0)
+    tree_node& add_child(std::uint32_t v = 0)
     {
         children.push_back({ v });
         return *this;
