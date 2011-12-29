@@ -25,9 +25,9 @@ struct mailman_send_job
 
 struct mailman_add_peer
 {
-    native_socket_t sockfd;
+    native_socket_type sockfd;
     process_information_ptr pinfo;
-    inline mailman_add_peer(native_socket_t fd,
+    inline mailman_add_peer(native_socket_type fd,
                             const process_information_ptr& piptr)
         : sockfd(fd), pinfo(piptr)
     {
@@ -53,7 +53,7 @@ class mailman_job
                 const channel_ptr& to,
                 const any_tuple& omsg);
 
-    mailman_job(native_socket_t sockfd, const process_information_ptr& pinfo);
+    mailman_job(native_socket_type sockfd, const process_information_ptr& pinfo);
 
     static mailman_job* kill_job();
 

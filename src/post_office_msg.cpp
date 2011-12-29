@@ -2,7 +2,7 @@
 
 namespace cppa { namespace detail {
 
-post_office_msg::add_peer::add_peer(native_socket_t peer_socket,
+post_office_msg::add_peer::add_peer(native_socket_type peer_socket,
                                     const process_information_ptr& peer_ptr,
                                     const actor_proxy_ptr& peer_actor_ptr,
                                     std::unique_ptr<attachable>&& peer_observer)
@@ -13,14 +13,14 @@ post_office_msg::add_peer::add_peer(native_socket_t peer_socket,
 {
 }
 
-post_office_msg::add_server_socket::add_server_socket(native_socket_t ssockfd,
+post_office_msg::add_server_socket::add_server_socket(native_socket_type ssockfd,
                                                       const actor_ptr& whom)
     : server_sockfd(ssockfd)
     , published_actor(whom)
 {
 }
 
-post_office_msg::post_office_msg(native_socket_t arg0,
+post_office_msg::post_office_msg(native_socket_type arg0,
                                  const process_information_ptr& arg1,
                                  const actor_proxy_ptr& arg2,
                                  std::unique_ptr<attachable>&& arg3)
@@ -30,7 +30,7 @@ post_office_msg::post_office_msg(native_socket_t arg0,
     new (&m_add_peer_msg) add_peer(arg0, arg1, arg2, std::move(arg3));
 }
 
-post_office_msg::post_office_msg(native_socket_t arg0, const actor_ptr& arg1)
+post_office_msg::post_office_msg(native_socket_type arg0, const actor_ptr& arg1)
     : next(nullptr)
     , m_type(add_server_socket_type)
 {

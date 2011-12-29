@@ -27,12 +27,12 @@ class post_office_msg
     struct add_peer
     {
 
-        native_socket_t sockfd;
+        native_socket_type sockfd;
         process_information_ptr peer;
         actor_proxy_ptr first_peer_actor;
         std::unique_ptr<attachable> attachable_ptr;
 
-        add_peer(native_socket_t peer_socket,
+        add_peer(native_socket_type peer_socket,
                  const process_information_ptr& peer_ptr,
                  const actor_proxy_ptr& peer_actor_ptr,
                  std::unique_ptr<attachable>&& peer_observer);
@@ -42,10 +42,10 @@ class post_office_msg
     struct add_server_socket
     {
 
-        native_socket_t server_sockfd;
+        native_socket_type server_sockfd;
         actor_ptr published_actor;
 
-        add_server_socket(native_socket_t ssockfd, const actor_ptr& whom);
+        add_server_socket(native_socket_type ssockfd, const actor_ptr& whom);
 
     };
 
@@ -55,12 +55,12 @@ class post_office_msg
         inline proxy_exited(const actor_proxy_ptr& who) : proxy_ptr(who) { }
     };
 
-    post_office_msg(native_socket_t arg0,
+    post_office_msg(native_socket_type arg0,
                     const process_information_ptr& arg1,
                     const actor_proxy_ptr& arg2,
                     std::unique_ptr<attachable>&& arg3);
 
-    post_office_msg(native_socket_t arg0, const actor_ptr& arg1);
+    post_office_msg(native_socket_type arg0, const actor_ptr& arg1);
 
     post_office_msg(const actor_proxy_ptr& proxy_ptr);
 

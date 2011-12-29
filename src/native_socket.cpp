@@ -9,7 +9,7 @@ namespace cppa { namespace detail {
 
 #ifndef CPPA_WINDOWS
 
-void closesocket(native_socket_t s)
+void closesocket(native_socket_type s)
 {
     if(::close(s) != 0)
     {

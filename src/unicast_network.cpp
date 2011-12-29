@@ -31,7 +31,7 @@ namespace cppa {
 
 namespace {
 
-void read_from_socket(detail::native_socket_t sfd, void* buf, size_t buf_size)
+void read_from_socket(detail::native_socket_type sfd, void* buf, size_t buf_size)
 {
     char* cbuf = reinterpret_cast<char*>(buf);
     size_t read_bytes = 0;
@@ -58,11 +58,11 @@ struct socket_guard
 {
 
     bool m_released;
-    detail::native_socket_t m_socket;
+    detail::native_socket_type m_socket;
 
  public:
 
-    socket_guard(detail::native_socket_t sfd) : m_released(false), m_socket(sfd)
+    socket_guard(detail::native_socket_type sfd) : m_released(false), m_socket(sfd)
     {
     }
 
@@ -81,10 +81,10 @@ struct socket_guard
 void publish(actor_ptr& whom, std::uint16_t port)
 {
     if (!whom) return;
-    detail::native_socket_t sockfd;
+    detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
+    if (sockfd == detail::invalid_socket)
     {
         throw network_error("could not create server socket");
     }
@@ -123,11 +123,11 @@ void publish(actor_ptr&& whom, std::uint16_t port)
 
 actor_ptr remote_actor(const char* host, std::uint16_t port)
 {
-    detail::native_socket_t sockfd;
+    detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     struct hostent* server;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
+    if (sockfd == detail::invalid_socket)
     {
         throw network_error("socket creation failed");
     }

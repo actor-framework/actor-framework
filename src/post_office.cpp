@@ -61,7 +61,7 @@ constexpr size_t s_max_buffer_size = (1024 * 1024);
 static_assert((s_max_buffer_size % s_chunk_size) == 0,
               "max_buffer_size is not a multiple of chunk_size");
 
-static_assert(sizeof(cppa::detail::native_socket_t) == sizeof(std::uint32_t),
+static_assert(sizeof(cppa::detail::native_socket_type) == sizeof(std::uint32_t),
               "sizeof(native_socket_t) != sizeof(std::uint32_t)");
 
 constexpr int s_rdflag = MSG_DONTWAIT;
@@ -93,9 +93,9 @@ class po_peer
 
     state m_state;
     // TCP socket to remote peer
-    native_socket_t m_socket;
+    native_socket_type m_socket;
     // TCP socket identifying our parent (that accepted m_socket)
-    native_socket_t m_parent_socket;
+    native_socket_type m_parent_socket;
     // caches process_information::get()
     process_information_ptr m_pself;
     // the process information or our remote peer
@@ -119,7 +119,7 @@ class po_peer
     {
     }
 
-    explicit po_peer(native_socket_t sockfd, native_socket_t parent_socket)
+    explicit po_peer(native_socket_type sockfd, native_socket_type parent_socket)
         : m_state(wait_for_process_info)
         , m_socket(sockfd)
         , m_parent_socket(parent_socket)
@@ -146,7 +146,7 @@ class po_peer
         // other.m_children.clear();
     }
 
-    native_socket_t get_socket() const
+    native_socket_type get_socket() const
     {
         return m_socket;
     }
@@ -344,7 +344,7 @@ class po_doorman
 {
 
     // server socket
-    native_socket_t m_socket;
+    native_socket_type m_socket;
     actor_ptr published_actor;
     std::list<po_peer>* m_peers;
     // caches process_information::get()
@@ -375,7 +375,7 @@ class po_doorman
         other.m_socket = -1;
     }
 
-    inline native_socket_t get_socket() const
+    inline native_socket_type get_socket() const
     {
         return m_socket;
     }
@@ -639,7 +639,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
                 case close_socket_event:
                 {
                     DEBUG("close_socket_event");
-                    auto sockfd = static_cast<native_socket_t>(pmsg[1]);
+                    auto sockfd = static_cast<native_socket_type>(pmsg[1]);
                     auto end = peers.end();
                     auto i = std::find_if(peers.begin(), end,
                                           [sockfd](po_peer& peer) -> bool
@@ -691,7 +691,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
  *                 (forward each function call to our queue)                  *
  ******************************************************************************/
 
-void post_office_add_peer(native_socket_t a0,
+void post_office_add_peer(native_socket_type a0,
                           const process_information_ptr& a1,
                           const actor_proxy_ptr& a2,
                           std::unique_ptr<attachable>&& a3)
@@ -703,7 +703,7 @@ void post_office_add_peer(native_socket_t a0,
     write(nm->write_handle(), msg, pipe_msg_size);
 }
 
-void post_office_publish(native_socket_t server_socket,
+void post_office_publish(native_socket_type server_socket,
                          const actor_ptr& published_actor)
 {
     DEBUG("post_office_publish(" << published_actor->id() << ")");
@@ -722,7 +722,7 @@ void post_office_unpublish(actor_id whom)
     write(nm->write_handle(), msg, pipe_msg_size);
 }
 
-void post_office_close_socket(native_socket_t sfd)
+void post_office_close_socket(native_socket_type sfd)
 {
     auto nm = singleton_manager::get_network_manager();
     pipe_msg msg = { close_socket_event, static_cast<std::uint32_t>(sfd) };
