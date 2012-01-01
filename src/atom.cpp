@@ -32,17 +32,27 @@
 
 namespace cppa {
 
-std::string to_string(const atom_value& a)
+std::string to_string(atom_value const& what)
 {
+    auto x = static_cast<std::uint64_t>(what);
     std::string result;
     result.reserve(11);
-    for (auto x = static_cast<std::uint64_t>(a); x != 0; x >>= 6)
+    // don't read characters before we found the leading 0xF
+    // first four bits set?
+    bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
+    std::uint64_t mask = 0x0FC0000000000000;
+    for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6)
     {
-        // decode 6 bit characters to ASCII
-        result += detail::decoding_table[static_cast<size_t>(x & 0x3F)];
+        if (read_chars)
+        {
+            result += detail::decoding_table[(x & mask) >> bitshift];
+        }
+        else if (((x & mask) >> bitshift) == 0xF)
+        {
+            read_chars = true;
+        }
     }
-    // result is reversed, since we read from right-to-left
-    return std::string(result.rbegin(), result.rend());
+    return std::move(result);
 }
 
 } // namespace cppa
