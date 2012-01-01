@@ -66,7 +66,23 @@ struct is_boxed< util::wrapped<T> >
     static const bool value = true;
 };
 
+template<typename T>
+struct is_boxed<util::wrapped<T>()>
+{
+    static const bool value = true;
+};
 
+template<typename T>
+struct is_boxed<util::wrapped<T>(&)()>
+{
+    static const bool value = true;
+};
+
+template<typename T>
+struct is_boxed<util::wrapped<T>(*)()>
+{
+    static const bool value = true;
+};
 
 } } // namespace cppa::detail
 

@@ -68,7 +68,7 @@ size_t test__pattern()
             CPPA_CHECK_EQUAL(str, "hello foo");
             lambda_invoked[1] = true;
         },
-        on("1", val<int>(), any_vals) >> [&](int value)
+        on("1", val<int>, any_vals) >> [&](int value)
         {
             CPPA_CHECK_EQUAL(value, 2);
             lambda_invoked[2] = true;

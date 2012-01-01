@@ -98,8 +98,8 @@ class invoke_rule_builder
 
     template<typename... Args>
     invoke_rule_builder(Args const&... args)
+        : m_pattern(new pattern_type(args...))
     {
-        m_pattern.reset(new pattern_type(args...));
     }
 
     template<typename F>

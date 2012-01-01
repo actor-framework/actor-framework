@@ -47,6 +47,24 @@ struct unboxed< util::wrapped<T> >
     typedef typename util::wrapped<T>::type type;
 };
 
+template<typename T>
+struct unboxed<util::wrapped<T> (&)()>
+{
+    typedef typename util::wrapped<T>::type type;
+};
+
+template<typename T>
+struct unboxed<util::wrapped<T> ()>
+{
+    typedef typename util::wrapped<T>::type type;
+};
+
+template<typename T>
+struct unboxed<util::wrapped<T> (*)()>
+{
+    typedef typename util::wrapped<T>::type type;
+};
+
 } } // namespace cppa::detail
 
 #endif // UNBOXED_HPP

@@ -99,6 +99,14 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     {
     }
 
+    // allow initialization with a function pointer or reference
+    // returning a wrapped<Head>
+    template<typename...Args>
+    tdata(util::wrapped<Head>(*)(), Args const&... vals)
+        : super(vals...), head()
+    {
+    }
+
     inline tdata<Tail...>& tail()
     {
         // upcast
