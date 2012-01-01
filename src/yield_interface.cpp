@@ -59,7 +59,6 @@ void call(util::fiber* what, util::fiber* from)
 {
     t_ystate = yield_state::invalid;
     t_caller = from;
-    //t_caller.reset(from);
     t_callee = what;
     util::fiber::swap(*from, *what);
 }

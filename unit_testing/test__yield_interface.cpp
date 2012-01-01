@@ -26,15 +26,23 @@ struct pseudo_worker
 {
 
     int m_count;
+    bool m_blocked;
 
-    pseudo_worker() : m_count(0) { }
+    pseudo_worker() : m_count(0), m_blocked(true) { }
 
     void operator()()
     {
         for (;;)
         {
-            ++m_count;
-            yield(m_count < 10 ? yield_state::ready : yield_state::done);
+            if (m_blocked)
+            {
+                yield(yield_state::blocked);
+            }
+            else
+            {
+                ++m_count;
+                yield(m_count < 10 ? yield_state::ready : yield_state::done);
+            }
         }
     }
 
@@ -54,18 +62,18 @@ size_t test__yield_interface()
     fiber fself;
     fiber fcoroutine(coroutine, &worker);
 
-    auto do_switch = [&]() { call(&fcoroutine, &fself); };
-
     int i = 0;
     do
     {
-        do_switch();
+        if (i == 2) worker.m_blocked = false;
+        call(&fcoroutine, &fself);
         ++i;
     }
-    while (yielded_state() != yield_state::done && i < 10);
+    while (yielded_state() != yield_state::done && i < 12);
 
     CPPA_CHECK_EQUAL(yielded_state(), yield_state::done);
-    CPPA_CHECK_EQUAL(i, 10);
+    CPPA_CHECK_EQUAL(worker.m_count, 10);
+    CPPA_CHECK_EQUAL(i, 12);
 
     return CPPA_TEST_RESULT;
 }
