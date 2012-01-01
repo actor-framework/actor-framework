@@ -8,12 +8,12 @@ namespace cppa {
  */
 struct anything { };
 
-inline bool operator==(const anything&, const anything&)
+inline bool operator==(anything const&, anything const&)
 {
     return true;
 }
 
-inline bool operator!=(const anything&, const anything&)
+inline bool operator!=(anything const&, anything const&)
 {
     return false;
 }

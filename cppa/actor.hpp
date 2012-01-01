@@ -32,10 +32,10 @@ class actor : public channel
 
  protected:
 
-    actor(const process_information_ptr& parent = process_information::get());
+    actor(process_information_ptr const& parent = process_information::get());
 
     actor(std::uint32_t aid,
-          const process_information_ptr& parent = process_information::get());
+          process_information_ptr const& parent = process_information::get());
 
  public:
 
@@ -67,7 +67,7 @@ class actor : public channel
     /**
      * @brief Detaches the first attached object that matches @p what.
      */
-    virtual void detach(const attachable::token& what) = 0;
+    virtual void detach(attachable::token const& what) = 0;
 
     template<typename T>
     bool attach(std::unique_ptr<T>&& ptr,
@@ -87,7 +87,7 @@ class actor : public channel
      * @note Groups are leaved automatically if the Actor finishes
      *       execution.
      */
-    void leave(const group_ptr& what);
+    void leave(group_ptr const& what);
 
     /**
      * @brief Links this actor to @p other.
@@ -148,7 +148,7 @@ class actor : public channel
      * @brief Gets the {@link process_information} of the parent process.
      * @returns The {@link process_information} of the parent process.
      */
-    inline const process_information& parent_process() const;
+    inline process_information const& parent_process() const;
 
     /**
      * @brief Gets the {@link process_information} pointer
@@ -185,7 +185,7 @@ typedef intrusive_ptr<actor> actor_ptr;
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-inline const process_information& actor::parent_process() const
+inline process_information const& actor::parent_process() const
 {
     return *m_parent_process;
 }
@@ -230,7 +230,7 @@ class functor_attachable : public attachable
         m_functor(reason);
     }
 
-    bool matches(const attachable::token&)
+    bool matches(attachable::token const&)
     {
         return false;
     }

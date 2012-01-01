@@ -23,7 +23,7 @@ class any_tuple
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
-    explicit any_tuple(const cow_ptr<detail::abstract_tuple>& vals);
+    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
 
  public:
 
@@ -32,32 +32,32 @@ class any_tuple
     any_tuple();
 
     template<typename... Args>
-    any_tuple(const tuple<Args...>& t) : m_vals(t.vals()) { }
+    any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
 
     template<typename... Args>
-    any_tuple(const tuple_view<Args...>& t) : m_vals(t.vals()) { }
+    any_tuple(tuple_view<Args...> const& t) : m_vals(t.vals()) { }
 
     explicit any_tuple(detail::abstract_tuple*);
 
     any_tuple(any_tuple&&);
 
-    any_tuple(const any_tuple&) = default;
+    any_tuple(any_tuple const&) = default;
 
     any_tuple& operator=(any_tuple&&);
 
-    any_tuple& operator=(const any_tuple&) = default;
+    any_tuple& operator=(any_tuple const&) = default;
 
     size_t size() const;
 
     void* mutable_at(size_t p);
 
-    const void* at(size_t p) const;
+    void const* at(size_t p) const;
 
-    const uniform_type_info& utype_info_at(size_t p) const;
+    uniform_type_info const& utype_info_at(size_t p) const;
 
-    const cow_ptr<detail::abstract_tuple>& vals() const;
+    cow_ptr<detail::abstract_tuple> const& vals() const;
 
-    bool equals(const any_tuple& other) const;
+    bool equals(any_tuple const& other) const;
 
     any_tuple tail(size_t offset = 1) const;
 
@@ -67,27 +67,27 @@ class any_tuple
     }
 
     template<typename T>
-    inline const T& get_as(size_t p) const;
+    inline T const& get_as(size_t p) const;
 
     template<typename T>
     inline T& get_mutable_as(size_t p);
 
 };
 
-inline bool operator==(const any_tuple& lhs, const any_tuple& rhs)
+inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
 {
     return lhs.equals(rhs);
 }
 
-inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs)
+inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename T>
-inline const T& any_tuple::get_as(size_t p) const
+inline T const& any_tuple::get_as(size_t p) const
 {
-    return *reinterpret_cast<const T*>(at(p));
+    return *reinterpret_cast<T const*>(at(p));
 }
 
 template<typename T>
@@ -97,7 +97,7 @@ inline T& any_tuple::get_mutable_as(size_t p)
 }
 
 template<typename... Types>
-tuple_view<Types...> tuple_cast(const any_tuple& tup)
+tuple_view<Types...> tuple_cast(any_tuple const& tup)
 {
     return tuple_view<Types...>::from(tup.vals());
 }

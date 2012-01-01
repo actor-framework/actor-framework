@@ -16,8 +16,8 @@ class group_manager
 
     group_manager();
 
-    intrusive_ptr<group> get(const std::string& module_name,
-                             const std::string& group_identifier);
+    intrusive_ptr<group> get(std::string const& module_name,
+                             std::string const& group_identifier);
 
     void add_module(group::module*);
 

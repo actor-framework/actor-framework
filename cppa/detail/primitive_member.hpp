@@ -21,9 +21,9 @@ class primitive_member : public util::abstract_uniform_type_info<T>
 
  public:
 
-    void serialize(const void* obj, serializer* s) const
+    void serialize(void const* obj, serializer* s) const
     {
-        s->write_value(*reinterpret_cast<const T*>(obj));
+        s->write_value(*reinterpret_cast<T const*>(obj));
     }
 
     void deserialize(void* obj, deserializer* d) const

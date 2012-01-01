@@ -19,8 +19,8 @@ class primitive_variant;
 class serializer
 {
 
-    serializer(const serializer&) = delete;
-    serializer& operator=(const serializer&) = delete;
+    serializer(serializer const&) = delete;
+    serializer& operator=(serializer const&) = delete;
 
  public:
 
@@ -33,7 +33,7 @@ class serializer
      *        named @p type_name.
      * @param type_name The platform-independent @p libcppa type name.
      */
-    virtual void begin_object(const std::string& type_name) = 0;
+    virtual void begin_object(std::string const& type_name) = 0;
 
     /**
      * @brief Ends serialization of an object.
@@ -54,19 +54,19 @@ class serializer
      * @brief Writes a single value to the data sink.
      * @param value A primitive data value.
      */
-    virtual void write_value(const primitive_variant& value) = 0;
+    virtual void write_value(primitive_variant const& value) = 0;
 
     /**
      * @brief Writes @p num values as a tuple to the data sink.
      * @param num Size of the array @p values.
      * @param values An array of size @p num of primitive data values.
      */
-    virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
+    virtual void write_tuple(size_t num, primitive_variant const* values) = 0;
 
 };
 
 template<typename T>
-serializer& operator<<(serializer& s, const T& what)
+serializer& operator<<(serializer& s, T const& what)
 {
     auto mtype = uniform_typeid<T>();
     if (mtype == nullptr)

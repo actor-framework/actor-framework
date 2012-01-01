@@ -51,7 +51,7 @@ class abstract_actor : public Base
 
         }
 
-        queue_node(actor* from, const any_tuple& content)
+        queue_node(actor* from, any_tuple const& content)
             : next(nullptr), sender(from), msg(content)
         {
 
@@ -69,7 +69,7 @@ class abstract_actor : public Base
     }
 
     template<class List, typename Element>
-    bool unique_insert(List& lst, const Element& e)
+    bool unique_insert(List& lst, Element const& e)
     {
         auto end = lst.end();
         auto i = std::find(lst.begin(), end, e);
@@ -82,7 +82,7 @@ class abstract_actor : public Base
     }
 
     template<class List, typename Iterator, typename Element>
-    int erase_all(List& lst, Iterator begin, Iterator end, const Element& e)
+    int erase_all(List& lst, Iterator begin, Iterator end, Element const& e)
     {
         auto i = std::find(begin, end, e);
         if (i != end)
@@ -93,7 +93,7 @@ class abstract_actor : public Base
     }
 
     template<class List, typename Element>
-    int erase_all(List& lst, const Element& e)
+    int erase_all(List& lst, Element const& e)
     {
         return erase_all(lst, lst.begin(), lst.end(), e);
     }
@@ -191,7 +191,7 @@ class abstract_actor : public Base
         }
     }
 
-    void detach(const attachable::token& what) /*override*/
+    void detach(attachable::token const& what) /*override*/
     {
         attachable_ptr uptr;
         // lifetime scope of guard

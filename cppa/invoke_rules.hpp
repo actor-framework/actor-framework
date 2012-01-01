@@ -1,31 +1,3 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
- *                                                                            *
- * Copyright (C) 2011, Dominik Charousset <dominik.charousset@haw-hamburg.de> *
- *                                                                            *
- * This file is part of libcppa.                                              *
- * libcppa is free software: you can redistribute it and/or modify it under   *
- * the terms of the GNU Lesser General Public License as published by the     *
- * Free Software Foundation, either version 3 of the License                  *
- * or (at your option) any later version.                                     *
- *                                                                            *
- * libcppa is distributed in the hope that it will be useful,                 *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                       *
- * See the GNU Lesser General Public License for more details.                *
- *                                                                            *
- * You should have received a copy of the GNU Lesser General Public License   *
- * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
-
 #ifndef INVOKE_RULES_HPP
 #define INVOKE_RULES_HPP
 
@@ -89,7 +61,7 @@ class invoke_rules_base
      * @returns @p true if a pattern matched @p data;
      *          otherwise @p false.
      */
-    bool operator()(const any_tuple& data) const;
+    bool operator()(any_tuple const& data) const;
 
     /**
      * @brief Tries to match @p data with one of the stored patterns.
@@ -97,7 +69,7 @@ class invoke_rules_base
      * @returns An {@link intermediate} instance that could invoke
      *          the corresponding callback; otherwise @p nullptr.
      */
-    detail::intermediate* get_intermediate(const any_tuple& data) const;
+    detail::intermediate* get_intermediate(any_tuple const& data) const;
 
 };
 
@@ -111,8 +83,8 @@ class timed_invoke_rules : public invoke_rules_base
 
     friend class invoke_rules;
 
-    timed_invoke_rules(const timed_invoke_rules&) = delete;
-    timed_invoke_rules& operator=(const timed_invoke_rules&) = delete;
+    timed_invoke_rules(timed_invoke_rules const&) = delete;
+    timed_invoke_rules& operator=(timed_invoke_rules const&) = delete;
 
     timed_invoke_rules(invokable_list&& prepended_list,
                        timed_invoke_rules&& other);
@@ -127,7 +99,7 @@ public:
 
     timed_invoke_rules& operator=(timed_invoke_rules&&);
 
-    const util::duration& timeout() const;
+    util::duration const& timeout() const;
 
     void handle_timeout() const;
 
@@ -147,8 +119,8 @@ class invoke_rules : public invoke_rules_base
 
     friend class timed_invoke_rules;
 
-    invoke_rules(const invoke_rules&) = delete;
-    invoke_rules& operator=(const invoke_rules&) = delete;
+    invoke_rules(invoke_rules const&) = delete;
+    invoke_rules& operator=(invoke_rules const&) = delete;
 
  public:
 

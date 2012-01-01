@@ -8,21 +8,21 @@ namespace cppa { namespace util {
 class any_tuple_iterator
 {
 
-    const any_tuple& m_data;
+    any_tuple const& m_data;
     size_t m_pos;
 
  public:
 
-    any_tuple_iterator(const any_tuple& data, size_t pos = 0);
+    any_tuple_iterator(any_tuple const& data, size_t pos = 0);
 
     inline bool at_end() const;
 
     template<typename T>
-    inline const T& value() const;
+    inline T const& value() const;
 
-    inline const void* value_ptr() const;
+    inline void const* value_ptr() const;
 
-    inline const cppa::uniform_type_info& type() const;
+    inline cppa::uniform_type_info const& type() const;
 
     inline size_t position() const;
 
@@ -36,17 +36,17 @@ inline bool any_tuple_iterator::at_end() const
 }
 
 template<typename T>
-inline const T& any_tuple_iterator::value() const
+inline T const& any_tuple_iterator::value() const
 {
-    return *reinterpret_cast<const T*>(m_data.at(m_pos));
+    return *reinterpret_cast<T const*>(m_data.at(m_pos));
 }
 
-inline const uniform_type_info& any_tuple_iterator::type() const
+inline uniform_type_info const& any_tuple_iterator::type() const
 {
     return m_data.utype_info_at(m_pos);
 }
 
-inline const void* any_tuple_iterator::value_ptr() const
+inline void const* any_tuple_iterator::value_ptr() const
 {
     return m_data.at(m_pos);
 }

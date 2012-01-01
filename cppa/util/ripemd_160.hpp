@@ -43,7 +43,7 @@
 
 namespace cppa { namespace util {
 
-void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data);
+void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data);
 
 } } // namespace cppa::util
 

@@ -10,13 +10,13 @@ class is_copyable_
 {
 
     template<typename A>
-    static bool cpy_help_fun(const A* arg0, decltype(new A(*arg0)) = nullptr)
+    static bool cpy_help_fun(A const* arg0, decltype(new A(*arg0)) = nullptr)
     {
         return true;
     }
 
     template<typename A>
-    static void cpy_help_fun(const A*, void* = nullptr) { }
+    static void cpy_help_fun(A const*, void* = nullptr) { }
 
     typedef decltype(cpy_help_fun(static_cast<T*>(nullptr),
                                   static_cast<T*>(nullptr)))

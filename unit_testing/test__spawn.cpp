@@ -335,7 +335,6 @@ size_t test__spawn()
 //        link(my_link, spawn(new event_testee));
 //    }
 //    send(my_link, atom(":Exit"), exit_reason::user_defined);
-
     return CPPA_TEST_RESULT;
 
 

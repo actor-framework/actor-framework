@@ -28,11 +28,11 @@ class process_information : public ref_counted,
 
     //process_information();
 
-    process_information(std::uint32_t process_id, const node_id_type& node_id);
+    process_information(std::uint32_t process_id, node_id_type const& node_id);
 
-    process_information(std::uint32_t process_id, const std::string& hash);
+    process_information(std::uint32_t process_id, std::string const& hash);
 
-    process_information(const process_information& other);
+    process_information(process_information const& other);
 
     /**
      * @brief Identifies the running process.
@@ -45,16 +45,16 @@ class process_information : public ref_counted,
      * A hash build from the MAC address of the first network device
      * and the serial number from the root HD (mounted in "/" or "C:").
      */
-    inline const node_id_type& node_id() const { return m_node_id; }
+    inline node_id_type const& node_id() const { return m_node_id; }
 
     /**
      * @brief Returns the proccess_information for the running process.
      * @returns
      */
-    static const intrusive_ptr<process_information>& get();
+    static intrusive_ptr<process_information> const& get();
 
     // "inherited" from comparable<process_information>
-    int compare(const process_information& other) const;
+    int compare(process_information const& other) const;
 
  private:
 
@@ -63,24 +63,24 @@ class process_information : public ref_counted,
 
 };
 
-void node_id_from_string(const std::string& hash,
+void node_id_from_string(std::string const& hash,
                          process_information::node_id_type& node_id);
 
-bool equal(const std::string& hash,
-           const process_information::node_id_type& node_id);
+bool equal(std::string const& hash,
+           process_information::node_id_type const& node_id);
 
-inline bool equal(const process_information::node_id_type& node_id,
-                  const std::string& hash)
+inline bool equal(process_information::node_id_type const& node_id,
+                  std::string const& hash)
 {
     return equal(hash, node_id);
 }
 
-std::string to_string(const process_information& what);
+std::string to_string(process_information const& what);
 
 /**
  * @brief Converts {@link node_id} to an hexadecimal string.
  */
-std::string to_string(const process_information::node_id_type& node_id);
+std::string to_string(process_information::node_id_type const& node_id);
 
 /**
  * @brief A smart pointer type that manages instances of

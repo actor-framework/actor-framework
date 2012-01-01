@@ -69,7 +69,7 @@ class tuple
      * @brief Initializes the tuple with @p args.
      * @param args Initialization values.
      */
-    tuple(const ElementTypes&... args) : m_vals(new vals_t(args...))
+    tuple(ElementTypes const&... args) : m_vals(new vals_t(args...))
     {
     }
 
@@ -87,7 +87,7 @@ class tuple
      * @brief Gets a pointer to the internal data.
      * @returns A const void pointer to the <tt>N</tt>th element.
      */
-    inline const void* at(size_t p) const
+    inline void const* at(size_t p) const
     {
         return m_vals->at(p);
     }
@@ -97,7 +97,7 @@ class tuple
      *        of an element.
      * @returns The uniform type of the <tt>N</tt>th element.
      */
-    inline const uniform_type_info* utype_at(size_t p) const
+    inline uniform_type_info const* utype_at(size_t p) const
     {
         return m_vals->utype_info_at(p);
     }
@@ -109,7 +109,7 @@ class tuple
      */
     cow_ptr<InternalData> vals() const;
 #   else
-    inline const cow_ptr<vals_t>& vals() const
+    inline cow_ptr<vals_t> const& vals() const
     {
         return m_vals;
     }
@@ -137,7 +137,7 @@ struct tuple_type_from_type_list<util::type_list<Types...>>
  * @relates tuple
  */
 template<size_t N, typename T>
-const T& get(const tuple<...>& tup);
+T const& get(tuple<...> const& tup);
 
 /**
  * @ingroup CopyOnWrite
@@ -159,12 +159,12 @@ T& get_ref(tuple<...>& tup);
  * @relates tuple
  */
 template<typename... Types>
-tuple<Types...> make_tuple(const Types&... args);
+tuple<Types...> make_tuple(Types const&... args);
 
 #else
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(const tuple<Types...>& tup)
+const typename util::at<N, Types...>::type& get(tuple<Types...> const& tup)
 {
     return get<N>(tup.vals()->data());
 }
@@ -179,7 +179,7 @@ template<typename... Types>
 typename tuple_type_from_type_list<
     typename util::type_list_apply<util::type_list<Types...>,
                                    detail::implicit_conversions>::type>::type
-make_tuple(const Types&... args)
+make_tuple(Types const&... args)
 {
     return { args... };
 }
@@ -194,8 +194,8 @@ make_tuple(const Types&... args)
  * @relates tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(const tuple<LhsTypes...>& lhs,
-                       const tuple<RhsTypes...>& rhs)
+inline bool operator==(tuple<LhsTypes...> const& lhs,
+                       tuple<RhsTypes...> const& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
@@ -208,8 +208,8 @@ inline bool operator==(const tuple<LhsTypes...>& lhs,
  * @relates tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(const tuple<LhsTypes...>& lhs,
-                       const tuple<RhsTypes...>& rhs)
+inline bool operator!=(tuple<LhsTypes...> const& lhs,
+                       tuple<RhsTypes...> const& rhs)
 {
     return !(lhs == rhs);
 }

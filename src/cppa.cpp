@@ -34,17 +34,18 @@ class observer : public cppa::attachable
 
 namespace cppa {
 
-local_actor* operator<<(local_actor* whom, const any_tuple& what)
+const self_type& operator<<(const self_type& s, const any_tuple& what)
 {
-    if (whom) whom->enqueue(self, what);
-    return whom;
+    local_actor* sptr = s;
+    sptr->enqueue(sptr, what);
+    return s;
 }
 
-// matches self << make_tuple(...)
-local_actor* operator<<(local_actor* whom, any_tuple&& what)
+const self_type& operator<<(const self_type& s, any_tuple&& what)
 {
-    if (whom) whom->enqueue(self, std::move(what));
-    return whom;
+    local_actor* sptr = s;
+    sptr->enqueue(sptr, std::move(what));
+    return s;
 }
 
 void link(actor_ptr& other)

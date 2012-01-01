@@ -15,7 +15,7 @@ namespace cppa {
 
 template<typename... MatchRules>
 typename tuple_view_type_from_type_list<typename util::filter_type_list<anything, util::type_list<MatchRules...>>::type>::type
-get_view(const any_tuple& ut)
+get_view(any_tuple const& ut)
 {
     pattern<MatchRules...> p;
     typename pattern<MatchRules...>::mapping_vector mapping;

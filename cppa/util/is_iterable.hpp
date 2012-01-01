@@ -14,7 +14,7 @@ class is_iterable
     template<class C>
     static bool sfinae_fun
     (
-        const C* cc,
+        C const* cc,
         // check for 'C::begin()' returning a forward iterator
         typename util::enable_if<util::is_forward_iterator<decltype(cc->begin())>>::type* = 0,
         // check for 'C::end()' returning the same kind of forward iterator
@@ -27,7 +27,7 @@ class is_iterable
     // SFNINAE default
     static void sfinae_fun(...) { }
 
-    typedef decltype(sfinae_fun(static_cast<const T*>(nullptr))) result_type;
+    typedef decltype(sfinae_fun(static_cast<T const*>(nullptr))) result_type;
 
  public:
 

@@ -10,7 +10,7 @@ namespace cppa { namespace detail {
 // public part of the actor interface
 struct channel : ref_counted
 {
-	virtual void enqueue_msg(const message& msg) = 0;
+	virtual void enqueue_msg(message const& msg) = 0;
 };
 
 } } // namespace cppa::detail

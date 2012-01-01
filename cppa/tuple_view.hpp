@@ -42,7 +42,7 @@ class tuple_view
 
     tuple_view() : m_vals(tuple<ElementTypes...>().vals()) { }
 
-    static tuple_view from(const vals_t& vals)
+    static tuple_view from(vals_t const& vals)
     {
         return tuple_view(vals);
     }
@@ -52,7 +52,7 @@ class tuple_view
         return tuple_view(std::move(vals));
     }
 
-    tuple_view(const vals_t& vals, mapping_vector& mapping)
+    tuple_view(vals_t const& vals, mapping_vector& mapping)
         : m_vals(new detail::decorated_tuple<ElementTypes...>(vals, mapping))
     {
     }
@@ -61,7 +61,7 @@ class tuple_view
     {
     }
 
-    tuple_view& operator=(const tuple_view& other)
+    tuple_view& operator=(tuple_view const& other)
     {
         m_vals = other.m_vals;
         return *this;
@@ -73,9 +73,9 @@ class tuple_view
         return *this;
     }
 
-    tuple_view(const tuple_view&) = default;
+    tuple_view(tuple_view const&) = default;
 
-    inline const vals_t& vals() const
+    inline vals_t const& vals() const
     {
         return m_vals;
     }
@@ -88,7 +88,7 @@ class tuple_view
 
  private:
 
-    explicit tuple_view(const vals_t& vals) : m_vals(vals)
+    explicit tuple_view(vals_t const& vals) : m_vals(vals)
     {
     }
 
@@ -101,11 +101,11 @@ class tuple_view
 };
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(const tuple_view<Types...>& t)
+const typename util::at<N, Types...>::type& get(tuple_view<Types...> const& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;
-    return *reinterpret_cast<const result_t*>(t.vals()->at(N));
+    return *reinterpret_cast<result_t const*>(t.vals()->at(N));
 }
 
 template<size_t N, typename... Types>
@@ -126,43 +126,43 @@ struct tuple_view_type_from_type_list<util::type_list<Types...>>
 };
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(const tuple_view<LhsTypes...>& lhs,
-                       const tuple_view<RhsTypes...>& rhs)
+inline bool operator==(tuple_view<LhsTypes...> const& lhs,
+                       tuple_view<RhsTypes...> const& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(const tuple<LhsTypes...>& lhs,
-                       const tuple_view<RhsTypes...>& rhs)
+inline bool operator==(tuple<LhsTypes...> const& lhs,
+                       tuple_view<RhsTypes...> const& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(const tuple_view<LhsTypes...>& lhs,
-                       const tuple<RhsTypes...>& rhs)
+inline bool operator==(tuple_view<LhsTypes...> const& lhs,
+                       tuple<RhsTypes...> const& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(const tuple_view<LhsTypes...>& lhs,
-                       const tuple_view<RhsTypes...>& rhs)
+inline bool operator!=(tuple_view<LhsTypes...> const& lhs,
+                       tuple_view<RhsTypes...> const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(const tuple<LhsTypes...>& lhs,
-                       const tuple_view<RhsTypes...>& rhs)
+inline bool operator!=(tuple<LhsTypes...> const& lhs,
+                       tuple_view<RhsTypes...> const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(const tuple_view<LhsTypes...>& lhs,
-                       const tuple<RhsTypes...>& rhs)
+inline bool operator!=(tuple_view<LhsTypes...> const& lhs,
+                       tuple<RhsTypes...> const& rhs)
 {
     return !(lhs == rhs);
 }

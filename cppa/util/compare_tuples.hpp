@@ -12,7 +12,7 @@ namespace cppa { namespace detail {
 
 template<size_t N, template<typename...> class Tuple, typename... Types>
 const typename util::at<N, Types...>::type&
-do_get(const Tuple<Types...>& t)
+do_get(Tuple<Types...> const& t)
 {
     return ::cppa::get<N, Types...>(t);
 }
@@ -20,7 +20,7 @@ do_get(const Tuple<Types...>& t)
 template<size_t N, typename LhsTuple, typename RhsTuple>
 struct cmp_helper
 {
-    inline static bool cmp(const LhsTuple& lhs, const RhsTuple& rhs)
+    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs)
     {
         return    do_get<N>(lhs) == do_get<N>(rhs)
                && cmp_helper<N-1, LhsTuple, RhsTuple>::cmp(lhs, rhs);
@@ -30,7 +30,7 @@ struct cmp_helper
 template<typename LhsTuple, typename RhsTuple>
 struct cmp_helper<0, LhsTuple, RhsTuple>
 {
-    inline static bool cmp(const LhsTuple& lhs, const RhsTuple& rhs)
+    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs)
     {
         return do_get<0>(lhs) == do_get<0>(rhs);
     }
@@ -42,8 +42,8 @@ namespace cppa { namespace util {
 
 template<template<typename...> class LhsTuple, typename... LhsTypes,
          template<typename...> class RhsTuple, typename... RhsTypes>
-bool compare_tuples(const LhsTuple<LhsTypes...>& lhs,
-                    const RhsTuple<RhsTypes...>& rhs)
+bool compare_tuples(LhsTuple<LhsTypes...> const& lhs,
+                    RhsTuple<RhsTypes...> const& rhs)
 {
     static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
                   "could not compare tuples of different size");
@@ -58,8 +58,8 @@ bool compare_tuples(const LhsTuple<LhsTypes...>& lhs,
 
 template<template<typename...> class LhsTuple, typename... LhsTypes,
          template<typename...> class RhsTuple, typename... RhsTypes>
-bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
-                            const RhsTuple<RhsTypes...>& rhs)
+bool compare_first_elements(LhsTuple<LhsTypes...> const& lhs,
+                            RhsTuple<RhsTypes...> const& rhs)
 {
     typedef util::type_list<LhsTypes...> lhs_types;
     typedef util::type_list<RhsTypes...> rhs_types;

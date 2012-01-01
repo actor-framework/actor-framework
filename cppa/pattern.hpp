@@ -24,8 +24,8 @@ template<typename T0, typename... Tn>
 class pattern<T0, Tn...>
 {
 
-    pattern(const pattern&) = delete;
-    pattern& operator=(const pattern&) = delete;
+    pattern(pattern const&) = delete;
+    pattern& operator=(pattern const&) = delete;
 
  public:
 
@@ -41,12 +41,9 @@ class pattern<T0, Tn...>
 
     typedef typename tuple_view_type::mapping_vector mapping_vector;
 
-    //typedef typename detail::tdata_from_type_list<filtered_tpl_args>::type
-    //        data_type;
-
     pattern()
     {
-        const cppa::uniform_type_info** iter = m_utis;
+        cppa::uniform_type_info const* * iter = m_utis;
         detail::fill_uti_vec<decltype(iter), T0, Tn...>(iter);
         for (size_t i = 0; i < size; ++i)
         {
@@ -55,7 +52,7 @@ class pattern<T0, Tn...>
     }
 
     template<typename Arg0, typename... Args>
-    pattern(const Arg0& arg0, const Args&... args) : m_data(arg0, args...)
+    pattern(Arg0 const& arg0, Args const&... args) : m_data(arg0, args...)
     {
         bool invalid_args[] = { detail::is_boxed<Arg0>::value,
                                 detail::is_boxed<Args>::value... };
@@ -66,8 +63,7 @@ class pattern<T0, Tn...>
                                                        m_utis, m_data_ptr);
     }
 
-    // todo: calculate expected vector type
-    bool operator()(const cppa::any_tuple& msg,
+    bool operator()(cppa::any_tuple const& msg,
                     mapping_vector* mapping = nullptr) const
     {
         detail::pattern_arg arg0(size, m_data_ptr, m_utis);
@@ -77,10 +73,9 @@ class pattern<T0, Tn...>
 
  private:
 
-    //typename detail::tdata_from_type_list<filtered_tpl_args>::type m_data;
     detail::tdata<T0, Tn...> m_data;
-    const cppa::uniform_type_info* m_utis[size];
-    const void* m_data_ptr[size];
+    cppa::uniform_type_info const* m_utis[size];
+    void const* m_data_ptr[size];
 
 };
 

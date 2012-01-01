@@ -16,12 +16,12 @@ namespace cppa { namespace detail {
 
 #ifdef CPPA_WINDOWS
     typedef SOCKET native_socket_type;
-    typedef const char* socket_send_ptr;
+    typedef char const* socket_send_ptr;
     typedef char* socket_recv_ptr;
     constexpr SOCKET invalid_socket = INVALID_SOCKET;
 #else
     typedef int native_socket_type;
-    typedef const void* socket_send_ptr;
+    typedef void const* socket_send_ptr;
     typedef void* socket_recv_ptr;
     constexpr int invalid_socket = -1;
     void closesocket(native_socket_type s);

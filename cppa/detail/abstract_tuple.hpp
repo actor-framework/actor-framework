@@ -17,10 +17,10 @@ struct abstract_tuple : ref_counted
     // accessors
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
-    virtual const void* at(size_t pos) const = 0;
-    virtual const uniform_type_info& utype_info_at(size_t pos) const = 0;
+    virtual void const* at(size_t pos) const = 0;
+    virtual uniform_type_info const& utype_info_at(size_t pos) const = 0;
 
-    virtual bool equals(const abstract_tuple& other) const;
+    virtual bool equals(abstract_tuple const& other) const;
 
 };
 

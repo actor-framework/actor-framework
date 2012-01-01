@@ -21,7 +21,7 @@ class either
 
     bool m_is_left;
 
-    void check_flag(bool flag, const char* side)
+    void check_flag(bool flag, char const* side)
     {
         if (m_is_left != flag)
         {
@@ -63,7 +63,7 @@ class either
         new (&m_left) Left ();
     }
 
-    either(const Left& value) : m_is_left(true)
+    either(Left const& value) : m_is_left(true)
     {
         cr_left(value);
     }
@@ -73,7 +73,7 @@ class either
         cr_left(std::move(value));
     }
 
-    either(const Right& value) : m_is_left(false)
+    either(Right const& value) : m_is_left(false)
     {
         cr_right(value);
     }
@@ -83,7 +83,7 @@ class either
         cr_right(std::move(value));
     }
 
-    either(const either& other) : m_is_left(other.m_is_left)
+    either(either const& other) : m_is_left(other.m_is_left)
     {
         if (other.m_is_left)
         {
@@ -112,7 +112,7 @@ class either
         destroy();
     }
 
-    either& operator=(const either& other)
+    either& operator=(either const& other)
     {
         if (m_is_left == other.m_is_left)
         {
@@ -186,7 +186,7 @@ class either
         return m_left;
     }
 
-    const Left& left() const
+    Left const& left() const
     {
         check_flag(true, "left");
         return m_left;
@@ -198,7 +198,7 @@ class either
         return m_right;
     }
 
-    const Right& right() const
+    Right const& right() const
     {
         check_flag(false, "right");
         return m_right;
@@ -225,25 +225,25 @@ bool operator==(const either<Left, Right>& lhs,
 }
 
 template<typename Left, typename Right>
-bool operator==(const either<Left, Right>& lhs, const Left& rhs)
+bool operator==(const either<Left, Right>& lhs, Left const& rhs)
 {
     return lhs.is_left() && lhs.left() == rhs;
 }
 
 template<typename Left, typename Right>
-bool operator==(const Left& lhs, const either<Left, Right>& rhs)
+bool operator==(Left const& lhs, const either<Left, Right>& rhs)
 {
     return rhs == lhs;
 }
 
 template<typename Left, typename Right>
-bool operator==(const either<Left, Right>& lhs, const Right& rhs)
+bool operator==(const either<Left, Right>& lhs, Right const& rhs)
 {
     return lhs.is_right() && lhs.right() == rhs;
 }
 
 template<typename Left, typename Right>
-bool operator==(const Right& lhs, const either<Left, Right>& rhs)
+bool operator==(Right const& lhs, const either<Left, Right>& rhs)
 {
     return rhs == lhs;
 }
@@ -256,25 +256,25 @@ bool operator!=(const either<Left, Right>& lhs,
 }
 
 template<typename Left, typename Right>
-bool operator!=(const either<Left, Right>& lhs, const Left& rhs)
+bool operator!=(const either<Left, Right>& lhs, Left const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename Left, typename Right>
-bool operator!=(const Left& lhs, const either<Left, Right>& rhs)
+bool operator!=(Left const& lhs, const either<Left, Right>& rhs)
 {
     return !(rhs == lhs);
 }
 
 template<typename Left, typename Right>
-bool operator!=(const either<Left, Right>& lhs, const Right& rhs)
+bool operator!=(const either<Left, Right>& lhs, Right const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename Left, typename Right>
-bool operator!=(const Right& lhs, const either<Left, Right>& rhs)
+bool operator!=(Right const& lhs, const either<Left, Right>& rhs)
 {
     return !(rhs == lhs);
 }

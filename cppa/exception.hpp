@@ -22,7 +22,7 @@ class exception : public std::exception
      * @brief Returns the error message.
      * @returns The error message as C-string.
      */
-    const char* what() const throw();
+    char const* what() const throw();
 
  protected:
 
@@ -36,7 +36,7 @@ class exception : public std::exception
      * @brief Creates an exception with the error string @p what_str.
      * @param what_str Error message as string.
      */
-    exception(const std::string& what_str);
+    exception(std::string const& what_str);
 
  private:
 
@@ -77,7 +77,7 @@ class network_error : public exception
  public:
 
     network_error(std::string&& what_str);
-    network_error(const std::string& what_str);
+    network_error(std::string const& what_str);
 
 };
 

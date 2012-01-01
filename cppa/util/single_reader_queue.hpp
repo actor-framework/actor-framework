@@ -39,7 +39,7 @@ class single_reader_queue
     }
 
     template<typename TimePoint>
-    element_type* try_pop(const TimePoint& abs_time)
+    element_type* try_pop(TimePoint const& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
@@ -157,7 +157,7 @@ class single_reader_queue
     detail::condition_variable m_cv;
 
     template<typename TimePoint>
-    bool timed_wait_for_data(const TimePoint& timeout)
+    bool timed_wait_for_data(TimePoint const& timeout)
     {
         if (!m_head && !(m_tail.load()))
         {

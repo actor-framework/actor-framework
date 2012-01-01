@@ -23,7 +23,7 @@ struct map_member_util<T, false, true>
 {
     primitive_member<T> impl;
 
-    void serialize_value(const T& what, serializer* s) const
+    void serialize_value(T const& what, serializer* s) const
     {
         impl.serialize(&what, s);
     }
@@ -41,13 +41,13 @@ struct map_member_util<T, false, true>
 template<typename T>
 struct map_member_util<T, false, false>
 {
-    const uniform_type_info* m_type;
+    uniform_type_info const* m_type;
 
     map_member_util() : m_type(uniform_typeid<T>())
     {
     }
 
-    void serialize_value(const T& what, serializer* s) const
+    void serialize_value(T const& what, serializer* s) const
     {
         m_type->serialize(&what, s);
     }
@@ -73,7 +73,7 @@ struct map_member_util<T, true, false>
     pair_member<first_type, second_type> impl;
 
 
-    void serialize_value(const T& what, serializer* s) const
+    void serialize_value(T const& what, serializer* s) const
     {
         // impl needs a pair without const modifier
         std::pair<first_type, second_type> p(what.first, what.second);
@@ -105,11 +105,11 @@ class map_member : public util::abstract_uniform_type_info<Map>
 
  public:
 
-    void serialize(const void* obj, serializer* s) const
+    void serialize(void const* obj, serializer* s) const
     {
-        auto& mp = *reinterpret_cast<const Map*>(obj);
+        auto& mp = *reinterpret_cast<Map const*>(obj);
         s->begin_sequence(mp.size());
-        for (const auto& val : mp)
+        for (auto const& val : mp)
         {
             m_helper.serialize_value(val, s);
         }

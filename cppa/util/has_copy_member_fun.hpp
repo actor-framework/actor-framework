@@ -10,13 +10,13 @@ class has_copy_member_fun
 {
 
     template<typename A>
-    static bool hc_help_fun(const A* arg0, decltype(arg0->copy()) = 0)
+    static bool hc_help_fun(A const* arg0, decltype(arg0->copy()) = 0)
     {
         return true;
     }
 
     template<typename A>
-    static void hc_help_fun(const A*, void* = 0) { }
+    static void hc_help_fun(A const*, void* = 0) { }
 
     typedef decltype(hc_help_fun((T*) 0, (T*) 0)) result_type;
 

@@ -8,8 +8,8 @@ namespace cppa { namespace detail {
 class intermediate
 {
 
-    intermediate(const intermediate&) = delete;
-    intermediate& operator=(const intermediate&) = delete;
+    intermediate(intermediate const&) = delete;
+    intermediate& operator=(intermediate const&) = delete;
 
  public:
 
@@ -53,7 +53,7 @@ class intermediate_impl<Impl, void> : public intermediate
 
  public:
 
-    intermediate_impl(const Impl& impl) : m_impl(impl) { }
+    intermediate_impl(Impl const& impl) : m_impl(impl) { }
 
     intermediate_impl(Impl&& impl) : m_impl(std::move(impl)) { }
 

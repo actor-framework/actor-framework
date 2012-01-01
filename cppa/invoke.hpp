@@ -25,7 +25,7 @@ struct invoke_helper
     typedef typename rlist::head_type back_type;
     typedef typename util::element_at<N, Tuple>::type tuple_val_type;
     typedef typename util::pop_back<ArgTypeList>::type next_list;
-    inline static ResultType _(F& f, const Tuple& t, const Args&... args)
+    inline static ResultType _(F& f, Tuple const& t, Args const&... args)
     {
         static_assert(std::is_convertible<tuple_val_type, back_type>::value,
                       "tuple element is not convertible to expected argument");
@@ -37,7 +37,7 @@ struct invoke_helper
 template<size_t N, typename F, typename ResultType, class Tuple, typename... Args>
 struct invoke_helper<N, F, ResultType, Tuple, util::type_list<>, Args...>
 {
-    inline static ResultType _(F& f, const Tuple&, const Args&... args)
+    inline static ResultType _(F& f, Tuple const&, Args const&... args)
     {
         return f(args...);
     }
@@ -59,7 +59,7 @@ struct invoke_impl<true, F, Tuple<TTypes...> >
 
     typedef Tuple<TTypes...> tuple_type;
 
-    inline static result_type _(F& f, const tuple_type& t)
+    inline static result_type _(F& f, tuple_type const& t)
     {
         return invoke_helper<sizeof...(TTypes) - 1, F, result_type, tuple_type, arg_types>::_(f, t);
     }
@@ -79,7 +79,7 @@ struct invoke_impl<false, F, Tuple<TTypes...> >
 
     typedef Tuple<TTypes...> tuple_type;
 
-    inline static result_type _(F& f, const tuple_type& t)
+    inline static result_type _(F& f, tuple_type const& t)
     {
         return invoke_helper<sizeof...(TTypes) - 1, F, result_type, tuple_type, arg_types>::_(f, t);
     }
@@ -92,7 +92,7 @@ namespace cppa {
 
 template<typename F, class Tuple>
 typename detail::invoke_impl<std::is_function<typename std::remove_pointer<F>::type>::value, F, Tuple>::result_type
-invoke(F what, const Tuple& args)
+invoke(F what, Tuple const& args)
 {
     typedef typename std::remove_pointer<F>::type f_type;
     static constexpr bool is_fun = std::is_function<f_type>::value;

@@ -29,19 +29,19 @@ class uniform_type_info_map
 
     ~uniform_type_info_map();
 
-    inline const int_map& int_names() const
+    inline int_map const& int_names() const
     {
         return m_ints;
     }
 
-    uniform_type_info* by_raw_name(const std::string& name) const;
+    uniform_type_info* by_raw_name(std::string const& name) const;
 
-    uniform_type_info* by_uniform_name(const std::string& name) const;
+    uniform_type_info* by_uniform_name(std::string const& name) const;
 
     std::vector<uniform_type_info*> get_all() const;
 
     // NOT thread safe!
-    bool insert(const std::set<std::string>& raw_names, uniform_type_info* uti);
+    bool insert(std::set<std::string> const& raw_names, uniform_type_info* uti);
 
  private:
 

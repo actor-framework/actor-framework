@@ -19,14 +19,14 @@ class object_array : public detail::abstract_tuple
 
     object_array(object_array&& other);
 
-    object_array(const object_array& other);
+    object_array(object_array const& other);
 
     /**
      * @pre
      */
     void push_back(object&& what);
 
-    void push_back(const object& what);
+    void push_back(object const& what);
 
     void* mutable_at(size_t pos);
 
@@ -34,11 +34,11 @@ class object_array : public detail::abstract_tuple
 
     abstract_tuple* copy() const;
 
-    const void* at(size_t pos) const;
+    void const* at(size_t pos) const;
 
-    bool equals(const cppa::detail::abstract_tuple&) const;
+    bool equals(cppa::detail::abstract_tuple const&) const;
 
-    const uniform_type_info& utype_info_at(size_t pos) const;
+    uniform_type_info const& utype_info_at(size_t pos) const;
 
 };
 

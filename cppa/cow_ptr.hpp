@@ -21,14 +21,14 @@ constexpr int copy_method()
 
 // is_copyable
 template<typename T>
-T* copy_of(const T* what, std::integral_constant<int, 1>)
+T* copy_of(T const* what, std::integral_constant<int, 1>)
 {
     return new T(*what);
 }
 
 // has_copy_member_fun
 template<typename T>
-T* copy_of(const T* what, std::integral_constant<int, 2>)
+T* copy_of(T const* what, std::integral_constant<int, 2>)
 {
     return what->copy();
 }
@@ -71,17 +71,17 @@ class cow_ptr
 
     cow_ptr(T* raw_ptr) : m_ptr(raw_ptr) { }
 
-    cow_ptr(const cow_ptr& other) : m_ptr(other.m_ptr) { }
+    cow_ptr(cow_ptr const& other) : m_ptr(other.m_ptr) { }
 
     template<typename Y>
-    cow_ptr(const cow_ptr<Y>& other) : m_ptr(const_cast<Y*>(other.get())) { }
+    cow_ptr(cow_ptr<Y> const& other) : m_ptr(const_cast<Y*>(other.get())) { }
 
     inline void swap(cow_ptr& other)
     {
         m_ptr.swap(other.m_ptr);
     }
 
-    cow_ptr& operator=(const cow_ptr& other)
+    cow_ptr& operator=(cow_ptr const& other)
     {
         cow_ptr tmp(other);
         swap(tmp);
@@ -89,7 +89,7 @@ class cow_ptr
     }
 
     template<typename Y>
-    cow_ptr& operator=(const cow_ptr<Y>& other)
+    cow_ptr& operator=(cow_ptr<Y> const& other)
     {
         cow_ptr tmp(other);
         swap(tmp);
@@ -98,15 +98,15 @@ class cow_ptr
 
     inline T* get() { return detach_ptr(); }
 
-    inline const T* get() const { return m_ptr.get(); }
+    inline T const* get() const { return m_ptr.get(); }
 
     inline T* operator->() { return detach_ptr(); }
 
     inline T& operator*() { return detach_ptr(); }
 
-    inline const T* operator->() const { return m_ptr.get(); }
+    inline T const* operator->() const { return m_ptr.get(); }
 
-    inline const T& operator*() const { return *m_ptr.get(); }
+    inline T const& operator*() const { return *m_ptr.get(); }
 
     inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 

@@ -12,7 +12,7 @@ struct void_type
     typedef type_list<> tail_type;
 };
 
-inline bool operator==(const void_type&, const void_type&) { return true; }
+inline bool operator==(void_type const&, void_type const&) { return true; }
 
 } } // namespace cppa::util
 

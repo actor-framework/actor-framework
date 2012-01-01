@@ -63,8 +63,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
     {
 
         stack_element() = delete;
-        stack_element(const stack_element&) = delete;
-        stack_element& operator=(const stack_element&) = delete;
+        stack_element(stack_element const&) = delete;
+        stack_element& operator=(stack_element const&) = delete;
 
         util::either<invoke_rules*, timed_invoke_rules*> m_ptr;
         bool m_ownership;

@@ -10,7 +10,7 @@ struct remove_const_reference
 };
 
 template<typename T>
-struct remove_const_reference<const T&>
+struct remove_const_reference<T const&>
 {
     typedef T type;
 };

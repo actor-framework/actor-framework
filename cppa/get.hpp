@@ -17,17 +17,17 @@ template<typename...> class tuple;
 // forward declaration of tuple_view
 template<typename...> class tuple_view;
 
-// forward declaration of get(const detail::tdata<...>&)
+// forward declaration of get(detail::tdata<...> const&)
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>&);
+const typename util::at<N, Tn...>::type& get(detail::tdata<Tn...> const&);
 
-// forward declarations of get(const tuple<...>&)
+// forward declarations of get(tuple<...> const&)
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const tuple<Tn...>&);
+const typename util::at<N, Tn...>::type& get(tuple<Tn...> const&);
 
-// forward declarations of get(const tuple_view<...>&)
+// forward declarations of get(tuple_view<...> const&)
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const tuple_view<Tn...>&);
+const typename util::at<N, Tn...>::type& get(tuple_view<Tn...> const&);
 
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Tn>

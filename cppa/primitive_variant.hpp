@@ -34,7 +34,7 @@ namespace cppa {
 class primitive_variant;
 
 template<typename T>
-const T& get(const primitive_variant& pv);
+T const& get(primitive_variant const& pv);
 
 template<typename T>
 T& get_ref(primitive_variant& pv);
@@ -46,11 +46,11 @@ T& get_ref(primitive_variant& pv);
 class primitive_variant
 {
 
-    friend bool operator==(const primitive_variant& lhs,
-                           const primitive_variant& rhs);
+    friend bool operator==(primitive_variant const& lhs,
+                           primitive_variant const& rhs);
 
     template<typename T>
-    friend const T& get(const primitive_variant& pv);
+    friend T const& get(primitive_variant const& pv);
 
     template<typename T>
     friend T& get_ref(primitive_variant& pv);
@@ -185,7 +185,7 @@ class primitive_variant
      * @brief Creates a copy from @p other.
      * @param other A primitive variant.
      */
-    primitive_variant(const primitive_variant& other);
+    primitive_variant(primitive_variant const& other);
 
     /**
      * @brief Creates a new variant and move the value from @p other to it.
@@ -223,7 +223,7 @@ class primitive_variant
      * @param other A primitive variant.
      * @returns <tt>*this</tt>.
      */
-    primitive_variant& operator=(const primitive_variant& other);
+    primitive_variant& operator=(primitive_variant const& other);
 
     /**
      * @brief Moves the content of @p other to @p this.
@@ -244,7 +244,7 @@ class primitive_variant
      *          otherwise typeid(T) is returned, where T is the C++ type
      *          of @p this.
      */
-    const std::type_info& type() const;
+    std::type_info const& type() const;
 
     ~primitive_variant();
 
@@ -259,7 +259,7 @@ class primitive_variant
  * @throws <tt>std::logic_error</tt> if @p pv is not of type @p T.
  */
 template<typename T>
-const T& get(const primitive_variant& pv)
+T const& get(primitive_variant const& pv)
 {
     static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
     return pv.get_as<ptype>();
@@ -291,7 +291,7 @@ T& get_ref(primitive_variant& pv)
  * @returns A const reference to the value of @p pv of type @p T.
  */
 template<primitive_type PT>
-const T& get_ref(const primitive_variant& pv);
+T const& get_ref(primitive_variant const& pv);
 
 /**
  * @ingroup TypeSystem
@@ -308,7 +308,7 @@ T& get_ref(primitive_variant& pv);
 
 template<primitive_type PT>
 inline const typename detail::ptype_to_type<PT>::type&
-get(const primitive_variant& pv)
+get(primitive_variant const& pv)
 {
     static_assert(PT != pt_null, "PT == pt_null");
     return get<typename detail::ptype_to_type<PT>::type>(pv);
@@ -324,17 +324,17 @@ get_ref(primitive_variant& pv)
 
 #endif
 
-bool operator==(const primitive_variant& lhs, const primitive_variant& rhs);
+bool operator==(primitive_variant const& lhs, primitive_variant const& rhs);
 
 inline
-bool operator!=(const primitive_variant& lhs, const primitive_variant& rhs)
+bool operator!=(primitive_variant const& lhs, primitive_variant const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename T>
 typename util::enable_if<util::is_primitive<T>, bool>::type
-operator==(const T& lhs, const primitive_variant& rhs)
+operator==(T const& lhs, primitive_variant const& rhs)
 {
     static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
     static_assert(ptype != pt_null, "T is an incompatible type");
@@ -343,21 +343,21 @@ operator==(const T& lhs, const primitive_variant& rhs)
 
 template<typename T>
 typename util::enable_if<util::is_primitive<T>, bool>::type
-operator==(const primitive_variant& lhs, const T& rhs)
+operator==(primitive_variant const& lhs, T const& rhs)
 {
     return (rhs == lhs);
 }
 
 template<typename T>
 typename util::enable_if<util::is_primitive<T>, bool>::type
-operator!=(const primitive_variant& lhs, const T& rhs)
+operator!=(primitive_variant const& lhs, T const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename T>
 typename util::enable_if<util::is_primitive<T>, bool>::type
-operator!=(const T& lhs, const primitive_variant& rhs)
+operator!=(T const& lhs, primitive_variant const& rhs)
 {
     return !(lhs == rhs);
 }

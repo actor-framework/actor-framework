@@ -6,8 +6,8 @@
 
 namespace cppa { namespace detail {
 
-std::string to_uniform_name(const std::string& demangled_name);
-std::string to_uniform_name(const std::type_info& tinfo);
+std::string to_uniform_name(std::string const& demangled_name);
+std::string to_uniform_name(std::type_info const& tinfo);
 
 } } // namespace cppa::detail
 

@@ -35,9 +35,9 @@ struct fill_vecs_util
     inline static void _(size_t pos,
                          size_t dt_size,
                          bool* dt_invalids,
-                         const DataTuple& dt,
-                         const cppa::uniform_type_info** utis,
-                         const void** data_ptrs)
+                         DataTuple const& dt,
+                         cppa::uniform_type_info const* * utis,
+                         void const* * data_ptrs)
     {
         utis[pos] = uniform_typeid<T0>();
         if (pos < dt_size && dt_invalids[pos] == false)
@@ -58,9 +58,9 @@ struct fill_vecs_util<anything>
     inline static void _(size_t pos,
                          size_t,
                          bool*,
-                         const DataTuple&,
-                         const cppa::uniform_type_info** utis,
-                         const void** data_ptrs)
+                         DataTuple const&,
+                         cppa::uniform_type_info const* * utis,
+                         void const* * data_ptrs)
     {
         utis[pos] = nullptr;
         data_ptrs[pos] = nullptr;
@@ -71,9 +71,9 @@ template<typename DataTuple, typename T0>
 void fill_vecs(size_t pos,
                size_t dt_size,
                bool* dt_invalids,
-               const DataTuple& dt,
-               const cppa::uniform_type_info** utis,
-               const void** data_ptrs)
+               DataTuple const& dt,
+               cppa::uniform_type_info const* * utis,
+               void const* * data_ptrs)
 {
     fill_vecs_util<T0>::_(pos, dt_size, dt_invalids, dt, utis, data_ptrs);
 }
@@ -82,9 +82,9 @@ template<typename DataTuple, typename T0, typename T1, typename... Tn>
 void fill_vecs(size_t pos,
                size_t dt_size,
                bool* dt_invalids,
-               const DataTuple& dt,
-               const cppa::uniform_type_info** utis,
-               const void** data_ptrs)
+               DataTuple const& dt,
+               cppa::uniform_type_info const* * utis,
+               void const* * data_ptrs)
 {
     fill_vecs_util<T0>::_(pos, dt_size, dt_invalids,
                           dt, utis, data_ptrs);
@@ -112,9 +112,9 @@ struct pattern_arg
     {
     }
 
-    pattern_arg(const pattern_arg&) = default;
+    pattern_arg(pattern_arg const&) = default;
 
-    pattern_arg& operator=(const pattern_arg&) = default;
+    pattern_arg& operator=(pattern_arg const&) = default;
 
     inline bool at_end() const { return m_pos == m_size; }
 
@@ -124,12 +124,12 @@ struct pattern_arg
         return *this;
     }
 
-    inline const uniform_type_info* type() const
+    inline uniform_type_info const* type() const
     {
         return m_types[m_pos];
     }
 
-    inline const void* value() const
+    inline void const* value() const
     {
         return m_data[m_pos];
     }
@@ -147,13 +147,13 @@ struct tuple_iterator_arg
     util::any_tuple_iterator iter;
     vector_type* mapping;
 
-    inline tuple_iterator_arg(const any_tuple& tup,
+    inline tuple_iterator_arg(any_tuple const& tup,
                               vector_type* mv = nullptr)
         : iter(tup), mapping(mv)
     {
     }
 
-    inline tuple_iterator_arg(const util::any_tuple_iterator& from_iter,
+    inline tuple_iterator_arg(util::any_tuple_iterator const& from_iter,
                               vector_type* mv = nullptr)
         : iter(from_iter), mapping(mv)
     {
@@ -173,12 +173,12 @@ struct tuple_iterator_arg
         return *this;
     }
 
-    inline const uniform_type_info* type() const
+    inline uniform_type_info const* type() const
     {
         return &(iter.type());
     }
 
-    inline const void* value() const
+    inline void const* value() const
     {
         return iter.value_ptr();
     }

@@ -91,16 +91,16 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
         uniform_type_info* m_meta;
 
-        std::function<void (const uniform_type_info*,
-                            const void*,
+        std::function<void (uniform_type_info const*,
+                            void const*,
                             serializer*              )> m_serialize;
 
-        std::function<void (const uniform_type_info*,
+        std::function<void (uniform_type_info const*,
                             void*,
                             deserializer*            )> m_deserialize;
 
-        member(const member&) = delete;
-        member& operator=(const member&) = delete;
+        member(member const&) = delete;
+        member& operator=(member const&) = delete;
 
         void swap(member& other)
         {
@@ -122,13 +122,13 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         template<typename R, class C>
         member(uniform_type_info* mtptr, R C::*mem_ptr) : m_meta(mtptr)
         {
-            m_serialize = [mem_ptr] (const uniform_type_info* mt,
-                                     const void* obj,
+            m_serialize = [mem_ptr] (uniform_type_info const* mt,
+                                     void const* obj,
                                      serializer* s)
             {
-                mt->serialize(&(*reinterpret_cast<const C*>(obj).*mem_ptr), s);
+                mt->serialize(&(*reinterpret_cast<C const*>(obj).*mem_ptr), s);
             };
-            m_deserialize = [mem_ptr] (const uniform_type_info* mt,
+            m_deserialize = [mem_ptr] (uniform_type_info const* mt,
                                        void* obj,
                                        deserializer* d)
             {
@@ -145,14 +145,14 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
             typedef typename util::rm_ref<SArg>::type setter_arg;
             static_assert(std::is_same<getter_result, setter_arg>::value,
                           "getter result doesn't match setter argument");
-            m_serialize = [getter] (const uniform_type_info* mt,
-                                    const void* obj,
+            m_serialize = [getter] (uniform_type_info const* mt,
+                                    void const* obj,
                                     serializer* s)
             {
-                GRes v = (*reinterpret_cast<const C*>(obj).*getter)();
+                GRes v = (*reinterpret_cast<C const*>(obj).*getter)();
                 mt->serialize(&v, s);
             };
-            m_deserialize = [setter] (const uniform_type_info* mt,
+            m_deserialize = [setter] (uniform_type_info const* mt,
                                       void* obj,
                                       deserializer* d)
             {
@@ -173,11 +173,11 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         {
             return {
                 mtptr,
-                [] (const uniform_type_info* mt, const void* obj, serializer* s)
+                [] (uniform_type_info const* mt, void const* obj, serializer* s)
                 {
                     mt->serialize(obj, s);
                 },
-                [] (const uniform_type_info* mt, void* obj, deserializer* d)
+                [] (uniform_type_info const* mt, void* obj, deserializer* d)
                 {
                     mt->deserialize(obj, d);
                 }
@@ -195,7 +195,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
             return *this;
         }
 
-        inline void serialize(const void* parent, serializer* s) const
+        inline void serialize(void const* parent, serializer* s) const
         {
             m_serialize(m_meta, parent, s);
         }
@@ -322,7 +322,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         }
     }
 
-    void serialize(const void* obj, serializer* s) const
+    void serialize(void const* obj, serializer* s) const
     {
         s->begin_object(this->name());
         for (auto& m : m_members)

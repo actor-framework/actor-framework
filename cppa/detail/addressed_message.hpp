@@ -18,26 +18,26 @@ class addressed_message
 
  public:
 
-    addressed_message(const actor_ptr& from,
-            const channel_ptr& to,
-            const any_tuple& ut);
+    addressed_message(actor_ptr const& from,
+            channel_ptr const& to,
+            any_tuple const& ut);
 
-    addressed_message(const actor_ptr& from,
-            const channel_ptr& to,
+    addressed_message(actor_ptr const& from,
+            channel_ptr const& to,
             any_tuple&& ut);
 
     addressed_message() = default;
     addressed_message(addressed_message&&) = default;
-    addressed_message(const addressed_message&) = default;
+    addressed_message(addressed_message const&) = default;
     addressed_message& operator=(addressed_message&&) = default;
-    addressed_message& operator=(const addressed_message&) = default;
+    addressed_message& operator=(addressed_message const&) = default;
 
     inline actor_ptr& sender()
     {
         return m_sender;
     }
 
-    inline const actor_ptr& sender() const
+    inline actor_ptr const& sender() const
     {
         return m_sender;
     }
@@ -47,7 +47,7 @@ class addressed_message
         return m_receiver;
     }
 
-    inline const channel_ptr& receiver() const
+    inline channel_ptr const& receiver() const
     {
         return m_receiver;
     }
@@ -57,7 +57,7 @@ class addressed_message
         return m_content;
     }
 
-    inline const any_tuple& content() const
+    inline any_tuple const& content() const
     {
         return m_content;
     }
@@ -75,9 +75,9 @@ class addressed_message
 
 };
 
-bool operator==(const addressed_message& lhs, const addressed_message& rhs);
+bool operator==(addressed_message const& lhs, addressed_message const& rhs);
 
-inline bool operator!=(const addressed_message& lhs, const addressed_message& rhs)
+inline bool operator!=(addressed_message const& lhs, addressed_message const& rhs)
 {
     return !(lhs == rhs);
 }

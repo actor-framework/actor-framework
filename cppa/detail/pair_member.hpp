@@ -25,9 +25,9 @@ class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>>
 
  public:
 
-    void serialize(const void* obj, serializer* s) const
+    void serialize(void const* obj, serializer* s) const
     {
-        auto& p = *reinterpret_cast<const pair_type*>(obj);
+        auto& p = *reinterpret_cast<pair_type const*>(obj);
         primitive_variant values[2] = { p.first, p.second };
         s->write_tuple(2, values);
     }

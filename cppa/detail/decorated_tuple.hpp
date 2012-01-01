@@ -27,7 +27,7 @@ class decorated_tuple : public abstract_tuple
 
     typedef cow_ptr<abstract_tuple> ptr_type;
 
-    decorated_tuple(const ptr_type& d, const vector_type& v)
+    decorated_tuple(ptr_type const& d, vector_type const& v)
         : m_decorated(d), m_mappings(v)
     {
     }
@@ -47,17 +47,17 @@ class decorated_tuple : public abstract_tuple
         return new decorated_tuple(*this);
     }
 
-    virtual const void* at(size_t pos) const
+    virtual void const* at(size_t pos) const
     {
         return m_decorated->at(m_mappings[pos]);
     }
 
-    virtual const uniform_type_info& utype_info_at(size_t pos) const
+    virtual uniform_type_info const& utype_info_at(size_t pos) const
     {
         return m_decorated->utype_info_at(m_mappings[pos]);
     }
 
-    virtual bool equals(const abstract_tuple&) const
+    virtual bool equals(abstract_tuple const&) const
     {
         return false;
     }
@@ -67,14 +67,14 @@ class decorated_tuple : public abstract_tuple
     ptr_type m_decorated;
     vector_type m_mappings;
 
-    decorated_tuple(const decorated_tuple& other)
+    decorated_tuple(decorated_tuple const& other)
         : abstract_tuple()
         , m_decorated(other.m_decorated)
         , m_mappings(other.m_mappings)
     {
     }
 
-    decorated_tuple& operator=(const decorated_tuple&) = delete;
+    decorated_tuple& operator=(decorated_tuple const&) = delete;
 
 };
 

@@ -23,7 +23,7 @@ class serializer;
 class deserializer;
 class uniform_type_info;
 
-const uniform_type_info* uniform_typeid(const std::type_info&);
+uniform_type_info const* uniform_typeid(std::type_info const&);
 
 /**
  * @defgroup TypeSystem libcppa's platform-independent type system.
@@ -121,16 +121,16 @@ class uniform_type_info
 
     friend class object;
 
-    friend bool operator==(const uniform_type_info& lhs,
-                           const uniform_type_info& rhs);
+    friend bool operator==(uniform_type_info const& lhs,
+                           uniform_type_info const& rhs);
 
     // disable copy and move constructors
     uniform_type_info(uniform_type_info&&) = delete;
-    uniform_type_info(const uniform_type_info&) = delete;
+    uniform_type_info(uniform_type_info const&) = delete;
 
     // disable assignment operators
     uniform_type_info& operator=(uniform_type_info&&) = delete;
-    uniform_type_info& operator=(const uniform_type_info&) = delete;
+    uniform_type_info& operator=(uniform_type_info const&) = delete;
 
  public:
 
@@ -142,7 +142,7 @@ class uniform_type_info
      * @returns The instance associated to @p uniform_name.
      * @throws std::runtime_error if no type named @p uniform_name was found.
      */
-    static uniform_type_info* from(const std::string& uniform_name);
+    static uniform_type_info* from(std::string const& uniform_name);
 
     /**
      * @brief Get instance by std::type_info.
@@ -150,7 +150,7 @@ class uniform_type_info
      * @returns An instance describing the same type as @p tinfo.
      * @throws std::runtime_error if @p tinfo is not an announced type.
      */
-    static const uniform_type_info* from(const std::type_info& tinfo);
+    static uniform_type_info const* from(std::type_info const& tinfo);
 
     /**
      * @brief Get all instances.
@@ -162,7 +162,7 @@ class uniform_type_info
      * @brief Get the internal @p libcppa name for this type.
      * @returns A string describing the @p libcppa internal type name.
      */
-    inline const std::string& name() const { return m_name; }
+    inline std::string const& name() const { return m_name; }
 
     /**
      * @brief Creates an object of this type.
@@ -179,7 +179,7 @@ class uniform_type_info
      *        type than @p tinfo.
      * @returns @p true if @p tinfo describes the same type as @p this.
      */
-    virtual bool equals(const std::type_info& tinfo) const = 0;
+    virtual bool equals(std::type_info const& tinfo) const = 0;
 
     /**
      * @brief Compares two instances of this type.
@@ -188,7 +188,7 @@ class uniform_type_info
      * @returns @p true if <tt>*instance1 == *instance2</tt>.
      * @pre @p instance1 and @p instance2 have the type of @p this.
      */
-    virtual bool equals(const void* instance1, const void* instance2) const = 0;
+    virtual bool equals(void const* instance1, void const* instance2) const = 0;
 
     /**
      * @brief Serializes @p instance to @p sink.
@@ -196,7 +196,7 @@ class uniform_type_info
      * @param sink Target data sink.
      * @pre @p instance has the type of @p this.
      */
-    virtual void serialize(const void* instance, serializer* sink) const = 0;
+    virtual void serialize(void const* instance, serializer* sink) const = 0;
 
     /**
      * @brief Deserializes @p instance from @p source.
@@ -208,7 +208,7 @@ class uniform_type_info
 
  protected:
 
-    uniform_type_info(const std::string& uniform_name);
+    uniform_type_info(std::string const& uniform_name);
 
     /**
      * @brief Casts @p instance to the native type and deletes it.
@@ -226,7 +226,7 @@ class uniform_type_info
      *          with the default constructor.
      * @pre @p instance has the type of @p this or is set to @p nullptr.
      */
-    virtual void* new_instance(const void* instance = nullptr) const = 0;
+    virtual void* new_instance(void const* instance = nullptr) const = 0;
 
  private:
 
@@ -235,41 +235,41 @@ class uniform_type_info
 };
 
 template<typename T>
-inline const uniform_type_info* uniform_typeid()
+inline uniform_type_info const* uniform_typeid()
 {
     return uniform_typeid(typeid(T));
 }
 
-inline bool operator==(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs)
+inline bool operator==(uniform_type_info const& lhs,
+                       uniform_type_info const& rhs)
 {
     // uniform_type_info instances are singletons,
     // thus, equal == identical
     return &lhs == &rhs;
 }
 
-inline bool operator!=(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs)
+inline bool operator!=(uniform_type_info const& lhs,
+                       uniform_type_info const& rhs)
 {
     return !(lhs == rhs);
 }
 
-inline bool operator==(const uniform_type_info& lhs, const std::type_info& rhs)
+inline bool operator==(uniform_type_info const& lhs, std::type_info const& rhs)
 {
     return lhs.equals(rhs);
 }
 
-inline bool operator!=(const uniform_type_info& lhs, const std::type_info& rhs)
+inline bool operator!=(uniform_type_info const& lhs, std::type_info const& rhs)
 {
     return !(lhs.equals(rhs));
 }
 
-inline bool operator==(const std::type_info& lhs, const uniform_type_info& rhs)
+inline bool operator==(std::type_info const& lhs, uniform_type_info const& rhs)
 {
     return rhs.equals(lhs);
 }
 
-inline bool operator!=(const std::type_info& lhs, const uniform_type_info& rhs)
+inline bool operator!=(std::type_info const& lhs, uniform_type_info const& rhs)
 {
     return !(rhs.equals(lhs));
 }

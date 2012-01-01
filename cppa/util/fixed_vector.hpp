@@ -21,16 +21,16 @@ class fixed_vector
     typedef size_t size_type;
 
     typedef T& reference;
-    typedef const T& const_reference;
+    typedef T const& const_reference;
 
     typedef T* iterator;
-    typedef const T* const_iterator;
+    typedef T const* const_iterator;
 
     constexpr fixed_vector() : m_size(0)
     {
     }
 
-    fixed_vector(const fixed_vector& other) : m_size(other.m_size)
+    fixed_vector(fixed_vector const& other) : m_size(other.m_size)
     {
         std::copy(other.m_data, other.m_data + other.m_size, m_data);
     }
@@ -50,7 +50,7 @@ class fixed_vector
         return m_size == MaxSize;
     }
 
-    inline void push_back(const T& what)
+    inline void push_back(T const& what)
     {
         m_data[m_size++] = what;
     }

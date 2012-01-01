@@ -18,8 +18,8 @@ class object;
 class deserializer
 {
 
-    deserializer(const deserializer&) = delete;
-    deserializer& operator=(const deserializer&) = delete;
+    deserializer(deserializer const&) = delete;
+    deserializer& operator=(deserializer const&) = delete;
 
  public:
 
@@ -43,7 +43,7 @@ class deserializer
      * @brief Begins deserialization of an object of type @p type_name.
      * @param type_name The platform-independent @p libcppa type name.
      */
-    virtual void begin_object(const std::string& type_name) = 0;
+    virtual void begin_object(std::string const& type_name) = 0;
 
     /**
      * @brief Ends deserialization of an object.
@@ -76,7 +76,7 @@ class deserializer
      * @param storage Array of size @p num, storing the result of this function.
      */
     virtual void read_tuple(size_t num,
-                            const primitive_type* ptypes,
+                            primitive_type const* ptypes,
                             primitive_variant* storage   ) = 0;
 
 };

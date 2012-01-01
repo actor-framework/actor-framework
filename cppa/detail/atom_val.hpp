@@ -27,7 +27,7 @@ inline constexpr std::uint64_t next_interim(std::uint64_t tmp, size_t char_code)
     return (tmp << 6) | encoding_table[char_code];
 }
 
-constexpr std::uint64_t atom_val(const char* str, std::uint64_t interim = 0)
+constexpr std::uint64_t atom_val(char const* str, std::uint64_t interim = 0)
 {
     return (*str <= 0) ? interim
                        : atom_val(str + 1, next_interim(interim, *str));

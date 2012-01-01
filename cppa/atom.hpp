@@ -9,7 +9,7 @@ namespace cppa {
 
 enum class atom_value : std::uint64_t { dirty_little_hack = 37337 };
 
-std::string to_string(const atom_value& a);
+std::string to_string(atom_value const& a);
 
 template<size_t Size>
 constexpr atom_value atom(const char (&str) [Size])

@@ -5,7 +5,7 @@
 
 namespace cppa { namespace detail {
 
-std::string demangle(const char* typeid_name);
+std::string demangle(char const* typeid_name);
 
 } } // namespace cppa::detail
 

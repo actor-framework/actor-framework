@@ -25,7 +25,7 @@ void ping()
         {
             ++s_pongs;
             get_ref<1>(response) = value + 1;
-            reply_tuple(response);
+            last_sender() << response;
         }
     );
 }
@@ -35,7 +35,7 @@ void pong(actor_ptr ping_actor)
     link(ping_actor);
     auto pong_tuple = make_tuple(atom("Pong"), 0);
     // kickoff
-    send_tuple(ping_actor, pong_tuple);
+    ping_actor << pong_tuple;
     // invoke rules
     receive_loop
     (
@@ -48,7 +48,7 @@ void pong(actor_ptr ping_actor)
         on<atom("Ping"), int>() >> [&](int value)
         {
             get_ref<1>(pong_tuple) = value + 1;
-            reply_tuple(pong_tuple);
+            last_sender() << pong_tuple;
         }
     );
 }

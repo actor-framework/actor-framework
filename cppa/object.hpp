@@ -15,11 +15,11 @@ namespace cppa {
 
 // forward declarations
 class object;
-bool operator==(const object& lhs, const object& rhs);
+bool operator==(object const& lhs, object const& rhs);
 
 class uniform_type_info;
-const uniform_type_info* uniform_typeid(const std::type_info&);
-bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
+uniform_type_info const* uniform_typeid(std::type_info const&);
+bool operator==(uniform_type_info const& lhs, std::type_info const& rhs);
 
 /**
  * @brief Grants mutable access to the stored value of @p obj.
@@ -39,7 +39,7 @@ T& get_ref(object& obj);
  * @throws std::invalid_argument if <tt>obj.type() != typeid(T)</tt>
  */
 template<typename T>
-const T& get(const object& obj);
+T const& get(object const& obj);
 
 /**
  * @brief An abstraction class that stores an instance of
@@ -48,7 +48,7 @@ const T& get(const object& obj);
 class object
 {
 
-    friend bool operator==(const object& lhs, const object& rhs);
+    friend bool operator==(object const& lhs, object const& rhs);
 
  public:
 
@@ -59,7 +59,7 @@ class object
      * @warning {@link object} takes ownership of @p val.
      * @pre {@code val != nullptr && utinfo != nullptr}
      */
-    object(void* val, const uniform_type_info* utinfo);
+    object(void* val, uniform_type_info const* utinfo);
 
     /**
      * @brief Creates an empty object.
@@ -77,7 +77,7 @@ class object
      * @brief Creates a (deep) copy of @p other.
      * @post {*this == other}
      */
-    object(const object& other);
+    object(object const& other);
 
     /**
      * @brief Moves the content from @p other to this.
@@ -89,21 +89,21 @@ class object
      * @brief Creates a (deep) copy of @p other and assigns it to @p this.
      * @return @p *this
      */
-    object& operator=(const object& other);
+    object& operator=(object const& other);
 
     /**
      * @brief Gets the RTTI of this object.
      * @returns A {@link uniform_type_info} describing the current
      *          type of @p this.
      */
-    const uniform_type_info& type() const;
+    uniform_type_info const& type() const;
 
     /**
      * @brief Gets the stored value.
      * @returns A const pointer to the currently stored value.
-     * @see get(const object&)
+     * @see get(object const&)
      */
-    const void* value() const;
+    void const* value() const;
 
     /**
      * @brief Gets the stored value.
@@ -125,7 +125,7 @@ class object
  private:
 
     void* m_value;
-    const uniform_type_info* m_type;
+    uniform_type_info const* m_type;
 
     void swap(object& other);
 
@@ -140,7 +140,7 @@ object object::from(T&& what)
     return { new value_type(std::forward<T>(what)), rtti };
 }
 
-inline bool operator!=(const object& lhs, const object& rhs)
+inline bool operator!=(object const& lhs, object const& rhs)
 {
     return !(lhs == rhs);
 }
@@ -159,7 +159,7 @@ T& get_ref(object& obj)
 }
 
 template<typename T>
-const T& get(const object& obj)
+T const& get(object const& obj)
 {
     static_assert(util::disjunction<std::is_pointer<T>,
                                     std::is_reference<T>>::value == false,
@@ -168,7 +168,7 @@ const T& get(const object& obj)
     {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
-    return *reinterpret_cast<const T*>(obj.value());
+    return *reinterpret_cast<T const*>(obj.value());
 }
 
 } // namespace cppa

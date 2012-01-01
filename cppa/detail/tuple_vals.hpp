@@ -32,20 +32,20 @@ class tuple_vals : public abstract_tuple
     }
 
     template<typename... Types>
-    const void* tdata_at(const tdata<Types...>& d, size_t pos) const
+    void const* tdata_at(tdata<Types...> const& d, size_t pos) const
     {
         return (pos == 0) ? &(d.head) : tdata_at(d.tail(), pos - 1);
     }
 
  public:
 
-    tuple_vals(const tuple_vals& other) : super(), m_data(other.m_data) { }
+    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
 
     tuple_vals() : m_data() { }
 
-    tuple_vals(const ElementTypes&... args) : m_data(args...) { }
+    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
 
-    inline const data_type& data() const { return m_data; }
+    inline data_type const& data() const { return m_data; }
 
     inline data_type& data_ref() { return m_data; }
 
@@ -64,20 +64,20 @@ class tuple_vals : public abstract_tuple
         return new tuple_vals(*this);
     }
 
-    const void* at(size_t pos) const
+    void const* at(size_t pos) const
     {
         return tdata_at(m_data, pos);
     }
 
-    const uniform_type_info& utype_info_at(size_t pos) const
+    uniform_type_info const& utype_info_at(size_t pos) const
     {
         return m_types.at(pos);
     }
 
-    bool equals(const abstract_tuple& other) const
+    bool equals(abstract_tuple const& other) const
     {
         if (size() != other.size()) return false;
-        const tuple_vals* o = dynamic_cast<const tuple_vals*>(&other);
+        tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);
         if (o)
         {
             return m_data == (o->m_data);

@@ -55,9 +55,9 @@ class duration
 
 };
 
-bool operator==(const duration& lhs, const duration& rhs);
+bool operator==(duration const& lhs, duration const& rhs);
 
-inline bool operator!=(const duration& lhs, const duration& rhs)
+inline bool operator!=(duration const& lhs, duration const& rhs)
 {
     return !(lhs == rhs);
 }
@@ -67,7 +67,7 @@ inline bool operator!=(const duration& lhs, const duration& rhs)
 template<class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs,
-           const cppa::util::duration& rhs)
+           cppa::util::duration const& rhs)
 {
     switch (rhs.unit)
     {

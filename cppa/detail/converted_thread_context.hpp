@@ -43,7 +43,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void enqueue(actor* sender, any_tuple&& msg) /*override*/;
 
-    void enqueue(actor* sender, const any_tuple& msg) /*override*/;
+    void enqueue(actor* sender, any_tuple const& msg) /*override*/;
 
     void dequeue(invoke_rules& rules) /*override*/;
 
@@ -69,7 +69,7 @@ class converted_thread_context : public abstract_actor<local_actor>
             invoke_rules_base& rules,
             queue_node_buffer& buffer);
 
-    throw_on_exit_result throw_on_exit(const any_tuple& msg);
+    throw_on_exit_result throw_on_exit(any_tuple const& msg);
 
     pattern<atom_value, actor_ptr, std::uint32_t> m_exit_msg_pattern;
 

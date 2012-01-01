@@ -83,7 +83,7 @@ size_t test__pattern()
             CPPA_CHECK_EQUAL(value, 1);
             lambda_invoked[4] = true;
         },
-        on_arg_match() >> [&](double v1, const float& v2)
+        on_arg_match >> [&](double v1, const float& v2)
         {
             CPPA_CHECK_EQUAL(v1, 1.0);
             CPPA_CHECK_EQUAL(v2, 2.0f);

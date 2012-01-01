@@ -26,7 +26,7 @@ class binary_serializer : public serializer
 
     ~binary_serializer();
 
-    void begin_object(const std::string& tname);
+    void begin_object(std::string const& tname);
 
     void end_object();
 
@@ -34,9 +34,9 @@ class binary_serializer : public serializer
 
     void end_sequence();
 
-    void write_value(const primitive_variant& value);
+    void write_value(primitive_variant const& value);
 
-    void write_tuple(size_t size, const primitive_variant* values);
+    void write_tuple(size_t size, primitive_variant const* values);
 
     /**
      * @brief Takes the internal buffer and returns it.
@@ -52,7 +52,7 @@ class binary_serializer : public serializer
     /**
      * @brief Returns a pointer to the internal buffer.
      */
-    const char* data() const;
+    char const* data() const;
 
     /**
      * @brief Resets the internal buffer.

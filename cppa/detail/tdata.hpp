@@ -29,17 +29,17 @@ struct tdata<>
         throw std::out_of_range("");
     }
 
-    const tdata<>& tail() const
+    tdata<> const& tail() const
     {
         throw std::out_of_range("");
     }
 
-    inline const void* at(size_t) const
+    inline void const* at(size_t) const
     {
         throw std::out_of_range("");
     }
 
-    inline bool operator==(const tdata&) const
+    inline bool operator==(tdata const&) const
     {
         return true;
     }
@@ -56,15 +56,15 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline tdata() : super(), head() { }
 
-    //tdata(const Head& v0, const Tail&... vals) : super(vals...), head(v0) { }
+    //tdata(Head const& v0, Tail const&... vals) : super(vals...), head(v0) { }
 
     // allow partial initialization
     template<typename... Args>
-    tdata(const Head& v0, const Args&... vals) : super(vals...), head(v0) { }
+    tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
 
     // allow initialization with wrapped<Head> (uses the default constructor)
     template<typename... Args>
-    tdata(const util::wrapped<Head>&, const Args&... vals)
+    tdata(util::wrapped<Head> const&, Args const&... vals)
         : super(vals...), head()
     {
     }
@@ -75,18 +75,18 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         return *this;
     }
 
-    inline const tdata<Tail...>& tail() const
+    inline tdata<Tail...> const& tail() const
     {
         // upcast
         return *this;
     }
 
-    inline bool operator==(const tdata& other) const
+    inline bool operator==(tdata const& other) const
     {
         return head == other.head && tail() == other.tail();
     }
 
-    inline const void* at(size_t pos) const
+    inline void const* at(size_t pos) const
     {
         return (pos == 0) ? &head : super::at(pos - 1);
     }
@@ -122,13 +122,13 @@ struct tdata_from_type_list<cppa::util::type_list<T...>>
 namespace cppa {
 
 template<typename... Tn>
-inline detail::tdata<Tn...> make_tdata(const Tn&... args)
+inline detail::tdata<Tn...> make_tdata(Tn const&... args)
 {
     return detail::tdata<Tn...>(args...);
 }
 
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv)
+const typename util::at<N, Tn...>::type& get(detail::tdata<Tn...> const& tv)
 {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
     return static_cast<const typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;

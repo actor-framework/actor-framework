@@ -11,7 +11,7 @@ struct list_member_util
 {
     typedef typename List::value_type value_type;
     static constexpr primitive_type vptype = type_to_ptype<value_type>::ptype;
-    void operator()(const List& list, serializer* s) const
+    void operator()(List const& list, serializer* s) const
     {
         s->begin_sequence(list.size());
         for (auto i = list.begin(); i != list.end(); ++i)
@@ -37,13 +37,13 @@ struct list_member_util<List, false>
 {
     typedef typename List::value_type value_type;
 
-    const uniform_type_info* m_value_type;
+    uniform_type_info const* m_value_type;
 
     list_member_util() : m_value_type(uniform_typeid<value_type>())
     {
     }
 
-    void operator()(const List& list, serializer* s) const
+    void operator()(List const& list, serializer* s) const
     {
         s->begin_sequence(list.size());
         for (auto i = list.begin(); i != list.end(); ++i)
@@ -76,9 +76,9 @@ class list_member : public util::abstract_uniform_type_info<List>
 
  public:
 
-    void serialize(const void* obj, serializer* s) const
+    void serialize(void const* obj, serializer* s) const
     {
-        auto& list = *reinterpret_cast<const List*>(obj);
+        auto& list = *reinterpret_cast<List const*>(obj);
         m_helper(list, s);
     }
 

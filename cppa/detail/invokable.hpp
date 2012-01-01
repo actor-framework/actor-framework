@@ -19,14 +19,14 @@ namespace cppa { namespace detail {
 class invokable_base
 {
 
-    invokable_base(const invokable_base&) = delete;
-    invokable_base& operator=(const invokable_base&) = delete;
+    invokable_base(invokable_base const&) = delete;
+    invokable_base& operator=(invokable_base const&) = delete;
 
  public:
 
     invokable_base() = default;
     virtual ~invokable_base();
-    virtual bool invoke(const any_tuple&) const = 0;
+    virtual bool invoke(any_tuple const&) const = 0;
 
 };
 
@@ -37,11 +37,11 @@ class timed_invokable : public invokable_base
 
  protected:
 
-    timed_invokable(const util::duration&);
+    timed_invokable(util::duration const&);
 
  public:
 
-    inline const util::duration& timeout() const
+    inline util::duration const& timeout() const
     {
         return m_timeout;
     }
@@ -58,12 +58,12 @@ class timed_invokable_impl : public timed_invokable
 
  public:
 
-    timed_invokable_impl(const util::duration& d, const TargetFun& tfun)
+    timed_invokable_impl(util::duration const& d, TargetFun const& tfun)
         : super(d), m_target(tfun)
     {
     }
 
-    bool invoke(const any_tuple&) const
+    bool invoke(any_tuple const&) const
     {
         m_target();
         return true;
@@ -76,7 +76,7 @@ class invokable : public invokable_base
 
  public:
 
-    virtual intermediate* get_intermediate(const any_tuple&) = 0;
+    virtual intermediate* get_intermediate(any_tuple const&) = 0;
 
 };
 
@@ -87,10 +87,10 @@ class invokable_impl : public invokable
     struct iimpl : intermediate
     {
 
-        const TargetFun& m_target;
+        TargetFun const& m_target;
         TupleView m_args;
 
-        iimpl(const TargetFun& tf) : m_target(tf)
+        iimpl(TargetFun const& tf) : m_target(tf)
         {
         }
 
@@ -109,12 +109,12 @@ class invokable_impl : public invokable
 
  public:
 
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, const TargetFun& mt)
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, TargetFun const& mt)
         : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
     {
     }
 
-    bool invoke(const any_tuple& data) const
+    bool invoke(any_tuple const& data) const
     {
 
         vector_type mv;
@@ -137,7 +137,7 @@ class invokable_impl : public invokable
         return false;
     }
 
-    intermediate* get_intermediate(const any_tuple& data)
+    intermediate* get_intermediate(any_tuple const& data)
     {
         vector_type mv;
         if ((*m_pattern)(data, &mv))
@@ -164,9 +164,9 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 
     struct iimpl : intermediate
     {
-        const TargetFun& m_target;
+        TargetFun const& m_target;
 
-        iimpl(const TargetFun& tf) : m_target(tf)
+        iimpl(TargetFun const& tf) : m_target(tf)
         {
         }
 
@@ -182,12 +182,12 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 
  public:
 
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, const TargetFun& mt)
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, TargetFun const& mt)
         : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
     {
     }
 
-    bool invoke(const any_tuple& data) const
+    bool invoke(any_tuple const& data) const
     {
         if ((*m_pattern)(data, nullptr))
         {
@@ -197,7 +197,7 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
         return false;
     }
 
-    intermediate* get_intermediate(const any_tuple& data)
+    intermediate* get_intermediate(any_tuple const& data)
     {
         return ((*m_pattern)(data, nullptr)) ? &m_iimpl : nullptr;
     }

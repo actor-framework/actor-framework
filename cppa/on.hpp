@@ -33,7 +33,7 @@ class timed_invoke_rule_builder
 
  public:
 
-    constexpr timed_invoke_rule_builder(const util::duration& d) : m_timeout(d)
+    constexpr timed_invoke_rule_builder(util::duration const& d) : m_timeout(d)
     {
     }
 
@@ -67,7 +67,7 @@ class invoke_rule_builder
  public:
 
     template<typename... Args>
-    invoke_rule_builder(const Args&... args)
+    invoke_rule_builder(Args const&... args)
     {
         m_pattern.reset(new pattern_type(args...));
     }
@@ -86,16 +86,19 @@ class on_the_fly_invoke_rule_builder
 
  public:
 
-    template<typename F>
-    invoke_rules operator>>(F&& f)
+    constexpr on_the_fly_invoke_rule_builder()
     {
-        typedef typename util::get_callable_trait<F>::type ctrait;
+    }
+
+    template<typename F>
+    invoke_rules operator>>(F&& f) const
+    {
+        using namespace ::cppa::util;
+        typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename util::type_list_apply<raw_types, util::rm_ref>::type
-                types;
-        typedef typename pattern_type_from_type_list<types>::type
-                pattern_type;
+        typedef typename type_list_apply<raw_types,rm_ref>::type types;
+        typedef typename pattern_type_from_type_list<types>::type pattern_type;
         typedef typename pattern_type::tuple_view_type tuple_view_type;
         typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
         std::unique_ptr<pattern_type> pptr(new pattern_type);
@@ -114,18 +117,14 @@ constexpr typename detail::boxed<T>::type val()
     return typename detail::boxed<T>::type();
 }
 
-//constexpr detail::boxed<anything> any_vals = detail::boxed<anything>();
 constexpr anything any_vals = anything();
 
-constexpr detail::on_the_fly_invoke_rule_builder on_arg_match()
-{
-    return { };
-}
+constexpr detail::on_the_fly_invoke_rule_builder on_arg_match;
 
 template<typename Arg0, typename... Args>
 detail::invoke_rule_builder<typename detail::unboxed<Arg0>::type,
                             typename detail::unboxed<Args>::type...>
-on(const Arg0& arg0, const Args&... args)
+on(Arg0 const& arg0, Args const&... args)
 {
     return { arg0, args... };
 }
