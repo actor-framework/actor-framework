@@ -94,7 +94,7 @@ void abstract_scheduled_actor::enqueue(actor* sender, any_tuple&& msg)
     enqueue_node(new queue_node(sender, std::move(msg)));
 }
 
-void abstract_scheduled_actor::enqueue(actor* sender, const any_tuple& msg)
+void abstract_scheduled_actor::enqueue(actor* sender, any_tuple const& msg)
 {
     enqueue_node(new queue_node(sender, msg));
 }
@@ -114,7 +114,7 @@ int abstract_scheduled_actor::compare_exchange_state(int expected,
     return e;
 }
 
-void abstract_scheduled_actor::request_timeout(const util::duration& d)
+void abstract_scheduled_actor::request_timeout(util::duration const& d)
 {
     future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
     m_has_pending_timeout_request = true;
@@ -235,7 +235,7 @@ bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&)
     return false;
 }
 
-void scheduled_actor_dummy::detach(const attachable::token&)
+void scheduled_actor_dummy::detach(attachable::token const&)
 {
 }
 
