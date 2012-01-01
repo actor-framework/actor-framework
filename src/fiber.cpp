@@ -33,18 +33,24 @@
 #endif
 
 #include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <cstdint>
 #include <type_traits>
 
-#include <ucontext.h>
-#include <sys/mman.h>
-#include <signal.h>
-#include <cstddef>
-
 #include "cppa/util/fiber.hpp"
+#include "cppa/detail/thread.hpp"
 
-#ifdef CPPA_USE_UCONTEXT_IMPL
+#if defined(CPPA_USE_UCONTEXT_IMPL) || defined(CPPA_USE_PTH_IMPL)
+
+#include <signal.h>
+#include <sys/mman.h>
+
+#ifdef CPPA_USE_PTH_IMPL
+#include "pth.h"
+#else
+#include <ucontext.h>
+#endif
 
 namespace {
 
@@ -135,6 +141,7 @@ void release_stack_node(stack_node* node)
 typedef void (*void_function)();
 typedef void (*void_ptr_function)(void*);
 
+#ifndef CPPA_USE_PTH_IMPL
 template<size_t PointerSize,
          typename FunType = void_function,
          typename IntType = int>
@@ -188,11 +195,15 @@ struct trampoline<8, FunType, IntType>
                     4, func_addr[0], func_addr[1], arg_addr[0], arg_addr[1]);
     }
 };
+#else
+cppa::detail::mutex s_uctx_make_mtx;
+#endif
 
 } // namespace <anonymous>
 
 namespace cppa { namespace util {
 
+#ifndef CPPA_USE_PTH_IMPL
 struct fiber_impl
 {
 
@@ -214,6 +225,11 @@ struct fiber_impl
         , m_func(func)
         , m_arg(arg)
     {
+    }
+
+    inline void swap(fiber_impl* to)
+    {
+        swapcontext(&(m_ctx), &(to->m_ctx));
     }
 
     void initialize()
@@ -239,7 +255,65 @@ struct fiber_impl
     }
 
 };
+#else
 
+
+struct fiber_impl
+{
+
+    bool m_initialized;
+    stack_node* m_node;
+    void (*m_func)(void*);
+    void* m_arg;
+    pth_uctx_t m_ctx;
+
+    fiber_impl() throw() : m_initialized(true), m_node(0), m_func(0), m_arg(0)
+    {
+        memset(&m_ctx, 0, sizeof(pth_uctx_t));
+        pth_uctx_create(&m_ctx);
+    }
+
+    fiber_impl(void (*func)(void*), void* arg)
+        : m_initialized(false)
+        , m_node(nullptr)
+        , m_func(func)
+        , m_arg(arg)
+    {
+    }
+
+    inline void swap(fiber_impl* to)
+    {
+        pth_uctx_switch(m_ctx, to->m_ctx);
+    }
+
+    void initialize()
+    {
+        m_initialized = true;
+        m_node = get_stack_node();
+        memset(&m_ctx, 0, sizeof(pth_uctx_t));
+        pth_uctx_create(&m_ctx);
+        // lifetime scope of guard
+        {
+            // pth uses static data to initialize m_ctx
+            detail::unique_lock<detail::mutex> guard(s_uctx_make_mtx);
+            pth_uctx_make(m_ctx, reinterpret_cast<char*>(m_node->s), STACK_SIZE,
+                          nullptr, m_func, m_arg, nullptr);
+        }
+    }
+
+    inline void lazy_init()
+    {
+        if (!m_initialized) initialize();
+    }
+
+    ~fiber_impl()
+    {
+        if (m_node) release_stack_node(m_node);
+        pth_uctx_destroy(m_ctx);
+    }
+
+};
+#endif
 
 fiber::fiber() throw() : m_impl(new fiber_impl)
 {
@@ -257,7 +331,7 @@ fiber::~fiber()
 void fiber::swap(fiber& from, fiber& to)
 {
     to.m_impl->lazy_init();
-    swapcontext(&(from.m_impl->m_ctx), &(to.m_impl->m_ctx));
+    from.m_impl->swap(to.m_impl);
 }
 
 } } // namespace cppa::util
