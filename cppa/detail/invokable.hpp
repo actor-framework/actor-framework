@@ -88,8 +88,9 @@ class timed_invokable_impl : public timed_invokable
 
  public:
 
-    timed_invokable_impl(util::duration const& d, TargetFun const& tfun)
-        : super(d), m_target(tfun)
+    template<typename F>
+    timed_invokable_impl(util::duration const& d, F&& fun)
+        : super(d), m_target(std::forward<F>(fun))
     {
     }
 
@@ -114,13 +115,15 @@ template<class TupleView, class Pattern, class TargetFun>
 class invokable_impl : public invokable
 {
 
+    typedef typename Pattern::mapping_vector vector_type;
+
     struct iimpl : intermediate
     {
-
-        TargetFun const& m_target;
+        TargetFun m_target;
         TupleView m_args;
 
-        iimpl(TargetFun const& tf) : m_target(tf)
+        template<typename F>
+        iimpl(F&& fun) : m_target(std::forward<F>(fun))
         {
         }
 
@@ -128,25 +131,21 @@ class invokable_impl : public invokable
         {
             cppa::invoke(m_target, m_args);
         }
-
     };
 
-    typedef util::fixed_vector<size_t, TupleView::num_elements> vector_type;
-
     std::unique_ptr<Pattern> m_pattern;
-    TargetFun m_target;
     iimpl m_iimpl;
 
  public:
 
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, TargetFun const& mt)
-        : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
+    template<typename F>
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, F&& fun)
+        : m_pattern(std::move(pptr)), m_iimpl(std::forward<F>(fun))
     {
     }
 
     bool invoke(any_tuple const& data) const
     {
-
         vector_type mv;
         if ((*m_pattern)(data, &mv))
         {
@@ -154,13 +153,13 @@ class invokable_impl : public invokable
             {
                 // "perfect" match; no mapping needed at all
                 TupleView tv = TupleView::from(data.vals());
-                cppa::invoke(m_target, tv);
+                cppa::invoke(m_iimpl.m_target, tv);
             }
             else
             {
                 // mapping needed
                 TupleView tv(data.vals(), mv);
-                cppa::invoke(m_target, tv);
+                cppa::invoke(m_iimpl.m_target, tv);
             }
             return true;
         }
@@ -194,9 +193,10 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 
     struct iimpl : intermediate
     {
-        TargetFun const& m_target;
+        TargetFun m_target;
 
-        iimpl(TargetFun const& tf) : m_target(tf)
+        template<typename F>
+        iimpl(F&& fun) : m_target(fun)
         {
         }
 
@@ -207,13 +207,13 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
     };
 
     std::unique_ptr<Pattern> m_pattern;
-    TargetFun m_target;
     iimpl m_iimpl;
 
  public:
 
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, TargetFun const& mt)
-        : m_pattern(std::move(pptr)), m_target(mt), m_iimpl(m_target)
+    template<typename F>
+    invokable_impl(std::unique_ptr<Pattern>&& pptr, F&& fun)
+        : m_pattern(std::move(pptr)), m_iimpl(std::forward<F>(fun))
     {
     }
 
@@ -221,7 +221,7 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
     {
         if ((*m_pattern)(data, nullptr))
         {
-            m_target();
+            m_iimpl.m_target();
             return true;
         }
         return false;

@@ -39,12 +39,6 @@
 
 namespace cppa { namespace detail {
 
-/*
-class invokable;
-class intermediate;
-class timed_invokable;
-*/
-
 typedef std::unique_ptr<detail::invokable> invokable_ptr;
 typedef std::unique_ptr<detail::timed_invokable> timed_invokable_ptr;
 
