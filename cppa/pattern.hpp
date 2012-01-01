@@ -1,3 +1,33 @@
+/******************************************************************************\
+ *           ___        __                                                    *
+ *          /\_ \    __/\ \                                                   *
+ *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
+ *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
+ *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
+ *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
+ *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
+ *                                          \ \_\   \ \_\                     *
+ *                                           \/_/    \/_/                     *
+ *                                                                            *
+ * Copyright (C) 2011, 2012                                                   *
+ * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
+ *                                                                            *
+ * This file is part of libcppa.                                              *
+ * libcppa is free software: you can redistribute it and/or modify it under   *
+ * the terms of the GNU Lesser General Public License as published by the     *
+ * Free Software Foundation, either version 3 of the License                  *
+ * or (at your option) any later version.                                     *
+ *                                                                            *
+ * libcppa is distributed in the hope that it will be useful,                 *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                       *
+ * See the GNU Lesser General Public License for more details.                *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
+\******************************************************************************/
+
+
 #ifndef LIBCPPA_PATTERN_HPP
 #define LIBCPPA_PATTERN_HPP
 
@@ -66,7 +96,7 @@ class pattern<T0, Tn...>
     bool operator()(cppa::any_tuple const& msg,
                     mapping_vector* mapping = nullptr) const
     {
-        detail::pattern_arg arg0(size, m_data_ptr, m_utis);
+        detail::pattern_iterator arg0(size, m_data_ptr, m_utis);
         detail::tuple_iterator_arg<mapping_vector> arg1(msg, mapping);
         return detail::do_match(arg0, arg1);
     }

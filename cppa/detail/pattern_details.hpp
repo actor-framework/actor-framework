@@ -1,3 +1,33 @@
+/******************************************************************************\
+ *           ___        __                                                    *
+ *          /\_ \    __/\ \                                                   *
+ *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
+ *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
+ *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
+ *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
+ *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
+ *                                          \ \_\   \ \_\                     *
+ *                                           \/_/    \/_/                     *
+ *                                                                            *
+ * Copyright (C) 2011, 2012                                                   *
+ * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
+ *                                                                            *
+ * This file is part of libcppa.                                              *
+ * libcppa is free software: you can redistribute it and/or modify it under   *
+ * the terms of the GNU Lesser General Public License as published by the     *
+ * Free Software Foundation, either version 3 of the License                  *
+ * or (at your option) any later version.                                     *
+ *                                                                            *
+ * libcppa is distributed in the hope that it will be useful,                 *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                       *
+ * See the GNU Lesser General Public License for more details.                *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
+\******************************************************************************/
+
+
 #ifndef PATTER_DETAILS_HPP
 #define PATTER_DETAILS_HPP
 
@@ -34,20 +64,14 @@ struct fill_vecs_util
     template<typename DataTuple>
     inline static void _(size_t pos,
                          size_t dt_size,
-                         bool* dt_invalids,
+                         bool* dt_is_invalid,
                          DataTuple const& dt,
                          cppa::uniform_type_info const* * utis,
                          void const* * data_ptrs)
     {
         utis[pos] = uniform_typeid<T0>();
-        if (pos < dt_size && dt_invalids[pos] == false)
-        {
-            data_ptrs[pos] = dt.at(pos);
-        }
-        else
-        {
-            data_ptrs[pos] = nullptr;
-        }
+        data_ptrs[pos] = (pos < dt_size && !(dt_is_invalid[pos])) ? dt.at(pos)
+                                                                  : nullptr;
     }
 };
 
@@ -92,7 +116,7 @@ void fill_vecs(size_t pos,
                                     dt, utis, data_ptrs);
 }
 
-struct pattern_arg
+class pattern_iterator
 {
 
     size_t m_pos;
@@ -102,9 +126,9 @@ struct pattern_arg
 
  public:
 
-    inline pattern_arg(size_t msize,
-                       void const* const* mdata,
-                       cppa::uniform_type_info const* const* mtypes)
+    inline pattern_iterator(size_t msize,
+                            void const* const* mdata,
+                            cppa::uniform_type_info const* const* mtypes)
         : m_pos(0)
         , m_size(msize)
         , m_data(mdata)
@@ -112,16 +136,18 @@ struct pattern_arg
     {
     }
 
-    pattern_arg(pattern_arg const&) = default;
+    pattern_iterator(pattern_iterator const&) = default;
 
-    pattern_arg& operator=(pattern_arg const&) = default;
+    pattern_iterator& operator=(pattern_iterator const&) = default;
 
-    inline bool at_end() const { return m_pos == m_size; }
+    inline bool at_end() const
+    {
+        return m_pos == m_size;
+    }
 
-    inline pattern_arg& next()
+    inline void next()
     {
         ++m_pos;
-        return *this;
     }
 
     inline uniform_type_info const* type() const
@@ -134,43 +160,58 @@ struct pattern_arg
         return m_data[m_pos];
     }
 
-    inline bool has_value() const { return value() != nullptr; }
+    inline bool has_value() const
+    {
+        return value() != nullptr;
+    }
 
 };
 
 template<typename VectorType>
-struct tuple_iterator_arg
+class tuple_iterator_arg
 {
 
-    typedef VectorType vector_type;
-
     util::any_tuple_iterator iter;
-    vector_type* mapping;
+    VectorType* mapping;
 
-    inline tuple_iterator_arg(any_tuple const& tup,
-                              vector_type* mv = nullptr)
+ public:
+
+    inline tuple_iterator_arg(any_tuple const& tup, VectorType* mv = nullptr)
         : iter(tup), mapping(mv)
     {
     }
 
-    inline tuple_iterator_arg(util::any_tuple_iterator const& from_iter,
-                              vector_type* mv = nullptr)
-        : iter(from_iter), mapping(mv)
+    inline tuple_iterator_arg(tuple_iterator_arg const& other, VectorType* mv)
+        : iter(other.iter), mapping(mv)
     {
     }
 
-    inline bool at_end() const { return iter.at_end(); }
+    inline bool at_end() const
+    {
+        return iter.at_end();
+    }
 
-    inline tuple_iterator_arg& next()
+    inline void next()
     {
         iter.next();
-        return *this;
     }
 
-    inline tuple_iterator_arg& push_mapping()
+    inline bool has_mapping() const
+    {
+        return mapping != nullptr;
+    }
+
+    inline void push_mapping()
     {
         if (mapping) mapping->push_back(iter.position());
-        return *this;
+    }
+
+    inline void push_mapping(VectorType const& what)
+    {
+        if (mapping)
+        {
+            mapping->insert(mapping->end(), what.begin(), what.end());
+        }
     }
 
     inline uniform_type_info const* type() const
@@ -186,72 +227,58 @@ struct tuple_iterator_arg
 };
 
 template<typename VectorType>
-bool do_match(pattern_arg& pargs, tuple_iterator_arg<VectorType>& targs)
+bool do_match(pattern_iterator& iter, tuple_iterator_arg<VectorType>& targ)
 {
-    for (;;)
+    for ( ; !(iter.at_end() && targ.at_end()); iter.next(), targ.next())
     {
-        if (pargs.at_end() && targs.at_end())
+        if (iter.at_end())
         {
-            return true;
+            return false;
         }
-        else if (pargs.type() == nullptr) // nullptr == wildcard (anything)
+        else if (iter.type() == nullptr) // nullptr == wildcard (anything)
         {
             // perform submatching
-            pargs.next();
-            if (pargs.at_end())
+            iter.next();
+            if (iter.at_end())
             {
                 // always true at the end of the pattern
                 return true;
             }
-            auto pargs_copy = pargs;
             VectorType mv;
-            auto mv_ptr = (targs.mapping) ? &mv : nullptr;
+            auto mv_ptr = (targ.has_mapping()) ? &mv : nullptr;
             // iterate over tu_args until we found a match
-            while (targs.at_end() == false)
+            for ( ; targ.at_end() == false; mv.clear(), targ.next())
             {
-                tuple_iterator_arg<VectorType> targs_copy(targs.iter, mv_ptr);
-                if (do_match(pargs_copy, targs_copy))
+                auto iter_cpy = iter;
+                tuple_iterator_arg<VectorType> targ_cpy(targ, mv_ptr);
+                if (do_match(iter_cpy, targ_cpy))
                 {
-                    if (mv_ptr)
-                    {
-                        targs.mapping->insert(targs.mapping->end(),
-                                              mv.begin(),
-                                              mv.end());
-                    }
+                    targ.push_mapping(mv);
                     return true;
                 }
-                // next iteration
-                mv.clear();
-                targs.next();
             }
-            // no successfull submatch found
-            return false;
+            return false; // no submatch found
         }
         // compare types
-        else if (targs.at_end() == false && pargs.type() == targs.type())
+        else if (targ.at_end() == false && iter.type() == targ.type())
         {
             // compare values if needed
-            if (   pargs.has_value() == false
-                || pargs.type()->equals(pargs.value(), targs.value()))
+            if (   iter.has_value() == false
+                || iter.type()->equals(iter.value(), targ.value()))
             {
-                targs.push_mapping();
-                // ok, go to next iteration
+                targ.push_mapping();
             }
             else
             {
-                // values didn't match
-                return false;
+                return false; // values didn't match
             }
         }
         else
         {
-            // no match
-            return false;
+            return false; // no match
         }
-        // next iteration
-        pargs.next();
-        targs.next();
     }
+    return true; // iter.at_end() && targ.at_end()
 }
 
 } } // namespace cppa::detail

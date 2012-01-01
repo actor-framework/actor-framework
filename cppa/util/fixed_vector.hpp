@@ -1,3 +1,33 @@
+/******************************************************************************\
+ *           ___        __                                                    *
+ *          /\_ \    __/\ \                                                   *
+ *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
+ *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
+ *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
+ *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
+ *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
+ *                                          \ \_\   \ \_\                     *
+ *                                           \/_/    \/_/                     *
+ *                                                                            *
+ * Copyright (C) 2011, 2012                                                   *
+ * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
+ *                                                                            *
+ * This file is part of libcppa.                                              *
+ * libcppa is free software: you can redistribute it and/or modify it under   *
+ * the terms of the GNU Lesser General Public License as published by the     *
+ * Free Software Foundation, either version 3 of the License                  *
+ * or (at your option) any later version.                                     *
+ *                                                                            *
+ * libcppa is distributed in the hope that it will be useful,                 *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                       *
+ * See the GNU Lesser General Public License for more details.                *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
+\******************************************************************************/
+
+
 #ifndef FIXED_VECTOR_HPP
 #define FIXED_VECTOR_HPP
 
@@ -87,7 +117,7 @@ class fixed_vector
 
     inline const_iterator end() const
     {
-        return (static_cast<T*>(m_data) + m_size);
+        return (static_cast<T const*>(m_data) + m_size);
     }
 
     template<class InputIterator>
@@ -97,9 +127,13 @@ class fixed_vector
     {
         if (pos == end())
         {
-            for (InputIterator i = first; i != last; ++i)
+            if (m_size + static_cast<size_type>(last - first) > MaxSize)
             {
-                push_back(*i);
+                throw std::runtime_error("fixed_vector::insert: full");
+            }
+            for ( ; first != last; ++first)
+            {
+                push_back(*first);
             }
         }
         else
