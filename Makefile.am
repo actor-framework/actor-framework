@@ -45,6 +45,7 @@ libcppa_la_SOURCES = \
   src/post_office_msg.cpp \
   src/primitive_variant.cpp \
   src/process_information.cpp \
+  src/receive.cpp \
   src/ripemd_160.cpp \
   src/abstract_scheduled_actor.cpp \
   src/scheduler.cpp \

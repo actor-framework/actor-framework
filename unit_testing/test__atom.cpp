@@ -35,7 +35,6 @@ size_t test__atom()
     CPPA_CHECK_EQUAL(atom("   "), atom("@!?"));
     CPPA_CHECK_NOT_EQUAL(atom("abc"), atom(" abc"));
     CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
-    cout << to_string(s_foo) << endl;
     self << make_tuple(atom("foo"), static_cast<std::uint32_t>(42))
          << make_tuple(atom(":Attach"), atom(":Baz"), "cstring")
          << make_tuple(atom("b"), atom("a"), atom("c"), 23.f)

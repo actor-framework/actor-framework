@@ -87,7 +87,6 @@ class invoke_rule_builder
     typedef typename pattern_type_from_type_list<converted_type_list>::type
             pattern_type;
 
-    //typedef pattern<TypeList...> pattern_type;
     typedef std::unique_ptr<pattern_type> pattern_ptr_type;
 
     pattern_ptr_type m_pattern;
@@ -194,7 +193,7 @@ detail::invoke_rule_builder<atom_value, atom_value, atom_value,
 }
 
 template<class Rep, class Period>
-inline constexpr detail::timed_invoke_rule_builder
+constexpr detail::timed_invoke_rule_builder
 after(const std::chrono::duration<Rep, Period>& d)
 {
     return { util::duration(d) };

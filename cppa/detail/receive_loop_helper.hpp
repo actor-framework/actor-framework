@@ -33,7 +33,9 @@
 
 #include <new>
 
-#include "cppa/receive.hpp"
+#include "cppa/self.hpp"
+#include "cppa/behavior.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/invoke_rules.hpp"
 
 
@@ -43,15 +45,18 @@ template<typename Statement>
 struct receive_while_helper
 {
     Statement m_stmt;
-    receive_while_helper(Statement&& stmt) : m_stmt(std::move(stmt))
+
+    template<typename S>
+    receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt))
     {
     }
 
     void operator()(invoke_rules& rules)
     {
+        local_actor* sptr = self;
         while (m_stmt())
         {
-            receive(rules);
+            sptr->dequeue(rules);
         }
     }
 
@@ -63,9 +68,10 @@ struct receive_while_helper
 
     void operator()(timed_invoke_rules& rules)
     {
+        local_actor* sptr = self;
         while (m_stmt())
         {
-            receive(rules);
+            sptr->dequeue(rules);
         }
     }
 
@@ -94,22 +100,17 @@ struct receive_while_helper
 class do_receive_helper
 {
 
-    bool m_timed;
+    behavior m_bhvr;
 
-    union
+    inline void init(timed_invoke_rules&& bhvr)
     {
-        invoke_rules m_rules;
-        timed_invoke_rules m_trules;
-    };
-
-    inline void init(timed_invoke_rules&& ti_rules)
-    {
-        m_timed = true;
-        m_rules.~invoke_rules();
-        new (&m_trules) timed_invoke_rules(std::move(ti_rules));
+        m_bhvr = std::move(bhvr);
     }
 
-    inline void init(invoke_rules&) { }
+    inline void init(invoke_rules& bhvr)
+    {
+        m_bhvr = std::move(bhvr);
+    }
 
     template<typename Arg0, typename... Args>
     inline void init(invoke_rules& rules, Arg0&& arg0, Args&&... args)
@@ -120,34 +121,24 @@ class do_receive_helper
 
  public:
 
-    template<typename... Args>
-    do_receive_helper(invoke_rules&& rules, Args&&... args) : m_timed(false)
+    do_receive_helper(invoke_rules&& rules) : m_bhvr(std::move(rules))
     {
-        new (&m_rules) invoke_rules(std::move(rules));
-        init(m_rules, std::forward<Args>(args)...);
     }
 
-    do_receive_helper(timed_invoke_rules&& rules) : m_timed(true)
+    do_receive_helper(timed_invoke_rules&& rules) : m_bhvr(std::move(rules))
     {
-        new (&m_trules) timed_invoke_rules(std::move(rules));
     }
 
-    do_receive_helper(do_receive_helper&& other) : m_timed(other.m_timed)
+    template<typename Arg0, typename... Args>
+    do_receive_helper(invoke_rules&& rules, Arg0&& arg0, Args&&... args)
     {
-        if (other.m_timed)
-        {
-            new (&m_trules) timed_invoke_rules(std::move(other.m_trules));
-        }
-        else
-        {
-            new (&m_rules) invoke_rules(std::move(other.m_rules));
-        }
+        invoke_rules tmp(std::move(rules));
+        init(tmp.splice(std::forward<Arg0>(arg0)), std::forward<Args>(args)...);
     }
 
-    ~do_receive_helper()
+    do_receive_helper(do_receive_helper&& other)
+        : m_bhvr(std::move(other.m_bhvr))
     {
-        if (m_timed) m_trules.~timed_invoke_rules();
-        else m_rules.~invoke_rules();
     }
 
     template<typename Statement>
@@ -155,11 +146,12 @@ class do_receive_helper
     {
         static_assert(std::is_same<bool, decltype(stmt())>::value,
                       "functor or function does not return a boolean");
-        if (m_timed)
+        local_actor* sptr = self;
+        if (m_bhvr.is_left())
         {
             do
             {
-                receive(m_trules);
+                sptr->dequeue(m_bhvr.left());
             }
             while (stmt() == false);
         }
@@ -167,7 +159,7 @@ class do_receive_helper
         {
             do
             {
-                receive(m_rules);
+                sptr->dequeue(m_bhvr.right());
             }
             while (stmt() == false);
         }

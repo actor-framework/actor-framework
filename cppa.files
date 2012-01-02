@@ -243,3 +243,4 @@ cppa/fsm_actor.hpp
 cppa/self.hpp
 src/self.cpp
 cppa/behavior.hpp
+src/receive.cpp
