@@ -238,7 +238,7 @@ cppa/event_based_actor.hpp
 src/event_based_actor.cpp
 cppa/stacked_event_based_actor.hpp
 src/stacked_event_based_actor.cpp
-cppa/event_based_actor_mixin.hpp
+cppa/event_based_actor_base.hpp
 cppa/fsm_actor.hpp
 cppa/self.hpp
 src/self.cpp

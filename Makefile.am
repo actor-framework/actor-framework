@@ -89,7 +89,7 @@ nobase_library_include_HEADERS = \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
   cppa/event_based_actor.hpp \
-  cppa/event_based_actor_mixin.hpp \
+  cppa/event_based_actor_base.hpp \
   cppa/abstract_event_based_actor.hpp \
   cppa/detail/abstract_tuple.hpp \
   cppa/detail/actor_count.hpp \

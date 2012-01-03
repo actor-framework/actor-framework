@@ -31,14 +31,14 @@
 #ifndef STACKED_EVENT_BASED_ACTOR_HPP
 #define STACKED_EVENT_BASED_ACTOR_HPP
 
-#include "cppa/event_based_actor_mixin.hpp"
+#include "cppa/event_based_actor_base.hpp"
 
 namespace cppa {
 
-class stacked_event_based_actor : public event_based_actor_mixin<stacked_event_based_actor>
+class stacked_event_based_actor : public event_based_actor_base<stacked_event_based_actor>
 {
 
-    friend class event_based_actor_mixin<stacked_event_based_actor>;
+    friend class event_based_actor_base<stacked_event_based_actor>;
 
     typedef abstract_event_based_actor::stack_element stack_element;
 

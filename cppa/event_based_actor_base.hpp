@@ -37,7 +37,7 @@
 namespace cppa {
 
 template<typename Derived>
-class event_based_actor_mixin : public abstract_event_based_actor
+class event_based_actor_base : public abstract_event_based_actor
 {
 
     typedef abstract_event_based_actor super;
