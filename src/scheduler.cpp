@@ -101,32 +101,29 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
     // setup & local variables
     self.set(m_self.get());
-    //set_self(m_self.get());
     auto& queue = m_self->mailbox();
-    //typedef std::pair<cppa::actor_ptr, decltype(queue.pop())> future_msg;
     std::multimap<decltype(detail::now()), decltype(queue.pop())> messages;
     decltype(queue.pop()) msg_ptr = nullptr;
     decltype(detail::now()) now;
     bool done = false;
     // message handling rules
-    auto rules =
+    auto handle_msg =
     (
         on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
                                                        const actor_ptr&)
-//        on<util::duration,anything>() >> [&](const util::duration& d)
         {
-            //any_tuple msg = msg_ptr->msg.tail();
             // calculate timeout
             auto timeout = detail::now();
             timeout += d;
             messages.insert(std::make_pair(std::move(timeout),
                                            std::move(msg_ptr)));
+            // do not delete this msg_ptr (now)
+            msg_ptr = nullptr;
         },
         on<atom(":_DIE")>() >> [&]()
         {
             done = true;
-        },
-        others() >> []() { }
+        }
     );
     // loop
     while (!done)
@@ -145,7 +142,9 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 while (it != messages.end() && (it->first) <= now)
                 {
                     auto ptr = it->second;
-                    auto whom = const_cast<actor_ptr*>(reinterpret_cast<const actor_ptr*>(ptr->msg.at(1)));
+                    auto whom = const_cast<actor_ptr*>(
+                                    reinterpret_cast<actor_ptr const*>(
+                                        ptr->msg.at(1)));
                     if (*whom)
                     {
                         auto msg = ptr->msg.tail(2);
@@ -162,9 +161,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 }
             }
         }
-        rules(msg_ptr->msg);
-        //delete msg_ptr;
-        msg_ptr = nullptr;
+        handle_msg(msg_ptr->msg);
+        delete msg_ptr;
     }
 }
 

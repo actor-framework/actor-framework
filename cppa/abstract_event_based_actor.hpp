@@ -167,9 +167,9 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
     template<typename... Args>
     void receive(Args&&...)
     {
-        static_assert(sizeof...(Args) < 0,
+        static_assert((sizeof...(Args) + 1) < 1,
                       "You shall not use receive in an event-based actor. "
-                      "Use become()/unbecome() instead.");
+                      "Use become() instead.");
     }
 
     template<typename... Args>

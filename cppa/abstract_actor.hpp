@@ -34,7 +34,6 @@
 #include "cppa/config.hpp"
 
 #include <list>
-#include <mutex>
 #include <atomic>
 #include <vector>
 #include <memory>
@@ -45,6 +44,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/detail/thread.hpp"
 
 namespace cppa {
 
@@ -52,15 +52,16 @@ namespace cppa {
 template<class Base>
 class abstract_actor : public Base
 {
-
-    typedef std::lock_guard<std::mutex> guard_type;
+    typedef detail::lock_guard<detail::mutex> guard_type;
+    //typedef std::lock_guard<std::mutex> guard_type;
     typedef std::unique_ptr<attachable> attachable_ptr;
 
     // true if the associated thread has finished execution
     std::atomic<std::uint32_t> m_exit_reason;
 
     // guards access to m_exited, m_subscriptions and m_links
-    std::mutex m_mtx;
+    //std::mutex m_mtx;
+    detail::mutex m_mtx;
 
     // manages actor links
     std::list<actor_ptr> m_links;
@@ -78,13 +79,11 @@ class abstract_actor : public Base
         queue_node(actor* from, any_tuple&& content)
             : next(nullptr), sender(from), msg(std::move(content))
         {
-
         }
 
         queue_node(actor* from, any_tuple const& content)
             : next(nullptr), sender(from), msg(content)
         {
-
         }
     };
 
@@ -130,8 +129,6 @@ class abstract_actor : public Base
 
  protected:
 
-    //abstract_actor() : Base() { }
-
     template<typename... Args>
     abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
                                    , m_exit_reason(exit_reason::not_exited)
@@ -145,7 +142,7 @@ class abstract_actor : public Base
         decltype(m_attachables) mattachables;
         // lifetime scope of guard
         {
-            std::lock_guard<std::mutex> guard(m_mtx);
+            guard_type guard(m_mtx);
             if (m_exit_reason != exit_reason::not_exited)
             {
                 // already exited
@@ -174,18 +171,25 @@ class abstract_actor : public Base
 
     bool link_to_impl(intrusive_ptr<actor>& other)
     {
-        guard_type guard(m_mtx);
-        if (other && !exited() && other->establish_backlink(this))
+        if (other && other != this)
         {
-            m_links.push_back(other);
-            return true;
+            guard_type guard(m_mtx);
+            if (exited())
+            {
+                other->enqueue(this, atom(":Exit"), m_exit_reason.load());
+            }
+            else if (other->establish_backlink(this))
+            {
+                m_links.push_back(other);
+                return true;
+            }
         }
         return false;
     }
 
-    bool unlink_from_impl (intrusive_ptr<actor>& other)
+    bool unlink_from_impl(intrusive_ptr<actor>& other)
     {
-        std::lock_guard<std::mutex> guard(m_mtx);
+        guard_type guard(m_mtx);
         if (other && !exited() && other->remove_backlink(this))
         {
             return erase_all(m_links, other) > 0;
@@ -227,15 +231,17 @@ class abstract_actor : public Base
         // lifetime scope of guard
         {
             guard_type guard(m_mtx);
-            for (auto i = m_attachables.begin(); i != m_attachables.end(); ++i)
+            auto end = m_attachables.end();
+            auto i = std::find_if(m_attachables.begin(),
+                                  end,
+                                  [&](attachable_ptr& ptr)
+                                  {
+                                      return ptr->matches(what);
+                                  });
+            if (i != end)
             {
-                if ((*i)->matches(what))
-                {
-                    uptr = std::move(*i);
-                    m_attachables.erase(i);
-                    // exit loop (and release lock)
-                    break;
-                }
+                uptr = std::move(*i);
+                m_attachables.erase(i);
             }
         }
         // uptr will be destroyed here, without locked mutex
@@ -255,34 +261,30 @@ class abstract_actor : public Base
     {
         if (other && other != this)
         {
-            std::lock_guard<std::mutex> guard(m_mtx);
-            return erase_all(m_links, other) > 0;//m_links.erase(other) > 0;
+            guard_type guard(m_mtx);
+            return erase_all(m_links, other) > 0;
         }
         return false;
     }
 
     bool establish_backlink(intrusive_ptr<actor>& other) /*override*/
     {
-        bool result = false;
         std::uint32_t reason = exit_reason::not_exited;
         if (other && other != this)
         {
-            // lifetime scope of guard
+            guard_type guard(m_mtx);
+            reason = m_exit_reason.load();
+            if (reason == exit_reason::not_exited)
             {
-                std::lock_guard<std::mutex> guard(m_mtx);
-                reason = m_exit_reason.load();
-                if (reason == exit_reason::not_exited)
-                {
-                    result = unique_insert(m_links, other);
-                    //result = m_links.insert(other).second;
-                }
+                return unique_insert(m_links, other);
             }
         }
+        // send exit message without lock
         if (reason != exit_reason::not_exited)
         {
             other->enqueue(this, make_tuple(atom(":Exit"), reason));
         }
-        return result;
+        return false;
     }
 
 };

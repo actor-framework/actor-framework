@@ -35,9 +35,8 @@ namespace cppa {
 
 enum scheduling_hint
 {
-	scheduled,
-	detached,
-	as_task
+    scheduled,
+    detached
 };
 
 } // namespace cppa
