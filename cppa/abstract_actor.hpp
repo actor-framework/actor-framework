@@ -176,7 +176,8 @@ class abstract_actor : public Base
             guard_type guard(m_mtx);
             if (exited())
             {
-                other->enqueue(this, atom(":Exit"), m_exit_reason.load());
+                other->enqueue(this, make_tuple(atom(":Exit"),
+                                                m_exit_reason.load()));
             }
             else if (other->establish_backlink(this))
             {

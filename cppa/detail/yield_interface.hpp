@@ -44,19 +44,14 @@ enum class yield_state
     // actor waits for messages
     blocked,
     // actor finished execution
-    done,
-    // actor was killed because of an unhandled exception
-    killed
+    done
 };
 
 // return to the scheduler / worker
 void yield(yield_state);
 
-// returns the yielded state of a scheduled actor
-yield_state yielded_state();
-
 // switches to @p what and returns to @p from after yield(...)
-void call(util::fiber* what, util::fiber* from);
+yield_state call(util::fiber* what, util::fiber* from);
 
 } } // namespace cppa::detail
 

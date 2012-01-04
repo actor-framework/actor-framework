@@ -136,11 +136,9 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
     //set_self(this);
     for (;;)
     {
-        call(&m_fiber, from);
-        switch (yielded_state())
+        switch (call(&m_fiber, from))
         {
             case yield_state::done:
-            case yield_state::killed:
             {
                 callback->exec_done();
                 return;

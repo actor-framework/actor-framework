@@ -61,17 +61,18 @@ size_t test__yield_interface()
 
     fiber fself;
     fiber fcoroutine(coroutine, &worker);
+    yield_state ys;
 
     int i = 0;
     do
     {
         if (i == 2) worker.m_blocked = false;
-        call(&fcoroutine, &fself);
+        ys = call(&fcoroutine, &fself);
         ++i;
     }
-    while (yielded_state() != yield_state::done && i < 12);
+    while (ys != yield_state::done && i < 12);
 
-    CPPA_CHECK_EQUAL(yielded_state(), yield_state::done);
+    CPPA_CHECK_EQUAL(ys, yield_state::done);
     CPPA_CHECK_EQUAL(worker.m_count, 10);
     CPPA_CHECK_EQUAL(i, 12);
 

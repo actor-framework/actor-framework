@@ -50,17 +50,13 @@ void yield(yield_state ystate)
     util::fiber::swap(*t_callee, *t_caller);
 }
 
-yield_state yielded_state()
-{
-    return t_ystate;
-}
-
-void call(util::fiber* what, util::fiber* from)
+yield_state call(util::fiber* what, util::fiber* from)
 {
     t_ystate = yield_state::invalid;
     t_caller = from;
     t_callee = what;
     util::fiber::swap(*from, *what);
+    return t_ystate;
 }
 
 } } // namespace cppa::detail
