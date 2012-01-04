@@ -58,7 +58,7 @@ class is_forward_iterator
         return true;
     }
 
-    static void sfinae_fun(...) { }
+    static void sfinae_fun(void*) { }
 
     typedef decltype(sfinae_fun(static_cast<T*>(nullptr))) result_type;
 

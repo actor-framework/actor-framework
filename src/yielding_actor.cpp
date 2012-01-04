@@ -133,7 +133,6 @@ void yielding_actor::dequeue(timed_invoke_rules& rules)
 void yielding_actor::resume(util::fiber* from, resume_callback* callback)
 {
     self.set(this);
-    //set_self(this);
     for (;;)
     {
         switch (call(&m_fiber, from))

@@ -35,7 +35,7 @@
 
 namespace cppa { namespace detail {
 
-enum class yield_state
+enum class yield_state : int
 {
     // yield() wasn't called yet
     invalid,

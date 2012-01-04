@@ -36,9 +36,9 @@ namespace {
 
 using namespace cppa;
 
+__thread detail::yield_state* t_ystate = nullptr;
 __thread util::fiber* t_caller = nullptr;
 __thread util::fiber* t_callee = nullptr;
-__thread detail::yield_state t_ystate = detail::yield_state::invalid;
 
 } // namespace <anonymous>
 
@@ -46,17 +46,18 @@ namespace cppa { namespace detail {
 
 void yield(yield_state ystate)
 {
-    t_ystate = ystate;
+    *t_ystate = ystate;
     util::fiber::swap(*t_callee, *t_caller);
 }
 
 yield_state call(util::fiber* what, util::fiber* from)
 {
-    t_ystate = yield_state::invalid;
+    yield_state result;
+    t_ystate = &result;
     t_caller = from;
     t_callee = what;
     util::fiber::swap(*from, *what);
-    return t_ystate;
+    return result;
 }
 
 } } // namespace cppa::detail

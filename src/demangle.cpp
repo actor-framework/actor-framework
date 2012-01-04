@@ -41,7 +41,7 @@
 
 namespace cppa { namespace detail {
 
-std::string demangle(const char* decorated)
+std::string demangle(char const* decorated)
 {
     size_t size;
     int status;
@@ -54,7 +54,7 @@ std::string demangle(const char* decorated)
     }
     std::string result; // the undecorated typeid name
     result.reserve(size);
-    const char* cstr = undecorated;
+    char const* cstr = undecorated;
     // filter unnecessary characters from undecorated
     char c = *cstr;
     while (c != '\0')

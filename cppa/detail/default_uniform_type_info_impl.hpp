@@ -59,7 +59,7 @@ class is_stl_compliant_list
         // mutable pointer
         C* mc,
         // check if there's a 'void push_back()' that takes C::value_type
-        decltype(mc->push_back(typename C::value_type()))*                  = 0
+        decltype(mc->push_back(typename C::value_type()))* = nullptr
     )
     {
         return true;
@@ -93,7 +93,7 @@ class is_stl_compliant_map
         return true;
     }
 
-    static void cmp_help_fun(...) { }
+    static void cmp_help_fun(void*) { }
 
     typedef decltype(cmp_help_fun(static_cast<T*>(nullptr))) result_type;
 

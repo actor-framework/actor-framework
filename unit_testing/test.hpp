@@ -66,4 +66,8 @@ size_t test__primitive_variant();
 
 void test__queue_performance();
 
+using std::cout;
+using std::endl;
+using std::cerr;
+
 #endif // TEST_HPP

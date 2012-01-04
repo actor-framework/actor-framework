@@ -55,7 +55,7 @@ class is_iterable
     }
 
     // SFNINAE default
-    static void sfinae_fun(...) { }
+    static void sfinae_fun(void const*) { }
 
     typedef decltype(sfinae_fun(static_cast<T const*>(nullptr))) result_type;
 
