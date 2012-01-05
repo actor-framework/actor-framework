@@ -10,6 +10,8 @@ test
 *.tmp
 *.la
 *.lo
+*.dump
+*.beam
 .libs/
 .deps/
 libcppa.pc
