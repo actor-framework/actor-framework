@@ -32,13 +32,16 @@
 #include <limits>
 #include <stdexcept>
 
+#include "cppa/attachable.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
+#include "cppa/util/upgrade_lock_guard.hpp"
 
 namespace {
 
 typedef cppa::detail::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
 typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
+typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guard;
 
 } // namespace <anonymous>
 
@@ -48,31 +51,57 @@ actor_registry::actor_registry() : m_running(0), m_ids(1)
 {
 }
 
-void actor_registry::add(actor* whom)
+actor_ptr actor_registry::get(actor_id key) const
 {
-    exclusive_guard guard(m_instances_mtx);
-    m_instances.insert(std::make_pair(whom->id(), whom));
+    shared_guard guard(m_instances_mtx);
+    auto i = m_instances.find(key);
+    if (i != m_instances.end())
+    {
+        return i->second;
+    }
+    return nullptr;
 }
 
-void actor_registry::remove(actor* whom)
+void actor_registry::put(actor_id key, actor_ptr const& value)
 {
-    exclusive_guard guard(m_instances_mtx);
-    m_instances.erase(whom->id());
-}
-
-actor_ptr actor_registry::find(actor_id whom)
-{
-    actor_ptr result;
-    // lifetime scope of guard
+    bool add_attachable = false;
+    if (value != nullptr)
     {
         shared_guard guard(m_instances_mtx);
-        auto i = m_instances.find(whom);
-        if (i != m_instances.end())
+        auto i = m_instances.find(key);
+        if (i == m_instances.end())
         {
-            result.reset(i->second);
+            upgrade_guard uguard(guard);
+            m_instances.insert(std::make_pair(key, value));
+            add_attachable = true;
         }
     }
-    return std::move(result);
+    if (add_attachable)
+    {
+        struct eraser : attachable
+        {
+            actor_id m_id;
+            actor_registry* m_singleton;
+            eraser(actor_id id, actor_registry* s) : m_id(id), m_singleton(s)
+            {
+            }
+            void actor_exited(std::uint32_t)
+            {
+                m_singleton->erase(m_id);
+            }
+            bool matches(token const&)
+            {
+                return false;
+            }
+        };
+        const_cast<actor_ptr&>(value)->attach(new eraser(value->id(), this));
+    }
+}
+
+void actor_registry::erase(actor_id key)
+{
+    exclusive_guard guard(m_instances_mtx);
+    m_instances.insert(std::pair<actor_id, actor_ptr>(key, nullptr));
 }
 
 std::uint32_t actor_registry::next_id()
@@ -85,7 +114,7 @@ void actor_registry::inc_running()
     ++m_running;
 }
 
-size_t actor_registry::running()
+size_t actor_registry::running() const
 {
     return m_running.load();
 }

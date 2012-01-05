@@ -326,9 +326,13 @@ class po_peer
                     && content.utype_info_at(0) == typeid(atom_value)
                     && content.get_as<atom_value>(0) == atom(":Monitor"))
                 {
-                    auto receiver_ch = msg.receiver();
-                    actor_ptr receiver = dynamic_cast<actor*>(receiver_ch.get());
-                    if (receiver->parent_process() == *process_information::get())
+                    auto receiver = msg.receiver().downcast<actor>();
+                    //actor_ptr receiver = dynamic_cast<actor*>(receiver_ch.get());
+                    if (!receiver)
+                    {
+                        DEBUG("empty receiver");
+                    }
+                    else if (receiver->parent_process() == *process_information::get())
                     {
                         //cout << pinfo << " ':Monitor'; actor id = "
                         //     << sender->id() << endl;
@@ -352,8 +356,15 @@ class po_peer
                 }
                 else
                 {
-                    msg.receiver()->enqueue(msg.sender().get(),
-                                            std::move(msg.content()));
+                    if (msg.receiver())
+                    {
+                        msg.receiver()->enqueue(msg.sender().get(),
+                                                std::move(msg.content()));
+                    }
+                    else
+                    {
+                        DEBUG("empty receiver");
+                    }
                 }
                 m_rdbuf.reset();
                 m_state = wait_for_msg_size;

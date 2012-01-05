@@ -36,6 +36,7 @@
 #include <cstdint>
 
 #include "cppa/actor.hpp"
+#include "cppa/attachable.hpp"
 #include "cppa/detail/thread.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
@@ -48,14 +49,12 @@ class actor_registry
 
     actor_registry();
 
-    // adds @p whom to the list of known actors
-    void add(actor* whom);
+    // return nullptr if the actor wasn't put *or* finished execution
+    actor_ptr get(actor_id key) const;
 
-    // removes @p whom from the list of known actors
-    void remove(actor* whom);
+    void put(actor_id key, actor_ptr const& value);
 
-    // looks for an actor with id @p whom in the list of known actors
-    actor_ptr find(actor_id whom);
+    void erase(actor_id key);
 
     // gets the next free actor id
     actor_id next_id();
@@ -66,7 +65,7 @@ class actor_registry
     // decreases running-actors-count by one
     void dec_running();
 
-    size_t running();
+    size_t running() const;
 
     // blocks the caller until running-actors-count becomes @p expected
     void await_running_count_equal(size_t expected);
@@ -79,8 +78,8 @@ class actor_registry
     mutex m_running_mtx;
     condition_variable m_running_cv;
 
-    util::shared_spinlock m_instances_mtx;
-    std::map<std::uint32_t, actor*> m_instances;
+    mutable util::shared_spinlock m_instances_mtx;
+    std::map<std::uint32_t, actor_ptr> m_instances;
 
 };
 

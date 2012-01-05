@@ -70,23 +70,10 @@ actor::actor(const process_information_ptr& pptr)
     {
         throw std::logic_error("parent == nullptr");
     }
-    else
-    {
-        registry().add(this);
-    }
 }
 
 actor::~actor()
 {
-    if (!m_is_proxy)
-    {
-        registry().remove(this);
-    }
-}
-
-intrusive_ptr<actor> actor::by_id(actor_id whom)
-{
-    return registry().find(whom);
 }
 
 void actor::join(group_ptr& what)

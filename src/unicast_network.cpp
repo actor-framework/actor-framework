@@ -52,7 +52,9 @@
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/native_socket.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 
 using std::cout;
 using std::endl;
@@ -111,6 +113,7 @@ struct socket_guard
 void publish(actor_ptr& whom, std::uint16_t port)
 {
     if (!whom) return;
+    detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
     detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);

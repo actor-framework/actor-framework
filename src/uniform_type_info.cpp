@@ -58,6 +58,7 @@
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/addressed_message.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -181,16 +182,20 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 
  public:
 
-    static void s_serialize(const actor* ptr,
+    static void s_serialize(actor_ptr const& ptr,
                             serializer* sink,
                             const std::string name)
     {
-        if (!ptr)
+        if (ptr == nullptr)
         {
             serialize_nullptr(sink);
         }
         else
         {
+            if (ptr->is_proxy() == false)
+            {
+                singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
+            }
             primitive_variant ptup[3];
             ptup[0] = ptr->id();
             ptup[1] = ptr->parent_process().process_id();
@@ -231,7 +236,9 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
             if (   pinf->process_id() == get<std::uint32_t>(ptup[1])
                 && cppa::equal(nstr, pinf->node_id()))
             {
-                ptrref = actor::by_id(get<std::uint32_t>(ptup[0]));
+                auto id = get<std::uint32_t>(ptup[0]);
+                ptrref = singleton_manager::get_actor_registry()->get(id);
+                //ptrref = actor::by_id(get<std::uint32_t>(ptup[0]));
             }
             else
             {
@@ -248,7 +255,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 
     void serialize(const void* ptr, serializer* sink) const
     {
-        s_serialize(reinterpret_cast<const actor_ptr*>(ptr)->get(),
+        s_serialize(*reinterpret_cast<const actor_ptr*>(ptr),
                     sink,
                     name());
     }
@@ -265,11 +272,11 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
 
  public:
 
-    static void s_serialize(const group* ptr,
+    static void s_serialize(group_ptr const& ptr,
                             serializer* sink,
                             const std::string& name)
     {
-        if (!ptr)
+        if (ptr == nullptr)
         {
             serialize_nullptr(sink);
         }
@@ -314,7 +321,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
 
     void serialize(const void* ptr, serializer* sink) const
     {
-        s_serialize(reinterpret_cast<const group_ptr*>(ptr)->get(),
+        s_serialize(*reinterpret_cast<const group_ptr*>(ptr),
                     sink,
                     name());
     }
@@ -334,26 +341,26 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
 
  public:
 
-    static void s_serialize(const channel* ptr,
+    static void s_serialize(channel_ptr const& ptr,
                             serializer* sink,
                             const std::string& channel_type_name,
                             const std::string& actor_ptr_type_name,
                             const std::string& group_ptr_type_name)
     {
         sink->begin_object(channel_type_name);
-        if (!ptr)
+        if (ptr == nullptr)
         {
             serialize_nullptr(sink);
         }
         else
         {
-            const group* gptr;
-            auto aptr = dynamic_cast<const actor*>(ptr);
+            group_ptr gptr;
+            auto aptr = ptr.downcast<actor>();
             if (aptr)
             {
                 actor_ptr_tinfo::s_serialize(aptr, sink, actor_ptr_type_name);
             }
-            else if ((gptr = dynamic_cast<const group*>(ptr)) != nullptr)
+            else if ((gptr = ptr.downcast<group>()))
             {
                 group_ptr_tinfo::s_serialize(gptr, sink, group_ptr_type_name);
             }
@@ -408,7 +415,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
 
     void serialize(const void* instance, serializer* sink) const
     {
-        s_serialize(reinterpret_cast<const channel_ptr*>(instance)->get(),
+        s_serialize(*reinterpret_cast<const channel_ptr*>(instance),
                     sink,
                     name(),
                     actor_ptr_name,
@@ -501,8 +508,8 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
         const addressed_message& msg = *reinterpret_cast<const addressed_message*>(instance);
         const any_tuple& data = msg.content();
         sink->begin_object(name());
-        actor_ptr_tinfo::s_serialize(msg.sender().get(), sink, actor_ptr_name);
-        channel_ptr_tinfo::s_serialize(msg.receiver().get(),
+        actor_ptr_tinfo::s_serialize(msg.sender(), sink, actor_ptr_name);
+        channel_ptr_tinfo::s_serialize(msg.receiver(),
                                        sink,
                                        channel_ptr_name,
                                        actor_ptr_name,

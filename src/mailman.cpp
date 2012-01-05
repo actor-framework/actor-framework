@@ -36,7 +36,13 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/detail/post_office.hpp"
 
-//#define DEBUG(arg) std::cout << arg << std::endl
+/*
+#define DEBUG(arg)                                                             \
+    std::cout << "[process id: "                                               \
+              << cppa::process_information::get()->process_id()                \
+              << "] " << arg << std::endl
+*/
+
 #define DEBUG(unused) ((void) 0)
 
 // implementation of mailman.hpp

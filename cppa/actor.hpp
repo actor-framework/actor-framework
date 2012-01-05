@@ -195,13 +195,6 @@ class actor : public channel
      */
     inline actor_id id() const;
 
-    /**
-     * @brief Get the actor that has the unique identifier @p needle.
-     * @returns A pointer to the requestet actor or @c nullptr if no
-     *          running actor with the ID @p actor_id was found in this process.
-     */
-    static intrusive_ptr<actor> by_id(actor_id needle);
-
     inline bool is_proxy() const;
 
 };

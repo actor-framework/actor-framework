@@ -24,6 +24,7 @@
 
 #include "test.hpp"
 
+#include "cppa/self.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
@@ -132,6 +133,16 @@ size_t test__serialization()
     catch (std::exception& e)
     {
         CPPA_ERROR("exception: " << e.what());
+    }
+
+    {
+        any_tuple ttup = make_tuple(1, 2, actor_ptr(self));
+        binary_serializer bs;
+        bs << ttup;
+        binary_deserializer bd(bs.data(), bs.size());
+        any_tuple ttup2;
+        uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
+        CPPA_CHECK_EQUAL(ttup, ttup2);
     }
 
     {
