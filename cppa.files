@@ -244,3 +244,4 @@ cppa/self.hpp
 src/self.cpp
 cppa/behavior.hpp
 src/receive.cpp
+benchmarks/actor_creation.cpp

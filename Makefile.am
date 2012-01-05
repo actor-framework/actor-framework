@@ -226,4 +226,4 @@ libcppa_la_LDFLAGS = -release $(PACKAGE_VERSION) $(BOOST_CPPFLAGS)
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcppa.pc
 
-SUBDIRS = . unit_testing examples
+SUBDIRS = . unit_testing examples benchmarks
