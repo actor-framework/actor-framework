@@ -12,6 +12,7 @@ test
 *.lo
 *.dump
 *.beam
+*.class
 .libs/
 .deps/
 libcppa.pc
