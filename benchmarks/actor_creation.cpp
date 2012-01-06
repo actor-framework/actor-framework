@@ -28,40 +28,80 @@
 \******************************************************************************/
 
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+
 #include "cppa/cppa.hpp"
 #include "cppa/fsm_actor.hpp"
 
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::uint32_t;
 
 using namespace cppa;
 
 struct testee : event_based_actor
 {
+    actor_ptr m_parent;
     int m_x;
-    testee(int x) : m_x(x)
+    testee(actor_ptr const& parent, int x) : m_parent(parent), m_x(x)
     {
     }
     void init()
     {
         if (m_x > 0)
         {
-            spawn(new testee(m_x - 1));
-            spawn(new testee(m_x - 1));
+            spawn(new testee(this, m_x - 1));
+            spawn(new testee(this, m_x - 1));
+            become
+            (
+                on<atom("result"),uint32_t>() >> [=](uint32_t value1)
+                {
+                    become
+                    (
+                        on<atom("result"),uint32_t>() >> [=](uint32_t value2)
+                        {
+                            send(m_parent, atom("result"), value1 + value2);
+                            quit(exit_reason::normal);
+                        }
+                    );
+                }
+            );
+        }
+        else
+        {
+            send(m_parent, atom("result"), (std::uint32_t) 1);
         }
     }
 };
 
-void cr_stacked_actor(int x)
+void cr_stacked_actor(actor_ptr parent, int x)
 {
     if (x > 0)
     {
-        spawn(cr_stacked_actor, x - 1);
-        spawn(cr_stacked_actor, x - 1);
+        spawn(cr_stacked_actor, self, x - 1);
+        spawn(cr_stacked_actor, self, x - 1);
+        receive
+        (
+            on<atom("result"),uint32_t>() >> [&](uint32_t value1)
+            {
+                receive
+                (
+                    on<atom("result"),uint32_t>() >> [&](uint32_t value2)
+                    {
+                        send(parent, atom("result"), value1 + value2);
+                        quit(exit_reason::normal);
+                    }
+                );
+            }
+        );
+    }
+    else
+    {
+        send(parent, atom("result"), (std::uint32_t) 1);
     }
 }
 
@@ -85,17 +125,27 @@ int main(int argc, char** argv)
         }
         if (strcmp(argv[1], "stacked") == 0)
         {
-            spawn(cr_stacked_actor, num);
+            spawn(cr_stacked_actor, self, num);
         }
         else if (strcmp(argv[1], "event-based") == 0)
         {
-            spawn(new testee(num));
+            spawn(new testee(self, num));
         }
         else
         {
             usage();
             return 1;
         }
+        receive
+        (
+            on<atom("result"),uint32_t>() >> [=](uint32_t value)
+            {
+                //cout << "value = " << value << endl
+                //     << "expected => 2^" << num << " = "
+                //     << (1 << num) << endl;
+                assert(value == (((uint32_t) 1) << num));
+            }
+        );
         await_all_others_done();
     }
     else
