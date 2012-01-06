@@ -34,6 +34,7 @@
 #include <string>
 #include <type_traits>
 
+#include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 
 #include "cppa/util/is_array_of.hpp"
@@ -67,8 +68,11 @@ struct implicit_conversions
 
     typedef typename util::replace_type<subtype3, actor_ptr,
                                         std::is_same<actor*,T>,
-                                        std::is_same<local_actor*,T>>::type
+                                        std::is_same<local_actor*,T>,
+                                        std::is_same<self_type,T>,
+                                        std::is_same<self_type,T>>::type
             type;
+
 };
 
 } } // namespace cppa::detail

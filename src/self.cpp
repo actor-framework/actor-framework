@@ -80,6 +80,11 @@ local_actor* self_type::get_impl()
     return result;
 }
 
+actor* self_type::convert_impl()
+{
+    return get_impl();
+}
+
 local_actor* self_type::get_unchecked_impl()
 {
     return t_this_context.get();

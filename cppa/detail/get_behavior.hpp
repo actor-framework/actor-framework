@@ -62,7 +62,13 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
 
     F m_fun;
-    tdata<Args...> m_args;
+
+    typedef typename tdata_from_type_list<
+        typename util::type_list_apply<util::type_list<Args...>,
+                                       implicit_conversions>::type>::type
+        tdata_type;
+
+    tdata_type m_args;
 
  public:
 
@@ -95,7 +101,13 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
 
     F m_fun;
-    tdata<Args...> m_args;
+
+    typedef typename tdata_from_type_list<
+        typename util::type_list_apply<util::type_list<Args...>,
+                                       implicit_conversions>::type>::type
+        tdata_type;
+
+    tdata_type m_args;
 
  public:
 

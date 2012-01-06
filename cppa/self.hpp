@@ -32,7 +32,6 @@
 #define SELF_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/local_actor.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
 namespace cppa {
@@ -47,6 +46,8 @@ extern local_actor* self;
 
 #else
 
+class local_actor;
+
 // convertible<...> enables "actor_ptr this_actor = self;"
 class self_type : public convertible<self_type, actor*>
 {
@@ -57,6 +58,8 @@ class self_type : public convertible<self_type, actor*>
 
     static local_actor* get_impl();
 
+    static actor* convert_impl();
+
     self_type(self_type const&) = delete;
     self_type& operator=(self_type const&) = delete;
 
@@ -65,9 +68,9 @@ class self_type : public convertible<self_type, actor*>
     constexpr self_type() { }
 
     // "inherited" from convertible<...>
-    inline local_actor* do_convert() const
+    inline actor* do_convert() const
     {
-        return get_impl();
+        return convert_impl();
     }
 
     // allow "self" wherever an local_actor or actor pointer is expected
