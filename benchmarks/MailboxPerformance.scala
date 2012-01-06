@@ -10,24 +10,23 @@ object global {
 }
 
 class ThreadedReceiver(n: Long) extends Actor {
-    def act() {
+    override def act() {
         var i: Long = 0
         while (i < n)
             receive {
                 case Msg => i += 1
             }
-       Console println "received " + i + " messages"
     }
 }
 
 class ThreadlessReceiver(n: Long) extends Actor {
-    def rcv(rest: Long) {
+    var i: Long = 0
+    override def act() {
         react {
-            case Msg => if (rest > 0) rcv(rest-1);
+            case Msg =>
+                i += 1
+                if (i < n) act
         }
-    }
-    def act() {
-        rcv(n);
     }
 }
 
@@ -47,15 +46,6 @@ object MailboxPerformance {
     def usage() {
         Console println "usage: (threaded|threadless|akka) (num_threads) (msgs_per_thread)"
     }
-    def cr_threads(receiver: { def !(msg:Any): Unit }, threads: Int, msgs: Int) {
-            for (i <- 0 until threads)
-                (new java.lang.Thread {
-                    override def run() {
-                        for (j <- 0 until msgs)
-                            receiver ! Msg
-                    }
-                }).start
-    }
     def main(args: Array[String]) = {
         if (args.size != 3) {
             usage
@@ -63,18 +53,25 @@ object MailboxPerformance {
         }
         val threads = args(1).toInt
         val msgs = args(2).toInt
-        if (args(0) == "threaded") {
-            cr_threads((new ThreadedReceiver(threads*msgs)).start, threads, msgs)
+        val impl = List("threaded", "threadless", "akka").indexOf(args(0))
+        if (impl == -1) {
+            usage
         }
-        else if (args(0) == "threadless") {
-            cr_threads((new ThreadlessReceiver(threads*msgs)).start, threads, msgs)
+        else if (impl < 2) {
+            val rcvRef = if (impl == 0) (new ThreadedReceiver(threads*msgs)).start
+                         else (new ThreadlessReceiver(threads*msgs)).start
+            for (i <- 0 until threads)
+                (new java.lang.Thread {
+                    override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
+                }).start
         }
-        else if (args(0) == "akka") {
-            val a = actorOf(new AkkaReceiver(threads*msgs)).start
-            // akka actors define operator! with implicit argument
-            cr_threads(new AnyRef { def !(what: Any) { a ! what } }, threads, msgs)
+        else {
+            val rcvRef = actorOf(new AkkaReceiver(threads*msgs)).start
+            for (i <- 0 until threads)
+                (new java.lang.Thread {
+                    override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
+                }).start
             global.latch.await
         }
-        else usage
     }
 }
