@@ -73,7 +73,6 @@ void receiver(int64_t max)
             ++value;
             if (value == max)
             {
-std::cout << "received " << value << " messages" << endl;
                 quit(exit_reason::normal);
             }
         }
