@@ -80,20 +80,20 @@ void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& nod
 
 void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node)
 {
-    if (m_loop_stack.top().is_left())
+    auto& bhvr = m_loop_stack.top();
+    if (bhvr.is_left())
     {
-        handle_message(node, m_loop_stack.top().left());
+        handle_message(node, bhvr.left());
     }
     else
     {
-        handle_message(node, m_loop_stack.top().right());
+        handle_message(node, bhvr.right());
     }
 }
 
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
     self.set(this);
-    //set_self(this);
     auto done_cb = [&]()
     {
         m_state.store(abstract_scheduled_actor::done);
@@ -102,9 +102,9 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         callback->exec_done();
     };
 
-    bool actor_done = false;
     std::unique_ptr<queue_node> node;
-    do
+    for (;;)
+    //do
     {
         if (m_loop_stack.empty())
         {
@@ -149,20 +149,17 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         catch (actor_exited& what)
         {
             cleanup(what.reason());
-            actor_done = true;
+            done_cb();
+            return;
         }
         catch (...)
         {
             cleanup(exit_reason::unhandled_exception);
-            actor_done = true;
-        }
-        if (actor_done)
-        {
             done_cb();
             return;
         }
     }
-    while (callback->still_ready());
+    //while (callback->still_ready());
 }
 
 void abstract_event_based_actor::on_exit()

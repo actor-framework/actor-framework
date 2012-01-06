@@ -51,7 +51,7 @@ class either
 
     bool m_is_left;
 
-    void check_flag(bool flag, char const* side)
+    void check_flag(bool flag, char const* side) const
     {
         if (m_is_left != flag)
         {
@@ -212,25 +212,25 @@ class either
 
     Left& left()
     {
-        check_flag(true, "left");
+        //check_flag(true, "left");
         return m_left;
     }
 
     Left const& left() const
     {
-        check_flag(true, "left");
+        //check_flag(true, "left");
         return m_left;
     }
 
     Right& right()
     {
-        check_flag(false, "right");
+        //check_flag(false, "right");
         return m_right;
     }
 
     Right const& right() const
     {
-        check_flag(false, "right");
+        //check_flag(false, "right");
         return m_right;
     }
 

@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <iostream>
+
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
 #include "cppa/detail/invokable.hpp"
@@ -144,8 +146,9 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
             }
             case yield_state::ready:
             {
-                if (callback->still_ready()) break;
-                else return;
+                break;
+                //if (callback->still_ready()) break;
+                //else return;
             }
             case yield_state::blocked:
             {
@@ -154,8 +157,9 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
                 {
                     case abstract_scheduled_actor::ready:
                     {
-                        if (callback->still_ready()) break;
-                        else return;
+                        break;
+                        //if (callback->still_ready()) break;
+                        //else return;
                     }
                     case abstract_scheduled_actor::blocked:
                     {

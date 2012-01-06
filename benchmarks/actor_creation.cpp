@@ -43,66 +43,83 @@ using std::uint32_t;
 
 using namespace cppa;
 
-struct testee : event_based_actor
+struct testee : fsm_actor<testee>
 {
+    uint32_t m_v1;
     actor_ptr m_parent;
-    int m_x;
-    testee(actor_ptr const& parent, int x) : m_parent(parent), m_x(x)
+    behavior init_state;
+    behavior wait4result1;
+    behavior wait4result2;
+    testee(actor_ptr const& parent) : m_v1(0), m_parent(parent)
     {
-    }
-    void init()
-    {
-        if (m_x > 0)
-        {
-            spawn(new testee(this, m_x - 1));
-            spawn(new testee(this, m_x - 1));
-            become
-            (
-                on<atom("result"),uint32_t>() >> [=](uint32_t value1)
-                {
-                    become
-                    (
-                        on<atom("result"),uint32_t>() >> [=](uint32_t value2)
-                        {
-                            send(m_parent, atom("result"), value1 + value2);
-                            quit(exit_reason::normal);
-                        }
-                    );
-                }
-            );
-        }
-        else
-        {
-            send(m_parent, atom("result"), (std::uint32_t) 1);
-        }
-    }
-};
-
-void cr_stacked_actor(actor_ptr parent, int x)
-{
-    if (x > 0)
-    {
-        spawn(cr_stacked_actor, self, x - 1);
-        spawn(cr_stacked_actor, self, x - 1);
-        receive
+        init_state =
         (
-            on<atom("result"),uint32_t>() >> [&](uint32_t value1)
+            on<atom("spread"), int>() >> [=](int x)
             {
-                receive
-                (
-                    on<atom("result"),uint32_t>() >> [&](uint32_t value2)
-                    {
-                        send(parent, atom("result"), value1 + value2);
-                        quit(exit_reason::normal);
-                    }
-                );
+                if (x > 0)
+                {
+                    any_tuple msg = make_tuple(atom("spread"), x - 1);
+                    spawn(new testee(this)) << msg;
+                    spawn(new testee(this)) << msg;
+                    become(&wait4result1);
+                }
+                else
+                {
+                    send(m_parent, atom("result"), (std::uint32_t) 1);
+                    quit(exit_reason::normal);
+                }
+            }
+        );
+        wait4result1 =
+        (
+            on<atom("result"), uint32_t>() >> [=](uint32_t v1)
+            {
+                m_v1 = v1;
+                become(&wait4result2);
+            }
+        );
+        wait4result2 =
+        (
+            on<atom("result"), uint32_t>() >> [=](uint32_t v2)
+            {
+                send(m_parent, atom("result"), m_v1 + v2);
+                quit(exit_reason::normal);
             }
         );
     }
-    else
-    {
-        send(parent, atom("result"), (std::uint32_t) 1);
-    }
+};
+
+void stacked_actor(actor_ptr parent)
+{
+    receive
+    (
+        on<atom("spread"), int>() >> [&](int x)
+        {
+            if (x > 0)
+            {
+                any_tuple msg = make_tuple(atom("spread"), x - 1);
+                spawn(stacked_actor, self) << msg;
+                spawn(stacked_actor, self) << msg;
+                receive
+                (
+                    on<atom("result"), uint32_t>() >> [&](uint32_t v1)
+                    {
+                        receive
+                        (
+                            on<atom("result"),uint32_t>() >> [&](uint32_t v2)
+                            {
+                                send(parent, atom("result"), v1 + v2);
+                            }
+                        );
+                    }
+                );
+            }
+            else
+            {
+                send(parent, atom("result"), (std::uint32_t) 1);
+            }
+        }
+    );
 }
 
 void usage()
@@ -125,11 +142,11 @@ int main(int argc, char** argv)
         }
         if (strcmp(argv[1], "stacked") == 0)
         {
-            spawn(cr_stacked_actor, self, num);
+            send(spawn(stacked_actor, self), atom("spread"), num);
         }
         else if (strcmp(argv[1], "event-based") == 0)
         {
-            spawn(new testee(self, num));
+            send(spawn(new testee(self)), atom("spread"), num);
         }
         else
         {

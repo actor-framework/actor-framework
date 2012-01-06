@@ -13,6 +13,8 @@ test
 *.dump
 *.beam
 *.class
+benchmarks/mailbox_performance
+benchmarks/actor_creation
 .libs/
 .deps/
 libcppa.pc

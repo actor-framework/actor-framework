@@ -86,25 +86,27 @@ struct thread_pool_scheduler::worker
 
     void operator()()
     {
-        typedef decltype(now()) time_type;
+        //typedef decltype(now()) time_type;
         // enqueue as idle worker
         m_supervisor_queue->push_back(this);
         util::fiber fself;
         struct handler : abstract_scheduled_actor::resume_callback
         {
-            time_type timeout;
-            bool reschedule;
             abstract_scheduled_actor* job;
-            handler() : timeout(now()), reschedule(false), job(nullptr)
+            //time_type timeout;
+            //bool reschedule;
+            handler() : job(nullptr)//, timeout(now()), reschedule(false)
             {
             }
             bool still_ready()
             {
+                /*
                 if (timeout >= now())
                 {
                     reschedule = true;
                     return false;
                 }
+                */
                 return true;
             }
             void exec_done()
@@ -128,6 +130,7 @@ struct thread_pool_scheduler::worker
                 if (m_done) return;
             }
             h.job = const_cast<abstract_scheduled_actor*>(m_job);
+            /*
             // run actor up to 300ms
             h.reschedule = false;
             h.timeout = now();
@@ -137,6 +140,8 @@ struct thread_pool_scheduler::worker
             {
                 m_job_queue->push_back(h.job);
             }
+            */
+            h.job->resume(&fself, &h);
             m_job = nullptr;
             CPPA_MEMORY_BARRIER();
             m_supervisor_queue->push_back(this);
@@ -156,7 +161,9 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     worker_queue wqueue;
     std::vector<worker_ptr> workers;
     // init with at least two workers
-    size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 2);
+    //size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 2);
+    // init with 2 threads per core but no less than 4
+    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 4);
     auto new_worker = [&]()
     {
         worker_ptr wptr(new worker(&wqueue, jqueue));
@@ -180,10 +187,10 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         else
         {
             // fetch next idle worker (wait up to 500ms)
-            worker* w = nullptr;
-            auto timeout = now();
-            timeout += std::chrono::milliseconds(500);
-            while (!w)
+            //worker* w = nullptr;
+            //auto timeout = now();
+            //timeout += std::chrono::milliseconds(500);
+            /*while (!w)
             {
                 w = wqueue.try_pop(timeout);
                 // all workers are blocked since 500ms, start a new one
@@ -192,6 +199,8 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                     new_worker();
                 }
             }
+            */
+            worker* w = wqueue.pop();
             // lifetime scope of guard
             {
                 guard_type guard(w->m_mtx);
