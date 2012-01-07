@@ -9,10 +9,10 @@ testee(Pid) ->
             spawn(actor_creation, testee, [self()]) ! {spread, X-1},
             spawn(actor_creation, testee, [self()]) ! {spread, X-1},
             receive
-                {result, X1} ->
+                {result, R1} ->
                     receive
-                        {result, X2} ->
-                            Pid ! {result, (X1+X2)}
+                        {result, R2} ->
+                            Pid ! {result, (R1+R2)}
                     end
             end
     end.
@@ -22,12 +22,12 @@ start(X) ->
     N = list_to_integer(atom_to_list(H)),
     spawn(actor_creation, testee, [self()]) ! {spread, N},
     receive
-        {result, X} ->
+        {result, R} ->
             if
-                X == (2 bsl N) ->
-                    X;
+                R == (1 bsl N) ->
+                    R;
                 true ->
-                    error("unexpted result!")
+                    error("unexpected result!")
             end
     end.
 
