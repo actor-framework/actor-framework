@@ -43,7 +43,7 @@
 
 namespace {
 
-void erase_trailing_newline(std::string& str)
+inline void erase_trailing_newline(std::string& str)
 {
     while (!str.empty() && (*str.rbegin()) == '\n')
     {
@@ -96,7 +96,7 @@ cppa::process_information* compute_proc_info()
     return new cppa::process_information(getpid(), node_id);
 }
 
-cppa::intrusive_ptr<cppa::process_information> s_pinfo;
+cppa::process_information_ptr s_pinfo;
 
 struct pinfo_manager
 {
@@ -151,8 +151,8 @@ void node_id_from_string(const std::string& hash,
     }
 }
 
-bool equal(const std::string& hash,
-           const process_information::node_id_type& node_id)
+bool equal(std::string const& hash,
+           process_information::node_id_type const& node_id)
 {
     if (hash.size() != (node_id.size() * 2))
     {
@@ -180,23 +180,23 @@ bool equal(const std::string& hash,
     return true;
 }
 
-process_information::process_information(const process_information& other)
+process_information::process_information(process_information const& other)
     : super(), m_process_id(other.process_id()), m_node_id(other.node_id())
 {
 }
 
-process_information::process_information(std::uint32_t a, const std::string& b)
+process_information::process_information(std::uint32_t a, std::string const& b)
     : m_process_id(a)
 {
     node_id_from_string(b, m_node_id);
 }
 
-process_information::process_information(std::uint32_t a, const node_id_type& b)
+process_information::process_information(std::uint32_t a, node_id_type const& b)
     : m_process_id(a), m_node_id(b)
 {
 }
 
-std::string to_string(const process_information::node_id_type& node_id)
+std::string to_string(process_information::node_id_type const& node_id)
 {
     std::ostringstream oss;
     oss << std::hex;
@@ -209,15 +209,15 @@ std::string to_string(const process_information::node_id_type& node_id)
     return oss.str();
 }
 
-const intrusive_ptr<process_information>& process_information::get()
+intrusive_ptr<process_information> const& process_information::get()
 {
     return s_pinfo;
 }
 
-int process_information::compare(const process_information& other) const
+int process_information::compare(process_information const& other) const
 {
-    int tmp = strncmp(reinterpret_cast<const char*>(node_id().data()),
-                      reinterpret_cast<const char*>(other.node_id().data()),
+    int tmp = strncmp(reinterpret_cast<char const*>(node_id().data()),
+                      reinterpret_cast<char const*>(other.node_id().data()),
                       node_id_size);
     if (tmp == 0)
     {
@@ -228,7 +228,7 @@ int process_information::compare(const process_information& other) const
     return tmp;
 }
 
-std::string to_string(const process_information& what)
+std::string to_string(process_information const& what)
 {
     std::ostringstream oss;
     oss << what.process_id() << "@" << to_string(what.node_id());
