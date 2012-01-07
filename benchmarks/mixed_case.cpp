@@ -42,7 +42,7 @@ using std::endl;
 using std::int64_t;
 using std::uint64_t;
 
-typedef std::vector<uint64_t>;
+typedef std::vector<uint64_t> factors;
 
 using namespace cppa;
 
@@ -77,6 +77,13 @@ factors factorize(uint64_t n)
     }
     result.push_back(d);
     return std::move(result);
+}
+
+void check_factors(factors const& vec)
+{
+    assert(vec.size() == 2);
+    assert(vec[0] == s_factor1);
+    assert(vec[1] == s_factor2);
 }
 
 struct fsm_worker : fsm_actor<fsm_worker>
@@ -120,6 +127,7 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
     actor_ptr next;
     actor_ptr worker;
     behavior init_state;
+    int remainig_results;
     void new_ring(int ring_size)
     {
         send(worker, atom("calc"), s_task_n);
@@ -128,10 +136,12 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
         {
             next = spawn(new fsm_chain_link(next));
         }
+        ++remainig_results;
         send(next, atom("token"), s_num_messages);
     }
     fsm_chain_master() : iteration(0)
     {
+        remainig_results = 0;
         worker = spawn(new fsm_worker);
         init_state =
         (
@@ -153,7 +163,25 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
                             {
                                 send(worker, atom(":Exit"),
                                              exit_reason::user_defined);
-                                quit(exit_reason::normal);
+                                if (remainig_results == 0)
+                                {
+                                    quit(exit_reason::normal);
+                                }
+                                else
+                                {
+                                    become
+                                    (
+                                        on<atom("result"), factors>() >> [=](factors const& vec)
+                                        {
+                                            check_factors(vec);
+                                            --remainig_results;
+                                            if (remainig_results == 0)
+                                            {
+                                                quit(exit_reason::normal);
+                                            }
+                                        }
+                                    );
+                                }
                             }
                         }
                         else
@@ -161,11 +189,10 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
                             send(next, atom("token"), v - 1);
                         }
                     },
-                    on<atom("result"), factors>() >> [](factors const& vec)
+                    on<atom("result"), factors>() >> [=](factors const& vec)
                     {
-                        assert(vec.size() == 2);
-                        assert(vec[0] == s_factor1);
-                        assert(vec[1] == s_factor2);
+                        check_factors(vec);
+                        --remainig_results;
                     }
                 );
             }
@@ -202,6 +229,7 @@ void chain_master()
         );
     });
     actor_ptr next;
+    int remaining_results = 0;
     auto new_ring = [&](int ring_size)
     {
         send(worker, atom("calc"), s_task_n);
@@ -211,6 +239,7 @@ void chain_master()
             next = spawn(chain_link, next);
         }
         send(next, atom("token"), s_num_messages);
+        ++remaining_results;
     };
     receive
     (
@@ -234,14 +263,14 @@ void chain_master()
                         send(next, atom("token"), v - 1);
                     }
                 },
-                on<atom("result"), factors>() >> [](factors const& vec)
+                on<atom("result"), factors>() >> [&](factors const& vec)
                 {
-                    assert(vec.size() == 2);
-                    assert(vec[0] == s_factor1);
-                    assert(vec[1] == s_factor2);
+                    --remaining_results;
+                    check_factors(vec);
                 }
             )
-            .until([&]() { return iteration == repetitions; });
+            .until([&]() { return    iteration == repetitions
+                                  && remaining_results == 0; });
         }
     );
     send(worker, atom(":Exit"), exit_reason::user_defined);

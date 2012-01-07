@@ -246,3 +246,4 @@ cppa/behavior.hpp
 src/receive.cpp
 benchmarks/actor_creation.cpp
 benchmarks/mailbox_performance.cpp
+benchmarks/mixed_case.cpp
