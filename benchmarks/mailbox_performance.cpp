@@ -35,6 +35,7 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/fsm_actor.hpp"
+#include "cppa/detail/thread.hpp"
 
 using std::cout;
 using std::cerr;
@@ -66,15 +67,11 @@ struct fsm_receiver : fsm_actor<fsm_receiver>
 void receiver(int64_t max)
 {
     int64_t value;
-    receive_loop
+    receive_while([&]() { return value < max; })
     (
         on(atom("msg")) >> [&]()
         {
             ++value;
-            if (value == max)
-            {
-                quit(exit_reason::normal);
-            }
         }
     );
 }
@@ -130,7 +127,7 @@ int main(int argc, char** argv)
         }
         for (int64_t i = 0; i < num_sender; ++i)
         {
-            spawn<detached>(sender, testee, num_msgs);
+            detail::thread(sender, testee, num_msgs).detach();
         }
         await_all_others_done();
     }
