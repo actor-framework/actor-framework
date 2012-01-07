@@ -15,6 +15,7 @@ test
 *.class
 benchmarks/mailbox_performance
 benchmarks/actor_creation
+theron_mailbox_performance
 .libs/
 .deps/
 libcppa.pc
