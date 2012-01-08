@@ -57,7 +57,7 @@ struct fsm_receiver : fsm_actor<fsm_receiver>
                 ++m_value;
                 if (m_value == max)
                 {
-                    quit(exit_reason::normal);
+                    become_void();
                 }
             }
         );

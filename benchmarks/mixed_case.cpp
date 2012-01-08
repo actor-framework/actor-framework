@@ -114,8 +114,12 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link>
                 send(next, atom("token"), v);
                 if (v == 0)
                 {
-                    quit(exit_reason::normal);
+                    become_void();
                 }
+            },
+            on(atom("done")) >> [=]()
+            {
+                become_void();
             }
         );
     }
@@ -165,7 +169,8 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
                                              exit_reason::user_defined);
                                 if (remainig_results == 0)
                                 {
-                                    quit(exit_reason::normal);
+                                    send(worker, atom("done"));
+                                    become_void();
                                 }
                                 else
                                 {
@@ -177,7 +182,8 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
                                             --remainig_results;
                                             if (remainig_results == 0)
                                             {
-                                                quit(exit_reason::normal);
+                                                send(worker, atom("done"));
+                                                become_void();
                                             }
                                         }
                                     );
@@ -203,30 +209,38 @@ void tst();
 
 void chain_link(actor_ptr next)
 {
-    receive_loop
+    bool done = false;
+    do_receive
     (
         on<atom("token"), int>() >> [&](int v)
         {
             send(next, atom("token"), v);
             if (v == 0)
             {
-                quit(exit_reason::normal);
+                done = true;
             }
         }
-    );
+    )
+    .until([&]() { return done == true; });
 }
 
 void chain_master()
 {
     auto worker = spawn([]()
     {
-        receive_loop
+        bool done = false;
+        do_receive
         (
-            on<atom("calc"), uint64_t>() >> [=](uint64_t what)
+            on<atom("calc"), uint64_t>() >> [](uint64_t what)
             {
                 reply(atom("result"), factorize(what));
+            },
+            on(atom("done")) >> [&]()
+            {
+                done = true;
             }
-        );
+        )
+        .until([&]() { return done == true; });
     });
     actor_ptr next;
     int remaining_results = 0;
@@ -273,7 +287,7 @@ void chain_master()
                                   && remaining_results == 0; });
         }
     );
-    send(worker, atom(":Exit"), exit_reason::user_defined);
+    send(worker, atom("done"));
 }
 
 template<typename F>
