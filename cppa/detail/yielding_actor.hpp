@@ -49,7 +49,8 @@ class yielding_actor : public abstract_scheduled_actor
 
     typedef abstract_scheduled_actor super;
     typedef super::queue_node queue_node;
-    typedef util::singly_linked_list<queue_node> queue_node_buffer;
+    typedef super::queue_node_ptr queue_node_ptr;
+    typedef super::queue_node_buffer queue_node_buffer;
 
     util::fiber m_fiber;
     scheduled_actor* m_behavior;

@@ -163,11 +163,13 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     //size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 2);
     // init with 2 threads per core but no less than 4
     size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 4);
-    auto new_worker = [&]()
+    size_t max_workers = num_workers * 4;
+    auto new_worker = [&]() -> worker*
     {
         worker_ptr wptr(new worker(&wqueue, jqueue));
         wptr->start();
         workers.push_back(std::move(wptr));
+        return workers.back().get();
     };
     for (size_t i = 0; i < num_workers; ++i)
     {
@@ -185,18 +187,29 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
         }
         else
         {
-            // fetch next idle worker (wait up to 500ms)
-            //worker* w = nullptr;
-            //auto timeout = now();
-            //timeout += std::chrono::milliseconds(500);
-            /*while (!w)
+            /*
+            // fetch next idle worker
+            worker* w = nullptr;
+            if (num_workers < max_workers)
             {
-                w = wqueue.try_pop(timeout);
-                // all workers are blocked since 500ms, start a new one
+                w = wqueue.try_pop();
                 if (!w)
                 {
-                    new_worker();
+                    // fetch next idle worker (wait up to 500ms)
+                    timeout = now();
+                    timeout += std::chrono::milliseconds(500);
+                    w = wqueue.try_pop(timeout);
+                    // all workers are blocked since 500ms, start a new one
+                    if (!w)
+                    {
+                        w = new_worker();
+                        ++num_workers;
+                    }
                 }
+            }
+            else
+            {
+                w = wqueue.pop();
             }
             */
             worker* w = wqueue.pop();

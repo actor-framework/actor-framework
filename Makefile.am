@@ -178,6 +178,7 @@ nobase_library_include_HEADERS = \
   cppa/util/compare_tuples.hpp \
   cppa/util/concat_type_lists.hpp \
   cppa/util/conjunction.hpp \
+  cppa/util/default_deallocator.hpp \
   cppa/util/disable_if.hpp \
   cppa/util/disjunction.hpp \
   cppa/util/duration.hpp \

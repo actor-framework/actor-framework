@@ -32,13 +32,15 @@
 #define SINGLY_LINKED_LIST_HPP
 
 #include <utility>
+#include "cppa/util/default_deallocator.hpp"
 
 namespace cppa { namespace util {
 
-template<typename T>
+template<typename T, class Deallocator = default_deallocator<T> >
 class singly_linked_list
 {
 
+    Deallocator d;
     T* m_head;
     T* m_tail;
 
@@ -82,7 +84,7 @@ class singly_linked_list
         while (m_head)
         {
             T* next = m_head->next;
-            delete m_head;
+            d(m_head);
             m_head = next;
         }
         m_head = m_tail = nullptr;

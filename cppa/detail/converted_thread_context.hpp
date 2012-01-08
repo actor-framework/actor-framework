@@ -61,6 +61,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     typedef abstract_actor<local_actor> super;
     typedef super::queue_node queue_node;
+    typedef super::queue_node_ptr queue_node_ptr;
 
  public:
 
@@ -79,14 +80,15 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void dequeue(timed_invoke_rules& rules)  /*override*/;
 
-    inline util::single_reader_queue<queue_node>& mailbox()
+    inline decltype(m_mailbox)& mailbox()
     {
         return m_mailbox;
     }
 
  private:
 
-    typedef util::singly_linked_list<queue_node> queue_node_buffer;
+    typedef util::singly_linked_list<queue_node,super::queue_node_deallocator>
+            queue_node_buffer;
 
     enum throw_on_exit_result
     {
@@ -95,7 +97,7 @@ class converted_thread_context : public abstract_actor<local_actor>
     };
 
     // returns true if node->msg was accepted by rules
-    bool dq(std::unique_ptr<queue_node>& node,
+    bool dq(queue_node_ptr& node,
             invoke_rules_base& rules,
             queue_node_buffer& buffer);
 

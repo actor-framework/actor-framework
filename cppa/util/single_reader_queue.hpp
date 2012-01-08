@@ -34,17 +34,19 @@
 #include <atomic>
 
 #include "cppa/detail/thread.hpp"
+#include "cppa/util/default_deallocator.hpp"
 
 namespace cppa { namespace util {
 
 /**
  * @brief An intrusive, thread safe queue implementation.
  */
-template<typename T>
+template<typename T, class Deallocator = default_deallocator<T> >
 class single_reader_queue
 {
 
     typedef detail::unique_lock<detail::mutex> lock_type;
+    Deallocator d;
 
  public:
 
@@ -170,7 +172,8 @@ class single_reader_queue
         {
             element_type* tmp = e;
             e = e->next;
-            delete tmp;
+            d(tmp);
+            //delete tmp;
         }
     }
 

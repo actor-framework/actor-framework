@@ -61,18 +61,20 @@ void converted_thread_context::cleanup(std::uint32_t reason)
 
 void converted_thread_context::enqueue(actor* sender, any_tuple&& msg)
 {
-    m_mailbox.push_back(new queue_node(sender, std::move(msg)));
+    m_mailbox.push_back(fetch_node(sender, std::move(msg)));
+    //m_mailbox.push_back(new queue_node(sender, std::move(msg)));
 }
 
 void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 {
-    m_mailbox.push_back(new queue_node(sender, msg));
+    m_mailbox.push_back(fetch_node(sender, msg));
+    //m_mailbox.push_back(new queue_node(sender, msg));
 }
 
 void converted_thread_context::dequeue(invoke_rules& rules) /*override*/
 {
     queue_node_buffer buffer;
-    std::unique_ptr<queue_node> node(m_mailbox.pop());
+    queue_node_ptr node(m_mailbox.pop());
     while (dq(node, rules, buffer) == false)
     {
         node.reset(m_mailbox.pop());
@@ -84,7 +86,7 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
     auto timeout = now();
     timeout += rules.timeout();
     queue_node_buffer buffer;
-    std::unique_ptr<queue_node> node(m_mailbox.try_pop());
+    queue_node_ptr node(m_mailbox.try_pop());
     do
     {
         while (!node)
@@ -119,7 +121,7 @@ converted_thread_context::throw_on_exit(const any_tuple& msg)
     return not_an_exit_signal;
 }
 
-bool converted_thread_context::dq(std::unique_ptr<queue_node>& node,
+bool converted_thread_context::dq(queue_node_ptr& node,
                                   invoke_rules_base& rules,
                                   queue_node_buffer& buffer)
 {

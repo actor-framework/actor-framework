@@ -46,7 +46,6 @@ typedef std::vector<uint64_t> factors;
 
 using namespace cppa;
 
-constexpr int s_num_messages = 1000;
 constexpr uint64_t s_task_n = uint64_t(86028157)*329545133;
 constexpr uint64_t s_factor1 = 86028157;
 constexpr uint64_t s_factor2 = 329545133;
@@ -54,17 +53,14 @@ constexpr uint64_t s_factor2 = 329545133;
 factors factorize(uint64_t n)
 {
     factors result;
-    uint64_t d = 2;
     if (n <= 3)
     {
         result.push_back(n);
         return std::move(result);
     }
-    // while the factor being tested
-    // is lower than the number to factorize
+    uint64_t d = 2;
     while(d < n)
     {
-        // if valid prime
         if((n % d) == 0)
         {
             result.push_back(d);
@@ -88,14 +84,19 @@ void check_factors(factors const& vec)
 
 struct fsm_worker : fsm_actor<fsm_worker>
 {
+    actor_ptr mc;
     behavior init_state;
-    fsm_worker()
+    fsm_worker(actor_ptr const& msgcollector) : mc(msgcollector)
     {
         init_state =
         (
             on<atom("calc"), uint64_t>() >> [=](uint64_t what)
             {
-                reply(atom("result"), factorize(what));
+                send(mc, atom("result"), factorize(what));
+            },
+            on(atom("done")) >> [=]()
+            {
+                become_void();
             }
         );
     }
@@ -111,15 +112,8 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link>
         (
             on<atom("token"), int>() >> [=](int v)
             {
-                send(next, atom("token"), v);
-                if (v == 0)
-                {
-                    become_void();
-                }
-            },
-            on(atom("done")) >> [=]()
-            {
-                become_void();
+                next->enqueue(nullptr, std::move(last_received()));
+                if (v == 0) become_void();
             }
         );
     }
@@ -128,84 +122,80 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link>
 struct fsm_chain_master : fsm_actor<fsm_chain_master>
 {
     int iteration;
+    actor_ptr mc;
     actor_ptr next;
     actor_ptr worker;
     behavior init_state;
     int remainig_results;
-    void new_ring(int ring_size)
+    void new_ring(int ring_size, int initial_token_value)
     {
         send(worker, atom("calc"), s_task_n);
+        ++remainig_results;
         next = self;
         for (int i = 1; i < ring_size; ++i)
         {
             next = spawn(new fsm_chain_link(next));
         }
-        ++remainig_results;
-        send(next, atom("token"), s_num_messages);
+        send(next, atom("token"), initial_token_value);
     }
-    fsm_chain_master() : iteration(0)
+    fsm_chain_master(actor_ptr msgcollector) : iteration(0), mc(msgcollector)
     {
         remainig_results = 0;
-        worker = spawn(new fsm_worker);
+        worker = spawn(new fsm_worker(msgcollector));
         init_state =
         (
-            on<atom("init"), int, int>() >> [=](int ring_size, int repetitions)
+            on<atom("init"), int, int, int>() >> [=](int rs, int itv, int n)
             {
                 iteration = 0;
-                new_ring(ring_size);
+                new_ring(rs, itv);
                 become
                 (
                     on<atom("token"), int>() >> [=](int v)
                     {
                         if (v == 0)
                         {
-                            if (++iteration < repetitions)
+                            if (++iteration < n)
                             {
-                                new_ring(ring_size);
+                                new_ring(rs, itv);
                             }
                             else
                             {
-                                send(worker, atom(":Exit"),
-                                             exit_reason::user_defined);
-                                if (remainig_results == 0)
-                                {
-                                    send(worker, atom("done"));
-                                    become_void();
-                                }
-                                else
-                                {
-                                    become
-                                    (
-                                        on<atom("result"), factors>() >> [=](factors const& vec)
-                                        {
-                                            check_factors(vec);
-                                            --remainig_results;
-                                            if (remainig_results == 0)
-                                            {
-                                                send(worker, atom("done"));
-                                                become_void();
-                                            }
-                                        }
-                                    );
-                                }
+                                send(worker, atom("done"));
+                                send(mc, atom("masterdone"));
+                                become_void();
                             }
                         }
                         else
                         {
                             send(next, atom("token"), v - 1);
                         }
-                    },
-                    on<atom("result"), factors>() >> [=](factors const& vec)
-                    {
-                        check_factors(vec);
-                        --remainig_results;
                     }
                 );
             }
         );
     }
 };
-void tst();
+
+struct fsm_supervisor : fsm_actor<fsm_supervisor>
+{
+    int left;
+    behavior init_state;
+    fsm_supervisor(int num_msgs) : left(num_msgs)
+    {
+        init_state =
+        (
+            on(atom("masterdone")) >> [=]()
+            {
+                if (--left == 0) become_void();
+            },
+            on<atom("result"), factors>() >> [=](factors const& vec)
+            {
+                check_factors(vec);
+                if (--left == 0) become_void();
+            }
+        );
+    }
+};
 
 void chain_link(actor_ptr next)
 {
@@ -214,7 +204,7 @@ void chain_link(actor_ptr next)
     (
         on<atom("token"), int>() >> [&](int v)
         {
-            send(next, atom("token"), v);
+            next->enqueue(nullptr, std::move(last_received()));
             if (v == 0)
             {
                 done = true;
@@ -224,16 +214,17 @@ void chain_link(actor_ptr next)
     .until([&]() { return done == true; });
 }
 
-void chain_master()
+void chain_master(actor_ptr msgcollector)
 {
-    auto worker = spawn([]()
+    auto worker = spawn([=]()
     {
+        actor_ptr mc = msgcollector;
         bool done = false;
         do_receive
         (
-            on<atom("calc"), uint64_t>() >> [](uint64_t what)
+            on<atom("calc"), uint64_t>() >> [&](uint64_t what)
             {
-                reply(atom("result"), factorize(what));
+                send(mc, atom("result"), factorize(what));
             },
             on(atom("done")) >> [&]()
             {
@@ -242,62 +233,80 @@ void chain_master()
         )
         .until([&]() { return done == true; });
     });
-    actor_ptr next;
-    int remaining_results = 0;
-    auto new_ring = [&](int ring_size)
+    auto new_ring = [&](int ring_size, int initial_token_value) -> actor_ptr
     {
         send(worker, atom("calc"), s_task_n);
-        next = self;
+        actor_ptr next = self;
         for (int i = 1; i < ring_size; ++i)
         {
             next = spawn(chain_link, next);
         }
-        send(next, atom("token"), s_num_messages);
-        ++remaining_results;
+        send(next, atom("token"), initial_token_value);
+        return next;
     };
     receive
     (
-        on<atom("init"), int, int>() >> [&](int ring_size, int repetitions)
+        on<atom("init"), int, int, int>() >> [&](int rs, int itv, int n)
         {
             int iteration = 0;
-            new_ring(ring_size);
+            auto next = new_ring(rs, itv);
             do_receive
             (
                 on<atom("token"), int>() >> [&](int v)
                 {
                     if (v == 0)
                     {
-                        if (++iteration < repetitions)
+                        if (++iteration < n)
                         {
-                            new_ring(ring_size);
+                            next = new_ring(rs, itv);
                         }
                     }
                     else
                     {
                         send(next, atom("token"), v - 1);
                     }
-                },
-                on<atom("result"), factors>() >> [&](factors const& vec)
-                {
-                    --remaining_results;
-                    check_factors(vec);
                 }
             )
-            .until([&]() { return    iteration == repetitions
-                                  && remaining_results == 0; });
+            .until([&]() { return iteration == n; });
         }
     );
+    send(msgcollector, atom("masterdone"));
     send(worker, atom("done"));
 }
 
+void supervisor(int num_msgs)
+{
+    do_receive
+    (
+        on(atom("masterdone")) >> [&]()
+        {
+            --num_msgs;
+        },
+        on<atom("result"), factors>() >> [&](factors const& vec)
+        {
+            --num_msgs;
+            check_factors(vec);
+        }
+    )
+    .until([&]() { return num_msgs == 0; });
+}
+
 template<typename F>
-void run_test(F&& spawn_impl, int ring_size, int repetitions)
+void run_test(F&& spawn_impl,
+              int num_rings, int ring_size,
+              int initial_token_value, int repetitions)
 {
     std::vector<actor_ptr> masters; // of the universe
-    for (int i = 0; i < 10; ++i)
+    // each master sends one masterdone message and one
+    // factorization is calculated per repetition
+    //auto supermaster = spawn(supervisor, num_rings+repetitions);
+    for (int i = 0; i < num_rings; ++i)
     {
         masters.push_back(spawn_impl());
-        send(masters.back(), atom("init"), ring_size, repetitions);
+        send(masters.back(), atom("init"),
+                             ring_size,
+                             initial_token_value,
+                             repetitions);
     }
     await_all_others_done();
 }
@@ -329,20 +338,25 @@ T rd(char const* cstr)
 int main(int argc, char** argv)
 {
     announce<factors>();
-    if (argc == 4)
+    if (argc == 6)
     {
-        int ring_size = rd<int>(argv[2]);
-        int repetitions = rd<int>(argv[3]);
+        int num_rings = rd<int>(argv[2]);
+        int ring_size = rd<int>(argv[3]);
+        int initial_token_value = rd<int>(argv[4]);
+        int repetitions = rd<int>(argv[5]);
+        int num_msgs = num_rings + (num_rings * repetitions);
         if (strcmp(argv[1], "event-based") == 0)
         {
-            run_test([]() { return spawn(new fsm_chain_master); },
-                     ring_size, repetitions);
+            auto mc = spawn(new fsm_supervisor(num_msgs));
+            run_test([&]() { return spawn(new fsm_chain_master(mc)); },
+                     num_rings, ring_size, initial_token_value, repetitions);
             return 0;
         }
         else if (strcmp(argv[1], "stacked") == 0)
         {
-            run_test([]() { return spawn(chain_master); },
-                     ring_size, repetitions);
+            auto mc = spawn(supervisor, num_msgs);
+            run_test([&]() { return spawn(chain_master, mc); },
+                     num_rings, ring_size, initial_token_value, repetitions);
             return 0;
         }
     }

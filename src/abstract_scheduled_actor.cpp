@@ -91,12 +91,14 @@ void abstract_scheduled_actor::enqueue_node(queue_node* node)
 
 void abstract_scheduled_actor::enqueue(actor* sender, any_tuple&& msg)
 {
-    enqueue_node(new queue_node(sender, std::move(msg)));
+    enqueue_node(fetch_node(sender, std::move(msg)));
+    //enqueue_node(new queue_node(sender, std::move(msg)));
 }
 
 void abstract_scheduled_actor::enqueue(actor* sender, any_tuple const& msg)
 {
-    enqueue_node(new queue_node(sender, msg));
+    enqueue_node(fetch_node(sender, msg));
+    //enqueue_node(new queue_node(sender, msg));
 }
 
 int abstract_scheduled_actor::compare_exchange_state(int expected,
@@ -146,7 +148,7 @@ auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
     return ordinary_message;
 }
 
-auto abstract_scheduled_actor::dq(std::unique_ptr<queue_node>& node,
+auto abstract_scheduled_actor::dq(queue_node_ptr& node,
                                   invoke_rules_base& rules,
                                   queue_node_buffer& buffer) -> dq_result
 {

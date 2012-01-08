@@ -79,13 +79,13 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  private:
 
-    void handle_message(std::unique_ptr<queue_node>& node,
+    void handle_message(queue_node_ptr& node,
                         invoke_rules& behavior);
 
-    void handle_message(std::unique_ptr<queue_node>& node,
+    void handle_message(queue_node_ptr& node,
                         timed_invoke_rules& behavior);
 
-    void handle_message(std::unique_ptr<queue_node>& node);
+    void handle_message(queue_node_ptr& node);
 
  protected:
 

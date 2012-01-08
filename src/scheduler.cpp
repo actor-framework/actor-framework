@@ -99,11 +99,13 @@ struct scheduler_helper
 
 void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
+    typedef abstract_actor<local_actor>::queue_node_ptr queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();
-    std::multimap<decltype(detail::now()), decltype(queue.pop())> messages;
-    decltype(queue.pop()) msg_ptr = nullptr;
+    std::multimap<decltype(detail::now()), queue_node_ptr> messages;
+    queue_node_ptr msg_ptr;
+    //decltype(queue.pop()) msg_ptr = nullptr;
     decltype(detail::now()) now;
     bool done = false;
     // message handling rules
@@ -117,8 +119,6 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
             timeout += d;
             messages.insert(std::make_pair(std::move(timeout),
                                            std::move(msg_ptr)));
-            // do not delete this msg_ptr (now)
-            msg_ptr = nullptr;
         },
         on<atom(":_DIE")>() >> [&]()
         {
@@ -128,11 +128,11 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     // loop
     while (!done)
     {
-        while (msg_ptr == nullptr)
+        while (!msg_ptr)
         {
             if (messages.empty())
             {
-                msg_ptr = queue.pop();
+                msg_ptr.reset(queue.pop());
             }
             else
             {
@@ -141,7 +141,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 auto it = messages.begin();
                 while (it != messages.end() && (it->first) <= now)
                 {
-                    auto ptr = it->second;
+                    abstract_actor<local_actor>::queue_node_ptr ptr(std::move(it->second));
+                    //auto ptr = it->second;
                     auto whom = const_cast<actor_ptr*>(
                                     reinterpret_cast<actor_ptr const*>(
                                         ptr->msg.at(1)));
@@ -152,7 +153,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                     }
                     messages.erase(it);
                     it = messages.begin();
-                    delete ptr;
+                    //delete ptr;
                 }
                 // wait for next message or next timeout
                 if (it != messages.end())
@@ -162,7 +163,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
             }
         }
         handle_msg(msg_ptr->msg);
-        delete msg_ptr;
+        //delete msg_ptr;
     }
 }
 

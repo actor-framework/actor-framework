@@ -95,7 +95,7 @@ void yielding_actor::dequeue(invoke_rules& rules)
 {
     queue_node_buffer buffer;
     yield_until_not_empty();
-    std::unique_ptr<queue_node> node(m_mailbox.pop());
+    queue_node_ptr node(m_mailbox.pop());
     while (dq(node, rules, buffer) != dq_done)
     {
         yield_until_not_empty();
@@ -115,7 +115,7 @@ void yielding_actor::dequeue(timed_invoke_rules& rules)
         //    request_timeout(rules.timeout());
         //}
         yield_until_not_empty();
-        std::unique_ptr<queue_node> node(m_mailbox.pop());
+        queue_node_ptr node(m_mailbox.pop());
         switch (dq(node, rules, buffer))
         {
             case dq_done:

@@ -49,14 +49,14 @@ void abstract_event_based_actor::dequeue(timed_invoke_rules&)
     quit(exit_reason::unallowed_function_call);
 }
 
-void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node,
+void abstract_event_based_actor::handle_message(queue_node_ptr& node,
                                                 invoke_rules& behavior)
 {
     // no need to handle result
     (void) dq(node, behavior, m_buffer);
 }
 
-void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node,
+void abstract_event_based_actor::handle_message(queue_node_ptr& node,
                                                 timed_invoke_rules& behavior)
 {
     switch (dq(node, behavior, m_buffer))
@@ -83,7 +83,7 @@ void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& nod
     }
 }
 
-void abstract_event_based_actor::handle_message(std::unique_ptr<queue_node>& node)
+void abstract_event_based_actor::handle_message(queue_node_ptr& node)
 {
     auto& bhvr = m_loop_stack.top();
     if (bhvr.is_left())
@@ -107,7 +107,7 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         callback->exec_done();
     };
 
-    std::unique_ptr<queue_node> node;
+    queue_node_ptr node;
     for (;;)
     //do
     {
