@@ -117,7 +117,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
     static constexpr int blocked        = 0x02;
     static constexpr int about_to_block = 0x04;
 
-    abstract_scheduled_actor();
+    abstract_scheduled_actor(int state = done);
 
     template<typename Scheduler>
     abstract_scheduled_actor(void (*enqueue_fun)(Scheduler*,

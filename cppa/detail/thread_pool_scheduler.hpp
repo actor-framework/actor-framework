@@ -64,7 +64,8 @@ class thread_pool_scheduler : public scheduler
     scheduled_actor_dummy m_dummy;
     thread m_supervisor;
 
-    actor_ptr spawn_impl(abstract_scheduled_actor* what);
+    actor_ptr spawn_impl(abstract_scheduled_actor* what,
+                         bool push_to_queue = true);
 
     static void worker_loop(worker*);
     static void supervisor_loop(job_queue*, abstract_scheduled_actor*);

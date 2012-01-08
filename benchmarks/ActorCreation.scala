@@ -17,7 +17,7 @@ class ThreadedTestee(parent: Actor) extends Actor {
             case Spread(s) =>
                 if (s > 0) {
                     val next = Spread(s-1)
-                    (new ThreadedTestee(this)).start ! Spread(s-1)
+                    (new ThreadedTestee(this)).start ! next
                     (new ThreadedTestee(this)).start ! next
                     receive {
                         case Result(v1) =>
@@ -103,14 +103,16 @@ object ActorCreation {
         }
         val n = args(1).toInt
         if (args(0) == "threaded") {
-            actor {
+            val newMax = (1 << n) + 100
+            System.setProperty("actors.maxPoolSize", newMax.toString)
+            //actor {
                 (new ThreadedTestee(self)).start ! Spread(n)
                 receive {
                     case Result(v) =>
                         if (v != (1 << n))
                             Console.println("ERROR: expected " + (1 << n) + ", received " + v)
                 }
-            }
+            //}
         }
         else if (args(0) == "threadless") {
             actor {

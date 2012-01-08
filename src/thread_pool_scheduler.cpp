@@ -112,7 +112,6 @@ struct thread_pool_scheduler::worker
             void exec_done()
             {
                 if (!job->deref()) delete job;
-                CPPA_MEMORY_BARRIER();
                 dec_actor_count();
                 job = nullptr;
             }
@@ -245,20 +244,22 @@ void thread_pool_scheduler::schedule(abstract_scheduled_actor* what)
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what)
+actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what,
+                                            bool push_to_queue)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<abstract_scheduled_actor> ctx(what);
     ctx->ref();
-    m_queue.push_back(ctx.get());
+    if (push_to_queue) m_queue.push_back(ctx.get());
     return std::move(ctx);
 }
 
 
 actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
 {
-    return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
+    // do NOT push event-based actors to the queue on startup
+    return spawn_impl(what->attach_to_scheduler(enqueue_fun, this), false);
 }
 
 actor_ptr thread_pool_scheduler::spawn(scheduled_actor* behavior,

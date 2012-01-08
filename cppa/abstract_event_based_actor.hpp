@@ -89,6 +89,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  protected:
 
+    abstract_event_based_actor();
+
     struct stack_element
     {
 

@@ -38,9 +38,9 @@ namespace cppa { namespace detail {
 
 namespace { void dummy_enqueue(void*, abstract_scheduled_actor*) { } }
 
-abstract_scheduled_actor::abstract_scheduled_actor()
+abstract_scheduled_actor::abstract_scheduled_actor(int state)
     : next(nullptr)
-    , m_state(abstract_scheduled_actor::done)
+    , m_state(state)
     , m_enqueue_to_scheduler(dummy_enqueue, static_cast<void*>(nullptr), this)
     , m_has_pending_timeout_request(false)
     , m_active_timeout_id(0)

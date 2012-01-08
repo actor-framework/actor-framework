@@ -48,6 +48,7 @@ class stacked_event_based_actor : public event_based_actor_base<stacked_event_ba
  protected:
 
     void unbecome();
+    void become_void();
 
 };
 

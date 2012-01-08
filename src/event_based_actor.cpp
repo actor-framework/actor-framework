@@ -32,9 +32,9 @@
 
 namespace cppa {
 
-void event_based_actor::clear()
+void event_based_actor::become_void()
 {
-    if (!m_loop_stack.empty()) m_loop_stack.pop();
+    while (!m_loop_stack.empty()) m_loop_stack.pop();
 }
 
 void event_based_actor::do_become(behavior* bhvr)
@@ -51,14 +51,14 @@ void event_based_actor::do_become(behavior* bhvr)
 
 void event_based_actor::do_become(invoke_rules* bhvr, bool has_ownership)
 {
-    clear();
+    become_void();
     reset_timeout();
     m_loop_stack.push(stack_element(bhvr, has_ownership));
 }
 
 void event_based_actor::do_become(timed_invoke_rules* bhvr, bool has_ownership)
 {
-    clear();
+    become_void();
     request_timeout(bhvr->timeout());
     m_loop_stack.push(stack_element(bhvr, has_ownership));
 }

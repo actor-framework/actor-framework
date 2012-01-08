@@ -10,32 +10,39 @@ case class Calc(value: Long)
 case class Factors(values: List[Long])
 
 object global {
-    final val taskN = ((Long) 86028157) * 329545133
+    final val taskN: Long = 86028157l * 329545133
     final val factor1: Long = 86028157
     final val factor2: Long = 329545133
     final val numMessages = 1000
     val latch = new java.util.concurrent.CountDownLatch(1)
-    val checkFactors(f: List[Long]) {
+    def checkFactors(f: List[Long]) {
         assert(f.length == 2 && f(1) == factor1 && f(2) == factor2)
     }
-}
-
-object factorize {
-    def apply(arg: Long): List[Long] {
+    def factorize(arg: Long): List[Long] = {
         var n = arg
         if (n <= 3)
             return List[Long](n)
-        var result = new List[Long]
+        var result = new scala.collection.mutable.LinkedList[Long]
         var d: Long = 2
         while (d < n) {
             if ((n % d) == 0) {
-                result append d
+                result :+ d
                 n = n / d
             }
             else
                 d = if (d == 2) 3 else d + 2
         }
-        result append d
+        (result :+ d) toList
+    }
+}
+
+class ThreadedWorker extends Actor {
+    override def act() {
+        receive {
+            case Calc(value) =>
+                reply(global.factorize(value))
+                act()
+        }
     }
 }
 
@@ -50,101 +57,69 @@ class ThreadedChainLink(next: Actor) extends Actor {
 }
 
 class ThreadedChainMaster extends Actor {
-    @tailrec
-    final def newRing(a: Actor, i: Int) {
-        val next = new ThreadedChainLink(a)
+    @tailrec final def newRing(a: Actor, i: Int): Actor = {
+        val next = (new ThreadedChainLink(a)).start
         if (i > 0) newRing(next, i-1) else next
     }
-    def checkFactors(f: List[Long]) {
-        
-    }
     override def act() {
-        val worker = actor {
-            receive {
-                case Calc(value) => reply factorize(value)
-            }
-        }
+        val worker = (new ThreadedWorker).start
         receive {
             case Init(rsize, iterations) =>
-                var remainingFactors = iterations
+                var remainingFactors = 0
                 for (_ <- 0 until iterations) {
-                    val next = newRing(rsize)
+                    val next = newRing(this, rsize)
+                    remainingFactors += 1
                     worker ! Calc(global.taskN)
-                    while (state != 0x2)
+                    var done = false
+                    while (done == false)
                         receive {
                             case Token(value) =>
-                                if (value > 0) next ! Token(value-1)
-
+                                if (value > 0) next ! Token(value-1) else done = true
+                            case Factors(f) =>
+                                global.checkFactors(f)
+                                remainingFactors -= 1
                         }
                 }
+                while (remainingFactors > 0)
+                    receive {
+                        case Factors(f) =>
+                            global.checkFactors(f)
+                            remainingFactors -= 1
+                    }
 
         }
     }
 }
 
-class ThreadedReceiver(n: Long) extends Actor {
-    override def act() {
-        var i: Long = 0
-        while (i < n)
-            receive {
-                case Msg => i += 1
-            }
-    }
-}
-
-class ThreadlessReceiver(n: Long) extends Actor {
-    var i: Long = 0
-    override def act() {
-        react {
-            case Msg =>
-                i += 1
-                if (i < n) act
-        }
-    }
-}
-
-class AkkaReceiver(n: Long) extends akka.actor.Actor {
-    var received: Long = 0
-    def receive = {
-        case Msg =>
-            received += 1
-            if (received == n) {
-                global.latch.countDown
-                self.exit
-            }
-    }
-}
-
-object MailboxPerformance {
+object MixedCase {
     def usage() {
-        Console println "usage: (threaded|threadless|akka) (num_threads) (msgs_per_thread)"
+        Console println "usage: (threaded|threadless|akka) (ring_size) (repetitions)"
     }
     def main(args: Array[String]) = {
         if (args.size != 3) {
             usage
             throw new IllegalArgumentException("")
         }
-        val threads = args(1).toInt
-        val msgs = args(2).toInt
+        val ringSize = args(1).toInt
+        val repetitions = args(2).toInt
         val impl = List("threaded", "threadless", "akka").indexOf(args(0))
         if (impl == -1) {
             usage
         }
-        else if (impl < 2) {
-            val rcvRef = if (impl == 0) (new ThreadedReceiver(threads*msgs)).start
-                         else (new ThreadlessReceiver(threads*msgs)).start
-            for (i <- 0 until threads)
-                (new java.lang.Thread {
-                    override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
-                }).start
+        else if (impl == 0) {
+            System.setProperty("actors.maxPoolSize", ((11 * ringSize) + 10).toString)
+            for (_ <- 0 until 10) {
+                val a = (new ThreadedChainMaster()).start
+                a ! Init(ringSize, repetitions)
+            }
         }
-        else {
+        /*else {
             val rcvRef = actorOf(new AkkaReceiver(threads*msgs)).start
             for (i <- 0 until threads)
                 (new java.lang.Thread {
                     override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
                 }).start
             global.latch.await
-        }
+        }*/
     }
 }

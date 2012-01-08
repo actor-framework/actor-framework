@@ -34,6 +34,11 @@
 
 namespace cppa {
 
+abstract_event_based_actor::abstract_event_based_actor()
+    : super(abstract_event_based_actor::blocked)
+{
+}
+
 void abstract_event_based_actor::dequeue(invoke_rules&)
 {
     quit(exit_reason::unallowed_function_call);

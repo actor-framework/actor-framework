@@ -43,11 +43,14 @@ class event_based_actor : public event_based_actor_base<event_based_actor>
 
     typedef abstract_event_based_actor::stack_element stack_element;
 
-    void clear();
     // has_ownership == false
     void do_become(behavior* bhvr);
     void do_become(invoke_rules* bhvr, bool has_ownership);
     void do_become(timed_invoke_rules* bhvr, bool has_ownership);
+
+ public:
+
+    void become_void();
 
 };
 

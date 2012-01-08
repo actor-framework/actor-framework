@@ -92,25 +92,29 @@ void usage()
          << endl;
 }
 
+template<typename T>
+T rd(char const* cstr)
+{
+    char* endptr = nullptr;
+    T result = static_cast<T>(strtol(cstr, &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
+    {
+        std::string errstr;
+        errstr += "\"";
+        errstr += cstr;
+        errstr += "\" is not an integer";
+        usage();
+        throw std::invalid_argument(errstr);
+    }
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     if (argc == 4)
     {
-        char* endptr = nullptr;
-        int64_t num_sender = static_cast<int64_t>(strtol(argv[2], &endptr, 10));
-        if (endptr == nullptr || *endptr != '\0')
-        {
-            cerr << "\"" << argv[2] << "\" is not an integer" << endl;
-            usage();
-            return 1;
-        }
-        int64_t num_msgs = static_cast<int64_t>(strtol(argv[3], &endptr, 10));
-        if (endptr == nullptr || *endptr != '\0')
-        {
-            cerr << "\"" << argv[3] << "\" is not an integer" << endl;
-            usage();
-            return 1;
-        }
+        int64_t num_sender = rd<int64_t>(argv[2]);
+        int64_t num_msgs = rd<int64_t>(argv[3]);
         actor_ptr testee;
         if (strcmp(argv[1], "stacked") == 0)
         {

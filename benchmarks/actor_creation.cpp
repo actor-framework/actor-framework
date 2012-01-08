@@ -45,12 +45,9 @@ using namespace cppa;
 
 struct testee : fsm_actor<testee>
 {
-    uint32_t m_v1;
     actor_ptr m_parent;
     behavior init_state;
-    behavior wait4result1;
-    behavior wait4result2;
-    testee(actor_ptr const& parent) : m_v1(0), m_parent(parent)
+    testee(actor_ptr const& parent) : m_parent(parent)
     {
         init_state =
         (
@@ -61,29 +58,26 @@ struct testee : fsm_actor<testee>
                     any_tuple msg = make_tuple(atom("spread"), x - 1);
                     spawn(new testee(this)) << msg;
                     spawn(new testee(this)) << msg;
-                    become(&wait4result1);
+                    become
+                    (
+                        on<atom("result"), uint32_t>() >> [=](uint32_t v1)
+                        {
+                            become
+                            (
+                                on<atom("result"), uint32_t>() >> [=](uint32_t v2)
+                                {
+                                    send(m_parent, atom("result"), v1 + v2);
+                                    become_void();
+                                }
+                            );
+                        }
+                    );
                 }
                 else
                 {
                     send(m_parent, atom("result"), (std::uint32_t) 1);
-                    quit(exit_reason::normal);
+                    become_void();
                 }
-            }
-        );
-        wait4result1 =
-        (
-            on<atom("result"), uint32_t>() >> [=](uint32_t v1)
-            {
-                m_v1 = v1;
-                become(&wait4result2);
-            }
-        );
-        wait4result2 =
-        (
-            on<atom("result"), uint32_t>() >> [=](uint32_t v2)
-            {
-                send(m_parent, atom("result"), m_v1 + v2);
-                quit(exit_reason::normal);
             }
         );
     }
@@ -129,17 +123,28 @@ void usage()
          << endl;
 }
 
+template<typename T>
+T rd(char const* cstr)
+{
+    char* endptr = nullptr;
+    T result = static_cast<T>(strtol(cstr, &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
+    {
+        std::string errstr;
+        errstr += "\"";
+        errstr += cstr;
+        errstr += "\" is not an integer";
+        usage();
+        throw std::invalid_argument(errstr);
+    }
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     if (argc == 3)
     {
-        char* endptr = nullptr;
-        int num = static_cast<int>(strtol(argv[2], &endptr, 10));
-        if (endptr == nullptr || *endptr != '\0')
-        {
-            cerr << "\"" << argv[2] << "\" is not an integer" << endl;
-            return 1;
-        }
+        int num = rd<int>(argv[2]);
         if (strcmp(argv[1], "stacked") == 0)
         {
             send(spawn(stacked_actor, self), atom("spread"), num);

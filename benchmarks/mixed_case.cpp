@@ -277,30 +277,58 @@ void chain_master()
 }
 
 template<typename F>
-void run_test(F&& spawn_impl)
+void run_test(F&& spawn_impl, int ring_size, int repetitions)
 {
     std::vector<actor_ptr> masters; // of the universe
     for (int i = 0; i < 10; ++i)
     {
         masters.push_back(spawn_impl());
-        send(masters.back(), atom("init"), 50, 20);
+        send(masters.back(), atom("init"), ring_size, repetitions);
     }
     await_all_others_done();
+}
+
+void usage()
+{
+    cout << "usage: mailbox_performance "
+            "(stacked|event-based) (ring size) (repetitions)" << endl
+         << endl;
+}
+
+template<typename T>
+T rd(char const* cstr)
+{
+    char* endptr = nullptr;
+    T result = static_cast<T>(strtol(cstr, &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
+    {
+        std::string errstr;
+        errstr += "\"";
+        errstr += cstr;
+        errstr += "\" is not an integer";
+        usage();
+        throw std::invalid_argument(errstr);
+    }
+    return result;
 }
 
 int main(int argc, char** argv)
 {
     announce<factors>();
-    if (argc == 2)
+    if (argc == 4)
     {
+        int ring_size = rd<int>(argv[2]);
+        int repetitions = rd<int>(argv[3]);
         if (strcmp(argv[1], "event-based") == 0)
         {
-            run_test([]() { return spawn(new fsm_chain_master); });
+            run_test([]() { return spawn(new fsm_chain_master); },
+                     ring_size, repetitions);
             return 0;
         }
         else if (strcmp(argv[1], "stacked") == 0)
         {
-            run_test([]() { return spawn(chain_master); });
+            run_test([]() { return spawn(chain_master); },
+                     ring_size, repetitions);
             return 0;
         }
     }

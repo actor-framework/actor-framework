@@ -122,11 +122,12 @@ size_t actor_registry::running() const
 void actor_registry::dec_running()
 {
     size_t new_val = --m_running;
+    /*
     if (new_val == std::numeric_limits<size_t>::max())
     {
         throw std::underflow_error("actor_count::dec()");
     }
-    else if (new_val <= 1)
+    else*/ if (new_val <= 1)
     {
         unique_lock<mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
