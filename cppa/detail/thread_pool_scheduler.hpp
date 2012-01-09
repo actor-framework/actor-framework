@@ -33,6 +33,7 @@
 
 #include "cppa/scheduler.hpp"
 #include "cppa/detail/thread.hpp"
+#include "cppa/util/producer_consumer_list.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
@@ -58,7 +59,8 @@ class thread_pool_scheduler : public scheduler
 
  private:
 
-    typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
+    //typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
+    typedef util::producer_consumer_list<abstract_scheduled_actor> job_queue;
 
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;

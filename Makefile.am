@@ -204,6 +204,7 @@ nobase_library_include_HEADERS = \
   cppa/util/is_one_of.hpp \
   cppa/util/is_primitive.hpp \
   cppa/util/pop_back.hpp \
+  cppa/util/producer_consumer_list.hpp \
   cppa/util/pt_dispatch.hpp \
   cppa/util/pt_token.hpp \
   cppa/util/remove_const_reference.hpp \

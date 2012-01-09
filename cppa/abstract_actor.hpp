@@ -129,6 +129,9 @@ class abstract_actor : public Base
         queue_node* m_ptr;
         queue_node_deallocator d;
 
+        queue_node_ptr(queue_node_ptr const&) = delete;
+        queue_node_ptr& operator=(queue_node_ptr const&) = delete;
+
      public:
 
         inline queue_node_ptr(queue_node* ptr = nullptr) : m_ptr(ptr)
@@ -147,7 +150,7 @@ class abstract_actor : public Base
 
         inline queue_node* operator->() { return m_ptr; }
 
-        queue_node* release()
+        inline queue_node* release()
         {
             auto result = m_ptr;
             m_ptr = nullptr;
@@ -158,6 +161,12 @@ class abstract_actor : public Base
         {
             d(m_ptr);
             m_ptr = ptr;
+        }
+
+        inline queue_node_ptr& operator=(queue_node_ptr&& other)
+        {
+            reset(other.release());
+            return *this;
         }
 
         inline operator bool() const { return m_ptr != nullptr; }

@@ -126,11 +126,9 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
     actor_ptr next;
     actor_ptr worker;
     behavior init_state;
-    int remainig_results;
     void new_ring(int ring_size, int initial_token_value)
     {
         send(worker, atom("calc"), s_task_n);
-        ++remainig_results;
         next = self;
         for (int i = 1; i < ring_size; ++i)
         {
@@ -140,12 +138,11 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
     }
     fsm_chain_master(actor_ptr msgcollector) : iteration(0), mc(msgcollector)
     {
-        remainig_results = 0;
-        worker = spawn(new fsm_worker(msgcollector));
         init_state =
         (
             on<atom("init"), int, int, int>() >> [=](int rs, int itv, int n)
             {
+                worker = spawn(new fsm_worker(msgcollector));
                 iteration = 0;
                 new_ring(rs, itv);
                 become

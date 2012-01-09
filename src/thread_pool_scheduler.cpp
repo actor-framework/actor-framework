@@ -60,18 +60,13 @@ typedef util::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 struct thread_pool_scheduler::worker
 {
 
-    worker* next;
-    bool m_done;
+    typedef abstract_scheduled_actor* job_ptr;
+
     job_queue* m_job_queue;
-    volatile abstract_scheduled_actor* m_job;
-    worker_queue* m_supervisor_queue;
-    mutex m_mtx;
-    condition_variable m_cv;
+    job_ptr m_dummy;
     thread m_thread;
 
-    worker(worker_queue* supervisor_queue, job_queue* jq)
-        : next(nullptr), m_done(false), m_job_queue(jq), m_job(nullptr)
-        , m_supervisor_queue(supervisor_queue)
+    worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy)
     {
     }
 
@@ -84,31 +79,70 @@ struct thread_pool_scheduler::worker
 
     worker& operator=(const worker&) = delete;
 
+    job_ptr aggressive_polling()
+    {
+        job_ptr result = nullptr;
+        for (int i = 0; i < 3; ++i)
+        {
+            result = m_job_queue->try_pop();
+            if (result)
+            {
+                return result;
+            }
+            detail::this_thread::yield();
+        }
+        return result;
+    }
+
+    job_ptr less_aggressive_polling()
+    {
+        job_ptr result = nullptr;
+        for (int i = 0; i < 10; ++i)
+        {
+            result =  m_job_queue->try_pop();
+            if (result)
+            {
+                return result;
+            }
+#           ifdef __APPLE__
+            auto timeout = boost::get_system_time();
+            timeout += boost::posix_time::milliseconds(1);
+            boost::this_thread::sleep(timeout);
+#           else
+            std::sleep_for(std::chrono::milliseconds(1));
+#           endif
+        }
+        return result;
+    }
+
+    job_ptr relaxed_polling()
+    {
+        job_ptr result = nullptr;
+        for (;;)
+        {
+            result =  m_job_queue->try_pop();
+            if (result)
+            {
+                return result;
+            }
+#           ifdef __APPLE__
+            auto timeout = boost::get_system_time();
+            timeout += boost::posix_time::milliseconds(10);
+            boost::this_thread::sleep(timeout);
+#           else
+            std::sleep_for(std::chrono::milliseconds(10));
+#           endif
+        }
+    }
+
     void operator()()
     {
-        //typedef decltype(now()) time_type;
-        // enqueue as idle worker
-        m_supervisor_queue->push_back(this);
         util::fiber fself;
         struct handler : abstract_scheduled_actor::resume_callback
         {
             abstract_scheduled_actor* job;
-            //time_type timeout;
-            //bool reschedule;
-            handler() : job(nullptr)//, timeout(now()), reschedule(false)
-            {
-            }
-            bool still_ready()
-            {
-                /*
-                if (timeout >= now())
-                {
-                    reschedule = true;
-                    return false;
-                }
-                */
-                return true;
-            }
+            handler() : job(nullptr) { }
+            bool still_ready() { return true; }
             void exec_done()
             {
                 if (!job->deref()) delete job;
@@ -119,31 +153,25 @@ struct thread_pool_scheduler::worker
         handler h;
         for (;;)
         {
-            // lifetime scope of guard (wait for new job)
+            h.job = aggressive_polling();
+            if (!h.job)
             {
-                guard_type guard(m_mtx);
-                while (m_job == nullptr && !m_done)
+                h.job = less_aggressive_polling();
+                if (!h.job)
                 {
-                    m_cv.wait(guard);
+                    h.job = relaxed_polling();
                 }
-                if (m_done) return;
             }
-            h.job = const_cast<abstract_scheduled_actor*>(m_job);
-            /*
-            // run actor up to 300ms
-            h.reschedule = false;
-            h.timeout = now();
-            h.timeout += std::chrono::milliseconds(300);
-            h.job->resume(&fself, &h);
-            if (h.reschedule && h.job)
+            if (h.job == m_dummy)
             {
-                m_job_queue->push_back(h.job);
+                // dummy of doom received ...
+                m_job_queue->push_back(h.job); // kill the next guy
+                return;                        // and say goodbye
             }
-            */
-            h.job->resume(&fself, &h);
-            m_job = nullptr;
-            CPPA_MEMORY_BARRIER();
-            m_supervisor_queue->push_back(this);
+            else
+            {
+                h.job->resume(&fself, &h);
+            }
         }
     }
 
@@ -157,85 +185,19 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             abstract_scheduled_actor* dummy)
 {
-    worker_queue wqueue;
     std::vector<worker_ptr> workers;
-    // init with at least two workers
-    //size_t num_workers = std::max<size_t>(thread::hardware_concurrency(), 2);
-    // init with 2 threads per core but no less than 4
     size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 4);
-    size_t max_workers = num_workers * 4;
-    auto new_worker = [&]() -> worker*
-    {
-        worker_ptr wptr(new worker(&wqueue, jqueue));
-        wptr->start();
-        workers.push_back(std::move(wptr));
-        return workers.back().get();
-    };
     for (size_t i = 0; i < num_workers; ++i)
     {
-        new_worker();
-    }
-    bool done = false;
-    // loop
-    do
-    {
-        // fetch next job
-        abstract_scheduled_actor* job = jqueue->pop();
-        if (job == dummy)
-        {
-            done = true;
-        }
-        else
-        {
-            /*
-            // fetch next idle worker
-            worker* w = nullptr;
-            if (num_workers < max_workers)
-            {
-                w = wqueue.try_pop();
-                if (!w)
-                {
-                    // fetch next idle worker (wait up to 500ms)
-                    timeout = now();
-                    timeout += std::chrono::milliseconds(500);
-                    w = wqueue.try_pop(timeout);
-                    // all workers are blocked since 500ms, start a new one
-                    if (!w)
-                    {
-                        w = new_worker();
-                        ++num_workers;
-                    }
-                }
-            }
-            else
-            {
-                w = wqueue.pop();
-            }
-            */
-            worker* w = wqueue.pop();
-            // lifetime scope of guard
-            {
-                guard_type guard(w->m_mtx);
-                w->m_job = job;
-                w->m_cv.notify_one();
-            }
-        }
-    }
-    while (!done);
-    // quit
-    for (auto& w : workers)
-    {
-        guard_type guard(w->m_mtx);
-        w->m_done = true;
-        w->m_cv.notify_one();
+        worker_ptr wptr(new worker(jqueue, dummy));
+        wptr->start();
+        workers.push_back(std::move(wptr));
     }
     // wait for workers
     for (auto& w : workers)
     {
         w->m_thread.join();
     }
-    // "clear" worker_queue
-    while (wqueue.try_pop() != nullptr) { }
 }
 
 void thread_pool_scheduler::start()
