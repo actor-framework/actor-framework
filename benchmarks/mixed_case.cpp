@@ -201,7 +201,7 @@ void chain_link(actor_ptr next)
     (
         on<atom("token"), int>() >> [&](int v)
         {
-            next->enqueue(nullptr, std::move(last_received()));
+            next << last_received();
             if (v == 0)
             {
                 done = true;
@@ -211,42 +211,40 @@ void chain_link(actor_ptr next)
     .until([&]() { return done == true; });
 }
 
+void worker_fun(actor_ptr msgcollector)
+{
+    bool done = false;
+    do_receive
+    (
+        on<atom("calc"), uint64_t>() >> [&](uint64_t what)
+        {
+            send(msgcollector, atom("result"), factorize(what));
+        },
+        on(atom("done")) >> [&]()
+        {
+            done = true;
+        }
+    )
+    .until([&]() { return done == true; });
+}
+
+actor_ptr new_ring(actor_ptr next, int ring_size)
+{
+    for (int i = 1; i < ring_size; ++i) next = spawn(chain_link, next);
+    return next;
+}
+
 void chain_master(actor_ptr msgcollector)
 {
-    auto worker = spawn([=]()
-    {
-        actor_ptr mc = msgcollector;
-        bool done = false;
-        do_receive
-        (
-            on<atom("calc"), uint64_t>() >> [&](uint64_t what)
-            {
-                send(mc, atom("result"), factorize(what));
-            },
-            on(atom("done")) >> [&]()
-            {
-                done = true;
-            }
-        )
-        .until([&]() { return done == true; });
-    });
-    auto new_ring = [&](int ring_size, int initial_token_value) -> actor_ptr
-    {
-        send(worker, atom("calc"), s_task_n);
-        actor_ptr next = self;
-        for (int i = 1; i < ring_size; ++i)
-        {
-            next = spawn(chain_link, next);
-        }
-        send(next, atom("token"), initial_token_value);
-        return next;
-    };
+    auto worker = spawn(worker_fun, msgcollector);
     receive
     (
         on<atom("init"), int, int, int>() >> [&](int rs, int itv, int n)
         {
             int iteration = 0;
-            auto next = new_ring(rs, itv);
+            auto next = new_ring(self, rs);
+            send(next, atom("token"), itv);
+            send(worker, atom("calc"), s_task_n);
             do_receive
             (
                 on<atom("token"), int>() >> [&](int v)
@@ -255,7 +253,9 @@ void chain_master(actor_ptr msgcollector)
                     {
                         if (++iteration < n)
                         {
-                            next = new_ring(rs, itv);
+                            next = new_ring(self, rs);
+                            send(next, atom("token"), itv);
+                            send(worker, atom("calc"), s_task_n);
                         }
                     }
                     else
