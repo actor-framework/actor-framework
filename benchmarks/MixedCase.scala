@@ -33,18 +33,23 @@ object global {
 }
 
 class ThreadedWorker(supervisor: Actor) extends Actor {
-    override def act() = receive {
-        case Calc(value) => supervisor ! Factors(global.factorize(value)); act
-        case Done => // recursion ends
+    override def act() {
+        var done = false
+        while (done == false) {
+            receive {
+                case Calc(value) => supervisor ! Factors(global.factorize(value))
+                case Done => done = true
+            }
+        }
     }
 }
 
 class ThreadedChainLink(next: Actor) extends Actor {
-    override def act() = {
+    override def act() {
         var done = false
         while (done == false)
             receive {
-                case Token(value) => next ! Token(value); if (value > 0) done = true
+                case Token(value) => next ! Token(value); if (value == 0) done = true
             }
     }
 }
@@ -77,7 +82,7 @@ class ThreadedChainMaster(supervisor: Actor) extends Actor {
 class ThreadedSupervisor(numMessages: Int) extends Actor {
     override def act() = for (_ <- 0 until numMessages) {
         receive {
-            case Factors(f) => global.checkFactors(f);
+            case Factors(f) => global.checkFactors(f)
             case MasterExited =>
         }
     }
@@ -222,7 +227,7 @@ object MixedCase {
         val numMessages = (numRings + (numRings * repetitions))
         val impl = args(0)
         if (impl == "threaded") {
-            //System.setProperty("actors.maxPoolSize", ((11 * ringSize) + 10).toString)
+            //System.setProperty("actors.maxPoolSize", (numRings + (numRings * ringSize) + 10).toString)
             val s = (new ThreadedSupervisor(numMessages)).start
             for (_ <- 0 until numRings)
                 (new ThreadedChainMaster(s)).start ! initMsg
