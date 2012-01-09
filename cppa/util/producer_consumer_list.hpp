@@ -22,7 +22,6 @@ class producer_consumer_list
     {
         value_ptr value;
         std::atomic<node*> next;
-        ~node() { delete value; }
         node(value_ptr val) : value(val), next(nullptr) { }
         char pad[CPPA_CACHE_LINE_SIZE - sizeof(value_ptr)- sizeof(std::atomic<node*>)];
     };
