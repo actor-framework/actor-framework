@@ -187,9 +187,11 @@ constexpr typename detail::boxed<T>::type val()
     return typename detail::boxed<T>::type();
 }
 
-constexpr anything any_vals;// = anything();
+constexpr anything any_vals = anything();
 
-constexpr typename detail::boxed<util::arg_match_t>::type arg_match;
+typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
+
+constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
 constexpr detail::on_the_fly_invoke_rule_builder on_arg_match;
 
