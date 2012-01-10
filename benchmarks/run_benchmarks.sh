@@ -23,11 +23,14 @@ benchmarks["erlang.actor_creation"]="actor_creation"
 benchmarks["erlang.mailbox_performance"]="mailbox_performance"
 
 declare -A bench_args
+
+# 20 rings, 50 actors in each ring, initial token value = 10000, 5 repetitions
 bench_args["mixed_case"]="20 50 10000 5"
+# 2^19 actors
 bench_args["actor_creation"]="19"
+# 20 threads, 1,000,000 each = 20,000,000 messages
 bench_args["mailbox_performance"]="20 1000000"
 
-#Lang="cppa"
 for Lang in "cppa" "scala" "erlang" ; do
     for Bench in "actor_creation" "mailbox_performance" "mixed_case" ; do
         Args=${bench_args[$Bench]}
