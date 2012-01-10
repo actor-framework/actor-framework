@@ -31,19 +31,27 @@
 #ifndef TDATA_HPP
 #define TDATA_HPP
 
+#include <typeinfo>
+
 #include "cppa/get.hpp"
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
 
+namespace cppa {
+class uniform_type_info;
+uniform_type_info const* uniform_typeid(std::type_info const&);
+} // namespace cppa
+
 namespace cppa { namespace detail {
 
 /*
- * just like std::tuple (but derives from ref_counted?)
+ * "enhanced std::tuple"
  */
 template<typename...>
 struct tdata;
@@ -53,6 +61,11 @@ struct tdata<>
 {
 
     util::void_type head;
+
+    constexpr tdata() { }
+
+    // swallow "arg_match" silently
+    constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
 
     tdata<>& tail()
     {
@@ -69,12 +82,20 @@ struct tdata<>
         throw std::out_of_range("");
     }
 
+    inline uniform_type_info const* type_at(size_t) const
+    {
+        throw std::out_of_range("");
+    }
+
     inline bool operator==(tdata const&) const
     {
         return true;
     }
 
 };
+
+template<typename... X, typename... Y>
+void tdata_set(tdata<X...>& rhs, tdata<Y...> const& lhs);
 
 template<typename Head, typename... Tail>
 struct tdata<Head, Tail...> : tdata<Tail...>
@@ -92,6 +113,10 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     template<typename... Args>
     tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
 
+    // allow partial initialization
+    template<typename... Args>
+    tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
+
     // allow initialization with wrapped<Head> (uses the default constructor)
     template<typename... Args>
     tdata(util::wrapped<Head> const&, Args const&... vals)
@@ -99,12 +124,26 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     {
     }
 
+    // allow (partial) initialization from a different tdata
+    template<typename... Y>
+    tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head) { }
+
+    template<typename... Y>
+    tdata(tdata<Y...>&& other) : super(std::move(other.tail())), head(std::move(other.head)) { }
+
     // allow initialization with a function pointer or reference
     // returning a wrapped<Head>
     template<typename...Args>
     tdata(util::wrapped<Head>(*)(), Args const&... vals)
         : super(vals...), head()
     {
+    }
+
+    template<typename... Y>
+    tdata& operator=(tdata<Y...> const& other)
+    {
+        tdata_set(*this, other);
+        return *this;
     }
 
     inline tdata<Tail...>& tail()
@@ -124,12 +163,27 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         return head == other.head && tail() == other.tail();
     }
 
-    inline void const* at(size_t pos) const
+    inline void const* at(size_t p) const
     {
-        return (pos == 0) ? &head : super::at(pos - 1);
+        return (p == 0) ? &head : super::at(p-1);
+    }
+
+    inline uniform_type_info const* type_at(size_t p) const
+    {
+        return (p == 0) ? uniform_typeid(typeid(Head)) : super::type_at(p-1);
     }
 
 };
+
+template<typename... X>
+void tdata_set(tdata<X...>&, tdata<> const&) { }
+
+template<typename... X, typename... Y>
+void tdata_set(tdata<X...>& rhs, tdata<Y...> const& lhs)
+{
+    rhs.head = lhs.head;
+    tdata_set(rhs.tail(), lhs.tail());
+}
 
 template<size_t N, typename... Tn>
 struct tdata_upcast_helper;

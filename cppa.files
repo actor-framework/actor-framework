@@ -249,3 +249,4 @@ benchmarks/mailbox_performance.cpp
 benchmarks/mixed_case.cpp
 cppa/util/default_deallocator.hpp
 cppa/util/producer_consumer_list.hpp
+cppa/util/arg_match_t.hpp

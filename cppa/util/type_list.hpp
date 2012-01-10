@@ -33,6 +33,7 @@
 
 #include <typeinfo>
 
+#include "cppa/util/if_else.hpp"
 #include "cppa/util/void_type.hpp"
 
 namespace cppa {
@@ -51,8 +52,14 @@ template<>
 struct type_list<>
 {
     typedef void_type head_type;
+    typedef void_type back_type;
     typedef type_list<> tail_type;
     static const size_t size = 0;
+    template<typename, int = 0>
+    struct find
+    {
+        static const int value = -1;
+    };
 };
 
 template<typename Head, typename... Tail>
@@ -64,6 +71,11 @@ struct type_list<Head, Tail...>
     typedef Head head_type;
 
     typedef type_list<Tail...> tail_type;
+
+    typedef typename if_else_c<sizeof...(Tail) == 0,
+                               Head,
+                               wrapped<typename tail_type::back_type> >::type
+            back_type;
 
     static const size_t size =  sizeof...(Tail) + 1;
 
@@ -87,6 +99,14 @@ struct type_list<Head, Tail...>
             init<typename TypeList::tail_type>(what);
         }
     }
+
+    template<typename What, int Pos = 0>
+    struct find
+    {
+        static const int value = std::is_same<What,Head>::value
+                                 ? Pos
+                                 : type_list<Tail...>::template find<What,Pos+1>::value;
+    };
 
  private:
 

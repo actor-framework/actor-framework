@@ -183,6 +183,54 @@ abstract_event_based_actor* event_testee2()
     return new impl;
 }
 
+struct chopstick : public fsm_actor<chopstick>
+{
+
+    behavior init_state;
+
+    behavior taken_by(actor_ptr hakker)
+    {
+        return
+        (
+            on<atom("take")>() >> [=]()
+            {
+                reply(atom("busy"));
+            },
+            on(atom("put"), hakker) >> [=]()
+            {
+                become(&init_state);
+            },
+            on(atom("break")) >> [=]()
+            {
+                become_void();
+            }
+        );
+    }
+
+    chopstick()
+    {
+        init_state =
+        (
+            on(atom("take"), arg_match) >> [=](actor_ptr hakker)
+            {
+                if (hakker)
+                {
+                    become(taken_by(hakker));
+                    reply(atom("taken"));
+                }
+            },
+            on(atom("break")) >> [=]()
+            {
+                become_void();
+            },
+            others() >> [=]()
+            {
+            }
+        );
+    }
+
+};
+
 class testee_actor : public scheduled_actor
 {
 
@@ -321,6 +369,17 @@ size_t test__spawn()
 
     spawn(testee1);
     spawn(event_testee2());
+
+    auto cstk = spawn(new chopstick);
+    send(cstk, atom("take"), self);
+    receive
+    (
+        on(atom("taken")) >> [&]()
+        {
+            send(cstk, atom("put"), self);
+            send(cstk, atom("break"));
+        }
+    );
 
     await_all_others_done();
 

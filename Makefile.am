@@ -172,6 +172,7 @@ nobase_library_include_HEADERS = \
   cppa/util/a_matches_b.hpp \
   cppa/util/any_tuple_iterator.hpp \
   cppa/util/apply.hpp \
+  cppa/util/arg_match_t.hpp \
   cppa/util/at.hpp \
   cppa/util/callable_trait.hpp \
   cppa/util/comparable.hpp \

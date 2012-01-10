@@ -41,12 +41,16 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/util/pop_back.hpp"
 #include "cppa/util/duration.hpp"
+#include "cppa/util/type_list.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/filter_type_list.hpp"
+#include "cppa/util/concat_type_lists.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
@@ -80,32 +84,69 @@ template<typename... TypeList>
 class invoke_rule_builder
 {
 
-    typedef typename util::type_list_apply<util::type_list<TypeList...>,
-                                           detail::implicit_conversions>::type
-            converted_type_list;
+    typedef util::arg_match_t arg_match_t;
 
-    typedef typename pattern_type_from_type_list<converted_type_list>::type
+    typedef util::type_list<TypeList...> raw_types;
+
+    static const bool is_complete =
+            !std::is_same<arg_match_t, typename raw_types::back_type>::value;
+
+    typedef typename util::if_else_c<is_complete == false,
+                                     typename util::pop_back<raw_types>::type,
+                                     util::wrapped<raw_types> >::type
+            types;
+
+    static_assert(types::template find<arg_match_t>::value == -1,
+                  "arg_match is allowed only as last parameter for on()");
+
+    typedef typename util::type_list_apply<types,
+                                           detail::implicit_conversions>::type
+            converted_types;
+
+    typedef typename pattern_type_from_type_list<converted_types>::type
             pattern_type;
 
-    typedef std::unique_ptr<pattern_type> pattern_ptr_type;
-
-    pattern_ptr_type m_pattern;
+    std::unique_ptr<pattern_type> m_ptr;
 
     typedef typename pattern_type::tuple_view_type tuple_view_type;
+
+    template<typename F>
+    invoke_rules cr_rules(F&& f, std::integral_constant<bool,true>)
+    {
+        typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
+        return invokable_ptr(new impl(std::move(m_ptr),std::forward<F>(f)));
+    }
+
+    template<typename F>
+    invoke_rules cr_rules(F&& f, std::integral_constant<bool,false>)
+    {
+        using namespace ::cppa::util;
+        typedef typename get_callable_trait<F>::type ctrait;
+        typedef typename ctrait::arg_types raw_types;
+        static_assert(raw_types::size > 0, "functor has no arguments");
+        typedef typename type_list_apply<raw_types,rm_ref>::type new_types;
+        typedef typename concat_type_lists<converted_types,new_types>::type types;
+        typedef typename pattern_type_from_type_list<types>::type epattern;
+        typedef typename epattern::tuple_view_type tuple_view_type;
+        typedef invokable_impl<tuple_view_type, epattern, F> impl;
+        std::unique_ptr<epattern> pptr(extend_pattern<epattern>(m_ptr.get()));
+        return invokable_ptr(new impl(std::move(pptr), std::forward<F>(f)));
+    }
 
  public:
 
     template<typename... Args>
     invoke_rule_builder(Args const&... args)
-        : m_pattern(new pattern_type(args...))
+        : m_ptr(new pattern_type(args...))
     {
     }
+
 
     template<typename F>
     invoke_rules operator>>(F&& f)
     {
-        typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
-        return invokable_ptr(new impl(std::move(m_pattern),std::forward<F>(f)));
+        std::integral_constant<bool,is_complete> token;
+        return cr_rules(std::forward<F>(f), token);
     }
 
 };
@@ -146,7 +187,9 @@ constexpr typename detail::boxed<T>::type val()
     return typename detail::boxed<T>::type();
 }
 
-constexpr anything any_vals = anything();
+constexpr anything any_vals;// = anything();
+
+constexpr typename detail::boxed<util::arg_match_t>::type arg_match;
 
 constexpr detail::on_the_fly_invoke_rule_builder on_arg_match;
 

@@ -68,24 +68,30 @@ class event_based_actor_base : public abstract_event_based_actor
         d_this()->do_become(bhvr);
     }
 
-    inline void become(invoke_rules* behavior)
+    inline void become(invoke_rules* bhvr)
     {
-        d_this()->do_become(behavior, false);
+        d_this()->do_become(bhvr, false);
     }
 
-    inline void become(timed_invoke_rules* behavior)
+    inline void become(timed_invoke_rules* bhvr)
     {
-        d_this()->do_become(behavior, false);
+        d_this()->do_become(bhvr, false);
     }
 
-    inline void become(invoke_rules&& behavior)
+    inline void become(invoke_rules&& bhvr)
     {
-        d_this()->do_become(new invoke_rules(std::move(behavior)), true);
+        d_this()->do_become(new invoke_rules(std::move(bhvr)), true);
     }
 
-    inline void become(timed_invoke_rules&& behavior)
+    inline void become(timed_invoke_rules&& bhvr)
     {
-        d_this()->do_become(new timed_invoke_rules(std::move(behavior)), true);
+        d_this()->do_become(new timed_invoke_rules(std::move(bhvr)), true);
+    }
+
+    inline void become(behavior&& bhvr)
+    {
+        if (bhvr.is_left()) become(std::move(bhvr.left()));
+        else become(std::move(bhvr.right()));
     }
 
     template<typename Head, typename... Tail>

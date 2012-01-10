@@ -31,6 +31,10 @@
 #ifndef FSM_ACTOR_HPP
 #define FSM_ACTOR_HPP
 
+#include <type_traits>
+
+#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/enable_if.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
