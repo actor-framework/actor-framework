@@ -28,28 +28,13 @@ using namespace cppa;
 struct event_testee : public fsm_actor<event_testee>
 {
 
-    behavior* w4str()
-    {
-        return &wait4string;
-    }
-
-    behavior* w4float()
-    {
-        return &wait4float;
-    }
-
-    behavior* w4int()
-    {
-        return &init_state;
-    }
-
     behavior wait4string =
     (
-        on<std::string>() >> [this]()
+        on<std::string>() >> [=]()
         {
-            become(w4int());
+            become(&wait4int);
         },
-        on<atom("GetState")>() >> [=]()
+        on<atom("get_state")>() >> [=]()
         {
             reply("wait4string");
         }
@@ -59,25 +44,27 @@ struct event_testee : public fsm_actor<event_testee>
     (
         on<float>() >> [=]()
         {
-            become(w4str());
+            become(&wait4string);
         },
-        on<atom("GetState")>() >> [=]()
+        on<atom("get_state")>() >> [=]()
         {
             reply("wait4float");
         }
     );
 
-    behavior init_state =
+    behavior wait4int =
     (
         on<int>() >> [=]()
         {
-            become(w4float());
+            become(&wait4float);
         },
-        on<atom("GetState")>() >> [=]()
+        on<atom("get_state")>() >> [=]()
         {
-            reply("init_state");
+            reply("wait4int");
         }
     );
+
+    behavior& init_state = wait4int;
 
 };
 
@@ -90,19 +77,21 @@ class event_testee : public fsm_actor<event_testee>
 
     behavior wait4string;
     behavior wait4float;
-    behavior init_state;
+    behavior wait4int;
+
+    behavior& init_state;
 
  public:
 
-    event_testee()
+    event_testee() : init_state(wait4int)
     {
         wait4string =
         (
             on<std::string>() >> [=]()
             {
-                become(&init_state);
+                become(&wait4int);
             },
-            on<atom("GetState")>() >> [=]()
+            on<atom("get_state")>() >> [=]()
             {
                 reply("wait4string");
             }
@@ -112,40 +101,24 @@ class event_testee : public fsm_actor<event_testee>
         (
             on<float>() >> [=]()
             {
-                //become(&wait4string);
-                become
-                (
-                    on<std::string>() >> [=]()
-                    {
-                        become(&init_state);
-                    },
-                    on<atom("GetState")>() >> []()
-                    {
-                        reply("wait4string");
-                    }
-                );
+                become(&wait4string);
             },
-            on<atom("GetState")>() >> [=]()
+            on<atom("get_state")>() >> [=]()
             {
                 reply("wait4float");
             }
         );
 
-        init_state =
+        wait4int =
         (
             on<int>() >> [=]()
             {
                 become(&wait4float);
             },
-            on<atom("GetState")>() >> [=]()
+            on<atom("get_state")>() >> [=]()
             {
-                reply("init_state");
-            },
-            after(std::chrono::seconds(5)) >> [=]()
-            {
-                quit(exit_reason::user_defined);
+                reply("wait4int");
             }
-
         );
     }
 
@@ -158,35 +131,27 @@ abstract_event_based_actor* event_testee2()
 {
     struct impl : fsm_actor<impl>
     {
-        int num_timeouts;
-        timed_invoke_rules init_state;
-        impl() : num_timeouts(0)
+        behavior wait4timeout(int remaining)
         {
-            init_state =
+            return
             (
-                others() >> []()
-                {
-                    cout << "event testee2: "
-                         << to_string(last_received())
-                         << endl;
-                },
                 after(std::chrono::milliseconds(50)) >> [=]()
                 {
-                    if (++num_timeouts >= 5)
-                    {
-                        quit(exit_reason::normal);
-                    }
+                    if (remaining == 1) become_void();
+                    else become(wait4timeout(remaining-1));
                 }
             );
         }
+
+        behavior init_state;
+
+        impl() : init_state(wait4timeout(5)) { }
     };
     return new impl;
 }
 
 struct chopstick : public fsm_actor<chopstick>
 {
-
-    behavior init_state;
 
     behavior taken_by(actor_ptr hakker)
     {
@@ -207,17 +172,16 @@ struct chopstick : public fsm_actor<chopstick>
         );
     }
 
+    behavior init_state;
+
     chopstick()
     {
         init_state =
         (
             on(atom("take"), arg_match) >> [=](actor_ptr hakker)
             {
-                if (hakker)
-                {
-                    become(taken_by(hakker));
-                    reply(atom("taken"));
-                }
+                become(taken_by(hakker));
+                reply(atom("taken"));
             },
             on(atom("break")) >> [=]()
             {
@@ -237,34 +201,36 @@ class testee_actor : public scheduled_actor
     void wait4string()
     {
         bool string_received = false;
-        receive_while([&]() { return !string_received; })
+        do_receive
         (
             on<std::string>() >> [&]()
             {
                 string_received = true;
             },
-            on<atom("GetState")>() >> [&]()
+            on<atom("get_state")>() >> [&]()
             {
                 reply("wait4string");
             }
-        );
+        )
+        .until([&]() { return string_received; });
     }
 
     void wait4float()
     {
         bool float_received = false;
-        receive_while([&]() { return !float_received; })
+        do_receive
         (
             on<float>() >> [&]()
             {
                 float_received = true;
                 wait4string();
             },
-            on<atom("GetState")>() >> [&]()
+            on<atom("get_state")>() >> [&]()
             {
                 reply("wait4float");
             }
-        );
+        )
+        .until([&]() { return float_received; });
     }
 
  public:
@@ -277,9 +243,9 @@ class testee_actor : public scheduled_actor
             {
                 wait4float();
             },
-            on<atom("GetState")>() >> [&]()
+            on<atom("get_state")>() >> [&]()
             {
-                reply("init_state");
+                reply("wait4int");
             }
         );
     }
@@ -346,10 +312,10 @@ std::string behavior_test()
     send(et, .3f);
     send(et, "hello again " + testee_name);
     send(et, "goodbye " + testee_name);
-    send(et, atom("GetState"));
+    send(et, atom("get_state"));
     receive
     (
-        on<std::string>() >> [&](const std::string& str)
+        on_arg_match >> [&](const std::string& str)
         {
             result = str;
         },
@@ -383,8 +349,8 @@ size_t test__spawn()
 
     await_all_others_done();
 
-    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "init_state");
-    CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "init_state");
+    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "wait4int");
+    CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "wait4int");
 
     // create 20,000 actors linked to one single actor
     // and kill them all through killing the link

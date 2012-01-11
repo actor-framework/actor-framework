@@ -247,6 +247,12 @@ src/receive.cpp
 benchmarks/actor_creation.cpp
 benchmarks/mailbox_performance.cpp
 benchmarks/mixed_case.cpp
+benchmarks/actor_creation.erl
+benchmarks/mailbox_performance.erl
+benchmarks/mixed_case.erl
+benchmarks/ActorCreation.scala
+benchmarks/MailboxPerformance.scala
+benchmarks/MixedCase.scala
 cppa/util/default_deallocator.hpp
 cppa/util/producer_consumer_list.hpp
 cppa/util/arg_match_t.hpp

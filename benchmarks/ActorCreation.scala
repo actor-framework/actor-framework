@@ -59,21 +59,20 @@ class ThreadlessTestee(parent: Actor) extends Actor {
 
 class AkkaTestee(parent: akka.actor.ActorRef) extends akka.actor.Actor {
     def receive = {
+        case Spread(0) =>
+            parent ! Result(1)
+            self.stop
         case Spread(s) =>
-            if (s > 0) {
-                val msg = Spread(s-1)
-                actorOf(new AkkaTestee(self)).start ! msg
-                actorOf(new AkkaTestee(self)).start ! msg
-            }
-            else {
-                parent ! Result(1)
-                self.stop
-            }
-        case Result(v1) =>
+            val msg = Spread(s-1)
+            actorOf(new AkkaTestee(self)).start ! msg
+            actorOf(new AkkaTestee(self)).start ! msg
             become {
-                case Result(v2) =>
-                    parent ! Result(v1 + v2)
-                    self.exit
+                case Result(r1) =>
+                    become {
+                        case Result(r2) =>
+                            parent ! Result(r1 + r2)
+                            self.exit
+                    }
             }
     }
 }
