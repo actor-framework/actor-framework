@@ -9,8 +9,116 @@
 
 using namespace cppa;
 
+static uniform_type_info const* iinfo = uniform_typeid<int>();
+
+template<typename T>
+struct uti_util
+{
+    static inline uniform_type_info const* get() { return uniform_typeid<T>(); }
+};
+
+template<>
+struct uti_util<anything>
+{
+    static inline uniform_type_info const* get() { return nullptr; }
+};
+
+template<typename T>
+struct tinfo_util
+{
+    static inline std::type_info const* get() { return &(typeid(T)); }
+};
+
+template<>
+struct tinfo_util<anything>
+{
+    static inline std::type_info const* get() { return nullptr; }
+};
+
+template<bool BuiltinOnlyTypes, typename... T>
+struct type_arr_base
+{
+    uniform_type_info const* data[sizeof...(T)];
+    type_arr_base() : data({uti_util<T>::get()...})
+    {
+    }
+    inline uniform_type_info const* operator[](size_t p) const
+    {
+        return data[p];
+    }
+    inline size_t size() const { return sizeof...(T); }
+};
+
+template<typename... T>
+struct type_arr_base<false, T...>
+{
+    std::type_info const* data[sizeof...(T)];
+    type_arr_base() : data({tinfo_util<T>::get()...})
+    {
+    }
+    inline std::type_info const* operator[](size_t p) const
+    {
+        return data[p];
+    }
+    inline size_t size() const
+    {
+        return sizeof...(T);
+    }
+};
+
+template<typename T>
+struct is_builtin
+{
+    static constexpr bool value = std::is_arithmetic<T>::value;
+};
+
+template<>
+struct is_builtin<anything>
+{
+    static constexpr bool value = true;
+};
+
+template<typename... T>
+struct type_arr : type_arr_base<util::eval_type_list<util::type_list<T...>,is_builtin>::value, T...>
+{
+
+};
+
+void subtest()
+{
+    typedef pattern<int,int,int> i3;
+    i3 ip;
+    std::vector<int> vec = {1, 2, 3};
+    detail::pattern_iterator arg0(i3::size, ip.m_data_ptr, ip.m_utis);
+    detail::tuple_iterator_arg<std::vector<int>, i3::mapping_vector> arg1(vec);
+    cout << "match(vec) ( on<int,int,int> =====> " << detail::do_match(arg0, arg1) << endl;
+}
+
+template<typename Arr>
+void plot(Arr const& arr)
+{
+    cout << "{ ";
+    for (size_t i = 0; i < arr.size(); ++i)
+    {
+        if (i > 0) cout << ", ";
+        cout << "arr[" << i << "] = " << ((arr[i]) ? arr[i]->name() : "anything");
+    }
+    cout << " }" << endl;
+}
+
+class foobar { };
+
+static type_arr_base<true,int,anything,float> arr1;
+static type_arr_base<false,int,anything,foobar> arr2;
+
 size_t test__pattern()
 {
+    cout << "iinfo->name() = " << iinfo->name() << endl;
+
+    plot(arr1);
+    plot(arr2);
+
+    //subtest();
     CPPA_TEST(test__pattern);
     // some pattern objects to play with
     pattern<atom_value, int, std::string> p0{util::wrapped<atom_value>()};

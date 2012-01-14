@@ -110,7 +110,6 @@ class tuple
     inline size_t size() const
     {
         return sizeof...(ElementTypes);
-        //return m_vals->size();
     }
 
     /**

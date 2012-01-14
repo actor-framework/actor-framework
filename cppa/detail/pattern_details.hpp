@@ -167,8 +167,71 @@ class pattern_iterator
 
 };
 
-template<typename VectorType>
+template<class T, class VectorType>
 class tuple_iterator_arg
+{
+
+    size_t pos;
+    std::type_info const* element_type;
+    typename T::const_iterator i;
+    typename T::const_iterator end;
+    VectorType* mapping;
+
+ public:
+
+    inline tuple_iterator_arg(T const& iterable, VectorType* mv = nullptr)
+        : pos(0), element_type(&typeid(typename T::value_type)), i(iterable.begin()), end(iterable.end()), mapping(mv)
+    {
+    }
+
+    inline tuple_iterator_arg(tuple_iterator_arg const& other, VectorType* mv)
+        : pos(other.pos), element_type(other.element_type), i(other.i), end(other.end), mapping(mv)
+    {
+    }
+
+    inline bool at_end() const
+    {
+        return i == end;
+    }
+
+    inline void next()
+    {
+        ++pos;
+        ++i;
+    }
+
+    inline bool has_mapping() const
+    {
+        return mapping != nullptr;
+    }
+
+    inline void push_mapping()
+    {
+        if (mapping) mapping->push_back(pos);
+    }
+
+    inline void push_mapping(VectorType const& what)
+    {
+        if (mapping)
+        {
+            mapping->insert(mapping->end(), what.begin(), what.end());
+        }
+    }
+
+    inline std::type_info const& type() const
+    {
+        return *element_type;
+    }
+
+    inline void const* value() const
+    {
+        return &(*i);
+    }
+
+};
+
+template<class VectorType>
+class tuple_iterator_arg<any_tuple, VectorType>
 {
 
     util::any_tuple_iterator iter;
@@ -214,9 +277,9 @@ class tuple_iterator_arg
         }
     }
 
-    inline uniform_type_info const* type() const
+    inline auto type() const -> decltype(iter.type())
     {
-        return &(iter.type());
+        return iter.type();
     }
 
     inline void const* value() const
@@ -226,8 +289,8 @@ class tuple_iterator_arg
 
 };
 
-template<typename VectorType>
-bool do_match(pattern_iterator& iter, tuple_iterator_arg<VectorType>& targ)
+template<class T, class VectorType>
+bool do_match(pattern_iterator& iter, tuple_iterator_arg<T, VectorType>& targ)
 {
     for ( ; !(iter.at_end() && targ.at_end()); iter.next(), targ.next())
     {
@@ -250,7 +313,7 @@ bool do_match(pattern_iterator& iter, tuple_iterator_arg<VectorType>& targ)
             for ( ; targ.at_end() == false; mv.clear(), targ.next())
             {
                 auto iter_cpy = iter;
-                tuple_iterator_arg<VectorType> targ_cpy(targ, mv_ptr);
+                tuple_iterator_arg<T,VectorType> targ_cpy(targ, mv_ptr);
                 if (do_match(iter_cpy, targ_cpy))
                 {
                     targ.push_mapping(mv);
@@ -260,7 +323,7 @@ bool do_match(pattern_iterator& iter, tuple_iterator_arg<VectorType>& targ)
             return false; // no submatch found
         }
         // compare types
-        else if (targ.at_end() == false && iter.type() == targ.type())
+        else if (targ.at_end() == false && *(iter.type()) == targ.type())
         {
             // compare values if needed
             if (   iter.has_value() == false

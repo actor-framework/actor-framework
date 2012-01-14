@@ -15,7 +15,7 @@ using namespace cppa;
 
 namespace {
 
-void client_part(const std::map<std::string, std::string>& args)
+void client_part(std::map<std::string, std::string> const& args)
 {
     auto i = args.find("port");
     if (i == args.end())
@@ -26,20 +26,14 @@ void client_part(const std::map<std::string, std::string>& args)
     std::uint16_t port;
     iss >> port;
     auto ping_actor = remote_actor("localhost", port);
-    try
-    {
-        pong(ping_actor);
-    }
-    catch (cppa::actor_exited&)
-    {
-    }
+    spawn(pong, ping_actor);
     await_all_others_done();
 }
 
 } // namespace <anonymous>
 
-size_t test__remote_actor(const char* app_path, bool is_client,
-                          const std::map<std::string, std::string>& args)
+size_t test__remote_actor(char const* app_path, bool is_client,
+                          std::map<std::string, std::string> const& args)
 {
     if (is_client)
     {
@@ -64,16 +58,11 @@ size_t test__remote_actor(const char* app_path, bool is_client,
         }
     }
     while (!success);
-    //cout << "port = " << port << endl;
-    std::string cmd;
-    {
-        std::ostringstream oss;
-        oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
-        cmd = oss.str();
-    }
+    std::ostringstream oss;
+    oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
     // execute client_part() in a separate process,
     // connected via localhost socket
-    detail::thread child([&cmd]() { system(cmd.c_str()); });
+    detail::thread child([&oss]() { system(oss.str().c_str()); });
     await_all_others_done();
     CPPA_CHECK_EQUAL(pongs(), 5);
     // wait until separate process (in sep. thread) finished execution

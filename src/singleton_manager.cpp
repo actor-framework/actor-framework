@@ -51,67 +51,79 @@ namespace {
 using namespace cppa;
 using namespace cppa::detail;
 
-struct singleton_container
+std::atomic<uniform_type_info_map*> s_uniform_type_info_map(nullptr);
+std::atomic<network_manager*> s_network_manager(nullptr);
+std::atomic<actor_registry*> s_actor_registry(nullptr);
+std::atomic<group_manager*> s_group_manager(nullptr);
+std::atomic<empty_tuple*> s_empty_tuple(nullptr);
+std::atomic<scheduler*> s_scheduler(nullptr);
+
+template<typename T>
+void stop_and_kill(std::atomic<T*>& ptr)
 {
-
-    std::atomic<scheduler*> m_scheduler;
-    network_manager* m_network_manager;
-
-    uniform_type_info_map* m_uniform_type_info_map;
-    actor_registry* m_actor_registry;
-    group_manager* m_group_manager;
-    empty_tuple* m_empty_tuple;
-
-    singleton_container() : m_scheduler(nullptr), m_network_manager(nullptr)
+    auto p = ptr.load();
+    if (p)
     {
-        m_uniform_type_info_map = new uniform_type_info_map;
-        m_actor_registry = new actor_registry;
-        m_group_manager = new group_manager;
-        m_empty_tuple = new empty_tuple;
-        m_empty_tuple->ref();
-    }
-
-    ~singleton_container()
-    {
-        // disconnect all peers
-        if (m_network_manager)
+        if (ptr.compare_exchange_weak(p, nullptr))
         {
-            m_network_manager->stop();
-            delete m_network_manager;
+            p->stop();
+            delete p;
         }
-        // run actor specific cleanup if needed
+        else
+        {
+            stop_and_kill(ptr);
+        }
+    }
+}
+
+struct singleton_cleanup_helper
+{
+    ~singleton_cleanup_helper()
+    {
         if (self.unchecked() != nullptr)
         {
-            try
-            {
-                self.unchecked()->quit(exit_reason::normal);
-            }
-            catch (actor_exited&)
-            {
-            }
+            try { self.unchecked()->quit(exit_reason::normal); }
+            catch (actor_exited&) { }
         }
-        // wait for all running actors to quit
-        m_actor_registry->await_running_count_equal(0);
-        // shutdown scheduler
-        // TODO: figure out why the ... Mac OS dies with a segfault here
-#       ifndef __APPLE__
-        auto s = m_scheduler.load();
-        if (s)
+        auto rptr = s_actor_registry.load();
+        if (rptr)
         {
-            s->stop();
-            delete s;
+            rptr->await_running_count_equal(0);
         }
-#       endif
-        // it's safe now to delete all other singletons
-        delete m_group_manager;
-        if (!m_empty_tuple->deref()) delete m_empty_tuple;
-        delete m_actor_registry;
-        delete m_uniform_type_info_map;
+        delete s_actor_registry.load();
+        // TODO: figure out why the ... Mac OS dies with a segfault here
+//#       ifndef __APPLE__
+        stop_and_kill(s_scheduler);
+//#       endif
+        stop_and_kill(s_network_manager);
+        // it's safe now to delete all other singletons now
+        delete s_group_manager.load();
+        auto et = s_empty_tuple.load();
+        if (et && !et->deref()) delete et;
+        delete s_actor_registry.load();
+        delete s_uniform_type_info_map.load();
     }
+}
+;//s_cleanup_helper;
 
-};
-
-singleton_container s_container;
+template<typename T>
+T* lazy_get(std::atomic<T*>& ptr)
+{
+    T* result = ptr.load();
+    if (result == nullptr)
+    {
+        auto tmp = new T();
+        if (ptr.compare_exchange_weak(result, tmp) == false)
+        {
+            delete tmp;
+        }
+        else
+        {
+            return tmp;
+        }
+    }
+    return result;
+}
 
 } // namespace <anonymous>
 
@@ -119,46 +131,59 @@ namespace cppa { namespace detail {
 
 actor_registry* singleton_manager::get_actor_registry()
 {
-    return s_container.m_actor_registry;
+    return lazy_get(s_actor_registry);
 }
 
 uniform_type_info_map* singleton_manager::get_uniform_type_info_map()
 {
-    return s_container.m_uniform_type_info_map;
+    return lazy_get(s_uniform_type_info_map);
 }
 
 group_manager* singleton_manager::get_group_manager()
 {
-    return s_container.m_group_manager;
+    return lazy_get(s_group_manager);
 }
 
 scheduler* singleton_manager::get_scheduler()
 {
-    return s_container.m_scheduler.load();
+    return s_scheduler.load();
 }
 
 bool singleton_manager::set_scheduler(scheduler* ptr)
 {
     scheduler* expected = nullptr;
-    if (s_container.m_scheduler.compare_exchange_weak(expected, ptr))
+    if (s_scheduler.compare_exchange_weak(expected, ptr))
     {
         ptr->start();
-        s_container.m_network_manager = network_manager::create_singleton();
-        s_container.m_network_manager->start();
+        auto nm = network_manager::create_singleton();
+        network_manager* nm_expected = nullptr;
+        if (s_network_manager.compare_exchange_weak(nm_expected, nm))
+        {
+            nm->start();
+        }
+        else
+        {
+            delete nm;
+        }
         return true;
     }
-    return false;
+    else
+    {
+        delete ptr;
+        return false;
+    }
 }
 
 network_manager* singleton_manager::get_network_manager()
 {
-    network_manager* result = s_container.m_network_manager;
+    network_manager* result = s_network_manager.load();
     if (result == nullptr)
     {
         scheduler* s = new thread_pool_scheduler;
+        // set_scheduler sets s_network_manager
         if (set_scheduler(s) == false)
         {
-            delete s;
+            //delete s;
         }
         return get_network_manager();
     }
@@ -167,7 +192,21 @@ network_manager* singleton_manager::get_network_manager()
 
 empty_tuple* singleton_manager::get_empty_tuple()
 {
-    return s_container.m_empty_tuple;
+    empty_tuple* result = s_empty_tuple.load();
+    if (result == nullptr)
+    {
+        auto tmp = new empty_tuple;
+        if (s_empty_tuple.compare_exchange_weak(result, tmp) == false)
+        {
+            delete tmp;
+        }
+        else
+        {
+            result = tmp;
+            result->ref();
+        }
+    }
+    return result;
 }
 
 } } // namespace cppa::detail

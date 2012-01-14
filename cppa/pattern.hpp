@@ -101,7 +101,7 @@ class pattern<T0, Tn...>
                     mapping_vector* mapping = nullptr) const
     {
         detail::pattern_iterator arg0(size, m_data_ptr, m_utis);
-        detail::tuple_iterator_arg<mapping_vector> arg1(msg, mapping);
+        detail::tuple_iterator_arg<any_tuple,mapping_vector> arg1(msg, mapping);
         return detail::do_match(arg0, arg1);
     }
 
