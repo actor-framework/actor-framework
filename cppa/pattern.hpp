@@ -43,6 +43,7 @@
 #include "cppa/util/type_list_apply.hpp"
 
 #include "cppa/detail/tdata.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/pattern_details.hpp"
 
 namespace cppa {
@@ -77,8 +78,6 @@ class pattern<T0, Tn...>
 
     pattern()
     {
-        cppa::uniform_type_info const* * iter = m_utis;
-        detail::fill_uti_vec<decltype(iter), T0, Tn...>(iter);
         for (size_t i = 0; i < size; ++i)
         {
             m_data_ptr[i] = nullptr;
@@ -90,17 +89,20 @@ class pattern<T0, Tn...>
     {
         bool invalid_args[] = { detail::is_boxed<Arg0>::value,
                                 detail::is_boxed<Args>::value... };
-        detail::fill_vecs<decltype(m_data), T0, Tn...>(0,
-                                                       sizeof...(Args) + 1,
-                                                       invalid_args,
-                                                       m_data,
-                                                       m_utis, m_data_ptr);
+        for (size_t i = 0; i < sizeof...(Args) + 1; ++i)
+        {
+            m_data_ptr[i] = invalid_args[i] ? nullptr : m_data.at(i);
+        }
+        for (size_t i = sizeof...(Args) + 1; i < size; ++i)
+        {
+            m_data_ptr[i] = nullptr;
+        }
     }
 
     bool operator()(cppa::any_tuple const& msg,
                     mapping_vector* mapping = nullptr) const
     {
-        detail::pattern_iterator arg0(size, m_data_ptr, m_utis);
+        detail::pattern_iterator<decltype(m_utis)> arg0(size, m_data_ptr, m_utis);
         detail::tuple_iterator_arg<any_tuple,mapping_vector> arg1(msg, mapping);
         return detail::do_match(arg0, arg1);
     }
@@ -108,10 +110,14 @@ class pattern<T0, Tn...>
 // private:
 
     detail::tdata<T0, Tn...> m_data;
-    cppa::uniform_type_info const* m_utis[size];
+    //cppa::uniform_type_info const* m_utis[size];
+    static detail::types_array<T0, Tn...> m_utis;
     void const* m_data_ptr[size];
 
 };
+
+template<typename T0, typename... Tn>
+detail::types_array<T0, Tn...> pattern<T0, Tn...>::m_utis;
 
 template<class ExtendedType, class BasicType>
 ExtendedType* extend_pattern(BasicType* p)
@@ -120,14 +126,14 @@ ExtendedType* extend_pattern(BasicType* p)
     et->m_data = p->m_data;
     for (size_t i = 0; i < BasicType::size; ++i)
     {
-        et->m_utis[i] = p->m_utis[i];
+        //et->m_utis[i] = p->m_utis[i];
         et->m_data_ptr[i] = (p->m_data_ptr[i]) ? et->m_data.at(i)
                                                : nullptr;
     }
     for (size_t i = BasicType::size; i < ExtendedType::size; ++i)
     {
         et->m_data_ptr[i] = nullptr;
-        et->m_utis[i] = et->m_data.type_at(i);
+        //et->m_utis[i] = et->m_data.type_at(i);
     }
     return et;
 }

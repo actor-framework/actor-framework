@@ -116,19 +116,20 @@ void fill_vecs(size_t pos,
                                     dt, utis, data_ptrs);
 }
 
+template<class TypesArray>
 class pattern_iterator
 {
 
     size_t m_pos;
     size_t m_size;
     void const* const* m_data;
-    cppa::uniform_type_info const* const* m_types;
+    TypesArray const& m_types;
 
  public:
 
     inline pattern_iterator(size_t msize,
                             void const* const* mdata,
-                            cppa::uniform_type_info const* const* mtypes)
+                            TypesArray const& mtypes)
         : m_pos(0)
         , m_size(msize)
         , m_data(mdata)
@@ -289,8 +290,8 @@ class tuple_iterator_arg<any_tuple, VectorType>
 
 };
 
-template<class T, class VectorType>
-bool do_match(pattern_iterator& iter, tuple_iterator_arg<T, VectorType>& targ)
+template<class TypesArray, class T, class VectorType>
+bool do_match(pattern_iterator<TypesArray>& iter, tuple_iterator_arg<T, VectorType>& targ)
 {
     for ( ; !(iter.at_end() && targ.at_end()); iter.next(), targ.next())
     {

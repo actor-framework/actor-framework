@@ -17,16 +17,6 @@
 
 using namespace cppa;
 
-void subtest()
-{
-    typedef pattern<int,int,int> i3;
-    i3 ip;
-    std::vector<int> vec = {1, 2, 3};
-    detail::pattern_iterator arg0(i3::size, ip.m_data_ptr, ip.m_utis);
-    detail::tuple_iterator_arg<std::vector<int>, i3::mapping_vector> arg1(vec);
-    cout << "match(vec) ( on<int,int,int> =====> " << detail::do_match(arg0, arg1) << endl;
-}
-
 template<typename Arr>
 void plot(Arr const& arr)
 {
@@ -51,7 +41,6 @@ size_t test__pattern()
     plot(arr1);
     plot(arr2);
 
-    //subtest();
     CPPA_TEST(test__pattern);
     // some pattern objects to play with
     pattern<atom_value, int, std::string> p0{util::wrapped<atom_value>()};
