@@ -31,4 +31,18 @@
 #ifndef TBIND_HPP
 #define TBIND_HPP
 
+namespace cppa { namespace util {
+
+template<template <typename, typename> class Tpl, typename Arg1>
+struct tbind
+{
+    template<typename Arg2>
+    struct type
+    {
+        static constexpr bool value = Tpl<Arg1, Arg2>::value;
+    };
+};
+
+} } // namespace cppa::util
+
 #endif // TBIND_HPP
