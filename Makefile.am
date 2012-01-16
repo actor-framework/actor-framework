@@ -137,6 +137,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/to_uniform_name.hpp \
   cppa/detail/tuple_vals.hpp \
   cppa/detail/type_to_ptype.hpp \
+  cppa/detail/types_array.hpp \
   cppa/detail/unboxed.hpp \
   cppa/detail/uniform_type_info_map.hpp \
   cppa/detail/yield_interface.hpp \

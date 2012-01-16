@@ -25,7 +25,6 @@
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
-
 // header for experimental stuff
 #include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/any_tuple_iterator.hpp"
@@ -162,14 +161,13 @@ int main(int argc, char** argv)
         }
     }
     //print_node_id();
-    //cout << endl << endl;
     std::cout << std::boolalpha;
     size_t errors = 0;
+    RUN_TEST(test__uniform_type);
     RUN_TEST(test__pattern);
     RUN_TEST(test__yield_interface);
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);
-    RUN_TEST(test__uniform_type);
     RUN_TEST(test__intrusive_ptr);
     RUN_TEST(test__type_list);
     RUN_TEST(test__tuple);
