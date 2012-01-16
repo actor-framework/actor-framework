@@ -54,7 +54,7 @@ struct eval_first_n<N, type_list<TypesA...>, type_list<TypesB...>, What>
     typedef typename first_n<N, first_list>::type slist_a;
     typedef typename first_n<N, second_list>::type slist_b;
 
-    static const bool value = eval_type_lists<slist_a, slist_b, What>::value;
+    static constexpr bool value = eval_type_lists<slist_a, slist_b, What>::value;
 };
 
 } } // namespace cppa::util

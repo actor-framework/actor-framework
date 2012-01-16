@@ -39,10 +39,10 @@
 namespace cppa { namespace detail {
 
 template<typename T>
-struct is_pair { static const bool value = false; };
+struct is_pair { static constexpr bool value = false; };
 
 template<typename First, typename Second>
-struct is_pair< std::pair<First, Second> > { static const bool value = true; };
+struct is_pair< std::pair<First, Second> > { static constexpr bool value = true; };
 
 template<typename T, bool IsPair, bool IsPrimitive>
 struct map_member_util;

@@ -31,7 +31,6 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
-#include "cppa/util/a_matches_b.hpp"
 #include "cppa/util/apply.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/compare_tuples.hpp"
@@ -40,8 +39,6 @@
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/eval_first_n.hpp"
-#include "cppa/util/eval_type_list.hpp"
-#include "cppa/util/eval_type_lists.hpp"
 #include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/first_n.hpp"
 #include "cppa/util/has_copy_member_fun.hpp"
@@ -51,11 +48,9 @@
 #include "cppa/util/is_one_of.hpp"
 #include "cppa/util/remove_const_reference.hpp"
 #include "cppa/util/replace_type.hpp"
-#include "cppa/util/reverse_type_list.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 #include "cppa/util/singly_linked_list.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/void_type.hpp"
 
 #endif // UTIL_HPP

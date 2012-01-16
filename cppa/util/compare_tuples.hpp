@@ -36,7 +36,6 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/is_comparable.hpp"
-#include "cppa/util/eval_type_lists.hpp"
 
 namespace cppa { namespace detail {
 
@@ -77,10 +76,11 @@ bool compare_tuples(LhsTuple<LhsTypes...> const& lhs,
 {
     static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
                   "could not compare tuples of different size");
-    static_assert(util::eval_type_lists<util::type_list<LhsTypes...>,
-                                        util::type_list<RhsTypes...>,
-                                        util::is_comparable>::value,
+
+    static_assert(tl_zipped_forall<type_list<type_pair<LhsTypes,RhsTypes>...>,
+                                   is_comparable>::value,
                   "types of lhs are not comparable to the types of rhs");
+
     return detail::cmp_helper<(sizeof...(LhsTypes) - 1),
                               LhsTuple<LhsTypes...>,
                               RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
@@ -91,19 +91,17 @@ template<template<typename...> class LhsTuple, typename... LhsTypes,
 bool compare_first_elements(LhsTuple<LhsTypes...> const& lhs,
                             RhsTuple<RhsTypes...> const& rhs)
 {
-    typedef util::type_list<LhsTypes...> lhs_types;
-    typedef util::type_list<RhsTypes...> rhs_types;
+    static constexpr size_t cmp_size = (sizeof...(LhsTypes) < sizeof...(RhsTypes))
+                                       ? sizeof...(LhsTypes)
+                                       : sizeof...(RhsTypes);
 
-    static constexpr size_t lhs_size = sizeof...(LhsTypes);
-    static constexpr size_t rhs_size = sizeof...(RhsTypes);
-    static constexpr size_t cmp_size = (lhs_size < rhs_size)
-                                       ? lhs_size
-                                       : rhs_size;
+    typedef util::type_list<LhsTypes...> lhs_tlist;
+    typedef util::type_list<RhsTypes...> rhs_tlist;
+    typedef typename tl_first_n<cmp_size, lhs_tlist>::type lhs_sublist;
+    typedef typename tl_first_n<cmp_size, rhs_tlist>::type rhs_sublist;
+    typedef typename tl_zip<lhs_sublist, rhs_sublist>::type zipped_sublists;
 
-    static_assert(util::eval_first_n<cmp_size,
-                                     lhs_types,
-                                     rhs_types,
-                                     util::is_comparable>::value,
+    static_assert(tl_zipped_forall<zipped_sublists, is_comparable>::value,
                   "types of lhs are not comparable to the types of rhs");
 
     return detail::cmp_helper<(cmp_size - 1),

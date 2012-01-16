@@ -41,14 +41,12 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/invoke_rules.hpp"
 
-#include "cppa/util/pop_back.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/callable_trait.hpp"
-#include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/concat_type_lists.hpp"
 
@@ -88,19 +86,19 @@ class invoke_rule_builder
 
     typedef util::type_list<TypeList...> raw_types;
 
-    static const bool is_complete =
-            !std::is_same<arg_match_t, typename raw_types::back_type>::value;
+    static constexpr bool is_complete =
+            !std::is_same<arg_match_t, typename raw_types::back>::value;
 
     typedef typename util::if_else_c<is_complete == false,
-                                     typename util::pop_back<raw_types>::type,
+                                     typename util::tl_pop_back<raw_types>::type,
                                      util::wrapped<raw_types> >::type
             types;
 
     static_assert(util::tl_find<types, arg_match_t>::value == -1,
                   "arg_match is allowed only as last parameter for on()");
 
-    typedef typename util::type_list_apply<types,
-                                           detail::implicit_conversions>::type
+    typedef typename util::tl_apply<types,
+                                    detail::implicit_conversions>::type
             converted_types;
 
     typedef typename pattern_type_from_type_list<converted_types>::type
@@ -124,7 +122,7 @@ class invoke_rule_builder
         typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename type_list_apply<raw_types,rm_ref>::type new_types;
+        typedef typename tl_apply<raw_types,rm_ref>::type new_types;
         typedef typename concat_type_lists<converted_types,new_types>::type types;
         typedef typename pattern_type_from_type_list<types>::type epattern;
         typedef typename epattern::tuple_view_type tuple_view_type;
@@ -167,7 +165,7 @@ class on_the_fly_invoke_rule_builder
         typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename type_list_apply<raw_types,rm_ref>::type types;
+        typedef typename tl_apply<raw_types,rm_ref>::type types;
         typedef typename pattern_type_from_type_list<types>::type pattern_type;
         typedef typename pattern_type::tuple_view_type tuple_view_type;
         typedef invokable_impl<tuple_view_type, pattern_type, F> impl;

@@ -64,7 +64,7 @@ class is_forward_iterator
 
  public:
 
-    static const bool value = std::is_same<bool, result_type>::value;
+    static constexpr bool value = std::is_same<bool, result_type>::value;
 
 };
 

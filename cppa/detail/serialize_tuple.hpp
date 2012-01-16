@@ -46,9 +46,9 @@ struct serialize_tuple
     template<typename T>
     inline static void _(serializer& s, T const* tup)
     {
-        s << uniform_typeid<typename List::head_type>()->name()
-          << *reinterpret_cast<const typename List::head_type*>(tup->at(Pos));
-        serialize_tuple<typename List::tail_type, Pos + 1>::_(s, tup);
+        s << uniform_typeid<typename List::head>()->name()
+          << *reinterpret_cast<const typename List::head*>(tup->at(Pos));
+        serialize_tuple<typename List::tail, Pos + 1>::_(s, tup);
     }
 };
 

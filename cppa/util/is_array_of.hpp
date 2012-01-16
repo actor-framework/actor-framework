@@ -44,7 +44,7 @@ struct is_array_of
 {
     typedef typename std::remove_all_extents<T>::type step1_type;
     typedef typename std::remove_cv<step1_type>::type step2_type;
-    static const bool value =    std::is_array<T>::value
+    static constexpr bool value =    std::is_array<T>::value
                               && std::is_same<step2_type, U>::value;
 };
 

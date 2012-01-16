@@ -72,7 +72,7 @@ class is_stl_compliant_list
 
  public:
 
-    static const bool value =    util::is_iterable<T>::value
+    static constexpr bool value =    util::is_iterable<T>::value
                               && std::is_same<bool, result_type>::value;
 
 };
@@ -99,7 +99,7 @@ class is_stl_compliant_map
 
  public:
 
-    static const bool value =    util::is_iterable<T>::value
+    static constexpr bool value =    util::is_iterable<T>::value
                               && std::is_same<bool, result_type>::value;
 
 };
@@ -111,7 +111,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     template<typename X>
     struct is_invalid
     {
-        static const bool value =    !util::is_primitive<X>::value
+        static constexpr bool value =    !util::is_primitive<X>::value
                                   && !is_stl_compliant_map<X>::value
                                   && !is_stl_compliant_list<X>::value;
     };

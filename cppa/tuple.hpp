@@ -45,8 +45,6 @@
 #include "cppa/util/replace_type.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
-#include "cppa/util/eval_type_list.hpp"
-#include "cppa/util/type_list_apply.hpp"
 #include "cppa/util/is_legal_tuple_type.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
@@ -77,12 +75,14 @@ class tuple
 
     static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
 
-    static_assert(util::eval_type_list<element_types,
-                                       util::is_legal_tuple_type>::value,
+    static_assert(util::tl_forall<element_types, util::is_legal_tuple_type>::value,
                   "illegal types in tuple definition: "
                   "pointers and references are prohibited");
 
-    typedef detail::tuple_vals<ElementTypes...> vals_t;
+    typedef detail::tuple_vals<ElementTypes...> tuple_vals_type;
+
+    //typedef detail::tuple_vals<ElementTypes...> vals_t;
+    typedef detail::abstract_tuple vals_t;
 
     cow_ptr<vals_t> m_vals;
 
@@ -91,7 +91,7 @@ class tuple
     /**
      * @brief Initializes each element with its default constructor.
      */
-    tuple() : m_vals(new vals_t)
+    tuple() : m_vals(new tuple_vals_type)
     {
     }
 
@@ -99,7 +99,7 @@ class tuple
      * @brief Initializes the tuple with @p args.
      * @param args Initialization values.
      */
-    tuple(ElementTypes const&... args) : m_vals(new vals_t(args...))
+    tuple(ElementTypes const&... args) : m_vals(new tuple_vals_type(args...))
     {
     }
 
@@ -119,6 +119,11 @@ class tuple
     inline void const* at(size_t p) const
     {
         return m_vals->at(p);
+    }
+
+    inline void* mutable_at(size_t p)
+    {
+        return m_vals->mutable_at(p);
     }
 
     /**
@@ -195,19 +200,23 @@ tuple<Types...> make_tuple(Types const&... args);
 template<size_t N, typename... Types>
 const typename util::at<N, Types...>::type& get(tuple<Types...> const& tup)
 {
-    return get<N>(tup.vals()->data());
+    typedef typename util::at<N, Types...>::type result_type;
+    return *reinterpret_cast<result_type const*>(tup.at(N));
+    //return get<N>(tup.vals()->data());
 }
 
 template<size_t N, typename... Types>
 typename util::at<N, Types...>::type& get_ref(tuple<Types...>& tup)
 {
-    return get_ref<N>(tup.m_vals->data_ref());
+    typedef typename util::at<N, Types...>::type result_type;
+    return *reinterpret_cast<result_type*>(tup.mutable_at(N));
+    //return get_ref<N>(tup.m_vals->data_ref());
 }
 
 template<typename... Types>
 typename tuple_type_from_type_list<
-    typename util::type_list_apply<util::type_list<Types...>,
-                                   detail::implicit_conversions>::type>::type
+    typename util::tl_apply<util::type_list<Types...>,
+                            detail::implicit_conversions>::type>::type
 make_tuple(Types const&... args)
 {
     return { args... };

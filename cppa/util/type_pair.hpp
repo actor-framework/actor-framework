@@ -28,31 +28,18 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UTIL_REVERSE_TYPE_LIST_HPP
-#define CPPA_UTIL_REVERSE_TYPE_LIST_HPP
-
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/concat_type_lists.hpp"
+#ifndef TYPE_PAIR_HPP
+#define TYPE_PAIR_HPP
 
 namespace cppa { namespace util {
 
-template<typename ListFrom, typename ListTo = type_list<>>
-struct reverse_type_list;
-
-template<typename HeadA, typename... TailA, typename... ListB>
-struct reverse_type_list<type_list<HeadA, TailA...>, type_list<ListB...>>
+template<typename First, typename Second>
+struct type_pair
 {
-    typedef typename reverse_type_list<type_list<TailA...>,
-                                       type_list<HeadA, ListB...>>::type
-            type;
-};
-
-template<typename... Types>
-struct reverse_type_list<type_list<>, type_list<Types...>>
-{
-    typedef type_list<Types...> type;
+    typedef First first;
+    typedef Second second;
 };
 
 } } // namespace cppa::util
 
-#endif // CPPA_UTIL_REVERSE_TYPE_LIST_HPP
+#endif // TYPE_PAIR_HPP

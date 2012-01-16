@@ -39,7 +39,6 @@
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_view.hpp"
-#include "cppa/util/a_matches_b.hpp"
 
 namespace cppa {
 

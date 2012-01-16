@@ -36,6 +36,7 @@
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tdata.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/serialize_tuple.hpp"
 
@@ -49,11 +50,11 @@ class tuple_vals : public abstract_tuple
 
     typedef tdata<ElementTypes...> data_type;
 
-    typedef util::type_list<ElementTypes...> element_types;
+    typedef types_array<ElementTypes...> element_types;
 
     data_type m_data;
 
-    element_types m_types;
+    static types_array<ElementTypes...> m_types;
 
     template<typename... Types>
     void* tdata_mutable_at(tdata<Types...>& d, size_t pos)
@@ -101,7 +102,7 @@ class tuple_vals : public abstract_tuple
 
     uniform_type_info const& utype_info_at(size_t pos) const
     {
-        return m_types.at(pos);
+        return *(m_types[pos]);
     }
 
     bool equals(abstract_tuple const& other) const
@@ -116,6 +117,9 @@ class tuple_vals : public abstract_tuple
     }
 
 };
+
+template<typename... ElementTypes>
+types_array<ElementTypes...> tuple_vals<ElementTypes...>::m_types;
 
 } } // namespace cppa::detail
 

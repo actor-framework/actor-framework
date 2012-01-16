@@ -40,7 +40,7 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/type_list_apply.hpp"
+#include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/tdata.hpp"
 #include "cppa/detail/types_array.hpp"

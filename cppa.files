@@ -3,7 +3,6 @@ cppa/tuple.hpp
 unit_testing/main.cpp
 cppa/util/void_type.hpp
 cppa/util/type_list.hpp
-cppa/util/a_matches_b.hpp
 cppa/util.hpp
 cppa/util/is_one_of.hpp
 cppa/util/conjunction.hpp
@@ -28,10 +27,8 @@ cppa/util/concat_type_lists.hpp
 cppa/util/filter_type_list.hpp
 cppa/util/is_comparable.hpp
 cppa/util/callable_trait.hpp
-cppa/util/reverse_type_list.hpp
 unit_testing/test__type_list.cpp
 cppa/util/remove_const_reference.hpp
-cppa/util/type_list_apply.hpp
 cppa/util/eval_type_lists.hpp
 cppa/util/compare_tuples.hpp
 cppa/get.hpp
@@ -138,7 +135,6 @@ cppa/from_string.hpp
 cppa/util/at.hpp
 cppa/util/element_at.hpp
 cppa/util/if_else.hpp
-cppa/util/pop_back.hpp
 cppa/util/pt_dispatch.hpp
 cppa/detail/get_behavior.hpp
 unit_testing/test__ripemd_160.cpp
@@ -258,3 +254,4 @@ cppa/util/producer_consumer_list.hpp
 cppa/util/arg_match_t.hpp
 cppa/detail/types_array.hpp
 cppa/util/is_builtin.hpp
+cppa/util/type_pair.hpp

@@ -34,6 +34,7 @@
 #include <typeinfo>
 
 #include "cppa/util/if_else.hpp"
+#include "cppa/util/type_pair.hpp"
 #include "cppa/util/void_type.hpp"
 
 namespace cppa {
@@ -51,9 +52,9 @@ template<typename... Types> struct type_list;
 template<>
 struct type_list<>
 {
-    typedef void_type head_type;
-    typedef void_type back_type;
-    typedef type_list<> tail_type;
+    typedef void_type head;
+    typedef void_type back;
+    typedef type_list<> tail;
     static const size_t size = 0;
 };
 
@@ -61,48 +62,66 @@ template<typename Head, typename... Tail>
 struct type_list<Head, Tail...>
 {
 
-    typedef uniform_type_info const* uti_ptr;
+    typedef Head head;
 
-    typedef Head head_type;
-
-    typedef type_list<Tail...> tail_type;
+    typedef type_list<Tail...> tail;
 
     typedef typename if_else_c<sizeof...(Tail) == 0,
                                Head,
-                               wrapped<typename tail_type::back_type> >::type
-            back_type;
+                               wrapped<typename tail::back> >::type
+            back;
 
     static const size_t size =  sizeof...(Tail) + 1;
 
-    type_list()
-    {
-        init<type_list>(m_arr);
-    }
-
-    inline uniform_type_info const& at(size_t pos) const
-    {
-        return *m_arr[pos];
-    }
-
-    template<typename TypeList>
-    static void init(uti_ptr* what)
-    {
-        what[0] = uniform_typeid(typeid(typename TypeList::head_type));
-        if (TypeList::size > 1)
-        {
-            ++what;
-            init<typename TypeList::tail_type>(what);
-        }
-    }
-
- private:
-
-    uti_ptr m_arr[size];
-
 };
 
-// type_list::find
+/**
+ * @brief Zips two lists of equal size.
+ *
+ * Creates a list formed from the two lists @p ListA and @p ListB,
+ * e.g., tl_zip<type_list<int,double>,type_list<float,string>>::type
+ * is type_list<type_pair<int,float>,type_pair<double,string>>.
+ */
+template<class ListA, class ListB>
+struct tl_zip;
 
+template<typename... LhsElements, typename... RhsElements>
+struct tl_zip<type_list<LhsElements...>, type_list<RhsElements...> >
+{
+    static_assert(type_list<LhsElements...>::size ==
+                  type_list<RhsElements...>::size,
+                  "Lists have different size");
+    typedef type_list<type_pair<LhsElements, RhsElements>...> type;
+};
+
+template<class From, typename... Elements>
+struct tl_reverse_impl;
+
+template<typename T0, typename... T, typename... E>
+struct tl_reverse_impl<type_list<T0, T...>, E...>
+{
+    typedef typename tl_reverse_impl<type_list<T...>, T0, E...>::type type;
+};
+
+template<typename... E>
+struct tl_reverse_impl<type_list<>, E...>
+{
+    typedef type_list<E...> type;
+};
+
+/**
+ * @brief Creates a new list wih elements in reversed order.
+ */
+template<class List>
+struct tl_reverse
+{
+    typedef typename tl_reverse_impl<List>::type type;
+};
+
+/**
+ * @brief Finds the first element of type @p What beginning at
+ *        index @p Pos.
+ */
 template<class List, typename What, int Pos = 0>
 struct tl_find;
 
@@ -120,7 +139,31 @@ struct tl_find<type_list<Head, Tail...>, What, Pos>
                                : tl_find<type_list<Tail...>, What, Pos+1>::value;
 };
 
-// type_list::forall
+template<size_t N, class List, typename... T>
+struct tl_first_n_impl;
+
+template<class List, typename... T>
+struct tl_first_n_impl<0, List, T...>
+{
+    typedef type_list<T...> type;
+};
+
+template<size_t N, typename L0, typename... L, typename... T>
+struct tl_first_n_impl<N, type_list<L0, L...>, T...>
+{
+    typedef typename tl_first_n_impl<N-1, type_list<L...>, T..., L0>::type type;
+};
+
+/**
+ * @brief Creates a new list from the first @p N elements of @p List.
+ */
+template<size_t N, class List>
+struct tl_first_n
+{
+    static_assert(N > 0, "N == 0");
+    static_assert(List::size >= N, "List::size < N");
+    typedef typename tl_first_n_impl<N, List>::type type;
+};
 
 /**
  * @brief Tests whether a predicate holds for all elements of a list.
@@ -128,19 +171,82 @@ struct tl_find<type_list<Head, Tail...>, What, Pos>
 template<class List, template <typename> class Predicate>
 struct tl_forall
 {
-    typedef typename List::head_type head_type;
-    typedef typename List::tail_type tail_type;
-
-    static const bool value =
-               Predicate<head_type>::value
-            && tl_forall<tail_type, Predicate>::value;
+    static constexpr bool value =
+               Predicate<typename List::head>::value
+            && tl_forall<typename List::tail, Predicate>::value;
 };
 
 template<template <typename> class Predicate>
 struct tl_forall<type_list<>, Predicate>
 {
-    static const bool value = true;
+    static constexpr bool value = true;
 };
+
+/**
+ * @brief Tests whether a predicate holds for all elements of a zipped list.
+ */
+template<class ZippedList, template <typename, typename> class Predicate>
+struct tl_zipped_forall
+{
+    typedef typename ZippedList::head head;
+    static constexpr bool value =
+               Predicate<typename head::first, typename head::second>::value
+            && tl_zipped_forall<typename ZippedList::tail, Predicate>::value;
+};
+
+template<template <typename, typename> class Predicate>
+struct tl_zipped_forall<type_list<>, Predicate>
+{
+    static constexpr bool value = true;
+};
+
+/**
+ * @brief Concatenates two lists.
+ */
+template<typename ListA, typename ListB>
+struct tl_concat;
+
+template<typename... ListATypes, typename... ListBTypes>
+struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
+{
+    typedef type_list<ListATypes..., ListBTypes...> type;
+};
+
+/**
+ * @brief Applies a "template function" to each element in the list.
+ */
+template<typename List, template <typename> class What>
+struct tl_apply;
+
+template<template <typename> class What, typename... Elements>
+struct tl_apply<type_list<Elements...>, What>
+{
+    typedef type_list<typename What<Elements>::type...> type;
+};
+
+/**
+ * @brief Applies a binary "template function" to each element
+ *        in the zipped list.
+ */
+template<typename List, template<typename, typename> class What>
+struct tl_zipped_apply;
+
+template<template<typename, typename> class What, typename... T>
+struct tl_zipped_apply<type_list<T...>, What>
+{
+    typedef type_list<typename What<typename T::first, typename T::second>::type...> type;
+};
+
+/**
+ * @brief Creates a new list wih all but the last element of @p List.
+ */
+template<class List>
+struct tl_pop_back
+{
+    typedef typename tl_reverse<List>::type rlist;
+    typedef typename tl_reverse<typename rlist::tail>::type type;
+};
+
 
 } } // namespace cppa::util
 

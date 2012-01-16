@@ -57,31 +57,31 @@ struct boxed<anything>
 template<typename T>
 struct is_boxed
 {
-    static const bool value = false;
+    static constexpr bool value = false;
 };
 
 template<typename T>
 struct is_boxed< util::wrapped<T> >
 {
-    static const bool value = true;
+    static constexpr bool value = true;
 };
 
 template<typename T>
 struct is_boxed<util::wrapped<T>()>
 {
-    static const bool value = true;
+    static constexpr bool value = true;
 };
 
 template<typename T>
 struct is_boxed<util::wrapped<T>(&)()>
 {
-    static const bool value = true;
+    static constexpr bool value = true;
 };
 
 template<typename T>
 struct is_boxed<util::wrapped<T>(*)()>
 {
-    static const bool value = true;
+    static constexpr bool value = true;
 };
 
 } } // namespace cppa::detail

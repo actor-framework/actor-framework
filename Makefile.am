@@ -170,7 +170,6 @@ nobase_library_include_HEADERS = \
   cppa/tuple_view.hpp \
   cppa/uniform_type_info.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
-  cppa/util/a_matches_b.hpp \
   cppa/util/any_tuple_iterator.hpp \
   cppa/util/apply.hpp \
   cppa/util/arg_match_t.hpp \
@@ -188,7 +187,6 @@ nobase_library_include_HEADERS = \
   cppa/util/element_at.hpp \
   cppa/util/enable_if.hpp \
   cppa/util/eval_first_n.hpp \
-  cppa/util/eval_type_list.hpp \
   cppa/util/eval_type_lists.hpp \
   cppa/util/fiber.hpp \
   cppa/util/filter_type_list.hpp \
@@ -205,21 +203,19 @@ nobase_library_include_HEADERS = \
   cppa/util/is_legal_tuple_type.hpp \
   cppa/util/is_one_of.hpp \
   cppa/util/is_primitive.hpp \
-  cppa/util/pop_back.hpp \
   cppa/util/producer_consumer_list.hpp \
   cppa/util/pt_dispatch.hpp \
   cppa/util/pt_token.hpp \
   cppa/util/remove_const_reference.hpp \
   cppa/util/replace_type.hpp \
-  cppa/util/reverse_type_list.hpp \
   cppa/util/ripemd_160.hpp \
   cppa/util/rm_ref.hpp \
   cppa/util/shared_lock_guard.hpp \
   cppa/util/shared_spinlock.hpp \
   cppa/util/single_reader_queue.hpp \
   cppa/util/singly_linked_list.hpp \
-  cppa/util/type_list_apply.hpp \
   cppa/util/type_list.hpp \
+  cppa/util/type_pair.hpp \
   cppa/util/upgrade_lock_guard.hpp \
   cppa/util/void_type.hpp \
   cppa/util/wrapped.hpp

@@ -54,7 +54,7 @@ class is_copyable_
 
  public:
 
-    static const bool value = std::is_same<bool, result_type>::value;
+    static constexpr bool value = std::is_same<bool, result_type>::value;
 
 };
 
@@ -64,7 +64,7 @@ class is_copyable_<true, T>
 
  public:
 
-    static const bool value = false;
+    static constexpr bool value = false;
 
 };
 

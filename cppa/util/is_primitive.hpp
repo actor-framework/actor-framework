@@ -50,7 +50,7 @@ namespace cppa { namespace util {
 template<typename T>
 struct is_primitive
 {
-    static const bool value = detail::type_to_ptype<T>::ptype != pt_null;
+    static constexpr bool value = detail::type_to_ptype<T>::ptype != pt_null;
 };
 
 } } // namespace cppa::util

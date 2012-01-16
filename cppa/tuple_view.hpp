@@ -38,7 +38,6 @@
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/a_matches_b.hpp"
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/compare_tuples.hpp"
 

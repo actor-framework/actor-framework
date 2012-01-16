@@ -39,7 +39,6 @@
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
-#include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
 

@@ -47,11 +47,11 @@ template<size_t N, typename List>
 struct n_
 {
 
-    typedef typename util::element_at<N - 1, List>::type head_type;
+    typedef typename util::element_at<N - 1, List>::type head;
 
-    typedef typename util::if_else<std::is_same<util::void_type, head_type>,
+    typedef typename util::if_else<std::is_same<util::void_type, head>,
                                    util::type_list<>,
-                                   util::wrapped<util::type_list<head_type>>>::type
+                                   util::wrapped<util::type_list<head>>>::type
             head_list;
 
     typedef typename n_<N - 1, List>::type tail_list;

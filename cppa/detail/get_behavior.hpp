@@ -64,8 +64,8 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
     F m_fun;
 
     typedef typename tdata_from_type_list<
-        typename util::type_list_apply<util::type_list<Args...>,
-                                       implicit_conversions>::type>::type
+        typename util::tl_apply<util::type_list<Args...>,
+                                implicit_conversions>::type>::type
         tdata_type;
 
     tdata_type m_args;
@@ -103,8 +103,8 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
     F m_fun;
 
     typedef typename tdata_from_type_list<
-        typename util::type_list_apply<util::type_list<Args...>,
-                                       implicit_conversions>::type>::type
+        typename util::tl_apply<util::type_list<Args...>,
+                                implicit_conversions>::type>::type
         tdata_type;
 
     tdata_type m_args;
