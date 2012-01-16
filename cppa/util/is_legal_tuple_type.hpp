@@ -38,9 +38,9 @@ namespace cppa { namespace util {
 template<typename T>
 struct is_legal_tuple_type
 {
-    static constexpr bool value =    std::is_pointer<T>::value == false
-                              && std::is_reference<T>::value == false
-                              && std::is_array<T>::value == false;
+    static constexpr bool value =    std::is_reference<T>::value == false
+                                  && std::is_pointer<T>::value == false
+                                  && std::is_array<T>::value == false;
 };
 
 } } // namespace cppa::util

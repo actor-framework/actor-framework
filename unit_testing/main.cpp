@@ -26,7 +26,6 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 // header for experimental stuff
-#include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/any_tuple_iterator.hpp"
 
 #define CPPA_TEST_CATCH_BLOCK()                                                \

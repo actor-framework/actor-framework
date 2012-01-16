@@ -36,8 +36,6 @@
 
 #include "cppa/primitive_type.hpp"
 
-#include "cppa/util/apply.hpp"
-
 namespace cppa { namespace detail {
 
 // if (IfStmt == true) ptype = PT; else ptype = Else::ptype;
@@ -68,8 +66,8 @@ struct type_to_ptype_impl :
     if_else_ptype<std::is_same<T, std::int16_t>, pt_int16,
     if_else_ptype<std::is_same<T, std::int32_t>, pt_int32,
     if_else_ptype<std::is_same<T, std::int64_t>, pt_int64,
-    if_else_ptype<std::is_same<T, std::uint8_t>, pt_uint8,
     // unsigned integers
+    if_else_ptype<std::is_same<T, std::uint8_t>, pt_uint8,
     if_else_ptype<std::is_same<T, std::uint16_t>, pt_uint16,
     if_else_ptype<std::is_same<T, std::uint32_t>, pt_uint32,
     if_else_ptype<std::is_same<T, std::uint64_t>, pt_uint64,
@@ -90,9 +88,7 @@ template<typename T>
 struct type_to_ptype
 {
 
-    typedef typename util::apply<T,
-                                 std::remove_reference,
-                                 std::remove_cv        >::type type;
+    typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
 
     static const primitive_type ptype = type_to_ptype_impl<type>::ptype;
 

@@ -40,10 +40,13 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_view.hpp"
 
+#include "cppa/util/tbind.hpp"
+#include "cppa/util/type_list.hpp"
+
 namespace cppa {
 
 template<typename... MatchRules>
-typename tuple_view_type_from_type_list<typename util::filter_type_list<anything, util::type_list<MatchRules...>>::type>::type
+typename tuple_view_type_from_type_list<typename util::lt_filter_not<util::type_list<MatchRules...>, util::tbind<std::is_same, anything>::type>::type>::type
 get_view(any_tuple const& ut)
 {
     pattern<MatchRules...> p;

@@ -39,8 +39,8 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/filter_type_list.hpp"
 
 #include "cppa/detail/tdata.hpp"
 #include "cppa/detail/types_array.hpp"
@@ -68,7 +68,7 @@ class pattern<T0, Tn...>
 
     typedef util::type_list<T0, Tn...> tpl_args;
 
-    typedef typename util::filter_type_list<anything, tpl_args>::type
+    typedef typename util::lt_filter_not<tpl_args, util::tbind<std::is_same, anything>::type>::type
             filtered_tpl_args;
 
     typedef typename tuple_view_type_from_type_list<filtered_tpl_args>::type

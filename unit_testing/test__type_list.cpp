@@ -21,10 +21,6 @@ size_t test__type_list()
 
     CPPA_TEST(test__type_list);
 
-    typedef apply<const int&, remove_const_reference>::type int_typedef;
-
-    CPPA_CHECK((is_same<int, int_typedef>::value));
-
     typedef type_list<int, float, std::string> l1;
     typedef typename tl_reverse<l1>::type r1;
 

@@ -31,16 +31,12 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
-#include "cppa/util/apply.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/concat_type_lists.hpp"
 #include "cppa/util/conjunction.hpp"
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/enable_if.hpp"
-#include "cppa/util/eval_first_n.hpp"
-#include "cppa/util/filter_type_list.hpp"
-#include "cppa/util/first_n.hpp"
 #include "cppa/util/has_copy_member_fun.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/is_copyable.hpp"

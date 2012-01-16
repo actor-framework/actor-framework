@@ -178,8 +178,7 @@ inline bool operator!=(object const& lhs, object const& rhs)
 template<typename T>
 T& get_ref(object& obj)
 {
-    static_assert(util::disjunction<std::is_pointer<T>,
-                                    std::is_reference<T>>::value == false,
+    static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
     if (!(obj.type() == typeid(T)))
     {
@@ -191,8 +190,7 @@ T& get_ref(object& obj)
 template<typename T>
 T const& get(object const& obj)
 {
-    static_assert(util::disjunction<std::is_pointer<T>,
-                                    std::is_reference<T>>::value == false,
+    static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
     if (!(obj.type() == typeid(T)))
     {

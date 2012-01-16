@@ -40,7 +40,6 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-#include "cppa/util/apply.hpp"
 #include "cppa/util/pt_token.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"

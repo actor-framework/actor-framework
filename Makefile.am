@@ -171,7 +171,6 @@ nobase_library_include_HEADERS = \
   cppa/uniform_type_info.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
   cppa/util/any_tuple_iterator.hpp \
-  cppa/util/apply.hpp \
   cppa/util/arg_match_t.hpp \
   cppa/util/at.hpp \
   cppa/util/callable_trait.hpp \
@@ -186,11 +185,7 @@ nobase_library_include_HEADERS = \
   cppa/util/either.hpp \
   cppa/util/element_at.hpp \
   cppa/util/enable_if.hpp \
-  cppa/util/eval_first_n.hpp \
-  cppa/util/eval_type_lists.hpp \
   cppa/util/fiber.hpp \
-  cppa/util/filter_type_list.hpp \
-  cppa/util/first_n.hpp \
   cppa/util/fixed_vector.hpp \
   cppa/util/has_copy_member_fun.hpp \
   cppa/util.hpp \

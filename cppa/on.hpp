@@ -45,9 +45,7 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
-#include "cppa/util/eval_first_n.hpp"
 #include "cppa/util/callable_trait.hpp"
-#include "cppa/util/filter_type_list.hpp"
 #include "cppa/util/concat_type_lists.hpp"
 
 #include "cppa/detail/boxed.hpp"

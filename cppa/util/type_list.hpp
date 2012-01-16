@@ -75,6 +75,8 @@ struct type_list<Head, Tail...>
 
 };
 
+// static list list::zip(list, list)
+
 /**
  * @brief Zips two lists of equal size.
  *
@@ -93,6 +95,8 @@ struct tl_zip<type_list<LhsElements...>, type_list<RhsElements...> >
                   "Lists have different size");
     typedef type_list<type_pair<LhsElements, RhsElements>...> type;
 };
+
+// list list::reverse()
 
 template<class From, typename... Elements>
 struct tl_reverse_impl;
@@ -118,6 +122,8 @@ struct tl_reverse
     typedef typename tl_reverse_impl<List>::type type;
 };
 
+// bool list::find(type)
+
 /**
  * @brief Finds the first element of type @p What beginning at
  *        index @p Pos.
@@ -139,6 +145,8 @@ struct tl_find<type_list<Head, Tail...>, What, Pos>
                                : tl_find<type_list<Tail...>, What, Pos+1>::value;
 };
 
+// list list::first_n(size_t)
+
 template<size_t N, class List, typename... T>
 struct tl_first_n_impl;
 
@@ -157,13 +165,15 @@ struct tl_first_n_impl<N, type_list<L0, L...>, T...>
 /**
  * @brief Creates a new list from the first @p N elements of @p List.
  */
-template<size_t N, class List>
+template<class List, size_t N>
 struct tl_first_n
 {
     static_assert(N > 0, "N == 0");
     static_assert(List::size >= N, "List::size < N");
     typedef typename tl_first_n_impl<N, List>::type type;
 };
+
+// bool list::forall(predicate)
 
 /**
  * @brief Tests whether a predicate holds for all elements of a list.
@@ -181,6 +191,8 @@ struct tl_forall<type_list<>, Predicate>
 {
     static constexpr bool value = true;
 };
+
+// bool list::zipped_forall(predicate)
 
 /**
  * @brief Tests whether a predicate holds for all elements of a zipped list.
@@ -200,6 +212,8 @@ struct tl_zipped_forall<type_list<>, Predicate>
     static constexpr bool value = true;
 };
 
+// static list list::concat(list, list)
+
 /**
  * @brief Concatenates two lists.
  */
@@ -212,30 +226,46 @@ struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
     typedef type_list<ListATypes..., ListBTypes...> type;
 };
 
+template<class List, typename Element>
+struct tl_prepend;
+
+template<typename E0, typename... E>
+struct tl_prepend<type_list<E...>, E0>
+{
+    typedef type_list<E0, E...> type;
+};
+
+// list list::appy(trait)
+
 /**
  * @brief Applies a "template function" to each element in the list.
  */
-template<typename List, template <typename> class What>
+template<typename List, template <typename> class Trait>
 struct tl_apply;
 
-template<template <typename> class What, typename... Elements>
-struct tl_apply<type_list<Elements...>, What>
+template<template <typename> class Trait, typename... Elements>
+struct tl_apply<type_list<Elements...>, Trait>
 {
-    typedef type_list<typename What<Elements>::type...> type;
+    typedef type_list<typename Trait<Elements>::type...> type;
 };
+
+// list list::zipped_apply(trait)
 
 /**
  * @brief Applies a binary "template function" to each element
  *        in the zipped list.
  */
-template<typename List, template<typename, typename> class What>
+template<typename List, template<typename, typename> class Trait>
 struct tl_zipped_apply;
 
-template<template<typename, typename> class What, typename... T>
-struct tl_zipped_apply<type_list<T...>, What>
+template<template<typename, typename> class Trait, typename... T>
+struct tl_zipped_apply<type_list<T...>, Trait>
 {
-    typedef type_list<typename What<typename T::first, typename T::second>::type...> type;
+    typedef type_list<typename Trait<typename T::first,
+                                     typename T::second>::type...> type;
 };
+
+// list list::pop_back()
 
 /**
  * @brief Creates a new list wih all but the last element of @p List.
@@ -247,6 +277,99 @@ struct tl_pop_back
     typedef typename tl_reverse<typename rlist::tail>::type type;
 };
 
+// type list::at(size_t)
+
+template<size_t N, typename... E>
+struct lt_at_impl;
+
+
+template<size_t N, typename E0, typename... E>
+struct lt_at_impl<N, E0, E...>
+{
+    typedef typename lt_at_impl<N-1, E...>::type type;
+};
+
+template<typename E0, typename... E>
+struct lt_at_impl<0, E0, E...>
+{
+    typedef E0 type;
+};
+
+/**
+ * @brief Gets element at index @p N of @p List.
+ */
+template<class List, size_t N>
+struct lt_at;
+
+template<size_t N, typename... E>
+struct lt_at<type_list<E...>, N>
+{
+    static_assert(N < sizeof...(E), "N >= List::size");
+    typedef typename lt_at_impl<N, E...>::type type;
+};
+
+// list list::prepend(type)
+
+/**
+ * @brief Creates a new list with @p What prepended to @p List.
+ */
+template<class List, typename What>
+struct lt_prepend;
+
+template<typename What, typename... T>
+struct lt_prepend<type_list<T...>, What>
+{
+    typedef type_list<What, T...> type;
+};
+
+
+// list list::filter(predicate)
+
+template<class List, bool... Selected>
+struct lt_filter_impl;
+
+template<>
+struct lt_filter_impl< type_list<> >
+{
+    typedef type_list<> type;
+};
+
+template<typename T0, typename... T, bool... S>
+struct lt_filter_impl<type_list<T0, T...>, false, S...>
+{
+    typedef typename lt_filter_impl<type_list<T...>, S...>::type type;
+};
+
+template<typename T0, typename... T, bool... S>
+struct lt_filter_impl<type_list<T0, T...>, true, S...>
+{
+    typedef typename lt_prepend<typename lt_filter_impl<type_list<T...>, S...>::type, T0>::type type;
+};
+
+/**
+ * @brief Create a new list containing all elements which satisfy @p Predicate.
+ */
+template<class List, template<typename> class Predicate>
+struct lt_filter;
+
+template<template<typename> class Predicate, typename... T>
+struct lt_filter<type_list<T...>, Predicate>
+{
+    typedef typename lt_filter_impl<type_list<T...>, Predicate<T>::value...>::type type;
+};
+
+/**
+ * @brief Create a new list containing all elements which
+ *        do not satisfy @p Predicate.
+ */
+template<class List, template<typename> class Predicate>
+struct lt_filter_not;
+
+template<template<typename> class Predicate, typename... T>
+struct lt_filter_not<type_list<T...>, Predicate>
+{
+    typedef typename lt_filter_impl<type_list<T...>, !Predicate<T>::value...>::type type;
+};
 
 } } // namespace cppa::util
 
