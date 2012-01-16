@@ -255,3 +255,4 @@ cppa/util/arg_match_t.hpp
 cppa/detail/types_array.hpp
 cppa/util/is_builtin.hpp
 cppa/util/type_pair.hpp
+cppa/util/tbind.hpp

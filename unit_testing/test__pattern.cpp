@@ -34,26 +34,26 @@ typedef std::pair<int,int> foobar;
 static detail::types_array<int,anything,float> arr1;
 static detail::types_array<int,anything,foobar> arr2;
 
-template<template <typename, typename> class Tpl, typename Arg1>
-struct tbind
-{
-    template<typename Arg2>
-    struct type
-    {
-        static constexpr bool value = Tpl<Arg1, Arg2>::value;
-    };
-};
+//template<template <typename, typename> class Tpl, typename Arg1>
+//struct tbind
+//{
+//    template<typename Arg2>
+//    struct type
+//    {
+//        static constexpr bool value = Tpl<Arg1, Arg2>::value;
+//    };
+//};
 
-template<template<typename> class Predicate, class Value>
-struct foobaz
-{
-    static constexpr bool value = Predicate<Value>::value;
-};
+//template<template<typename> class Predicate, class Value>
+//struct foobaz
+//{
+//    static constexpr bool value = Predicate<Value>::value;
+//};
 
 size_t test__pattern()
 {
 
-    cout << "foobaz: " << foobaz<tbind<std::is_same, void>::type, void>::value << endl;
+    //cout << "foobaz: " << foobaz<tbind<std::is_same, void>::type, void>::value << endl;
 
     announce<foobar>(&foobar::first, &foobar::second);
 
