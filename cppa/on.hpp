@@ -96,7 +96,7 @@ class invoke_rule_builder
                                      util::wrapped<raw_types> >::type
             types;
 
-    static_assert(types::template find<arg_match_t>::value == -1,
+    static_assert(util::tl_find<types, arg_match_t>::value == -1,
                   "arg_match is allowed only as last parameter for on()");
 
     typedef typename util::type_list_apply<types,

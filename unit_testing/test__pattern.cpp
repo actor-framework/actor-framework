@@ -6,65 +6,16 @@
 #include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/pattern.hpp"
+#include "cppa/announce.hpp"
+
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
+#include "cppa/util/conjunction.hpp"
+#include "cppa/util/is_primitive.hpp"
 
 using namespace cppa;
 
 static uniform_type_info const* iinfo = uniform_typeid<int>();
-
-template<typename T>
-struct uti_util
-{
-    static inline uniform_type_info const* get() { return uniform_typeid<T>(); }
-};
-
-template<>
-struct uti_util<anything>
-{
-    static inline uniform_type_info const* get() { return nullptr; }
-};
-
-template<typename T>
-struct tinfo_util
-{
-    static inline std::type_info const* get() { return &(typeid(T)); }
-};
-
-template<>
-struct tinfo_util<anything>
-{
-    static inline std::type_info const* get() { return nullptr; }
-};
-
-template<bool BuiltinOnlyTypes, typename... T>
-struct type_arr_base
-{
-    uniform_type_info const* data[sizeof...(T)];
-    type_arr_base() : data({uti_util<T>::get()...})
-    {
-    }
-    inline uniform_type_info const* operator[](size_t p) const
-    {
-        return data[p];
-    }
-    inline size_t size() const { return sizeof...(T); }
-};
-
-template<typename... T>
-struct type_arr_base<false, T...>
-{
-    std::type_info const* data[sizeof...(T)];
-    type_arr_base() : data({tinfo_util<T>::get()...})
-    {
-    }
-    inline std::type_info const* operator[](size_t p) const
-    {
-        return data[p];
-    }
-    inline size_t size() const
-    {
-        return sizeof...(T);
-    }
-};
 
 template<typename T>
 struct is_builtin
@@ -78,8 +29,113 @@ struct is_builtin<anything>
     static constexpr bool value = true;
 };
 
+template<bool IsBuiltIn, typename T>
+struct uti_util_impl
+{
+    static inline uniform_type_info const* get()
+    {
+        return uniform_typeid<T>();
+    }
+};
+
+template<typename T>
+struct uti_util_impl<false, T>
+{
+    static inline uniform_type_info const* get()
+    {
+        return nullptr;
+    }
+};
+
+template<>
+struct uti_util_impl<true, anything>
+{
+    static inline uniform_type_info const* get()
+    {
+        return nullptr;
+    }
+};
+
+template<typename T>
+inline uniform_type_info const* get_uti_static()
+{
+    return uti_util_impl<is_builtin<T>::value, T>::get();
+}
+
+template<bool BuiltinOnlyTypes, typename... T>
+struct types_array_impl
+{
+    uniform_type_info const* data[sizeof...(T)];
+    types_array_impl() : data({get_uti_static<T>()...})
+    {
+    }
+    inline uniform_type_info const* operator[](size_t p) const
+    {
+        return data[p];
+    }
+    inline size_t size() const { return sizeof...(T); }
+};
+
+template<typename T>
+struct tinfo_util
+{
+    static inline std::type_info const* get()
+    {
+        return &(typeid(T));
+    }
+};
+
+template<>
+struct tinfo_util<anything>
+{
+    static inline std::type_info const* get()
+    {
+        return nullptr;
+    }
+};
+
 template<typename... T>
-struct type_arr : type_arr_base<util::eval_type_list<util::type_list<T...>,is_builtin>::value, T...>
+struct types_array_impl<false, T...>
+{
+    std::type_info const* tinfo_data[sizeof...(T)];
+    mutable std::atomic<uniform_type_info const*> data[sizeof...(T)];
+    types_array_impl() : tinfo_data({tinfo_util<T>::get()...})
+    {
+        bool static_init[sizeof...(T)] = { is_builtin<T>::value... };
+        for (size_t i = 0; i < sizeof...(T); ++i)
+        {
+            if (static_init[i])
+            {
+                auto x = tinfo_data[i];
+                if (x) data[i].store(uniform_typeid(*x));
+            }
+        }
+    }
+    inline uniform_type_info const* operator[](size_t p) const
+    {
+        auto x = data[p].load();
+        if (!x)
+        {
+            auto y = tinfo_data[p];
+            if (y)
+            {
+                auto result = uniform_typeid(*y);
+                data[p].store(result, std::memory_order_relaxed);
+                return result;
+            }
+        }
+        return x;
+    }
+    inline size_t size() const
+    {
+        return sizeof...(T);
+    }
+};
+
+template<typename... T>
+struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
+                                                      is_builtin>::value,
+                                      T...>
 {
 
 };
@@ -106,13 +162,15 @@ void plot(Arr const& arr)
     cout << " }" << endl;
 }
 
-class foobar { };
+typedef std::pair<int,int> foobar;
 
-static type_arr_base<true,int,anything,float> arr1;
-static type_arr_base<false,int,anything,foobar> arr2;
+static types_array_impl<true,int,anything,float> arr1;
+static types_array_impl<false,int,anything,foobar> arr2;
 
 size_t test__pattern()
 {
+    announce<foobar>(&foobar::first, &foobar::second);
+
     cout << "iinfo->name() = " << iinfo->name() << endl;
 
     plot(arr1);

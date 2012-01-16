@@ -55,11 +55,6 @@ struct type_list<>
     typedef void_type back_type;
     typedef type_list<> tail_type;
     static const size_t size = 0;
-    template<typename, int = 0>
-    struct find
-    {
-        static const int value = -1;
-    };
 };
 
 template<typename Head, typename... Tail>
@@ -100,18 +95,51 @@ struct type_list<Head, Tail...>
         }
     }
 
-    template<typename What, int Pos = 0>
-    struct find
-    {
-        static const int value = std::is_same<What,Head>::value
-                                 ? Pos
-                                 : type_list<Tail...>::template find<What,Pos+1>::value;
-    };
-
  private:
 
     uti_ptr m_arr[size];
 
+};
+
+// type_list::find
+
+template<class List, typename What, int Pos = 0>
+struct tl_find;
+
+template<typename What, int Pos>
+struct tl_find<type_list<>, What, Pos>
+{
+    static constexpr int value = -1;
+};
+
+template<typename What, int Pos, typename Head, typename... Tail>
+struct tl_find<type_list<Head, Tail...>, What, Pos>
+{
+    static constexpr int value = std::is_same<Head, What>::value
+                               ? Pos
+                               : tl_find<type_list<Tail...>, What, Pos+1>::value;
+};
+
+// type_list::forall
+
+/**
+ * @brief Tests whether a predicate holds for all elements of a list.
+ */
+template<class List, template <typename> class Predicate>
+struct tl_forall
+{
+    typedef typename List::head_type head_type;
+    typedef typename List::tail_type tail_type;
+
+    static const bool value =
+               Predicate<head_type>::value
+            && tl_forall<tail_type, Predicate>::value;
+};
+
+template<template <typename> class Predicate>
+struct tl_forall<type_list<>, Predicate>
+{
+    static const bool value = true;
 };
 
 } } // namespace cppa::util
