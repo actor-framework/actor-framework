@@ -177,8 +177,8 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 template<typename... X>
 void tdata_set(tdata<X...>&, tdata<> const&) { }
 
-template<typename... X, typename... Y>
-void tdata_set(tdata<X...>& lhs, tdata<Y...> const& rhs)
+template<typename Head, typename... X, typename... Y>
+void tdata_set(tdata<Head, X...>& lhs, tdata<Head, Y...> const& rhs)
 {
     lhs.head = rhs.head;
     tdata_set(lhs.tail(), rhs.tail());

@@ -155,22 +155,13 @@ ExtendedType* extend_pattern(BasicType const* p)
 {
     ExtendedType* et = new ExtendedType;
     detail::tdata_set(et->m_data, p->m_data);
-    //et->m_data = p->m_data;
     for (size_t i = 0; i < BasicType::size; ++i)
     {
         if (p->m_data_ptr[i] != nullptr)
         {
-
+            et->m_data_ptr[i] = et->m_data.at(i);
         }
-        //et->m_data_ptr[i] = (p->m_data_ptr[i]) ? et->m_data.at(i)
-        //                                       : nullptr;
     }
-    /*
-    for (size_t j = BasicType::size; j < ExtendedType::size; ++j)
-    {
-      et->m_data_ptr[j] = nullptr;
-    }
-    */
     return et;
 }
 
