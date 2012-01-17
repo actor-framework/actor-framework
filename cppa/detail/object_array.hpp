@@ -68,7 +68,7 @@ class object_array : public detail::abstract_tuple
 
     bool equals(cppa::detail::abstract_tuple const&) const;
 
-    uniform_type_info const& utype_info_at(size_t pos) const;
+    uniform_type_info const* type_at(size_t pos) const;
 
 };
 

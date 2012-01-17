@@ -41,12 +41,12 @@ object_array::object_array(object_array&& other)
 {
 }
 
-object_array::object_array(const object_array& other)
+object_array::object_array(object_array const& other)
     : m_elements(other.m_elements)
 {
 }
 
-void object_array::push_back(const object& what)
+void object_array::push_back(object const& what)
 {
     m_elements.push_back(what);
 }
@@ -71,21 +71,21 @@ abstract_tuple* object_array::copy() const
     return new object_array(*this);
 }
 
-const void* object_array::at(size_t pos) const
+void const* object_array::at(size_t pos) const
 {
     return m_elements[pos].value();
 }
 
-bool object_array::equals(const cppa::detail::abstract_tuple& ut) const
+bool object_array::equals(cppa::detail::abstract_tuple const& ut) const
 {
     if (size() == ut.size())
     {
         for (size_t i = 0; i < size(); ++i)
         {
-            const uniform_type_info& utype = utype_info_at(i);
-            if (utype == ut.utype_info_at(i))
+            auto utype = type_at(i);
+            if (utype == ut.type_at(i))
             {
-                if (!utype.equals(at(i), ut.at(i))) return false;
+                if (!utype->equals(at(i), ut.at(i))) return false;
             }
             else
             {
@@ -97,7 +97,7 @@ bool object_array::equals(const cppa::detail::abstract_tuple& ut) const
     return false;
 }
 
-const uniform_type_info& object_array::utype_info_at(size_t pos) const
+uniform_type_info const* object_array::type_at(size_t pos) const
 {
     return m_elements[pos].type();
 }

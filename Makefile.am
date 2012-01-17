@@ -13,7 +13,6 @@ libcppa_la_SOURCES = \
   src/actor_registry.cpp \
   src/addressed_message.cpp \
   src/any_tuple.cpp \
-  src/any_tuple_iterator.cpp \
   src/atom.cpp \
   src/attachable.cpp \
   src/binary_deserializer.cpp \
@@ -120,7 +119,6 @@ nobase_library_include_HEADERS = \
   cppa/detail/object_array.hpp \
   cppa/detail/object_impl.hpp \
   cppa/detail/pair_member.hpp \
-  cppa/detail/pattern_details.hpp \
   cppa/detail/post_office.hpp \
   cppa/detail/post_office_msg.hpp \
   cppa/detail/primitive_member.hpp \
@@ -170,7 +168,6 @@ nobase_library_include_HEADERS = \
   cppa/tuple_view.hpp \
   cppa/uniform_type_info.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
-  cppa/util/any_tuple_iterator.hpp \
   cppa/util/arg_match_t.hpp \
   cppa/util/at.hpp \
   cppa/util/callable_trait.hpp \

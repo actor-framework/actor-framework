@@ -65,9 +65,9 @@ struct offset_decorator : cppa::detail::abstract_tuple
         return m_decorated->at(pos + m_offset);
     }
 
-    const cppa::uniform_type_info& utype_info_at(size_t pos) const
+    const cppa::uniform_type_info* type_at(size_t pos) const
     {
-        return m_decorated->utype_info_at(pos + m_offset);
+        return m_decorated->type_at(pos + m_offset);
     }
 
  private:
@@ -131,9 +131,9 @@ const void* any_tuple::at(size_t p) const
     return m_vals->at(p);
 }
 
-const uniform_type_info& any_tuple::utype_info_at(size_t p) const
+const uniform_type_info* any_tuple::type_at(size_t p) const
 {
-    return m_vals->utype_info_at(p);
+    return m_vals->type_at(p);
 }
 
 const cow_ptr<detail::abstract_tuple>& any_tuple::vals() const

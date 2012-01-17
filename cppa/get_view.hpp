@@ -43,6 +43,8 @@
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
+#include "cppa/detail/matches.hpp"
+
 namespace cppa {
 
 template<typename... MatchRules>
@@ -51,7 +53,7 @@ get_view(any_tuple const& ut)
 {
     pattern<MatchRules...> p;
     typename pattern<MatchRules...>::mapping_vector mapping;
-    if (p(ut, &mapping))
+    if (detail::matches(detail::pm_decorated(ut.begin(), &mapping), p.begin()))
     {
         return { ut.vals(), mapping };
     }

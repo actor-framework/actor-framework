@@ -103,14 +103,14 @@ bool operator==(const object& lhs, const object& rhs)
     {
         // values might both point to s_void if lhs and rhs are "empty"
         return    lhs.value() == rhs.value()
-               || lhs.type().equals(lhs.value(), rhs.value());
+               || lhs.type()->equals(lhs.value(), rhs.value());
     }
     return false;
 }
 
-const uniform_type_info& object::type() const
+uniform_type_info const* object::type() const
 {
-    return *m_type;
+    return m_type;
 }
 
 const void* object::value() const

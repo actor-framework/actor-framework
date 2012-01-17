@@ -109,7 +109,6 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     bool m_has_pending_timeout_request;
     std::uint32_t m_active_timeout_id;
-    pattern<atom_value, std::uint32_t> m_pattern;
 
  public:
 

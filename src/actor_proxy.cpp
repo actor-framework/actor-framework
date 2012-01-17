@@ -104,9 +104,9 @@ void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
     }
     */
     if (   msg.size() == 2
-        && msg.utype_info_at(0) == typeid(atom_value)
+        && *(msg.type_at(0)) == typeid(atom_value)
         && msg.get_as<atom_value>(0) == atom(":KillProxy")
-        && msg.utype_info_at(1) == typeid(std::uint32_t))
+        && *(msg.type_at(1)) == typeid(std::uint32_t))
     {
         cleanup(msg.get_as<std::uint32_t>(1));
         return;

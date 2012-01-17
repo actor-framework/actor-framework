@@ -38,12 +38,12 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
     if (size() != other.size()) return false;
     for (size_t i = 0; i < size(); ++i)
     {
-        const cppa::uniform_type_info& uti = utype_info_at(i);
-        if (uti != other.utype_info_at(i)) return false;
+        auto uti = type_at(i);
+        if (uti != other.type_at(i)) return false;
         auto lhs = at(i);
         auto rhs = other.at(i);
         // compare first addresses, then values
-        if (lhs != rhs && !(uti.equals(lhs, rhs))) return false;
+        if (lhs != rhs && !(uti->equals(lhs, rhs))) return false;
     }
     return true;
 }

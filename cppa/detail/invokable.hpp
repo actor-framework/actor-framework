@@ -39,6 +39,8 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/fixed_vector.hpp"
+
+#include "cppa/detail/matches.hpp"
 #include "cppa/detail/intermediate.hpp"
 
 // forward declaration
@@ -147,7 +149,8 @@ class invokable_impl : public invokable
     bool invoke(any_tuple const& data) const
     {
         vector_type mv;
-        if ((*m_pattern)(data, &mv))
+        if (detail::matches(pm_decorated(data.begin(), &mv), m_pattern->begin()))
+        //if ((*m_pattern)(data, &mv))
         {
             if (mv.size() == data.size())
             {
@@ -169,7 +172,8 @@ class invokable_impl : public invokable
     intermediate* get_intermediate(any_tuple const& data)
     {
         vector_type mv;
-        if ((*m_pattern)(data, &mv))
+        //if ((*m_pattern)(data, &mv))
+        if (detail::matches(pm_decorated(data.begin(), &mv), m_pattern->begin()))
         {
             if (mv.size() == data.size())
             {
@@ -219,7 +223,8 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 
     bool invoke(any_tuple const& data) const
     {
-        if ((*m_pattern)(data, nullptr))
+        if (detail::matches(data.begin(), m_pattern->begin()))
+        //if ((*m_pattern)(data, nullptr))
         {
             m_iimpl.m_target();
             return true;
@@ -229,7 +234,9 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
 
     intermediate* get_intermediate(any_tuple const& data)
     {
-        return ((*m_pattern)(data, nullptr)) ? &m_iimpl : nullptr;
+        return detail::matches(data.begin(), m_pattern->begin()) ? &m_iimpl
+                                                                 : nullptr;
+        //return ((*m_pattern)(data, nullptr)) ? &m_iimpl : nullptr;
     }
 
 };

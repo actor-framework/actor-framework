@@ -43,7 +43,7 @@ struct empty_tuple : cppa::detail::abstract_tuple
     abstract_tuple* copy() const;
     void const* at(size_t) const;
     bool equals(abstract_tuple const& other) const;
-    uniform_type_info const& utype_info_at(size_t) const;
+    uniform_type_info const* type_at(size_t) const;
 
 };
 

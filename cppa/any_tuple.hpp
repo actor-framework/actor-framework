@@ -39,17 +39,11 @@
 
 namespace cppa {
 
-//template<typename... Types>
-//tuple_view<Types...> tuple_cast(any_tuple&& tup);
-
 /**
  * @brief Describes a fixed-length tuple with elements of any type.
  */
 class any_tuple
 {
-
-    //template<typename... Types>
-    //friend tuple_view<Types...> tuple_cast(any_tuple&& tup);
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
@@ -81,7 +75,7 @@ class any_tuple
 
     void const* at(size_t p) const;
 
-    uniform_type_info const& utype_info_at(size_t p) const;
+    uniform_type_info const* type_at(size_t p) const;
 
     cow_ptr<detail::abstract_tuple> const& vals() const;
 
@@ -100,7 +94,28 @@ class any_tuple
     template<typename T>
     inline T& get_mutable_as(size_t p);
 
+    class const_iterator
+    {
 
+        any_tuple const& ref;
+        size_t p;
+
+     public:
+
+        inline const_iterator(any_tuple const& data, size_t pos = 0)
+            : ref(data), p(pos)
+        {
+        }
+
+        inline void next() { ++p; }
+        inline bool at_end() const { return p >= ref.size(); }
+        inline size_t position() const { return p; }
+        inline void const* value() const { return ref.at(p); }
+        inline uniform_type_info const* type() const { return ref.type_at(p); }
+
+    };
+
+    inline const_iterator begin() const { return {*this}; }
 
 };
 
@@ -125,20 +140,6 @@ inline T& any_tuple::get_mutable_as(size_t p)
 {
     return *reinterpret_cast<T*>(mutable_at(p));
 }
-
-/*
-template<typename... Types>
-tuple_view<Types...> tuple_cast(any_tuple const& tup)
-{
-    return tuple_view<Types...>::from(tup.vals());
-}
-
-template<typename... Types>
-tuple_view<Types...> tuple_cast(any_tuple&& tup)
-{
-    return tuple_view<Types...>::from(std::move(tup.m_vals));
-}
-*/
 
 } // namespace cppa
 

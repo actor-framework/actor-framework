@@ -47,7 +47,7 @@ T from_string(const std::string &what)
 {
     object o = from_string(what);
     std::type_info const& tinfo = typeid(T);
-    if (o.type() == tinfo)
+    if (tinfo == *(o.type()))
     {
         return std::move(get<T>(o));
     }
@@ -56,7 +56,7 @@ T from_string(const std::string &what)
         std::string error_msg = "expected type name ";
         error_msg += uniform_typeid(tinfo)->name();
         error_msg += " found ";
-        error_msg += o.type().name();
+        error_msg += o.type()->name();
         throw std::logic_error(error_msg);
     }
 }

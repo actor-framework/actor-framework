@@ -180,7 +180,7 @@ size_t test__serialization()
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
         CPPA_CHECK_EQUAL(obj1, obj2);
-        if (obj1.type() == typeid(any_tuple) && obj2.type() == obj1.type())
+        if (typeid(any_tuple) == *(obj1.type()) && obj2.type() == obj1.type())
         {
             auto& content1 = get<any_tuple>(obj1);
             auto& content2 = get<any_tuple>(obj2);
@@ -241,7 +241,7 @@ size_t test__serialization()
             binary_deserializer bd(bs.data(), bs.size());
             object res;
             bd >> res;
-            CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
+            CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
             b2 = get<struct_b>(res);
         }
         // verify result of serialization / deserialization
@@ -250,7 +250,7 @@ size_t test__serialization()
         // deserialize b3 from string
         {
             object res = from_string(b1str);
-            CPPA_CHECK_EQUAL(res.type().name(), "struct_b");
+            CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
             b3 = get<struct_b>(res);
         }
         CPPA_CHECK_EQUAL(b1, b3);
@@ -270,7 +270,7 @@ size_t test__serialization()
             binary_deserializer bd(bs.data(), bs.size());
             object res;
             bd >> res;
-            CPPA_CHECK_EQUAL(res.type().name(), "struct_c");
+            CPPA_CHECK_EQUAL(res.type()->name(), "struct_c");
             c2 = get<struct_c>(res);
         }
         // verify result of serialization / deserialization

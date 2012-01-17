@@ -28,13 +28,39 @@
 \******************************************************************************/
 
 
-#include "cppa/util/any_tuple_iterator.hpp"
+#ifndef TUPLE_CAST_HPP
+#define TUPLE_CAST_HPP
 
-namespace cppa { namespace util {
+#include "cppa/pattern.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/util/option.hpp"
+#include "cppa/detail/matches.hpp"
 
-any_tuple_iterator::any_tuple_iterator(const any_tuple& data, size_t pos)
-    : m_data(data), m_pos(pos)
+namespace cppa {
+
+template<typename... P>
+auto tuple_cast(any_tuple const& tup, pattern<P...> const& p)
+    -> util::option<typename tuple_from_type_list<typename pattern<P...>::filtered_types>::type>
 {
+    typedef typename pattern<P...>::mapping_vector mapping_vector;
+    typedef typename pattern<P...>::filtered_types filtered_types;
+    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
+    util::option<tuple_type> result;
+    mapping_vector mv;
+    if (detail::matches(detail::pm_decorated(tup.begin(), &mv), p.begin()))
+    {
+        if (mv.size() == tup.size()) // perfect match
+        {
+            result = tuple_type::from(tup.vals());
+        }
+        else
+        {
+            result = tuple_type::from(new detail::decorated_tuple<filtered_types::size>(tup.vals(), mv));
+        }
+    }
+    return std::move(result);
 }
 
-} } // namespace cppa::util
+}
+
+#endif // TUPLE_CAST_HPP

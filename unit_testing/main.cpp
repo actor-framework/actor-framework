@@ -25,9 +25,6 @@
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
-// header for experimental stuff
-#include "cppa/util/any_tuple_iterator.hpp"
-
 #define CPPA_TEST_CATCH_BLOCK()                                                \
 catch (std::exception& e)                                                      \
 {                                                                              \

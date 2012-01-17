@@ -126,7 +126,7 @@ class object
      * @returns A {@link uniform_type_info} describing the current
      *          type of @p this.
      */
-    uniform_type_info const& type() const;
+    uniform_type_info const* type() const;
 
     /**
      * @brief Gets the stored value.
@@ -180,7 +180,7 @@ T& get_ref(object& obj)
 {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(obj.type() == typeid(T)))
+    if (!(*(obj.type()) == typeid(T)))
     {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
@@ -192,7 +192,7 @@ T const& get(object const& obj)
 {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(obj.type() == typeid(T)))
+    if (!(*(obj.type()) == typeid(T)))
     {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }

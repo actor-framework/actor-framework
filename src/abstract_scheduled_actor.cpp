@@ -30,13 +30,17 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/task_scheduler.hpp"
-#include "cppa/detail/abstract_scheduled_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
+#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-namespace { void dummy_enqueue(void*, abstract_scheduled_actor*) { } }
+namespace {
+void dummy_enqueue(void*, abstract_scheduled_actor*) { }
+types_array<atom_value, std::uint32_t> t_atom_ui32_types;
+}
 
 abstract_scheduled_actor::abstract_scheduled_actor(int state)
     : next(nullptr)
@@ -124,7 +128,9 @@ void abstract_scheduled_actor::request_timeout(util::duration const& d)
 
 auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
 {
-    if (m_pattern(msg))
+    if (   msg.size() == 2
+        && msg.type_at(0) == t_atom_ui32_types[0]
+        && msg.type_at(1) == t_atom_ui32_types[1])
     {
         auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
         auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));

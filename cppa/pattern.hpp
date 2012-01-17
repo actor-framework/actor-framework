@@ -42,9 +42,9 @@
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
+#include "cppa/detail/boxed.hpp"
 #include "cppa/detail/tdata.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/detail/pattern_details.hpp"
 
 namespace cppa {
 
@@ -75,6 +75,53 @@ class pattern
 
     typedef typename tuple_view_type::mapping_vector mapping_vector;
 
+    class const_iterator
+    {
+
+        pattern const* m_ptr;
+        size_t m_pos;
+
+     public:
+
+        const_iterator(pattern const* ptr) : m_ptr(ptr), m_pos(0) { }
+
+        const_iterator(const_iterator const&) = default;
+
+        const_iterator& operator=(const_iterator const&) = default;
+
+        const_iterator& next()
+        {
+            ++m_pos;
+            return *this;
+        }
+
+        inline bool at_end()
+        {
+            return m_pos == sizeof...(Types);
+        }
+
+        inline uniform_type_info const* type() const
+        {
+            return m_ptr->m_utis[m_pos];
+        }
+
+        inline bool has_value() const
+        {
+            return m_ptr->m_data_ptr[m_pos] != nullptr;
+        }
+
+        inline void const* value() const
+        {
+            return m_ptr->m_data_ptr[m_pos];
+        }
+
+    };
+
+    const_iterator begin() const
+    {
+        return {this};
+    }
+
     pattern()
     {
         for (size_t i = 0; i < size; ++i)
@@ -98,18 +145,7 @@ class pattern
         }
     }
 
-    bool operator()(cppa::any_tuple const& msg,
-                    mapping_vector* mapping = nullptr) const
-    {
-        detail::pattern_iterator<decltype(m_utis)> arg0(size, m_data_ptr, m_utis);
-        detail::tuple_iterator_arg<any_tuple,mapping_vector> arg1(msg, mapping);
-        return detail::do_match(arg0, arg1);
-    }
-
-// private:
-
     detail::tdata<Types...> m_data;
-    //cppa::uniform_type_info const* m_utis[size];
     static detail::types_array<Types...> m_utis;
     void const* m_data_ptr[size];
 

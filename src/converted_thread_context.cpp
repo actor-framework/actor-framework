@@ -33,6 +33,7 @@
 
 #include "cppa/self.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/detail/matches.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
@@ -62,13 +63,11 @@ void converted_thread_context::cleanup(std::uint32_t reason)
 void converted_thread_context::enqueue(actor* sender, any_tuple&& msg)
 {
     m_mailbox.push_back(fetch_node(sender, std::move(msg)));
-    //m_mailbox.push_back(new queue_node(sender, std::move(msg)));
 }
 
 void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 {
     m_mailbox.push_back(fetch_node(sender, msg));
-    //m_mailbox.push_back(new queue_node(sender, msg));
 }
 
 void converted_thread_context::dequeue(invoke_rules& rules) /*override*/
@@ -105,7 +104,9 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
 converted_thread_context::throw_on_exit_result
 converted_thread_context::throw_on_exit(const any_tuple& msg)
 {
-    if (m_exit_msg_pattern(msg))
+    pattern<atom_value, actor_ptr, std::uint32_t>::mapping_vector* ptr = nullptr;
+    auto j = m_exit_msg_pattern.begin();
+    if (detail::matches(pm_decorated(msg.begin(), ptr), j))
     {
         auto reason = *reinterpret_cast<const std::uint32_t*>(msg.at(2));
         if (reason != exit_reason::normal)

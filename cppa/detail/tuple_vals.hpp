@@ -100,9 +100,9 @@ class tuple_vals : public abstract_tuple
         return tdata_at(m_data, pos);
     }
 
-    uniform_type_info const& utype_info_at(size_t pos) const
+    uniform_type_info const* type_at(size_t pos) const
     {
-        return *(m_types[pos]);
+        return m_types[pos];
     }
 
     bool equals(abstract_tuple const& other) const

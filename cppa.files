@@ -179,8 +179,6 @@ cppa/detail/delegate.hpp
 src/delegate.cpp
 cppa/detail/receive_loop_helper.hpp
 cppa/util/wrapped.hpp
-cppa/util/any_tuple_iterator.hpp
-src/any_tuple_iterator.cpp
 cppa/detail/boxed.hpp
 cppa/detail/unboxed.hpp
 src/invoke_rules.cpp
@@ -207,7 +205,6 @@ src/addressed_message.cpp
 unit_testing/test__yield_interface.cpp
 cppa/anything.hpp
 cppa/pattern.hpp
-cppa/detail/pattern_details.hpp
 unit_testing/test__pattern.cpp
 cppa/util/fixed_vector.hpp
 cppa/detail/implicit_conversions.hpp
@@ -251,3 +248,5 @@ cppa/util/is_builtin.hpp
 cppa/util/type_pair.hpp
 cppa/util/tbind.hpp
 cppa/util/option.hpp
+cppa/tuple_cast.hpp
+cppa/detail/matches.hpp

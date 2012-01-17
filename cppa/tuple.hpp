@@ -152,7 +152,7 @@ class tuple
      */
     inline uniform_type_info const* utype_at(size_t p) const
     {
-        return m_vals->utype_info_at(p);
+        return m_vals->type_at(p);
     }
 
 #   ifdef CPPA_DOCUMENTATION

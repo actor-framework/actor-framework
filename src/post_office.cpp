@@ -323,7 +323,7 @@ class po_peer
                 auto& content = msg.content();
                 DEBUG("<-- " << to_string(content));
                 if (   content.size() == 1
-                    && content.utype_info_at(0) == typeid(atom_value)
+                    && *(content.type_at(0)) == typeid(atom_value)
                     && content.get_as<atom_value>(0) == atom(":Monitor"))
                 {
                     auto receiver = msg.receiver().downcast<actor>();
