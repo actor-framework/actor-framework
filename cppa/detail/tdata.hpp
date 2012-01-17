@@ -178,10 +178,10 @@ template<typename... X>
 void tdata_set(tdata<X...>&, tdata<> const&) { }
 
 template<typename... X, typename... Y>
-void tdata_set(tdata<X...>& rhs, tdata<Y...> const& lhs)
+void tdata_set(tdata<X...>& lhs, tdata<Y...> const& rhs)
 {
-    rhs.head = lhs.head;
-    tdata_set(rhs.tail(), lhs.tail());
+    lhs.head = rhs.head;
+    tdata_set(lhs.tail(), rhs.tail());
 }
 
 template<size_t N, typename... Tn>

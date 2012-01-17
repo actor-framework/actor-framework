@@ -37,28 +37,6 @@ typedef std::pair<int,int> foobar;
 static detail::types_array<int,anything,float> arr1;
 static detail::types_array<int,anything,foobar> arr2;
 
-/*
-template<typename... P>
-auto tuple_cast(any_tuple const& tup, pattern<P...> const& p) -> util::option<typename tuple_from_type_list<typename pattern<P...>::filtered_types>::type>
-{
-    typedef typename pattern<P...>::filtered_types filtered_types;
-    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
-    util::option<tuple_type> result;
-    typename pattern<P...>::mapping_vector mv;
-    if (p(tup, &mv))
-    {
-        if (mv.size() == tup.size()) // perfect match
-        {
-            result = tuple_type::from(tup.vals());
-        }
-        else
-        {
-            result = tuple_type::from(new detail::decorated_tuple<filtered_types::size>(tup.vals(), mv));
-        }
-    }
-    return std::move(result);
-}*/
-
 struct match_helper
 {
     any_tuple const& what;

@@ -107,21 +107,21 @@ class invoke_rule_builder
     typedef typename pattern_type::tuple_view_type tuple_view_type;
 
     template<typename F>
-    invoke_rules cr_rules(F&& f, std::integral_constant<bool,true>)
+    invoke_rules cr_rules(F&& f, std::integral_constant<bool, true>)
     {
         typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
         return invokable_ptr(new impl(std::move(m_ptr),std::forward<F>(f)));
     }
 
     template<typename F>
-    invoke_rules cr_rules(F&& f, std::integral_constant<bool,false>)
+    invoke_rules cr_rules(F&& f, std::integral_constant<bool, false>)
     {
         using namespace ::cppa::util;
         typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
         typedef typename tl_apply<raw_types,rm_ref>::type new_types;
-        typedef typename concat_type_lists<converted_types,new_types>::type types;
+        typedef typename tl_concat<converted_types,new_types>::type types;
         typedef typename pattern_from_type_list<types>::type epattern;
         typedef typename epattern::tuple_view_type tuple_view_type;
         typedef invokable_impl<tuple_view_type, epattern, F> impl;

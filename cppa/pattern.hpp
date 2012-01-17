@@ -48,8 +48,6 @@
 
 namespace cppa {
 
-struct dont_initialize_pattern { };
-
 template<typename... Types>
 class pattern
 {
@@ -60,8 +58,6 @@ class pattern
     pattern& operator=(pattern const&) = delete;
 
  public:
-
-    pattern(dont_initialize_pattern const&) { }
 
     static constexpr size_t size = sizeof...(Types);
 
@@ -155,19 +151,26 @@ template<typename... Types>
 detail::types_array<Types...> pattern<Types...>::m_utis;
 
 template<class ExtendedType, class BasicType>
-ExtendedType* extend_pattern(BasicType* p)
+ExtendedType* extend_pattern(BasicType const* p)
 {
-    ExtendedType* et = new ExtendedType(dont_initialize_pattern());
-    et->m_data = p->m_data;
+    ExtendedType* et = new ExtendedType;
+    detail::tdata_set(et->m_data, p->m_data);
+    //et->m_data = p->m_data;
     for (size_t i = 0; i < BasicType::size; ++i)
     {
-        et->m_data_ptr[i] = (p->m_data_ptr[i]) ? et->m_data.at(i)
-                                               : nullptr;
+        if (p->m_data_ptr[i] != nullptr)
+        {
+
+        }
+        //et->m_data_ptr[i] = (p->m_data_ptr[i]) ? et->m_data.at(i)
+        //                                       : nullptr;
     }
-    for (size_t i = BasicType::size; i < ExtendedType::size; ++i)
+    /*
+    for (size_t j = BasicType::size; j < ExtendedType::size; ++j)
     {
-        et->m_data_ptr[i] = nullptr;
+      et->m_data_ptr[j] = nullptr;
     }
+    */
     return et;
 }
 
