@@ -34,7 +34,6 @@
 #include "cppa/cow_ptr.hpp"
 
 #include "cppa/tuple.hpp"
-#include "cppa/tuple_view.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa {

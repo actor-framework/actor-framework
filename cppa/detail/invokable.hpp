@@ -35,9 +35,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "cppa/invoke.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/util/duration.hpp"
+#include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/fixed_vector.hpp"
 
 #include "cppa/detail/matches.hpp"
@@ -131,7 +131,7 @@ class invokable_impl : public invokable
 
         void invoke() // override
         {
-            cppa::invoke(m_target, m_args);
+            util::apply_tuple(m_target, m_args);
         }
     };
 
@@ -156,13 +156,13 @@ class invokable_impl : public invokable
             {
                 // "perfect" match; no mapping needed at all
                 TupleView tv = TupleView::from(data.vals());
-                cppa::invoke(m_iimpl.m_target, tv);
+                util::apply_tuple(m_iimpl.m_target, tv);
             }
             else
             {
                 // mapping needed
                 TupleView tv(data.vals(), mv);
-                cppa::invoke(m_iimpl.m_target, tv);
+                util::apply_tuple(m_iimpl.m_target, tv);
             }
             return true;
         }

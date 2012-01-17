@@ -28,7 +28,6 @@
 \******************************************************************************/
 
 
-#include "cppa/invoke.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/detail/invokable.hpp"

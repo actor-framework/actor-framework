@@ -11,7 +11,6 @@
 #include "cppa/on.hpp"
 #include "cppa/util.hpp"
 #include "cppa/tuple.hpp"
-#include "cppa/invoke.hpp"
 #include "cppa/get_view.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"

@@ -33,8 +33,9 @@
 
 #include <type_traits>
 
-#include "cppa/invoke.hpp"
 #include "cppa/util/rm_ref.hpp"
+#include "cppa/util/apply_tuple.hpp"
+
 #include "cppa/detail/tdata.hpp"
 #include "cppa/scheduled_actor.hpp"
 
@@ -74,7 +75,7 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
 
     ftor_behavior(F ptr, Args const&... args) : m_fun(ptr), m_args(args...) { }
 
-    virtual void act() { invoke(m_fun, m_args); }
+    virtual void act() { util::apply_tuple(m_fun, m_args); }
 
 };
 
@@ -120,7 +121,7 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
     {
     }
 
-    virtual void act() { invoke(m_fun, m_args); }
+    virtual void act() { util::apply_tuple(m_fun, m_args); }
 
 };
 

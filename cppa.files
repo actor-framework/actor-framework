@@ -35,7 +35,6 @@ cppa/util/has_copy_member_fun.hpp
 cppa/detail/intermediate.hpp
 cppa/detail/invokable.hpp
 cppa/invoke_rules.hpp
-cppa/invoke.hpp
 cppa/on.hpp
 unit_testing/test__serialization.cpp
 cppa/serializer.hpp

@@ -148,7 +148,6 @@ nobase_library_include_HEADERS = \
   cppa/get_view.hpp \
   cppa/group.hpp \
   cppa/intrusive_ptr.hpp \
-  cppa/invoke.hpp \
   cppa/invoke_rules.hpp \
   cppa/object.hpp \
   cppa/on.hpp \

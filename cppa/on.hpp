@@ -35,10 +35,10 @@
 #include <memory>
 
 #include "cppa/atom.hpp"
-#include "cppa/invoke.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/tuple_view.hpp"
 #include "cppa/invoke_rules.hpp"
 
 #include "cppa/util/duration.hpp"

@@ -67,6 +67,16 @@ struct apply_tuple_util<X, X, Args...> : apply_tuple_impl<X, Args...>
 {
 };
 
+template<>
+struct apply_tuple_util<1, 0>
+{
+    template<typename F, class Unused>
+    static auto apply(F&& f, Unused const&) -> typename get_result_type<F>::type
+    {
+        return f();
+    }
+};
+
 template<typename F, template<typename...> class Tuple, typename... T>
 auto apply_tuple(F&& fun, Tuple<T...>& tup)
     -> typename get_result_type<F>::type
@@ -75,8 +85,9 @@ auto apply_tuple(F&& fun, Tuple<T...>& tup)
     static constexpr size_t tup_size = sizeof...(T);
     static_assert(tup_size >= fun_args::size,
                   "cannot conjure up additional arguments");
-    static constexpr size_t from = tup_size - fun_args::size;
-    static constexpr size_t to = tup_size - 1;
+    static constexpr size_t args_size = fun_args::size;
+    static constexpr size_t from = (args_size > 0) ? tup_size - args_size : 1;
+    static constexpr size_t to = (args_size > 0) ? tup_size - 1 : 0;
     return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
 }
 
@@ -88,8 +99,9 @@ auto apply_tuple(F&& fun, Tuple<T...> const& tup)
     static constexpr size_t tup_size = sizeof...(T);
     static_assert(tup_size >= fun_args::size,
                   "cannot conjure up additional arguments");
-    static constexpr size_t from = tup_size - fun_args::size;
-    static constexpr size_t to = tup_size - 1;
+    static constexpr size_t args_size = fun_args::size;
+    static constexpr size_t from = (args_size > 0) ? tup_size - args_size : 1;
+    static constexpr size_t to = (args_size > 0) ? tup_size - 1 : 0;
     return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
 }
 

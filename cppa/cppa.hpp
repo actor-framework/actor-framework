@@ -40,7 +40,6 @@
 #include "cppa/self.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/invoke.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/receive.hpp"
 #include "cppa/announce.hpp"
