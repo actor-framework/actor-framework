@@ -8,12 +8,14 @@
 #include "cppa/pattern.hpp"
 #include "cppa/announce.hpp"
 
+#include "cppa/util/option.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/conjunction.hpp"
 #include "cppa/util/is_primitive.hpp"
 
 #include "cppa/detail/types_array.hpp"
+#include "cppa/detail/decorated_tuple.hpp"
 
 using namespace cppa;
 
@@ -34,26 +36,63 @@ typedef std::pair<int,int> foobar;
 static detail::types_array<int,anything,float> arr1;
 static detail::types_array<int,anything,foobar> arr2;
 
-//template<template <typename, typename> class Tpl, typename Arg1>
-//struct tbind
-//{
-//    template<typename Arg2>
-//    struct type
-//    {
-//        static constexpr bool value = Tpl<Arg1, Arg2>::value;
-//    };
-//};
+template<typename... P>
+auto tuple_cast(any_tuple const& tup, pattern<P...> const& p) -> util::option<typename tuple_from_type_list<typename pattern<P...>::filtered_types>::type>
+{
+    typedef typename pattern<P...>::filtered_types filtered_types;
+    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
+    util::option<tuple_type> result;
+    typename pattern<P...>::mapping_vector mv;
+    if (p(tup, &mv))
+    {
+        if (mv.size() == tup.size()) // perfect match
+        {
+            result = tuple_type::from(tup.vals());
+        }
+        else
+        {
+            result = tuple_type::from(new detail::decorated_tuple<filtered_types::size>(tup.vals(), mv));
+        }
+    }
+    return std::move(result);
+}
 
-//template<template<typename> class Predicate, class Value>
-//struct foobaz
-//{
-//    static constexpr bool value = Predicate<Value>::value;
-//};
+struct match_helper
+{
+    any_tuple const& what;
+    match_helper(any_tuple const& w) : what(w) { }
+    void operator()(invoke_rules&& rules)
+    {
+        rules(what);
+    }
+};
+
+match_helper match(any_tuple const& x)
+{
+
+    return { x };
+}
 
 size_t test__pattern()
 {
 
-    //cout << "foobaz: " << foobaz<tbind<std::is_same, void>::type, void>::value << endl;
+    //std::vector<int> ivec = {1, 2, 3};
+
+    match(make_tuple(1,2,3))
+    (
+        on_arg_match >> [](int a, int b, int c)
+        {
+            cout << "MATCH: " << a << ", " << b << ", " << c << endl;
+        }
+    );
+
+    pattern<int, anything, int> i3;
+    any_tuple i3_any_tup = make_tuple(1, 2, 3);
+    auto opt = tuple_cast(i3_any_tup, i3);
+    if (opt.valid())
+    {
+        cout << "x = ( " << get<0>(*opt) << ", " << get<1>(*opt) << " )" << endl;
+    }
 
     announce<foobar>(&foobar::first, &foobar::second);
 

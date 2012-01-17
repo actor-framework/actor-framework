@@ -64,34 +64,30 @@ template<typename... ElementTypes>
 class tuple
 {
 
-    template<size_t N, typename... Types>
-    friend typename util::at<N, Types...>::type& get_ref(tuple<Types...>&);
-
- public:
-
-    typedef util::type_list<ElementTypes...> element_types;
-
- private:
-
     static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
 
-    static_assert(util::tl_forall<element_types, util::is_legal_tuple_type>::value,
+    static_assert(util::tl_forall<util::type_list<ElementTypes...>,
+                                  util::is_legal_tuple_type>::value,
                   "illegal types in tuple definition: "
                   "pointers and references are prohibited");
 
-    typedef detail::tuple_vals<ElementTypes...> tuple_vals_type;
+    typedef detail::tuple_vals<ElementTypes...> data_type;
 
-    //typedef detail::tuple_vals<ElementTypes...> vals_t;
-    typedef detail::abstract_tuple vals_t;
+    cow_ptr<detail::abstract_tuple> m_vals;
 
-    cow_ptr<vals_t> m_vals;
+    struct ptr_ctor { };
+
+    template<typename CowPtr>
+    tuple(ptr_ctor const&, CowPtr&& ptr) : m_vals(std::forward<CowPtr>(ptr))
+    {
+    }
 
  public:
 
     /**
      * @brief Initializes each element with its default constructor.
      */
-    tuple() : m_vals(new tuple_vals_type)
+    tuple() : m_vals(new data_type)
     {
     }
 
@@ -99,8 +95,31 @@ class tuple
      * @brief Initializes the tuple with @p args.
      * @param args Initialization values.
      */
-    tuple(ElementTypes const&... args) : m_vals(new tuple_vals_type(args...))
+    tuple(ElementTypes const&... args) : m_vals(new data_type(args...))
     {
+    }
+
+    /**
+     * @brief Initializes the tuple with @p args.
+     * @param args Initialization values.
+     */
+    tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...))
+    {
+    }
+
+    tuple(tuple&&) = default;
+    tuple(tuple const&) = default;
+    tuple& operator=(tuple&&) = default;
+    tuple& operator=(tuple const&) = default;
+
+    static tuple from(cow_ptr<detail::abstract_tuple>&& ptr)
+    {
+        return tuple(ptr_ctor(), std::move(ptr));
+    }
+
+    static tuple from(cow_ptr<detail::abstract_tuple> const& ptr)
+    {
+        return tuple(ptr_ctor(), ptr);
     }
 
     /**
@@ -143,7 +162,7 @@ class tuple
      */
     cow_ptr<InternalData> vals() const;
 #   else
-    inline cow_ptr<vals_t> const& vals() const
+    inline cow_ptr<detail::abstract_tuple> const& vals() const
     {
         return m_vals;
     }
@@ -152,10 +171,10 @@ class tuple
 };
 
 template<typename TypeList>
-struct tuple_type_from_type_list;
+struct tuple_from_type_list;
 
 template<typename... Types>
-struct tuple_type_from_type_list<util::type_list<Types...>>
+struct tuple_from_type_list< util::type_list<Types...> >
 {
     typedef tuple<Types...> type;
 };
@@ -202,7 +221,6 @@ const typename util::at<N, Types...>::type& get(tuple<Types...> const& tup)
 {
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type const*>(tup.at(N));
-    //return get<N>(tup.vals()->data());
 }
 
 template<size_t N, typename... Types>
@@ -210,11 +228,10 @@ typename util::at<N, Types...>::type& get_ref(tuple<Types...>& tup)
 {
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
-    //return get_ref<N>(tup.m_vals->data_ref());
 }
 
 template<typename... Types>
-typename tuple_type_from_type_list<
+typename tuple_from_type_list<
     typename util::tl_apply<util::type_list<Types...>,
                             detail::implicit_conversions>::type>::type
 make_tuple(Types const&... args)

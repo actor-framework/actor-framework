@@ -51,11 +51,10 @@ namespace cppa {
 struct dont_initialize_pattern { };
 
 template<typename... Types>
-class pattern;
-
-template<typename T0, typename... Tn>
-class pattern<T0, Tn...>
+class pattern
 {
+
+    static_assert(sizeof...(Types) > 0, "empty pattern");
 
     pattern(pattern const&) = delete;
     pattern& operator=(pattern const&) = delete;
@@ -64,14 +63,14 @@ class pattern<T0, Tn...>
 
     pattern(dont_initialize_pattern const&) { }
 
-    static constexpr size_t size = sizeof...(Tn) + 1;
+    static constexpr size_t size = sizeof...(Types);
 
-    typedef util::type_list<T0, Tn...> tpl_args;
+    typedef util::type_list<Types...> types;
 
-    typedef typename util::lt_filter_not<tpl_args, util::tbind<std::is_same, anything>::type>::type
-            filtered_tpl_args;
+    typedef typename util::lt_filter_not<types, util::tbind<std::is_same, anything>::type>::type
+            filtered_types;
 
-    typedef typename tuple_view_type_from_type_list<filtered_tpl_args>::type
+    typedef typename tuple_view_type_from_type_list<filtered_types>::type
             tuple_view_type;
 
     typedef typename tuple_view_type::mapping_vector mapping_vector;
@@ -109,15 +108,15 @@ class pattern<T0, Tn...>
 
 // private:
 
-    detail::tdata<T0, Tn...> m_data;
+    detail::tdata<Types...> m_data;
     //cppa::uniform_type_info const* m_utis[size];
-    static detail::types_array<T0, Tn...> m_utis;
+    static detail::types_array<Types...> m_utis;
     void const* m_data_ptr[size];
 
 };
 
-template<typename T0, typename... Tn>
-detail::types_array<T0, Tn...> pattern<T0, Tn...>::m_utis;
+template<typename... Types>
+detail::types_array<Types...> pattern<Types...>::m_utis;
 
 template<class ExtendedType, class BasicType>
 ExtendedType* extend_pattern(BasicType* p)
@@ -126,23 +125,21 @@ ExtendedType* extend_pattern(BasicType* p)
     et->m_data = p->m_data;
     for (size_t i = 0; i < BasicType::size; ++i)
     {
-        //et->m_utis[i] = p->m_utis[i];
         et->m_data_ptr[i] = (p->m_data_ptr[i]) ? et->m_data.at(i)
                                                : nullptr;
     }
     for (size_t i = BasicType::size; i < ExtendedType::size; ++i)
     {
         et->m_data_ptr[i] = nullptr;
-        //et->m_utis[i] = et->m_data.type_at(i);
     }
     return et;
 }
 
 template<typename TypeList>
-struct pattern_type_from_type_list;
+struct pattern_from_type_list;
 
 template<typename... Types>
-struct pattern_type_from_type_list<util::type_list<Types...>>
+struct pattern_from_type_list<util::type_list<Types...>>
 {
     typedef pattern<Types...> type;
 };

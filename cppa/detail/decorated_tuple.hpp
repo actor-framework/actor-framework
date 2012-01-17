@@ -45,17 +45,20 @@
 
 namespace cppa { namespace detail {
 
-template<typename... ElementTypes>
+template<size_t VectorSize>
 class decorated_tuple : public abstract_tuple
 {
 
  public:
 
-    typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
-
-    typedef util::type_list<ElementTypes...> element_types;
+    typedef util::fixed_vector<size_t, VectorSize> vector_type;
 
     typedef cow_ptr<abstract_tuple> ptr_type;
+
+    decorated_tuple(ptr_type&& d, vector_type const& v)
+        : m_decorated(std::move(d)), m_mappings(v)
+    {
+    }
 
     decorated_tuple(ptr_type const& d, vector_type const& v)
         : m_decorated(d), m_mappings(v)

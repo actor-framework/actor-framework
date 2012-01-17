@@ -82,7 +82,7 @@ class tuple_view
     }
 
     tuple_view(vals_t const& vals, mapping_vector& mapping)
-        : m_vals(new detail::decorated_tuple<ElementTypes...>(vals, mapping))
+        : m_vals(new detail::decorated_tuple<num_elements>(vals, mapping))
     {
     }
 

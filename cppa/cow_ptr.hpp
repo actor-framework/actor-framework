@@ -101,6 +101,8 @@ class cow_ptr
 
     cow_ptr(T* raw_ptr) : m_ptr(raw_ptr) { }
 
+    cow_ptr(cow_ptr&& other) : m_ptr(std::move(other.m_ptr)) { }
+
     cow_ptr(cow_ptr const& other) : m_ptr(other.m_ptr) { }
 
     template<typename Y>
@@ -109,6 +111,12 @@ class cow_ptr
     inline void swap(cow_ptr& other)
     {
         m_ptr.swap(other.m_ptr);
+    }
+
+    cow_ptr& operator=(cow_ptr&& other)
+    {
+        swap(other);
+        return *this;
     }
 
     cow_ptr& operator=(cow_ptr const& other)
