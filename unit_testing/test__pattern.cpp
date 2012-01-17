@@ -12,8 +12,10 @@
 #include "cppa/util/option.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
+#include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/conjunction.hpp"
 #include "cppa/util/is_primitive.hpp"
+#include "cppa/util/is_mutable_ref.hpp"
 
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
@@ -47,6 +49,8 @@ struct match_helper
     }
 };
 
+using namespace cppa::util;
+
 match_helper match(any_tuple const& x)
 {
 
@@ -55,9 +59,6 @@ match_helper match(any_tuple const& x)
 
 size_t test__pattern()
 {
-
-    //std::vector<int> ivec = {1, 2, 3};
-
     match(make_tuple(1,2,3))
     (
         on_arg_match >> [](int a, int b, int c)

@@ -28,116 +28,71 @@
 \******************************************************************************/
 
 
-#ifndef ANY_TUPLE_HPP
-#define ANY_TUPLE_HPP
+#ifndef APPLY_TUPLE_HPP
+#define APPLY_TUPLE_HPP
 
-#include "cppa/cow_ptr.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
+#include "cppa/util/is_manipulator.hpp"
+#include "cppa/util/callable_trait.hpp"
 
-#include "cppa/tuple.hpp"
-#include "cppa/tuple_view.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
+namespace cppa { namespace util {
 
-namespace cppa {
-
-/**
- * @brief Describes a fixed-length tuple with elements of any type.
- */
-class any_tuple
+template<size_t... Range>
+struct apply_tuple_impl
 {
-
-    cow_ptr<detail::abstract_tuple> m_vals;
-
-    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
-
- public:
-
-    any_tuple();
-
-    template<typename... Args>
-    any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
-
-    explicit any_tuple(detail::abstract_tuple*);
-
-    any_tuple(any_tuple&&);
-
-    any_tuple(any_tuple const&) = default;
-
-    any_tuple& operator=(any_tuple&&);
-
-    any_tuple& operator=(any_tuple const&) = default;
-
-    size_t size() const;
-
-    void* mutable_at(size_t p);
-
-    void const* at(size_t p) const;
-
-    uniform_type_info const* type_at(size_t p) const;
-
-    cow_ptr<detail::abstract_tuple> const& vals() const;
-
-    bool equals(any_tuple const& other) const;
-
-    any_tuple tail(size_t offset = 1) const;
-
-    inline bool empty() const
+    template<typename F, template<typename...> class Tuple, typename... T>
+    static auto apply(F&& f, Tuple<T...> const& args,
+                      typename disable_if<is_manipulator<F>, int>::type = 0)
+        -> typename get_result_type<F>::type
     {
-        return size() == 0;
+        return f(get<Range>(args)...);
     }
-
-    template<typename T>
-    inline T const& get_as(size_t p) const;
-
-    template<typename T>
-    inline T& get_mutable_as(size_t p);
-
-    class const_iterator
+    template<typename F, template<typename...> class Tuple, typename... T>
+    static auto apply(F&& f, Tuple<T...>& args,
+                      typename enable_if<is_manipulator<F>, int>::type = 0)
+        -> typename get_result_type<F>::type
     {
-
-        any_tuple const& ref;
-        size_t p;
-
-     public:
-
-        inline const_iterator(any_tuple const& data, size_t pos = 0)
-            : ref(data), p(pos)
-        {
-        }
-
-        inline void next() { ++p; }
-        inline bool at_end() const { return p >= ref.size(); }
-        inline size_t position() const { return p; }
-        inline void const* value() const { return ref.at(p); }
-        inline uniform_type_info const* type() const { return ref.type_at(p); }
-
-    };
-
-    inline const_iterator begin() const { return {*this}; }
-
+        return f(get_ref<Range>(args)...);
+    }
 };
 
-inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
+template<int From, int To, int... Args>
+struct apply_tuple_util : apply_tuple_util<From, To-1, To, Args...>
 {
-    return lhs.equals(rhs);
+};
+
+template<int X, int... Args>
+struct apply_tuple_util<X, X, Args...> : apply_tuple_impl<X, Args...>
+{
+};
+
+template<typename F, template<typename...> class Tuple, typename... T>
+auto apply_tuple(F&& fun, Tuple<T...>& tup)
+    -> typename get_result_type<F>::type
+{
+    typedef typename get_arg_types<F>::types fun_args;
+    static constexpr size_t tup_size = sizeof...(T);
+    static_assert(tup_size >= fun_args::size,
+                  "cannot conjure up additional arguments");
+    static constexpr size_t from = tup_size - fun_args::size;
+    static constexpr size_t to = tup_size - 1;
+    return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
 }
 
-inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
+template<typename F, template<typename...> class Tuple, typename... T>
+auto apply_tuple(F&& fun, Tuple<T...> const& tup)
+    -> typename get_result_type<F>::type
 {
-    return !(lhs == rhs);
+    typedef typename get_arg_types<F>::types fun_args;
+    static constexpr size_t tup_size = sizeof...(T);
+    static_assert(tup_size >= fun_args::size,
+                  "cannot conjure up additional arguments");
+    static constexpr size_t from = tup_size - fun_args::size;
+    static constexpr size_t to = tup_size - 1;
+    return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
 }
 
-template<typename T>
-inline T const& any_tuple::get_as(size_t p) const
-{
-    return *reinterpret_cast<T const*>(at(p));
-}
+} } // namespace cppa::util
 
-template<typename T>
-inline T& any_tuple::get_mutable_as(size_t p)
-{
-    return *reinterpret_cast<T*>(mutable_at(p));
-}
-
-} // namespace cppa
-
-#endif // ANY_TUPLE_HPP
+#endif // APPLY_TUPLE_HPP

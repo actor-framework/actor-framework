@@ -55,9 +55,6 @@ template<typename... ElementTypes>
 class tuple_view
 {
 
-    //static_assert(sizeof...(ElementTypes) > 0,
-    //              "could not declare an empty tuple_view");
-
     template<size_t N, typename... Types>
     friend typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>&);
 

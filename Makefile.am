@@ -168,6 +168,7 @@ nobase_library_include_HEADERS = \
   cppa/tuple_view.hpp \
   cppa/uniform_type_info.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
+  cppa/util/apply_tuple.hpp \
   cppa/util/arg_match_t.hpp \
   cppa/util/at.hpp \
   cppa/util/callable_trait.hpp \
@@ -192,6 +193,8 @@ nobase_library_include_HEADERS = \
   cppa/util/is_forward_iterator.hpp \
   cppa/util/is_iterable.hpp \
   cppa/util/is_legal_tuple_type.hpp \
+  cppa/util/is_manipulator.hpp \
+  cppa/util/is_mutable_ref.hpp \
   cppa/util/is_one_of.hpp \
   cppa/util/is_primitive.hpp \
   cppa/util/option.hpp \

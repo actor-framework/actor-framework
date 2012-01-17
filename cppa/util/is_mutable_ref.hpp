@@ -28,116 +28,29 @@
 \******************************************************************************/
 
 
-#ifndef ANY_TUPLE_HPP
-#define ANY_TUPLE_HPP
+#ifndef IS_MUTABLE_REF_HPP
+#define IS_MUTABLE_REF_HPP
 
-#include "cppa/cow_ptr.hpp"
+namespace cppa { namespace util {
 
-#include "cppa/tuple.hpp"
-#include "cppa/tuple_view.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
-
-namespace cppa {
-
-/**
- * @brief Describes a fixed-length tuple with elements of any type.
- */
-class any_tuple
+template<typename T>
+struct is_mutable_ref
 {
-
-    cow_ptr<detail::abstract_tuple> m_vals;
-
-    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
-
- public:
-
-    any_tuple();
-
-    template<typename... Args>
-    any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
-
-    explicit any_tuple(detail::abstract_tuple*);
-
-    any_tuple(any_tuple&&);
-
-    any_tuple(any_tuple const&) = default;
-
-    any_tuple& operator=(any_tuple&&);
-
-    any_tuple& operator=(any_tuple const&) = default;
-
-    size_t size() const;
-
-    void* mutable_at(size_t p);
-
-    void const* at(size_t p) const;
-
-    uniform_type_info const* type_at(size_t p) const;
-
-    cow_ptr<detail::abstract_tuple> const& vals() const;
-
-    bool equals(any_tuple const& other) const;
-
-    any_tuple tail(size_t offset = 1) const;
-
-    inline bool empty() const
-    {
-        return size() == 0;
-    }
-
-    template<typename T>
-    inline T const& get_as(size_t p) const;
-
-    template<typename T>
-    inline T& get_mutable_as(size_t p);
-
-    class const_iterator
-    {
-
-        any_tuple const& ref;
-        size_t p;
-
-     public:
-
-        inline const_iterator(any_tuple const& data, size_t pos = 0)
-            : ref(data), p(pos)
-        {
-        }
-
-        inline void next() { ++p; }
-        inline bool at_end() const { return p >= ref.size(); }
-        inline size_t position() const { return p; }
-        inline void const* value() const { return ref.at(p); }
-        inline uniform_type_info const* type() const { return ref.type_at(p); }
-
-    };
-
-    inline const_iterator begin() const { return {*this}; }
-
+    static constexpr bool value = false;
 };
 
-inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
+template<typename T>
+struct is_mutable_ref<T const&>
 {
-    return lhs.equals(rhs);
-}
-
-inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
-{
-    return !(lhs == rhs);
-}
+    static constexpr bool value = false;
+};
 
 template<typename T>
-inline T const& any_tuple::get_as(size_t p) const
+struct is_mutable_ref<T&>
 {
-    return *reinterpret_cast<T const*>(at(p));
-}
+    static constexpr bool value = true;
+};
 
-template<typename T>
-inline T& any_tuple::get_mutable_as(size_t p)
-{
-    return *reinterpret_cast<T*>(mutable_at(p));
-}
+} } // namespace cppa::util
 
-} // namespace cppa
-
-#endif // ANY_TUPLE_HPP
+#endif // IS_MUTABLE_REF_HPP

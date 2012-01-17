@@ -192,6 +192,23 @@ struct tl_forall<type_list<>, Predicate>
     static constexpr bool value = true;
 };
 
+/**
+ * @brief Tests whether a predicate holds for some of the elements of a list.
+ */
+template<class List, template <typename> class Predicate>
+struct tl_exists
+{
+    static constexpr bool value =
+               Predicate<typename List::head>::value
+            || tl_exists<typename List::tail, Predicate>::value;
+};
+
+template<template <typename> class Predicate>
+struct tl_exists<type_list<>, Predicate>
+{
+    static constexpr bool value = false;
+};
+
 // bool list::zipped_forall(predicate)
 
 /**
@@ -224,15 +241,6 @@ template<typename... ListATypes, typename... ListBTypes>
 struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
 {
     typedef type_list<ListATypes..., ListBTypes...> type;
-};
-
-template<class List, typename Element>
-struct tl_prepend;
-
-template<typename E0, typename... E>
-struct tl_prepend<type_list<E...>, E0>
-{
-    typedef type_list<E0, E...> type;
 };
 
 // list list::appy(trait)
@@ -280,17 +288,17 @@ struct tl_pop_back
 // type list::at(size_t)
 
 template<size_t N, typename... E>
-struct lt_at_impl;
+struct tl_at_impl;
 
 
 template<size_t N, typename E0, typename... E>
-struct lt_at_impl<N, E0, E...>
+struct tl_at_impl<N, E0, E...>
 {
-    typedef typename lt_at_impl<N-1, E...>::type type;
+    typedef typename tl_at_impl<N-1, E...>::type type;
 };
 
 template<typename E0, typename... E>
-struct lt_at_impl<0, E0, E...>
+struct tl_at_impl<0, E0, E...>
 {
     typedef E0 type;
 };
@@ -299,13 +307,13 @@ struct lt_at_impl<0, E0, E...>
  * @brief Gets element at index @p N of @p List.
  */
 template<class List, size_t N>
-struct lt_at;
+struct tl_at;
 
 template<size_t N, typename... E>
-struct lt_at<type_list<E...>, N>
+struct tl_at<type_list<E...>, N>
 {
     static_assert(N < sizeof...(E), "N >= List::size");
-    typedef typename lt_at_impl<N, E...>::type type;
+    typedef typename tl_at_impl<N, E...>::type type;
 };
 
 // list list::prepend(type)
@@ -314,10 +322,10 @@ struct lt_at<type_list<E...>, N>
  * @brief Creates a new list with @p What prepended to @p List.
  */
 template<class List, typename What>
-struct lt_prepend;
+struct tl_prepend;
 
 template<typename What, typename... T>
-struct lt_prepend<type_list<T...>, What>
+struct tl_prepend<type_list<T...>, What>
 {
     typedef type_list<What, T...> type;
 };
@@ -326,36 +334,36 @@ struct lt_prepend<type_list<T...>, What>
 // list list::filter(predicate)
 
 template<class List, bool... Selected>
-struct lt_filter_impl;
+struct tl_filter_impl;
 
 template<>
-struct lt_filter_impl< type_list<> >
+struct tl_filter_impl< type_list<> >
 {
     typedef type_list<> type;
 };
 
 template<typename T0, typename... T, bool... S>
-struct lt_filter_impl<type_list<T0, T...>, false, S...>
+struct tl_filter_impl<type_list<T0, T...>, false, S...>
 {
-    typedef typename lt_filter_impl<type_list<T...>, S...>::type type;
+    typedef typename tl_filter_impl<type_list<T...>, S...>::type type;
 };
 
 template<typename T0, typename... T, bool... S>
-struct lt_filter_impl<type_list<T0, T...>, true, S...>
+struct tl_filter_impl<type_list<T0, T...>, true, S...>
 {
-    typedef typename lt_prepend<typename lt_filter_impl<type_list<T...>, S...>::type, T0>::type type;
+    typedef typename tl_prepend<typename tl_filter_impl<type_list<T...>, S...>::type, T0>::type type;
 };
 
 /**
  * @brief Create a new list containing all elements which satisfy @p Predicate.
  */
 template<class List, template<typename> class Predicate>
-struct lt_filter;
+struct tl_filter;
 
 template<template<typename> class Predicate, typename... T>
-struct lt_filter<type_list<T...>, Predicate>
+struct tl_filter<type_list<T...>, Predicate>
 {
-    typedef typename lt_filter_impl<type_list<T...>, Predicate<T>::value...>::type type;
+    typedef typename tl_filter_impl<type_list<T...>, Predicate<T>::value...>::type type;
 };
 
 /**
@@ -363,12 +371,12 @@ struct lt_filter<type_list<T...>, Predicate>
  *        do not satisfy @p Predicate.
  */
 template<class List, template<typename> class Predicate>
-struct lt_filter_not;
+struct tl_filter_not;
 
 template<template<typename> class Predicate, typename... T>
-struct lt_filter_not<type_list<T...>, Predicate>
+struct tl_filter_not<type_list<T...>, Predicate>
 {
-    typedef typename lt_filter_impl<type_list<T...>, !Predicate<T>::value...>::type type;
+    typedef typename tl_filter_impl<type_list<T...>, !Predicate<T>::value...>::type type;
 };
 
 } } // namespace cppa::util

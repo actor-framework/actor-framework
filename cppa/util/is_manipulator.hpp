@@ -28,91 +28,24 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UTIL_CALLABLE_TRAIT
-#define CPPA_UTIL_CALLABLE_TRAIT
+#ifndef IS_MANIPULATOR_HPP
+#define IS_MANIPULATOR_HPP
 
-#include <type_traits>
-
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/is_mutable_ref.hpp"
+#include "cppa/util/callable_trait.hpp"
 
 namespace cppa { namespace util {
 
-template<typename Signature>
-struct callable_trait;
-
-// member function pointer (const)
-template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...) const>
+// A manipulator is a function that manipulates its arguments via
+// mutable references.
+template<typename F>
+struct is_manipulator
 {
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
-};
-
-// member function pointer
-template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...)>
-{
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
-};
-
-// good ol' function
-template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (Args...)>
-{
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
-};
-
-// good ol' function pointer
-template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (*)(Args...)>
-{
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
-};
-
-template<bool IsFun, bool IsMemberFun, typename C>
-struct get_callable_trait_helper
-{
-    typedef callable_trait<C> type;
-};
-
-template<typename C>
-struct get_callable_trait_helper<false, false, C>
-{
-    // assuming functor
-    typedef callable_trait<decltype(&C::operator())> type;
-};
-
-template<typename C>
-struct get_callable_trait
-{
-    typedef typename rm_ref<C>::type fun_type;
-    typedef typename
-            get_callable_trait_helper<
-                (   std::is_function<fun_type>::value
-                 || std::is_function<typename std::remove_pointer<fun_type>::type>::value),
-                std::is_member_function_pointer<fun_type>::value,
-                fun_type>::type
-            type;
-};
-
-template<typename C>
-struct get_arg_types
-{
-    typedef typename get_callable_trait<C>::type trait_type;
-    typedef typename trait_type::arg_types types;
-};
-
-template<typename C>
-struct get_result_type
-{
-    typedef typename get_callable_trait<C>::type trait_type;
-    typedef typename trait_type::result_type type;
+    static constexpr bool value =
+            tl_exists<typename get_arg_types<F>::types, is_mutable_ref>::value;
 };
 
 } } // namespace cppa::util
 
-#endif // CPPA_UTIL_CALLABLE_TRAIT
+#endif // IS_MANIPULATOR_HPP

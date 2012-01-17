@@ -249,3 +249,6 @@ cppa/util/tbind.hpp
 cppa/util/option.hpp
 cppa/tuple_cast.hpp
 cppa/detail/matches.hpp
+cppa/util/is_mutable_ref.hpp
+cppa/util/is_manipulator.hpp
+cppa/util/apply_tuple.hpp

@@ -42,6 +42,7 @@
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
+#include "cppa/util/fixed_vector.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/tdata.hpp"
@@ -49,9 +50,15 @@
 
 namespace cppa {
 
+template<class ExtendedType, class BasicType>
+ExtendedType* extend_pattern(BasicType const* p);
+
 template<typename... Types>
 class pattern
 {
+
+    template<class ExtendedType, class BasicType>
+    friend ExtendedType* extend_pattern(BasicType const* p);
 
     static_assert(sizeof...(Types) > 0, "empty pattern");
 
@@ -64,13 +71,10 @@ class pattern
 
     typedef util::type_list<Types...> types;
 
-    typedef typename util::lt_filter_not<types, util::tbind<std::is_same, anything>::type>::type
+    typedef typename util::tl_filter_not<types, util::tbind<std::is_same, anything>::type>::type
             filtered_types;
 
-    typedef typename tuple_view_type_from_type_list<filtered_types>::type
-            tuple_view_type;
-
-    typedef typename tuple_view_type::mapping_vector mapping_vector;
+    typedef util::fixed_vector<size_t, filtered_types::size> mapping_vector;
 
     class const_iterator
     {
@@ -149,6 +153,8 @@ class pattern
             m_data_ptr[i] = nullptr;
         }
     }
+
+ private:
 
     detail::tdata<Types...> m_data;
     static detail::types_array<Types...> m_utis;
