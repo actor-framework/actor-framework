@@ -33,7 +33,6 @@
 
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/compare_tuples.hpp"
-#include "cppa/util/concat_type_lists.hpp"
 #include "cppa/util/conjunction.hpp"
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/enable_if.hpp"

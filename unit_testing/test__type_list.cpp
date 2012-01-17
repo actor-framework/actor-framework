@@ -34,7 +34,7 @@ size_t test__type_list()
     CPPA_CHECK((is_same<element_at<1, l1>::type, element_at<1, r1>::type>::value));
     CPPA_CHECK((is_same<element_at<2, l1>::type, element_at<0, r1>::type>::value));
 
-    typedef concat_type_lists<type_list<int>, l1>::type l2;
+    typedef tl_concat<type_list<int>, l1>::type l2;
 
     CPPA_CHECK((is_same<int, l2::head>::value));
     CPPA_CHECK((is_same<l1, l2::tail>::value));

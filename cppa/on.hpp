@@ -46,7 +46,6 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/callable_trait.hpp"
-#include "cppa/util/concat_type_lists.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"

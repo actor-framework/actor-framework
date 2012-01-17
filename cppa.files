@@ -23,7 +23,6 @@ unit_testing/test__spawn.cpp
 src/mock_scheduler.cpp
 cppa/actor.hpp
 unit_testing/test__intrusive_ptr.cpp
-cppa/util/concat_type_lists.hpp
 cppa/util/is_comparable.hpp
 cppa/util/callable_trait.hpp
 unit_testing/test__type_list.cpp
