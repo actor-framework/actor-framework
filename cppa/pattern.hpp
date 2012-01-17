@@ -41,6 +41,7 @@
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/arg_match_t.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/tdata.hpp"
@@ -129,13 +130,21 @@ class pattern
     template<typename Arg0, typename... Args>
     pattern(Arg0 const& arg0, Args const&... args) : m_data(arg0, args...)
     {
+        using std::is_same;
+        using namespace util;
+        typedef typename type_list<Arg0, Args...>::back arg_n;
+        static constexpr bool ignore_arg_n = is_same<arg_n, arg_match_t>::value;
         bool invalid_args[] = { detail::is_boxed<Arg0>::value,
                                 detail::is_boxed<Args>::value... };
-        for (size_t i = 0; i < sizeof...(Args) + 1; ++i)
+        // ignore extra arg_match_t argument
+        static constexpr size_t args_size = sizeof...(Args)
+                                          + (ignore_arg_n ? 0 : 1);
+        static_assert(args_size <= size, "too many arguments");
+        for (size_t i = 0; i < args_size; ++i)
         {
             m_data_ptr[i] = invalid_args[i] ? nullptr : m_data.at(i);
         }
-        for (size_t i = sizeof...(Args) + 1; i < size; ++i)
+        for (size_t i = args_size; i < size; ++i)
         {
             m_data_ptr[i] = nullptr;
         }
