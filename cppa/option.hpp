@@ -172,6 +172,6 @@ class option
 
 };
 
-} // namespace cppa::util
+} // namespace cppa
 
 #endif // OPTION_HPP
