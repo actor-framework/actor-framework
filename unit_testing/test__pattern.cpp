@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 
 #include "test.hpp"
 
@@ -23,15 +24,17 @@
 using namespace cppa;
 
 template<typename Arr>
-void plot(Arr const& arr)
+std::string plot(Arr const& arr)
 {
-    cout << "{ ";
+    std::ostringstream oss;
+    oss << "{ ";
     for (size_t i = 0; i < arr.size(); ++i)
     {
-        if (i > 0) cout << ", ";
-        cout << "arr[" << i << "] = " << ((arr[i]) ? arr[i]->name() : "anything");
+        if (i > 0) oss << ", ";
+        oss << "arr[" << i << "] = " << ((arr[i]) ? arr[i]->name() : "anything");
     }
-    cout << " }" << endl;
+    oss << " }";
+    return oss.str();
 }
 
 typedef std::pair<int,int> foobar;
@@ -59,28 +62,38 @@ match_helper match(any_tuple const& x)
 
 size_t test__pattern()
 {
+    CPPA_TEST(test__pattern);
+
     match(make_tuple(1,2,3))
     (
-        on_arg_match >> [](int a, int b, int c)
+        on_arg_match >> [&](int a, int b, int c)
         {
-            cout << "MATCH: " << a << ", " << b << ", " << c << endl;
+            CPPA_CHECK_EQUAL(a, 1);
+            CPPA_CHECK_EQUAL(b, 2);
+            CPPA_CHECK_EQUAL(c, 3);
         }
     );
 
     pattern<int, anything, int> i3;
     any_tuple i3_any_tup = make_tuple(1, 2, 3);
     auto opt = tuple_cast(i3_any_tup, i3);
+    CPPA_CHECK(opt.valid());
     if (opt.valid())
     {
-        cout << "x = ( " << get<0>(*opt) << ", " << get<1>(*opt) << " )" << endl;
+        CPPA_CHECK_EQUAL(get<0>(*opt), 1);
+        CPPA_CHECK_EQUAL(get<1>(*opt), 3);
     }
 
     announce<foobar>(&foobar::first, &foobar::second);
 
-    plot(arr1);
-    plot(arr2);
+    static constexpr char const* arr1_as_string =
+            "{ arr[0] = @i32, arr[1] = anything, arr[2] = float }";
+    CPPA_CHECK_EQUAL(plot(arr1), arr1_as_string);
+    static constexpr char const* arr2_as_string =
+            "{ arr[0] = @i32, arr[1] = anything, "
+            "arr[2] = std::pair<@i32,@i32> }";
+    CPPA_CHECK_EQUAL(plot(arr2), arr2_as_string);
 
-    CPPA_TEST(test__pattern);
     // some pattern objects to play with
     pattern<atom_value, int, std::string> p0{util::wrapped<atom_value>()};
     pattern<atom_value, int, std::string> p1(atom("FooBar"));
