@@ -31,9 +31,9 @@
 #ifndef TUPLE_CAST_HPP
 #define TUPLE_CAST_HPP
 
+#include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/util/option.hpp"
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/decorated_tuple.hpp"

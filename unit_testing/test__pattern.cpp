@@ -5,11 +5,11 @@
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/tuple_cast.hpp"
 
-#include "cppa/util/option.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/apply_tuple.hpp"

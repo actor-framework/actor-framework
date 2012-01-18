@@ -151,6 +151,7 @@ nobase_library_include_HEADERS = \
   cppa/invoke_rules.hpp \
   cppa/object.hpp \
   cppa/on.hpp \
+  cppa/option.hpp \
   cppa/pattern.hpp \
   cppa/primitive_type.hpp \
   cppa/primitive_variant.hpp \
@@ -196,7 +197,6 @@ nobase_library_include_HEADERS = \
   cppa/util/is_mutable_ref.hpp \
   cppa/util/is_one_of.hpp \
   cppa/util/is_primitive.hpp \
-  cppa/util/option.hpp \
   cppa/util/producer_consumer_list.hpp \
   cppa/util/pt_dispatch.hpp \
   cppa/util/pt_token.hpp \
