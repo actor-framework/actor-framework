@@ -38,7 +38,6 @@
 #include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/tuple_view.hpp"
 #include "cppa/invoke_rules.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -103,13 +102,10 @@ class invoke_rule_builder
 
     std::unique_ptr<pattern_type> m_ptr;
 
-    typedef typename tuple_view_type_from_type_list<typename pattern_type::filtered_types>::type tuple_view_type;
-
     template<typename F>
     invoke_rules cr_rules(F&& f, std::integral_constant<bool, true>)
     {
-        typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
-        return invokable_ptr(new impl(std::move(m_ptr),std::forward<F>(f)));
+        return get_invokable_impl(std::forward<F>(f), std::move(m_ptr));
     }
 
     template<typename F>
@@ -122,13 +118,8 @@ class invoke_rule_builder
         typedef typename tl_apply<raw_types,rm_ref>::type new_types;
         typedef typename tl_concat<converted_types,new_types>::type types;
         typedef typename pattern_from_type_list<types>::type epattern;
-
-        //typedef typename epattern::tuple_view_type tuple_view_type;
-        typedef typename tuple_view_type_from_type_list<typename epattern::filtered_types>::type tuple_view_type;
-
-        typedef invokable_impl<tuple_view_type, epattern, F> impl;
         std::unique_ptr<epattern> pptr(extend_pattern<epattern>(m_ptr.get()));
-        return invokable_ptr(new impl(std::move(pptr), std::forward<F>(f)));
+        return get_invokable_impl(std::forward<F>(f), std::move(pptr));
     }
 
  public:
@@ -167,13 +158,8 @@ class on_the_fly_invoke_rule_builder
         static_assert(raw_types::size > 0, "functor has no arguments");
         typedef typename tl_apply<raw_types,rm_ref>::type types;
         typedef typename pattern_from_type_list<types>::type pattern_type;
-        //typedef typename pattern_type::tuple_view_type tuple_view_type;
-
-        typedef typename tuple_view_type_from_type_list<typename pattern_type::filtered_types>::type tuple_view_type;
-
-        typedef invokable_impl<tuple_view_type, pattern_type, F> impl;
         std::unique_ptr<pattern_type> pptr(new pattern_type);
-        return invokable_ptr(new impl(std::move(pptr), std::forward<F>(f)));
+        return get_invokable_impl(std::forward<F>(f), std::move(pptr));
     }
 
 };

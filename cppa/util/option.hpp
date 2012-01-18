@@ -115,6 +115,10 @@ class option
 
     inline bool valid() const { return m_valid; }
 
+    inline explicit operator bool() const { return m_valid; }
+
+    inline bool operator!() const { return !m_valid; }
+
     inline What& operator*() { return m_value; }
     inline What const& operator*() const { return m_value; }
 

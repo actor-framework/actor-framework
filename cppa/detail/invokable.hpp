@@ -36,9 +36,11 @@
 #include <cstdint>
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/tuple_cast.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/fixed_vector.hpp"
+#include "cppa/util/callable_trait.hpp"
 
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/intermediate.hpp"
@@ -113,57 +115,34 @@ class invokable : public invokable_base
 
 };
 
-template<class TupleView, class Pattern, class TargetFun>
+template<size_t NumArgs, typename Fun, class Tuple, class Pattern>
 class invokable_impl : public invokable
 {
 
-    typedef typename Pattern::mapping_vector vector_type;
-
     struct iimpl : intermediate
     {
-        TargetFun m_target;
-        TupleView m_args;
-
-        template<typename F>
-        iimpl(F&& fun) : m_target(std::forward<F>(fun))
-        {
-        }
-
-        void invoke() // override
-        {
-            util::apply_tuple(m_target, m_args);
-        }
-    };
-
+        Fun m_fun;
+        Tuple m_args;
+        template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
+        void invoke() { util::apply_tuple(m_fun, m_args); }
+    }
+    m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
-    iimpl m_iimpl;
 
  public:
 
     template<typename F>
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, F&& fun)
-        : m_pattern(std::move(pptr)), m_iimpl(std::forward<F>(fun))
+    invokable_impl(F&& fun, std::unique_ptr<Pattern>&& pptr)
+        : m_iimpl(std::forward<F>(fun)), m_pattern(std::move(pptr))
     {
     }
 
     bool invoke(any_tuple const& data) const
     {
-        vector_type mv;
-        if (detail::matches(pm_decorated(data.begin(), &mv), m_pattern->begin()))
-        //if ((*m_pattern)(data, &mv))
+        auto tuple_option = tuple_cast(data, *m_pattern);
+        if (tuple_option.valid())
         {
-            if (mv.size() == data.size())
-            {
-                // "perfect" match; no mapping needed at all
-                TupleView tv = TupleView::from(data.vals());
-                util::apply_tuple(m_iimpl.m_target, tv);
-            }
-            else
-            {
-                // mapping needed
-                TupleView tv(data.vals(), mv);
-                util::apply_tuple(m_iimpl.m_target, tv);
-            }
+            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
             return true;
         }
         return false;
@@ -171,19 +150,10 @@ class invokable_impl : public invokable
 
     intermediate* get_intermediate(any_tuple const& data)
     {
-        vector_type mv;
-        //if ((*m_pattern)(data, &mv))
-        if (detail::matches(pm_decorated(data.begin(), &mv), m_pattern->begin()))
+        auto tuple_option = tuple_cast(data, *m_pattern);
+        if (tuple_option.valid())
         {
-            if (mv.size() == data.size())
-            {
-                // perfect match
-                m_iimpl.m_args = TupleView::from(data.vals());
-            }
-            else
-            {
-                m_iimpl.m_args = TupleView(data.vals(), mv);
-            }
+            m_iimpl.m_args = std::move(*tuple_option);
             return &m_iimpl;
         }
         return nullptr;
@@ -191,42 +161,32 @@ class invokable_impl : public invokable
 
 };
 
-template<template<class...> class TupleClass, class Pattern, class TargetFun>
-class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
+template<typename Fun, class Tuple, class Pattern>
+class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
 {
 
     struct iimpl : intermediate
     {
-        TargetFun m_target;
-
-        template<typename F>
-        iimpl(F&& fun) : m_target(fun)
-        {
-        }
-
-        void invoke()
-        {
-            m_target();
-        }
-    };
-
+        Fun m_fun;
+        template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
+        void invoke() { m_fun(); }
+    }
+    m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
-    iimpl m_iimpl;
 
  public:
 
     template<typename F>
-    invokable_impl(std::unique_ptr<Pattern>&& pptr, F&& fun)
-        : m_pattern(std::move(pptr)), m_iimpl(std::forward<F>(fun))
+    invokable_impl(F&& fun, std::unique_ptr<Pattern>&& pptr)
+        : m_iimpl(std::forward<F>(fun)), m_pattern(std::move(pptr))
     {
     }
 
     bool invoke(any_tuple const& data) const
     {
         if (detail::matches(data.begin(), m_pattern->begin()))
-        //if ((*m_pattern)(data, nullptr))
         {
-            m_iimpl.m_target();
+            m_iimpl.m_fun();
             return true;
         }
         return false;
@@ -236,10 +196,28 @@ class invokable_impl<TupleClass<>, Pattern, TargetFun> : public invokable
     {
         return detail::matches(data.begin(), m_pattern->begin()) ? &m_iimpl
                                                                  : nullptr;
-        //return ((*m_pattern)(data, nullptr)) ? &m_iimpl : nullptr;
     }
 
 };
+
+
+template<typename Fun, class Pattern>
+struct select_invokable_impl
+{
+    typedef typename util::get_arg_types<Fun>::types arg_types;
+    typedef typename Pattern::filtered_types filtered_types;
+    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
+    typedef invokable_impl<arg_types::size, Fun, tuple_type, Pattern> type;
+};
+
+template<typename Fun, class Pattern>
+std::unique_ptr<invokable> get_invokable_impl(Fun&& fun,
+                                              std::unique_ptr<Pattern>&& pptr)
+{
+    typedef typename select_invokable_impl<Fun, Pattern>::type result;
+    return std::unique_ptr<invokable>(new result(std::forward<Fun>(fun),
+                                                 std::move(pptr)));
+}
 
 } } // namespace cppa::detail
 

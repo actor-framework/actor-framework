@@ -28,7 +28,7 @@
 #include "cppa/tuple.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
-#include "cppa/get_view.hpp"
+#include "cppa/tuple_cast.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
@@ -124,10 +124,15 @@ size_t test__serialization()
     any_tuple atuple1(oarr);
     try
     {
-        auto tv1 = get_view<std::uint32_t, std::string>(atuple1);
-        CPPA_CHECK_EQUAL(tv1.size(), 2);
-        CPPA_CHECK_EQUAL(get<0>(tv1), 42);
-        CPPA_CHECK_EQUAL(get<1>(tv1), "foo");
+        auto opt = tuple_cast<std::uint32_t, std::string>(atuple1);
+        CPPA_CHECK(opt.valid());
+        if (opt)
+        {
+            auto& tup = *opt;
+            CPPA_CHECK_EQUAL(tup.size(), 2);
+            CPPA_CHECK_EQUAL(get<0>(tup), 42);
+            CPPA_CHECK_EQUAL(get<1>(tup), "foo");
+        }
     }
     catch (std::exception& e)
     {
@@ -154,10 +159,15 @@ size_t test__serialization()
         uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
         try
         {
-            auto tview = get_view<std::uint32_t, std::string>(atuple2);
-            CPPA_CHECK_EQUAL(tview.size(), 2);
-            CPPA_CHECK_EQUAL(get<0>(tview), 42);
-            CPPA_CHECK_EQUAL(get<1>(tview), "foo");
+            auto opt = tuple_cast<std::uint32_t, std::string>(atuple2);
+            CPPA_CHECK(opt.valid());
+            if (opt.valid())
+            {
+                auto& tup = *opt;
+                CPPA_CHECK_EQUAL(tup.size(), 2);
+                CPPA_CHECK_EQUAL(get<0>(tup), 42);
+                CPPA_CHECK_EQUAL(get<1>(tup), "foo");
+            }
         }
         catch (std::exception& e)
         {
@@ -184,14 +194,20 @@ size_t test__serialization()
         {
             auto& content1 = get<any_tuple>(obj1);
             auto& content2 = get<any_tuple>(obj2);
-            auto cview1 = get_view<decltype(42), std::string>(content1);
-            auto cview2 = get_view<decltype(42), std::string>(content2);
-            CPPA_CHECK_EQUAL(cview1.size(), 2);
-            CPPA_CHECK_EQUAL(cview2.size(), 2);
-            CPPA_CHECK_EQUAL(get<0>(cview1), 42);
-            CPPA_CHECK_EQUAL(get<0>(cview2), 42);
-            CPPA_CHECK_EQUAL(get<1>(cview1), "Hello \"World\"!");
-            CPPA_CHECK_EQUAL(get<1>(cview2), "Hello \"World\"!");
+            auto opt1 = tuple_cast<decltype(42), std::string>(content1);
+            auto opt2 = tuple_cast<decltype(42), std::string>(content2);
+            CPPA_CHECK(opt1.valid() && opt2.valid());
+            if (opt1.valid() && opt2.valid())
+            {
+                auto& tup1 = *opt1;
+                auto& tup2 = *opt2;
+                CPPA_CHECK_EQUAL(tup1.size(), 2);
+                CPPA_CHECK_EQUAL(tup2.size(), 2);
+                CPPA_CHECK_EQUAL(get<0>(tup1), 42);
+                CPPA_CHECK_EQUAL(get<0>(tup2), 42);
+                CPPA_CHECK_EQUAL(get<1>(tup1), "Hello \"World\"!");
+                CPPA_CHECK_EQUAL(get<1>(tup2), "Hello \"World\"!");
+            }
         }
         else
         {

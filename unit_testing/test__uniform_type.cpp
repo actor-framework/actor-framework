@@ -15,7 +15,6 @@
 
 #include "test.hpp"
 
-#include "cppa/get_view.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"

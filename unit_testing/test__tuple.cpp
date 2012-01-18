@@ -11,10 +11,9 @@
 #include "cppa/on.hpp"
 #include "cppa/util.hpp"
 #include "cppa/tuple.hpp"
-#include "cppa/get_view.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/tuple_view.hpp"
+#include "cppa/tuple_cast.hpp"
 #include "cppa/invoke_rules.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -26,8 +25,6 @@ using std::cout;
 using std::endl;
 
 using namespace cppa;
-
-
 
 size_t test__tuple()
 {
@@ -42,7 +39,9 @@ size_t test__tuple()
     CPPA_CHECK_EQUAL(t0_0, "1");
     CPPA_CHECK_EQUAL(t0_1, 2);
     // create a view of t0 that only contains the string
-    auto v0 = get_view<std::string, anything>(t0);
+    auto v0opt = tuple_cast(t0, pattern<std::string, anything>());
+    if (!v0opt) throw std::runtime_error("tuple_cast failed!");
+    auto& v0 = *v0opt;
     auto v0_0 = get<0>(v0);
     CPPA_CHECK_EQUAL(v0.size(), 1);
     CPPA_CHECK((std::is_same<decltype(v0_0), std::string>::value));
@@ -57,5 +56,6 @@ size_t test__tuple()
     auto lhs = make_tuple(1,2,3,4);
     auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
     CPPA_CHECK_EQUAL(lhs, rhs);
+    CPPA_CHECK_EQUAL(rhs, lhs);
     return CPPA_TEST_RESULT;
 }

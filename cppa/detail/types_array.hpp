@@ -116,6 +116,15 @@ struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
 {
 };
 
+template<typename... T>
+struct static_types_array
+{
+    static types_array<T...> arr;
+};
+
+template<typename... T>
+types_array<T...> static_types_array<T...>::arr;
+
 } } // namespace cppa::detail
 
 #endif // TYPES_ARRAY_HPP
