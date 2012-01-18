@@ -109,7 +109,7 @@ struct thread_pool_scheduler::worker
             timeout += boost::posix_time::milliseconds(1);
             boost::this_thread::sleep(timeout);
 #           else
-            std::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #           endif
         }
         return result;
@@ -130,7 +130,7 @@ struct thread_pool_scheduler::worker
             timeout += boost::posix_time::milliseconds(10);
             boost::this_thread::sleep(timeout);
 #           else
-            std::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 #           endif
         }
     }
