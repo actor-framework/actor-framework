@@ -47,11 +47,10 @@ converted_thread_context::converted_thread_context()
 
 void converted_thread_context::quit(std::uint32_t reason)
 {
-    try { super::cleanup(reason); } catch(...) { }
+    super::cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
     // self must point to a newly created instance
-    self.set(nullptr);
-    //set_self(nullptr);
+    //self.set(nullptr);
     throw actor_exited(reason);
 }
 
@@ -88,7 +87,7 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
     queue_node_ptr node(m_mailbox.try_pop());
     do
     {
-        while (!node)
+        if (!node)
         {
             node.reset(m_mailbox.try_pop(timeout));
             if (!node)
@@ -102,13 +101,11 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
     while (dq(node, rules, buffer) == false);
 }
 converted_thread_context::throw_on_exit_result
-converted_thread_context::throw_on_exit(const any_tuple& msg)
+converted_thread_context::throw_on_exit(any_tuple const& msg)
 {
-    pattern<atom_value, actor_ptr, std::uint32_t>::mapping_vector* ptr = nullptr;
-    auto j = m_exit_msg_pattern.begin();
-    if (detail::matches(pm_decorated(msg.begin(), ptr), j))
+    if (matches(msg.begin(), m_exit_msg_pattern.begin()))
     {
-        auto reason = *reinterpret_cast<const std::uint32_t*>(msg.at(2));
+        auto reason = msg.get_as<std::uint32_t>(1);
         if (reason != exit_reason::normal)
         {
             // throws

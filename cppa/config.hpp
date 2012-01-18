@@ -31,6 +31,11 @@
 #ifndef CPPA_CONFIG_HPP
 #define CPPA_CONFIG_HPP
 
+// uncomment this line or use
+// ./configure CXXFLAGS="-DCPPA_DISABLE_CONTEXT_SWITCHING"
+// if ucontext_t is not available on your platform
+//#define CPPA_DISABLE_CONTEXT_SWITCHING
+
 #if defined(__GNUC__)
 #  define CPPA_GCC
 #endif
@@ -55,8 +60,10 @@
 #ifdef CPPA_MACOS
 #   include <libkern/OSAtomic.h>
 #   define CPPA_MEMORY_BARRIER() OSMemoryBarrier()
-#elif defined(CPPA_LINUX)
+#elif defined(CPPA_GCC)
 #   define CPPA_MEMORY_BARRIER() __sync_synchronize()
+#else
+#  error Plattform and/or compiler not supportet
 #endif
 
 #endif // CPPA_CONFIG_HPP

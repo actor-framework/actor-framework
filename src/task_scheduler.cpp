@@ -36,6 +36,7 @@
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
+#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/yielding_actor.hpp"
 #include "cppa/detail/yield_interface.hpp"
@@ -134,9 +135,17 @@ actor_ptr task_scheduler::spawn(abstract_event_based_actor* what)
     return spawn_impl(what->attach_to_scheduler(enqueue_fun, this));
 }
 
-actor_ptr task_scheduler::spawn(scheduled_actor* behavior, scheduling_hint)
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+actor_ptr task_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint hint)
 {
-    return spawn_impl(new yielding_actor(behavior, enqueue_fun, this));
+    if (hint == detached) return mock_scheduler::spawn(bhvr);
+    return spawn_impl(new yielding_actor(bhvr, enqueue_fun, this));
 }
+#else
+actor_ptr task_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
+{
+    return mock_scheduler::spawn(bhvr);
+}
+#endif
 
 } } // namespace cppa::detail

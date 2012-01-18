@@ -237,19 +237,24 @@ actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
     return spawn_impl(what->attach_to_scheduler(enqueue_fun, this), false);
 }
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* behavior,
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
                                        scheduling_hint hint)
 {
     if (hint == detached)
     {
-        return mock_scheduler::spawn(behavior);
+        return mock_scheduler::spawn(bhvr);
     }
     else
     {
-        return spawn_impl(new yielding_actor(behavior,
-                                             enqueue_fun,
-                                             this));
+        return spawn_impl(new yielding_actor(bhvr, enqueue_fun, this));
     }
 }
+#else
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
+{
+    return mock_scheduler::spawn(bhvr);
+}
+#endif
 
 } } // namespace cppa::detail

@@ -334,6 +334,7 @@ size_t test__spawn()
     CPPA_TEST(test__spawn);
 
     spawn(testee1);
+    return 0;
     spawn(event_testee2());
 
     auto cstk = spawn(new chopstick);

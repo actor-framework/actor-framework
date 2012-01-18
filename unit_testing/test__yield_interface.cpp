@@ -57,6 +57,12 @@ size_t test__yield_interface()
 {
     CPPA_TEST(test__yield_interface);
 
+#   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+    cout << "WARNING: context switching was explicitly disabled using "
+            "CPPA_DISABLE_CONTEXT_SWITCHING"
+         << endl;
+    return CPPA_TEST_RESULT;
+#   else
     pseudo_worker worker;
 
     fiber fself;
@@ -77,4 +83,5 @@ size_t test__yield_interface()
     CPPA_CHECK_EQUAL(i, 12);
 
     return CPPA_TEST_RESULT;
+#   endif
 }

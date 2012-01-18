@@ -28,13 +28,15 @@
 \******************************************************************************/
 
 
+#include "cppa/detail/yielding_actor.hpp"
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+
 #include <iostream>
 
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
-#include "cppa/detail/yielding_actor.hpp"
 
 namespace cppa { namespace detail {
 
@@ -184,3 +186,9 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
 }
 
 } } // namespace cppa::detail
+
+#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+
+namespace { int keep_compiler_happy() { return 42; } }
+
+#endif // CPPA_DISABLE_CONTEXT_SWITCHING

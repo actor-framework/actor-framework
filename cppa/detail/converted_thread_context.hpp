@@ -103,7 +103,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     throw_on_exit_result throw_on_exit(any_tuple const& msg);
 
-    pattern<atom_value, actor_ptr, std::uint32_t> m_exit_msg_pattern;
+    pattern<atom_value, std::uint32_t> m_exit_msg_pattern;
 
 };
 

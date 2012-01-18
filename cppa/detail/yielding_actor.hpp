@@ -31,6 +31,10 @@
 #ifndef YIELDING_ACTOR_HPP
 #define YIELDING_ACTOR_HPP
 
+#include "cppa/config.hpp"
+
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+
 #include <stack>
 
 #include "cppa/pattern.hpp"
@@ -84,5 +88,7 @@ class yielding_actor : public abstract_scheduled_actor
 };
 
 } } // namespace cppa::detail
+
+#endif // CPPA_DISABLE_CONTEXT_SWITCHING
 
 #endif // YIELDING_ACTOR_HPP

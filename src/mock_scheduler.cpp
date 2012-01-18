@@ -56,7 +56,6 @@ void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
                cppa::scheduled_actor* behavior)
 {
     cppa::self.set(m_self.get());
-    //cppa::set_self(m_self.get());
     if (behavior)
     {
         try { behavior->act(); }
@@ -64,6 +63,7 @@ void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
         try { behavior->on_exit(); }
         catch (...) { }
         delete behavior;
+        cppa::self.set(nullptr);
     }
     cppa::detail::dec_actor_count();
 }

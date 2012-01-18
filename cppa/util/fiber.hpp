@@ -33,13 +33,22 @@
 
 #include "cppa/config.hpp"
 
-#if defined (CPPA_MACOS) || defined (CPPA_LINUX)
+#if defined(CPPA_MACOS) || defined(CPPA_LINUX)
 #   define CPPA_USE_UCONTEXT_IMPL
 #elif defined (CPPA_WINDOWS)
 #   define CPPA_USE_FIBER_IMPL
 #endif
 
-#ifdef CPPA_USE_UCONTEXT_IMPL
+#ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+
+namespace cppa { namespace util {
+struct fiber
+{
+    inline static void swap(fiber&, fiber&) { }
+};
+} }
+
+#elif defined(CPPA_USE_UCONTEXT_IMPL)
 
 namespace cppa { namespace util {
 

@@ -32,6 +32,9 @@
 #define _XOPEN_SOURCE
 #endif
 
+#include "cppa/config.hpp"
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+
 #include <atomic>
 #include <cstddef>
 #include <cstring>
@@ -41,107 +44,35 @@
 #include "cppa/util/fiber.hpp"
 #include "cppa/detail/thread.hpp"
 
-#if defined(CPPA_USE_UCONTEXT_IMPL) || defined(CPPA_USE_PTH_IMPL)
+#ifdef CPPA_USE_UCONTEXT_IMPL
 
 #include <signal.h>
 #include <sys/mman.h>
 
-#ifdef CPPA_USE_PTH_IMPL
-#include "pth.h"
-#else
 #include <ucontext.h>
-#endif
 
 namespace {
 
-constexpr size_t STACK_SIZE = SIGSTKSZ;
+constexpr size_t s_stack_size = SIGSTKSZ;
 
-struct stack_node
+inline void* get_stack()
 {
-    stack_node* next;
-    void* s;
-
-    stack_node(): next(NULL) , s(mmap(0, STACK_SIZE,
-                                         PROT_EXEC | PROT_READ | PROT_WRITE,
-                                         MAP_PRIVATE | MAP_ANON,
-                                         -1,
-                                         0))
-                                 //new char[STACK_SIZE])
-    {
-        //memset(s, 0, STACK_SIZE);
-    }
-
-    ~stack_node()
-    {
-        munmap(s, STACK_SIZE);
-        //delete[] reinterpret_cast<char*>(s);
-    }
-};
-
-std::atomic<stack_node*> s_head(nullptr);
-std::atomic<size_t> s_size(0);
-
-struct cleanup_helper
-{
-    ~cleanup_helper()
-    {
-        stack_node* h = s_head.load();
-        while (s_head.compare_exchange_weak(h, nullptr) == false)
-        {
-            // try again
-        }
-        s_size = 0;
-        while (h)
-        {
-            auto tmp = h->next;
-            delete h;
-            h = tmp;
-        }
-    }
-}
-s_cleanup_helper;
-
-stack_node* get_stack_node()
-{
-    stack_node* result = s_head.load();
-    for (;;)
-    {
-        if (result)
-        {
-            if (s_head.compare_exchange_weak(result, result->next))
-            {
-                --s_size;
-                return result;
-            }
-        }
-        else
-        {
-            return new stack_node;
-        }
-    }
+    return mmap(0,
+                s_stack_size,
+                PROT_EXEC | PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANON,
+                -1,
+                0);
 }
 
-void release_stack_node(stack_node* node)
+inline void release_stack(void* mem)
 {
-    if (++s_size < 16)
-    {
-        node->next = s_head.load();
-        for (;;)
-        {
-            if (s_head.compare_exchange_weak(node->next, node)) return;
-        }
-    }
-    else
-    {
-        --s_size;
-        delete node;
-    }
+     munmap(mem, s_stack_size);
 }
 
 typedef void (*void_function)();
 typedef void (*void_ptr_function)(void*);
 
-#ifndef CPPA_USE_PTH_IMPL
 template<size_t PointerSize,
          typename FunType = void_function,
          typename IntType = int>
@@ -195,25 +126,21 @@ struct trampoline<8, FunType, IntType>
                     4, func_addr[0], func_addr[1], arg_addr[0], arg_addr[1]);
     }
 };
-#else
-cppa::detail::mutex s_uctx_make_mtx;
-#endif
 
 } // namespace <anonymous>
 
 namespace cppa { namespace util {
 
-#ifndef CPPA_USE_PTH_IMPL
 struct fiber_impl
 {
 
     bool m_initialized;
-    stack_node* m_node;
+    void* m_stack;
     void (*m_func)(void*);
     void* m_arg;
     ucontext_t m_ctx;
 
-    fiber_impl() throw() : m_initialized(true), m_node(0), m_func(0), m_arg(0)
+    fiber_impl() throw() : m_initialized(true), m_stack(0), m_func(0), m_arg(0)
     {
         memset(&m_ctx, 0, sizeof(ucontext_t));
         getcontext(&m_ctx);
@@ -221,7 +148,7 @@ struct fiber_impl
 
     fiber_impl(void (*func)(void*), void* arg)
         : m_initialized(false)
-        , m_node(nullptr)
+        , m_stack(nullptr)
         , m_func(func)
         , m_arg(arg)
     {
@@ -235,11 +162,11 @@ struct fiber_impl
     void initialize()
     {
         m_initialized = true;
-        m_node = get_stack_node();
         memset(&m_ctx, 0, sizeof(ucontext_t));
         getcontext(&m_ctx);
-        m_ctx.uc_stack.ss_sp = m_node->s;
-        m_ctx.uc_stack.ss_size = STACK_SIZE;
+        m_stack = get_stack();
+        m_ctx.uc_stack.ss_sp = m_stack;
+        m_ctx.uc_stack.ss_size = s_stack_size;
         m_ctx.uc_link = nullptr;
         trampoline<sizeof(void*)>::prepare(&m_ctx, m_func, m_arg);
     }
@@ -251,69 +178,10 @@ struct fiber_impl
 
     ~fiber_impl()
     {
-        if (m_node) release_stack_node(m_node);
+        if (m_stack) release_stack(m_stack);
     }
 
 };
-#else
-
-
-struct fiber_impl
-{
-
-    bool m_initialized;
-    stack_node* m_node;
-    void (*m_func)(void*);
-    void* m_arg;
-    pth_uctx_t m_ctx;
-
-    fiber_impl() throw() : m_initialized(true), m_node(0), m_func(0), m_arg(0)
-    {
-        memset(&m_ctx, 0, sizeof(pth_uctx_t));
-        pth_uctx_create(&m_ctx);
-    }
-
-    fiber_impl(void (*func)(void*), void* arg)
-        : m_initialized(false)
-        , m_node(nullptr)
-        , m_func(func)
-        , m_arg(arg)
-    {
-    }
-
-    inline void swap(fiber_impl* to)
-    {
-        pth_uctx_switch(m_ctx, to->m_ctx);
-    }
-
-    void initialize()
-    {
-        m_initialized = true;
-        m_node = get_stack_node();
-        memset(&m_ctx, 0, sizeof(pth_uctx_t));
-        pth_uctx_create(&m_ctx);
-        // lifetime scope of guard
-        {
-            // pth uses static data to initialize m_ctx
-            detail::unique_lock<detail::mutex> guard(s_uctx_make_mtx);
-            pth_uctx_make(m_ctx, reinterpret_cast<char*>(m_node->s), STACK_SIZE,
-                          nullptr, m_func, m_arg, nullptr);
-        }
-    }
-
-    inline void lazy_init()
-    {
-        if (!m_initialized) initialize();
-    }
-
-    ~fiber_impl()
-    {
-        if (m_node) release_stack_node(m_node);
-        pth_uctx_destroy(m_ctx);
-    }
-
-};
-#endif
 
 fiber::fiber() throw() : m_impl(new fiber_impl)
 {
@@ -368,4 +236,10 @@ fiber::~fiber()
     }
 }
 
-#endif
+#endif // CPPA_USE_FIBER_IMPL
+
+#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+
+namespace { int keep_compiler_happy() { return 42; } }
+
+#endif // CPPA_DISABLE_CONTEXT_SWITCHING
