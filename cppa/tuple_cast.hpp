@@ -43,12 +43,12 @@ namespace cppa {
 // cast using a pattern
 template<typename... P>
 auto tuple_cast(any_tuple const& tup, pattern<P...> const& p)
-    -> util::option<typename tuple_from_type_list<typename pattern<P...>::filtered_types>::type>
+    -> option<typename tuple_from_type_list<typename pattern<P...>::filtered_types>::type>
 {
     typedef typename pattern<P...>::mapping_vector mapping_vector;
     typedef typename pattern<P...>::filtered_types filtered_types;
     typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
-    util::option<tuple_type> result;
+    option<tuple_type> result;
     mapping_vector mv;
     if (detail::matches(detail::pm_decorated(tup.begin(), &mv), p.begin()))
     {
@@ -66,9 +66,9 @@ auto tuple_cast(any_tuple const& tup, pattern<P...> const& p)
 
 // cast using types
 template<typename... T>
-util::option< tuple<T...> > tuple_cast(any_tuple const& tup)
+option< tuple<T...> > tuple_cast(any_tuple const& tup)
 {
-    util::option< tuple<T...> > result;
+    option< tuple<T...> > result;
     auto& tarr = detail::static_types_array<T...>::arr;
     if (tup.size() == sizeof...(T))
     {

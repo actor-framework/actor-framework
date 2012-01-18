@@ -1,7 +1,7 @@
 #ifndef OPTION_HPP
 #define OPTION_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
 
 template<typename What>
 class option
@@ -36,14 +36,16 @@ class option
         cr(std::forward<V>(value));
     }
 
-    option(option const& other) : m_valid(other.m_valid)
+    option(option const& other)
     {
         if (other.m_valid) cr(other.m_value);
+        else m_valid = false;
     }
 
-    option(option&& other) : m_valid(other.m_valid)
+    option(option&& other)
     {
         if (other.m_valid) cr(std::move(other.m_value));
+        else m_valid = false;
     }
 
     ~option()
@@ -126,8 +128,20 @@ class option
 
     inline What const& get() const { return m_value; }
 
+    inline What& get_or_else(What const& val)
+    {
+        if (!m_valid) cr(val);
+        return m_value;
+    }
+
+    inline What& get_or_else(What&& val)
+    {
+        if (!m_valid) cr(std::move(val));
+        return m_value;
+    }
+
 };
 
-} } // namespace cppa::util
+} // namespace cppa::util
 
 #endif // OPTION_HPP
