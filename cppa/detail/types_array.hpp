@@ -79,7 +79,7 @@ struct types_array_impl<false, T...>
     // non-builtin types at runtime
     mutable std::atomic<uniform_type_info const*> data[sizeof...(T)];
     types_array_impl()
-        : tinfo_data({ta_util<std_tinf,util::is_builtin<T>::value,T>::get()...})
+        : tinfo_data{ta_util<std_tinf,util::is_builtin<T>::value,T>::get()...}
     {
         bool static_init[sizeof...(T)] = {    !std::is_same<T,anything>::value
                                            && util::is_builtin<T>::value ...  };
