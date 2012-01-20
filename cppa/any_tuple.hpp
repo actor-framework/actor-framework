@@ -92,23 +92,15 @@ class any_tuple
 
     class const_iterator
     {
-
         any_tuple const& ref;
         size_t p;
-
      public:
-
         inline const_iterator(any_tuple const& data, size_t pos = 0)
-            : ref(data), p(pos)
-        {
-        }
-
+            : ref(data), p(pos) { }
         inline void next() { ++p; }
         inline bool at_end() const { return p >= ref.size(); }
-        inline size_t position() const { return p; }
         inline void const* value() const { return ref.at(p); }
         inline uniform_type_info const* type() const { return ref.type_at(p); }
-
     };
 
     inline const_iterator begin() const { return {*this}; }

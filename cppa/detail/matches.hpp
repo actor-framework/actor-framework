@@ -78,6 +78,7 @@ template<class MappingVector, typename Iterator>
 class push_mapping_decorator
 {
 
+    size_t pos;
     Iterator iter;
     MappingVector* mapping;
 
@@ -86,28 +87,29 @@ class push_mapping_decorator
     typedef MappingVector mapping_vector;
 
     push_mapping_decorator(Iterator const& i, MappingVector* mv)
-        : iter(i), mapping(mv)
+        : pos(0), iter(i), mapping(mv)
     {
     }
 
-    push_mapping_decorator(push_mapping_decorator const& other, MappingVector* mv)
-        : iter(other.iter), mapping(mv)
+    push_mapping_decorator(push_mapping_decorator const& other,
+                           MappingVector* mv)
+        : pos(other.pos), iter(other.iter), mapping(mv)
     {
     }
 
     push_mapping_decorator(push_mapping_decorator&& other)
-        : iter(std::move(other.iter)), mapping(other.mapping)
+        : pos(other.pos), iter(std::move(other.iter)), mapping(other.mapping)
     {
     }
 
-    inline void next() { iter.next(); }
+    inline void next() { ++pos; iter.next(); }
     inline bool at_end() const { return iter.at_end(); }
     inline void const* value() const { return iter.value(); }
     inline decltype(iter.type()) type() const { return iter.type(); }
     inline bool has_mapping() const { return mapping != nullptr; }
     inline void push_mapping()
     {
-        if (mapping) mapping->push_back(iter.position());
+        if (mapping) mapping->push_back(pos);
     }
     inline void push_mapping(MappingVector const& mv)
     {

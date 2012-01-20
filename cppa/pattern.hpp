@@ -31,18 +31,22 @@
 #ifndef LIBCPPA_PATTERN_HPP
 #define LIBCPPA_PATTERN_HPP
 
+#include <list>
 #include <vector>
 #include <cstddef>
 #include <type_traits>
 
+#include "cppa/option.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/tuple_view.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/fixed_vector.hpp"
+#include "cppa/util/is_primitive.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/tdata.hpp"
@@ -84,22 +88,13 @@ class pattern
 
      public:
 
+        const_iterator(const_iterator const&) = default;
+        const_iterator& operator=(const_iterator const&) = default;
         const_iterator(pattern const* ptr) : m_ptr(ptr), m_pos(0) { }
 
-        const_iterator(const_iterator const&) = default;
+        inline void next() { ++m_pos; }
 
-        const_iterator& operator=(const_iterator const&) = default;
-
-        const_iterator& next()
-        {
-            ++m_pos;
-            return *this;
-        }
-
-        inline bool at_end()
-        {
-            return m_pos == sizeof...(Types);
-        }
+        inline bool at_end() { return m_pos == sizeof...(Types); }
 
         inline uniform_type_info const* type() const
         {

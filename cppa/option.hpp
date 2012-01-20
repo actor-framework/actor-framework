@@ -33,30 +33,32 @@
 
 namespace cppa {
 
-template<typename What>
+template<typename T>
 class option
 {
 
     union
     {
-        What m_value;
+        T m_value;
     };
 
     bool m_valid;
 
     void destroy()
     {
-        if (m_valid) m_value.~What();
+        if (m_valid) m_value.~T();
     }
 
     template<typename V>
     void cr(V&& value)
     {
         m_valid = true;
-        new (&m_value) What (std::forward<V>(value));
+        new (&m_value) T (std::forward<V>(value));
     }
 
  public:
+
+    typedef T value_type;
 
     option() : m_valid(false) { }
 
@@ -131,14 +133,14 @@ class option
         return *this;
     }
 
-    option& operator=(What const& value)
+    option& operator=(T const& value)
     {
         if (m_valid) m_value = value;
         else cr(value);
         return *this;
     }
 
-    option& operator=(What& value)
+    option& operator=(T& value)
     {
         if (m_valid) m_value = std::move(value);
         else cr(std::move(value));
@@ -151,20 +153,20 @@ class option
 
     inline bool operator!() const { return !m_valid; }
 
-    inline What& operator*() { return m_value; }
-    inline What const& operator*() const { return m_value; }
+    inline T& operator*() { return m_value; }
+    inline T const& operator*() const { return m_value; }
 
-    inline What& get() { return m_value; }
+    inline T& get() { return m_value; }
 
-    inline What const& get() const { return m_value; }
+    inline T const& get() const { return m_value; }
 
-    inline What& get_or_else(What const& val)
+    inline T& get_or_else(T const& val)
     {
         if (!m_valid) cr(val);
         return m_value;
     }
 
-    inline What& get_or_else(What&& val)
+    inline T& get_or_else(T&& val)
     {
         if (!m_valid) cr(std::move(val));
         return m_value;

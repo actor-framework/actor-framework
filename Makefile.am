@@ -84,6 +84,7 @@ nobase_library_include_HEADERS = \
   cppa/channel.hpp \
   cppa/config.hpp \
   cppa/local_actor.hpp \
+  cppa/match.hpp \
   cppa/cow_ptr.hpp \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
@@ -145,7 +146,6 @@ nobase_library_include_HEADERS = \
   cppa/from_string.hpp \
   cppa/fsm_actor.hpp \
   cppa/get.hpp \
-  cppa/get_view.hpp \
   cppa/group.hpp \
   cppa/intrusive_ptr.hpp \
   cppa/invoke_rules.hpp \

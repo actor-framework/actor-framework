@@ -114,7 +114,6 @@ cppa/announce.hpp
 cppa/util/shared_spinlock.hpp
 src/shared_spinlock.cpp
 cppa/util/shared_lock_guard.hpp
-cppa/get_view.hpp
 cppa/detail/object_array.hpp
 src/object_array.cpp
 cppa/any_tuple.hpp
@@ -251,3 +250,5 @@ cppa/detail/matches.hpp
 cppa/util/is_mutable_ref.hpp
 cppa/util/is_manipulator.hpp
 cppa/util/apply_tuple.hpp
+cppa/any_tuple_view.hpp
+cppa/match.hpp

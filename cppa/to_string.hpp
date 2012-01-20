@@ -32,6 +32,7 @@
 #define TO_STRING_HPP
 
 #include "cppa/uniform_type_info.hpp"
+#include "cppa/detail/to_uniform_name.hpp"
 
 namespace cppa {
 

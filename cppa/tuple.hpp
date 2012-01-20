@@ -42,12 +42,14 @@
 #include "cppa/ref_counted.hpp"
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/replace_type.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/is_legal_tuple_type.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
+#include "cppa/detail/decorated_tuple.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
@@ -83,6 +85,8 @@ class tuple
     }
 
  public:
+
+    static constexpr size_t num_elements = sizeof...(ElementTypes);
 
     /**
      * @brief Initializes each element with its default constructor.
@@ -122,6 +126,13 @@ class tuple
         return tuple(ptr_ctor(), ptr);
     }
 
+    static tuple from(cow_ptr<detail::abstract_tuple> const& ptr,
+                      util::fixed_vector<size_t, num_elements> const& mv)
+    {
+        return tuple(ptr_ctor(),
+                     new detail::decorated_tuple<num_elements>(ptr, mv));
+    }
+
     /**
      * @brief Gets the size of this tuple.
      * @returns <tt>sizeof...(ElementTypes)</tt>.
@@ -150,7 +161,7 @@ class tuple
      *        of an element.
      * @returns The uniform type of the <tt>N</tt>th element.
      */
-    inline uniform_type_info const* utype_at(size_t p) const
+    inline uniform_type_info const* type_at(size_t p) const
     {
         return m_vals->type_at(p);
     }

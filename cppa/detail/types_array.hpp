@@ -114,6 +114,34 @@ struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
                                                       util::is_builtin>::value,
                                       T...>
 {
+    class const_iterator
+    {
+
+        types_array const& m_ref;
+        size_t m_pos;
+
+     public:
+
+        const_iterator(const_iterator const&) = default;
+        const_iterator& operator=(const_iterator const&) = default;
+        const_iterator(types_array const& ptr) : m_ref(ptr), m_pos(0) { }
+
+        inline void next() { ++m_pos; }
+
+        inline bool at_end() const { return m_pos == sizeof...(T); }
+
+        inline uniform_type_info const* type() const
+        {
+            return m_ref[m_pos];
+        }
+
+        inline bool has_value() const { return false; }
+
+        inline void const* value() const { return nullptr; }
+
+    };
+
+    const_iterator begin() const { return {*this}; }
 };
 
 template<typename... T>

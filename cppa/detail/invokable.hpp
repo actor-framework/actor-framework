@@ -38,6 +38,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/util/duration.hpp"
+#include "cppa/any_tuple_view.hpp"
 #include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/callable_trait.hpp"
@@ -61,6 +62,7 @@ class invokable_base
     invokable_base() = default;
     virtual ~invokable_base();
     virtual bool invoke(any_tuple const&) const = 0;
+    virtual bool invoke(any_tuple_view const&) const = 0;
 
 };
 
@@ -104,6 +106,13 @@ class timed_invokable_impl : public timed_invokable
         return true;
     }
 
+    bool invoke(any_tuple_view const&) const
+    {
+        m_target();
+        return true;
+    }
+
+
 };
 
 class invokable : public invokable_base
@@ -129,6 +138,18 @@ class invokable_impl : public invokable
     m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
 
+    template<typename T>
+    bool invoke_impl(T const& data) const
+    {
+        auto tuple_option = tuple_cast(data, *m_pattern);
+        if (tuple_option.valid())
+        {
+            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
+            return true;
+        }
+        return false;
+    }
+
  public:
 
     template<typename F>
@@ -139,13 +160,12 @@ class invokable_impl : public invokable
 
     bool invoke(any_tuple const& data) const
     {
-        auto tuple_option = tuple_cast(data, *m_pattern);
-        if (tuple_option.valid())
-        {
-            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
-            return true;
-        }
-        return false;
+        return invoke_impl(data);
+    }
+
+    bool invoke(any_tuple_view const& data) const
+    {
+        return invoke_impl(data);
     }
 
     intermediate* get_intermediate(any_tuple const& data)
@@ -174,6 +194,17 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
 
+    template<typename T>
+    bool invoke_impl(T const& data) const
+    {
+        if (detail::matches(data.begin(), m_pattern->begin()))
+        {
+            m_iimpl.m_fun();
+            return true;
+        }
+        return false;
+    }
+
  public:
 
     template<typename F>
@@ -184,12 +215,12 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
 
     bool invoke(any_tuple const& data) const
     {
-        if (detail::matches(data.begin(), m_pattern->begin()))
-        {
-            m_iimpl.m_fun();
-            return true;
-        }
-        return false;
+        return invoke_impl(data);
+    }
+
+    bool invoke(any_tuple_view const& data) const
+    {
+        return invoke_impl(data);
     }
 
     intermediate* get_intermediate(any_tuple const& data)
@@ -199,7 +230,6 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     }
 
 };
-
 
 template<typename Fun, class Pattern>
 struct select_invokable_impl

@@ -50,6 +50,7 @@ namespace cppa {
 
 class any_tuple;
 class invoke_rules;
+class any_tuple_view;
 class timed_invoke_rules;
 
 typedef std::list<detail::invokable_ptr> invokable_list;
@@ -86,6 +87,8 @@ class invoke_rules_base
      *          otherwise @p false.
      */
     bool operator()(any_tuple const& data) const;
+
+    bool operator()(any_tuple_view const& data) const;
 
     /**
      * @brief Tries to match @p data with one of the stored patterns.

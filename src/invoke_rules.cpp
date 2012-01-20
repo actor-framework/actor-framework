@@ -46,11 +46,20 @@ invoke_rules_base::~invoke_rules_base()
 {
 }
 
-bool invoke_rules_base::operator()(const any_tuple& t) const
+bool invoke_rules_base::operator()(const any_tuple& data) const
 {
-    for (auto i = m_list.begin(); i != m_list.end(); ++i)
+    for (detail::invokable_ptr const& ptr : m_list)
     {
-        if ((*i)->invoke(t)) return true;
+        if (ptr->invoke(data)) return true;
+    }
+    return false;
+}
+
+bool invoke_rules_base::operator()(any_tuple_view const& data) const
+{
+    for (detail::invokable_ptr const& ptr : m_list)
+    {
+        if (ptr->invoke(data)) return true;
     }
     return false;
 }
@@ -59,9 +68,9 @@ detail::intermediate*
 invoke_rules_base::get_intermediate(const any_tuple& t) const
 {
     detail::intermediate* result;
-    for (auto i = m_list.begin(); i != m_list.end(); ++i)
+    for (detail::invokable_ptr const& ptr : m_list)
     {
-        result = (*i)->get_intermediate(t);
+        result = ptr->get_intermediate(t);
         if (result != nullptr) return result;
     }
     return nullptr;

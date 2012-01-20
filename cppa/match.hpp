@@ -28,39 +28,65 @@
 \******************************************************************************/
 
 
-#ifndef GET_VIEW_HPP
-#define GET_VIEW_HPP
+#ifndef MATCH_HPP
+#define MATCH_HPP
 
-#include <vector>
-#include <cstddef>
+#include <type_traits>
 
 #include "cppa/tuple.hpp"
-#include "cppa/pattern.hpp"
-#include "cppa/anything.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/tuple_view.hpp"
+#include "cppa/invoke_rules.hpp"
+#include "cppa/any_tuple_view.hpp"
 
-#include "cppa/util/tbind.hpp"
-#include "cppa/util/type_list.hpp"
+#include "cppa/util/if_else.hpp"
+#include "cppa/util/enable_if.hpp"
 
-#include "cppa/detail/matches.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 
-template<typename... MatchRules>
-typename tuple_view_type_from_type_list<typename util::tl_filter_not<util::type_list<MatchRules...>, util::tbind<std::is_same, anything>::type>::type>::type
-get_view(any_tuple const& ut)
+namespace detail {
+
+template<typename Tuple>
+struct match_helper
 {
-    pattern<MatchRules...> p;
-    typename pattern<MatchRules...>::mapping_vector mapping;
-    if (detail::matches(detail::pm_decorated(ut.begin(), &mapping), p.begin()))
+    static constexpr bool is_view = std::is_same<Tuple, any_tuple_view>::value;
+    Tuple what;
+    template<typename T>
+    match_helper(T const& w, typename util::enable_if_c<std::is_same<T, T>::value && is_view>::type* =0)
+        : what(w) { }
+    template<typename T>
+    match_helper(T const& w, typename util::enable_if_c<std::is_same<T, T>::value && !is_view>::type* =0)
+        : what(make_tuple(w)) { }
+    void operator()(invoke_rules& rules) { rules(what); }
+    void operator()(invoke_rules&& rules) { rules(what); }
+    template<typename Head, typename... Tail>
+    void operator()(invoke_rules&& bhvr, Head&& head, Tail&&... tail)
     {
-        return { ut.vals(), mapping };
+        invoke_rules tmp(std::move(bhvr));
+        (*this)(tmp.splice(std::forward<Head>(head)),
+                std::forward<Tail>(tail)...);
     }
-    // todo: throw nicer exception
-    throw std::runtime_error("doesn't match");
+    template<typename Head, typename... Tail>
+    void operator()(invoke_rules& bhvr, Head&& head, Tail&&... tail)
+    {
+        (*this)(bhvr.splice(std::forward<Head>(head)),
+                std::forward<Tail>(tail)...);
+    }
+};
+
+} // namespace detail
+
+template<typename T>
+auto match(T const& x)
+    -> detail::match_helper<
+        typename util::if_else<
+            std::is_same<typename detail::implicit_conversions<T>::type, T>,
+            any_tuple_view,
+            util::wrapped<any_tuple> >::type>
+{
+    return {x};
 }
 
 } // namespace cppa
 
-#endif // GET_VIEW_HPP
+#endif // MATCH_HPP

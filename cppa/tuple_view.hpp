@@ -32,9 +32,11 @@
 #define TUPLE_VIEW_HPP
 
 #include <vector>
+#include <cstring>
 
 #include "cppa/get.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/any_tuple.hpp"
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/type_list.hpp"
@@ -58,52 +60,45 @@ class tuple_view
     template<size_t N, typename... Types>
     friend typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>&);
 
- public:
+    void const* m_data[sizeof...(ElementTypes)];
 
-    typedef cow_ptr<detail::abstract_tuple> vals_t;
+    tuple_view() { }
+
+ public:
 
     static constexpr size_t num_elements = sizeof...(ElementTypes);
 
-    typedef util::fixed_vector<size_t, num_elements> mapping_vector;
-
-    tuple_view() : m_vals(tuple<ElementTypes...>().vals()) { }
-
-    static tuple_view from(vals_t const& vals)
+    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void const*> > const& vec)
     {
-        return tuple_view(vals);
+        tuple_view result;
+        size_t j = 0;
+        for (auto i = vec.begin(); i != vec.end(); ++i)
+        {
+            result.m_data[j++] = i->second;
+        }
+        return std::move(result);
     }
 
-    static tuple_view from(vals_t&& vals)
+    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void const*> > const& vec,
+                           util::fixed_vector<size_t, sizeof...(ElementTypes)> const& mv)
     {
-        return tuple_view(std::move(vals));
-    }
-
-    tuple_view(vals_t const& vals, mapping_vector& mapping)
-        : m_vals(new detail::decorated_tuple<num_elements>(vals, mapping))
-    {
-    }
-
-    tuple_view(tuple_view&& other) : m_vals(std::move(other.m_vals))
-    {
+        tuple_view result;
+        for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
+        {
+            result.m_data[i] = vec[mv[i]].second;
+        }
+        return std::move(result);
     }
 
     tuple_view& operator=(tuple_view const& other)
     {
-        m_vals = other.m_vals;
+        memcpy(m_data, other.m_data, num_elements * sizeof(void*));
         return *this;
     }
 
-    tuple_view& operator=(tuple_view&& other)
+    tuple_view(tuple_view const& other)
     {
-        m_vals = std::move(other.m_vals);
-        return *this;
-    }
-
-    tuple_view(tuple_view const&) = default;
-
-    inline vals_t const& vals() const
-    {
-        return m_vals;
+        memcpy(m_data, other.m_data, num_elements * sizeof(void*));
     }
 
     inline size_t size() const
@@ -111,17 +106,7 @@ class tuple_view
         return sizeof...(ElementTypes);
     }
 
- private:
-
-    explicit tuple_view(vals_t const& vals) : m_vals(vals)
-    {
-    }
-
-    explicit tuple_view(vals_t&& vals) : m_vals(std::move(vals))
-    {
-    }
-
-    vals_t m_vals;
+    inline void const* at(size_t p) const { return m_data[p]; }
 
 };
 
@@ -130,22 +115,22 @@ const typename util::at<N, Types...>::type& get(tuple_view<Types...> const& t)
 {
     static_assert(N < sizeof...(Types), "N >= t.size()");
     typedef typename util::at<N, Types...>::type result_t;
-    return *reinterpret_cast<result_t const*>(t.vals()->at(N));
+    return *reinterpret_cast<result_t const*>(t.at(N));
 }
 
-template<size_t N, typename... Types>
-typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t)
-{
-    static_assert(N < sizeof...(Types), "N >= t.size()");
-    typedef typename util::at<N, Types...>::type result_t;
-    return *reinterpret_cast<result_t*>(t.m_vals->mutable_at(N));
-}
+//template<size_t N, typename... Types>
+//typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t)
+//{
+//    static_assert(N < sizeof...(Types), "N >= t.size()");
+//    typedef typename util::at<N, Types...>::type result_t;
+//    return *reinterpret_cast<result_t*>(t.m_vals->mutable_at(N));
+//}
 
 template<typename TypeList>
-struct tuple_view_type_from_type_list;
+struct tuple_view_from_type_list;
 
 template<typename... Types>
-struct tuple_view_type_from_type_list<util::type_list<Types...>>
+struct tuple_view_from_type_list<util::type_list<Types...>>
 {
     typedef tuple_view<Types...> type;
 };

@@ -39,7 +39,7 @@ struct offset_decorator : cppa::detail::abstract_tuple
 
     typedef cppa::cow_ptr<cppa::detail::abstract_tuple> ptr_type;
 
-    offset_decorator(const ptr_type& decorated, size_t offset)
+    offset_decorator(ptr_type const& decorated, size_t offset)
         : m_offset(offset)
         , m_decorated(decorated)
     {
@@ -99,7 +99,7 @@ any_tuple::any_tuple(any_tuple&& other) : m_vals(s_empty_tuple())
     m_vals.swap(other.m_vals);
 }
 
-any_tuple::any_tuple(const cow_ptr<detail::abstract_tuple>& vals) : m_vals(vals)
+any_tuple::any_tuple(cow_ptr<detail::abstract_tuple> const& vals) : m_vals(vals)
 {
 }
 
@@ -141,7 +141,7 @@ const cow_ptr<detail::abstract_tuple>& any_tuple::vals() const
     return m_vals;
 }
 
-bool any_tuple::equals(const any_tuple& other) const
+bool any_tuple::equals(any_tuple const& other) const
 {
     return m_vals->equals(*other.vals());
 }

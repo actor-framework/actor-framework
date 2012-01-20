@@ -6,6 +6,7 @@
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/match.hpp"
 #include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/announce.hpp"
@@ -42,37 +43,29 @@ typedef std::pair<int,int> foobar;
 static detail::types_array<int,anything,float> arr1;
 static detail::types_array<int,anything,foobar> arr2;
 
-struct match_helper
+template<typename T>
+void match_test(T const& value)
 {
-    any_tuple const& what;
-    match_helper(any_tuple const& w) : what(w) { }
-    void operator()(invoke_rules&& rules)
-    {
-        rules(what);
-    }
-};
-
-using namespace cppa::util;
-
-match_helper match(any_tuple const& x)
-{
-
-    return { x };
+    match(value)
+    (
+        on<int, int, int, anything>() >> [&](int a, int b, int c)
+        {
+            cout << "(" << a << ", " << b << ", " << c << ")" << endl;
+        },
+        on_arg_match >> [&](std::string const& str)
+        {
+            cout << str << endl;
+        }
+    );
 }
 
 size_t test__pattern()
 {
     CPPA_TEST(test__pattern);
 
-    match(make_tuple(1,2,3))
-    (
-        on_arg_match >> [&](int a, int b, int c)
-        {
-            CPPA_CHECK_EQUAL(a, 1);
-            CPPA_CHECK_EQUAL(b, 2);
-            CPPA_CHECK_EQUAL(c, 3);
-        }
-    );
+    match_test(make_tuple(1,2,3));
+    match_test(std::list<int>{1, 2, 3});
+    match_test("abc");
 
     pattern<int, anything, int> i3;
     any_tuple i3_any_tup = make_tuple(1, 2, 3);

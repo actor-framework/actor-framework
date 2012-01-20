@@ -11,6 +11,7 @@
 #include "cppa/on.hpp"
 #include "cppa/util.hpp"
 #include "cppa/tuple.hpp"
+#include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/tuple_cast.hpp"
@@ -38,24 +39,37 @@ size_t test__tuple()
     CPPA_CHECK((std::is_same<decltype(t0_1), int>::value));
     CPPA_CHECK_EQUAL(t0_0, "1");
     CPPA_CHECK_EQUAL(t0_1, 2);
-    // create a view of t0 that only contains the string
-    auto v0opt = tuple_cast(t0, pattern<std::string, anything>());
-    if (!v0opt) throw std::runtime_error("tuple_cast failed!");
-    auto& v0 = *v0opt;
-    auto v0_0 = get<0>(v0);
-    CPPA_CHECK_EQUAL(v0.size(), 1);
-    CPPA_CHECK((std::is_same<decltype(v0_0), std::string>::value));
-    CPPA_CHECK_EQUAL(v0_0, "1");
-    // check cow semantics
-    CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same string
-    get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
-    CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value
-    CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value
-    CPPA_CHECK_NOT_EQUAL(&get<0>(t0), &get<0>(v0)); // no longer the same
-    // check operator==
-    auto lhs = make_tuple(1,2,3,4);
-    auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
-    CPPA_CHECK_EQUAL(lhs, rhs);
-    CPPA_CHECK_EQUAL(rhs, lhs);
+    // get a view of t0
+    auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(t0));
+    CPPA_CHECK((v1opt));
+    if (v1opt)
+    {
+        auto& v1 = *v1opt;
+        auto v1_0 = get<0>(v1);
+        CPPA_CHECK_EQUAL(v1.size(), 1);
+        CPPA_CHECK_EQUAL(v1_0, "1");
+    }
+    // use tuple cast to get a subtuple
+    auto v0opt = tuple_cast<std::string, anything>(t0);
+    CPPA_CHECK((v0opt));
+    if (v0opt)
+    {
+        auto& v0 = *v0opt;
+        auto v0_0 = get<0>(v0);
+        CPPA_CHECK((std::is_same<decltype(v0_0), std::string>::value));
+        CPPA_CHECK_EQUAL(v0.size(), 1);
+        CPPA_CHECK_EQUAL(v0_0, "1");
+        // check cow semantics
+        CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same string
+        get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
+        CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value
+        CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value
+        CPPA_CHECK_NOT_EQUAL(&get<0>(t0), &get<0>(v0)); // no longer the same
+        // check operator==
+        auto lhs = make_tuple(1,2,3,4);
+        auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
+        CPPA_CHECK_EQUAL(lhs, rhs);
+        CPPA_CHECK_EQUAL(rhs, lhs);
+    }
     return CPPA_TEST_RESULT;
 }
