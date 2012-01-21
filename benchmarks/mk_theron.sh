@@ -1,5 +1,10 @@
 #!/bin/bash
+IFLAGS="-I../../Theron/Include/"
+LFLAGS="-L../../Theron/Lib -ltheron -lboost_thread"
+FLAGS="-O2 -fno-strict-aliasing -DNDEBUG"
 for i in theron_*.cpp ; do
-    echo compile $i ...
-    g++ -std=c++0x -O3 $i -I../../Theron/Include/ -L../../Theron/Lib -ltheron -lboost_thread -o $(echo $i | grep -o -P "^[a-z_]+")
+    echo "compile $i"
+    out_file=$(echo $i | sed 's/\(.*\)\..*/\1/')
+    echo "out_file = $out_file"
+    g++ -std=c++0x $i -o $out_file $FLAGS $LFLAGS $IFLAGS
 done

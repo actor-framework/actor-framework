@@ -3,75 +3,103 @@
 #include <Theron/Framework.h> 
 #include <Theron/Actor.h> 
 
-#include <iostream>
 #include <thread>
 #include <cstdint>
+#include <iostream>
+#include <functional>
 
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::int64_t;
 
+using namespace Theron;
+
+int64_t t_max = 0;
+
 // A trivial actor that does nothing. 
-struct receiver : Theron::Actor 
+struct receiver : Actor 
 {
 
-	int64_t m_max;
 	int64_t m_num;
-	Theron::Address m_waiter;
 
-    typedef struct { int64_t arg1; Theron::Address arg2; } Parameters;
-
-	void handler(int64_t const&, Theron::Address)
+	void handler(int64_t const&, Address from)
 	{
-		if (++m_num == m_max)
-			Send(m_max, m_waiter);
+		if (++m_num == t_max)
+			Send(t_max, from);
 	}
 
-	//receiver(int64_t max, Theron::Address waiter) : m_max(max), m_num(0), m_waiter(waiter)
-    receiver(Parameters const& p) : m_max(p.arg1), m_num(0), m_waiter(p.arg2)
+	//receiver(int64_t max, Address waiter) : m_max(max), m_num(0), m_waiter(waiter)
+    receiver() : m_num(0)
 	{
 		RegisterHandler(this, &receiver::handler);
 	}
 
 }; 
 
-void sender(Theron::ActorRef ref, int64_t num)
+void send_sender(Framework& f, ActorRef ref, Address waiter, int64_t num)
+{
+    auto addr = ref.GetAddress();
+	int64_t msg;
+	for (int64_t i = 0; i < num; ++i)
+        f.Send(msg, waiter, addr);
+		//ref.Push(msg, ref.GetAddress());
+}
+
+void push_sender(Framework& f, ActorRef ref, Address waiter, int64_t num)
 {
 	int64_t msg;
 	for (int64_t i = 0; i < num; ++i)
-	{
-		ref.Push(msg, ref.GetAddress());
-	}
+		ref.Push(msg, waiter);
+}
+
+template<typename T>
+T rd(char const* cstr)
+{
+    char* endptr = nullptr;
+    T result = static_cast<T>(strtol(cstr, &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
+    {
+        std::string errstr;
+        errstr += "\"";
+        errstr += cstr;
+        errstr += "\" is not an integer";
+        throw std::invalid_argument(errstr);
+    }
+    return result;
+}
+
+void usage()
+{
+	cout << "usage ('push'|'send') (num_threads) (num_messages)" << endl;
+    exit(1);
 }
 
 int main(int argc, char** argv)
 {
-	if (argc != 3)
+	if (argc != 4)
 	{
-		cout << "usage (num_threads) (num_messages)" << endl;
 		return 1;
 	}
-	char* endptr = nullptr;
-        int64_t num_sender = static_cast<int64_t>(strtol(argv[1], &endptr, 10));
-        if (endptr == nullptr || *endptr != '\0')
-        {
-            cerr << "\"" << argv[1] << "\" is not an integer" << endl;
-            return 1;
-        }
-        int64_t num_msgs = static_cast<int64_t>(strtol(argv[2], &endptr, 10));
-        if (endptr == nullptr || *endptr != '\0')
-        {
-            cerr << "\"" << argv[2] << "\" is not an integer" << endl;
-            return 1;
-        }
-	Theron::Receiver r;
-	Theron::Framework framework; 
-	Theron::ActorRef aref(framework.CreateActor<receiver>(receiver::Parameters{num_sender*num_msgs, r.GetAddress()})); 
+    enum { invalid_impl, push_impl, send_impl } impl = invalid_impl;
+    if (strcmp(argv[1], "push") == 0) impl = push_impl;
+    else if (strcmp(argv[1], "send") == 0) impl = send_impl;
+    else usage();
+    auto num_sender = rd<int64_t>(argv[2]);
+    auto num_msgs = rd<int64_t>(argv[3]);
+	Receiver r;
+    t_max = num_sender * num_msgs;
+    auto receiverAddr = r.GetAddress();
+	Framework framework; 
+	ActorRef aref(framework.CreateActor<receiver>()); 
+    std::list<std::thread> threads;
+    auto impl_fun = (impl == push_impl) ? send_sender : push_sender;
 	for (int64_t i = 0; i < num_sender; ++i)
-        {
-            std::thread(sender, aref, num_msgs).detach();
-        }
+    {
+        threads.push_back(std::thread(impl_fun, std::ref(framework), aref, receiverAddr, num_msgs));
+    }
 	r.Wait();
+    for (auto& t : threads) t.join();
 	return 0; 
 } 
+

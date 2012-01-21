@@ -23,12 +23,12 @@ object Matching {
         var msg5Matched: Long = 0;
         var msg6Matched: Long = 0;
         val partFun: PF[Any, Unit] = {
-            case Msg1(_) => msg1Matched += 1
-            case Msg2(_) => msg2Matched += 1
-            case Msg3(_) => msg3Matched += 1
-            case Msg4(_, _) => msg4Matched += 1
-            case Msg5(_, _, _) => msg5Matched += 1
-            case Msg6(_, _, _) => msg6Matched += 1
+            case Msg1(0) => msg1Matched += 1
+            case Msg2(0.0) => msg2Matched += 1
+            case Msg3(List(0)) => msg3Matched += 1
+            case Msg4(0, "0") => msg4Matched += 1
+            case Msg5(0, 0, 0) => msg5Matched += 1
+            case Msg6(0, 0.0, "0") => msg6Matched += 1
         }
         val m1 = Msg1(0)
         val m2 = Msg2(0.0)
