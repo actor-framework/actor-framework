@@ -16,6 +16,7 @@ test
 benchmarks/mailbox_performance
 benchmarks/actor_creation
 benchmarks/mixed_case
+benchmarks/matching
 theron_mailbox_performance
 .libs/
 .deps/

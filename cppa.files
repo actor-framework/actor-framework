@@ -252,3 +252,5 @@ cppa/util/is_manipulator.hpp
 cppa/util/apply_tuple.hpp
 cppa/any_tuple_view.hpp
 cppa/match.hpp
+benchmarks/Matching.scala
+benchmarks/matching.cpp
