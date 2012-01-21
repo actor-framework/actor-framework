@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 {
     if (argc != 4)
     {
-        return 1;
+        usage();
     }
     enum { invalid_impl, push_impl, send_impl } impl = invalid_impl;
     if (strcmp(argv[1], "push") == 0) impl = push_impl;
