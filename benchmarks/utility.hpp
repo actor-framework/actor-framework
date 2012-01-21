@@ -32,6 +32,7 @@
 #define UTILITY_HPP
 
 #include <stdexcept>
+#include <algorithm>
 
 template<typename T>
 T rd(char const* cstr)
@@ -52,12 +53,15 @@ T rd(char const* cstr)
 int num_cores()
 {
     char cbuf[100];
-    FILE* cmd = popen("cat /proc/cpuinfo | grep processor | wc -l", "r");
-    if (fgets(cbuf, 100, get_uuid_cmd) != 0)
+    FILE* cmd = popen("/bin/cat /proc/cpuinfo | /bin/grep processor | /usr/bin/wc -l", "r");
+    if (fgets(cbuf, 100, cmd) == 0)
     {
         throw std::runtime_error("cannot determine number of cores");
     }
     pclose(cmd);
+    // erase trailing newline
+    auto i = std::find(cbuf, cbuf + 100, '\n');
+    *i = '\0';
     return rd<int>(cbuf);
 }
 

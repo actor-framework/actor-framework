@@ -15,18 +15,13 @@ using std::endl;
 using std::int64_t;
 using std::uint32_t;
 
-using namespace Theron;
 
 struct spread { int value; };
 struct result { uint32_t value; };
 
-THERON_REGISTER_MESSAGE(spread);
-THERON_REGISTER_MESSAGE(result);
+using namespace Theron;
 
-template<typename RefType>
-struct testee_base : Actor;
-
-struct testee : testee_base<RefType>
+struct testee : Actor
 {
 
     typedef struct { Address arg0; } Parameters;
@@ -34,7 +29,7 @@ struct testee : testee_base<RefType>
     Address m_parent;
     bool m_first_result_received;
     uint32_t m_first_result;
-    std::vector<RefType> m_children;
+    std::vector<ActorRef> m_children;
 
     void spread_handler(spread const& arg, const Address)
     {
@@ -48,7 +43,7 @@ struct testee : testee_base<RefType>
             Parameters params = {GetAddress()};
             for (int i = 0; i < 2; ++i)
             {
-                m_children.push_back(GetFramework().CreateActor<testee<RefType>>(params));
+                m_children.push_back(GetFramework().CreateActor<testee>(params));
                 m_children.back().Push(msg, GetAddress());
             }
         }
@@ -63,15 +58,15 @@ struct testee : testee_base<RefType>
         }
         else
         {
-            Send(result{m_first_result + arg.value});
+            Send(result{m_first_result + arg.value}, m_parent);
             m_children.clear();
         }
     }
 
-    send_testee(Parameters const& p) : m_parent(p.arg0), m_first_result_received(false)
+    testee(Parameters const& p) : m_parent(p.arg0), m_first_result_received(false)
     {
-        RegisterHandler(this, &send_testee::spread_handler);
-        RegisterHandler(this, &send_testee::result_handler);
+        RegisterHandler(this, &testee::spread_handler);
+        RegisterHandler(this, &testee::result_handler);
     }
 
 };
@@ -92,8 +87,9 @@ int main(int argc, char** argv)
     }
     int num = rd<int>(argv[2]);
     Receiver r;
-    Framework framework;
-    ActorRef aref(framework.CreateActor<testee>(teste::Parameters{r.GetAddress()}));
+    Framework framework(num_cores());
+    ActorRef aref(framework.CreateActor<testee>(testee::Parameters{r.GetAddress()}));
     aref.Push(spread{num}, r.GetAddress());
     r.Wait();
 }
+

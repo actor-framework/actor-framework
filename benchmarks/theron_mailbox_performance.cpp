@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     Receiver r;
     t_max = num_sender * num_msgs;
     auto receiverAddr = r.GetAddress();
-    Framework framework;
+    Framework framework(num_cores());
     ActorRef aref(framework.CreateActor<receiver>());
     std::list<std::thread> threads;
     auto impl_fun = (impl == push_impl) ? send_sender : push_sender;
