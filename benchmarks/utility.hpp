@@ -49,4 +49,16 @@ T rd(char const* cstr)
     return result;
 }
 
+int num_cores()
+{
+    char cbuf[100];
+    FILE* cmd = popen("cat /proc/cpuinfo | grep processor | wc -l", "r");
+    if (fgets(cbuf, 100, get_uuid_cmd) != 0)
+    {
+        throw std::runtime_error("cannot determine number of cores");
+    }
+    pclose(cmd);
+    return rd<int>(cbuf);
+}
+
 #endif // UTILITY_HPP
