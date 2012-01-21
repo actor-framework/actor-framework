@@ -51,31 +51,6 @@ constexpr uint64_t s_task_n = uint64_t(86028157)*329545133;
 constexpr uint64_t s_factor1 = 86028157;
 constexpr uint64_t s_factor2 = 329545133;
 
-factors factorize(uint64_t n)
-{
-    factors result;
-    if (n <= 3)
-    {
-        result.push_back(n);
-        return std::move(result);
-    }
-    uint64_t d = 2;
-    while(d < n)
-    {
-        if((n % d) == 0)
-        {
-            result.push_back(d);
-            n /= d;
-        }
-        else
-        {
-            d = (d == 2) ? 3 : (d + 2);
-        }
-    }
-    result.push_back(d);
-    return std::move(result);
-}
-
 void check_factors(factors const& vec)
 {
     assert(vec.size() == 2);
@@ -148,25 +123,22 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
                 new_ring(rs, itv);
                 become
                 (
-                    on<atom("token"), int>() >> [=](int v)
+                    on(atom("token"), 0) >> [=]()
                     {
-                        if (v == 0)
+                        if (++iteration < n)
                         {
-                            if (++iteration < n)
-                            {
-                                new_ring(rs, itv);
-                            }
-                            else
-                            {
-                                send(worker, atom("done"));
-                                send(mc, atom("masterdone"));
-                                become_void();
-                            }
+                            new_ring(rs, itv);
                         }
                         else
                         {
-                            send(next, atom("token"), v - 1);
+                            send(worker, atom("done"));
+                            send(mc, atom("masterdone"));
+                            become_void();
                         }
+                    },
+                    on<atom("token"), int>() >> [=](int v)
+                    {
+                        send(next, atom("token"), v - 1);
                     }
                 );
             }
@@ -312,35 +284,34 @@ void run_test(F&& spawn_impl,
 void usage()
 {
     cout << "usage: mailbox_performance "
-            "(stacked|event-based) (ring size) (repetitions)" << endl
+            "(stacked|event-based) (num rings) (ring size) "
+            "(initial token value) (repetitions)"
+         << endl
          << endl;
+    exit(1);
 }
 
 int main(int argc, char** argv)
 {
     announce<factors>();
-    if (argc == 6)
+    if (argc != 6) usage();
+    int num_rings = rd<int>(argv[2]);
+    int ring_size = rd<int>(argv[3]);
+    int initial_token_value = rd<int>(argv[4]);
+    int repetitions = rd<int>(argv[5]);
+    int num_msgs = num_rings + (num_rings * repetitions);
+    if (strcmp(argv[1], "event-based") == 0)
     {
-        int num_rings = rd<int>(argv[2]);
-        int ring_size = rd<int>(argv[3]);
-        int initial_token_value = rd<int>(argv[4]);
-        int repetitions = rd<int>(argv[5]);
-        int num_msgs = num_rings + (num_rings * repetitions);
-        if (strcmp(argv[1], "event-based") == 0)
-        {
-            auto mc = spawn(new fsm_supervisor(num_msgs));
-            run_test([&]() { return spawn(new fsm_chain_master(mc)); },
-                     num_rings, ring_size, initial_token_value, repetitions);
-            return 0;
-        }
-        else if (strcmp(argv[1], "stacked") == 0)
-        {
-            auto mc = spawn(supervisor, num_msgs);
-            run_test([&]() { return spawn(chain_master, mc); },
-                     num_rings, ring_size, initial_token_value, repetitions);
-            return 0;
-        }
+        auto mc = spawn(new fsm_supervisor(num_msgs));
+        run_test([&]() { return spawn(new fsm_chain_master(mc)); },
+                 num_rings, ring_size, initial_token_value, repetitions);
+        return 0;
     }
-    cerr << "usage: mixed_case (stacked|event-based)" << endl;
-    return 1;
+    else if (strcmp(argv[1], "stacked") == 0)
+    {
+        auto mc = spawn(supervisor, num_msgs);
+        run_test([&]() { return spawn(chain_master, mc); },
+                 num_rings, ring_size, initial_token_value, repetitions);
+        return 0;
+    }
 }

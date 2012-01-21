@@ -31,6 +31,7 @@
 #ifndef UTILITY_HPP
 #define UTILITY_HPP
 
+#include <vector>
 #include <stdexcept>
 #include <algorithm>
 
@@ -63,6 +64,31 @@ int num_cores()
     auto i = std::find(cbuf, cbuf + 100, '\n');
     *i = '\0';
     return rd<int>(cbuf);
+}
+
+std::vector<uint64_t> factorize(uint64_t n)
+{
+    std::vector<uint64_t> result;
+    if (n <= 3)
+    {
+        result.push_back(n);
+        return std::move(result);
+    }
+    uint64_t d = 2;
+    while(d < n)
+    {
+        if((n % d) == 0)
+        {
+            result.push_back(d);
+            n /= d;
+        }
+        else
+        {
+            d = (d == 2) ? 3 : (d + 2);
+        }
+    }
+    result.push_back(d);
+    return std::move(result);
 }
 
 #endif // UTILITY_HPP

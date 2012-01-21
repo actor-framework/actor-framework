@@ -258,3 +258,4 @@ benchmarks/matching.erl
 benchmarks/theron_mailbox_performance.cpp
 benchmarks/utility.hpp
 benchmarks/theron_actor_creation.cpp
+benchmarks/theron_mixed_case.cpp
