@@ -9,12 +9,9 @@
 
 #include "utility.hpp"
 
-using std::cerr;
 using std::cout;
 using std::endl;
-using std::int64_t;
 using std::uint32_t;
-
 
 struct spread { int value; };
 struct result { uint32_t value; };
@@ -23,8 +20,6 @@ using namespace Theron;
 
 struct testee : Actor
 {
-
-    typedef struct { Address arg0; } Parameters;
 
     Address m_parent;
     bool m_first_result_received;
@@ -58,10 +53,12 @@ struct testee : Actor
         }
         else
         {
-            Send(result{m_first_result + arg.value}, m_parent);
             m_children.clear();
+            Send(result{m_first_result + arg.value}, m_parent);
         }
     }
+
+    typedef struct { Address arg0; } Parameters;
 
     testee(Parameters const& p) : m_parent(p.arg0), m_first_result_received(false)
     {
