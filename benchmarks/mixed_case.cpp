@@ -33,6 +33,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "utility.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/fsm_actor.hpp"
 
@@ -313,23 +314,6 @@ void usage()
     cout << "usage: mailbox_performance "
             "(stacked|event-based) (ring size) (repetitions)" << endl
          << endl;
-}
-
-template<typename T>
-T rd(char const* cstr)
-{
-    char* endptr = nullptr;
-    T result = static_cast<T>(strtol(cstr, &endptr, 10));
-    if (endptr == nullptr || *endptr != '\0')
-    {
-        std::string errstr;
-        errstr += "\"";
-        errstr += cstr;
-        errstr += "\" is not an integer";
-        usage();
-        throw std::invalid_argument(errstr);
-    }
-    return result;
 }
 
 int main(int argc, char** argv)

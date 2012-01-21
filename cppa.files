@@ -254,3 +254,7 @@ cppa/any_tuple_view.hpp
 cppa/match.hpp
 benchmarks/Matching.scala
 benchmarks/matching.cpp
+benchmarks/matching.erl
+benchmarks/theron_mailbox_performance.cpp
+benchmarks/utility.hpp
+benchmarks/theron_actor_creation.cpp

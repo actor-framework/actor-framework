@@ -153,7 +153,6 @@ class is_pm_decorated
 };
 
 template<class TupleIterator, class PatternIterator>
-//int matches(TupleIterator targ, typename pattern<P...>::const_iterator iter)
 auto matches(TupleIterator targ, PatternIterator iter)
     -> typename util::enable_if_c<is_pm_decorated<TupleIterator>::value,bool>::type
 {

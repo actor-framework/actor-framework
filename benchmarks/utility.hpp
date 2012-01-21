@@ -28,101 +28,25 @@
 \******************************************************************************/
 
 
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
+#ifndef UTILITY_HPP
+#define UTILITY_HPP
 
-#include "utility.hpp"
-#include "cppa/cppa.hpp"
-#include "cppa/fsm_actor.hpp"
-#include "cppa/detail/thread.hpp"
+#include <stdexcept>
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::int64_t;
-
-using namespace cppa;
-
-struct fsm_receiver : fsm_actor<fsm_receiver>
+template<typename T>
+T rd(char const* cstr)
 {
-    int64_t m_value;
-    behavior init_state;
-    fsm_receiver(int64_t max) : m_value(0)
+    char* endptr = nullptr;
+    T result = static_cast<T>(strtol(cstr, &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
     {
-        init_state =
-        (
-            on(atom("msg")) >> [=]()
-            {
-                ++m_value;
-                if (m_value == max)
-                {
-                    become_void();
-                }
-            }
-        );
+        std::string errstr;
+        errstr += "\"";
+        errstr += cstr;
+        errstr += "\" is not an integer";
+        throw std::invalid_argument(errstr);
     }
-};
-
-void receiver(int64_t max)
-{
-    int64_t value;
-    receive_while([&]() { return value < max; })
-    (
-        on(atom("msg")) >> [&]()
-        {
-            ++value;
-        }
-    );
+    return result;
 }
 
-void sender(actor_ptr whom, int64_t count)
-{
-    any_tuple msg = make_tuple(atom("msg"));
-    for (int64_t i = 0; i < count; ++i)
-    {
-        whom->enqueue(nullptr, msg);
-    }
-}
-
-void usage()
-{
-    cout << "usage: mailbox_performance "
-            "(stacked|event-based) (sending threads) (msg per thread)" << endl
-         << endl;
-}
-
-int main(int argc, char** argv)
-{
-    if (argc == 4)
-    {
-        int64_t num_sender = rd<int64_t>(argv[2]);
-        int64_t num_msgs = rd<int64_t>(argv[3]);
-        actor_ptr testee;
-        if (strcmp(argv[1], "stacked") == 0)
-        {
-            testee = spawn(receiver, num_sender * num_msgs);
-        }
-        else if (strcmp(argv[1], "event-based") == 0)
-        {
-            testee = spawn(new fsm_receiver(num_sender * num_msgs));
-        }
-        else
-        {
-            usage();
-            return 1;
-        }
-        for (int64_t i = 0; i < num_sender; ++i)
-        {
-            detail::thread(sender, testee, num_msgs).detach();
-        }
-        await_all_others_done();
-    }
-    else
-    {
-        usage();
-        return 1;
-    }
-    return 0;
-}
+#endif // UTILITY_HPP
