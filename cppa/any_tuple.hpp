@@ -50,19 +50,42 @@ class any_tuple
 
  public:
 
+    /**
+     * @brief Creates an empty tuple.
+     * @post <tt>empty() == true</tt>
+     */
     any_tuple();
 
+    /**
+     * @brief Creates a tuple from @p t.
+     * @param t A typed tuple representation.
+     * @post <tt>empty() == false</tt>
+     */
     template<typename... Args>
     any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
 
     explicit any_tuple(detail::abstract_tuple*);
 
+    /**
+     * @brief Move constructor.
+     */
     any_tuple(any_tuple&&);
 
+    /**
+     * @brief Copy constructor.
+     */
     any_tuple(any_tuple const&) = default;
 
+    /**
+     * @brief Move assignment.
+     * @returns <tt>*this</tt>.
+     */
     any_tuple& operator=(any_tuple&&);
 
+    /**
+     * @brief Copy assignment.
+     * @returns <tt>*this</tt>.
+     */
     any_tuple& operator=(any_tuple const&) = default;
 
     size_t size() const;
@@ -77,7 +100,7 @@ class any_tuple
 
     bool equals(any_tuple const& other) const;
 
-    any_tuple tail(size_t offset = 1) const;
+    std::type_info const& impl_type() const;
 
     inline bool empty() const
     {

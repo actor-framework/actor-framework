@@ -68,6 +68,8 @@ class tuple_view
 
     static constexpr size_t num_elements = sizeof...(ElementTypes);
 
+    typedef util::type_list<ElementTypes...> types;
+
     static tuple_view from(std::vector< std::pair<uniform_type_info const*, void const*> > const& vec)
     {
         tuple_view result;

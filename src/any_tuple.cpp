@@ -34,6 +34,7 @@
 
 namespace {
 
+/*
 struct offset_decorator : cppa::detail::abstract_tuple
 {
 
@@ -76,6 +77,7 @@ struct offset_decorator : cppa::detail::abstract_tuple
     ptr_type m_decorated;
 
 };
+*/
 
 inline cppa::detail::empty_tuple* s_empty_tuple()
 {
@@ -109,11 +111,9 @@ any_tuple& any_tuple::operator=(any_tuple&& other)
     return *this;
 }
 
-any_tuple any_tuple::tail(size_t offset) const
+std::type_info const& any_tuple::impl_type() const
 {
-    if (offset == 0) return *this;
-    if (size() <= offset) return any_tuple(s_empty_tuple());
-    return any_tuple(new offset_decorator(m_vals, offset));
+    return m_vals->impl_type();
 }
 
 size_t any_tuple::size() const

@@ -255,18 +255,15 @@ class testee_actor : public scheduled_actor
 // receives one timeout and quits
 void testee1()
 {
-    receive_loop
+    receive
     (
-        after(std::chrono::milliseconds(10)) >> []()
-        {
-            quit(exit_reason::user_defined);
-        }
+        after(std::chrono::milliseconds(10)) >> []() { }
     );
 }
 
 void testee2(actor_ptr other)
 {
-    link(other);
+    self->link_to(other);
     send(other, std::uint32_t(1));
     receive_loop
     (
@@ -370,13 +367,14 @@ size_t test__spawn()
 
     auto report_unexpected = [&]()
     {
-        cerr << "unexpected message: " << to_string(last_received()) << endl;
+        cerr << "unexpected message: "
+             << to_string(self->last_dequeued()) << endl;
         CPPA_CHECK(false);
     };
-    trap_exit(true);
+    self->trap_exit(true);
     auto pong_actor = spawn(pong, spawn(ping));
     monitor(pong_actor);
-    link(pong_actor);
+    self->link_to(pong_actor);
 //    monitor(spawn(testee2, spawn(testee1)));
     int i = 0;
     int flags = 0;

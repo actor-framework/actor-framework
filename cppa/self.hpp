@@ -84,12 +84,6 @@ class self_type : public convertible<self_type, actor*>
         return get_impl();
     }
 
-    // backward compatibility
-    inline local_actor* operator()() const
-    {
-        return get_impl();
-    }
-
     // @pre get_unchecked() == nullptr
     inline void set(local_actor* ptr) const
     {

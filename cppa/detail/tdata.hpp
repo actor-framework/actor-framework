@@ -34,6 +34,7 @@
 #include <typeinfo>
 
 #include "cppa/get.hpp"
+#include "cppa/option.hpp"
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/wrapped.hpp"
@@ -145,22 +146,68 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         return *this;
     }
 
-    inline tdata<Tail...>& tail()
+    // upcast
+    inline tdata<Tail...>& tail() { return *this; }
+    inline tdata<Tail...> const& tail() const { return *this; }
+
+    inline void const* at(size_t p) const
     {
-        // upcast
+        return (p == 0) ? &head : super::at(p-1);
+    }
+
+    inline uniform_type_info const* type_at(size_t p) const
+    {
+        return (p == 0) ? uniform_typeid(typeid(Head)) : super::type_at(p-1);
+    }
+
+};
+
+template<typename Head, typename... Tail>
+struct tdata<option<Head>, Tail...> : tdata<Tail...>
+{
+
+    typedef tdata<Tail...> super;
+
+    option<Head> head;
+
+    typedef option<Head> opt_type;
+
+    inline tdata() : super(), head() { }
+
+    template<typename... Args>
+    tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
+
+    template<typename... Args>
+    tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
+
+    template<typename... Args>
+    tdata(util::wrapped<Head> const&, Args const&... vals) : super(vals...) { }
+
+    // allow (partial) initialization from a different tdata
+    template<typename... Y>
+    tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head) { }
+
+    template<typename... Y>
+    tdata(tdata<Y...>&& other) : super(std::move(other.tail())), head(std::move(other.head)) { }
+
+    // allow initialization with a function pointer or reference
+    // returning a wrapped<Head>
+    template<typename...Args>
+    tdata(util::wrapped<Head>(*)(), Args const&... vals)
+        : super(vals...), head()
+    {
+    }
+
+    template<typename... Y>
+    tdata& operator=(tdata<Y...> const& other)
+    {
+        tdata_set(*this, other);
         return *this;
     }
 
-    inline tdata<Tail...> const& tail() const
-    {
-        // upcast
-        return *this;
-    }
-
-    inline bool operator==(tdata const& other) const
-    {
-        return head == other.head && tail() == other.tail();
-    }
+    // upcast
+    inline tdata<Tail...>& tail() { return *this; }
+    inline tdata<Tail...> const& tail() const { return *this; }
 
     inline void const* at(size_t p) const
     {

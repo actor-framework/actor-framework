@@ -40,6 +40,7 @@
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_view.hpp"
+#include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/tbind.hpp"
@@ -47,6 +48,7 @@
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/is_primitive.hpp"
+#include "cppa/util/static_foreach.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/tdata.hpp"
@@ -78,51 +80,23 @@ class pattern
     typedef typename util::tl_filter_not<types, util::tbind<std::is_same, anything>::type>::type
             filtered_types;
 
+    static constexpr size_t filtered_size = filtered_types::size;
+
     typedef util::fixed_vector<size_t, filtered_types::size> mapping_vector;
 
-    class const_iterator
+    typedef type_value_pair const* const_iterator;
+
+    const_iterator begin() const { return m_ptrs; }
+
+    const_iterator end() const { return m_ptrs + size; }
+
+    pattern() : m_has_values(false)
     {
-
-        pattern const* m_ptr;
-        size_t m_pos;
-
-     public:
-
-        const_iterator(const_iterator const&) = default;
-        const_iterator& operator=(const_iterator const&) = default;
-        const_iterator(pattern const* ptr) : m_ptr(ptr), m_pos(0) { }
-
-        inline void next() { ++m_pos; }
-
-        inline bool at_end() { return m_pos == sizeof...(Types); }
-
-        inline uniform_type_info const* type() const
-        {
-            return m_ptr->m_utis[m_pos];
-        }
-
-        inline bool has_value() const
-        {
-            return m_ptr->m_data_ptr[m_pos] != nullptr;
-        }
-
-        inline void const* value() const
-        {
-            return m_ptr->m_data_ptr[m_pos];
-        }
-
-    };
-
-    const_iterator begin() const
-    {
-        return {this};
-    }
-
-    pattern()
-    {
+        auto& arr = detail::static_types_array<Types...>::arr;
         for (size_t i = 0; i < size; ++i)
         {
-            m_data_ptr[i] = nullptr;
+            m_ptrs[i].first = arr[i];
+            m_ptrs[i].second = nullptr;
         }
     }
 
@@ -131,34 +105,55 @@ class pattern
     {
         using std::is_same;
         using namespace util;
+        static constexpr bool all_boxed =
+                util::tl_forall<type_list<Arg0, Args...>,
+                                detail::is_boxed        >::value;
+        m_has_values = !all_boxed;
         typedef typename type_list<Arg0, Args...>::back arg_n;
         static constexpr bool ignore_arg_n = is_same<arg_n, arg_match_t>::value;
-        bool invalid_args[] = { detail::is_boxed<Arg0>::value,
-                                detail::is_boxed<Args>::value... };
         // ignore extra arg_match_t argument
         static constexpr size_t args_size = sizeof...(Args)
                                           + (ignore_arg_n ? 0 : 1);
         static_assert(args_size <= size, "too many arguments");
-        for (size_t i = 0; i < args_size; ++i)
-        {
-            m_data_ptr[i] = invalid_args[i] ? nullptr : m_data.at(i);
-        }
+        auto& arr = detail::static_types_array<Types...>::arr;
+        functor f(*this, arr);
+        util::static_foreach<0, args_size>::_(m_data, f);
         for (size_t i = args_size; i < size; ++i)
         {
-            m_data_ptr[i] = nullptr;
+            m_ptrs[i].first = arr[i];
+            m_ptrs[i].second = nullptr;
         }
     }
 
+    inline bool has_values() const { return m_has_values; }
+
  private:
 
-    detail::tdata<Types...> m_data;
-    static detail::types_array<Types...> m_utis;
-    void const* m_data_ptr[size];
+    struct functor;
+
+    friend class functor;
+
+    struct functor
+    {
+        pattern& p;
+        detail::types_array<Types...>& arr;
+        size_t i;
+        functor(pattern& pp, detail::types_array<Types...>& tarr)
+            : p(pp), arr(tarr), i(0) { }
+        template<typename T>
+        void operator()(option<T> const& what)
+        {
+            p.m_ptrs[i].first = arr[i];
+            p.m_ptrs[i].second = (what) ? &(*what) : nullptr;
+            ++i;
+        }
+    };
+
+    detail::tdata<option<Types>...> m_data;
+    bool m_has_values;
+    type_value_pair m_ptrs[size];
 
 };
-
-template<typename... Types>
-detail::types_array<Types...> pattern<Types...>::m_utis;
 
 template<class ExtendedType, class BasicType>
 ExtendedType* extend_pattern(BasicType const* p)
@@ -167,10 +162,18 @@ ExtendedType* extend_pattern(BasicType const* p)
     detail::tdata_set(et->m_data, p->m_data);
     for (size_t i = 0; i < BasicType::size; ++i)
     {
-        if (p->m_data_ptr[i] != nullptr)
+        et->m_ptrs[i].first = p->m_ptrs[i].first;
+        if (p->m_ptrs[i].second != nullptr)
         {
-            et->m_data_ptr[i] = et->m_data.at(i);
+            et->m_ptrs[i].second = et->m_data.at(i);
         }
+    }
+    typedef typename ExtendedType::types extended_types;
+    typedef typename detail::static_types_array_from_type_list<extended_types>::type tarr;
+    auto& arr = tarr::arr;
+    for (auto i = BasicType::size; i < ExtendedType::size; ++i)
+    {
+        et->m_ptrs[i].first = arr[i];
     }
     return et;
 }

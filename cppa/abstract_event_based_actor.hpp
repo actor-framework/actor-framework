@@ -42,6 +42,9 @@
 
 namespace cppa {
 
+/**
+ * @brief Base class for all event-based actor implementations.
+ */
 class abstract_event_based_actor : public detail::abstract_scheduled_actor
 {
 
@@ -58,12 +61,12 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
     void resume(util::fiber*, resume_callback* callback) /*override*/;
 
     /**
-     *
+     * @brief Initializes the actor by defining an initial behavior.
      */
     virtual void init() = 0;
 
     /**
-     *
+     * @copydoc cppa::scheduled_actor::on_exit()
      */
     virtual void on_exit();
 

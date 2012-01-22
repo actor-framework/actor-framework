@@ -53,6 +53,7 @@ size_t test__local_group()
         after(std::chrono::seconds(2)) >> [&]()
         {
             CPPA_CHECK(false);
+            result = 10;
         }
     )
     .until([&result]() { return result == 10; });

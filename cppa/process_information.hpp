@@ -52,34 +52,51 @@ class process_information : public ref_counted,
 
  public:
 
+    /**
+     * @brief @c libcppa uses 160 bit hashes (20 bytes).
+     */
     static constexpr size_t node_id_size = 20;
 
+    /**
+     * @brief Represents a 160 bit hash.
+     */
     typedef std::array<std::uint8_t, node_id_size> node_id_type;
 
-    //process_information();
+    /**
+     * @brief Copy constructor.
+     */
+    process_information(process_information const&);
 
-    process_information(std::uint32_t process_id, node_id_type const& node_id);
-
+    /**
+     * @brief Creates @c this from @p process_id and @p hash.
+     * @param process_id System-wide unique process identifier.
+     * @param hash Unique node id as hexadecimal string representation.
+     */
     process_information(std::uint32_t process_id, std::string const& hash);
 
-    process_information(process_information const& other);
+    /**
+     * @brief Creates @c this from @p process_id and @p hash.
+     * @param process_id System-wide unique process identifier.
+     * @param hash Unique node id.
+     */
+    process_information(std::uint32_t process_id, node_id_type const& node_id);
 
     /**
      * @brief Identifies the running process.
+     * @returns A system-wide unique process identifier.
      */
     inline std::uint32_t process_id() const { return m_process_id; }
 
     /**
      * @brief Identifies the host system.
-     *
-     * A hash build from the MAC address of the first network device
-     * and the serial number from the root HD (mounted in "/" or "C:").
+     * @returns A hash build from the MAC address of the first network device
+     *          and the UUID of the root partition (mounted in "/" or "C:").
      */
     inline node_id_type const& node_id() const { return m_node_id; }
 
     /**
      * @brief Returns the proccess_information for the running process.
-     * @returns
+     * @returns A pointer to the singleton of this process.
      */
     static intrusive_ptr<process_information> const& get();
 
@@ -108,7 +125,10 @@ inline bool equal(process_information::node_id_type const& node_id,
 std::string to_string(process_information const& what);
 
 /**
- * @brief Converts {@link node_id} to an hexadecimal string.
+ * @brief Converts a {@link process_information::node_id_type node_id}
+ *        to a hexadecimal string.
+ * @param node_id A unique node identifier.
+ * @returns A hexadecimal representation of @p node_id.
  */
 std::string to_string(process_information::node_id_type const& node_id);
 

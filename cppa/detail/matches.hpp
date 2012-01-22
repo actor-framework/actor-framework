@@ -31,9 +31,15 @@
 #ifndef DO_MATCH_HPP
 #define DO_MATCH_HPP
 
+#include <type_traits>
+
 #include "cppa/pattern.hpp"
 #include "cppa/util/enable_if.hpp"
+#include "cppa/util/fixed_vector.hpp"
+#include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/types_array.hpp"
+#include "cppa/detail/object_array.hpp"
+#include "cppa/detail/decorated_tuple.hpp"
 
 namespace cppa { namespace detail {
 
@@ -153,20 +159,20 @@ class is_pm_decorated
 };
 
 template<class TupleIterator, class PatternIterator>
-auto matches(TupleIterator targ, PatternIterator iter)
+auto matches(TupleIterator targ, PatternIterator pbegin, PatternIterator pend)
     -> typename util::enable_if_c<is_pm_decorated<TupleIterator>::value,bool>::type
 {
-    for ( ; !(iter.at_end() && targ.at_end()); iter.next(), targ.next())
+    for ( ; !(pbegin == pend && targ.at_end()); ++pbegin, targ.next())
     {
-        if (iter.at_end())
+        if (pbegin == pend)
         {
             return false;
         }
-        else if (iter.type() == nullptr) // nullptr == wildcard (anything)
+        else if (pbegin->first == nullptr) // nullptr == wildcard (anything)
         {
             // perform submatching
-            iter.next();
-            if (iter.at_end())
+            ++pbegin;
+            if (pbegin == pend)
             {
                 // always true at the end of the pattern
                 return true;
@@ -176,7 +182,7 @@ auto matches(TupleIterator targ, PatternIterator iter)
             // iterate over tu_args until we found a match
             for ( ; targ.at_end() == false; mv.clear(), targ.next())
             {
-                if (matches(TupleIterator(targ, mv_ptr), iter))
+                if (matches(TupleIterator(targ, mv_ptr), pbegin, pend))
                 {
                     targ.push_mapping(mv);
                     return true;
@@ -185,11 +191,11 @@ auto matches(TupleIterator targ, PatternIterator iter)
             return false; // no submatch found
         }
         // compare types
-        else if (targ.at_end() == false && iter.type() == targ.type())
+        else if (targ.at_end() == false && pbegin->first == targ.type())
         {
             // compare values if needed
-            if (   iter.has_value() == false
-                || iter.type()->equals(iter.value(), targ.value()))
+            if (   pbegin->second == nullptr
+                || pbegin->first->equals(pbegin->second, targ.value()))
             {
                 targ.push_mapping();
             }
@@ -203,24 +209,24 @@ auto matches(TupleIterator targ, PatternIterator iter)
             return false; // no match
         }
     }
-    return true; // iter.at_end() && targ.at_end()
+    return true; // pbegin == pend && targ.at_end()
 }
 
 template<class TupleIterator, class PatternIterator>
-auto matches(TupleIterator targ, PatternIterator iter)
+auto matches(TupleIterator targ, PatternIterator pbegin, PatternIterator pend)
     -> typename util::enable_if_c<!is_pm_decorated<TupleIterator>::value,bool>::type
 {
-    for ( ; !(iter.at_end() && targ.at_end()); iter.next(), targ.next())
+    for ( ; !(pbegin == pend && targ.at_end()); ++pbegin, targ.next())
     {
-        if (iter.at_end())
+        if (pbegin == pend)
         {
             return false;
         }
-        else if (iter.type() == nullptr) // nullptr == wildcard (anything)
+        else if (pbegin->first == nullptr) // nullptr == wildcard (anything)
         {
             // perform submatching
-            iter.next();
-            if (iter.at_end())
+            ++pbegin;
+            if (pbegin == pend)
             {
                 // always true at the end of the pattern
                 return true;
@@ -228,7 +234,7 @@ auto matches(TupleIterator targ, PatternIterator iter)
             // iterate over tu_args until we found a match
             for ( ; targ.at_end() == false; targ.next())
             {
-                if (matches(targ, iter))
+                if (matches(targ, pbegin, pend))
                 {
                     return true;
                 }
@@ -236,15 +242,11 @@ auto matches(TupleIterator targ, PatternIterator iter)
             return false; // no submatch found
         }
         // compare types
-        else if (targ.at_end() == false && iter.type() == targ.type())
+        else if (targ.at_end() == false && pbegin->first == targ.type())
         {
             // compare values if needed
-            if (   iter.has_value() == false
-                || iter.type()->equals(iter.value(), targ.value()))
-            {
-                // ok, match next
-            }
-            else
+            if (   pbegin->second != nullptr
+                && !pbegin->first->equals(pbegin->second, targ.value()))
             {
                 return false; // values didn't match
             }
@@ -254,7 +256,131 @@ auto matches(TupleIterator targ, PatternIterator iter)
             return false; // no match
         }
     }
-    return true; // iter.at_end() && targ.at_end()
+    return true; // pbegin == pend && targ.at_end()
+}
+
+// pattern does not contain "anything"
+template<class Tuple, class Pattern>
+bool matches(std::integral_constant<int, 0>,
+             Tuple const& tpl, Pattern const& pttrn,
+             util::fixed_vector<size_t, Pattern::filtered_size>* mv)
+{
+    typedef typename Pattern::types ptypes;
+    typedef typename decorated_tuple_from_type_list<ptypes>::type dec_t;
+    typedef typename tuple_vals_from_type_list<ptypes>::type tv_t;
+    std::type_info const& tinfo = tpl.impl_type();
+    if (tinfo == typeid(dec_t) || tinfo == typeid(tv_t))
+    {
+        if (pttrn.has_values())
+        {
+            size_t i = 0;
+            auto end = pttrn.end();
+            for (auto iter = pttrn.begin(); iter != end; ++iter)
+            {
+                if (iter->second)
+                {
+                    if (iter->first->equals(iter->second, tpl.at(i)) == false)
+                    {
+                        return false;
+                    }
+                }
+                ++i;
+            }
+        }
+    }
+    else if (tinfo == typeid(object_array))
+    {
+        if (pttrn.has_values())
+        {
+            size_t i = 0;
+            auto end = pttrn.end();
+            for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+            {
+                if (iter->first != tpl.type_at(i)) return false;
+                if (iter->second)
+                {
+                    if (iter->first->equals(iter->second, tpl.at(i)) == false)
+                        return false;
+                }
+            }
+        }
+        else
+        {
+            size_t i = 0;
+            auto end = pttrn.end();
+            for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+            {
+                if (iter->first != tpl.type_at(i)) return false;
+            }
+        }
+    }
+    else
+    {
+        return false;
+    }
+    // ok => match
+    if (mv) for (size_t i = 0; i < Pattern::size; ++i) mv->push_back(i);
+    return true;
+}
+
+// "anything" at end of pattern
+template<class Tuple, class Pattern>
+bool matches(std::integral_constant<int, 1>,
+             Tuple const& tpl, Pattern const& pttrn,
+             util::fixed_vector<size_t, Pattern::filtered_size>* mv)
+{
+    auto end = pttrn.end();
+    --end; // iterate until we reach "anything"
+    size_t i = 0;
+    if (pttrn.has_values())
+    {
+        for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+        {
+            if (iter->first != tpl.type_at(i)) return false;
+            if (iter->second)
+            {
+                if (iter->first->equals(iter->second, tpl.at(i)) == false)
+                    return false;
+            }
+        }
+    }
+    else
+    {
+        for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+        {
+            if (iter->first != tpl.type_at(i)) return false;
+        }
+    }
+    // ok => match
+    if (mv) for (size_t i = 0; i < Pattern::size; ++i) mv->push_back(i);
+    return true;
+}
+
+// "anything" somewhere in between (ugh!)
+template<class Tuple, class Pattern>
+bool matches(std::integral_constant<int, 2>,
+             Tuple const& tpl, Pattern const& ptrn,
+             util::fixed_vector<size_t, Pattern::filtered_size>* mv = 0)
+{
+    if (mv)
+        return matches(pm_decorated(tpl.begin(), mv), ptrn.begin(), ptrn.end());
+    return matches(tpl.begin(), ptrn.begin(), ptrn.end());
+}
+
+template<class Tuple, class Pattern>
+inline bool matches(Tuple const& tpl, Pattern const& pttrn,
+                    util::fixed_vector<size_t, Pattern::filtered_size>* mv = 0)
+{
+    typedef typename Pattern::types ptypes;
+    static constexpr int first_anything = util::tl_find<ptypes, anything>::value;
+    // impl1 = no anything
+    // impl2 = anything at end
+    // impl3 = anything somewhere in between
+    static constexpr int impl = (first_anything == -1)
+            ? 0
+            : ((first_anything == ((int) Pattern::size) - 1) ? 1 : 2);
+    static constexpr std::integral_constant<int, impl> token;
+    return matches(token, tpl, pttrn, mv);
 }
 
 } } // namespace cppa::detail

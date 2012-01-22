@@ -36,9 +36,15 @@
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
  * @brief Represents a remote Actor.
  */
+class actor_proxy : public actor { };
+
+#else // CPPA_DOCUMENTATION
+
 class actor_proxy : public abstract_actor<actor>
 {
 
@@ -64,6 +70,8 @@ class actor_proxy : public abstract_actor<actor>
     bool establish_backlink(intrusive_ptr<actor>& to);
 
 };
+
+#endif // CPPA_DOCUMENTATION
 
 typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
 

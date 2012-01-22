@@ -44,6 +44,7 @@ struct empty_tuple : cppa::detail::abstract_tuple
     void const* at(size_t) const;
     bool equals(abstract_tuple const& other) const;
     uniform_type_info const* type_at(size_t) const;
+    std::type_info const& impl_type() const;
 
 };
 

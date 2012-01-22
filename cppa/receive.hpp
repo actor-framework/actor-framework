@@ -38,18 +38,73 @@
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
  * @brief Dequeues the next message from the mailbox that's matched
  *        by @p bhvr and executes the corresponding callback.
+ * @param bhvr Denotes the actor's response the next incoming message.
  */
-inline void receive(invoke_rules& bhvr)
-{
-    self->dequeue(bhvr);
-}
+void receive(behavior& bhvr);
 
-inline void receive(timed_invoke_rules& bhvr)
+/**
+ * @brief Receives messages in an endless loop.
+ *
+ * Semantically equal to: <tt>for (;;) { receive(bhvr); }</tt>
+ * @param bhvr Denotes the actor's response the next incoming message.
+ */
+void receive_loop(behavior& bhvr);
+
+/**
+ * @brief Receives messages as long as @p stmt returns true.
+ *
+ * Semantically equal to: <tt>while (stmt()) { receive(...); }</tt>.
+ *
+ * <b>Usage example:</b>
+ * @code
+ * int i = 0;
+ * receive_while([&]() { return (++i <= 10); })
+ * (
+ *     on<int>() >> int_fun,
+ *     on<float>() >> float_fun
+ * );
+ * @endcode
+ * @param stmt Lambda expression, functor or function returning a @c bool.
+ * @returns A functor implementing the loop.
+ */
+template<typename Statement>
+auto receive_while(Statement&& stmt);
+
+/**
+ * @brief Receives messages until @p stmt returns true.
+ *
+ * Semantically equal to: <tt>do { receive(...); } while (stmt() == false);</tt>
+ *
+ * <b>Usage example:</b>
+ * @code
+ * int i = 0;
+ * do_receive
+ * (
+ *     on<int>() >> int_fun,
+ *     on<float>() >> float_fun
+ * )
+ * .until([&]() { return (++i >= 10); };
+ * @endcode
+ * @param bhvr Denotes the actor's response the next incoming message.
+ * @returns A functor providing the @c until member function.
+ */
+auto do_receive(behavior& bhvr);
+
+#else // CPPA_DOCUMENTATION
+
+inline void receive(invoke_rules& bhvr) { self->dequeue(bhvr); }
+
+inline void receive(timed_invoke_rules& bhvr) { self->dequeue(bhvr); }
+
+inline void receive(behavior& bhvr)
 {
-    self->dequeue(bhvr);
+    if (bhvr.is_left()) self->dequeue(bhvr.left());
+    else self->dequeue(bhvr.right());
 }
 
 inline void receive(timed_invoke_rules&& bhvr)
@@ -79,58 +134,29 @@ void receive(invoke_rules& bhvr, Head&& head, Tail&&... tail)
             std::forward<Tail>(tail)...);
 }
 
-inline void receive(behavior& bhvr)
-{
-    if (bhvr.is_left()) receive(bhvr.left());
-    else receive(bhvr.right());
-}
 
-/**
- * @brief Receives messages in an endless loop.
- *
- * Semantically equal to: <tt>for (;;) { receive(rules); }</tt>
- * @param rules Invoke rules to receive and handle messages.
- */
 void receive_loop(invoke_rules& rules);
 
-/**
- * @copydoc receive_loop(invoke_rules&)
- * Support for invoke rules with timeout.
- */
 void receive_loop(timed_invoke_rules& rules);
 
-/**
- * @copydoc receive_loop(invoke_rules&)
- * Support for rvalue references.
- */
+inline void receive_loop(behavior& bhvr)
+{
+    if (bhvr.is_left()) receive_loop(bhvr.left());
+    else receive_loop(bhvr.right());
+}
+
 inline void receive_loop(invoke_rules&& rules)
 {
     invoke_rules tmp(std::move(rules));
     receive_loop(tmp);
 }
 
-/**
- * @copydoc receive_loop(invoke_rules&)
- * Support for rvalue references and timeout.
- */
 inline void receive_loop(timed_invoke_rules&& rules)
 {
     timed_invoke_rules tmp(std::move(rules));
     receive_loop(tmp);
 }
 
-/**
- * @brief Receives messages in an endless loop.
- *
- * This function overload provides a simple way to define a receive loop
- * with on-the-fly {@link invoke_rules}.
- *
- * @b Example:
- * @code
- * receive_loop(on<int>() >> int_fun, on<float>() >> float_fun);
- * @endcode
- * @see receive_loop(invoke_rules&)
- */
 template<typename Head, typename... Tail>
 void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
 {
@@ -138,20 +164,6 @@ void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
                  std::forward<Tail>(tail)...);
 }
 
-/**
- * @brief Receives messages in an endless loop.
- *
- * This function overload provides a simple way to define a receive loop
- * with on-the-fly {@link invoke_rules}.
- *
- * @b Example:
- * @code
- * receive_loop(on<int>() >> int_fun, on<float>() >> float_fun);
- * @endcode
- * @see receive_loop(invoke_rules&)
- *
- * Support for rvalue references.
- */
 template<typename Head, typename... Tail>
 void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
 {
@@ -160,23 +172,6 @@ void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
                  std::forward<Tail>(tail)...);
 }
 
-/**
- * @brief Receives messages as long as @p stmt returns true.
- *
- * Semantically equal to: <tt>while (stmt()) { receive(...); }</tt>.
- *
- * <b>Usage example:</b>
- * @code
- * int i = 0;
- * receive_while([&]() { return (++i <= 10); })
- * (
- *     on<int>() >> int_fun,
- *     on<float>() >> float_fun
- * );
- * @endcode
- * @param stmt Lambda expression, functor or function returning a @c bool.
- * @returns A functor implementing the loop.
- */
 template<typename Statement>
 detail::receive_while_helper<Statement>
 receive_while(Statement&& stmt)
@@ -186,29 +181,13 @@ receive_while(Statement&& stmt)
     return std::move(stmt);
 }
 
-/**
- * @brief Receives messages until @p stmt returns true.
- *
- * Semantically equal to: <tt>do { receive(...); } while (stmt() == false);</tt>
- *
- * <b>Usage example:</b>
- * @code
- * int i = 0;
- * do_receive
- * (
- *     on<int>() >> int_fun,
- *     on<float>() >> float_fun
- * )
- * .until([&]() { return (++i >= 10); };
- * @endcode
- * @param args Invoke rules to handle received messages.
- * @returns A functor providing the @c until member function.
- */
 template<typename... Args>
 detail::do_receive_helper do_receive(Args&&... args)
 {
     return detail::do_receive_helper(std::forward<Args>(args)...);
 }
+
+#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

@@ -207,8 +207,8 @@ int main()
         {
             // prints the tree in its serialized format:
             // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
-            cout << "to_string(last_received()): "
-                 << to_string(last_received())
+            cout << "to_string(self->last_dequeued()): "
+                 << to_string(self->last_dequeued())
                  << endl;
             // prints the tree using the print member function:
             // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
@@ -225,7 +225,7 @@ int main()
             //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
             //   )
             // } )
-            cout << "to_string: " << to_string(last_received()) << endl;
+            cout << "to_string: " << to_string(self->last_dequeued()) << endl;
         }
     );
 

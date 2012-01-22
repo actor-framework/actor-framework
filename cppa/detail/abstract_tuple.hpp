@@ -32,6 +32,7 @@
 #define ABSTRACT_TUPLE_HPP
 
 #include "cppa/ref_counted.hpp"
+#include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
@@ -41,6 +42,8 @@ namespace cppa { namespace detail {
 struct abstract_tuple : ref_counted
 {
 
+    typedef type_value_pair const* const_iterator;
+
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
 
@@ -49,8 +52,10 @@ struct abstract_tuple : ref_counted
     virtual abstract_tuple* copy() const = 0;
     virtual void const* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
+    // type of the implementation class
+    virtual std::type_info const& impl_type() const = 0;
 
-    virtual bool equals(abstract_tuple const& other) const;
+    bool equals(abstract_tuple const& other) const;
 
 };
 

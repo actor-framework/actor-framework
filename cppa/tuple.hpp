@@ -86,6 +86,8 @@ class tuple
 
  public:
 
+    typedef util::type_list<ElementTypes...> types;
+
     static constexpr size_t num_elements = sizeof...(ElementTypes);
 
     /**
@@ -130,7 +132,7 @@ class tuple
                       util::fixed_vector<size_t, num_elements> const& mv)
     {
         return tuple(ptr_ctor(),
-                     new detail::decorated_tuple<num_elements>(ptr, mv));
+                     new detail::decorated_tuple<ElementTypes...>(ptr, mv));
     }
 
     /**

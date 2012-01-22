@@ -30,12 +30,12 @@ object Matching {
             case Msg5(0, 0, 0) => msg5Matched += 1
             case Msg6(0, 0.0, "0") => msg6Matched += 1
         }
-        val m1 = Msg1(0)
-        val m2 = Msg2(0.0)
-        val m3 = Msg3(List(0))
-        val m4 = Msg4(0, "0")
-        val m5 = Msg5(0, 0, 0)
-        val m6 = Msg6(0, 0.0, "0")
+        val m1: Any = Msg1(0)
+        val m2: Any = Msg2(0.0)
+        val m3: Any = Msg3(List(0))
+        val m4: Any = Msg4(0, "0")
+        val m5: Any = Msg5(0, 0, 0)
+        val m6: Any = Msg6(0, 0.0, "0")
         for (_ <- zero until numLoops) {
             partFun(m1)
             partFun(m2)

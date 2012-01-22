@@ -129,7 +129,7 @@ int main(int, char**)
         on<baz>() >> []()
         {
             // prints: @<> ( { baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) ) } )
-            cout << to_string(last_received()) << endl;
+            cout << to_string(self->last_dequeued()) << endl;
         }
 
     );

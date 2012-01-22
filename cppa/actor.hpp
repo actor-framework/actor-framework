@@ -72,22 +72,26 @@ class actor : public channel
     ~actor();
 
     /**
-     * @brief Attaches @p ptr to this actor
-     *        (the actor takes ownership of @p ptr).
+     * @brief Attaches @p ptr to this actor.
      *
-     * The actor will call <tt>ptr->detach(...)</tt> on exit or immediately
-     * if he already exited.
-     *
+     * The actor will call <tt>ptr->detach(...)</tt> on exit, or immediately
+     * if it already finished execution.
+     * @param ptr A callback object that's executed if the actor finishes
+     *            execution.
      * @returns @c true if @p ptr was successfully attached to the actor;
      *          otherwise (actor already exited) @p false.
+     * @warning The actor takes ownership of @p ptr.
      */
     virtual bool attach(attachable* ptr) = 0;
 
     /**
-     * @brief Attaches the functor or function @p ftor to this actor.
+     * @brief Convenience function that attaches the functor
+     *        or function @p ftor to this actor.
      *
-     * The actor executes <tt>ftor()</tt> on exit or immediatley if he
-     * already exited.
+     * The actor executes <tt>ftor()</tt> on exit, or immediatley
+     * if it already finished execution.
+     * @param ftor A functor, function or lambda expression that's executed
+     *             if the actor finishes execution.
      * @returns @c true if @p ftor was successfully attached to the actor;
      *          otherwise (actor already exited) @p false.
      */
@@ -128,7 +132,7 @@ class actor : public channel
 
     /**
      * @brief Unlinks this actor from @p other.
-     * @param oter Linked Actor.
+     * @param other Linked Actor.
      * @note Links are automatically removed if the Actor finishes execution.
      */
     virtual void unlink_from(intrusive_ptr<actor>& other) = 0;
@@ -152,27 +156,23 @@ class actor : public channel
     // rvalue support
     /**
      * @copydoc link_to(intrusive_ptr<actor>&)
-     * Support for rvalue references.
      */
     void link_to(intrusive_ptr<actor>&& other);
 
     /**
      * @copydoc unlink_from(intrusive_ptr<actor>&)
-     * Support for rvalue references.
      */
     void unlink_from(intrusive_ptr<actor>&& other);
 
     /**
      * @copydoc remove_backlink(intrusive_ptr<actor>&)
-     * Support for rvalue references.
      */
-    bool remove_backlink(intrusive_ptr<actor>&& to);
+    bool remove_backlink(intrusive_ptr<actor>&& other);
 
     /**
      * @copydoc establish_backlink(intrusive_ptr<actor>&)
-     * Support for rvalue references.
      */
-    bool establish_backlink(intrusive_ptr<actor>&& to);
+    bool establish_backlink(intrusive_ptr<actor>&& other);
 
     /**
      * @brief Gets the {@link process_information} of the parent process.
@@ -195,6 +195,11 @@ class actor : public channel
      */
     inline actor_id id() const;
 
+    /**
+     * @brief Checks if this actor is running on a remote node.
+     * @returns @c true if this actor represents a remote actor;
+     *          otherwise @c false.
+     */
     inline bool is_proxy() const;
 
 };

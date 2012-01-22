@@ -70,6 +70,8 @@ class object_array : public detail::abstract_tuple
 
     uniform_type_info const* type_at(size_t pos) const;
 
+    std::type_info const& impl_type() const;
+
 };
 
 } } // namespace cppa::detail

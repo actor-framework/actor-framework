@@ -34,7 +34,7 @@
 namespace cppa {
 
 /**
- * @brief Acts as wildcard pattern.
+ * @brief Acts as wildcard expression in patterns.
  */
 struct anything { };
 

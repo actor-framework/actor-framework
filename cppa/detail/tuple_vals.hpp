@@ -116,10 +116,24 @@ class tuple_vals : public abstract_tuple
         return abstract_tuple::equals(other);
     }
 
+    std::type_info const& impl_type() const
+    {
+        return typeid(tuple_vals);
+    }
+
 };
 
 template<typename... ElementTypes>
 types_array<ElementTypes...> tuple_vals<ElementTypes...>::m_types;
+
+template<typename TypeList>
+struct tuple_vals_from_type_list;
+
+template<typename... Types>
+struct tuple_vals_from_type_list< util::type_list<Types...> >
+{
+    typedef tuple_vals<Types...> type;
+};
 
 } } // namespace cppa::detail
 

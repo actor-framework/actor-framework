@@ -45,13 +45,13 @@
 
 namespace cppa { namespace detail {
 
-template<size_t VectorSize>
+template<typename... ElementTypes>
 class decorated_tuple : public abstract_tuple
 {
 
  public:
 
-    typedef util::fixed_vector<size_t, VectorSize> vector_type;
+    typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
 
     typedef cow_ptr<abstract_tuple> ptr_type;
 
@@ -95,6 +95,12 @@ class decorated_tuple : public abstract_tuple
         return false;
     }
 
+    virtual std::type_info const& impl_type() const
+    {
+        return typeid(decorated_tuple);
+    }
+
+
  private:
 
     ptr_type m_decorated;
@@ -109,6 +115,15 @@ class decorated_tuple : public abstract_tuple
 
     decorated_tuple& operator=(decorated_tuple const&) = delete;
 
+};
+
+template<typename TypeList>
+struct decorated_tuple_from_type_list;
+
+template<typename... Types>
+struct decorated_tuple_from_type_list< util::type_list<Types...> >
+{
+    typedef decorated_tuple<Types...> type;
 };
 
 } } // namespace cppa::detail

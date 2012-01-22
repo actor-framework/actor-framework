@@ -205,7 +205,7 @@
  *
  * @section Receive Receive messages
  *
- * The function @p receive takes a @i behavior as argument. The behavior
+ * The function @p receive takes a @p behavior as argument. The behavior
  * is a list of { pattern >> callback } rules.
  *
  * @code
@@ -378,45 +378,33 @@
 namespace cppa {
 
 /**
- * @brief Links the calling actor to @p other.
- * @param other An Actor that is related with the calling Actor.
- */
-void link(actor_ptr& other);
-
-/**
- * @copydoc link(actor_ptr&)
- * Support for rvalue references.
- */
-void link(actor_ptr&& other);
-
-/**
  * @brief Links @p lhs and @p rhs;
- * @param lhs First Actor instance.
- * @param rhs Second Actor instance.
+ * @param lhs Left-hand operand.
+ * @param rhs Right-hand operand.
  * @pre <tt>lhs != rhs</tt>
  */
 void link(actor_ptr&  lhs, actor_ptr&  rhs);
 
 /**
  * @copydoc link(actor_ptr&,actor_ptr&)
- * Support for rvalue references.
  */
 void link(actor_ptr&& lhs, actor_ptr&  rhs);
 
 /**
  * @copydoc link(actor_ptr&,actor_ptr&)
- * Support for rvalue references.
  */
 void link(actor_ptr&& lhs, actor_ptr&& rhs);
 
 /**
  * @copydoc link(actor_ptr&,actor_ptr&)
- * Support for rvalue references.
  */
 void link(actor_ptr&  lhs, actor_ptr&& rhs);
 
 /**
- * @brief Unlinks @p lhs and @p rhs;
+ * @brief Unlinks @p lhs from @p rhs;
+ * @param lhs Left-hand operand.
+ * @param rhs Right-hand operand.
+ * @pre <tt>lhs != rhs</tt>
  */
 void unlink(actor_ptr& lhs, actor_ptr& rhs);
 
@@ -430,7 +418,6 @@ void monitor(actor_ptr& whom);
 
 /**
  * @copydoc monitor(actor_ptr&)
- * Support for rvalue references.
  */
 void monitor(actor_ptr&& whom);
 
@@ -439,29 +426,6 @@ void monitor(actor_ptr&& whom);
  * @param whom Monitored Actor.
  */
 void demonitor(actor_ptr& whom);
-
-/**
- * @brief Gets the @c trap_exit state of the calling Actor.
- * @returns @c true if the Actor explicitly handles Exit messages;
- *          @c false if the Actor uses the default behavior (finish execution
- *          if an Exit message with non-normal exit reason was received).
- */
-inline bool trap_exit()
-{
-    return self->trap_exit();
-}
-
-/**
- * @brief Sets the @c trap_exit state of the calling Actor.
- * @param new_value  Set this to @c true if you want to explicitly handle Exit
- *                   messages. The default is @c false, causing an Actor to
- *                   finish execution if an Exit message with non-normal
- *                   exit reason was received.
- */
-inline void trap_exit(bool new_value)
-{
-    self->trap_exit(new_value);
-}
 
 inline actor_ptr spawn(scheduled_actor* what)
 {
@@ -481,7 +445,7 @@ inline actor_ptr spawn(abstract_event_based_actor* what)
 
 /**
  * @brief Spawns a new actor that executes @p what with given arguments.
- * @param Hint Hint to the scheduler for the best scheduling strategy.
+ * @tparam Hint Hint to the scheduler for the best scheduling strategy.
  * @param what Function or functor that the spawned Actor should execute.
  * @param args Arguments needed to invoke @p what.
  * @returns A pointer to the newly created {@link actor Actor}.
@@ -513,34 +477,6 @@ spawn(F&& what, Args const&... args)
                                actor_ptr>::type
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
-}
-
-/**
- * @copydoc local_actor::quit()
- *
- * Alias for <tt>self->quit(reason);</tt>
- */
-inline void quit(std::uint32_t reason)
-{
-    self->quit(reason);
-}
-
-/**
- * @brief Gets the last dequeued message from the mailbox.
- * @returns The last dequeued message from the mailbox.
- */
-inline any_tuple& last_received()
-{
-    return self->last_dequeued();
-}
-
-/**
- * @brief Gets the sender of the last received message.
- * @returns An {@link actor_ptr} to the sender of the last received message.
- */
-inline actor_ptr& last_sender()
-{
-    return self->last_sender();
 }
 
 #ifdef CPPA_DOCUMENTATION
@@ -634,7 +570,7 @@ self_type const& operator<<(self_type const& s, any_tuple const& what);
 
 self_type const& operator<<(self_type const& s, any_tuple&& what);
 
-#endif
+#endif // CPPA_DOCUMENTATION
 
 template<typename Arg0, typename... Args>
 void reply(Arg0 const& arg0, Args const&... args)
@@ -677,7 +613,6 @@ void publish(actor_ptr& whom, std::uint16_t port);
 
 /**
  * @copydoc publish(actor_ptr&,std::uint16_t)
- * Support for rvalue references.
  */
 void publish(actor_ptr&& whom, std::uint16_t port);
 

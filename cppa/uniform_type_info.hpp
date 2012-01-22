@@ -100,7 +100,7 @@ uniform_type_info const* uniform_typeid(std::type_info const&);
  * Depending on your platform, the error message looks somewhat like this:
  *
  * <tt>
- * terminate called after throwing an instance of 'std::runtime_error'
+ * terminate called after throwing an instance of std::runtime_error
  * <br>
  * what():  uniform_type_info::by_type_info(): foo is an unknown typeid name
  * </tt>

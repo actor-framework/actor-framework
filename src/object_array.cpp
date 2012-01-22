@@ -102,4 +102,9 @@ uniform_type_info const* object_array::type_at(size_t pos) const
     return m_elements[pos].type();
 }
 
+std::type_info const& object_array::impl_type() const
+{
+    return typeid(object_array);
+}
+
 } } // namespace cppa::detail

@@ -197,7 +197,7 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     template<typename T>
     bool invoke_impl(T const& data) const
     {
-        if (detail::matches(data.begin(), m_pattern->begin()))
+        if (matches(data, *m_pattern))
         {
             m_iimpl.m_fun();
             return true;
@@ -225,8 +225,7 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
 
     intermediate* get_intermediate(any_tuple const& data)
     {
-        return detail::matches(data.begin(), m_pattern->begin()) ? &m_iimpl
-                                                                 : nullptr;
+        return matches(data, *m_pattern) ? &m_iimpl : nullptr;
     }
 
 };

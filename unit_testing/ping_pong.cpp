@@ -31,7 +31,7 @@ void ping()
 
 void pong(actor_ptr ping_actor)
 {
-    link(ping_actor);
+    self->link_to(ping_actor);
     // kickoff
     send(ping_actor, atom("pong"), 0);
     receive_loop
@@ -40,7 +40,7 @@ void pong(actor_ptr ping_actor)
         {
             // terminate with non-normal exit reason
             // to force ping actor to quit
-            quit(exit_reason::user_defined);
+            self->quit(exit_reason::user_defined);
         },
         on<atom("ping"), int>() >> [](int value)
         {

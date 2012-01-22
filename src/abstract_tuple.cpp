@@ -42,7 +42,7 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
         if (uti != other.type_at(i)) return false;
         auto lhs = at(i);
         auto rhs = other.at(i);
-        // compare first addresses, then values
+        // compare addresses first, then values
         if (lhs != rhs && !(uti->equals(lhs, rhs))) return false;
     }
     return true;

@@ -112,7 +112,8 @@ class scheduler
                      Duration const& rel_time, Data const&... data)
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        any_tuple tup = make_tuple(util::duration(rel_time), to, data...);
+        any_tuple data_tup = make_tuple(data...);
+        any_tuple tup = make_tuple(util::duration(rel_time), to, data_tup);
         future_send_helper()->enqueue(self, std::move(tup));
     }
 

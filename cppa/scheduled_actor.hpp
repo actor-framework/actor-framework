@@ -33,13 +33,35 @@
 
 namespace cppa {
 
+/**
+ * @brief A base class for context-switching or thread-mapped actor
+ *        implementations.
+ *
+ * This abstract class provides a class-based way to define context-switching
+ * or thread-mapped actors. In general,
+ * you always should use event-based actors. However, if you need to call
+ * blocking functions, or need to have your own thread for other reasons,
+ * this class can be used to define a class-based actor.
+ */
 class scheduled_actor
 {
 
  public:
 
     virtual ~scheduled_actor();
+
+    /**
+     * @brief Can be overridden to perform cleanup code after an actor
+     *        finished execution.
+     * @warning Must not call any function manipulating the actor's state such
+     *          as join, leave, link, or monitor.
+     */
     virtual void on_exit();
+
+    /**
+     * @brief Implements the behavior of a context-switching or thread-mapped
+     *        actor.
+     */
     virtual void act() = 0;
 
 };

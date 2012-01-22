@@ -28,67 +28,29 @@
 \******************************************************************************/
 
 
-#ifndef ATTACHABLE_HPP
-#define ATTACHABLE_HPP
+#ifndef STATIC_FOREACH_HPP
+#define STATIC_FOREACH_HPP
 
-#include <cstdint>
-#include <typeinfo>
+namespace cppa { namespace util {
 
-namespace cppa {
-
-/**
- * @brief Callback utility class.
- */
-class attachable
+template<size_t Begin, size_t End>
+struct static_foreach
 {
-
-    attachable(attachable const&) = delete;
-    attachable& operator=(attachable const&) = delete;
-
- protected:
-
-    attachable() = default;
-
- public:
-
-    /**
-     * @brief Represents a pointer to a value with its RTTI.
-     */
-    struct token
+    template<typename Container, typename Fun>
+    static inline void _(Container const& c, Fun& f)
     {
-        /**
-         * @brief Denotes the type of @c ptr.
-         */
-        std::type_info const& subtype;
-        /**
-         * @brief Any value, used to identify @c attachable instances.
-         */
-        void const* ptr;
-        inline token(std::type_info const& msubtype, void const* mptr)
-            : subtype(msubtype), ptr(mptr)
-        {
-        }
-    };
-
-    virtual ~attachable();
-
-    /**
-     * @brief Executed if the actor finished execution with given @p reason.
-     *
-     * The default implementation does nothing.
-     * @param reason The exit rason of the observed actor.
-     */
-    virtual void actor_exited(std::uint32_t reason) = 0;
-
-    /**
-     * @brief Selects a group of @c attachable instances by @p what.
-     * @param what A value that selects zero or more @c attachable instances.
-     * @returns @c true if @p what selects this instance; otherwise @c false.
-     */
-    virtual bool matches(token const& what) = 0;
-
+        f(get<Begin>(c));
+        static_foreach<Begin+1, End>::_(c, f);
+    }
 };
 
-} // namespace cppa
+template<size_t X>
+struct static_foreach<X, X>
+{
+    template<typename Container, typename Fun>
+    static inline void _(Container const&, Fun&) { }
+};
 
-#endif // ATTACHABLE_HPP
+} } // namespace cppa::util
+
+#endif // STATIC_FOREACH_HPP

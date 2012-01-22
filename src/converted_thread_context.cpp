@@ -103,7 +103,7 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
 converted_thread_context::throw_on_exit_result
 converted_thread_context::throw_on_exit(any_tuple const& msg)
 {
-    if (matches(msg.begin(), m_exit_msg_pattern.begin()))
+    if (matches(msg, m_exit_msg_pattern))
     {
         auto reason = msg.get_as<std::uint32_t>(1);
         if (reason != exit_reason::normal)

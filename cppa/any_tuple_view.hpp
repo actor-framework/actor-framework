@@ -45,6 +45,7 @@
 #include "cppa/util/is_primitive.hpp"
 
 #include "cppa/detail/types_array.hpp"
+#include "cppa/detail/object_array.hpp"
 
 namespace cppa {
 
@@ -145,6 +146,13 @@ class any_tuple_view
     inline T const& get_as(size_t p) const
     {
         return *reinterpret_cast<T const*>(at(p));
+    }
+
+    inline std::type_info const& impl_type() const
+    {
+        // this is a lie, but the pattern matching implementation
+        // needs to do a full runtime check of each element
+        return typeid(detail::object_array);
     }
 
     class const_iterator

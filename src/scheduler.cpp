@@ -148,7 +148,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                                         ptr->msg.at(1)));
                     if (*whom)
                     {
-                        auto msg = ptr->msg.tail(2);
+                        any_tuple msg = *(reinterpret_cast<any_tuple const*>(
+                                            ptr->msg.at(2)));
                         (*whom)->enqueue(ptr->sender.get(), std::move(msg));
                     }
                     messages.erase(it);

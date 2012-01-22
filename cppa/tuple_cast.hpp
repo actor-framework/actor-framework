@@ -51,7 +51,7 @@ option<ResultTuple> tuple_cast_impl(Tuple const& tup, pattern<P...> const& p)
 {
     typedef typename pattern<P...>::filtered_types filtered_types;
     typename pattern<P...>::mapping_vector mv;
-    if (detail::matches(detail::pm_decorated(tup.begin(), &mv), p.begin()))
+    if (detail::matches(tup, p, &mv))
     {
         if (mv.size() == tup.size()) // perfect match
         {
@@ -59,7 +59,7 @@ option<ResultTuple> tuple_cast_impl(Tuple const& tup, pattern<P...> const& p)
         }
         else
         {
-            typedef detail::decorated_tuple<filtered_types::size> decorated;
+            typedef typename detail::decorated_tuple_from_type_list<filtered_types>::type decorated;
             return {ResultTuple::from(tup.vals(), mv)};
         }
     }
@@ -87,11 +87,9 @@ option<ResultTuple> tuple_cast_impl(Tuple const& tup)
     else
     {
         util::fixed_vector<size_t, ResultTuple::num_elements> mv;
-        if (detail::matches(detail::pm_decorated(tup.begin(), &mv),
-                            detail::static_types_array<T...>::arr.begin()))
+        if (detail::matches(tup, detail::static_types_array<T...>::arr, &mv))
         {
             // never a perfect match
-            typedef detail::decorated_tuple<ResultTuple::num_elements> decorated;
             return {ResultTuple::from(tup.vals(), mv)};
         }
     }
