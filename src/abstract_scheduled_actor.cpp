@@ -29,11 +29,16 @@
 
 
 #include "cppa/cppa.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
+
+using std::cout;
+using std::endl;
+#include <iostream>
 
 namespace cppa { namespace detail {
 
@@ -202,6 +207,12 @@ auto abstract_scheduled_actor::dq(queue_node_ptr& node,
     }
     else
     {
+        std::string err_msg = "unhandled message in actor ";
+        err_msg += std::to_string(id());
+        err_msg += ": ";
+        err_msg += to_string(node->msg);
+        err_msg += "\n";
+        cout << err_msg;
         buffer.push_back(node.release());
         return dq_indeterminate;
     }

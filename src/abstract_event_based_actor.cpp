@@ -72,9 +72,9 @@ void abstract_event_based_actor::handle_message(queue_node_ptr& node,
             // request next timeout if needed
             if (!m_loop_stack.empty())
             {
-                if (m_loop_stack.top().is_right())
+                if (m_loop_stack.back().is_right())
                 {
-                    request_timeout(m_loop_stack.top().right().timeout());
+                    request_timeout(m_loop_stack.back().right().timeout());
                 }
             }
             break;
@@ -85,7 +85,7 @@ void abstract_event_based_actor::handle_message(queue_node_ptr& node,
 
 void abstract_event_based_actor::handle_message(queue_node_ptr& node)
 {
-    auto& bhvr = m_loop_stack.top();
+    auto& bhvr = m_loop_stack.back();
     if (bhvr.is_left())
     {
         handle_message(node, bhvr.left());
@@ -102,7 +102,7 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     auto done_cb = [&]()
     {
         m_state.store(abstract_scheduled_actor::done);
-        while (!m_loop_stack.empty()) m_loop_stack.pop();
+        while (!m_loop_stack.empty()) m_loop_stack.pop_back();
         on_exit();
         callback->exec_done();
     };

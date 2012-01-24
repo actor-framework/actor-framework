@@ -524,12 +524,19 @@ void send(intrusive_ptr<C>&& whom, Arg0 const& arg0, Args const&... args)
     if (tmp) tmp->enqueue(self, make_tuple(arg0, args...));
 }
 
+// matches "send(this, ...)" in event-based actors
+template<typename Arg0, typename... Args>
+void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
+{
+    whom->enqueue(whom, make_tuple(arg0, args...));
+}
+
+
 // matches send(self, ...);
 template<typename Arg0, typename... Args>
-void send(self_type const&, Arg0 const& arg0, Args const&... args)
+inline void send(self_type const&, Arg0 const& arg0, Args const&... args)
 {
-    local_actor* s = self;
-    s->enqueue(s, make_tuple(arg0, args...));
+    send(static_cast<local_actor*>(self), arg0, args...);
 }
 
 template<class C>

@@ -71,113 +71,32 @@ class abstract_actor : public Base
  public:
 
     class queue_node_ptr;
-    struct queue_node_deallocator;
 
     struct queue_node
     {
         friend class abstract_actor;
         friend class queue_node_ptr;
-        friend struct queue_node_deallocator;
 
         queue_node* next;
-        std::atomic<queue_node*>* owner;
         actor_ptr sender;
         any_tuple msg;
 
-     private: // you have to be a friend to create or destroy a node
-
-        inline ~queue_node() { }
-        queue_node() : next(nullptr), owner(nullptr) { }
+        queue_node() : next(nullptr) { }
         queue_node(actor* from, any_tuple&& content)
-            : next(nullptr), owner(nullptr), sender(from), msg(std::move(content))
+            : next(nullptr), sender(from), msg(std::move(content))
         {
         }
         queue_node(actor* from, any_tuple const& content)
-            : next(nullptr), owner(nullptr), sender(from), msg(content)
+            : next(nullptr), sender(from), msg(content)
         {
         }
     };
 
-    struct queue_node_deallocator
-    {
-        inline void operator()(queue_node* ptr)
-        {
-            if (ptr)
-            {
-                if (ptr->owner != nullptr)
-                {
-                    ptr->sender.reset();
-                    ptr->msg = any_tuple();
-                    auto owner = ptr->owner;
-                    ptr->next = owner->load();
-                    for (;;)
-                    {
-                        if (owner->compare_exchange_weak(ptr->next, ptr)) return;
-                    }
-                }
-                else
-                {
-                    delete ptr;
-                }
-            }
-        }
-    };
-
-    class queue_node_ptr
-    {
-
-        queue_node* m_ptr;
-        queue_node_deallocator d;
-
-        queue_node_ptr(queue_node_ptr const&) = delete;
-        queue_node_ptr& operator=(queue_node_ptr const&) = delete;
-
-     public:
-
-        inline queue_node_ptr(queue_node* ptr = nullptr) : m_ptr(ptr)
-        {
-        }
-
-        inline queue_node_ptr(queue_node_ptr&& other) : m_ptr(other.m_ptr)
-        {
-            other.m_ptr = nullptr;
-        }
-
-        inline ~queue_node_ptr()
-        {
-            d(m_ptr);
-        }
-
-        inline queue_node* operator->() { return m_ptr; }
-
-        inline queue_node* release()
-        {
-            auto result = m_ptr;
-            m_ptr = nullptr;
-            return result;
-        }
-
-        inline void reset(queue_node* ptr = nullptr)
-        {
-            d(m_ptr);
-            m_ptr = ptr;
-        }
-
-        inline queue_node_ptr& operator=(queue_node_ptr&& other)
-        {
-            reset(other.release());
-            return *this;
-        }
-
-        inline operator bool() const { return m_ptr != nullptr; }
-
-    };
+    typedef std::unique_ptr<queue_node> queue_node_ptr;
 
  protected:
 
-    queue_node m_prefetched_nodes[10];
-    std::atomic<queue_node*> m_prefetched;
-    util::single_reader_queue<queue_node,queue_node_deallocator> m_mailbox;
+    util::single_reader_queue<queue_node> m_mailbox;
 
  private:
 
@@ -220,20 +139,8 @@ class abstract_actor : public Base
  protected:
 
     template<typename T>
-    queue_node* fetch_node(actor* sender, T&& msg)
+    inline queue_node* fetch_node(actor* sender, T&& msg)
     {
-        queue_node* result = m_prefetched.load();
-        while (result)
-        {
-            queue_node* next = result->next;
-            if (m_prefetched.compare_exchange_weak(result, next))
-            {
-                result->next = nullptr;
-                result->sender.reset(sender);
-                result->msg = std::forward<T>(msg);
-                return result;
-            }
-        }
         return new queue_node(sender, std::forward<T>(msg));
     }
 
@@ -241,13 +148,6 @@ class abstract_actor : public Base
     abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
                                    , m_exit_reason(exit_reason::not_exited)
     {
-        for (int i = 0; i < 9; ++i)
-        {
-            m_prefetched_nodes[i].next = &(m_prefetched_nodes[i+1]);
-            m_prefetched_nodes[i].owner = &m_prefetched;
-        }
-        m_prefetched_nodes[9].owner = &m_prefetched;
-        m_prefetched.store(m_prefetched_nodes);
     }
 
     void cleanup(std::uint32_t reason)

@@ -66,4 +66,16 @@
 #  error Plattform and/or compiler not supportet
 #endif
 
+#ifdef CPPA_DEBUG
+#include <cstdlib>
+#define CPPA_REQUIRE__(stmt, file, line)                                       \
+    printf("%s:%u: requirement failed '%s'\n", file, line, stmt); abort()
+#define CPPA_REQUIRE(stmt)                                                     \
+    if ((stmt) == false) {                                                     \
+        CPPA_REQUIRE__(#stmt, __FILE__, __LINE__);                             \
+    }((void) 0)
+#else // CPPA_DEBUG
+#define CPPA_REQUIRE(unused) ((void) 0)
+#endif // CPPA_DEBUG
+
 #endif // CPPA_CONFIG_HPP

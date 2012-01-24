@@ -30,11 +30,32 @@
 
 #include "cppa/event_based_actor.hpp"
 
+namespace {
+
+template<class StackElement, class Vec, class What>
+void push_to(Vec& vec, What* bhvr, bool has_ownership)
+{
+    // keep always the latest element in the stack to prevent subtle errors,
+    // e.g., the addresses of all variables in a lambda expression calling
+    // become() suddenly are invalid if we would pop the behavior!
+    if (vec.size() < 2)
+    {
+        vec.push_back(StackElement(bhvr, has_ownership));
+    }
+    else
+    {
+        vec[0] = std::move(vec[1]);
+        vec[1] = StackElement(bhvr, has_ownership);
+    }
+}
+
+} // namespace <anonymous>
+
 namespace cppa {
 
 void event_based_actor::become_void()
 {
-    while (!m_loop_stack.empty()) m_loop_stack.pop();
+    m_loop_stack.clear();
 }
 
 void event_based_actor::do_become(behavior* bhvr)
@@ -51,16 +72,14 @@ void event_based_actor::do_become(behavior* bhvr)
 
 void event_based_actor::do_become(invoke_rules* bhvr, bool has_ownership)
 {
-    become_void();
     reset_timeout();
-    m_loop_stack.push(stack_element(bhvr, has_ownership));
+    push_to<stack_element>(m_loop_stack, bhvr, has_ownership);
 }
 
 void event_based_actor::do_become(timed_invoke_rules* bhvr, bool has_ownership)
 {
-    become_void();
     request_timeout(bhvr->timeout());
-    m_loop_stack.push(stack_element(bhvr, has_ownership));
+    push_to<stack_element>(m_loop_stack, bhvr, has_ownership);
 }
 
 } // namespace cppa

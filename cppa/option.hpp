@@ -31,60 +31,67 @@
 #ifndef OPTION_HPP
 #define OPTION_HPP
 
+#include <new>
+#include <utility>
+#include "cppa/config.hpp"
+
 namespace cppa {
 
+/**
+ * @brief Represents an optional value of @p T.
+ */
 template<typename T>
 class option
 {
 
-    union
-    {
-        T m_value;
-    };
-
-    bool m_valid;
-
-    void destroy()
-    {
-        if (m_valid) m_value.~T();
-    }
-
-    template<typename V>
-    void cr(V&& value)
-    {
-        m_valid = true;
-        new (&m_value) T (std::forward<V>(value));
-    }
-
  public:
 
+    /**
+     * @brief Typdef for @p T.
+     */
     typedef T value_type;
 
+    /**
+     * @brief Default constructor.
+     * @post <tt>valid() == false</tt>
+     */
     option() : m_valid(false) { }
 
-    template<typename V>
-    option(V&& value)
-    {
-        cr(std::forward<V>(value));
-    }
+    /**
+     * @brief Creates an @p option from @p value.
+     * @post <tt>valid() == true</tt>
+     */
+    option(T&& value) { cr(std::move(value)); }
 
+    /**
+     * @brief Creates an @p option from @p value.
+     * @post <tt>valid() == true</tt>
+     */
+    option(T const& value) { cr(value); }
+
+    /**
+     * @brief Copy constructor.
+     */
     option(option const& other)
     {
         if (other.m_valid) cr(other.m_value);
         else m_valid = false;
     }
 
+    /**
+     * @brief Move constructor.
+     */
     option(option&& other)
     {
         if (other.m_valid) cr(std::move(other.m_value));
         else m_valid = false;
     }
 
-    ~option()
-    {
-        destroy();
-    }
+    ~option() { destroy(); }
 
+    /**
+     * @brief Copy assignment.
+     */
     option& operator=(option const& other)
     {
         if (m_valid)
@@ -99,16 +106,16 @@ class option
                 m_valid = false;
             }
         }
-        else
+        else if (other.m_valid)
         {
-            if (other.m_valid)
-            {
-                cr(other.m_value);
-            }
+            cr(other.m_value);
         }
         return *this;
     }
 
+    /**
+     * @brief Move assignment.
+     */
     option& operator=(option&& other)
     {
         if (m_valid)
@@ -123,16 +130,16 @@ class option
                 m_valid = false;
             }
         }
-        else
+        else if (other.m_valid)
         {
-            if (other.m_valid)
-            {
-                cr(std::move(other.m_value));
-            }
+            cr(std::move(other.m_value));
         }
         return *this;
     }
 
+    /**
+     * @brief Copy assignment.
+     */
     option& operator=(T const& value)
     {
         if (m_valid) m_value = value;
@@ -140,6 +147,9 @@ class option
         return *this;
     }
 
+    /**
+     * @brief Move assignment.
+     */
     option& operator=(T& value)
     {
         if (m_valid) m_value = std::move(value);
@@ -147,32 +157,131 @@ class option
         return *this;
     }
 
+    /**
+     * @brief Returns @p true if this @p option has a valid value;
+     *        otherwise @p false.
+     */
     inline bool valid() const { return m_valid; }
 
+    /**
+     * @copydoc valid()
+     */
     inline explicit operator bool() const { return m_valid; }
 
+    /**
+     * @brief Returns @p false if this @p option has a valid value;
+     *        otherwise @p true.
+     */
     inline bool operator!() const { return !m_valid; }
 
-    inline T& operator*() { return m_value; }
-    inline T const& operator*() const { return m_value; }
-
-    inline T& get() { return m_value; }
-
-    inline T const& get() const { return m_value; }
-
-    inline T& get_or_else(T const& val)
+    /**
+     * @brief Returns the value.
+     */
+    inline T& operator*()
     {
-        if (!m_valid) cr(val);
+        CPPA_REQUIRE(valid());
         return m_value;
     }
 
-    inline T& get_or_else(T&& val)
+    /**
+     * @brief Returns the value.
+     */
+    inline T const& operator*() const
     {
-        if (!m_valid) cr(std::move(val));
+        CPPA_REQUIRE(valid());
         return m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
+    inline T& get()
+    {
+        CPPA_REQUIRE(valid());
+        return m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
+    inline T const& get() const
+    {
+        CPPA_REQUIRE(valid());
+        return m_value;
+    }
+
+    /**
+     * @brief Returns the value of this @p option if it's valid
+     *        or @p default_value.
+     */
+    inline T& get_or_else(T const& default_value)
+    {
+        if (!m_valid) cr(default_value);
+        return m_value;
+    }
+
+    /**
+     * @copydoc get_or_else(T const&)
+     */
+    inline T& get_or_else(T&& default_value)
+    {
+        if (!m_valid) cr(std::move(default_value));
+        return m_value;
+    }
+
+ public:
+
+    bool m_valid;
+    union { T m_value; };
+
+    void destroy() { if (m_valid) m_value.~T(); }
+
+    template<typename V>
+    void cr(V&& value)
+    {
+        m_valid = true;
+        new (&m_value) T (std::forward<V>(value));
     }
 
 };
+
+template<typename T>
+bool operator==(option<T> const& lhs, option<T> const& rhs)
+{
+    if ((lhs) && (rhs)) return *lhs == *rhs;
+    return false;
+}
+
+template<typename T>
+bool operator==(option<T> const& lhs, T const& rhs)
+{
+    if (lhs) return *lhs == rhs;
+    return false;
+}
+
+template<typename T>
+bool operator==(T const& lhs, option<T> const& rhs)
+{
+    return rhs == lhs;
+}
+
+template<typename T>
+bool operator!=(option<T> const& lhs, option<T> const& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<typename T>
+bool operator!=(option<T> const& lhs, T const& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<typename T>
+bool operator!=(T const& lhs, option<T> const& rhs)
+{
+    return !(lhs == rhs);
+}
 
 } // namespace cppa
 

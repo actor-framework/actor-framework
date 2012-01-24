@@ -31,10 +31,10 @@ long the_test(int msg_count)
     auto msg = make_tuple(atom("AddCount"), val);
     for (int i = 0; i < msg_count; ++i)
     {
-        send_tuple(counter, msg);
+        counter << msg;
         //send(counter, atom("AddCount"), val);
     }
-    send(counter, atom("Get"), self());
+    send(counter, atom("Get"), self);
     long result = 0;
     receive
     (
@@ -64,3 +64,4 @@ int main()
     await_all_others_done();
     return 0;
 }
+

@@ -60,7 +60,7 @@ class tuple_view
     template<size_t N, typename... Types>
     friend typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>&);
 
-    void const* m_data[sizeof...(ElementTypes)];
+    void* m_data[sizeof...(ElementTypes)];
 
     tuple_view() { }
 
@@ -70,7 +70,7 @@ class tuple_view
 
     typedef util::type_list<ElementTypes...> types;
 
-    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void const*> > const& vec)
+    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void*> > const& vec)
     {
         tuple_view result;
         size_t j = 0;
@@ -81,7 +81,7 @@ class tuple_view
         return std::move(result);
     }
 
-    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void const*> > const& vec,
+    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void*> > const& vec,
                            util::fixed_vector<size_t, sizeof...(ElementTypes)> const& mv)
     {
         tuple_view result;
@@ -110,6 +110,8 @@ class tuple_view
 
     inline void const* at(size_t p) const { return m_data[p]; }
 
+    inline void* mutable_at(size_t p) { return m_data[p]; }
+
 };
 
 template<size_t N, typename... Types>
@@ -120,13 +122,13 @@ const typename util::at<N, Types...>::type& get(tuple_view<Types...> const& t)
     return *reinterpret_cast<result_t const*>(t.at(N));
 }
 
-//template<size_t N, typename... Types>
-//typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t)
-//{
-//    static_assert(N < sizeof...(Types), "N >= t.size()");
-//    typedef typename util::at<N, Types...>::type result_t;
-//    return *reinterpret_cast<result_t*>(t.m_vals->mutable_at(N));
-//}
+template<size_t N, typename... Types>
+typename util::at<N, Types...>::type& get_ref(tuple_view<Types...>& t)
+{
+    static_assert(N < sizeof...(Types), "N >= t.size()");
+    typedef typename util::at<N, Types...>::type result_t;
+    return *reinterpret_cast<result_t*>(t.mutable_at(N));
+}
 
 template<typename TypeList>
 struct tuple_view_from_type_list;

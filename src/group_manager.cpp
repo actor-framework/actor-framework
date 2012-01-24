@@ -47,22 +47,16 @@ typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 
 class local_group_module;
 
-class local_group : public group
+class group_impl : public group
 {
-
-    friend class local_group_module;
 
     util::shared_spinlock m_shared_mtx;
     std::set<channel_ptr> m_subscribers;
 
-    // allow access to local_group_module only
-    local_group(std::string&& gname) : group(std::move(gname), "local")
-    {
-    }
+ protected:
 
-    local_group(const std::string& gname) : group(gname, "local")
-    {
-    }
+    template<typename F, typename S>
+    group_impl(F&& f, S&& s) : group(std::forward<F>(f), std::forward<S>(s)) { }
 
  public:
 
@@ -71,6 +65,8 @@ class local_group : public group
         shared_guard guard(m_shared_mtx);
         for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
         {
+            // this cast is safe because we don't affect the "value"
+            // of *i, thus, the set remains in a consistent state
             const_cast<channel_ptr&>(*i)->enqueue(sender, msg);
         }
     }
@@ -81,7 +77,7 @@ class local_group : public group
         enqueue(sender, tmp);
     }
 
-    virtual group::subscription subscribe(const channel_ptr& who)
+    group::subscription subscribe(const channel_ptr& who) /*override*/
     {
         group::subscription result;
         exclusive_guard guard(m_shared_mtx);
@@ -92,11 +88,24 @@ class local_group : public group
         return result;
     }
 
-    virtual void unsubscribe(const channel_ptr& who)
+    void unsubscribe(const channel_ptr& who) /*override*/
     {
         exclusive_guard guard(m_shared_mtx);
         m_subscribers.erase(who);
     }
+};
+
+struct anonymous_group : group_impl
+{
+    anonymous_group() : group_impl("anonymous", "anonymous") { }
+};
+
+class local_group : public group_impl
+{
+
+    friend class local_group_module;
+
+    local_group(std::string const& gname) : group_impl(gname, "local") { }
 
 };
 
@@ -110,9 +119,7 @@ class local_group_module : public group::module
 
  public:
 
-    local_group_module() : super("local")
-    {
-    }
+    local_group_module() : super("local") { }
 
     group_ptr get(const std::string& group_name)
     {
@@ -145,6 +152,11 @@ group_manager::group_manager()
 {
     std::unique_ptr<group::module> ptr(new local_group_module);
     m_mmap.insert(std::make_pair(std::string("local"), std::move(ptr)));
+}
+
+intrusive_ptr<group> group_manager::anonymous()
+{
+    return new anonymous_group;
 }
 
 intrusive_ptr<group> group_manager::get(const std::string& module_name,

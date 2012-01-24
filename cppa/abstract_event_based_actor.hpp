@@ -35,9 +35,10 @@
 #include <memory>
 #include <vector>
 
+#include "cppa/config.hpp"
+#include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/invoke_rules.hpp"
-#include "cppa/util/either.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -101,7 +102,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
         stack_element(stack_element const&) = delete;
         stack_element& operator=(stack_element const&) = delete;
 
-        util::either<invoke_rules*, timed_invoke_rules*> m_ptr;
+        either<invoke_rules*, timed_invoke_rules*> m_ptr;
         bool m_ownership;
 
         inline stack_element(invoke_rules* ptr, bool take_ownership)
@@ -142,30 +143,24 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
                 }
             }
         }
-        inline bool is_left()
-        {
-            return m_ptr.is_left();
-        }
-        inline bool is_right()
-        {
-            return m_ptr.is_right();
-        }
+        inline bool is_left() { return m_ptr.is_left(); }
+        inline bool is_right() { return m_ptr.is_right(); }
         inline invoke_rules& left()
         {
             auto ptr = m_ptr.left();
-            if (ptr == nullptr) throw std::runtime_error("nullptr");
+            CPPA_REQUIRE(ptr != nullptr);
             return *(ptr);
         }
         inline timed_invoke_rules& right()
         {
             auto ptr = m_ptr.right();
-            if (ptr == nullptr) throw std::runtime_error("nullptr");
+            CPPA_REQUIRE(ptr != nullptr);
             return *(ptr);
         }
     };
 
     queue_node_buffer m_buffer;
-    std::stack<stack_element, std::vector<stack_element> > m_loop_stack;
+    std::vector<stack_element> m_loop_stack;
 
     // provoke compiler errors for usage of receive() and related functions
 

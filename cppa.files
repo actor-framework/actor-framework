@@ -215,7 +215,7 @@ examples/hello_world_example.cpp
 examples/math_actor_example.cpp
 cppa/detail/yielding_actor.hpp
 src/yielding_actor.cpp
-cppa/util/either.hpp
+cppa/either.hpp
 cppa/abstract_event_based_actor.hpp
 src/abstract_event_based_actor.cpp
 cppa/event_based_actor.hpp
@@ -261,3 +261,4 @@ benchmarks/theron_actor_creation.cpp
 benchmarks/theron_mixed_case.cpp
 cppa/util/static_foreach.hpp
 cppa/type_value_pair.hpp
+examples/dining_hakkers.cpp

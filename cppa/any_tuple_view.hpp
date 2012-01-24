@@ -52,7 +52,7 @@ namespace cppa {
 class any_tuple_view
 {
 
-    typedef std::vector< std::pair<uniform_type_info const*, void const*> >
+    typedef std::vector< std::pair<uniform_type_info const*, void*> >
             vector_type;
 
     vector_type m_values;
@@ -86,6 +86,7 @@ class any_tuple_view
         }
     }
 
+    /*
     template<typename... T>
     explicit any_tuple_view(tuple<T...> const& tup)
     {
@@ -94,6 +95,7 @@ class any_tuple_view
             m_values.push_back(std::make_pair(tup.type_at(i), tup.at(i)));
         }
     }
+    */
 
     template<typename... T>
     any_tuple_view(tuple_view<T...> const& tup)
@@ -113,16 +115,16 @@ class any_tuple_view
     }
 
     template<typename T>
-    any_tuple_view(std::set<T> const& vec) { from_list(vec); }
+    any_tuple_view(std::set<T>& vec) { from_list(vec); }
 
     template<typename T>
-    any_tuple_view(std::list<T> const& vec) { from_list(vec); }
+    any_tuple_view(std::list<T>& vec) { from_list(vec); }
 
     template<typename T>
-    any_tuple_view(std::vector<T> const& vec) { from_list(vec); }
+    any_tuple_view(std::vector<T>& vec) { from_list(vec); }
 
     template<typename T>
-    any_tuple_view(T const& val,
+    any_tuple_view(T& val,
                    typename util::enable_if<util::is_primitive<T> >::type* = 0)
     {
         auto& arr = detail::static_types_array<T>::arr;
@@ -134,6 +136,8 @@ class any_tuple_view
     inline size_t size() const { return m_values.size(); }
 
     inline void const* at(size_t p) const { return m_values[p].second; }
+
+    void* mutable_at(size_t p) { return m_values[p].second; }
 
     inline uniform_type_info const* type_at(size_t p) const
     {

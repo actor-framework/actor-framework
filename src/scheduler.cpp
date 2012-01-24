@@ -149,7 +149,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                     if (*whom)
                     {
                         any_tuple msg = *(reinterpret_cast<any_tuple const*>(
-                                            ptr->msg.at(2)));
+                                                  ptr->msg.at(2)));
                         (*whom)->enqueue(ptr->sender.get(), std::move(msg));
                     }
                     messages.erase(it);
@@ -159,7 +159,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 // wait for next message or next timeout
                 if (it != messages.end())
                 {
-                    msg_ptr = queue.try_pop(it->first);
+                    msg_ptr.reset(queue.try_pop(it->first));
                 }
             }
         }

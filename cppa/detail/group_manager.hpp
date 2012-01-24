@@ -49,6 +49,8 @@ class group_manager
     intrusive_ptr<group> get(std::string const& module_name,
                              std::string const& group_identifier);
 
+    intrusive_ptr<group> anonymous();
+
     void add_module(group::module*);
 
  private:

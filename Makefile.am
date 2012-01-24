@@ -88,6 +88,7 @@ nobase_library_include_HEADERS = \
   cppa/cow_ptr.hpp \
   cppa/cppa.hpp \
   cppa/deserializer.hpp \
+  cppa/either.hpp \
   cppa/event_based_actor.hpp \
   cppa/event_based_actor_base.hpp \
   cppa/abstract_event_based_actor.hpp \
@@ -179,7 +180,6 @@ nobase_library_include_HEADERS = \
   cppa/util/disable_if.hpp \
   cppa/util/disjunction.hpp \
   cppa/util/duration.hpp \
-  cppa/util/either.hpp \
   cppa/util/element_at.hpp \
   cppa/util/enable_if.hpp \
   cppa/util/fiber.hpp \

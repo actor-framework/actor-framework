@@ -152,6 +152,15 @@ class group : public channel
                                     std::string const& group_identifier);
 
     /**
+     * @brief Returns an anonymous group.
+     *
+     * Each calls to this member function returns a new instances
+     * of an anonymous group. Anonymous groups can be used whenever
+     * a set of actors wants to communicate over an exclusive channel.
+     */
+    static intrusive_ptr<group> anonymous();
+
+    /**
      * @brief Add a new group module to the libcppa group management.
      * @threadsafe
      */

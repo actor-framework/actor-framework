@@ -52,14 +52,11 @@ class any_tuple
 
     /**
      * @brief Creates an empty tuple.
-     * @post <tt>empty() == true</tt>
      */
     any_tuple();
 
     /**
      * @brief Creates a tuple from @p t.
-     * @param t A typed tuple representation.
-     * @post <tt>empty() == false</tt>
      */
     template<typename... Args>
     any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
@@ -78,13 +75,11 @@ class any_tuple
 
     /**
      * @brief Move assignment.
-     * @returns <tt>*this</tt>.
      */
     any_tuple& operator=(any_tuple&&);
 
     /**
      * @brief Copy assignment.
-     * @returns <tt>*this</tt>.
      */
     any_tuple& operator=(any_tuple const&) = default;
 

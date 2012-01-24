@@ -45,9 +45,7 @@ namespace cppa { namespace detail {
 
 class task_scheduler;
 
-/**
- * @brief A spawned, scheduled Actor.
- */
+// A spawned, scheduled Actor.
 class abstract_scheduled_actor : public abstract_actor<local_actor>
 {
 
@@ -65,7 +63,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     typedef abstract_actor super;
     typedef super::queue_node queue_node;
-    typedef util::singly_linked_list<queue_node,super::queue_node_deallocator>
+    typedef util::singly_linked_list<queue_node>
             queue_node_buffer;
 
     enum dq_result

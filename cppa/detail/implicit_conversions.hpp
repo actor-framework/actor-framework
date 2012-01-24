@@ -67,9 +67,8 @@ struct implicit_conversions
             subtype3;
 
     typedef typename util::replace_type<subtype3, actor_ptr,
-                                        std::is_same<actor*,T>,
-                                        std::is_same<local_actor*,T>,
-                                        std::is_same<self_type,T>,
+                                        std::is_convertible<T, actor*>,
+                                        std::is_convertible<T, local_actor*>,
                                         std::is_same<self_type,T>>::type
             type;
 
