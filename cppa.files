@@ -261,4 +261,4 @@ benchmarks/theron_actor_creation.cpp
 benchmarks/theron_mixed_case.cpp
 cppa/util/static_foreach.hpp
 cppa/type_value_pair.hpp
-examples/dining_hakkers.cpp
+examples/dining_philosophers.cpp
