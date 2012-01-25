@@ -32,7 +32,9 @@
 #define DECORATED_TUPLE_HPP
 
 #include <vector>
+#include <algorithm>
 
+#include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -58,21 +60,26 @@ class decorated_tuple : public abstract_tuple
     decorated_tuple(ptr_type&& d, vector_type const& v)
         : m_decorated(std::move(d)), m_mappings(v)
     {
+        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
+        CPPA_REQUIRE(std::max_element(v.begin(), v.end()) < m_decorated->size());
     }
 
     decorated_tuple(ptr_type const& d, vector_type const& v)
         : m_decorated(d), m_mappings(v)
     {
+        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
+        CPPA_REQUIRE(std::max_element(v.begin(), v.end()) < m_decorated->size());
     }
 
     virtual void* mutable_at(size_t pos)
     {
+        CPPA_REQUIRE(pos < size());
         return m_decorated->mutable_at(m_mappings[pos]);
     }
 
     virtual size_t size() const
     {
-        return m_mappings.size();
+        return sizeof...(ElementTypes);
     }
 
     virtual decorated_tuple* copy() const
@@ -82,11 +89,13 @@ class decorated_tuple : public abstract_tuple
 
     virtual void const* at(size_t pos) const
     {
+        CPPA_REQUIRE(pos < size());
         return m_decorated->at(m_mappings[pos]);
     }
 
     virtual uniform_type_info const* type_at(size_t pos) const
     {
+        CPPA_REQUIRE(pos < size());
         return m_decorated->type_at(m_mappings[pos]);
     }
 
