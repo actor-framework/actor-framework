@@ -30,11 +30,10 @@
 
 #include <vector>
 #include <chrono>
-#include <iostream>
 #include <sstream>
+#include <iostream>
 
 #include "cppa/cppa.hpp"
-#include "cppa/fsm_actor.hpp"
 
 using std::cout;
 using std::endl;
@@ -133,6 +132,8 @@ struct philosopher : fsm_actor<philosopher>
         (
             on(atom("taken"), what) >> [=]()
             {
+                // create message in memory to avoid interleaved
+                // messages on the terminal
                 std::ostringstream oss;
                 oss << name
                     << " has picked up chopsticks with IDs "
@@ -198,7 +199,7 @@ struct philosopher : fsm_actor<philosopher>
                 become(&thinking);
             }
         );
-        // philosopher obtained both chopsticsk and eats (for five seconds)
+        // philosopher obtained both chopstick and eats (for five seconds)
         eating =
         (
             on(atom("think")) >> [=]()
@@ -225,7 +226,7 @@ struct philosopher : fsm_actor<philosopher>
 
 };
 
-int main()
+int main(int, char**)
 {
     // create five chopsticks
     cout << "chopstick ids:";
