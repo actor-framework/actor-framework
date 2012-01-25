@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <cstring>      // strerror
 #include <unistd.h>
+#include <iostream>
 #include <sys/time.h>
 #include <sys/types.h>
 
@@ -73,7 +74,16 @@ struct network_manager_impl : network_manager
         m_loop = thread(post_office_loop, m_pipe[0], m_pipe[1]);
     }
 
-    int write_handle()
+    void write_to_pipe(pipe_msg const& what)
+    {
+        if (write(m_pipe[1], what, pipe_msg_size) != (int) pipe_msg_size)
+        {
+            std::cerr << "FATAL: cannot write to pipe" << std::endl;
+            abort();
+        }
+    }
+
+    inline int write_handle() const
     {
         return m_pipe[1];
     }
@@ -91,7 +101,7 @@ struct network_manager_impl : network_manager
     void stop() /*override*/
     {
         pipe_msg msg = { shutdown_event, 0 };
-        write(write_handle(), msg, pipe_msg_size);
+        write_to_pipe(msg);
         // m_loop calls close(m_pipe[0])
         m_loop.join();
         close(m_pipe[0]);

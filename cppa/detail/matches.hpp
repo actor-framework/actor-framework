@@ -329,6 +329,7 @@ bool matches(std::integral_constant<int, 1>,
              Tuple const& tpl, Pattern const& pttrn,
              util::fixed_vector<size_t, Pattern::filtered_size>* mv)
 {
+    static_assert(Pattern::size > 0, "empty pattern");
     auto end = pttrn.end();
     --end; // iterate until we reach "anything"
     size_t i = 0;
@@ -351,8 +352,13 @@ bool matches(std::integral_constant<int, 1>,
             if (iter->first != tpl.type_at(i)) return false;
         }
     }
-    // ok => match
-    if (mv) for (size_t i = 0; i < Pattern::size; ++i) mv->push_back(i);
+    // ok => match, fill vector if needed and pattern is != <anything>
+    if (mv)
+    {
+        // fill vector up to the position of 'anything'
+        size_t end = Pattern::size - 1;
+        for (size_t i = 0; i < end; ++i) mv->push_back(i);
+    }
     return true;
 }
 
@@ -373,13 +379,13 @@ inline bool matches(Tuple const& tpl, Pattern const& pttrn,
 {
     typedef typename Pattern::types ptypes;
     static constexpr int first_anything = util::tl_find<ptypes, anything>::value;
-    // impl1 = no anything
-    // impl2 = anything at end
-    // impl3 = anything somewhere in between
+    // impl0 = no anything
+    // impl1 = anything at end
+    // impl2 = anything somewhere in between
     static constexpr int impl = (first_anything == -1)
             ? 0
             : ((first_anything == ((int) Pattern::size) - 1) ? 1 : 2);
-    static constexpr std::integral_constant<int, impl> token;
+    std::integral_constant<int, impl> token;
     return matches(token, tpl, pttrn, mv);
 }
 

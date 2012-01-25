@@ -15,7 +15,7 @@ AC_PROG_LIBTOOL
 # check for C++0x compatibility
 AC_LANG([C++])
 ORIGINAL_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS -Werror --std=c++0x"
+CPPFLAGS="$CPPFLAGS -Werror -std=c++0x"
 
 AC_CACHE_CHECK(
   [whether C++ compiler supports variadic templates],
@@ -24,16 +24,15 @@ AC_CACHE_CHECK(
                     [ac_cv_cpp_variadic_templates=yes],
                     [ac_cv_cpp_variadic_templates=no]))
 
-AC_CACHE_CHECK(
-  [whether C++ compiler supports nullptr],
-  [ac_cv_cpp_nullptr],
-  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[static void* myptr = nullptr;]])],
-                    [ac_cv_cpp_nullptr=yes],
-                    [ac_cv_cpp_nullptr=no]))
+#AC_CACHE_CHECK(
+#  [whether C++ compiler supports nullptr],
+#  [ac_cv_cpp_nullptr],
+#  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[static void* myptr = nullptr;]])],
+#                    [ac_cv_cpp_nullptr=yes],
+#                    [ac_cv_cpp_nullptr=no]))
 
 AS_IF(
-  [test "x$ac_cv_cpp_variadic_templates" = "xyes" &&
-   test "x$ac_cv_cpp_nullptr" = "xyes"],
+  [test "x$ac_cv_cpp_variadic_templates" = "xyes" ],
   [],
   [AC_MSG_ERROR([at least one required C++ compiler feature is not supported])])
 

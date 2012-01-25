@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <iostream>
+
 #include "cppa/cppa.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"

@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include <list>
 #include <string>
 #include <utility>
@@ -40,7 +42,10 @@ size_t test__tuple()
     CPPA_CHECK_EQUAL(t0_0, "1");
     CPPA_CHECK_EQUAL(t0_1, 2);
     // get a view of t0
-    auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(t0));
+    /*
+    any_tuple atup0(t0);
+    any_tuple_view aview0(atup0);
+    auto v1opt = tuple_cast<std::string, anything>(aview0);
     CPPA_CHECK((v1opt));
     if (v1opt)
     {
@@ -49,16 +54,19 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(v1.size(), 1);
         CPPA_CHECK_EQUAL(v1_0, "1");
     }
+    // */
     // use tuple cast to get a subtuple
-    auto v0opt = tuple_cast<std::string, anything>(t0);
+    any_tuple at0(t0);
+    auto v0opt = tuple_cast<std::string, anything>(at0);
     CPPA_CHECK((v0opt));
     if (v0opt)
     {
-        auto& v0 = *v0opt;
+        tuple<std::string>& v0 = *v0opt;
         auto v0_0 = get<0>(v0);
         CPPA_CHECK((std::is_same<decltype(v0_0), std::string>::value));
         CPPA_CHECK_EQUAL(v0.size(), 1);
         CPPA_CHECK_EQUAL(v0_0, "1");
+        CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));
         // check cow semantics
         CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same string
         get_ref<0>(t0) = "hello world";                 // detaches t0 from v0

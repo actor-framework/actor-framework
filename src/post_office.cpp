@@ -497,8 +497,6 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
     FD_SET(pipe_read_handle, &readset);
     // keeps track about what peer we are iterating at the moment
     po_peer* selected_peer = nullptr;
-    // our thread id
-    auto thread_id = this_thread::get_id();
     // our event queue
     auto& msg_queue = singleton_manager::get_network_manager()->post_office_queue();
     auto pself = process_information::get();
@@ -526,7 +524,11 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
             // this callback is not guaranteed to be executed in the same thread
             msg_queue.push_back(new post_office_msg(pptr_copy));
             pipe_msg msg = { rd_queue_event, 0 };
-            write(pipe_write_handle, msg, pipe_msg_size);
+            if (write(pipe_write_handle, msg, pipe_msg_size) != (int) pipe_msg_size)
+            {
+                cerr << "FATAL: cannot write to pipe" << endl;
+                abort();
+            }
         });
     });
     for (;;)
@@ -565,7 +567,11 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
             pipe_msg pmsg;
             //memcpy(pmsg, pipe_msg_buf.data(), pipe_msg_buf.size());
             //pipe_msg_buf.clear();
-            ::read(pipe_read_handle, &pmsg, pipe_msg_size);
+            if (::read(pipe_read_handle, &pmsg, pipe_msg_size) != (int) pipe_msg_size)
+            {
+                cerr << "FATAL: cannot read from pipe" << endl;
+                abort();
+            }
             switch (pmsg[0])
             {
                 case rd_queue_event:
@@ -741,7 +747,7 @@ void post_office_add_peer(native_socket_type a0,
     nm->post_office_queue().push_back(new post_office_msg(a0, a1, a2,
                                                           std::move(a3)));
     pipe_msg msg = { rd_queue_event, 0 };
-    write(nm->write_handle(), msg, pipe_msg_size);
+    nm->write_to_pipe(msg);
 }
 
 void post_office_publish(native_socket_type server_socket,
@@ -752,7 +758,7 @@ void post_office_publish(native_socket_type server_socket,
     nm->post_office_queue().push_back(new post_office_msg(server_socket,
                                                           published_actor));
     pipe_msg msg = { rd_queue_event, 0 };
-    write(nm->write_handle(), msg, pipe_msg_size);
+    nm->write_to_pipe(msg);
 }
 
 void post_office_unpublish(actor_id whom)
@@ -760,14 +766,14 @@ void post_office_unpublish(actor_id whom)
     DEBUG("post_office_unpublish(" << whom << ")");
     auto nm = singleton_manager::get_network_manager();
     pipe_msg msg = { unpublish_actor_event, whom };
-    write(nm->write_handle(), msg, pipe_msg_size);
+    nm->write_to_pipe(msg);
 }
 
 void post_office_close_socket(native_socket_type sfd)
 {
     auto nm = singleton_manager::get_network_manager();
     pipe_msg msg = { close_socket_event, static_cast<std::uint32_t>(sfd) };
-    write(nm->write_handle(), msg, pipe_msg_size);
+    nm->write_to_pipe(msg);
 }
 
 } } // namespace cppa::detail

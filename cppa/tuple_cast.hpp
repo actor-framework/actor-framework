@@ -71,7 +71,7 @@ template<class ResultTuple, class Tuple, typename... T>
 option<ResultTuple> tuple_cast_impl(Tuple const& tup)
 {
     // no anything in given template parameter pack
-    if (ResultTuple::num_elements == sizeof...(T))
+    if (util::tl_find<util::type_list<T...>, anything>::value == -1)
     {
         auto& tarr = detail::static_types_array<T...>::arr;
         if (tup.size() == sizeof...(T))

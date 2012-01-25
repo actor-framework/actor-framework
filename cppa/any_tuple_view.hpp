@@ -78,11 +78,11 @@ class any_tuple_view
     any_tuple_view& operator=(any_tuple_view&&) = default;
     any_tuple_view& operator=(any_tuple_view const&) = default;
 
-    any_tuple_view(any_tuple const& tup)
+    any_tuple_view(any_tuple& tup)
     {
         for (size_t i = 0; i < tup.size(); ++i)
         {
-            m_values.push_back(std::make_pair(tup.type_at(i), tup.at(i)));
+            m_values.push_back(std::make_pair(tup.type_at(i), tup.mutable_at(i)));
         }
     }
 

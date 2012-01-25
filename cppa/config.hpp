@@ -67,6 +67,7 @@
 #endif
 
 #ifdef CPPA_DEBUG
+#include <cstdio>
 #include <cstdlib>
 #define CPPA_REQUIRE__(stmt, file, line)                                       \
     printf("%s:%u: requirement failed '%s'\n", file, line, stmt); abort()

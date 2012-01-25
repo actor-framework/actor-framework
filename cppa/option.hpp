@@ -61,30 +61,28 @@ class option
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
-    option(T&& value) { cr(std::move(value)); }
+    option(T&& value) : m_valid(false) { cr(std::move(value)); }
 
     /**
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
-    option(T const& value) { cr(value); }
+    option(T const& value) : m_valid(false) { cr(value); }
 
     /**
      * @brief Copy constructor.
      */
-    option(option const& other)
+    option(option const& other) : m_valid(false)
     {
         if (other.m_valid) cr(other.m_value);
-        else m_valid = false;
     }
 
     /**
      * @brief Move constructor.
      */
-    option(option&& other)
+    option(option&& other) : m_valid(false)
     {
         if (other.m_valid) cr(std::move(other.m_value));
-        else m_valid = false;
     }
 
     ~option() { destroy(); }
@@ -96,15 +94,8 @@ class option
     {
         if (m_valid)
         {
-            if (other.m_valid)
-            {
-                m_value = other.m_value;
-            }
-            else
-            {
-                destroy();
-                m_valid = false;
-            }
+            if (other.m_valid) m_value = other.m_value;
+            else destroy();
         }
         else if (other.m_valid)
         {
@@ -120,15 +111,8 @@ class option
     {
         if (m_valid)
         {
-            if (other.m_valid)
-            {
-                m_value = std::move(other.m_value);
-            }
-            else
-            {
-                destroy();
-                m_valid = false;
-            }
+            if (other.m_valid) m_value = std::move(other.m_value);
+            else destroy();
         }
         else if (other.m_valid)
         {
@@ -234,11 +218,19 @@ class option
     bool m_valid;
     union { T m_value; };
 
-    void destroy() { if (m_valid) m_value.~T(); }
+    void destroy()
+    {
+        if (m_valid)
+        {
+            m_value.~T();
+            m_valid = false;
+        }
+    }
 
     template<typename V>
     void cr(V&& value)
     {
+        CPPA_REQUIRE(!valid());
         m_valid = true;
         new (&m_value) T (std::forward<V>(value));
     }
