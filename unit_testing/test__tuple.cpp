@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include <list>
 #include <string>
 #include <utility>
@@ -42,10 +40,8 @@ size_t test__tuple()
     CPPA_CHECK_EQUAL(t0_0, "1");
     CPPA_CHECK_EQUAL(t0_1, 2);
     // get a view of t0
-    /*
     any_tuple atup0(t0);
-    any_tuple_view aview0(atup0);
-    auto v1opt = tuple_cast<std::string, anything>(aview0);
+    auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(atup0));
     CPPA_CHECK((v1opt));
     if (v1opt)
     {
@@ -54,7 +50,6 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(v1.size(), 1);
         CPPA_CHECK_EQUAL(v1_0, "1");
     }
-    // */
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);

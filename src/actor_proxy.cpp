@@ -68,41 +68,6 @@ void actor_proxy::enqueue(actor* sender, any_tuple&& msg)
 
 void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
 {
-    /*
-    if (msg.size() > 0 && msg.utype_info_at(0) == typeid(atom_value))
-    {
-        if (msg.size() == 2 && msg.utype_info_at(1) == typeid(actor_ptr))
-        {
-            switch (to_int(msg.get_as<atom_value>(0)))
-            {
-                // received via post_office
-                case to_int(atom(":Link")):
-                {
-                    auto s = msg.get_as<actor_ptr>(1);
-                    (void) link_to_impl(s);
-                    //link_to(s);
-                    return;
-                }
-                // received via post_office
-                case to_int(atom(":Unlink")):
-                {
-                    auto s = msg.get_as<actor_ptr>(1);
-                    (void) unlink_from_impl(s);
-                    //unlink_from(s);
-                    return;
-                }
-                default: break;
-            }
-        }
-        else if (   msg.size() == 2
-                 && msg.get_as<atom_value>(0) == atom(":KillProxy")
-                 && msg.utype_info_at(1) == typeid(std::uint32_t))
-        {
-            cleanup(msg.get_as<std::uint32_t>(1));
-            return;
-        }
-    }
-    */
     if (   msg.size() == 2
         && *(msg.type_at(0)) == typeid(atom_value)
         && msg.get_as<atom_value>(0) == atom(":KillProxy")
@@ -121,8 +86,13 @@ void actor_proxy::link_to(intrusive_ptr<actor>& other)
         // causes remote actor to link to (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_tuple(atom(":Link"), actor_ptr(this)));
+                        make_tuple(atom(":Link"), other));
     }
+}
+
+void actor_proxy::local_link_to(intrusive_ptr<actor>& other)
+{
+    link_to_impl(other);
 }
 
 void actor_proxy::unlink_from(intrusive_ptr<actor>& other)
@@ -132,8 +102,13 @@ void actor_proxy::unlink_from(intrusive_ptr<actor>& other)
         // causes remote actor to unlink from (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_tuple(atom(":Unlink"), actor_ptr(this)));
+                        make_tuple(atom(":Unlink"), other));
     }
+}
+
+void actor_proxy::local_unlink_from(intrusive_ptr<actor>& other)
+{
+    unlink_from_impl(other);
 }
 
 bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other)
@@ -141,9 +116,10 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other)
     bool result = super::establish_backlink(other);
     if (result)
     {
+        // causes remote actor to unlink from (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_tuple(atom(":Link"), actor_ptr(this)));
+                        make_tuple(atom(":Link"), other));
     }
     return result;
 }

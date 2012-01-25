@@ -59,6 +59,7 @@
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/buffer.hpp"
 #include "cppa/detail/mailman.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/native_socket.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -81,6 +82,8 @@ using std::cerr;
 using std::endl;
 
 namespace {
+
+cppa::detail::types_array<cppa::atom_value, cppa::actor_ptr> t_atom_actor_ptr_types;
 
 // allocate in 1KB chunks (minimize reallocations)
 constexpr size_t s_chunk_size = 1024;
@@ -186,11 +189,8 @@ class po_peer
 
     void add_child(const actor_proxy_ptr& pptr)
     {
+        CPPA_REQUIRE(pptr.get() != nullptr);
         if (pptr) m_children.push_back(pptr);
-        else
-        {
-            DEBUG("po_peer::add_child(nullptr) called");
-        }
     }
 
     inline size_t children_count() const
@@ -322,12 +322,13 @@ class po_peer
                 }
                 auto& content = msg.content();
                 DEBUG("<-- " << to_string(content));
+                // intercept ":Monitor" messages
                 if (   content.size() == 1
-                    && *(content.type_at(0)) == typeid(atom_value)
+                    && t_atom_actor_ptr_types[0] == content.type_at(0)
                     && content.get_as<atom_value>(0) == atom(":Monitor"))
                 {
                     auto receiver = msg.receiver().downcast<actor>();
-                    //actor_ptr receiver = dynamic_cast<actor*>(receiver_ch.get());
+                    CPPA_REQUIRE(receiver.get() != nullptr);
                     if (!receiver)
                     {
                         DEBUG("empty receiver");
@@ -353,6 +354,30 @@ class po_peer
                     {
                         DEBUG(":Monitor received for an remote actor");
                     }
+                }
+                // intercept ":Link" messages
+                else if (   content.size() == 2
+                         && t_atom_actor_ptr_types[0] == content.type_at(0)
+                         && t_atom_actor_ptr_types[1] == content.type_at(1)
+                         && content.get_as<atom_value>(0) == atom(":Link"))
+                {
+                    CPPA_REQUIRE(msg.sender()->is_proxy());
+                    auto whom = msg.sender().downcast<actor_proxy>();
+                    auto to = content.get_as<actor_ptr>(1);
+                    if ((whom) && (to))
+                        whom->local_link_to(to);
+                }
+                // intercept ":Unlink" messages
+                else if (   content.size() == 2
+                         && t_atom_actor_ptr_types[0] == content.type_at(0)
+                         && t_atom_actor_ptr_types[1] == content.type_at(1)
+                         && content.get_as<atom_value>(0) == atom(":Link"))
+                {
+                    CPPA_REQUIRE(msg.sender()->is_proxy());
+                    auto whom = msg.sender().downcast<actor_proxy>();
+                    auto from = content.get_as<actor_ptr>(1);
+                    if ((whom) && (from))
+                        whom->local_unlink_from(from);
                 }
                 else
                 {

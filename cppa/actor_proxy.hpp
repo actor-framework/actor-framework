@@ -63,7 +63,15 @@ class actor_proxy : public abstract_actor<actor>
 
     void link_to(intrusive_ptr<actor>& other);
 
+    // do not cause to send this actor an ":Unlink" message
+    // to the "original" remote actor
+    void local_link_to(intrusive_ptr<actor>& other);
+
     void unlink_from(intrusive_ptr<actor>& other);
+
+    // do not cause to send this actor an ":Unlink" message
+    // to the "original" remote actor
+    void local_unlink_from(intrusive_ptr<actor>& other);
 
     bool remove_backlink(intrusive_ptr<actor>& to);
 
