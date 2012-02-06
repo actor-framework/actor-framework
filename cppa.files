@@ -53,8 +53,6 @@ unit_testing/test__queue_performance.cpp
 cppa/util/single_reader_queue.hpp
 cppa/util/singly_linked_list.hpp
 unit_testing/test__local_group.cpp
-unit_testing/hash_of.cpp
-unit_testing/hash_of.hpp
 cppa/detail/channel.hpp
 cppa/local_actor.hpp
 cppa/channel.hpp

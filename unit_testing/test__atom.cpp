@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "test.hpp"
-#include "hash_of.hpp"
 #include "cppa/util.hpp"
 
 #include "cppa/cppa.hpp"

@@ -209,12 +209,14 @@ auto abstract_scheduled_actor::dq(queue_node_ptr& node,
     }
     else
     {
+        /*
         std::string err_msg = "unhandled message in actor ";
         err_msg += std::to_string(id());
         err_msg += ": ";
         err_msg += to_string(node->msg);
         err_msg += "\n";
         cout << err_msg;
+        */
         buffer.push_back(node.release());
         return dq_indeterminate;
     }

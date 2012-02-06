@@ -13,7 +13,6 @@
 #include <iostream>
 
 #include "test.hpp"
-#include "hash_of.hpp"
 
 #include "cppa/tuple.hpp"
 #include "cppa/config.hpp"

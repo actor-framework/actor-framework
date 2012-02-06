@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "test.hpp"
-#include "hash_of.hpp"
 
 #include "cppa/on.hpp"
 #include "cppa/self.hpp"

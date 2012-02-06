@@ -63,7 +63,7 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(v0_0, "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));
         // check cow semantics
-        CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same string
+        CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same
         get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
         CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value
         CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value

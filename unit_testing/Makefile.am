@@ -3,8 +3,7 @@ ACLOCAL_AMFLAGS = -I ../m4
 
 noinst_PROGRAMS = unit_tests
 
-unit_tests_SOURCES =    hash_of.cpp \
-                        main.cpp \
+unit_tests_SOURCES =    main.cpp \
                         ping_pong.cpp \
                         test__atom.cpp \
                         test__intrusive_ptr.cpp \

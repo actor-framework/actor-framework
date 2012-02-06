@@ -331,7 +331,6 @@ size_t test__spawn()
     CPPA_TEST(test__spawn);
 
     spawn(testee1);
-    return 0;
     spawn(event_testee2());
 
     auto cstk = spawn(new chopstick);
@@ -352,18 +351,13 @@ size_t test__spawn()
 
     // create 20,000 actors linked to one single actor
     // and kill them all through killing the link
-//    auto my_link = spawn(new event_testee);
-//    for (int i = 0; i < 20000; ++i)
-//    {
-//        link(my_link, spawn(new event_testee));
-//    }
-//    send(my_link, atom(":Exit"), exit_reason::user_defined);
-    return CPPA_TEST_RESULT;
-
-
-
-
-
+    auto my_link = spawn(new event_testee);
+    for (int i = 0; i < 20000; ++i)
+    {
+        link(my_link, spawn(new event_testee));
+    }
+    send(my_link, atom(":Exit"), exit_reason::user_defined);
+    await_all_others_done();
 
     auto report_unexpected = [&]()
     {
@@ -375,12 +369,11 @@ size_t test__spawn()
     auto pong_actor = spawn(pong, spawn(ping));
     monitor(pong_actor);
     self->link_to(pong_actor);
-//    monitor(spawn(testee2, spawn(testee1)));
     int i = 0;
     int flags = 0;
     future_send(self, std::chrono::seconds(1), atom("FooBar"));
     // wait for :Down and :Exit messages of pong
-    receive_while([&i]() { return ++i <= 3 /*4*/; })
+    receive_while([&i]() { return ++i <= 3; })
     (
         on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
@@ -411,13 +404,13 @@ size_t test__spawn()
             cout << "!!! TIMEOUT !!!" << endl;
             CPPA_CHECK(false);
         }
-
     );
     // wait for termination of all spawned actors
     await_all_others_done();
     CPPA_CHECK_EQUAL(flags, 0x07);
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 5);
+
     /*
     spawn(testee3, self);
     i = 0;
@@ -437,7 +430,7 @@ size_t test__spawn()
             CPPA_CHECK(false);
         }
     );
-    await_all_others_done();
     */
+    await_all_others_done();
     return CPPA_TEST_RESULT;
 }

@@ -1,18 +1,8 @@
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE
-#endif
-
 #include <atomic>
 #include <cstring>
 #include <cstdint>
-#include <type_traits>
-
-#include <ucontext.h>
-#include <sys/mman.h>
-#include <signal.h>
-#include <cstddef>
-
 #include <iostream>
+#include <type_traits>
 
 #include "test.hpp"
 #include "cppa/util/fiber.hpp"
@@ -56,19 +46,15 @@ void coroutine(void* worker)
 size_t test__yield_interface()
 {
     CPPA_TEST(test__yield_interface);
-
 #   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
     cout << "WARNING: context switching was explicitly disabled using "
             "CPPA_DISABLE_CONTEXT_SWITCHING"
          << endl;
-    return CPPA_TEST_RESULT;
 #   else
-    pseudo_worker worker;
-
     fiber fself;
+    pseudo_worker worker;
     fiber fcoroutine(coroutine, &worker);
     yield_state ys;
-
     int i = 0;
     do
     {
@@ -77,11 +63,9 @@ size_t test__yield_interface()
         ++i;
     }
     while (ys != yield_state::done && i < 12);
-
     CPPA_CHECK_EQUAL(ys, yield_state::done);
     CPPA_CHECK_EQUAL(worker.m_count, 10);
     CPPA_CHECK_EQUAL(i, 12);
-
-    return CPPA_TEST_RESULT;
 #   endif
+    return CPPA_TEST_RESULT;
 }
