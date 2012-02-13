@@ -75,6 +75,11 @@ class fixed_vector
         m_size = 0;
     }
 
+    inline bool empty() const
+    {
+        return m_size == 0;
+    }
+
     inline bool full() const
     {
         return m_size == MaxSize;

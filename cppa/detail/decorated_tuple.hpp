@@ -68,7 +68,7 @@ class decorated_tuple : public abstract_tuple
         : m_decorated(d), m_mappings(v)
     {
         CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
-        CPPA_REQUIRE(std::max_element(v.begin(), v.end()) < m_decorated->size());
+        CPPA_REQUIRE(v.empty() || *(std::max_element(v.begin(), v.end())) < m_decorated->size());
     }
 
     virtual void* mutable_at(size_t pos)
