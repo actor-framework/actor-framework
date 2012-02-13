@@ -165,6 +165,7 @@ int main(int argc, char** argv)
     RUN_TEST(test__primitive_variant);
     RUN_TEST(test__intrusive_ptr);
     RUN_TEST(test__type_list);
+    RUN_TEST(test__fixed_vector);
     RUN_TEST(test__tuple);
     RUN_TEST(test__serialization);
     RUN_TEST(test__spawn);

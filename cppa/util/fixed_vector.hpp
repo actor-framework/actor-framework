@@ -31,15 +31,27 @@
 #ifndef FIXED_VECTOR_HPP
 #define FIXED_VECTOR_HPP
 
+#include <iterator>
 #include <algorithm>
 #include <stdexcept>
+#include <type_traits>
+#include <initializer_list>
+
+#include "cppa/config.hpp"
 
 namespace cppa { namespace util {
 
-// @warning does not perform any bound checks
+/**
+ * @brief A vector with a fixed maximum size.
+ *
+ * This implementation is highly optimized for arithmetic types and refuses
+ * any non-arithmetic template parameter.
+ */
 template<typename T, size_t MaxSize>
 class fixed_vector
 {
+
+    static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type");
 
     size_t m_size;
 
@@ -56,6 +68,9 @@ class fixed_vector
     typedef T* iterator;
     typedef T const* const_iterator;
 
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
     constexpr fixed_vector() : m_size(0)
     {
     }
@@ -63,6 +78,12 @@ class fixed_vector
     fixed_vector(fixed_vector const& other) : m_size(other.m_size)
     {
         std::copy(other.m_data, other.m_data + other.m_size, m_data);
+    }
+
+    fixed_vector(std::initializer_list<T> init) : m_size(init.size())
+    {
+        CPPA_REQUIRE(init.size() <= MaxSize);
+        std::copy(init.begin(), init.end(), m_data);
     }
 
     inline size_type size() const
@@ -87,22 +108,36 @@ class fixed_vector
 
     inline void push_back(T const& what)
     {
+        CPPA_REQUIRE(!full());
         m_data[m_size++] = what;
     }
 
     inline void push_back(T&& what)
     {
+        CPPA_REQUIRE(!full());
         m_data[m_size++] = std::move(what);
     }
 
-    inline reference operator[](size_t pos)
+    inline reference at(size_type pos)
     {
+        CPPA_REQUIRE(pos < m_size);
         return m_data[pos];
     }
 
-    inline const_reference operator[](size_t pos) const
+    inline const_reference at(size_type pos) const
     {
+        CPPA_REQUIRE(pos < m_size);
         return m_data[pos];
+    }
+
+    inline reference operator[](size_type pos)
+    {
+        return at(pos);
+    }
+
+    inline const_reference operator[](size_type pos) const
+    {
+        return at(pos);
     }
 
     inline iterator begin()
@@ -115,6 +150,11 @@ class fixed_vector
         return m_data;
     }
 
+    inline const_iterator cbegin() const
+    {
+        return begin();
+    }
+
     inline iterator end()
     {
         return (static_cast<T*>(m_data) + m_size);
@@ -125,6 +165,81 @@ class fixed_vector
         return (static_cast<T const*>(m_data) + m_size);
     }
 
+    inline const_iterator cend() const
+    {
+        return end();
+    }
+
+    inline reverse_iterator rbegin()
+    {
+        return reverse_iterator(end());
+    }
+
+    inline const_reverse_iterator rbegin() const
+    {
+        return reverse_iterator(end());
+    }
+
+    inline const_reverse_iterator crbegin() const
+    {
+        return rbegin();
+    }
+
+    inline reverse_iterator rend()
+    {
+        return reverse_iterator(begin());
+    }
+
+    inline const_reverse_iterator rend() const
+    {
+        return reverse_iterator(begin());
+    }
+
+    inline const_reverse_iterator crend() const
+    {
+        return rend();
+    }
+
+    inline reference front()
+    {
+        CPPA_REQUIRE(!empty());
+        return m_data[0];
+    }
+
+    inline const_reference front() const
+    {
+        CPPA_REQUIRE(!empty());
+        return m_data[0];
+    }
+
+    inline reference back()
+    {
+        CPPA_REQUIRE(m_size > 0);
+        return m_data[m_size - 1];
+    }
+
+    inline const_reference back() const
+    {
+        CPPA_REQUIRE(m_size > 0);
+        return m_data[m_size - 1];
+    }
+
+    inline T* data()
+    {
+        return m_data;
+    }
+
+    inline T const* data() const
+    {
+        return m_data;
+    }
+
+    /**
+     * @brief Inserts elements to specified position in the container.
+     * @warning This member function is implemented for <tt>pos == end()</tt>
+     *          only by now. The user has to guarantee that the size of the
+     *          sequence [first, last) fits into the vector.
+     */
     template<class InputIterator>
     inline void insert(iterator pos,
                        InputIterator first,
