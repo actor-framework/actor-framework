@@ -51,6 +51,9 @@ class either
 
  public:
 
+    typedef Left left_type;
+    typedef Right right_type;
+
     /**
      * @brief Default constructor, creates a @p Left.
      */

@@ -39,6 +39,7 @@
 #include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/invoke_rules.hpp"
+#include "cppa/detail/disablable_delete.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -95,69 +96,10 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     abstract_event_based_actor();
 
-    struct stack_element
-    {
-
-        stack_element() = delete;
-        stack_element(stack_element const&) = delete;
-        stack_element& operator=(stack_element const&) = delete;
-
-        either<invoke_rules*, timed_invoke_rules*> m_ptr;
-        bool m_ownership;
-
-        inline stack_element(invoke_rules* ptr, bool take_ownership)
-            : m_ptr(ptr), m_ownership(take_ownership)
-        {
-        }
-
-        inline stack_element(timed_invoke_rules* ptr, bool take_ownership)
-            : m_ptr(ptr), m_ownership(take_ownership)
-        {
-        }
-
-        inline stack_element(stack_element&& other)
-            : m_ptr(other.m_ptr), m_ownership(other.m_ownership)
-        {
-            other.m_ownership = false;
-        }
-
-        inline stack_element& operator=(stack_element&& other)
-        {
-            m_ptr = other.m_ptr;
-            m_ownership = other.m_ownership;
-            other.m_ownership = false;
-            return *this;
-        }
-
-        inline ~stack_element()
-        {
-            if (m_ownership)
-            {
-                if (m_ptr.is_left())
-                {
-                    delete m_ptr.left();
-                }
-                else
-                {
-                    delete m_ptr.right();
-                }
-            }
-        }
-        inline bool is_left() { return m_ptr.is_left(); }
-        inline bool is_right() { return m_ptr.is_right(); }
-        inline invoke_rules& left()
-        {
-            auto ptr = m_ptr.left();
-            CPPA_REQUIRE(ptr != nullptr);
-            return *(ptr);
-        }
-        inline timed_invoke_rules& right()
-        {
-            auto ptr = m_ptr.right();
-            CPPA_REQUIRE(ptr != nullptr);
-            return *(ptr);
-        }
-    };
+    // ownership flag + pointer
+    typedef either<std::unique_ptr<invoke_rules, detail::disablable_delete<invoke_rules>>,
+                   std::unique_ptr<timed_invoke_rules, detail::disablable_delete<timed_invoke_rules>>>
+            stack_element;
 
     queue_node_buffer m_buffer;
     std::vector<stack_element> m_loop_stack;

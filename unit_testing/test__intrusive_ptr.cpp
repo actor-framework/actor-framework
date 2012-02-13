@@ -48,6 +48,8 @@ class0_ptr get_test_ptr()
 
 size_t test__intrusive_ptr()
 {
+    // this test dosn't test thread-safety of intrusive_ptr
+    // however, it is thread safe since it uses atomic operations only
 
     CPPA_TEST(test__intrusive_ptr);
 

@@ -60,17 +60,15 @@ class abstract_actor : public Base
     std::atomic<std::uint32_t> m_exit_reason;
 
     // guards access to m_exited, m_subscriptions and m_links
-    //std::mutex m_mtx;
     detail::mutex m_mtx;
 
-    // manages actor links
-    std::list<actor_ptr> m_links;
+    // links to other actors
+    std::vector<actor_ptr> m_links;
 
+    // code that is executed on cleanup
     std::vector<attachable_ptr> m_attachables;
 
  public:
-
-    class queue_node_ptr;
 
     struct queue_node
     {
@@ -104,36 +102,6 @@ class abstract_actor : public Base
     bool exited() const
     {
         return m_exit_reason.load() != exit_reason::not_exited;
-    }
-
-    template<class List, typename Element>
-    bool unique_insert(List& lst, Element const& e)
-    {
-        auto end = lst.end();
-        auto i = std::find(lst.begin(), end, e);
-        if (i == end)
-        {
-            lst.push_back(e);
-            return true;
-        }
-        return false;
-    }
-
-    template<class List, typename Iterator, typename Element>
-    int erase_all(List& lst, Iterator begin, Iterator end, Element const& e)
-    {
-        auto i = std::find(begin, end, e);
-        if (i != end)
-        {
-            return 1 + erase_all(lst, lst.erase(i), end, e);
-        }
-        return 0;
-    }
-
-    template<class List, typename Element>
-    int erase_all(List& lst, Element const& e)
-    {
-        return erase_all(lst, lst.begin(), lst.end(), e);
     }
 
  protected:
@@ -170,13 +138,10 @@ class abstract_actor : public Base
             m_links.clear();
             m_attachables.clear();
         }
-        if (!mlinks.empty())
+        // send exit messages
+        for (actor_ptr& aptr : mlinks)
         {
-            // send exit messages
-            for (actor_ptr& aptr : mlinks)
-            {
-                aptr->enqueue(this, make_tuple(atom(":Exit"), reason));
-            }
+            aptr->enqueue(this, make_tuple(atom(":Exit"), reason));
         }
         for (attachable_ptr& ptr : mattachables)
         {
@@ -189,11 +154,14 @@ class abstract_actor : public Base
         if (other && other != this)
         {
             guard_type guard(m_mtx);
+            // send exit message if already exited
             if (exited())
             {
                 other->enqueue(this, make_tuple(atom(":Exit"),
                                                 m_exit_reason.load()));
             }
+            // add link if not already linked to other
+            // (checked by establish_backlink)
             else if (other->establish_backlink(this))
             {
                 m_links.push_back(other);
@@ -206,9 +174,13 @@ class abstract_actor : public Base
     bool unlink_from_impl(intrusive_ptr<actor>& other)
     {
         guard_type guard(m_mtx);
+        // remove_backlink returns true if this actor is linked to other
         if (other && !exited() && other->remove_backlink(this))
         {
-            return erase_all(m_links, other) > 0;
+            auto i = std::find(m_links.begin(), m_links.end(), other);
+            CPPA_REQUIRE(i != m_links.end());
+            m_links.erase(i);
+            return true;
         }
         return false;
     }
@@ -278,7 +250,12 @@ class abstract_actor : public Base
         if (other && other != this)
         {
             guard_type guard(m_mtx);
-            return erase_all(m_links, other) > 0;
+            auto i = std::find(m_links.begin(), m_links.end(), other);
+            if (i != m_links.end())
+            {
+                m_links.erase(i);
+                return true;
+            }
         }
         return false;
     }
@@ -292,7 +269,12 @@ class abstract_actor : public Base
             reason = m_exit_reason.load();
             if (reason == exit_reason::not_exited)
             {
-                return unique_insert(m_links, other);
+                auto i = std::find(m_links.begin(), m_links.end(), other);
+                if (i == m_links.end())
+                {
+                    m_links.push_back(other);
+                    return true;
+                }
             }
         }
         // send exit message without lock

@@ -260,3 +260,4 @@ benchmarks/theron_mixed_case.cpp
 cppa/util/static_foreach.hpp
 cppa/type_value_pair.hpp
 examples/dining_philosophers.cpp
+cppa/detail/disablable_delete.hpp

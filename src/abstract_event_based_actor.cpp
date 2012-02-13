@@ -72,9 +72,10 @@ void abstract_event_based_actor::handle_message(queue_node_ptr& node,
             // request next timeout if needed
             if (!m_loop_stack.empty())
             {
-                if (m_loop_stack.back().is_right())
+                auto& back = m_loop_stack.back();
+                if (back.is_right())
                 {
-                    request_timeout(m_loop_stack.back().right().timeout());
+                    request_timeout(back.right()->timeout());
                 }
             }
             break;
@@ -88,11 +89,11 @@ void abstract_event_based_actor::handle_message(queue_node_ptr& node)
     auto& bhvr = m_loop_stack.back();
     if (bhvr.is_left())
     {
-        handle_message(node, bhvr.left());
+        handle_message(node, *(bhvr.left()));
     }
     else
     {
-        handle_message(node, bhvr.right());
+        handle_message(node, *(bhvr.right()));
     }
 }
 

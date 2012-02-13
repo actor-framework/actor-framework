@@ -106,6 +106,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/default_uniform_type_info_impl.hpp \
   cppa/detail/delegate.hpp \
   cppa/detail/demangle.hpp \
+  cppa/detail/disablable_delete.hpp \
   cppa/detail/empty_tuple.hpp \
   cppa/detail/get_behavior.hpp \
   cppa/detail/group_manager.hpp \

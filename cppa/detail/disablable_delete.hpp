@@ -28,39 +28,30 @@
 \******************************************************************************/
 
 
-#include "cppa/stacked_event_based_actor.hpp"
+#ifndef DISABLABLE_DELETE_HPP
+#define DISABLABLE_DELETE_HPP
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-void stacked_event_based_actor::become_void()
+template<typename T>
+class disablable_delete
 {
-    m_loop_stack.clear();
-}
 
-void stacked_event_based_actor::unbecome()
-{
-    if (!m_loop_stack.empty())
+    bool m_enabled;
+
+ public:
+
+    disablable_delete() : m_enabled(true) { }
+
+    inline void disable() { m_enabled = false; }
+
+    inline void operator()(T* ptr)
     {
-        m_loop_stack.pop_back();
+        if (m_enabled) delete ptr;
     }
-}
 
-void stacked_event_based_actor::do_become(invoke_rules* behavior,
-                                          bool has_ownership)
-{
-    reset_timeout();
-    stack_element::left_type ptr(behavior);
-    if (!has_ownership) ptr.get_deleter().disable();
-    m_loop_stack.push_back(std::move(ptr));
-}
+};
 
-void stacked_event_based_actor::do_become(timed_invoke_rules* behavior,
-                                          bool has_ownership)
-{
-    request_timeout(behavior->timeout());
-    stack_element::right_type ptr(behavior);
-    if (!has_ownership) ptr.get_deleter().disable();
-    m_loop_stack.push_back(std::move(ptr));
-}
+} } // namespace cppa::detail
 
-} // namespace cppa
+#endif // DISABLABLE_DELETE_HPP
