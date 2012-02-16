@@ -84,50 +84,8 @@ class pattern
 
     typedef util::fixed_vector<size_t, filtered_types::size> mapping_vector;
 
-    class const_iterator
-    {
+    typedef type_value_pair_const_iterator const_iterator;
 
-        type_value_pair const* iter;
-
-     public:
-
-        const_iterator(type_value_pair const* i) : iter(i) { }
-
-        const_iterator(const_iterator const&) = default;
-
-        inline uniform_type_info const* type() const { return iter->first; }
-
-        inline void const* value() const { return iter->second; }
-
-        inline decltype(iter) operator->() { return iter; }
-
-        inline decltype(*iter) operator*() { return *iter; }
-
-        inline const_iterator& operator++()
-        {
-            ++iter;
-            return *this;
-        }
-
-        inline const_iterator& operator--()
-        {
-            --iter;
-            return *this;
-        }
-
-        inline bool operator==(const_iterator const& other) const
-        {
-            return iter == other.iter;
-        }
-
-        inline bool operator!=(const_iterator const& other) const
-        {
-            return iter != other.iter;
-        }
-
-    };
-
-    //typedef type_value_pair const* const_iterator;
 
     const_iterator begin() const { return m_ptrs; }
 

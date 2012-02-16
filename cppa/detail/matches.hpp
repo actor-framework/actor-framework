@@ -234,8 +234,11 @@ bool matches(std::integral_constant<int, 0>,
             // compare values only (types are guaranteed to be equal)
             for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                if (   j->second != nullptr
-                    && i->first->equals(i->second, j->second) == false) return false;
+                if (   j.value() != nullptr
+                    && i.type()->equals(i.value(), j.value()) == false)
+                {
+                    return false;
+                }
             }
         }
     }
@@ -246,9 +249,12 @@ bool matches(std::integral_constant<int, 0>,
             // compares type and value
             for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                if (   i->first != j->first
-                    || (   j->second != nullptr
-                        && i->first->equals(i->second, j->second) == false)) return false;
+                if (   i.type() != j.type()
+                    || (   j.value() != nullptr
+                        && i.type()->equals(i.value(), j.value()) == false))
+                {
+                    return false;
+                }
             }
         }
         else
@@ -256,7 +262,7 @@ bool matches(std::integral_constant<int, 0>,
             // compares the types only
             for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                if (i->first != j->first) return false;
+                if (i.type() != j.type()) return false;
             }
         }
     }

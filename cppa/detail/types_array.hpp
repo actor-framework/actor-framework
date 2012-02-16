@@ -77,7 +77,7 @@ struct types_array_impl
     {
         return data[p];
     }
-    typedef type_value_pair const* const_iterator;
+    typedef type_value_pair_const_iterator const_iterator;
     inline const_iterator begin() const { return pairs; }
     inline const_iterator end() const { return pairs + sizeof...(T); }
 };
@@ -121,7 +121,7 @@ struct types_array_impl<false, T...>
         }
         return result;
     }
-    typedef type_value_pair const* const_iterator;
+    typedef type_value_pair_const_iterator const_iterator;
     inline const_iterator begin() const
     {
         auto result = pairs.load();

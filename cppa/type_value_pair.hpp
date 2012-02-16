@@ -37,6 +37,54 @@ namespace cppa {
 
 typedef std::pair<uniform_type_info const*, void const*> type_value_pair;
 
+class type_value_pair_const_iterator
+{
+
+    type_value_pair const* iter;
+
+ public:
+
+    type_value_pair_const_iterator(type_value_pair const* i) : iter(i) { }
+
+    type_value_pair_const_iterator(type_value_pair_const_iterator const&) = default;
+
+    inline uniform_type_info const* type() const { return iter->first; }
+
+    inline void const* value() const { return iter->second; }
+
+    inline decltype(iter) operator->() { return iter; }
+
+    inline decltype(*iter) operator*() { return *iter; }
+
+    inline type_value_pair_const_iterator& operator++()
+    {
+        ++iter;
+        return *this;
+    }
+
+    inline type_value_pair_const_iterator& operator--()
+    {
+        --iter;
+        return *this;
+    }
+
+    inline type_value_pair_const_iterator operator+(size_t offset)
+    {
+        return iter + offset;
+    }
+
+    inline bool operator==(type_value_pair_const_iterator const& other) const
+    {
+        return iter == other.iter;
+    }
+
+    inline bool operator!=(type_value_pair_const_iterator const& other) const
+    {
+        return iter != other.iter;
+    }
+
+};
+
 } // namespace cppa
 
 #endif // TYPE_VALUE_PAIR_HPP
