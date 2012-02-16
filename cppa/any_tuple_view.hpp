@@ -152,12 +152,6 @@ class any_tuple_view
         return typeid(detail::object_array);
     }
 
-    typedef type_value_pair const* const_iterator;
-
-    inline const_iterator begin() const { return m_values.data(); }
-
-    inline const_iterator end() const { return begin() + m_values.size(); }
-
 };
 
 } // namespace cppa

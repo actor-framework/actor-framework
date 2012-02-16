@@ -31,6 +31,9 @@
 #ifndef ABSTRACT_TUPLE_HPP
 #define ABSTRACT_TUPLE_HPP
 
+#include <iterator>
+
+#include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -42,14 +45,10 @@ namespace cppa { namespace detail {
 struct abstract_tuple : ref_counted
 {
 
-    typedef type_value_pair const* const_iterator;
-
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
 
     // accessors
-    virtual const_iterator begin() const = 0;
-    virtual const_iterator end() const = 0;
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
     virtual void const* at(size_t pos) const = 0;
@@ -58,6 +57,58 @@ struct abstract_tuple : ref_counted
     virtual std::type_info const& impl_type() const = 0;
 
     bool equals(abstract_tuple const& other) const;
+
+    // iterator support
+    class const_iterator : public std::iterator<std::bidirectional_iterator_tag,
+                                                type_value_pair>
+    {
+
+        size_t m_pos;
+        abstract_tuple const& m_tuple;
+
+     public:
+
+        const_iterator(abstract_tuple const& tup, size_t pos = 0) : m_pos(pos), m_tuple(tup) { }
+
+        const_iterator(const_iterator const&) = default;
+
+        inline bool operator==(const_iterator const& other) const
+        {
+            CPPA_REQUIRE(&(other.m_tuple) == &(other.m_tuple));
+            return other.m_pos == m_pos;
+        }
+
+        inline bool operator!=(const_iterator const& other) const
+        {
+            return !(*this == other);
+        }
+
+        inline const_iterator& operator++()
+        {
+            ++m_pos;
+            return *this;
+        }
+
+        inline const_iterator& operator--()
+        {
+            CPPA_REQUIRE(m_pos > 0);
+            --m_pos;
+            return *this;
+        }
+
+        inline size_t position() const { return m_pos; }
+
+        void const* value() const { return m_tuple.at(m_pos); }
+
+        uniform_type_info const* type() const { return m_tuple.type_at(m_pos); }
+
+        type_value_pair operator*() { return {type(), value()}; }
+
+    };
+
+    inline const_iterator begin() const { return {*this}; }
+
+    inline const_iterator end() const { return {*this, size()}; }
 
 };
 

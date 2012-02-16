@@ -42,6 +42,7 @@ size_t test__tuple()
     // get a view of t0
     any_tuple atup0(t0);
     CPPA_CHECK(atup0.size() == 2 && atup0.at(0) == &get<0>(t0));
+    /*
     auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(atup0));
     // the tuple_view forces atup0 to detach from t0
     CPPA_CHECK(atup0.size() == 2 && atup0.at(0) != &get<0>(t0));
@@ -55,6 +56,7 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(v1_0, "1");
         CPPA_CHECK_EQUAL(atup0.at(0), &(get<0>(v1)));     // point to the same
     }
+    */
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);

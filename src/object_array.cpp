@@ -49,15 +49,11 @@ object_array::object_array(object_array const& other)
 void object_array::push_back(object const& what)
 {
     m_elements.push_back(what);
-    auto& back = m_elements.back();
-    m_data.push_back({back.type(), back.value()});
 }
 
 void object_array::push_back(object&& what)
 {
     m_elements.push_back(std::move(what));
-    auto& back = m_elements.back();
-    m_data.push_back({back.type(), back.value()});
 }
 
 void* object_array::mutable_at(size_t pos)
@@ -78,16 +74,6 @@ abstract_tuple* object_array::copy() const
 void const* object_array::at(size_t pos) const
 {
     return m_elements[pos].value();
-}
-
-abstract_tuple::const_iterator object_array::begin() const
-{
-    return m_data.data();
-}
-
-abstract_tuple::const_iterator object_array::end() const
-{
-    return begin() + m_data.size();
 }
 
 bool object_array::equals(cppa::detail::abstract_tuple const& ut) const

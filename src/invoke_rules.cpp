@@ -55,15 +55,6 @@ bool invoke_rules_base::operator()(const any_tuple& data) const
     return false;
 }
 
-bool invoke_rules_base::operator()(any_tuple_view const& data) const
-{
-    for (detail::invokable_ptr const& ptr : m_list)
-    {
-        if (ptr->invoke(data)) return true;
-    }
-    return false;
-}
-
 detail::intermediate*
 invoke_rules_base::get_intermediate(const any_tuple& t) const
 {

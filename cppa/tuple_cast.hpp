@@ -36,7 +36,6 @@
 #include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/any_tuple_view.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/types_array.hpp"
@@ -125,6 +124,7 @@ auto tuple_cast(any_tuple const& tup)
     return tuple_cast_impl<tuple_type, any_tuple, T...>(tup);
 }
 
+/*
 template<typename... P>
 auto tuple_cast(any_tuple_view const& tup, pattern<P...> const& p)
     -> option<
@@ -152,6 +152,7 @@ auto tuple_cast(any_tuple_view const& tup)
     typedef typename result_type::value_type tuple_type;
     return tuple_cast_impl<tuple_type, any_tuple_view, T...>(tup);
 }
+*/
 
 } // namespace cppa
 

@@ -61,26 +61,13 @@ class tuple_vals : public abstract_tuple
 
     static types_array<ElementTypes...> m_types;
 
-    type_value_pair m_view[sizeof...(ElementTypes)];
-
-    void init_view()
-    {
-        for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
-        {
-            m_view[i].first = m_types[i];
-            m_view[i].second = m_data.at(i);
-        }
-    }
-
  public:
 
-    using abstract_tuple::const_iterator;
+    tuple_vals() : m_data() { }
 
-    tuple_vals() : m_data() { init_view(); }
+    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
 
-    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { init_view(); }
-
-    tuple_vals(ElementTypes const&... args) : m_data(args...) { init_view(); }
+    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
 
     inline data_type const& data() const
     {
@@ -90,16 +77,6 @@ class tuple_vals : public abstract_tuple
     inline data_type& data_ref()
     {
         return m_data;
-    }
-
-    const_iterator begin() const
-    {
-        return m_view;
-    }
-
-    const_iterator end() const
-    {
-        return begin() + sizeof...(ElementTypes);
     }
 
     size_t size() const
@@ -115,14 +92,12 @@ class tuple_vals : public abstract_tuple
     void const* at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        return m_view[pos].second;
+        return m_data.at(pos);
     }
 
     void* mutable_at(size_t pos)
     {
-        CPPA_REQUIRE(pos < size());
-        // safe, because tuple_cals is used in cow_ptrs only
-        return const_cast<void*>(m_view[pos].second);
+        return const_cast<void*>(at(pos));
     }
 
     uniform_type_info const* type_at(size_t pos) const

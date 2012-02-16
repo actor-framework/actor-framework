@@ -72,16 +72,6 @@ class decorated_tuple : public abstract_tuple
         init(v);
     }
 
-    virtual const_iterator begin() const
-    {
-        return m_data;
-    }
-
-    virtual const_iterator end() const
-    {
-        return static_cast<const_iterator>(m_data) + sizeof...(ElementTypes);
-    }
-
     virtual void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());

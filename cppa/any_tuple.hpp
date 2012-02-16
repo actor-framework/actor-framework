@@ -135,7 +135,7 @@ class any_tuple
         return *reinterpret_cast<T*>(mutable_at(p));
     }
 
-    typedef type_value_pair const* const_iterator;
+    typedef detail::abstract_tuple::const_iterator const_iterator;
 
     inline const_iterator begin() const { return m_vals->begin(); }
 

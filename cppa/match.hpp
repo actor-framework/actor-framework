@@ -35,7 +35,6 @@
 
 #include "cppa/tuple.hpp"
 #include "cppa/invoke_rules.hpp"
-#include "cppa/any_tuple_view.hpp"
 
 #include "cppa/util/if_else.hpp"
 #include "cppa/util/enable_if.hpp"
@@ -49,14 +48,16 @@ namespace detail {
 template<typename Tuple>
 struct match_helper
 {
-    static constexpr bool is_view = std::is_same<Tuple, any_tuple_view>::value;
+    //static constexpr bool is_view = std::is_same<Tuple, any_tuple_view>::value;
+    static constexpr bool is_view = false;
     Tuple what;
     template<typename T>
     match_helper(T const& w, typename util::enable_if_c<std::is_same<T, T>::value && is_view>::type* =0)
         : what(w) { }
-    template<typename T>
-    match_helper(T const& w, typename util::enable_if_c<std::is_same<T, T>::value && !is_view>::type* =0)
-        : what(make_tuple(w)) { }
+
+    //template<typename T>
+    //match_helper(T const& w, typename util::enable_if_c<std::is_same<T, T>::value && !is_view>::type* =0)
+    //    : what(make_tuple(w)) { }
     void operator()(invoke_rules& rules) { rules(what); }
     void operator()(invoke_rules&& rules) { rules(what); }
     template<typename Head, typename... Tail>
@@ -76,6 +77,7 @@ struct match_helper
 
 } // namespace detail
 
+/*
 template<typename T>
 auto match(T const& x)
     -> detail::match_helper<
@@ -86,6 +88,7 @@ auto match(T const& x)
 {
     return {x};
 }
+*/
 
 } // namespace cppa
 

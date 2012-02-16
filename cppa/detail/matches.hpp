@@ -45,23 +45,10 @@
 
 namespace cppa { namespace detail {
 
-template<typename T>
-inline auto ptr_type(T& ptr, util::enable_if<std::is_pointer<T>>* = 0) -> T
-{
-    return ptr;
-}
-
-template<typename T>
-inline auto ptr_type(T& iter, util::disable_if<std::is_pointer<T>>* = 0) -> decltype(iter.operator->())
-{
-    return iter.operator->();
-}
-
 template<class MappingVector, typename Iterator>
 class push_mapping_decorator
 {
 
-    size_t pos;
     Iterator iter;
     MappingVector& mapping;
     size_t commited_size;
@@ -71,7 +58,7 @@ class push_mapping_decorator
     typedef MappingVector mapping_vector;
 
     push_mapping_decorator(Iterator const& i, MappingVector& mv)
-        : pos(0), iter(i), mapping(mv), commited_size(0)
+        : iter(i), mapping(mv), commited_size(0)
     {
     }
 
@@ -79,29 +66,29 @@ class push_mapping_decorator
 
     inline push_mapping_decorator& operator++()
     {
-        ++pos;
         ++iter;
         return *this;
     }
 
-    inline bool operator==(Iterator const& i)
+    inline push_mapping_decorator& operator--()
     {
-        return iter == i;
+        --iter;
+        return *this;
     }
 
-    inline decltype(*iter) operator*()
-    {
-        return *iter;
-    }
+    inline bool operator==(Iterator const& i) { return iter == i; }
 
-    inline decltype(ptr_type(iter)) operator->()
-    {
-        return ptr_type(iter);
-    }
+    inline bool operator!=(Iterator const& i) { return iter != i; }
+
+    inline decltype(iter.value()) value() const { return iter.value(); }
+
+    inline decltype(iter.type()) type() const { return iter.type(); }
+
+    inline size_t position() const { return iter.position(); }
 
     inline void push_mapping()
     {
-        mapping.push_back(pos);
+        mapping.push_back(position());
     }
 
     inline void commit_mapping()
@@ -150,7 +137,7 @@ template<typename T>
 inline typename util::enable_if<is_pm_decorated<T>, void>::type
 push_mapping(T& iter)
 {
-    iter->push_mapping();
+    iter.push_mapping();
 }
 
 template<typename T>
@@ -161,7 +148,7 @@ template<typename T>
 inline typename util::enable_if<is_pm_decorated<T>, void>::type
 commit_mapping(T& iter)
 {
-    iter->commit_mapping();
+    iter.commit_mapping();
 }
 
 template<typename T>
@@ -172,20 +159,20 @@ template<typename T>
 inline typename util::enable_if<is_pm_decorated<T>, void>::type
 rollback_mapping(T& iter)
 {
-    iter->rollback_mapping();
+    iter.rollback_mapping();
 }
 
 template<class TupleBeginIterator, class TupleEndIterator, class PatternIterator>
 bool matches(TupleBeginIterator tbegin, TupleEndIterator tend,
              PatternIterator pbegin, PatternIterator pend)
 {
-    for ( ; !(pbegin == pend && tbegin == tend); ++pbegin, ++tbegin)
+    while (!(pbegin == pend && tbegin == tend))
     {
         if (pbegin == pend)
         {
             return false;
         }
-        else if (pbegin->first == nullptr) // nullptr == wildcard (anything)
+        else if (pbegin.type() == nullptr) // nullptr == wildcard (anything)
         {
             // perform submatching
             ++pbegin;
@@ -206,11 +193,11 @@ bool matches(TupleBeginIterator tbegin, TupleEndIterator tend,
             return false; // no submatch found
         }
         // compare types
-        else if (tbegin != tend && pbegin->first == tbegin->first)
+        else if (tbegin != tend && pbegin.type() == tbegin.type())
         {
             // compare values if needed
-            if (   pbegin->second == nullptr
-                || pbegin->first->equals(pbegin->second, tbegin->second))
+            if (   pbegin.value() == nullptr
+                || pbegin.type()->equals(pbegin.value(), tbegin.value()))
             {
                 push_mapping(tbegin);
             }
