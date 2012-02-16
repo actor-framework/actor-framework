@@ -35,6 +35,8 @@
 #include <list>
 #include <vector>
 #include <utility>
+#include <iterator>
+#include <algorithm>
 
 #include "cppa/tuple.hpp"
 #include "cppa/any_tuple.hpp"
@@ -52,8 +54,7 @@ namespace cppa {
 class any_tuple_view
 {
 
-    typedef std::vector< std::pair<uniform_type_info const*, void*> >
-            vector_type;
+    typedef std::vector<type_value_pair> vector_type;
 
     vector_type m_values;
 
@@ -80,22 +81,14 @@ class any_tuple_view
 
     any_tuple_view(any_tuple& tup)
     {
-        for (size_t i = 0; i < tup.size(); ++i)
+        if (tup.size() > 0)
         {
-            m_values.push_back(std::make_pair(tup.type_at(i), tup.mutable_at(i)));
+            // force tuple to detach
+            tup.mutable_at(0);
+            std::back_insert_iterator<vector_type> back_iter{m_values};
+            std::copy(tup.begin(), tup.end(), back_iter);
         }
     }
-
-    /*
-    template<typename... T>
-    explicit any_tuple_view(tuple<T...> const& tup)
-    {
-        for (size_t i = 0; i < tup.size(); ++i)
-        {
-            m_values.push_back(std::make_pair(tup.type_at(i), tup.at(i)));
-        }
-    }
-    */
 
     template<typename... T>
     any_tuple_view(tuple_view<T...> const& tup)
@@ -137,7 +130,7 @@ class any_tuple_view
 
     inline void const* at(size_t p) const { return m_values[p].second; }
 
-    void* mutable_at(size_t p) { return m_values[p].second; }
+    void* mutable_at(size_t p) { return const_cast<void*>(m_values[p].second); }
 
     inline uniform_type_info const* type_at(size_t p) const
     {
@@ -159,21 +152,11 @@ class any_tuple_view
         return typeid(detail::object_array);
     }
 
-    class const_iterator
-    {
-        typedef typename vector_type::const_iterator vec_iterator;
-        vec_iterator pos;
-        vec_iterator end;
-     public:
-        inline const_iterator(any_tuple_view const& view)
-            : pos(view.m_values.begin()), end(view.m_values.end()) { }
-        inline void next() { ++pos; }
-        inline bool at_end() const { return pos == end; }
-        inline void const* value() const { return pos->second; }
-        inline uniform_type_info const* type() const { return pos->first; }
-    };
+    typedef type_value_pair const* const_iterator;
 
-    inline const_iterator begin() const { return {*this}; }
+    inline const_iterator begin() const { return m_values.data(); }
+
+    inline const_iterator end() const { return begin() + m_values.size(); }
 
 };
 

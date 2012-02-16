@@ -33,6 +33,16 @@
 
 namespace cppa { namespace detail {
 
+abstract_tuple::const_iterator empty_tuple::begin() const
+{
+    return nullptr;
+}
+
+abstract_tuple::const_iterator empty_tuple::end() const
+{
+    return nullptr;
+}
+
 size_t empty_tuple::size() const
 {
     return 0;

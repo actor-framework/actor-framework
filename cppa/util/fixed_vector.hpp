@@ -39,6 +39,8 @@
 
 #include "cppa/config.hpp"
 
+#include "cppa/config.hpp"
+
 namespace cppa { namespace util {
 
 /**
@@ -77,7 +79,22 @@ class fixed_vector
 
     fixed_vector(fixed_vector const& other) : m_size(other.m_size)
     {
-        std::copy(other.m_data, other.m_data + other.m_size, m_data);
+        std::copy(other.begin(), other.end(), m_data);
+    }
+
+    void resize(size_type s)
+    {
+        CPPA_REQUIRE(s < MaxSize);
+        if (s > m_size)
+        {
+            auto x = T();
+            auto old_size = m_size;
+            for (auto i = old_size; i < s; ++i) push_back(x);
+        }
+        else
+        {
+            m_size = s;
+        }
     }
 
     fixed_vector(std::initializer_list<T> init) : m_size(init.size())
@@ -157,12 +174,12 @@ class fixed_vector
 
     inline iterator end()
     {
-        return (static_cast<T*>(m_data) + m_size);
+        return (static_cast<iterator>(m_data) + m_size);
     }
 
     inline const_iterator end() const
     {
-        return (static_cast<T const*>(m_data) + m_size);
+        return (static_cast<const_iterator>(m_data) + m_size);
     }
 
     inline const_iterator cend() const

@@ -51,30 +51,42 @@ template<typename... ElementTypes>
 class decorated_tuple : public abstract_tuple
 {
 
+    static_assert(sizeof...(ElementTypes) > 0,
+                  "decorated_tuple is not allowed to be empty");
+
  public:
 
     typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
 
     typedef cow_ptr<abstract_tuple> ptr_type;
 
-    decorated_tuple(ptr_type&& d, vector_type const& v)
-        : m_decorated(std::move(d)), m_mappings(v)
+    using abstract_tuple::const_iterator;
+
+    decorated_tuple(ptr_type&& d, vector_type const& v) : m_decorated(std::move(d))
     {
-        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
-        CPPA_REQUIRE(std::max_element(v.begin(), v.end()) < m_decorated->size());
+        init(v);
     }
 
-    decorated_tuple(ptr_type const& d, vector_type const& v)
-        : m_decorated(d), m_mappings(v)
+    decorated_tuple(ptr_type const& d, vector_type const& v) : m_decorated(d)
     {
-        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
-        CPPA_REQUIRE(v.empty() || *(std::max_element(v.begin(), v.end())) < m_decorated->size());
+        init(v);
+    }
+
+    virtual const_iterator begin() const
+    {
+        return m_data;
+    }
+
+    virtual const_iterator end() const
+    {
+        return static_cast<const_iterator>(m_data) + sizeof...(ElementTypes);
     }
 
     virtual void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());
-        return m_decorated->mutable_at(m_mappings[pos]);
+        // const_cast is safe because decorated_tuple is used in cow_ptrs only
+        return const_cast<void*>(m_data[pos].second);
     }
 
     virtual size_t size() const
@@ -90,18 +102,13 @@ class decorated_tuple : public abstract_tuple
     virtual void const* at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        return m_decorated->at(m_mappings[pos]);
+        return m_data[pos].second;
     }
 
     virtual uniform_type_info const* type_at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        return m_decorated->type_at(m_mappings[pos]);
-    }
-
-    virtual bool equals(abstract_tuple const&) const
-    {
-        return false;
+        return m_data[pos].first;
     }
 
     virtual std::type_info const& impl_type() const
@@ -109,17 +116,29 @@ class decorated_tuple : public abstract_tuple
         return typeid(decorated_tuple);
     }
 
-
  private:
 
     ptr_type m_decorated;
-    vector_type m_mappings;
+    type_value_pair m_data[sizeof...(ElementTypes)];
 
     decorated_tuple(decorated_tuple const& other)
         : abstract_tuple()
         , m_decorated(other.m_decorated)
-        , m_mappings(other.m_mappings)
     {
+        // both instances point to the same data
+        std::copy(other.begin(), other.end(), m_data);
+    }
+
+    void init(vector_type const& v)
+    {
+        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
+        CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < m_decorated->size());
+        for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
+        {
+            auto x = v[i];
+            m_data[i].first = m_decorated->type_at(x);
+            m_data[i].second = m_decorated->at(x);
+        }
     }
 
     decorated_tuple& operator=(decorated_tuple const&) = delete;

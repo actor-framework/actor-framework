@@ -48,6 +48,8 @@ struct abstract_tuple : ref_counted
     virtual void* mutable_at(size_t pos) = 0;
 
     // accessors
+    virtual const_iterator begin() const = 0;
+    virtual const_iterator end() const = 0;
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
     virtual void const* at(size_t pos) const = 0;

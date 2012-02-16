@@ -31,15 +31,16 @@
 #ifndef ANY_TUPLE_HPP
 #define ANY_TUPLE_HPP
 
-#include "cppa/cow_ptr.hpp"
-
 #include "cppa/tuple.hpp"
+#include "cppa/config.hpp"
+#include "cppa/cow_ptr.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa {
 
 /**
- * @brief Describes a fixed-length tuple with elements of any type.
+ * @brief Describes a fixed-length copy-on-write tuple
+ *        with elements of any type.
  */
 class any_tuple
 {
@@ -60,6 +61,12 @@ class any_tuple
      */
     template<typename... Args>
     any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
+
+    /**
+     * @brief Creates a tuple and moves the content from @p t.
+     */
+    template<typename... Args>
+    any_tuple(tuple<Args...>&& t) : m_vals(std::move(t.m_vals)) { }
 
     explicit any_tuple(detail::abstract_tuple*);
 
@@ -83,45 +90,60 @@ class any_tuple
      */
     any_tuple& operator=(any_tuple const&) = default;
 
+    /**
+     * @brief Gets the size of this tuple.
+     */
     size_t size() const;
 
+    /**
+     * @brief Gets a mutable pointer to the element at position @p p.
+     */
     void* mutable_at(size_t p);
 
+    /**
+     * @brief Gets a const pointer to the element at position @p p.
+     */
     void const* at(size_t p) const;
 
+    /**
+     * @brief Gets {@link uniform_type_info uniform type information}
+     *        of the element at position @p p.
+     */
     uniform_type_info const* type_at(size_t p) const;
 
-    cow_ptr<detail::abstract_tuple> const& vals() const;
-
+    /**
+     * @brief Returns @c true if <tt>*this == other</tt>, otherwise false.
+     */
     bool equals(any_tuple const& other) const;
 
-    std::type_info const& impl_type() const;
+    /**
+     * @brief Returns true if <tt>size() == 0</tt>, otherwise false.
+     */
+    inline bool empty() const { return size() == 0; }
 
-    inline bool empty() const
+    template<typename T>
+    inline T const& get_as(size_t p) const
     {
-        return size() == 0;
+        CPPA_REQUIRE(type_at(p) == typeid(T));
+        return *reinterpret_cast<T const*>(at(p));
     }
 
     template<typename T>
-    inline T const& get_as(size_t p) const;
-
-    template<typename T>
-    inline T& get_mutable_as(size_t p);
-
-    class const_iterator
+    inline T& get_mutable_as(size_t p)
     {
-        any_tuple const& ref;
-        size_t p;
-     public:
-        inline const_iterator(any_tuple const& data, size_t pos = 0)
-            : ref(data), p(pos) { }
-        inline void next() { ++p; }
-        inline bool at_end() const { return p >= ref.size(); }
-        inline void const* value() const { return ref.at(p); }
-        inline uniform_type_info const* type() const { return ref.type_at(p); }
-    };
+        CPPA_REQUIRE(type_at(p) == typeid(T));
+        return *reinterpret_cast<T*>(mutable_at(p));
+    }
 
-    inline const_iterator begin() const { return {*this}; }
+    typedef type_value_pair const* const_iterator;
+
+    inline const_iterator begin() const { return m_vals->begin(); }
+
+    inline const_iterator end() const { return m_vals->end(); }
+
+    std::type_info const& impl_type() const;
+
+    cow_ptr<detail::abstract_tuple> const& vals() const;
 
 };
 
@@ -133,18 +155,6 @@ inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
 inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
 {
     return !(lhs == rhs);
-}
-
-template<typename T>
-inline T const& any_tuple::get_as(size_t p) const
-{
-    return *reinterpret_cast<T const*>(at(p));
-}
-
-template<typename T>
-inline T& any_tuple::get_mutable_as(size_t p)
-{
-    return *reinterpret_cast<T*>(mutable_at(p));
 }
 
 } // namespace cppa
