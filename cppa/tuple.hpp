@@ -73,6 +73,8 @@ class tuple
                   "illegal types in tuple definition: "
                   "pointers and references are prohibited");
 
+    friend class any_tuple;
+
     typedef detail::tuple_vals<ElementTypes...> data_type;
 
     cow_ptr<detail::abstract_tuple> m_vals;
@@ -137,7 +139,6 @@ class tuple
 
     /**
      * @brief Gets the size of this tuple.
-     * @returns <tt>sizeof...(ElementTypes)</tt>.
      */
     inline size_t size() const
     {
@@ -145,14 +146,16 @@ class tuple
     }
 
     /**
-     * @brief Gets a pointer to the internal data.
-     * @returns A const void pointer to the <tt>N</tt>th element.
+     * @brief Gets a const pointer to the element at position @p p.
      */
     inline void const* at(size_t p) const
     {
         return m_vals->at(p);
     }
 
+    /**
+     * @brief Gets a mutable pointer to the element at position @p p.
+     */
     inline void* mutable_at(size_t p)
     {
         return m_vals->mutable_at(p);
@@ -160,26 +163,17 @@ class tuple
 
     /**
      * @brief Gets {@link uniform_type_info uniform type information}
-     *        of an element.
-     * @returns The uniform type of the <tt>N</tt>th element.
+     *        of the element at position @p p.
      */
     inline uniform_type_info const* type_at(size_t p) const
     {
         return m_vals->type_at(p);
     }
 
-#   ifdef CPPA_DOCUMENTATION
-    /**
-     * @brief Gets the internal data.
-     * @returns A pointer to the internal data representation.
-     */
-    cow_ptr<InternalData> vals() const;
-#   else
     inline cow_ptr<detail::abstract_tuple> const& vals() const
     {
         return m_vals;
     }
-#   endif
 
 };
 

@@ -33,6 +33,8 @@
 
 #include <stdexcept>
 
+#include "cppa/type_value_pair.hpp"
+
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tdata.hpp"
@@ -46,6 +48,9 @@ template<typename... ElementTypes>
 class tuple_vals : public abstract_tuple
 {
 
+    static_assert(sizeof...(ElementTypes) > 0,
+                  "tuple_vals is not allowed to be empty");
+
     typedef abstract_tuple super;
 
     typedef tdata<ElementTypes...> data_type;
@@ -56,33 +61,45 @@ class tuple_vals : public abstract_tuple
 
     static types_array<ElementTypes...> m_types;
 
-    template<typename... Types>
-    void* tdata_mutable_at(tdata<Types...>& d, size_t pos)
-    {
-        return (pos == 0) ? &(d.head) : tdata_mutable_at(d.tail(), pos - 1);
-    }
+    type_value_pair m_view[sizeof...(ElementTypes)];
 
-    template<typename... Types>
-    void const* tdata_at(tdata<Types...> const& d, size_t pos) const
+    void init_view()
     {
-        return (pos == 0) ? &(d.head) : tdata_at(d.tail(), pos - 1);
+        for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
+        {
+            m_view[i].first = m_types[i];
+            m_view[i].second = m_data.at(i);
+        }
     }
 
  public:
 
-    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
+    using abstract_tuple::const_iterator;
 
-    tuple_vals() : m_data() { }
+    tuple_vals() : m_data() { init_view(); }
 
-    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
+    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { init_view(); }
 
-    inline data_type const& data() const { return m_data; }
+    tuple_vals(ElementTypes const&... args) : m_data(args...) { init_view(); }
 
-    inline data_type& data_ref() { return m_data; }
-
-    void* mutable_at(size_t pos)
+    inline data_type const& data() const
     {
-        return tdata_mutable_at(m_data, pos);
+        return m_data;
+    }
+
+    inline data_type& data_ref()
+    {
+        return m_data;
+    }
+
+    const_iterator begin() const
+    {
+        return m_view;
+    }
+
+    const_iterator end() const
+    {
+        return begin() + sizeof...(ElementTypes);
     }
 
     size_t size() const
@@ -97,11 +114,20 @@ class tuple_vals : public abstract_tuple
 
     void const* at(size_t pos) const
     {
-        return tdata_at(m_data, pos);
+        CPPA_REQUIRE(pos < size());
+        return m_view[pos].second;
+    }
+
+    void* mutable_at(size_t pos)
+    {
+        CPPA_REQUIRE(pos < size());
+        // safe, because tuple_cals is used in cow_ptrs only
+        return const_cast<void*>(m_view[pos].second);
     }
 
     uniform_type_info const* type_at(size_t pos) const
     {
+        CPPA_REQUIRE(pos < size());
         return m_types[pos];
     }
 

@@ -70,24 +70,24 @@ class tuple_view
 
     typedef util::type_list<ElementTypes...> types;
 
-    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void*> > const& vec)
+    static tuple_view from(std::vector<type_value_pair> const& vec)
     {
         tuple_view result;
         size_t j = 0;
-        for (auto i = vec.begin(); i != vec.end(); ++i)
+        for (type_value_pair const& tvp : vec)
         {
-            result.m_data[j++] = i->second;
+            result.m_data[j++] = const_cast<void*>(tvp.second);
         }
         return std::move(result);
     }
 
-    static tuple_view from(std::vector< std::pair<uniform_type_info const*, void*> > const& vec,
+    static tuple_view from(std::vector<type_value_pair> const& vec,
                            util::fixed_vector<size_t, sizeof...(ElementTypes)> const& mv)
     {
         tuple_view result;
         for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
         {
-            result.m_data[i] = vec[mv[i]].second;
+            result.m_data[i] = const_cast<void*>(vec[mv[i]].second);
         }
         return std::move(result);
     }

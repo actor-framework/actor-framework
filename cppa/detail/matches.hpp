@@ -31,10 +31,12 @@
 #ifndef DO_MATCH_HPP
 #define DO_MATCH_HPP
 
+#include <algorithm>
 #include <type_traits>
 
 #include "cppa/pattern.hpp"
 #include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/types_array.hpp"
@@ -43,42 +45,17 @@
 
 namespace cppa { namespace detail {
 
-template<class T, typename Iterator>
-class cppa_iterator_decorator
+template<typename T>
+inline auto ptr_type(T& ptr, util::enable_if<std::is_pointer<T>>* = 0) -> T
 {
+    return ptr;
+}
 
-    static types_array<T> tarr;
-
-    Iterator begin;
-    Iterator end;
-    size_t pos;
-    uniform_type_info const* t;
-
- public:
-
-    cppa_iterator_decorator(Iterator first, Iterator last)
-        : begin(first), end(last), pos(0), t(tarr[0])
-    {
-    }
-
-    inline void next()
-    {
-        ++begin;
-        ++pos;
-    }
-
-    inline bool at_end() const { return begin == end; }
-
-    inline uniform_type_info const* type() const { return t; }
-
-    inline void const* value() const { return &(*begin); }
-
-    inline size_t position() const { return pos; }
-
-};
-
-template<class T, typename Iterator>
-types_array<T> cppa_iterator_decorator<T, Iterator>::tarr;
+template<typename T>
+inline auto ptr_type(T& iter, util::disable_if<std::is_pointer<T>>* = 0) -> decltype(iter.operator->())
+{
+    return iter.operator->();
+}
 
 template<class MappingVector, typename Iterator>
 class push_mapping_decorator
@@ -86,56 +63,63 @@ class push_mapping_decorator
 
     size_t pos;
     Iterator iter;
-    MappingVector* mapping;
+    MappingVector& mapping;
+    size_t commited_size;
 
  public:
 
     typedef MappingVector mapping_vector;
 
-    push_mapping_decorator(Iterator const& i, MappingVector* mv)
-        : pos(0), iter(i), mapping(mv)
+    push_mapping_decorator(Iterator const& i, MappingVector& mv)
+        : pos(0), iter(i), mapping(mv), commited_size(0)
     {
     }
 
-    push_mapping_decorator(push_mapping_decorator const& other,
-                           MappingVector* mv)
-        : pos(other.pos), iter(other.iter), mapping(mv)
+    push_mapping_decorator(push_mapping_decorator const&) = default;
+
+    inline push_mapping_decorator& operator++()
     {
+        ++pos;
+        ++iter;
+        return *this;
     }
 
-    push_mapping_decorator(push_mapping_decorator&& other)
-        : pos(other.pos), iter(std::move(other.iter)), mapping(other.mapping)
+    inline bool operator==(Iterator const& i)
     {
+        return iter == i;
     }
 
-    inline void next() { ++pos; iter.next(); }
-    inline bool at_end() const { return iter.at_end(); }
-    inline void const* value() const { return iter.value(); }
-    inline decltype(iter.type()) type() const { return iter.type(); }
-    inline bool has_mapping() const { return mapping != nullptr; }
+    inline decltype(*iter) operator*()
+    {
+        return *iter;
+    }
+
+    inline decltype(ptr_type(iter)) operator->()
+    {
+        return ptr_type(iter);
+    }
+
     inline void push_mapping()
     {
-        if (mapping) mapping->push_back(pos);
+        mapping.push_back(pos);
     }
-    inline void push_mapping(MappingVector const& mv)
+
+    inline void commit_mapping()
     {
-        if (mapping) mapping->insert(mapping->end(), mv.begin(), mv.end());
+        commited_size = mapping.size();
+    }
+
+    inline void rollback_mapping()
+    {
+        mapping.resize(commited_size);
     }
 
 };
 
 template<typename Iterator, class MappingVector>
-push_mapping_decorator<MappingVector, Iterator> pm_decorated(Iterator i, MappingVector* mv)
+push_mapping_decorator<MappingVector, Iterator> pm_decorated(Iterator i, MappingVector& mv)
 {
     return {i, mv};
-}
-
-template<typename Iterator>
-auto ci_decorated(Iterator begin, Iterator end)
-     -> cppa_iterator_decorator<typename util::rm_ref<decltype(*begin)>::type,
-                                Iterator>
-{
-    return {begin, end};
 }
 
 template<typename T>
@@ -158,11 +142,44 @@ class is_pm_decorated
 
 };
 
-template<class TupleIterator, class PatternIterator>
-auto matches(TupleIterator targ, PatternIterator pbegin, PatternIterator pend)
-    -> typename util::enable_if_c<is_pm_decorated<TupleIterator>::value,bool>::type
+template<typename T>
+inline typename util::disable_if<is_pm_decorated<T>, void>::type
+push_mapping(T&) { }
+
+template<typename T>
+inline typename util::enable_if<is_pm_decorated<T>, void>::type
+push_mapping(T& iter)
 {
-    for ( ; !(pbegin == pend && targ.at_end()); ++pbegin, targ.next())
+    iter->push_mapping();
+}
+
+template<typename T>
+inline typename util::disable_if<is_pm_decorated<T>, void>::type
+commit_mapping(T&) { }
+
+template<typename T>
+inline typename util::enable_if<is_pm_decorated<T>, void>::type
+commit_mapping(T& iter)
+{
+    iter->commit_mapping();
+}
+
+template<typename T>
+inline typename util::disable_if<is_pm_decorated<T>, void>::type
+rollback_mapping(T&) { }
+
+template<typename T>
+inline typename util::enable_if<is_pm_decorated<T>, void>::type
+rollback_mapping(T& iter)
+{
+    iter->rollback_mapping();
+}
+
+template<class TupleBeginIterator, class TupleEndIterator, class PatternIterator>
+bool matches(TupleBeginIterator tbegin, TupleEndIterator tend,
+             PatternIterator pbegin, PatternIterator pend)
+{
+    for ( ; !(pbegin == pend && tbegin == tend); ++pbegin, ++tbegin)
     {
         if (pbegin == pend)
         {
@@ -177,76 +194,27 @@ auto matches(TupleIterator targ, PatternIterator pbegin, PatternIterator pend)
                 // always true at the end of the pattern
                 return true;
             }
-            typename TupleIterator::mapping_vector mv;
-            auto mv_ptr = (targ.has_mapping()) ? &mv : nullptr;
+            // safe current mapping as fallback
+            commit_mapping(tbegin);
             // iterate over tu_args until we found a match
-            for ( ; targ.at_end() == false; mv.clear(), targ.next())
+            for (; tbegin != tend; ++tbegin)
             {
-                if (matches(TupleIterator(targ, mv_ptr), pbegin, pend))
-                {
-                    targ.push_mapping(mv);
-                    return true;
-                }
+                if (matches(tbegin, tend, pbegin, pend)) return true;
+                // restore mapping to fallback (delete invalid mappings)
+                rollback_mapping(tbegin);
             }
             return false; // no submatch found
         }
         // compare types
-        else if (targ.at_end() == false && pbegin->first == targ.type())
+        else if (tbegin != tend && pbegin->first == tbegin->first)
         {
             // compare values if needed
             if (   pbegin->second == nullptr
-                || pbegin->first->equals(pbegin->second, targ.value()))
+                || pbegin->first->equals(pbegin->second, tbegin->second))
             {
-                targ.push_mapping();
+                push_mapping(tbegin);
             }
             else
-            {
-                return false; // values didn't match
-            }
-        }
-        else
-        {
-            return false; // no match
-        }
-    }
-    return true; // pbegin == pend && targ.at_end()
-}
-
-template<class TupleIterator, class PatternIterator>
-auto matches(TupleIterator targ, PatternIterator pbegin, PatternIterator pend)
-    -> typename util::enable_if_c<!is_pm_decorated<TupleIterator>::value,bool>::type
-{
-    for ( ; !(pbegin == pend && targ.at_end()); ++pbegin, targ.next())
-    {
-        if (pbegin == pend)
-        {
-            return false;
-        }
-        else if (pbegin->first == nullptr) // nullptr == wildcard (anything)
-        {
-            // perform submatching
-            ++pbegin;
-            if (pbegin == pend)
-            {
-                // always true at the end of the pattern
-                return true;
-            }
-            // iterate over tu_args until we found a match
-            for ( ; targ.at_end() == false; targ.next())
-            {
-                if (matches(targ, pbegin, pend))
-                {
-                    return true;
-                }
-            }
-            return false; // no submatch found
-        }
-        // compare types
-        else if (targ.at_end() == false && pbegin->first == targ.type())
-        {
-            // compare values if needed
-            if (   pbegin->second != nullptr
-                && !pbegin->first->equals(pbegin->second, targ.value()))
             {
                 return false; // values didn't match
             }
@@ -265,6 +233,7 @@ bool matches(std::integral_constant<int, 0>,
              Tuple const& tpl, Pattern const& pttrn,
              util::fixed_vector<size_t, Pattern::filtered_size>* mv)
 {
+    // assertion "tpl.size() == pttrn.size()" is guaranteed from caller
     typedef typename Pattern::types ptypes;
     typedef typename decorated_tuple_from_type_list<ptypes>::type dec_t;
     typedef typename tuple_vals_from_type_list<ptypes>::type tv_t;
@@ -273,18 +242,17 @@ bool matches(std::integral_constant<int, 0>,
     {
         if (pttrn.has_values())
         {
-            size_t i = 0;
-            auto end = pttrn.end();
-            for (auto iter = pttrn.begin(); iter != end; ++iter)
+            // compare values only (types are guaranteed to be equal)
+            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
             {
-                if (iter->second)
-                {
-                    if (iter->first->equals(iter->second, tpl.at(i)) == false)
-                    {
-                        return false;
-                    }
-                }
-                ++i;
+                // pattern (rhs) does not have to have a value
+                return    rhs.second == nullptr
+                       || lhs.first->equals(lhs.second, rhs.second);
+            };
+            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
+            {
+                // values differ
+                return false;
             }
         }
     }
@@ -292,25 +260,31 @@ bool matches(std::integral_constant<int, 0>,
     {
         if (pttrn.has_values())
         {
-            size_t i = 0;
-            auto end = pttrn.end();
-            for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+            // compares type and value
+            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
             {
-                if (iter->first != tpl.type_at(i)) return false;
-                if (iter->second)
-                {
-                    if (iter->first->equals(iter->second, tpl.at(i)) == false)
-                        return false;
-                }
+                // pattern (rhs) does not have to have a value
+                return    lhs.first == rhs.first
+                       && (   rhs.second == nullptr
+                           || lhs.first->equals(lhs.second, rhs.second));
+            };
+            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
+            {
+                // types or values differ
+                return false;
             }
         }
         else
         {
-            size_t i = 0;
-            auto end = pttrn.end();
-            for (auto iter = pttrn.begin(); iter != end; ++iter, ++i)
+            // compares the types only
+            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
             {
-                if (iter->first != tpl.type_at(i)) return false;
+                return lhs.first == rhs.first;
+            };
+            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
+            {
+                // types differ
+                return false;
             }
         }
     }
@@ -369,8 +343,8 @@ bool matches(std::integral_constant<int, 2>,
              util::fixed_vector<size_t, Pattern::filtered_size>* mv = 0)
 {
     if (mv)
-        return matches(pm_decorated(tpl.begin(), mv), ptrn.begin(), ptrn.end());
-    return matches(tpl.begin(), ptrn.begin(), ptrn.end());
+        return matches(pm_decorated(tpl.begin(), *mv), tpl.end(), ptrn.begin(), ptrn.end());
+    return matches(tpl.begin(), tpl.end(), ptrn.begin(), ptrn.end());
 }
 
 template<class Tuple, class Pattern>

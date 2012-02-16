@@ -35,9 +35,13 @@
 
 namespace cppa { namespace detail {
 
-struct empty_tuple : cppa::detail::abstract_tuple
+struct empty_tuple : abstract_tuple
 {
 
+    using abstract_tuple::const_iterator;
+
+    const_iterator begin() const;
+    const_iterator end() const;
     size_t size() const;
     void* mutable_at(size_t);
     abstract_tuple* copy() const;

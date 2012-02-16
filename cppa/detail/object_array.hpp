@@ -34,16 +34,20 @@
 #include <vector>
 
 #include "cppa/object.hpp"
+#include "cppa/type_value_pair.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {
 
-class object_array : public detail::abstract_tuple
+class object_array : public abstract_tuple
 {
 
     std::vector<object> m_elements;
+    std::vector<type_value_pair> m_data;
 
  public:
+
+    using abstract_tuple::const_iterator;
 
     object_array();
 
@@ -51,14 +55,15 @@ class object_array : public detail::abstract_tuple
 
     object_array(object_array const& other);
 
-    /**
-     * @pre
-     */
     void push_back(object&& what);
 
     void push_back(object const& what);
 
     void* mutable_at(size_t pos);
+
+    const_iterator begin() const;
+
+    const_iterator end() const;
 
     size_t size() const;
 
