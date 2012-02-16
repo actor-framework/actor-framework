@@ -225,21 +225,17 @@ bool matches(std::integral_constant<int, 0>,
     typedef typename decorated_tuple_from_type_list<ptypes>::type dec_t;
     typedef typename tuple_vals_from_type_list<ptypes>::type tv_t;
     std::type_info const& tinfo = tpl.impl_type();
+    auto j = pttrn.begin();
+    auto end = tpl.end();
     if (tinfo == typeid(dec_t) || tinfo == typeid(tv_t))
     {
         if (pttrn.has_values())
         {
             // compare values only (types are guaranteed to be equal)
-            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
+            for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                // pattern (rhs) does not have to have a value
-                return    rhs.second == nullptr
-                       || lhs.first->equals(lhs.second, rhs.second);
-            };
-            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
-            {
-                // values differ
-                return false;
+                if (   j->second != nullptr
+                    && i->first->equals(i->second, j->second) == false) return false;
             }
         }
     }
@@ -248,30 +244,19 @@ bool matches(std::integral_constant<int, 0>,
         if (pttrn.has_values())
         {
             // compares type and value
-            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
+            for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                // pattern (rhs) does not have to have a value
-                return    lhs.first == rhs.first
-                       && (   rhs.second == nullptr
-                           || lhs.first->equals(lhs.second, rhs.second));
-            };
-            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
-            {
-                // types or values differ
-                return false;
+                if (   i->first != j->first
+                    || (   j->second != nullptr
+                        && i->first->equals(i->second, j->second) == false)) return false;
             }
         }
         else
         {
             // compares the types only
-            auto eq = [](type_value_pair const& lhs, type_value_pair const& rhs)
+            for (auto i = tpl.begin(); i != end; ++i, ++j)
             {
-                return lhs.first == rhs.first;
-            };
-            if (std::equal(tpl.begin(), tpl.end(), pttrn.begin(), eq) == false)
-            {
-                // types differ
-                return false;
+                if (i->first != j->first) return false;
             }
         }
     }
