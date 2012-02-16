@@ -41,24 +41,32 @@ size_t test__tuple()
     CPPA_CHECK_EQUAL(t0_1, 2);
     // get a view of t0
     any_tuple atup0(t0);
+    CPPA_CHECK(atup0.size() == 2 && atup0.at(0) == &get<0>(t0));
     auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(atup0));
+    // the tuple_view forces atup0 to detach from t0
+    CPPA_CHECK(atup0.size() == 2 && atup0.at(0) != &get<0>(t0));
     CPPA_CHECK((v1opt));
     if (v1opt)
     {
         auto& v1 = *v1opt;
-        auto v1_0 = get<0>(v1);
+        CPPA_CHECK((std::is_same<decltype(v1), tuple_view<std::string>&>::value));
         CPPA_CHECK_EQUAL(v1.size(), 1);
+        auto& v1_0 = get<0>(v1);
         CPPA_CHECK_EQUAL(v1_0, "1");
+        CPPA_CHECK_EQUAL(atup0.at(0), &(get<0>(v1)));     // point to the same
     }
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
+    CPPA_CHECK((std::is_same<decltype(v0opt), option<tuple<std::string>>>::value));
     CPPA_CHECK((v0opt));
+    CPPA_CHECK(at0.size() == 2 && at0.at(0) == &get<0>(t0));
     if (v0opt)
     {
-        tuple<std::string>& v0 = *v0opt;
-        auto v0_0 = get<0>(v0);
-        CPPA_CHECK((std::is_same<decltype(v0_0), std::string>::value));
+        auto& v0 = *v0opt;
+        CPPA_CHECK((std::is_same<decltype(v0), tuple<std::string>&>::value));
+        auto& v0_0 = get<0>(v0);
+        CPPA_CHECK((std::is_same<decltype(v0_0), std::string const&>::value));
         CPPA_CHECK_EQUAL(v0.size(), 1);
         CPPA_CHECK_EQUAL(v0_0, "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));

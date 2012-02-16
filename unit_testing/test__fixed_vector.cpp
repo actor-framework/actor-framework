@@ -22,21 +22,23 @@ size_t test__fixed_vector()
     fixed_vector<int, 4> vec4 {1, 2};
     fixed_vector<int, 2> vec5 {3, 4};
     vec4.insert(vec4.end(), vec5.begin(), vec5.end());
+    auto vec6 = vec4;
     CPPA_CHECK_EQUAL(vec1.size(), 4);
     CPPA_CHECK_EQUAL(vec2.size(), 4);
     CPPA_CHECK_EQUAL(vec3.size(), 4);
     CPPA_CHECK_EQUAL(vec4.size(), 4);
     CPPA_CHECK_EQUAL(vec5.size(), 2);
+    CPPA_CHECK_EQUAL(vec6.size(), 4);
     CPPA_CHECK_EQUAL(vec1.full(), true);
     CPPA_CHECK_EQUAL(vec2.full(), false);
     CPPA_CHECK_EQUAL(vec3.full(), true);
     CPPA_CHECK_EQUAL(vec4.full(), true);
     CPPA_CHECK_EQUAL(vec5.full(), true);
-    CPPA_CHECK_EQUAL(vec4.full(), true);
+    CPPA_CHECK_EQUAL(vec6.full(), true);
     CPPA_CHECK(std::equal(vec1.begin(), vec1.end(), arr1));
     CPPA_CHECK(std::equal(vec2.rbegin(), vec2.rend(), arr1));
-    CPPA_CHECK_EQUAL(vec4.size(), vec1.size());
-    if (vec4.size() == vec1.size())
-        CPPA_CHECK(std::equal(vec4.begin(), vec4.end(), arr1));
+    CPPA_CHECK(std::equal(vec4.begin(), vec4.end(), arr1));
+    CPPA_CHECK(std::equal(vec6.begin(), vec6.end(), arr1));
+    CPPA_CHECK(std::equal(vec6.begin(), vec6.end(), vec2.rbegin()));
     return CPPA_TEST_RESULT;
 }

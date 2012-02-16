@@ -124,14 +124,14 @@ class any_tuple
     template<typename T>
     inline T const& get_as(size_t p) const
     {
-        CPPA_REQUIRE(type_at(p) == typeid(T));
+        CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T const*>(at(p));
     }
 
     template<typename T>
     inline T& get_mutable_as(size_t p)
     {
-        CPPA_REQUIRE(type_at(p) == typeid(T));
+        CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T*>(mutable_at(p));
     }
 
