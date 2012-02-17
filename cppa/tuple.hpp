@@ -76,19 +76,18 @@ class tuple
     friend class any_tuple;
 
     typedef detail::tuple_vals<ElementTypes...> data_type;
+    typedef detail::decorated_tuple<ElementTypes...> decorated_type;
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
-    struct ptr_ctor { };
+    struct priv_ctor { };
 
-    template<typename CowPtr>
-    tuple(ptr_ctor const&, CowPtr&& ptr) : m_vals(std::forward<CowPtr>(ptr))
-    {
-    }
+    tuple(priv_ctor, cow_ptr<detail::abstract_tuple>&& ptr) : m_vals(std::move(ptr)) { }
 
  public:
 
     typedef util::type_list<ElementTypes...> types;
+    typedef cow_ptr<detail::abstract_tuple> cow_ptr_type;
 
     static constexpr size_t num_elements = sizeof...(ElementTypes);
 
@@ -120,21 +119,24 @@ class tuple
     tuple& operator=(tuple&&) = default;
     tuple& operator=(tuple const&) = default;
 
-    static tuple from(cow_ptr<detail::abstract_tuple>&& ptr)
+    static tuple from(cow_ptr_type ptr)
     {
-        return tuple(ptr_ctor(), std::move(ptr));
+        if (ptr->size() == sizeof...(ElementTypes))
+        {
+            // *this == *ptr
+            return {priv_ctor(), std::move(ptr)};
+        }
+        else
+        {
+            // *this is a subtuple of *ptr
+            return {priv_ctor(), decorated_type::create(std::move(ptr))};
+        }
     }
 
-    static tuple from(cow_ptr<detail::abstract_tuple> const& ptr)
-    {
-        return tuple(ptr_ctor(), ptr);
-    }
-
-    static tuple from(cow_ptr<detail::abstract_tuple> const& ptr,
+    static tuple from(cow_ptr_type ptr,
                       util::fixed_vector<size_t, num_elements> const& mv)
     {
-        return tuple(ptr_ctor(),
-                     new detail::decorated_tuple<ElementTypes...>(ptr, mv));
+        return {priv_ctor(), decorated_type::create(std::move(ptr), mv)};
     }
 
     /**

@@ -48,18 +48,30 @@ namespace cppa {
 template<class ResultTuple, class Tuple, typename... P>
 option<ResultTuple> tuple_cast_impl(Tuple const& tup, pattern<P...> const& p)
 {
-    typedef typename pattern<P...>::filtered_types filtered_types;
-    typename pattern<P...>::mapping_vector mv;
-    if (detail::matches(tup, p, &mv))
+    typedef util::type_list<P...> types;
+    static constexpr int apos = util::tl_find<types, anything>::value;
+    // no anything in given template parameter pack
+    // or anything at end of template parameter pack
+    if (apos == -1 || apos == (sizeof...(P) - 1))
     {
-        if (mv.size() == tup.size()) // perfect match
+        if (detail::matches(tup, p))
         {
             return {ResultTuple::from(tup.vals())};
         }
-        else
+    }
+    else
+    {
+        typename pattern<P...>::mapping_vector mv;
+        if (detail::matches(tup, p, &mv))
         {
-            typedef typename detail::decorated_tuple_from_type_list<filtered_types>::type decorated;
-            return {ResultTuple::from(tup.vals(), mv)};
+            if (mv.size() == tup.size()) // perfect match
+            {
+                return {ResultTuple::from(tup.vals())};
+            }
+            else
+            {
+                return {ResultTuple::from(tup.vals(), mv)};
+            }
         }
     }
     return { };
@@ -69,17 +81,21 @@ option<ResultTuple> tuple_cast_impl(Tuple const& tup, pattern<P...> const& p)
 template<class ResultTuple, class Tuple, typename... T>
 option<ResultTuple> tuple_cast_impl(Tuple const& tup)
 {
+    typedef util::type_list<T...> types;
+    static constexpr int apos = util::tl_find<types, anything>::value;
     // no anything in given template parameter pack
-    if (util::tl_find<util::type_list<T...>, anything>::value == -1)
+    // or anything at end of template parameter pack
+    if (apos == -1 || apos == (sizeof...(T) - 1))
     {
-        auto& tarr = detail::static_types_array<T...>::arr;
-        if (tup.size() == sizeof...(T))
+        if (tup.size() >= sizeof...(T))
         {
-            for (size_t i = 0; i < sizeof...(T); ++i)
+            auto& tarr = detail::static_types_array<T...>::arr;
+            static constexpr int end = (apos == -1) ? sizeof...(T) : apos;
+            for (int i = 0; i < end; ++i)
             {
                 if (tarr[i] != tup.type_at(i)) return { };
             }
-            // always a perfect match
+            // always a perfect match or subtuple
             return {ResultTuple::from(tup.vals())};
         }
     }

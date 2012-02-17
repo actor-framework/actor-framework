@@ -117,8 +117,11 @@ class pattern
                                           + (ignore_arg_n ? 0 : 1);
         static_assert(args_size <= size, "too many arguments");
         auto& arr = detail::static_types_array<Types...>::arr;
-        functor f(*this, arr);
+        // "polymophic lambda"
+        init_helper f(m_ptrs, arr);
+        // init elements [0, N)
         util::static_foreach<0, args_size>::_(m_data, f);
+        // init elements [N, size)
         for (size_t i = args_size; i < size; ++i)
         {
             m_ptrs[i].first = arr[i];
@@ -130,23 +133,19 @@ class pattern
 
  private:
 
-    struct functor;
-
-    friend class functor;
-
-    struct functor
+    struct init_helper
     {
-        pattern& p;
-        detail::types_array<Types...>& arr;
-        size_t i;
-        functor(pattern& pp, detail::types_array<Types...>& tarr)
-            : p(pp), arr(tarr), i(0) { }
+        type_value_pair* iter_to;
+        type_value_pair_const_iterator iter_from;
+        init_helper(type_value_pair* pp, detail::types_array<Types...>& tarr)
+            : iter_to(pp), iter_from(tarr.begin()) { }
         template<typename T>
         void operator()(option<T> const& what)
         {
-            p.m_ptrs[i].first = arr[i];
-            p.m_ptrs[i].second = (what) ? &(*what) : nullptr;
-            ++i;
+            iter_to->first = iter_from.type();
+            iter_to->second = (what) ? &(*what) : nullptr;
+            ++iter_to;
+            ++iter_from;
         }
     };
 

@@ -58,18 +58,17 @@ class decorated_tuple : public abstract_tuple
 
     typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
 
-    typedef cow_ptr<abstract_tuple> ptr_type;
+    typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
-    using abstract_tuple::const_iterator;
-
-    decorated_tuple(ptr_type&& d, vector_type const& v) : m_decorated(std::move(d))
+    static cow_pointer_type create(cow_pointer_type d, vector_type const& v)
     {
-        init(v);
+        return {(new decorated_tuple(std::move(d)))->init(v)};
     }
 
-    decorated_tuple(ptr_type const& d, vector_type const& v) : m_decorated(d)
+    // creates a subtuple form @p d with sizeof...(ElementTypes) elements
+    static cow_pointer_type create(cow_pointer_type d)
     {
-        init(v);
+        return {(new decorated_tuple(std::move(d)))->init()};
     }
 
     virtual void* mutable_at(size_t pos)
@@ -108,8 +107,12 @@ class decorated_tuple : public abstract_tuple
 
  private:
 
-    ptr_type m_decorated;
+    cow_pointer_type m_decorated;
     type_value_pair m_data[sizeof...(ElementTypes)];
+
+    decorated_tuple(cow_pointer_type const& d) : m_decorated(d) { }
+
+    decorated_tuple(cow_pointer_type&& d) : m_decorated(std::move(d)) { }
 
     decorated_tuple(decorated_tuple const& other)
         : abstract_tuple()
@@ -119,8 +122,9 @@ class decorated_tuple : public abstract_tuple
         std::copy(other.begin(), other.end(), m_data);
     }
 
-    void init(vector_type const& v)
+    decorated_tuple* init(vector_type const& v)
     {
+        CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
         CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
         CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < m_decorated->size());
         for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
@@ -129,6 +133,19 @@ class decorated_tuple : public abstract_tuple
             m_data[i].first = m_decorated->type_at(x);
             m_data[i].second = m_decorated->at(x);
         }
+        return this;
+    }
+
+    decorated_tuple* init()
+    {
+        CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
+        // copy first n elements
+        for (size_t i = 0; i < sizeof...(ElementTypes); ++i)
+        {
+            m_data[i].first = m_decorated->type_at(i);
+            m_data[i].second = m_decorated->at(i);
+        }
+        return this;
     }
 
     decorated_tuple& operator=(decorated_tuple const&) = delete;

@@ -96,6 +96,11 @@ struct abstract_tuple : ref_counted
             return *this;
         }
 
+        inline const_iterator operator+(size_t offset)
+        {
+            return {m_tuple, m_pos + offset};
+        }
+
         inline size_t position() const { return m_pos; }
 
         void const* value() const { return m_tuple.at(m_pos); }
