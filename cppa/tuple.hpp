@@ -119,24 +119,32 @@ class tuple
     tuple& operator=(tuple&&) = default;
     tuple& operator=(tuple const&) = default;
 
-    static tuple from(cow_ptr_type ptr)
+    inline static tuple from(cow_ptr_type ptr)
     {
-        if (ptr->size() == sizeof...(ElementTypes))
-        {
-            // *this == *ptr
-            return {priv_ctor(), std::move(ptr)};
-        }
-        else
-        {
-            // *this is a subtuple of *ptr
-            return {priv_ctor(), decorated_type::create(std::move(ptr))};
-        }
+        return {priv_ctor(), std::move(ptr)};
     }
 
-    static tuple from(cow_ptr_type ptr,
-                      util::fixed_vector<size_t, num_elements> const& mv)
+    inline static tuple from(cow_ptr_type ptr,
+                             util::fixed_vector<size_t, num_elements> const& mv)
     {
         return {priv_ctor(), decorated_type::create(std::move(ptr), mv)};
+    }
+
+    // *this is a [0, N) subtuple
+    inline static tuple subtuple(cow_ptr_type ptr)
+    {
+        // N == ptr->size() ?
+        if (ptr->size() == num_elements) return from(std::move(ptr));
+        // no, create subtuple
+        return {priv_ctor(), decorated_type::create(std::move(ptr))};
+    }
+
+    inline static tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
+    {
+        // N == ptr->size() ?
+        if (ptr->size() == num_elements) return from(std::move(ptr));
+        // no, create subtuple
+        return {priv_ctor(), decorated_type::create(std::move(ptr), offset)};
     }
 
     /**

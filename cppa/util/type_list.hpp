@@ -135,14 +135,21 @@ template<typename What, int Pos>
 struct tl_find<type_list<>, What, Pos>
 {
     static constexpr int value = -1;
+    typedef type_list<> rest_list;
+};
+
+template<typename What, int Pos, typename... Tail>
+struct tl_find<type_list<What, Tail...>, What, Pos>
+{
+    static constexpr int value = Pos;
+    typedef type_list<Tail...> rest_list;
 };
 
 template<typename What, int Pos, typename Head, typename... Tail>
 struct tl_find<type_list<Head, Tail...>, What, Pos>
 {
-    static constexpr int value = std::is_same<Head, What>::value
-                               ? Pos
-                               : tl_find<type_list<Tail...>, What, Pos+1>::value;
+    static constexpr int value = tl_find<type_list<Tail...>, What, Pos+1>::value;
+    typedef typename tl_find<type_list<Tail...>, What, Pos+1>::rest_list rest_list;
 };
 
 // list list::first_n(size_t)
@@ -207,6 +214,45 @@ template<template <typename> class Predicate>
 struct tl_exists<type_list<>, Predicate>
 {
     static constexpr bool value = false;
+};
+
+
+// size_t list::count(predicate)
+
+/**
+ * @brief Counts the number of elements in the list which satisfy a predicate.
+ */
+template<class List, template <typename> class Predicate>
+struct tl_count
+{
+    static constexpr size_t value =
+              (Predicate<typename List::head>::value ? 1 : 0)
+            + tl_count<typename List::tail, Predicate>::value;
+};
+
+template<template <typename> class Predicate>
+struct tl_count<type_list<>, Predicate>
+{
+    static constexpr size_t value = 0;
+};
+
+// size_t list::count_not(predicate)
+
+/**
+ * @brief Counts the number of elements in the list which satisfy a predicate.
+ */
+template<class List, template <typename> class Predicate>
+struct tl_count_not
+{
+    static constexpr size_t value =
+              (Predicate<typename List::head>::value ? 0 : 1)
+            + tl_count_not<typename List::tail, Predicate>::value;
+};
+
+template<template <typename> class Predicate>
+struct tl_count_not<type_list<>, Predicate>
+{
+    static constexpr size_t value = 0;
 };
 
 // bool list::zipped_forall(predicate)

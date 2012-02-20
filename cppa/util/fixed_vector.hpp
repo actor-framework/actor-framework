@@ -84,17 +84,8 @@ class fixed_vector
 
     void resize(size_type s)
     {
-        CPPA_REQUIRE(s < MaxSize);
-        if (s > m_size)
-        {
-            auto x = T();
-            auto old_size = m_size;
-            for (auto i = old_size; i < s; ++i) push_back(x);
-        }
-        else
-        {
-            m_size = s;
-        }
+        CPPA_REQUIRE(s <= MaxSize);
+        m_size = s;
     }
 
     fixed_vector(std::initializer_list<T> init) : m_size(init.size())

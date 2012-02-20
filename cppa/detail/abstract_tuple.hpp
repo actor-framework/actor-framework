@@ -101,13 +101,34 @@ struct abstract_tuple : ref_counted
             return {m_tuple, m_pos + offset};
         }
 
+        inline const_iterator& operator+=(size_t offset)
+        {
+            m_pos += offset;
+            return *this;
+        }
+
+        inline const_iterator operator-(size_t offset)
+        {
+            CPPA_REQUIRE(m_pos >= offset);
+            return {m_tuple, m_pos - offset};
+        }
+
+        inline const_iterator& operator-=(size_t offset)
+        {
+            CPPA_REQUIRE(m_pos >= offset);
+            m_pos -= offset;
+            return *this;
+        }
+
         inline size_t position() const { return m_pos; }
 
         void const* value() const { return m_tuple.at(m_pos); }
 
         uniform_type_info const* type() const { return m_tuple.type_at(m_pos); }
 
-        type_value_pair operator*() { return {type(), value()}; }
+        const_iterator& operator*() { return *this; }
+
+        operator type_value_pair() const { return {type(), value()}; }
 
     };
 
@@ -116,6 +137,27 @@ struct abstract_tuple : ref_counted
     inline const_iterator end() const { return {*this, size()}; }
 
 };
+
+inline bool full_eq(abstract_tuple::const_iterator const& lhs,
+                    type_value_pair const& rhs)
+{
+    return    lhs.type() == rhs.first
+           && (   rhs.second == nullptr
+               || lhs.type()->equals(lhs.value(), rhs.second));
+}
+
+inline bool values_only_eq(abstract_tuple::const_iterator const& lhs,
+                         type_value_pair const& rhs)
+{
+    return    rhs.second == nullptr
+           || lhs.type()->equals(lhs.value(), rhs.second);
+}
+
+inline bool types_only_eq(abstract_tuple::const_iterator const& lhs,
+                          type_value_pair const& rhs)
+{
+    return lhs.type() == rhs.first;
+}
 
 } } // namespace cppa::detail
 

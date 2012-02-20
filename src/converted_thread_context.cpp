@@ -32,8 +32,8 @@
 #include <algorithm>
 
 #include "cppa/self.hpp"
+#include "cppa/match.hpp"
 #include "cppa/exception.hpp"
-#include "cppa/detail/matches.hpp"
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
@@ -100,10 +100,11 @@ void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
     }
     while (dq(node, rules, buffer) == false);
 }
+
 converted_thread_context::throw_on_exit_result
 converted_thread_context::throw_on_exit(any_tuple const& msg)
 {
-    if (matches(msg, m_exit_msg_pattern))
+    if (match(msg, m_exit_msg_pattern))
     {
         auto reason = msg.get_as<std::uint32_t>(1);
         if (reason != exit_reason::normal)

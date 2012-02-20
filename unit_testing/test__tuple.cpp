@@ -39,30 +39,14 @@ size_t test__tuple()
     CPPA_CHECK((std::is_same<decltype(t0_1), int>::value));
     CPPA_CHECK_EQUAL(t0_0, "1");
     CPPA_CHECK_EQUAL(t0_1, 2);
-    // get a view of t0
-    any_tuple atup0(t0);
-    CPPA_CHECK(atup0.size() == 2 && atup0.at(0) == &get<0>(t0));
-    /*
-    auto v1opt = tuple_cast<std::string, anything>(any_tuple_view(atup0));
-    // the tuple_view forces atup0 to detach from t0
-    CPPA_CHECK(atup0.size() == 2 && atup0.at(0) != &get<0>(t0));
-    CPPA_CHECK((v1opt));
-    if (v1opt)
-    {
-        auto& v1 = *v1opt;
-        CPPA_CHECK((std::is_same<decltype(v1), tuple_view<std::string>&>::value));
-        CPPA_CHECK_EQUAL(v1.size(), 1);
-        auto& v1_0 = get<0>(v1);
-        CPPA_CHECK_EQUAL(v1_0, "1");
-        CPPA_CHECK_EQUAL(atup0.at(0), &(get<0>(v1)));     // point to the same
-    }
-    */
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
     CPPA_CHECK((std::is_same<decltype(v0opt), option<tuple<std::string>>>::value));
     CPPA_CHECK((v0opt));
-    CPPA_CHECK(at0.size() == 2 && at0.at(0) == &get<0>(t0));
+    CPPA_CHECK(   at0.size() == 2
+               && at0.at(0) == &get<0>(t0)
+               && at0.at(1) == &get<1>(t0));
     if (v0opt)
     {
         auto& v0 = *v0opt;
@@ -83,6 +67,25 @@ size_t test__tuple()
         auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
         CPPA_CHECK_EQUAL(lhs, rhs);
         CPPA_CHECK_EQUAL(rhs, lhs);
+    }
+    any_tuple at1 = make_tuple("one", 2, 3.f, 4.0);
+    {
+        // perfect match
+        auto opt0 = tuple_cast<std::string, int, float, double>(at1);
+        CPPA_CHECK(opt0);
+        if (opt0) { CPPA_CHECK_EQUAL(*opt0, make_tuple("one", 2, 3.f, 4.0)); }
+        // leading wildcard
+        auto opt1 = tuple_cast<anything, double>(at1);
+        CPPA_CHECK(opt1);
+        if (opt1) { CPPA_CHECK_EQUAL(get<0>(*opt1), 4.0); }
+        // trailing wildcard
+        auto opt2 = tuple_cast<std::string, anything>(at1);
+        CPPA_CHECK(opt2);
+        if (opt2) { CPPA_CHECK_EQUAL(get<0>(*opt2), "one"); }
+        // wildcard in between
+        auto opt3 = tuple_cast<std::string, anything, double>(at1);
+        CPPA_CHECK(opt3);
+        if (opt3) { CPPA_CHECK_EQUAL(*opt3, make_tuple("one", 4.0)); }
     }
     return CPPA_TEST_RESULT;
 }

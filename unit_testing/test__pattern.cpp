@@ -5,8 +5,8 @@
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/tuple.hpp"
 #include "cppa/match.hpp"
+#include "cppa/tuple.hpp"
 #include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/announce.hpp"

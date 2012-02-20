@@ -74,11 +74,6 @@ class tuple_vals : public abstract_tuple
         return m_data;
     }
 
-    inline data_type& data_ref()
-    {
-        return m_data;
-    }
-
     size_t size() const
     {
         return sizeof...(ElementTypes);

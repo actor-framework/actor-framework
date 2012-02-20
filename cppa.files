@@ -244,12 +244,10 @@ cppa/util/type_pair.hpp
 cppa/util/tbind.hpp
 cppa/option.hpp
 cppa/tuple_cast.hpp
-cppa/detail/matches.hpp
 cppa/util/is_mutable_ref.hpp
 cppa/util/is_manipulator.hpp
 cppa/util/apply_tuple.hpp
 cppa/any_tuple_view.hpp
-cppa/match.hpp
 benchmarks/Matching.scala
 benchmarks/matching.cpp
 benchmarks/matching.erl
@@ -262,3 +260,5 @@ cppa/type_value_pair.hpp
 examples/dining_philosophers.cpp
 cppa/detail/disablable_delete.hpp
 unit_testing/test__fixed_vector.cpp
+cppa/detail/tuple_cast_impl.hpp
+cppa/match.hpp

@@ -35,6 +35,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "cppa/match.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/util/duration.hpp"
@@ -42,7 +43,6 @@
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/callable_trait.hpp"
 
-#include "cppa/detail/matches.hpp"
 #include "cppa/detail/intermediate.hpp"
 
 // forward declaration
@@ -183,7 +183,7 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     template<typename T>
     bool invoke_impl(T const& data) const
     {
-        if (matches(data, *m_pattern))
+        if (match(data, *m_pattern))
         {
             m_iimpl.m_fun();
             return true;
@@ -206,7 +206,7 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
 
     intermediate* get_intermediate(any_tuple const& data)
     {
-        return matches(data, *m_pattern) ? &m_iimpl : nullptr;
+        return match(data, *m_pattern) ? &m_iimpl : nullptr;
     }
 
 };

@@ -136,6 +136,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/tdata.hpp \
   cppa/detail/thread_pool_scheduler.hpp \
   cppa/detail/to_uniform_name.hpp \
+  cppa/detail/tuple_cast_impl.hpp \
   cppa/detail/tuple_vals.hpp \
   cppa/detail/type_to_ptype.hpp \
   cppa/detail/types_array.hpp \
