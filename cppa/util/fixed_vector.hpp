@@ -73,9 +73,7 @@ class fixed_vector
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    constexpr fixed_vector() : m_size(0)
-    {
-    }
+    constexpr fixed_vector() : m_size(0) { }
 
     fixed_vector(fixed_vector const& other) : m_size(other.m_size)
     {
@@ -120,12 +118,6 @@ class fixed_vector
         m_data[m_size++] = what;
     }
 
-    inline void push_back(T&& what)
-    {
-        CPPA_REQUIRE(!full());
-        m_data[m_size++] = std::move(what);
-    }
-
     inline reference at(size_type pos)
     {
         CPPA_REQUIRE(pos < m_size);
@@ -140,11 +132,13 @@ class fixed_vector
 
     inline reference operator[](size_type pos)
     {
+        CPPA_REQUIRE(pos < m_size);
         return at(pos);
     }
 
     inline const_reference operator[](size_type pos) const
     {
+        CPPA_REQUIRE(pos < m_size);
         return at(pos);
     }
 
@@ -165,12 +159,12 @@ class fixed_vector
 
     inline iterator end()
     {
-        return (static_cast<iterator>(m_data) + m_size);
+        return begin() + m_size;
     }
 
     inline const_iterator end() const
     {
-        return (static_cast<const_iterator>(m_data) + m_size);
+        return begin() + m_size;
     }
 
     inline const_iterator cend() const
@@ -222,13 +216,13 @@ class fixed_vector
 
     inline reference back()
     {
-        CPPA_REQUIRE(m_size > 0);
+        CPPA_REQUIRE(!empty());
         return m_data[m_size - 1];
     }
 
     inline const_reference back() const
     {
-        CPPA_REQUIRE(m_size > 0);
+        CPPA_REQUIRE(!empty());
         return m_data[m_size - 1];
     }
 

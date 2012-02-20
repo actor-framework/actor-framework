@@ -45,6 +45,9 @@ namespace cppa { namespace detail {
 struct abstract_tuple : ref_counted
 {
 
+    abstract_tuple() = default;
+    abstract_tuple(abstract_tuple const&);
+
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
 
@@ -64,17 +67,22 @@ struct abstract_tuple : ref_counted
     {
 
         size_t m_pos;
-        abstract_tuple const& m_tuple;
+        abstract_tuple const* m_tuple;
 
      public:
 
-        const_iterator(abstract_tuple const& tup, size_t pos = 0) : m_pos(pos), m_tuple(tup) { }
+        inline const_iterator(abstract_tuple const* tup, size_t pos = 0)
+            : m_pos(pos), m_tuple(tup)
+        {
+        }
 
         const_iterator(const_iterator const&) = default;
 
+        const_iterator& operator=(const_iterator const&) = default;
+
         inline bool operator==(const_iterator const& other) const
         {
-            CPPA_REQUIRE(&(other.m_tuple) == &(other.m_tuple));
+            CPPA_REQUIRE(other.m_tuple == other.m_tuple);
             return other.m_pos == m_pos;
         }
 
@@ -122,19 +130,25 @@ struct abstract_tuple : ref_counted
 
         inline size_t position() const { return m_pos; }
 
-        void const* value() const { return m_tuple.at(m_pos); }
+        inline void const* value() const
+        {
+            return m_tuple->at(m_pos);
+        }
 
-        uniform_type_info const* type() const { return m_tuple.type_at(m_pos); }
+        inline uniform_type_info const* type() const
+        {
+            return m_tuple->type_at(m_pos);
+        }
 
-        const_iterator& operator*() { return *this; }
+        inline const_iterator& operator*() { return *this; }
 
-        operator type_value_pair() const { return {type(), value()}; }
+        inline operator type_value_pair() const { return {type(), value()}; }
 
     };
 
-    inline const_iterator begin() const { return {*this}; }
+    inline const_iterator begin() const { return {this}; }
 
-    inline const_iterator end() const { return {*this, size()}; }
+    inline const_iterator end() const { return {this, size()}; }
 
 };
 

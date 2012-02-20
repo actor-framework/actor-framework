@@ -32,6 +32,7 @@ size_t test__tuple()
     CPPA_TEST(test__tuple);
     // check type correctness of make_tuple()
     auto t0 = make_tuple("1", 2);
+    CPPA_CHECK((std::is_same<decltype(t0), cppa::tuple<std::string, int>>::value));
     auto t0_0 = get<0>(t0);
     auto t0_1 = get<1>(t0);
     // check implicit type conversion
@@ -51,12 +52,24 @@ size_t test__tuple()
     {
         auto& v0 = *v0opt;
         CPPA_CHECK((std::is_same<decltype(v0), tuple<std::string>&>::value));
-        auto& v0_0 = get<0>(v0);
-        CPPA_CHECK((std::is_same<decltype(v0_0), std::string const&>::value));
+        CPPA_CHECK((std::is_same<decltype(get<0>(v0)), std::string const&>::value));
         CPPA_CHECK_EQUAL(v0.size(), 1);
-        CPPA_CHECK_EQUAL(v0_0, "1");
+        CPPA_CHECK_EQUAL(get<0>(v0), "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));
         // check cow semantics
+
+        cout << " t0: " << t0.vals().get() << endl
+             << " v0: " << v0.vals().get() << endl
+             << "*v0: " << dynamic_cast<detail::decorated_tuple<std::string> const*>(v0.vals().get())->decorated().get() << endl
+             << "at0: " << at0.vals().get() << endl;
+
+
+
+        cout << "&get<0>(t0): " << (&get<0>(t0)) << endl
+             << "&get<0>(v0): " << (&get<0>(v0)) << endl
+             << "  at0.at(0): " << (at0.at(0)) << endl;
+
+
         CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same
         get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
         CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value

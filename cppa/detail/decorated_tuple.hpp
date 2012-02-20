@@ -82,6 +82,7 @@ class decorated_tuple : public abstract_tuple
     virtual void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());
+        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->mutable_at(m_mapping[pos]);
     }
 
@@ -98,12 +99,14 @@ class decorated_tuple : public abstract_tuple
     virtual void const* at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
+        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->at(m_mapping[pos]);
     }
 
     virtual uniform_type_info const* type_at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
+        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->type_at(m_mapping[pos]);
     }
 
@@ -112,21 +115,24 @@ class decorated_tuple : public abstract_tuple
         return typeid(decorated_tuple);
     }
 
+    cow_pointer_type& decorated()
+    {
+        return m_decorated;
+    }
+
+    cow_pointer_type const& decorated() const
+    {
+        return m_decorated;
+    }
+
  private:
 
     cow_pointer_type m_decorated;
     vector_type m_mapping;
 
-    decorated_tuple(cow_pointer_type const& d) : m_decorated(d) { }
-
     decorated_tuple(cow_pointer_type&& d) : m_decorated(std::move(d)) { }
 
-    decorated_tuple(decorated_tuple const& other)
-        : abstract_tuple()
-        , m_decorated(other.m_decorated)
-        , m_mapping(other.m_mapping)
-    {
-    }
+    decorated_tuple(decorated_tuple const&) = default;
 
     decorated_tuple* init(vector_type const& v)
     {
@@ -143,7 +149,7 @@ class decorated_tuple : public abstract_tuple
         CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
         size_t i = 0;
         m_mapping.resize(sizeof...(ElementTypes));
-        std::generate(m_mapping.begin(), m_mapping.end(), [&](){return i++;});
+        std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
         return this;
     }
 
@@ -152,7 +158,7 @@ class decorated_tuple : public abstract_tuple
         CPPA_REQUIRE((m_decorated->size() - offset) == sizeof...(ElementTypes));
         size_t i = offset;
         m_mapping.resize(sizeof...(ElementTypes));
-        std::generate(m_mapping.begin(), m_mapping.end(), [&](){return i++;});
+        std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
         return this;
     }
 

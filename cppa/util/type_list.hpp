@@ -378,6 +378,7 @@ struct tl_prepend<type_list<T...>, What>
 
 
 // list list::filter(predicate)
+// list list::filter_not(predicate)
 
 template<class List, bool... Selected>
 struct tl_filter_impl;

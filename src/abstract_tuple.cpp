@@ -48,4 +48,6 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
     return true;
 }
 
+abstract_tuple::abstract_tuple(abstract_tuple const&) : ref_counted() { }
+
 } } // namespace cppa::detail
