@@ -80,6 +80,13 @@ class fixed_vector
         std::copy(other.begin(), other.end(), m_data);
     }
 
+    fixed_vector& operator=(fixed_vector const& other)
+    {
+        resize(other.size());
+        std::copy(other.begin(), other.end(), begin());
+        return *this;
+    }
+
     void resize(size_type s)
     {
         CPPA_REQUIRE(s <= MaxSize);
@@ -132,13 +139,11 @@ class fixed_vector
 
     inline reference operator[](size_type pos)
     {
-        CPPA_REQUIRE(pos < m_size);
         return at(pos);
     }
 
     inline const_reference operator[](size_type pos) const
     {
-        CPPA_REQUIRE(pos < m_size);
         return at(pos);
     }
 

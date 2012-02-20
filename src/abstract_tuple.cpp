@@ -34,18 +34,9 @@ namespace cppa { namespace detail {
 
 bool abstract_tuple::equals(const abstract_tuple &other) const
 {
-    if (this == &other) return true;
-    if (size() != other.size()) return false;
-    for (size_t i = 0; i < size(); ++i)
-    {
-        auto uti = type_at(i);
-        if (uti != other.type_at(i)) return false;
-        auto lhs = at(i);
-        auto rhs = other.at(i);
-        // compare addresses first, then values
-        if (lhs != rhs && !(uti->equals(lhs, rhs))) return false;
-    }
-    return true;
+    return    this == &other
+           || (   size() == other.size()
+               && std::equal(begin(), end(), other.begin(), detail::full_eq));
 }
 
 abstract_tuple::abstract_tuple(abstract_tuple const&) : ref_counted() { }

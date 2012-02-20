@@ -60,7 +60,7 @@ size_t test__tuple()
 
         cout << " t0: " << t0.vals().get() << endl
              << " v0: " << v0.vals().get() << endl
-             << "*v0: " << dynamic_cast<detail::decorated_tuple<std::string> const*>(v0.vals().get())->decorated().get() << endl
+             //<< "*v0: " << dynamic_cast<detail::decorated_tuple<std::string> const*>(v0.vals().get())->decorated().get() << endl
              << "at0: " << at0.vals().get() << endl;
 
 
@@ -86,19 +86,38 @@ size_t test__tuple()
         // perfect match
         auto opt0 = tuple_cast<std::string, int, float, double>(at1);
         CPPA_CHECK(opt0);
-        if (opt0) { CPPA_CHECK_EQUAL(*opt0, make_tuple("one", 2, 3.f, 4.0)); }
+        if (opt0)
+        {
+            CPPA_CHECK_EQUAL(*opt0, make_tuple("one", 2, 3.f, 4.0));
+            CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
+        }
         // leading wildcard
         auto opt1 = tuple_cast<anything, double>(at1);
         CPPA_CHECK(opt1);
-        if (opt1) { CPPA_CHECK_EQUAL(get<0>(*opt1), 4.0); }
+        if (opt1)
+        {
+            CPPA_CHECK_EQUAL(get<0>(*opt1), 4.0);
+            CPPA_CHECK_EQUAL(&get<0>(*opt1), at1.at(3));
+        }
         // trailing wildcard
         auto opt2 = tuple_cast<std::string, anything>(at1);
         CPPA_CHECK(opt2);
-        if (opt2) { CPPA_CHECK_EQUAL(get<0>(*opt2), "one"); }
+        if (opt2)
+        {
+            CPPA_CHECK_EQUAL(get<0>(*opt2), "one");
+            CPPA_CHECK_EQUAL(&get<0>(*opt2), at1.at(0));
+        }
         // wildcard in between
         auto opt3 = tuple_cast<std::string, anything, double>(at1);
         CPPA_CHECK(opt3);
-        if (opt3) { CPPA_CHECK_EQUAL(*opt3, make_tuple("one", 4.0)); }
+        if (opt3)
+        {
+            CPPA_CHECK_EQUAL(*opt3, make_tuple("one", 4.0));
+            CPPA_CHECK_EQUAL(get<0>(*opt3), "one");
+            CPPA_CHECK_EQUAL(get<1>(*opt3), 4.0);
+            CPPA_CHECK_EQUAL(&get<0>(*opt3), at1.at(0));
+            CPPA_CHECK_EQUAL(&get<1>(*opt3), at1.at(3));
+        }
     }
     return CPPA_TEST_RESULT;
 }

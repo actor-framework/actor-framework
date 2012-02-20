@@ -130,20 +130,9 @@ class tuple
         return {priv_ctor(), decorated_type::create(std::move(ptr), mv)};
     }
 
-    // *this is a [0, N) subtuple
-    inline static tuple subtuple(cow_ptr_type ptr)
-    {
-        // N == ptr->size() ?
-        if (ptr->size() == num_elements) return from(std::move(ptr));
-        // no, create subtuple
-        return {priv_ctor(), decorated_type::create(std::move(ptr))};
-    }
-
     inline static tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
     {
-        // N == ptr->size() ?
-        if (ptr->size() == num_elements) return from(std::move(ptr));
-        // no, create subtuple
+        CPPA_REQUIRE(offset > 0);
         return {priv_ctor(), decorated_type::create(std::move(ptr), offset)};
     }
 

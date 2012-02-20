@@ -62,27 +62,21 @@ class decorated_tuple : public abstract_tuple
 
     typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
-    static cow_pointer_type create(cow_pointer_type d, vector_type const& v)
+    static inline cow_pointer_type create(cow_pointer_type d,
+                                          vector_type const& v)
     {
-        return {(new decorated_tuple(std::move(d)))->init(v)};
-    }
-
-    // creates a subtuple form @p d with sizeof...(ElementTypes) elements
-    static cow_pointer_type create(cow_pointer_type d)
-    {
-        return {(new decorated_tuple(std::move(d)))->init()};
+        return {new decorated_tuple(std::move(d), v)};
     }
 
     // creates a subtuple form @p d with an offset
-    static cow_pointer_type create(cow_pointer_type d, size_t offset)
+    static inline cow_pointer_type create(cow_pointer_type d, size_t offset)
     {
-        return {(new decorated_tuple(std::move(d)))->init(offset)};
+        return {new decorated_tuple(std::move(d), offset)};
     }
 
     virtual void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());
-        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->mutable_at(m_mapping[pos]);
     }
 
@@ -99,14 +93,12 @@ class decorated_tuple : public abstract_tuple
     virtual void const* at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->at(m_mapping[pos]);
     }
 
     virtual uniform_type_info const* type_at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        CPPA_REQUIRE(m_mapping[pos] < m_decorated->size());
         return m_decorated->type_at(m_mapping[pos]);
     }
 
@@ -130,37 +122,26 @@ class decorated_tuple : public abstract_tuple
     cow_pointer_type m_decorated;
     vector_type m_mapping;
 
-    decorated_tuple(cow_pointer_type&& d) : m_decorated(std::move(d)) { }
-
-    decorated_tuple(decorated_tuple const&) = default;
-
-    decorated_tuple* init(vector_type const& v)
+    decorated_tuple(cow_pointer_type d, vector_type const& v)
+        : m_decorated(std::move(d)), m_mapping(v)
     {
         CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
         CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
-        CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < m_decorated->size());
-        m_mapping.resize(v.size());
-        std::copy(v.begin(), v.end(), m_mapping.begin());
-        return this;
+        CPPA_REQUIRE(  *(std::max_element(v.begin(), v.end()))
+                     < m_decorated->size());
     }
 
-    decorated_tuple* init()
+    decorated_tuple(cow_pointer_type d, size_t offset)
+        : m_decorated(std::move(d))
     {
-        CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
-        size_t i = 0;
-        m_mapping.resize(sizeof...(ElementTypes));
-        std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
-        return this;
-    }
-
-    decorated_tuple* init(size_t offset)
-    {
-        CPPA_REQUIRE((m_decorated->size() - offset) == sizeof...(ElementTypes));
+        CPPA_REQUIRE((m_decorated->size() - offset) >= sizeof...(ElementTypes));
+        CPPA_REQUIRE(offset > 0);
         size_t i = offset;
         m_mapping.resize(sizeof...(ElementTypes));
         std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
-        return this;
     }
+
+    decorated_tuple(decorated_tuple const&) = default;
 
     decorated_tuple& operator=(decorated_tuple const&) = delete;
 

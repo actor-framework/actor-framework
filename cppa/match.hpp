@@ -390,7 +390,7 @@ struct matcher<pattern_characteristic::wildcard_in_between, T...>
         {
             // first range
             size_t i = 0;
-            mv.resize(size);
+            mv.resize(size - 1);
             auto begin = mv.begin();
             std::generate(begin, begin + wc_pos, [&]() { return i++; });
             // second range

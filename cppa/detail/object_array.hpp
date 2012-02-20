@@ -48,11 +48,9 @@ class object_array : public abstract_tuple
 
     using abstract_tuple::const_iterator;
 
-    object_array();
-
-    object_array(object_array&& other);
-
-    object_array(object_array const& other);
+    object_array() = default;
+    object_array(object_array&&) = default;
+    object_array(object_array const&) = default;
 
     void push_back(object&& what);
 

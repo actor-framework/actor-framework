@@ -95,19 +95,8 @@ struct tuple_cast_impl<pattern_characteristic::no_wildcard, Result, T...>
 
 template<class Result, typename... T>
 struct tuple_cast_impl<pattern_characteristic::trailing_wildcard, Result, T...>
+        : tuple_cast_impl<pattern_characteristic::no_wildcard, Result, T...>
 {
-    template<class Tuple>
-    inline static option<Result> _(Tuple const& tup)
-    {
-        if (match<T...>(tup)) return {Result::subtuple(tup.vals())};
-        return {};
-    }
-    template<class Tuple>
-    inline static option<Result> _(Tuple const& tup, pattern<T...> const& p)
-    {
-        if (match(tup, p)) return {Result::subtuple(tup.vals())};
-        return {};
-    }
 };
 
 template<class Result, typename... T>
