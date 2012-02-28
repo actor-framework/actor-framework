@@ -30,14 +30,21 @@
 
 #include <algorithm>
 
+#include "cppa/config.hpp"
 #include "cppa/object.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/void_type.hpp"
+#include "cppa/detail/types_array.hpp"
 
 namespace {
 
 cppa::util::void_type s_void;
+
+inline cppa::uniform_type_info const* tvoid()
+{
+    return cppa::detail::static_types_array<cppa::util::void_type>::arr[0];
+}
 
 } // namespace <anonymous>
 
@@ -49,16 +56,14 @@ void object::swap(object& other)
     std::swap(m_type, other.m_type);
 }
 
-object::object(void* val, const uniform_type_info* utype)
+object::object(void* val, uniform_type_info const* utype)
     : m_value(val), m_type(utype)
 {
-    if (val && !utype)
-    {
-        throw std::invalid_argument("val && !utype");
-    }
+    CPPA_REQUIRE(val != nullptr);
+    CPPA_REQUIRE(utype != nullptr);
 }
 
-object::object() : m_value(&s_void), m_type(uniform_typeid<util::void_type>())
+object::object() : m_value(&s_void), m_type(tvoid())
 {
 }
 
@@ -67,17 +72,14 @@ object::~object()
     if (m_value != &s_void) m_type->delete_instance(m_value);
 }
 
-
-object::object(const object& other) : m_value(&s_void), m_type(uniform_typeid<util::void_type>())
+object::object(object const& other)
 {
-    if (other.value() != &s_void)
-    {
-        m_value = other.m_type->new_instance(other.m_value);
-        m_type = other.m_type;
-    }
+    m_type = other.m_type;
+    m_value = (other.m_value == &s_void) ? other.m_value
+                                         : m_type->new_instance(other.m_value);
 }
 
-object::object(object&& other) : m_value(&s_void), m_type(uniform_typeid<util::void_type>())
+object::object(object&& other) : m_value(&s_void), m_type(tvoid())
 {
     swap(other);
 }
@@ -89,15 +91,14 @@ object& object::operator=(object&& other)
     return *this;
 }
 
-object& object::operator=(const object& other)
+object& object::operator=(object const& other)
 {
-    // use copy ctor and then swap
     object tmp(other);
     swap(tmp);
     return *this;
 }
 
-bool operator==(const object& lhs, const object& rhs)
+bool operator==(object const& lhs, object const& rhs)
 {
     if (lhs.type() == rhs.type())
     {
@@ -113,7 +114,7 @@ uniform_type_info const* object::type() const
     return m_type;
 }
 
-const void* object::value() const
+void const* object::value() const
 {
     return m_value;
 }

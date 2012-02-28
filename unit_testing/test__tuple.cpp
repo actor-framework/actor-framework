@@ -57,19 +57,6 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(get<0>(v0), "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));
         // check cow semantics
-
-        cout << " t0: " << t0.vals().get() << endl
-             << " v0: " << v0.vals().get() << endl
-             //<< "*v0: " << dynamic_cast<detail::decorated_tuple<std::string> const*>(v0.vals().get())->decorated().get() << endl
-             << "at0: " << at0.vals().get() << endl;
-
-
-
-        cout << "&get<0>(t0): " << (&get<0>(t0)) << endl
-             << "&get<0>(v0): " << (&get<0>(v0)) << endl
-             << "  at0.at(0): " << (at0.at(0)) << endl;
-
-
         CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same
         get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
         CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value

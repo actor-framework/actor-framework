@@ -65,13 +65,13 @@ class decorated_tuple : public abstract_tuple
     static inline cow_pointer_type create(cow_pointer_type d,
                                           vector_type const& v)
     {
-        return {new decorated_tuple(std::move(d), v)};
+        return cow_pointer_type{new decorated_tuple(std::move(d), v)};
     }
 
     // creates a subtuple form @p d with an offset
     static inline cow_pointer_type create(cow_pointer_type d, size_t offset)
     {
-        return {new decorated_tuple(std::move(d), offset)};
+        return cow_pointer_type{new decorated_tuple(std::move(d), offset)};
     }
 
     virtual void* mutable_at(size_t pos)
@@ -125,16 +125,21 @@ class decorated_tuple : public abstract_tuple
     decorated_tuple(cow_pointer_type d, vector_type const& v)
         : m_decorated(std::move(d)), m_mapping(v)
     {
-        CPPA_REQUIRE(m_decorated->size() >= sizeof...(ElementTypes));
+#       ifdef CPPA_DEBUG
+        cow_pointer_type const& ptr = m_decorated; // prevent detaching
+#       endif
+        CPPA_REQUIRE(ptr->size() >= sizeof...(ElementTypes));
         CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
-        CPPA_REQUIRE(  *(std::max_element(v.begin(), v.end()))
-                     < m_decorated->size());
+        CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < ptr->size());
     }
 
     decorated_tuple(cow_pointer_type d, size_t offset)
         : m_decorated(std::move(d))
     {
-        CPPA_REQUIRE((m_decorated->size() - offset) >= sizeof...(ElementTypes));
+#       ifdef CPPA_DEBUG
+        cow_pointer_type const& ptr = m_decorated; // prevent detaching
+#       endif
+        CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(ElementTypes));
         CPPA_REQUIRE(offset > 0);
         size_t i = offset;
         m_mapping.resize(sizeof...(ElementTypes));

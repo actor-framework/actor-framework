@@ -81,7 +81,7 @@ class cow_ptr
 
     intrusive_ptr<T> m_ptr;
 
-    T* detach_ptr()
+    T* detached_ptr()
     {
         T* ptr = m_ptr.get();
         if (!ptr->unique())
@@ -94,12 +94,14 @@ class cow_ptr
         return ptr;
     }
 
+    inline T const* ptr() const { return m_ptr.get(); }
+
  public:
 
     template<typename Y>
-    cow_ptr(Y* raw_ptr) : m_ptr(raw_ptr) { }
+    explicit cow_ptr(Y* raw_ptr) : m_ptr(raw_ptr) { }
 
-    cow_ptr(T* raw_ptr) : m_ptr(raw_ptr) { }
+    explicit cow_ptr(T* raw_ptr) : m_ptr(raw_ptr) { }
 
     cow_ptr(cow_ptr&& other) : m_ptr(std::move(other.m_ptr)) { }
 
@@ -134,17 +136,17 @@ class cow_ptr
         return *this;
     }
 
-    inline T* get() { return detach_ptr(); }
+    inline T* get() { return detached_ptr(); }
 
-    inline T const* get() const { return m_ptr.get(); }
+    inline T& operator*() { return *detached_ptr(); }
 
-    inline T* operator->() { return detach_ptr(); }
+    inline T* operator->() { return detached_ptr(); }
 
-    inline T& operator*() { return detach_ptr(); }
+    inline T const* get() const { return ptr(); }
 
-    inline T const* operator->() const { return m_ptr.get(); }
+    inline T const& operator*() const { return *ptr(); }
 
-    inline T const& operator*() const { return *m_ptr.get(); }
+    inline T const* operator->() const { return ptr(); }
 
     inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 

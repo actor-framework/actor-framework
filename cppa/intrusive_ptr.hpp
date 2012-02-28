@@ -73,17 +73,13 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
 
     intrusive_ptr(T* raw_ptr) { set_ptr(raw_ptr); }
 
-    intrusive_ptr(intrusive_ptr const& other)
-    {
-        set_ptr(other.m_ptr);
-    }
+    intrusive_ptr(intrusive_ptr const& other) { set_ptr(other.m_ptr); }
 
-    intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.take())
-    {
-    }
+    intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.take()) { }
 
+    // enables "actor_ptr s = self"
     template<typename From>
-    intrusive_ptr(const convertible<From, T*>& from)
+    intrusive_ptr(convertible<From, T*> const& from)
     {
         set_ptr(from.convert());
     }
@@ -180,13 +176,13 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
         return *this;
     }
 
-    inline T* operator->() { return m_ptr; }
-
     inline T& operator*() { return *m_ptr; }
 
-    inline T const* operator->() const { return m_ptr; }
+    inline T* operator->() { return m_ptr; }
 
     inline T const& operator*() const { return *m_ptr; }
+
+    inline T const* operator->() const { return m_ptr; }
 
     inline explicit operator bool() const { return m_ptr != nullptr; }
 
@@ -203,15 +199,13 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
     template<class C>
     intrusive_ptr<C> downcast() const
     {
-        if (m_ptr) return dynamic_cast<C*>(const_cast<T*>(m_ptr));
-        return nullptr;
+        return (m_ptr) ? dynamic_cast<C*>(const_cast<T*>(m_ptr)) : nullptr;
     }
 
     template<class C>
     intrusive_ptr<C> upcast() const
     {
-        if (m_ptr) return static_cast<C*>(const_cast<T*>(m_ptr));
-        return nullptr;
+        return (m_ptr) ? static_cast<C*>(const_cast<T*>(m_ptr)) : nullptr;
     }
 
 };
