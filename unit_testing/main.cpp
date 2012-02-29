@@ -158,19 +158,19 @@ int main(int argc, char** argv)
     //print_node_id();
     std::cout << std::boolalpha;
     size_t errors = 0;
-    RUN_TEST(test__uniform_type);
-    RUN_TEST(test__pattern);
-    RUN_TEST(test__yield_interface);
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);
+    RUN_TEST(test__uniform_type);
+    RUN_TEST(test__pattern);
     RUN_TEST(test__intrusive_ptr);
     RUN_TEST(test__type_list);
     RUN_TEST(test__fixed_vector);
     RUN_TEST(test__tuple);
     RUN_TEST(test__serialization);
-    RUN_TEST(test__spawn);
     RUN_TEST(test__local_group);
     RUN_TEST(test__atom);
+    RUN_TEST(test__yield_interface);
+    RUN_TEST(test__spawn);
     RUN_TEST_A3(test__remote_actor, argv[0], false, args);
     cout << endl
          << "error(s) in all tests: " << errors
