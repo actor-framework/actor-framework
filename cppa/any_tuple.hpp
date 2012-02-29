@@ -141,9 +141,12 @@ class any_tuple
 
     inline const_iterator end() const { return m_vals->end(); }
 
-    std::type_info const& impl_type() const;
-
     cow_ptr<detail::abstract_tuple> const& vals() const;
+
+    inline std::type_info const* values_type_list() const
+    {
+        return m_vals->values_type_list();
+    }
 
 };
 

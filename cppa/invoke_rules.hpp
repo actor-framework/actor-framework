@@ -52,7 +52,7 @@ class any_tuple;
 class invoke_rules;
 class timed_invoke_rules;
 
-typedef std::list<detail::invokable_ptr> invokable_list;
+typedef std::vector<detail::invokable_ptr> invokable_list;
 
 /**
  * @brief Base of {@link timed_invoke_rules} and {@link invoke_rules}.

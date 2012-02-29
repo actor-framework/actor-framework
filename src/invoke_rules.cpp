@@ -87,7 +87,9 @@ timed_invoke_rules::timed_invoke_rules(invokable_list&& lhs,
                                        timed_invoke_rules&& rhs)
     : super(std::move(lhs)), m_ti(std::move(rhs.m_ti))
 {
-    m_list.splice(m_list.begin(), rhs.m_list);
+    std::move(rhs.m_list.begin(), rhs.m_list.end(), std::back_inserter(m_list));
+    rhs.m_list.clear();
+    //m_list.splice(m_list.begin(), rhs.m_list);
 }
 
 timed_invoke_rules& timed_invoke_rules::operator=(timed_invoke_rules&& other)
@@ -126,7 +128,8 @@ invoke_rules::invoke_rules(std::unique_ptr<detail::invokable>&& arg)
 
 invoke_rules& invoke_rules::splice(invokable_list&& ilist)
 {
-    m_list.splice(m_list.end(), ilist);
+    std::move(ilist.begin(), ilist.end(), std::back_inserter(m_list));
+    ilist.clear();
     return *this;
 }
 
@@ -142,7 +145,8 @@ timed_invoke_rules invoke_rules::splice(timed_invoke_rules&& other)
 
 invoke_rules invoke_rules::operator,(invoke_rules&& other)
 {
-    m_list.splice(m_list.end(), other.m_list);
+    splice(std::move(other));
+    //m_list.splice(m_list.end(), other.m_list);
     return std::move(m_list);
 }
 

@@ -102,19 +102,9 @@ class decorated_tuple : public abstract_tuple
         return m_decorated->type_at(m_mapping[pos]);
     }
 
-    virtual std::type_info const& impl_type() const
+    std::type_info const* values_type_list() const
     {
-        return typeid(decorated_tuple);
-    }
-
-    cow_pointer_type& decorated()
-    {
-        return m_decorated;
-    }
-
-    cow_pointer_type const& decorated() const
-    {
-        return m_decorated;
+        return detail::static_type_list<ElementTypes...>::list;
     }
 
  private:

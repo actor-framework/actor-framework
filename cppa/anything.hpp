@@ -31,6 +31,8 @@
 #ifndef LIBCPPA_ANYTHING_HPP
 #define LIBCPPA_ANYTHING_HPP
 
+#include <type_traits>
+
 namespace cppa {
 
 /**
@@ -47,6 +49,13 @@ inline bool operator!=(anything const&, anything const&)
 {
     return false;
 }
+
+template<typename T>
+struct is_anything
+{
+    static constexpr bool value = std::is_same<T, anything>::value;
+};
+
 
 } // namespace cppa
 

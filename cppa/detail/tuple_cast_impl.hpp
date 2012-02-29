@@ -52,13 +52,11 @@ enum class tuple_cast_impl_id
 };
 
 // covers wildcard_in_between and multiple_wildcards
-template<pattern_characteristic, class Result, typename... T>
+template<wildcard_position, class Result, typename... T>
 struct tuple_cast_impl
 {
     static constexpr size_t size =
-        util::tl_count_not<
-            util::type_list<T...>,
-            util::tbind<std::is_same, anything>::type>::value;
+            util::tl_count_not<util::type_list<T...>, is_anything>::value;
     typedef util::fixed_vector<size_t, size> mapping_vector;
     template<class Tuple>
     inline static option<Result> _(Tuple const& tup)
@@ -77,7 +75,7 @@ struct tuple_cast_impl
 };
 
 template<class Result, typename... T>
-struct tuple_cast_impl<pattern_characteristic::no_wildcard, Result, T...>
+struct tuple_cast_impl<wildcard_position::nil, Result, T...>
 {
     template<class Tuple>
     static inline option<Result> _(Tuple const& tup)
@@ -94,13 +92,13 @@ struct tuple_cast_impl<pattern_characteristic::no_wildcard, Result, T...>
 };
 
 template<class Result, typename... T>
-struct tuple_cast_impl<pattern_characteristic::trailing_wildcard, Result, T...>
-        : tuple_cast_impl<pattern_characteristic::no_wildcard, Result, T...>
+struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
+        : tuple_cast_impl<wildcard_position::nil, Result, T...>
 {
 };
 
 template<class Result, typename... T>
-struct tuple_cast_impl<pattern_characteristic::leading_wildcard, Result, T...>
+struct tuple_cast_impl<wildcard_position::leading, Result, T...>
 {
     template<class Tuple>
     inline static option<Result> _(Tuple const& tup)

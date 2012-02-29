@@ -36,7 +36,6 @@
 #include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
@@ -46,34 +45,27 @@
 
 namespace cppa {
 
-enum class pattern_characteristic
-{
-    no_wildcard,
-    trailing_wildcard,
-    leading_wildcard,
-    wildcard_in_between,
-    multiple_wildcards
-};
-
-template<typename Types>
-constexpr pattern_characteristic get_pattern_characteristic()
-{
-    return util::tl_exists<Types, util::tbind<std::is_same, anything>::type>::value
-           ? ((util::tl_count<Types, util::tbind<std::is_same, anything>::type>::value == 1)
-              ? (std::is_same<typename Types::head, anything>::value
-                 ? pattern_characteristic::leading_wildcard
-                 : (std::is_same<typename Types::back, anything>::value
-                    ? pattern_characteristic::trailing_wildcard
-                    : pattern_characteristic::wildcard_in_between))
-              : pattern_characteristic::multiple_wildcards)
-           : pattern_characteristic::no_wildcard;
-}
-
 namespace detail {
-template<pattern_characteristic, typename...> struct matcher;
+
+typedef std::integral_constant<wildcard_position,
+                               wildcard_position::nil>
+        no_wildcard;
+
+bool tmatch(no_wildcard,
+            std::type_info const* tuple_value_type_list,
+            any_tuple::const_iterator const& tuple_begin,
+            any_tuple::const_iterator const& tuple_end,
+            std::type_info const* pattern_type_list,
+            type_value_pair_const_iterator pattern_begin,
+            type_value_pair_const_iterator pattern_end);
+
 } // namespace detail
 
-template<pattern_characteristic PC, typename... Ts>
+namespace detail {
+template<wildcard_position, typename...> struct matcher;
+} // namespace detail
+
+template<wildcard_position PC, typename... Ts>
 struct match_impl;
 
 /**
@@ -83,7 +75,7 @@ template<typename... Ts>
 inline bool match(any_tuple const& tup)
 {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_pattern_characteristic<tl>(), Ts...>::_(tup);
+    return match_impl<get_wildcard_position<tl>(), Ts...>::_(tup);
 }
 
 /**
@@ -95,10 +87,10 @@ inline bool match(any_tuple const& tup,
                       size_t,
                       util::tl_count_not<
                           util::type_list<Ts...>,
-                          util::tbind<std::is_same, anything>::type>::value>& mv)
+                          is_anything>::value>& mv)
 {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_pattern_characteristic<tl>(), Ts...>::_(tup, mv);
+    return match_impl<get_wildcard_position<tl>(), Ts...>::_(tup, mv);
 }
 
 /**
@@ -108,7 +100,7 @@ template<typename... Ts>
 inline bool match(any_tuple const& tup, pattern<Ts...> const& ptrn)
 {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_pattern_characteristic<tl>(), Ts...>::_(tup, ptrn);
+    return match_impl<get_wildcard_position<tl>(), Ts...>::_(tup, ptrn);
 }
 
 /**
@@ -120,13 +112,13 @@ inline bool match(any_tuple const& tup,
                   typename pattern<Ts...>::mapping_vector& mv)
 {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_pattern_characteristic<tl>(), Ts...>::_(tup,
+    return match_impl<get_wildcard_position<tl>(), Ts...>::_(tup,
                                                                   ptrn,
                                                                   mv);
 }
 
 // implementation for zero or one wildcards
-template<pattern_characteristic PC, typename... Ts>
+template<wildcard_position PC, typename... Ts>
 struct match_impl
 {
     static inline bool _(any_tuple const& tup)
@@ -161,9 +153,9 @@ struct match_impl
 
 // implementation for multiple wildcards
 template<typename... Ts>
-struct match_impl<pattern_characteristic::multiple_wildcards, Ts...>
+struct match_impl<wildcard_position::multiple, Ts...>
 {
-    static constexpr auto PC = pattern_characteristic::multiple_wildcards;
+    static constexpr auto PC = wildcard_position::multiple;
 
     static inline bool _(any_tuple const& tup)
     {
@@ -209,19 +201,19 @@ struct match_impl<pattern_characteristic::multiple_wildcards, Ts...>
 namespace detail {
 
 template<typename... T>
-struct matcher<pattern_characteristic::no_wildcard, T...>
+struct matcher<wildcard_position::nil, T...>
 {
     static inline bool tmatch(any_tuple const& tup)
     {
         // match implementation type if possible
-        auto& impl_typeid = tup.impl_type();
-        if (   impl_typeid == typeid(tuple_vals<T...>)
-            || impl_typeid == typeid(decorated_tuple<T...>))
+        auto vals = tup.values_type_list();
+        auto prns = detail::static_type_list<T...>::list;
+        if (vals == prns || *vals == *prns)
         {
             return true;
         }
         // always use a full dynamic match for object arrays
-        else if (   impl_typeid == typeid(detail::object_array)
+        else if (*vals == typeid(detail::object_array)
                  && tup.size() == sizeof...(T))
         {
             auto& tarr = detail::static_types_array<T...>::arr;
@@ -236,9 +228,8 @@ struct matcher<pattern_characteristic::no_wildcard, T...>
     {
         if (tmatch(tup))
         {
-            size_t i = 0;
             mv.resize(sizeof...(T));
-            std::generate(mv.begin(), mv.end(), [&]() { return i++; });
+            std::iota(mv.begin(), mv.end(), 0);
             return true;
         }
         return false;
@@ -252,7 +243,7 @@ struct matcher<pattern_characteristic::no_wildcard, T...>
 };
 
 template<typename... T>
-struct matcher<pattern_characteristic::trailing_wildcard, T...>
+struct matcher<wildcard_position::trailing, T...>
 {
     static constexpr size_t size = sizeof...(T) - 1;
 
@@ -273,9 +264,8 @@ struct matcher<pattern_characteristic::trailing_wildcard, T...>
     {
         if (tmatch(tup))
         {
-            size_t i = 0;
             mv.resize(size);
-            std::generate(mv.begin(), mv.end(), [&]() { return i++; });
+            std::iota(mv.begin(), mv.end(), 0);
             return true;
         }
         return false;
@@ -290,7 +280,7 @@ struct matcher<pattern_characteristic::trailing_wildcard, T...>
 };
 
 template<>
-struct matcher<pattern_characteristic::leading_wildcard, anything>
+struct matcher<wildcard_position::leading, anything>
 {
     static inline bool tmatch(any_tuple const&)
     {
@@ -307,7 +297,7 @@ struct matcher<pattern_characteristic::leading_wildcard, anything>
 };
 
 template<typename... T>
-struct matcher<pattern_characteristic::leading_wildcard, T...>
+struct matcher<wildcard_position::leading, T...>
 {
     static constexpr size_t size = sizeof...(T) - 1;
 
@@ -331,9 +321,8 @@ struct matcher<pattern_characteristic::leading_wildcard, T...>
     {
         if (tmatch(tup))
         {
-            size_t i = tup.size() - size;
             mv.resize(size);
-            std::generate(mv.begin(), mv.end(), [&]() { return i++; });
+            std::iota(mv.begin(), mv.end(), tup.size() - size);
             return true;
         }
         return false;
@@ -350,7 +339,7 @@ struct matcher<pattern_characteristic::leading_wildcard, T...>
 };
 
 template<typename... T>
-struct matcher<pattern_characteristic::wildcard_in_between, T...>
+struct matcher<wildcard_position::in_between, T...>
 {
     static constexpr int signed_wc_pos =
             util::tl_find<util::type_list<T...>, anything>::value;
@@ -389,14 +378,12 @@ struct matcher<pattern_characteristic::wildcard_in_between, T...>
         if (tmatch(tup))
         {
             // first range
-            size_t i = 0;
             mv.resize(size - 1);
             auto begin = mv.begin();
-            std::generate(begin, begin + wc_pos, [&]() { return i++; });
+            std::iota(begin, begin + wc_pos, 0);
             // second range
-            i = tup.size() - (size - (wc_pos + 1));
             begin = mv.begin() + wc_pos;
-            std::generate(begin, mv.end(), [&]() { return i++; });
+            std::iota(begin, mv.end(), tup.size() - (size - (wc_pos + 1)));
             return true;
         }
         return false;
@@ -421,11 +408,10 @@ struct matcher<pattern_characteristic::wildcard_in_between, T...>
 };
 
 template<typename... T>
-struct matcher<pattern_characteristic::multiple_wildcards, T...>
+struct matcher<wildcard_position::multiple, T...>
 {
     static constexpr size_t wc_count =
-            util::tl_count<util::type_list<T...>,
-                           util::tbind<std::is_same, anything>::type>::value;
+            util::tl_count<util::type_list<T...>, is_anything>::value;
 
     static_assert(sizeof...(T) > wc_count, "only wildcards given");
 

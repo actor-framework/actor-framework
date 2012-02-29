@@ -111,11 +111,6 @@ any_tuple& any_tuple::operator=(any_tuple&& other)
     return *this;
 }
 
-std::type_info const& any_tuple::impl_type() const
-{
-    return m_vals->impl_type();
-}
-
 size_t any_tuple::size() const
 {
     return m_vals->size();

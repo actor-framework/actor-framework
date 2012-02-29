@@ -52,7 +52,7 @@ auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     typedef typename pattern<T...>::filtered_types filtered_types;
     typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
     static constexpr auto impl =
-            get_pattern_characteristic<util::type_list<T...>>();
+            get_wildcard_position<util::type_list<T...>>();
     return detail::tuple_cast_impl<impl, tuple_type, T...>::_(tup, p);
 }
 
@@ -61,16 +61,14 @@ template<typename... T>
 auto tuple_cast(any_tuple const& tup)
     -> option<
         typename tuple_from_type_list<
-            typename util::tl_filter_not<
-                util::type_list<T...>,
-                util::tbind<std::is_same, anything>::type
-            >::type
+            typename util::tl_filter_not<util::type_list<T...>,
+                                         is_anything>::type
         >::type>
 {
     typedef decltype(tuple_cast<T...>(tup)) result_type;
     typedef typename result_type::value_type tuple_type;
     static constexpr auto impl =
-            get_pattern_characteristic<util::type_list<T...>>();
+            get_wildcard_position<util::type_list<T...>>();
     return detail::tuple_cast_impl<impl, tuple_type, T...>::_(tup);
 }
 

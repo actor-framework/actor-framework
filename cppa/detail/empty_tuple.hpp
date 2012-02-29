@@ -47,6 +47,7 @@ struct empty_tuple : abstract_tuple
     bool equals(abstract_tuple const& other) const;
     uniform_type_info const* type_at(size_t) const;
     std::type_info const& impl_type() const;
+    std::type_info const* values_type_list() const;
 
 };
 

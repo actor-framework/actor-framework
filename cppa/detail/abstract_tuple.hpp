@@ -56,8 +56,8 @@ struct abstract_tuple : ref_counted
     virtual abstract_tuple* copy() const = 0;
     virtual void const* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
-    // type of the implementation class
-    virtual std::type_info const& impl_type() const = 0;
+    // type_list of values or nullptr
+    virtual std::type_info const* values_type_list() const = 0;
 
     bool equals(abstract_tuple const& other) const;
 

@@ -43,7 +43,6 @@
 #include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/fixed_vector.hpp"
@@ -55,6 +54,29 @@
 #include "cppa/detail/types_array.hpp"
 
 namespace cppa {
+
+enum class wildcard_position
+{
+    nil,
+    trailing,
+    leading,
+    in_between,
+    multiple
+};
+
+template<typename Types>
+constexpr wildcard_position get_wildcard_position()
+{
+    return util::tl_exists<Types, is_anything>::value
+           ? ((util::tl_count<Types, is_anything>::value == 1)
+              ? (std::is_same<typename Types::head, anything>::value
+                 ? wildcard_position::leading
+                 : (std::is_same<typename Types::back, anything>::value
+                    ? wildcard_position::trailing
+                    : wildcard_position::in_between))
+              : wildcard_position::multiple)
+           : wildcard_position::nil;
+}
 
 template<class ExtendedType, class BasicType>
 ExtendedType* extend_pattern(BasicType const* p);
@@ -77,7 +99,7 @@ class pattern
 
     typedef util::type_list<Types...> types;
 
-    typedef typename util::tl_filter_not<types, util::tbind<std::is_same, anything>::type>::type
+    typedef typename util::tl_filter_not<types, is_anything>::type
             filtered_types;
 
     static constexpr size_t filtered_size = filtered_types::size;

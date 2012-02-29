@@ -5,7 +5,6 @@
 
 #include "cppa/type_value_pair.hpp"
 
-#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/is_builtin.hpp"
 
@@ -159,12 +158,13 @@ struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
 {
     static constexpr size_t size = sizeof...(T);
     typedef util::type_list<T...> types;
-    typedef typename util::tl_filter_not<types, util::tbind<std::is_same, anything>::type>::type
+    typedef typename util::tl_filter_not<types, is_anything>::type
             filtered_types;
     static constexpr size_t filtered_size = filtered_types::size;
     inline bool has_values() const { return false; }
 };
 
+// utility for singleton-like access to a types_array
 template<typename... T>
 struct static_types_array
 {
@@ -182,6 +182,16 @@ struct static_types_array_from_type_list<util::type_list<T...>>
 {
     typedef static_types_array<T...> type;
 };
+
+// utility for singleton-like access to a type_info instance of a type_list
+template<typename... T>
+struct static_type_list
+{
+    static std::type_info const* list;
+};
+
+template<typename... T>
+std::type_info const* static_type_list<T...>::list = &typeid(util::type_list<T...>);
 
 } } // namespace cppa::detail
 
