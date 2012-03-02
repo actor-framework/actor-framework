@@ -53,7 +53,7 @@ auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
     static constexpr auto impl =
             get_wildcard_position<util::type_list<T...>>();
-    return detail::tuple_cast_impl<impl, tuple_type, T...>::_(tup, p);
+    return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup, p);
 }
 
 // cast using types
@@ -69,7 +69,24 @@ auto tuple_cast(any_tuple const& tup)
     typedef typename result_type::value_type tuple_type;
     static constexpr auto impl =
             get_wildcard_position<util::type_list<T...>>();
-    return detail::tuple_cast_impl<impl, tuple_type, T...>::_(tup);
+    return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup);
+}
+
+/////////////////////////// for in-library use only! ///////////////////////////
+
+// cast using a pattern; does not perform type checking
+template<typename... T>
+auto unsafe_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
+    -> option<
+        typename tuple_from_type_list<
+            typename pattern<T...>::filtered_types
+        >::type>
+{
+    typedef typename pattern<T...>::filtered_types filtered_types;
+    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
+    static constexpr auto impl =
+            get_wildcard_position<util::type_list<T...>>();
+    return detail::tuple_cast_impl<impl, tuple_type, T...>::unsafe(tup, p);
 }
 
 } // namespace cppa
