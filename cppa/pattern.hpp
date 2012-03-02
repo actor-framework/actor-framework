@@ -97,6 +97,9 @@ class pattern
 
     static constexpr size_t size = sizeof...(Types);
 
+    static constexpr wildcard_position wildcard_pos =
+            get_wildcard_position<util::type_list<Types...> >();
+
     typedef util::type_list<Types...> types;
 
     typedef typename util::tl_filter_not<types, is_anything>::type
@@ -181,21 +184,15 @@ template<class ExtendedType, class BasicType>
 ExtendedType* extend_pattern(BasicType const* p)
 {
     ExtendedType* et = new ExtendedType;
-    detail::tdata_set(et->m_data, p->m_data);
-    for (size_t i = 0; i < BasicType::size; ++i)
+    if (p->has_values())
     {
-        et->m_ptrs[i].first = p->m_ptrs[i].first;
-        if (p->m_ptrs[i].second != nullptr)
-        {
-            et->m_ptrs[i].second = et->m_data.at(i);
-        }
-    }
-    typedef typename ExtendedType::types extended_types;
-    typedef typename detail::static_types_array_from_type_list<extended_types>::type tarr;
-    auto& arr = tarr::arr;
-    for (auto i = BasicType::size; i < ExtendedType::size; ++i)
-    {
-        et->m_ptrs[i].first = arr[i];
+        detail::tdata_set(et->m_data, p->m_data);
+        et->m_has_values = true;
+        typedef typename ExtendedType::types extended_types;
+        typedef typename detail::static_types_array_from_type_list<extended_types>::type tarr;
+        auto& arr = tarr::arr;
+        typename ExtendedType::init_helper f(et->m_ptrs, arr);
+        util::static_foreach<0, BasicType::size>::_(et->m_data, f);
     }
     return et;
 }
