@@ -77,6 +77,9 @@ size_t test__tuple()
         {
             CPPA_CHECK_EQUAL(*opt0, make_tuple("one", 2, 3.f, 4.0));
             CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
+            CPPA_CHECK_EQUAL(&get<1>(*opt0), at1.at(1));
+            CPPA_CHECK_EQUAL(&get<2>(*opt0), at1.at(2));
+            CPPA_CHECK_EQUAL(&get<3>(*opt0), at1.at(3));
         }
         // leading wildcard
         auto opt1 = tuple_cast<anything, double>(at1);
