@@ -36,6 +36,7 @@
 #include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
+
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
@@ -50,14 +51,6 @@ namespace detail {
 typedef std::integral_constant<wildcard_position,
                                wildcard_position::nil>
         no_wildcard;
-
-bool tmatch(no_wildcard,
-            std::type_info const* tuple_value_type_list,
-            any_tuple::const_iterator const& tuple_begin,
-            any_tuple::const_iterator const& tuple_end,
-            std::type_info const* pattern_type_list,
-            type_value_pair_const_iterator pattern_begin,
-            type_value_pair_const_iterator pattern_end);
 
 } // namespace detail
 
@@ -116,6 +109,17 @@ inline bool match(any_tuple const& tup,
                                                                   ptrn,
                                                                   mv);
 }
+
+/**
+ * @brief Matches types only (ignores all values of given pattern).
+ */
+template<typename... Ts>
+inline bool match_types(any_tuple const& tup, pattern<Ts...> const&)
+{
+    typedef util::type_list<Ts...> tl;
+    return match_impl<get_wildcard_position<tl>(), Ts...>::_(tup);
+}
+
 
 // implementation for zero or one wildcards
 template<wildcard_position PC, typename... Ts>
