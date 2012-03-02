@@ -134,6 +134,7 @@ nobase_library_include_HEADERS = \
   cppa/detail/swap_bytes.hpp \
   cppa/detail/task_scheduler.hpp \
   cppa/detail/tdata.hpp \
+  cppa/detail/thread.hpp \
   cppa/detail/thread_pool_scheduler.hpp \
   cppa/detail/to_uniform_name.hpp \
   cppa/detail/tuple_cast_impl.hpp \
@@ -168,7 +169,9 @@ nobase_library_include_HEADERS = \
   cppa/stacked_event_based_actor.hpp \
   cppa/to_string.hpp \
   cppa/tuple.hpp \
+  cppa/tuple_cast.hpp \
   cppa/tuple_view.hpp \
+  cppa/type_value_pair.hpp \
   cppa/uniform_type_info.hpp \
   cppa/util/abstract_uniform_type_info.hpp \
   cppa/util/apply_tuple.hpp \
@@ -189,6 +192,7 @@ nobase_library_include_HEADERS = \
   cppa/util/has_copy_member_fun.hpp \
   cppa/util.hpp \
   cppa/util/is_array_of.hpp \
+  cppa/util/is_builtin.hpp \
   cppa/util/if_else.hpp \
   cppa/util/is_comparable.hpp \
   cppa/util/is_copyable.hpp \
@@ -206,6 +210,7 @@ nobase_library_include_HEADERS = \
   cppa/util/replace_type.hpp \
   cppa/util/ripemd_160.hpp \
   cppa/util/rm_ref.hpp \
+  cppa/util/static_foreach.hpp \
   cppa/util/shared_lock_guard.hpp \
   cppa/util/shared_spinlock.hpp \
   cppa/util/single_reader_queue.hpp \
