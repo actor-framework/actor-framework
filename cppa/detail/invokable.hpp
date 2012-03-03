@@ -112,7 +112,6 @@ class invokable : public invokable_base
 
  public:
 
-    virtual bool matches_values() const = 0;
     // Checks whether the types of @p value match the pattern.
     virtual bool types_match(any_tuple const& value) const = 0;
     // Checks whether this invokable could be invoked with @p value.
@@ -171,11 +170,6 @@ class invokable_impl : public invokable
     }
 
 
-    bool matches_values() const
-    {
-        return m_pattern->has_values();
-    }
-
     bool types_match(any_tuple const& value) const
     {
         return match_types(value, *m_pattern);
@@ -224,9 +218,10 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     std::unique_ptr<Pattern> m_pattern;
 
     template<typename... P>
-    bool unsafe_vmatch(any_tuple const& t, pattern<P...> const& p) const
+    inline bool unsafe_vmatch(any_tuple const& t, pattern<P...> const& p) const
     {
-        return matcher<Pattern::wildcard_pos, P...>::vmatch(t, p);
+        return    p.has_values() == false
+               || matcher<Pattern::wildcard_pos, P...>::vmatch(t, p);
     }
 
  public:
@@ -255,11 +250,6 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
             return true;
         }
         return false;
-    }
-
-    bool matches_values() const
-    {
-        return m_pattern->has_values();
     }
 
     bool types_match(any_tuple const& value) const
