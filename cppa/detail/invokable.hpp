@@ -36,6 +36,7 @@
 #include <cstdint>
 
 #include "cppa/match.hpp"
+#include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/util/duration.hpp"
@@ -111,7 +112,17 @@ class invokable : public invokable_base
 
  public:
 
-    virtual intermediate* get_intermediate(any_tuple const&) = 0;
+    virtual bool matches_values() const = 0;
+    // Checks whether the types of @p value match the pattern.
+    virtual bool types_match(any_tuple const& value) const = 0;
+    // Checks whether this invokable could be invoked with @p value.
+    virtual bool could_invoke(any_tuple const& value) const = 0;
+    // Prepare this invokable.
+    virtual intermediate* get_intermediate(any_tuple const& value) = 0;
+    // Prepare this invokable and suppress type checking.
+    virtual intermediate* get_unsafe_intermediate(any_tuple const& value) = 0;
+    // Suppress type checking.
+    virtual bool unsafe_invoke(any_tuple const& value) const = 0;
 
 };
 
@@ -129,18 +140,6 @@ class invokable_impl : public invokable
     m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
 
-    template<typename T>
-    bool invoke_impl(T const& data) const
-    {
-        auto tuple_option = tuple_cast(data, *m_pattern);
-        if (tuple_option.valid())
-        {
-            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
-            return true;
-        }
-        return false;
-    }
-
  public:
 
     template<typename F>
@@ -149,17 +148,61 @@ class invokable_impl : public invokable
     {
     }
 
-    bool invoke(any_tuple const& data) const
+    bool invoke(any_tuple const& value) const
     {
-        return invoke_impl(data);
+        auto tuple_option = tuple_cast(value, *m_pattern);
+        if (tuple_option)
+        {
+            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
+            return true;
+        }
+        return false;
     }
 
-    intermediate* get_intermediate(any_tuple const& data)
+    bool unsafe_invoke(any_tuple const& value) const
     {
-        auto tuple_option = tuple_cast(data, *m_pattern);
-        if (tuple_option.valid())
+        auto tuple_option = unsafe_tuple_cast(value, *m_pattern);
+        if (tuple_option)
+        {
+            util::apply_tuple(m_iimpl.m_fun, *tuple_option);
+            return true;
+        }
+        return false;
+    }
+
+
+    bool matches_values() const
+    {
+        return m_pattern->has_values();
+    }
+
+    bool types_match(any_tuple const& value) const
+    {
+        return match_types(value, *m_pattern);
+    }
+
+    bool could_invoke(any_tuple const& value) const
+    {
+        return match(value, *m_pattern);
+    }
+
+    intermediate* get_intermediate(any_tuple const& value)
+    {
+        auto tuple_option = tuple_cast(value, *m_pattern);
+        if (tuple_option)
         {
             m_iimpl.m_args = std::move(*tuple_option);
+            return &m_iimpl;
+        }
+        return nullptr;
+    }
+
+    intermediate* get_unsafe_intermediate(any_tuple const& value)
+    {
+        auto x = unsafe_tuple_cast(value, *m_pattern);
+        if (x)
+        {
+            m_iimpl.m_args = std::move(*x);
             return &m_iimpl;
         }
         return nullptr;
@@ -180,15 +223,10 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
     m_iimpl;
     std::unique_ptr<Pattern> m_pattern;
 
-    template<typename T>
-    bool invoke_impl(T const& data) const
+    template<typename... P>
+    bool unsafe_vmatch(any_tuple const& t, pattern<P...> const& p) const
     {
-        if (match(data, *m_pattern))
-        {
-            m_iimpl.m_fun();
-            return true;
-        }
-        return false;
+        return matcher<Pattern::wildcard_pos, P...>::vmatch(t, p);
     }
 
  public:
@@ -201,12 +239,47 @@ class invokable_impl<0, Fun, Tuple, Pattern> : public invokable
 
     bool invoke(any_tuple const& data) const
     {
-        return invoke_impl(data);
+        if (match(data, *m_pattern))
+        {
+            m_iimpl.m_fun();
+            return true;
+        }
+        return false;
     }
 
-    intermediate* get_intermediate(any_tuple const& data)
+    bool unsafe_invoke(any_tuple const& value) const
     {
-        return match(data, *m_pattern) ? &m_iimpl : nullptr;
+        if (unsafe_vmatch(value, *m_pattern))
+        {
+            m_iimpl.m_fun();
+            return true;
+        }
+        return false;
+    }
+
+    bool matches_values() const
+    {
+        return m_pattern->has_values();
+    }
+
+    bool types_match(any_tuple const& value) const
+    {
+        return match_types(value, *m_pattern);
+    }
+
+    bool could_invoke(any_tuple const& value) const
+    {
+        return match(value, *m_pattern);
+    }
+
+    intermediate* get_intermediate(any_tuple const& value)
+    {
+        return match(value, *m_pattern) ? &m_iimpl : nullptr;
+    }
+
+    intermediate* get_unsafe_intermediate(any_tuple const& value)
+    {
+        return unsafe_vmatch(value, *m_pattern) ? &m_iimpl : nullptr;
     }
 
 };
