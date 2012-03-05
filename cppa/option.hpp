@@ -213,7 +213,7 @@ class option
         return m_value;
     }
 
- public:
+ private:
 
     bool m_valid;
     union { T m_value; };
