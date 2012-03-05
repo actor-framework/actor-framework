@@ -98,6 +98,27 @@ struct tuple_cast_impl
         }
         return {};
     }
+    template<class Tuple>
+    static inline Result force(Tuple const& tup, pattern<T...> const& p)
+    {
+        mapping_vector mv;
+        if (WP == wildcard_position::in_between)
+        {
+            // first range
+            mv.resize(size);
+            auto begin = mv.begin();
+            std::iota(begin, begin + first_wc, 0);
+            // second range
+            begin = mv.begin() + first_wc;
+            std::iota(begin, mv.end(), tup.size() - (size - first_wc));
+            return {Result::from(tup.vals(), mv)};
+        }
+        else
+        {
+            match(tup, p, mv);
+            return {Result::from(tup.vals(), mv)};
+        }
+    }
 };
 
 template<class Result, typename... T>
@@ -125,6 +146,11 @@ struct tuple_cast_impl<wildcard_position::nil, Result, T...>
         }
         return {};
     }
+    template<class Tuple>
+    static inline Result force(Tuple const& tup, pattern<T...> const&)
+    {
+        return {Result::from(tup.vals())};
+    }
 };
 
 template<class Result, typename... T>
@@ -140,6 +166,11 @@ struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
             return {Result::from(tup.vals())};
         }
         return {};
+    }
+    template<class Tuple>
+    static inline Result force(Tuple const& tup, pattern<T...> const&)
+    {
+        return {Result::from(tup.vals())};
     }
 };
 
@@ -170,6 +201,12 @@ struct tuple_cast_impl<wildcard_position::leading, Result, T...>
             return Result::offset_subtuple(tup.vals(), o);
         }
         return {};
+    }
+    template<class Tuple>
+    static inline Result force(Tuple const& tup, pattern<T...> const&)
+    {
+        size_t o = tup.size() - (sizeof...(T) - 1);
+        return Result::offset_subtuple(tup.vals(), o);
     }
 };
 
