@@ -89,6 +89,21 @@ auto unsafe_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     return detail::tuple_cast_impl<impl, tuple_type, T...>::unsafe(tup, p);
 }
 
+// cast using a pattern; does neither perform type checking nor checks values
+template<typename... T>
+auto forced_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
+    -> typename tuple_from_type_list<
+            typename pattern<T...>::filtered_types
+       >::type
+{
+    typedef typename pattern<T...>::filtered_types filtered_types;
+    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
+    static constexpr auto impl =
+            get_wildcard_position<util::type_list<T...>>();
+    return detail::tuple_cast_impl<impl, tuple_type, T...>::force(tup, p);
+}
+
+
 } // namespace cppa
 
 #endif // TUPLE_CAST_HPP
