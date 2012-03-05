@@ -31,6 +31,8 @@
 #ifndef TYPE_VALUE_PAIR_HPP
 #define TYPE_VALUE_PAIR_HPP
 
+#include <cstddef>
+
 #include "cppa/uniform_type_info.hpp"
 
 namespace cppa {
@@ -44,22 +46,43 @@ class type_value_pair_const_iterator
 
  public:
 
+    typedef type_value_pair const               value_type;
+    typedef std::ptrdiff_t                      difference_type;
+    typedef type_value_pair const*              pointer;
+    typedef type_value_pair const&              reference;
+    typedef std::bidirectional_iterator_tag     iterator_category;
+
+    constexpr type_value_pair_const_iterator() : iter(nullptr) { }
+
     type_value_pair_const_iterator(type_value_pair const* i) : iter(i) { }
 
-    type_value_pair_const_iterator(type_value_pair_const_iterator const&) = default;
+    type_value_pair_const_iterator(type_value_pair_const_iterator const&)
+        = default;
+
+    type_value_pair_const_iterator&
+    operator=(type_value_pair_const_iterator const&) = default;
 
     inline uniform_type_info const* type() const { return iter->first; }
 
     inline void const* value() const { return iter->second; }
 
-    inline decltype(iter) operator->() { return iter; }
+    inline decltype(iter) base() const { return iter; }
 
-    inline decltype(*iter) operator*() { return *iter; }
+    inline decltype(iter) operator->() const { return iter; }
+
+    inline decltype(*iter) operator*() const { return *iter; }
 
     inline type_value_pair_const_iterator& operator++()
     {
         ++iter;
         return *this;
+    }
+
+    inline type_value_pair_const_iterator operator++(int)
+    {
+        type_value_pair_const_iterator tmp{*this};
+        ++iter;
+        return tmp;
     }
 
     inline type_value_pair_const_iterator& operator--()
@@ -68,22 +91,31 @@ class type_value_pair_const_iterator
         return *this;
     }
 
+    inline type_value_pair_const_iterator operator--(int)
+    {
+        type_value_pair_const_iterator tmp{*this};
+        --iter;
+        return tmp;
+    }
+
     inline type_value_pair_const_iterator operator+(size_t offset)
     {
         return iter + offset;
     }
 
-    inline bool operator==(type_value_pair_const_iterator const& other) const
-    {
-        return iter == other.iter;
-    }
-
-    inline bool operator!=(type_value_pair_const_iterator const& other) const
-    {
-        return iter != other.iter;
-    }
-
 };
+
+inline bool operator==(type_value_pair_const_iterator const& lhs,
+                       type_value_pair_const_iterator const& rhs)
+{
+    return lhs.base() == rhs.base();
+}
+
+inline bool operator!=(type_value_pair_const_iterator const& lhs,
+                       type_value_pair_const_iterator const& rhs)
+{
+    return !(lhs == rhs);
+}
 
 } // namespace cppa
 
