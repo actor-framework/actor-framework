@@ -69,8 +69,16 @@
 #ifdef CPPA_DEBUG
 #include <cstdio>
 #include <cstdlib>
+#include <execinfo.h>
+
 #define CPPA_REQUIRE__(stmt, file, line)                                       \
-    printf("%s:%u: requirement failed '%s'\n", file, line, stmt); abort()
+    printf("%s:%u: requirement failed '%s'\n", file, line, stmt);              \
+    {                                                                          \
+        void *array[10];                                                       \
+        size_t size = backtrace(array, 10);                                    \
+        backtrace_symbols_fd(array, size, 2);                                  \
+    }                                                                          \
+    abort()
 #define CPPA_REQUIRE(stmt)                                                     \
     if ((stmt) == false) {                                                     \
         CPPA_REQUIRE__(#stmt, __FILE__, __LINE__);                             \
