@@ -3,7 +3,6 @@ cppa/tuple.hpp
 unit_testing/main.cpp
 cppa/util/void_type.hpp
 cppa/util/type_list.hpp
-cppa/util.hpp
 cppa/util/is_one_of.hpp
 cppa/util/conjunction.hpp
 cppa/util/disjunction.hpp
@@ -34,7 +33,6 @@ cppa/util/is_copyable.hpp
 cppa/util/has_copy_member_fun.hpp
 cppa/detail/intermediate.hpp
 cppa/detail/invokable.hpp
-cppa/invoke_rules.hpp
 cppa/on.hpp
 unit_testing/test__serialization.cpp
 cppa/serializer.hpp
@@ -176,7 +174,6 @@ cppa/detail/receive_loop_helper.hpp
 cppa/util/wrapped.hpp
 cppa/detail/boxed.hpp
 cppa/detail/unboxed.hpp
-src/invoke_rules.cpp
 src/abstract_tuple.cpp
 cppa/util/duration.hpp
 src/duration.cpp
@@ -262,3 +259,5 @@ cppa/detail/disablable_delete.hpp
 unit_testing/test__fixed_vector.cpp
 cppa/detail/tuple_cast_impl.hpp
 cppa/match.hpp
+cppa/partial_function.hpp
+src/partial_function.cpp

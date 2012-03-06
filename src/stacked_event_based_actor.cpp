@@ -45,22 +45,14 @@ void stacked_event_based_actor::unbecome()
     }
 }
 
-void stacked_event_based_actor::do_become(invoke_rules* behavior,
+void stacked_event_based_actor::do_become(behavior* bhvr,
                                           bool has_ownership)
 {
     reset_timeout();
-    stack_element::left_type ptr(behavior);
-    if (!has_ownership) ptr.get_deleter().disable();
-    m_loop_stack.push_back(std::move(ptr));
-}
-
-void stacked_event_based_actor::do_become(timed_invoke_rules* behavior,
-                                          bool has_ownership)
-{
-    request_timeout(behavior->timeout());
-    stack_element::right_type ptr(behavior);
-    if (!has_ownership) ptr.get_deleter().disable();
-    m_loop_stack.push_back(std::move(ptr));
+    request_timeout(bhvr->timeout());
+    stack_element se{bhvr};
+    if (!has_ownership) se.get_deleter().disable();
+    m_loop_stack.push_back(std::move(se));
 }
 
 } // namespace cppa

@@ -129,8 +129,11 @@ int abstract_scheduled_actor::compare_exchange_state(int expected,
 
 void abstract_scheduled_actor::request_timeout(util::duration const& d)
 {
-    future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
-    m_has_pending_timeout_request = true;
+    if (d.valid())
+    {
+        future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
+        m_has_pending_timeout_request = true;
+    }
 }
 
 auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
@@ -162,7 +165,7 @@ auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
 }
 
 auto abstract_scheduled_actor::dq(queue_node_ptr& node,
-                                  invoke_rules_base& rules,
+                                  partial_function& rules,
                                   queue_node_buffer& buffer) -> dq_result
 {
     switch (filter_msg(node->msg))
@@ -232,11 +235,11 @@ void scheduled_actor_dummy::quit(std::uint32_t)
 {
 }
 
-void scheduled_actor_dummy::dequeue(invoke_rules&)
+void scheduled_actor_dummy::dequeue(behavior&)
 {
 }
 
-void scheduled_actor_dummy::dequeue(timed_invoke_rules&)
+void scheduled_actor_dummy::dequeue(partial_function&)
 {
 }
 

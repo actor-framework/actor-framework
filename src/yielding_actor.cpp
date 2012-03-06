@@ -93,7 +93,7 @@ void yielding_actor::yield_until_not_empty()
     }
 }
 
-void yielding_actor::dequeue(invoke_rules& rules)
+void yielding_actor::dequeue(partial_function& rules)
 {
     queue_node_buffer buffer;
     yield_until_not_empty();
@@ -105,32 +105,40 @@ void yielding_actor::dequeue(invoke_rules& rules)
     }
 }
 
-void yielding_actor::dequeue(timed_invoke_rules& rules)
+void yielding_actor::dequeue(behavior& rules)
 {
-    queue_node_buffer buffer;
-    // try until a message was successfully dequeued
-    request_timeout(rules.timeout());
-    for (;;)
+    if (rules.timeout().valid())
     {
-        //if (m_mailbox.empty() && has_pending_timeout() == false)
-        //{
-        //    request_timeout(rules.timeout());
-        //}
-        yield_until_not_empty();
-        queue_node_ptr node(m_mailbox.pop());
-        switch (dq(node, rules, buffer))
+        queue_node_buffer buffer;
+        // try until a message was successfully dequeued
+        request_timeout(rules.timeout());
+        for (;;)
         {
-            case dq_done:
+            //if (m_mailbox.empty() && has_pending_timeout() == false)
+            //{
+            //    request_timeout(rules.timeout());
+            //}
+            yield_until_not_empty();
+            queue_node_ptr node(m_mailbox.pop());
+            switch (dq(node, rules.get_partial_function(), buffer))
             {
-                return;
+                case dq_done:
+                {
+                    return;
+                }
+                case dq_timeout_occured:
+                {
+                    rules.handle_timeout();
+                    return;
+                }
+                default: break;
             }
-            case dq_timeout_occured:
-            {
-                rules.handle_timeout();
-                return;
-            }
-            default: break;
         }
+    }
+    else
+    {
+        // suppress virtual function call
+        yielding_actor::dequeue(rules.get_partial_function());
     }
 }
 

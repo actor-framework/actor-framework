@@ -32,8 +32,9 @@
 #define CONTEXT_HPP
 
 #include "cppa/actor.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/invoke_rules.hpp"
+#include "cppa/partial_function.hpp"
 #include "cppa/util/single_reader_queue.hpp"
 
 namespace cppa {
@@ -70,19 +71,19 @@ class local_actor : public actor
     virtual void quit(std::uint32_t reason) = 0;
 
     /**
+     * @brief
+     * @param rules
+     * @warning Call only from the owner of the queue.
+     */
+    virtual void dequeue(behavior& rules) = 0;
+
+    /**
      * @brief Removes the first element from the queue that is matched
      *        by @p rules and invokes the corresponding callback.
      * @param rules
      * @warning Call only from the owner of the queue.
      */
-    virtual void dequeue(invoke_rules& rules) = 0;
-
-    /**
-     * @brief
-     * @param rules
-     * @warning Call only from the owner of the queue.
-     */
-    virtual void dequeue(timed_invoke_rules& rules) = 0;
+    virtual void dequeue(partial_function& rules) = 0;
 
     inline bool trap_exit() const;
 

@@ -5,7 +5,6 @@
 
 #include "test.hpp"
 
-#include "cppa/util.hpp"
 #include "cppa/util/at.hpp"
 #include "cppa/util/element_at.hpp"
 #include "cppa/uniform_type_info.hpp"

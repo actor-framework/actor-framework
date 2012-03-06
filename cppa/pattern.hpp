@@ -111,10 +111,25 @@ class pattern
 
     typedef type_value_pair_const_iterator const_iterator;
 
+    typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 
-    const_iterator begin() const { return m_ptrs; }
+    inline const_iterator begin() const { return m_ptrs; }
 
-    const_iterator end() const { return m_ptrs + size; }
+    inline const_iterator end() const { return m_ptrs + size; }
+
+    inline reverse_const_iterator rbegin() const
+    {
+        return reverse_const_iterator{end()};
+    }
+
+    inline reverse_const_iterator rend() const
+    {
+        return reverse_const_iterator{begin()};
+    }
+
+    inline const_iterator vbegin() const { return m_vbegin; }
+
+    inline const_iterator vend() const { return m_vend; }
 
     pattern() : m_has_values(false)
     {
@@ -124,6 +139,7 @@ class pattern
             m_ptrs[i].first = arr[i];
             m_ptrs[i].second = nullptr;
         }
+        m_vbegin = m_vend = begin();
     }
 
     template<typename Arg0, typename... Args>
@@ -152,6 +168,7 @@ class pattern
             m_ptrs[i].first = arr[i];
             m_ptrs[i].second = nullptr;
         }
+        init_value_iterators();
     }
 
     inline bool has_values() const { return m_has_values; }
@@ -174,9 +191,27 @@ class pattern
         }
     };
 
+    void init_value_iterators()
+    {
+        auto pred = [](type_value_pair const& tvp) { return tvp.second != 0; };
+        auto last = end();
+        m_vbegin = std::find_if(begin(), last, pred);
+        if (m_vbegin == last)
+        {
+            m_vbegin = m_vend = begin();
+        }
+        else
+        {
+            m_vend = std::find_if(rbegin(), rend(), pred).base();
+        }
+    }
+
     detail::tdata<option<Types>...> m_data;
     bool m_has_values;
     type_value_pair m_ptrs[size];
+
+    const_iterator m_vbegin;
+    const_iterator m_vend;
 
 };
 
@@ -189,10 +224,13 @@ ExtendedType* extend_pattern(BasicType const* p)
         detail::tdata_set(et->m_data, p->m_data);
         et->m_has_values = true;
         typedef typename ExtendedType::types extended_types;
-        typedef typename detail::static_types_array_from_type_list<extended_types>::type tarr;
+        typedef typename
+                detail::static_types_array_from_type_list<extended_types>::type
+                tarr;
         auto& arr = tarr::arr;
         typename ExtendedType::init_helper f(et->m_ptrs, arr);
         util::static_foreach<0, BasicType::size>::_(et->m_data, f);
+        et->init_value_iterators();
     }
     return et;
 }

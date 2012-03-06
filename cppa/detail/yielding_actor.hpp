@@ -79,9 +79,9 @@ class yielding_actor : public abstract_scheduled_actor
 
     ~yielding_actor() /*override*/;
 
-    void dequeue(invoke_rules& rules) /*override*/;
+    void dequeue(behavior& rules) /*override*/;
 
-    void dequeue(timed_invoke_rules& rules) /*override*/;
+    void dequeue(partial_function& rules) /*override*/;
 
     void resume(util::fiber* from, resume_callback* callback) /*override*/;
 

@@ -71,13 +71,15 @@ class duration
     {
     }
 
-    template <class Rep, class Period>
+    template<class Rep, class Period>
     constexpr duration(std::chrono::duration<Rep, Period> d)
         : unit(get_time_unit_from_period<Period>()), count(d.count())
     {
         static_assert(get_time_unit_from_period<Period>() != time_unit::none,
                       "only seconds, milliseconds or microseconds allowed");
     }
+
+    inline bool valid() const { return unit != time_unit::none; }
 
     time_unit unit;
 

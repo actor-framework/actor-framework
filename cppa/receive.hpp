@@ -97,84 +97,42 @@ auto do_receive(behavior& bhvr);
 
 #else // CPPA_DOCUMENTATION
 
-inline void receive(invoke_rules& bhvr) { self->dequeue(bhvr); }
+inline void receive(behavior& bhvr) { self->dequeue(bhvr); }
 
-inline void receive(timed_invoke_rules& bhvr) { self->dequeue(bhvr); }
+inline void receive(partial_function& fun) { self->dequeue(fun); }
 
-inline void receive(behavior& bhvr)
+inline void receive(behavior&& arg0)
 {
-    if (bhvr.is_left()) self->dequeue(bhvr.left());
-    else self->dequeue(bhvr.right());
+    behavior tmp{std::move(arg0)};
+    receive(tmp);
 }
 
-inline void receive(timed_invoke_rules&& bhvr)
+template<typename... Args>
+void receive(partial_function&& arg0, Args&&... args)
 {
-    timed_invoke_rules tmp(std::move(bhvr));
-    self->dequeue(tmp);
+    typename detail::select_bhvr<Args...>::type tmp;
+    receive(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
 }
 
-inline void receive(invoke_rules&& bhvr)
+void receive_loop(behavior& rules);
+
+void receive_loop(partial_function& rules);
+
+inline void receive_loop(behavior&& arg0)
 {
-    invoke_rules tmp(std::move(bhvr));
-    self->dequeue(tmp);
-}
-
-template<typename Head, typename... Tail>
-void receive(invoke_rules&& bhvr, Head&& head, Tail&&... tail)
-{
-    invoke_rules tmp(std::move(bhvr));
-    receive(tmp.splice(std::forward<Head>(head)),
-            std::forward<Tail>(tail)...);
-}
-
-template<typename Head, typename... Tail>
-void receive(invoke_rules& bhvr, Head&& head, Tail&&... tail)
-{
-    receive(bhvr.splice(std::forward<Head>(head)),
-            std::forward<Tail>(tail)...);
-}
-
-
-void receive_loop(invoke_rules& rules);
-
-void receive_loop(timed_invoke_rules& rules);
-
-inline void receive_loop(behavior& bhvr)
-{
-    if (bhvr.is_left()) receive_loop(bhvr.left());
-    else receive_loop(bhvr.right());
-}
-
-inline void receive_loop(invoke_rules&& rules)
-{
-    invoke_rules tmp(std::move(rules));
+    behavior tmp{std::move(arg0)};
     receive_loop(tmp);
 }
 
-inline void receive_loop(timed_invoke_rules&& rules)
+template<typename... Args>
+void receive_loop(partial_function&& arg0, Args&&... args)
 {
-    timed_invoke_rules tmp(std::move(rules));
-    receive_loop(tmp);
-}
-
-template<typename Head, typename... Tail>
-void receive_loop(invoke_rules& rules, Head&& head, Tail&&... tail)
-{
-    receive_loop(rules.splice(std::forward<Head>(head)),
-                 std::forward<Tail>(tail)...);
-}
-
-template<typename Head, typename... Tail>
-void receive_loop(invoke_rules&& rules, Head&& head, Tail&&... tail)
-{
-    invoke_rules tmp(std::move(rules));
-    receive_loop(tmp.splice(std::forward<Head>(head)),
-                 std::forward<Tail>(tail)...);
+    typename detail::select_bhvr<Args...>::type tmp;
+    receive_loop(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
 }
 
 template<typename Statement>
-detail::receive_while_helper<Statement>
-receive_while(Statement&& stmt)
+detail::receive_while_helper<Statement> receive_while(Statement&& stmt)
 {
     static_assert(std::is_same<bool, decltype(stmt())>::value,
                   "functor or function does not return a boolean");

@@ -210,14 +210,16 @@ struct matcher<wildcard_position::nil, T...>
     static inline bool tmatch(any_tuple const& tup)
     {
         // match implementation type if possible
-        auto vals = tup.values_type_list();
-        auto prns = detail::static_type_list<T...>::list;
-        if (vals == prns || *vals == *prns)
+        auto impl = tup.impl_type();
+        // the impl_type of both decorated_tuple and tuple_vals
+        // is &typeid(type_list<T...>)
+        auto tinf = detail::static_type_list<T...>::list;
+        if (impl == tinf || *impl == *tinf)
         {
             return true;
         }
         // always use a full dynamic match for object arrays
-        else if (*vals == typeid(detail::object_array)
+        else if (*impl == typeid(detail::object_array)
                  && tup.size() == sizeof...(T))
         {
             auto& tarr = detail::static_types_array<T...>::arr;
@@ -241,8 +243,9 @@ struct matcher<wildcard_position::nil, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        return std::equal(tup.begin(), tup.end(), ptrn.begin(),
-                          detail::values_only_eq);
+        CPPA_REQUIRE(tup.size() == sizeof...(T));
+        return std::equal(ptrn.begin(), ptrn.vend(), tup.begin(),
+                          detail::values_only_eq_v2);
     }
 };
 
@@ -277,9 +280,8 @@ struct matcher<wildcard_position::trailing, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        auto begin = tup.begin();
-        return std::equal(begin, begin + size, ptrn.begin(),
-                          detail::values_only_eq);
+        return std::equal(ptrn.begin(), ptrn.vend(), tup.begin(),
+                          detail::values_only_eq_v2);
     }
 };
 
@@ -334,11 +336,12 @@ struct matcher<wildcard_position::leading, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        auto begin = tup.begin();
-        begin += (tup.size() - size);
-        return std::equal(begin, tup.end(),
-                          ptrn.begin() + 1,  // skip 'anything'
-                          detail::values_only_eq);
+        auto tbegin = tup.begin();
+        // skip unmatched elements
+        tbegin += (tup.size() - size);
+        // skip leading wildcard ++(ptr.begin())
+        return std::equal(++(ptrn.begin()), ptrn.vend(), tbegin,
+                          detail::values_only_eq_v2);
     }
 };
 

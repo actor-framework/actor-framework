@@ -45,10 +45,6 @@ namespace cppa {
 class any_tuple
 {
 
-    cow_ptr<detail::abstract_tuple> m_vals;
-
-    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
-
  public:
 
     /**
@@ -143,10 +139,21 @@ class any_tuple
 
     cow_ptr<detail::abstract_tuple> const& vals() const;
 
-    inline std::type_info const* values_type_list() const
+    inline void const* type_token() const
     {
-        return m_vals->values_type_list();
+        return m_vals->type_token();
     }
+
+    inline std::type_info const* impl_type() const
+    {
+        return m_vals->impl_type();
+    }
+
+ private:
+
+    cow_ptr<detail::abstract_tuple> m_vals;
+
+    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
 
 };
 

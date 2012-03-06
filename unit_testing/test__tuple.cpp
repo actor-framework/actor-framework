@@ -9,13 +9,11 @@
 #include "test.hpp"
 
 #include "cppa/on.hpp"
-#include "cppa/util.hpp"
 #include "cppa/tuple.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/tuple_cast.hpp"
-#include "cppa/invoke_rules.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 

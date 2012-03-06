@@ -185,7 +185,7 @@ struct tl_first_n
 /**
  * @brief Tests whether a predicate holds for all elements of a list.
  */
-template<class List, template <typename> class Predicate>
+template<class List, template<typename> class Predicate>
 struct tl_forall
 {
     static constexpr bool value =
@@ -193,7 +193,7 @@ struct tl_forall
             && tl_forall<typename List::tail, Predicate>::value;
 };
 
-template<template <typename> class Predicate>
+template<template<typename> class Predicate>
 struct tl_forall<type_list<>, Predicate>
 {
     static constexpr bool value = true;
@@ -202,7 +202,7 @@ struct tl_forall<type_list<>, Predicate>
 /**
  * @brief Tests whether a predicate holds for some of the elements of a list.
  */
-template<class List, template <typename> class Predicate>
+template<class List, template<typename> class Predicate>
 struct tl_exists
 {
     static constexpr bool value =
@@ -210,7 +210,7 @@ struct tl_exists
             || tl_exists<typename List::tail, Predicate>::value;
 };
 
-template<template <typename> class Predicate>
+template<template<typename> class Predicate>
 struct tl_exists<type_list<>, Predicate>
 {
     static constexpr bool value = false;
@@ -222,7 +222,7 @@ struct tl_exists<type_list<>, Predicate>
 /**
  * @brief Counts the number of elements in the list which satisfy a predicate.
  */
-template<class List, template <typename> class Predicate>
+template<class List, template<typename> class Predicate>
 struct tl_count
 {
     static constexpr size_t value =
@@ -230,7 +230,7 @@ struct tl_count
             + tl_count<typename List::tail, Predicate>::value;
 };
 
-template<template <typename> class Predicate>
+template<template<typename> class Predicate>
 struct tl_count<type_list<>, Predicate>
 {
     static constexpr size_t value = 0;
@@ -241,7 +241,7 @@ struct tl_count<type_list<>, Predicate>
 /**
  * @brief Counts the number of elements in the list which satisfy a predicate.
  */
-template<class List, template <typename> class Predicate>
+template<class List, template<typename> class Predicate>
 struct tl_count_not
 {
     static constexpr size_t value =
@@ -249,7 +249,7 @@ struct tl_count_not
             + tl_count_not<typename List::tail, Predicate>::value;
 };
 
-template<template <typename> class Predicate>
+template<template<typename> class Predicate>
 struct tl_count_not<type_list<>, Predicate>
 {
     static constexpr size_t value = 0;
@@ -260,7 +260,7 @@ struct tl_count_not<type_list<>, Predicate>
 /**
  * @brief Tests whether a predicate holds for all elements of a zipped list.
  */
-template<class ZippedList, template <typename, typename> class Predicate>
+template<class ZippedList, template<typename, typename> class Predicate>
 struct tl_zipped_forall
 {
     typedef typename ZippedList::head head;
@@ -269,7 +269,7 @@ struct tl_zipped_forall
             && tl_zipped_forall<typename ZippedList::tail, Predicate>::value;
 };
 
-template<template <typename, typename> class Predicate>
+template<template<typename, typename> class Predicate>
 struct tl_zipped_forall<type_list<>, Predicate>
 {
     static constexpr bool value = true;
@@ -294,10 +294,10 @@ struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
 /**
  * @brief Applies a "template function" to each element in the list.
  */
-template<typename List, template <typename> class Trait>
+template<typename List, template<typename> class Trait>
 struct tl_apply;
 
-template<template <typename> class Trait, typename... Elements>
+template<template<typename> class Trait, typename... Elements>
 struct tl_apply<type_list<Elements...>, Trait>
 {
     typedef type_list<typename Trait<Elements>::type...> type;

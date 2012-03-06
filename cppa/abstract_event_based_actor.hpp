@@ -38,7 +38,7 @@
 #include "cppa/config.hpp"
 #include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
-#include "cppa/invoke_rules.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/detail/disablable_delete.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
@@ -56,9 +56,9 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  public:
 
-    void dequeue(invoke_rules&) /*override*/;
+    void dequeue(behavior&) /*override*/;
 
-    void dequeue(timed_invoke_rules&) /*override*/;
+    void dequeue(partial_function&) /*override*/;
 
     void resume(util::fiber*, resume_callback* callback) /*override*/;
 
@@ -74,31 +74,20 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     template<typename Scheduler>
     abstract_event_based_actor*
-    attach_to_scheduler(void (*enqueue_fun)(Scheduler*, abstract_scheduled_actor*),
+    attach_to_scheduler(void (*enq_fun)(Scheduler*, abstract_scheduled_actor*),
                         Scheduler* sched)
     {
-        m_enqueue_to_scheduler.reset(enqueue_fun, sched, this);
+        m_enqueue_to_scheduler.reset(enq_fun, sched, this);
         this->init();
         return this;
     }
-
- private:
-
-    void handle_message(queue_node_ptr& node,
-                        invoke_rules& behavior);
-
-    void handle_message(queue_node_ptr& node,
-                        timed_invoke_rules& behavior);
-
-    void handle_message(queue_node_ptr& node);
 
  protected:
 
     abstract_event_based_actor();
 
     // ownership flag + pointer
-    typedef either<std::unique_ptr<invoke_rules, detail::disablable_delete<invoke_rules>>,
-                   std::unique_ptr<timed_invoke_rules, detail::disablable_delete<timed_invoke_rules>>>
+    typedef std::unique_ptr<behavior, detail::disablable_delete<behavior>>
             stack_element;
 
     queue_node_buffer m_buffer;
@@ -131,6 +120,10 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
     {
         receive(std::forward<Args>(args)...);
     }
+
+ private:
+
+    void handle_message(queue_node_ptr& node);
 
 };
 

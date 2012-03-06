@@ -39,61 +39,46 @@ abstract_event_based_actor::abstract_event_based_actor()
 {
 }
 
-void abstract_event_based_actor::dequeue(invoke_rules&)
+void abstract_event_based_actor::dequeue(behavior&)
 {
     quit(exit_reason::unallowed_function_call);
 }
 
-void abstract_event_based_actor::dequeue(timed_invoke_rules&)
+void abstract_event_based_actor::dequeue(partial_function&)
 {
     quit(exit_reason::unallowed_function_call);
-}
-
-void abstract_event_based_actor::handle_message(queue_node_ptr& node,
-                                                invoke_rules& behavior)
-{
-    // no need to handle result
-    (void) dq(node, behavior, m_buffer);
-}
-
-void abstract_event_based_actor::handle_message(queue_node_ptr& node,
-                                                timed_invoke_rules& behavior)
-{
-    switch (dq(node, behavior, m_buffer))
-    {
-        case dq_timeout_occured:
-        {
-            behavior.handle_timeout();
-            // fall through
-        }
-        case dq_done:
-        {
-            // callback might have called become()/unbecome()
-            // request next timeout if needed
-            if (!m_loop_stack.empty())
-            {
-                auto& back = m_loop_stack.back();
-                if (back.is_right())
-                {
-                    request_timeout(back.right()->timeout());
-                }
-            }
-            break;
-        }
-        default: break;
-    }
 }
 
 void abstract_event_based_actor::handle_message(queue_node_ptr& node)
 {
-    auto& bhvr = m_loop_stack.back();
-    if (bhvr.is_left())
+    auto& bhvr = *(m_loop_stack.back());
+    if (bhvr.timeout().valid())
     {
-        handle_message(node, *(bhvr.left()));
+        switch (dq(node, bhvr.get_partial_function(), m_buffer))
+        {
+            case dq_timeout_occured:
+            {
+                bhvr.handle_timeout();
+                // fall through
+            }
+            case dq_done:
+            {
+                // callback might have called become()/unbecome()
+                // request next timeout if needed
+                if (!m_loop_stack.empty())
+                {
+                    auto& next_bhvr = *(m_loop_stack.back());
+                    request_timeout(next_bhvr.timeout());
+                }
+                break;
+            }
+            default: break;
+        }
     }
     else
     {
-        handle_message(node, *(bhvr.right()));
+        // no need to handle result
+        (void) dq(node, bhvr.get_partial_function(), m_buffer);
     }
 }
 

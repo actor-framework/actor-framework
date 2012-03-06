@@ -55,7 +55,7 @@ inline cppa::detail::actor_registry& registry()
 namespace cppa {
 
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
-    : m_is_proxy(true), m_id(aid), m_parent_process(pptr)
+    : m_id(aid), m_is_proxy(true), m_parent_process(pptr)
 {
     if (!pptr)
     {
@@ -64,7 +64,7 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
 }
 
 actor::actor(const process_information_ptr& pptr)
-    : m_is_proxy(false), m_id(registry().next_id()), m_parent_process(pptr)
+    : m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr)
 {
     if (!pptr)
     {

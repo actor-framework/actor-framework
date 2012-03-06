@@ -35,10 +35,9 @@
 
 #include "cppa/self.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/attachable.hpp"
-#include "cppa/invoke_rules.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
 
 #include "cppa/detail/thread.hpp"

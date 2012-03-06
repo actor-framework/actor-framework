@@ -56,14 +56,19 @@ struct abstract_tuple : ref_counted
     virtual abstract_tuple* copy() const = 0;
     virtual void const* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
-    // type_list of values or nullptr
-    virtual std::type_info const* values_type_list() const = 0;
+
+    // identifies the type of the implementation, this is NOT the
+    // typeid of the implementation class
+    virtual std::type_info const* impl_type() const = 0;
+
+    // uniquely identifies this category (element types) of messages
+    virtual void const* type_token() const = 0;
 
     bool equals(abstract_tuple const& other) const;
 
     // iterator support
-    class const_iterator : public std::iterator<std::bidirectional_iterator_tag,
-                                                type_value_pair>
+    class const_iterator //: public std::iterator<std::bidirectional_iterator_tag,
+                         //                       type_value_pair>
     {
 
         size_t m_pos;
@@ -142,7 +147,7 @@ struct abstract_tuple : ref_counted
 
         inline const_iterator& operator*() { return *this; }
 
-        inline operator type_value_pair() const { return {type(), value()}; }
+        //inline operator type_value_pair() const { return {type(), value()}; }
 
     };
 
@@ -160,17 +165,43 @@ inline bool full_eq(abstract_tuple::const_iterator const& lhs,
                || lhs.type()->equals(lhs.value(), rhs.second));
 }
 
+
+inline bool full_eq_v2(type_value_pair const& lhs,
+                       abstract_tuple::const_iterator const& rhs)
+{
+    return full_eq(rhs, lhs);
+}
+
+inline bool full_eq_v3(abstract_tuple::const_iterator const& lhs,
+                       abstract_tuple::const_iterator const& rhs)
+{
+    return    lhs.type() == rhs.type()
+           && lhs.type()->equals(lhs.value(), rhs.value());
+}
+
 inline bool values_only_eq(abstract_tuple::const_iterator const& lhs,
-                         type_value_pair const& rhs)
+                           type_value_pair const& rhs)
 {
     return    rhs.second == nullptr
            || lhs.type()->equals(lhs.value(), rhs.second);
+}
+
+inline bool values_only_eq_v2(type_value_pair const& lhs,
+                           abstract_tuple::const_iterator const& rhs)
+{
+    return values_only_eq(rhs, lhs);
 }
 
 inline bool types_only_eq(abstract_tuple::const_iterator const& lhs,
                           type_value_pair const& rhs)
 {
     return lhs.type() == rhs.first;
+}
+
+inline bool types_only_eq_v2(type_value_pair const& lhs,
+                          abstract_tuple::const_iterator const& rhs)
+{
+    return lhs.first == rhs.type();
 }
 
 } } // namespace cppa::detail

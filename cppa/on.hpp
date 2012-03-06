@@ -37,8 +37,9 @@
 #include "cppa/atom.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/invoke_rules.hpp"
+#include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
@@ -54,28 +55,27 @@
 
 namespace cppa { namespace detail {
 
-class timed_invoke_rule_builder
+class behavior_rvalue_builder
 {
 
     util::duration m_timeout;
 
  public:
 
-    constexpr timed_invoke_rule_builder(util::duration const& d) : m_timeout(d)
+    constexpr behavior_rvalue_builder(util::duration const& d) : m_timeout(d)
     {
     }
 
     template<typename F>
-    timed_invoke_rules operator>>(F&& f)
+    behavior operator>>(F&& f)
     {
-        typedef timed_invokable_impl<F> impl;
-        return timed_invokable_ptr(new impl(m_timeout, std::forward<F>(f)));
+        return {m_timeout, std::function<void()>{std::forward<F>(f)}};
     }
 
 };
 
 template<typename... TypeList>
-class invoke_rule_builder
+class rvalue_builder
 {
 
     typedef util::arg_match_t arg_match_t;
@@ -85,9 +85,10 @@ class invoke_rule_builder
     static constexpr bool is_complete =
             !std::is_same<arg_match_t, typename raw_types::back>::value;
 
-    typedef typename util::if_else_c<is_complete == false,
-                                     typename util::tl_pop_back<raw_types>::type,
-                                     util::wrapped<raw_types> >::type
+    typedef typename util::if_else_c<
+                        is_complete == false,
+                        typename util::tl_pop_back<raw_types>::type,
+                        util::wrapped<raw_types> >::type
             types;
 
     static_assert(util::tl_find<types, arg_match_t>::value == -1,
@@ -103,13 +104,13 @@ class invoke_rule_builder
     std::unique_ptr<pattern_type> m_ptr;
 
     template<typename F>
-    invoke_rules cr_rules(F&& f, std::integral_constant<bool, true>)
+    partial_function cr_rvalue(F&& f, std::integral_constant<bool, true>)
     {
         return get_invokable_impl(std::forward<F>(f), std::move(m_ptr));
     }
 
     template<typename F>
-    invoke_rules cr_rules(F&& f, std::integral_constant<bool, false>)
+    partial_function cr_rvalue(F&& f, std::integral_constant<bool, false>)
     {
         using namespace ::cppa::util;
         typedef typename get_callable_trait<F>::type ctrait;
@@ -125,32 +126,31 @@ class invoke_rule_builder
  public:
 
     template<typename... Args>
-    invoke_rule_builder(Args const&... args)
-        : m_ptr(new pattern_type(args...))
+    rvalue_builder(Args const&... args) : m_ptr(new pattern_type(args...))
     {
     }
 
 
     template<typename F>
-    invoke_rules operator>>(F&& f)
+    partial_function operator>>(F&& f)
     {
-        std::integral_constant<bool,is_complete> token;
-        return cr_rules(std::forward<F>(f), token);
+        std::integral_constant<bool, is_complete> token;
+        return cr_rvalue(std::forward<F>(f), token);
     }
 
 };
 
-class on_the_fly_invoke_rule_builder
+class on_the_fly_rvalue_builder
 {
 
  public:
 
-    constexpr on_the_fly_invoke_rule_builder()
+    constexpr on_the_fly_rvalue_builder()
     {
     }
 
     template<typename F>
-    invoke_rules operator>>(F&& f) const
+    partial_function operator>>(F&& f) const
     {
         using namespace ::cppa::util;
         typedef typename get_callable_trait<F>::type ctrait;
@@ -180,10 +180,10 @@ typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
 
 constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
-constexpr detail::on_the_fly_invoke_rule_builder on_arg_match;
+constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 template<typename Arg0, typename... Args>
-detail::invoke_rule_builder<typename detail::unboxed<Arg0>::type,
+detail::rvalue_builder<typename detail::unboxed<Arg0>::type,
                             typename detail::unboxed<Args>::type...>
 on(Arg0 const& arg0, Args const&... args)
 {
@@ -191,25 +191,25 @@ on(Arg0 const& arg0, Args const&... args)
 }
 
 template<typename... TypeList>
-detail::invoke_rule_builder<TypeList...> on()
+detail::rvalue_builder<TypeList...> on()
 {
     return { };
 }
 
 template<atom_value A0, typename... TypeList>
-detail::invoke_rule_builder<atom_value, TypeList...> on()
+detail::rvalue_builder<atom_value, TypeList...> on()
 {
     return { A0 };
 }
 
 template<atom_value A0, atom_value A1, typename... TypeList>
-detail::invoke_rule_builder<atom_value, atom_value, TypeList...> on()
+detail::rvalue_builder<atom_value, atom_value, TypeList...> on()
 {
     return { A0, A1 };
 }
 
 template<atom_value A0, atom_value A1, atom_value A2, typename... TypeList>
-detail::invoke_rule_builder<atom_value, atom_value,
+detail::rvalue_builder<atom_value, atom_value,
                             atom_value, TypeList...> on()
 {
     return { A0, A1, A2 };
@@ -218,20 +218,20 @@ detail::invoke_rule_builder<atom_value, atom_value,
 template<atom_value A0, atom_value A1,
          atom_value A2, atom_value A3,
          typename... TypeList>
-detail::invoke_rule_builder<atom_value, atom_value, atom_value,
+detail::rvalue_builder<atom_value, atom_value, atom_value,
                             atom_value, TypeList...> on()
 {
     return { A0, A1, A2, A3 };
 }
 
 template<class Rep, class Period>
-constexpr detail::timed_invoke_rule_builder
-after(const std::chrono::duration<Rep, Period>& d)
+constexpr detail::behavior_rvalue_builder
+after(std::chrono::duration<Rep, Period> const& d)
 {
     return { util::duration(d) };
 }
 
-inline detail::invoke_rule_builder<anything> others()
+inline detail::rvalue_builder<anything> others()
 {
     return { };
 }

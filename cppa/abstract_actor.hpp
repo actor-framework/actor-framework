@@ -52,59 +52,124 @@ namespace cppa {
 template<class Base>
 class abstract_actor : public Base
 {
-    typedef detail::lock_guard<detail::mutex> guard_type;
-    //typedef std::lock_guard<std::mutex> guard_type;
+
     typedef std::unique_ptr<attachable> attachable_ptr;
-
-    // true if the associated thread has finished execution
-    std::atomic<std::uint32_t> m_exit_reason;
-
-    // guards access to m_exited, m_subscriptions and m_links
-    detail::mutex m_mtx;
-
-    // links to other actors
-    std::vector<actor_ptr> m_links;
-
-    // code that is executed on cleanup
-    std::vector<attachable_ptr> m_attachables;
+    typedef detail::lock_guard<detail::mutex> guard_type;
 
  public:
 
     struct queue_node
     {
-        friend class abstract_actor;
-        friend class queue_node_ptr;
-
         queue_node* next;
         actor_ptr sender;
         any_tuple msg;
-
         queue_node() : next(nullptr) { }
         queue_node(actor* from, any_tuple&& content)
-            : next(nullptr), sender(from), msg(std::move(content))
-        {
-        }
+            : next(nullptr), sender(from), msg(std::move(content)) { }
         queue_node(actor* from, any_tuple const& content)
-            : next(nullptr), sender(from), msg(content)
-        {
-        }
+            : next(nullptr), sender(from), msg(content) { }
     };
 
     typedef std::unique_ptr<queue_node> queue_node_ptr;
 
- protected:
-
-    util::single_reader_queue<queue_node> m_mailbox;
-
- private:
-
-    // @pre m_mtx.locked()
-    bool exited() const
+    bool attach(attachable* ptr) /*override*/
     {
-        return m_exit_reason.load() != exit_reason::not_exited;
+        if (ptr == nullptr)
+        {
+            guard_type guard(m_mtx);
+            return m_exit_reason.load() == exit_reason::not_exited;
+        }
+        else
+        {
+            attachable_ptr uptr(ptr);
+            std::uint32_t reason;
+            // lifetime scope of guard
+            {
+                guard_type guard(m_mtx);
+                reason = m_exit_reason.load();
+                if (reason == exit_reason::not_exited)
+                {
+                    m_attachables.push_back(std::move(uptr));
+                    return true;
+                }
+            }
+            uptr->actor_exited(reason);
+            return false;
+        }
+    }
+
+    void detach(attachable::token const& what) /*override*/
+    {
+        attachable_ptr uptr;
+        // lifetime scope of guard
+        {
+            guard_type guard(m_mtx);
+            auto end = m_attachables.end();
+            auto i = std::find_if(
+                        m_attachables.begin(), end,
+                        [&](attachable_ptr& p) { return p->matches(what); });
+            if (i != end)
+            {
+                uptr = std::move(*i);
+                m_attachables.erase(i);
+            }
+        }
+        // uptr will be destroyed here, without locked mutex
+    }
+
+    void link_to(intrusive_ptr<actor>& other) /*override*/
+    {
+        (void) link_to_impl(other);
+    }
+
+    void unlink_from(intrusive_ptr<actor>& other) /*override*/
+    {
+        (void) unlink_from_impl(other);
+    }
+
+    bool remove_backlink(intrusive_ptr<actor>& other) /*override*/
+    {
+        if (other && other != this)
+        {
+            guard_type guard(m_mtx);
+            auto i = std::find(m_links.begin(), m_links.end(), other);
+            if (i != m_links.end())
+            {
+                m_links.erase(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool establish_backlink(intrusive_ptr<actor>& other) /*override*/
+    {
+        std::uint32_t reason = exit_reason::not_exited;
+        if (other && other != this)
+        {
+            guard_type guard(m_mtx);
+            reason = m_exit_reason.load();
+            if (reason == exit_reason::not_exited)
+            {
+                auto i = std::find(m_links.begin(), m_links.end(), other);
+                if (i == m_links.end())
+                {
+                    m_links.push_back(other);
+                    return true;
+                }
+            }
+        }
+        // send exit message without lock
+        if (reason != exit_reason::not_exited)
+        {
+            other->enqueue(this, make_tuple(atom(":Exit"), reason));
+        }
+        return false;
     }
 
  protected:
+
+    util::single_reader_queue<queue_node> m_mailbox;
 
     template<typename T>
     inline queue_node* fetch_node(actor* sender, T&& msg)
@@ -185,105 +250,22 @@ class abstract_actor : public Base
         return false;
     }
 
- public:
+ private:
 
-    bool attach(attachable* ptr) /*override*/
+    // @pre m_mtx.locked()
+    bool exited() const
     {
-        if (ptr == nullptr)
-        {
-            guard_type guard(m_mtx);
-            return m_exit_reason.load() == exit_reason::not_exited;
-        }
-        else
-        {
-            attachable_ptr uptr(ptr);
-            std::uint32_t reason;
-            // lifetime scope of guard
-            {
-                guard_type guard(m_mtx);
-                reason = m_exit_reason.load();
-                if (reason == exit_reason::not_exited)
-                {
-                    m_attachables.push_back(std::move(uptr));
-                    return true;
-                }
-            }
-            uptr->actor_exited(reason);
-            return false;
-        }
+        return m_exit_reason.load() != exit_reason::not_exited;
     }
 
-    void detach(attachable::token const& what) /*override*/
-    {
-        attachable_ptr uptr;
-        // lifetime scope of guard
-        {
-            guard_type guard(m_mtx);
-            auto end = m_attachables.end();
-            auto i = std::find_if(m_attachables.begin(),
-                                  end,
-                                  [&](attachable_ptr& ptr)
-                                  {
-                                      return ptr->matches(what);
-                                  });
-            if (i != end)
-            {
-                uptr = std::move(*i);
-                m_attachables.erase(i);
-            }
-        }
-        // uptr will be destroyed here, without locked mutex
-    }
-
-    void link_to(intrusive_ptr<actor>& other) /*override*/
-    {
-        (void) link_to_impl(other);
-    }
-
-    void unlink_from(intrusive_ptr<actor>& other) /*override*/
-    {
-        (void) unlink_from_impl(other);
-    }
-
-    bool remove_backlink(intrusive_ptr<actor>& other) /*override*/
-    {
-        if (other && other != this)
-        {
-            guard_type guard(m_mtx);
-            auto i = std::find(m_links.begin(), m_links.end(), other);
-            if (i != m_links.end())
-            {
-                m_links.erase(i);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool establish_backlink(intrusive_ptr<actor>& other) /*override*/
-    {
-        std::uint32_t reason = exit_reason::not_exited;
-        if (other && other != this)
-        {
-            guard_type guard(m_mtx);
-            reason = m_exit_reason.load();
-            if (reason == exit_reason::not_exited)
-            {
-                auto i = std::find(m_links.begin(), m_links.end(), other);
-                if (i == m_links.end())
-                {
-                    m_links.push_back(other);
-                    return true;
-                }
-            }
-        }
-        // send exit message without lock
-        if (reason != exit_reason::not_exited)
-        {
-            other->enqueue(this, make_tuple(atom(":Exit"), reason));
-        }
-        return false;
-    }
+    // true if the associated thread has finished execution
+    std::atomic<std::uint32_t> m_exit_reason;
+    // guards access to m_exited, m_subscriptions and m_links
+    detail::mutex m_mtx;
+    // links to other actors
+    std::vector<actor_ptr> m_links;
+    // code that is executed on cleanup
+    std::vector<attachable_ptr> m_attachables;
 
 };
 

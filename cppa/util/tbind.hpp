@@ -33,7 +33,7 @@
 
 namespace cppa { namespace util {
 
-template<template <typename, typename> class Tpl, typename Arg1>
+template<template<typename, typename> class Tpl, typename Arg1>
 struct tbind
 {
     template<typename Arg2>

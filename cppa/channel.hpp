@@ -53,10 +53,6 @@ class channel : public ref_counted
     friend class actor;
     friend class group;
 
-    // channel is a sealed class and the only
-    // allowed subclasses are actor and group.
-    channel() = default;
-
  public:
 
     virtual ~channel();
@@ -67,6 +63,12 @@ class channel : public ref_counted
     virtual void enqueue(actor* sender, any_tuple const& msg) = 0;
 
     virtual void enqueue(actor* sender, any_tuple&& msg) = 0;
+
+ private:
+
+    // channel is a sealed class and the only
+    // allowed subclasses are actor and group.
+    channel() = default;
 
 };
 

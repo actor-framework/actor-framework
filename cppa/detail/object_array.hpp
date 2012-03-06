@@ -68,7 +68,9 @@ class object_array : public abstract_tuple
 
     uniform_type_info const* type_at(size_t pos) const;
 
-    std::type_info const* values_type_list() const;
+    void const* type_token() const;
+
+    std::type_info const* impl_type() const;
 
 };
 

@@ -56,17 +56,6 @@ typedef std::uint32_t actor_id;
 class actor : public channel
 {
 
-    bool m_is_proxy;
-    actor_id m_id;
-    process_information_ptr m_parent_process;
-
- protected:
-
-    actor(process_information_ptr const& parent = process_information::get());
-
-    actor(std::uint32_t aid,
-          process_information_ptr const& parent = process_information::get());
-
  public:
 
     ~actor();
@@ -201,6 +190,20 @@ class actor : public channel
      *          otherwise @c false.
      */
     inline bool is_proxy() const;
+
+
+ protected:
+
+    actor(process_information_ptr const& parent = process_information::get());
+
+    actor(std::uint32_t aid,
+          process_information_ptr const& parent = process_information::get());
+
+ private:
+
+    actor_id m_id;
+    bool m_is_proxy;
+    process_information_ptr m_parent_process;
 
 };
 

@@ -84,7 +84,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
     filter_result filter_msg(any_tuple const& msg);
 
     dq_result dq(queue_node_ptr& node,
-                 invoke_rules_base& rules,
+                 partial_function& rules,
                  queue_node_buffer& buffer);
 
     bool has_pending_timeout()
@@ -157,8 +157,8 @@ struct scheduled_actor_dummy : abstract_scheduled_actor
 {
     void resume(util::fiber*, resume_callback*);
     void quit(std::uint32_t);
-    void dequeue(invoke_rules&);
-    void dequeue(timed_invoke_rules&);
+    void dequeue(behavior&);
+    void dequeue(partial_function&);
     void link_to(intrusive_ptr<actor>&);
     void unlink_from(intrusive_ptr<actor>&);
     bool establish_backlink(intrusive_ptr<actor>&);

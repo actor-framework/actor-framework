@@ -42,64 +42,26 @@ class event_based_actor_base : public abstract_event_based_actor
 
     typedef abstract_event_based_actor super;
 
-    inline void become_impl(invoke_rules& rules)
-    {
-        become(std::move(rules));
-    }
-
-    inline void become_impl(timed_invoke_rules&& rules)
-    {
-        become(std::move(rules));
-    }
-
-    template<typename Head, typename... Tail>
-    void become_impl(invoke_rules& rules, Head&& head, Tail&&... tail)
-    {
-        become_impl(rules.splice(std::forward<Head>(head)),
-                    std::forward<Tail>(tail)...);
-    }
-
     inline Derived* d_this() { return static_cast<Derived*>(this); }
 
  protected:
 
     inline void become(behavior* bhvr)
     {
-        d_this()->do_become(bhvr);
-    }
-
-    inline void become(invoke_rules* bhvr)
-    {
         d_this()->do_become(bhvr, false);
     }
 
-    inline void become(timed_invoke_rules* bhvr)
+    template<typename... Args>
+    void become(partial_function&& arg0, Args&&... args)
     {
-        d_this()->do_become(bhvr, false);
+        auto ptr = new behavior;
+        ptr->splice(std::move(arg0), std::forward<Args>(args)...);
+        d_this()->do_become(ptr, true);
     }
 
-    inline void become(invoke_rules&& bhvr)
+    inline void become(behavior&& arg0)
     {
-        d_this()->do_become(new invoke_rules(std::move(bhvr)), true);
-    }
-
-    inline void become(timed_invoke_rules&& bhvr)
-    {
-        d_this()->do_become(new timed_invoke_rules(std::move(bhvr)), true);
-    }
-
-    inline void become(behavior&& bhvr)
-    {
-        if (bhvr.is_left()) become(std::move(bhvr.left()));
-        else become(std::move(bhvr.right()));
-    }
-
-    template<typename Head, typename... Tail>
-    void become(invoke_rules&& rules, Head&& head, Tail&&... tail)
-    {
-        invoke_rules tmp(std::move(rules));
-        become_impl(tmp.splice(std::forward<Head>(head)),
-                    std::forward<Tail>(tail)...);
+        d_this()->do_become(new behavior(std::move(arg0)), true);
     }
 
 };

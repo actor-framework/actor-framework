@@ -50,9 +50,6 @@ class actor_proxy : public abstract_actor<actor>
 
     typedef abstract_actor<actor> super;
 
-    void forward_message(process_information_ptr const&,
-                         actor*, any_tuple const&);
-
  public:
 
     actor_proxy(std::uint32_t mid, process_information_ptr const& parent);
@@ -76,6 +73,11 @@ class actor_proxy : public abstract_actor<actor>
     bool remove_backlink(intrusive_ptr<actor>& to);
 
     bool establish_backlink(intrusive_ptr<actor>& to);
+
+ public:
+
+    void forward_message(process_information_ptr const&,
+                         actor*, any_tuple const&);
 
 };
 

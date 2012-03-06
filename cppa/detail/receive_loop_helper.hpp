@@ -36,7 +36,12 @@
 #include "cppa/self.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/invoke_rules.hpp"
+#include "cppa/partial_function.hpp"
+
+#include "cppa/util/tbind.hpp"
+#include "cppa/util/type_list.hpp"
+
+#include "cppa/detail/invokable.hpp"
 
 
 namespace cppa { namespace detail {
@@ -47,54 +52,33 @@ struct receive_while_helper
     Statement m_stmt;
 
     template<typename S>
-    receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt))
-    {
-    }
+    receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt)) { }
 
-    void operator()(invoke_rules& rules)
+    void operator()(behavior& bhvr)
     {
         local_actor* sptr = self;
-        while (m_stmt())
-        {
-            sptr->dequeue(rules);
-        }
+        while (m_stmt()) sptr->dequeue(bhvr);
     }
 
-    void operator()(invoke_rules&& rules)
+    void operator()(partial_function& fun)
     {
-        invoke_rules tmp(std::move(rules));
+        local_actor* sptr = self;
+        while (m_stmt()) sptr->dequeue(fun);
+    }
+
+    void operator()(behavior&& bhvr)
+    {
+        behavior tmp{std::move(bhvr)};
         (*this)(tmp);
     }
 
-    void operator()(timed_invoke_rules& rules)
+    template<typename... Args>
+    void operator()(partial_function&& arg0, Args&&... args)
     {
-        local_actor* sptr = self;
-        while (m_stmt())
-        {
-            sptr->dequeue(rules);
-        }
+        typename select_bhvr<Args...>::type tmp;
+        (*this)(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
     }
 
-    void operator()(timed_invoke_rules&& rules)
-    {
-        timed_invoke_rules tmp(std::move(rules));
-        (*this)(tmp);
-    }
-
-    template<typename Arg0, typename... Args>
-    void operator()(invoke_rules& rules, Arg0&& arg0, Args&&... args)
-    {
-        (*this)(rules.splice(std::forward<Arg0>(arg0)),
-                std::forward<Args>(args)...);
-    }
-
-    template<typename Arg0, typename... Args>
-    void operator()(invoke_rules&& rules, Arg0&& arg0, Args&&... args)
-    {
-        invoke_rules tmp(std::move(rules));
-        (*this)(tmp.splice(std::forward<Arg0>(arg0)),
-                std::forward<Args>(args)...);
-    }
 };
 
 class do_receive_helper
@@ -102,44 +86,19 @@ class do_receive_helper
 
     behavior m_bhvr;
 
-    inline void init(timed_invoke_rules&& bhvr)
-    {
-        m_bhvr = std::move(bhvr);
-    }
-
-    inline void init(invoke_rules& bhvr)
-    {
-        m_bhvr = std::move(bhvr);
-    }
-
-    template<typename Arg0, typename... Args>
-    inline void init(invoke_rules& rules, Arg0&& arg0, Args&&... args)
-    {
-        init(rules.splice(std::forward<Arg0>(arg0)),
-             std::forward<Args>(args)...);
-    }
-
  public:
 
-    do_receive_helper(invoke_rules&& rules) : m_bhvr(std::move(rules))
-    {
-    }
-
-    do_receive_helper(timed_invoke_rules&& rules) : m_bhvr(std::move(rules))
+    do_receive_helper(behavior&& bhvr) : m_bhvr(std::move(bhvr))
     {
     }
 
     template<typename Arg0, typename... Args>
-    do_receive_helper(invoke_rules&& rules, Arg0&& arg0, Args&&... args)
+    do_receive_helper(Arg0&& arg0, Args&&... args)
     {
-        invoke_rules tmp(std::move(rules));
-        init(tmp.splice(std::forward<Arg0>(arg0)), std::forward<Args>(args)...);
+        m_bhvr.splice(std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
-    do_receive_helper(do_receive_helper&& other)
-        : m_bhvr(std::move(other.m_bhvr))
-    {
-    }
+    do_receive_helper(do_receive_helper&&) = default;
 
     template<typename Statement>
     void until(Statement&& stmt)
@@ -147,11 +106,11 @@ class do_receive_helper
         static_assert(std::is_same<bool, decltype(stmt())>::value,
                       "functor or function does not return a boolean");
         local_actor* sptr = self;
-        if (m_bhvr.is_left())
+        if (m_bhvr.timeout().valid())
         {
             do
             {
-                sptr->dequeue(m_bhvr.left());
+                sptr->dequeue(m_bhvr);
             }
             while (stmt() == false);
         }
@@ -159,7 +118,7 @@ class do_receive_helper
         {
             do
             {
-                sptr->dequeue(m_bhvr.right());
+                sptr->dequeue(m_bhvr.get_partial_function());
             }
             while (stmt() == false);
         }

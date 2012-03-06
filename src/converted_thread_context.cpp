@@ -69,7 +69,7 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
     m_mailbox.push_back(fetch_node(sender, msg));
 }
 
-void converted_thread_context::dequeue(invoke_rules& rules) /*override*/
+void converted_thread_context::dequeue(partial_function& rules)  /*override*/
 {
     queue_node_buffer buffer;
     queue_node_ptr node(m_mailbox.pop());
@@ -79,26 +79,33 @@ void converted_thread_context::dequeue(invoke_rules& rules) /*override*/
     }
 }
 
-void converted_thread_context::dequeue(timed_invoke_rules& rules)  /*override*/
+void converted_thread_context::dequeue(behavior& rules) /*override*/
 {
-    auto timeout = now();
-    timeout += rules.timeout();
-    queue_node_buffer buffer;
-    queue_node_ptr node(m_mailbox.try_pop());
-    do
+    if (rules.timeout().valid())
     {
-        if (!node)
+        auto timeout = now();
+        timeout += rules.timeout();
+        queue_node_buffer buffer;
+        queue_node_ptr node(m_mailbox.try_pop());
+        do
         {
-            node.reset(m_mailbox.try_pop(timeout));
             if (!node)
             {
-                if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
-                rules.handle_timeout();
-                return;
+                node.reset(m_mailbox.try_pop(timeout));
+                if (!node)
+                {
+                    if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
+                    rules.handle_timeout();
+                    return;
+                }
             }
         }
+        while (dq(node, rules.get_partial_function(), buffer) == false);
     }
-    while (dq(node, rules, buffer) == false);
+    else
+    {
+        converted_thread_context::dequeue(rules.get_partial_function());
+    }
 }
 
 converted_thread_context::throw_on_exit_result
@@ -121,7 +128,7 @@ converted_thread_context::throw_on_exit(any_tuple const& msg)
 }
 
 bool converted_thread_context::dq(queue_node_ptr& node,
-                                  invoke_rules_base& rules,
+                                  partial_function& rules,
                                   queue_node_buffer& buffer)
 {
     if (m_trap_exit == false && throw_on_exit(node->msg) == normal_exit_signal)

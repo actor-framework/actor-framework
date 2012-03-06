@@ -75,9 +75,9 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void enqueue(actor* sender, any_tuple const& msg) /*override*/;
 
-    void dequeue(invoke_rules& rules) /*override*/;
+    void dequeue(behavior& rules) /*override*/;
 
-    void dequeue(timed_invoke_rules& rules)  /*override*/;
+    void dequeue(partial_function& rules)  /*override*/;
 
     inline decltype(m_mailbox)& mailbox()
     {
@@ -97,7 +97,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     // returns true if node->msg was accepted by rules
     bool dq(queue_node_ptr& node,
-            invoke_rules_base& rules,
+            partial_function& rules,
             queue_node_buffer& buffer);
 
     throw_on_exit_result throw_on_exit(any_tuple const& msg);

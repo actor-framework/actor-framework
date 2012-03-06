@@ -112,7 +112,12 @@ class tuple_vals : public abstract_tuple
         return abstract_tuple::equals(other);
     }
 
-    std::type_info const* values_type_list() const
+    void const* type_token() const
+    {
+        return detail::static_type_list<ElementTypes...>::list;
+    }
+
+    std::type_info const* impl_type() const
     {
         return detail::static_type_list<ElementTypes...>::list;
     }

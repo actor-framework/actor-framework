@@ -32,7 +32,7 @@
 
 namespace cppa {
 
-void receive_loop(invoke_rules& rules)
+void receive_loop(behavior& rules)
 {
     local_actor* sptr = self;
     for (;;)
@@ -41,7 +41,7 @@ void receive_loop(invoke_rules& rules)
     }
 }
 
-void receive_loop(timed_invoke_rules& rules)
+void receive_loop(partial_function& rules)
 {
     local_actor* sptr = self;
     for (;;)

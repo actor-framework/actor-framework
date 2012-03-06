@@ -44,7 +44,7 @@ class upgrade_lock_guard
 
  public:
 
-    template<template <typename> class LockType>
+    template<template<typename> class LockType>
     upgrade_lock_guard(LockType<UpgradeLockable>& other)
     {
         m_lockable = other.release();

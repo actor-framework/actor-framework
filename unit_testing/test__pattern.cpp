@@ -1,5 +1,6 @@
 #include <string>
 #include <sstream>
+#include <functional>
 
 #include "test.hpp"
 
@@ -11,6 +12,7 @@
 #include "cppa/pattern.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/tuple_cast.hpp"
+#include "cppa/partial_function.hpp"
 
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
@@ -19,8 +21,11 @@
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
 
+#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
+
+#include <boost/progress.hpp>
 
 using namespace cppa;
 
@@ -57,6 +62,35 @@ void match_test(T const& value)
             cout << str << endl;
         }
     );
+}
+
+template<class Testee>
+void invoke_test(std::vector<any_tuple>& test_tuples, Testee& x)
+{
+    boost::progress_timer t;
+    for (int i = 0; i < 1000000; ++i)
+    {
+        for (auto& t : test_tuples) x(t);
+    }
+}
+
+inline detail::intermediate* get_i(partial_function& pf, any_tuple const& value)
+{
+    return pf.get_intermediate(value);
+}
+
+template<class Testee>
+void intermediate_test(std::vector<any_tuple>& test_tuples, Testee& x)
+{
+    boost::progress_timer t;
+    for (int i = 0; i < 1000000; ++i)
+    {
+        for (auto& t : test_tuples)
+        {
+            auto i = get_i(x, t);
+            if (i) i->invoke();
+        }
+    }
 }
 
 size_t test__pattern()
