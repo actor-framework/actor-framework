@@ -35,14 +35,21 @@
 
 namespace cppa {
 
+partial_function::partial_function(invokable_ptr&& ptr)
+{
+    m_funs.push_back(std::move(ptr));
+}
+
 partial_function::partial_function(partial_function&& other)
     : m_funs(std::move(other.m_funs))
 {
 }
 
-partial_function::partial_function(invokable_ptr&& ptr)
+partial_function& partial_function::operator=(partial_function&& other)
 {
-    m_funs.push_back(std::move(ptr));
+    m_funs = std::move(other.m_funs);
+    m_cache.clear();
+    return *this;
 }
 
 auto partial_function::get_cache_entry(any_tuple const& value) -> cache_entry&
@@ -110,10 +117,11 @@ detail::intermediate* partial_function::get_intermediate(any_tuple const& value)
     return nullptr;
 }
 
-behavior partial_function::operator,(behavior&& arg)
+behavior operator,(partial_function&& lhs, behavior&& rhs)
 {
-    behavior bhvr{std::move(arg)};
-    bhvr.get_partial_function().m_funs = std::move(m_funs);
+    behavior bhvr{rhs.m_timeout, std::move(rhs.m_timeout_handler)};
+    bhvr.get_partial_function().splice(std::move(rhs.get_partial_function()),
+                                       std::move(lhs));
     return bhvr;
 }
 

@@ -44,13 +44,16 @@ class behavior;
 class partial_function
 {
 
+    partial_function(partial_function const&) = delete;
+    partial_function& operator=(partial_function const&) = delete;
+
  public:
 
     typedef std::unique_ptr<detail::invokable> invokable_ptr;
 
     partial_function() = default;
-
     partial_function(partial_function&& other);
+    partial_function& operator=(partial_function&& other);
 
     partial_function(invokable_ptr&& ptr);
 
@@ -69,13 +72,6 @@ class partial_function
         std::move(vec.begin(), vec.end(), std::back_inserter(m_funs));
         return splice(std::forward<Args>(args)...);
     }
-
-    inline partial_function operator,(partial_function&& arg)
-    {
-        return std::move(splice(std::move(arg)));
-    }
-
-    behavior operator,(behavior&& arg);
 
  private:
 
@@ -96,6 +92,14 @@ class partial_function
     cache_entry& get_cache_entry(any_tuple const& value);
 
 };
+
+inline partial_function operator,(partial_function&& lhs,
+                                  partial_function&& rhs)
+{
+    return std::move(lhs.splice(std::move(rhs)));
+}
+
+behavior operator,(partial_function&& lhs, behavior&& rhs);
 
 } // namespace cppa
 

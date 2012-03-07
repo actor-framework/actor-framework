@@ -49,6 +49,8 @@ namespace cppa {
 class behavior
 {
 
+    friend behavior operator,(partial_function&& lhs, behavior&& rhs);
+
     behavior(behavior const&) = delete;
     behavior& operator=(behavior const&) = delete;
 
