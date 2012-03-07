@@ -31,6 +31,7 @@
 #ifndef PARTIAL_FUNCTION_HPP
 #define PARTIAL_FUNCTION_HPP
 
+#include <list>
 #include <vector>
 #include <memory>
 #include <utility>
@@ -68,8 +69,7 @@ class partial_function
     template<class... Args>
     partial_function& splice(partial_function&& arg0, Args&&... args)
     {
-        auto& vec = arg0.m_funs;
-        std::move(vec.begin(), vec.end(), std::back_inserter(m_funs));
+        m_funs.splice(m_funs.end(), std::move(arg0.m_funs));
         return splice(std::forward<Args>(args)...);
     }
 
@@ -85,7 +85,7 @@ class partial_function
     typedef std::vector<detail::invokable*> cache_entry;
     typedef std::pair<void const*, cache_entry> cache_element;
 
-    std::vector<invokable_ptr> m_funs;
+    std::list<invokable_ptr> m_funs;
     std::vector<cache_element> m_cache;
     cache_element m_dummy; // binary search dummy
 
