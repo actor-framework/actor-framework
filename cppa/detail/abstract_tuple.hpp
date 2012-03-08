@@ -67,8 +67,7 @@ struct abstract_tuple : ref_counted
     bool equals(abstract_tuple const& other) const;
 
     // iterator support
-    class const_iterator //: public std::iterator<std::bidirectional_iterator_tag,
-                         //                       type_value_pair>
+    class const_iterator
     {
 
         size_t m_pos;

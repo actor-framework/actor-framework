@@ -85,10 +85,10 @@ template<typename... Types>
 class pattern
 {
 
+    static_assert(sizeof...(Types) > 0, "empty pattern");
+
     template<class ExtendedType, class BasicType>
     friend ExtendedType* extend_pattern(BasicType const* p);
-
-    static_assert(sizeof...(Types) > 0, "empty pattern");
 
     pattern(pattern const&) = delete;
     pattern& operator=(pattern const&) = delete;
@@ -102,6 +102,8 @@ class pattern
 
     typedef util::type_list<Types...> types;
 
+    typedef typename types::head head_type;
+
     typedef typename util::tl_filter_not<types, is_anything>::type
             filtered_types;
 
@@ -113,9 +115,9 @@ class pattern
 
     typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 
-    inline const_iterator begin() const { return m_ptrs; }
+    inline const_iterator begin() const { return std::begin(m_ptrs); }
 
-    inline const_iterator end() const { return m_ptrs + size; }
+    inline const_iterator end() const { return std::end(m_ptrs); }
 
     inline reverse_const_iterator rbegin() const
     {
@@ -127,9 +129,9 @@ class pattern
         return reverse_const_iterator{begin()};
     }
 
-    inline const_iterator vbegin() const { return m_vbegin; }
-
     inline const_iterator vend() const { return m_vend; }
+
+    inline bool has_values() const { return m_has_values; }
 
     pattern() : m_has_values(false)
     {
@@ -139,20 +141,52 @@ class pattern
             m_ptrs[i].first = arr[i];
             m_ptrs[i].second = nullptr;
         }
-        m_vbegin = m_vend = begin();
+        m_vend = begin();
     }
 
-    template<typename Arg0, typename... Args>
-    pattern(Arg0 const& arg0, Args const&... args) : m_data(arg0, args...)
+    template<typename... Args>
+    pattern(head_type const& arg0, Args&&... args)
+        : m_data(arg0, std::forward<Args>(args)...)
     {
-        using std::is_same;
-        using namespace util;
-        static constexpr bool all_boxed =
-                util::tl_forall<type_list<Arg0, Args...>,
-                                detail::is_boxed        >::value;
-        m_has_values = !all_boxed;
-        typedef typename type_list<Arg0, Args...>::back arg_n;
-        static constexpr bool ignore_arg_n = is_same<arg_n, arg_match_t>::value;
+        init<head_type, Args...>();
+    }
+
+    template<typename... Args>
+    pattern(head_type&& arg0, Args&&... args)
+        : m_data(std::move(arg0), std::forward<Args>(args)...)
+    {
+        init<head_type, Args...>();
+    }
+
+    template<typename... Args>
+    pattern(util::wrapped<head_type> const& arg0, Args const&... args)
+        : m_data(arg0, std::forward<Args>(args)...)
+    {
+        init<util::wrapped<head_type>, Args...>();
+    }
+
+    template<typename... Args>
+    pattern(detail::tdata<Args...> const& data) : m_data(data)
+    {
+        init<Args...>();
+    }
+
+    template<typename... Args>
+    pattern(detail::tdata<Args...>&& data) : m_data(std::move(data))
+    {
+        init<Args...>();
+    }
+
+    typedef detail::tdata<option<Types>...> data_type;
+
+ private:
+
+    template<typename Arg0, typename... Args>
+    void init()
+    {
+        typedef typename util::type_list<Arg0, Args...>::back arg_n;
+        static constexpr bool ignore_arg_n =
+                std::is_same<arg_n, util::arg_match_t>::value;
         // ignore extra arg_match_t argument
         static constexpr size_t args_size = sizeof...(Args)
                                           + (ignore_arg_n ? 0 : 1);
@@ -168,49 +202,40 @@ class pattern
             m_ptrs[i].first = arr[i];
             m_ptrs[i].second = nullptr;
         }
-        init_value_iterators();
+        init_vend();
+        m_has_values = (vend() != begin());
     }
 
-    inline bool has_values() const { return m_has_values; }
+    typedef type_value_pair tvp_array[size];
 
- private:
-
+    // a polymophic functor
     struct init_helper
     {
-        type_value_pair* iter_to;
-        type_value_pair_const_iterator iter_from;
-        init_helper(type_value_pair* pp, detail::types_array<Types...>& tarr)
-            : iter_to(pp), iter_from(tarr.begin()) { }
+        size_t i;
+        tvp_array& m_ptrs;
+        detail::types_array<Types...>& m_arr;
+        init_helper(tvp_array& ptrs, detail::types_array<Types...>& tarr)
+            : i(0), m_ptrs(ptrs), m_arr(tarr) { }
         template<typename T>
-        void operator()(option<T> const& what)
+        inline void operator()(option<T> const& what)
         {
-            iter_to->first = iter_from.type();
-            iter_to->second = (what) ? &(*what) : nullptr;
-            ++iter_to;
-            ++iter_from;
+            m_ptrs[i].first = m_arr[i];
+            m_ptrs[i].second = (what) ? &(*what) : nullptr;
+            ++i;
         }
     };
 
-    void init_value_iterators()
+    inline void init_vend()
     {
-        auto pred = [](type_value_pair const& tvp) { return tvp.second != 0; };
-        auto last = end();
-        m_vbegin = std::find_if(begin(), last, pred);
-        if (m_vbegin == last)
-        {
-            m_vbegin = m_vend = begin();
-        }
-        else
-        {
-            m_vend = std::find_if(rbegin(), rend(), pred).base();
-        }
+        m_vend = std::find_if(
+                    rbegin(), rend(),
+                    [](type_value_pair const& tvp) { return tvp.second != 0; }
+                 ).base();
     }
 
-    detail::tdata<option<Types>...> m_data;
     bool m_has_values;
-    type_value_pair m_ptrs[size];
-
-    const_iterator m_vbegin;
+    detail::tdata<option<Types>...> m_data;
+    tvp_array m_ptrs;
     const_iterator m_vend;
 
 };
@@ -230,7 +255,7 @@ ExtendedType* extend_pattern(BasicType const* p)
         auto& arr = tarr::arr;
         typename ExtendedType::init_helper f(et->m_ptrs, arr);
         util::static_foreach<0, BasicType::size>::_(et->m_data, f);
-        et->init_value_iterators();
+        et->init_vend();
     }
     return et;
 }

@@ -101,12 +101,17 @@ class rvalue_builder
     typedef typename pattern_from_type_list<converted_types>::type
             pattern_type;
 
-    std::unique_ptr<pattern_type> m_ptr;
+    typedef typename pattern_type::data_type pattern_data;
+
+    pattern_data m_data;
+    bool m_has_values;
 
     template<typename F>
     partial_function cr_rvalue(F&& f, std::integral_constant<bool, true>)
     {
-        return get_invokable_impl(std::forward<F>(f), std::move(m_ptr));
+        return m_has_values ? get_invokable_impl<pattern_type>(std::forward<F>(f),
+                                                               std::move(m_data))
+                            : get_invokable_impl<pattern_type>(std::forward<F>(f));
     }
 
     template<typename F>
@@ -119,15 +124,19 @@ class rvalue_builder
         typedef typename tl_apply<raw_types,rm_ref>::type new_types;
         typedef typename tl_concat<converted_types,new_types>::type types;
         typedef typename pattern_from_type_list<types>::type epattern;
-        std::unique_ptr<epattern> pptr(extend_pattern<epattern>(m_ptr.get()));
-        return get_invokable_impl(std::forward<F>(f), std::move(pptr));
+        return m_has_values ? get_invokable_impl<epattern>(std::forward<F>(f),
+                                                           std::move(m_data))
+                            : get_invokable_impl<epattern>(std::forward<F>(f));
     }
 
  public:
 
     template<typename... Args>
-    rvalue_builder(Args const&... args) : m_ptr(new pattern_type(args...))
+    rvalue_builder(Args&&... args) : m_data(std::forward<Args>(args)...)
     {
+        static constexpr bool all_boxed =
+                util::tl_forall<util::type_list<Args...>, is_boxed>::value;
+        m_has_values = !all_boxed;
     }
 
 
@@ -158,8 +167,7 @@ class on_the_fly_rvalue_builder
         static_assert(raw_types::size > 0, "functor has no arguments");
         typedef typename tl_apply<raw_types,rm_ref>::type types;
         typedef typename pattern_from_type_list<types>::type pattern_type;
-        std::unique_ptr<pattern_type> pptr(new pattern_type);
-        return get_invokable_impl(std::forward<F>(f), std::move(pptr));
+        return get_invokable_impl<pattern_type>(std::forward<F>(f));
     }
 
 };

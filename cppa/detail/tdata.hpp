@@ -64,6 +64,10 @@ struct tdata<>
 
     constexpr tdata() { }
 
+    inline tdata(tdata&&) { }
+
+    inline tdata(tdata const&) { }
+
     // swallow "arg_match" silently
     constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
 
@@ -87,10 +91,7 @@ struct tdata<>
         throw std::out_of_range("");
     }
 
-    inline bool operator==(tdata const&) const
-    {
-        return true;
-    }
+    inline bool operator==(tdata const&) const { return true; }
 
 };
 
@@ -182,6 +183,9 @@ struct tdata<option<Head>, Tail...> : tdata<Tail...>
 
     template<typename... Args>
     tdata(util::wrapped<Head> const&, Args const&... vals) : super(vals...) { }
+
+    tdata(tdata<>&&) : super(), head() { }
+    tdata(tdata<> const&) : super(), head() { }
 
     // allow (partial) initialization from a different tdata
     template<typename... Y>
