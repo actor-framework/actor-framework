@@ -36,8 +36,9 @@
 #include "cppa/abstract_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
-#include "cppa/util/singly_linked_list.hpp"
-#include "cppa/util/single_reader_queue.hpp"
+
+#include "cppa/intrusive/singly_linked_list.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 #include "cppa/detail/delegate.hpp"
 
@@ -50,9 +51,9 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 {
 
     friend class task_scheduler;
-    friend class util::single_reader_queue<abstract_scheduled_actor>;
+    friend class intrusive::single_reader_queue<abstract_scheduled_actor>;
 
-    abstract_scheduled_actor* next; // intrusive next pointer (single_reader_queue)
+    abstract_scheduled_actor* next; // intrusive next pointer
 
     void enqueue_node(queue_node* node);
 
@@ -63,8 +64,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     typedef abstract_actor super;
     typedef super::queue_node queue_node;
-    typedef util::singly_linked_list<queue_node>
-            queue_node_buffer;
+    typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
 
     enum dq_result
     {

@@ -60,7 +60,9 @@ class invokable
 
  public:
 
-    invokable() = default;
+    invokable* next;
+
+    inline invokable() : next(nullptr) { }
     virtual ~invokable();
 
     virtual bool invoke(any_tuple const&) const = 0;

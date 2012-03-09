@@ -51,8 +51,8 @@ using namespace cppa::detail;
 struct network_manager_impl : network_manager
 {
 
-    typedef util::single_reader_queue<post_office_msg> post_office_queue_t;
-    typedef util::single_reader_queue<mailman_job> mailman_queue_t;
+    typedef intrusive::single_reader_queue<post_office_msg> post_office_queue_t;
+    typedef intrusive::single_reader_queue<mailman_job> mailman_queue_t;
 
     int m_pipe[2]; // m_pipe[0]: read; m_pipe[1]: write
 
@@ -88,12 +88,12 @@ struct network_manager_impl : network_manager
         return m_pipe[1];
     }
 
-    util::single_reader_queue<mailman_job>& mailman_queue()
+    mailman_queue_t& mailman_queue()
     {
         return m_mailman_queue;
     }
 
-    util::single_reader_queue<post_office_msg>& post_office_queue()
+    post_office_queue_t& post_office_queue()
     {
         return m_post_office_queue;
     }

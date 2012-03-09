@@ -44,8 +44,6 @@
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
-#include "cppa/util/singly_linked_list.hpp"
-
 namespace cppa { namespace detail {
 
 class yielding_actor : public abstract_scheduled_actor

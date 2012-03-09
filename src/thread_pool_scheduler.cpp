@@ -53,7 +53,7 @@ void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
 
 typedef unique_lock<mutex> guard_type;
 typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
-typedef util::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
+typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
 } // namespace <anonmyous>
 

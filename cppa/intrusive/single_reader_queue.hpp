@@ -34,19 +34,18 @@
 #include <atomic>
 
 #include "cppa/detail/thread.hpp"
-#include "cppa/util/default_deallocator.hpp"
+#include "cppa/intrusive/singly_linked_list.hpp"
 
-namespace cppa { namespace util {
+namespace cppa { namespace intrusive {
 
 /**
  * @brief An intrusive, thread safe queue implementation.
  */
-template<typename T, class Deallocator = default_deallocator<T> >
+template<typename T>
 class single_reader_queue
 {
 
     typedef detail::unique_lock<detail::mutex> lock_type;
-    Deallocator d;
 
  public:
 
@@ -97,8 +96,9 @@ class single_reader_queue
     /**
      * @warning call only from the reader (owner)
      */
-    template<typename List>
-    void push_front(List&& list)
+    //template<typename List>
+    //void push_front(List&& list)
+    void push_front(singly_linked_list<T>&& list)
     {
         if (!list.empty())
         {
@@ -172,8 +172,7 @@ class single_reader_queue
         {
             element_type* tmp = e;
             e = e->next;
-            d(tmp);
-            //delete tmp;
+            delete tmp;
         }
     }
 

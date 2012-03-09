@@ -7,7 +7,7 @@
 #include <boost/thread.hpp>
 #include <boost/progress.hpp>
 
-#include "cppa/util/single_reader_queue.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 //#define DEBUG_RESULTS
 
@@ -22,7 +22,7 @@ const size_t trials = 10;
 
 
 
-using cppa::util::single_reader_queue;
+using cppa::intrusive::single_reader_queue;
 
 using std::cout;
 using std::cerr;

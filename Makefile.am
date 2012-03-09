@@ -149,6 +149,9 @@ nobase_library_include_HEADERS = \
     cppa/fsm_actor.hpp \
     cppa/get.hpp \
     cppa/group.hpp \
+    cppa/intrusive/iterator.hpp \
+    cppa/intrusive/single_reader_queue.hpp \
+    cppa/intrusive/singly_linked_list.hpp \
     cppa/intrusive_ptr.hpp \
     cppa/local_actor.hpp \
     cppa/match.hpp \
@@ -182,7 +185,6 @@ nobase_library_include_HEADERS = \
     cppa/util/comparable.hpp \
     cppa/util/compare_tuples.hpp \
     cppa/util/conjunction.hpp \
-    cppa/util/default_deallocator.hpp \
     cppa/util/disable_if.hpp \
     cppa/util/disjunction.hpp \
     cppa/util/duration.hpp \
@@ -213,8 +215,6 @@ nobase_library_include_HEADERS = \
     cppa/util/rm_ref.hpp \
     cppa/util/shared_lock_guard.hpp \
     cppa/util/shared_spinlock.hpp \
-    cppa/util/single_reader_queue.hpp \
-    cppa/util/singly_linked_list.hpp \
     cppa/util/static_foreach.hpp \
     cppa/util/tbind.hpp \
     cppa/util/type_list.hpp \

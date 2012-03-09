@@ -34,7 +34,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
-#include "cppa/util/single_reader_queue.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
 
@@ -43,7 +43,7 @@ class task_scheduler : public scheduler
 
     typedef scheduler super;
 
-    typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
+    typedef intrusive::single_reader_queue<abstract_scheduled_actor> job_queue;
 
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;

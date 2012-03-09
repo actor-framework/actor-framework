@@ -90,11 +90,6 @@ mailman_job::~mailman_job()
     }
 }
 
-/*
-// implemented in post_office.cpp
-util::single_reader_queue<mailman_job>& mailman_queue();
-*/
-
 // known issues: send() should be asynchronous and select() should be used
 void mailman_loop()
 {

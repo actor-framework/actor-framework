@@ -28,81 +28,89 @@
 \******************************************************************************/
 
 
-#ifndef PARTIAL_FUNCTION_HPP
-#define PARTIAL_FUNCTION_HPP
+#include <iterator>
 
-#include <list>
-#include <vector>
-#include <memory>
-#include <utility>
-
-#include "cppa/detail/invokable.hpp"
+#include "test.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
 
-namespace cppa {
+using std::begin;
+using std::end;
 
-class behavior;
+namespace { size_t s_iint_instances = 0; }
 
-class partial_function
+struct iint
 {
-
-    partial_function(partial_function const&) = delete;
-    partial_function& operator=(partial_function const&) = delete;
-
- public:
-
-    typedef std::unique_ptr<detail::invokable> invokable_ptr;
-
-    partial_function() = default;
-    partial_function(partial_function&& other);
-    partial_function& operator=(partial_function&& other);
-
-    partial_function(invokable_ptr&& ptr);
-
-    bool defined_at(any_tuple const& value);
-
-    void operator()(any_tuple const& value);
-
-    detail::invokable const* definition_at(any_tuple const& value);
-
-    detail::intermediate* get_intermediate(any_tuple const& value);
-
-    template<class... Args>
-    partial_function& splice(partial_function&& arg0, Args&&... args)
-    {
-        if (m_funs.empty()) m_funs = std::move(arg0.m_funs);
-        else m_funs.splice_after(m_funs.before_end(), std::move(arg0.m_funs));
-        return splice(std::forward<Args>(args)...);
-    }
-
- private:
-
-    // terminates recursion
-    inline partial_function& splice()
-    {
-        m_cache.clear();
-        return *this;
-    }
-
-    typedef std::vector<detail::invokable*> cache_entry;
-    typedef std::pair<void const*, cache_entry> cache_element;
-
-    intrusive::singly_linked_list<detail::invokable> m_funs;
-    std::vector<cache_element> m_cache;
-    cache_element m_dummy; // binary search dummy
-
-    cache_entry& get_cache_entry(any_tuple const& value);
-
+    iint* next;
+    int value;
+    inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
+    ~iint() { --s_iint_instances; }
 };
 
-inline partial_function operator,(partial_function&& lhs,
-                                  partial_function&& rhs)
+inline bool operator==(iint const& lhs, iint const& rhs)
 {
-    return std::move(lhs.splice(std::move(rhs)));
+    return lhs.value == rhs.value;
 }
 
-behavior operator,(partial_function&& lhs, behavior&& rhs);
+inline bool operator==(iint const& lhs, int rhs)
+{
+    return lhs.value == rhs;
+}
 
-} // namespace cppa
+inline bool operator==(int lhs, iint const& rhs)
+{
+    return lhs == rhs.value;
+}
 
-#endif // PARTIAL_FUNCTION_HPP
+typedef cppa::intrusive::singly_linked_list<iint> iint_list;
+
+size_t test__intrusive_containers()
+{
+    CPPA_TEST(test__intrusive_containers);
+    iint_list ilist1;
+    ilist1.push_back(new iint(1));
+    ilist1.emplace_back(2);
+    ilist1.push_back(new iint(3));
+    {
+        iint_list tmp;
+        tmp.push_back(new iint(4));
+        tmp.push_back(new iint(5));
+        ilist1.splice_after(ilist1.before_end(), std::move(tmp));
+        CPPA_CHECK(tmp.empty());
+    }
+    int iarr1[] = { 1, 2, 3, 4, 5 };
+    CPPA_CHECK((std::equal(begin(iarr1), end(iarr1), begin(ilist1))));
+    CPPA_CHECK((std::equal(begin(ilist1), end(ilist1), begin(iarr1))));
+
+    ilist1.push_front(new iint(0));
+    auto i = ilist1.erase_after(ilist1.begin());
+    // i points to second element
+    CPPA_CHECK_EQUAL(*i, 2);
+    i = ilist1.insert_after(i, new iint(20));
+    CPPA_CHECK_EQUAL(*i, 20);
+    int iarr2[] = { 0, 2, 20, 3, 4, 5 };
+    CPPA_CHECK((std::equal(begin(iarr2), end(iarr2), begin(ilist1))));
+
+    auto p = ilist1.take();
+    CPPA_CHECK(ilist1.empty());
+    auto ilist2 = iint_list::from(p);
+    ilist2.emplace_front(1);                    // 1 0 2 20 3 4 5
+    i = ilist2.erase_after(ilist2.begin());     // 1 2 20 3 4 5
+    CPPA_CHECK_EQUAL(*i, 2);
+    ilist2.erase_after(i);                      // 1 2 3 4 5
+    CPPA_CHECK((std::equal(begin(iarr1), end(iarr1), begin(ilist2))));
+
+    CPPA_CHECK_EQUAL(s_iint_instances, 5);
+
+    ilist2.remove_if([](iint const& val) { return (val.value % 2) != 0; });
+
+    CPPA_CHECK_EQUAL(s_iint_instances, 2);
+
+    int iarr3[] = { 2, 4 };
+    CPPA_CHECK((std::equal(begin(iarr3), end(iarr3), begin(ilist2))));
+
+    ilist2.clear();
+    CPPA_CHECK_EQUAL(s_iint_instances, 0);
+    CPPA_CHECK(ilist2.empty());
+
+    return CPPA_TEST_RESULT;
+}

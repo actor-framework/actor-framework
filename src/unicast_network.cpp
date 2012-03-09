@@ -47,7 +47,7 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-#include "cppa/util/single_reader_queue.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"

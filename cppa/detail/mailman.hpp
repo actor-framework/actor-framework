@@ -35,8 +35,8 @@
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/native_socket.hpp"
-#include "cppa/util/single_reader_queue.hpp"
 #include "cppa/detail/addressed_message.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
 
@@ -67,7 +67,7 @@ struct mailman_add_peer
 class mailman_job
 {
 
-    friend class util::single_reader_queue<mailman_job>;
+    friend class intrusive::single_reader_queue<mailman_job>;
 
  public:
 
@@ -136,7 +136,7 @@ class mailman_job
 
 void mailman_loop();
 
-util::single_reader_queue<mailman_job>& mailman_queue();
+intrusive::single_reader_queue<mailman_job>& mailman_queue();
 
 }} // namespace cppa::detail
 

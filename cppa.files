@@ -48,8 +48,7 @@ cppa/util/replace_type.hpp
 cppa/detail/serialize_tuple.hpp
 unit_testing/test__atom.cpp
 unit_testing/test__queue_performance.cpp
-cppa/util/single_reader_queue.hpp
-cppa/util/singly_linked_list.hpp
+cppa/intrusive/single_reader_queue.hpp
 unit_testing/test__local_group.cpp
 cppa/detail/channel.hpp
 cppa/local_actor.hpp
@@ -232,7 +231,6 @@ benchmarks/mixed_case.erl
 benchmarks/ActorCreation.scala
 benchmarks/MailboxPerformance.scala
 benchmarks/MixedCase.scala
-cppa/util/default_deallocator.hpp
 cppa/util/producer_consumer_list.hpp
 cppa/util/arg_match_t.hpp
 cppa/detail/types_array.hpp
@@ -261,3 +259,6 @@ cppa/detail/tuple_cast_impl.hpp
 cppa/match.hpp
 cppa/partial_function.hpp
 src/partial_function.cpp
+cppa/intrusive/singly_linked_list.hpp
+cppa/intrusive/iterator.hpp
+unit_testing/test__intrusive_containers.cpp

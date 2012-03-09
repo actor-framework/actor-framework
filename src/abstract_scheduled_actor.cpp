@@ -184,7 +184,6 @@ auto abstract_scheduled_actor::dq(queue_node_ptr& node,
             if (!buffer.empty())
             {
                 m_mailbox.push_front(std::move(buffer));
-                buffer.clear();
             }
             return dq_timeout_occured;
         }
@@ -199,7 +198,6 @@ auto abstract_scheduled_actor::dq(queue_node_ptr& node,
         if (!buffer.empty())
         {
             m_mailbox.push_front(std::move(buffer));
-            buffer.clear();
         }
         // expire pending request
         if (m_has_pending_timeout_request)

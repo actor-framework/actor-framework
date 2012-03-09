@@ -160,6 +160,7 @@ int main(int argc, char** argv)
     size_t errors = 0;
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);
+    RUN_TEST(test__intrusive_containers);
     RUN_TEST(test__uniform_type);
     RUN_TEST(test__pattern);
     RUN_TEST(test__intrusive_ptr);

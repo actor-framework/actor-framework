@@ -169,7 +169,7 @@ class abstract_actor : public Base
 
  protected:
 
-    util::single_reader_queue<queue_node> m_mailbox;
+    intrusive::single_reader_queue<queue_node> m_mailbox;
 
     template<typename T>
     inline queue_node* fetch_node(actor* sender, T&& msg)

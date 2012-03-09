@@ -37,7 +37,7 @@ namespace cppa {
 
 partial_function::partial_function(invokable_ptr&& ptr)
 {
-    m_funs.push_back(std::move(ptr));
+    m_funs.push_back(ptr.release());
 }
 
 partial_function::partial_function(partial_function&& other)
@@ -68,12 +68,9 @@ auto partial_function::get_cache_entry(any_tuple const& value) -> cache_entry&
     {
         // ... create one (store all invokables with matching types)
         cache_entry tmp;
-        for (auto& fun : m_funs)
+        for (auto f = m_funs.begin(); f != m_funs.end(); ++f)
         {
-            if (fun->types_match(value))
-            {
-                tmp.push_back(fun.get());
-            }
+            if (f->types_match(value)) tmp.push_back(f.ptr());
         }
         // m_cache is always sorted,
         // due to emplace(upper_bound, ...) insertions

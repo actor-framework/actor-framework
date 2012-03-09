@@ -36,14 +36,14 @@
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/native_socket.hpp"
-#include "cppa/util/single_reader_queue.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
 
 class post_office_msg
 {
 
-    friend class util::single_reader_queue<post_office_msg>;
+    friend class intrusive::single_reader_queue<post_office_msg>;
 
  public:
 

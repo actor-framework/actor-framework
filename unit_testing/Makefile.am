@@ -7,6 +7,7 @@ unit_tests_SOURCES =    main.cpp \
                         ping_pong.cpp \
                         test__atom.cpp \
                         test__fixed_vector.cpp \
+                        test__intrusive_containers.cpp \
                         test__intrusive_ptr.cpp \
                         test__local_group.cpp \
                         test__pattern.cpp \

@@ -48,7 +48,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/util/singly_linked_list.hpp"
+#include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa { namespace detail {
 
@@ -86,8 +86,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
  private:
 
-    typedef util::singly_linked_list<queue_node>
-            queue_node_buffer;
+    typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
 
     enum throw_on_exit_result
     {

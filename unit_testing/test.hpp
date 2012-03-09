@@ -64,6 +64,7 @@ size_t test__serialization();
 size_t test__local_group();
 size_t test__primitive_variant();
 size_t test__fixed_vector();
+size_t test__intrusive_containers();
 
 void test__queue_performance();
 

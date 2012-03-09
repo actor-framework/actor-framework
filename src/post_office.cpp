@@ -52,8 +52,8 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-// used cppa utility
-#include "cppa/util/single_reader_queue.hpp"
+// used cppa intrusive containers
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 // used cppa details
 #include "cppa/detail/thread.hpp"
@@ -103,7 +103,7 @@ constexpr int s_rdflag = MSG_DONTWAIT;
 
 namespace cppa { namespace detail {
 
-util::single_reader_queue<mailman_job>& mailman_queue()
+intrusive::single_reader_queue<mailman_job>& mailman_queue()
 {
     return singleton_manager::get_network_manager()->mailman_queue();
 }

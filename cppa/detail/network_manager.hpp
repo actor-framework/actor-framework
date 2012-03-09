@@ -49,9 +49,9 @@ class network_manager
 
     virtual void stop() = 0;
 
-    virtual util::single_reader_queue<mailman_job>& mailman_queue() = 0;
+    virtual intrusive::single_reader_queue<mailman_job>& mailman_queue() = 0;
 
-    virtual util::single_reader_queue<post_office_msg>& post_office_queue() = 0;
+    virtual intrusive::single_reader_queue<post_office_msg>& post_office_queue() = 0;
 
     static network_manager* create_singleton();
 

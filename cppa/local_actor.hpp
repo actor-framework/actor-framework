@@ -35,7 +35,7 @@
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/partial_function.hpp"
-#include "cppa/util/single_reader_queue.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa {
 
