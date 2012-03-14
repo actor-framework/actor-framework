@@ -70,8 +70,8 @@ class partial_function
     template<class... Args>
     partial_function& splice(partial_function&& arg0, Args&&... args)
     {
-        if (m_funs.empty()) m_funs = std::move(arg0.m_funs);
-        else m_funs.splice_after(m_funs.before_end(), std::move(arg0.m_funs));
+        m_funs.splice_after(m_funs.before_end(), std::move(arg0.m_funs));
+        arg0.m_cache.clear();
         return splice(std::forward<Args>(args)...);
     }
 

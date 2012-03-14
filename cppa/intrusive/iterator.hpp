@@ -35,6 +35,9 @@
 
 namespace cppa { namespace intrusive {
 
+/**
+ * @brief A forward iterator for intrusive lists.
+ */
 template<class T>
 class iterator // : std::iterator<forward_iterator_tag, T>
 {
@@ -66,6 +69,10 @@ class iterator // : std::iterator<forward_iterator_tag, T>
         m_ptr = m_ptr->next;
         return tmp;
     }
+
+    inline explicit operator bool() { return m_ptr != nullptr; }
+
+    inline bool operator!() { return m_ptr != nullptr; }
 
     inline reference operator*() { return *m_ptr; }
     inline const_reference operator*() const { return *m_ptr; }

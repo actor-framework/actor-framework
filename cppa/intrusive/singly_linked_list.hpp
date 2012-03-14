@@ -39,6 +39,7 @@
 
 namespace cppa { namespace intrusive {
 
+// like std::forward_list but intrusive and supports push_back()
 template<class T>
 class singly_linked_list
 {
@@ -59,25 +60,30 @@ class singly_linked_list
     typedef ::cppa::intrusive::iterator<value_type>        iterator;
     typedef ::cppa::intrusive::iterator<value_type const>  const_iterator;
 
-    singly_linked_list() : m_head(nullptr), m_tail(nullptr) { }
+    singly_linked_list() : m_head(), m_tail(&m_head) { }
 
-    singly_linked_list(singly_linked_list&& other)
-        : m_head(other.m_head), m_tail(other.m_tail)
+    singly_linked_list(singly_linked_list&& other) : m_head(), m_tail(&m_head)
     {
-        other.m_head = other.m_tail = nullptr;
+        *this = std::move(other);
     }
 
     singly_linked_list& operator=(singly_linked_list&& other)
     {
-        std::swap(m_head, other.m_head);
-        std::swap(m_tail, other.m_tail);
+        clear();
+        if (other.not_empty())
+        {
+            m_head.next = other.m_head.next;
+            m_tail = other.m_tail;
+            other.m_head.next = nullptr;
+            other.m_tail = &(other.m_head);
+        }
         return *this;
     }
 
     static singly_linked_list from(std::pair<pointer, pointer> const& p)
     {
         singly_linked_list result;
-        result.m_head = p.first;
+        result.m_head.next = p.first;
         result.m_tail = p.second;
         return result;
     }
@@ -86,17 +92,21 @@ class singly_linked_list
 
     // element access
 
-    inline reference front() { return *m_head; }
-    inline const_reference front() const { return *m_head; }
+    inline reference front() { return *(m_head.next); }
+    inline const_reference front() const { return *(m_head.next); }
 
     inline reference back() { return *m_tail; }
     inline const_reference back() const { return *m_tail; }
 
     // iterators
 
-    inline iterator begin() { return m_head; }
-    inline const_iterator begin() const { return m_head; }
-    inline const_iterator cbegin() const { return m_head; }
+    inline iterator before_begin() { return &m_head; }
+    inline const_iterator before_begin() const { return &m_head; }
+    inline const_iterator before_cbegin() const { return &m_head; }
+
+    inline iterator begin() { return m_head.next; }
+    inline const_iterator begin() const { return m_head.next; }
+    inline const_iterator cbegin() const { return m_head.next; }
 
     inline iterator before_end() { return m_tail; }
     inline const_iterator before_end() const { return m_tail; }
@@ -108,26 +118,34 @@ class singly_linked_list
 
     // capacity
 
-    inline bool empty() const { return m_head == nullptr; }
+    inline bool empty() const { return m_head.next == nullptr; }
+    inline bool not_empty() const { return m_head.next != nullptr; }
+
     // no size member function because it would have O(n) complexity
 
     // modifiers
 
     void clear()
     {
-        while (m_head)
+        if (not_empty())
         {
-            pointer next = m_head->next;
-            delete m_head;
-            m_head = next;
+            auto h = m_head.next;
+            while (h)
+            {
+                pointer next = h->next;
+                delete h;
+                h = next;
+            }
+            m_head.next = nullptr;
+            m_tail = &m_head;
         }
-        m_tail = nullptr;
     }
 
     iterator insert_after(iterator i, pointer what)
     {
         what->next = i->next;
         i->next = what;
+        if (i == m_tail) m_tail = what;
         return what;
     }
 
@@ -143,24 +161,31 @@ class singly_linked_list
         auto next = pos->next;
         if (next)
         {
+            if (next == m_tail) m_tail = pos.ptr();
             pos->next = next->next;
             delete next;
         }
         return pos->next;
     }
 
+    // removes the element after pos from the list and returns it
+    pointer take_after(iterator pos)
+    {
+        CPPA_REQUIRE(pos != nullptr);
+        auto next = pos->next;
+        if (next)
+        {
+            if (next == m_tail) m_tail = pos.ptr();
+            pos->next = next->next;
+        }
+        return next;
+    }
+
     void push_back(pointer what)
     {
         what->next = nullptr;
-        if (empty())
-        {
-            m_tail = m_head = what;
-        }
-        else
-        {
-            m_tail->next = what;
-            m_tail = what;
-        }
+        m_tail->next = what;
+        m_tail = what;
     }
 
     template<typename... Args>
@@ -169,19 +194,16 @@ class singly_linked_list
         push_back(new value_type(std::forward<Args>(args)...));
     }
 
-    // pop_back would have complexity O(n)
-
     void push_front(pointer what)
     {
         if (empty())
         {
-            what->next = nullptr;
-            m_tail = m_head = what;
+            push_back(what);
         }
         else
         {
-            what->next = m_head;
-            m_head = what;
+            what->next = m_head.next;
+            m_head.next = what;
         }
     }
 
@@ -193,27 +215,46 @@ class singly_linked_list
 
     void pop_front()
     {
-        if (!empty())
+        auto x = m_head.next;
+        if (x == nullptr)
         {
-            auto next = m_head->next;
-            delete m_head;
-            m_head = next;
-            if (m_head == nullptr) m_tail = nullptr;
+            // list is empty
+            return;
         }
+        else if (x == m_tail)
+        {
+            m_tail = &m_head;
+            m_head.next = nullptr;
+        }
+        else
+        {
+            m_head.next = x->next;
+        }
+        delete x;
     }
+
+    // pop_back would have complexity O(n)
 
     std::pair<pointer, pointer> take()
     {
-        auto result = std::make_pair(m_head, m_tail);
-        m_head = m_tail = nullptr;
-        return result;
+        if (empty())
+        {
+            return {nullptr, nullptr};
+        }
+        else
+        {
+            auto result = std::make_pair(m_head.next, m_tail);
+            m_head.next = nullptr;
+            m_tail = &m_head;
+            return result;
+        }
     }
 
     void splice_after(iterator pos, singly_linked_list&& other)
     {
         CPPA_REQUIRE(pos != nullptr);
         CPPA_REQUIRE(this != &other);
-        if (other.empty() == false)
+        if (other.not_empty())
         {
             auto next = pos->next;
             auto pair = other.take();
@@ -230,24 +271,15 @@ class singly_linked_list
     template<typename UnaryPredicate>
     void remove_if(UnaryPredicate p)
     {
-        auto i = begin();
-        while (!empty() && p(*i))
+        auto i = before_begin();
+        while (i->next != nullptr)
         {
-            pop_front();
-            i = begin();
-        }
-        if (empty()) return;
-        auto predecessor = i;
-        ++i;
-        while (i != nullptr)
-        {
-            if (p(*i))
+            if (p(*(i->next)))
             {
-                i = erase_after(predecessor);
+                erase_after(i);
             }
             else
             {
-                predecessor = i;
                 ++i;
             }
         }
@@ -260,7 +292,7 @@ class singly_linked_list
 
  private:
 
-    pointer m_head;
+    value_type m_head;
     pointer m_tail;
 
 };

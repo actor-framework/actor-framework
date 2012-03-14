@@ -33,7 +33,7 @@
 
 namespace cppa { namespace util {
 
-template<bool Stmt, typename T>
+template<bool Stmt, typename T = void>
 struct disable_if_c { };
 
 template<typename T>

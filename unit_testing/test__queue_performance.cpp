@@ -32,7 +32,7 @@ struct queue_element
 {
     queue_element* next;
     size_t value;
-    queue_element(size_t val) : next(0), value(val) { }
+    queue_element(size_t val = 0) : next(0), value(val) { }
 };
 
 template<typename T>

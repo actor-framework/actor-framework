@@ -36,4 +36,16 @@ invokable::~invokable()
 {
 }
 
+bool invokable::invoke(any_tuple const&) const { return false; }
+
+bool invokable::unsafe_invoke(any_tuple const&) const { return false; }
+
+bool invokable::types_match(any_tuple const&) const { return false; }
+
+bool invokable::could_invoke(any_tuple const&) const { return false; }
+
+intermediate* invokable::get_intermediate(any_tuple const&) { return 0; }
+
+intermediate* invokable::get_unsafe_intermediate(any_tuple const&) { return 0; }
+
 } } // namespace cppa::detail

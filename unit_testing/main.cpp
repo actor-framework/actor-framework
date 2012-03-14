@@ -21,7 +21,6 @@
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
-#include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 #define CPPA_TEST_CATCH_BLOCK()                                                \
@@ -133,12 +132,7 @@ int main(int argc, char** argv)
         else if (found_key(i, args, "scheduler"))
         {
             auto& sched = i->second;
-            if (sched == "task_scheduler")
-            {
-                cout << "using task_scheduler" << endl;
-                cppa::set_scheduler(new cppa::detail::task_scheduler);
-            }
-            else if (sched == "thread_pool_scheduler")
+            if (sched == "thread_pool_scheduler")
             {
                 cout << "using thread_pool_scheduler" << endl;
                 cppa::set_scheduler(new cppa::detail::thread_pool_scheduler);

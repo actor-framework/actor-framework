@@ -16,17 +16,32 @@ class producer_consumer_list
 
  public:
 
-    typedef T* value_ptr;
+    typedef T                   value_type;
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef value_type&         reference;
+    typedef value_type const&   const_reference;
+    typedef value_type*         pointer;
+    typedef value_type const*   const_pointer;
 
     struct node
     {
-        value_ptr value;
+        pointer value;
         std::atomic<node*> next;
-        node(value_ptr val) : value(val), next(nullptr) { }
-        char pad[CPPA_CACHE_LINE_SIZE - sizeof(value_ptr)- sizeof(std::atomic<node*>)];
+        node(pointer val) : value(val), next(nullptr) { }
+        static constexpr size_type payload_size =
+                sizeof(pointer) + sizeof(std::atomic<node*>);
+        static constexpr size_type pad_size =
+                (CPPA_CACHE_LINE_SIZE * ((payload_size / CPPA_CACHE_LINE_SIZE) + 1)) - payload_size;
+        // avoid false sharing
+        char pad[pad_size];
+
     };
 
  private:
+
+    static_assert(sizeof(node*) < CPPA_CACHE_LINE_SIZE,
+                  "sizeof(node*) >= CPPA_CACHE_LINE_SIZE");
 
     // for one consumer at a time
     node* m_first;
@@ -73,16 +88,16 @@ class producer_consumer_list
         }
     }
 
-    inline void push_back(value_ptr value)
+    inline void push_back(pointer value)
     {
         assert(value != nullptr);
         push_impl(new node(value));
     }
 
     // returns nullptr on failure
-    value_ptr try_pop()
+    pointer try_pop()
     {
-        value_ptr result = nullptr;
+        pointer result = nullptr;
         while (m_consumer_lock.exchange(true))
         {
             detail::this_thread::yield();

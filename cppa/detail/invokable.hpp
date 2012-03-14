@@ -65,17 +65,17 @@ class invokable
     inline invokable() : next(nullptr) { }
     virtual ~invokable();
 
-    virtual bool invoke(any_tuple const&) const = 0;
+    virtual bool invoke(any_tuple const&) const;
     // Suppress type checking.
-    virtual bool unsafe_invoke(any_tuple const& value) const = 0;
+    virtual bool unsafe_invoke(any_tuple const& value) const;
     // Checks whether the types of @p value match the pattern.
-    virtual bool types_match(any_tuple const& value) const = 0;
+    virtual bool types_match(any_tuple const& value) const;
     // Checks whether this invokable could be invoked with @p value.
-    virtual bool could_invoke(any_tuple const& value) const = 0;
+    virtual bool could_invoke(any_tuple const& value) const;
     // Prepare this invokable.
-    virtual intermediate* get_intermediate(any_tuple const& value) = 0;
+    virtual intermediate* get_intermediate(any_tuple const& value);
     // Prepare this invokable and suppress type checking.
-    virtual intermediate* get_unsafe_intermediate(any_tuple const& value) = 0;
+    virtual intermediate* get_unsafe_intermediate(any_tuple const& value);
 
 };
 

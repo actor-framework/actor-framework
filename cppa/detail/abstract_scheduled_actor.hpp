@@ -44,13 +44,10 @@
 
 namespace cppa { namespace detail {
 
-class task_scheduler;
-
 // A spawned, scheduled Actor.
 class abstract_scheduled_actor : public abstract_actor<local_actor>
 {
 
-    friend class task_scheduler;
     friend class intrusive::single_reader_queue<abstract_scheduled_actor>;
 
     abstract_scheduled_actor* next; // intrusive next pointer

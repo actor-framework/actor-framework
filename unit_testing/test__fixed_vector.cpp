@@ -23,12 +23,12 @@ size_t test__fixed_vector()
     fixed_vector<int, 2> vec5 {3, 4};
     vec4.insert(vec4.end(), vec5.begin(), vec5.end());
     auto vec6 = vec4;
-    CPPA_CHECK_EQUAL(vec1.size(), 4);
-    CPPA_CHECK_EQUAL(vec2.size(), 4);
-    CPPA_CHECK_EQUAL(vec3.size(), 4);
-    CPPA_CHECK_EQUAL(vec4.size(), 4);
-    CPPA_CHECK_EQUAL(vec5.size(), 2);
-    CPPA_CHECK_EQUAL(vec6.size(), 4);
+    CPPA_CHECK_EQUAL(vec1.size(), static_cast<size_t>(4));
+    CPPA_CHECK_EQUAL(vec2.size(), static_cast<size_t>(4));
+    CPPA_CHECK_EQUAL(vec3.size(), static_cast<size_t>(4));
+    CPPA_CHECK_EQUAL(vec4.size(), static_cast<size_t>(4));
+    CPPA_CHECK_EQUAL(vec5.size(), static_cast<size_t>(2));
+    CPPA_CHECK_EQUAL(vec6.size(), static_cast<size_t>(4));
     CPPA_CHECK_EQUAL(vec1.full(), true);
     CPPA_CHECK_EQUAL(vec2.full(), false);
     CPPA_CHECK_EQUAL(vec3.full(), true);

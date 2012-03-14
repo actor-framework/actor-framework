@@ -153,8 +153,6 @@ src/native_socket.cpp
 cppa/detail/post_office.hpp
 src/post_office.cpp
 cppa/detail/buffer.hpp
-cppa/detail/task_scheduler.hpp
-src/task_scheduler.cpp
 cppa/detail/actor_count.hpp
 src/actor_count.cpp
 cppa/util/fiber.hpp

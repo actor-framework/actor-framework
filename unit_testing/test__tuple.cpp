@@ -63,8 +63,8 @@ size_t test__tuple()
         // check operator==
         auto lhs = make_tuple(1,2,3,4);
         auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
-        CPPA_CHECK_EQUAL(lhs, rhs);
-        CPPA_CHECK_EQUAL(rhs, lhs);
+        CPPA_CHECK(lhs == rhs);
+        CPPA_CHECK(rhs == lhs);
     }
     any_tuple at1 = make_tuple("one", 2, 3.f, 4.0);
     {
@@ -73,7 +73,7 @@ size_t test__tuple()
         CPPA_CHECK(opt0);
         if (opt0)
         {
-            CPPA_CHECK_EQUAL(*opt0, make_tuple("one", 2, 3.f, 4.0));
+            CPPA_CHECK((*opt0 == make_tuple("one", 2, 3.f, 4.0)));
             CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
             CPPA_CHECK_EQUAL(&get<1>(*opt0), at1.at(1));
             CPPA_CHECK_EQUAL(&get<2>(*opt0), at1.at(2));
@@ -100,7 +100,7 @@ size_t test__tuple()
         CPPA_CHECK(opt3);
         if (opt3)
         {
-            CPPA_CHECK_EQUAL(*opt3, make_tuple("one", 4.0));
+            CPPA_CHECK((*opt3 == make_tuple("one", 4.0)));
             CPPA_CHECK_EQUAL(get<0>(*opt3), "one");
             CPPA_CHECK_EQUAL(get<1>(*opt3), 4.0);
             CPPA_CHECK_EQUAL(&get<0>(*opt3), at1.at(0));

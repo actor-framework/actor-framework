@@ -96,7 +96,7 @@ size_t test__intrusive_ptr()
         p1 = p2;
         CPPA_CHECK_EQUAL(class0_instances, 1);
         CPPA_CHECK_EQUAL(class1_instances, 1);
-        CPPA_CHECK_EQUAL(p1, p2);
+        CPPA_CHECK(p1 == p2);
     }
     CPPA_CHECK_EQUAL(class0_instances, 0);
     CPPA_CHECK_EQUAL(class1_instances, 0);

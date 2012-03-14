@@ -13,7 +13,16 @@ using std::string;
 using namespace cppa;
 using namespace cppa::util;
 
-namespace { constexpr auto s_foo = atom("FooBar"); }
+namespace {
+
+constexpr auto s_foo = atom("FooBar");
+
+inline std::ostream& operator<<(std::ostream& out, atom_value const& a)
+{
+    return (out << to_string(a));
+}
+
+} // namespace <anonymous>
 
 template<atom_value AtomValue, typename... Types>
 void foo()

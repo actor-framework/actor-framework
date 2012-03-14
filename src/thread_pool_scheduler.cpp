@@ -186,7 +186,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             abstract_scheduled_actor* dummy)
 {
     std::vector<worker_ptr> workers;
-    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 4);
+    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
     for (size_t i = 0; i < num_workers; ++i)
     {
         worker_ptr wptr(new worker(jqueue, dummy));

@@ -93,7 +93,7 @@ post_office_msg::~post_office_msg()
             m_proxy_exited.~proxy_exited();
             break;
         }
-        default: throw std::logic_error("invalid post_office_msg type");
+        default: break;
     }
 }
 

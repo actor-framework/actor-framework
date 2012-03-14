@@ -34,7 +34,6 @@
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/detail/task_scheduler.hpp"
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 

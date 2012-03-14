@@ -5,6 +5,40 @@
 #include <string>
 #include <cstddef>
 #include <iostream>
+#include <type_traits>
+
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
+
+template<typename T1, typename T2>
+inline bool cppa_check_value_fun_eq(T1 const& value1, T2 const& value2,
+                                    typename cppa::util::disable_if_c<std::is_integral<T1>::value && std::is_integral<T2>::value>::type* = 0)
+{
+    return value1 == value2;
+}
+
+template<typename T1, typename T2>
+inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
+                                    typename cppa::util::enable_if_c<std::is_integral<T1>::value && std::is_integral<T2>::value>::type* = 0)
+{
+    return value1 == static_cast<T1>(value2);
+}
+
+template<typename T1, typename T2>
+inline void cppa_check_value_fun(T1 const& value1, T2 const& value2,
+                                 char const* file_name,
+                                 int line_number,
+                                  size_t& error_count)
+{
+    if (cppa_check_value_fun_eq(value1, value2) == false)
+    {
+        std::cerr << "ERROR in file " << file_name << " on line " << line_number
+                  << " => expected value: " << value1
+                  << ", found: " << value2
+                  << std::endl;
+        ++error_count;
+    }
+}
 
 #define CPPA_TEST(name)                                                        \
 struct cppa_test_scope                                                         \
@@ -20,6 +54,7 @@ struct cppa_test_scope                                                         \
 #define CPPA_TEST_RESULT cppa_ts.error_count
 
 #ifdef CPPA_VERBOSE_CHECK
+#define CPPA_IF_VERBOSE(line_of_code) line_of_code
 #define CPPA_CHECK(line_of_code)                                               \
 if (!(line_of_code))                                                           \
 {                                                                              \
@@ -33,6 +68,7 @@ else                                                                           \
 }                                                                              \
 ((void) 0)
 #else
+#define CPPA_IF_VERBOSE(line_of_code) ((void) 0)
 #define CPPA_CHECK(line_of_code)                                               \
 if (!(line_of_code))                                                           \
 {                                                                              \
@@ -46,7 +82,10 @@ if (!(line_of_code))                                                           \
 std::cerr << err_msg << std::endl;                                             \
 ++cppa_ts.error_count
 
-#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) == (rhs_loc)))
+#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
+  cppa_check_value_fun((lhs_loc), (rhs_loc), __FILE__, __LINE__,               \
+                       cppa_ts.error_count)
+
 #define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) != (rhs_loc)))
 
 size_t test__yield_interface();

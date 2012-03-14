@@ -4,6 +4,29 @@
 
 using namespace cppa;
 
+namespace {
+
+struct streamer
+{
+    std::ostream& o;
+    streamer(std::ostream& mo) : o(mo) { }
+    template<typename T>
+    void operator()(T const& value)
+    {
+        o << value;
+    }
+};
+
+inline std::ostream& operator<<(std::ostream& o,
+                                cppa::primitive_variant const& pv)
+{
+    streamer s{o};
+    pv.apply(s);
+    return o;
+}
+
+} // namespace <anonymous>
+
 size_t test__primitive_variant()
 {
     CPPA_TEST(test__primitive_variant);

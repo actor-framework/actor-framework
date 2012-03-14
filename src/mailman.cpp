@@ -82,7 +82,7 @@ mailman_job::~mailman_job()
             m_add_socket.~mailman_add_peer();
             break;
         }
-        case kill_type:
+        default:
         {
             // union doesn't contain a valid object
             break;

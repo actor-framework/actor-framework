@@ -54,7 +54,6 @@ libcppa_la_SOURCES = \
     src/singleton_manager.cpp \
     src/stacked_event_based_actor.cpp \
     src/string_serialization.cpp \
-    src/task_scheduler.cpp \
     src/thread_pool_scheduler.cpp \
     src/to_uniform_name.cpp \
     src/unicast_network.cpp \
@@ -127,7 +126,6 @@ nobase_library_include_HEADERS = \
     cppa/detail/serialize_tuple.hpp \
     cppa/detail/singleton_manager.hpp \
     cppa/detail/swap_bytes.hpp \
-    cppa/detail/task_scheduler.hpp \
     cppa/detail/tdata.hpp \
     cppa/detail/thread.hpp \
     cppa/detail/thread_pool_scheduler.hpp \

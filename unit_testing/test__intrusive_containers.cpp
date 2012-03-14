@@ -32,6 +32,7 @@
 
 #include "test.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 using std::begin;
 using std::end;
@@ -62,6 +63,7 @@ inline bool operator==(int lhs, iint const& rhs)
 }
 
 typedef cppa::intrusive::singly_linked_list<iint> iint_list;
+typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
 size_t test__intrusive_containers()
 {
@@ -84,9 +86,9 @@ size_t test__intrusive_containers()
     ilist1.push_front(new iint(0));
     auto i = ilist1.erase_after(ilist1.begin());
     // i points to second element
-    CPPA_CHECK_EQUAL(*i, 2);
+    CPPA_CHECK_EQUAL(i->value, 2);
     i = ilist1.insert_after(i, new iint(20));
-    CPPA_CHECK_EQUAL(*i, 20);
+    CPPA_CHECK_EQUAL(i->value, 20);
     int iarr2[] = { 0, 2, 20, 3, 4, 5 };
     CPPA_CHECK((std::equal(begin(iarr2), end(iarr2), begin(ilist1))));
 
@@ -95,22 +97,59 @@ size_t test__intrusive_containers()
     auto ilist2 = iint_list::from(p);
     ilist2.emplace_front(1);                    // 1 0 2 20 3 4 5
     i = ilist2.erase_after(ilist2.begin());     // 1 2 20 3 4 5
-    CPPA_CHECK_EQUAL(*i, 2);
+    CPPA_CHECK_EQUAL(i->value, 2);
     ilist2.erase_after(i);                      // 1 2 3 4 5
     CPPA_CHECK((std::equal(begin(iarr1), end(iarr1), begin(ilist2))));
 
-    CPPA_CHECK_EQUAL(s_iint_instances, 5);
+    // five elements + two dummies
+    CPPA_CHECK_EQUAL(s_iint_instances, 7);
 
     ilist2.remove_if([](iint const& val) { return (val.value % 2) != 0; });
 
-    CPPA_CHECK_EQUAL(s_iint_instances, 2);
+    // two elements + two dummies
+    CPPA_CHECK_EQUAL(s_iint_instances, 4);
 
     int iarr3[] = { 2, 4 };
     CPPA_CHECK((std::equal(begin(iarr3), end(iarr3), begin(ilist2))));
 
+    auto x = ilist2.take_after(ilist2.before_begin());
+    CPPA_CHECK_EQUAL(x->value, 2);
+    delete x;
+
     ilist2.clear();
-    CPPA_CHECK_EQUAL(s_iint_instances, 0);
+    // two dummies
+    CPPA_CHECK_EQUAL(s_iint_instances, 2);
     CPPA_CHECK(ilist2.empty());
+
+    {
+        iint_queue iq;
+        for (int i = 0; i < 20; ++i) iq._push_back(new iint(i));
+        iint_list tmp;
+        for (int i = 0; i < 9; ++i)
+        {
+            tmp.push_back(iq.pop());
+        }
+        delete iq.pop();
+        iq.push_front(std::move(tmp));
+        CPPA_CHECK(tmp.empty());
+        CPPA_CHECK_EQUAL(std::distance(iq.cache().begin(), iq.cache().end()), 19);
+        std::unique_ptr<iint> iptr;
+        for (int i = 0; i < 9; ++i)
+        {
+            iptr.reset(iq.pop());
+            CPPA_CHECK(iptr);
+            if (iptr) CPPA_CHECK_EQUAL(iptr->value, i);
+        }
+        for (int i = 10; i < 20; ++i)
+        {
+            iptr.reset(iq.pop());
+            CPPA_CHECK(iptr);
+            if (iptr) CPPA_CHECK_EQUAL(iptr->value, i);
+        }
+    }
+
+    // two dummies
+    CPPA_CHECK_EQUAL(s_iint_instances, 2);
 
     return CPPA_TEST_RESULT;
 }

@@ -12,6 +12,27 @@ using namespace cppa;
 using namespace cppa::util;
 using namespace cppa::detail;
 
+namespace {
+
+std::ostream& operator<<(std::ostream& o, yield_state ys)
+{
+    switch (ys)
+    {
+        case yield_state::invalid:
+            return (o << "yield_state::invalid");
+        case yield_state::ready:
+            return (o << "yield_state::ready");
+        case yield_state::blocked:
+            return (o << "yield_state::blocked");
+        case yield_state::done:
+            return (o << "yield_state::done");
+        default:
+            return (o << "{{{invalid yield_state}}}");
+    }
+}
+
+} // namespace <anonymous>
+
 struct pseudo_worker
 {
 

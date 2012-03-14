@@ -40,6 +40,8 @@ namespace cppa { namespace intrusive {
 
 /**
  * @brief An intrusive, thread safe queue implementation.
+ * @note For implementation details see
+ *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
 template<typename T>
 class single_reader_queue
@@ -49,28 +51,38 @@ class single_reader_queue
 
  public:
 
-    typedef T element_type;
+    typedef T                   value_type;
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef value_type&         reference;
+    typedef value_type const&   const_reference;
+    typedef value_type*         pointer;
+    typedef value_type const*   const_pointer;
+
+    typedef singly_linked_list<value_type> cache_type;
 
     /**
      * @warning call only from the reader (owner)
      */
-    element_type* pop()
+    pointer pop()
     {
         wait_for_data();
-        element_type* result = take_head();
-        return result;
+        return take_head();
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    element_type* try_pop()
+    pointer try_pop()
     {
         return take_head();
     }
 
+    /**
+     * @warning call only from the reader (owner)
+     */
     template<typename TimePoint>
-    element_type* try_pop(TimePoint const& abs_time)
+    pointer try_pop(TimePoint const& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
@@ -78,46 +90,27 @@ class single_reader_queue
     /**
      * @warning call only from the reader (owner)
      */
-    void push_front(element_type* element)
+    void push_front(pointer element)
     {
-        element->next = m_head;
-        m_head = element;
+        m_cache.push_front(element);
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    void push_front(element_type* first, element_type* last)
+    void push_front(cache_type&& list)
     {
-        last->next = m_head;
-        m_head = first;
-    }
-
-    /**
-     * @warning call only from the reader (owner)
-     */
-    //template<typename List>
-    //void push_front(List&& list)
-    void push_front(singly_linked_list<T>&& list)
-    {
-        if (!list.empty())
-        {
-            auto p = list.take();
-            if (p.first)
-            {
-                push_front(p.first, p.second);
-            }
-        }
+        m_cache.splice_after(m_cache.before_begin(), std::move(list));
     }
 
     // returns true if the queue was empty
-    bool _push_back(element_type* new_element)
+    bool _push_back(pointer new_element)
     {
-        element_type* e = m_tail.load();
+        pointer e = m_stack.load();
         for (;;)
         {
             new_element->next = e;
-            if (m_tail.compare_exchange_weak(e, new_element))
+            if (m_stack.compare_exchange_weak(e, new_element))
             {
                 return (e == nullptr);
             }
@@ -127,16 +120,16 @@ class single_reader_queue
     /**
      * @reentrant
      */
-    void push_back(element_type* new_element)
+    void push_back(pointer new_element)
     {
-        element_type* e = m_tail.load();
+        pointer e = m_stack.load();
         for (;;)
         {
             new_element->next = e;
             if (!e)
             {
                 lock_type guard(m_mtx);
-                if (m_tail.compare_exchange_weak(e, new_element))
+                if (m_stack.compare_exchange_weak(e, new_element))
                 {
                     m_cv.notify_one();
                     return;
@@ -144,7 +137,7 @@ class single_reader_queue
             }
             else
             {
-                if (m_tail.compare_exchange_weak(e, new_element))
+                if (m_stack.compare_exchange_weak(e, new_element))
                 {
                     return;
                 }
@@ -152,37 +145,38 @@ class single_reader_queue
         }
     }
 
+    inline cache_type& cache() { return m_cache; }
+
     /**
      * @warning call only from the reader (owner)
      */
-    bool empty()
+    inline bool empty() const
     {
-        return !m_head && !(m_tail.load());
+        return m_cache.empty() && m_stack.load() == nullptr;
     }
 
-    single_reader_queue() : m_tail(nullptr), m_head(nullptr)
+    inline bool not_empty() const
+    {
+        return !empty();
+    }
+
+    single_reader_queue() : m_stack(nullptr)
     {
     }
 
     ~single_reader_queue()
     {
-        fetch_new_data();
-        element_type* e = m_head;
-        while (e)
-        {
-            element_type* tmp = e;
-            e = e->next;
-            delete tmp;
-        }
+        // empty the stack
+        (void) fetch_new_data();
     }
 
  private:
 
     // exposed to "outside" access
-    std::atomic<element_type*> m_tail;
+    std::atomic<pointer> m_stack;
 
     // accessed only by the owner
-    element_type* m_head;
+    cache_type m_cache;
 
     // locked on enqueue/dequeue operations to/from an empty list
     detail::mutex m_mtx;
@@ -191,10 +185,10 @@ class single_reader_queue
     template<typename TimePoint>
     bool timed_wait_for_data(TimePoint const& timeout)
     {
-        if (!m_head && !(m_tail.load()))
+        if (m_cache.empty() && !(m_stack.load()))
         {
             lock_type guard(m_mtx);
-            while (!(m_tail.load()))
+            while (!(m_stack.load()))
             {
                 if (detail::wait_until(guard, m_cv, timeout) == false)
                 {
@@ -207,30 +201,31 @@ class single_reader_queue
 
     void wait_for_data()
     {
-        if (!m_head && !(m_tail.load()))
+        if (m_cache.empty() && !(m_stack.load()))
         {
             lock_type guard(m_mtx);
-            while (!(m_tail.load())) m_cv.wait(guard);
+            while (!(m_stack.load())) m_cv.wait(guard);
         }
     }
 
-    // atomically set public_tail to nullptr and enqueue all
+    // atomically sets m_stack to nullptr and enqueues all elements to the cache
     bool fetch_new_data()
     {
-        element_type* e = m_tail.load();
+        pointer e = m_stack.load();
         while (e)
         {
-            if (m_tail.compare_exchange_weak(e, 0))
+            if (m_stack.compare_exchange_weak(e, 0))
             {
+                // iterator to the last element before insertions begin
+                auto iter = m_cache.before_end();
                 // public_tail (e) has LIFO order,
                 // but private_head requires FIFO order
                 while (e)
                 {
                     // next iteration element
-                    element_type* next = e->next;
-                    // enqueue e to private_head
-                    e->next = m_head;
-                    m_head = e;
+                    pointer next = e->next;
+                    // insert e to private cache (convert to LIFO order)
+                    m_cache.insert_after(iter, e);
                     // next iteration
                     e = next;
                 }
@@ -242,15 +237,13 @@ class single_reader_queue
         return false;
     }
 
-    element_type* take_head()
+    pointer take_head()
     {
-        if (m_head || fetch_new_data())
+        if (m_cache.not_empty() || fetch_new_data())
         {
-            element_type* result = m_head;
-            m_head = result->next;
-            return result;
+            return m_cache.take_after(m_cache.before_begin());
         }
-        return 0;
+        return nullptr;
     }
 
 };

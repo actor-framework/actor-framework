@@ -59,7 +59,7 @@ size_t test__uniform_type()
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
         object obj2(obj1);
-        CPPA_CHECK_EQUAL(obj1, obj2);
+        CPPA_CHECK(obj1 == obj2);
         get_ref<foo>(obj1).value = 42;
         CPPA_CHECK(obj1 != obj2);
         CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);

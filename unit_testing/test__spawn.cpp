@@ -138,7 +138,7 @@ abstract_event_based_actor* event_testee2()
                 after(std::chrono::milliseconds(50)) >> [=]()
                 {
                     if (remaining == 1) become_void();
-                    else become(wait4timeout(remaining-1));
+                    else become(wait4timeout(remaining - 1));
                 }
             );
         }
@@ -330,9 +330,22 @@ size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
 
+    CPPA_IF_VERBOSE(cout << "test future_send() ... " << std::flush);
+    future_send(self, std::chrono::seconds(1), 1, 2, 3);
+    receive(on(1, 2, 3) >> []() { });
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "test timeout ... " << std::flush);
+    receive(after(std::chrono::seconds(1)) >> []() { });
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "testee1 & event_testee2 ... " << std::flush);
     spawn(testee1);
     spawn(event_testee2());
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    CPPA_IF_VERBOSE(cout << "chopstick ... " << std::flush);
     auto cstk = spawn(new chopstick);
     send(cstk, atom("take"), self);
     receive
@@ -343,8 +356,8 @@ size_t test__spawn()
             send(cstk, atom("break"));
         }
     );
-
     await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "wait4int");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "wait4int");

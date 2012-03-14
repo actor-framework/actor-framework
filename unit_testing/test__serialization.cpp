@@ -129,8 +129,8 @@ size_t test__serialization()
         if (opt)
         {
             auto& tup = *opt;
-            CPPA_CHECK_EQUAL(tup.size(), 2);
-            CPPA_CHECK_EQUAL(get<0>(tup), 42);
+            CPPA_CHECK_EQUAL(tup.size(), static_cast<size_t>(2));
+            CPPA_CHECK_EQUAL(get<0>(tup), static_cast<std::uint32_t>(42));
             CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
     }
@@ -146,7 +146,7 @@ size_t test__serialization()
         binary_deserializer bd(bs.data(), bs.size());
         any_tuple ttup2;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
-        CPPA_CHECK_EQUAL(ttup, ttup2);
+        CPPA_CHECK(ttup == ttup2);
     }
 
     {
@@ -189,7 +189,7 @@ size_t test__serialization()
         object obj1;
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
-        CPPA_CHECK_EQUAL(obj1, obj2);
+        CPPA_CHECK(obj1 == obj2);
         if (typeid(any_tuple) == *(obj1.type()) && obj2.type() == obj1.type())
         {
             auto& content1 = get<any_tuple>(obj1);
@@ -261,7 +261,7 @@ size_t test__serialization()
             b2 = get<struct_b>(res);
         }
         // verify result of serialization / deserialization
-        CPPA_CHECK_EQUAL(b1, b2);
+        CPPA_CHECK(b1 == b2);
         CPPA_CHECK_EQUAL(to_string(b2), b1str);
         // deserialize b3 from string
         {
@@ -269,7 +269,7 @@ size_t test__serialization()
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
             b3 = get<struct_b>(res);
         }
-        CPPA_CHECK_EQUAL(b1, b3);
+        CPPA_CHECK(b1 == b3);
     }
     // test serializers / deserializers with struct_c
     {
@@ -290,7 +290,7 @@ size_t test__serialization()
             c2 = get<struct_c>(res);
         }
         // verify result of serialization / deserialization
-        CPPA_CHECK_EQUAL(c1, c2);
+        CPPA_CHECK(c1 == c2);
     }
     return CPPA_TEST_RESULT;
 }

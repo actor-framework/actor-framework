@@ -43,12 +43,14 @@ namespace cppa { namespace detail {
 class post_office_msg
 {
 
+    friend class intrusive::singly_linked_list<post_office_msg>;
     friend class intrusive::single_reader_queue<post_office_msg>;
 
  public:
 
     enum msg_type
     {
+        invalid_type,
         add_peer_type,
         add_server_socket_type,
         proxy_exited_type
@@ -84,6 +86,8 @@ class post_office_msg
         actor_proxy_ptr proxy_ptr;
         inline proxy_exited(actor_proxy_ptr const& who) : proxy_ptr(who) { }
     };
+
+    inline post_office_msg() : next(nullptr), m_type(invalid_type) { }
 
     post_office_msg(native_socket_type arg0,
                     process_information_ptr const& arg1,
