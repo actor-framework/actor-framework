@@ -215,11 +215,11 @@ size_t test__serialization()
         }
     }
 
-    CPPA_CHECK_EQUAL((is_iterable<int>::value), false);
+    CPPA_CHECK((is_iterable<int>::value) == false);
     // std::string is primitive and thus not identified by is_iterable
-    CPPA_CHECK_EQUAL((is_iterable<std::string>::value), false);
-    CPPA_CHECK_EQUAL((is_iterable<std::list<int>>::value), true);
-    CPPA_CHECK_EQUAL((is_iterable<std::map<int,int>>::value), true);
+    CPPA_CHECK((is_iterable<std::string>::value) == false);
+    CPPA_CHECK((is_iterable<std::list<int>>::value) == true);
+    CPPA_CHECK((is_iterable<std::map<int,int>>::value) == true);
     // test meta_object implementation for primitive types
     {
         auto meta_int = uniform_typeid<std::uint32_t>();

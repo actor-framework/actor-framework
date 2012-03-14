@@ -27,8 +27,8 @@ size_t test__type_list()
     CPPA_CHECK((is_same<float, element_at<1, l1>::type>::value));
     CPPA_CHECK((is_same<std::string, element_at<2, l1>::type>::value));
 
-    CPPA_CHECK_EQUAL(l1::size, 3);
-    CPPA_CHECK_EQUAL(l1::size, r1::size);
+    CPPA_CHECK(l1::size == 3);
+    CPPA_CHECK(l1::size == r1::size);
     CPPA_CHECK((is_same<element_at<0, l1>::type, element_at<2, r1>::type>::value));
     CPPA_CHECK((is_same<element_at<1, l1>::type, element_at<1, r1>::type>::value));
     CPPA_CHECK((is_same<element_at<2, l1>::type, element_at<0, r1>::type>::value));
