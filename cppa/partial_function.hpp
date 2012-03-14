@@ -43,6 +43,10 @@ namespace cppa {
 
 class behavior;
 
+/**
+ * @brief A partial function implementation
+ *        for {@link cppa::any_tuple any_tuples}.
+ */
 class partial_function
 {
 

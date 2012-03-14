@@ -44,7 +44,7 @@
 namespace cppa {
 
 /**
- * @brief
+ * @brief Describes the behavior of an actor.
  */
 class behavior
 {

@@ -39,6 +39,9 @@
 
 namespace cppa {
 
+/**
+ * @example dining_philosophers.cpp
+ */
 template<class Derived>
 class fsm_actor : public event_based_actor
 {

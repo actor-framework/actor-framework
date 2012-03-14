@@ -47,6 +47,15 @@ uniform_type_info const* uniform_typeid(std::type_info const&);
 
 namespace cppa { namespace util {
 
+/**
+ * @defgroup TypeList Type list meta-programming utility.
+ */
+
+/**
+ * @addtogroup TypeList
+ * @{
+ */
+
 template<typename... Types> struct type_list;
 
 template<>
@@ -58,6 +67,9 @@ struct type_list<>
     static const size_t size = 0;
 };
 
+/**
+ * @brief A list of types.
+ */
 template<typename Head, typename... Tail>
 struct type_list<Head, Tail...>
 {
@@ -77,6 +89,9 @@ struct type_list<Head, Tail...>
 
 // static list list::zip(list, list)
 
+template<class ListA, class ListB>
+struct tl_zip;
+
 /**
  * @brief Zips two lists of equal size.
  *
@@ -84,16 +99,14 @@ struct type_list<Head, Tail...>
  * e.g., tl_zip<type_list<int,double>,type_list<float,string>>::type
  * is type_list<type_pair<int,float>,type_pair<double,string>>.
  */
-template<class ListA, class ListB>
-struct tl_zip;
-
 template<typename... LhsElements, typename... RhsElements>
 struct tl_zip<type_list<LhsElements...>, type_list<RhsElements...> >
 {
+    typedef type_list<type_pair<LhsElements, RhsElements>...> type;
+ private:
     static_assert(type_list<LhsElements...>::size ==
                   type_list<RhsElements...>::size,
                   "Lists have different size");
-    typedef type_list<type_pair<LhsElements, RhsElements>...> type;
 };
 
 // list list::reverse()
@@ -129,27 +142,38 @@ struct tl_reverse
  *        index @p Pos.
  */
 template<class List, typename What, int Pos = 0>
-struct tl_find;
+struct tl_find_impl;
 
 template<typename What, int Pos>
-struct tl_find<type_list<>, What, Pos>
+struct tl_find_impl<type_list<>, What, Pos>
 {
     static constexpr int value = -1;
     typedef type_list<> rest_list;
 };
 
 template<typename What, int Pos, typename... Tail>
-struct tl_find<type_list<What, Tail...>, What, Pos>
+struct tl_find_impl<type_list<What, Tail...>, What, Pos>
 {
     static constexpr int value = Pos;
     typedef type_list<Tail...> rest_list;
 };
 
 template<typename What, int Pos, typename Head, typename... Tail>
-struct tl_find<type_list<Head, Tail...>, What, Pos>
+struct tl_find_impl<type_list<Head, Tail...>, What, Pos>
 {
-    static constexpr int value = tl_find<type_list<Tail...>, What, Pos+1>::value;
-    typedef typename tl_find<type_list<Tail...>, What, Pos+1>::rest_list rest_list;
+    static constexpr int value = tl_find_impl<type_list<Tail...>, What, Pos+1>::value;
+    typedef typename tl_find_impl<type_list<Tail...>, What, Pos+1>::rest_list rest_list;
+};
+
+/**
+ * @brief Finds the first element of type @p What beginning at
+ *        index @p Pos.
+ */
+template<class List, class What, int Pos = 0>
+struct tl_find
+{
+    static constexpr int value = tl_find_impl<List, What, Pos>::value;
+    typedef typename tl_find_impl<List, What, Pos>::rest_list rest_list;
 };
 
 // list list::first_n(size_t)
@@ -175,9 +199,10 @@ struct tl_first_n_impl<N, type_list<L0, L...>, T...>
 template<class List, size_t N>
 struct tl_first_n
 {
+    typedef typename tl_first_n_impl<N, List>::type type;
+ private:
     static_assert(N > 0, "N == 0");
     static_assert(List::size >= N, "List::size < N");
-    typedef typename tl_first_n_impl<N, List>::type type;
 };
 
 // bool list::forall(predicate)
@@ -277,12 +302,12 @@ struct tl_zipped_forall<type_list<>, Predicate>
 
 // static list list::concat(list, list)
 
-/**
- * @brief Concatenates two lists.
- */
 template<typename ListA, typename ListB>
 struct tl_concat;
 
+/**
+ * @brief Concatenates two lists.
+ */
 template<typename... ListATypes, typename... ListBTypes>
 struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
 {
@@ -291,12 +316,12 @@ struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
 
 // list list::appy(trait)
 
-/**
- * @brief Applies a "template function" to each element in the list.
- */
 template<typename List, template<typename> class Trait>
 struct tl_apply;
 
+/**
+ * @brief Applies a "template function" to each element in the list.
+ */
 template<template<typename> class Trait, typename... Elements>
 struct tl_apply<type_list<Elements...>, Trait>
 {
@@ -305,13 +330,13 @@ struct tl_apply<type_list<Elements...>, Trait>
 
 // list list::zipped_apply(trait)
 
-/**
- * @brief Applies a binary "template function" to each element
- *        in the zipped list.
- */
 template<typename List, template<typename, typename> class Trait>
 struct tl_zipped_apply;
 
+/**
+ * @brief Applies a "binary template function" to each element
+ *        in the zipped list.
+ */
 template<template<typename, typename> class Trait, typename... T>
 struct tl_zipped_apply<type_list<T...>, Trait>
 {
@@ -349,12 +374,12 @@ struct tl_at_impl<0, E0, E...>
     typedef E0 type;
 };
 
-/**
- * @brief Gets element at index @p N of @p List.
- */
 template<class List, size_t N>
 struct tl_at;
 
+/**
+ * @brief Gets element at index @p N of @p List.
+ */
 template<size_t N, typename... E>
 struct tl_at<type_list<E...>, N>
 {
@@ -364,12 +389,12 @@ struct tl_at<type_list<E...>, N>
 
 // list list::prepend(type)
 
-/**
- * @brief Creates a new list with @p What prepended to @p List.
- */
 template<class List, typename What>
 struct tl_prepend;
 
+/**
+ * @brief Creates a new list with @p What prepended to @p List.
+ */
 template<typename What, typename... T>
 struct tl_prepend<type_list<T...>, What>
 {
@@ -401,12 +426,12 @@ struct tl_filter_impl<type_list<T0, T...>, true, S...>
     typedef typename tl_prepend<typename tl_filter_impl<type_list<T...>, S...>::type, T0>::type type;
 };
 
-/**
- * @brief Create a new list containing all elements which satisfy @p Predicate.
- */
 template<class List, template<typename> class Predicate>
 struct tl_filter;
 
+/**
+ * @brief Create a new list containing all elements which satisfy @p Predicate.
+ */
 template<template<typename> class Predicate, typename... T>
 struct tl_filter<type_list<T...>, Predicate>
 {
@@ -426,6 +451,9 @@ struct tl_filter_not<type_list<T...>, Predicate>
     typedef typename tl_filter_impl<type_list<T...>, !Predicate<T>::value...>::type type;
 };
 
+/**
+ * @}
+ */
 } } // namespace cppa::util
 
 #endif // LIBCPPA_UTIL_TYPE_LIST_HPP

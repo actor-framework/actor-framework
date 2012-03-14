@@ -8,13 +8,15 @@ using namespace cppa;
 
 void math_actor()
 {
+    // receive messages in an endless loop
     receive_loop
     (
-        on<atom("plus"), int, int>() >> [](int a, int b)
+        // "arg_match" matches the parameter types of given lambda expression
+        on(atom("plus"), arg_match) >> [](int a, int b)
         {
             reply(atom("result"), a + b);
         },
-        on<atom("minus"), int, int>() >> [](int a, int b)
+        on(atom("minus"), arg_match) >> [](int a, int b)
         {
             reply(atom("result"), a - b);
         }
@@ -28,6 +30,7 @@ int main()
     send(ma, atom("plus"), 1, 2);
     receive
     (
+        // on<> matches types only, but allows up to four leading atoms
         on<atom("result"), int>() >> [](int result)
         {
             cout << "1 + 2 = " << result << endl;
@@ -36,7 +39,8 @@ int main()
     send(ma, atom("minus"), 1, 2);
     receive
     (
-        on<atom("result"), int>() >> [](int result)
+        // on() matches values; use val<T> to match any value of type T
+        on(atom("result"), val<int>) >> [](int result)
         {
             cout << "1 - 2 = " << result << endl;
         }

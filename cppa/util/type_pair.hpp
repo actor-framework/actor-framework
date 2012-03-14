@@ -33,6 +33,10 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @ingroup TypeList
+ * @brief A pair of two types.
+ */
 template<typename First, typename Second>
 struct type_pair
 {

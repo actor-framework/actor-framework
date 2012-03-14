@@ -80,7 +80,14 @@ class iterator // : std::iterator<forward_iterator_tag, T>
     inline pointer operator->() { return m_ptr; }
     inline const_pointer operator->() const { return m_ptr; }
 
+    /**
+     * @brief Returns the element this iterator points to.
+     */
     inline pointer ptr() { return m_ptr; }
+
+    /**
+     * @brief Returns the element this iterator points to.
+     */
     inline const_pointer ptr() const { return m_ptr; }
 
  private:

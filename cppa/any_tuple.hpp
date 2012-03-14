@@ -47,6 +47,8 @@ class any_tuple
 
  public:
 
+    typedef detail::abstract_tuple::const_iterator const_iterator;
+
     /**
      * @brief Creates an empty tuple.
      */
@@ -130,8 +132,6 @@ class any_tuple
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T*>(mutable_at(p));
     }
-
-    typedef detail::abstract_tuple::const_iterator const_iterator;
 
     inline const_iterator begin() const { return m_vals->begin(); }
 

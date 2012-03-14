@@ -39,7 +39,10 @@
 
 namespace cppa { namespace intrusive {
 
-// like std::forward_list but intrusive and supports push_back()
+/**
+ * @brief A singly linked list similar to std::forward_list
+ *        but intrusive and with push_back() support.
+ */
 template<class T>
 class singly_linked_list
 {
@@ -80,6 +83,9 @@ class singly_linked_list
         return *this;
     }
 
+    /**
+     * @brief Creates a list from given [first, last] range.
+     */
     static singly_linked_list from(std::pair<pointer, pointer> const& p)
     {
         singly_linked_list result;
@@ -102,7 +108,7 @@ class singly_linked_list
 
     inline iterator before_begin() { return &m_head; }
     inline const_iterator before_begin() const { return &m_head; }
-    inline const_iterator before_cbegin() const { return &m_head; }
+    inline const_iterator cbefore_begin() const { return &m_head; }
 
     inline iterator begin() { return m_head.next; }
     inline const_iterator begin() const { return m_head.next; }
@@ -118,13 +124,23 @@ class singly_linked_list
 
     // capacity
 
+    /**
+     * @brief Returns true if <tt>{@link begin()} == {@link end()}</tt>.
+     */
     inline bool empty() const { return m_head.next == nullptr; }
+    /**
+     * @brief Returns true if <tt>{@link begin()} != {@link end()}</tt>.
+     */
     inline bool not_empty() const { return m_head.next != nullptr; }
 
     // no size member function because it would have O(n) complexity
 
     // modifiers
 
+    /**
+     * @brief Deletes all elements.
+     * @post {@link empty()}
+     */
     void clear()
     {
         if (not_empty())
@@ -141,20 +157,32 @@ class singly_linked_list
         }
     }
 
-    iterator insert_after(iterator i, pointer what)
+    /**
+     * @brief Inserts @p what after @p i.
+     * @returns An iterator to the inserted element.
+     */
+    iterator insert_after(iterator pos, pointer what)
     {
-        what->next = i->next;
-        i->next = what;
-        if (i == m_tail) m_tail = what;
+        what->next = pos->next;
+        pos->next = what;
+        if (pos == m_tail) m_tail = what;
         return what;
     }
 
+    /**
+     * @brief Constructs an element from @p args in-place after @p pos.
+     * @returns An iterator to the inserted element.
+     */
     template<typename... Args>
-    void emplace_after(iterator i, Args&&... args)
+    void emplace_after(iterator pos, Args&&... args)
     {
-        insert_after(i, new value_type(std::forward<Args>(args)...));
+        insert_after(pos, new value_type(std::forward<Args>(args)...));
     }
 
+    /**
+     * @brief Deletes the element after @p pos.
+     * @returns An iterator to the element following the erased one.
+     */
     iterator erase_after(iterator pos)
     {
         CPPA_REQUIRE(pos != nullptr);
@@ -168,7 +196,9 @@ class singly_linked_list
         return pos->next;
     }
 
-    // removes the element after pos from the list and returns it
+    /**
+     * @brief Removes the element after @p pos from the list and returns it.
+     */
     pointer take_after(iterator pos)
     {
         CPPA_REQUIRE(pos != nullptr);
@@ -181,6 +211,9 @@ class singly_linked_list
         return next;
     }
 
+    /**
+     * @brief Appends @p what to the list.
+     */
     void push_back(pointer what)
     {
         what->next = nullptr;
@@ -188,12 +221,19 @@ class singly_linked_list
         m_tail = what;
     }
 
+    /**
+     * @brief Creates an element from @p args in-place and appends it
+     *        to the list.
+     */
     template<typename... Args>
     void emplace_back(Args&&... args)
     {
         push_back(new value_type(std::forward<Args>(args)...));
     }
 
+    /**
+     * @brief Inserts @p what as the first element of the list.
+     */
     void push_front(pointer what)
     {
         if (empty())
@@ -207,12 +247,19 @@ class singly_linked_list
         }
     }
 
+    /**
+     * @brief Creates an element from @p args and inserts it
+     *        as the first element of the list.
+     */
     template<typename... Args>
     void emplace_front(Args&&... args)
     {
         push_front(new value_type(std::forward<Args>(args)...));
     }
 
+    /**
+     * @brief Deletes the first element of the list.
+     */
     void pop_front()
     {
         auto x = m_head.next;
@@ -235,6 +282,10 @@ class singly_linked_list
 
     // pop_back would have complexity O(n)
 
+    /**
+     * @brief Returns the content of the list as [first, last] sequence.
+     * @post {@link empty()}
+     */
     std::pair<pointer, pointer> take()
     {
         if (empty())
@@ -250,6 +301,12 @@ class singly_linked_list
         }
     }
 
+    /**
+     * @brief Moves all elements from @p other to @p *this.
+     *        The elements are inserted after @p pos.
+     * @pre <tt>@p pos != {@link end()}</tt>
+     * @pre <tt>this != &other</tt>
+     */
     void splice_after(iterator pos, singly_linked_list&& other)
     {
         CPPA_REQUIRE(pos != nullptr);
@@ -268,6 +325,9 @@ class singly_linked_list
         }
     }
 
+    /**
+     * @brief Removes all elements for which predicate @p returns @p true.
+     */
     template<typename UnaryPredicate>
     void remove_if(UnaryPredicate p)
     {
@@ -276,7 +336,7 @@ class singly_linked_list
         {
             if (p(*(i->next)))
             {
-                erase_after(i);
+                (void) erase_after(i);
             }
             else
             {
@@ -285,6 +345,9 @@ class singly_linked_list
         }
     }
 
+    /**
+     * @brief Removes all elements that are equal to @p value.
+     */
     void remove(value_type const& value)
     {
         remove_if([&](value_type const& other) { return value == other; });

@@ -117,9 +117,6 @@ class single_reader_queue
         }
     }
 
-    /**
-     * @reentrant
-     */
     void push_back(pointer new_element)
     {
         pointer e = m_stack.load();
@@ -155,6 +152,9 @@ class single_reader_queue
         return m_cache.empty() && m_stack.load() == nullptr;
     }
 
+    /**
+     * @warning call only from the reader (owner)
+     */
     inline bool not_empty() const
     {
         return !empty();

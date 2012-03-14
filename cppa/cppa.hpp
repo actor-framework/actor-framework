@@ -87,10 +87,6 @@
  * {@link MessageHandling message handling}
  * section of this documentation.
  *
- * @subsection IntroHelloWorld Hello World Example
- *
- * @include hello_world_example.cpp
- *
  * @section GettingStarted Getting Started
  *
  * To build @p libcppa, you need <tt>GCC >= 4.6</tt>, @p Automake
@@ -110,6 +106,18 @@
  * Windows is not supported yet, because MVSC++ doesn't implement the
  * C++11 features needed to compile @p libcppa.
  *
+ * @section IntroHelloWorld Hello World Example
+ *
+ * @include hello_world_example.cpp
+ *
+ * @section IntroMoreExamples More Examples
+ *
+ * The {@link math_actor_example.cpp Math Actor Example} shows the usage
+ * of {@link receive_loop} and {@link cppa::arg_match arg_match}.
+ * The {@link dining_philosophers.cpp Dining Philosophers Example}
+ * introduces event-based actors and includes a lot of <tt>libcppa</tt>
+ * features.
+ *
  * @namespace cppa
  * @brief This is the root namespace of libcppa.
  *
@@ -120,10 +128,8 @@
  * @brief This namespace contains utility classes and meta programming
  *        utilities used by the libcppa implementation.
  *
- * @namespace cppa::detail
- * @brief This namespace contains implementation details. Classes and
- *        functions of this namespace could change even in minor
- *        updates of the library and should not be used by outside of libcppa.
+ * @namespace cppa::intrusive
+ * @brief This namespace contains intrusive container implementations.
  *
  * @defgroup CopyOnWrite Copy-on-write optimization.
  * @p libcppa uses a copy-on-write optimization for its message

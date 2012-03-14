@@ -176,6 +176,65 @@ class on_the_fly_rvalue_builder
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @brief A wildcard that matches the argument types
+*         of a given callback. Must be the last argument to {@link on()}.
+ * @see {@link math_actor_example.cpp Math Actor Example}
+ */
+constexpr ___ arg_match;
+
+/**
+ * @brief Left-hand side of a partial function expression.
+ *
+ * Equal to <tt>on(arg_match)</tt>.
+ */
+constexpr ___ on_arg_match;
+
+/**
+ * @brief A wildcard that matches any value of type @p T.
+ * @see {@link math_actor_example.cpp Math Actor Example}
+ */
+template<typename T>
+___ val();
+
+/**
+ * @brief A wildcard that matches any number of any values.
+ */
+constexpr anything any_vals;
+
+
+/**
+ * @brief Left-hand side of a partial function expression that matches values.
+ *
+ * This overload can be used with the wildcards {@link cppa::val val},
+ * {@link cppa::any_vals any_vals} and {@link cppa::arg_match arg_match}.
+ */
+template<typename Arg0, typename... Args>
+___ on(Arg0 const& arg0, Args const&... args);
+
+/**
+ * @brief Left-hand side of a partial function expression that matches types.
+ *
+ * This overload matches types only. The type {@link cppa::anything anything}
+ * can be used as wildcard to match any number of elements of any types.
+ */
+template<typename... Ts>
+___ on();
+
+/**
+ * @brief Left-hand side of a partial function expression that matches types.
+ *
+ * This overload matches up to four leading atoms.
+ * The type {@link cppa::anything anything}
+ * can be used as wildcard to match any number of elements of any types.
+ */
+template<atom_value... Atoms, typename... Ts>
+___ on();
+
+#else
+
 template<typename T>
 constexpr typename detail::boxed<T>::type val()
 {
@@ -204,30 +263,29 @@ detail::rvalue_builder<TypeList...> on()
     return { };
 }
 
-template<atom_value A0, typename... TypeList>
-detail::rvalue_builder<atom_value, TypeList...> on()
+template<atom_value A0, typename... Ts>
+detail::rvalue_builder<atom_value, Ts...> on()
 {
     return { A0 };
 }
 
-template<atom_value A0, atom_value A1, typename... TypeList>
-detail::rvalue_builder<atom_value, atom_value, TypeList...> on()
+template<atom_value A0, atom_value A1, typename... Ts>
+detail::rvalue_builder<atom_value, atom_value, Ts...> on()
 {
     return { A0, A1 };
 }
 
-template<atom_value A0, atom_value A1, atom_value A2, typename... TypeList>
-detail::rvalue_builder<atom_value, atom_value,
-                            atom_value, TypeList...> on()
+template<atom_value A0, atom_value A1, atom_value A2, typename... Ts>
+detail::rvalue_builder<atom_value, atom_value, atom_value, Ts...> on()
 {
     return { A0, A1, A2 };
 }
 
 template<atom_value A0, atom_value A1,
          atom_value A2, atom_value A3,
-         typename... TypeList>
+         typename... Ts>
 detail::rvalue_builder<atom_value, atom_value, atom_value,
-                            atom_value, TypeList...> on()
+                       atom_value, Ts...> on()
 {
     return { A0, A1, A2, A3 };
 }
@@ -243,6 +301,8 @@ inline detail::rvalue_builder<anything> others()
 {
     return { };
 }
+
+#endif
 
 } // namespace cppa
 
