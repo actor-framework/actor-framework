@@ -33,6 +33,10 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @ingroup MetaProgramming
+ * @brief A for loop that can be used with tuples.
+ */
 template<size_t Begin, size_t End>
 struct static_foreach
 {

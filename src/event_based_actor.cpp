@@ -34,7 +34,20 @@ namespace cppa {
 
 void event_based_actor::become_void()
 {
+    cleanup(exit_reason::normal);
     m_loop_stack.clear();
+}
+
+void event_based_actor::quit(std::uint32_t reason)
+{
+    if (reason == exit_reason::normal)
+    {
+        become_void();
+    }
+    else
+    {
+        abstract_scheduled_actor::quit(reason);
+    }
 }
 
 void event_based_actor::do_become(behavior* bhvr, bool has_ownership)

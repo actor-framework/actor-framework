@@ -15,11 +15,12 @@ using namespace cppa;
 struct chopstick : fsm_actor<chopstick>
 {
 
-    behavior& init_state;
+    behavior& init_state; // a reference to available
     behavior available;
 
     behavior taken_by(actor_ptr const& philos)
     {
+        // create a behavior new on-the-fly
         return
         (
             on<atom("take"), actor_ptr>() >> [=](actor_ptr other)

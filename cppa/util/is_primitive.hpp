@@ -36,7 +36,8 @@
 namespace cppa { namespace util {
 
 /**
- * @brief Evaluates to @c true if @c T is a primitive type.
+ * @ingroup MetaProgramming
+ * @brief Chekcs wheter @p T is a primitive type.
  *
  * <code>is_primitive<T>::value == true</code> if and only if @c T
  * is a signed / unsigned integer or one of the following types:

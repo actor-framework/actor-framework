@@ -41,7 +41,6 @@
 #include "cppa/object.hpp"
 
 #include "cppa/util/comparable.hpp"
-#include "cppa/util/disjunction.hpp"
 #include "cppa/util/callable_trait.hpp"
 
 #include "cppa/detail/demangle.hpp"

@@ -36,6 +36,9 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief SI time units to specify timeouts.
+ */
 enum class time_unit : std::uint32_t
 {
     none = 0,
@@ -44,6 +47,10 @@ enum class time_unit : std::uint32_t
     microseconds = 1000000
 };
 
+/**
+ * @brief Converts an STL time period to a
+ *        {@link cppa::util::time_unit time_unit}.
+ */
 template<typename Period>
 constexpr time_unit get_time_unit_from_period()
 {
@@ -58,6 +65,10 @@ constexpr time_unit get_time_unit_from_period()
                      : time_unit::none))));
 }
 
+/**
+ * @brief Time duration consisting of a {@link cppa::util::time_unit time_unit}
+ *        and a 32 bit unsigned integer.
+ */
 class duration
 {
 
@@ -79,6 +90,9 @@ class duration
                       "only seconds, milliseconds or microseconds allowed");
     }
 
+    /**
+     * @brief Returns true if <tt>unit != time_unit::none</tt>.
+     */
     inline bool valid() const { return unit != time_unit::none; }
 
     time_unit unit;
@@ -87,8 +101,14 @@ class duration
 
 };
 
+/**
+ * @relates duration
+ */
 bool operator==(duration const& lhs, duration const& rhs);
 
+/**
+ * @relates duration
+ */
 inline bool operator!=(duration const& lhs, duration const& rhs)
 {
     return !(lhs == rhs);
@@ -96,6 +116,9 @@ inline bool operator!=(duration const& lhs, duration const& rhs)
 
 } } // namespace cppa::util
 
+/**
+ * @relates cppa::util::duration
+ */
 template<class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs,

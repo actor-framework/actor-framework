@@ -81,6 +81,44 @@ struct receive_while_helper
 
 };
 
+template<typename T>
+class receive_for_helper
+{
+
+    T& begin;
+    T end;
+
+ public:
+
+    receive_for_helper(T& first, T const& last) : begin(first), end(last) { }
+
+    void operator()(behavior& bhvr)
+    {
+        local_actor* sptr = self;
+        for ( ; begin != end; ++begin) sptr->dequeue(bhvr);
+    }
+
+    void operator()(partial_function& fun)
+    {
+        local_actor* sptr = self;
+        for ( ; begin != end; ++begin) sptr->dequeue(fun);
+    }
+
+    void operator()(behavior&& bhvr)
+    {
+        behavior tmp{std::move(bhvr)};
+        (*this)(tmp);
+    }
+
+    template<typename... Args>
+    void operator()(partial_function&& arg0, Args&&... args)
+    {
+        typename select_bhvr<Args...>::type tmp;
+        (*this)(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
+    }
+
+};
+
 class do_receive_helper
 {
 

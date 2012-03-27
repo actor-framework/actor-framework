@@ -40,7 +40,10 @@
 namespace cppa {
 
 /**
- * @example dining_philosophers.cpp
+ * @brief A base class for event-based actors using the
+ *        Curiously Recurring Template Pattern
+ *        to initialize the derived actor with its @p init_state member.
+ * @tparam Derived Subclass of fsm_actor.
  */
 template<class Derived>
 class fsm_actor : public event_based_actor
@@ -48,6 +51,10 @@ class fsm_actor : public event_based_actor
 
  public:
 
+    /**
+     * @brief Overrides abstract_event_based_actor::init() and sets
+     *        the initial actor behavior to <tt>Derived::init_state</tt>.
+     */
     void init()
     {
         become(&(static_cast<Derived*>(this)->init_state));

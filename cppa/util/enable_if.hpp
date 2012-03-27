@@ -44,6 +44,11 @@ struct enable_if_c<true, T>
     typedef T type;
 };
 
+/**
+ * @ingroup MetaProgramming
+ * @brief SFINAE trick to enable a template function based on its
+ *        template parameters.
+ */
 template<class Trait, typename T = void>
 struct enable_if : enable_if_c<Trait::value, T>
 {

@@ -34,7 +34,7 @@
 namespace cppa { namespace util {
 
 /**
- * @ingroup TypeList
+ * @ingroup MetaProgramming
  * @brief A pair of two types.
  */
 template<typename First, typename Second>

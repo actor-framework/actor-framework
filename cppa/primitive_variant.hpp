@@ -286,7 +286,7 @@ class primitive_variant
  * @relates primitive_variant
  * @param pv A primitive variant of type @p T.
  * @returns A const reference to the value of @p pv of type @p T.
- * @throws <tt>std::logic_error</tt> if @p pv is not of type @p T.
+ * @throws std::logic_error if @p pv is not of type @p T.
  */
 template<typename T>
 T const& get(primitive_variant const& pv)
@@ -301,7 +301,7 @@ T const& get(primitive_variant const& pv)
  * @relates primitive_variant
  * @param pv A primitive variant of type @p T.
  * @returns A reference to the value of @p pv of type @p T.
- * @throws <tt>std::logic_error</tt> if @p pv is not of type @p T.
+ * @throws std::logic_error if @p pv is not of type @p T.
  */
 template<typename T>
 T& get_ref(primitive_variant& pv)

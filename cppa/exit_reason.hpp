@@ -33,6 +33,11 @@
 
 #include <cstdint>
 
+/**
+ * @namespace cppa::exit_reason
+ * @brief This naemspace contains all predefined exit reasons.
+ */
+
 namespace cppa { namespace exit_reason {
 
 /**

@@ -95,6 +95,10 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     // provoke compiler errors for usage of receive() and related functions
 
+    /**
+     * @brief Provokes a compiler error to ensure that an event-based actor
+     *        does not accidently uses receive() instead of become().
+     */
     template<typename... Args>
     void receive(Args&&...)
     {
@@ -103,18 +107,27 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
                       "Use become() instead.");
     }
 
+    /**
+     * @brief Provokes a compiler error.
+     */
     template<typename... Args>
     void receive_loop(Args&&... args)
     {
         receive(std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Provokes a compiler error.
+     */
     template<typename... Args>
     void receive_while(Args&&... args)
     {
         receive(std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Provokes a compiler error.
+     */
     template<typename... Args>
     void do_receive(Args&&... args)
     {

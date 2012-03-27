@@ -34,7 +34,7 @@
 namespace cppa { namespace util {
 
 /**
- * @ingroup TypeList
+ * @ingroup MetaProgramming
  * @brief Predefines the first template parameter of @p Tp1.
  */
 template<template<typename, typename> class Tpl, typename Arg1>

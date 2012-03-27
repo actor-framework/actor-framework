@@ -9,7 +9,11 @@
 
 namespace cppa { namespace util {
 
-// T is any type
+/**
+ * @brief A producer-consumer list.
+ *
+ * For implementation details see http://drdobbs.com/cpp/211601363.
+ */
 template<typename T>
 class producer_consumer_list
 {

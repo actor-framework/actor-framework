@@ -125,7 +125,7 @@
  * implement Actor based applications.
  *
  * @namespace cppa::util
- * @brief This namespace contains utility classes and meta programming
+ * @brief This namespace contains utility classes and metaprogramming
  *        utilities used by the libcppa implementation.
  *
  * @namespace cppa::intrusive
@@ -283,24 +283,24 @@
  *
  * @section ReceiveLoops Receive loops
  *
- * Previous examples using @p receive create behavior on-the-fly.
+ * Previous examples using @p receive create behaviors on-the-fly.
  * This is inefficient in a loop since the argument passed to receive
- * is created in each iteration again. Its possible to store the behavior
+ * is created in each iteration again. It's possible to store the behavior
  * in a variable and pass that variable to receive. This fixes the issue
  * of re-creation each iteration but rips apart definition and usage.
  *
- * There are three convenience function implementing receive loops to
- * declare patterns and behavior where they belong without unnecessary
- * copies: @p receive_loop, @p receive_while and @p do_receive.
+ * There are four convenience functions implementing receive loops to
+ * declare behavior where it belongs without unnecessary
+ * copies: @p receive_loop, @p receive_while, @p receive_for and @p do_receive.
  *
  * @p receive_loop is analogous to @p receive and loops "forever" (until the
  * actor finishes execution).
  *
  * @p receive_while creates a functor evaluating a lambda expression.
- * The loop continues until the given returns false. A simple example:
+ * The loop continues until the given lambda returns @p false. A simple example:
  *
  * @code
- * // receive two ints
+ * // receive two integers
  * vector<int> received_values;
  * receive_while([&]() { return received_values.size() < 2; })
  * (
@@ -310,6 +310,17 @@
  *     }
  * );
  * // ...
+ * @endcode
+ *
+ * @p receive_for is a simple ranged-based loop:
+ *
+ * @code
+ * std::vector<int> vec {1, 2, 3, 4};
+ * auto i = vec.begin();
+ * receive_for(i, vec.end())
+ * (
+ *     on(atom("get")) >> [&]() { reply(atom("result"), *i); }
+ * );
  * @endcode
  *
  * @p do_receive returns a functor providing the function @p until that
@@ -350,6 +361,8 @@
  * );
  * @endcode
  *
+ * See also the {@link dancing_kirby.cpp dancing kirby example}.
+ *
  * @defgroup ImplicitConversion Implicit type conversions.
  *
  * The message passing of @p libcppa prohibits pointers in messages because
@@ -380,14 +393,39 @@
  *     on("hello actor!") >> []() { }
  * );
  * @endcode
+ *
+ * @defgroup ActorManagement Actor management.
+ *
+ */
+
+// examples
+
+/**
+ * @brief A trivial example program.
+ * @example hello_world_example.cpp
+ */
+
+/**
+ * @brief Shows the usage of {@link cppa::atom atoms}
+ *        and {@link cppa::arg_match arg_match}.
+ * @example math_actor_example.cpp
+ */
+
+/**
+ * @brief A simple example for a future_send based application.
+ * @example dancing_kirby.cpp
+ */
+
+/**
+ * @brief An event-based "Dining Philosophers" implementation.
+ * @example dining_philosophers.cpp
  */
 
 namespace cppa {
 
 /**
+ * @ingroup ActorManagement
  * @brief Links @p lhs and @p rhs;
- * @param lhs Left-hand operand.
- * @param rhs Right-hand operand.
  * @pre <tt>lhs != rhs</tt>
  */
 void link(actor_ptr&  lhs, actor_ptr&  rhs);
@@ -408,54 +446,68 @@ void link(actor_ptr&& lhs, actor_ptr&& rhs);
 void link(actor_ptr&  lhs, actor_ptr&& rhs);
 
 /**
+ * @ingroup ActorManagement
  * @brief Unlinks @p lhs from @p rhs;
- * @param lhs Left-hand operand.
- * @param rhs Right-hand operand.
  * @pre <tt>lhs != rhs</tt>
  */
 void unlink(actor_ptr& lhs, actor_ptr& rhs);
 
 /**
- * @brief Adds a monitor to @p whom.
- *
- * Sends a ":Down" message to the calling Actor if @p whom exited.
- * @param whom Actor instance that should be monitored by the calling Actor.
+ * @ingroup ActorManagement
+ * @brief Adds a unidirectional @p monitor to @p whom.
+ * @note Each calls to @p monitor creates a new, independent monitor.
+ * @pre The calling actor receives a ":Down" message from @p whom when
+ *      it terminates.
  */
 void monitor(actor_ptr& whom);
 
-/**
- * @copydoc monitor(actor_ptr&)
- */
 void monitor(actor_ptr&& whom);
 
 /**
+ * @ingroup ActorManagement
  * @brief Removes a monitor from @p whom.
- * @param whom Monitored Actor.
  */
 void demonitor(actor_ptr& whom);
 
+/**
+ * @ingroup ActorManagement
+ * @brief Spans a new context-switching actor.
+ * @returns A pointer to the spawned {@link actor Actor}.
+ */
 inline actor_ptr spawn(scheduled_actor* what)
 {
     return get_scheduler()->spawn(what, scheduled);
 }
 
+/**
+ * @ingroup ActorManagement
+ * @brief Spans a new context-switching actor.
+ * @tparam Hint Hint to the scheduler for the best scheduling strategy.
+ * @returns A pointer to the spawned {@link actor Actor}.
+ */
 template<scheduling_hint Hint>
 inline actor_ptr spawn(scheduled_actor* what)
 {
     return get_scheduler()->spawn(what, Hint);
 }
 
+/**
+ * @ingroup ActorManagement
+ * @brief Spans a new event-based actor.
+ * @returns A pointer to the spawned {@link actor Actor}.
+ */
 inline actor_ptr spawn(abstract_event_based_actor* what)
 {
     return get_scheduler()->spawn(what);
 }
 
 /**
+ * @ingroup ActorManagement
  * @brief Spawns a new actor that executes @p what with given arguments.
  * @tparam Hint Hint to the scheduler for the best scheduling strategy.
  * @param what Function or functor that the spawned Actor should execute.
  * @param args Arguments needed to invoke @p what.
- * @returns A pointer to the newly created {@link actor Actor}.
+ * @returns A pointer to the spawned {@link actor actor}.
  */
 template<scheduling_hint Hint, typename F, typename... Args>
 auto //actor_ptr
@@ -471,10 +523,8 @@ spawn(F&& what, Args const&... args)
 }
 
 /**
+ * @ingroup ActorManagement
  * @brief Alias for <tt>spawn<scheduled>(what, args...)</tt>.
- * @param what Function or functor that the spawned Actor should execute.
- * @param args Arguments needed to invoke @p what.
- * @returns A pointer to the newly created {@link actor Actor}.
  */
 template<typename F, typename... Args>
 auto // actor_ptr
@@ -489,27 +539,20 @@ spawn(F&& what, Args const&... args)
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Sends a message to @p whom.
- *
- * Sends the tuple <tt>{ arg0, args... }</tt> as a message to @p whom.
- * @param whom Receiver of the message.
- * @param arg0 First value for the message content.
- * @param args Any number of values for the message content.
+ * @ingroup MessageHandling
+ * @brief Sends <tt>{arg0, args...}</tt> as a message to @p whom.
  */
 template<typename Arg0, typename... Args>
 void send(channel_ptr& whom, Arg0 const& arg0, Args const&... args);
 
 /**
+ * @ingroup MessageHandling
  * @brief Send a message to @p whom.
  *
  * <b>Usage example:</b>
  * @code
  * self << make_tuple(1, 2, 3);
  * @endcode
- *
- * Sends the tuple @p what as a message to @p whom.
- * @param whom Receiver of the message.
- * @param what Content of the message.
  * @returns @p whom.
  */
 channel_ptr& operator<<(channel_ptr& whom, any_tuple const& what);
@@ -586,6 +629,10 @@ self_type const& operator<<(self_type const& s, any_tuple&& what);
 
 #endif // CPPA_DOCUMENTATION
 
+/**
+ * @ingroup MessageHandling
+ * @brief Sends a message to the sender of the last received message.
+ */
 template<typename Arg0, typename... Args>
 void reply(Arg0 const& arg0, Args const&... args)
 {
@@ -593,6 +640,7 @@ void reply(Arg0 const& arg0, Args const&... args)
 }
 
 /**
+ * @ingroup MessageHandling
  * @brief Sends a message to @p whom that is delayed by @p rel_time.
  * @param whom Receiver of the message.
  * @param rel_time Relative time duration to delay the message.
@@ -602,6 +650,17 @@ template<typename Duration, typename... Data>
 void future_send(actor_ptr whom, Duration const& rel_time, Data const&... data)
 {
     get_scheduler()->future_send(whom, rel_time, data...);
+}
+
+/**
+ * @ingroup MessageHandling
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @see future_send()
+ */
+template<typename Duration, typename... Data>
+void delayed_reply(Duration const& rel_time, Data const... data)
+{
+    future_send(self->last_sender(), rel_time, data...);
 }
 
 /**

@@ -17,7 +17,6 @@
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/apply_tuple.hpp"
-#include "cppa/util/conjunction.hpp"
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
 

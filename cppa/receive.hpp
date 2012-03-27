@@ -76,6 +76,26 @@ template<typename Statement>
 auto receive_while(Statement&& stmt);
 
 /**
+ * @brief Receives messages as in a range-based loop.
+ *
+ * Semantically equal to: <tt>for ( ; begin != end; ++begin) { receive(...); }</tt>.
+ *
+ * <b>Usage example:</b>
+ * @code
+ * int i = 0;
+ * receive_for(i, 10)
+ * (
+ *     on(atom("get")) >> [&]() { reply("result", i); }
+ * );
+ * @endcode
+ * @param begin First value in range.
+ * @param end Last value in range (excluded).
+ * @returns A functor implementing the loop.
+ */
+template<typename T>
+auto receive_for(T& begin, T const& end);
+
+/**
  * @brief Receives messages until @p stmt returns true.
  *
  * Semantically equal to: <tt>do { receive(...); } while (stmt() == false);</tt>
@@ -129,6 +149,12 @@ void receive_loop(partial_function&& arg0, Args&&... args)
 {
     typename detail::select_bhvr<Args...>::type tmp;
     receive_loop(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
+}
+
+template<typename T>
+detail::receive_for_helper<T> receive_for(T& begin, T const& end)
+{
+    return {begin, end};
 }
 
 template<typename Statement>

@@ -36,6 +36,9 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief A spinlock implementation providing shared and exclusive locking.
+ */
 class shared_spinlock
 {
 

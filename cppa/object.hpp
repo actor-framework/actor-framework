@@ -38,7 +38,6 @@
 
 #include "cppa/exception.hpp"
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/disjunction.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {

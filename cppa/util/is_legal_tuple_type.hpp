@@ -35,6 +35,10 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @ingroup MetaProgramming
+ * @brief Checks wheter @p T is neither a reference nor a pointer nor an array.
+ */
 template<typename T>
 struct is_legal_tuple_type
 {

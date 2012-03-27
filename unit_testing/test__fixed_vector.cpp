@@ -23,12 +23,12 @@ size_t test__fixed_vector()
     fixed_vector<int, 2> vec5 {3, 4};
     vec4.insert(vec4.end(), vec5.begin(), vec5.end());
     auto vec6 = vec4;
-    CPPA_CHECK_EQUAL(vec1.size(), static_cast<size_t>(4));
-    CPPA_CHECK_EQUAL(vec2.size(), static_cast<size_t>(4));
-    CPPA_CHECK_EQUAL(vec3.size(), static_cast<size_t>(4));
-    CPPA_CHECK_EQUAL(vec4.size(), static_cast<size_t>(4));
-    CPPA_CHECK_EQUAL(vec5.size(), static_cast<size_t>(2));
-    CPPA_CHECK_EQUAL(vec6.size(), static_cast<size_t>(4));
+    CPPA_CHECK_EQUAL(vec1.size(), 4);
+    CPPA_CHECK_EQUAL(vec2.size(), 4);
+    CPPA_CHECK_EQUAL(vec3.size(), 4);
+    CPPA_CHECK_EQUAL(vec4.size(), 4);
+    CPPA_CHECK_EQUAL(vec5.size(), 2);
+    CPPA_CHECK_EQUAL(vec6.size(), 4);
     CPPA_CHECK_EQUAL(vec1.full(), true);
     CPPA_CHECK_EQUAL(vec2.full(), false);
     CPPA_CHECK_EQUAL(vec3.full(), true);
@@ -40,5 +40,23 @@ size_t test__fixed_vector()
     CPPA_CHECK(std::equal(vec4.begin(), vec4.end(), arr1));
     CPPA_CHECK(std::equal(vec6.begin(), vec6.end(), arr1));
     CPPA_CHECK(std::equal(vec6.begin(), vec6.end(), vec2.rbegin()));
+    fixed_vector<int, 10> vec7 {5, 9};
+    fixed_vector<int, 10> vec8 {1, 2, 3, 4};
+    fixed_vector<int, 10> vec9 {6, 7, 8};
+    vec7.insert(vec7.begin() + 1, vec9.begin(), vec9.end());
+    vec7.insert(vec7.begin(), vec8.begin(), vec8.end());
+    CPPA_CHECK_EQUAL(vec7.full(), false);
+    fixed_vector<int, 1> vec10 {10};
+    vec7.insert(vec7.end(), vec10.begin(), vec10.end());
+    CPPA_CHECK_EQUAL(vec7.full(), true);
+    CPPA_CHECK((std::is_sorted(vec7.begin(), vec7.end())));
+    int arr2[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    CPPA_CHECK((std::equal(vec7.begin(), vec7.end(), std::begin(arr2))));
+    vec7.assign(std::begin(arr2), std::end(arr2));
+    CPPA_CHECK((std::equal(vec7.begin(), vec7.end(), std::begin(arr2))));
+    vec7.assign(5, 0);
+    CPPA_CHECK_EQUAL(vec7.size(), 5);
+    CPPA_CHECK((std::all_of(vec7.begin(), vec7.end(),
+                            [](int i) { return i == 0; })));
     return CPPA_TEST_RESULT;
 }

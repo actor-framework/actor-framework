@@ -57,12 +57,12 @@ class either
     /**
      * @brief Default constructor, creates a @p Left.
      */
-    either() : m_is_left(true) { new (&m_left) Left (); }
+    either() : m_is_left(true) { new (&m_left) left_type (); }
 
     /**
      * @brief Creates a @p Left from @p value.
      */
-    either(Left const& value) : m_is_left(true) { cr_left(value); }
+    either(left_type const& value) : m_is_left(true) { cr_left(value); }
 
     /**
      * @brief Creates a @p Left from @p value.
@@ -72,25 +72,19 @@ class either
     /**
      * @brief Creates a @p Right from @p value.
      */
-    either(Right const& value) : m_is_left(false) { cr_right(value); }
+    either(right_type const& value) : m_is_left(false) { cr_right(value); }
 
     /**
      * @brief Creates a @p Right from @p value.
      */
     either(Right&& value) : m_is_left(false) { cr_right(std::move(value)); }
 
-    /**
-     * @brief Copy constructor.
-     */
     either(either const& other) : m_is_left(other.m_is_left)
     {
         if (other.m_is_left) cr_left(other.m_left);
         else cr_right(other.m_right);
     }
 
-    /**
-     * @brief Move constructor.
-     */
     either(either&& other) : m_is_left(other.m_is_left)
     {
         if (other.m_is_left) cr_left(std::move(other.m_left));
@@ -99,9 +93,6 @@ class either
 
     ~either() { destroy(); }
 
-    /**
-     * @brief Copy assignment.
-     */
     either& operator=(either const& other)
     {
         if (m_is_left == other.m_is_left)
@@ -119,9 +110,6 @@ class either
         return *this;
     }
 
-    /**
-     * @brief Move assignment.
-     */
     either& operator=(either&& other)
     {
         if (m_is_left == other.m_is_left)
@@ -161,7 +149,7 @@ class either
     /**
      * @brief Returns this @p either as a @p Left.
      */
-    inline Left const& left() const
+    inline left_type const& left() const
     {
         CPPA_REQUIRE(m_is_left);
         return m_left;
@@ -179,7 +167,7 @@ class either
     /**
      * @brief Returns this @p either as a @p Right.
      */
-    inline Right const& right() const
+    inline right_type const& right() const
     {
         CPPA_REQUIRE(!m_is_left);
         return m_right;
@@ -191,8 +179,8 @@ class either
 
     union
     {
-        Left m_left;
-        Right m_right;
+        left_type m_left;
+        right_type m_right;
     };
 
     void destroy()
@@ -204,17 +192,18 @@ class either
     template<typename L>
     void cr_left(L&& value)
     {
-        new (&m_left) Left (std::forward<L>(value));
+        new (&m_left) left_type (std::forward<L>(value));
     }
 
     template<typename R>
     void cr_right(R&& value)
     {
-        new (&m_right) Right (std::forward<R>(value));
+        new (&m_right) right_type (std::forward<R>(value));
     }
 
 };
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator==(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
 {
@@ -226,54 +215,63 @@ bool operator==(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
     return false;
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator==(either<Left, Right> const& lhs, Left const& rhs)
 {
     return lhs.is_left() && lhs.left() == rhs;
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator==(Left const& lhs, either<Left, Right> const& rhs)
 {
     return rhs == lhs;
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator==(either<Left, Right> const& lhs, Right const& rhs)
 {
     return lhs.is_right() && lhs.right() == rhs;
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator==(Right const& lhs, either<Left, Right> const& rhs)
 {
     return rhs == lhs;
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator!=(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator!=(either<Left, Right> const& lhs, Left const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator!=(Left const& lhs, either<Left, Right> const& rhs)
 {
     return !(rhs == lhs);
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator!=(either<Left, Right> const& lhs, Right const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/** @relates either */
 template<typename Left, typename Right>
 bool operator!=(Right const& lhs, either<Left, Right> const& rhs)
 {

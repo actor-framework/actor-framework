@@ -48,7 +48,11 @@
 
 namespace cppa {
 
-// implements linking and monitoring for actors
+/**
+ * @brief Implements linking and monitoring for actors.
+ * @tparam Base Either {@link cppa::actor actor}
+ *              or {@link cppa::local_actor local_actor}.
+ */
 template<class Base>
 class abstract_actor : public Base
 {

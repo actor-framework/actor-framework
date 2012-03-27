@@ -287,7 +287,7 @@ void testee3(actor_ptr parent)
         {
             if (polls < 5)
             {
-                //delayed_reply(std::chrono::milliseconds(50), atom("Poll"));
+                delayed_reply(std::chrono::milliseconds(50), atom("Poll"));
             }
             send(parent, atom("Push"), polls);
         }

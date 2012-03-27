@@ -48,11 +48,11 @@ uniform_type_info const* uniform_typeid(std::type_info const&);
 namespace cppa { namespace util {
 
 /**
- * @defgroup TypeList Type list meta-programming utility.
+ * @defgroup MetaProgramming Metaprogramming utility.
  */
 
 /**
- * @addtogroup TypeList
+ * @addtogroup MetaProgramming
  * @{
  */
 

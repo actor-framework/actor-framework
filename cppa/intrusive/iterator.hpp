@@ -96,60 +96,90 @@ class iterator // : std::iterator<forward_iterator_tag, T>
 
 };
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator==(iterator<T> const& lhs, iterator<T> const& rhs)
 {
     return lhs.ptr() == rhs.ptr();
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator==(iterator<T> const& lhs, T const* rhs)
 {
     return lhs.ptr() == rhs;
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator==(T const* lhs, iterator<T> const& rhs)
 {
     return lhs == rhs.ptr();
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator==(iterator<T> const& lhs, decltype(nullptr))
 {
     return lhs.ptr() == nullptr;
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator==(decltype(nullptr), iterator<T> const& rhs)
 {
     return rhs.ptr() == nullptr;
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator!=(iterator<T> const& lhs, iterator<T> const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator!=(iterator<T> const& lhs, T const* rhs)
 {
     return !(lhs == rhs);
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator!=(T const* lhs, iterator<T> const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator!=(iterator<T> const& lhs, decltype(nullptr))
 {
     return !(lhs == nullptr);
 }
 
+/**
+ * @relates iterator
+ */
 template<class T>
 inline bool operator!=(decltype(nullptr), iterator<T> const& rhs)
 {

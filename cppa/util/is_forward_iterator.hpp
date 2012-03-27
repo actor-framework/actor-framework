@@ -37,6 +37,10 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @ingroup MetaProgramming
+ * @brief Checks wheter @p T behaves like a forward iterator.
+ */
 template<typename T>
 class is_forward_iterator
 {

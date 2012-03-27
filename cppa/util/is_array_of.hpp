@@ -36,8 +36,9 @@
 namespace cppa { namespace util {
 
 /**
+ * @ingroup MetaProgramming
  * @brief <tt>is_array_of<T,U>::value == true</tt> if and only
- *        if T is an array of U.
+ *        if @p T is an array of @p U.
  */
 template<typename T, typename U>
 struct is_array_of
@@ -45,7 +46,7 @@ struct is_array_of
     typedef typename std::remove_all_extents<T>::type step1_type;
     typedef typename std::remove_cv<step1_type>::type step2_type;
     static constexpr bool value =    std::is_array<T>::value
-                              && std::is_same<step2_type, U>::value;
+                                  && std::is_same<step2_type, U>::value;
 };
 
 } } // namespace cppa::util

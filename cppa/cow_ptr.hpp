@@ -41,6 +41,9 @@ namespace cppa {
 /**
  * @ingroup CopyOnWrite
  * @brief A copy-on-write smart pointer implementation.
+ * @tparam T A class that provides a copy() member function and has
+ *           the same interface as or is a subclass of
+ *           {@link ref_counted}.
  */
 template<typename T>
 class cow_ptr

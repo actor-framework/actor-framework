@@ -36,6 +36,11 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @ingroup MetaProgramming
+ * @brief Checks wheter @p T has <tt>begin()</tt> and <tt>end()</tt> member
+ *        functions returning forward iterators.
+ */
 template<typename T>
 class is_iterable
 {

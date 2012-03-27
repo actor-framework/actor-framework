@@ -39,6 +39,10 @@ namespace cppa { namespace util {
 
 // A manipulator is a function that manipulates its arguments via
 // mutable references.
+/**
+ * @ingroup MetaProgramming
+ * @brief Checks wheter functor or function @p F takes mutable references.
+ */
 template<typename F>
 struct is_manipulator
 {

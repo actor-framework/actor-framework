@@ -33,6 +33,9 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief Checks wheter @p T is a non-const reference.
+ */
 template<typename T>
 struct is_mutable_ref
 {

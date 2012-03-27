@@ -190,24 +190,19 @@ nobase_library_include_HEADERS = \
     cppa/util/enable_if.hpp \
     cppa/util/fiber.hpp \
     cppa/util/fixed_vector.hpp \
-    cppa/util/has_copy_member_fun.hpp \
     cppa/util/if_else.hpp \
     cppa/util/is_array_of.hpp \
     cppa/util/is_builtin.hpp \
-    cppa/util/is_comparable.hpp \
-    cppa/util/is_copyable.hpp \
     cppa/util/is_forward_iterator.hpp \
     cppa/util/is_iterable.hpp \
     cppa/util/is_iterable.hpp \
     cppa/util/is_legal_tuple_type.hpp \
     cppa/util/is_manipulator.hpp \
     cppa/util/is_mutable_ref.hpp \
-    cppa/util/is_one_of.hpp \
     cppa/util/is_primitive.hpp \
     cppa/util/producer_consumer_list.hpp \
     cppa/util/pt_dispatch.hpp \
     cppa/util/pt_token.hpp \
-    cppa/util/remove_const_reference.hpp \
     cppa/util/replace_type.hpp \
     cppa/util/ripemd_160.hpp \
     cppa/util/rm_ref.hpp \

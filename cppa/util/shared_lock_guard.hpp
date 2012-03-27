@@ -33,6 +33,9 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief Similar to <tt>std::lock_guard</tt> but performs shared locking.
+ */
 template<typename SharedLockable>
 class shared_lock_guard
 {

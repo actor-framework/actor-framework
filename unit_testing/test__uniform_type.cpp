@@ -20,7 +20,6 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/disjunction.hpp"
 #include "cppa/util/callable_trait.hpp"
 
 using std::cout;

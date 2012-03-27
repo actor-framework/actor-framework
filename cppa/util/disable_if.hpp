@@ -42,6 +42,11 @@ struct disable_if_c<false, T>
     typedef T type;
 };
 
+/**
+ * @ingroup MetaProgramming
+ * @brief SFINAE trick to disable a template function based on its
+ *        template parameters.
+ */
 template<class Trait, typename T = void>
 struct disable_if : disable_if_c<Trait::value, T>
 {

@@ -35,8 +35,6 @@
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/conjunction.hpp"
-#include "cppa/util/disjunction.hpp"
 #include "cppa/util/is_iterable.hpp"
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_forward_iterator.hpp"

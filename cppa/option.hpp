@@ -69,17 +69,11 @@ class option
      */
     option(T const& value) : m_valid(false) { cr(value); }
 
-    /**
-     * @brief Copy constructor.
-     */
     option(option const& other) : m_valid(false)
     {
         if (other.m_valid) cr(other.m_value);
     }
 
-    /**
-     * @brief Move constructor.
-     */
     option(option&& other) : m_valid(false)
     {
         if (other.m_valid) cr(std::move(other.m_value));
@@ -87,9 +81,6 @@ class option
 
     ~option() { destroy(); }
 
-    /**
-     * @brief Copy assignment.
-     */
     option& operator=(option const& other)
     {
         if (m_valid)
@@ -104,9 +95,6 @@ class option
         return *this;
     }
 
-    /**
-     * @brief Move assignment.
-     */
     option& operator=(option&& other)
     {
         if (m_valid)
@@ -121,9 +109,6 @@ class option
         return *this;
     }
 
-    /**
-     * @brief Copy assignment.
-     */
     option& operator=(T const& value)
     {
         if (m_valid) m_value = value;
@@ -131,9 +116,6 @@ class option
         return *this;
     }
 
-    /**
-     * @brief Move assignment.
-     */
     option& operator=(T& value)
     {
         if (m_valid) m_value = std::move(value);
@@ -153,8 +135,7 @@ class option
     inline explicit operator bool() const { return m_valid; }
 
     /**
-     * @brief Returns @p false if this @p option has a valid value;
-     *        otherwise @p true.
+     * @brief Returns <tt>!valid()</tt>
      */
     inline bool operator!() const { return !m_valid; }
 
@@ -195,8 +176,9 @@ class option
     }
 
     /**
-     * @brief Returns the value of this @p option if it's valid
-     *        or @p default_value.
+     * @brief Returns the value. The value is set to @p default_value
+     *        if <tt>valid() == false</tt>.
+     * @post <tt>valid() == true</tt>
      */
     inline T& get_or_else(T const& default_value)
     {
@@ -237,6 +219,7 @@ class option
 
 };
 
+/** @relates option */
 template<typename T>
 bool operator==(option<T> const& lhs, option<T> const& rhs)
 {
@@ -244,6 +227,7 @@ bool operator==(option<T> const& lhs, option<T> const& rhs)
     return false;
 }
 
+/** @relates option */
 template<typename T>
 bool operator==(option<T> const& lhs, T const& rhs)
 {
@@ -251,24 +235,28 @@ bool operator==(option<T> const& lhs, T const& rhs)
     return false;
 }
 
+/** @relates option */
 template<typename T>
 bool operator==(T const& lhs, option<T> const& rhs)
 {
     return rhs == lhs;
 }
 
+/** @relates option */
 template<typename T>
 bool operator!=(option<T> const& lhs, option<T> const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/** @relates option */
 template<typename T>
 bool operator!=(option<T> const& lhs, T const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/** @relates option */
 template<typename T>
 bool operator!=(T const& lhs, option<T> const& rhs)
 {

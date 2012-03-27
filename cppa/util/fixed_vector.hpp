@@ -39,8 +39,6 @@
 
 #include "cppa/config.hpp"
 
-#include "cppa/config.hpp"
-
 namespace cppa { namespace util {
 
 /**
@@ -62,22 +60,24 @@ class fixed_vector
 
  public:
 
-    typedef size_t size_type;
+    typedef T                   value_type;
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef value_type&         reference;
+    typedef value_type const&   const_reference;
+    typedef value_type*         pointer;
+    typedef value_type const*   const_pointer;
 
-    typedef T& reference;
-    typedef T const& const_reference;
-
-    typedef T* iterator;
-    typedef T const* const_iterator;
-
-    typedef std::reverse_iterator<iterator> reverse_iterator;
-    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+    typedef T*                                      iterator;
+    typedef T const*                                const_iterator;
+    typedef std::reverse_iterator<iterator>         reverse_iterator;
+    typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
 
     constexpr fixed_vector() : m_size(0) { }
 
     fixed_vector(fixed_vector const& other) : m_size(other.m_size)
     {
-        std::copy(other.begin(), other.end(), m_data);
+        std::copy(other.begin(), other.end(), begin());
     }
 
     fixed_vector& operator=(fixed_vector const& other)
@@ -96,12 +96,37 @@ class fixed_vector
     fixed_vector(std::initializer_list<T> init) : m_size(init.size())
     {
         CPPA_REQUIRE(init.size() <= MaxSize);
-        std::copy(init.begin(), init.end(), m_data);
+        std::copy(init.begin(), init.end(), begin());
+    }
+
+    void assign(size_type count, const_reference value)
+    {
+        resize(count);
+        std::fill(begin(), end(), value);
+    }
+
+    template<typename InputIterator>
+    void assign(InputIterator first, InputIterator last,
+                // dummy SFINAE argument
+                typename std::iterator_traits<InputIterator>::pointer = 0)
+    {
+        resize(std::distance(first, last));
+        std::copy(first, last, begin());
     }
 
     inline size_type size() const
     {
         return m_size;
+    }
+
+    inline size_type max_size() const
+    {
+        return MaxSize;
+    }
+
+    inline size_type capacity() const
+    {
+        return max_size() - size();
     }
 
     inline void clear()
@@ -114,15 +139,26 @@ class fixed_vector
         return m_size == 0;
     }
 
+    inline bool not_empty() const
+    {
+        return m_size > 0;
+    }
+
     inline bool full() const
     {
         return m_size == MaxSize;
     }
 
-    inline void push_back(T const& what)
+    inline void push_back(const_reference what)
     {
         CPPA_REQUIRE(!full());
         m_data[m_size++] = what;
+    }
+
+    inline void pop_back()
+    {
+        CPPA_REQUIRE(not_empty());
+        --m_size;
     }
 
     inline reference at(size_type pos)
@@ -242,30 +278,31 @@ class fixed_vector
     }
 
     /**
-     * @brief Inserts elements to specified position in the container.
-     * @warning This member function is implemented for <tt>pos == end()</tt>
-     *          only by now. The user has to guarantee that the size of the
-     *          sequence [first, last) fits into the vector.
+     * @brief Inserts elements before the element pointed to by @p pos.
+     * @throw std::length_error if
+     *        <tt>size() + distance(first, last) > MaxSize</tt>
      */
     template<class InputIterator>
-    inline void insert(iterator pos,
-                       InputIterator first,
-                       InputIterator last)
+    inline void insert(iterator pos, InputIterator first, InputIterator last)
     {
+        auto num_elements = std::distance(first, last);
+        if ((size() + num_elements) > MaxSize)
+        {
+            throw std::length_error("fixed_vector::insert: too much elements");
+        }
         if (pos == end())
         {
-            if (m_size + static_cast<size_type>(last - first) > MaxSize)
-            {
-                throw std::runtime_error("fixed_vector::insert: full");
-            }
-            for ( ; first != last; ++first)
-            {
-                push_back(*first);
-            }
+            resize(size() + num_elements);
+            std::copy(first, last, pos);
         }
         else
         {
-            throw std::runtime_error("not implemented fixed_vector::insert");
+            // move elements
+            auto old_end = end();
+            resize(size() + num_elements);
+            std::copy_backward(pos, old_end, end());
+            // insert new elements
+            std::copy(first, last, pos);
         }
     }
 
