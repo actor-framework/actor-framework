@@ -253,6 +253,6 @@ cppa/match.hpp
 cppa/partial_function.hpp
 src/partial_function.cpp
 cppa/intrusive/singly_linked_list.hpp
-cppa/intrusive/iterator.hpp
+cppa/intrusive/forward_iterator.hpp
 unit_testing/test__intrusive_containers.cpp
 examples/dancing_kirby.cpp

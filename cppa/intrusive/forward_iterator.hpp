@@ -39,7 +39,7 @@ namespace cppa { namespace intrusive {
  * @brief A forward iterator for intrusive lists.
  */
 template<class T>
-class iterator // : std::iterator<forward_iterator_tag, T>
+class forward_iterator
 {
 
  public:
@@ -52,20 +52,20 @@ class iterator // : std::iterator<forward_iterator_tag, T>
     typedef ptrdiff_t                   difference_type;
     typedef std::forward_iterator_tag   iterator_category;
 
-    inline iterator(T* ptr) : m_ptr(ptr) { }
+    inline forward_iterator(T* ptr) : m_ptr(ptr) { }
 
-    iterator(iterator const&) = default;
-    iterator& operator=(iterator const&) = default;
+    forward_iterator(forward_iterator const&) = default;
+    forward_iterator& operator=(forward_iterator const&) = default;
 
-    inline iterator& operator++()
+    inline forward_iterator& operator++()
     {
         m_ptr = m_ptr->next;
         return *this;
     }
 
-    inline iterator operator++(int)
+    inline forward_iterator operator++(int)
     {
-        iterator tmp{*this};
+        forward_iterator tmp{*this};
         m_ptr = m_ptr->next;
         return tmp;
     }
@@ -97,91 +97,93 @@ class iterator // : std::iterator<forward_iterator_tag, T>
 };
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(iterator<T> const& lhs, iterator<T> const& rhs)
+inline bool operator==(forward_iterator<T> const& lhs,
+                       forward_iterator<T> const& rhs)
 {
     return lhs.ptr() == rhs.ptr();
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(iterator<T> const& lhs, T const* rhs)
+inline bool operator==(forward_iterator<T> const& lhs, T const* rhs)
 {
     return lhs.ptr() == rhs;
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(T const* lhs, iterator<T> const& rhs)
+inline bool operator==(T const* lhs, forward_iterator<T> const& rhs)
 {
     return lhs == rhs.ptr();
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(iterator<T> const& lhs, decltype(nullptr))
+inline bool operator==(forward_iterator<T> const& lhs, decltype(nullptr))
 {
     return lhs.ptr() == nullptr;
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(decltype(nullptr), iterator<T> const& rhs)
+inline bool operator==(decltype(nullptr), forward_iterator<T> const& rhs)
 {
     return rhs.ptr() == nullptr;
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(iterator<T> const& lhs, iterator<T> const& rhs)
+inline bool operator!=(forward_iterator<T> const& lhs,
+                       forward_iterator<T> const& rhs)
 {
     return !(lhs == rhs);
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(iterator<T> const& lhs, T const* rhs)
+inline bool operator!=(forward_iterator<T> const& lhs, T const* rhs)
 {
     return !(lhs == rhs);
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(T const* lhs, iterator<T> const& rhs)
+inline bool operator!=(T const* lhs, forward_iterator<T> const& rhs)
 {
     return !(lhs == rhs);
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(iterator<T> const& lhs, decltype(nullptr))
+inline bool operator!=(forward_iterator<T> const& lhs, decltype(nullptr))
 {
     return !(lhs == nullptr);
 }
 
 /**
- * @relates iterator
+ * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(decltype(nullptr), iterator<T> const& rhs)
+inline bool operator!=(decltype(nullptr), forward_iterator<T> const& rhs)
 {
     return !(nullptr == rhs);
 }

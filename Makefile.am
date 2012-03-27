@@ -147,7 +147,7 @@ nobase_library_include_HEADERS = \
     cppa/fsm_actor.hpp \
     cppa/get.hpp \
     cppa/group.hpp \
-    cppa/intrusive/iterator.hpp \
+    cppa/intrusive/forward_iterator.hpp \
     cppa/intrusive/single_reader_queue.hpp \
     cppa/intrusive/singly_linked_list.hpp \
     cppa/intrusive_ptr.hpp \

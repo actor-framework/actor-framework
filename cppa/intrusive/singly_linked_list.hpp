@@ -35,13 +35,14 @@
 #include <utility>
 
 #include "cppa/config.hpp"
-#include "cppa/intrusive/iterator.hpp"
+#include "cppa/intrusive/forward_iterator.hpp"
 
 namespace cppa { namespace intrusive {
 
 /**
  * @brief A singly linked list similar to std::forward_list
  *        but intrusive and with push_back() support.
+ * @tparam T A class providing a @p next pointer and a default constructor.
  */
 template<class T>
 class singly_linked_list
@@ -60,8 +61,8 @@ class singly_linked_list
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
-    typedef ::cppa::intrusive::iterator<value_type>        iterator;
-    typedef ::cppa::intrusive::iterator<value_type const>  const_iterator;
+    typedef forward_iterator<value_type>       iterator;
+    typedef forward_iterator<value_type const> const_iterator;
 
     singly_linked_list() : m_head(), m_tail(&m_head) { }
 
@@ -158,7 +159,7 @@ class singly_linked_list
     }
 
     /**
-     * @brief Inserts @p what after @p i.
+     * @brief Inserts @p what after @p pos.
      * @returns An iterator to the inserted element.
      */
     iterator insert_after(iterator pos, pointer what)
@@ -326,7 +327,7 @@ class singly_linked_list
     }
 
     /**
-     * @brief Removes all elements for which predicate @p returns @p true.
+     * @brief Removes all elements for which predicate @p p returns @p true.
      */
     template<typename UnaryPredicate>
     void remove_if(UnaryPredicate p)
