@@ -94,7 +94,6 @@ cppa/detail/pair_member.hpp
 cppa/detail/map_member.hpp
 cppa/util/is_forward_iterator.hpp
 cppa/util/rm_ref.hpp
-cppa/util/is_iterable.hpp
 cppa/binary_serializer.hpp
 src/binary_serializer.cpp
 cppa/binary_deserializer.hpp
