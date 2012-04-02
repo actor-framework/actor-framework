@@ -112,6 +112,12 @@ inline bool found_key(Iterator& i, Container& cont, Key&& key)
     return (i = cont.find(std::forward<Key>(key))) != cont.end();
 }
 
+template<typename F, typename S>
+any_tuple to_tuple(std::pair<F, S> const& p)
+{
+    return make_tuple(p.first, p.second);
+}
+
 struct match_helper
 {
     any_tuple tup;
@@ -127,8 +133,24 @@ struct match_helper
 template<typename F, typename S>
 match_helper match(std::pair<F, S> const& what)
 {
-    return {make_tuple(what.first, what.second)};
+    return {to_tuple(what)};
 }
+
+template<class Container>
+struct match_each_helper
+{
+    Container const& args;
+    template<typename... Args>
+    void operator()(partial_function&& pf, Args&&... args)
+    {
+        partial_function tmp;
+        tmp.splice(std::move(pf), std::forward<Args>(args)...);
+        for (auto& arg : args)
+        {
+            tmp(to_tuple(arg));
+        }
+    }
+};
 
 void usage(char const* argv0)
 {
@@ -170,12 +192,6 @@ int main(int argc, char** argv)
                     cerr << "unknown scheduler: " << sched << endl;
                     exit(1);
                 }
-            },
-            on_arg_match >> [&](std::string const& key, std::string const&)
-            {
-                cerr << "unknown key: \"" << key << "\"" << endl;
-                usage(argv[0]);
-                exit(2);
             }
         );
     }
