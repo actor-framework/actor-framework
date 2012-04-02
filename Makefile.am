@@ -193,6 +193,7 @@ nobase_library_include_HEADERS = \
     cppa/util/if_else.hpp \
     cppa/util/is_array_of.hpp \
     cppa/util/is_builtin.hpp \
+    cppa/util/is_comparable.hpp \
     cppa/util/is_forward_iterator.hpp \
     cppa/util/is_iterable.hpp \
     cppa/util/is_legal_tuple_type.hpp \

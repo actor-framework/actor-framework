@@ -255,3 +255,4 @@ cppa/intrusive/singly_linked_list.hpp
 cppa/intrusive/forward_iterator.hpp
 unit_testing/test__intrusive_containers.cpp
 examples/dancing_kirby.cpp
+cppa/util/is_comparable.hpp
