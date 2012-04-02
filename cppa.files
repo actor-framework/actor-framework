@@ -11,7 +11,6 @@ src/uniform_type_info.cpp
 cppa/config.hpp
 unit_testing/test__tuple.cpp
 cppa/detail/abstract_tuple.hpp
-cppa/tuple_view.hpp
 cppa/detail/tuple_vals.hpp
 cppa/detail/decorated_tuple.hpp
 cppa/cow_ptr.hpp
@@ -234,7 +233,6 @@ cppa/tuple_cast.hpp
 cppa/util/is_mutable_ref.hpp
 cppa/util/is_manipulator.hpp
 cppa/util/apply_tuple.hpp
-cppa/any_tuple_view.hpp
 benchmarks/Matching.scala
 benchmarks/matching.cpp
 benchmarks/matching.erl
@@ -256,3 +254,7 @@ cppa/intrusive/forward_iterator.hpp
 unit_testing/test__intrusive_containers.cpp
 examples/dancing_kirby.cpp
 cppa/util/is_comparable.hpp
+cppa/detail/tuple_view.hpp
+cppa/detail/container_tuple_view.hpp
+cppa/detail/matches.hpp
+unit_testing/test__match.cpp

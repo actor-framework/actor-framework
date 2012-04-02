@@ -67,7 +67,7 @@ class is_iterable
  public:
 
     static constexpr bool value =    util::is_primitive<T>::value == false
-                              && std::is_same<bool, result_type>::value;
+                                  && std::is_same<bool, result_type>::value;
 
 };
 

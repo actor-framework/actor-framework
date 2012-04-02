@@ -28,122 +28,78 @@
 \******************************************************************************/
 
 
-#ifndef TUPLE_VALS_HPP
-#define TUPLE_VALS_HPP
+#ifndef CONTAINER_TUPLE_VIEW_HPP
+#define CONTAINER_TUPLE_VIEW_HPP
 
-#include <stdexcept>
-
-#include "cppa/type_value_pair.hpp"
-
-#include "cppa/util/type_list.hpp"
-
-#include "cppa/detail/tdata.hpp"
-#include "cppa/detail/types_array.hpp"
+#include "cppa/detail/tuple_vals.hpp"
+#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
-#include "cppa/detail/serialize_tuple.hpp"
+#include "cppa/detail/disablable_delete.hpp"
 
 namespace cppa { namespace detail {
 
-template<typename... ElementTypes>
-class tuple_vals : public abstract_tuple
+template<class Container>
+class container_tuple_view : public abstract_tuple
 {
-
-    static_assert(sizeof...(ElementTypes) > 0,
-                  "tuple_vals is not allowed to be empty");
-
-    typedef abstract_tuple super;
 
  public:
 
-    typedef tdata<ElementTypes...> data_type;
+    typedef typename Container::value_type value_type;
 
-    typedef types_array<ElementTypes...> element_types;
-
-    tuple_vals() : m_data() { }
-
-    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
-
-    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
-
-    inline data_type& data()
+    container_tuple_view(Container* c, bool take_ownership = false) : m_ptr(c)
     {
-        return m_data;
-    }
-
-    inline data_type const& data() const
-    {
-        return m_data;
+        CPPA_REQUIRE(c != nullptr);
+        if (!take_ownership) m_ptr.get_deleter().disable();
     }
 
     size_t size() const
     {
-        return sizeof...(ElementTypes);
+        return m_ptr->size();
     }
 
-    tuple_vals* copy() const
+    abstract_tuple* copy() const
     {
-        return new tuple_vals(*this);
+        return new container_tuple_view{new Container(*m_ptr), true};
     }
 
     void const* at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        return m_data.at(pos);
+        auto i = m_ptr->begin();
+        std::advance(i, pos);
+        return &(*i);
     }
 
     void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());
-        return const_cast<void*>(at(pos));
+        auto i = m_ptr->begin();
+        std::advance(i, pos);
+        return &(*i);
     }
 
     uniform_type_info const* type_at(size_t pos) const
     {
         CPPA_REQUIRE(pos < size());
-        return m_types[pos];
-    }
-
-    bool equals(abstract_tuple const& other) const
-    {
-        if (size() != other.size()) return false;
-        tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);
-        if (o)
-        {
-            return m_data == (o->m_data);
-        }
-        return abstract_tuple::equals(other);
+        return static_types_array<value_type>::arr[0];
     }
 
     void const* type_token() const
     {
-        return detail::static_type_list<ElementTypes...>::list;
+        return &(typeid(Container));
     }
 
     std::type_info const* impl_type() const
     {
-        return detail::static_type_list<ElementTypes...>::list;
+        return &(typeid(detail::object_array));
     }
 
  private:
 
-    data_type m_data;
+    std::unique_ptr<Container, disablable_delete<Container> > m_ptr;
 
-    static types_array<ElementTypes...> m_types;
-
-};
-
-template<typename... ElementTypes>
-types_array<ElementTypes...> tuple_vals<ElementTypes...>::m_types;
-
-template<typename TypeList>
-struct tuple_vals_from_type_list;
-
-template<typename... Types>
-struct tuple_vals_from_type_list< util::type_list<Types...> >
-{
-    typedef tuple_vals<Types...> type;
 };
 
 } } // namespace cppa::detail
 
-#endif // TUPLE_VALS_HPP
+#endif // CONTAINER_TUPLE_VIEW_HPP

@@ -1,7 +1,7 @@
 #ifndef TEST_HPP
 #define TEST_HPP
 
-#include <map>
+#include <vector>
 #include <string>
 #include <cstddef>
 #include <iostream>
@@ -88,14 +88,17 @@ std::cerr << err_msg << std::endl;                                             \
 
 #define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) != (rhs_loc)))
 
+typedef std::pair<std::string, std::string> string_pair;
+
 size_t test__yield_interface();
-size_t test__remote_actor(const char* app_path, bool is_client,
-                          const std::map<std::string, std::string>& args);
+size_t test__remote_actor(char const* app_path, bool is_client,
+                          std::vector<string_pair> const& args);
 size_t test__ripemd_160();
 size_t test__uniform_type();
 size_t test__type_list();
 size_t test__atom();
 size_t test__tuple();
+size_t test__match();
 size_t test__spawn();
 size_t test__pattern();
 size_t test__intrusive_ptr();

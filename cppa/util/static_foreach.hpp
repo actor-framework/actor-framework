@@ -31,6 +31,8 @@
 #ifndef STATIC_FOREACH_HPP
 #define STATIC_FOREACH_HPP
 
+#include "cppa/get.hpp"
+
 namespace cppa { namespace util {
 
 /**

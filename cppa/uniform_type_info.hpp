@@ -263,12 +263,18 @@ class uniform_type_info
 
 };
 
+/**
+ * @relates uniform_type_info
+ */
 template<typename T>
 inline uniform_type_info const* uniform_typeid()
 {
     return uniform_typeid(typeid(T));
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator==(uniform_type_info const& lhs,
                        uniform_type_info const& rhs)
 {
@@ -277,27 +283,42 @@ inline bool operator==(uniform_type_info const& lhs,
     return &lhs == &rhs;
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator!=(uniform_type_info const& lhs,
                        uniform_type_info const& rhs)
 {
     return !(lhs == rhs);
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator==(uniform_type_info const& lhs, std::type_info const& rhs)
 {
     return lhs.equals(rhs);
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator!=(uniform_type_info const& lhs, std::type_info const& rhs)
 {
     return !(lhs.equals(rhs));
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator==(std::type_info const& lhs, uniform_type_info const& rhs)
 {
     return rhs.equals(lhs);
 }
 
+/**
+ * @relates uniform_type_info
+ */
 inline bool operator!=(std::type_info const& lhs, uniform_type_info const& rhs)
 {
     return !(rhs.equals(lhs));

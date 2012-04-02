@@ -50,6 +50,18 @@ uniform_type_info const* uniform_typeid(std::type_info const&);
 
 namespace cppa { namespace detail {
 
+template<typename T>
+inline void* ptr_to(T& what) { return &what; }
+
+template<typename T>
+inline void const* ptr_to(T const& what) { return &what; }
+
+template<typename T>
+inline void* ptr_to(T* what) { return what; }
+
+template<typename T>
+inline void const* ptr_to(T const* what) { return what; }
+
 /*
  * "enhanced std::tuple"
  */
@@ -153,7 +165,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline void const* at(size_t p) const
     {
-        return (p == 0) ? &head : super::at(p-1);
+        return (p == 0) ? ptr_to(head) : super::at(p-1);
     }
 
     inline uniform_type_info const* type_at(size_t p) const
@@ -215,7 +227,7 @@ struct tdata<option<Head>, Tail...> : tdata<Tail...>
 
     inline void const* at(size_t p) const
     {
-        return (p == 0) ? &head : super::at(p-1);
+        return (p == 0) ? ptr_to(head) : super::at(p-1);
     }
 
     inline uniform_type_info const* type_at(size_t p) const

@@ -105,12 +105,18 @@ class type_value_pair_const_iterator
 
 };
 
+/**
+ * @relates type_value_pair_const_iterator
+ */
 inline bool operator==(type_value_pair_const_iterator const& lhs,
                        type_value_pair_const_iterator const& rhs)
 {
     return lhs.base() == rhs.base();
 }
 
+/**
+ * @relates type_value_pair_const_iterator
+ */
 inline bool operator!=(type_value_pair_const_iterator const& lhs,
                        type_value_pair_const_iterator const& rhs)
 {

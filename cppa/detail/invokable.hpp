@@ -36,7 +36,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "cppa/match.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
@@ -45,6 +44,7 @@
 #include "cppa/util/fixed_vector.hpp"
 #include "cppa/util/callable_trait.hpp"
 
+#include "cppa/detail/matches.hpp"
 #include "cppa/detail/intermediate.hpp"
 
 // forward declaration
@@ -90,11 +90,11 @@ struct abstract_invokable : public invokable
     }
     bool types_match(any_tuple const& value) const
     {
-        return match_types(value, m_pattern);
+        return matches_types(value, m_pattern);
     }
     bool could_invoke(any_tuple const& value) const
     {
-        return match(value, m_pattern);
+        return matches(value, m_pattern);
     }
 };
 
@@ -218,9 +218,9 @@ class invokable_impl<true, 0, Fun, Tuple, Pattern> : public abstract_invokable<T
         : super(std::forward<Args>(args)...), m_iimpl(std::forward<F>(fun))
     {
     }
-    bool invoke(any_tuple const& data) const
+    bool invoke(any_tuple const& value) const
     {
-        return match(data, this->m_pattern) ? m_iimpl() : false;
+        return matches(value, this->m_pattern) ? m_iimpl() : false;
     }
     bool unsafe_invoke(any_tuple const& value) const
     {
@@ -228,7 +228,7 @@ class invokable_impl<true, 0, Fun, Tuple, Pattern> : public abstract_invokable<T
     }
     intermediate* get_intermediate(any_tuple const& value)
     {
-        return match(value, this->m_pattern) ? &m_iimpl : nullptr;
+        return matches(value, this->m_pattern) ? &m_iimpl : nullptr;
     }
     intermediate* get_unsafe_intermediate(any_tuple const& value)
     {

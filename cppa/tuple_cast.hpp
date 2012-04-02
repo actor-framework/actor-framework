@@ -33,15 +33,17 @@
 
 #include <type_traits>
 
-#include "cppa/match.hpp"
 #include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
 
+#include "cppa/detail/matches.hpp"
 #include "cppa/detail/tuple_cast_impl.hpp"
 
 namespace cppa {
 
-// cast using a pattern
+/**
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ */
 template<typename... T>
 auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     -> option<
@@ -56,7 +58,9 @@ auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup, p);
 }
 
-// cast using types
+/**
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ */
 template<typename... T>
 auto tuple_cast(any_tuple const& tup)
     -> option<

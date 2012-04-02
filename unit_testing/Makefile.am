@@ -15,6 +15,7 @@ unit_tests_SOURCES =    main.cpp \
                         test__queue_performance.cpp \
                         test__remote_actor.cpp \
                         test__ripemd_160.cpp \
+                        test__match.cpp \
                         test__serialization.cpp \
                         test__spawn.cpp \
                         test__tuple.cpp \

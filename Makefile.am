@@ -74,7 +74,6 @@ nobase_library_include_HEADERS = \
     cppa/actor_proxy.hpp \
     cppa/announce.hpp \
     cppa/any_tuple.hpp \
-    cppa/any_tuple_view.hpp \
     cppa/anything.hpp \
     cppa/atom.hpp \
     cppa/attachable.hpp \
@@ -96,6 +95,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/boxed.hpp \
     cppa/detail/buffer.hpp \
     cppa/detail/channel.hpp \
+    cppa/detail/container_tuple_view.hpp \
     cppa/detail/converted_thread_context.hpp \
     cppa/detail/decorated_tuple.hpp \
     cppa/detail/default_uniform_type_info_impl.hpp \
@@ -111,6 +111,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/list_member.hpp \
     cppa/detail/mailman.hpp \
     cppa/detail/map_member.hpp \
+    cppa/detail/matches.hpp \
     cppa/detail/mock_scheduler.hpp \
     cppa/detail/native_socket.hpp \
     cppa/detail/network_manager.hpp \
@@ -132,6 +133,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/to_uniform_name.hpp \
     cppa/detail/tuple_cast_impl.hpp \
     cppa/detail/tuple_vals.hpp \
+    cppa/detail/tuple_view.hpp \
     cppa/detail/type_to_ptype.hpp \
     cppa/detail/types_array.hpp \
     cppa/detail/unboxed.hpp \
@@ -172,7 +174,6 @@ nobase_library_include_HEADERS = \
     cppa/to_string.hpp \
     cppa/tuple.hpp \
     cppa/tuple_cast.hpp \
-    cppa/tuple_view.hpp \
     cppa/type_value_pair.hpp \
     cppa/uniform_type_info.hpp \
     cppa/util/abstract_uniform_type_info.hpp \

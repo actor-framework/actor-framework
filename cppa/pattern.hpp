@@ -38,8 +38,6 @@
 
 #include "cppa/option.hpp"
 #include "cppa/anything.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/tuple_view.hpp"
 #include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 

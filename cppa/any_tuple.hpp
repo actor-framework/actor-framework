@@ -34,7 +34,16 @@
 #include "cppa/tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
+
+#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
+#include "cppa/util/is_iterable.hpp"
+
+#include "cppa/detail/tuple_view.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/detail/container_tuple_view.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 
@@ -149,19 +158,99 @@ class any_tuple
         return m_vals->impl_type();
     }
 
+    template<typename T>
+    static inline any_tuple view(T&& value,
+                typename util::enable_if<util::is_iterable<typename util::rm_ref<T>::type> >::type* = 0)
+    {
+        static constexpr bool can_optimize =    std::is_reference<T>::value
+                                             && !std::is_const<T>::value;
+        std::integral_constant<bool, can_optimize> token;
+        return any_tuple{container_view(std::forward<T>(value), token)};
+    }
+
+    template<typename T>
+    static inline any_tuple view(T&& value,
+                typename util::disable_if<util::is_iterable<typename util::rm_ref<T>::type> >::type* = 0)
+    {
+        typedef typename util::rm_ref<T>::type vtype;
+        typedef typename detail::implicit_conversions<vtype>::type converted;
+        static_assert(util::is_legal_tuple_type<converted>::value,
+                      "T is not a valid tuple type");
+        static constexpr bool can_optimize =
+                   std::is_same<converted, vtype>::value
+                && std::is_reference<T>::value
+                && !std::is_const<T>::value;
+        std::integral_constant<bool, can_optimize> token;
+        return any_tuple{simple_view(std::forward<T>(value), token)};
+    }
+
  private:
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
     explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
 
+    typedef detail::abstract_tuple* tup_ptr;
+
+    template<typename T>
+    static inline tup_ptr simple_view(T& value,
+                                      std::integral_constant<bool, true>)
+    {
+        return new detail::tuple_view<T>(&value);
+    }
+
+    template<typename First, typename Second>
+    static inline tup_ptr simple_view(std::pair<First, Second>& p,
+                                      std::integral_constant<bool, true>)
+    {
+        return new detail::tuple_view<First, Second>(&p.first, &p.second);
+    }
+
+    template<typename T>
+    static inline tup_ptr simple_view(T&& value,
+                                      std::integral_constant<bool, false>)
+    {
+        typedef typename util::rm_ref<T>::type vtype;
+        typedef typename detail::implicit_conversions<vtype>::type converted;
+        return new detail::tuple_vals<converted>(std::forward<T>(value));
+    }
+
+    template<typename First, typename Second>
+    static inline any_tuple view(std::pair<First, Second> p,
+                                 std::integral_constant<bool, false>)
+    {
+       return new detail::tuple_vals<First, Second>(std::move(p.first),
+                                                    std::move(p.second));
+    }
+
+    template<typename T>
+    static inline detail::abstract_tuple* container_view(T& value,
+                                                 std::integral_constant<bool, true>)
+    {
+        return new detail::container_tuple_view<T>(&value);
+    }
+
+    template<typename T>
+    static inline detail::abstract_tuple* container_view(T&& value,
+                                                 std::integral_constant<bool, false>)
+    {
+        typedef typename util::rm_ref<T>::type ctype;
+        return new detail::container_tuple_view<T>(new ctype(std::forward<T>(value)));
+    }
+
 };
 
+/**
+ * @relates any_tuple
+ */
 inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
 {
     return lhs.equals(rhs);
 }
 
+/**
+ * @relates any_tuple
+ */
 inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
 {
     return !(lhs == rhs);

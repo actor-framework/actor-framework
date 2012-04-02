@@ -28,42 +28,48 @@
 \******************************************************************************/
 
 
-#ifndef TUPLE_VALS_HPP
-#define TUPLE_VALS_HPP
+#ifndef TUPLE_VIEW_HPP
+#define TUPLE_VIEW_HPP
 
-#include <stdexcept>
+#include "cppa/util/static_foreach.hpp"
 
-#include "cppa/type_value_pair.hpp"
-
-#include "cppa/util/type_list.hpp"
-
-#include "cppa/detail/tdata.hpp"
-#include "cppa/detail/types_array.hpp"
+#include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
-#include "cppa/detail/serialize_tuple.hpp"
 
 namespace cppa { namespace detail {
 
+struct tuple_view_copy_helper
+{
+    size_t pos;
+    abstract_tuple* target;
+    tuple_view_copy_helper(abstract_tuple* trgt) : pos(0), target(trgt) { }
+    template<typename T>
+    void operator()(T const* value)
+    {
+        *(reinterpret_cast<T*>(target->mutable_at(pos++))) = *value;
+    }
+};
+
 template<typename... ElementTypes>
-class tuple_vals : public abstract_tuple
+class tuple_view : public abstract_tuple
 {
 
     static_assert(sizeof...(ElementTypes) > 0,
                   "tuple_vals is not allowed to be empty");
 
-    typedef abstract_tuple super;
-
  public:
 
-    typedef tdata<ElementTypes...> data_type;
+    typedef tdata<ElementTypes*...> data_type;
 
     typedef types_array<ElementTypes...> element_types;
 
-    tuple_vals() : m_data() { }
+    tuple_view() = delete;
+    tuple_view(tuple_view const&) = delete;
 
-    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
-
-    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
+    /**
+     * @warning @p tuple_view does @b NOT takes ownership for given pointers
+     */
+    tuple_view(ElementTypes*... args) : m_data(args...) { }
 
     inline data_type& data()
     {
@@ -80,9 +86,12 @@ class tuple_vals : public abstract_tuple
         return sizeof...(ElementTypes);
     }
 
-    tuple_vals* copy() const
+    abstract_tuple* copy() const
     {
-        return new tuple_vals(*this);
+        auto result = new tuple_vals<ElementTypes...>;
+        tuple_view_copy_helper f{result};
+        util::static_foreach<0, sizeof...(ElementTypes)>::_(m_data, f);
+        return result;
     }
 
     void const* at(size_t pos) const
@@ -101,17 +110,6 @@ class tuple_vals : public abstract_tuple
     {
         CPPA_REQUIRE(pos < size());
         return m_types[pos];
-    }
-
-    bool equals(abstract_tuple const& other) const
-    {
-        if (size() != other.size()) return false;
-        tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);
-        if (o)
-        {
-            return m_data == (o->m_data);
-        }
-        return abstract_tuple::equals(other);
     }
 
     void const* type_token() const
@@ -133,17 +131,8 @@ class tuple_vals : public abstract_tuple
 };
 
 template<typename... ElementTypes>
-types_array<ElementTypes...> tuple_vals<ElementTypes...>::m_types;
-
-template<typename TypeList>
-struct tuple_vals_from_type_list;
-
-template<typename... Types>
-struct tuple_vals_from_type_list< util::type_list<Types...> >
-{
-    typedef tuple_vals<Types...> type;
-};
+types_array<ElementTypes...> tuple_view<ElementTypes...>::m_types;
 
 } } // namespace cppa::detail
 
-#endif // TUPLE_VALS_HPP
+#endif // TUPLE_VIEW_HPP
