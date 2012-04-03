@@ -31,6 +31,8 @@
 #ifndef ANY_TUPLE_HPP
 #define ANY_TUPLE_HPP
 
+#include <iostream>
+
 #include "cppa/tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
@@ -136,7 +138,7 @@ class any_tuple
     }
 
     template<typename T>
-    inline T& get_mutable_as(size_t p)
+    inline T& get_as_mutable(size_t p)
     {
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T*>(mutable_at(p));
@@ -146,14 +148,16 @@ class any_tuple
 
     inline const_iterator end() const { return m_vals->end(); }
 
-    cow_ptr<detail::abstract_tuple> const& vals() const;
+    inline cow_ptr<detail::abstract_tuple>& vals()  { return m_vals; }
+    inline cow_ptr<detail::abstract_tuple> const& vals() const { return m_vals; }
+    inline cow_ptr<detail::abstract_tuple> const& cvals() const { return m_vals; }
 
-    inline void const* type_token() const
+    inline std::type_info const* type_token() const
     {
         return m_vals->type_token();
     }
 
-    inline std::type_info const* impl_type() const
+    inline detail::tuple_impl_info impl_type() const
     {
         return m_vals->impl_type();
     }
@@ -235,7 +239,7 @@ class any_tuple
                                                  std::integral_constant<bool, false>)
     {
         typedef typename util::rm_ref<T>::type ctype;
-        return new detail::container_tuple_view<T>(new ctype(std::forward<T>(value)));
+        return new detail::container_tuple_view<T>(new ctype(std::forward<T>(value)), true);
     }
 
 };

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <cstddef>
+#include <sstream>
 #include <iostream>
 #include <type_traits>
 
@@ -109,6 +110,8 @@ size_t test__fixed_vector();
 size_t test__intrusive_containers();
 
 void test__queue_performance();
+
+std::vector<std::string> split(std::string const& str, char delim);
 
 using std::cout;
 using std::endl;

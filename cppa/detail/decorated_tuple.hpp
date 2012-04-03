@@ -53,6 +53,8 @@ template<typename... ElementTypes>
 class decorated_tuple : public abstract_tuple
 {
 
+    typedef abstract_tuple super;
+
     static_assert(sizeof...(ElementTypes) > 0,
                   "decorated_tuple is not allowed to be empty");
 
@@ -102,14 +104,9 @@ class decorated_tuple : public abstract_tuple
         return m_decorated->type_at(m_mapping[pos]);
     }
 
-    void const* type_token() const
+    std::type_info const* type_token() const
     {
-        return detail::static_type_list<ElementTypes...>::list;
-    }
-
-    std::type_info const* impl_type() const
-    {
-        return detail::static_type_list<ElementTypes...>::list;
+        return static_type_list<ElementTypes...>::list;
     }
 
  private:
@@ -118,7 +115,8 @@ class decorated_tuple : public abstract_tuple
     vector_type m_mapping;
 
     decorated_tuple(cow_pointer_type d, vector_type const& v)
-        : m_decorated(std::move(d)), m_mapping(v)
+        : super(tuple_impl_info::statically_typed)
+        , m_decorated(std::move(d)), m_mapping(v)
     {
 #       ifdef CPPA_DEBUG
         cow_pointer_type const& ptr = m_decorated; // prevent detaching
@@ -129,7 +127,7 @@ class decorated_tuple : public abstract_tuple
     }
 
     decorated_tuple(cow_pointer_type d, size_t offset)
-        : m_decorated(std::move(d))
+        : super(tuple_impl_info::statically_typed), m_decorated(std::move(d))
     {
 #       ifdef CPPA_DEBUG
         cow_pointer_type const& ptr = m_decorated; // prevent detaching

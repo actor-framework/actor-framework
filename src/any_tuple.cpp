@@ -34,51 +34,6 @@
 
 namespace {
 
-/*
-struct offset_decorator : cppa::detail::abstract_tuple
-{
-
-    typedef cppa::cow_ptr<cppa::detail::abstract_tuple> ptr_type;
-
-    offset_decorator(ptr_type const& decorated, size_t offset)
-        : m_offset(offset)
-        , m_decorated(decorated)
-    {
-    }
-
-    void* mutable_at(size_t pos)
-    {
-        return m_decorated->mutable_at(pos + m_offset);
-    }
-
-    size_t size() const
-    {
-        return m_decorated->size() - m_offset;
-    }
-
-    abstract_tuple* copy() const
-    {
-        return new offset_decorator(m_decorated, m_offset);
-    }
-
-    const void* at(size_t pos) const
-    {
-        return m_decorated->at(pos + m_offset);
-    }
-
-    const cppa::uniform_type_info* type_at(size_t pos) const
-    {
-        return m_decorated->type_at(pos + m_offset);
-    }
-
- private:
-
-    size_t m_offset;
-    ptr_type m_decorated;
-
-};
-*/
-
 inline cppa::detail::empty_tuple* s_empty_tuple()
 {
     return cppa::detail::singleton_manager::get_empty_tuple();
@@ -129,11 +84,6 @@ const void* any_tuple::at(size_t p) const
 const uniform_type_info* any_tuple::type_at(size_t p) const
 {
     return m_vals->type_at(p);
-}
-
-const cow_ptr<detail::abstract_tuple>& any_tuple::vals() const
-{
-    return m_vals;
 }
 
 bool any_tuple::equals(any_tuple const& other) const

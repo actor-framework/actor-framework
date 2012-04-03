@@ -57,6 +57,8 @@ class tuple_view : public abstract_tuple
     static_assert(sizeof...(ElementTypes) > 0,
                   "tuple_vals is not allowed to be empty");
 
+    typedef abstract_tuple super;
+
  public:
 
     typedef tdata<ElementTypes*...> data_type;
@@ -69,7 +71,10 @@ class tuple_view : public abstract_tuple
     /**
      * @warning @p tuple_view does @b NOT takes ownership for given pointers
      */
-    tuple_view(ElementTypes*... args) : m_data(args...) { }
+    tuple_view(ElementTypes*... args)
+        : super(tuple_impl_info::statically_typed), m_data(args...)
+    {
+    }
 
     inline data_type& data()
     {
@@ -112,12 +117,7 @@ class tuple_view : public abstract_tuple
         return m_types[pos];
     }
 
-    void const* type_token() const
-    {
-        return detail::static_type_list<ElementTypes...>::list;
-    }
-
-    std::type_info const* impl_type() const
+    std::type_info const* type_token() const
     {
         return detail::static_type_list<ElementTypes...>::list;
     }

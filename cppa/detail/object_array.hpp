@@ -42,13 +42,13 @@ namespace cppa { namespace detail {
 class object_array : public abstract_tuple
 {
 
-    std::vector<object> m_elements;
+    typedef abstract_tuple super;
 
  public:
 
     using abstract_tuple::const_iterator;
 
-    object_array() = default;
+    object_array();
     object_array(object_array&&) = default;
     object_array(object_array const&) = default;
 
@@ -68,9 +68,9 @@ class object_array : public abstract_tuple
 
     uniform_type_info const* type_at(size_t pos) const;
 
-    void const* type_token() const;
+ private:
 
-    std::type_info const* impl_type() const;
+    std::vector<object> m_elements;
 
 };
 

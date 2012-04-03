@@ -39,6 +39,15 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
                && std::equal(begin(), end(), other.begin(), detail::full_eq_v3));
 }
 
-abstract_tuple::abstract_tuple(abstract_tuple const&) : ref_counted() { }
+abstract_tuple::abstract_tuple(abstract_tuple const& other)
+    : ref_counted()
+    , m_impl_type(other.m_impl_type)
+{
+}
+
+std::type_info const* abstract_tuple::type_token() const
+{
+    return &typeid(void);
+}
 
 } } // namespace cppa::detail

@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include "cppa/to_string.hpp"
+
 #include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/partial_function.hpp"
@@ -66,11 +68,23 @@ auto partial_function::get_cache_entry(any_tuple const& value) -> cache_entry&
     // if we didn't found a cache entry ...
     if (i == end || i->first != m_dummy.first)
     {
-        // ... create one (store all invokables with matching types)
+        // ... create one
         cache_entry tmp;
-        for (auto f = m_funs.begin(); f != m_funs.end(); ++f)
+        if (value.impl_type() == detail::tuple_impl_info::statically_typed)
         {
-            if (f->types_match(value)) tmp.push_back(f.ptr());
+            // use static type information for optimal caching
+            for (auto f = m_funs.begin(); f != m_funs.end(); ++f)
+            {
+                if (f->types_match(value)) tmp.push_back(f.ptr());
+            }
+        }
+        else
+        {
+            // "dummy" cache entry with all functions (dynamically typed tuple)
+            for (auto f = m_funs.begin(); f != m_funs.end(); ++f)
+            {
+                tmp.push_back(f.ptr());
+            }
         }
         // m_cache is always sorted,
         // due to emplace(upper_bound, ...) insertions
@@ -79,20 +93,31 @@ auto partial_function::get_cache_entry(any_tuple const& value) -> cache_entry&
     return i->second;
 }
 
-void partial_function::operator()(any_tuple const& value)
+void partial_function::operator()(any_tuple value)
 {
+    using detail::invokable;
     auto& v = get_cache_entry(value);
-    (void) std::any_of(
-                v.begin(), v.end(),
-                [&](detail::invokable* i) { return i->unsafe_invoke(value); });
+    if (value.impl_type() == detail::tuple_impl_info::statically_typed)
+    {
+        std::any_of(v.begin(), v.end(),
+                    [&](invokable* i) { return i->unsafe_invoke(value); });
+    }
+    else
+    {
+        std::any_of(v.begin(), v.end(),
+                    [&](invokable* i) { return i->invoke(value); });
+    }
 }
 
-detail::invokable const* partial_function::definition_at(any_tuple const& value)
+detail::invokable const* partial_function::definition_at(any_tuple value)
 {
+    using detail::invokable;
     auto& v = get_cache_entry(value);
-    auto i = std::find_if(
-                v.begin(), v.end(),
-                [&](detail::invokable* i) { return i->could_invoke(value); });
+    auto i = (value.impl_type() == detail::tuple_impl_info::statically_typed)
+             ? std::find_if(v.begin(), v.end(),
+                            [&](invokable* i) { return i->could_invoke(value);})
+             : std::find_if(v.begin(), v.end(),
+                            [&](invokable* i) { return i->invoke(value); });
     return (i != v.end()) ? *i : nullptr;
 }
 
@@ -101,15 +126,20 @@ bool partial_function::defined_at(any_tuple const& value)
     return definition_at(value) != nullptr;
 }
 
-detail::intermediate* partial_function::get_intermediate(any_tuple const& value)
+detail::intermediate* partial_function::get_intermediate(any_tuple value)
 {
     detail::intermediate* result = nullptr;
-    for (auto& i : get_cache_entry(value))
+    if (value.impl_type() == detail::tuple_impl_info::statically_typed)
     {
-        if ((result = i->get_unsafe_intermediate(value)) != nullptr)
-        {
-            return result;
-        }
+        for (auto& i : get_cache_entry(value))
+            if ((result = i->get_unsafe_intermediate(value)) != nullptr)
+                return result;
+    }
+    else
+    {
+        for (auto& i : get_cache_entry(value))
+            if ((result = i->get_intermediate(value)) != nullptr)
+                return result;
     }
     return nullptr;
 }

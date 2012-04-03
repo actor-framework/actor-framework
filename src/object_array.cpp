@@ -32,6 +32,10 @@
 
 namespace cppa { namespace detail {
 
+object_array::object_array() : super(tuple_impl_info::dynamically_typed)
+{
+}
+
 void object_array::push_back(object const& what)
 {
     m_elements.push_back(what);
@@ -65,16 +69,6 @@ void const* object_array::at(size_t pos) const
 uniform_type_info const* object_array::type_at(size_t pos) const
 {
     return m_elements[pos].type();
-}
-
-void const* object_array::type_token() const
-{
-    return &typeid(object_array);
-}
-
-std::type_info const* object_array::impl_type() const
-{
-    return &typeid(object_array);
 }
 
 } } // namespace cppa::detail

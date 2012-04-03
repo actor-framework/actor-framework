@@ -121,19 +121,19 @@ class tuple
 
     inline static tuple from(cow_ptr_type ptr)
     {
-        return {priv_ctor(), std::move(ptr)};
+        return {priv_ctor{}, std::move(ptr)};
     }
 
     inline static tuple from(cow_ptr_type ptr,
                              util::fixed_vector<size_t, num_elements> const& mv)
     {
-        return {priv_ctor(), decorated_type::create(std::move(ptr), mv)};
+        return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
     }
 
     inline static tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
     {
         CPPA_REQUIRE(offset > 0);
-        return {priv_ctor(), decorated_type::create(std::move(ptr), offset)};
+        return {priv_ctor{}, decorated_type::create(std::move(ptr), offset)};
     }
 
     /**

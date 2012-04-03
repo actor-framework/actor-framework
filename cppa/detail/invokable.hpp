@@ -47,9 +47,6 @@
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/intermediate.hpp"
 
-// forward declaration
-namespace cppa { class any_tuple; class partial_function; }
-
 namespace cppa { namespace detail {
 
 class invokable
@@ -65,29 +62,113 @@ class invokable
     inline invokable() : next(nullptr) { }
     virtual ~invokable();
 
-    virtual bool invoke(any_tuple const&) const;
-    // Suppress type checking.
-    virtual bool unsafe_invoke(any_tuple const& value) const;
     // Checks whether the types of @p value match the pattern.
     virtual bool types_match(any_tuple const& value) const;
     // Checks whether this invokable could be invoked with @p value.
     virtual bool could_invoke(any_tuple const& value) const;
+
+    // Type checking.
+    virtual bool invoke(any_tuple& value) const;
+    // Suppress type checking.
+    virtual bool unsafe_invoke(any_tuple& value) const;
+
     // Prepare this invokable.
-    virtual intermediate* get_intermediate(any_tuple const& value);
+    virtual intermediate* get_intermediate(any_tuple& value);
     // Prepare this invokable and suppress type checking.
-    virtual intermediate* get_unsafe_intermediate(any_tuple const& value);
+    virtual intermediate* get_unsafe_intermediate(any_tuple& value);
 
 };
 
-template<class Tuple, class Pattern>
-struct abstract_invokable : public invokable
+/*
+ * @tparam Fun Function or functor
+ * @tparam FunArgs Type list of functor parameters *without* any qualifiers
+ */
+template<typename Fun, class FunArgs, class TupleTypes>
+struct iimpl : intermediate
+{
+    typedef Fun functor_type;
+    typedef typename tuple_from_type_list<TupleTypes>::type tuple_type;
+    functor_type m_fun;
+    tuple_type m_default_args;
+    tuple_type m_args;
+    template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
+    void invoke()
+    {
+        util::apply_tuple(m_fun, m_args);
+        // "forget" arguments after invocation
+        m_args = m_default_args;
+    }
+    inline intermediate* prepare(option<tuple_type>&& tup)
+    {
+        if (tup)
+        {
+            m_args = std::move(*tup);
+            return this;
+        }
+        return nullptr;
+    }
+    inline bool operator()(option<tuple_type>&& tup) const
+    {
+        if (tup)
+        {
+            util::apply_tuple(m_fun, *tup);
+            return true;
+        }
+        return false;
+    }
+};
+
+template<typename Fun, class TupleTypes>
+struct iimpl<Fun, util::type_list<>, TupleTypes> : intermediate
+{
+    typedef Fun functor_type;
+    functor_type m_fun;
+    template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
+    void invoke() { m_fun(); }
+    inline intermediate* prepare(bool result) // result passed by policy
+    {
+        return result ? this : nullptr;
+    }
+    inline bool operator()(bool result) const // result passed by policy
+    {
+        if (result) m_fun();
+        return result;
+    }
+};
+
+template<typename Fun, class TupleTypes>
+struct iimpl<Fun, util::type_list<any_tuple>, TupleTypes> : intermediate
+{
+    typedef Fun functor_type;
+    functor_type m_fun;
+    any_tuple m_arg;
+    template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
+    void invoke() { m_fun(m_arg); m_arg = any_tuple{}; }
+    inline intermediate* prepare(any_tuple arg)
+    {
+        m_arg = std::move(arg);
+        return this;
+    }
+    inline bool operator()(any_tuple arg) const
+    {
+        m_fun(arg);
+        return true;
+    }
+};
+
+enum mapping_policy
+{
+    do_not_map,
+    map_to_bool,
+    map_to_option
+};
+
+template<mapping_policy, class Pattern>
+struct pattern_policy
 {
     Pattern m_pattern;
-    abstract_invokable() { }
     template<typename... Args>
-    abstract_invokable(Args&&... args) : m_pattern(std::forward<Args>(args)...)
-    {
-    }
+    pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
     bool types_match(any_tuple const& value) const
     {
         return matches_types(value, m_pattern);
@@ -96,176 +177,191 @@ struct abstract_invokable : public invokable
     {
         return matches(value, m_pattern);
     }
+    any_tuple map(any_tuple& value) const
+    {
+        return std::move(value);
+    }
+    any_tuple map_unsafe(any_tuple& value) const
+    {
+        return std::move(value);
+    }
 };
 
-template<bool CheckValues, size_t NumArgs, typename Fun, class Tuple, class Pattern>
-class invokable_impl : public abstract_invokable<Tuple, Pattern>
+template<class Pattern>
+struct pattern_policy<map_to_option, Pattern>
 {
-
-    typedef abstract_invokable<Tuple, Pattern> super;
-
-    template<typename T>
-    inline bool invoke_impl(option<T>&& tup) const
+    Pattern m_pattern;
+    template<typename... Args>
+    pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
+    bool types_match(any_tuple const& value) const
     {
-        if (tup)
-        {
-            util::apply_tuple(m_iimpl.m_fun, *tup);
-            return true;
-        }
-        return false;
+        return matches_types(value, m_pattern);
     }
-
-    template<typename T>
-    inline intermediate* get_intermediate_impl(option<T>&& tup)
+    bool could_invoke(any_tuple const& value) const
     {
-        if (tup)
-        {
-            m_iimpl.m_args = std::move(*tup);
-            return &m_iimpl;
-        }
-        return nullptr;
+        return matches(value, m_pattern);
     }
-
- protected:
-
-    struct iimpl : intermediate
+    auto map(any_tuple& value) const
+         -> decltype(moving_tuple_cast(value, m_pattern))
     {
-        Fun m_fun;
-        Tuple m_args;
-        template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
-        void invoke() { util::apply_tuple(m_fun, m_args); }
+        auto result = moving_tuple_cast(value, m_pattern);
+        return result;
     }
-    m_iimpl;
-
- public:
-
-    template<typename F, typename... Args>
-    invokable_impl(F&& fun, Args&&... args)
-        : super(std::forward<Args>(args)...),  m_iimpl(std::forward<F>(fun))
+    auto map_unsafe(any_tuple& value) const
+         -> decltype(unsafe_tuple_cast(value, m_pattern))
     {
+        return unsafe_tuple_cast(value, m_pattern);
     }
-
-    bool invoke(any_tuple const& value) const
-    {
-        return invoke_impl(tuple_cast(value, this->m_pattern));
-    }
-
-    bool unsafe_invoke(any_tuple const& value) const
-    {
-        return invoke_impl(unsafe_tuple_cast(value, this->m_pattern));
-    }
-
-    intermediate* get_intermediate(any_tuple const& value)
-    {
-        return get_intermediate_impl(tuple_cast(value, this->m_pattern));
-    }
-
-    intermediate* get_unsafe_intermediate(any_tuple const& value)
-    {
-        return get_intermediate_impl(unsafe_tuple_cast(value, this->m_pattern));
-    }
-
 };
 
-template<size_t NumArgs, typename Fun, class Tuple, class Pattern>
-struct invokable_impl<false, NumArgs, Fun, Tuple, Pattern> : public invokable_impl<true, NumArgs, Fun, Tuple, Pattern>
+template<class Pattern>
+struct pattern_policy<map_to_bool, Pattern>
 {
-    typedef invokable_impl<true, NumArgs, Fun, Tuple, Pattern> super;
-    template<typename F>
-    invokable_impl(F&& fun) : super(std::forward<F>(fun))
+    Pattern m_pattern;
+    template<typename... Args>
+    pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
+    bool types_match(any_tuple const& value) const
     {
+        return matches_types(value, m_pattern);
     }
-    bool unsafe_invoke(any_tuple const& value) const
+    bool could_invoke(any_tuple const& value) const
     {
-        auto tup = forced_tuple_cast(value, this->m_pattern);
-        util::apply_tuple((this->m_iimpl).m_fun, tup);
+        return matches(value, m_pattern);
+    }
+    bool map(any_tuple& value) const
+    {
+        return could_invoke(value);
+    }
+    bool map_unsafe(any_tuple& value) const
+    {
+        return could_invoke(value);
+    }
+};
+
+struct dummy_policy
+{
+    inline bool types_match(any_tuple const&) const
+    {
         return true;
     }
-    intermediate* get_unsafe_intermediate(any_tuple const& value)
+    inline bool could_invoke(any_tuple const&) const
     {
-        (this->m_iimpl).m_args = forced_tuple_cast(value, this->m_pattern);
-        return &(this->m_iimpl);
+        return true;
+    }
+    inline any_tuple map(any_tuple& value) const
+    {
+        return std::move(value);
+    }
+    inline any_tuple map_unsafe(any_tuple& value) const
+    {
+        return std::move(value);
     }
 };
 
-template<typename Fun, class Tuple, class Pattern>
-class invokable_impl<true, 0, Fun, Tuple, Pattern> : public abstract_invokable<Tuple, Pattern>
+template<class IntermediateImpl, class Policy>
+struct invokable_impl : public invokable
 {
 
-    typedef abstract_invokable<Tuple, Pattern> super;
+    IntermediateImpl m_ii;
+    Policy m_policy;
 
-    template<typename... P>
-    inline bool unsafe_vmatch(any_tuple const& t, pattern<P...> const& p) const
+    template<typename Arg0, typename... Args>
+    invokable_impl(Arg0&& arg0, Args&&... args)
+        : m_ii(std::forward<Arg0>(arg0))
+        , m_policy(std::forward<Args>(args)...)
     {
-        return matcher<pattern<P...>::wildcard_pos, P...>::vmatch(t, p);
     }
 
- protected:
+    bool invoke(any_tuple& value) const
+    {
+        return m_ii(m_policy.map(value));
+    }
 
-    struct iimpl : intermediate
+    bool unsafe_invoke(any_tuple& value) const
     {
-        Fun m_fun;
-        template<typename F> iimpl(F&& fun) : m_fun(std::forward<F>(fun)) { }
-        void invoke() { m_fun(); }
-        inline bool operator()() const { m_fun(); return true; }
+        return m_ii(m_policy.map_unsafe(value));
     }
-    m_iimpl;
 
- public:
+    bool types_match(any_tuple const& value) const
+    {
+        return m_policy.types_match(value);
+    }
 
-    template<typename F, typename... Args>
-    invokable_impl(F&& fun, Args&&... args)
-        : super(std::forward<Args>(args)...), m_iimpl(std::forward<F>(fun))
+    bool could_invoke(any_tuple const& value) const
     {
+        return m_policy.could_invoke(value);
     }
-    bool invoke(any_tuple const& value) const
+
+    intermediate* get_intermediate(any_tuple& value)
     {
-        return matches(value, this->m_pattern) ? m_iimpl() : false;
+        return m_ii.prepare(m_policy.map(value));
     }
-    bool unsafe_invoke(any_tuple const& value) const
+
+    intermediate* get_unsafe_intermediate(any_tuple& value)
     {
-        return unsafe_vmatch(value, this->m_pattern) ? m_iimpl() : false;
+        return m_ii.prepare(m_policy.map_unsafe(value));
     }
-    intermediate* get_intermediate(any_tuple const& value)
-    {
-        return matches(value, this->m_pattern) ? &m_iimpl : nullptr;
-    }
-    intermediate* get_unsafe_intermediate(any_tuple const& value)
-    {
-        return unsafe_vmatch(value, this->m_pattern) ? &m_iimpl : nullptr;
-    }
+
 };
 
-template<typename Fun, class Tuple, class Pattern>
-struct invokable_impl<false, 0, Fun, Tuple, Pattern> : public invokable_impl<true, 0, Fun, Tuple, Pattern>
+template<class ArgTypes>
+constexpr mapping_policy get_mapping_policy()
 {
-    typedef invokable_impl<true, 0, Fun, Tuple, Pattern> super;
-    template<typename... Args>
-    invokable_impl(Args&&... args) : super(std::forward<Args>(args)...) { }
-    bool unsafe_invoke(any_tuple const&) const
-    {
-        return (this->m_iimpl)();
-    }
-    intermediate* get_unsafe_intermediate(any_tuple const&)
-    {
-        return &(this->m_iimpl);
-    }
+    return (ArgTypes::size == 0)
+            ? map_to_bool
+            : ((   std::is_same<typename ArgTypes::head, any_tuple>::value
+                && ArgTypes::size == 1)
+               ? do_not_map
+               : map_to_option);
+}
+
+template<class Container>
+struct filtered;
+
+template<typename... Ts>
+struct filtered<util::type_list<Ts...> >
+{
+    typedef typename util::tl_filter_not<util::type_list<Ts...>, is_anything>::type
+            types;
 };
+
+template<typename... Ts>
+struct filtered<pattern<Ts...> >
+{
+    typedef typename filtered<util::type_list<Ts...>>::types types;
+};
+
 
 template<typename Fun, class Pattern>
 struct select_invokable_impl
 {
-    typedef typename util::get_arg_types<Fun>::types arg_types;
-    typedef typename Pattern::filtered_types filtered_types;
-    typedef typename tuple_from_type_list<filtered_types>::type tuple_type;
-    typedef invokable_impl<true, arg_types::size, Fun, tuple_type, Pattern> type1;
-    typedef invokable_impl<false, arg_types::size, Fun, tuple_type, Pattern> type2;
+    typedef typename util::get_arg_types<Fun>::types qualified_arg_types;
+    typedef typename util::tl_apply<qualified_arg_types, util::rm_ref>::type
+            arg_types;
+    static constexpr mapping_policy mp = get_mapping_policy<arg_types>();
+    typedef invokable_impl<iimpl<Fun, arg_types, typename filtered<Pattern>::types>,
+                           pattern_policy<mp, Pattern> > type;
+};
+
+template<typename Fun>
+struct select_invokable_impl<Fun, pattern<anything> >
+{
+    typedef typename util::get_arg_types<Fun>::types qualified_arg_types;
+    typedef typename util::tl_apply<qualified_arg_types, util::rm_ref>::type
+            arg_types;
+    typedef typename util::rm_ref<typename arg_types::head>::type arg0;
+    static_assert(arg_types::size < 2, "functor has too many arguments");
+    static_assert(   arg_types::size == 0
+                  || std::is_same<any_tuple, arg0>::value,
+                  "bad signature");
+    typedef invokable_impl<iimpl<Fun, arg_types, util::type_list<> >,
+                           dummy_policy> type;
 };
 
 template<class Pattern, typename Fun, typename Data>
 std::unique_ptr<invokable> get_invokable_impl(Fun&& fun, Data&& dt)
 {
-    typedef typename select_invokable_impl<Fun, Pattern>::type1 result;
+    typedef typename select_invokable_impl<Fun, Pattern>::type result;
     return std::unique_ptr<invokable>(
                 new result(std::forward<Fun>(fun), std::forward<Data>(dt)));
 }
@@ -273,7 +369,7 @@ std::unique_ptr<invokable> get_invokable_impl(Fun&& fun, Data&& dt)
 template<class Pattern, typename Fun>
 std::unique_ptr<invokable> get_invokable_impl(Fun&& fun)
 {
-    typedef typename select_invokable_impl<Fun, Pattern>::type2 result;
+    typedef typename select_invokable_impl<Fun, typename Pattern::types>::type result;
     return std::unique_ptr<invokable>(new result(std::forward<Fun>(fun)));
 }
 

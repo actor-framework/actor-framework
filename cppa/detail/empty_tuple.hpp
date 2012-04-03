@@ -40,14 +40,14 @@ struct empty_tuple : abstract_tuple
 
     using abstract_tuple::const_iterator;
 
+    empty_tuple();
     size_t size() const;
     void* mutable_at(size_t);
     abstract_tuple* copy() const;
     void const* at(size_t) const;
     bool equals(abstract_tuple const& other) const;
     uniform_type_info const* type_at(size_t) const;
-    std::type_info const* impl_type() const;
-    void const* type_token() const;
+    std::type_info const* type_token() const;
 
 };
 

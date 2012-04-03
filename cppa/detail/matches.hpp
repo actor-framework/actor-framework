@@ -46,18 +46,14 @@ struct matcher<wildcard_position::nil, T...>
 {
     static inline bool tmatch(any_tuple const& tup)
     {
-        // match implementation type if possible
-        auto impl = tup.impl_type();
-        // the impl_type of both decorated_tuple and tuple_vals
-        // is &typeid(type_list<T...>)
-        auto tinf = detail::static_type_list<T...>::list;
-        if (impl == tinf || *impl == *tinf)
+        if (tup.impl_type() == tuple_impl_info::statically_typed)
         {
-            return true;
+            // statically typed tuples return &typeid(type_list<T...>)
+            // as type token
+            return typeid(util::type_list<T...>) == *(tup.type_token());
         }
-        // always use a full dynamic match for object arrays
-        else if (*impl == typeid(detail::object_array)
-                 && tup.size() == sizeof...(T))
+        // always use a full dynamic match for dynamic typed tuples
+        else if (tup.size() == sizeof...(T))
         {
             auto& tarr = detail::static_types_array<T...>::arr;
             return std::equal(tup.begin(), tup.end(), tarr.begin(),
@@ -479,12 +475,36 @@ bool matches(any_tuple const& tup, pattern<Ts...> const& pn,
                                                                      mv);
 }
 
+// support for type_list based matching
+template<typename... Ts>
+inline bool matches(any_tuple const& tup, util::type_list<Ts...> const&)
+{
+    return matches<Ts...>(tup);
+}
+
+template<typename... Ts>
+inline bool matches(any_tuple const& tup, util::type_list<Ts...> const&,
+                    util::fixed_vector<
+                                        size_t,
+                                        util::tl_count_not<
+                                            util::type_list<Ts...>,
+                                            is_anything>::value>& mv)
+{
+    return matches<Ts...>(mv);
+}
+
 /*
  * @brief Returns true if this tuple matches the pattern <tt>{Ts...}</tt>
  *        (does not match for values).
  */
 template<typename... Ts>
 inline bool matches_types(any_tuple const& tup, pattern<Ts...> const&)
+{
+    return matches<Ts...>(tup);
+}
+
+template<typename... Ts>
+inline bool matches_types(any_tuple const& tup, util::type_list<Ts...> const&)
 {
     return matches<Ts...>(tup);
 }

@@ -65,6 +65,15 @@ using std::endl;
 
 using namespace cppa;
 
+std::vector<std::string> split(std::string const& str, char delim)
+{
+    std::vector<std::string> result;
+    std::stringstream strs{str};
+    std::string tmp;
+    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+    return result;
+}
+
 void print_node_id()
 {
     auto pinfo = cppa::process_information::get();
@@ -76,15 +85,6 @@ void print_node_id()
                                  << ".42@"
                                  << node_id_hash
                                  << endl;
-}
-
-std::vector<std::string> split(std::string const& str, char delim)
-{
-    std::vector<std::string> result;
-    std::stringstream strs{str};
-    std::string tmp;
-    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
-    return result;
 }
 
 std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1)
@@ -121,16 +121,6 @@ void usage(char const* argv0)
 int main(int argc, char** argv)
 {
     /*
-    std::string abc = "abc";
-    cout << "is_iterable<string> = " << cppa::util::is_iterable<std::string>::value << endl;
-    match(abc)
-    (
-        on("abc") >> []()
-        {
-            cout << "ABC" << endl;
-        }
-    );
-
     match_each(argv + 1, argv + argc)
     (
         on_arg_match >> [](std::string const& str)
@@ -145,11 +135,15 @@ int main(int argc, char** argv)
         {
             cout << "key = \"" << key << "\", value = \"" << value << "\""
                  << endl;
+        },
+        others() >> [](any_tuple const& oops)
+        {
+            cout << "not a key value pair: " << to_string(oops) << endl;
         }
     );
 
     return 0;
-    */
+    //*/
 
     auto args = get_kv_pairs(argc, argv);
     match_each(args)

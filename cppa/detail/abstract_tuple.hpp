@@ -32,6 +32,7 @@
 #define ABSTRACT_TUPLE_HPP
 
 #include <iterator>
+#include <typeinfo>
 
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
@@ -42,11 +43,21 @@
 
 namespace cppa { namespace detail {
 
-struct abstract_tuple : ref_counted
+enum tuple_impl_info
+{
+    statically_typed,
+    dynamically_typed
+};
+
+class abstract_tuple : public ref_counted
 {
 
-    abstract_tuple() = default;
-    abstract_tuple(abstract_tuple const&);
+    tuple_impl_info m_impl_type;
+
+ public:
+
+    inline abstract_tuple(tuple_impl_info tii) : m_impl_type(tii) { }
+    abstract_tuple(abstract_tuple const& other);
 
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
@@ -57,12 +68,16 @@ struct abstract_tuple : ref_counted
     virtual void const* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
 
-    // identifies the type of the implementation, this is NOT the
-    // typeid of the implementation class
-    virtual std::type_info const* impl_type() const = 0;
+    // Identifies the type of the implementation.
+    // A statically typed tuple implementation can use some optimizations,
+    // e.g., "impl_type() == statically_typed" implies that type_token()
+    // identifies all possible instances of a given tuple implementation
+    inline tuple_impl_info impl_type() const { return m_impl_type; }
 
     // uniquely identifies this category (element types) of messages
-    virtual void const* type_token() const = 0;
+    // override this member function only if impl_type() == statically_typed
+    // (default returns &typeid(void))
+    virtual std::type_info const* type_token() const;
 
     bool equals(abstract_tuple const& other) const;
 
@@ -151,8 +166,10 @@ struct abstract_tuple : ref_counted
     };
 
     inline const_iterator begin() const { return {this}; }
+    inline const_iterator cbegin() const { return {this}; }
 
     inline const_iterator end() const { return {this, size()}; }
+    inline const_iterator cend() const { return {this, size()}; }
 
 };
 

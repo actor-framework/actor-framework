@@ -118,7 +118,7 @@ int main(int, char**)
     int i = 0;
     receive_while([&]() { return ++i <= 2; })
     (
-        on<bar>() >> [](const bar& val)
+        on<bar>() >> [](bar const& val)
         {
             cout << "bar(foo("
                  << val.f.a() << ","
@@ -126,12 +126,11 @@ int main(int, char**)
                  << val.i << ")"
                  << endl;
         },
-        on<baz>() >> []()
+        on<baz>() >> [](baz const& val)
         {
-            // prints: @<> ( { baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) ) } )
-            cout << to_string(self->last_dequeued()) << endl;
+            // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
+            cout << to_string(val) << endl;
         }
-
     );
     return 0;
 }

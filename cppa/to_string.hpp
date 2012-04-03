@@ -43,7 +43,7 @@ std::string to_string_impl(void const* what, uniform_type_info const* utype);
 } // namespace detail
 
 /**
- * @brief Serializes a value to a string.
+ * @brief Serializes a value to a string representation.
  * @param what A value of an announced type.
  * @returns A string representation of @p what.
  */

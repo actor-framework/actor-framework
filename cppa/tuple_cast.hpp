@@ -42,10 +42,11 @@
 namespace cppa {
 
 /**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}; moves content
+ *        of @p tup on success.
  */
 template<typename... T>
-auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
+auto moving_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> option<
         typename tuple_from_type_list<
             typename pattern<T...>::filtered_types
@@ -59,28 +60,70 @@ auto tuple_cast(any_tuple const& tup, pattern<T...> const& p)
 }
 
 /**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}; moves content
+ *        of @p tup on success.
  */
 template<typename... T>
-auto tuple_cast(any_tuple const& tup)
+auto moving_tuple_cast(any_tuple& tup)
     -> option<
         typename tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
                                          is_anything>::type
         >::type>
 {
-    typedef decltype(tuple_cast<T...>(tup)) result_type;
+    typedef decltype(moving_tuple_cast<T...>(tup)) result_type;
     typedef typename result_type::value_type tuple_type;
     static constexpr auto impl =
             get_wildcard_position<util::type_list<T...>>();
     return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup);
 }
 
+template<typename... T>
+auto moving_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
+    -> decltype(moving_tuple_cast<T...>(tup))
+{
+    return moving_tuple_cast<T...>(tup);
+}
+
+/**
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ */
+template<typename... T>
+auto tuple_cast(any_tuple tup, pattern<T...> const& p)
+     -> option<
+          typename tuple_from_type_list<
+            typename pattern<T...>::filtered_types
+        >::type>
+{
+    return moving_tuple_cast(tup, p);
+}
+
+/**
+ * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
+ */
+template<typename... T>
+auto tuple_cast(any_tuple tup)
+     -> option<
+          typename tuple_from_type_list<
+            typename util::tl_filter_not<util::type_list<T...>,
+                                         is_anything>::type
+        >::type>
+{
+    return moving_tuple_cast<T...>(tup);
+}
+
+template<typename... T>
+auto tuple_cast(any_tuple tup, util::type_list<T...> const&)
+    -> decltype(tuple_cast<T...>(tup))
+{
+    return moving_tuple_cast<T...>(tup);
+}
+
 /////////////////////////// for in-library use only! ///////////////////////////
 
-// cast using a pattern; does not perform type checking
+// (moving) cast using a pattern; does not perform type checking
 template<typename... T>
-auto unsafe_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
+auto unsafe_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> option<
         typename tuple_from_type_list<
             typename pattern<T...>::filtered_types
@@ -93,9 +136,16 @@ auto unsafe_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
     return detail::tuple_cast_impl<impl, tuple_type, T...>::unsafe(tup, p);
 }
 
+template<typename... T>
+auto unsafe_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
+    -> decltype(tuple_cast<T...>(tup))
+{
+    return tuple_cast<T...>(tup);
+}
+
 // cast using a pattern; does neither perform type checking nor checks values
 template<typename... T>
-auto forced_tuple_cast(any_tuple const& tup, pattern<T...> const& p)
+auto forced_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> typename tuple_from_type_list<
             typename pattern<T...>::filtered_types
        >::type

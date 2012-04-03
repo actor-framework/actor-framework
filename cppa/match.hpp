@@ -38,23 +38,29 @@ namespace cppa { namespace detail {
 
 struct match_helper
 {
+    match_helper(match_helper const&) = delete;
+    match_helper& operator=(match_helper const&) = delete;
     any_tuple tup;
-    match_helper(any_tuple t) : tup(std::move(t)) { }
+    match_helper(any_tuple&& t) : tup(std::move(t)) { }
+    match_helper(match_helper&&) = default;
     template<class... Args>
     void operator()(partial_function&& pf, Args&&... args)
     {
         partial_function tmp;
         tmp.splice(std::move(pf), std::forward<Args>(args)...);
-        tmp(tup);
+        tmp(std::move(tup));
     }
 };
 
 template<typename Iterator>
 struct match_each_helper
 {
+    match_each_helper(match_each_helper const&) = delete;
+    match_each_helper& operator=(match_each_helper const&) = delete;
     Iterator i;
     Iterator e;
     match_each_helper(Iterator first, Iterator last) : i(first), e(last) { }
+    match_each_helper(match_each_helper&&) = default;
     template<typename... Args>
     void operator()(partial_function&& arg0, Args&&... args)
     {
@@ -70,11 +76,17 @@ struct match_each_helper
 template<typename Iterator, typename Projection>
 struct pmatch_each_helper
 {
+    pmatch_each_helper(pmatch_each_helper const&) = delete;
+    pmatch_each_helper& operator=(pmatch_each_helper const&) = delete;
     Iterator i;
     Iterator e;
     Projection p;
+    pmatch_each_helper(pmatch_each_helper&&) = default;
     template<typename PJ>
-    pmatch_each_helper(Iterator first, Iterator last, PJ&& proj) : i(first), e(last), p(std::forward<PJ>(proj)) { }
+    pmatch_each_helper(Iterator first, Iterator last, PJ&& proj)
+        : i(first), e(last), p(std::forward<PJ>(proj))
+    {
+    }
     template<typename... Args>
     void operator()(partial_function&& arg0, Args&&... args)
     {
@@ -90,6 +102,11 @@ struct pmatch_each_helper
 } } // namespace cppa::detail
 
 namespace cppa {
+
+//inline detail::match_helper match(any_tuple t)
+//{
+//    return std::move(t);
+//}
 
 /**
  * @brief Match expression.

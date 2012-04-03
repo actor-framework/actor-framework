@@ -59,11 +59,14 @@ class tuple_vals : public abstract_tuple
 
     typedef types_array<ElementTypes...> element_types;
 
-    tuple_vals() : m_data() { }
+    tuple_vals() : super(tuple_impl_info::statically_typed), m_data() { }
 
-    tuple_vals(tuple_vals const& other) : super(), m_data(other.m_data) { }
+    tuple_vals(tuple_vals const&) = default;
 
-    tuple_vals(ElementTypes const&... args) : m_data(args...) { }
+    tuple_vals(ElementTypes const&... args)
+        : super(tuple_impl_info::statically_typed), m_data(args...)
+    {
+    }
 
     inline data_type& data()
     {
@@ -114,12 +117,7 @@ class tuple_vals : public abstract_tuple
         return abstract_tuple::equals(other);
     }
 
-    void const* type_token() const
-    {
-        return detail::static_type_list<ElementTypes...>::list;
-    }
-
-    std::type_info const* impl_type() const
+    std::type_info const* type_token() const
     {
         return detail::static_type_list<ElementTypes...>::list;
     }

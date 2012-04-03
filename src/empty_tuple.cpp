@@ -33,6 +33,10 @@
 
 namespace cppa { namespace detail {
 
+empty_tuple::empty_tuple() : abstract_tuple(tuple_impl_info::statically_typed)
+{
+}
+
 size_t empty_tuple::size() const
 {
     return 0;
@@ -63,14 +67,9 @@ bool empty_tuple::equals(const abstract_tuple& other) const
     return other.size() == 0;
 }
 
-void const* empty_tuple::type_token() const
+std::type_info const* empty_tuple::type_token() const
 {
-    return &typeid(empty_tuple);
-}
-
-std::type_info const* empty_tuple::impl_type() const
-{
-    return &typeid(empty_tuple);
+    return &typeid(util::type_list<>);
 }
 
 } } // namespace cppa::detail

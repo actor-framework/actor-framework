@@ -31,6 +31,8 @@
 #ifndef CONTAINER_TUPLE_VIEW_HPP
 #define CONTAINER_TUPLE_VIEW_HPP
 
+#include <iostream>
+
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
@@ -42,11 +44,14 @@ template<class Container>
 class container_tuple_view : public abstract_tuple
 {
 
+    typedef abstract_tuple super;
+
  public:
 
     typedef typename Container::value_type value_type;
 
-    container_tuple_view(Container* c, bool take_ownership = false) : m_ptr(c)
+    container_tuple_view(Container* c, bool take_ownership = false)
+        : super(tuple_impl_info::dynamically_typed), m_ptr(c)
     {
         CPPA_REQUIRE(c != nullptr);
         if (!take_ownership) m_ptr.get_deleter().disable();
@@ -78,20 +83,9 @@ class container_tuple_view : public abstract_tuple
         return &(*i);
     }
 
-    uniform_type_info const* type_at(size_t pos) const
+    uniform_type_info const* type_at(size_t) const
     {
-        CPPA_REQUIRE(pos < size());
         return static_types_array<value_type>::arr[0];
-    }
-
-    void const* type_token() const
-    {
-        return &(typeid(Container));
-    }
-
-    std::type_info const* impl_type() const
-    {
-        return &(typeid(detail::object_array));
     }
 
  private:
