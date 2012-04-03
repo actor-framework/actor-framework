@@ -149,6 +149,24 @@ class rvalue_builder
 
 };
 
+template<>
+class rvalue_builder<anything>
+{
+
+    typedef pattern<anything> pattern_type;
+
+ public:
+
+    constexpr rvalue_builder() { }
+
+    template<typename F>
+    partial_function operator>>(F&& f)
+    {
+        return get_invokable_impl<pattern_type>(std::forward<F>(f));
+    }
+
+};
+
 class on_the_fly_rvalue_builder
 {
 
