@@ -11,9 +11,121 @@ using namespace cppa;
 using std::vector;
 using std::string;
 
+template<typename T>
+std::function<bool (T const&)> is_any_of(std::vector<T> vec)
+{
+    return [=](T const& value)
+    {
+        return std::any_of(vec.begin(), vec.end(),
+                           [&](T const& v) { return value == v; });
+    };
+}
+
+template<typename T>
+std::function<bool (T const&)> is_none_of(std::vector<T> vec)
+{
+    return [=](T const& value)
+    {
+        return std::none_of(vec.begin(), vec.end(),
+                           [&](T const& v) { return value == v; });
+    };
+}
+
+struct placeholder
+{
+    constexpr placeholder() { }
+    template<typename T>
+    std::function<bool (T const&)> operator<(T const& value) const
+    {
+        return [=](T const& other) { return other < value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> operator<=(T const& value) const
+    {
+        return [=](T const& other) { return other <= value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> operator>(T const& value) const
+    {
+        return [=](T const& other) { return other > value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> operator>=(T const& value) const
+    {
+        return [=](T const& other) { return other >= value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> operator==(T const& value) const
+    {
+        return [=](T const& other) { return other == value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> operator!=(T const& value) const
+    {
+        return [=](T const& other) { return other != value; };
+    }
+    template<typename T>
+    std::function<bool (T const&)> any_of(std::vector<T> vec) const
+    {
+        return [=](T const& value)
+        {
+                 return std::any_of(vec.begin(), vec.end(),
+                                    [&](T const& v) { return value == v; });
+        };
+    }
+    template<typename T>
+    std::function<bool (typename detail::implicit_conversions<T>::type const&)>
+    any_of(std::initializer_list<T> list) const
+    {
+        typedef typename detail::implicit_conversions<T>::type ctype;
+        vector<ctype> vec;
+        for (auto& i : list) vec.emplace_back(i);
+        //vec.insert(vec.begin(), list.begin(), list.end());
+        return [vec](ctype const& value)
+        {
+            return std::any_of(vec.begin(), vec.end(),
+                               [&](ctype const& v) { return value == v; });
+        };
+    }
+    template<typename T>
+    std::function<bool (T const&)> none_of(std::vector<T> vec) const
+    {
+        return [=](T const& value)
+        {
+            return std::none_of(vec.begin(), vec.end(),
+                               [&](T const& v) { return value == v; });
+        };
+    }
+};
+
+static constexpr placeholder _x;
+
+template<typename... Args>
+void _on(Args&&...)
+{
+}
+
 size_t test__match()
 {
     CPPA_TEST(test__match);
+
+    auto xfun = _x.any_of<int>({1, 2, 3});
+    cout << "xfun(4) = " << xfun(4) << endl;
+    cout << "xfun(2) = " << xfun(2) << endl;
+
+    auto lfun = _x < 5;
+    cout << "lfun(4) = " << lfun(4) << endl;
+    cout << "lfun(6) = " << lfun(6) << endl;
+
+    cout << "sizeof(std::function<bool (int const&)>) = "
+         << sizeof(std::function<bool (int const&)>)
+         << endl;
+
+    _on(_x.any_of({"-h", "--help"}), _x == 5);
+
+    auto hfun = _x.any_of({"-h", "--help"});
+    cout << "hfun(-h) = " << hfun("-h") << endl;
+    cout << "hfun(-r) = " << hfun("-r") << endl;
 
     bool invoked = false;
     match("abc")
