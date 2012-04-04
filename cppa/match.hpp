@@ -73,6 +73,26 @@ struct match_each_helper
     }
 };
 
+template<class Container>
+struct copying_match_each_helper
+{
+    copying_match_each_helper(copying_match_each_helper const&) = delete;
+    copying_match_each_helper& operator=(copying_match_each_helper const&) = delete;
+    Container vec;
+    copying_match_each_helper(Container tmp) : vec(std::move(tmp)) { }
+    copying_match_each_helper(copying_match_each_helper&&) = default;
+    template<typename... Args>
+    void operator()(partial_function&& arg0, Args&&... args)
+    {
+        partial_function tmp;
+        tmp.splice(std::move(arg0), std::forward<Args>(args)...);
+        for (auto& i : vec)
+        {
+            tmp(any_tuple::view(i));
+        }
+    }
+};
+
 template<typename Iterator, typename Projection>
 struct pmatch_each_helper
 {
@@ -112,9 +132,9 @@ inline detail::match_helper match(any_tuple t)
  * @brief Match expression.
  */
 template<typename T>
-detail::match_helper match(T& what)
+detail::match_helper match(T&& what)
 {
-    return any_tuple::view(what);
+    return any_tuple::view(std::forward<T>(what));
 }
 
 /**
@@ -125,6 +145,16 @@ auto match_each(Container& what)
      -> detail::match_each_helper<decltype(std::begin(what))>
 {
     return {std::begin(what), std::end(what)};
+}
+
+template<typename T>
+auto match_each(std::initializer_list<T> list)
+    -> detail::copying_match_each_helper<std::vector<typename detail::strip_and_convert<T>::type>>
+{
+    std::vector<typename detail::strip_and_convert<T>::type> vec;
+    vec.reserve(list.size());
+    for (auto& i : list) vec.emplace_back(std::move(i));
+    return vec;
 }
 
 template<typename InputIterator>

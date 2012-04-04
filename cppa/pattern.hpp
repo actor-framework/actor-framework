@@ -45,6 +45,7 @@
 #include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/guard.hpp"
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
@@ -104,6 +105,11 @@ struct cmp_helper
     inline bool operator()(T const& what)
     {
         return what == tup.get_as<T>(i++);
+    }
+    template<typename T>
+    inline bool operator()(std::unique_ptr<util::guard<T> > const& g)
+    {
+        return (*g)(tup.get_as<T>(i++));
     }
     template<typename T>
     inline bool operator()(util::wrapped<T> const&)

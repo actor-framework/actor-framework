@@ -190,6 +190,37 @@ size_t test__pattern()
     );
     CPPA_CHECK_EQUAL(true, invoked);
 
+    pattern<char, short, int, long> p12;
+    pattern<char, short, int, long> p13{char(0), short(1), int(2), long(3)};
+    any_tuple t4 = make_cow_tuple(char(0), short(1), int(2), long(3));
+    CPPA_CHECK((detail::matches(t4, p12)));
+    CPPA_CHECK(p12._matches_values(t4));
+    CPPA_CHECK((detail::matches(t4, p13)));
+    CPPA_CHECK(p13._matches_values(t4));
+
+    invoked = false;
+    match('a')
+    (
+        on<char>() >> [&](char c)
+        {
+            invoked = true;
+            CPPA_CHECK_EQUAL('a', c);
+        }
+    );
+    CPPA_CHECK_EQUAL(true, invoked);
+
+    invoked = false;
+    const char muhaha = 'a';
+    match(muhaha)
+    (
+        on<char>() >> [&](char c)
+        {
+            invoked = true;
+            CPPA_CHECK_EQUAL('a', c);
+        }
+    );
+    CPPA_CHECK_EQUAL(true, invoked);
+
     /*
     CPPA_CHECK(p0(x));
     CPPA_CHECK(p1(x));

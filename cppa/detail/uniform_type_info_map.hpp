@@ -81,7 +81,7 @@ class uniform_type_info_map
     // maps uniform names to uniform type informations
     uti_map m_by_uname;
 
-    // maps sizeof(-integer_type-) to { raw-names-set, uniform-names-set }
+    // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
     int_map m_ints;
 
 };

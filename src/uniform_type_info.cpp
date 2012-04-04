@@ -112,14 +112,14 @@ typedef std::set<std::string> string_set;
 
 template<typename Int>
 void push(std::map<int, std::pair<string_set, string_set>>& ints,
-          std::integral_constant<bool, true>)
+          std::integral_constant<bool, true>) // signed version
 {
     ints[sizeof(Int)].first.insert(raw_name<Int>());
 }
 
 template<typename Int>
 void push(std::map<int, std::pair<string_set, string_set>>& ints,
-          std::integral_constant<bool, false>)
+          std::integral_constant<bool, false>) // unsigned version
 {
     ints[sizeof(Int)].second.insert(raw_name<Int>());
 }
@@ -625,24 +625,18 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 
  public:
 
-    bool equals(const std::type_info& tinfo) const
+    bool equals(std::type_info const& tinfo) const
     {
         // TODO: string comparsion sucks & is slow; find a nicer solution
         auto map_iter = uti_map().int_names().find(sizeof(T));
-        const string_set& st = is_signed<T>::value ? map_iter->second.first
+        string_set const& st = is_signed<T>::value ? map_iter->second.first
                                                    : map_iter->second.second;
-        auto end = st.end();
-        for (auto i = st.begin(); i != end; ++i)
-        {
-            if ((*i) == raw_name(tinfo)) return true;
-        }
-        return false;
+        auto x = raw_name(tinfo);
+        return std::any_of(st.begin(), st.end(),
+                           [&](std::string const& y) { return x == y; });
     }
 
 };
-
-//} } } // namespace cppa::detail::<anonymous>
-//namespace cppa { namespace detail {
 
 using std::is_integral;
 using util::enable_if;
@@ -655,14 +649,12 @@ class uniform_type_info_map_helper
 
     typedef uniform_type_info_map* this_ptr;
 
-    static void insert(this_ptr d, uniform_type_info* uti,
-                       const std::set<std::string>& tnames)
+    static void insert(this_ptr d,
+                       uniform_type_info* uti,
+                       std::set<std::string> const& tnames)
     {
-        if (tnames.empty())
-        {
-            throw std::logic_error("tnames.empty()");
-        }
-        for (const std::string& tname : tnames)
+        CPPA_REQUIRE(tnames.empty() == false);
+        for (std::string const& tname : tnames)
         {
             d->m_by_rname.insert(std::make_pair(tname, uti));
         }
@@ -671,16 +663,15 @@ class uniform_type_info_map_helper
 
     template<typename T>
     static inline void insert(this_ptr d,
-                              const std::set<std::string>& tnames,
+                              std::set<std::string> const& tnames,
                               typename enable_if<is_integral<T>>::type* = 0)
     {
-        //insert(new default_uniform_type_info_impl<T>(), tnames);
         insert(d, new int_tinfo<T>, tnames);
     }
 
     template<typename T>
     static inline void insert(this_ptr d,
-                              const std::set<std::string>& tnames,
+                              std::set<std::string> const& tnames,
                               typename disable_if<is_integral<T>>::type* = 0)
     {
         insert(d, new default_uniform_type_info_impl<T>(), tnames);
@@ -689,7 +680,7 @@ class uniform_type_info_map_helper
     template<typename T>
     static inline void insert(this_ptr d)
     {
-        insert<T>(d, { std::string(raw_name<T>()) });
+        insert<T>(d, {std::string(raw_name<T>())});
     }
 
     static void init(this_ptr d)
@@ -707,6 +698,8 @@ class uniform_type_info_map_helper
         insert(d, new addr_msg_tinfo, {raw_name<detail::addressed_message>() });
         insert(d, new void_type_tinfo, { raw_name<void_type>() });
         insert<float>(d);
+        insert<double>(d);
+        /*
         if (sizeof(double) == sizeof(long double))
         {
             std::string dbl = raw_name<double>();
@@ -718,6 +711,7 @@ class uniform_type_info_map_helper
             insert<double>(d);
             insert<long double>(d);
         }
+        */
         // first: signed
         // second: unsigned
         push<char,

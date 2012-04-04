@@ -28,30 +28,15 @@
 \******************************************************************************/
 
 
-#ifndef RM_REF_HPP
-#define RM_REF_HPP
+#include "cppa/pattern.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
 
-/**
- * @brief Like std::remove_reference but prohibits void and
- *        also removes const references.
- */
-template<typename T>
-struct rm_ref { typedef T type; };
+value_matcher::~value_matcher() { }
 
-template<typename T>
-struct rm_ref<T const&> { typedef T type; };
+bool dummy_matcher::operator()(any_tuple const&)
+{
+    return true;
+}
 
-template<typename T>
-struct rm_ref<T&> { typedef T type; };
-
-template<typename T>
-struct rm_ref<const T> { typedef T type; };
-
-template<>
-struct rm_ref<void> { };
-
-} } // namespace cppa::util
-
-#endif // RM_REF_HPP
+} // namespace cppa

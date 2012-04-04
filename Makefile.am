@@ -40,6 +40,7 @@ libcppa_la_SOURCES = \
     src/object.cpp \
     src/object_array.cpp \
     src/partial_function.cpp \
+    src/pattern.cpp \
     src/post_office.cpp \
     src/post_office_msg.cpp \
     src/primitive_variant.cpp \
@@ -191,6 +192,7 @@ nobase_library_include_HEADERS = \
     cppa/util/enable_if.hpp \
     cppa/util/fiber.hpp \
     cppa/util/fixed_vector.hpp \
+    cppa/util/guard.hpp \
     cppa/util/if_else.hpp \
     cppa/util/is_array_of.hpp \
     cppa/util/is_builtin.hpp \

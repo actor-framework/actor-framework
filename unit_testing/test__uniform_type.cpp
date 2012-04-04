@@ -89,11 +89,6 @@ size_t test__uniform_type()
         "@channel",                     // cppa::channel_ptr
         "cppa::util::duration"
     };
-    if (sizeof(double) != sizeof(long double))
-    {
-        // long double is only present if it's not an alias for double
-        expected.insert("long double");
-    }
     // holds the type names we see at runtime
     std::set<std::string> found;
     // fetch all available type names

@@ -28,30 +28,21 @@
 \******************************************************************************/
 
 
-#ifndef RM_REF_HPP
-#define RM_REF_HPP
+#ifndef GUARD_HPP
+#define GUARD_HPP
 
 namespace cppa { namespace util {
 
-/**
- * @brief Like std::remove_reference but prohibits void and
- *        also removes const references.
- */
 template<typename T>
-struct rm_ref { typedef T type; };
+struct guard
+{
 
-template<typename T>
-struct rm_ref<T const&> { typedef T type; };
+    virtual ~guard() { }
 
-template<typename T>
-struct rm_ref<T&> { typedef T type; };
+    virtual bool operator()(T const&) const = 0;
 
-template<typename T>
-struct rm_ref<const T> { typedef T type; };
-
-template<>
-struct rm_ref<void> { };
+};
 
 } } // namespace cppa::util
 
-#endif // RM_REF_HPP
+#endif // GUARD_HPP

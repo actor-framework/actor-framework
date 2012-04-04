@@ -264,5 +264,4 @@ std::string to_uniform_name(const std::type_info& tinfo)
     return to_uniform_name(demangle(tinfo.name()));
 }
 
-
 } } // namespace cppa::detail

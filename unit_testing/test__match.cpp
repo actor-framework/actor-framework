@@ -11,94 +11,106 @@ using namespace cppa;
 using std::vector;
 using std::string;
 
-template<typename T>
-std::function<bool (T const&)> is_any_of(std::vector<T> vec)
-{
-    return [=](T const& value)
-    {
-        return std::any_of(vec.begin(), vec.end(),
-                           [&](T const& v) { return value == v; });
-    };
-}
+#define CPPA_GUARD_IMPL(GuardOperator)                                         \
+    struct impl : util::guard<T>                                               \
+    {                                                                          \
+        T m_val;                                                               \
+        impl(T&& val) : m_val(std::move(val)) { }                              \
+        bool operator()(T const& other) const { return other < m_val; }        \
+    };  return std::unique_ptr<util::guard<T>>{new impl{std::move(value)}}
 
-template<typename T>
-std::function<bool (T const&)> is_none_of(std::vector<T> vec)
+struct pattern_placeholder
 {
-    return [=](T const& value)
-    {
-        return std::none_of(vec.begin(), vec.end(),
-                           [&](T const& v) { return value == v; });
-    };
-}
+    constexpr pattern_placeholder() { }
 
-struct placeholder
-{
-    constexpr placeholder() { }
     template<typename T>
-    std::function<bool (T const&)> operator<(T const& value) const
+    std::unique_ptr<util::guard<T>> operator<(T value) const
     {
-        return [=](T const& other) { return other < value; };
+        CPPA_GUARD_IMPL(<);
     }
+
     template<typename T>
-    std::function<bool (T const&)> operator<=(T const& value) const
+    std::unique_ptr<util::guard<T>> operator<=(T value) const
     {
-        return [=](T const& other) { return other <= value; };
+        CPPA_GUARD_IMPL(<=);
     }
+
     template<typename T>
-    std::function<bool (T const&)> operator>(T const& value) const
+    std::unique_ptr<util::guard<T>> operator>(T value) const
     {
-        return [=](T const& other) { return other > value; };
+        CPPA_GUARD_IMPL(>);
     }
+
     template<typename T>
-    std::function<bool (T const&)> operator>=(T const& value) const
+    std::unique_ptr<util::guard<T>> operator>=(T value) const
     {
-        return [=](T const& other) { return other >= value; };
+        CPPA_GUARD_IMPL(>=);
     }
+
     template<typename T>
-    std::function<bool (T const&)> operator==(T const& value) const
+    T operator==(T value) const
     {
-        return [=](T const& other) { return other == value; };
+        return value;
     }
+
     template<typename T>
-    std::function<bool (T const&)> operator!=(T const& value) const
+    std::unique_ptr<util::guard<T>> operator!=(T value) const
     {
-        return [=](T const& other) { return other != value; };
+        CPPA_GUARD_IMPL(!=);
     }
+
     template<typename T>
-    std::function<bool (T const&)> any_of(std::vector<T> vec) const
+    std::unique_ptr<util::guard<T>> any_of(std::vector<T> vec) const
     {
-        return [=](T const& value)
+cout << "guard<vector<" << detail::demangle(typeid(T).name()) << ">>" << endl;
+        typedef std::vector<T> vector_type;
+        struct impl : util::guard<T>
         {
-                 return std::any_of(vec.begin(), vec.end(),
-                                    [&](T const& v) { return value == v; });
+            vector_type m_vec;
+            impl(vector_type&& v) : m_vec(std::move(v)) { }
+            bool operator()(T const& value) const
+            {
+                cout << "guard<vector<" << detail::demangle(typeid(T).name()) << ">>::operator()(" << value << ")" << endl;
+                return std::any_of(m_vec.begin(), m_vec.end(),
+                                   [&](T const& val) { return val == value; });
+            }
         };
+        return std::unique_ptr<util::guard<T>>{new impl{std::move(vec)}};
     }
+
     template<typename T>
-    std::function<bool (typename detail::implicit_conversions<T>::type const&)>
+    std::unique_ptr<util::guard<typename detail::strip_and_convert<T>::type>>
     any_of(std::initializer_list<T> list) const
     {
-        typedef typename detail::implicit_conversions<T>::type ctype;
-        vector<ctype> vec;
+        typedef typename detail::strip_and_convert<T>::type sc_type;
+        std::vector<sc_type> vec;
+        vec.reserve(list.size());
         for (auto& i : list) vec.emplace_back(i);
-        //vec.insert(vec.begin(), list.begin(), list.end());
-        return [vec](ctype const& value)
-        {
-            return std::any_of(vec.begin(), vec.end(),
-                               [&](ctype const& v) { return value == v; });
-        };
+        return this->any_of(std::move(vec));
     }
+
     template<typename T>
-    std::function<bool (T const&)> none_of(std::vector<T> vec) const
+    std::unique_ptr<util::guard<typename detail::strip_and_convert<T>::type>>
+    starts_with(T substr) const
     {
-        return [=](T const& value)
+        typedef typename detail::strip_and_convert<T>::type str_type;
+        struct impl : util::guard<str_type>
         {
-            return std::none_of(vec.begin(), vec.end(),
-                               [&](T const& v) { return value == v; });
+            str_type m_str;
+            impl(str_type str) : m_str(std::move(str)) { }
+            bool operator()(str_type const& str) const
+            {
+                return    m_str.size() <= str.size()
+                       && std::equal(m_str.begin(), m_str.end(), str.begin());
+            }
         };
+        return std::unique_ptr<util::guard<str_type>>{new impl{std::move(substr)}};
     }
+
+
 };
 
-static constexpr placeholder _x;
+static constexpr pattern_placeholder _x;
 
 template<typename... Args>
 void _on(Args&&...)
@@ -109,6 +121,7 @@ size_t test__match()
 {
     CPPA_TEST(test__match);
 
+    /*
     auto xfun = _x.any_of<int>({1, 2, 3});
     cout << "xfun(4) = " << xfun(4) << endl;
     cout << "xfun(2) = " << xfun(2) << endl;
@@ -126,6 +139,7 @@ size_t test__match()
     auto hfun = _x.any_of({"-h", "--help"});
     cout << "hfun(-h) = " << hfun("-h") << endl;
     cout << "hfun(-r) = " << hfun("-r") << endl;
+    */
 
     bool invoked = false;
     match("abc")
@@ -137,6 +151,39 @@ size_t test__match()
     );
     if (!invoked) { CPPA_ERROR("match(\"abc\") failed"); }
     invoked = false;
+
+    match_each({"-h", "-wtf"})
+    (
+        on(_x.any_of({"-h", "--help"})) >> []()
+        {
+            cout << "AWESOME!!!" << endl;
+        },
+        on(_x.starts_with("-")) >> [](std::string const& str)
+        {
+            match_each(str.begin() + 1, str.end())
+            (
+                on<char>() >> [](char c)
+                //on(_x.any_of({'w', 't', 'f'})) >> [](char c)
+                {
+                    cout << c;
+                },
+                others() >> [](any_tuple const& tup)
+                {
+                    cout << "oops: " << to_string(tup) << endl;
+                }
+            );
+            cout << endl;
+        }
+
+    );
+
+    match(5)
+    (
+        on(_x < 6) >> [](int i)
+        {
+            cout << i << " < 6 !!! :)" << endl;
+        }
+    );
 
     vector<string> vec{"a", "b", "c"};
     match(vec)

@@ -260,11 +260,11 @@ constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 template<typename Arg0, typename... Args>
-detail::rvalue_builder<typename detail::unboxed<Arg0>::type,
-                            typename detail::unboxed<Args>::type...>
-on(Arg0 const& arg0, Args const&... args)
+detail::rvalue_builder<typename detail::unboxed<typename util::rm_ref<Arg0>::type>::type,
+                       typename detail::unboxed<typename util::rm_ref<Args>::type>::type...>
+on(Arg0&& arg0, Args&&... args)
 {
-    return { arg0, args... };
+    return {std::forward<Arg0>(arg0), std::forward<Args>(args)...};
 }
 
 template<typename... TypeList>

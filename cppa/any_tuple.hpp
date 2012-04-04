@@ -31,8 +31,6 @@
 #ifndef ANY_TUPLE_HPP
 #define ANY_TUPLE_HPP
 
-#include <iostream>
-
 #include "cppa/cow_tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
@@ -183,7 +181,7 @@ class any_tuple
         static constexpr bool can_optimize =
                    std::is_same<converted, vtype>::value
                 && std::is_reference<T>::value
-                && !std::is_const<T>::value;
+                && !std::is_const<typename std::remove_reference<T>::type>::value;
         std::integral_constant<bool, can_optimize> token;
         return any_tuple{simple_view(std::forward<T>(value), token)};
     }
