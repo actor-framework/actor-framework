@@ -42,7 +42,7 @@ namespace cppa {
 namespace detail { template<typename...> class tdata; }
 
 // forward declaration of tuple
-template<typename...> class tuple;
+template<typename...> class cow_tuple;
 
 // forward declaration of get(detail::tdata<...> const&)
 template<size_t N, typename... Tn>
@@ -50,7 +50,7 @@ const typename util::at<N, Tn...>::type& get(detail::tdata<Tn...> const&);
 
 // forward declarations of get(tuple<...> const&)
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(tuple<Tn...> const&);
+const typename util::at<N, Tn...>::type& get(cow_tuple<Tn...> const&);
 
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Tn>
@@ -58,7 +58,7 @@ typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
 
 // forward declarations of get_ref(tuple<...>&)
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(tuple<Tn...>&);
+typename util::at<N, Tn...>::type& get_ref(cow_tuple<Tn...>&);
 
 } // namespace cppa
 

@@ -103,6 +103,12 @@ class type_value_pair_const_iterator
         return iter + offset;
     }
 
+    inline type_value_pair_const_iterator& operator+=(size_t offset)
+    {
+        iter += offset;
+        return *this;
+    }
+
 };
 
 /**

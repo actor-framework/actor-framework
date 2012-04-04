@@ -39,7 +39,7 @@
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/match.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/announce.hpp"
 
 using std::cout;
@@ -77,12 +77,12 @@ int main(int argc, char** argv)
         return 1;
     }
     auto num_loops = rd<int64_t>(argv[1]);
-    any_tuple m1 = make_tuple(atom("msg1"), 0);
-    any_tuple m2 = make_tuple(atom("msg2"), 0.0);
-    any_tuple m3 = cppa::make_tuple(atom("msg3"), list<int>{0});
-    any_tuple m4 = make_tuple(atom("msg4"), 0, "0");
-    any_tuple m5 = make_tuple(atom("msg5"), 0, 0, 0);
-    any_tuple m6 = make_tuple(atom("msg6"), 0, 0.0, "0");
+    any_tuple m1 = make_cow_tuple(atom("msg1"), 0);
+    any_tuple m2 = make_cow_tuple(atom("msg2"), 0.0);
+    any_tuple m3 = cppa::make_cow_tuple(atom("msg3"), list<int>{0});
+    any_tuple m4 = make_cow_tuple(atom("msg4"), 0, "0");
+    any_tuple m5 = make_cow_tuple(atom("msg5"), 0, 0, 0);
+    any_tuple m6 = make_cow_tuple(atom("msg6"), 0, 0.0, "0");
     int64_t m1matched = 0;
     int64_t m2matched = 0;
     int64_t m3matched = 0;

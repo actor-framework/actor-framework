@@ -31,16 +31,21 @@
 #ifndef LIBCPPA_PATTERN_HPP
 #define LIBCPPA_PATTERN_HPP
 
+#include <iostream>
+
 #include <list>
+#include <memory>
 #include <vector>
 #include <cstddef>
 #include <type_traits>
 
 #include "cppa/option.hpp"
 #include "cppa/anything.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/fixed_vector.hpp"
@@ -76,17 +81,156 @@ constexpr wildcard_position get_wildcard_position()
            : wildcard_position::nil;
 }
 
-template<class ExtendedType, class BasicType>
-ExtendedType* extend_pattern(BasicType const* p);
+struct value_matcher
+{
+    const bool is_dummy;
+    inline value_matcher(bool dummy_impl = false) : is_dummy(dummy_impl) { }
+    virtual ~value_matcher();
+    virtual bool operator()(any_tuple const&) = 0;
+};
+
+struct dummy_matcher : value_matcher
+{
+    inline dummy_matcher() : value_matcher(true) { }
+    bool operator()(any_tuple const&);
+};
+
+struct cmp_helper
+{
+    size_t i;
+    any_tuple const& tup;
+    cmp_helper(any_tuple const& tp, size_t pos = 0) : i(pos), tup(tp) { }
+    template<typename T>
+    inline bool operator()(T const& what)
+    {
+        return what == tup.get_as<T>(i++);
+    }
+    template<typename T>
+    inline bool operator()(util::wrapped<T> const&)
+    {
+        ++i;
+        return true;
+    }
+};
+
+template<wildcard_position WP, class PatternTypes, class ValueTypes>
+class value_matcher_impl;
+
+template<typename... Ts, typename... Vs>
+class value_matcher_impl<wildcard_position::nil,
+                         util::type_list<Ts...>,
+                         util::type_list<Vs...> > : public value_matcher
+{
+
+    detail::tdata<Vs...> m_values;
+
+ public:
+
+    template<typename... Args>
+    value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
+
+    bool operator()(any_tuple const& tup)
+    {
+        cmp_helper h{tup};
+        return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
+    }
+
+};
+
+template<typename... Ts, typename... Vs>
+class value_matcher_impl<wildcard_position::trailing,
+                         util::type_list<Ts...>,
+                         util::type_list<Vs...> >
+        : public value_matcher_impl<wildcard_position::nil,
+                                    util::type_list<Ts...>,
+                                    util::type_list<Vs...> >
+{
+
+    typedef value_matcher_impl<wildcard_position::nil,
+                               util::type_list<Ts...>,
+                               util::type_list<Vs...> >
+            super;
+
+ public:
+
+    template<typename... Args>
+    value_matcher_impl(Args&&... args) : super(std::forward<Args>(args)...) { }
+
+};
+
+template<typename... Ts, typename... Vs>
+class value_matcher_impl<wildcard_position::leading,
+                         util::type_list<Ts...>,
+                         util::type_list<Vs...> > : public value_matcher
+{
+
+    detail::tdata<Vs...> m_values;
+
+ public:
+
+    template<typename... Args>
+    value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
+
+    bool operator()(any_tuple const& tup)
+    {
+        cmp_helper h{tup, tup.size() - sizeof...(Ts)};
+        return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
+    }
+
+};
+
+template<typename... Ts, typename... Vs>
+class value_matcher_impl<wildcard_position::in_between,
+                         util::type_list<Ts...>,
+                         util::type_list<Vs...> > : public value_matcher
+{
+
+    detail::tdata<Vs...> m_values;
+
+ public:
+
+    template<typename... Args>
+    value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
+
+    bool operator()(any_tuple const& tup)
+    {
+        static constexpr size_t wcpos =
+                static_cast<size_t>(util::tl_find<util::type_list<Ts...>, anything>::value);
+        static_assert(wcpos < sizeof...(Ts), "illegal wildcard position");
+        cmp_helper h0{tup, 0};
+        cmp_helper h1{tup, tup.size() - (sizeof...(Ts) - (wcpos + 1))};
+        static constexpr size_t range_end = (sizeof...(Vs) > wcpos)
+                                            ? wcpos
+                                            : sizeof...(Vs);
+        return    util::static_foreach<0, range_end>::eval(m_values, h0)
+               && util::static_foreach<range_end + 1, sizeof...(Vs)>::eval(m_values, h1);
+    }
+
+};
+
+template<typename... Ts, typename... Vs>
+class value_matcher_impl<wildcard_position::multiple,
+                         util::type_list<Ts...>,
+                         util::type_list<Vs...> > : public value_matcher
+{
+
+ public:
+
+    template<typename... Args>
+    value_matcher_impl(Args&&...) { }
+
+    bool operator()(any_tuple const&)
+    {
+        throw std::runtime_error("not implemented yet, sorry");
+    }
+
+};
 
 template<typename... Types>
 class pattern
 {
 
     static_assert(sizeof...(Types) > 0, "empty pattern");
-
-    template<class ExtendedType, class BasicType>
-    friend ExtendedType* extend_pattern(BasicType const* p);
 
     pattern(pattern const&) = delete;
     pattern& operator=(pattern const&) = delete;
@@ -109,13 +253,19 @@ class pattern
 
     typedef util::fixed_vector<size_t, filtered_types::size> mapping_vector;
 
-    typedef type_value_pair_const_iterator const_iterator;
+    typedef uniform_type_info const* const_iterator;
 
     typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 
-    inline const_iterator begin() const { return std::begin(m_ptrs); }
+    inline const_iterator begin() const
+    {
+        return detail::static_types_array<Types...>::arr.begin();
+    }
 
-    inline const_iterator end() const { return std::end(m_ptrs); }
+    inline const_iterator end() const
+    {
+        return detail::static_types_array<Types...>::arr.end();
+    }
 
     inline reverse_const_iterator rbegin() const
     {
@@ -127,82 +277,62 @@ class pattern
         return reverse_const_iterator{begin()};
     }
 
-    inline const_iterator vend() const { return m_vend; }
+    inline bool has_values() const { return m_vm->is_dummy == false; }
 
-    inline bool has_values() const { return m_has_values; }
-
-    pattern() : m_has_values(false)
+    // @warning does NOT check types
+    bool _matches_values(any_tuple const& tup) const
     {
-        auto& arr = detail::static_types_array<Types...>::arr;
-        for (size_t i = 0; i < size; ++i)
-        {
-            m_ptrs[i].first = arr[i];
-            m_ptrs[i].second = nullptr;
-        }
-        m_vend = begin();
+        return (*m_vm)(tup);
+    }
+
+    pattern() : m_vm(new dummy_matcher)
+    {
     }
 
     template<typename... Args>
-    pattern(head_type const& arg0, Args&&... args)
-        : m_data(arg0, std::forward<Args>(args)...)
+    pattern(head_type arg0, Args&&... args)
+        : m_vm(get_value_matcher(std::move(arg0), std::forward<Args>(args)...))
     {
-        init<head_type, Args...>();
     }
 
     template<typename... Args>
-    pattern(head_type&& arg0, Args&&... args)
-        : m_data(std::move(arg0), std::forward<Args>(args)...)
+    pattern(util::wrapped<head_type> const& arg0, Args&&... args)
+        : m_vm(get_value_matcher(arg0, std::forward<Args>(args)...))
     {
-        init<head_type, Args...>();
     }
 
     template<typename... Args>
-    pattern(util::wrapped<head_type> const& arg0, Args const&... args)
-        : m_data(arg0, std::forward<Args>(args)...)
+    pattern(detail::tdata<Args...> const& data)
     {
-        init<util::wrapped<head_type>, Args...>();
+        m_vm.reset(new value_matcher_impl<wildcard_pos, types, util::type_list<Args...> >{data});
     }
 
-    template<typename... Args>
-    pattern(detail::tdata<Args...> const& data) : m_data(data)
+    pattern(std::unique_ptr<value_matcher>&& vm) : m_vm(std::move(vm)) { }
+
+    static inline value_matcher* get_value_matcher()
     {
-        init<Args...>();
+        return new dummy_matcher;
     }
-
-    template<typename... Args>
-    pattern(detail::tdata<Args...>&& data) : m_data(std::move(data))
-    {
-        init<Args...>();
-    }
-
-    typedef detail::tdata<option<Types>...> data_type;
-
- private:
 
     template<typename Arg0, typename... Args>
-    void init()
+    static value_matcher* get_value_matcher(Arg0&& arg0, Args&&... args)
     {
-        typedef typename util::type_list<Arg0, Args...>::back arg_n;
-        static constexpr bool ignore_arg_n =
-                std::is_same<arg_n, util::arg_match_t>::value;
-        // ignore extra arg_match_t argument
-        static constexpr size_t args_size = sizeof...(Args)
-                                          + (ignore_arg_n ? 0 : 1);
-        static_assert(args_size <= size, "too many arguments");
-        auto& arr = detail::static_types_array<Types...>::arr;
-        // "polymophic lambda"
-        init_helper f(m_ptrs, arr);
-        // init elements [0, N)
-        util::static_foreach<0, args_size>::_(m_data, f);
-        // init elements [N, size)
-        for (size_t i = args_size; i < size; ++i)
+        using namespace util;
+        typedef typename tl_filter_not<
+                    type_list<typename detail::strip_and_convert<Arg0>::type,
+                              typename detail::strip_and_convert<Args>::type...>,
+                    tbind<std::is_same, wrapped<arg_match_t> >::type
+                >::type
+                arg_types;
+        static_assert(arg_types::size <= size, "too many arguments");
+        if (tl_forall<arg_types, detail::is_boxed>::value)
         {
-            m_ptrs[i].first = arr[i];
-            m_ptrs[i].second = nullptr;
+            return new dummy_matcher;
         }
-        init_vend();
-        m_has_values = (vend() != begin());
+        return new value_matcher_impl<wildcard_pos, types, arg_types>{std::forward<Arg0>(arg0), std::forward<Args>(args)...};
     }
+
+ private:
 
     typedef type_value_pair tvp_array[size];
 
@@ -223,40 +353,9 @@ class pattern
         }
     };
 
-    inline void init_vend()
-    {
-        m_vend = std::find_if(
-                    rbegin(), rend(),
-                    [](type_value_pair const& tvp) { return tvp.second != 0; }
-                 ).base();
-    }
-
-    bool m_has_values;
-    detail::tdata<option<Types>...> m_data;
-    tvp_array m_ptrs;
-    const_iterator m_vend;
+    std::unique_ptr<value_matcher> m_vm;
 
 };
-
-template<class ExtendedType, class BasicType>
-ExtendedType* extend_pattern(BasicType const* p)
-{
-    ExtendedType* et = new ExtendedType;
-    if (p->has_values())
-    {
-        detail::tdata_set(et->m_data, p->m_data);
-        et->m_has_values = true;
-        typedef typename ExtendedType::types extended_types;
-        typedef typename
-                detail::static_types_array_from_type_list<extended_types>::type
-                tarr;
-        auto& arr = tarr::arr;
-        typename ExtendedType::init_helper f(et->m_ptrs, arr);
-        util::static_foreach<0, BasicType::size>::_(et->m_data, f);
-        et->init_vend();
-    }
-    return et;
-}
 
 template<typename TypeList>
 struct pattern_from_type_list;

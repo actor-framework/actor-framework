@@ -173,21 +173,6 @@ class abstract_tuple : public ref_counted
 
 };
 
-inline bool full_eq(abstract_tuple::const_iterator const& lhs,
-                    type_value_pair const& rhs)
-{
-    return    lhs.type() == rhs.first
-           && (   rhs.second == nullptr
-               || lhs.type()->equals(lhs.value(), rhs.second));
-}
-
-
-inline bool full_eq_v2(type_value_pair const& lhs,
-                       abstract_tuple::const_iterator const& rhs)
-{
-    return full_eq(rhs, lhs);
-}
-
 inline bool full_eq_v3(abstract_tuple::const_iterator const& lhs,
                        abstract_tuple::const_iterator const& rhs)
 {
@@ -195,29 +180,16 @@ inline bool full_eq_v3(abstract_tuple::const_iterator const& lhs,
            && lhs.type()->equals(lhs.value(), rhs.value());
 }
 
-inline bool values_only_eq(abstract_tuple::const_iterator const& lhs,
-                           type_value_pair const& rhs)
-{
-    return    rhs.second == nullptr
-           || lhs.type()->equals(lhs.value(), rhs.second);
-}
-
-inline bool values_only_eq_v2(type_value_pair const& lhs,
-                           abstract_tuple::const_iterator const& rhs)
-{
-    return values_only_eq(rhs, lhs);
-}
-
 inline bool types_only_eq(abstract_tuple::const_iterator const& lhs,
-                          type_value_pair const& rhs)
+                          uniform_type_info const* rhs)
 {
-    return lhs.type() == rhs.first;
+    return lhs.type() == rhs;
 }
 
-inline bool types_only_eq_v2(type_value_pair const& lhs,
-                          abstract_tuple::const_iterator const& rhs)
+inline bool types_only_eq_v2(uniform_type_info const* lhs,
+                             abstract_tuple::const_iterator const& rhs)
 {
-    return lhs.first == rhs.type();
+    return lhs == rhs.type();
 }
 
 } } // namespace cppa::detail

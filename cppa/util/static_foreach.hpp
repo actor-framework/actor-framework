@@ -35,26 +35,48 @@
 
 namespace cppa { namespace util {
 
-/**
- * @ingroup MetaProgramming
- * @brief A for loop that can be used with tuples.
- */
-template<size_t Begin, size_t End>
-struct static_foreach
+template<size_t Begin, size_t End, bool BeginGreaterEnd>
+struct static_foreach_impl
 {
     template<typename Container, typename Fun>
     static inline void _(Container const& c, Fun& f)
     {
         f(get<Begin>(c));
-        static_foreach<Begin+1, End>::_(c, f);
+        static_foreach_impl<Begin+1, End, (Begin+1 > End)>::_(c, f);
+    }
+    template<typename Container, typename Fun>
+    static inline bool eval(Container const& c, Fun& f)
+    {
+        return    f(get<Begin>(c))
+               && static_foreach_impl<Begin+1, End, (Begin+1 > End)>::eval(c, f);
     }
 };
 
 template<size_t X>
-struct static_foreach<X, X>
+struct static_foreach_impl<X, X, false>
 {
     template<typename Container, typename Fun>
     static inline void _(Container const&, Fun&) { }
+    template<typename Container, typename Fun>
+    static inline bool eval(Container const&, Fun&) { return true; }
+};
+
+template<size_t X, size_t Y>
+struct static_foreach_impl<X, Y, true>
+{
+    template<typename Container, typename Fun>
+    static inline void _(Container const&, Fun&) { }
+    template<typename Container, typename Fun>
+    static inline bool eval(Container const&, Fun&) { return true; }
+};
+
+/**
+ * @ingroup MetaProgramming
+ * @brief A for loop that can be used with tuples.
+ */
+template<size_t Begin, size_t End>
+struct static_foreach : static_foreach_impl<Begin, End, (Begin > End)>
+{
 };
 
 } } // namespace cppa::util

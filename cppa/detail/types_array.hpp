@@ -62,23 +62,17 @@ struct types_array_impl
     static constexpr bool builtin_only = true;
     // all types are builtin, perform lookup on constuction
     uniform_type_info const* data[sizeof...(T)];
-    type_value_pair pairs[sizeof...(T)];
     types_array_impl()
         : data{ta_util<cppa_tinf,util::is_builtin<T>::value,T>::get()...}
     {
-        for (size_t i = 0; i < sizeof...(T); ++i)
-        {
-            pairs[i].first = data[i];
-            pairs[i].second = nullptr;
-        }
     }
     inline uniform_type_info const* operator[](size_t p) const
     {
         return data[p];
     }
-    typedef type_value_pair_const_iterator const_iterator;
-    inline const_iterator begin() const { return pairs; }
-    inline const_iterator end() const { return pairs + sizeof...(T); }
+    typedef uniform_type_info const* const* const_iterator;
+    inline const_iterator begin() const { return std::begin(data); }
+    inline const_iterator end() const { return std::end(data); }
 };
 
 template<typename... T>
@@ -90,7 +84,7 @@ struct types_array_impl<false, T...>
     // contains uniform_type_infos for builtin types and lazy initializes
     // non-builtin types at runtime
     mutable std::atomic<uniform_type_info const*> data[sizeof...(T)];
-    mutable std::atomic<type_value_pair const*> pairs;
+    mutable std::atomic<uniform_type_info const* *> pairs;
     // pairs[sizeof...(T)];
     types_array_impl()
         : tinfo_data{ta_util<std_tinf,util::is_builtin<T>::value,T>::get()...}
@@ -120,17 +114,16 @@ struct types_array_impl<false, T...>
         }
         return result;
     }
-    typedef type_value_pair_const_iterator const_iterator;
+    typedef uniform_type_info const* const* const_iterator;
     inline const_iterator begin() const
     {
         auto result = pairs.load();
         if (result == nullptr)
         {
-            auto parr = new type_value_pair[sizeof...(T)];
+            auto parr = new uniform_type_info const*[sizeof...(T)];
             for (size_t i = 0; i < sizeof...(T); ++i)
             {
-                parr[i].first = (*this)[i];
-                parr[i].second = nullptr;
+                parr[i] = (*this)[i];
             }
             if (!pairs.compare_exchange_weak(result, parr, std::memory_order_relaxed))
             {

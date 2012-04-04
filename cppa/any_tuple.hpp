@@ -33,7 +33,7 @@
 
 #include <iostream>
 
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
 
@@ -69,13 +69,13 @@ class any_tuple
      * @brief Creates a tuple from @p t.
      */
     template<typename... Args>
-    any_tuple(tuple<Args...> const& t) : m_vals(t.vals()) { }
+    any_tuple(cow_tuple<Args...> const& t) : m_vals(t.vals()) { }
 
     /**
      * @brief Creates a tuple and moves the content from @p t.
      */
     template<typename... Args>
-    any_tuple(tuple<Args...>&& t) : m_vals(std::move(t.m_vals)) { }
+    any_tuple(cow_tuple<Args...>&& t) : m_vals(std::move(t.m_vals)) { }
 
     explicit any_tuple(detail::abstract_tuple*);
 

@@ -38,7 +38,7 @@
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/self.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/receive.hpp"
@@ -140,7 +140,7 @@
  * tuple @p x and @p y, whereas @p y is a copy of @p x:
  *
  * @code
- * auto x = make_tuple(1, 2, 3);
+ * auto x = make_cow_tuple(1, 2, 3);
  * auto y = x;
  * @endcode
  *
@@ -193,7 +193,7 @@
  * send(a1, atom("hello"), "hello a1!");
  *
  * // send a message to a1, a2 and a3
- * auto msg = make_tuple(atom("compute"), 1, 2, 3);
+ * auto msg = make_cow_tuple(atom("compute"), 1, 2, 3);
  * auto s = self; // cache self pointer
  * // note: this is more efficient then using send() three times because
  * //       send() would create a new tuple each time;
@@ -385,7 +385,7 @@
  * send(self, u"hello unicode world!");
  *
  * // x has the type cppa::tuple<std::string, std::string>
- * auto x = make_tuple("hello", "tuple");
+ * auto x = make_cow_tuple("hello", "tuple");
  *
  * receive
  * (
@@ -551,7 +551,7 @@ void send(channel_ptr& whom, Arg0 const& arg0, Args const&... args);
  *
  * <b>Usage example:</b>
  * @code
- * self << make_tuple(1, 2, 3);
+ * self << make_cow_tuple(1, 2, 3);
  * @endcode
  * @returns @p whom.
  */
@@ -563,7 +563,7 @@ template<class C, typename Arg0, typename... Args>
 void send(intrusive_ptr<C>& whom, Arg0 const& arg0, Args const&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
-    if (whom) whom->enqueue(self, make_tuple(arg0, args...));
+    if (whom) whom->enqueue(self, make_cow_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
@@ -571,14 +571,14 @@ void send(intrusive_ptr<C>&& whom, Arg0 const& arg0, Args const&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self, make_tuple(arg0, args...));
+    if (tmp) tmp->enqueue(self, make_cow_tuple(arg0, args...));
 }
 
 // matches "send(this, ...)" in event-based actors
 template<typename Arg0, typename... Args>
 void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
 {
-    whom->enqueue(whom, make_tuple(arg0, args...));
+    whom->enqueue(whom, make_cow_tuple(arg0, args...));
 }
 
 

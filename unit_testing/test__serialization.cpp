@@ -25,7 +25,7 @@
 #include "test.hpp"
 
 #include "cppa/self.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/tuple_cast.hpp"
@@ -140,7 +140,7 @@ size_t test__serialization()
     }
 
     {
-        any_tuple ttup = make_tuple(1, 2, actor_ptr(self));
+        any_tuple ttup = make_cow_tuple(1, 2, actor_ptr(self));
         binary_serializer bs;
         bs << ttup;
         binary_deserializer bd(bs.data(), bs.size());
@@ -176,7 +176,7 @@ size_t test__serialization()
     }
 
     {
-        any_tuple msg1 = cppa::make_tuple(42, std::string("Hello \"World\"!"));
+        any_tuple msg1 = cppa::make_cow_tuple(42, std::string("Hello \"World\"!"));
         auto msg1_tostring = to_string(msg1);
         if (msg1str != msg1_tostring)
         {

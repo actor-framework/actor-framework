@@ -37,6 +37,7 @@
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 
+#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/is_array_of.hpp"
 #include "cppa/util/replace_type.hpp"
 
@@ -72,6 +73,13 @@ struct implicit_conversions
                                         std::is_same<self_type,T>>::type
             type;
 
+};
+
+template<typename T>
+struct strip_and_convert
+{
+    typedef typename implicit_conversions<typename util::rm_ref<T>::type>::type
+            type;
 };
 
 } } // namespace cppa::detail

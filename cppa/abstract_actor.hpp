@@ -166,7 +166,7 @@ class abstract_actor : public Base
         // send exit message without lock
         if (reason != exit_reason::not_exited)
         {
-            other->enqueue(this, make_tuple(atom(":Exit"), reason));
+            other->enqueue(this, make_cow_tuple(atom(":Exit"), reason));
         }
         return false;
     }
@@ -210,7 +210,7 @@ class abstract_actor : public Base
         // send exit messages
         for (actor_ptr& aptr : mlinks)
         {
-            aptr->enqueue(this, make_tuple(atom(":Exit"), reason));
+            aptr->enqueue(this, make_cow_tuple(atom(":Exit"), reason));
         }
         for (attachable_ptr& ptr : mattachables)
         {
@@ -226,7 +226,7 @@ class abstract_actor : public Base
             // send exit message if already exited
             if (exited())
             {
-                other->enqueue(this, make_tuple(atom(":Exit"),
+                other->enqueue(this, make_cow_tuple(atom(":Exit"),
                                                 m_exit_reason.load()));
             }
             // add link if not already linked to other

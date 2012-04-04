@@ -37,7 +37,7 @@
 
 #include "cppa/self.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
@@ -112,8 +112,8 @@ class scheduler
                      Duration const& rel_time, Data const&... data)
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        any_tuple data_tup = make_tuple(data...);
-        any_tuple tup = make_tuple(util::duration(rel_time), to, data_tup);
+        any_tuple data_tup = make_cow_tuple(data...);
+        any_tuple tup = make_cow_tuple(util::duration(rel_time), to, data_tup);
         future_send_helper()->enqueue(self, std::move(tup));
     }
 

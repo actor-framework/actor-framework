@@ -45,12 +45,12 @@ size_t test__atom()
     CPPA_CHECK_NOT_EQUAL(atom("abc"), atom(" abc"));
     // check to_string impl.
     CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
-    self << make_tuple(atom("foo"), static_cast<std::uint32_t>(42))
-         << make_tuple(atom(":Attach"), atom(":Baz"), "cstring")
-         << make_tuple(atom("b"), atom("a"), atom("c"), 23.f)
-         << make_tuple(atom("a"), atom("b"), atom("c"), 23.f);
+    self << make_cow_tuple(atom("foo"), static_cast<std::uint32_t>(42))
+         << make_cow_tuple(atom(":Attach"), atom(":Baz"), "cstring")
+         << make_cow_tuple(atom("b"), atom("a"), atom("c"), 23.f)
+         << make_cow_tuple(atom("a"), atom("b"), atom("c"), 23.f);
     int i = 0;
-    receive_while([&i]() { return ++i <= 3; })
+    receive_for(i, 3)
     (
         on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value)
         {

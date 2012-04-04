@@ -101,17 +101,13 @@ class rvalue_builder
     typedef typename pattern_from_type_list<converted_types>::type
             pattern_type;
 
-    typedef typename pattern_type::data_type pattern_data;
-
-    pattern_data m_data;
-    bool m_has_values;
+    std::unique_ptr<value_matcher> m_vm;
 
     template<typename F>
     partial_function cr_rvalue(F&& f, std::integral_constant<bool, true>)
     {
-        return m_has_values ? get_invokable_impl<pattern_type>(std::forward<F>(f),
-                                                               std::move(m_data))
-                            : get_invokable_impl<pattern_type>(std::forward<F>(f));
+        return get_invokable_impl<pattern_type>(std::forward<F>(f),
+                                                std::move(m_vm));
     }
 
     template<typename F>
@@ -124,21 +120,17 @@ class rvalue_builder
         typedef typename tl_apply<raw_types,rm_ref>::type new_types;
         typedef typename tl_concat<converted_types,new_types>::type types;
         typedef typename pattern_from_type_list<types>::type epattern;
-        return m_has_values ? get_invokable_impl<epattern>(std::forward<F>(f),
-                                                           std::move(m_data))
-                            : get_invokable_impl<epattern>(std::forward<F>(f));
+        return get_invokable_impl<epattern>(std::forward<F>(f),
+                                            std::move(m_vm));
     }
 
  public:
 
     template<typename... Args>
-    rvalue_builder(Args&&... args) : m_data(std::forward<Args>(args)...)
+    rvalue_builder(Args&&... args)
+        : m_vm(pattern_type::get_value_matcher(std::forward<Args>(args)...))
     {
-        static constexpr bool all_boxed =
-                util::tl_forall<util::type_list<Args...>, is_boxed>::value;
-        m_has_values = !all_boxed;
     }
-
 
     template<typename F>
     partial_function operator>>(F&& f)

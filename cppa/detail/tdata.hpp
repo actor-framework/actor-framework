@@ -42,6 +42,7 @@
 #include "cppa/util/arg_match_t.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 class uniform_type_info;
@@ -275,10 +276,11 @@ struct tdata_from_type_list<cppa::util::type_list<T...>>
 
 namespace cppa {
 
-template<typename... Tn>
-inline detail::tdata<Tn...> make_tdata(Tn const&... args)
+template<typename... Args>
+detail::tdata<typename detail::implicit_conversions<typename util::rm_ref<Args>::type>::type...>
+mk_tdata(Args&&... args)
 {
-    return detail::tdata<Tn...>(args...);
+    return {std::forward<Args>(args)...};
 }
 
 template<size_t N, typename... Tn>

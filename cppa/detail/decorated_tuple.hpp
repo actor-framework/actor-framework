@@ -146,10 +146,10 @@ class decorated_tuple : public abstract_tuple
 };
 
 template<typename TypeList>
-struct decorated_tuple_from_type_list;
+struct decorated_cow_tuple_from_type_list;
 
 template<typename... Types>
-struct decorated_tuple_from_type_list< util::type_list<Types...> >
+struct decorated_cow_tuple_from_type_list< util::type_list<Types...> >
 {
     typedef decorated_tuple<Types...> type;
 };

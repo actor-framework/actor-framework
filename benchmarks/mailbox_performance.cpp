@@ -79,7 +79,7 @@ void receiver(int64_t max)
 
 void sender(actor_ptr whom, int64_t count)
 {
-    any_tuple msg = make_tuple(atom("msg"));
+    any_tuple msg = make_cow_tuple(atom("msg"));
     for (int64_t i = 0; i < count; ++i)
     {
         whom->enqueue(nullptr, msg);

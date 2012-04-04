@@ -1,5 +1,5 @@
 cppa/ref_counted.hpp
-cppa/tuple.hpp
+cppa/cow_tuple.hpp
 unit_testing/main.cpp
 cppa/util/void_type.hpp
 cppa/util/type_list.hpp

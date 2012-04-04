@@ -135,4 +135,11 @@ void demonitor(actor_ptr& whom)
     if (whom) whom->detach(mtoken);
 }
 
+value_matcher::~value_matcher() { }
+
+bool dummy_matcher::operator()(any_tuple const&)
+{
+    return true;
+}
+
 } // namespace cppa

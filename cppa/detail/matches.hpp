@@ -77,8 +77,7 @@ struct matcher<wildcard_position::nil, T...>
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
         CPPA_REQUIRE(tup.size() == sizeof...(T));
-        return std::equal(ptrn.begin(), ptrn.vend(), tup.begin(),
-                          detail::values_only_eq_v2);
+        return ptrn._matches_values(tup);
     }
 };
 
@@ -113,8 +112,7 @@ struct matcher<wildcard_position::trailing, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        return std::equal(ptrn.begin(), ptrn.vend(), tup.begin(),
-                          detail::values_only_eq_v2);
+        return ptrn._matches_values(tup);
     }
 };
 
@@ -169,12 +167,7 @@ struct matcher<wildcard_position::leading, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        auto tbegin = tup.begin();
-        // skip unmatched elements
-        tbegin += (tup.size() - size);
-        // skip leading wildcard ++(ptr.begin())
-        return std::equal(++(ptrn.begin()), ptrn.vend(), tbegin,
-                          detail::values_only_eq_v2);
+        return ptrn._matches_values(tup);
     }
 };
 
@@ -231,19 +224,7 @@ struct matcher<wildcard_position::in_between, T...>
 
     static inline bool vmatch(any_tuple const& tup, pattern<T...> const& ptrn)
     {
-        // first range
-        auto tbegin = tup.begin();
-        auto tend = tbegin + wc_pos;
-        if (std::equal(tbegin, tend, ptrn.begin(), detail::values_only_eq))
-        {
-            // second range
-            tbegin = tend = tup.end();
-            tbegin -= (size - (wc_pos + 1));
-            auto pbegin = ptrn.begin();
-            pbegin += (wc_pos + 1);
-            return std::equal(tbegin, tend, pbegin, detail::values_only_eq);
-        }
-        return false;
+        return ptrn._matches_values(tup);
     }
 };
 
@@ -335,19 +316,7 @@ struct matcher<wildcard_position::multiple, T...>
                               pattern<T...> const& ptrn,
                               typename pattern<T...>::mapping_vector const& mv)
     {
-        auto i = mv.begin();
-        for (auto j = ptrn.begin(); j != ptrn.end(); ++j)
-        {
-            if (j.type() != nullptr)
-            {
-                if (   j.value() != nullptr
-                    && j.type()->equals(tup.at(*i), j.value()) == false)
-                {
-                    return false;
-                }
-                ++i;
-            }
-        }
+        return ptrn._matches_values(tup, &mv);
     }
 };
 

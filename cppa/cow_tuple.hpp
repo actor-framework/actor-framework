@@ -60,17 +60,17 @@ class local_actor;
 
 /**
  * @ingroup CopyOnWrite
- * @brief A fixed-length copy-on-write tuple.
+ * @brief A fixed-length copy-on-write cow_tuple.
  */
 template<typename... ElementTypes>
-class tuple
+class cow_tuple
 {
 
     static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
 
     static_assert(util::tl_forall<util::type_list<ElementTypes...>,
                                   util::is_legal_tuple_type>::value,
-                  "illegal types in tuple definition: "
+                  "illegal types in cow_tuple definition: "
                   "pointers and references are prohibited");
 
     friend class any_tuple;
@@ -82,7 +82,7 @@ class tuple
 
     struct priv_ctor { };
 
-    tuple(priv_ctor, cow_ptr<detail::abstract_tuple>&& ptr) : m_vals(std::move(ptr)) { }
+    cow_tuple(priv_ctor, cow_ptr<detail::abstract_tuple>&& ptr) : m_vals(std::move(ptr)) { }
 
  public:
 
@@ -94,50 +94,50 @@ class tuple
     /**
      * @brief Initializes each element with its default constructor.
      */
-    tuple() : m_vals(new data_type)
+    cow_tuple() : m_vals(new data_type)
     {
     }
 
     /**
-     * @brief Initializes the tuple with @p args.
+     * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    tuple(ElementTypes const&... args) : m_vals(new data_type(args...))
+    cow_tuple(ElementTypes const&... args) : m_vals(new data_type(args...))
     {
     }
 
     /**
-     * @brief Initializes the tuple with @p args.
+     * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...))
+    cow_tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...))
     {
     }
 
-    tuple(tuple&&) = default;
-    tuple(tuple const&) = default;
-    tuple& operator=(tuple&&) = default;
-    tuple& operator=(tuple const&) = default;
+    cow_tuple(cow_tuple&&) = default;
+    cow_tuple(cow_tuple const&) = default;
+    cow_tuple& operator=(cow_tuple&&) = default;
+    cow_tuple& operator=(cow_tuple const&) = default;
 
-    inline static tuple from(cow_ptr_type ptr)
+    inline static cow_tuple from(cow_ptr_type ptr)
     {
         return {priv_ctor{}, std::move(ptr)};
     }
 
-    inline static tuple from(cow_ptr_type ptr,
+    inline static cow_tuple from(cow_ptr_type ptr,
                              util::fixed_vector<size_t, num_elements> const& mv)
     {
         return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
     }
 
-    inline static tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
+    inline static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
     {
         CPPA_REQUIRE(offset > 0);
         return {priv_ctor{}, decorated_type::create(std::move(ptr), offset)};
     }
 
     /**
-     * @brief Gets the size of this tuple.
+     * @brief Gets the size of this cow_tuple.
      */
     inline size_t size() const
     {
@@ -177,12 +177,12 @@ class tuple
 };
 
 template<typename TypeList>
-struct tuple_from_type_list;
+struct cow_tuple_from_type_list;
 
 template<typename... Types>
-struct tuple_from_type_list< util::type_list<Types...> >
+struct cow_tuple_from_type_list< util::type_list<Types...> >
 {
-    typedef tuple<Types...> type;
+    typedef cow_tuple<Types...> type;
 };
 
 #ifdef CPPA_DOCUMENTATION
@@ -190,87 +190,85 @@ struct tuple_from_type_list< util::type_list<Types...> >
 /**
  * @ingroup CopyOnWrite
  * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.
- * @param tup The tuple object.
+ * @param tup The cow_tuple object.
  * @returns A const-reference of type T, whereas T is the type of the
  *          <tt>N</tt>th element of @p tup.
- * @relates tuple
+ * @relates cow_tuple
  */
 template<size_t N, typename T>
-T const& get(tuple<...> const& tup);
+T const& get(cow_tuple<...> const& tup);
 
 /**
  * @ingroup CopyOnWrite
  * @brief Gets a reference to the <tt>N</tt>th element of @p tup.
- * @param tup The tuple object.
+ * @param tup The cow_tuple object.
  * @returns A reference of type T, whereas T is the type of the
  *          <tt>N</tt>th element of @p tup.
- * @note Detaches @p tup if there are two or more references to the tuple data.
- * @relates tuple
+ * @note Detaches @p tup if there are two or more references to the cow_tuple data.
+ * @relates cow_tuple
  */
 template<size_t N, typename T>
-T& get_ref(tuple<...>& tup);
+T& get_ref(cow_tuple<...>& tup);
 
 /**
  * @ingroup ImplicitConversion
- * @brief Creates a new tuple from @p args.
- * @param args Values for the tuple elements.
- * @returns A tuple object containing the values @p args.
- * @relates tuple
+ * @brief Creates a new cow_tuple from @p args.
+ * @param args Values for the cow_tuple elements.
+ * @returns A cow_tuple object containing the values @p args.
+ * @relates cow_tuple
  */
-template<typename... Types>
-tuple<Types...> make_tuple(Types const&... args);
+template<typename... Args>
+cow_tuple<Args...> make_cow_tuple(Args&&... args);
 
 #else
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(tuple<Types...> const& tup)
+const typename util::at<N, Types...>::type& get(cow_tuple<Types...> const& tup)
 {
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type const*>(tup.at(N));
 }
 
 template<size_t N, typename... Types>
-typename util::at<N, Types...>::type& get_ref(tuple<Types...>& tup)
+typename util::at<N, Types...>::type& get_ref(cow_tuple<Types...>& tup)
 {
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 
-template<typename... Types>
-typename tuple_from_type_list<
-    typename util::tl_apply<util::type_list<Types...>,
-                            detail::implicit_conversions>::type>::type
-make_tuple(Types const&... args)
+template<typename... Args>
+cow_tuple<typename detail::strip_and_convert<Args>::type...>
+make_cow_tuple(Args&&... args)
 {
-    return { args... };
+    return {std::forward<Args>(args)...};
 }
 
 #endif
 
 /**
- * @brief Compares two tuples.
- * @param lhs First tuple object.
- * @param rhs Second tuple object.
+ * @brief Compares two cow_tuples.
+ * @param lhs First cow_tuple object.
+ * @param rhs Second cow_tuple object.
  * @returns @p true if @p lhs and @p rhs are equal; otherwise @p false.
- * @relates tuple
+ * @relates cow_tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(tuple<LhsTypes...> const& lhs,
-                       tuple<RhsTypes...> const& rhs)
+inline bool operator==(cow_tuple<LhsTypes...> const& lhs,
+                       cow_tuple<RhsTypes...> const& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
 
 /**
- * @brief Compares two tuples.
- * @param lhs First tuple object.
- * @param rhs Second tuple object.
+ * @brief Compares two cow_tuples.
+ * @param lhs First cow_tuple object.
+ * @param rhs Second cow_tuple object.
  * @returns @p true if @p lhs and @p rhs are not equal; otherwise @p false.
- * @relates tuple
+ * @relates cow_tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(tuple<LhsTypes...> const& lhs,
-                       tuple<RhsTypes...> const& rhs)
+inline bool operator!=(cow_tuple<LhsTypes...> const& lhs,
+                       cow_tuple<RhsTypes...> const& rhs)
 {
     return !(lhs == rhs);
 }

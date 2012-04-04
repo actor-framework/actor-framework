@@ -83,6 +83,7 @@ nobase_library_include_HEADERS = \
     cppa/channel.hpp \
     cppa/config.hpp \
     cppa/cow_ptr.hpp \
+    cppa/cow_tuple.hpp \
     cppa/cppa.hpp \
     cppa/deserializer.hpp \
     cppa/detail/abstract_scheduled_actor.hpp \
@@ -172,7 +173,6 @@ nobase_library_include_HEADERS = \
     cppa/serializer.hpp \
     cppa/stacked_event_based_actor.hpp \
     cppa/to_string.hpp \
-    cppa/tuple.hpp \
     cppa/tuple_cast.hpp \
     cppa/type_value_pair.hpp \
     cppa/uniform_type_info.hpp \

@@ -15,7 +15,7 @@
 #include "test.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
 #include "cppa/anything.hpp"

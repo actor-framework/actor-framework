@@ -59,7 +59,7 @@ struct testee : fsm_actor<testee>
             },
             on(atom("spread"), arg_match) >> [=](int x)
             {
-                any_tuple msg = make_tuple(atom("spread"), x - 1);
+                any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
                 spawn(new testee(this)) << msg;
                 spawn(new testee(this)) << msg;
                 become
@@ -91,7 +91,7 @@ void stacked_testee(actor_ptr parent)
         },
         on(atom("spread"), arg_match) >> [&](int x)
         {
-            any_tuple msg = make_tuple(atom("spread"), x-1);
+            any_tuple msg = make_cow_tuple(atom("spread"), x-1);
             spawn(stacked_testee, self) << msg;
             spawn(stacked_testee, self) << msg;
             receive

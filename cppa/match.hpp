@@ -103,10 +103,10 @@ struct pmatch_each_helper
 
 namespace cppa {
 
-//inline detail::match_helper match(any_tuple t)
-//{
-//    return std::move(t);
-//}
+inline detail::match_helper match(any_tuple t)
+{
+    return std::move(t);
+}
 
 /**
  * @brief Match expression.

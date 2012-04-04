@@ -26,7 +26,7 @@ inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
 }
 
 template<typename T1, typename T2>
-inline void cppa_check_value_fun(T1 const& value1, T2 const& value2,
+inline bool cppa_check_value_fun(T1 const& value1, T2 const& value2,
                                  char const* file_name,
                                  int line_number,
                                   size_t& error_count)
@@ -38,6 +38,21 @@ inline void cppa_check_value_fun(T1 const& value1, T2 const& value2,
                   << ", found: " << value2
                   << std::endl;
         ++error_count;
+        return false;
+    }
+    return true;
+}
+
+template<typename T1, typename T2>
+inline void cppa_check_value_verbose_fun(T1 const& value1, T2 const& value2,
+                                         char const* file_name,
+                                         int line_number,
+                                         size_t& error_count)
+{
+    if (cppa_check_value_fun(value1, value2, file_name,
+                             line_number, error_count))
+    {
+         std::cout << "line " << line_number << " passed" << std::endl;
     }
 }
 
@@ -65,9 +80,13 @@ if (!(line_of_code))                                                           \
 }                                                                              \
 else                                                                           \
 {                                                                              \
-    std::cout << "line " << __LINE__ << " passed" << endl;                     \
+    std::cout << "line " << __LINE__ << " passed" << std::endl;                \
 }                                                                              \
 ((void) 0)
+#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
+  cppa_check_value_verbose_fun((lhs_loc), (rhs_loc), __FILE__, __LINE__,       \
+                               cppa_ts.error_count)
+
 #else
 #define CPPA_IF_VERBOSE(line_of_code) ((void) 0)
 #define CPPA_CHECK(line_of_code)                                               \
@@ -77,15 +96,15 @@ if (!(line_of_code))                                                           \
               << " => " << #line_of_code << std::endl;                         \
     ++cppa_ts.error_count;                                                     \
 } ((void) 0)
+#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
+  cppa_check_value_fun((lhs_loc), (rhs_loc), __FILE__, __LINE__,               \
+                       cppa_ts.error_count)
+
 #endif
 
 #define CPPA_ERROR(err_msg)                                                    \
 std::cerr << err_msg << std::endl;                                             \
 ++cppa_ts.error_count
-
-#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
-  cppa_check_value_fun((lhs_loc), (rhs_loc), __FILE__, __LINE__,               \
-                       cppa_ts.error_count)
 
 #define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) != (rhs_loc)))
 

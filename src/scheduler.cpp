@@ -84,7 +84,7 @@ struct scheduler_helper
 
     void stop()
     {
-        m_worker->enqueue(nullptr, make_tuple(atom(":_DIE")));
+        m_worker->enqueue(nullptr, make_cow_tuple(atom(":_DIE")));
         m_thread.join();
     }
 

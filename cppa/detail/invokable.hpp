@@ -87,7 +87,7 @@ template<typename Fun, class FunArgs, class TupleTypes>
 struct iimpl : intermediate
 {
     typedef Fun functor_type;
-    typedef typename tuple_from_type_list<TupleTypes>::type tuple_type;
+    typedef typename cow_tuple_from_type_list<TupleTypes>::type tuple_type;
     functor_type m_fun;
     tuple_type m_default_args;
     tuple_type m_args;
@@ -358,19 +358,20 @@ struct select_invokable_impl<Fun, pattern<anything> >
                            dummy_policy> type;
 };
 
-template<class Pattern, typename Fun, typename Data>
-std::unique_ptr<invokable> get_invokable_impl(Fun&& fun, Data&& dt)
+template<class Pattern, typename Fun>
+std::unique_ptr<invokable> get_invokable_impl(Fun&& fun,
+                                              std::unique_ptr<value_matcher>&& vm)
 {
     typedef typename select_invokable_impl<Fun, Pattern>::type result;
-    return std::unique_ptr<invokable>(
-                new result(std::forward<Fun>(fun), std::forward<Data>(dt)));
+    return std::unique_ptr<invokable>{
+                new result(std::forward<Fun>(fun), std::move(vm))};
 }
 
 template<class Pattern, typename Fun>
 std::unique_ptr<invokable> get_invokable_impl(Fun&& fun)
 {
     typedef typename select_invokable_impl<Fun, typename Pattern::types>::type result;
-    return std::unique_ptr<invokable>(new result(std::forward<Fun>(fun)));
+    return std::unique_ptr<invokable>{new result(std::forward<Fun>(fun))};
 }
 
 } } // namespace cppa::detail

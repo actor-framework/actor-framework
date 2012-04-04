@@ -52,7 +52,7 @@ std::string to_string(atom_value const& what)
             read_chars = true;
         }
     }
-    return std::move(result);
+    return result;
 }
 
 } // namespace cppa

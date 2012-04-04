@@ -223,7 +223,7 @@ class po_peer
     {
         if (!m_children.empty())
         {
-            auto msg = make_tuple(atom(":KillProxy"),
+            auto msg = make_cow_tuple(atom(":KillProxy"),
                                   exit_reason::remote_link_unreachable);
             for (actor_proxy_ptr& pptr : m_children)
             {
@@ -341,7 +341,7 @@ class po_peer
                         // this message was send from a proxy
                         receiver->attach_functor([=](std::uint32_t reason)
                         {
-                            any_tuple kmsg = make_tuple(atom(":KillProxy"),
+                            any_tuple kmsg = make_cow_tuple(atom(":KillProxy"),
                                                         reason);
                             auto mjob = new detail::mailman_job(m_peer,
                                                                 receiver,
@@ -540,7 +540,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
             if (!pptr) DEBUG("pptr == nullptr");
             throw std::logic_error("selected_peer == nullptr");
         }
-        pptr->enqueue(nullptr, make_tuple(atom(":Monitor")));
+        pptr->enqueue(nullptr, make_cow_tuple(atom(":Monitor")));
         selected_peer->add_child(pptr);
         auto aid = pptr->id();
         auto pptr_copy = pptr;

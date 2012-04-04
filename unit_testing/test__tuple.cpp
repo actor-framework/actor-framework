@@ -9,7 +9,7 @@
 #include "test.hpp"
 
 #include "cppa/on.hpp"
-#include "cppa/tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
@@ -28,9 +28,9 @@ using namespace cppa;
 size_t test__tuple()
 {
     CPPA_TEST(test__tuple);
-    // check type correctness of make_tuple()
-    auto t0 = make_tuple("1", 2);
-    CPPA_CHECK((std::is_same<decltype(t0), cppa::tuple<std::string, int>>::value));
+    // check type correctness of make_cow_tuple()
+    auto t0 = make_cow_tuple("1", 2);
+    CPPA_CHECK((std::is_same<decltype(t0), cppa::cow_tuple<std::string, int>>::value));
     auto t0_0 = get<0>(t0);
     auto t0_1 = get<1>(t0);
     // check implicit type conversion
@@ -41,7 +41,7 @@ size_t test__tuple()
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
-    CPPA_CHECK((std::is_same<decltype(v0opt), option<tuple<std::string>>>::value));
+    CPPA_CHECK((std::is_same<decltype(v0opt), option<cow_tuple<std::string>>>::value));
     CPPA_CHECK((v0opt));
     CPPA_CHECK(   at0.size() == 2
                && at0.at(0) == &get<0>(t0)
@@ -49,7 +49,7 @@ size_t test__tuple()
     if (v0opt)
     {
         auto& v0 = *v0opt;
-        CPPA_CHECK((std::is_same<decltype(v0), tuple<std::string>&>::value));
+        CPPA_CHECK((std::is_same<decltype(v0), cow_tuple<std::string>&>::value));
         CPPA_CHECK((std::is_same<decltype(get<0>(v0)), std::string const&>::value));
         CPPA_CHECK_EQUAL(v0.size(), 1);
         CPPA_CHECK_EQUAL(get<0>(v0), "1");
@@ -61,19 +61,19 @@ size_t test__tuple()
         CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value
         CPPA_CHECK_NOT_EQUAL(&get<0>(t0), &get<0>(v0)); // no longer the same
         // check operator==
-        auto lhs = make_tuple(1,2,3,4);
-        auto rhs = make_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
+        auto lhs = make_cow_tuple(1,2,3,4);
+        auto rhs = make_cow_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
         CPPA_CHECK(lhs == rhs);
         CPPA_CHECK(rhs == lhs);
     }
-    any_tuple at1 = make_tuple("one", 2, 3.f, 4.0);
+    any_tuple at1 = make_cow_tuple("one", 2, 3.f, 4.0);
     {
         // perfect match
         auto opt0 = tuple_cast<std::string, int, float, double>(at1);
         CPPA_CHECK(opt0);
         if (opt0)
         {
-            CPPA_CHECK((*opt0 == make_tuple("one", 2, 3.f, 4.0)));
+            CPPA_CHECK((*opt0 == make_cow_tuple("one", 2, 3.f, 4.0)));
             CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
             CPPA_CHECK_EQUAL(&get<1>(*opt0), at1.at(1));
             CPPA_CHECK_EQUAL(&get<2>(*opt0), at1.at(2));
@@ -100,7 +100,7 @@ size_t test__tuple()
         CPPA_CHECK(opt3);
         if (opt3)
         {
-            CPPA_CHECK((*opt3 == make_tuple("one", 4.0)));
+            CPPA_CHECK((*opt3 == make_cow_tuple("one", 4.0)));
             CPPA_CHECK_EQUAL(get<0>(*opt3), "one");
             CPPA_CHECK_EQUAL(get<1>(*opt3), 4.0);
             CPPA_CHECK_EQUAL(&get<0>(*opt3), at1.at(0));
