@@ -31,6 +31,7 @@
 #ifndef APPLY_TUPLE_HPP
 #define APPLY_TUPLE_HPP
 
+#include "cppa/get.hpp"
 #include "cppa/util/enable_if.hpp"
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/is_manipulator.hpp"
@@ -38,40 +39,43 @@
 
 namespace cppa { namespace util {
 
-template<size_t... Range>
+template<typename Result, bool IsManipulator, size_t... Range>
 struct apply_tuple_impl
 {
     template<typename F, template<typename...> class Tuple, typename... T>
-    static auto apply(F&& f, Tuple<T...> const& args,
-                      typename disable_if<is_manipulator<F>, int>::type = 0)
-        -> typename get_result_type<F>::type
+    static Result apply(F&& f, Tuple<T...> const& args)
     {
         return f(get<Range>(args)...);
     }
+};
+
+template<typename Result, size_t... Range>
+struct apply_tuple_impl<Result, true, Range...>
+{
     template<typename F, template<typename...> class Tuple, typename... T>
-    static auto apply(F&& f, Tuple<T...>& args,
-                      typename enable_if<is_manipulator<F>, int>::type = 0)
-        -> typename get_result_type<F>::type
+    static Result apply(F&& f, Tuple<T...>& args)
     {
         return f(get_ref<Range>(args)...);
     }
 };
 
-template<int From, int To, int... Args>
-struct apply_tuple_util : apply_tuple_util<From, To-1, To, Args...>
+template<typename Result, bool IsManipulator, int From, int To, int... Args>
+struct apply_tuple_util
+        : apply_tuple_util<Result, IsManipulator, From, To-1, To, Args...>
 {
 };
 
-template<int X, int... Args>
-struct apply_tuple_util<X, X, Args...> : apply_tuple_impl<X, Args...>
+template<typename Result, bool IsManipulator, int X, int... Args>
+struct apply_tuple_util<Result, IsManipulator, X, X, Args...>
+        : apply_tuple_impl<Result, IsManipulator, X, Args...>
 {
 };
 
-template<>
-struct apply_tuple_util<1, 0>
+template<typename Result, bool IsManipulator>
+struct apply_tuple_util<Result, IsManipulator, 1, 0>
 {
     template<typename F, class Unused>
-    static auto apply(F&& f, Unused const&) -> typename get_result_type<F>::type
+    static Result apply(F&& f, Unused const&)
     {
         return f();
     }
@@ -81,6 +85,7 @@ template<typename F, template<typename...> class Tuple, typename... T>
 auto apply_tuple(F&& fun, Tuple<T...>& tup)
     -> typename get_result_type<F>::type
 {
+    typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
     static constexpr size_t tup_size = sizeof...(T);
     static_assert(tup_size >= fun_args::size,
@@ -88,13 +93,15 @@ auto apply_tuple(F&& fun, Tuple<T...>& tup)
     static constexpr size_t args_size = fun_args::size;
     static constexpr size_t from = (args_size > 0) ? tup_size - args_size : 1;
     static constexpr size_t to = (args_size > 0) ? tup_size - 1 : 0;
-    return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
+    return apply_tuple_util<result_type, is_manipulator<F>::value, from, to>
+           ::apply(std::forward<F>(fun), tup);
 }
 
 template<typename F, template<typename...> class Tuple, typename... T>
 auto apply_tuple(F&& fun, Tuple<T...> const& tup)
     -> typename get_result_type<F>::type
 {
+    typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
     static constexpr size_t tup_size = sizeof...(T);
     static_assert(tup_size >= fun_args::size,
@@ -102,7 +109,18 @@ auto apply_tuple(F&& fun, Tuple<T...> const& tup)
     static constexpr size_t args_size = fun_args::size;
     static constexpr size_t from = (args_size > 0) ? tup_size - args_size : 1;
     static constexpr size_t to = (args_size > 0) ? tup_size - 1 : 0;
-    return apply_tuple_util<from, to>::apply(std::forward<F>(fun), tup);
+    return apply_tuple_util<result_type, is_manipulator<F>::value, from, to>
+           ::apply(std::forward<F>(fun), tup);
+}
+
+template<typename Result, typename F, template<typename...> class Tuple, typename... T>
+Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup)
+{
+    static constexpr size_t tup_size = sizeof...(T);
+    static constexpr size_t from = 0;
+    static constexpr size_t to = tup_size - 1;
+    return apply_tuple_util<Result, false, from, to>
+           ::apply(std::forward<F>(fun), tup);
 }
 
 } } // namespace cppa::util

@@ -87,13 +87,13 @@ struct value_matcher
     const bool is_dummy;
     inline value_matcher(bool dummy_impl = false) : is_dummy(dummy_impl) { }
     virtual ~value_matcher();
-    virtual bool operator()(any_tuple const&) = 0;
+    virtual bool operator()(any_tuple const&) const = 0;
 };
 
 struct dummy_matcher : value_matcher
 {
     inline dummy_matcher() : value_matcher(true) { }
-    bool operator()(any_tuple const&);
+    bool operator()(any_tuple const&) const;
 };
 
 struct cmp_helper
@@ -135,7 +135,7 @@ class value_matcher_impl<wildcard_position::nil,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup)
+    bool operator()(any_tuple const& tup) const
     {
         cmp_helper h{tup};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
@@ -177,7 +177,7 @@ class value_matcher_impl<wildcard_position::leading,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup)
+    bool operator()(any_tuple const& tup) const
     {
         cmp_helper h{tup, tup.size() - sizeof...(Ts)};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
@@ -198,7 +198,7 @@ class value_matcher_impl<wildcard_position::in_between,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup)
+    bool operator()(any_tuple const& tup) const
     {
         static constexpr size_t wcpos =
                 static_cast<size_t>(util::tl_find<util::type_list<Ts...>, anything>::value);
@@ -225,7 +225,7 @@ class value_matcher_impl<wildcard_position::multiple,
     template<typename... Args>
     value_matcher_impl(Args&&...) { }
 
-    bool operator()(any_tuple const&)
+    bool operator()(any_tuple const&) const
     {
         throw std::runtime_error("not implemented yet, sorry");
     }

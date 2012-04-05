@@ -80,7 +80,9 @@ class rvalue_builder
 
     typedef util::arg_match_t arg_match_t;
 
-    typedef util::type_list<TypeList...> raw_types;
+    typedef util::type_list<
+                typename detail::implicit_conversions<TypeList>::type...>
+            raw_types;
 
     static constexpr bool is_complete =
             !std::is_same<arg_match_t, typename raw_types::back>::value;
@@ -94,12 +96,7 @@ class rvalue_builder
     static_assert(util::tl_find<types, arg_match_t>::value == -1,
                   "arg_match is allowed only as last parameter for on()");
 
-    typedef typename util::tl_apply<types,
-                                    detail::implicit_conversions>::type
-            converted_types;
-
-    typedef typename pattern_from_type_list<converted_types>::type
-            pattern_type;
+    typedef typename pattern_from_type_list<types>::type pattern_type;
 
     std::unique_ptr<value_matcher> m_vm;
 
@@ -115,11 +112,11 @@ class rvalue_builder
     {
         using namespace ::cppa::util;
         typedef typename get_callable_trait<F>::type ctrait;
-        typedef typename ctrait::arg_types raw_types;
+        typedef typename ctrait::arg_types raw_arg_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename tl_apply<raw_types,rm_ref>::type new_types;
-        typedef typename tl_concat<converted_types,new_types>::type types;
-        typedef typename pattern_from_type_list<types>::type epattern;
+        typedef typename tl_apply<raw_arg_types,rm_ref>::type arg_types;
+        typedef typename tl_concat<types,arg_types>::type full_types;
+        typedef typename pattern_from_type_list<full_types>::type epattern;
         return get_invokable_impl<epattern>(std::forward<F>(f),
                                             std::move(m_vm));
     }

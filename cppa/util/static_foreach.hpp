@@ -50,6 +50,12 @@ struct static_foreach_impl
         return    f(get<Begin>(c))
                && static_foreach_impl<Begin+1, End, (Begin+1 > End)>::eval(c, f);
     }
+    template<typename Container, typename Fun>
+    static inline bool eval_or(Container const& c, Fun& f)
+    {
+        return    f(get<Begin>(c))
+               || static_foreach_impl<Begin+1, End, (Begin+1 > End)>::eval_or(c, f);
+    }
 };
 
 template<size_t X>
@@ -59,6 +65,8 @@ struct static_foreach_impl<X, X, false>
     static inline void _(Container const&, Fun&) { }
     template<typename Container, typename Fun>
     static inline bool eval(Container const&, Fun&) { return true; }
+    template<typename Container, typename Fun>
+    static inline bool eval_or(Container const&, Fun&) { return true; }
 };
 
 template<size_t X, size_t Y>
@@ -68,6 +76,8 @@ struct static_foreach_impl<X, Y, true>
     static inline void _(Container const&, Fun&) { }
     template<typename Container, typename Fun>
     static inline bool eval(Container const&, Fun&) { return true; }
+    template<typename Container, typename Fun>
+    static inline bool eval_or(Container const&, Fun&) { return true; }
 };
 
 /**
