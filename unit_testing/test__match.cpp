@@ -11,93 +11,7 @@ using namespace cppa;
 using std::vector;
 using std::string;
 
-struct pattern_placeholder
-{
-    constexpr pattern_placeholder() { }
-
-    template<typename T>
-    std::unique_ptr<util::guard<T>> any_of(std::vector<T> vec) const
-    {
-        typedef std::vector<T> vector_type;
-        struct impl : util::guard<T>
-        {
-            vector_type m_vec;
-            impl(vector_type&& v) : m_vec(std::move(v)) { }
-            bool operator()(T const& value) const
-            {
-                return std::any_of(m_vec.begin(), m_vec.end(),
-                                   [&](T const& val) { return val == value; });
-            }
-        };
-        return std::unique_ptr<util::guard<T>>{new impl{std::move(vec)}};
-    }
-
-    template<typename T>
-    std::unique_ptr<util::guard<typename detail::strip_and_convert<T>::type>>
-    any_of(std::initializer_list<T> list) const
-    {
-        typedef typename detail::strip_and_convert<T>::type sc_type;
-        std::vector<sc_type> vec;
-        vec.reserve(list.size());
-        for (auto& i : list) vec.emplace_back(i);
-        return this->any_of(std::move(vec));
-    }
-
-    template<typename T>
-    std::unique_ptr<util::guard<typename detail::strip_and_convert<T>::type>>
-    starts_with(T substr) const
-    {
-        typedef typename detail::strip_and_convert<T>::type str_type;
-        struct impl : util::guard<str_type>
-        {
-            str_type m_str;
-            impl(str_type str) : m_str(std::move(str)) { }
-            bool operator()(str_type const& str) const
-            {
-                return    m_str.size() <= str.size()
-                       && std::equal(m_str.begin(), m_str.end(), str.begin());
-            }
-        };
-        return std::unique_ptr<util::guard<str_type>>{new impl{std::move(substr)}};
-    }
-
-};
-
-#define CPPA_GUARD_OPERATOR(Operator)                                          \
-    template<typename T>                                                       \
-    std::unique_ptr<util::guard<T> >                                           \
-    operator Operator (pattern_placeholder const&, T value) {                  \
-        struct impl : util::guard<T> {                                         \
-            T m_val;                                                           \
-            impl(T&& val) : m_val(std::move(val)) { }                          \
-            bool operator()(T const& other) const                              \
-            { return other Operator m_val; }                                   \
-        };                                                                     \
-        return std::unique_ptr<util::guard<T> >{new impl{std::move(value)}};   \
-    }                                                                          \
-    template<typename T>                                                       \
-    std::unique_ptr<util::guard<T> >                                           \
-    operator Operator (T value, pattern_placeholder const&) {                  \
-        struct impl : util::guard<T> {                                         \
-            T m_val;                                                           \
-            impl(T&& val) : m_val(std::move(val)) { }                          \
-            bool operator()(T const& other) const                              \
-            { return m_val Operator other; }                                   \
-        };                                                                     \
-        return std::unique_ptr<util::guard<T> >{new impl{std::move(value)}};   \
-    }
-
-CPPA_GUARD_OPERATOR(<)
-CPPA_GUARD_OPERATOR(<=)
-CPPA_GUARD_OPERATOR(>)
-CPPA_GUARD_OPERATOR(>=)
-CPPA_GUARD_OPERATOR(==)
-CPPA_GUARD_OPERATOR(!=)
-
-
-static constexpr pattern_placeholder _x;
-
-enum eval_op
+enum operator_id
 {
     addition_op,
     subtraction_op,
@@ -117,35 +31,11 @@ enum eval_op
 
 #define CPPA_DISPATCH_OP(EnumValue, Operator)                                  \
     template<typename T1, typename T2>                                         \
-    inline auto operator()(std::integral_constant<eval_op, EnumValue >,        \
-                           T1 const& lhs, T2 const& rhs) const                 \
+    inline auto eval_op(std::integral_constant<operator_id, EnumValue >,       \
+                        T1 const& lhs, T2 const& rhs) const                    \
     -> decltype(lhs Operator rhs) { return lhs Operator rhs; }
 
-struct op_dispatcher
-{
-    constexpr op_dispatcher() { }
-    CPPA_DISPATCH_OP(addition_op, +)
-    CPPA_DISPATCH_OP(subtraction_op, -)
-    CPPA_DISPATCH_OP(multiplication_op, *)
-    CPPA_DISPATCH_OP(division_op, /)
-    CPPA_DISPATCH_OP(modulo_op, %)
-    CPPA_DISPATCH_OP(less_op, <)
-    CPPA_DISPATCH_OP(less_eq_op, <=)
-    CPPA_DISPATCH_OP(greater_op, >)
-    CPPA_DISPATCH_OP(greater_eq_op, >=)
-    CPPA_DISPATCH_OP(equal_op, ==)
-    CPPA_DISPATCH_OP(not_equal_op, !=)
-    template<typename T, typename Fun>
-    inline bool operator()(std::integral_constant<eval_op, exec_fun_op>,
-                           T const& arg, Fun const& fun) const
-    {
-        return fun(arg);
-    }
-};
-
-static constexpr op_dispatcher s_opd;
-
-template<eval_op, typename First, typename Second>
+template<operator_id, typename First, typename Second>
 struct guard_expr;
 
 template<int X>
@@ -162,7 +52,7 @@ struct guard_placeholder
 
 };
 
-template<eval_op OP, typename First, typename Second>
+template<operator_id OP, typename First, typename Second>
 struct guard_expr;
 
 template<typename... Ts, typename T>
@@ -178,23 +68,23 @@ auto fetch(detail::tdata<Ts...> const& tup, guard_placeholder<X>)
     return *get<X>(tup);
 }
 
-template<typename... Ts, eval_op OP, typename First, typename Second>
+template<typename... Ts, operator_id OP, typename First, typename Second>
 auto fetch(detail::tdata<Ts...> const& tup,
            guard_expr<OP, First, Second> const& ge)
      -> decltype(ge.eval(tup));
 
-template<class Tuple, eval_op OP, typename First, typename Second>
-auto eval_guard_expr(std::integral_constant<eval_op, OP> token,
+template<class Tuple, operator_id OP, typename First, typename Second>
+auto eval_guard_expr(std::integral_constant<operator_id, OP> token,
                      Tuple const& tup,
                      First const& lhs,
                      Second const& rhs)
-     -> decltype(s_opd(token, fetch(tup, lhs), fetch(tup, rhs)))
+     -> decltype(eval_op(token, fetch(tup, lhs), fetch(tup, rhs)))
 {
-    return s_opd(token, fetch(tup, lhs), fetch(tup, rhs));
+    return eval_op(token, fetch(tup, lhs), fetch(tup, rhs));
 }
 
 template<class Tuple, typename First, typename Second>
-bool eval_guard_expr(std::integral_constant<eval_op, logical_and_op>,
+bool eval_guard_expr(std::integral_constant<operator_id, logical_and_op>,
                      Tuple const& tup,
                      First const& lhs,
                      Second const& rhs)
@@ -205,7 +95,7 @@ bool eval_guard_expr(std::integral_constant<eval_op, logical_and_op>,
 }
 
 template<class Tuple, typename First, typename Second>
-bool eval_guard_expr(std::integral_constant<eval_op, logical_or_op>,
+bool eval_guard_expr(std::integral_constant<operator_id, logical_or_op>,
                      Tuple const& tup,
                      First const& lhs,
                      Second const& rhs)
@@ -228,7 +118,7 @@ struct compute_<guard_placeholder<X>, detail::tdata<Ts...> >
 };
 
 
-template<eval_op OP, typename First, typename Second, class Tuple>
+template<operator_id OP, typename First, typename Second, class Tuple>
 struct compute_result_type
 {
     typedef bool type;
@@ -242,7 +132,7 @@ struct compute_result_type<addition_op, First, Second, Tuple>
     typedef decltype(lhs_type() + rhs_type()) type;
 };
 
-template<eval_op OP, typename First, typename Second>
+template<operator_id OP, typename First, typename Second>
 struct guard_expr
 {
     std::pair<First, Second> m_args;
@@ -255,7 +145,7 @@ struct guard_expr
     auto eval(detail::tdata<Args...> const& tup) const
          -> typename compute_result_type<OP, First, Second, detail::tdata<Args...>>::type
     {
-        std::integral_constant<eval_op, OP> token;
+        std::integral_constant<operator_id, OP> token;
         return eval_guard_expr(token, tup, m_args.first, m_args.second);
     }
     template<typename... Args>
@@ -267,7 +157,7 @@ struct guard_expr
     }
 };
 
-template<typename... Ts, eval_op OP, typename First, typename Second>
+template<typename... Ts, operator_id OP, typename First, typename Second>
 auto fetch(detail::tdata<Ts...> const& tup,
            guard_expr<OP, First, Second> const& ge)
      -> decltype(ge.eval(tup))
@@ -314,8 +204,8 @@ GUARD_PLACEHOLDER_OPERATOR(greater_eq_op, >=)
 GUARD_PLACEHOLDER_OPERATOR(equal_op, ==)
 GUARD_PLACEHOLDER_OPERATOR(not_equal_op, !=)
 
-template<eval_op OP1, typename F1, typename S1,
-         eval_op OP2, typename F2, typename S2>
+template<operator_id OP1, typename F1, typename S1,
+         operator_id OP2, typename F2, typename S2>
 guard_expr<logical_and_op, guard_expr<OP1, F1, S1>, guard_expr<OP2, F2, S2>>
 operator&&(guard_expr<OP1, F1, S1> lhs,
            guard_expr<OP2, F2, S2> rhs)
@@ -323,8 +213,8 @@ operator&&(guard_expr<OP1, F1, S1> lhs,
     return {std::move(lhs), std::move(rhs)};
 }
 
-template<eval_op OP1, typename F1, typename S1,
-         eval_op OP2, typename F2, typename S2>
+template<operator_id OP1, typename F1, typename S1,
+         operator_id OP2, typename F2, typename S2>
 guard_expr<logical_or_op, guard_expr<OP1, F1, S1>, guard_expr<OP2, F2, S2>>
 operator||(guard_expr<OP1, F1, S1> lhs,
            guard_expr<OP2, F2, S2> rhs)
@@ -332,7 +222,7 @@ operator||(guard_expr<OP1, F1, S1> lhs,
     return {std::move(lhs), std::move(rhs)};
 }
 
-template<eval_op OP, typename F, typename S, typename T>
+template<operator_id OP, typename F, typename S, typename T>
 guard_expr<equal_op, guard_expr<OP, F, S>, T>
 operator==(guard_expr<OP, F, S> lhs,
            T rhs)
@@ -380,13 +270,13 @@ struct foobaz
     }
 };
 
-template<eval_op OP, typename First, typename Second>
+template<operator_id OP, typename First, typename Second>
 value_matcher* when(guard_expr<OP, First, Second> ge)
 {
     return nullptr;
 }
 
-std::string to_string(eval_op op)
+std::string to_string(operator_id op)
 {
     switch (op)
     {
@@ -419,7 +309,7 @@ std::string to_string(guard_placeholder<X>)
     return "_x" + std::to_string(X+1);
 }
 
-template<typename... Ts, eval_op OP, typename First, typename Second>
+template<typename... Ts, operator_id OP, typename First, typename Second>
 std::string to_string(guard_expr<OP, First, Second> const& ge)
 {
     std::string result;
