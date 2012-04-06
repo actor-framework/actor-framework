@@ -258,5 +258,5 @@ cppa/detail/tuple_view.hpp
 cppa/detail/container_tuple_view.hpp
 cppa/detail/matches.hpp
 unit_testing/test__match.cpp
+cppa/guard_expr.hpp
 src/pattern.cpp
-cppa/util/guard.hpp

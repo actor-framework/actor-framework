@@ -82,8 +82,7 @@ struct apply_tuple_util<Result, IsManipulator, 1, 0>
 };
 
 template<typename F, template<typename...> class Tuple, typename... T>
-auto apply_tuple(F&& fun, Tuple<T...>& tup)
-    -> typename get_result_type<F>::type
+typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...>& tup)
 {
     typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
@@ -98,8 +97,7 @@ auto apply_tuple(F&& fun, Tuple<T...>& tup)
 }
 
 template<typename F, template<typename...> class Tuple, typename... T>
-auto apply_tuple(F&& fun, Tuple<T...> const& tup)
-    -> typename get_result_type<F>::type
+typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup)
 {
     typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
@@ -113,14 +111,22 @@ auto apply_tuple(F&& fun, Tuple<T...> const& tup)
            ::apply(std::forward<F>(fun), tup);
 }
 
-template<typename Result, typename F, template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup)
+template<typename Result, size_t From, size_t To,
+         typename F, template<typename...> class Tuple, typename... T>
+Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...> const& tup)
 {
-    static constexpr size_t tup_size = sizeof...(T);
-    static constexpr size_t from = 0;
-    static constexpr size_t to = tup_size - 1;
-    return apply_tuple_util<Result, false, from, to>
+    return apply_tuple_util<Result, false, From, To>
            ::apply(std::forward<F>(fun), tup);
+}
+
+// applies all values of @p tup to @p fun
+// does not evaluate result type of functor
+template<typename Result, typename F,
+         template<typename...> class Tuple, typename... T>
+Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
+{
+    return unchecked_apply_tuple_in_range<Result, 0, sizeof...(T) - 1>
+           (std::forward<F>(fun), tup);
 }
 
 } } // namespace cppa::util

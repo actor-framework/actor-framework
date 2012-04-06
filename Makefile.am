@@ -151,6 +151,7 @@ nobase_library_include_HEADERS = \
     cppa/fsm_actor.hpp \
     cppa/get.hpp \
     cppa/group.hpp \
+    cppa/guard_expr.hpp \
     cppa/intrusive/forward_iterator.hpp \
     cppa/intrusive/single_reader_queue.hpp \
     cppa/intrusive/singly_linked_list.hpp \
@@ -192,7 +193,6 @@ nobase_library_include_HEADERS = \
     cppa/util/enable_if.hpp \
     cppa/util/fiber.hpp \
     cppa/util/fixed_vector.hpp \
-    cppa/util/guard.hpp \
     cppa/util/if_else.hpp \
     cppa/util/is_array_of.hpp \
     cppa/util/is_builtin.hpp \

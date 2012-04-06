@@ -163,7 +163,7 @@ enum mapping_policy
     map_to_option
 };
 
-template<mapping_policy, class Pattern>
+template<mapping_policy, class Pattern> // do_not_map
 struct pattern_policy
 {
     Pattern m_pattern;

@@ -267,9 +267,9 @@ template<typename T>
 struct tdata_from_type_list;
 
 template<typename... T>
-struct tdata_from_type_list<cppa::util::type_list<T...>>
+struct tdata_from_type_list<util::type_list<T...>>
 {
-    typedef cppa::detail::tdata<T...> type;
+    typedef tdata<T...> type;
 };
 
 } } // namespace cppa::detail

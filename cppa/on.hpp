@@ -39,6 +39,7 @@
 #include "cppa/anything.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/guard_expr.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -98,7 +99,9 @@ class rvalue_builder
 
     typedef typename pattern_from_type_list<types>::type pattern_type;
 
-    std::unique_ptr<value_matcher> m_vm;
+    typedef std::unique_ptr<value_matcher> vm_ptr;
+
+    vm_ptr m_vm;
 
     template<typename F>
     partial_function cr_rvalue(F&& f, std::integral_constant<bool, true>)
@@ -122,6 +125,30 @@ class rvalue_builder
     }
 
  public:
+
+    template<operator_id OP, typename F, typename S>
+    rvalue_builder& when(guard_expr<OP, F, S> ge)
+    {
+        typedef guard_expr<OP, F, S> gtype;
+        struct vm_impl : value_matcher
+        {
+            vm_ptr m_ptr;
+            gtype m_ge;
+            vm_impl(vm_ptr&& ptr, gtype&& g) : m_ptr(std::move(ptr)), m_ge(std::move(g)) { }
+            bool operator()(any_tuple const& tup) const
+            {
+                static_assert(std::is_same<decltype(ge_invoke_any<types>(m_ge, tup)), bool>::value,
+                              "guard expression does not return a boolean");
+                if ((*m_ptr)(tup))
+                {
+                    return ge_invoke_any<types>(m_ge, tup);
+                }
+                return false;
+            }
+        };
+        m_vm.reset(new vm_impl(std::move(m_vm), std::move(ge)));
+        return *this;
+    }
 
     template<typename... Args>
     rvalue_builder(Args&&... args)

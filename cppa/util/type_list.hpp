@@ -314,6 +314,20 @@ struct tl_concat<type_list<ListATypes...>, type_list<ListBTypes...> >
     typedef type_list<ListATypes..., ListBTypes...> type;
 };
 
+// list list::push_back(list, type)
+
+template<typename List, typename What>
+struct tl_push_back;
+
+/**
+ * @brief Appends @p What to given list.
+ */
+template<typename... ListTypes, typename What>
+struct tl_push_back<type_list<ListTypes...>, What>
+{
+    typedef type_list<ListTypes..., What> type;
+};
+
 // list list::appy(trait)
 
 template<typename List, template<typename> class Trait>
