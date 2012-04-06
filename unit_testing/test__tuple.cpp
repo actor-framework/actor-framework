@@ -25,9 +25,65 @@ using std::endl;
 
 using namespace cppa;
 
+template<class Expr, class Guard, typename Result, typename... Args>
+class tpartial_function
+{
+
+ public:
+
+    tpartial_function(Guard&& g, Expr&& e)
+        : m_guard(std::move(g)), m_expr(std::move(e))
+    {
+    }
+
+    tpartial_function(tpartial_function&&) = default;
+    tpartial_function(tpartial_function const&) = default;
+
+    bool defined_at(Args const&... args)
+    {
+        return m_guard(args...);
+    }
+
+    Result operator()(Args const&... args)
+    {
+        return m_expr(args...);
+    }
+
+
+ private:
+
+    detail::tdata<Args...> m_args;
+    Guard m_guard;
+    Expr m_expr;
+
+};
+
+template<class Expr, class Guard, typename Result, class ArgTypes>
+struct tpf_;
+
+template<class Expr, class Guard, typename Result, typename... Ts>
+struct tpf_<Expr, Guard, Result, util::type_list<Ts...> >
+{
+    typedef tpartial_function<Expr, Guard, Result, Ts...> type;
+};
+
+template<class Expr, class Guard>
+
+typename tpf_<Expr, Guard,
+              typename util::get_callable_trait<Expr>::result_type,
+              typename util::get_callable_trait<Expr>::arg_types
+>::type
+tfun(Expr e, Guard g)
+{
+    return {std::move(g), std::move(e)};
+}
+
 size_t test__tuple()
 {
     CPPA_TEST(test__tuple);
+
+    using namespace cppa::placeholders;
+
     // check type correctness of make_cow_tuple()
     auto t0 = make_cow_tuple("1", 2);
     CPPA_CHECK((std::is_same<decltype(t0), cppa::cow_tuple<std::string, int>>::value));

@@ -33,7 +33,8 @@ void math_fun()
             done = true;
         }
     )
-    .until([&]() { return done; });
+    .until(gref(done));
+    //.until([&]() { return done; });
 }
 
 struct math_actor : event_based_actor

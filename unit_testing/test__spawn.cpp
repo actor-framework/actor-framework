@@ -212,7 +212,7 @@ class testee_actor : public scheduled_actor
                 reply("wait4string");
             }
         )
-        .until([&]() { return string_received; });
+        .until(gref(string_received));
     }
 
     void wait4float()
@@ -230,7 +230,7 @@ class testee_actor : public scheduled_actor
                 reply("wait4float");
             }
         )
-        .until([&]() { return float_received; });
+        .until(gref(float_received));
     }
 
  public:
@@ -281,11 +281,11 @@ void testee3(actor_ptr parent)
     // test a future_send / delayed_reply based loop
     future_send(self, std::chrono::milliseconds(50), atom("Poll"));
     int polls = 0;
-    receive_while([&polls]() { return ++polls <= 5; })
+    receive_for(polls, 5)
     (
         on(atom("Poll")) >> [&]()
         {
-            if (polls < 5)
+            if (polls < 4)
             {
                 delayed_reply(std::chrono::milliseconds(50), atom("Poll"));
             }
@@ -386,7 +386,7 @@ size_t test__spawn()
     int flags = 0;
     future_send(self, std::chrono::seconds(1), atom("FooBar"));
     // wait for :Down and :Exit messages of pong
-    receive_while([&i]() { return ++i <= 3; })
+    receive_for(i, 3)
     (
         on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
@@ -424,26 +424,6 @@ size_t test__spawn()
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 5);
 
-    /*
-    spawn(testee3, self);
-    i = 0;
-    // testee3 sends 5 { "Push", int } messages in a 50 milliseconds interval;
-    // allow for a maximum error of 5ms
-    receive_while([&i]() { return ++i <= 5; })
-    (
-        on<atom("Push"), int>() >> [&](int val)
-        {
-            CPPA_CHECK_EQUAL(i, val);
-            //cout << "{ Push, " << val << " } ..." << endl;
-        },
-        after(std::chrono::milliseconds(55)) >> [&]()
-        {
-            cout << "Push " << i
-                 << " was delayed more than 55 milliseconds" << endl;
-            CPPA_CHECK(false);
-        }
-    );
-    */
     await_all_others_done();
     return CPPA_TEST_RESULT;
 }

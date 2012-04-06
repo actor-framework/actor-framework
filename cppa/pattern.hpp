@@ -313,11 +313,14 @@ class pattern
         m_vm.reset(new value_matcher_impl<wildcard_pos, types, util::type_list<Args...> >{data});
     }
 
-    pattern(std::unique_ptr<value_matcher>&& vm) : m_vm(std::move(vm)) { }
+    pattern(std::unique_ptr<value_matcher>&& vm) : m_vm(std::move(vm))
+    {
+        if (!m_vm) m_vm.reset(new dummy_matcher);
+    }
 
     static inline value_matcher* get_value_matcher()
     {
-        return new dummy_matcher;
+        return nullptr;
     }
 
     template<typename Arg0, typename... Args>

@@ -116,7 +116,7 @@ int main(int, char**)
 
     // receive two messages
     int i = 0;
-    receive_while([&]() { return ++i <= 2; })
+    receive_for(i, 2)
     (
         on<bar>() >> [](bar const& val)
         {

@@ -97,6 +97,8 @@ struct get_callable_trait
                 std::is_member_function_pointer<fun_type>::value,
                 fun_type>::type
             type;
+    typedef typename type::result_type result_type;
+    typedef typename type::arg_types arg_types;
 };
 
 template<typename C>

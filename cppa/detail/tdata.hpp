@@ -104,6 +104,8 @@ struct tdata<>
         throw std::out_of_range("");
     }
 
+    inline void set() { }
+
     inline bool operator==(tdata const&) const { return true; }
 
 };
@@ -160,6 +162,13 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         return *this;
     }
 
+    template<typename Arg0, typename... Args>
+    inline void set(Arg0&& arg0, Args&&... args)
+    {
+        head = std::forward<Arg0>(arg0);
+        super::set(std::forward<Args>(args)...);
+    }
+
     // upcast
     inline tdata<Tail...>& tail() { return *this; }
     inline tdata<Tail...> const& tail() const { return *this; }
@@ -213,6 +222,13 @@ struct tdata<option<Head>, Tail...> : tdata<Tail...>
     tdata(util::wrapped<Head>(*)(), Args const&... vals)
         : super(vals...), head()
     {
+    }
+
+    template<typename Arg0, typename... Args>
+    inline void set(Arg0&& arg0, Args&&... args)
+    {
+        head = std::forward<Arg0>(arg0);
+        super::set(std::forward<Args>(args)...);
     }
 
     template<typename... Y>

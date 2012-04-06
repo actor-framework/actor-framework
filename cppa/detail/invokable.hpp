@@ -362,16 +362,23 @@ template<class Pattern, typename Fun>
 std::unique_ptr<invokable> get_invokable_impl(Fun&& fun,
                                               std::unique_ptr<value_matcher>&& vm)
 {
-    typedef typename select_invokable_impl<Fun, Pattern>::type result;
-    return std::unique_ptr<invokable>{
-                new result(std::forward<Fun>(fun), std::move(vm))};
+    typedef std::unique_ptr<invokable> result;
+    if (vm)
+    {
+        typedef typename select_invokable_impl<Fun, Pattern>::type impl1;
+        return result{new impl1{std::forward<Fun>(fun), std::move(vm)}};
+    }
+    typedef typename Pattern::types pattern_types;
+    typedef typename select_invokable_impl<Fun, pattern_types>::type impl2;
+    return result{new impl2{std::forward<Fun>(fun)}};
 }
 
 template<class Pattern, typename Fun>
 std::unique_ptr<invokable> get_invokable_impl(Fun&& fun)
 {
-    typedef typename select_invokable_impl<Fun, typename Pattern::types>::type result;
-    return std::unique_ptr<invokable>{new result(std::forward<Fun>(fun))};
+    typedef typename Pattern::types pattern_types;
+    typedef typename select_invokable_impl<Fun, pattern_types>::type impl;
+    return std::unique_ptr<invokable>{new impl(std::forward<Fun>(fun))};
 }
 
 } } // namespace cppa::detail

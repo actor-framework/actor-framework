@@ -200,7 +200,7 @@ int main()
 
     // receive both messages
     int i = 0;
-    receive_while([&]() { return ++i <= 2; })
+    receive_for(i, 2)
     (
         // ... and receive it
         on<tree>() >> [](const tree& tmsg)

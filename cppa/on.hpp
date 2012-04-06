@@ -126,27 +126,59 @@ class rvalue_builder
 
  public:
 
-    template<operator_id OP, typename F, typename S>
-    rvalue_builder& when(guard_expr<OP, F, S> ge)
+    //template<operator_id OP, typename F, typename S>
+    //rvalue_builder& when(guard_expr<OP, F, S> ge)
+    template<typename Fun>
+    rvalue_builder& when(Fun&& fun)
     {
-        typedef guard_expr<OP, F, S> gtype;
-        struct vm_impl : value_matcher
+        //TODO: static_assert
+        typedef typename util::rm_ref<Fun>::type fun_type;
+        if (m_vm)
         {
-            vm_ptr m_ptr;
-            gtype m_ge;
-            vm_impl(vm_ptr&& ptr, gtype&& g) : m_ptr(std::move(ptr)), m_ge(std::move(g)) { }
-            bool operator()(any_tuple const& tup) const
+            struct impl1 : value_matcher
             {
-                static_assert(std::is_same<decltype(ge_invoke_any<types>(m_ge, tup)), bool>::value,
-                              "guard expression does not return a boolean");
-                if ((*m_ptr)(tup))
+                vm_ptr m_ptr;
+                fun_type m_fun;
+                impl1(vm_ptr&& ptr, Fun&& f)
+                    : m_ptr(std::move(ptr)), m_fun(std::forward<Fun>(f))
                 {
-                    return ge_invoke_any<types>(m_ge, tup);
                 }
-                return false;
-            }
-        };
-        m_vm.reset(new vm_impl(std::move(m_vm), std::move(ge)));
+                bool operator()(any_tuple const& tup) const
+                {
+                    if ((*m_ptr)(tup))
+                    {
+                        auto ttup = tuple_cast(tup, types{});
+                        if (ttup)
+                        {
+                            return util::unchecked_apply_tuple<bool>(m_fun,
+                                                                     *ttup);
+                        }
+                    }
+                    return false;
+                }
+            };
+            m_vm.reset(new impl1{std::move(m_vm), std::forward<Fun>(fun)});
+        }
+        else
+        {
+            struct impl2 : value_matcher
+            {
+                fun_type m_fun;
+                impl2(Fun&& f) : m_fun(std::forward<Fun>(f))
+                {
+                }
+                bool operator()(any_tuple const& tup) const
+                {
+                    auto ttup = tuple_cast(tup, types{});
+                    if (ttup)
+                    {
+                        return util::unchecked_apply_tuple<bool>(m_fun, *ttup);
+                    }
+                    return false;
+                }
+            };
+            m_vm.reset(new impl2{std::forward<Fun>(fun)});
+        }
         return *this;
     }
 

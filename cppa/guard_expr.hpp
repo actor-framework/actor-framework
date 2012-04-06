@@ -38,6 +38,8 @@
 #include <type_traits>
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/enable_if.hpp"
+
 #include "cppa/detail/tdata.hpp"
 
 namespace cppa {
@@ -91,6 +93,10 @@ struct guard_expr
 
     guard_expr(guard_expr const&) = default;
     guard_expr(guard_expr&& other) : m_args(std::move(other.m_args)) { }
+
+    template<typename... Args>
+    bool operator()(Args const&... args) const;
+
 };
 
 #define CPPA_FORALL_OPS(SubMacro)                                              \
@@ -295,11 +301,50 @@ struct guard_placeholder
 
 };
 
+template<typename T>
+struct ge_reference_wrapper
+{
+    T const* value;
+    ge_reference_wrapper(T&&) = delete;
+    ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
+    ge_reference_wrapper(ge_reference_wrapper const&) = default;
+    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
+    T const& get() const { return *value; }
+    operator T const& () const { return *value; }
+};
+
+// support use of gref(BooleanVariable) as receive loop 'guard'
+template<>
+struct ge_reference_wrapper<bool>
+{
+    bool const* value;
+    ge_reference_wrapper(bool&&) = delete;
+    ge_reference_wrapper(bool const& val_ref) : value(&val_ref) { }
+    ge_reference_wrapper(ge_reference_wrapper const&) = default;
+    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
+    bool get() const { return *value; }
+    operator bool () const { return *value; }
+    bool operator()() const { return *value; }
+};
+
+/**
+ * @brief Create a reference wrapper similar to std::reference_wrapper<const T>
+ *        that could be used in guard expressions or to enforce lazy evaluation.
+ */
+template<typename T>
+ge_reference_wrapper<T> gref(T const& value) { return {value}; }
+
 
 // result type computation
 
 template<typename T, class Tuple>
 struct ge_unbound
+{
+    typedef T type;
+};
+
+template<typename T, class Tuple>
+struct ge_unbound<ge_reference_wrapper<T>, Tuple>
 {
     typedef T type;
 };
@@ -315,51 +360,49 @@ struct ge_unbound<guard_placeholder<X>, detail::tdata<Ts...> >
 
 // operators, operators, operators
 
-#define CPPA_GUARD_PLACEHOLDER_OPERATOR(EnumValue, Operator)                   \
-    template<int Pos1, int Pos2>                                               \
-    guard_expr< EnumValue , guard_placeholder<Pos1>, guard_placeholder<Pos2>>  \
-    operator Operator (guard_placeholder<Pos1> p1, guard_placeholder<Pos2> p2) \
-    { return {p1, p2}; }                                                       \
-    template<int Pos, typename T>                                              \
-    guard_expr< EnumValue , guard_placeholder<Pos>,                            \
-                typename detail::strip_and_convert<T>::type >                  \
-    operator Operator (guard_placeholder<Pos> gp, T value)                     \
-    { return {std::move(gp), std::move(value)}; }                              \
-    template<typename T, int Pos>                                              \
-    guard_expr< EnumValue ,                                                    \
-                typename detail::strip_and_convert<T>::type,                   \
-                guard_placeholder<Pos> >                                       \
-    operator Operator (T value, guard_placeholder<Pos> gp)                     \
-    { return {std::move(value), std::move(gp)}; }
+template<typename T>
+struct is_ge_type
+{
+    static constexpr bool value = false;
+};
 
-CPPA_FORALL_OPS(CPPA_GUARD_PLACEHOLDER_OPERATOR)
+template<int X>
+struct is_ge_type<guard_placeholder<X> >
+{
+    static constexpr bool value = true;
+};
 
-#define CPPA_GUARD_EXPR_OPERATOR(EnumValue, Operator)                          \
-    template<operator_id OP, typename F, typename S, typename T>               \
-    guard_expr< EnumValue , guard_expr<OP, F, S>,                              \
-                            typename detail::strip_and_convert<T>::type>       \
-    operator Operator (guard_expr<OP, F, S> lhs, T rhs)                        \
-    { return {lhs, rhs}; }                                                     \
-    template<typename T, operator_id OP, typename F, typename S>               \
-    guard_expr< EnumValue , typename detail::strip_and_convert<T>::type,       \
-                            guard_expr<OP, F, S>>                              \
-    operator Operator (T lhs, guard_expr<OP, F, S> rhs)                        \
-    { return {lhs, rhs}; }                                                     \
-    template<operator_id OP, typename F, typename S, int X>                    \
-    guard_expr< EnumValue , guard_expr<OP, F, S>, guard_placeholder<X> >       \
-    operator Operator (guard_expr<OP, F, S> lhs, guard_placeholder<X> rhs)     \
-    { return {lhs, rhs}; }                                                     \
-    template<int X, operator_id OP, typename F, typename S>                    \
-    guard_expr< EnumValue , guard_placeholder<X>, guard_expr<OP, F, S>>        \
-    operator Operator (guard_placeholder<X> lhs, guard_expr<OP, F, S> rhs)     \
-    { return {lhs, rhs}; }                                                     \
-    template<operator_id OP1, typename F1, typename S1,                        \
-             operator_id OP2, typename F2, typename S2>                        \
-    guard_expr< EnumValue , guard_expr<OP1, F1, S1>, guard_expr<OP2, F2, S2>>  \
-    operator Operator (guard_expr<OP1,F1,S1> lhs, guard_expr<OP2,F2,S2> rhs)   \
-    { return {lhs, rhs}; }
+template<typename T>
+struct is_ge_type<ge_reference_wrapper<T> >
+{
+    static constexpr bool value = true;
+};
 
-CPPA_FORALL_OPS(CPPA_GUARD_EXPR_OPERATOR)
+template<operator_id OP, typename First, typename Second>
+struct is_ge_type<guard_expr<OP, First, Second> >
+{
+    static constexpr bool value = true;
+};
+
+template<operator_id OP, typename T1, typename T2>
+guard_expr<OP, typename detail::strip_and_convert<T1>::type,
+               typename detail::strip_and_convert<T2>::type>
+ge_concatenate(T1 first, T2 second,
+               typename util::enable_if_c<
+                   is_ge_type<T1>::value || is_ge_type<T2>::value
+               >::type* = 0)
+{
+    return {first, second};
+}
+
+#define CPPA_GE_OPERATOR(EnumValue, Operator)                                  \
+    template<typename T1, typename T2>                                         \
+    auto operator Operator (T1 v1, T2 v2)                                      \
+         -> decltype(ge_concatenate< EnumValue >(v1, v2)) {                    \
+        return ge_concatenate< EnumValue >(v1, v2);                            \
+    }
+
+CPPA_FORALL_OPS(CPPA_GE_OPERATOR)
 
 template<operator_id OP>
 struct ge_eval_op;
@@ -430,25 +473,6 @@ struct ge_result_<guard_expr<exec_fun3_op, First, Second>, Tuple>
              )) type;
 };
 
-/*
-#define CPPA_G_RESULT_TYPE_SPECIALIZATION(EnumValue, Operator)                 \
-    template<typename First, typename Second, class Tuple>                     \
-    struct ge_result_< guard_expr< EnumValue , First, Second>, Tuple>          \
-    {                                                                          \
-        typedef typename ge_result_<First, Tuple>::type lhs_type;              \
-        typedef typename ge_result_<Second, Tuple>::type rhs_type;             \
-        typedef decltype(*static_cast<lhs_type const*>(nullptr)                \
-                         Operator                                              \
-                         *static_cast<rhs_type const*>(nullptr)) type;         \
-    };
-
-CPPA_G_RESULT_TYPE_SPECIALIZATION(addition_op, +)
-CPPA_G_RESULT_TYPE_SPECIALIZATION(subtraction_op, -)
-CPPA_G_RESULT_TYPE_SPECIALIZATION(multiplication_op, *)
-CPPA_G_RESULT_TYPE_SPECIALIZATION(division_op, /)
-CPPA_G_RESULT_TYPE_SPECIALIZATION(modulo_op, %)
-*/
-
 template<operator_id OP, typename First, typename Second, class Tuple>
 struct ge_result
 {
@@ -481,6 +505,12 @@ template<class Tuple, typename T>
 inline T const& ge_resolve(Tuple const&, T const& value)
 {
     return value;
+}
+
+template<class Tuple, typename T>
+inline T const& ge_resolve(Tuple const&, ge_reference_wrapper<T> const& value)
+{
+    return value.get();
 }
 
 template<class Tuple, int X>
@@ -633,6 +663,15 @@ ge_invoke_any(guard_expr<OP, First, Second> const& ge,
     CPPA_REQUIRE(static_cast<bool>(x) == true);
     ge_invoke_helper<guard_expr<OP, First, Second> > f{ge};
     return util::unchecked_apply_tuple<result_type>(f, *x);
+}
+
+template<operator_id OP, typename First, typename Second>
+template<typename... Args>
+bool guard_expr<OP, First, Second>::operator()(Args const&... args) const
+{
+    static_assert(std::is_same<decltype(ge_invoke(*this, args...)), bool>::value,
+                  "guard expression does not return a boolean");
+    return ge_invoke(*this, args...);
 }
 
 // finally ...

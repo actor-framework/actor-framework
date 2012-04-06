@@ -48,9 +48,10 @@ size_t test__match()
     auto expr2 = _x1 + _x2 < _x3;
     auto expr3 = _x1 % _x2 == 0;
     CPPA_CHECK_EQUAL(5, (ge_invoke(expr1, 2, 3)));
-    CPPA_CHECK(ge_invoke(expr2, 1, 2, 4));
+    //CPPA_CHECK(ge_invoke(expr2, 1, 2, 4));
+    CPPA_CHECK(expr2(1, 2, 4));
     CPPA_CHECK_EQUAL("12", (ge_invoke(expr1, std::string{"1"}, std::string{"2"})));
-    CPPA_CHECK((ge_invoke(expr3, 100, 2)));
+    CPPA_CHECK(expr3(100, 2));
 
     auto expr4 = _x1 == "-h" || _x1 == "--help";
     CPPA_CHECK(ge_invoke(expr4, string("-h")));

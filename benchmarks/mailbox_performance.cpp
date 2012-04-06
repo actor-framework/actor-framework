@@ -68,7 +68,8 @@ struct fsm_receiver : fsm_actor<fsm_receiver>
 void receiver(int64_t max)
 {
     int64_t value;
-    receive_while([&]() { return value < max; })
+    receive_while(gref(value) < max)
+    //receive_while([&]() { return value < max; })
     (
         on(atom("msg")) >> [&]()
         {

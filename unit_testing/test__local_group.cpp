@@ -41,7 +41,6 @@ size_t test__local_group()
     }
     send(foo_group, 2);
     int result = 0;
-    //receive_until([&result]() { return result == 10; })
     do_receive
     (
         on<int>() >> [&](int value)
@@ -55,7 +54,7 @@ size_t test__local_group()
             result = 10;
         }
     )
-    .until([&result]() { return result == 10; });
+    .until(gref(result) == 10);
     await_all_others_done();
     return CPPA_TEST_RESULT;
 }

@@ -58,7 +58,7 @@ int main(int, char**)
 
     // receive two messages
     int i = 0;
-    receive_while([&]() { return ++i <= 2; })
+    receive_for(i, 2)
     (
         // note: we sent a foo_pair2, but match on foo_pair
         // that's safe because both are aliases for std::pair<int,int>
