@@ -35,7 +35,6 @@
 #include "cppa/exception.hpp"
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace cppa { namespace detail {
@@ -71,11 +70,15 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 
 void converted_thread_context::dequeue(partial_function& rules)  /*override*/
 {
-    queue_node_buffer buffer;
-    queue_node_ptr node(m_mailbox.pop());
-    while (dq(node, rules, buffer) == false)
+    auto iter = m_mailbox.cache().begin();
+    auto mbox_end = m_mailbox.cache().end();
+    for (;;)
     {
-        node.reset(m_mailbox.pop());
+        for ( ; iter != mbox_end; ++iter)
+        {
+            if (dq(iter, rules)) return;
+        }
+        iter = m_mailbox.fetch_more();
     }
 }
 
@@ -85,22 +88,21 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
     {
         auto timeout = now();
         timeout += rules.timeout();
-        queue_node_buffer buffer;
-        queue_node_ptr node(m_mailbox.try_pop());
+        auto iter = m_mailbox.cache().begin();
+        auto mbox_end = m_mailbox.cache().end();
         do
         {
-            if (!node)
+            if (iter == mbox_end)
             {
-                node.reset(m_mailbox.try_pop(timeout));
-                if (!node)
+                iter = m_mailbox.try_fetch_more(timeout);
+                if (iter == mbox_end)
                 {
-                    if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
                     rules.handle_timeout();
                     return;
                 }
             }
         }
-        while (dq(node, rules.get_partial_function(), buffer) == false);
+        while (dq(iter, rules.get_partial_function()) == false);
     }
     else
     {
@@ -127,29 +129,27 @@ converted_thread_context::throw_on_exit(any_tuple const& msg)
     return not_an_exit_signal;
 }
 
-bool converted_thread_context::dq(queue_node_ptr& node,
-                                  partial_function& rules,
-                                  queue_node_buffer& buffer)
+bool converted_thread_context::dq(queue_node_iterator iter,
+                                  partial_function& rules)
 {
-    if (m_trap_exit == false && throw_on_exit(node->msg) == normal_exit_signal)
+    auto& node = *iter;
+    if (   m_trap_exit == false
+        && throw_on_exit(node->msg) == normal_exit_signal)
     {
         return false;
     }
-    auto imd = rules.get_intermediate(node->msg);
-    if (imd)
+    m_last_dequeued = node->msg;
+    m_last_sender = node->sender;
     {
-        m_last_dequeued = std::move(node->msg);
-        m_last_sender = std::move(node->sender);
-        // restore mailbox before invoking imd
-        if (!buffer.empty()) m_mailbox.push_front(std::move(buffer));
-        imd->invoke();
-        return true;
+        queue_node_guard qguard{node.get()};
+        if (rules(node->msg))
+        {
+            qguard.release();
+            m_mailbox.cache().erase(iter);
+            return true;
+        }
     }
-    else
-    {
-        buffer.push_back(node.release());
-        return false;
-    }
+    return false;
 }
 
 } } // namespace cppa::detail

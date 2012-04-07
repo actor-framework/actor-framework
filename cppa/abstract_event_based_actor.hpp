@@ -52,7 +52,6 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     typedef detail::abstract_scheduled_actor super;
     typedef super::queue_node queue_node;
-    typedef super::queue_node_buffer queue_node_buffer;
 
  public:
 
@@ -90,8 +89,10 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
     typedef std::unique_ptr<behavior, detail::disablable_delete<behavior>>
             stack_element;
 
-    queue_node_buffer m_buffer;
     std::vector<stack_element> m_loop_stack;
+
+    // current position in mailbox
+    mailbox_cache_type::iterator m_mailbox_pos;
 
     // provoke compiler errors for usage of receive() and related functions
 
@@ -136,7 +137,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  private:
 
-    void handle_message(queue_node_ptr& node);
+    bool handle_message(queue_node_iterator iter);
 
 };
 

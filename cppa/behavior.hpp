@@ -85,11 +85,6 @@ class behavior
         m_fun(value);
     }
 
-    inline detail::intermediate* get_intermediate(any_tuple const& value)
-    {
-        return m_fun.get_intermediate(value);
-    }
-
     inline partial_function& get_partial_function()
     {
         return m_fun;

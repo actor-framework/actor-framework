@@ -25,7 +25,6 @@ unit_testing/test__type_list.cpp
 cppa/util/compare_tuples.hpp
 cppa/get.hpp
 cppa/detail/tdata.hpp
-cppa/detail/intermediate.hpp
 cppa/detail/invokable.hpp
 cppa/on.hpp
 unit_testing/test__serialization.cpp
@@ -154,7 +153,6 @@ cppa/detail/yield_interface.hpp
 src/yield_interface.cpp
 cppa/detail/abstract_scheduled_actor.hpp
 src/abstract_scheduled_actor.cpp
-src/intermediate.cpp
 src/invokable.cpp
 cppa/detail/thread_pool_scheduler.hpp
 src/thread_pool_scheduler.cpp

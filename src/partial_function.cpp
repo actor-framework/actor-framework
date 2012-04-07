@@ -93,19 +93,19 @@ auto partial_function::get_cache_entry(any_tuple const& value) -> cache_entry&
     return i->second;
 }
 
-void partial_function::operator()(any_tuple value)
+bool partial_function::operator()(any_tuple value)
 {
     using detail::invokable;
     auto& v = get_cache_entry(value);
     if (value.impl_type() == detail::tuple_impl_info::statically_typed)
     {
-        std::any_of(v.begin(), v.end(),
-                    [&](invokable* i) { return i->unsafe_invoke(value); });
+        return std::any_of(v.begin(), v.end(),
+                           [&](invokable* i) { return i->unsafe_invoke(value); });
     }
     else
     {
-        std::any_of(v.begin(), v.end(),
-                    [&](invokable* i) { return i->invoke(value); });
+        return std::any_of(v.begin(), v.end(),
+                           [&](invokable* i) { return i->invoke(value); });
     }
 }
 
@@ -124,24 +124,6 @@ detail::invokable const* partial_function::definition_at(any_tuple value)
 bool partial_function::defined_at(any_tuple const& value)
 {
     return definition_at(value) != nullptr;
-}
-
-detail::intermediate* partial_function::get_intermediate(any_tuple value)
-{
-    detail::intermediate* result = nullptr;
-    if (value.impl_type() == detail::tuple_impl_info::statically_typed)
-    {
-        for (auto& i : get_cache_entry(value))
-            if ((result = i->get_unsafe_intermediate(value)) != nullptr)
-                return result;
-    }
-    else
-    {
-        for (auto& i : get_cache_entry(value))
-            if ((result = i->get_intermediate(value)) != nullptr)
-                return result;
-    }
-    return nullptr;
 }
 
 behavior operator,(partial_function&& lhs, behavior&& rhs)

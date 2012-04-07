@@ -18,7 +18,6 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
 
 using std::cout;
 using std::endl;

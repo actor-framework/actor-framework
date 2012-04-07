@@ -52,7 +52,6 @@ class yielding_actor : public abstract_scheduled_actor
     typedef abstract_scheduled_actor super;
     typedef super::queue_node queue_node;
     typedef super::queue_node_ptr queue_node_ptr;
-    typedef super::queue_node_buffer queue_node_buffer;
 
     util::fiber m_fiber;
     scheduled_actor* m_behavior;
@@ -77,9 +76,9 @@ class yielding_actor : public abstract_scheduled_actor
 
     ~yielding_actor() /*override*/;
 
-    void dequeue(behavior& rules) /*override*/;
+    void dequeue(behavior& bhvr) /*override*/;
 
-    void dequeue(partial_function& rules) /*override*/;
+    void dequeue(partial_function& fun) /*override*/;
 
     void resume(util::fiber* from, resume_callback* callback) /*override*/;
 

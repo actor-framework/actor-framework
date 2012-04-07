@@ -339,8 +339,12 @@ size_t test__spawn()
     receive(after(std::chrono::seconds(1)) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "testee1 & event_testee2 ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "testee1 ... " << std::flush);
     spawn(testee1);
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "event_testee2 ... " << std::flush);
     spawn(event_testee2());
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);

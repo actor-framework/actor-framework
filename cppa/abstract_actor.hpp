@@ -64,17 +64,29 @@ class abstract_actor : public Base
 
     struct queue_node
     {
-        queue_node* next;
+        queue_node* next;   // intrusive next pointer
+        bool marked;        // denotes if this node is currently processed
         actor_ptr sender;
         any_tuple msg;
-        queue_node() : next(nullptr) { }
-        queue_node(actor* from, any_tuple&& content)
-            : next(nullptr), sender(from), msg(std::move(content)) { }
-        queue_node(actor* from, any_tuple const& content)
-            : next(nullptr), sender(from), msg(content) { }
+        queue_node() : next(nullptr), marked(false) { }
+        queue_node(actor* from, any_tuple content)
+            : next(nullptr), marked(false), sender(from), msg(std::move(content))
+        {
+        }
     };
 
-    typedef std::unique_ptr<queue_node> queue_node_ptr;
+    struct queue_node_guard
+    {
+        queue_node* m_node;
+        queue_node_guard(queue_node* ptr) : m_node(ptr) { ptr->marked = true; }
+        inline void release() { m_node = nullptr; }
+        ~queue_node_guard() { if (m_node) m_node->marked = false; }
+    };
+
+    typedef intrusive::single_reader_queue<queue_node> mailbox_type;
+    typedef typename mailbox_type::unique_value_ptr queue_node_ptr;
+    typedef typename mailbox_type::cache_type mailbox_cache_type;
+    typedef typename mailbox_cache_type::iterator queue_node_iterator;
 
     bool attach(attachable* ptr) /*override*/
     {
@@ -173,7 +185,7 @@ class abstract_actor : public Base
 
  protected:
 
-    intrusive::single_reader_queue<queue_node> m_mailbox;
+    mailbox_type m_mailbox;
 
     template<typename T>
     inline queue_node* fetch_node(actor* sender, T&& msg)

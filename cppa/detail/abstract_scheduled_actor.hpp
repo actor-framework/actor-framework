@@ -60,8 +60,9 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
     delegate m_enqueue_to_scheduler;
 
     typedef abstract_actor super;
+    typedef super::queue_node_guard queue_node_guard;
     typedef super::queue_node queue_node;
-    typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
+    typedef super::queue_node_ptr queue_node_ptr;
 
     enum dq_result
     {
@@ -80,9 +81,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     filter_result filter_msg(any_tuple const& msg);
 
-    dq_result dq(queue_node_ptr& node,
-                 partial_function& rules,
-                 queue_node_buffer& buffer);
+    auto dq(queue_node_iterator node, partial_function& rules) -> dq_result;
 
     bool has_pending_timeout()
     {

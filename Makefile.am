@@ -30,7 +30,6 @@ libcppa_la_SOURCES = \
     src/fiber.cpp \
     src/group.cpp \
     src/group_manager.cpp \
-    src/intermediate.cpp \
     src/invokable.cpp \
     src/local_actor.cpp \
     src/mailman.cpp \
@@ -108,7 +107,6 @@ nobase_library_include_HEADERS = \
     cppa/detail/get_behavior.hpp \
     cppa/detail/group_manager.hpp \
     cppa/detail/implicit_conversions.hpp \
-    cppa/detail/intermediate.hpp \
     cppa/detail/invokable.hpp \
     cppa/detail/list_member.hpp \
     cppa/detail/mailman.hpp \

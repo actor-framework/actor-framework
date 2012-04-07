@@ -163,10 +163,11 @@ auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
     return ordinary_message;
 }
 
-auto abstract_scheduled_actor::dq(queue_node_ptr& node,
-                                  partial_function& rules,
-                                  queue_node_buffer& buffer) -> dq_result
+auto abstract_scheduled_actor::dq(queue_node_iterator iter,
+                                  partial_function& rules) -> dq_result
 {
+    auto& node = *iter;
+    if (node->marked) return dq_indeterminate;
     switch (filter_msg(node->msg))
     {
         case normal_exit_signal:
@@ -179,47 +180,31 @@ auto abstract_scheduled_actor::dq(queue_node_ptr& node,
         {
             // m_active_timeout_id is already invalid
             m_has_pending_timeout_request = false;
-            // restore mailbox before calling client
-            if (!buffer.empty())
-            {
-                m_mailbox.push_front(std::move(buffer));
-            }
             return dq_timeout_occured;
         }
         default: break;
     }
-    auto imd = rules.get_intermediate(node->msg);
-    if (imd)
+    m_last_dequeued = node->msg;
+    m_last_sender = node->sender;
+    // make sure no timeout is handled incorrectly
+    ++m_active_timeout_id;
+    // lifetime scope of qguard
     {
-        m_last_dequeued = std::move(node->msg);
-        m_last_sender = std::move(node->sender);
-        // restore mailbox before invoking imd
-        if (!buffer.empty())
+        // make sure nested received do not process this node again
+        queue_node_guard qguard{node.get()};
+        // try to invoke given function
+        if (rules(node->msg))
         {
-            m_mailbox.push_front(std::move(buffer));
-        }
-        // expire pending request
-        if (m_has_pending_timeout_request)
-        {
-            ++m_active_timeout_id;
+            // client erases node later (keep it marked until it's removed)
+            qguard.release();
+            // we definitely don't have a pending timeout now
             m_has_pending_timeout_request = false;
+            return dq_done;
         }
-        imd->invoke();
-        return dq_done;
     }
-    else
-    {
-        /*
-        std::string err_msg = "unhandled message in actor ";
-        err_msg += std::to_string(id());
-        err_msg += ": ";
-        err_msg += to_string(node->msg);
-        err_msg += "\n";
-        cout << err_msg;
-        */
-        buffer.push_back(node.release());
-        return dq_indeterminate;
-    }
+    // no match
+    --m_active_timeout_id;
+    return dq_indeterminate;
 }
 
 // dummy

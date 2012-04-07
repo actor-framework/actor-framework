@@ -36,7 +36,6 @@
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
 #include "cppa/detail/invokable.hpp"
-#include "cppa/detail/intermediate.hpp"
 
 namespace cppa { namespace detail {
 
@@ -73,16 +72,13 @@ void yielding_actor::run(void* ptr_arg)
 
 void yielding_actor::yield_until_not_empty()
 {
-    while (m_mailbox.empty())
+    if (m_mailbox.can_fetch_more() == false)
     {
         m_state.store(abstract_scheduled_actor::about_to_block);
         CPPA_MEMORY_BARRIER();
-        // make sure mailbox is empty
-        if (!m_mailbox.empty())
+        // make sure mailbox is 'empty'
+        if (m_mailbox.can_fetch_more() == false)
         {
-            // someone preempt us
-            //compare_exchange_state(scheduled_actor::about_to_block,
-            //                       scheduled_actor::ready);
             m_state.store(abstract_scheduled_actor::ready);
             return;
         }
@@ -93,52 +89,58 @@ void yielding_actor::yield_until_not_empty()
     }
 }
 
-void yielding_actor::dequeue(partial_function& rules)
+void yielding_actor::dequeue(partial_function& fun)
 {
-    queue_node_buffer buffer;
-    yield_until_not_empty();
-    queue_node_ptr node(m_mailbox.pop());
-    while (dq(node, rules, buffer) != dq_done)
+    auto iter = m_mailbox.cache().begin();
+    auto mbox_end = m_mailbox.cache().end();
+    for (;;)
     {
+        for ( ; iter != mbox_end; ++iter)
+        {
+            if (dq(iter, fun) == dq_done)
+            {
+                m_mailbox.cache().erase(iter);
+                return;
+            }
+        }
         yield_until_not_empty();
-        node.reset(m_mailbox.pop());
+        iter = m_mailbox.try_fetch_more();
     }
 }
 
-void yielding_actor::dequeue(behavior& rules)
+void yielding_actor::dequeue(behavior& bhvr)
 {
-    if (rules.timeout().valid())
+    if (bhvr.timeout().valid())
     {
-        queue_node_buffer buffer;
         // try until a message was successfully dequeued
-        request_timeout(rules.timeout());
+        request_timeout(bhvr.timeout());
+        auto iter = m_mailbox.cache().begin();
+        auto mbox_end = m_mailbox.cache().end();
         for (;;)
         {
-            //if (m_mailbox.empty() && has_pending_timeout() == false)
-            //{
-            //    request_timeout(rules.timeout());
-            //}
-            yield_until_not_empty();
-            queue_node_ptr node(m_mailbox.pop());
-            switch (dq(node, rules.get_partial_function(), buffer))
+            while (iter != mbox_end)
             {
-                case dq_done:
+                switch (dq(iter, bhvr.get_partial_function()))
                 {
-                    return;
+                    case dq_timeout_occured:
+                        bhvr.handle_timeout();
+                        // fall through
+                    case dq_done:
+                        iter = m_mailbox.cache().erase(iter);
+                        return;
+                    default:
+                        ++iter;
+                        break;
                 }
-                case dq_timeout_occured:
-                {
-                    rules.handle_timeout();
-                    return;
-                }
-                default: break;
             }
+            yield_until_not_empty();
+            iter = m_mailbox.try_fetch_more();
         }
     }
     else
     {
         // suppress virtual function call
-        yielding_actor::dequeue(rules.get_partial_function());
+        yielding_actor::dequeue(bhvr.get_partial_function());
     }
 }
 
@@ -199,4 +201,4 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
 
 namespace { int keep_compiler_happy() { return 42; } }
 
-#endif // CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING

@@ -74,25 +74,6 @@ void invoke_test(std::vector<any_tuple>& test_tuples, Testee& x)
     }
 }
 
-inline detail::intermediate* get_i(partial_function& pf, any_tuple const& value)
-{
-    return pf.get_intermediate(value);
-}
-
-template<class Testee>
-void intermediate_test(std::vector<any_tuple>& test_tuples, Testee& x)
-{
-    boost::progress_timer t;
-    for (int i = 0; i < 1000000; ++i)
-    {
-        for (auto& t : test_tuples)
-        {
-            auto i = get_i(x, t);
-            if (i) i->invoke();
-        }
-    }
-}
-
 size_t test__pattern()
 {
     CPPA_TEST(test__pattern);

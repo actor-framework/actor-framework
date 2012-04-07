@@ -31,10 +31,11 @@
 #ifndef SINGLE_READER_QUEUE_HPP
 #define SINGLE_READER_QUEUE_HPP
 
+#include <list>
 #include <atomic>
+#include <memory>
 
 #include "cppa/detail/thread.hpp"
-#include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -59,7 +60,9 @@ class single_reader_queue
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
-    typedef singly_linked_list<value_type> cache_type;
+    typedef std::unique_ptr<value_type> unique_value_ptr;
+    typedef std::list<unique_value_ptr> cache_type;
+    typedef typename cache_type::iterator cache_iterator;
 
     /**
      * @warning call only from the reader (owner)
@@ -85,22 +88,6 @@ class single_reader_queue
     pointer try_pop(TimePoint const& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
-    }
-
-    /**
-     * @warning call only from the reader (owner)
-     */
-    void push_front(pointer element)
-    {
-        m_cache.push_front(element);
-    }
-
-    /**
-     * @warning call only from the reader (owner)
-     */
-    void push_front(cache_type&& list)
-    {
-        m_cache.splice_after(m_cache.before_begin(), std::move(list));
     }
 
     // returns true if the queue was empty
@@ -144,6 +131,11 @@ class single_reader_queue
 
     inline cache_type& cache() { return m_cache; }
 
+    inline bool can_fetch_more() const
+    {
+        return m_stack.load() != nullptr;
+    }
+
     /**
      * @warning call only from the reader (owner)
      */
@@ -168,6 +160,29 @@ class single_reader_queue
     {
         // empty the stack
         (void) fetch_new_data();
+    }
+
+    cache_iterator try_fetch_more()
+    {
+        cache_iterator result = m_cache.end();
+        fetch_new_data(&result);
+        return result;
+    }
+
+    template<typename TimePoint>
+    cache_iterator try_fetch_more(TimePoint const& abs_time)
+    {
+        cache_iterator result = m_cache.end();
+        if (timed_wait_for_data(abs_time)) fetch_new_data(&result);
+        return result;
+    }
+
+    cache_iterator fetch_more()
+    {
+        cache_iterator result = m_cache.end();
+        wait_for_data();
+        fetch_new_data(&result);
+        return result;
     }
 
  private:
@@ -209,15 +224,15 @@ class single_reader_queue
     }
 
     // atomically sets m_stack to nullptr and enqueues all elements to the cache
-    bool fetch_new_data()
+    bool fetch_new_data(cache_iterator* iter = nullptr)
     {
         pointer e = m_stack.load();
         while (e)
         {
             if (m_stack.compare_exchange_weak(e, 0))
             {
-                // iterator to the last element before insertions begin
-                auto iter = m_cache.before_end();
+                // temporary list to convert LIFO to FIFO order
+                cache_type tmp;
                 // public_tail (e) has LIFO order,
                 // but private_head requires FIFO order
                 while (e)
@@ -225,10 +240,13 @@ class single_reader_queue
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    m_cache.insert_after(iter, e);
+                    tmp.push_front(unique_value_ptr{e});
+                    //m_cache.insert(iter, unique_value_ptr{e});
                     // next iteration
                     e = next;
                 }
+                if (iter) *iter = tmp.begin();
+                m_cache.splice(m_cache.end(), tmp);
                 return true;
             }
             // next iteration
@@ -239,9 +257,12 @@ class single_reader_queue
 
     pointer take_head()
     {
-        if (m_cache.not_empty() || fetch_new_data())
+        if (!m_cache.empty() || fetch_new_data())
         {
-            return m_cache.take_after(m_cache.before_begin());
+            auto result = m_cache.front().release();
+            m_cache.pop_front();
+            return result;
+            //return m_cache.take_after(m_cache.before_begin());
         }
         return nullptr;
     }

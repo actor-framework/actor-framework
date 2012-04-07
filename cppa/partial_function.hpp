@@ -65,11 +65,9 @@ class partial_function
 
     bool defined_at(any_tuple const& value);
 
-    void operator()(any_tuple value);
+    bool operator()(any_tuple value);
 
     detail::invokable const* definition_at(any_tuple value);
-
-    detail::intermediate* get_intermediate(any_tuple value);
 
     template<class... Args>
     partial_function& splice(partial_function&& arg0, Args&&... args)
