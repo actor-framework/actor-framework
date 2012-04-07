@@ -66,6 +66,11 @@ any_tuple& any_tuple::operator=(any_tuple&& other)
     return *this;
 }
 
+void any_tuple::reset()
+{
+    m_vals.reset(s_empty_tuple());
+}
+
 size_t any_tuple::size() const
 {
     return m_vals->size();

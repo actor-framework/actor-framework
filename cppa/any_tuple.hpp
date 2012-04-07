@@ -186,6 +186,8 @@ class any_tuple
         return any_tuple{simple_view(std::forward<T>(value), token)};
     }
 
+    void reset();
+
  private:
 
     cow_ptr<detail::abstract_tuple> m_vals;

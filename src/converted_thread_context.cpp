@@ -76,7 +76,11 @@ void converted_thread_context::dequeue(partial_function& rules)  /*override*/
     {
         for ( ; iter != mbox_end; ++iter)
         {
-            if (dq(iter, rules)) return;
+            if (dq(iter, rules))
+            {
+                m_mailbox.cache().erase(iter);
+                return;
+            }
         }
         iter = m_mailbox.fetch_more();
     }
@@ -103,6 +107,7 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
             }
         }
         while (dq(iter, rules.get_partial_function()) == false);
+        m_mailbox.cache().erase(iter);
     }
     else
     {
@@ -138,17 +143,22 @@ bool converted_thread_context::dq(queue_node_iterator iter,
     {
         return false;
     }
-    m_last_dequeued = node->msg;
-    m_last_sender = node->sender;
+    std::swap(m_last_dequeued, node->msg);
+    std::swap(m_last_sender, node->sender);
     {
         queue_node_guard qguard{node.get()};
-        if (rules(node->msg))
+        if (rules(m_last_dequeued))
         {
+            // client calls erase(iter)
             qguard.release();
-            m_mailbox.cache().erase(iter);
+            m_last_dequeued.reset();
+            m_last_sender.reset();
             return true;
         }
     }
+    // no match (restore members)
+    std::swap(m_last_dequeued, node->msg);
+    std::swap(m_last_sender, node->sender);
     return false;
 }
 

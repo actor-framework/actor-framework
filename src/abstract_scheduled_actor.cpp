@@ -184,8 +184,10 @@ auto abstract_scheduled_actor::dq(queue_node_iterator iter,
         }
         default: break;
     }
-    m_last_dequeued = node->msg;
-    m_last_sender = node->sender;
+    std::swap(m_last_dequeued, node->msg);
+    std::swap(m_last_sender, node->sender);
+    //m_last_dequeued = node->msg;
+    //m_last_sender = node->sender;
     // make sure no timeout is handled incorrectly
     ++m_active_timeout_id;
     // lifetime scope of qguard
@@ -193,17 +195,22 @@ auto abstract_scheduled_actor::dq(queue_node_iterator iter,
         // make sure nested received do not process this node again
         queue_node_guard qguard{node.get()};
         // try to invoke given function
-        if (rules(node->msg))
+        if (rules(m_last_dequeued))
         {
             // client erases node later (keep it marked until it's removed)
             qguard.release();
+            // this members are only valid during invocation
+            m_last_dequeued.reset();
+            m_last_sender.reset();
             // we definitely don't have a pending timeout now
             m_has_pending_timeout_request = false;
             return dq_done;
         }
     }
-    // no match
+    // no match (restore members)
     --m_active_timeout_id;
+    std::swap(m_last_dequeued, node->msg);
+    std::swap(m_last_sender, node->sender);
     return dq_indeterminate;
 }
 

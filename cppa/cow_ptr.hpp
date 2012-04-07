@@ -89,7 +89,9 @@ class cow_ptr
         return *this;
     }
 
-    inline T* get() { return detached_ptr(); }
+    inline void reset(T* value = nullptr) { m_ptr.reset(value); }
+
+    inline T* get() { return (m_ptr) ? detached_ptr() : nullptr; }
 
     inline T& operator*() { return *detached_ptr(); }
 
