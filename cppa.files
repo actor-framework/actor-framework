@@ -258,4 +258,3 @@ cppa/detail/matches.hpp
 unit_testing/test__match.cpp
 cppa/guard_expr.hpp
 src/pattern.cpp
-cppa/util/a_matches_b.hpp

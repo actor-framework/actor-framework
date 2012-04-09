@@ -317,8 +317,7 @@ class apply_policy<util::type_list<>, Args>
 
 };
 
-template<class InvokePolicy>
-struct invoke_helper_
+struct invoke_helper
 {
     template<class Leaf>
     bool operator()(Leaf const& leaf,
@@ -327,24 +326,17 @@ struct invoke_helper_
                     void const* v2,
                     detail::abstract_tuple const& v3) const
     {
-        return InvokePolicy::invoke(leaf, v0, v1, v2, v3);
+        typedef typename Leaf::args_list alist;
+        typedef invoke_policy<get_wildcard_position<alist>(), alist> impl;
+        return impl::invoke(leaf, v0, v1, v2, v3);
     }
     template<class Leaf, typename... Args>
-    bool operator()(Leaf const& leaf, Args const&... args) const
-    {
-        return InvokePolicy::invoke_args(leaf, args...);
-    }
-};
-
-struct invoke_helper
-{
-    template<class ArgTypes, class... Leaves, typename... Args>
-    bool operator()(detail::tdata<ArgTypes, Leaves...> const& list,
+    bool operator()(Leaf const& leaf,
                     Args const&... args) const
     {
-        typedef invoke_policy<get_wildcard_position<ArgTypes>(), ArgTypes> ipolicy;
-        invoke_helper_<ipolicy> fun;
-        return util::static_foreach<1, sizeof...(Leaves)+1>::eval_or(list, fun, args...);
+        typedef typename Leaf::args_list alist;
+        typedef invoke_policy<get_wildcard_position<alist>(), alist> impl;
+        return impl::invoke_args(leaf, args...);
     }
 };
 
@@ -428,7 +420,7 @@ struct tdata_concatenate<tdata<Lhs...>, tdata<Rhs...> >
 
 } } // namespace cppa::detail
 
-template<class Leaves>
+template<class... Leaves>
 class conditional_fun
 {
 
@@ -456,7 +448,7 @@ class conditional_fun
                 detail::abstract_tuple const& tup) const
     {
         invoke_helper fun;
-        return util::static_foreach<0, Leaves::tdata_size>::eval_or(m_leaves, fun, arg_types, timpl, native_arg, tup);
+        return util::static_foreach<0, sizeof...(Leaves)>::eval_or(m_leaves, fun, arg_types, timpl, native_arg, tup);
     }
 
     bool invoke(any_tuple const& tup) const
@@ -472,26 +464,26 @@ class conditional_fun
     bool operator()(Args const&... args)
     {
         invoke_helper fun;
-        return util::static_foreach<0, Leaves::tdata_size>::eval_or(m_leaves, fun, args...);
+        return util::static_foreach<0, sizeof...(Leaves)>::eval_or(m_leaves, fun, args...);
     }
 
-    typedef typename Leaves::back_type back_leaf;
-    typedef typename back_leaf::head_type back_arg_types;
-
+    /*
     template<typename OtherLeaves>
     conditional_fun<typename detail::tdata_concatenate<Leaves, OtherLeaves>::type>
     or_else(conditional_fun<OtherLeaves> const& other) const
     {
         return {m_leaves, other.m_leaves};
     }
+    */
 
-    template<class... LeafImpl>
-    conditional_fun<typename cfh_<back_arg_types, Leaves, LeafImpl...>::type>
-    or_else(conditional_fun<detail::tdata<detail::tdata<back_arg_types, LeafImpl...>>> const& other) const
+    template<class... Rhs>
+    conditional_fun<Leaves..., Rhs...>
+    or_else(conditional_fun<Rhs...> const& other) const
     {
-        return {m_leaves, other.m_leaves.back().tail()};
+        return {m_leaves, other.m_leaves};
     }
 
+    /*
     template<class... LeafImpl, class Others0, class... Others>
     conditional_fun<
         typename detail::tdata_concatenate<
@@ -506,36 +498,26 @@ class conditional_fun
         return or_else(head_fun{other.m_leaves.head})
               .or_else(tail_fun{other.m_leaves.tail()});
     }
+    */
 
  //private:
 
     // structure: tdata< tdata<type_list<...>, ...>,
     //                   tdata<type_list<...>, ...>,
     //                   ...>
-    Leaves m_leaves;
+    detail::tdata<Leaves...> m_leaves;
 
 };
 
 template<class ArgTypes, class Expr, class Guard, typename... TFuns>
-conditional_fun<
-    detail::tdata<
-        detail::tdata<ArgTypes,
-                    typename cfl_<ArgTypes, Expr, Guard, TFuns...>::type>>>
+conditional_fun<typename cfl_<ArgTypes, Expr, Guard, TFuns...>::type>
 cfun(Expr e, Guard g, TFuns... tfs)
 {
-    typedef detail::tdata<
-                ArgTypes,
-                typename cfl_<ArgTypes, Expr, Guard, TFuns...>::type>
-        result;
-    typedef typename result::tail_type ttype;
-    typedef typename ttype::head_type leaf_type;
+    typedef typename cfl_<ArgTypes, Expr, Guard, TFuns...>::type leaf_type;
     typedef typename util::get_callable_trait<Expr>::arg_types expr_args;
     static_assert(ArgTypes::size >= expr_args::size,
                   "Functor has too many arguments");
-    return result{
-                ArgTypes{},
-                leaf_type{std::move(g), std::move(e), std::move(tfs)...}
-            };
+    return leaf_type{std::move(g), std::move(e), std::move(tfs)...};
 }
 
 #define VERBOSE(LineOfCode) cout << #LineOfCode << " = " << (LineOfCode) << endl
@@ -590,15 +572,11 @@ struct cf_builder
     }
 
     template<typename Expr>
-    conditional_fun<
-        detail::tdata<
-            detail::tdata<Pattern,
-                          conditional_fun_leaf<Expr, Guard, Transformers, Pattern>>>>
+    conditional_fun<conditional_fun_leaf<Expr, Guard, Transformers, Pattern> >
     operator>>(Expr expr) const
     {
         typedef conditional_fun_leaf<Expr, Guard, Transformers, Pattern> tfun;
-        typedef detail::tdata<Pattern, tfun> result;
-        return result{Pattern{}, tfun{m_guard, std::move(expr), m_funs}};
+        return tfun{m_guard, std::move(expr), m_funs};
     }
 
 };
@@ -778,8 +756,6 @@ size_t test__tuple()
     static_assert(std::is_same<zz3, zz9>::value, "group_by failed");
 
     cout << detail::demangle(typeid(zz3).name()) << endl;
-
-    exit(0);
 
     typedef util::type_list<int, int> token1;
     typedef util::type_list<float> token2;

@@ -176,7 +176,6 @@ nobase_library_include_HEADERS = \
     cppa/tuple_cast.hpp \
     cppa/type_value_pair.hpp \
     cppa/uniform_type_info.hpp \
-    cppa/util/a_matches_b.hpp \
     cppa/util/abstract_uniform_type_info.hpp \
     cppa/util/apply_tuple.hpp \
     cppa/util/arg_match_t.hpp \
