@@ -40,6 +40,14 @@ struct void_type
 {
     typedef void_type head;
     typedef type_list<> tail;
+
+    constexpr void_type() { }
+    constexpr void_type(void_type const&) { }
+    void_type& operator=(void_type const&) = default;
+
+    // anything could be used to initialize a void...
+    template<typename Arg0, typename... Args>
+    void_type(Arg0&&, Args&&...) { }
 };
 
 inline bool operator==(void_type const&, void_type const&) { return true; }

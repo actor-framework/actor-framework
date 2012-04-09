@@ -68,6 +68,10 @@ class abstract_tuple : public ref_counted
     virtual void const* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
 
+    // returns either tdata<...> object or nullptr (default) if tuple
+    // is not a 'native' implementation
+    virtual void const* native_data() const;
+
     // Identifies the type of the implementation.
     // A statically typed tuple implementation can use some optimizations,
     // e.g., "impl_type() == statically_typed" implies that type_token()

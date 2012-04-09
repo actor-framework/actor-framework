@@ -306,6 +306,7 @@ struct ge_reference_wrapper
 {
     T const* value;
     ge_reference_wrapper(T&&) = delete;
+    ge_reference_wrapper() : value(nullptr) { }
     ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
     ge_reference_wrapper(ge_reference_wrapper const&) = default;
     ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;

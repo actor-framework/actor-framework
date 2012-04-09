@@ -44,6 +44,18 @@ struct type_pair
     typedef Second second;
 };
 
+template<class What>
+struct is_type_pair
+{
+    static constexpr bool value = false;
+};
+
+template<typename First, typename Second>
+struct is_type_pair<type_pair<First, Second> >
+{
+    static constexpr bool value = true;
+};
+
 } } // namespace cppa::util
 
 #endif // TYPE_PAIR_HPP

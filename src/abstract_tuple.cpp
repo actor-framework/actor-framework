@@ -50,4 +50,9 @@ std::type_info const* abstract_tuple::type_token() const
     return &typeid(void);
 }
 
+void const* abstract_tuple::native_data() const
+{
+    return nullptr;
+}
+
 } } // namespace cppa::detail

@@ -39,6 +39,8 @@
 #include "cppa/util/at.hpp"
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/enable_if.hpp"
+#include "cppa/util/disable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 
 #include "cppa/detail/abstract_tuple.hpp"
@@ -75,6 +77,13 @@ struct tdata<>
 
     util::void_type head;
 
+    typedef util::void_type head_type;
+    typedef tdata<> tail_type;
+    typedef util::void_type back_type;
+    typedef util::type_list<> types;
+
+    static constexpr size_t tdata_size = 0;
+
     constexpr tdata() { }
 
     inline tdata(tdata&&) { }
@@ -84,15 +93,9 @@ struct tdata<>
     // swallow "arg_match" silently
     constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
 
-    tdata<>& tail()
-    {
-        throw std::out_of_range("");
-    }
+    tdata<>& tail() { return *this; }
 
-    tdata<> const& tail() const
-    {
-        throw std::out_of_range("");
-    }
+    tdata<> const& tail() const { return *this; }
 
     inline void const* at(size_t) const
     {
@@ -119,7 +122,21 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     typedef tdata<Tail...> super;
 
+    typedef util::type_list<Head, Tail...> types;
+
     Head head;
+
+    static constexpr size_t tdata_size = (sizeof...(Tail) + 1);
+
+    typedef Head head_type;
+    typedef tdata<Tail...> tail_type;
+
+    typedef typename util::if_else_c<
+                (sizeof...(Tail) > 0),
+                typename tdata<Tail...>::back_type,
+                util::wrapped<Head>
+            >::type
+            back_type;
 
     inline tdata() : super(), head() { }
 
@@ -141,11 +158,51 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     }
 
     // allow (partial) initialization from a different tdata
+    // with traling extra arguments to initialize additional arguments
     template<typename... Y>
-    tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head) { }
+    tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head)
+    {
+    }
 
     template<typename... Y>
-    tdata(tdata<Y...>&& other) : super(std::move(other.tail())), head(std::move(other.head)) { }
+    tdata(tdata<Y...>&& other)
+        : super(std::move(other.tail())), head(std::move(other.head))
+    {
+    }
+
+    template<typename... Y>
+    tdata(Head const& arg, tdata<Y...> const& other)
+        : super(other), head(arg)
+    {
+    }
+
+    template<typename... Y>
+    tdata(tdata<Head> const& arg, tdata<Y...> const& other)
+        : super(other), head(arg.head)
+    {
+    }
+
+    template<typename ExtraArg, typename Y0, typename Y1, typename... Y>
+    tdata(tdata<Y0, Y1, Y...> const& other, ExtraArg const& arg)
+        : super(other.tail(), arg), head(other.head)
+    {
+    }
+
+    template<typename ExtraArg, typename Y0>
+    tdata(tdata<Y0> const& other, ExtraArg const& arg,
+          typename util::enable_if_c<   std::is_same<ExtraArg, ExtraArg>::value
+                                     && (sizeof...(Tail) > 0)>::type* = 0)
+        : super(arg), head(other.head)
+    {
+    }
+
+    template<typename ExtraArg, typename Y0>
+    tdata(tdata<Y0> const& other, ExtraArg const& arg,
+          typename util::enable_if_c<   std::is_same<ExtraArg, ExtraArg>::value
+                                     && (sizeof...(Tail) == 0)>::type* = 0)
+        : super(), head(other.head, arg)
+    {
+    }
 
     // allow initialization with a function pointer or reference
     // returning a wrapped<Head>
@@ -183,75 +240,42 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         return (p == 0) ? uniform_typeid(typeid(Head)) : super::type_at(p-1);
     }
 
-};
 
-template<typename Head, typename... Tail>
-struct tdata<option<Head>, Tail...> : tdata<Tail...>
-{
-
-    typedef tdata<Tail...> super;
-
-    option<Head> head;
-
-    typedef option<Head> opt_type;
-
-    inline tdata() : super(), head() { }
-
-    template<typename... Args>
-    tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
-
-    template<typename... Args>
-    tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
-
-    template<typename... Args>
-    tdata(util::wrapped<Head> const&, Args const&... vals) : super(vals...) { }
-
-    tdata(tdata<>&&) : super(), head() { }
-    tdata(tdata<> const&) : super(), head() { }
-
-    // allow (partial) initialization from a different tdata
-    template<typename... Y>
-    tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head) { }
-
-    template<typename... Y>
-    tdata(tdata<Y...>&& other) : super(std::move(other.tail())), head(std::move(other.head)) { }
-
-    // allow initialization with a function pointer or reference
-    // returning a wrapped<Head>
-    template<typename...Args>
-    tdata(util::wrapped<Head>(*)(), Args const&... vals)
-        : super(vals...), head()
+    Head& _back(std::integral_constant<size_t, 0>)
     {
+        return head;
     }
 
-    template<typename Arg0, typename... Args>
-    inline void set(Arg0&& arg0, Args&&... args)
+    template<size_t Pos>
+    back_type& _back(std::integral_constant<size_t, Pos>)
     {
-        head = std::forward<Arg0>(arg0);
-        super::set(std::forward<Args>(args)...);
+        std::integral_constant<size_t, Pos - 1> token;
+        return super::_back(token);
     }
 
-    template<typename... Y>
-    tdata& operator=(tdata<Y...> const& other)
+    back_type& back()
     {
-        tdata_set(*this, other);
-        return *this;
+        std::integral_constant<size_t, sizeof...(Tail)> token;
+        return _back(token);
     }
 
-    // upcast
-    inline tdata<Tail...>& tail() { return *this; }
-    inline tdata<Tail...> const& tail() const { return *this; }
-
-    inline void const* at(size_t p) const
+    Head const& _back(std::integral_constant<size_t, 0>) const
     {
-        return (p == 0) ? ptr_to(head) : super::at(p-1);
+        return head;
     }
 
-    inline uniform_type_info const* type_at(size_t p) const
+    template<size_t Pos>
+    back_type const& _back(std::integral_constant<size_t, Pos>) const
     {
-        return (p == 0) ? uniform_typeid(typeid(Head)) : super::type_at(p-1);
+        std::integral_constant<size_t, Pos - 1> token;
+        return super::_back(token);
     }
 
+    back_type const& back() const
+    {
+        std::integral_constant<size_t, sizeof...(Tail)> token;
+        return _back(token);
+    }
 };
 
 template<typename... X>

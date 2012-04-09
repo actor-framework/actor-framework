@@ -68,6 +68,11 @@ class tuple_vals : public abstract_tuple
     {
     }
 
+    void const* native_data() const
+    {
+        return &m_data;
+    }
+
     inline data_type& data()
     {
         return m_data;

@@ -115,6 +115,32 @@ struct get_result_type
     typedef typename trait_type::result_type type;
 };
 
+template<typename T>
+struct is_callable
+{
+
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr)
+    {
+        return true;
+    }
+
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr)
+    {
+        return true;
+    }
+
+    static void _fun(void*) { }
+
+    typedef decltype(_fun(static_cast<T*>(nullptr))) result_type;
+
+ public:
+
+    static constexpr bool value = std::is_same<bool, result_type>::value;
+
+};
+
 } } // namespace cppa::util
 
 #endif // CPPA_UTIL_CALLABLE_TRAIT
