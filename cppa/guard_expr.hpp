@@ -37,8 +37,12 @@
 #include <functional>
 #include <type_traits>
 
+#include "cppa/config.hpp"
+
 #include "cppa/util/at.hpp"
+#include "cppa/util/void_type.hpp"
 #include "cppa/util/enable_if.hpp"
+#include "cppa/util/apply_tuple.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -54,6 +58,8 @@ enum operator_id
     logical_and_op, logical_or_op,
     // pseudo operators for function invocation
     exec_fun1_op, exec_fun2_op, exec_fun3_op,
+    // operator to invoke a given functor with all arguments forwarded
+    exec_xfun_op,
     // pseudo operator to store function parameters
     dummy_op
 };
@@ -155,6 +161,15 @@ template<typename Fun, typename T1, typename T2, typename T3>
 typename gbind3<Fun, T1, T2, T3>::result gbind(Fun fun, T1 t1, T2 t2, T3 t3)
 {
     return {fun, t1, t2, t3};
+}
+
+/**
+ * @brief Call wrapper for any given functor returning a boolean.
+ */
+template<typename Fun>
+guard_expr<exec_xfun_op, Fun, util::void_type> gcall(Fun fun)
+{
+    return {fun, util::void_type{}};
 }
 
 struct ge_search_container
@@ -302,6 +317,20 @@ struct guard_placeholder
 };
 
 template<typename T>
+struct ge_mutable_reference_wrapper
+{
+    T* value;
+    ge_mutable_reference_wrapper() : value(nullptr) { }
+    ge_mutable_reference_wrapper(T&&) = delete;
+    ge_mutable_reference_wrapper(T const&) = delete;
+    ge_mutable_reference_wrapper(T& vref) : value(&vref) { }
+    ge_mutable_reference_wrapper(ge_mutable_reference_wrapper const&) = default;
+    ge_mutable_reference_wrapper& operator=(ge_mutable_reference_wrapper const&) = default;
+    T& get() { CPPA_REQUIRE(value != 0); return *value; }
+    operator T& () { CPPA_REQUIRE(value != 0); return *value; }
+};
+
+template<typename T>
 struct ge_reference_wrapper
 {
     T const* value;
@@ -310,8 +339,8 @@ struct ge_reference_wrapper
     ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
     ge_reference_wrapper(ge_reference_wrapper const&) = default;
     ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
-    T const& get() const { return *value; }
-    operator T const& () const { return *value; }
+    T const& get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator T const& () const { CPPA_REQUIRE(value != 0); return *value; }
 };
 
 // support use of gref(BooleanVariable) as receive loop 'guard'
@@ -352,11 +381,11 @@ struct ge_unbound<ge_reference_wrapper<T>, Tuple>
 
 // unbound type of placeholder
 template<int X, typename... Ts>
-struct ge_unbound<guard_placeholder<X>, detail::tdata<Ts...> >
+struct ge_unbound<guard_placeholder<X>, detail::tdata<std::reference_wrapper<Ts>...> >
 {
     static_assert(X < sizeof...(Ts),
                   "Cannot unbind placeholder (too few arguments)");
-    typedef typename std::remove_pointer<typename util::at<X, Ts...>::type>::type type;
+    typedef typename util::at<X, Ts...>::type type;
 };
 
 // operators, operators, operators
@@ -433,6 +462,12 @@ struct ge_result_<guard_expr<OP, First, Second>, Tuple>
     typedef decltype(
             ge_eval_op<OP>::_(*static_cast<lhs_type const*>(nullptr),
                               *static_cast<rhs_type const*>(nullptr))) type;
+};
+
+template<typename Fun, class Tuple>
+struct ge_result_<guard_expr<exec_xfun_op, Fun, util::void_type>, Tuple>
+{
+    typedef bool type;
 };
 
 template<typename First, typename Second, class Tuple>
@@ -516,9 +551,9 @@ inline T const& ge_resolve(Tuple const&, ge_reference_wrapper<T> const& value)
 
 template<class Tuple, int X>
 inline auto ge_resolve(Tuple const& tup, guard_placeholder<X>)
-            -> decltype(*get<X>(tup))
+       -> decltype(get<X>(tup).get())
 {
-    return *get<X>(tup);
+    return get<X>(tup).get();
 }
 
 template<class Tuple, operator_id OP, typename First, typename Second>
@@ -554,6 +589,15 @@ struct ge_eval_<logical_or_op, Tuple, First, Second>
         // emulate short-circuit evaluation
         if (ge_resolve(tup, lhs)) return true;
         return ge_resolve(tup, rhs);
+    }
+};
+
+template<class Tuple, typename Fun>
+struct ge_eval_<exec_xfun_op, Tuple, Fun, util::void_type>
+{
+    static inline bool _(Tuple const& tup, Fun const& fun, util::void_type const&)
+    {
+        return util::unchecked_apply_tuple<bool>(fun, tup);
     }
 };
 
@@ -618,9 +662,10 @@ auto ge_invoke_step2(guard_expr<OP, First, Second> const& ge,
 template<operator_id OP, typename First, typename Second, typename... Args>
 auto ge_invoke(guard_expr<OP, First, Second> const& ge,
                      Args const&... args)
-     -> typename ge_result<OP, First, Second, detail::tdata<Args*...>>::type
+     -> typename ge_result<OP, First, Second,
+                           detail::tdata<std::reference_wrapper<const Args>...>>::type
 {
-    detail::tdata<Args const*...> tup{&args...};
+    detail::tdata<std::reference_wrapper<const Args>...> tup{args...};
     return ge_invoke_step2(ge, tup);
 }
 
@@ -630,7 +675,7 @@ struct ge_invoke_helper
     GuardExpr const& ge;
     ge_invoke_helper(GuardExpr const& arg) : ge(arg) { }
     template<typename... Args>
-    bool operator()(Args&&... args)
+    bool operator()(Args&&... args) const
     {
         return ge_invoke(ge, std::forward<Args>(args)...);
     }

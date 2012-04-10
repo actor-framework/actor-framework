@@ -173,10 +173,12 @@ nobase_library_include_HEADERS = \
     cppa/serializer.hpp \
     cppa/stacked_event_based_actor.hpp \
     cppa/to_string.hpp \
+    cppa/tpartial_function.hpp \
     cppa/tuple_cast.hpp \
     cppa/type_value_pair.hpp \
     cppa/uniform_type_info.hpp \
     cppa/util/abstract_uniform_type_info.hpp \
+    cppa/util/apply_args.hpp \
     cppa/util/apply_tuple.hpp \
     cppa/util/arg_match_t.hpp \
     cppa/util/at.hpp \
@@ -201,11 +203,13 @@ nobase_library_include_HEADERS = \
     cppa/util/is_manipulator.hpp \
     cppa/util/is_mutable_ref.hpp \
     cppa/util/is_primitive.hpp \
+    cppa/util/left_or_right.hpp \
     cppa/util/producer_consumer_list.hpp \
     cppa/util/pt_dispatch.hpp \
     cppa/util/pt_token.hpp \
     cppa/util/replace_type.hpp \
     cppa/util/ripemd_160.hpp \
+    cppa/util/rm_option.hpp \
     cppa/util/rm_ref.hpp \
     cppa/util/shared_lock_guard.hpp \
     cppa/util/shared_spinlock.hpp \

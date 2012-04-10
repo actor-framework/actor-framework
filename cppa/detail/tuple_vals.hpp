@@ -73,6 +73,11 @@ class tuple_vals : public abstract_tuple
         return &m_data;
     }
 
+    void* mutable_native_data()
+    {
+        return &m_data;
+    }
+
     inline data_type& data()
     {
         return m_data;

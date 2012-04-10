@@ -28,40 +28,25 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_PAIR_HPP
-#define TYPE_PAIR_HPP
+#ifndef RM_OPTION_HPP
+#define RM_OPTION_HPP
+
+#include "cppa/option.hpp"
 
 namespace cppa { namespace util {
 
-/**
- * @ingroup MetaProgramming
- * @brief A pair of two types.
- */
-template<typename First, typename Second>
-struct type_pair
+template<typename T>
+struct rm_option
 {
-    typedef First first;
-    typedef Second second;
+    typedef T type;
 };
 
-template<typename First, typename Second>
-struct to_type_pair
+template<typename T>
+struct rm_option<option<T> >
 {
-    typedef type_pair<First, Second> type;
-};
-
-template<class What>
-struct is_type_pair
-{
-    static constexpr bool value = false;
-};
-
-template<typename First, typename Second>
-struct is_type_pair<type_pair<First, Second> >
-{
-    static constexpr bool value = true;
+    typedef T type;
 };
 
 } } // namespace cppa::util
 
-#endif // TYPE_PAIR_HPP
+#endif // RM_OPTION_HPP

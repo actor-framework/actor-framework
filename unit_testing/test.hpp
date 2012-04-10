@@ -103,8 +103,9 @@ if (!(line_of_code))                                                           \
 #endif
 
 #define CPPA_ERROR(err_msg)                                                    \
-std::cerr << err_msg << std::endl;                                             \
-++cppa_ts.error_count
+    std::cerr << "ERROR in file " << __FILE__ << " on line " << __LINE__       \
+              << ": " << err_msg << std::endl;                                 \
+    ++cppa_ts.error_count
 
 #define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc) CPPA_CHECK(((lhs_loc) != (rhs_loc)))
 

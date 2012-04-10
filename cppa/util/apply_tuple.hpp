@@ -43,7 +43,7 @@ template<typename Result, bool IsManipulator, size_t... Range>
 struct apply_tuple_impl
 {
     template<typename F, template<typename...> class Tuple, typename... T>
-    static Result apply(F&& f, Tuple<T...> const& args)
+    static Result apply(F& f, Tuple<T...> const& args)
     {
         return f(get<Range>(args)...);
     }
@@ -53,7 +53,7 @@ template<typename Result, size_t... Range>
 struct apply_tuple_impl<Result, true, Range...>
 {
     template<typename F, template<typename...> class Tuple, typename... T>
-    static Result apply(F&& f, Tuple<T...>& args)
+    static Result apply(F& f, Tuple<T...>& args)
     {
         return f(get_ref<Range>(args)...);
     }
@@ -75,7 +75,7 @@ template<typename Result, bool IsManipulator>
 struct apply_tuple_util<Result, IsManipulator, 1, 0>
 {
     template<typename F, class Unused>
-    static Result apply(F&& f, Unused const&)
+    static Result apply(F& f, Unused const&)
     {
         return f();
     }
@@ -119,11 +119,29 @@ Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...> const& tup)
            ::apply(std::forward<F>(fun), tup);
 }
 
+template<typename Result, size_t From, size_t To,
+         typename F, template<typename...> class Tuple, typename... T>
+Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...>& tup)
+{
+    return apply_tuple_util<Result, true, From, To>
+           ::apply(std::forward<F>(fun), tup);
+}
+
 // applies all values of @p tup to @p fun
 // does not evaluate result type of functor
 template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
 Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
+{
+    return unchecked_apply_tuple_in_range<Result, 0, sizeof...(T) - 1>
+           (std::forward<F>(fun), tup);
+}
+
+// applies all values of @p tup to @p fun
+// does not evaluate result type of functor
+template<typename Result, typename F,
+         template<typename...> class Tuple, typename... T>
+Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup)
 {
     return unchecked_apply_tuple_in_range<Result, 0, sizeof...(T) - 1>
            (std::forward<F>(fun), tup);

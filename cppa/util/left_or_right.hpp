@@ -28,40 +28,28 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_PAIR_HPP
-#define TYPE_PAIR_HPP
+#ifndef LEFT_OR_RIGHT_HPP
+#define LEFT_OR_RIGHT_HPP
+
+#include "cppa/util/void_type.hpp"
 
 namespace cppa { namespace util {
 
 /**
- * @ingroup MetaProgramming
- * @brief A pair of two types.
+ * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
  */
-template<typename First, typename Second>
-struct type_pair
+template<typename Left, typename Right>
+struct left_or_right
 {
-    typedef First first;
-    typedef Second second;
+    typedef Left type;
 };
 
-template<typename First, typename Second>
-struct to_type_pair
+template<typename Right>
+struct left_or_right<util::void_type, Right>
 {
-    typedef type_pair<First, Second> type;
-};
-
-template<class What>
-struct is_type_pair
-{
-    static constexpr bool value = false;
-};
-
-template<typename First, typename Second>
-struct is_type_pair<type_pair<First, Second> >
-{
-    static constexpr bool value = true;
+    typedef Right type;
 };
 
 } } // namespace cppa::util
 
-#endif // TYPE_PAIR_HPP
+#endif // LEFT_OR_RIGHT_HPP

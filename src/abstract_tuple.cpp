@@ -55,4 +55,9 @@ void const* abstract_tuple::native_data() const
     return nullptr;
 }
 
+void* abstract_tuple::mutable_native_data()
+{
+    return nullptr;
+}
+
 } } // namespace cppa::detail

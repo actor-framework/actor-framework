@@ -258,3 +258,7 @@ cppa/detail/matches.hpp
 unit_testing/test__match.cpp
 cppa/guard_expr.hpp
 src/pattern.cpp
+cppa/util/left_or_right.hpp
+cppa/util/apply_args.hpp
+cppa/tpartial_function.hpp
+cppa/util/rm_option.hpp

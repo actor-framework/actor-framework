@@ -274,7 +274,7 @@ template<typename Fun, class Pattern>
 struct select_invokable_impl
 {
     typedef typename util::get_arg_types<Fun>::types qualified_arg_types;
-    typedef typename util::tl_apply<qualified_arg_types, util::rm_ref>::type
+    typedef typename util::tl_map<qualified_arg_types, util::rm_ref>::type
             arg_types;
     static constexpr mapping_policy mp = get_mapping_policy<arg_types>();
     typedef invokable_impl<Fun, pattern_policy<mp, Pattern> > type;
@@ -284,7 +284,7 @@ template<typename Fun>
 struct select_invokable_impl<Fun, pattern<anything> >
 {
     typedef typename util::get_arg_types<Fun>::types qualified_arg_types;
-    typedef typename util::tl_apply<qualified_arg_types, util::rm_ref>::type
+    typedef typename util::tl_map<qualified_arg_types, util::rm_ref>::type
             arg_types;
     typedef typename util::rm_ref<typename arg_types::head>::type arg0;
     static_assert(arg_types::size < 2, "functor has too many arguments");

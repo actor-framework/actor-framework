@@ -186,6 +186,11 @@ class any_tuple
         return any_tuple{simple_view(std::forward<T>(value), token)};
     }
 
+    void force_detach()
+    {
+        m_vals.detach();
+    }
+
     void reset();
 
  private:

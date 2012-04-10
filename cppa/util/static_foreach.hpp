@@ -39,28 +39,32 @@ template<bool BeginLessEnd, size_t Begin, size_t End>
 struct static_foreach_impl
 {
     template<typename Container, typename Fun, typename... Args>
-    static inline void _(Container const& c, Fun& f, Args const&... args)
+    static inline void _(Container const& c, Fun& f, Args&&... args)
     {
-        f(get<Begin>(c), args...);
-        static_foreach_impl<(Begin+1 < End), Begin+1, End>::_(c, f, args...);
+        f(get<Begin>(c), std::forward<Args>(args)...);
+        static_foreach_impl<(Begin+1 < End), Begin+1, End>
+               ::_(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline void _ref(Container& c, Fun& f, Args const&... args)
+    static inline void _ref(Container& c, Fun& f, Args&&... args)
     {
-        f(get_ref<Begin>(c), args...);
-        static_foreach_impl<(Begin+1 < End), Begin+1, End>::_ref(c, f, args...);
+        f(get_ref<Begin>(c), std::forward<Args>(args)...);
+        static_foreach_impl<(Begin+1 < End), Begin+1, End>
+               ::_ref(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline bool eval(Container const& c, Fun& f, Args const&... args)
+    static inline bool eval(Container const& c, Fun& f, Args&&... args)
     {
-        return    f(get<Begin>(c), args...)
-               && static_foreach_impl<(Begin+1 < End), Begin+1, End>::eval(c, f, args...);
+        return    f(get<Begin>(c), std::forward<Args>(args)...)
+               && static_foreach_impl<(Begin+1 < End), Begin+1, End>
+                  ::eval(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline bool eval_or(Container const& c, Fun& f, Args const&... args)
+    static inline bool eval_or(Container const& c, Fun& f, Args&&... args)
     {
-        return    f(get<Begin>(c), args...)
-               || static_foreach_impl<(Begin+1 < End), Begin+1, End>::eval_or(c, f, args...);
+        return    f(get<Begin>(c), std::forward<Args>(args)...)
+               || static_foreach_impl<(Begin+1 < End), Begin+1, End>
+                  ::eval_or(c, f, std::forward<Args>(args)...);
     }
 };
 
@@ -68,13 +72,13 @@ template<size_t X, size_t Y>
 struct static_foreach_impl<false, X, Y>
 {
     template<typename... Args>
-    static inline void _(Args const&...) { }
+    static inline void _(Args&&...) { }
     template<typename... Args>
-    static inline void _ref(Args const&...) { }
+    static inline void _ref(Args&&...) { }
     template<typename... Args>
-    static inline bool eval(Args const&...) { return true; }
+    static inline bool eval(Args&&...) { return true; }
     template<typename... Args>
-    static inline bool eval_or(Args const&...) { return false; }
+    static inline bool eval_or(Args&&...) { return false; }
 };
 
 /**

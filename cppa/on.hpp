@@ -117,7 +117,7 @@ class rvalue_builder
         typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_arg_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename tl_apply<raw_arg_types,rm_ref>::type arg_types;
+        typedef typename tl_map<raw_arg_types,rm_ref>::type arg_types;
         typedef typename tl_concat<types,arg_types>::type full_types;
         typedef typename pattern_from_type_list<full_types>::type epattern;
         return get_invokable_impl<epattern>(std::forward<F>(f),
@@ -231,7 +231,7 @@ class on_the_fly_rvalue_builder
         typedef typename get_callable_trait<F>::type ctrait;
         typedef typename ctrait::arg_types raw_types;
         static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename tl_apply<raw_types,rm_ref>::type types;
+        typedef typename tl_map<raw_types,rm_ref>::type types;
         typedef typename pattern_from_type_list<types>::type pattern_type;
         return get_invokable_impl<pattern_type>(std::forward<F>(f));
     }

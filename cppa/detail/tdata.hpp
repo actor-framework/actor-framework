@@ -43,6 +43,7 @@
 #include "cppa/util/disable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 
+#include "cppa/detail/boxed.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
@@ -65,6 +66,18 @@ inline void* ptr_to(T* what) { return what; }
 template<typename T>
 inline void const* ptr_to(T const* what) { return what; }
 
+template<typename T>
+struct boxed_or_void
+{
+    static constexpr bool value = is_boxed<T>::value;
+};
+
+template<>
+struct boxed_or_void<util::void_type>
+{
+    static constexpr bool value = true;
+};
+
 /*
  * "enhanced std::tuple"
  */
@@ -82,16 +95,25 @@ struct tdata<>
     typedef util::void_type back_type;
     typedef util::type_list<> types;
 
-    static constexpr size_t tdata_size = 0;
+    static constexpr size_t num_elements = 0;
 
     constexpr tdata() { }
 
-    inline tdata(tdata&&) { }
+    // swallow any number of additional boxed or void_type arguments silently
+    template<typename... Args>
+    tdata(Args&&...)
+    {
+        typedef util::type_list<typename util::rm_ref<Args>::type...> incoming;
+        static_assert(util::tl_forall<incoming, boxed_or_void>::value,
+                      "Additional unboxed arguments provided");
+    }
 
+    inline tdata(tdata&) { }
+    inline tdata(tdata&&) { }
     inline tdata(tdata const&) { }
 
-    // swallow "arg_match" silently
-    constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
+    //// swallow "arg_match" silently
+    //constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
 
     tdata<>& tail() { return *this; }
 
@@ -113,6 +135,49 @@ struct tdata<>
 
 };
 
+template<bool IsBoxed, bool IsFunction, typename Head, typename T>
+struct td_filter_
+{
+    static inline T const& _(T const& arg) { return arg; }
+    static inline T&& _(T&& arg) { return std::move(arg); }
+    static inline T& _(T& arg) { return arg; }
+};
+
+template<typename Head, typename T>
+struct td_filter_<false, true, Head, T>
+{
+    static inline T* _(T* arg) { return arg; }
+};
+
+template<typename Head, typename T>
+struct td_filter_<true, false, Head, T>
+{
+    static inline Head _(T const&) { return Head{}; }
+};
+
+template<typename Head, typename T>
+struct td_filter_<true, true, Head, T> : td_filter_<true, false, Head, T>
+{
+};
+
+template<typename Head, typename T>
+auto td_filter(T&& arg)
+    -> decltype(
+        td_filter_<
+            is_boxed<typename util::rm_ref<T>::type>::value,
+            std::is_function<typename util::rm_ref<T>::type>::value,
+            Head,
+            typename util::rm_ref<T>::type
+        >::_(std::forward<T>(arg)))
+{
+    return  td_filter_<
+                is_boxed<typename util::rm_ref<T>::type>::value,
+                std::is_function<typename util::rm_ref<T>::type>::value,
+                Head,
+                typename util::rm_ref<T>::type
+            >::_(std::forward<T>(arg));
+}
+
 template<typename... X, typename... Y>
 void tdata_set(tdata<X...>& rhs, tdata<Y...> const& lhs);
 
@@ -126,7 +191,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     Head head;
 
-    static constexpr size_t tdata_size = (sizeof...(Tail) + 1);
+    static constexpr size_t num_elements = (sizeof...(Tail) + 1);
 
     typedef Head head_type;
     typedef tdata<Tail...> tail_type;
@@ -142,23 +207,31 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     //tdata(Head const& v0, Tail const&... vals) : super(vals...), head(v0) { }
 
-    // allow partial initialization
-    template<typename... Args>
-    tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
-
-    // allow partial initialization
-    template<typename... Args>
-    tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
-
-    // allow initialization with wrapped<Head> (uses the default constructor)
-    template<typename... Args>
-    tdata(util::wrapped<Head> const&, Args const&... vals)
-        : super(vals...), head()
+    template<typename Arg0, typename... Args>
+    tdata(Arg0&& arg0, Args&&... args)
+        : super(std::forward<Args>(args)...)
+        , head(td_filter<Head>(std::forward<Arg0>(arg0)))
     {
     }
 
+    tdata(tdata const&) = default;
+
+    // allow partial initialization
+    //template<typename... Args>
+    //tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
+
+    // allow partial initialization
+    //template<typename... Args>
+    //tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
+
     // allow (partial) initialization from a different tdata
     // with traling extra arguments to initialize additional arguments
+
+    template<typename... Y>
+    tdata(tdata<Y...>& other) : super(other.tail()), head(other.head)
+    {
+    }
+
     template<typename... Y>
     tdata(tdata<Y...> const& other) : super(other.tail()), head(other.head)
     {
@@ -170,6 +243,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     {
     }
 
+    /*
     template<typename... Y>
     tdata(Head const& arg, tdata<Y...> const& other)
         : super(other), head(arg)
@@ -203,14 +277,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         : super(), head(other.head, arg)
     {
     }
-
-    // allow initialization with a function pointer or reference
-    // returning a wrapped<Head>
-    template<typename...Args>
-    tdata(util::wrapped<Head>(*)(), Args const&... vals)
-        : super(vals...), head()
-    {
-    }
+    */
 
     template<typename... Y>
     tdata& operator=(tdata<Y...> const& other)

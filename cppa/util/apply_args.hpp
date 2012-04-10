@@ -28,40 +28,34 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_PAIR_HPP
-#define TYPE_PAIR_HPP
+#ifndef APPLY_ARGS_HPP
+#define APPLY_ARGS_HPP
+
+#include <cstddef>
 
 namespace cppa { namespace util {
 
-/**
- * @ingroup MetaProgramming
- * @brief A pair of two types.
- */
-template<typename First, typename Second>
-struct type_pair
+template<typename Result, size_t NumFunctorArgs, size_t NumArgs>
+struct apply_args
 {
-    typedef First first;
-    typedef Second second;
+    template<class Fun, typename Arg0, typename... Args>
+    static Result _(Fun const& fun, Arg0&&, Args&&... args)
+    {
+        return apply_args<Result, NumFunctorArgs, sizeof...(Args)>
+               ::_(fun, std::forward<Args>(args)...);
+    }
 };
 
-template<typename First, typename Second>
-struct to_type_pair
+template<typename Result, size_t X>
+struct apply_args<Result, X, X>
 {
-    typedef type_pair<First, Second> type;
-};
-
-template<class What>
-struct is_type_pair
-{
-    static constexpr bool value = false;
-};
-
-template<typename First, typename Second>
-struct is_type_pair<type_pair<First, Second> >
-{
-    static constexpr bool value = true;
+    template<class Fun, typename... Args>
+    static Result _(Fun const& fun, Args&&... args)
+    {
+        return fun(std::forward<Args>(args)...);
+    }
 };
 
 } } // namespace cppa::util
 
-#endif // TYPE_PAIR_HPP
+#endif // APPLY_ARGS_HPP

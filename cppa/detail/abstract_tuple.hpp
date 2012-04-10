@@ -61,6 +61,7 @@ class abstract_tuple : public ref_counted
 
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
+    virtual void* mutable_native_data();
 
     // accessors
     virtual size_t size() const = 0;
