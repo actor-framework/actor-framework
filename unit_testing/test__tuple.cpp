@@ -1138,13 +1138,16 @@ size_t test__tuple()
     auto f10 =
     (
         _on<int>().when(_x1 < 10) >> [&]() { invoked = "f10.0"; },
-        _on<int>() >> [&]() { invoked = "f10.1"; }
+        _on<int>()                >> [&]() { invoked = "f10.1"; },
+        _on<std::string>()        >> [&]() { invoked = "f10.2"; }
     );
 
     CPPA_CHECK(f10(9));
     CPPA_CHECK_EQUAL("f10.0", invoked);
     CPPA_CHECK(f10(10));
     CPPA_CHECK_EQUAL("f10.1", invoked);
+    CPPA_CHECK(f10("42"));
+    CPPA_CHECK_EQUAL("f10.2", invoked);
 
     int f11_fun = 0;
     auto f11 = pj_concat
