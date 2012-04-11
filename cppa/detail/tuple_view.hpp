@@ -108,7 +108,7 @@ class tuple_view : public abstract_tuple
     void* mutable_at(size_t pos)
     {
         CPPA_REQUIRE(pos < size());
-        return const_cast<void*>(at(pos));
+        return m_data.mutable_at(pos);
     }
 
     uniform_type_info const* type_at(size_t pos) const

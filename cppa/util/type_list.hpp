@@ -243,18 +243,20 @@ struct tl_find_if
 // list first_n(size_t)
 
 template<size_t N, class List, typename... T>
-struct tl_first_n_impl;
+struct tl_first_n_impl
+{
+    typedef typename tl_first_n_impl<
+                N - 1,
+                typename List::tail,
+                T..., typename List::head
+            >::type
+            type;
+};
 
 template<class List, typename... T>
 struct tl_first_n_impl<0, List, T...>
 {
     typedef type_list<T...> type;
-};
-
-template<size_t N, typename L0, typename... L, typename... T>
-struct tl_first_n_impl<N, type_list<L0, L...>, T...>
-{
-    typedef typename tl_first_n_impl<N-1, type_list<L...>, T..., L0>::type type;
 };
 
 /**

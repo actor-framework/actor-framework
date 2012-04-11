@@ -53,6 +53,16 @@ struct static_foreach_impl
                ::_ref(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
+    static inline void _auto(Container& c, Fun& f, Args&&... args)
+    {
+        _ref(c, f, std::forward<Args>(args)...);
+    }
+    template<typename Container, typename Fun, typename... Args>
+    static inline void _auto(Container const& c, Fun& f, Args&&... args)
+    {
+        _(c, f, std::forward<Args>(args)...);
+    }
+    template<typename Container, typename Fun, typename... Args>
     static inline bool eval(Container const& c, Fun& f, Args&&... args)
     {
         return    f(get<Begin>(c), std::forward<Args>(args)...)
@@ -75,6 +85,8 @@ struct static_foreach_impl<false, X, Y>
     static inline void _(Args&&...) { }
     template<typename... Args>
     static inline void _ref(Args&&...) { }
+    template<typename... Args>
+    static inline void _auto(Args&&...) { }
     template<typename... Args>
     static inline bool eval(Args&&...) { return true; }
     template<typename... Args>

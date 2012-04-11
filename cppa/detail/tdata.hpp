@@ -32,6 +32,7 @@
 #define TDATA_HPP
 
 #include <typeinfo>
+#include <functional>
 
 #include "cppa/get.hpp"
 #include "cppa/option.hpp"
@@ -44,6 +45,7 @@
 #include "cppa/util/arg_match_t.hpp"
 
 #include "cppa/detail/boxed.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
@@ -67,6 +69,36 @@ template<typename T>
 inline void const* ptr_to(T const* what) { return what; }
 
 template<typename T>
+inline void* ptr_to(std::reference_wrapper<T> const& what)
+{
+    return &(what.get());
+}
+
+template<typename T>
+inline void const* ptr_to(std::reference_wrapper<const T> const& what)
+{
+    return &(what.get());
+}
+
+template<typename T>
+inline uniform_type_info const* utype_of(T const&)
+{
+    return static_types_array<T>::arr[0];
+}
+
+template<typename T>
+inline uniform_type_info const* utype_of(std::reference_wrapper<T> const&)
+{
+    return static_types_array<typename util::rm_ref<T>::type>::arr[0];
+}
+
+template<typename T>
+inline uniform_type_info const* utype_of(T const* ptr)
+{
+    return utype_of(*ptr);
+}
+
+template<typename T>
 struct boxed_or_void
 {
     static constexpr bool value = is_boxed<T>::value;
@@ -78,8 +110,20 @@ struct boxed_or_void<util::void_type>
     static constexpr bool value = true;
 };
 
+template<typename T>
+struct unbox_ref
+{
+    typedef T type;
+};
+
+template<typename T>
+struct unbox_ref<std::reference_wrapper<T> >
+{
+    typedef T type;
+};
+
 /*
- * "enhanced std::tuple"
+ * "enhanced" std::tuple
  */
 template<typename...>
 struct tdata;
@@ -112,21 +156,27 @@ struct tdata<>
     inline tdata(tdata&&) { }
     inline tdata(tdata const&) { }
 
-    //// swallow "arg_match" silently
-    //constexpr tdata(util::wrapped<util::arg_match_t> const&) { }
+    inline size_t size() const { return num_elements; }
 
     tdata<>& tail() { return *this; }
 
     tdata<> const& tail() const { return *this; }
 
+    tdata<> const& ctail() const { return *this; }
+
     inline void const* at(size_t) const
     {
-        throw std::out_of_range("");
+        throw std::out_of_range("tdata<>");
+    }
+
+    inline void* mutable_at(size_t)
+    {
+        throw std::out_of_range("tdata<>");
     }
 
     inline uniform_type_info const* type_at(size_t) const
     {
-        throw std::out_of_range("");
+        throw std::out_of_range("tdata<>");
     }
 
     inline void set() { }
@@ -187,7 +237,10 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     typedef tdata<Tail...> super;
 
-    typedef util::type_list<Head, Tail...> types;
+    typedef util::type_list<
+                typename unbox_ref<Head>::type,
+                typename unbox_ref<Tail>::type...>
+            types;
 
     Head head;
 
@@ -216,16 +269,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     tdata(tdata const&) = default;
 
-    // allow partial initialization
-    //template<typename... Args>
-    //tdata(Head const& v0, Args const&... vals) : super(vals...), head(v0) { }
-
-    // allow partial initialization
-    //template<typename... Args>
-    //tdata(Head&& v0, Args const&... vals) : super(vals...), head(std::move(v0)) { }
-
     // allow (partial) initialization from a different tdata
-    // with traling extra arguments to initialize additional arguments
 
     template<typename... Y>
     tdata(tdata<Y...>& other) : super(other.tail()), head(other.head)
@@ -243,42 +287,6 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     {
     }
 
-    /*
-    template<typename... Y>
-    tdata(Head const& arg, tdata<Y...> const& other)
-        : super(other), head(arg)
-    {
-    }
-
-    template<typename... Y>
-    tdata(tdata<Head> const& arg, tdata<Y...> const& other)
-        : super(other), head(arg.head)
-    {
-    }
-
-    template<typename ExtraArg, typename Y0, typename Y1, typename... Y>
-    tdata(tdata<Y0, Y1, Y...> const& other, ExtraArg const& arg)
-        : super(other.tail(), arg), head(other.head)
-    {
-    }
-
-    template<typename ExtraArg, typename Y0>
-    tdata(tdata<Y0> const& other, ExtraArg const& arg,
-          typename util::enable_if_c<   std::is_same<ExtraArg, ExtraArg>::value
-                                     && (sizeof...(Tail) > 0)>::type* = 0)
-        : super(arg), head(other.head)
-    {
-    }
-
-    template<typename ExtraArg, typename Y0>
-    tdata(tdata<Y0> const& other, ExtraArg const& arg,
-          typename util::enable_if_c<   std::is_same<ExtraArg, ExtraArg>::value
-                                     && (sizeof...(Tail) == 0)>::type* = 0)
-        : super(), head(other.head, arg)
-    {
-    }
-    */
-
     template<typename... Y>
     tdata& operator=(tdata<Y...> const& other)
     {
@@ -293,20 +301,39 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         super::set(std::forward<Args>(args)...);
     }
 
+    inline size_t size() const { return num_elements; }
+
     // upcast
     inline tdata<Tail...>& tail() { return *this; }
+
     inline tdata<Tail...> const& tail() const { return *this; }
+
+    inline tdata<Tail...> const& ctail() const { return *this; }
 
     inline void const* at(size_t p) const
     {
-        return (p == 0) ? ptr_to(head) : super::at(p-1);
+        return (p == 0) ? ptr_to(head) : super::at(p - 1);
+    }
+
+    inline void* mutable_at(size_t p)
+    {
+        if (p == 0)
+        {
+#           ifdef CPPA_DEBUG
+            if (std::is_same<decltype(ptr_to(head)), void const*>::value)
+            {
+                throw std::logic_error{"mutable_at with const head"};
+            }
+#           endif
+            return const_cast<void*>(ptr_to(head));
+        }
+        return super::mutable_at(p - 1);
     }
 
     inline uniform_type_info const* type_at(size_t p) const
     {
-        return (p == 0) ? uniform_typeid(typeid(Head)) : super::type_at(p-1);
+        return (p == 0) ? utype_of(head) : super::type_at(p-1);
     }
-
 
     Head& _back(std::integral_constant<size_t, 0>)
     {

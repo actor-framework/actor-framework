@@ -322,12 +322,16 @@ struct ge_mutable_reference_wrapper
     T* value;
     ge_mutable_reference_wrapper() : value(nullptr) { }
     ge_mutable_reference_wrapper(T&&) = delete;
-    ge_mutable_reference_wrapper(T const&) = delete;
     ge_mutable_reference_wrapper(T& vref) : value(&vref) { }
     ge_mutable_reference_wrapper(ge_mutable_reference_wrapper const&) = default;
+    ge_mutable_reference_wrapper& operator=(T& vref)
+    {
+        value = &vref;
+        return *this;
+    }
     ge_mutable_reference_wrapper& operator=(ge_mutable_reference_wrapper const&) = default;
-    T& get() { CPPA_REQUIRE(value != 0); return *value; }
-    operator T& () { CPPA_REQUIRE(value != 0); return *value; }
+    T& get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator T& () const { CPPA_REQUIRE(value != 0); return *value; }
 };
 
 template<typename T>
@@ -338,6 +342,11 @@ struct ge_reference_wrapper
     ge_reference_wrapper() : value(nullptr) { }
     ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
     ge_reference_wrapper(ge_reference_wrapper const&) = default;
+    ge_reference_wrapper& operator=(T const& vref)
+    {
+        value = &vref;
+        return *this;
+    }
     ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
     T const& get() const { CPPA_REQUIRE(value != 0); return *value; }
     operator T const& () const { CPPA_REQUIRE(value != 0); return *value; }
@@ -352,9 +361,9 @@ struct ge_reference_wrapper<bool>
     ge_reference_wrapper(bool const& val_ref) : value(&val_ref) { }
     ge_reference_wrapper(ge_reference_wrapper const&) = default;
     ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
-    bool get() const { return *value; }
-    operator bool () const { return *value; }
-    bool operator()() const { return *value; }
+    bool get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator bool () const { CPPA_REQUIRE(value != 0); return *value; }
+    bool operator()() const { CPPA_REQUIRE(value != 0); return *value; }
 };
 
 /**
