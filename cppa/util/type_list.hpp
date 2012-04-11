@@ -101,7 +101,87 @@ struct is_type_list<type_list<Ts...> >
     static constexpr bool value = true;
 };
 
-// static list zip(list, list)
+// list slice(size_t, size_t)
+
+template<size_t LeftOffset, size_t Remaining,
+         typename PadType, class List, typename... T>
+struct tl_slice_impl
+{
+    typedef typename tl_slice_impl<
+                LeftOffset - 1,
+                Remaining,
+                PadType,
+                typename List::tail,
+                T...
+            >::type
+            type;
+};
+
+template<size_t Remaining, typename PadType, class List, typename... T>
+struct tl_slice_impl<0, Remaining, PadType, List, T...>
+{
+    typedef typename tl_slice_impl<
+                0,
+                Remaining - 1,
+                PadType,
+                typename List::tail,
+                T..., typename List::head
+            >::type
+            type;
+};
+
+template<size_t Remaining, typename PadType, typename... T>
+struct tl_slice_impl<0, Remaining, PadType, type_list<>, T...>
+{
+    typedef typename tl_slice_impl<
+                0,
+                Remaining - 1,
+                PadType,
+                type_list<>,
+                T..., PadType
+            >::type
+            type;
+};
+
+template<typename PadType, class List, typename... T>
+struct tl_slice_impl<0, 0, PadType, List, T...>
+{
+    typedef type_list<T...> type;
+};
+
+template<typename PadType, typename... T>
+struct tl_slice_impl<0, 0, PadType, type_list<>, T...>
+{
+    typedef type_list<T...> type;
+};
+
+template<class List, size_t ListSize, size_t First, size_t Last,
+         typename PadType = void_type>
+struct tl_slice_
+{
+    typedef typename tl_slice_impl<
+                First,
+                (Last - First),
+                PadType, List
+            >::type
+            type;
+};
+
+template<class List, size_t ListSize, typename PadType>
+struct tl_slice_<List, ListSize, 0, ListSize, PadType>
+{
+    typedef List type;
+};
+
+/**
+ * @brief Creates a new list from range (First, Last].
+ */
+template<class List, size_t First, size_t Last>
+struct tl_slice
+{
+    static_assert(First <= Last, "First > Last");
+    typedef typename tl_slice_<List, List::size, First, Last>::type type;
+};
 
 /**
  * @brief Zips two lists of equal size.
@@ -112,16 +192,61 @@ struct is_type_list<type_list<Ts...> >
  */
 template<class ListA, class ListB,
          template<typename, typename> class Fun = to_type_pair>
-struct tl_zip;
+struct tl_zip_impl;
 
 template<typename... LhsElements, typename... RhsElements,
          template<typename, typename> class Fun>
-struct tl_zip<type_list<LhsElements...>, type_list<RhsElements...>, Fun>
+struct tl_zip_impl<type_list<LhsElements...>, type_list<RhsElements...>, Fun>
 {
     static_assert(sizeof...(LhsElements) ==
                   sizeof...(RhsElements),
                   "Lists have different size");
     typedef type_list<typename Fun<LhsElements, RhsElements>::type...> type;
+};
+
+template<class ListA, class ListB,
+         template<typename, typename> class Fun = to_type_pair>
+struct tl_zip
+{
+    static constexpr size_t result_size =
+            (ListA::size < ListB::size) ? ListA::size
+                                        : ListB::size;
+
+    typedef typename tl_zip_impl<
+                typename tl_slice<ListA, 0, result_size>::type,
+                typename tl_slice<ListB, 0, result_size>::type,
+                Fun
+            >::type
+            type;
+};
+
+template<class ListA,
+         class ListB,
+         typename PadA = void_type,
+         typename PadB = void_type,
+         template<typename, typename> class Fun = to_type_pair>
+struct tl_zip_all
+{
+    static constexpr size_t result_size =
+            (ListA::size > ListB::size) ? ListA::size
+                                        : ListB::size;
+
+    typedef typename tl_zip_impl<
+                typename tl_slice_<
+                    ListA,
+                    ListA::size,
+                    0,
+                    result_size
+                >::type,
+                typename tl_slice_<
+                    ListB,
+                    ListB::size,
+                    0,
+                    result_size
+                >::type,
+                Fun
+            >::type
+            type;
 };
 
 template<class ListA>
@@ -240,85 +365,6 @@ struct tl_find_if
     static constexpr int value = tl_find_impl<List, Predicate, Pos>::value;
 };
 
-// list first_n(size_t)
-
-template<size_t N, class List, typename... T>
-struct tl_first_n_impl
-{
-    typedef typename tl_first_n_impl<
-                N - 1,
-                typename List::tail,
-                T..., typename List::head
-            >::type
-            type;
-};
-
-template<class List, typename... T>
-struct tl_first_n_impl<0, List, T...>
-{
-    typedef type_list<T...> type;
-};
-
-/**
- * @brief Creates a new list from the first @p N elements of @p List.
- */
-template<class List, size_t N>
-struct tl_first_n
-{
-    static_assert(List::size >= N, "List::size < N");
-    typedef typename tl_first_n_impl<N, List>::type type;
-};
-
-template<class List>
-struct tl_first_n<List, 0>
-{
-    typedef type_list<> type;
-};
-
-// list last_n(size_t)
-
-template<size_t TargetSize, size_t Size, class List, typename... T>
-struct tl_last_n_impl;
-
-template<size_t TargetSize, size_t Size, typename T0, typename... T>
-struct tl_last_n_impl<TargetSize, Size, type_list<>, T0, T...>
-{
-    typedef typename tl_last_n_impl<
-                TargetSize, Size-1,
-                type_list<>, T...
-            >::type
-            type;
-};
-
-template<size_t Size, typename... T>
-struct tl_last_n_impl<Size, Size, type_list<>, T...>
-{
-    typedef type_list<T...> type;
-};
-
-template<size_t TargetSize, size_t Size, typename L0, typename... L, typename... T>
-struct tl_last_n_impl<TargetSize, Size, type_list<L0, L...>, T...>
-{
-    typedef typename tl_last_n_impl<TargetSize, Size,
-                                    type_list<L...>, T..., L0>::type type;
-};
-
-/**
- * @brief Creates a new list from the first @p N elements of @p List.
- */
-template<class List, size_t N>
-struct tl_last_n
-{
-    static_assert(List::size >= N, "List::size < N");
-    typedef typename tl_last_n_impl<N, List::size, List>::type type;
-};
-
-template<class List>
-struct tl_last_n<List, 0>
-{
-    typedef type_list<> type;
-};
-
 // bool forall(predicate)
 
 /**
@@ -328,14 +374,44 @@ template<class List, template<typename> class Predicate>
 struct tl_forall
 {
     static constexpr bool value =
-               Predicate<class List::head>::value
-            && tl_forall<class List::tail, Predicate>::value;
+               Predicate<typename List::head>::value
+            && tl_forall<typename List::tail, Predicate>::value;
 };
 
 template<template<typename> class Predicate>
 struct tl_forall<type_list<>, Predicate>
 {
     static constexpr bool value = true;
+};
+
+template<class ListA, class ListB, template<typename, typename> class Predicate>
+struct tl_forall2_impl
+{
+    static constexpr bool value =
+               Predicate<typename ListA::head, typename ListB::head>::value
+            && tl_forall2_impl<
+                   typename ListA::tail,
+                   typename ListB::tail,
+                   Predicate
+               >::value;
+};
+
+template<template<typename, typename> class Predicate>
+struct tl_forall2_impl<type_list<>, type_list<>, Predicate>
+{
+    static constexpr bool value = true;
+};
+
+/**
+ * @brief Tests whether a binary predicate holds for all
+ *        corresponding elements of @p ListA and @p ListB.
+ */
+template<class ListA, class ListB, template<typename, typename> class Predicate>
+struct tl_binary_forall
+{
+    static constexpr bool value =
+               ListA::size == ListB::size
+            && tl_forall2_impl<ListA, ListB, Predicate>::value;
 };
 
 /**
@@ -677,7 +753,7 @@ struct tl_pad_right_impl;
 template<class List, size_t OldSize, size_t NewSize, typename FillType>
 struct tl_pad_right_impl<List, false, OldSize, NewSize, FillType>
 {
-    typedef typename tl_first_n<List, NewSize>::type type;
+    typedef typename tl_slice<List, 0, NewSize>::type type;
 };
 
 template<class List, size_t Size, typename FillType>
@@ -703,7 +779,7 @@ struct tl_pad_right_impl<List, true, OldSize, NewSize, FillType>
  * @brief Resizes the list to contain @p NewSize elements and uses
  *        @p FillType to initialize the new elements with.
  */
-template<class List, size_t NewSize, typename FillType>
+template<class List, size_t NewSize, typename FillType = void_type>
 struct tl_pad_right
 {
     typedef typename tl_pad_right_impl<

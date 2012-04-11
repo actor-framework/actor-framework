@@ -78,7 +78,8 @@ class tpartial_function
 
     tpartial_function(tpartial_function const&) = default;
 
-    bool defined_at(typename util::rm_ref<Args>::type const&... args) const
+    //bool defined_at(typename util::rm_ref<Args>::type const&... args) const
+    bool defined_at(Args... args) const
     {
         return m_guard(args...);
     }

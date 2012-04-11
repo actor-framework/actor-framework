@@ -90,11 +90,6 @@ struct invoke_policy_helper
     {
         storage = *reinterpret_cast<T const*>(tup.at(i++));
     }
-    //template<typename T>
-    //void operator()(ge_mutable_reference_wrapper<T>& storage)
-    //{
-    //    storage = *reinterpret_cast<T*>(tup.mutable_at(i++));
-    //}
 };
 
 template<typename T>
@@ -104,13 +99,25 @@ struct std_ref_wrapped
 };
 
 template<typename T>
+struct std_ref_wrapped<T&>
+{
+    typedef std::reference_wrapper<T> type;
+};
+
+template<typename T>
 struct gref_wrapped
 {
-    typedef ge_reference_wrapper<T> type;
+    typedef ge_reference_wrapper<typename util::rm_ref<T>::type> type;
 };
 
 template<typename T>
 struct gref_mutable_wrapped
+{
+    typedef ge_mutable_reference_wrapper<const typename util::rm_ref<T>::type> type;
+};
+
+template<typename T>
+struct gref_mutable_wrapped<T&>
 {
     typedef ge_mutable_reference_wrapper<T> type;
 };
@@ -131,44 +138,54 @@ struct invoke_policy_impl<wildcard_position::nil, Pattern, FilteredPattern>
             >::type
             arr_type;
 
-    template<typename Target, typename... Ts>
-    static bool _invoke_args(std::integral_constant<bool, true>,
-                             Target& target, Ts&&... args)
+    template<class Target, class Tup>
+    static inline bool shortcut(Target&, Tup&) { return false; }
+
+    template<class Target, typename... T>
+    static inline bool shortcut(Target& target,
+                                detail::tdata<T...> const& tup,
+                                typename util::enable_if<
+                                    util::tl_binary_forall<
+                                        util::type_list<T...>,
+                                        FilteredPattern,
+                                        std::is_convertible
+                                    >
+                                >::type* = 0)
     {
-        return target(std::forward<Ts>(args)...);
+        util::unchecked_apply_tuple<bool>(target, tup);
+        return true;
     }
 
-    template<typename Target, typename... Ts>
-    static bool _invoke_args(std::integral_constant<bool, false>,
-                             Target&, Ts&&...)
+    template<class Target, typename... T>
+    static inline bool shortcut(Target& target,
+                                detail::tdata<T...>& tup,
+                                typename util::enable_if<
+                                    util::tl_binary_forall<
+                                        util::type_list<T...>,
+                                        FilteredPattern,
+                                        std::is_convertible
+                                    >
+                                >::type* = 0)
     {
-        return false;
-    }
-
-    template<typename Target, typename... Ts>
-    static bool invoke_args(Target& target, Ts&&... args)
-    {
-        typedef util::type_list<typename util::rm_ref<Ts>::type...> incoming;
-        std::integral_constant<bool, std::is_same<incoming, Pattern>::value>
-                token;
-        return _invoke_args(token, target, std::forward<Ts>(args)...);
+        //static_assert(false, "");
+        util::unchecked_apply_tuple<bool>(target, tup);
+        return true;
     }
 
     template<class Target, typename NativeArg, typename Tuple>
-    static bool invoke_tuple(Target& target,
-                             std::type_info const& arg_types,
-                             detail::tuple_impl_info timpl,
-                             NativeArg native_arg,
-                             Tuple& tup)
+    static bool invoke(Target& target,
+                       std::type_info const& arg_types,
+                       detail::tuple_impl_info timpl,
+                       NativeArg* native_arg,
+                       Tuple& tup)
     {
+        if (shortcut(target, tup)) return true;
         if (arg_types == typeid(FilteredPattern))
         {
             if (native_arg)
             {
                 typedef typename util::if_else_c<
-                            std::is_const<
-                                typename std::remove_pointer<NativeArg>::type
-                            >::value,
+                            std::is_const<NativeArg>::value,
                             native_data_type const*,
                             util::wrapped<native_data_type*>
                         >::type
@@ -200,8 +217,6 @@ struct invoke_policy_impl<wildcard_position::nil, Pattern, FilteredPattern>
         }
 
         // either dynamically typed or statically typed but not a native tuple
-        // Tup::types is a type list with const qualified types if
-        // Tup represents 'encapsulated arguments'
         typedef typename detail::tdata_from_type_list<
                     typename util::tl_map<
                         typename util::if_else<
@@ -240,8 +255,9 @@ struct deduce_tup_type<wildcard_position::trailing, Tuple, FilteredPattern>
 {
     typedef typename detail::tdata_from_type_list<
                 typename util::tl_map<
-                    typename util::tl_first_n<
+                    typename util::tl_slice<
                         typename Tuple::types,
+                        0,
                         FilteredPattern::size
                     >::type,
                     gref_mutable_wrapped
@@ -286,13 +302,12 @@ template<class Pattern, class FilteredPattern>
 struct invoke_policy_impl<wildcard_position::trailing, Pattern, FilteredPattern>
 {
     template<class Target, typename NativeArg, class Tuple>
-    static bool invoke_tuple(Target& target,
-                             std::type_info const&,
-                             detail::tuple_impl_info,
-                             NativeArg,
-                             Tuple& tup)
+    static bool invoke(Target& target,
+                       std::type_info const&,
+                       detail::tuple_impl_info,
+                       NativeArg,
+                       Tuple& tup)
     {
-cout << __LINE__ << endl;
         typedef typename detail::static_types_array_from_type_list<
                     FilteredPattern
                 >::type
@@ -330,91 +345,11 @@ cout << __LINE__ << endl;
 
 template<class Pattern>
 struct invoke_policy
+        : invoke_policy_impl<
+            get_wildcard_position<Pattern>(),
+            Pattern,
+            typename util::tl_filter_not_type<Pattern, anything>::type>
 {
-
-    typedef typename util::tl_filter_not_type<Pattern, anything>::type
-            filtered_pattern;
-
-    static constexpr wildcard_position wc_pos =
-            get_wildcard_position<Pattern>();
-
-    typedef invoke_policy_impl<
-                get_wildcard_position<Pattern>(),
-                Pattern,
-                filtered_pattern>
-            impl;
-
-    typedef typename detail::tdata_from_type_list<
-                filtered_pattern
-            >::type
-            native_data_type;
-
-    template<typename Target, typename... Ts>
-    static bool _invoke_args(std::integral_constant<bool, false>,
-                             Target&, Ts&&...)
-    {
-        return false;
-    }
-
-    template<typename Target, typename... Ts>
-    static bool _invoke_args(std::integral_constant<bool, true>,
-                             Target& target, Ts&&... args)
-    {
-        detail::tdata<
-            std::reference_wrapper<
-                typename std::remove_reference<Ts>::type
-            >...
-        > wrapped_args{std::forward<Ts>(args)...};
-
-        auto const& arg_types =
-                typeid(util::type_list<typename util::rm_ref<Ts>::type...>);
-
-        return impl::invoke_tuple(target, arg_types,
-                                  detail::statically_typed,
-                                  static_cast<native_data_type*>(nullptr),
-                                  wrapped_args);
-    }
-
-    template<typename Target, typename... Ts>
-    static bool invoke_args(std::integral_constant<bool, false>,
-                            Target& target, Ts&&... args)
-    {
-        std::integral_constant<bool, sizeof...(Ts) >= filtered_pattern::size> x;
-        return _invoke_args(x, target, std::forward<Ts>(args)...);
-    }
-
-    template<typename Target, typename... Ts>
-    static bool invoke_args(std::integral_constant<bool, true>,
-                            Target& target, Ts&&... args)
-    {
-        return impl::invoke_args(target, std::forward<Ts>(args)...);
-    }
-
-    template<typename Target, typename... Ts>
-    static bool invoke(Target& target, Ts&&... args)
-    {
-        std::integral_constant<bool, wc_pos == wildcard_position::nil> token;
-        return invoke_args(token, target, std::forward<Ts>(args)...);
-    }
-
-    template<class Target>
-    static bool invoke(Target& target,
-                       std::type_info const& arg0,
-                       detail::tuple_impl_info arg1,
-                       void const* arg2,
-                       detail::abstract_tuple const& arg3)
-    {
-        return impl::invoke_tuple(target, arg0, arg1, arg2, arg3);
-    }
-    template<typename Target>
-    static bool invoke(Target& target,
-                       std::type_info const& arg1,
-                       detail::tuple_impl_info arg2,
-                       void* arg3,
-                       detail::abstract_tuple& arg4)
-    {
-        return impl::invoke_tuple(target, arg1, arg2, arg3, arg4);
-    }
 };
 
 template<class PartialFun>
@@ -440,6 +375,85 @@ struct add_const_ref
     typedef T const& type;
 };
 
+template<bool IsInvokable, typename T>
+struct pj_wrap_
+{
+    typedef T type;
+};
+
+template<typename T>
+struct pj_wrap_<true, T>
+{
+    typedef typename util::get_callable_trait<T>::type ctrait;
+    typedef typename util::rm_option<typename ctrait::result_type>::type type;
+};
+
+template<typename T>
+struct pj_wrap_<false, ge_mutable_reference_wrapper<T>&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
+template<typename T>
+struct pj_wrap_<false, ge_mutable_reference_wrapper<T> const&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
+template<typename T>
+struct pj_wrap_<false, T&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
+template<typename T>
+struct pj_wrap
+{
+    typedef typename pj_wrap_<util::is_callable<T>::value, T>::type type;
+};
+
+template<typename T>
+struct result_inference
+{
+    typedef typename util::rm_option<typename util::get_result_type<T>::type>::type type;
+};
+
+template<>
+struct result_inference<util::void_type>
+{
+    typedef util::void_type type;
+};
+
+template<typename T0, typename T1>
+struct mutable_ref_inference
+{
+    typedef T1 type;
+};
+
+template<typename T>
+struct mutable_ref_inference<T&, T>
+{
+    typedef T& type;
+};
+
+template<typename T>
+struct wrap_ref
+{
+    typedef T type;
+};
+
+template<typename T>
+struct wrap_ref<ge_mutable_reference_wrapper<T>&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
+template<typename T>
+struct wrap_ref<T&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
 /**
  * @brief Projection implemented by a set of functors.
  */
@@ -460,50 +474,47 @@ class projection
                 pattern_type,
                 anything
             >::type
-            filtered_pattern_type;
+            filtered_pattern;
 
-    static_assert(ProjectionFuns::size <= filtered_pattern_type::size,
+    static_assert(ProjectionFuns::size <= filtered_pattern::size,
                   "invalid projection (too many functions)");
 
-    typedef TargetSignature arg_types;
+    typedef typename util::tl_pad_left<
+                TargetSignature,
+                filtered_pattern::size
+            >::type
+            padded_signature;
 
-    // fill arg_types with first arguments of const-references
-    // deduced from filtered_pattern_type
-    typedef typename util::tl_zipped_map<
+    typedef typename util::tl_zip<
                 typename util::tl_zip<
                     typename util::tl_pad_left<
-                        arg_types,
-                        filtered_pattern_type::size,
-                        util::void_type
+                        typename util::tl_map<
+                            ProjectionFuns,
+                            result_inference
+                        >::type,
+                        filtered_pattern::size
                     >::type,
-                    typename util::tl_map<
-                        filtered_pattern_type,
-                        add_const_ref
-                    >::type
+                    padded_signature,
+                    util::left_or_right
+                >::type,
+                typename util::tl_map<
+                    filtered_pattern,
+                    add_const_ref
+                >::type
+            >::type
+            projected_arg_types;
+
+    /*
+    typedef typename util::tl_zip<
+                padded_signature,
+                typename util::tl_map<
+                    filtered_pattern,
+                    add_const_ref
                 >::type,
                 util::left_or_right
             >::type
-            filled_arg_types;
-
-    // get a container that manages const and non-const references
-    typedef typename util::tl_zipped_map<
-                typename util::tl_zip<
-                    filled_arg_types,
-                    typename util::tl_pad_right<
-                        ProjectionFuns,
-                        filtered_pattern_type::size,
-                        util::void_type
-                    >::type
-                >::type,
-                cf_transformed_type
-            >::type
-            projection_map;
-
-    typedef typename util::tl_map<projection_map, cf_unwrap>::type
             projected_arg_types;
-
-    typedef typename detail::tdata_from_type_list<projection_map>::type
-            collected_arg_types;
+    */
 
     projection(fun_container const& args) : m_funs(args)
     {
@@ -511,87 +522,64 @@ class projection
 
     projection(projection const&) = default;
 
-    template<class PartialFun, typename... Args>
-    bool _arg_impl(std::integral_constant<bool, true>,
-                   PartialFun& fun, Args&&... args    ) const
-    {
-        collected_arg_types pargs;
-        if (collect(pargs, m_funs, std::forward<Args>(args)...))
-        {
-            projection_helper<PartialFun> helper{fun};
-            return util::unchecked_apply_tuple<bool>(helper, pargs);
-        }
-        return false;
-    }
-
-    template<class PartialFun, typename... Args>
-    inline bool _arg_impl(std::integral_constant<bool, false>,
-                          PartialFun&, Args&&...              ) const
-    {
-        return false;
-    }
-
-    template<class PartialFun, typename... Args>
-    bool _arg_fwd(std::integral_constant<bool, false>,
-                  PartialFun&, Args&&...) const
-    {
-        return false;
-    }
-
-    template<class PartialFun, typename... Args>
-    bool _arg_fwd(std::integral_constant<bool, true>,
-                  PartialFun& fun, Args&&... args) const
-    {
-        typedef util::type_list<typename util::rm_ref<Args>::type...> incoming;
-        std::integral_constant<
-            bool,
-            util::tl_zipped_forall<
-                typename util::tl_zip<incoming, filtered_pattern_type>::type,
-                std::is_convertible
-            >::value
-        > token;
-        return _arg_impl(token, fun, std::forward<Args>(args)...);
-    }
-
     /**
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
      */
     template<class PartialFun, typename... Args>
     bool operator()(PartialFun& fun, Args&&... args) const
     {
-        std::integral_constant<
-            bool,
-            sizeof...(Args) == filtered_pattern_type::size
-        > token;
-        return _arg_fwd(token, fun, std::forward<Args>(args)...);
+        static constexpr bool can_collect =
+                util::tl_binary_forall<
+                    util::type_list<Args...>,
+                    typename util::tl_zip<
+                        padded_signature,
+                        filtered_pattern,
+                        mutable_ref_inference
+                    >::type,
+                    std::is_convertible
+                >::value;
+
+        std::integral_constant<bool, can_collect> token;
+        return invoke(token, fun, std::forward<Args>(args)...);
     }
 
  private:
 
+    template<class PartialFun, typename... Args>
+    bool invoke(std::integral_constant<bool, false>,
+                PartialFun&, Args&&...              ) const
+    {
+        return false;
+    }
+
+    template<class PartialFun, typename... Args>
+    bool invoke(std::integral_constant<bool, true>,
+                PartialFun&, Args&&...    ) const
+    {
+        /*
+        typedef typename util::tl_map<
+                    projected_arg_types,
+                    wrap_ref
+                >::type
+                collected_arg_types;
+
+        //typedef projected_arg_types collected_arg_types;
+
+        typename detail::tdata_from_type_list<collected_arg_types>::type pargs;
+        if (collect(pargs, m_funs, std::forward<Args>(args)...))
+        {
+            projection_helper<PartialFun> helper{fun};
+            return util::unchecked_apply_tuple<bool>(helper, pargs);
+        }
+        */
+        return false;
+    }
+
     template<typename Storage, typename T>
-    static inline  bool fetch_(Storage& storage, T& value)
+    static inline  bool fetch_(Storage& storage, T&& value)
     {
-        storage = value;
+        storage = std::forward<T>(value);
         return true;
-    }
-
-    template<typename T>
-    static inline  bool fetch_(T&, T const&)
-    {
-        return false;
-    }
-
-    template<typename T>
-    static inline  bool fetch_(ge_mutable_reference_wrapper<T>&,
-                               ge_mutable_reference_wrapper<const T>&)
-    {
-        return false;
-    }
-
-    template<typename T>
-    static inline  bool fetch_(ge_mutable_reference_wrapper<T>&, T const&)
-    {
-        return false;
     }
 
     template<class Storage>
@@ -612,26 +600,13 @@ class projection
     }
 
     template<typename Storage, typename T>
-    static inline bool fetch(Storage& storage,
-                             util::void_type const&,
-                             T&& value)
+    static inline bool fetch(Storage& storage, util::void_type const&, T&& arg)
     {
-        storage = std::forward<T>(value);
-        return true;
+        return fetch_(storage, std::forward<T>(arg));
     }
 
     static inline bool collect(detail::tdata<>&, detail::tdata<> const&)
     {
-        return true;
-    }
-
-    template<class TData, typename T0, typename... Ts>
-    static inline bool collect(TData& td, detail::tdata<> const& tr,
-                               T0&& arg0, Ts&&... args)
-    {
-        return    fetch_(td.head, std::forward<T0>(arg0))
-               && collect(td.tail(), tr.tail(), std::forward<Ts>(args)...);
-        //td.set(std::forward<T0>(arg0), std::forward<Ts>(args)...);
         return true;
     }
 
@@ -644,37 +619,6 @@ class projection
     }
 
 };
-
-/*
-template<class Pattern, class TargetSignature>
-class projection<Pattern, TargetSignature, util::type_list<> >
-{
-
- public:
-
-    typedef Pattern pattern_type;
-
-    typedef typename util::tl_filter_not_type<
-                pattern_type,
-                anything
-            >::type
-            filtered_pattern_type;
-
-    typedef filtered_pattern_type projected_arg_types;
-
-    projection(detail::tdata<>) { }
-    projection(projection&&) = default;
-    projection(projection const&) = default;
-
-    template<class PartialFun, typename... Args>
-    bool operator()(PartialFun& fun, Args&&... args) const
-    {
-        projection_helper<PartialFun> helper{fun};
-        return helper(std::forward<Args>(args)...);
-    }
-
-};
-*/
 
 template<class Expr, class Guard, class Transformers, class Pattern>
 struct get_cfl
@@ -731,6 +675,7 @@ struct invoke_helper2
     template<typename... Args>
     bool operator()(Args&&... args) const
     {
+        //static_assert(false, "foo");
         Token token;
         invoke_helper3<Data> fun{data};
         return util::static_foreach<0, Token::size>::eval_or(token, fun, std::forward<Args>(args)...);
@@ -788,51 +733,6 @@ struct is_manipulator_leaf<std::pair<First, Second> >
     static constexpr bool value = Second::manipulates_args;
 };
 
-template<bool ManipulatesArgs, class EvalOrder>
-struct pjf_invoke
-{
-    template<typename Leaves>
-    static bool _(Leaves const& leaves, any_tuple const& tup)
-    {
-        EvalOrder token;
-        invoke_helper<decltype(leaves)> fun{leaves};
-        auto const& cvals = *(tup.cvals());
-        return util::static_foreach<0, EvalOrder::size>
-               ::eval_or(token,
-                         fun,
-                         *(cvals.type_token()),
-                         cvals.impl_type(),
-                         cvals.native_data(),
-                         cvals);
-    }
-};
-
-template<class EvalOrder>
-struct pjf_invoke<true, EvalOrder>
-{
-    template<typename Leaves>
-    static bool _(Leaves const& leaves, any_tuple& tup)
-    {
-        EvalOrder token;
-        invoke_helper<decltype(leaves)> fun{leaves};
-        tup.force_detach();
-        auto& vals = *(tup.vals());
-        return util::static_foreach<0, EvalOrder::size>
-               ::eval_or(token,
-                         fun,
-                         *(vals.type_token()),
-                         vals.impl_type(),
-                         vals.mutable_native_data(),
-                         vals);
-    }
-    template<typename Leaves>
-    static bool _(Leaves const& leaves, any_tuple const& tup)
-    {
-        any_tuple tup_copy{tup};
-        return _(leaves, tup_copy);
-    }
-};
-
 void collect_tdata(detail::tdata<>&)
 {
 }
@@ -849,6 +749,37 @@ void collect_tdata(Storage& storage, Arg0 const& arg0, Args const&... args)
     storage = arg0.head;
     collect_tdata(storage.tail(), arg0.tail(), args...);
 }
+
+template<bool IsManipulator, typename T0, typename T1>
+struct pj_fwd_
+{
+    typedef T1 type;
+};
+
+template<bool IsManipulator, typename T>
+struct pj_fwd_<IsManipulator, T const&, T>
+{
+    typedef std::reference_wrapper<const T> type;
+};
+
+template<typename T>
+struct pj_fwd_<true, T&, T>
+{
+    typedef std::reference_wrapper<T> type;
+};
+
+template<bool IsManipulator, typename T>
+struct pj_fwd
+{
+    typedef typename pj_fwd_<
+                IsManipulator,
+                T,
+                typename detail::implicit_conversions<
+                    typename util::rm_ref<T>::type
+                >::type
+            >::type
+            type;
+};
 
 /**
  * @brief A function that works on the projection of given data rather than
@@ -879,16 +810,47 @@ class projected_fun
 
     projected_fun(projected_fun const&) = default;
 
+    bool _invoke(any_tuple const& tup) const
+    {
+        eval_order token;
+        invoke_helper<decltype(m_leaves)> fun{m_leaves};
+        auto& cvals = *(tup.cvals());
+        return util::static_foreach<0, eval_order::size>
+               ::eval_or(token,
+                         fun,
+                         *(cvals.type_token()),
+                         cvals.impl_type(),
+                         cvals.native_data(),
+                         cvals);
+    }
+
+    bool _invoke(any_tuple& tup) const
+    {
+        eval_order token;
+        invoke_helper<decltype(m_leaves)> fun{m_leaves};
+        tup.force_detach();
+        auto& vals = *(tup.vals());
+        return util::static_foreach<0, eval_order::size>
+               ::eval_or(token,
+                         fun,
+                         *(vals.type_token()),
+                         vals.impl_type(),
+                         vals.mutable_native_data(),
+                         vals);
+    }
+
     bool invoke(any_tuple const& tup) const
     {
-        return pjf_invoke<has_manipulator, eval_order>
-               ::_(m_leaves, tup);
+        if (has_manipulator)
+            return invoke(any_tuple{tup});
+        return _invoke(tup);
     }
 
     bool invoke(any_tuple& tup) const
     {
-        return pjf_invoke<has_manipulator, eval_order>
-               ::_(m_leaves, tup);
+        if (!has_manipulator)
+            return _invoke(static_cast<any_tuple const&>(tup));
+        return _invoke(tup);
     }
 
     bool invoke(any_tuple&& tup) const
@@ -898,19 +860,36 @@ class projected_fun
     }
 
     template<typename... Args>
-    bool invoke_args(Args&&... args) const
+    bool operator()(Args&&... args) const
     {
+        typedef detail::tdata<typename pj_fwd<has_manipulator, Args>::type...>
+                tuple_type;
+        // applies implicit conversions etc
+        tuple_type tup{std::forward<Args>(args)...};
+
+        typedef typename util::if_else_c<
+                    has_manipulator,
+                    tuple_type&,
+                    util::wrapped<tuple_type const&>
+                >::type
+                ref_type;
+
+        typedef typename util::if_else_c<
+                    has_manipulator,
+                    void*,
+                    util::wrapped<void const*>
+                >::type
+                ptr_type;
+
         eval_order token;
         invoke_helper<decltype(m_leaves)> fun{m_leaves};
         return util::static_foreach<0, eval_order::size>
-               ::eval_or(token, fun, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    bool operator()(Args&&... args) const
-    {
-        // applies implicit conversions and passes rvalues as const lvalue refs
-        return invoke_args(pjf_fwd<Args>::_(args)...);
+                ::eval_or(token,
+                          fun,
+                          typeid(util::type_list<typename util::rm_ref<Args>::type...>),
+                          detail::statically_typed,
+                          static_cast<ptr_type>(nullptr),
+                          static_cast<ref_type>(tup));
     }
 
     template<class... Rhs>
@@ -1270,6 +1249,7 @@ size_t test__tuple()
 {
     CPPA_TEST(test__tuple);
 
+/*
     using namespace cppa::placeholders;
 
     typedef typename util::tl_group_by<zz0, std::is_same>::type zz1;
@@ -1410,7 +1390,9 @@ size_t test__tuple()
     CPPA_CHECK(f11("10"));
     CPPA_CHECK_EQUAL(10, f11_fun);
 
-    //exit(0);
+    exit(0);
+
+*/
 
     /*
     VERBOSE(f00(42, 42));

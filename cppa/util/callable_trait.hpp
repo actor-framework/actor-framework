@@ -133,7 +133,8 @@ struct is_callable
 
     static void _fun(void*) { }
 
-    typedef decltype(_fun(static_cast<T*>(nullptr))) result_type;
+    typedef decltype(_fun(static_cast<typename rm_ref<T>::type*>(nullptr)))
+            result_type;
 
  public:
 

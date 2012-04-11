@@ -143,8 +143,8 @@ template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
 Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup)
 {
-    return unchecked_apply_tuple_in_range<Result, 0, sizeof...(T) - 1>
-           (std::forward<F>(fun), tup);
+    return apply_tuple_util<Result, true, 0, sizeof...(T) - 1>
+           ::apply(std::forward<F>(fun), tup);
 }
 
 } } // namespace cppa::util

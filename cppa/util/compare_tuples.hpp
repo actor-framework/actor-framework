@@ -76,8 +76,11 @@ bool compare_tuples(LhsTuple<LhsTypes...> const& lhs,
     static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
                   "could not compare tuples of different size");
 
-    static_assert(tl_zipped_forall<type_list<type_pair<LhsTypes,RhsTypes>...>,
-                                   is_comparable>::value,
+    static_assert(tl_binary_forall<
+                      type_list<LhsTypes...>,
+                      type_list<RhsTypes...>,
+                      is_comparable
+                  >::value,
                   "types of lhs are not comparable to the types of rhs");
 
     return detail::cmp_helper<(sizeof...(LhsTypes) - 1),
@@ -90,20 +93,16 @@ template<template<typename...> class LhsTuple, typename... LhsTypes,
 bool compare_first_elements(LhsTuple<LhsTypes...> const& lhs,
                             RhsTuple<RhsTypes...> const& rhs)
 {
-    static constexpr size_t cmp_size = (sizeof...(LhsTypes) < sizeof...(RhsTypes))
-                                       ? sizeof...(LhsTypes)
-                                       : sizeof...(RhsTypes);
+    typedef typename tl_zip<
+                util::type_list<LhsTypes...>,
+                util::type_list<RhsTypes...>
+            >::type
+            zipped_types;
 
-    typedef util::type_list<LhsTypes...> lhs_tlist;
-    typedef util::type_list<RhsTypes...> rhs_tlist;
-    typedef typename tl_first_n<lhs_tlist, cmp_size>::type lhs_sublist;
-    typedef typename tl_first_n<rhs_tlist, cmp_size>::type rhs_sublist;
-    typedef typename tl_zip<lhs_sublist, rhs_sublist>::type zipped_sublists;
-
-    static_assert(tl_zipped_forall<zipped_sublists, is_comparable>::value,
+    static_assert(tl_zipped_forall<zipped_types, is_comparable>::value,
                   "types of lhs are not comparable to the types of rhs");
 
-    return detail::cmp_helper<(cmp_size - 1),
+    return detail::cmp_helper<(zipped_types::size - 1),
                               LhsTuple<LhsTypes...>,
                               RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
 }
