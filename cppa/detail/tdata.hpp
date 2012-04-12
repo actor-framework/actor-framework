@@ -185,6 +185,11 @@ struct tdata<>
 
     inline bool operator==(tdata const&) const { return true; }
 
+    inline tuple_impl_info impl_type() const
+    {
+        return statically_typed;
+    }
+
 };
 
 template<bool IsBoxed, bool IsFunction, typename Head, typename T>

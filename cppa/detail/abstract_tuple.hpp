@@ -36,7 +36,6 @@
 
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
-#include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
@@ -165,8 +164,6 @@ class abstract_tuple : public ref_counted
         }
 
         inline const_iterator& operator*() { return *this; }
-
-        //inline operator type_value_pair() const { return {type(), value()}; }
 
     };
 
