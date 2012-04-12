@@ -42,8 +42,8 @@ namespace cppa { namespace util {
 template<typename Result, bool IsManipulator, size_t... Range>
 struct apply_tuple_impl
 {
-    template<typename F, template<typename...> class Tuple, typename... T>
-    static Result apply(F& f, Tuple<T...> const& args)
+    template<typename F, class Tuple>
+    static inline Result apply(F& f, Tuple const& args)
     {
         return f(get<Range>(args)...);
     }
@@ -52,8 +52,8 @@ struct apply_tuple_impl
 template<typename Result, size_t... Range>
 struct apply_tuple_impl<Result, true, Range...>
 {
-    template<typename F, template<typename...> class Tuple, typename... T>
-    static Result apply(F& f, Tuple<T...>& args)
+    template<typename F, class Tuple>
+    static inline Result apply(F& f, Tuple& args)
     {
         return f(get_ref<Range>(args)...);
     }
@@ -133,8 +133,8 @@ template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
 Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
 {
-    return unchecked_apply_tuple_in_range<Result, 0, sizeof...(T) - 1>
-           (std::forward<F>(fun), tup);
+    return apply_tuple_util<Result, false, 0, sizeof...(T) - 1>
+           ::apply(std::forward<F>(fun), tup);
 }
 
 // applies all values of @p tup to @p fun
