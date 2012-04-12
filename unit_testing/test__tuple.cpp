@@ -797,60 +797,89 @@ class projected_fun
     static constexpr bool has_manipulator =
             util::tl_exists<leaves_list, is_manipulator_leaf>::value;
 
+    void init()
+    {
+        m_dummy.second.fill(true);
+        m_cache.resize(cache_size);
+        for(size_t i = 0; i < cache_size; ++i) m_cache[i].first = nullptr;
+        m_cache_begin = m_cache_end = 0;
+    }
+
     template<typename... Args>
     projected_fun(Args&&... args) : m_leaves(std::forward<Args>(args)...)
     {
+        init();
     }
 
     projected_fun(projected_fun&& other) : m_leaves(std::move(other.m_leaves))
     {
+        init();
     }
 
-    projected_fun(projected_fun const&) = default;
+    projected_fun(projected_fun const& other) : m_leaves(other.m_leaves)
+    {
+        init();
+    }
 
     typedef std::array<bool, eval_order::size> cache_entry;
 
     typedef std::pair<std::type_info const*, cache_entry> cache_element;
 
-    mutable std::vector<cache_element> m_cache;
+    //mutable std::vector<cache_element> m_cache;
+
+    static constexpr size_t cache_size = 10;
+
+    mutable util::fixed_vector<cache_element, cache_size> m_cache;
+
+    // ring buffer like access to m_cache
+    mutable size_t m_cache_begin;
+    mutable size_t m_cache_end;
 
     mutable cache_element m_dummy;
+
+    static inline void advance_(size_t& i)
+    {
+        i = (i + 1) % cache_size;
+    }
+
+    inline size_t find_token_pos(std::type_info const* type_token) const
+    {
+        for (size_t i = m_cache_begin ; i != m_cache_end; advance_(i))
+        {
+            if (m_cache[i].first == type_token) return i;
+        }
+        return m_cache_end;
+    }
 
     typename cache_entry::iterator get_cache_entry(std::type_info const* type_token,
                                                    detail::abstract_tuple const& value) const
     {
         CPPA_REQUIRE(type_token != nullptr);
-        m_dummy.first = type_token;
-        auto end = m_cache.end();
-        // note: uses >= for comparison (not a "real" upper bound)
-        auto i = std::upper_bound(m_cache.begin(), end, m_dummy,
-                                  [](cache_element const& lhs,
-                                     cache_element const& rhs)
-                                  {
-                                      return lhs.first >= rhs.first;
-                                  });
+        size_t i = find_token_pos(type_token);
         // if we didn't found a cache entry ...
-        if (i == end || i->first != m_dummy.first)
+        if (i == m_cache_end)
         {
-            // ... create one
-            cache_entry tmp;
             if (value.impl_type() == detail::statically_typed)
             {
+                // ... 'create' one
+                advance_(m_cache_end);
+                if (m_cache_end == m_cache_begin) advance_(m_cache_begin);
+                m_cache[i].first = type_token;
                 eval_order token;
-                can_invoke_helper<cache_entry> fun{tmp};
+                can_invoke_helper<cache_entry> fun{m_cache[i].second};
                 util::static_foreach<0, eval_order::size>
                 ::_(token, fun, *type_token, value);
             }
             else
             {
-                // "dummy" cache entry with all functions enabled (dynamically typed tuple)
-                tmp.fill(true);
+                // return "dummy" cache entry with all functions enabled
+                // (dynamically typed tuple)
+                return m_dummy.second.begin();
             }
             // m_cache is always sorted,
             // due to emplace(upper_bound, ...) insertions
-            i = m_cache.emplace(i, std::move(m_dummy.first), std::move(tmp));
         }
-        return (i->second).begin();
+        return m_cache[i].second.begin();
     }
 
     template<typename AbstractTuple, typename NativeDataPtr>
@@ -1465,6 +1494,7 @@ size_t test__tuple()
 
     constexpr size_t numInvokes = 100000000;
 
+    /*
     auto xvals = make_cow_tuple(1, 2, "3");
 
     std::string three{"3"};
@@ -1528,6 +1558,7 @@ size_t test__tuple()
             }
         }
     }
+    */
 
     cout << "old partial function implementation for " << numInvokes << " matches" << endl;
     {
