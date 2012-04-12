@@ -176,13 +176,11 @@ struct invoke_policy_impl<wildcard_position::nil, Pattern, util::type_list<Ts...
         return shortcut_failed;
     }
 
-    template<class Target, typename PtrType, typename Tuple, typename ValueIter>
+    template<class Target, typename PtrType, typename Tuple>
     static bool invoke(Target& target,
                        std::type_info const& arg_types,
                        detail::tuple_impl_info timpl,
                        PtrType* native_arg,
-                       ValueIter vbegin,
-                       ValueIter vend,
                        Tuple& tup)
     {
         switch (shortcut(target, tup) )
@@ -229,7 +227,9 @@ struct invoke_policy_impl<wildcard_position::nil, Pattern, util::type_list<Ts...
 
         typedef dummy_tuple<PtrType*, Ts...> ttup_type;
         ttup_type ttup;
-        std::copy(vbegin, vend, std::begin(ttup.data));
+        // if we strip const here ...
+        for (size_t i = 0; i < sizeof...(Ts); ++i)
+            ttup[i] = const_cast<void*>(tup.at(i));
 
         // ... we restore it here again
         typedef typename util::if_else<
@@ -248,13 +248,11 @@ struct invoke_policy_impl<wildcard_position::leading,
                           util::type_list<anything>,
                           util::type_list<> >
 {
-    template<class Target, typename PtrType, class Tuple, typename ValueIter>
+    template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
                        std::type_info const&,
                        detail::tuple_impl_info,
                        PtrType*,
-                       ValueIter,
-                       ValueIter,
                        Tuple&)
     {
         return target();
@@ -266,13 +264,11 @@ struct invoke_policy_impl<wildcard_position::trailing, Pattern, util::type_list<
 {
     typedef util::type_list<Ts...> filtered_pattern;
 
-    template<class Target, typename PtrType, class Tuple, typename ValueIter>
+    template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
                        std::type_info const&,
                        detail::tuple_impl_info,
                        PtrType*,
-                       ValueIter vbegin,
-                       ValueIter,
                        Tuple& tup)
     {
         typedef detail::static_types_array<Ts...> arr_type;
@@ -290,7 +286,8 @@ struct invoke_policy_impl<wildcard_position::trailing, Pattern, util::type_list<
         }
         typedef dummy_tuple<Ts...> ttup_type;
         ttup_type ttup;
-        std::copy(vbegin, (vbegin + sizeof...(Ts)), std::begin(ttup.data));
+        for (size_t i = 0; i < sizeof...(Ts); ++i)
+            ttup[i] = const_cast<void*>(tup.at(i));
 
         typedef typename util::if_else<
                     std::is_const<Tuple>,
@@ -751,55 +748,31 @@ class projected_fun
 
     projected_fun(projected_fun const&) = default;
 
-    template<class Buffer, typename AbstractTuple, typename NativeDataPtr>
-    bool _do_invoke(Buffer& buf, AbstractTuple& vals, NativeDataPtr ndp) const
+    template<typename AbstractTuple, typename NativeDataPtr>
+    bool _do_invoke(AbstractTuple& vals, NativeDataPtr ndp) const
     {
         eval_order token;
         invoke_helper<decltype(m_leaves)> fun{m_leaves};
-        for (size_t i = 0; i < vals.size(); ++i)
-            buf.push_back(const_cast<void*>(vals.at(i)));
         return util::static_foreach<0, eval_order::size>
                ::eval_or(token,
                          fun,
                          *(vals.type_token()),
                          vals.impl_type(),
                          ndp,
-                         buf.begin(),
-                         buf.end(),
                          vals);
     }
 
     bool _invoke(any_tuple const& tup) const
     {
         auto const& cvals = *(tup.cvals());
-        if (cvals.size() < 10)
-        {
-            util::fixed_vector<void*, 10> buf;
-            return _do_invoke(buf, cvals, cvals.native_data());
-        }
-        else
-        {
-            std::vector<void*> buf;
-            buf.reserve(cvals.size());
-            return _do_invoke(buf, cvals, cvals.native_data());
-        }
+        return _do_invoke(cvals, cvals.native_data());
     }
 
     bool _invoke(any_tuple& tup) const
     {
         tup.force_detach();
         auto& vals = *(tup.vals());
-        if (vals.size() < 10)
-        {
-            util::fixed_vector<void*, 10> buf;
-            return _do_invoke(buf, vals, vals.mutable_native_data());
-        }
-        else
-        {
-            std::vector<void*> buf;
-            buf.reserve(vals.size());
-            return _do_invoke(buf, vals, vals.mutable_native_data());
-        }
+        return _do_invoke(vals, vals.mutable_native_data());
     }
 
     bool invoke(any_tuple const& tup) const
@@ -844,10 +817,6 @@ class projected_fun
                 >::type
                 ptr_type;
 
-        util::fixed_vector<void*, sizeof...(Args)> buf;
-        for (size_t i = 0; i < sizeof...(Args); ++i)
-            buf.push_back(const_cast<void*>(tup.at(i)));
-
         eval_order token;
         invoke_helper<decltype(m_leaves)> fun{m_leaves};
         return util::static_foreach<0, eval_order::size>
@@ -856,8 +825,6 @@ class projected_fun
                           typeid(util::type_list<typename util::rm_ref<Args>::type...>),
                           detail::statically_typed,
                           static_cast<ptr_type>(nullptr),
-                          buf.begin(),
-                          buf.end(),
                           static_cast<ref_type>(tup));
     }
 
@@ -1386,7 +1353,7 @@ size_t test__tuple()
         make_cow_tuple(1, 2, 3)
     };
 
-    constexpr size_t numInvokes = 1000000;
+    constexpr size_t numInvokes = 100000000;
 
     auto xvals = make_cow_tuple(1, 2, "3");
 
