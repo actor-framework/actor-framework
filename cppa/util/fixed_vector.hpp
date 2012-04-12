@@ -51,7 +51,8 @@ template<typename T, size_t MaxSize>
 class fixed_vector
 {
 
-    static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type");
+    static_assert(std::is_arithmetic<T>::value || std::is_pointer<T>::value,
+                  "T must be an arithmetic or pointer type");
 
     size_t m_size;
 
