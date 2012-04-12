@@ -1461,7 +1461,7 @@ size_t test__tuple()
     CPPA_CHECK(f11("10"));
     CPPA_CHECK_EQUAL(10, f11_fun);
 
-    exit(0);
+    return CPPA_TEST_RESULT;
 
     auto old_pf =
     (
