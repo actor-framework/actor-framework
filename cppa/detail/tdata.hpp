@@ -132,6 +132,8 @@ template<>
 struct tdata<>
 {
 
+    typedef tdata super;
+
     util::void_type head;
 
     typedef util::void_type head_type;
@@ -312,22 +314,36 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline void const* at(size_t p) const
     {
-        return (p == 0) ? ptr_to(head) : super::at(p - 1);
+        CPPA_REQUIRE(p < num_elements);
+        switch (p)
+        {
+            case  0: return ptr_to(head);
+            case  1: return ptr_to(super::head);
+            case  2: return ptr_to(super::super::head);
+            case  3: return ptr_to(super::super::super::head);
+            case  4: return ptr_to(super::super::super::super::head);
+            case  5: return ptr_to(super::super::super::super::super::head);
+            default: return super::at(p - 1);
+        }
+        //return (p == 0) ? ptr_to(head) : super::at(p - 1);
     }
 
     inline void* mutable_at(size_t p)
     {
+#       ifdef CPPA_DEBUG
         if (p == 0)
         {
-#           ifdef CPPA_DEBUG
             if (std::is_same<decltype(ptr_to(head)), void const*>::value)
             {
                 throw std::logic_error{"mutable_at with const head"};
             }
-#           endif
             return const_cast<void*>(ptr_to(head));
         }
         return super::mutable_at(p - 1);
+#       else
+        return const_cast<void*>(at(p));
+#       endif
+
     }
 
     inline uniform_type_info const* type_at(size_t p) const
@@ -418,10 +434,10 @@ mk_tdata(Args&&... args)
 }
 
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(detail::tdata<Tn...> const& tv)
+typename util::at<N, Tn...>::type const& get(detail::tdata<Tn...> const& tv)
 {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return static_cast<const typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
+    return static_cast<typename detail::tdata_upcast_helper<N, Tn...>::type const&>(tv).head;
 }
 
 template<size_t N, typename... Tn>
