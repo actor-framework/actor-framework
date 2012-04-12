@@ -1,4 +1,5 @@
 #include <list>
+#include <array>
 #include <string>
 #include <utility>
 #include <iostream>
@@ -176,6 +177,13 @@ struct invoke_policy_impl<wildcard_position::nil, Pattern, util::type_list<Ts...
         return shortcut_failed;
     }
 
+    static bool can_invoke(std::type_info const& arg_types,
+                           detail::abstract_tuple const&)
+    {
+        return arg_types == typeid(filtered_pattern);
+
+    }
+
     template<class Target, typename PtrType, typename Tuple>
     static bool invoke(Target& target,
                        std::type_info const& arg_types,
@@ -248,6 +256,11 @@ struct invoke_policy_impl<wildcard_position::leading,
                           util::type_list<anything>,
                           util::type_list<> >
 {
+    static inline bool can_invoke(std::type_info const&,
+                                  detail::abstract_tuple const&)
+    {
+        return true;
+    }
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
                        std::type_info const&,
@@ -263,6 +276,29 @@ template<class Pattern, typename... Ts>
 struct invoke_policy_impl<wildcard_position::trailing, Pattern, util::type_list<Ts...> >
 {
     typedef util::type_list<Ts...> filtered_pattern;
+
+    static bool can_invoke(std::type_info const& arg_types,
+                           detail::abstract_tuple const& tup)
+    {
+        if (arg_types == typeid(filtered_pattern))
+        {
+            return true;
+        }
+        typedef detail::static_types_array<Ts...> arr_type;
+        auto& arr = arr_type::arr;
+        if (tup.size() < filtered_pattern::size)
+        {
+            return false;
+        }
+        for (size_t i = 0; i < filtered_pattern::size; ++i)
+        {
+            if (arr[i] != tup.type_at(i))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
@@ -641,27 +677,51 @@ struct invoke_helper2
 };
 
 // invokes a group of {projection, tpartial_function} pairs
-template<typename Data>
+template<typename Data, typename BoolIter>
 struct invoke_helper
 {
     Data const& data;
-    invoke_helper(Data const& mdata) : data(mdata) { }
+    BoolIter enabled;
+    invoke_helper(Data const& mdata, BoolIter biter) : data(mdata), enabled(biter) { }
     // token: type_list<type_pair<integral_constant<size_t, X>,
     //                            std::pair<projection, tpartial_function>>,
     //                  ...>
     // all {projection, tpartial_function} pairs have the same pattern
     // thus, can be invoked from same data
     template<class Token, typename... Args>
-    bool operator()(Token, Args&&... args) const
+    bool operator()(Token, Args&&... args)
     {
         typedef typename Token::head type_pair;
         typedef typename type_pair::second leaf_pair;
         typedef typename leaf_pair::first_type projection_type;
-        // next invocation step
-        invoke_helper2<Data,
-                       Token,
-                       typename projection_type::pattern_type> fun{data};
-        return fun.invoke(std::forward<Args>(args)...);
+        if (*enabled++)
+        {
+            // next invocation step
+            invoke_helper2<Data,
+                           Token,
+                           typename projection_type::pattern_type> fun{data};
+            return fun.invoke(std::forward<Args>(args)...);
+        }
+        //++enabled;
+        return false;
+    }
+};
+
+template<typename BoolArray>
+struct can_invoke_helper
+{
+    BoolArray& data;
+    size_t i;
+    can_invoke_helper(BoolArray& mdata) : data(mdata), i(0) { }
+    template<class Token, typename... Args>
+    void operator()(Token, Args&&... args)
+    {
+        typedef typename Token::head type_pair;
+        typedef typename type_pair::second leaf_pair;
+        typedef typename leaf_pair::first_type projection_type;
+        typedef typename projection_type::pattern_type pattern_type;
+        typedef invoke_policy<pattern_type> impl;
+        data[i++] = impl::can_invoke(std::forward<Args>(args)...);
     }
 };
 
@@ -748,15 +808,62 @@ class projected_fun
 
     projected_fun(projected_fun const&) = default;
 
+    typedef std::array<bool, eval_order::size> cache_entry;
+
+    typedef std::pair<std::type_info const*, cache_entry> cache_element;
+
+    mutable std::vector<cache_element> m_cache;
+
+    mutable cache_element m_dummy;
+
+    typename cache_entry::iterator get_cache_entry(std::type_info const* type_token,
+                                                   detail::abstract_tuple const& value) const
+    {
+        CPPA_REQUIRE(type_token != nullptr);
+        m_dummy.first = type_token;
+        auto end = m_cache.end();
+        // note: uses >= for comparison (not a "real" upper bound)
+        auto i = std::upper_bound(m_cache.begin(), end, m_dummy,
+                                  [](cache_element const& lhs,
+                                     cache_element const& rhs)
+                                  {
+                                      return lhs.first >= rhs.first;
+                                  });
+        // if we didn't found a cache entry ...
+        if (i == end || i->first != m_dummy.first)
+        {
+            // ... create one
+            cache_entry tmp;
+            if (value.impl_type() == detail::statically_typed)
+            {
+                eval_order token;
+                can_invoke_helper<cache_entry> fun{tmp};
+                util::static_foreach<0, eval_order::size>
+                ::_(token, fun, *type_token, value);
+            }
+            else
+            {
+                // "dummy" cache entry with all functions enabled (dynamically typed tuple)
+                tmp.fill(true);
+            }
+            // m_cache is always sorted,
+            // due to emplace(upper_bound, ...) insertions
+            i = m_cache.emplace(i, std::move(m_dummy.first), std::move(tmp));
+        }
+        return (i->second).begin();
+    }
+
     template<typename AbstractTuple, typename NativeDataPtr>
     bool _do_invoke(AbstractTuple& vals, NativeDataPtr ndp) const
     {
+        std::type_info const* type_token = vals.type_token();
+        auto enabled_begin = get_cache_entry(type_token, vals);
         eval_order token;
-        invoke_helper<decltype(m_leaves)> fun{m_leaves};
+        invoke_helper<decltype(m_leaves), decltype(enabled_begin)> fun{m_leaves, enabled_begin};
         return util::static_foreach<0, eval_order::size>
                ::eval_or(token,
                          fun,
-                         *(vals.type_token()),
+                         *type_token,
                          vals.impl_type(),
                          ndp,
                          vals);
@@ -798,6 +905,8 @@ class projected_fun
     template<typename... Args>
     bool operator()(Args&&... args) const
     {
+        return invoke(make_cow_tuple(std::forward<Args>(args)...));
+        /*
         typedef detail::tdata<typename pj_fwd<has_manipulator, Args>::type...>
                 tuple_type;
         // applies implicit conversions etc
@@ -826,6 +935,7 @@ class projected_fun
                           detail::statically_typed,
                           static_cast<ptr_type>(nullptr),
                           static_cast<ref_type>(tup));
+        */
     }
 
     template<class... Rhs>
