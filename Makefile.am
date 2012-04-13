@@ -122,6 +122,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/post_office_msg.hpp \
     cppa/detail/primitive_member.hpp \
     cppa/detail/projection.hpp \
+    cppa/detail/pseudo_tuple.hpp \
     cppa/detail/ptype_to_type.hpp \
     cppa/detail/receive_loop_helper.hpp \
     cppa/detail/ref_counted_impl.hpp \
@@ -159,6 +160,7 @@ nobase_library_include_HEADERS = \
     cppa/intrusive_ptr.hpp \
     cppa/local_actor.hpp \
     cppa/match.hpp \
+    cppa/match_expr.hpp \
     cppa/object.hpp \
     cppa/on.hpp \
     cppa/option.hpp \
@@ -190,11 +192,9 @@ nobase_library_include_HEADERS = \
     cppa/util/compare_tuples.hpp \
     cppa/util/conjunction.hpp \
     cppa/util/deduce_ref_type.hpp \
-    cppa/util/disable_if.hpp \
     cppa/util/disjunction.hpp \
     cppa/util/duration.hpp \
     cppa/util/element_at.hpp \
-    cppa/util/enable_if.hpp \
     cppa/util/fiber.hpp \
     cppa/util/fixed_vector.hpp \
     cppa/util/if_else.hpp \

@@ -39,8 +39,6 @@
 #include "cppa/primitive_type.hpp"
 
 #include "cppa/util/pt_token.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 #include "cppa/util/pt_dispatch.hpp"
 #include "cppa/util/is_primitive.hpp"
 
@@ -51,11 +49,11 @@ namespace cppa { namespace detail {
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename util::disable_if<std::is_arithmetic<T>>::type* = 0);
+             typename std::enable_if<!std::is_arithmetic<T>::value>::type* = 0);
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename util::enable_if<std::is_arithmetic<T>, int>::type* = 0);
+             typename std::enable_if<std::is_arithmetic<T>::value, int>::type* = 0);
 
 } } // namespace cppa::detail
 
@@ -363,7 +361,7 @@ bool operator!=(primitive_variant const& lhs, primitive_variant const& rhs)
 }
 
 template<typename T>
-typename util::enable_if<util::is_primitive<T>, bool>::type
+typename std::enable_if<util::is_primitive<T>::value, bool>::type
 operator==(T const& lhs, primitive_variant const& rhs)
 {
     static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
@@ -372,21 +370,21 @@ operator==(T const& lhs, primitive_variant const& rhs)
 }
 
 template<typename T>
-typename util::enable_if<util::is_primitive<T>, bool>::type
+typename std::enable_if<util::is_primitive<T>::value, bool>::type
 operator==(primitive_variant const& lhs, T const& rhs)
 {
     return (rhs == lhs);
 }
 
 template<typename T>
-typename util::enable_if<util::is_primitive<T>, bool>::type
+typename std::enable_if<util::is_primitive<T>::value, bool>::type
 operator!=(primitive_variant const& lhs, T const& rhs)
 {
     return !(lhs == rhs);
 }
 
 template<typename T>
-typename util::enable_if<util::is_primitive<T>, bool>::type
+typename std::enable_if<util::is_primitive<T>::value, bool>::type
 operator!=(T const& lhs, primitive_variant const& rhs)
 {
     return !(lhs == rhs);
@@ -398,7 +396,7 @@ namespace cppa { namespace detail {
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename util::disable_if<std::is_arithmetic<T>>::type*)
+             typename std::enable_if<!std::is_arithmetic<T>::value>::type*)
 {
     if (FT == lhs_type)
     {
@@ -413,7 +411,7 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename util::enable_if<std::is_arithmetic<T>, int>::type*)
+             typename std::enable_if<std::is_arithmetic<T>::value, int>::type*)
 {
     // don't call a constructor for arithmetic types
     lhs = rhs;

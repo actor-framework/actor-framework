@@ -66,18 +66,14 @@ struct receive_while_helper
         while (m_stmt()) sptr->dequeue(fun);
     }
 
-    void operator()(behavior&& bhvr)
+    template<typename Arg0, typename... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
     {
-        behavior tmp{std::move(bhvr)};
+        auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...);
         (*this)(tmp);
     }
 
-    template<typename... Args>
-    void operator()(partial_function&& arg0, Args&&... args)
-    {
-        typename select_bhvr<Args...>::type tmp;
-        (*this)(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
-    }
 
 };
 
@@ -104,17 +100,12 @@ class receive_for_helper
         for ( ; begin != end; ++begin) sptr->dequeue(fun);
     }
 
-    void operator()(behavior&& bhvr)
+    template<typename Arg0, typename... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
     {
-        behavior tmp{std::move(bhvr)};
+        auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...);
         (*this)(tmp);
-    }
-
-    template<typename... Args>
-    void operator()(partial_function&& arg0, Args&&... args)
-    {
-        typename select_bhvr<Args...>::type tmp;
-        (*this)(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
     }
 
 };
@@ -126,14 +117,10 @@ class do_receive_helper
 
  public:
 
-    do_receive_helper(behavior&& bhvr) : m_bhvr(std::move(bhvr))
+    template<typename... Args>
+    do_receive_helper(Args&&... args)
+        : m_bhvr(match_expr_concat(std::forward<Args>(args)...))
     {
-    }
-
-    template<typename Arg0, typename... Args>
-    do_receive_helper(Arg0&& arg0, Args&&... args)
-    {
-        m_bhvr.splice(std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     do_receive_helper(do_receive_helper&&) = default;

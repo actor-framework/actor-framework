@@ -33,6 +33,7 @@
 
 #include <typeinfo>
 #include <functional>
+#include <type_traits>
 
 #include "cppa/get.hpp"
 #include "cppa/option.hpp"
@@ -40,8 +41,6 @@
 #include "cppa/util/at.hpp"
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 
 #include "cppa/detail/boxed.hpp"
@@ -151,7 +150,8 @@ struct tdata<>
     tdata(Args&&...)
     {
         typedef util::type_list<typename util::rm_ref<Args>::type...> incoming;
-        static_assert(util::tl_forall<incoming, boxed_or_void>::value,
+        typedef typename util::tl_filter_not_type<incoming, tdata>::type iargs;
+        static_assert(util::tl_forall<iargs, boxed_or_void>::value,
                       "Additional unboxed arguments provided");
     }
 
@@ -162,10 +162,6 @@ struct tdata<>
 
     inline const_iterator end() const { return {this}; }
     inline const_iterator cend() const { return {this}; }
-
-    inline tdata(tdata&) { }
-    inline tdata(tdata&&) { }
-    inline tdata(tdata const&) { }
 
     inline size_t size() const { return num_elements; }
 
@@ -276,14 +272,21 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     //tdata(Head const& v0, Tail const&... vals) : super(vals...), head(v0) { }
 
-    template<typename Arg0, typename... Args>
-    tdata(Arg0&& arg0, Args&&... args)
-        : super(std::forward<Args>(args)...)
+    tdata(Head arg) : super(), head(std::move(arg)) { }
+
+    template<typename Arg0, typename Arg1, typename... Args>
+    tdata(Arg0&& arg0, Arg1&& arg1, Args&&... args)
+        : super(std::forward<Arg1>(arg1), std::forward<Args>(args)...)
         , head(td_filter<Head>(std::forward<Arg0>(arg0)))
     {
     }
 
     tdata(tdata const&) = default;
+
+    tdata(tdata&& other)
+        : super(std::move(other.tail())), head(std::move(other.head))
+    {
+    }
 
     // allow (partial) initialization from a different tdata
 

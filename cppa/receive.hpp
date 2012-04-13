@@ -121,34 +121,24 @@ inline void receive(behavior& bhvr) { self->dequeue(bhvr); }
 
 inline void receive(partial_function& fun) { self->dequeue(fun); }
 
-inline void receive(behavior&& arg0)
+template<typename Arg0, typename... Args>
+void receive(Arg0&& arg0, Args&&... args)
 {
-    behavior tmp{std::move(arg0)};
+    auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
+                                 std::forward<Args>(args)...);
     receive(tmp);
-}
-
-template<typename... Args>
-void receive(partial_function&& arg0, Args&&... args)
-{
-    typename detail::select_bhvr<Args...>::type tmp;
-    receive(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
 }
 
 void receive_loop(behavior& rules);
 
 void receive_loop(partial_function& rules);
 
-inline void receive_loop(behavior&& arg0)
+template<typename Arg0, typename... Args>
+void receive_loop(Arg0&& arg0, Args&&... args)
 {
-    behavior tmp{std::move(arg0)};
+    auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
+                                 std::forward<Args>(args)...);
     receive_loop(tmp);
-}
-
-template<typename... Args>
-void receive_loop(partial_function&& arg0, Args&&... args)
-{
-    typename detail::select_bhvr<Args...>::type tmp;
-    receive_loop(tmp.splice(std::move(arg0), std::forward<Args>(args)...));
 }
 
 template<typename T>

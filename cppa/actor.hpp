@@ -41,7 +41,6 @@
 #include "cppa/process_information.hpp"
 
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/enable_if.hpp"
 
 namespace cppa {
 
@@ -94,7 +93,9 @@ class actor : public channel
 
     template<typename T>
     bool attach(std::unique_ptr<T>&& ptr,
-            typename util::enable_if<std::is_base_of<attachable,T>>::type* = 0);
+                typename std::enable_if<
+                    std::is_base_of<attachable,T>::value
+                >::type* = 0);
 
     /**
      * @brief Forces this actor to subscribe to the group @p what.
@@ -238,7 +239,9 @@ inline bool actor::is_proxy() const
 
 template<typename T>
 bool actor::attach(std::unique_ptr<T>&& ptr,
-                typename util::enable_if<std::is_base_of<attachable,T>>::type*)
+                   typename std::enable_if<
+                       std::is_base_of<attachable,T>::value
+                   >::type*)
 {
     return attach(static_cast<attachable*>(ptr.release()));
 }

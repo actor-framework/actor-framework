@@ -33,6 +33,7 @@
 
 #include <chrono>
 #include <memory>
+#include <type_traits>
 
 #include "cppa/atom.hpp"
 #include "cppa/pattern.hpp"
@@ -40,21 +41,61 @@
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/guard_expr.hpp"
+#include "cppa/match_expr.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/enable_if.hpp"
 #include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/callable_trait.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
 #include "cppa/detail/invokable.hpp"
+#include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/ref_counted_impl.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa { namespace detail {
+
+template<bool IsFun, typename T>
+struct add_ptr_to_fun_
+{
+    typedef T* type;
+};
+
+template<typename T>
+struct add_ptr_to_fun_<false, T>
+{
+    typedef T type;
+};
+
+template<typename T>
+struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T>
+{
+};
+
+template<bool ToVoid, typename T>
+struct to_void_impl
+{
+    typedef util::void_type type;
+};
+
+template<typename T>
+struct to_void_impl<false, T>
+{
+    typedef typename add_ptr_to_fun<T>::type type;
+};
+
+template<typename T>
+struct not_callable_to_void : to_void_impl<detail::is_boxed<T>::value || !util::is_callable<T>::value, T>
+{
+};
+
+template<typename T>
+struct boxed_and_callable_to_void : to_void_impl<detail::is_boxed<T>::value || util::is_callable<T>::value, T>
+{
+};
 
 class behavior_rvalue_builder
 {
@@ -75,144 +116,106 @@ class behavior_rvalue_builder
 
 };
 
-template<typename... TypeList>
-class rvalue_builder
+struct rvalue_builder_args_ctor { };
+
+template<class Guard, class Transformers, class Pattern>
+struct rvalue_builder
 {
 
-    typedef util::arg_match_t arg_match_t;
-
-    typedef util::type_list<
-                typename detail::implicit_conversions<TypeList>::type...>
-            raw_types;
-
     static constexpr bool is_complete =
-            !std::is_same<arg_match_t, typename raw_types::back>::value;
+            !std::is_same<util::arg_match_t, typename Pattern::back>::value;
 
-    typedef typename util::if_else_c<
-                        is_complete == false,
-                        typename util::tl_pop_back<raw_types>::type,
-                        util::wrapped<raw_types> >::type
-            types;
+    typedef typename util::tl_apply<Transformers, tdata>::type fun_container;
 
-    static_assert(util::tl_find<types, arg_match_t>::value == -1,
-                  "arg_match is allowed only as last parameter for on()");
-
-    typedef typename pattern_from_type_list<types>::type pattern_type;
-
-    typedef std::unique_ptr<value_matcher> vm_ptr;
-
-    vm_ptr m_vm;
-
-    template<typename F>
-    partial_function cr_rvalue(F&& f, std::integral_constant<bool, true>)
-    {
-        return get_invokable_impl<pattern_type>(std::forward<F>(f),
-                                                std::move(m_vm));
-    }
-
-    template<typename F>
-    partial_function cr_rvalue(F&& f, std::integral_constant<bool, false>)
-    {
-        using namespace ::cppa::util;
-        typedef typename get_callable_trait<F>::type ctrait;
-        typedef typename ctrait::arg_types raw_arg_types;
-        static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename tl_map<raw_arg_types,rm_ref>::type arg_types;
-        typedef typename tl_concat<types,arg_types>::type full_types;
-        typedef typename pattern_from_type_list<full_types>::type epattern;
-        return get_invokable_impl<epattern>(std::forward<F>(f),
-                                            std::move(m_vm));
-    }
+    Guard m_guard;
+    fun_container m_funs;
 
  public:
 
-    //template<operator_id OP, typename F, typename S>
-    //rvalue_builder& when(guard_expr<OP, F, S> ge)
-    template<typename Fun>
-    rvalue_builder& when(Fun&& fun)
-    {
-        //TODO: static_assert
-        typedef typename util::rm_ref<Fun>::type fun_type;
-        if (m_vm)
-        {
-            struct impl1 : value_matcher
-            {
-                vm_ptr m_ptr;
-                fun_type m_fun;
-                impl1(vm_ptr&& ptr, Fun&& f)
-                    : m_ptr(std::move(ptr)), m_fun(std::forward<Fun>(f))
-                {
-                }
-                bool operator()(any_tuple const& tup) const
-                {
-                    if ((*m_ptr)(tup))
-                    {
-                        auto ttup = tuple_cast(tup, types{});
-                        if (ttup)
-                        {
-                            return util::unchecked_apply_tuple<bool>(m_fun,
-                                                                     *ttup);
-                        }
-                    }
-                    return false;
-                }
-            };
-            m_vm.reset(new impl1{std::move(m_vm), std::forward<Fun>(fun)});
-        }
-        else
-        {
-            struct impl2 : value_matcher
-            {
-                fun_type m_fun;
-                impl2(Fun&& f) : m_fun(std::forward<Fun>(f))
-                {
-                }
-                bool operator()(any_tuple const& tup) const
-                {
-                    auto ttup = tuple_cast(tup, types{});
-                    if (ttup)
-                    {
-                        return util::unchecked_apply_tuple<bool>(m_fun, *ttup);
-                    }
-                    return false;
-                }
-            };
-            m_vm.reset(new impl2{std::forward<Fun>(fun)});
-        }
-        return *this;
-    }
+    rvalue_builder() = default;
 
     template<typename... Args>
-    rvalue_builder(Args&&... args)
-        : m_vm(pattern_type::get_value_matcher(std::forward<Args>(args)...))
+    rvalue_builder(rvalue_builder_args_ctor, Args const&... args)
+        : m_guard(args...)
+        , m_funs(args...)
     {
     }
 
-    template<typename F>
-    partial_function operator>>(F&& f)
+    rvalue_builder(Guard arg0, fun_container arg1)
+        : m_guard(std::move(arg0)), m_funs(std::move(arg1))
     {
-        std::integral_constant<bool, is_complete> token;
-        return cr_rvalue(std::forward<F>(f), token);
+    }
+
+    template<typename NewGuard>
+    rvalue_builder<
+        guard_expr<
+            logical_and_op,
+            guard_expr<exec_xfun_op, Guard, util::void_type>,
+            NewGuard>,
+        Transformers,
+        Pattern>
+    when(NewGuard ng,
+         typename std::enable_if<
+               std::is_same<NewGuard, NewGuard>::value
+            && !std::is_same<Guard, value_guard< util::type_list<> >>::value
+         >::type* = 0                                 ) const
+    {
+        return {(gcall(m_guard) && ng), std::move(m_funs)};
+    }
+
+    template<typename NewGuard>
+    rvalue_builder<NewGuard, Transformers, Pattern>
+    when(NewGuard ng,
+         typename std::enable_if<
+               std::is_same<NewGuard, NewGuard>::value
+            && std::is_same<Guard, value_guard< util::type_list<> >>::value
+         >::type* = 0                                 ) const
+    {
+        return {std::move(ng), std::move(m_funs)};
+    }
+
+    template<typename Expr>
+    match_expr<typename get_case<is_complete, Expr, Guard, Transformers, Pattern>::type>
+    operator>>(Expr expr) const
+    {
+        typedef typename get_case<
+                    is_complete,
+                    Expr,
+                    Guard,
+                    Transformers,
+                    Pattern
+                >::type
+                tpair;
+        return tpair{typename tpair::first_type{m_funs},
+                     typename tpair::second_type{std::move(expr),
+                                                 std::move(m_guard)}};
     }
 
 };
 
-template<>
-class rvalue_builder<anything>
+template<bool IsCallable, typename T>
+struct pattern_type_
 {
+    typedef util::get_callable_trait<T> ctrait;
+    typedef typename ctrait::arg_types args;
+    static_assert(args::size == 1, "only unary functions allowed");
+    typedef typename util::rm_ref<typename args::head>::type type;
+};
 
-    typedef pattern<anything> pattern_type;
+template<typename T>
+struct pattern_type_<false, T>
+{
+    typedef typename implicit_conversions<
+                typename util::rm_ref<
+                    typename detail::unboxed<T>::type
+                >::type
+            >::type
+            type;
+};
 
- public:
-
-    constexpr rvalue_builder() { }
-
-    template<typename F>
-    partial_function operator>>(F&& f)
-    {
-        return get_invokable_impl<pattern_type>(std::forward<F>(f));
-    }
-
+template<typename T>
+struct pattern_type : pattern_type_<util::is_callable<T>::value && !detail::is_boxed<T>::value, T>
+{
 };
 
 class on_the_fly_rvalue_builder
@@ -224,16 +227,30 @@ class on_the_fly_rvalue_builder
     {
     }
 
-    template<typename F>
-    partial_function operator>>(F&& f) const
+
+    template<typename Expr>
+    match_expr<
+        typename get_case<
+            false,
+            Expr,
+            value_guard< util::type_list<> >,
+            util::type_list<>,
+            util::type_list<>
+        >::type>
+    operator>>(Expr expr) const
     {
-        using namespace ::cppa::util;
-        typedef typename get_callable_trait<F>::type ctrait;
-        typedef typename ctrait::arg_types raw_types;
-        static_assert(raw_types::size > 0, "functor has no arguments");
-        typedef typename tl_map<raw_types,rm_ref>::type types;
-        typedef typename pattern_from_type_list<types>::type pattern_type;
-        return get_invokable_impl<pattern_type>(std::forward<F>(f));
+        typedef typename get_case<
+                    false,
+                    Expr,
+                    value_guard< util::type_list<> >,
+                    util::type_list<>,
+                    util::type_list<>
+                >::type
+                result;
+        return result{typename result::first_type{},
+                      typename result::second_type{
+                            std::move(expr),
+                            value_guard< util::type_list<> >{}}};
     }
 
 };
@@ -316,44 +333,59 @@ constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 template<typename Arg0, typename... Args>
-detail::rvalue_builder<typename detail::unboxed<typename util::rm_ref<Arg0>::type>::type,
-                       typename detail::unboxed<typename util::rm_ref<Args>::type>::type...>
-on(Arg0&& arg0, Args&&... args)
+detail::rvalue_builder<
+    detail::value_guard<
+        typename util::tl_trim<
+            typename util::tl_map<
+                util::type_list<Arg0, Args...>,
+                detail::boxed_and_callable_to_void,
+                detail::implicit_conversions
+            >::type
+        >::type
+    >,
+    typename util::tl_map<
+        util::type_list<Arg0, Args...>,
+        detail::not_callable_to_void
+    >::type,
+    util::type_list<typename detail::pattern_type<Arg0>::type,
+                    typename detail::pattern_type<Args>::type...> >
+on(Arg0 const& arg0, Args const&... args)
 {
-    return {std::forward<Arg0>(arg0), std::forward<Args>(args)...};
+    return {detail::rvalue_builder_args_ctor{}, arg0, args...};
 }
 
-template<typename... TypeList>
-detail::rvalue_builder<TypeList...> on()
+template<typename... T>
+detail::rvalue_builder<detail::value_guard<util::type_list<> >,
+                      util::type_list<>,
+                      util::type_list<T...> >
+on()
 {
-    return { };
+    return {};
 }
 
 template<atom_value A0, typename... Ts>
-detail::rvalue_builder<atom_value, Ts...> on()
+decltype(on(A0, val<Ts>()...)) on()
 {
-    return { A0 };
+    return on(A0, val<Ts>()...);
 }
 
 template<atom_value A0, atom_value A1, typename... Ts>
-detail::rvalue_builder<atom_value, atom_value, Ts...> on()
+decltype(on(A0, A1, val<Ts>()...)) on()
 {
-    return { A0, A1 };
+    return on(A0, A1, val<Ts>()...);
 }
 
 template<atom_value A0, atom_value A1, atom_value A2, typename... Ts>
-detail::rvalue_builder<atom_value, atom_value, atom_value, Ts...> on()
+decltype(on(A0, A1, A2, val<Ts>()...)) on()
 {
-    return { A0, A1, A2 };
+    return on(A0, A1, A2, val<Ts>()...);
 }
 
-template<atom_value A0, atom_value A1,
-         atom_value A2, atom_value A3,
+template<atom_value A0, atom_value A1, atom_value A2, atom_value A3,
          typename... Ts>
-detail::rvalue_builder<atom_value, atom_value, atom_value,
-                       atom_value, Ts...> on()
+decltype(on(A0, A1, A2, A3, val<Ts>()...)) on()
 {
-    return { A0, A1, A2, A3 };
+    return on(A0, A1, A2, A3, val<Ts>()...);
 }
 
 template<class Rep, class Period>
@@ -363,9 +395,9 @@ after(std::chrono::duration<Rep, Period> const& d)
     return { util::duration(d) };
 }
 
-inline detail::rvalue_builder<anything> others()
+inline decltype(on<anything>()) others()
 {
-    return { };
+    return on<anything>();
 }
 
 #endif

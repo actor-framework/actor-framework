@@ -36,7 +36,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/util/enable_if.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {

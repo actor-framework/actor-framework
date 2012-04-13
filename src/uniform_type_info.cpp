@@ -53,8 +53,6 @@
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
@@ -639,8 +637,7 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 };
 
 using std::is_integral;
-using util::enable_if;
-using util::disable_if;
+using std::enable_if;
 
 class uniform_type_info_map_helper
 {
@@ -664,7 +661,7 @@ class uniform_type_info_map_helper
     template<typename T>
     static inline void insert(this_ptr d,
                               std::set<std::string> const& tnames,
-                              typename enable_if<is_integral<T>>::type* = 0)
+                              typename enable_if<is_integral<T>::value>::type* = 0)
     {
         insert(d, new int_tinfo<T>, tnames);
     }
@@ -672,7 +669,7 @@ class uniform_type_info_map_helper
     template<typename T>
     static inline void insert(this_ptr d,
                               std::set<std::string> const& tnames,
-                              typename disable_if<is_integral<T>>::type* = 0)
+                              typename enable_if<!is_integral<T>::value>::type* = 0)
     {
         insert(d, new default_uniform_type_info_impl<T>(), tnames);
     }

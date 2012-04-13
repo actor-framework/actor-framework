@@ -43,12 +43,16 @@ struct match_helper
     any_tuple tup;
     match_helper(any_tuple&& t) : tup(std::move(t)) { }
     match_helper(match_helper&&) = default;
-    template<class... Args>
-    void operator()(partial_function&& pf, Args&&... args)
+    void operator()(partial_function&& arg)
     {
-        partial_function tmp;
-        tmp.splice(std::move(pf), std::forward<Args>(args)...);
-        tmp(std::move(tup));
+        partial_function tmp{std::move(arg)};
+        tmp(tup);
+    }
+    template<class Arg0, class... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
+    {
+        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...));
     }
 };
 
@@ -61,15 +65,19 @@ struct match_each_helper
     Iterator e;
     match_each_helper(Iterator first, Iterator last) : i(first), e(last) { }
     match_each_helper(match_each_helper&&) = default;
-    template<typename... Args>
-    void operator()(partial_function&& arg0, Args&&... args)
+    void operator()(partial_function&& arg)
     {
-        partial_function tmp;
-        tmp.splice(std::move(arg0), std::forward<Args>(args)...);
+        partial_function tmp{std::move(arg)};
         for (; i != e; ++i)
         {
             tmp(any_tuple::view(*i));
         }
+    }
+    template<class Arg0, class... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
+    {
+        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...));
     }
 };
 
@@ -81,15 +89,19 @@ struct copying_match_each_helper
     Container vec;
     copying_match_each_helper(Container tmp) : vec(std::move(tmp)) { }
     copying_match_each_helper(copying_match_each_helper&&) = default;
-    template<typename... Args>
-    void operator()(partial_function&& arg0, Args&&... args)
+    void operator()(partial_function&& arg)
     {
-        partial_function tmp;
-        tmp.splice(std::move(arg0), std::forward<Args>(args)...);
+        partial_function tmp{std::move(arg)};
         for (auto& i : vec)
         {
             tmp(any_tuple::view(i));
         }
+    }
+    template<class Arg0, class... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
+    {
+        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...));
     }
 };
 
@@ -107,15 +119,19 @@ struct pmatch_each_helper
         : i(first), e(last), p(std::forward<PJ>(proj))
     {
     }
-    template<typename... Args>
-    void operator()(partial_function&& arg0, Args&&... args)
+    void operator()(partial_function&& arg)
     {
-        partial_function tmp;
-        tmp.splice(std::move(arg0), std::forward<Args>(args)...);
+        partial_function tmp{std::move(arg)};
         for (; i != e; ++i)
         {
             tmp(any_tuple::view(p(*i)));
         }
+    }
+    template<class Arg0, class... Args>
+    void operator()(Arg0&& arg0, Args&&... args)
+    {
+        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...));
     }
 };
 

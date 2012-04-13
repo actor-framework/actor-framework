@@ -330,6 +330,11 @@ size_t test__spawn()
 {
     CPPA_TEST(test__spawn);
 
+    CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
+    send(self, 1, 2, 3);
+    receive(on(1, 2, 3) >> []() { });
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
     CPPA_IF_VERBOSE(cout << "test future_send() ... " << std::flush);
     future_send(self, std::chrono::seconds(1), 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });

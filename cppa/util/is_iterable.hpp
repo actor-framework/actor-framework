@@ -51,9 +51,9 @@ class is_iterable
     (
         C const* cc,
         // check for 'C::begin()' returning a forward iterator
-        typename util::enable_if<util::is_forward_iterator<decltype(cc->begin())>>::type* = 0,
+        typename std::enable_if<util::is_forward_iterator<decltype(cc->begin())>::value>::type* = 0,
         // check for 'C::end()' returning the same kind of forward iterator
-        typename util::enable_if<std::is_same<decltype(cc->begin()), decltype(cc->end())>>::type* = 0
+        typename std::enable_if<std::is_same<decltype(cc->begin()), decltype(cc->end())>::value>::type* = 0
     )
     {
         return true;

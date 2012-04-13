@@ -895,9 +895,12 @@ struct tl_pad_left_impl<List, Size, Size, FillType>
 template<class List, size_t NewSize, typename FillType = void_type>
 struct tl_pad_left
 {
-    static_assert(NewSize >= List::size, "List too big");
+    //static_assert(NewSize >= List::size, "List too big");
     typedef typename tl_pad_left_impl<
-                List, List::size, NewSize, FillType
+                List,
+                List::size,
+                (List::size > NewSize) ? List::size : NewSize,
+                FillType
             >::type
             type;
 };
@@ -990,6 +993,18 @@ template<class List, template<typename, typename> class Predicate>
 struct tl_group_by
 {
     typedef typename tl_group_by_impl<List, type_list<>, Predicate>::type type;
+};
+
+/**
+ * @brief Applies the types of the list to @p VarArgTemplate.
+ */
+template<class List, template<typename...> class VarArgTemplate>
+struct tl_apply;
+
+template<typename... Ts, template<typename...> class VarArgTemplate>
+struct tl_apply<type_list<Ts...>, VarArgTemplate>
+{
+    typedef VarArgTemplate<Ts...> type;
 };
 
 /**

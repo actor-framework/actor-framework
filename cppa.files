@@ -30,7 +30,6 @@ cppa/on.hpp
 unit_testing/test__serialization.cpp
 cppa/serializer.hpp
 cppa/deserializer.hpp
-cppa/util/enable_if.hpp
 cppa/object.hpp
 cppa/detail/object_impl.hpp
 cppa/detail/swap_bytes.hpp
@@ -76,7 +75,6 @@ src/to_uniform_name.cpp
 cppa/detail/default_uniform_type_info_impl.hpp
 src/object.cpp
 cppa/util/comparable.hpp
-cppa/util/disable_if.hpp
 cppa/primitive_variant.hpp
 cppa/primitive_type.hpp
 cppa/util/pt_token.hpp
@@ -268,3 +266,5 @@ cppa/util/deduce_ref_type.hpp
 cppa/detail/projection.hpp
 cppa/detail/value_guard.hpp
 cppa/detail/tuple_iterator.hpp
+cppa/match_expr.hpp
+cppa/detail/pseudo_tuple.hpp

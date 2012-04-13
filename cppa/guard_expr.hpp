@@ -41,7 +41,6 @@
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/enable_if.hpp"
 #include "cppa/util/apply_tuple.hpp"
 
 #include "cppa/detail/tdata.hpp"
@@ -427,7 +426,7 @@ template<operator_id OP, typename T1, typename T2>
 guard_expr<OP, typename detail::strip_and_convert<T1>::type,
                typename detail::strip_and_convert<T2>::type>
 ge_concatenate(T1 first, T2 second,
-               typename util::enable_if_c<
+               typename std::enable_if<
                    is_ge_type<T1>::value || is_ge_type<T2>::value
                >::type* = 0)
 {

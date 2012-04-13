@@ -35,10 +35,9 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/util/enable_if.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-using cppa::util::enable_if;
+using std::enable_if;
 
 namespace cppa {
 
@@ -57,14 +56,14 @@ inline void range_check(iterator begin, iterator end, size_t read_size)
 // @returns the next iterator position
 template<typename T>
 iterator read(iterator, iterator, T&,
-              typename enable_if< std::is_floating_point<T> >::type* = 0)
+              typename enable_if<std::is_floating_point<T>::value>::type* = 0)
 {
     throw std::logic_error("read floating point not implemented yet");
 }
 
 template<typename T>
 iterator read(iterator begin, iterator end, T& storage,
-              typename enable_if< std::is_integral<T> >::type* = 0)
+              typename enable_if<std::is_integral<T>::value>::type* = 0)
 {
     range_check(begin, end, sizeof(T));
     memcpy(&storage, begin, sizeof(T));

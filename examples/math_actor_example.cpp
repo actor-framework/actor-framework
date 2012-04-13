@@ -21,7 +21,7 @@ void math_fun()
         {
             reply(atom("result"), a + b);
         },
-        on(atom("minus"), arg_match) >> [](int a, int b)
+        on<atom("minus"), int, int>() >> [](int a, int b)
         {
             reply(atom("result"), a - b);
         },

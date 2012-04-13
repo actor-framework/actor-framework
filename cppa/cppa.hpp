@@ -55,8 +55,6 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -512,9 +510,11 @@ inline actor_ptr spawn(abstract_event_based_actor* what)
 template<scheduling_hint Hint, typename F, typename... Args>
 auto //actor_ptr
 spawn(F&& what, Args const&... args)
--> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
-                               || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
-                               actor_ptr>::type
+-> typename std::enable_if<
+           !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
+        && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
+        actor_ptr
+    >::type
 {
     typedef typename util::rm_ref<F>::type ftype;
     std::integral_constant<bool, std::is_function<ftype>::value> is_fun;
@@ -529,9 +529,11 @@ spawn(F&& what, Args const&... args)
 template<typename F, typename... Args>
 auto // actor_ptr
 spawn(F&& what, Args const&... args)
--> typename util::disable_if_c<   std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
-                               || std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
-                               actor_ptr>::type
+-> typename std::enable_if<
+           !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
+        && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
+        actor_ptr
+    >::type
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
@@ -590,7 +592,10 @@ inline void send(self_type const&, Arg0 const& arg0, Args const&... args)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
+typename std::enable_if<
+    std::is_base_of<channel, C>::value,
+    intrusive_ptr<C>&
+>::type
 operator<<(intrusive_ptr<C>& whom, any_tuple const& what)
 {
     if (whom) whom->enqueue(self, what);
@@ -598,7 +603,10 @@ operator<<(intrusive_ptr<C>& whom, any_tuple const& what)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
+typename std::enable_if<
+    std::is_base_of<channel, C>::value,
+    intrusive_ptr<C>
+>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple const& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
@@ -607,7 +615,10 @@ operator<<(intrusive_ptr<C>&& whom, any_tuple const& what)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>&>::type
+typename std::enable_if<
+    std::is_base_of<channel, C>::value,
+    intrusive_ptr<C>&
+>::type
 operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 {
     if (whom) whom->enqueue(self, std::move(what));
@@ -615,7 +626,10 @@ operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 }
 
 template<class C>
-typename util::enable_if<std::is_base_of<channel, C>, intrusive_ptr<C>>::type
+typename std::enable_if<
+    std::is_base_of<channel, C>::value,
+    intrusive_ptr<C>
+>::type
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));

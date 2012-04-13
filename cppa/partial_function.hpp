@@ -55,55 +55,50 @@ class partial_function
 
  public:
 
-    typedef std::unique_ptr<detail::invokable> invokable_ptr;
+    struct impl
+    {
+        virtual ~impl();
+        virtual bool invoke(any_tuple&) = 0;
+        virtual bool invoke(any_tuple const&) = 0;
+        virtual bool defined_at(any_tuple const&) = 0;
+    };
+
+    typedef std::unique_ptr<impl> impl_ptr;
 
     partial_function() = default;
-    partial_function(partial_function&& other);
-    partial_function& operator=(partial_function&& other);
+    partial_function(partial_function&&) = default;
+    partial_function& operator=(partial_function&&) = default;
 
-    partial_function(invokable_ptr&& ptr);
+    partial_function(impl_ptr&& ptr);
 
-    bool defined_at(any_tuple const& value);
-
-    bool operator()(any_tuple value);
-
-    detail::invokable const* definition_at(any_tuple value);
-
-    template<class... Args>
-    partial_function& splice(partial_function&& arg0, Args&&... args)
+    inline bool defined_at(any_tuple const& value)
     {
-        m_funs.splice_after(m_funs.before_end(), std::move(arg0.m_funs));
-        arg0.m_cache.clear();
-        return splice(std::forward<Args>(args)...);
+        return ((m_impl) && m_impl->defined_at(value));
+    }
+
+    inline bool operator()(any_tuple& value)
+    {
+        return ((m_impl) && m_impl->invoke(value));
+    }
+
+    inline bool operator()(any_tuple const& value)
+    {
+        return ((m_impl) && m_impl->invoke(value));
+    }
+
+    inline bool operator()(any_tuple&& value)
+    {
+        any_tuple cpy{std::move(value)};
+        return (*this)(cpy);
     }
 
  private:
 
-    // terminates recursion
-    inline partial_function& splice()
-    {
-        m_cache.clear();
-        return *this;
-    }
-
-    typedef std::vector<detail::invokable*> cache_entry;
-    typedef std::pair<void const*, cache_entry> cache_element;
-
-    intrusive::singly_linked_list<detail::invokable> m_funs;
-    std::vector<cache_element> m_cache;
-    cache_element m_dummy; // binary search dummy
-
-    cache_entry& get_cache_entry(any_tuple const& value);
+    impl_ptr m_impl;
 
 };
 
-inline partial_function operator,(partial_function&& lhs,
-                                  partial_function&& rhs)
-{
-    return std::move(lhs.splice(std::move(rhs)));
-}
-
-behavior operator,(partial_function&& lhs, behavior&& rhs);
+//behavior operator,(partial_function&& lhs, behavior&& rhs);
 
 } // namespace cppa
 

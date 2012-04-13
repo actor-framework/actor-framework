@@ -31,9 +31,9 @@
 #ifndef APPLY_TUPLE_HPP
 #define APPLY_TUPLE_HPP
 
+#include <type_traits>
+
 #include "cppa/get.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 #include "cppa/util/is_manipulator.hpp"
 #include "cppa/util/callable_trait.hpp"
 

@@ -62,18 +62,12 @@ class event_based_actor_base : public abstract_event_based_actor
     }
 
     /** @brief Sets the actor's behavior. */
-    template<typename... Args>
-    void become(partial_function&& arg0, Args&&... args)
+    template<typename Arg0, typename... Args>
+    void become(Arg0&& arg0, Args&&... args)
     {
-        auto ptr = new behavior;
-        ptr->splice(std::move(arg0), std::forward<Args>(args)...);
-        d_this()->do_become(ptr, true);
-    }
-
-    /** @brief Sets the actor's behavior to @p bhvr. */
-    inline void become(behavior&& bhvr)
-    {
-        d_this()->do_become(new behavior(std::move(bhvr)), true);
+        behavior tmp = match_expr_concat(std::forward<Arg0>(arg0),
+                                         std::forward<Args>(args)...);
+        d_this()->do_become(new behavior(std::move(tmp)), true);
     }
 
 };

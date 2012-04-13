@@ -8,19 +8,22 @@
 #include <iostream>
 #include <type_traits>
 
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
-
 template<typename T1, typename T2>
 inline bool cppa_check_value_fun_eq(T1 const& value1, T2 const& value2,
-                                    typename cppa::util::disable_if_c<std::is_integral<T1>::value && std::is_integral<T2>::value>::type* = 0)
+                                    typename std::enable_if<
+                                           !std::is_integral<T1>::value
+                                        || !std::is_integral<T2>::value
+                                    >::type* = 0)
 {
     return value1 == value2;
 }
 
 template<typename T1, typename T2>
 inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
-                                    typename cppa::util::enable_if_c<std::is_integral<T1>::value && std::is_integral<T2>::value>::type* = 0)
+                                    typename std::enable_if<
+                                           std::is_integral<T1>::value
+                                        && std::is_integral<T2>::value
+                                    >::type* = 0)
 {
     return value1 == static_cast<T1>(value2);
 }

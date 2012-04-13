@@ -34,12 +34,15 @@
 #include <functional>
 #include <type_traits>
 
+#include "cppa/match_expr.hpp"
+#include "cppa/partial_function.hpp"
+
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/if_else.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/util/disjunction.hpp"
 
 namespace cppa {
 
@@ -58,17 +61,26 @@ class behavior
 
     behavior() = default;
     behavior(behavior&&) = default;
-    behavior& operator=(behavior&&) = default;
-
 
     inline behavior(partial_function&& fun) : m_fun(std::move(fun))
     {
     }
 
+    template<typename... Cases>
+    behavior(match_expr<Cases...> const& me) : m_fun(me) { }
+
     inline behavior(util::duration tout, std::function<void()>&& handler)
         : m_timeout(tout), m_timeout_handler(std::move(handler))
     {
     }
+
+    behavior& operator=(behavior&&) = default;
+
+    //behavior& operator=(partial_function&& pfun)
+    //{
+    //    m_fun = std::move(pfun);
+    //    return *this;
+    //}
 
     inline void handle_timeout() const
     {
@@ -80,29 +92,9 @@ class behavior
         return m_timeout;
     }
 
-    inline void operator()(any_tuple const& value)
-    {
-        m_fun(value);
-    }
-
     inline partial_function& get_partial_function()
     {
         return m_fun;
-    }
-
-    inline behavior& splice(behavior&& what)
-    {
-        m_fun.splice(std::move(what.get_partial_function()));
-        m_timeout = what.m_timeout;
-        m_timeout_handler = std::move(what.m_timeout_handler);
-        return *this;
-    }
-
-    template<class... Args>
-    inline behavior& splice(partial_function&& arg0, Args&&... args)
-    {
-        m_fun.splice(std::move(arg0));
-        return splice(std::forward<Args>(args)...);
     }
 
  private:
@@ -116,16 +108,69 @@ class behavior
 
 };
 
+template<typename... Lhs>
+behavior operator,(match_expr<Lhs...> const& lhs,
+                   behavior&& rhs)
+{
+    rhs.get_partial_function() = lhs;
+    return std::move(rhs);
+}
+
+template<typename Arg0>
+behavior bhvr_collapse(Arg0&& arg)
+{
+    return {std::forward<Arg0>(arg)};
+}
+
+template<typename Arg0, typename Arg1, typename... Args>
+behavior bhvr_collapse(Arg0&& arg0, Arg1&& arg1, Args&&... args)
+{
+    return bhvr_collapse((std::forward<Arg0>(arg0), std::forward<Arg1>(arg1)),
+                         std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+typename std::enable_if<
+    util::disjunction<std::is_same<behavior, Args>...>::value,
+    behavior
+>::type
+match_expr_concat(Args&&... args)
+{
+    return bhvr_collapse(std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+typename std::enable_if<
+    util::disjunction<
+        std::is_same<
+            behavior,
+            typename util::rm_ref<Args>::type
+        >...
+    >::value == false,
+    partial_function
+>::type
+match_expr_concat(Args&&... args)
+{
+    return mexpr_concat_convert(std::forward<Args>(args)...);
+}
+
+inline partial_function match_expr_concat(partial_function&& pfun)
+{
+    return std::move(pfun);
+}
+
+inline behavior match_expr_concat(behavior&& bhvr)
+{
+    return std::move(bhvr);
+}
+
 namespace detail {
 
 template<typename... Ts>
 struct select_bhvr
 {
     static constexpr bool timed =
-            util::tl_exists<
-                util::type_list<Ts...>,
-                util::tbind<std::is_same, behavior>::type
-            >::value;
+            util::disjunction<std::is_same<behavior, Ts>...>::value;
     typedef typename util::if_else_c<timed,
                                      behavior,
                                      util::wrapped<partial_function> >::type

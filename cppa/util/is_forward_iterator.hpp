@@ -31,9 +31,9 @@
 #ifndef IS_FORWARD_ITERATOR_HPP
 #define IS_FORWARD_ITERATOR_HPP
 
+#include <type_traits>
+
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 
 namespace cppa { namespace util {
 
@@ -52,11 +52,11 @@ class is_forward_iterator
         // check for 'C::value_type C::operator*()' returning a non-void type
         typename rm_ref<decltype(*(*iter))>::type* = 0,
         // check for 'C& C::operator++()'
-        typename enable_if<std::is_same<C&, decltype(++(*iter))>>::type* = 0,
+        typename std::enable_if<std::is_same<C&, decltype(++(*iter))>::value>::type* = 0,
         // check for 'bool C::operator==()'
-        typename enable_if<std::is_same<bool, decltype(*iter == *iter)>>::type* = 0,
+        typename std::enable_if<std::is_same<bool, decltype(*iter == *iter)>::value>::type* = 0,
         // check for 'bool C::operator!=()'
-        typename enable_if<std::is_same<bool, decltype(*iter != *iter)>>::type* = 0
+        typename std::enable_if<std::is_same<bool, decltype(*iter != *iter)>::value>::type* = 0
     )
     {
         return true;

@@ -38,10 +38,13 @@
 
 namespace cppa {
 
-// forward declaration of detail::tdata
-namespace detail { template<typename...> class tdata; }
+// forward declaration of details
+namespace detail {
+template<typename...> class tdata;
+template<typename...> struct pseudo_tuple;
+}
 
-// forward declaration of tuple
+// forward declaration of cow_tuple
 template<typename...> class cow_tuple;
 
 // forward declaration of get(detail::tdata<...> const&)
@@ -52,6 +55,10 @@ typename util::at<N, Tn...>::type const& get(detail::tdata<Tn...> const&);
 template<size_t N, typename... Tn>
 typename util::at<N, Tn...>::type const& get(cow_tuple<Tn...> const&);
 
+// forward declarations of get(detail::pseudo_tuple<...>&)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type const& get(detail::pseudo_tuple<Tn...> const& tv);
+
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Tn>
 typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
@@ -59,6 +66,10 @@ typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
 // forward declarations of get_ref(tuple<...>&)
 template<size_t N, typename... Tn>
 typename util::at<N, Tn...>::type& get_ref(cow_tuple<Tn...>&);
+
+// forward declarations of get_ref(detail::pseudo_tuple<...>&)
+template<size_t N, typename... Tn>
+typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
 
 // support container-like access for type lists containing tokens
 template<size_t N, typename... Ts>

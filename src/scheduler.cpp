@@ -123,6 +123,15 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
         on<atom(":_DIE")>() >> [&]()
         {
             done = true;
+        },
+        others() >> [&]()
+        {
+#           ifdef CPPA_DEBUG
+                std::cerr << "scheduler_helper::time_emitter: UNKNOWN MESSAGE: "
+                          << to_string(msg_ptr->msg)
+                          << std::endl;
+#           endif
+            msg_ptr.reset();
         }
     );
     // loop

@@ -148,7 +148,7 @@ int main(int argc, char** argv)
     auto args = get_kv_pairs(argc, argv);
     match_each(args)
     (
-        on("run", arg_match) >> [&](std::string const& what)
+        on("run", val<std::string>) >> [&](std::string const& what)
         {
             if (what == "remote_actor")
             {
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
                 exit(0);
             }
         },
-        on("scheduler", arg_match) >> [](std::string const& sched)
+        on("scheduler", val<std::string>) >> [](std::string const& sched)
         {
             if (sched == "thread_pool_scheduler")
             {

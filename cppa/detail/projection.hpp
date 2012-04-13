@@ -36,6 +36,7 @@
 
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/apply_args.hpp"
 #include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/left_or_right.hpp"
 
@@ -71,6 +72,9 @@ class projection
 
     typedef typename tdata_from_type_list<ProjectionFuns>::type fun_container;
 
+    projection() = default;
+
+    projection(fun_container&& args) : m_funs(std::move(args)) { }
 
     projection(fun_container const& args) : m_funs(args) { }
 
@@ -170,6 +174,7 @@ class projection<util::type_list<> >
         fun();
         return true;
     }
+
 };
 
 template<class ProjectionFuns, class List>

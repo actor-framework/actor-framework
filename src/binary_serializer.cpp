@@ -33,11 +33,10 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "cppa/util/enable_if.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
 
-using cppa::util::enable_if;
+using std::enable_if;
 
 namespace {
 
@@ -75,7 +74,7 @@ class binary_writer
 
     template<typename T>
     void operator()(const T& value,
-                    typename enable_if< std::is_integral<T> >::type* = 0)
+                    typename enable_if<std::is_integral<T>::value>::type* = 0)
     {
         m_serializer->acquire(sizeof(T));
         write_int(m_serializer, value);
@@ -83,7 +82,7 @@ class binary_writer
 
     template<typename T>
     void operator()(const T&,
-                    typename enable_if< std::is_floating_point<T> >::type* = 0)
+                    typename enable_if<std::is_floating_point<T>::value>::type* = 0)
     {
         throw std::logic_error("binary_serializer::write_floating_point "
                                "not implemented yet");

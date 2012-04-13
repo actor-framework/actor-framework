@@ -39,14 +39,14 @@ namespace {
 
 template<class T>
 void ptv_del(T&,
-             typename util::enable_if<std::is_arithmetic<T>, int>::type* = 0)
+             typename std::enable_if<std::is_arithmetic<T>::value>::type* = 0)
 {
     // arithmetic types don't need destruction
 }
 
 template<class T>
 void ptv_del(T& what,
-             typename util::disable_if< std::is_arithmetic<T> >::type* = 0)
+             typename std::enable_if<!std::is_arithmetic<T>::value>::type* = 0)
 {
     what.~T();
 }

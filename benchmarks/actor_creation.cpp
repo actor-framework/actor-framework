@@ -57,18 +57,18 @@ struct testee : fsm_actor<testee>
                 send(parent, atom("result"), (uint32_t) 1);
                 become_void();
             },
-            on(atom("spread"), arg_match) >> [=](int x)
+            on<atom("spread"), int>() >> [=](int x)
             {
                 any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
                 spawn(new testee(this)) << msg;
                 spawn(new testee(this)) << msg;
                 become
                 (
-                    on(atom("result"), arg_match) >> [=](uint32_t r1)
+                    on<atom("result"), uint32_t>() >> [=](uint32_t r1)
                     {
                         become
                         (
-                            on(atom("result"), arg_match) >> [=](uint32_t r2)
+                            on<atom("result"), uint32_t>() >> [=](uint32_t r2)
                             {
                                 send(parent, atom("result"), r1 + r2);
                                 become_void();
@@ -89,18 +89,18 @@ void stacked_testee(actor_ptr parent)
         {
             send(parent, atom("result"), (uint32_t) 1);
         },
-        on(atom("spread"), arg_match) >> [&](int x)
+        on<atom("spread"), int>() >> [&](int x)
         {
             any_tuple msg = make_cow_tuple(atom("spread"), x-1);
             spawn(stacked_testee, self) << msg;
             spawn(stacked_testee, self) << msg;
             receive
             (
-                on(atom("result"), arg_match) >> [&](uint32_t v1)
+                on<atom("result"), uint32_t>() >> [&](uint32_t v1)
                 {
                     receive
                     (
-                        on(atom("result"),arg_match) >> [&](uint32_t v2)
+                        on<atom("result"),uint32_t>() >> [&](uint32_t v2)
                         {
                             send(parent, atom("result"), v1 + v2);
                         }

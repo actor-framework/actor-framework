@@ -31,13 +31,13 @@
 #ifndef ANY_TUPLE_HPP
 #define ANY_TUPLE_HPP
 
+#include <type_traits>
+
 #include "cppa/cow_tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
 
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/enable_if.hpp"
-#include "cppa/util/disable_if.hpp"
 #include "cppa/util/is_iterable.hpp"
 
 #include "cppa/detail/tuple_view.hpp"
@@ -162,7 +162,11 @@ class any_tuple
 
     template<typename T>
     static inline any_tuple view(T&& value,
-                typename util::enable_if<util::is_iterable<typename util::rm_ref<T>::type> >::type* = 0)
+                                 typename std::enable_if<
+                                     util::is_iterable<
+                                         typename util::rm_ref<T>::type
+                                     >::value
+                                 >::type* = 0)
     {
         static constexpr bool can_optimize =    std::is_reference<T>::value
                                              && !std::is_const<T>::value;
@@ -172,7 +176,11 @@ class any_tuple
 
     template<typename T>
     static inline any_tuple view(T&& value,
-                typename util::disable_if<util::is_iterable<typename util::rm_ref<T>::type> >::type* = 0)
+                                 typename std::enable_if<
+                                     util::is_iterable<
+                                         typename util::rm_ref<T>::type
+                                     >::value == false
+                                 >::type* = 0)
     {
         typedef typename util::rm_ref<T>::type vtype;
         typedef typename detail::implicit_conversions<vtype>::type converted;
