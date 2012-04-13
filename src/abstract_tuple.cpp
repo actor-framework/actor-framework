@@ -36,7 +36,7 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
 {
     return    this == &other
            || (   size() == other.size()
-               && std::equal(begin(), end(), other.begin(), detail::full_eq_v3));
+               && std::equal(begin(), end(), other.begin(), detail::full_eq));
 }
 
 abstract_tuple::abstract_tuple(abstract_tuple const& other)

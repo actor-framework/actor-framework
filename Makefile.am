@@ -121,6 +121,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/post_office.hpp \
     cppa/detail/post_office_msg.hpp \
     cppa/detail/primitive_member.hpp \
+    cppa/detail/projection.hpp \
     cppa/detail/ptype_to_type.hpp \
     cppa/detail/receive_loop_helper.hpp \
     cppa/detail/ref_counted_impl.hpp \
@@ -132,12 +133,14 @@ nobase_library_include_HEADERS = \
     cppa/detail/thread_pool_scheduler.hpp \
     cppa/detail/to_uniform_name.hpp \
     cppa/detail/tuple_cast_impl.hpp \
+    cppa/detail/tuple_iterator.hpp \
     cppa/detail/tuple_vals.hpp \
     cppa/detail/tuple_view.hpp \
     cppa/detail/type_to_ptype.hpp \
     cppa/detail/types_array.hpp \
     cppa/detail/unboxed.hpp \
     cppa/detail/uniform_type_info_map.hpp \
+    cppa/detail/value_guard.hpp \
     cppa/detail/yield_interface.hpp \
     cppa/detail/yielding_actor.hpp \
     cppa/either.hpp \
@@ -186,6 +189,7 @@ nobase_library_include_HEADERS = \
     cppa/util/comparable.hpp \
     cppa/util/compare_tuples.hpp \
     cppa/util/conjunction.hpp \
+    cppa/util/deduce_ref_type.hpp \
     cppa/util/disable_if.hpp \
     cppa/util/disjunction.hpp \
     cppa/util/duration.hpp \
@@ -205,8 +209,10 @@ nobase_library_include_HEADERS = \
     cppa/util/is_primitive.hpp \
     cppa/util/left_or_right.hpp \
     cppa/util/producer_consumer_list.hpp \
+    cppa/util/projection.hpp \
     cppa/util/pt_dispatch.hpp \
     cppa/util/pt_token.hpp \
+    cppa/util/purge_refs.hpp \
     cppa/util/replace_type.hpp \
     cppa/util/ripemd_160.hpp \
     cppa/util/rm_option.hpp \

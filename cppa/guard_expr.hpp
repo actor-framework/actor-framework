@@ -729,6 +729,26 @@ bool guard_expr<OP, First, Second>::operator()(Args const&... args) const
     return ge_invoke(*this, args...);
 }
 
+// some utility functions
+
+template<typename T>
+struct gref_wrapped
+{
+    typedef ge_reference_wrapper<typename util::rm_ref<T>::type> type;
+};
+
+template<typename T>
+struct mutable_gref_wrapped
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
+template<typename T>
+struct mutable_gref_wrapped<T&>
+{
+    typedef ge_mutable_reference_wrapper<T> type;
+};
+
 // finally ...
 
 namespace placeholders { namespace {

@@ -59,7 +59,8 @@ struct tuple_cast_impl
     static constexpr size_t size =
             util::tl_count_not<util::type_list<T...>, is_anything>::value;
     static constexpr size_t first_wc =
-            static_cast<size_t>(util::tl_find<util::type_list<T...>, anything>::value);
+            static_cast<size_t>(
+                util::tl_find<util::type_list<T...>, anything>::value);
     typedef util::fixed_vector<size_t, size> mapping_vector;
     static inline option<Result> safe(any_tuple& tup)
     {
@@ -80,7 +81,7 @@ struct tuple_cast_impl
         mapping_vector mv;
         if (WP == wildcard_position::in_between)
         {
-            if (!p.has_values() || matcher<WP, T...>::vmatch(tup, p))
+            if (!p.has_values() || matcher<WP, any_tuple, T...>::vmatch(tup, p))
             {
                 // first range
                 mv.resize(size);
@@ -140,7 +141,7 @@ struct tuple_cast_impl<wildcard_position::nil, Result, T...>
     static inline option<Result> unsafe(any_tuple& tup, pattern<T...> const& p)
     {
         if (   p.has_values() == false
-            || matcher<wildcard_position::nil, T...>::vmatch(tup, p))
+            || matcher<wildcard_position::nil, any_tuple, T...>::vmatch(tup, p))
         {
             return {Result::from(std::move(tup.vals()))};
         }
@@ -159,7 +160,8 @@ struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
     static inline option<Result> unsafe(any_tuple& tup, pattern<T...> const& p)
     {
         if (   p.has_values() == false
-            || matcher<wildcard_position::trailing, T...>::vmatch(tup, p))
+            || matcher<wildcard_position::trailing, any_tuple, T...>
+               ::vmatch(tup, p))
         {
             return {Result::from(std::move(tup.vals()))};
         }
@@ -189,7 +191,8 @@ struct tuple_cast_impl<wildcard_position::leading, Result, T...>
     static inline option<Result> unsafe(any_tuple& tup, pattern<T...> const& p)
     {
         if (   p.has_values() == false
-            || matcher<wildcard_position::leading, T...>::vmatch(tup, p))
+            || matcher<wildcard_position::leading, any_tuple, T...>
+               ::vmatch(tup, p))
         {
             size_t o = tup.size() - (sizeof...(T) - 1);
             return Result::offset_subtuple(tup.vals(), o);

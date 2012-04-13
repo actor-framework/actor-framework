@@ -108,13 +108,6 @@ struct get_arg_types
     typedef typename trait_type::arg_types types;
 };
 
-template<typename C>
-struct get_result_type
-{
-    typedef typename get_callable_trait<C>::type trait_type;
-    typedef typename trait_type::result_type type;
-};
-
 template<typename T>
 struct is_callable
 {
@@ -140,6 +133,25 @@ struct is_callable
 
     static constexpr bool value = std::is_same<bool, result_type>::value;
 
+};
+
+template<bool IsCallable, typename C>
+struct get_result_type_impl
+{
+    typedef typename get_callable_trait<C>::type trait_type;
+    typedef typename trait_type::result_type type;
+};
+
+template<typename C>
+struct get_result_type_impl<false, C>
+{
+    typedef void_type type;
+};
+
+template<typename C>
+struct get_result_type
+{
+    typedef typename get_result_type_impl<is_callable<C>::value, C>::type type;
 };
 
 } } // namespace cppa::util

@@ -262,3 +262,9 @@ cppa/util/left_or_right.hpp
 cppa/util/apply_args.hpp
 cppa/tpartial_function.hpp
 cppa/util/rm_option.hpp
+cppa/util/projection.hpp
+cppa/util/purge_refs.hpp
+cppa/util/deduce_ref_type.hpp
+cppa/detail/projection.hpp
+cppa/detail/value_guard.hpp
+cppa/detail/tuple_iterator.hpp

@@ -28,55 +28,83 @@
 \******************************************************************************/
 
 
-#ifndef LEFT_OR_RIGHT_HPP
-#define LEFT_OR_RIGHT_HPP
+#ifndef VALUE_GUARD_HPP
+#define VALUE_GUARD_HPP
 
+#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
+#include "cppa/util/type_list.hpp"
+#include "cppa/util/callable_trait.hpp"
 
-namespace cppa { namespace util {
+#include "cppa/detail/tdata.hpp"
 
-/**
- * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
- */
-template<typename Left, typename Right>
-struct left_or_right
+namespace cppa { namespace detail {
+
+template<bool IsFun, typename T>
+struct vg_fwd_
 {
-    typedef Left type;
+    static inline T const& _(T const& arg) { return arg; }
+    static inline T&& _(T&& arg) { return std::move(arg); }
+    static inline T& _(T& arg) { return arg; }
 };
 
-template<typename Right>
-struct left_or_right<util::void_type, Right>
+template<typename T>
+struct vg_fwd_<true, T>
 {
-    typedef Right type;
+    template<typename Arg>
+    static inline util::void_type _(Arg&&) { return {}; }
 };
 
-template<typename Right>
-struct left_or_right<util::void_type&, Right>
+// absorbs callables
+template<typename T>
+struct vg_fwd
+        : vg_fwd_<util::is_callable<typename util::rm_ref<T>::type>::value,
+                  typename util::rm_ref<T>::type>
 {
-    typedef Right type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type const&, Right>
+template<typename FilteredPattern>
+class value_guard
 {
-    typedef Right type;
+    typename tdata_from_type_list<FilteredPattern>::type m_args;
+
+    template<typename... Args>
+    inline bool _eval(util::void_type const&, tdata<> const&, Args&&...) const
+    {
+        return true;
+    }
+
+    template<class Tail, typename Arg0, typename... Args>
+    inline bool _eval(util::void_type const&, Tail const& tail,
+                      Arg0 const&, Args const&... args         ) const
+    {
+        return _eval(tail.head, tail.tail(), args...);
+    }
+
+    template<typename Head, class Tail, typename Arg0, typename... Args>
+    inline bool _eval(Head const& head, Tail const& tail,
+                      Arg0 const& arg0, Args const&... args) const
+    {
+        return head == arg0 && _eval(tail.head, tail.tail(), args...);
+    }
+
+ public:
+
+    value_guard() = default;
+    value_guard(value_guard const&) = default;
+
+    template<typename... Args>
+    value_guard(Args const&... args) : m_args(vg_fwd<Args>::_(args)...)
+    {
+    }
+
+    template<typename... Args>
+    inline bool operator()(Args const&... args) const
+    {
+        return _eval(m_args.head, m_args.tail(), args...);
+    }
 };
 
-/**
- * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
- */
-template<typename Left, typename Right>
-struct if_not_left
-{
-    typedef void_type type;
-};
+} } // namespace cppa::detail
 
-template<typename Right>
-struct if_not_left<util::void_type, Right>
-{
-    typedef Right type;
-};
-
-} } // namespace cppa::util
-
-#endif // LEFT_OR_RIGHT_HPP
+#endif // VALUE_GUARD_HPP

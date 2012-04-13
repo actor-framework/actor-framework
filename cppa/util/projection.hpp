@@ -28,55 +28,13 @@
 \******************************************************************************/
 
 
-#ifndef LEFT_OR_RIGHT_HPP
-#define LEFT_OR_RIGHT_HPP
-
-#include "cppa/util/void_type.hpp"
+#ifndef PROJECTION_HPP
+#define PROJECTION_HPP
 
 namespace cppa { namespace util {
 
-/**
- * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
- */
-template<typename Left, typename Right>
-struct left_or_right
-{
-    typedef Left type;
-};
 
-template<typename Right>
-struct left_or_right<util::void_type, Right>
-{
-    typedef Right type;
-};
-
-template<typename Right>
-struct left_or_right<util::void_type&, Right>
-{
-    typedef Right type;
-};
-
-template<typename Right>
-struct left_or_right<util::void_type const&, Right>
-{
-    typedef Right type;
-};
-
-/**
- * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
- */
-template<typename Left, typename Right>
-struct if_not_left
-{
-    typedef void_type type;
-};
-
-template<typename Right>
-struct if_not_left<util::void_type, Right>
-{
-    typedef Right type;
-};
 
 } } // namespace cppa::util
 
-#endif // LEFT_OR_RIGHT_HPP
+#endif // PROJECTION_HPP

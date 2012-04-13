@@ -47,6 +47,7 @@
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/detail/tuple_iterator.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
@@ -153,6 +154,14 @@ struct tdata<>
         static_assert(util::tl_forall<incoming, boxed_or_void>::value,
                       "Additional unboxed arguments provided");
     }
+
+    typedef tuple_iterator<tdata> const_iterator;
+
+    inline const_iterator begin() const { return {this}; }
+    inline const_iterator cbegin() const { return {this}; }
+
+    inline const_iterator end() const { return {this}; }
+    inline const_iterator cend() const { return {this}; }
 
     inline tdata(tdata&) { }
     inline tdata(tdata&&) { }
@@ -310,6 +319,15 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline size_t size() const { return num_elements; }
 
+    typedef tuple_iterator<tdata> const_iterator;
+
+    inline const_iterator begin() const { return {this}; }
+    inline const_iterator cbegin() const { return {this}; }
+
+    inline const_iterator end() const { return {this, size()}; }
+    inline const_iterator cend() const { return {this, size()}; }
+
+
     // upcast
     inline tdata<Tail...>& tail() { return *this; }
 
@@ -426,6 +444,22 @@ struct tdata_from_type_list<util::type_list<T...>>
 {
     typedef tdata<T...> type;
 };
+
+template<typename... T>
+inline void collect_tdata(tdata<T...>&) { }
+
+template<typename Storage, typename... Args>
+void collect_tdata(Storage& storage, tdata<> const&, Args const&... args)
+{
+    collect_tdata(storage, args...);
+}
+
+template<typename Storage, typename Arg0, typename... Args>
+void collect_tdata(Storage& storage, Arg0 const& arg0, Args const&... args)
+{
+    storage.head = arg0.head;
+    collect_tdata(storage.tail(), arg0.tail(), args...);
+}
 
 } } // namespace cppa::detail
 

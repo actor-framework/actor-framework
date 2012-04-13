@@ -28,55 +28,49 @@
 \******************************************************************************/
 
 
-#ifndef LEFT_OR_RIGHT_HPP
-#define LEFT_OR_RIGHT_HPP
+#ifndef PURGE_REFS_HPP
+#define PURGE_REFS_HPP
 
-#include "cppa/util/void_type.hpp"
+#include <functional>
+
+#include "cppa/guard_expr.hpp"
+#include "cppa/util/rm_ref.hpp"
 
 namespace cppa { namespace util {
 
-/**
- * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
- */
-template<typename Left, typename Right>
-struct left_or_right
+template<typename T>
+struct purge_refs_impl
 {
-    typedef Left type;
+    typedef T type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type, Right>
+template<typename T>
+struct purge_refs_impl<ge_reference_wrapper<T> >
 {
-    typedef Right type;
+    typedef T type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type&, Right>
+template<typename T>
+struct purge_refs_impl<ge_mutable_reference_wrapper<T> >
 {
-    typedef Right type;
+    typedef T type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type const&, Right>
+template<typename T>
+struct purge_refs_impl<std::reference_wrapper<T> >
 {
-    typedef Right type;
+    typedef T type;
 };
 
 /**
- * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
+ * @brief Removes references and reference wrappers.
  */
-template<typename Left, typename Right>
-struct if_not_left
+template<typename T>
+struct purge_refs
 {
-    typedef void_type type;
-};
-
-template<typename Right>
-struct if_not_left<util::void_type, Right>
-{
-    typedef Right type;
+    typedef typename purge_refs_impl<typename util::rm_ref<T>::type>::type type;
 };
 
 } } // namespace cppa::util
 
-#endif // LEFT_OR_RIGHT_HPP
+#endif // PURGE_REFS_HPP

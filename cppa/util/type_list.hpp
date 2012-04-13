@@ -554,17 +554,92 @@ struct tl_push_front<type_list<ListTypes...>, What>
 
 // list map(list, trait)
 
+template<typename T, template<typename> class... Funs>
+struct tl_apply_all;
+
+template<typename T>
+struct tl_apply_all<T>
+{
+    typedef T type;
+};
+
+template<typename T,
+         template<typename> class Fun0,
+         template<typename> class... Funs>
+struct tl_apply_all<T, Fun0, Funs...>
+{
+    typedef typename tl_apply_all<typename Fun0<T>::type, Funs...>::type type;
+};
+
+
 /**
  * @brief Creates a new list by applying a "template function" to each element.
  */
-template<class List, template<typename> class Fun>
+template<class List, template<typename> class... Funs>
 struct tl_map;
 
-template<template<typename> class Fun, typename... Elements>
-struct tl_map<type_list<Elements...>, Fun>
+template<typename... Ts, template<typename> class... Funs>
+struct tl_map<type_list<Ts...>, Funs...>
 {
-    typedef type_list<typename Fun<Elements>::type...> type;
+    typedef type_list<typename tl_apply_all<Ts, Funs...>::type...> type;
 };
+
+/**
+ * @brief Creates a new list by applying a @p Fun to each element which
+ *        returns @p TraitResult for @p Trait.
+ */
+template<class List,
+         template<typename> class Trait,
+         bool TraitResult,
+         template<typename> class... Funs>
+struct tl_map_conditional
+{
+    typedef typename tl_concat<
+                type_list<
+                    typename std::conditional<
+                        Trait<typename List::head>::value == TraitResult,
+                        typename tl_apply_all<typename List::head, Funs...>::type,
+                        typename List::head
+                    >::type
+                >,
+                typename tl_map_conditional<
+                    typename List::tail,
+                    Trait,
+                    TraitResult,
+                    Funs...
+                >::type
+            >::type
+            type;
+};
+
+template<template<typename> class Trait,
+         bool TraitResult,
+         template<typename> class... Funs>
+struct tl_map_conditional<type_list<>, Trait, TraitResult, Funs...>
+{
+    typedef type_list<> type;
+};
+
+/*
+
+  freaks GCC out ...
+
+template<typename... Ts,
+         template<typename> class Trait,
+         bool TraitResult,
+         template<typename> class... Funs>
+struct tl_map_conditional<type_list<Ts...>, Trait, TraitResult, Funs...>
+{
+    typedef type_list<
+                typename std::conditional<
+                    Trait<Ts>::value == TraitResult,
+                    typename tl_apply_all<Ts, Funs...>::type,
+                    Ts
+                >::type
+                ...
+            type;
+};
+*/
 
 // list zipped_map(trait)
 
@@ -590,8 +665,13 @@ struct tl_zipped_map<type_list<T...>, Fun>
 template<class List>
 struct tl_pop_back
 {
-    typedef typename tl_reverse<List>::type rlist;
-    typedef typename tl_reverse<typename rlist::tail>::type type;
+    typedef typename tl_slice<List, 0, List::size - 1>::type type;
+};
+
+template<>
+struct tl_pop_back<type_list<> >
+{
+    typedef type_list<> type;
 };
 
 // type at(size_t)
@@ -833,7 +913,7 @@ struct tl_is_zipped
 /**
  * @brief Removes trailing @p What elements from the end.
  */
-template<class List, typename What>
+template<class List, typename What = void_type>
 struct tl_trim
 {
     typedef typename util::if_else<

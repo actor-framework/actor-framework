@@ -40,6 +40,8 @@
 
 #include "cppa/util/type_list.hpp"
 
+#include "cppa/detail/tuple_iterator.hpp"
+
 namespace cppa { namespace detail {
 
 enum tuple_impl_info
@@ -85,87 +87,7 @@ class abstract_tuple : public ref_counted
 
     bool equals(abstract_tuple const& other) const;
 
-    // iterator support
-    class const_iterator
-    {
-
-        size_t m_pos;
-        abstract_tuple const* m_tuple;
-
-     public:
-
-        inline const_iterator(abstract_tuple const* tup, size_t pos = 0)
-            : m_pos(pos), m_tuple(tup)
-        {
-        }
-
-        const_iterator(const_iterator const&) = default;
-
-        const_iterator& operator=(const_iterator const&) = default;
-
-        inline bool operator==(const_iterator const& other) const
-        {
-            CPPA_REQUIRE(other.m_tuple == other.m_tuple);
-            return other.m_pos == m_pos;
-        }
-
-        inline bool operator!=(const_iterator const& other) const
-        {
-            return !(*this == other);
-        }
-
-        inline const_iterator& operator++()
-        {
-            ++m_pos;
-            return *this;
-        }
-
-        inline const_iterator& operator--()
-        {
-            CPPA_REQUIRE(m_pos > 0);
-            --m_pos;
-            return *this;
-        }
-
-        inline const_iterator operator+(size_t offset)
-        {
-            return {m_tuple, m_pos + offset};
-        }
-
-        inline const_iterator& operator+=(size_t offset)
-        {
-            m_pos += offset;
-            return *this;
-        }
-
-        inline const_iterator operator-(size_t offset)
-        {
-            CPPA_REQUIRE(m_pos >= offset);
-            return {m_tuple, m_pos - offset};
-        }
-
-        inline const_iterator& operator-=(size_t offset)
-        {
-            CPPA_REQUIRE(m_pos >= offset);
-            m_pos -= offset;
-            return *this;
-        }
-
-        inline size_t position() const { return m_pos; }
-
-        inline void const* value() const
-        {
-            return m_tuple->at(m_pos);
-        }
-
-        inline uniform_type_info const* type() const
-        {
-            return m_tuple->type_at(m_pos);
-        }
-
-        inline const_iterator& operator*() { return *this; }
-
-    };
+    typedef tuple_iterator<abstract_tuple> const_iterator;
 
     inline const_iterator begin() const { return {this}; }
     inline const_iterator cbegin() const { return {this}; }
@@ -175,24 +97,41 @@ class abstract_tuple : public ref_counted
 
 };
 
-inline bool full_eq_v3(abstract_tuple::const_iterator const& lhs,
-                       abstract_tuple::const_iterator const& rhs)
+struct full_eq_type
 {
-    return    lhs.type() == rhs.type()
-           && lhs.type()->equals(lhs.value(), rhs.value());
-}
+    constexpr full_eq_type() { }
+    template<class Tuple>
+    inline bool operator()(tuple_iterator<Tuple> const& lhs,
+                           tuple_iterator<Tuple> const& rhs) const
+    {
+        return    lhs.type() == rhs.type()
+               && lhs.type()->equals(lhs.value(), rhs.value());
+    }
+};
 
-inline bool types_only_eq(abstract_tuple::const_iterator const& lhs,
-                          uniform_type_info const* rhs)
+struct types_only_eq_type
 {
-    return lhs.type() == rhs;
-}
+    constexpr types_only_eq_type() { }
+    template<class Tuple>
+    inline bool operator()(tuple_iterator<Tuple> const& lhs,
+                           uniform_type_info const* rhs     ) const
+    {
+        return lhs.type() == rhs;
+    }
+    template<class Tuple>
+    inline bool operator()(uniform_type_info const* lhs,
+                           tuple_iterator<Tuple> const& rhs) const
+    {
+        return lhs == rhs.type();
+    }
+};
 
-inline bool types_only_eq_v2(uniform_type_info const* lhs,
-                             abstract_tuple::const_iterator const& rhs)
-{
-    return lhs == rhs.type();
-}
+namespace {
+
+constexpr full_eq_type full_eq;
+constexpr types_only_eq_type types_only_eq;
+
+} // namespace <anonymous>
 
 } } // namespace cppa::detail
 

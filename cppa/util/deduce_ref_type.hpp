@@ -28,55 +28,34 @@
 \******************************************************************************/
 
 
-#ifndef LEFT_OR_RIGHT_HPP
-#define LEFT_OR_RIGHT_HPP
+#ifndef DEDUCE_REF_TYPE_HPP
+#define DEDUCE_REF_TYPE_HPP
 
-#include "cppa/util/void_type.hpp"
+#include "cppa/util/rm_ref.hpp"
 
 namespace cppa { namespace util {
 
 /**
- * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
+ * @brief Deduces reference type of T0 and applies it to T1.
  */
-template<typename Left, typename Right>
-struct left_or_right
+template<typename T0, typename T1>
+struct deduce_ref_type
 {
-    typedef Left type;
+    typedef typename util::rm_ref<T1>::type type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type, Right>
+template<typename T0, typename T1>
+struct deduce_ref_type<T0&, T1>
 {
-    typedef Right type;
+    typedef typename util::rm_ref<T1>::type& type;
 };
 
-template<typename Right>
-struct left_or_right<util::void_type&, Right>
+template<typename T0, typename T1>
+struct deduce_ref_type<T0 const&, T1>
 {
-    typedef Right type;
-};
-
-template<typename Right>
-struct left_or_right<util::void_type const&, Right>
-{
-    typedef Right type;
-};
-
-/**
- * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
- */
-template<typename Left, typename Right>
-struct if_not_left
-{
-    typedef void_type type;
-};
-
-template<typename Right>
-struct if_not_left<util::void_type, Right>
-{
-    typedef Right type;
+    typedef typename util::rm_ref<T1>::type const& type;
 };
 
 } } // namespace cppa::util
 
-#endif // LEFT_OR_RIGHT_HPP
+#endif // DEDUCE_REF_TYPE_HPP
