@@ -160,7 +160,7 @@ struct rvalue_builder
             && !std::is_same<Guard, value_guard< util::type_list<> >>::value
          >::type* = 0                                 ) const
     {
-        return {(gcall(m_guard) && ng), std::move(m_funs)};
+        return {(ge_sub_function(m_guard) && ng), std::move(m_funs)};
     }
 
     template<typename NewGuard>

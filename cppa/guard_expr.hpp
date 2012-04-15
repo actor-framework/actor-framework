@@ -116,19 +116,19 @@ struct guard_expr
 // bind utility for placeholders
 
 template<typename Fun, typename T1>
-struct gbind1
+struct gcall1
 {
     typedef guard_expr<exec_fun1_op, Fun, T1> result;
 };
 
 template<typename Fun, typename T1, typename T2>
-struct gbind2
+struct gcall2
 {
     typedef guard_expr<exec_fun2_op, guard_expr<dummy_op, Fun, T1>, T2> result;
 };
 
 template<typename Fun, typename T1, typename T2, typename T3>
-struct gbind3
+struct gcall3
 {
     typedef guard_expr<exec_fun3_op, guard_expr<dummy_op, Fun, T1>,
                                      guard_expr<dummy_op, T2, T3> >
@@ -139,7 +139,7 @@ struct gbind3
  * @brief Call wrapper for guard placeholders and lazy evaluation.
  */
 template<typename Fun, typename T1>
-typename gbind1<Fun, T1>::result gbind(Fun fun, T1 t1)
+typename gcall1<Fun, T1>::result gcall(Fun fun, T1 t1)
 {
     return {fun, t1};
 }
@@ -148,7 +148,7 @@ typename gbind1<Fun, T1>::result gbind(Fun fun, T1 t1)
  * @brief Call wrapper for guard placeholders and lazy evaluation.
  */
 template<typename Fun, typename T1, typename T2>
-typename gbind2<Fun, T1, T2>::result gbind(Fun fun, T1 t1, T2 t2)
+typename gcall2<Fun, T1, T2>::result gcall(Fun fun, T1 t1, T2 t2)
 {
     return {fun, t1, t2};
 }
@@ -157,16 +157,17 @@ typename gbind2<Fun, T1, T2>::result gbind(Fun fun, T1 t1, T2 t2)
  * @brief Call wrapper for guard placeholders and lazy evaluation.
  */
 template<typename Fun, typename T1, typename T2, typename T3>
-typename gbind3<Fun, T1, T2, T3>::result gbind(Fun fun, T1 t1, T2 t2, T3 t3)
+typename gcall3<Fun, T1, T2, T3>::result gcall(Fun fun, T1 t1, T2 t2, T3 t3)
 {
     return {fun, t1, t2, t3};
 }
 
 /**
- * @brief Call wrapper for any given functor returning a boolean.
+ * @brief Calls @p fun with all arguments given to the guard expression.
+ *        The functor @p fun must return a boolean.
  */
 template<typename Fun>
-guard_expr<exec_xfun_op, Fun, util::void_type> gcall(Fun fun)
+guard_expr<exec_xfun_op, Fun, util::void_type> ge_sub_function(Fun fun)
 {
     return {fun, util::void_type{}};
 }
@@ -205,12 +206,12 @@ struct guard_placeholder
     constexpr guard_placeholder() { }
 
     /**
-     * @brief Convenient way to call <tt>gbind(fun, guard_placeholder)</tt>.
+     * @brief Convenient way to call <tt>gcall(fun, guard_placeholder)</tt>.
      */
     template<typename Fun>
-    typename gbind1<Fun, guard_placeholder>::result operator()(Fun fun) const
+    typename gcall1<Fun, guard_placeholder>::result operator()(Fun fun) const
     {
-        return gbind(fun, *this);
+        return gcall(fun, *this);
     }
 
     // utility function for starts_with()
@@ -222,13 +223,13 @@ struct guard_placeholder
     /**
      * @brief Evaluates to true if unbound argument starts with @p str.
      */
-    typename gbind2<decltype(&guard_placeholder::u8_starts_with),
+    typename gcall2<decltype(&guard_placeholder::u8_starts_with),
                      guard_placeholder,
                      std::string
              >::result
     starts_with(std::string str) const
     {
-        return gbind(&guard_placeholder::u8_starts_with, *this, str);
+        return gcall(&guard_placeholder::u8_starts_with, *this, str);
     }
 
     /**
@@ -236,10 +237,10 @@ struct guard_placeholder
      *        is contained in @p container.
      */
     template<class C>
-    typename gbind2<ge_search_container, C, guard_placeholder>::result
+    typename gcall2<ge_search_container, C, guard_placeholder>::result
     in(C container) const
     {
-        return gbind(ge_search_container{true}, container, *this);
+        return gcall(ge_search_container{true}, container, *this);
     }
 
     /**
@@ -247,13 +248,13 @@ struct guard_placeholder
      *        is contained in @p container.
      */
     template<class C>
-    typename gbind2<ge_search_container,
+    typename gcall2<ge_search_container,
                      std::reference_wrapper<C>,
                      guard_placeholder
              >::result
     in(std::reference_wrapper<C> container) const
     {
-        return gbind(ge_search_container{true}, container, *this);
+        return gcall(ge_search_container{true}, container, *this);
     }
 
     /**
@@ -261,7 +262,7 @@ struct guard_placeholder
      *        is contained in @p list.
      */
     template<typename T>
-    typename gbind2<ge_search_container,
+    typename gcall2<ge_search_container,
                      std::vector<typename detail::strip_and_convert<T>::type>,
                      guard_placeholder
              >::result
@@ -277,10 +278,10 @@ struct guard_placeholder
      *        is not contained in @p container.
      */
     template<class C>
-    typename gbind2<ge_search_container, C, guard_placeholder>::result
+    typename gcall2<ge_search_container, C, guard_placeholder>::result
     not_in(C container) const
     {
-        return gbind(ge_search_container{false}, container, *this);
+        return gcall(ge_search_container{false}, container, *this);
     }
 
     /**
@@ -288,13 +289,13 @@ struct guard_placeholder
      *        is not contained in @p container.
      */
     template<class C>
-    typename gbind2<ge_search_container,
+    typename gcall2<ge_search_container,
                      std::reference_wrapper<C>,
                      guard_placeholder
              >::result
     not_in(std::reference_wrapper<C> container) const
     {
-        return gbind(ge_search_container{false}, container, *this);
+        return gcall(ge_search_container{false}, container, *this);
     }
 
     /**
@@ -302,7 +303,7 @@ struct guard_placeholder
      *        is not contained in @p list.
      */
     template<typename T>
-    typename gbind2<ge_search_container,
+    typename gcall2<ge_search_container,
                      std::vector<typename detail::strip_and_convert<T>::type>,
                      guard_placeholder
              >::result

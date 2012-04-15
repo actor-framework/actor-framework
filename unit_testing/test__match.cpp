@@ -34,12 +34,12 @@ size_t test__match()
     using namespace std::placeholders;
     using namespace cppa::placeholders;
 
-    auto expr0 = gbind(ascending, _x1, _x2, _x3);
+    auto expr0 = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0, 1, 2, 3));
     CPPA_CHECK(!ge_invoke(expr0, 3, 2, 1));
 
     int ival0 = 2;
-    auto expr01 = gbind(ascending, _x1, std::ref(ival0), _x2);
+    auto expr01 = gcall(ascending, _x1, std::ref(ival0), _x2);
     CPPA_CHECK(ge_invoke(expr01, 1, 3));
     ++ival0;
     CPPA_CHECK(!ge_invoke(expr01, 1, 3));
