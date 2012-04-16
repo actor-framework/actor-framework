@@ -38,8 +38,10 @@
 #include <type_traits>
 
 #include "cppa/config.hpp"
+#include "cppa/option.hpp"
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/apply_tuple.hpp"
 
@@ -113,6 +115,63 @@ struct guard_expr
     SubMacro (not_equal_op, !=)
 
 
+template<typename T>
+struct ge_mutable_reference_wrapper
+{
+    T* value;
+    ge_mutable_reference_wrapper() : value(nullptr) { }
+    ge_mutable_reference_wrapper(T&&) = delete;
+    ge_mutable_reference_wrapper(T& vref) : value(&vref) { }
+    ge_mutable_reference_wrapper(ge_mutable_reference_wrapper const&) = default;
+    ge_mutable_reference_wrapper& operator=(T& vref)
+    {
+        value = &vref;
+        return *this;
+    }
+    ge_mutable_reference_wrapper& operator=(ge_mutable_reference_wrapper const&) = default;
+    T& get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator T& () const { CPPA_REQUIRE(value != 0); return *value; }
+};
+
+template<typename T>
+struct ge_reference_wrapper
+{
+    T const* value;
+    ge_reference_wrapper(T&&) = delete;
+    ge_reference_wrapper() : value(nullptr) { }
+    ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
+    ge_reference_wrapper(ge_reference_wrapper const&) = default;
+    ge_reference_wrapper& operator=(T const& vref)
+    {
+        value = &vref;
+        return *this;
+    }
+    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
+    T const& get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator T const& () const { CPPA_REQUIRE(value != 0); return *value; }
+};
+
+// support use of gref(BooleanVariable) as receive loop 'guard'
+template<>
+struct ge_reference_wrapper<bool>
+{
+    bool const* value;
+    ge_reference_wrapper(bool&&) = delete;
+    ge_reference_wrapper(bool const& val_ref) : value(&val_ref) { }
+    ge_reference_wrapper(ge_reference_wrapper const&) = default;
+    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
+    bool const& get() const { CPPA_REQUIRE(value != 0); return *value; }
+    operator bool const& () const { CPPA_REQUIRE(value != 0); return *value; }
+    bool operator()() const { CPPA_REQUIRE(value != 0); return *value; }
+};
+
+/**
+ * @brief Create a reference wrapper similar to std::reference_wrapper<const T>
+ *        that could be used in guard expressions or to enforce lazy evaluation.
+ */
+template<typename T>
+ge_reference_wrapper<T> gref(T const& value) { return {value}; }
+
 // bind utility for placeholders
 
 template<typename Fun, typename T1>
@@ -176,6 +235,7 @@ struct ge_search_container
 {
     bool sc;
     ge_search_container(bool should_contain) : sc(should_contain) { }
+
     template<class C>
     bool operator()(C const& haystack,
                     typename C::value_type const& needle) const
@@ -187,12 +247,55 @@ struct ge_search_container
         return std::none_of(haystack.begin(), haystack.end(),
                             [&](vtype const& val) { return needle == val; });
     }
+};
 
+struct ge_get_size
+{
     template<class C>
-    bool operator()(std::reference_wrapper<C> const& haystack_ref,
-                    typename C::value_type const& needle) const
+    inline auto operator()(C const& what) const -> decltype(what.size())
     {
-        return (*this)(haystack_ref.get(), needle);
+        return what.size();
+    }
+};
+
+struct ge_is_empty
+{
+    bool expected;
+    ge_is_empty(bool expected_value) : expected(expected_value) { }
+    template<class C>
+    inline bool operator()(C const& what) const
+    {
+        return what.empty() == expected;
+    }
+};
+
+struct ge_get_front
+{
+    template<class C>
+    inline auto operator()(C const& what,
+                           typename std::enable_if<
+                               std::is_reference<
+                                   decltype(what.front())
+                               >::value
+                           >::type* = 0) const
+    -> option<
+        std::reference_wrapper<
+            const typename util::rm_ref<decltype(what.front())>::type> >
+    {
+        if (what.empty() == false) return {what.front()};
+        return {};
+    }
+    template<class C>
+    inline auto operator()(C const& what,
+                           typename std::enable_if<
+                               std::is_reference<
+                                   decltype(what.front())
+                               >::value == false
+                           >::type* = 0) const
+    -> option<decltype(what.front())>
+    {
+        if (what.empty() == false) return {what.front()};
+        return {};
     }
 };
 
@@ -221,15 +324,41 @@ struct guard_placeholder
     }
 
     /**
+     * @brief Evaluates to the size of a container.
+     */
+    typename gcall1<ge_get_size, guard_placeholder>::result size() const
+    {
+        return gcall(ge_get_size{}, *this);
+    }
+
+    typename gcall1<ge_is_empty, guard_placeholder>::result empty() const
+    {
+        return gcall(ge_is_empty{true}, *this);
+    }
+
+    typename gcall1<ge_is_empty, guard_placeholder>::result not_empty() const
+    {
+        return gcall(ge_is_empty{false}, *this);
+    }
+
+    /**
+     * @brief Evaluates to the first element of a container if it's not empty.
+     */
+    typename gcall1<ge_get_front, guard_placeholder>::result front() const
+    {
+        return gcall(ge_get_front{}, *this);
+    }
+
+    /**
      * @brief Evaluates to true if unbound argument starts with @p str.
      */
     typename gcall2<decltype(&guard_placeholder::u8_starts_with),
-                     guard_placeholder,
-                     std::string
+                    guard_placeholder,
+                    std::string
              >::result
     starts_with(std::string str) const
     {
-        return gcall(&guard_placeholder::u8_starts_with, *this, str);
+        return gcall(&guard_placeholder::u8_starts_with, *this, std::move(str));
     }
 
     /**
@@ -240,21 +369,7 @@ struct guard_placeholder
     typename gcall2<ge_search_container, C, guard_placeholder>::result
     in(C container) const
     {
-        return gcall(ge_search_container{true}, container, *this);
-    }
-
-    /**
-     * @brief Evaluates to true if unbound argument
-     *        is contained in @p container.
-     */
-    template<class C>
-    typename gcall2<ge_search_container,
-                     std::reference_wrapper<C>,
-                     guard_placeholder
-             >::result
-    in(std::reference_wrapper<C> container) const
-    {
-        return gcall(ge_search_container{true}, container, *this);
+        return gcall(ge_search_container{true}, std::move(container), *this);
     }
 
     /**
@@ -270,7 +385,7 @@ struct guard_placeholder
     {
         std::vector<typename detail::strip_and_convert<T>::type> vec;
         for (auto& i : list) vec.emplace_back(i);
-        return in(vec);
+        return in(std::move(vec));
     }
 
     /**
@@ -281,21 +396,7 @@ struct guard_placeholder
     typename gcall2<ge_search_container, C, guard_placeholder>::result
     not_in(C container) const
     {
-        return gcall(ge_search_container{false}, container, *this);
-    }
-
-    /**
-     * @brief Evaluates to true if unbound argument
-     *        is not contained in @p container.
-     */
-    template<class C>
-    typename gcall2<ge_search_container,
-                     std::reference_wrapper<C>,
-                     guard_placeholder
-             >::result
-    not_in(std::reference_wrapper<C> container) const
-    {
-        return gcall(ge_search_container{false}, container, *this);
+        return gcall(ge_search_container{false}, std::move(container), *this);
     }
 
     /**
@@ -316,85 +417,31 @@ struct guard_placeholder
 
 };
 
-template<typename T>
-struct ge_mutable_reference_wrapper
-{
-    T* value;
-    ge_mutable_reference_wrapper() : value(nullptr) { }
-    ge_mutable_reference_wrapper(T&&) = delete;
-    ge_mutable_reference_wrapper(T& vref) : value(&vref) { }
-    ge_mutable_reference_wrapper(ge_mutable_reference_wrapper const&) = default;
-    ge_mutable_reference_wrapper& operator=(T& vref)
-    {
-        value = &vref;
-        return *this;
-    }
-    ge_mutable_reference_wrapper& operator=(ge_mutable_reference_wrapper const&) = default;
-    T& get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator T& () const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
-template<typename T>
-struct ge_reference_wrapper
-{
-    T const* value;
-    ge_reference_wrapper(T&&) = delete;
-    ge_reference_wrapper() : value(nullptr) { }
-    ge_reference_wrapper(T const& val_ref) : value(&val_ref) { }
-    ge_reference_wrapper(ge_reference_wrapper const&) = default;
-    ge_reference_wrapper& operator=(T const& vref)
-    {
-        value = &vref;
-        return *this;
-    }
-    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
-    T const& get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator T const& () const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
-// support use of gref(BooleanVariable) as receive loop 'guard'
-template<>
-struct ge_reference_wrapper<bool>
-{
-    bool const* value;
-    ge_reference_wrapper(bool&&) = delete;
-    ge_reference_wrapper(bool const& val_ref) : value(&val_ref) { }
-    ge_reference_wrapper(ge_reference_wrapper const&) = default;
-    ge_reference_wrapper& operator=(ge_reference_wrapper const&) = default;
-    bool get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator bool () const { CPPA_REQUIRE(value != 0); return *value; }
-    bool operator()() const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
-/**
- * @brief Create a reference wrapper similar to std::reference_wrapper<const T>
- *        that could be used in guard expressions or to enforce lazy evaluation.
- */
-template<typename T>
-ge_reference_wrapper<T> gref(T const& value) { return {value}; }
-
-
 // result type computation
 
 template<typename T, class Tuple>
-struct ge_unbound
-{
-    typedef T type;
-};
+struct ge_unbound { typedef T type; };
 
 template<typename T, class Tuple>
-struct ge_unbound<ge_reference_wrapper<T>, Tuple>
-{
-    typedef T type;
-};
+struct ge_unbound<ge_reference_wrapper<T>, Tuple> { typedef T type; };
+
+template<typename T, class Tuple>
+struct ge_unbound<std::reference_wrapper<T>, Tuple> { typedef T type; };
+
+template<typename T, class Tuple>
+struct ge_unbound<std::reference_wrapper<const T>, Tuple> { typedef T type; };
 
 // unbound type of placeholder
 template<int X, typename... Ts>
-struct ge_unbound<guard_placeholder<X>, detail::tdata<std::reference_wrapper<Ts>...> >
+struct ge_unbound<guard_placeholder<X>, detail::tdata<Ts...> >
 {
     static_assert(X < sizeof...(Ts),
                   "Cannot unbind placeholder (too few arguments)");
-    typedef typename util::at<X, Ts...>::type type;
+    typedef typename ge_unbound<
+                typename util::at<X, Ts...>::type,
+                detail::tdata<std::reference_wrapper<Ts>...>
+            >::type
+            type;
 };
 
 // operators, operators, operators
@@ -550,6 +597,18 @@ template<class Tuple, typename T>
 inline T const& ge_resolve(Tuple const&, T const& value)
 {
     return value;
+}
+
+template<class Tuple, typename T>
+inline T const& ge_resolve(Tuple const&, std::reference_wrapper<T> const& value)
+{
+    return value.get();
+}
+
+template<class Tuple, typename T>
+inline T const& ge_resolve(Tuple const&, std::reference_wrapper<const T> const& value)
+{
+    return value.get();
 }
 
 template<class Tuple, typename T>

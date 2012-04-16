@@ -171,8 +171,12 @@ class projection<util::type_list<> >
     template<class PartialFun>
     bool operator()(PartialFun& fun) const
     {
-        fun();
-        return true;
+        if (fun.defined_at())
+        {
+            fun();
+            return true;
+        }
+        return false;
     }
 
 };

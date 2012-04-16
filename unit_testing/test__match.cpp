@@ -1,6 +1,7 @@
 #include <functional>
 
 #include "test.hpp"
+#include "cppa/cppa.hpp"
 #include "cppa/on.hpp"
 #include "cppa/match.hpp"
 #include "cppa/announce.hpp"
@@ -34,15 +35,19 @@ size_t test__match()
     using namespace std::placeholders;
     using namespace cppa::placeholders;
 
-    auto expr0 = gcall(ascending, _x1, _x2, _x3);
-    CPPA_CHECK(ge_invoke(expr0, 1, 2, 3));
-    CPPA_CHECK(!ge_invoke(expr0, 3, 2, 1));
+    auto expr0_a = gcall(ascending, _x1, _x2, _x3);
+    CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));
+    CPPA_CHECK(!ge_invoke(expr0_a, 3, 2, 1));
 
     int ival0 = 2;
-    auto expr01 = gcall(ascending, _x1, std::ref(ival0), _x2);
-    CPPA_CHECK(ge_invoke(expr01, 1, 3));
+    auto expr0_b = gcall(ascending, _x1, std::ref(ival0), _x2);
+    CPPA_CHECK(ge_invoke(expr0_b, 1, 3));
     ++ival0;
-    CPPA_CHECK(!ge_invoke(expr01, 1, 3));
+    CPPA_CHECK(!ge_invoke(expr0_b, 1, 3));
+
+    auto expr0_c = gcall(ascending, 10, _x1, 30);
+    CPPA_CHECK(!ge_invoke(expr0_c, 10));
+    CPPA_CHECK(ge_invoke(expr0_c, 11));
 
     auto expr1 = _x1 + _x2;
     auto expr2 = _x1 + _x2 < _x3;
@@ -106,6 +111,34 @@ size_t test__match()
                   "wrong return type");
     CPPA_CHECK_EQUAL(42, (ge_invoke(expr15, 7, 10, 25)));
 
+    std::string expr16_str;// = "expr16";
+    auto expr16_a = _x1.size();
+    auto expr16_b = _x1.front() == 'e';
+    CPPA_CHECK_EQUAL(false, ge_invoke(expr16_b, expr16_str));
+    CPPA_CHECK_EQUAL(0, ge_invoke(expr16_a, expr16_str));
+    expr16_str = "expr16";
+    CPPA_CHECK_EQUAL(true, ge_invoke(expr16_b, expr16_str));
+    CPPA_CHECK_EQUAL(expr16_str.size(), ge_invoke(expr16_a, expr16_str));
+    expr16_str.front() = '_';
+    CPPA_CHECK_EQUAL(false, ge_invoke(expr16_b, expr16_str));
+
+    int expr17_value = 42;
+    auto expr17 = gref(expr17_value) == 42;
+    CPPA_CHECK_EQUAL(true, ge_invoke(expr17));
+    expr17_value = 0;
+    CPPA_CHECK_EQUAL(false, ge_invoke(expr17));
+
+    int expr18_value = 42;
+    auto expr18_a = gref(expr18_value) == 42;
+    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_a));
+    expr18_value = 0;
+    CPPA_CHECK_EQUAL(false, ge_invoke(expr18_a));
+    auto expr18_b = gref(expr18_value) == _x1;
+    auto expr18_c = std::ref(expr18_value) == _x1;
+    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_b, 0));
+    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_c, 0));
+
+
     bool invoked = false;
     match("abc")
     (
@@ -116,6 +149,46 @@ size_t test__match()
     );
     if (!invoked) { CPPA_ERROR("match(\"abc\") failed"); }
     invoked = false;
+
+    bool disable_case1 = true;
+    bool case1_invoked = false;
+    bool case2_invoked = false;
+    auto expr19 =
+    (
+        on<anything>().when(gref(disable_case1) == false) >> [&]()
+        {
+            case1_invoked = true;
+        },
+        on<anything>() >> [&]()
+        {
+            case2_invoked = true;
+        }
+    );
+    any_tuple expr19_tup = make_cow_tuple("hello guard!");
+    expr19(expr19_tup);
+    CPPA_CHECK(!case1_invoked);
+    CPPA_CHECK(case2_invoked);
+
+    partial_function expr20 = expr19;
+    case1_invoked = false;
+    case2_invoked = false;
+    disable_case1 = false;
+    expr20(expr19_tup);
+    CPPA_CHECK(case1_invoked);
+    CPPA_CHECK(!case2_invoked);
+
+    std::vector<int> expr21_vec_a{1, 2, 3};
+    std::vector<int> expr21_vec_b{1, 0, 2};
+    auto vec_sorted = [](std::vector<int> const& vec)
+    {
+        return std::is_sorted(vec.begin(), vec.end());
+    };
+    auto expr21 = gcall(vec_sorted, _x1);
+    CPPA_CHECK(ge_invoke(expr21, expr21_vec_a));
+    CPPA_CHECK(!ge_invoke(expr21, expr21_vec_b));
+
+    auto expr22 = _x1.empty() && _x2.not_empty();
+    CPPA_CHECK(ge_invoke(expr22, std::string(""), std::string("abc")));
 
     match(std::vector<int>{1, 2, 3})
     (

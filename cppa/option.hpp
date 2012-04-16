@@ -220,45 +220,45 @@ class option
 };
 
 /** @relates option */
-template<typename T>
-bool operator==(option<T> const& lhs, option<T> const& rhs)
+template<typename T, typename U>
+bool operator==(option<T> const& lhs, option<U> const& rhs)
 {
     if ((lhs) && (rhs)) return *lhs == *rhs;
     return false;
 }
 
 /** @relates option */
-template<typename T>
-bool operator==(option<T> const& lhs, T const& rhs)
+template<typename T, typename U>
+bool operator==(option<T> const& lhs, U const& rhs)
 {
     if (lhs) return *lhs == rhs;
     return false;
 }
 
 /** @relates option */
-template<typename T>
-bool operator==(T const& lhs, option<T> const& rhs)
+template<typename T, typename U>
+bool operator==(T const& lhs, option<U> const& rhs)
 {
     return rhs == lhs;
 }
 
 /** @relates option */
-template<typename T>
-bool operator!=(option<T> const& lhs, option<T> const& rhs)
+template<typename T, typename U>
+bool operator!=(option<T> const& lhs, option<U> const& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates option */
-template<typename T>
-bool operator!=(option<T> const& lhs, T const& rhs)
+template<typename T, typename U>
+bool operator!=(option<T> const& lhs, U const& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates option */
-template<typename T>
-bool operator!=(T const& lhs, option<T> const& rhs)
+template<typename T, typename U>
+bool operator!=(T const& lhs, option<U> const& rhs)
 {
     return !(lhs == rhs);
 }
