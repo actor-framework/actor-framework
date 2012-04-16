@@ -27,4 +27,4 @@ unit_tests_DEPENDENCIES = ../.libs/libcppa.la
 
 AM_CPPFLAGS = -I../
 unit_tests_CXXFLAGS = --std=c++0x -pedantic -Wall -Wextra
-unit_tests_LDADD = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) -L../.libs/ -lcppa
+unit_tests_LDADD = -L../.libs/ -lcppa $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
