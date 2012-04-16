@@ -102,14 +102,42 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         return;
     }
     auto mbox_end = m_mailbox.cache().end();
-    auto rm_fun = [&](queue_node& node) { return handle_message(node); };
+    auto rm_fun = [this](queue_node& node) { return handle_message(node); };
     for (;;)
     {
         try
         {
-            while (m_mailbox_pos != mbox_end)
+            auto iter = m_mailbox.cache().remove_first(rm_fun, m_mailbox_pos);
+            if (iter == mbox_end)
             {
-                m_mailbox_pos = m_mailbox.cache().remove_first(rm_fun, m_mailbox_pos);
+                // try fetch more
+                m_mailbox_pos = m_mailbox.cache().before_end();
+                if (m_mailbox.can_fetch_more() == false)
+                {
+                    m_state.store(abstract_scheduled_actor::about_to_block);
+                    CPPA_MEMORY_BARRIER();
+                    if (   m_mailbox.can_fetch_more()
+                        || compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                                  abstract_scheduled_actor::blocked        ) != abstract_scheduled_actor::blocked)
+                    {
+                        // someone preempt us
+                        m_mailbox.try_fetch_more();
+                    }
+                    else
+                    {
+                        // try again next time
+                        return;
+                    }
+                }
+                else
+                {
+                    m_mailbox.try_fetch_more();
+                }
+            }
+            else
+            {
+                // prepare for next receive
+                m_mailbox_pos = m_mailbox.cache().before_begin();
             }
         }
         catch (actor_exited& what)
@@ -130,36 +158,6 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
             done_cb();
             return;
         }
-        if (m_mailbox.can_fetch_more() == false)
-        {
-            m_state.store(abstract_scheduled_actor::about_to_block);
-            CPPA_MEMORY_BARRIER();
-            if (m_mailbox.can_fetch_more())
-            {
-                // someone preempt us
-                m_state.store(abstract_scheduled_actor::ready);
-            }
-            else
-            {
-                // nothing to do (wait for new messages)
-                switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                               abstract_scheduled_actor::blocked))
-                {
-                    case abstract_scheduled_actor::ready:
-                    {
-                        // someone preempt us
-                        break;
-                    }
-                    case abstract_scheduled_actor::blocked:
-                    {
-                        // done
-                        return;
-                    }
-                    default: exit(7); // illegal state
-                };
-            }
-        }
-        m_mailbox_pos = m_mailbox.try_fetch_more();
     }
 }
 
