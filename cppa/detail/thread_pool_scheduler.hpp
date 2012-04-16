@@ -47,15 +47,15 @@ class thread_pool_scheduler : public scheduler
 
     struct worker;
 
-    void start() /*override*/;
+    void start();// override
 
-    void stop() /*override*/;
+    void stop();// override
 
-    void schedule(abstract_scheduled_actor* what) /*override*/;
+    void enqueue(abstract_scheduled_actor* what);// override
 
-    actor_ptr spawn(abstract_event_based_actor* what);
+    actor_ptr spawn(abstract_event_based_actor* what); //override
 
-    actor_ptr spawn(scheduled_actor* behavior, scheduling_hint hint);
+    actor_ptr spawn(scheduled_actor* behavior, scheduling_hint hint); //override
 
  private:
 

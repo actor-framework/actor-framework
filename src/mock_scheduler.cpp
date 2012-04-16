@@ -39,6 +39,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
+#include "cppa/abstract_event_based_actor.hpp"
 
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
@@ -47,6 +48,7 @@
 #include "cppa/detail/converted_thread_context.hpp"
 
 using std::cout;
+using std::cerr;
 using std::endl;
 
 namespace {
@@ -90,6 +92,12 @@ actor_ptr mock_scheduler::spawn(abstract_event_based_actor* what)
 actor_ptr mock_scheduler::spawn(scheduled_actor* behavior, scheduling_hint)
 {
     return spawn(behavior);
+}
+
+void mock_scheduler::enqueue(detail::abstract_scheduled_actor*)
+{
+    cerr << "mock_scheduler::enqueue" << endl;
+    abort();
 }
 
 } } // namespace detail

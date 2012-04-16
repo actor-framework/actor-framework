@@ -32,6 +32,9 @@
 #include <cstddef>
 #include <iostream>
 
+#include "cppa/config.hpp"
+#include "cppa/abstract_event_based_actor.hpp"
+
 #include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
@@ -44,12 +47,6 @@ using std::endl;
 namespace cppa { namespace detail {
 
 namespace {
-
-void enqueue_fun(cppa::detail::thread_pool_scheduler* where,
-                 cppa::detail::abstract_scheduled_actor* what)
-{
-    where->schedule(what);
-}
 
 typedef unique_lock<mutex> guard_type;
 typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
@@ -142,9 +139,9 @@ struct thread_pool_scheduler::worker
         {
             abstract_scheduled_actor* job;
             handler() : job(nullptr) { }
-            bool still_ready() { return true; }
             void exec_done()
             {
+                CPPA_REQUIRE(job != nullptr);
                 if (!job->deref()) delete job;
                 dec_actor_count();
                 job = nullptr;
@@ -186,7 +183,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             abstract_scheduled_actor* dummy)
 {
     std::vector<worker_ptr> workers;
-    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
+    auto num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
     for (size_t i = 0; i < num_workers; ++i)
     {
         worker_ptr wptr(new worker(jqueue, dummy));
@@ -214,7 +211,7 @@ void thread_pool_scheduler::stop()
     super::stop();
 }
 
-void thread_pool_scheduler::schedule(abstract_scheduled_actor* what)
+void thread_pool_scheduler::enqueue(abstract_scheduled_actor* what)
 {
     m_queue.push_back(what);
 }
@@ -234,10 +231,15 @@ actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what,
 actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
 {
     // do NOT push event-based actors to the queue on startup
-    return spawn_impl(what->attach_to_scheduler(enqueue_fun, this), false);
+    return spawn_impl(what->attach_to_scheduler(this));
 }
 
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
+{
+    return mock_scheduler::spawn(bhvr);
+}
+#else
 actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
                                        scheduling_hint hint)
 {
@@ -247,13 +249,8 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
     }
     else
     {
-        return spawn_impl(new yielding_actor(bhvr, enqueue_fun, this));
+        return spawn_impl(new yielding_actor(bhvr, this));
     }
-}
-#else
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
-{
-    return mock_scheduler::spawn(bhvr);
 }
 #endif
 

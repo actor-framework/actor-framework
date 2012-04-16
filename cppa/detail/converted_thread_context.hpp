@@ -69,15 +69,15 @@ class converted_thread_context : public abstract_actor<local_actor>
     // called if the converted thread finished execution
     void cleanup(std::uint32_t reason = exit_reason::normal);
 
-    void quit(std::uint32_t reason) /*override*/;
+    void quit(std::uint32_t reason); //override
 
-    void enqueue(actor* sender, any_tuple&& msg) /*override*/;
+    void enqueue(actor* sender, any_tuple&& msg); //override
 
-    void enqueue(actor* sender, any_tuple const& msg) /*override*/;
+    void enqueue(actor* sender, any_tuple const& msg); //override
 
-    void dequeue(behavior& rules) /*override*/;
+    void dequeue(behavior& rules); //override
 
-    void dequeue(partial_function& rules)  /*override*/;
+    void dequeue(partial_function& rules) ; //override
 
     inline decltype(m_mailbox)& mailbox()
     {

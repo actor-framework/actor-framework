@@ -55,11 +55,11 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  public:
 
-    void dequeue(behavior&) /*override*/;
+    void dequeue(behavior&); //override
 
-    void dequeue(partial_function&) /*override*/;
+    void dequeue(partial_function&); //override
 
-    void resume(util::fiber*, resume_callback* callback) /*override*/;
+    void resume(util::fiber*, resume_callback* callback); //override
 
     /**
      * @brief Initializes the actor by defining an initial behavior.
@@ -71,13 +71,11 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
      */
     virtual void on_exit();
 
-    template<typename Scheduler>
-    abstract_event_based_actor*
-    attach_to_scheduler(void (*enq_fun)(Scheduler*, abstract_scheduled_actor*),
-                        Scheduler* sched)
+    inline abstract_event_based_actor* attach_to_scheduler(scheduler* sched)
     {
-        m_enqueue_to_scheduler.reset(enq_fun, sched, this);
-        this->init();
+        CPPA_REQUIRE(sched != nullptr);
+        m_scheduler = sched;
+        init();
         return this;
     }
 

@@ -28,18 +28,14 @@
 \******************************************************************************/
 
 
-#include <iostream>
-
 #include "cppa/cppa.hpp"
+#include "cppa/config.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
-
-using std::cout;
-using std::endl;
-#include <iostream>
 
 namespace cppa { namespace detail {
 
@@ -48,10 +44,20 @@ void dummy_enqueue(void*, abstract_scheduled_actor*) { }
 types_array<atom_value, std::uint32_t> t_atom_ui32_types;
 }
 
+abstract_scheduled_actor::abstract_scheduled_actor(scheduler* sched)
+    : next(nullptr)
+    , m_state(ready)
+    , m_scheduler(sched)
+    , m_has_pending_timeout_request(false)
+    , m_active_timeout_id(0)
+{
+    CPPA_REQUIRE(sched != nullptr);
+}
+
 abstract_scheduled_actor::abstract_scheduled_actor(int state)
     : next(nullptr)
     , m_state(state)
-    , m_enqueue_to_scheduler(dummy_enqueue, static_cast<void*>(nullptr), this)
+    , m_scheduler(nullptr)
     , m_has_pending_timeout_request(false)
     , m_active_timeout_id(0)
 {
@@ -80,7 +86,8 @@ void abstract_scheduled_actor::enqueue_node(queue_node* node)
                 {
                     if (m_state.compare_exchange_weak(state, ready))
                     {
-                        m_enqueue_to_scheduler();
+                        CPPA_REQUIRE(m_scheduler != nullptr);
+                        m_scheduler->enqueue(this);
                         return;
                     }
                     break;

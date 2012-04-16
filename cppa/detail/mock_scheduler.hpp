@@ -46,6 +46,8 @@ class mock_scheduler : public scheduler
 
     static actor_ptr spawn(scheduled_actor*);
 
+    void enqueue(detail::abstract_scheduled_actor*);
+
 };
 
 } } // namespace cppa::detail

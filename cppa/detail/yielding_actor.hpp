@@ -40,7 +40,6 @@
 #include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
 
-#include "cppa/detail/delegate.hpp"
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
@@ -64,23 +63,15 @@ class yielding_actor : public abstract_scheduled_actor
 
  public:
 
-    template<typename Scheduler>
-    yielding_actor(scheduled_actor* behavior,
-                    void (*enqueue_fun)(Scheduler*, abstract_scheduled_actor*),
-                    Scheduler* sched)
-        : super(enqueue_fun, sched)
-        , m_fiber(&yielding_actor::run, this)
-        , m_behavior(behavior)
-    {
-    }
+    yielding_actor(scheduled_actor* behavior, scheduler* sched);
 
-    ~yielding_actor() /*override*/;
+    ~yielding_actor(); //override
 
-    void dequeue(behavior& bhvr) /*override*/;
+    void dequeue(behavior& bhvr); //override
 
-    void dequeue(partial_function& fun) /*override*/;
+    void dequeue(partial_function& fun); //override
 
-    void resume(util::fiber* from, resume_callback* callback) /*override*/;
+    void resume(util::fiber* from, resume_callback* callback); //override
 
 };
 

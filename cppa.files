@@ -154,8 +154,6 @@ src/abstract_scheduled_actor.cpp
 src/invokable.cpp
 cppa/detail/thread_pool_scheduler.hpp
 src/thread_pool_scheduler.cpp
-cppa/detail/delegate.hpp
-src/delegate.cpp
 cppa/detail/receive_loop_helper.hpp
 cppa/util/wrapped.hpp
 cppa/detail/boxed.hpp

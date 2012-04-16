@@ -31,16 +31,17 @@
 #ifndef SCHEDULED_ACTOR_HPP
 #define SCHEDULED_ACTOR_HPP
 
+#include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/scheduled_actor.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
 
 #include "cppa/intrusive/singly_linked_list.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/detail/delegate.hpp"
+namespace cppa { class scheduler; }
 
 namespace cppa { namespace detail {
 
@@ -57,7 +58,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
  protected:
 
     std::atomic<int> m_state;
-    delegate m_enqueue_to_scheduler;
+    scheduler* m_scheduler;
 
     typedef abstract_actor super;
     typedef super::queue_node_guard queue_node_guard;
@@ -113,17 +114,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     abstract_scheduled_actor(int state = done);
 
-    template<typename Scheduler>
-    abstract_scheduled_actor(void (*enqueue_fun)(Scheduler*,
-                                                 abstract_scheduled_actor*),
-                    Scheduler* sched)
-        : next(nullptr)
-        , m_state(ready)
-        , m_enqueue_to_scheduler(enqueue_fun, sched, this)
-        , m_has_pending_timeout_request(false)
-        , m_active_timeout_id(0)
-    {
-    }
+    abstract_scheduled_actor(scheduler* sched);
 
     void quit(std::uint32_t reason);
 
@@ -136,10 +127,6 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
     struct resume_callback
     {
         virtual ~resume_callback();
-        // actor could continue computation
-        // - if false: actor interrupts
-        // - if true: actor continues
-        virtual bool still_ready() = 0;
         // called if an actor finished execution
         virtual void exec_done() = 0;
     };

@@ -20,7 +20,6 @@ libcppa_la_SOURCES = \
     src/channel.cpp \
     src/converted_thread_context.cpp \
     src/cppa.cpp \
-    src/delegate.cpp \
     src/demangle.cpp \
     src/deserializer.cpp \
     src/duration.cpp \
@@ -100,7 +99,6 @@ nobase_library_include_HEADERS = \
     cppa/detail/converted_thread_context.hpp \
     cppa/detail/decorated_tuple.hpp \
     cppa/detail/default_uniform_type_info_impl.hpp \
-    cppa/detail/delegate.hpp \
     cppa/detail/demangle.hpp \
     cppa/detail/disablable_delete.hpp \
     cppa/detail/empty_tuple.hpp \

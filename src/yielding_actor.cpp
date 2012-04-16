@@ -39,6 +39,13 @@
 
 namespace cppa { namespace detail {
 
+yielding_actor::yielding_actor(scheduled_actor* behavior, scheduler* sched)
+    : super(sched)
+    , m_fiber(&yielding_actor::run, this)
+    , m_behavior(behavior)
+{
+}
+
 yielding_actor::~yielding_actor()
 {
     delete m_behavior;
@@ -159,8 +166,6 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
             case yield_state::ready:
             {
                 break;
-                //if (callback->still_ready()) break;
-                //else return;
             }
             case yield_state::blocked:
             {
@@ -170,8 +175,6 @@ void yielding_actor::resume(util::fiber* from, resume_callback* callback)
                     case abstract_scheduled_actor::ready:
                     {
                         break;
-                        //if (callback->still_ready()) break;
-                        //else return;
                     }
                     case abstract_scheduled_actor::blocked:
                     {

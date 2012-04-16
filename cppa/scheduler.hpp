@@ -37,20 +37,22 @@
 
 #include "cppa/self.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/cow_tuple.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/channel.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
-#include "cppa/abstract_event_based_actor.hpp"
 
 #include "cppa/util/duration.hpp"
 
 namespace cppa {
 
-//class local_actor;
 class scheduled_actor;
 class scheduler_helper;
+class abstract_event_based_actor;
+
+namespace detail { class abstract_scheduled_actor; }
 
 /**
  * @brief
@@ -79,6 +81,8 @@ class scheduler
      * @warning Always call scheduler::stop on overriding.
      */
     virtual void stop();
+
+    virtual void enqueue(detail::abstract_scheduled_actor*) = 0;
 
     /**
      * @brief Spawns a new actor that executes <code>behavior->act()</code>

@@ -55,7 +55,6 @@ struct pool_job
         {
             abstract_event_based_actor* job;
             handler(abstract_event_based_actor* mjob) : job(mjob) { }
-            bool still_ready() { return true; }
             void exec_done()
             {
                 if (!job->deref()) delete job;
@@ -67,11 +66,6 @@ struct pool_job
     }
 };
 
-class boost_threadpool_scheduler;
-
-void enqueue_to_bts(boost_threadpool_scheduler* where,
-                    abstract_scheduled_actor *what);
-
 class boost_threadpool_scheduler : public scheduler
 {
 
@@ -80,17 +74,16 @@ class boost_threadpool_scheduler : public scheduler
 
  public:
 
-    void start() /*override*/
+    void start()
     {
         m_pool.size_controller().resize(std::max(num_cores(), 4));
     }
 
-    void stop() /*override*/
+    void stop()
     {
         m_pool.wait();
     }
-
-    void schedule(abstract_scheduled_actor* what) /*override*/
+    void enqueue(abstract_scheduled_actor* what)
     {
         auto job = static_cast<abstract_event_based_actor*>(what);
         boost::threadpool::schedule(m_pool, pool_job{job});
@@ -98,7 +91,7 @@ class boost_threadpool_scheduler : public scheduler
 
     actor_ptr spawn(abstract_event_based_actor* what)
     {
-        what->attach_to_scheduler(enqueue_to_bts, this);
+        what->attach_to_scheduler(this);
         inc_actor_count();
         CPPA_MEMORY_BARRIER();
         intrusive_ptr<abstract_event_based_actor> ctx(what);
@@ -112,12 +105,6 @@ class boost_threadpool_scheduler : public scheduler
     }
 
 };
-
-void enqueue_to_bts(boost_threadpool_scheduler* where,
-                    abstract_scheduled_actor* what)
-{
-    where->schedule(what);
-}
 
 } } // namespace cppa::detail
 
