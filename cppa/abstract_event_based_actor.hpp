@@ -135,7 +135,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  private:
 
-    bool handle_message(queue_node_iterator iter);
+    bool handle_message(queue_node& iter);
 
 };
 

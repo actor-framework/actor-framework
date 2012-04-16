@@ -13,6 +13,8 @@
 
 // "config"
 
+/*
+
 namespace {
 
 const size_t slave_messages = 1000000;
@@ -98,7 +100,9 @@ class locked_queue
 
     typedef T element_type;
 
-    element_type* pop()
+    typedef std::unique_ptr<element_type> unique_pointer;
+
+    unique_pointer pop()
     {
         if (!m_priv.empty())
         {
@@ -198,13 +202,12 @@ void master()
 #       endif
         for (size_t j = 0; j < num_msgs; ++j)
         {
-            queue_element* e = q.pop();
+            std::unique_ptr<queue_element> e = q.pop();
             result += e->value;
 #           ifdef DEBUG_RESULTS
             min_val = std::min(min_val, e->value);
             max_val = std::max(max_val, e->value);
 #           endif
-            delete e;
         }
         if (result != calc_result)
         {
@@ -291,4 +294,10 @@ void test__queue_performance()
     cout << endl;
     cout << "single_reader_queue:" << endl;
     test_q_impl<single_reader_queue<queue_element>>();
+}
+*/
+
+void test__queue_performance()
+{
+
 }

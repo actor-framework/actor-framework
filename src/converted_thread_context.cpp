@@ -70,19 +70,12 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 
 void converted_thread_context::dequeue(partial_function& rules)  /*override*/
 {
-    auto iter = m_mailbox.cache().begin();
+    auto rm_fun = [&](queue_node& node) { return dq(node, rules); };
+    auto iter = m_mailbox.cache().remove_first(rm_fun);
     auto mbox_end = m_mailbox.cache().end();
-    for (;;)
+    while (iter == mbox_end)
     {
-        for ( ; iter != mbox_end; ++iter)
-        {
-            if (dq(iter, rules))
-            {
-                m_mailbox.cache().erase(iter);
-                return;
-            }
-        }
-        iter = m_mailbox.fetch_more();
+        iter = m_mailbox.cache().remove_first(rm_fun, m_mailbox.fetch_more());
     }
 }
 
@@ -92,22 +85,22 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
     {
         auto timeout = now();
         timeout += rules.timeout();
-        auto iter = m_mailbox.cache().begin();
-        auto mbox_end = m_mailbox.cache().end();
-        do
+        auto rm_fun = [&](queue_node& node)
         {
+            return dq(node, rules.get_partial_function());
+        };
+        auto iter = m_mailbox.cache().remove_first(rm_fun);
+        auto mbox_end = m_mailbox.cache().end();
+        while (iter == mbox_end)
+        {
+            iter = m_mailbox.try_fetch_more(timeout);
             if (iter == mbox_end)
             {
-                iter = m_mailbox.try_fetch_more(timeout);
-                if (iter == mbox_end)
-                {
-                    rules.handle_timeout();
-                    return;
-                }
+                rules.handle_timeout();
+                return;
             }
+            iter = m_mailbox.cache().remove_first(rm_fun, iter);
         }
-        while (dq(iter, rules.get_partial_function()) == false);
-        m_mailbox.cache().erase(iter);
     }
     else
     {
@@ -134,19 +127,17 @@ converted_thread_context::throw_on_exit(any_tuple const& msg)
     return not_an_exit_signal;
 }
 
-bool converted_thread_context::dq(queue_node_iterator iter,
-                                  partial_function& rules)
+bool converted_thread_context::dq(queue_node& node, partial_function& rules)
 {
-    auto& node = *iter;
     if (   m_trap_exit == false
-        && throw_on_exit(node->msg) == normal_exit_signal)
+        && throw_on_exit(node.msg) == normal_exit_signal)
     {
         return false;
     }
-    std::swap(m_last_dequeued, node->msg);
-    std::swap(m_last_sender, node->sender);
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
     {
-        queue_node_guard qguard{node.get()};
+        queue_node_guard qguard{&node};
         if (rules(m_last_dequeued))
         {
             // client calls erase(iter)
@@ -157,8 +148,8 @@ bool converted_thread_context::dq(queue_node_iterator iter,
         }
     }
     // no match (restore members)
-    std::swap(m_last_dequeued, node->msg);
-    std::swap(m_last_sender, node->sender);
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
     return false;
 }
 

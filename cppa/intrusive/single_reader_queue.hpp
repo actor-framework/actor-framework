@@ -31,11 +31,12 @@
 #ifndef SINGLE_READER_QUEUE_HPP
 #define SINGLE_READER_QUEUE_HPP
 
-#include <list>
 #include <atomic>
 #include <memory>
 
 #include "cppa/detail/thread.hpp"
+
+#include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -52,22 +53,21 @@ class single_reader_queue
 
  public:
 
-    typedef T                   value_type;
-    typedef size_t              size_type;
-    typedef ptrdiff_t           difference_type;
-    typedef value_type&         reference;
-    typedef value_type const&   const_reference;
-    typedef value_type*         pointer;
-    typedef value_type const*   const_pointer;
-
-    typedef std::unique_ptr<value_type> unique_value_ptr;
-    typedef std::list<unique_value_ptr> cache_type;
-    typedef typename cache_type::iterator cache_iterator;
+    typedef T                              value_type;
+    typedef size_t                         size_type;
+    typedef ptrdiff_t                      difference_type;
+    typedef value_type&                    reference;
+    typedef value_type const&              const_reference;
+    typedef value_type*                    pointer;
+    typedef value_type const*              const_pointer;
+    typedef std::unique_ptr<value_type>    unique_pointer;
+    typedef singly_linked_list<value_type> cache_type;
+    typedef typename cache_type::iterator  cache_iterator;
 
     /**
      * @warning call only from the reader (owner)
      */
-    pointer pop()
+    unique_pointer pop()
     {
         wait_for_data();
         return take_head();
@@ -76,7 +76,7 @@ class single_reader_queue
     /**
      * @warning call only from the reader (owner)
      */
-    pointer try_pop()
+    unique_pointer try_pop()
     {
         return take_head();
     }
@@ -85,7 +85,7 @@ class single_reader_queue
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    pointer try_pop(TimePoint const& abs_time)
+    unique_pointer try_pop(TimePoint const& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
@@ -231,22 +231,17 @@ class single_reader_queue
         {
             if (m_stack.compare_exchange_weak(e, 0))
             {
-                // temporary list to convert LIFO to FIFO order
-                cache_type tmp;
-                // public_tail (e) has LIFO order,
-                // but private_head requires FIFO order
+                auto insert_pos = m_cache.before_end();
                 while (e)
                 {
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(unique_value_ptr{e});
-                    //m_cache.insert(iter, unique_value_ptr{e});
+                    m_cache.insert_after(insert_pos, e);
                     // next iteration
                     e = next;
                 }
-                if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), tmp);
+                if (iter) *iter = insert_pos;
                 return true;
             }
             // next iteration
@@ -255,16 +250,13 @@ class single_reader_queue
         return false;
     }
 
-    pointer take_head()
+    unique_pointer take_head()
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            auto result = m_cache.front().release();
-            m_cache.pop_front();
-            return result;
-            //return m_cache.take_after(m_cache.before_begin());
+            return unique_pointer{m_cache.take_after(m_cache.before_begin())};
         }
-        return nullptr;
+        return {};
     }
 
 };

@@ -95,7 +95,7 @@ class converted_thread_context : public abstract_actor<local_actor>
     };
 
     // returns true if node->msg was accepted by rules
-    bool dq(queue_node_iterator node, partial_function& rules);
+    bool dq(queue_node& node, partial_function& rules);
 
     throw_on_exit_result throw_on_exit(any_tuple const& msg);
 

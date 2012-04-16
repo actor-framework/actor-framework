@@ -121,36 +121,5 @@ size_t test__intrusive_containers()
     CPPA_CHECK_EQUAL(s_iint_instances, 2);
     CPPA_CHECK(ilist2.empty());
 
-    {
-        iint_queue iq;
-        for (int i = 0; i < 20; ++i) iq._push_back(new iint(i));
-        iint_list tmp;
-        for (int i = 0; i < 9; ++i)
-        {
-            tmp.push_back(iq.pop());
-        }
-        delete iq.pop();
-        /*iq.push_front(std::move(tmp));
-        CPPA_CHECK(tmp.empty());
-        CPPA_CHECK_EQUAL(std::distance(iq.cache().begin(), iq.cache().end()), 19);
-        std::unique_ptr<iint> iptr;
-        for (int i = 0; i < 9; ++i)
-        {
-            iptr.reset(iq.pop());
-            CPPA_CHECK(iptr);
-            if (iptr) CPPA_CHECK_EQUAL(iptr->value, i);
-        }
-        for (int i = 10; i < 20; ++i)
-        {
-            iptr.reset(iq.pop());
-            CPPA_CHECK(iptr);
-            if (iptr) CPPA_CHECK_EQUAL(iptr->value, i);
-        }
-        */
-    }
-
-    // two dummies
-    CPPA_CHECK_EQUAL(s_iint_instances, 2);
-
     return CPPA_TEST_RESULT;
 }

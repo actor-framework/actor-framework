@@ -347,6 +347,37 @@ class singly_linked_list
     }
 
     /**
+     * @brief Removes the first element for which predicate @p p
+     *        returns @p true.
+     * @returns iterator to the element that preceded the removed element
+     *          or end().
+     */
+    template<typename UnaryPredicate>
+    iterator remove_first(UnaryPredicate p, iterator before_first)
+    {
+        CPPA_REQUIRE(before_first != end());
+        while (before_first->next != nullptr)
+        {
+            if (p(*(before_first->next)))
+            {
+                erase_after(before_first);
+                return before_first;
+            }
+            else
+            {
+                ++before_first;
+            }
+        }
+        return end();
+    }
+
+    template<typename UnaryPredicate>
+    inline iterator remove_first(UnaryPredicate p)
+    {
+        return remove_first(std::move(p), before_begin());
+    }
+
+    /**
      * @brief Removes all elements that are equal to @p value.
      */
     void remove(value_type const& value)

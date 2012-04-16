@@ -98,51 +98,29 @@ void yielding_actor::yield_until_not_empty()
 
 void yielding_actor::dequeue(partial_function& fun)
 {
-    auto iter = m_mailbox.cache().begin();
-    auto mbox_end = m_mailbox.cache().end();
-    for (;;)
-    {
-        for ( ; iter != mbox_end; ++iter)
-        {
-            if (dq(iter, fun) == dq_done)
-            {
-                m_mailbox.cache().erase(iter);
-                return;
-            }
-        }
-        yield_until_not_empty();
-        iter = m_mailbox.try_fetch_more();
-    }
+    auto rm_fun = [&](queue_node& node) { return dq(node, fun) == dq_done; };
+    dequeue_impl(rm_fun);
 }
 
 void yielding_actor::dequeue(behavior& bhvr)
 {
     if (bhvr.timeout().valid())
     {
-        // try until a message was successfully dequeued
         request_timeout(bhvr.timeout());
-        auto iter = m_mailbox.cache().begin();
-        auto mbox_end = m_mailbox.cache().end();
-        for (;;)
+        auto rm_fun = [&](queue_node& node) -> bool
         {
-            while (iter != mbox_end)
+            switch (dq(node, bhvr.get_partial_function()))
             {
-                switch (dq(iter, bhvr.get_partial_function()))
-                {
-                    case dq_timeout_occured:
-                        bhvr.handle_timeout();
-                        // fall through
-                    case dq_done:
-                        iter = m_mailbox.cache().erase(iter);
-                        return;
-                    default:
-                        ++iter;
-                        break;
-                }
+                case dq_timeout_occured:
+                    bhvr.handle_timeout();
+                    return true;
+                case dq_done:
+                    return true;
+                default:
+                    return false;
             }
-            yield_until_not_empty();
-            iter = m_mailbox.try_fetch_more();
-        }
+        };
+        dequeue_impl(rm_fun);
     }
     else
     {

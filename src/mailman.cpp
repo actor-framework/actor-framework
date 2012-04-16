@@ -96,7 +96,7 @@ void mailman_loop()
     // serializes outgoing messages
     binary_serializer bs;
     // current active job
-    mailman_job* job = nullptr;
+    std::unique_ptr<mailman_job> job;
     // caches mailman_queue()
     auto& mqueue = mailman_queue();
     // connected tcp peers
@@ -171,10 +171,8 @@ void mailman_loop()
         }
         else if (job->is_kill_job())
         {
-            delete job;
             return;
         }
-        delete job;
     }
 }
 

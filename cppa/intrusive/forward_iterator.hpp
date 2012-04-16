@@ -52,7 +52,7 @@ class forward_iterator
     typedef ptrdiff_t                   difference_type;
     typedef std::forward_iterator_tag   iterator_category;
 
-    inline forward_iterator(T* ptr) : m_ptr(ptr) { }
+    inline forward_iterator(pointer ptr = nullptr) : m_ptr(ptr) { }
 
     forward_iterator(forward_iterator const&) = default;
     forward_iterator& operator=(forward_iterator const&) = default;

@@ -73,6 +73,24 @@ class yielding_actor : public abstract_scheduled_actor
 
     void resume(util::fiber* from, resume_callback* callback); //override
 
+ private:
+
+    template<typename Fun>
+    void dequeue_impl(Fun rm_fun)
+    {
+        auto iter = m_mailbox.cache().remove_first(rm_fun);
+        auto mbox_end = m_mailbox.cache().end();
+        while (iter == mbox_end)
+        {
+            yield_until_not_empty();
+            iter = m_mailbox.try_fetch_more();
+            if (iter != mbox_end)
+            {
+                iter = m_mailbox.cache().remove_first(rm_fun, iter);
+            }
+        }
+    }
+
 };
 
 } } // namespace cppa::detail

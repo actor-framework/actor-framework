@@ -82,7 +82,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     filter_result filter_msg(any_tuple const& msg);
 
-    auto dq(queue_node_iterator node, partial_function& rules) -> dq_result;
+    auto dq(queue_node& node, partial_function& rules) -> dq_result;
 
     bool has_pending_timeout()
     {

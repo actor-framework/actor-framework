@@ -40,7 +40,7 @@ namespace cppa {
 abstract_event_based_actor::abstract_event_based_actor()
     : super(abstract_event_based_actor::blocked)
 {
-    m_mailbox_pos = m_mailbox.cache().begin();
+    m_mailbox_pos = m_mailbox.cache().before_begin();
 }
 
 void abstract_event_based_actor::dequeue(behavior&)
@@ -53,12 +53,12 @@ void abstract_event_based_actor::dequeue(partial_function&)
     quit(exit_reason::unallowed_function_call);
 }
 
-bool abstract_event_based_actor::handle_message(queue_node_iterator iter)
+bool abstract_event_based_actor::handle_message(queue_node& node)
 {
     auto& bhvr = *(m_loop_stack.back());
     if (bhvr.timeout().valid())
     {
-        switch (dq(iter, bhvr.get_partial_function()))
+        switch (dq(node, bhvr.get_partial_function()))
         {
             case dq_timeout_occured:
             {
@@ -81,7 +81,7 @@ bool abstract_event_based_actor::handle_message(queue_node_iterator iter)
     }
     else
     {
-        return dq(iter, bhvr.get_partial_function()) == dq_done;
+        return dq(node, bhvr.get_partial_function()) == dq_done;
     }
 }
 
@@ -102,39 +102,33 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         return;
     }
     auto mbox_end = m_mailbox.cache().end();
+    auto rm_fun = [&](queue_node& node) { return handle_message(node); };
     for (;;)
     {
-        while (m_mailbox_pos != mbox_end)
+        try
         {
-            try
+            while (m_mailbox_pos != mbox_end)
             {
-                if (handle_message(m_mailbox_pos))
-                {
-                    m_mailbox_pos = m_mailbox.cache().erase(m_mailbox_pos);
-                }
-                else
-                {
-                    ++m_mailbox_pos;
-                }
+                m_mailbox_pos = m_mailbox.cache().remove_first(rm_fun, m_mailbox_pos);
             }
-            catch (actor_exited& what)
-            {
-                cleanup(what.reason());
-                done_cb();
-                return;
-            }
-            catch (...)
-            {
-                cleanup(exit_reason::unhandled_exception);
-                done_cb();
-                return;
-            }
-            if (m_loop_stack.empty())
-            {
-                cleanup(exit_reason::normal);
-                done_cb();
-                return;
-            }
+        }
+        catch (actor_exited& what)
+        {
+            cleanup(what.reason());
+            done_cb();
+            return;
+        }
+        catch (...)
+        {
+            cleanup(exit_reason::unhandled_exception);
+            done_cb();
+            return;
+        }
+        if (m_loop_stack.empty())
+        {
+            cleanup(exit_reason::normal);
+            done_cb();
+            return;
         }
         if (m_mailbox.can_fetch_more() == false)
         {

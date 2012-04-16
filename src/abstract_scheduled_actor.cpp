@@ -170,12 +170,11 @@ auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
     return ordinary_message;
 }
 
-auto abstract_scheduled_actor::dq(queue_node_iterator iter,
+auto abstract_scheduled_actor::dq(queue_node& node,
                                   partial_function& rules) -> dq_result
 {
-    auto& node = *iter;
-    if (node->marked) return dq_indeterminate;
-    switch (filter_msg(node->msg))
+    if (node.marked) return dq_indeterminate;
+    switch (filter_msg(node.msg))
     {
         case normal_exit_signal:
         case expired_timeout_message:
@@ -191,16 +190,16 @@ auto abstract_scheduled_actor::dq(queue_node_iterator iter,
         }
         default: break;
     }
-    std::swap(m_last_dequeued, node->msg);
-    std::swap(m_last_sender, node->sender);
-    //m_last_dequeued = node->msg;
-    //m_last_sender = node->sender;
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
+    //m_last_dequeued = node.msg;
+    //m_last_sender = node.sender;
     // make sure no timeout is handled incorrectly
     ++m_active_timeout_id;
     // lifetime scope of qguard
     {
         // make sure nested received do not process this node again
-        queue_node_guard qguard{node.get()};
+        queue_node_guard qguard{&node};
         // try to invoke given function
         if (rules(m_last_dequeued))
         {
@@ -216,8 +215,8 @@ auto abstract_scheduled_actor::dq(queue_node_iterator iter,
     }
     // no match (restore members)
     --m_active_timeout_id;
-    std::swap(m_last_dequeued, node->msg);
-    std::swap(m_last_sender, node->sender);
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
     return dq_indeterminate;
 }
 
