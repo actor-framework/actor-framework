@@ -47,43 +47,42 @@ namespace cppa { namespace detail {
 
 struct pool_job
 {
-    abstract_scheduled_actor* ptr;
-    pool_job(abstract_scheduled_actor* mptr) : ptr(mptr) { }
+    abstract_event_based_actor* ptr;
+    pool_job(abstract_event_based_actor* mptr) : ptr(mptr) { }
     void operator()()
     {
-        util::fiber fself;
         struct handler : abstract_scheduled_actor::resume_callback
         {
-            abstract_scheduled_actor* job;
-            handler() : job(nullptr) { }
+            abstract_event_based_actor* job;
+            handler(abstract_event_based_actor* mjob) : job(mjob) { }
             bool still_ready() { return true; }
             void exec_done()
             {
                 if (!job->deref()) delete job;
                 dec_actor_count();
-                job = nullptr;
             }
         };
-        handler h;
-        ptr->resume(&fself, &h);
+        handler h{ptr};
+        ptr->resume(nullptr, &h);
     }
 };
 
 class boost_threadpool_scheduler;
 
 void enqueue_to_bts(boost_threadpool_scheduler* where,
-                    abstract_scheduled_actor* what);
+                    abstract_scheduled_actor *what);
 
 class boost_threadpool_scheduler : public scheduler
 {
 
-    boost::threadpool::pool m_pool;
+    boost::threadpool::thread_pool<pool_job> m_pool;
+    //boost::threadpool::pool m_pool;
 
  public:
 
     void start() /*override*/
     {
-        m_pool.size_controller().resize(boost::thread::hardware_concurrency());
+        m_pool.size_controller().resize(std::max(num_cores(), 4));
     }
 
     void stop() /*override*/
@@ -93,30 +92,23 @@ class boost_threadpool_scheduler : public scheduler
 
     void schedule(abstract_scheduled_actor* what) /*override*/
     {
-        boost::threadpool::schedule(m_pool, pool_job{what});
+        auto job = static_cast<abstract_event_based_actor*>(what);
+        boost::threadpool::schedule(m_pool, pool_job{job});
     }
 
     actor_ptr spawn(abstract_event_based_actor* what)
     {
-        return spawn_impl(what->attach_to_scheduler(enqueue_to_bts, this), false);
-    }
-
-    actor_ptr spawn(scheduled_actor* bhvr, scheduling_hint hint)
-    {
-        if (hint == detached) return mock_scheduler::spawn(bhvr);
-        return spawn_impl(new yielding_actor(bhvr, enqueue_to_bts, this), true);
-    }
-
- private:
-
-    actor_ptr spawn_impl(abstract_scheduled_actor* what, bool push_to_queue)
-    {
+        what->attach_to_scheduler(enqueue_to_bts, this);
         inc_actor_count();
         CPPA_MEMORY_BARRIER();
-        intrusive_ptr<abstract_scheduled_actor> ctx(what);
+        intrusive_ptr<abstract_event_based_actor> ctx(what);
         ctx->ref();
-        if (push_to_queue) boost::threadpool::schedule(m_pool, pool_job{what});
         return std::move(ctx);
+    }
+
+    actor_ptr spawn(scheduled_actor* bhvr, scheduling_hint)
+    {
+        return mock_scheduler::spawn(bhvr);
     }
 
 };

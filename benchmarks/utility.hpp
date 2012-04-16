@@ -35,6 +35,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "boost/thread.hpp"
+
 template<typename T>
 T rd(char const* cstr)
 {
@@ -51,6 +53,12 @@ T rd(char const* cstr)
     return result;
 }
 
+#ifdef __APPLE__
+int num_cores()
+{
+    return static_cast<int>(boost::thread::hardware_concurrency());
+}
+#else
 int num_cores()
 {
     char cbuf[100];
@@ -65,6 +73,7 @@ int num_cores()
     *i = '\0';
     return rd<int>(cbuf);
 }
+#endif
 
 std::vector<uint64_t> factorize(uint64_t n)
 {
