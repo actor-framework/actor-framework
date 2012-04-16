@@ -105,7 +105,6 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     for (;;)
     {
         while (m_mailbox_pos != mbox_end)
-        //for ( ; m_mailbox_pos != mbox_end; ++m_mailbox_pos)
         {
             try
             {
