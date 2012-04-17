@@ -35,7 +35,6 @@
 #include <atomic>
 #include <memory>
 
-#include "cppa/config.hpp"
 #include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace intrusive {
@@ -61,14 +60,14 @@ class single_reader_queue
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
-    typedef std::unique_ptr<value_type>   unique_pointer;
-    typedef std::list<unique_pointer>     cache_type;
+    typedef std::unique_ptr<value_type> unique_value_ptr;
+    typedef std::list<unique_value_ptr> cache_type;
     typedef typename cache_type::iterator cache_iterator;
 
     /**
      * @warning call only from the reader (owner)
      */
-    unique_pointer pop()
+    pointer pop()
     {
         wait_for_data();
         return take_head();
@@ -77,7 +76,7 @@ class single_reader_queue
     /**
      * @warning call only from the reader (owner)
      */
-    unique_pointer try_pop()
+    pointer try_pop()
     {
         return take_head();
     }
@@ -86,7 +85,7 @@ class single_reader_queue
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    unique_pointer try_pop(TimePoint const& abs_time)
+    pointer try_pop(TimePoint const& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
@@ -241,14 +240,13 @@ class single_reader_queue
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(unique_pointer{e});
+                    tmp.push_front(unique_value_ptr{e});
                     //m_cache.insert(iter, unique_value_ptr{e});
                     // next iteration
                     e = next;
                 }
-                CPPA_REQUIRE(tmp.empty() == false);
                 if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), std::move(tmp));
+                m_cache.splice(m_cache.end(), tmp);
                 return true;
             }
             // next iteration
@@ -257,15 +255,16 @@ class single_reader_queue
         return false;
     }
 
-    unique_pointer take_head()
+    pointer take_head()
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            unique_pointer result = std::move(m_cache.front());
+            auto result = m_cache.front().release();
             m_cache.pop_front();
-            return std::move(result);
+            return result;
+            //return m_cache.take_after(m_cache.before_begin());
         }
-        return {};
+        return nullptr;
     }
 
 };

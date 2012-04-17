@@ -183,9 +183,13 @@ int main(int argc, char** argv)
             }
         }
     );
-    //print_node_id();
     std::cout << std::boolalpha;
     size_t errors = 0;
+
+    RUN_TEST(test__spawn);
+    return 0;
+
+    //print_node_id();
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);
     RUN_TEST(test__intrusive_containers);

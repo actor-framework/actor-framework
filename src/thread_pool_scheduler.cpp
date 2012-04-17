@@ -32,7 +32,6 @@
 #include <cstddef>
 #include <iostream>
 
-#include "cppa/config.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
 
 #include "cppa/detail/invokable.hpp"
@@ -139,9 +138,9 @@ struct thread_pool_scheduler::worker
         {
             abstract_scheduled_actor* job;
             handler() : job(nullptr) { }
+            bool still_ready() { return true; }
             void exec_done()
             {
-                CPPA_REQUIRE(job != nullptr);
                 if (!job->deref()) delete job;
                 dec_actor_count();
                 job = nullptr;
@@ -183,7 +182,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             abstract_scheduled_actor* dummy)
 {
     std::vector<worker_ptr> workers;
-    auto num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
+    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
     for (size_t i = 0; i < num_workers; ++i)
     {
         worker_ptr wptr(new worker(jqueue, dummy));
@@ -231,15 +230,10 @@ actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what,
 actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
 {
     // do NOT push event-based actors to the queue on startup
-    return spawn_impl(what->attach_to_scheduler(this));
+    return spawn_impl(what->attach_to_scheduler(this), false);
 }
 
-#ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
-{
-    return mock_scheduler::spawn(bhvr);
-}
-#else
+#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
                                        scheduling_hint hint)
 {
@@ -251,6 +245,11 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
     {
         return spawn_impl(new yielding_actor(bhvr, this));
     }
+}
+#else
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
+{
+    return mock_scheduler::spawn(bhvr);
 }
 #endif
 

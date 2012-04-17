@@ -84,7 +84,7 @@ class abstract_actor : public Base
     };
 
     typedef intrusive::single_reader_queue<queue_node> mailbox_type;
-    typedef typename mailbox_type::unique_pointer queue_node_ptr;
+    typedef std::unique_ptr<queue_node> queue_node_ptr;
     typedef typename mailbox_type::cache_type mailbox_cache_type;
     typedef typename mailbox_cache_type::iterator queue_node_iterator;
 

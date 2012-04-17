@@ -144,7 +144,6 @@ void abstract_scheduled_actor::request_timeout(util::duration const& d)
 
 auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
 {
-    CPPA_REQUIRE(msg.cvals().get() != nullptr);
     if (   msg.size() == 2
         && msg.type_at(0) == t_atom_ui32_types[0]
         && msg.type_at(1) == t_atom_ui32_types[1])
@@ -174,6 +173,7 @@ auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
 auto abstract_scheduled_actor::dq(queue_node& node,
                                   partial_function& fun) -> dq_result
 {
+    CPPA_REQUIRE(node.msg.cvals().get() != nullptr);
     if (node.marked) return dq_indeterminate;
     switch (filter_msg(node.msg))
     {

@@ -39,8 +39,9 @@ namespace cppa {
 
 abstract_event_based_actor::abstract_event_based_actor()
     : super(abstract_event_based_actor::blocked)
+    , m_mailbox_pos(m_mailbox.cache().end())
 {
-    m_mailbox_pos = m_mailbox.cache().end();
+    //m_mailbox_pos = m_mailbox.cache().end();
 }
 
 void abstract_event_based_actor::dequeue(behavior&)
@@ -90,7 +91,9 @@ bool abstract_event_based_actor::invoke_from_cache()
 {
     for (auto i = m_mailbox_pos; i != m_mailbox.cache().end(); ++i)
     {
-        if (handle_message(*(*i)))
+        auto& ptr = *i;
+        CPPA_REQUIRE(ptr.get() != nullptr);
+        if (handle_message(*ptr))
         {
             m_mailbox.cache().erase(i);
             return true;
@@ -102,20 +105,7 @@ bool abstract_event_based_actor::invoke_from_cache()
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
     self.set(this);
-    auto done_cb = [=]()
-    {
-        m_state.store(abstract_scheduled_actor::done);
-        while (!m_loop_stack.empty()) m_loop_stack.pop_back();
-        on_exit();
-        callback->exec_done();
-    };
     auto& mbox_cache = m_mailbox.cache();
-    auto mbox_end = mbox_cache.end();
-    /*auto rm_fun = [=](queue_node_ptr& ptr) -> bool
-    {
-        CPPA_REQUIRE(ptr.get() != nullptr);
-        return handle_message(*ptr);
-    };*/
     try
     {
         for (;;)
@@ -123,10 +113,13 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
             if (m_loop_stack.empty())
             {
                 cleanup(exit_reason::normal);
-                done_cb();
+                m_state.store(abstract_scheduled_actor::done);
+                m_loop_stack.clear();
+                on_exit();
+                callback->exec_done();
                 return;
             }
-            while (m_mailbox_pos == mbox_end)
+            while (m_mailbox_pos == mbox_cache.end())
             {
                 // try fetch more
                 if (m_mailbox.can_fetch_more() == false)
@@ -166,7 +159,10 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     {
         cleanup(exit_reason::unhandled_exception);
     }
-    done_cb();
+    m_state.store(abstract_scheduled_actor::done);
+    m_loop_stack.clear();
+    on_exit();
+    callback->exec_done();
 }
 
 void abstract_event_based_actor::on_exit()

@@ -602,7 +602,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
                 case rd_queue_event:
                 {
                     DEBUG("rd_queue_event");
-                    std::unique_ptr<post_office_msg> pom = msg_queue.pop();
+                    std::unique_ptr<post_office_msg> pom{msg_queue.pop()};
                     if (pom->is_add_peer_msg())
                     {
                         DEBUG("add_peer_msg");

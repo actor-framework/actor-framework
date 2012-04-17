@@ -141,8 +141,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
         {
             if (messages.empty())
             {
-                //msg_ptr.reset(queue.pop());
-                msg_ptr = queue.pop();
+                msg_ptr.reset(queue.pop());
             }
             else
             {
@@ -169,8 +168,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 // wait for next message or next timeout
                 if (it != messages.end())
                 {
-                    //msg_ptr.reset(queue.try_pop(it->first));
-                    msg_ptr = queue.try_pop(it->first);
+                    msg_ptr.reset(queue.try_pop(it->first));
                 }
             }
         }
