@@ -86,25 +86,36 @@ bool abstract_event_based_actor::handle_message(queue_node& node)
     }
 }
 
+bool abstract_event_based_actor::invoke_from_cache()
+{
+    for (auto i = m_mailbox_pos; i != m_mailbox.cache().end(); ++i)
+    {
+        if (handle_message(*(*i)))
+        {
+            m_mailbox.cache().erase(i);
+            return true;
+        }
+    }
+    return false;
+}
+
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
     self.set(this);
-    auto done_cb = [this, callback]()
+    auto done_cb = [=]()
     {
         m_state.store(abstract_scheduled_actor::done);
         while (!m_loop_stack.empty()) m_loop_stack.pop_back();
         on_exit();
         callback->exec_done();
     };
-    if (m_loop_stack.empty())
-    {
-        cleanup(exit_reason::normal);
-        done_cb();
-        return;
-    }
     auto& mbox_cache = m_mailbox.cache();
     auto mbox_end = mbox_cache.end();
-    auto rm_fun = [this](queue_node_ptr& ptr) { return handle_message(*ptr); };
+    /*auto rm_fun = [=](queue_node_ptr& ptr) -> bool
+    {
+        CPPA_REQUIRE(ptr.get() != nullptr);
+        return handle_message(*ptr);
+    };*/
     try
     {
         for (;;)
@@ -143,12 +154,8 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
                 }
                 m_mailbox_pos = m_mailbox.try_fetch_more();
             }
-            m_mailbox_pos = std::find_if(m_mailbox_pos, mbox_end, rm_fun);
-            if (m_mailbox_pos != mbox_end)
-            {
-                mbox_cache.erase(m_mailbox_pos);
-                m_mailbox_pos = mbox_cache.begin();
-            }
+            m_mailbox_pos = (invoke_from_cache()) ? mbox_cache.begin()
+                                                  : mbox_cache.end();
         }
     }
     catch (actor_exited& what)

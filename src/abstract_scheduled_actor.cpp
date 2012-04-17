@@ -144,6 +144,7 @@ void abstract_scheduled_actor::request_timeout(util::duration const& d)
 
 auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
 {
+    CPPA_REQUIRE(msg.cvals().get() != nullptr);
     if (   msg.size() == 2
         && msg.type_at(0) == t_atom_ui32_types[0]
         && msg.type_at(1) == t_atom_ui32_types[1])

@@ -35,6 +35,7 @@
 #include <atomic>
 #include <memory>
 
+#include "cppa/config.hpp"
 #include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace intrusive {
@@ -245,8 +246,9 @@ class single_reader_queue
                     // next iteration
                     e = next;
                 }
+                CPPA_REQUIRE(tmp.empty() == false);
                 if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), tmp);
+                m_cache.splice(m_cache.end(), std::move(tmp));
                 return true;
             }
             // next iteration
@@ -259,11 +261,11 @@ class single_reader_queue
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            auto result = std::move(m_cache.front());
+            unique_pointer result = std::move(m_cache.front());
             m_cache.pop_front();
             return std::move(result);
         }
-        return nullptr;
+        return {};
     }
 
 };
