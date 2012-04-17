@@ -171,7 +171,7 @@ auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
 }
 
 auto abstract_scheduled_actor::dq(queue_node& node,
-                                  partial_function& rules) -> dq_result
+                                  partial_function& fun) -> dq_result
 {
     if (node.marked) return dq_indeterminate;
     switch (filter_msg(node.msg))
@@ -201,7 +201,7 @@ auto abstract_scheduled_actor::dq(queue_node& node,
         // make sure nested receives do not process this node again
         queue_node_guard qguard{&node};
         // try to invoke given function
-        if (rules(m_last_dequeued))
+        if (fun(m_last_dequeued))
         {
             // client erases node later (keep it marked until it's removed)
             qguard.release();

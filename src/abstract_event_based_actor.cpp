@@ -111,6 +111,7 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         {
             if (m_loop_stack.empty())
             {
+                cleanup(exit_reason::normal);
                 done_cb();
                 return;
             }
