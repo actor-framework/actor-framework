@@ -31,12 +31,11 @@
 #ifndef SINGLE_READER_QUEUE_HPP
 #define SINGLE_READER_QUEUE_HPP
 
+#include <list>
 #include <atomic>
 #include <memory>
 
 #include "cppa/detail/thread.hpp"
-
-#include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -53,16 +52,17 @@ class single_reader_queue
 
  public:
 
-    typedef T                              value_type;
-    typedef size_t                         size_type;
-    typedef ptrdiff_t                      difference_type;
-    typedef value_type&                    reference;
-    typedef value_type const&              const_reference;
-    typedef value_type*                    pointer;
-    typedef value_type const*              const_pointer;
-    typedef std::unique_ptr<value_type>    unique_pointer;
-    typedef singly_linked_list<value_type> cache_type;
-    typedef typename cache_type::iterator  cache_iterator;
+    typedef T                   value_type;
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef value_type&         reference;
+    typedef value_type const&   const_reference;
+    typedef value_type*         pointer;
+    typedef value_type const*   const_pointer;
+
+    typedef std::unique_ptr<value_type>   unique_pointer;
+    typedef std::list<unique_pointer>     cache_type;
+    typedef typename cache_type::iterator cache_iterator;
 
     /**
      * @warning call only from the reader (owner)
@@ -233,18 +233,20 @@ class single_reader_queue
             {
                 // temporary list to convert LIFO to FIFO order
                 cache_type tmp;
+                // public_tail (e) has LIFO order,
+                // but private_head requires FIFO order
                 while (e)
                 {
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(e);
+                    tmp.push_front(unique_pointer{e});
                     //m_cache.insert(iter, unique_value_ptr{e});
                     // next iteration
                     e = next;
                 }
-                if (iter) *iter = m_cache.before_end();
-                m_cache.splice_after(m_cache.before_end(), std::move(tmp));
+                if (iter) *iter = tmp.begin();
+                m_cache.splice(m_cache.end(), tmp);
                 return true;
             }
             // next iteration
@@ -257,9 +259,11 @@ class single_reader_queue
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            return unique_pointer{m_cache.take_after(m_cache.before_begin())};
+            auto result = std::move(m_cache.front());
+            m_cache.pop_front();
+            return std::move(result);
         }
-        return {};
+        return nullptr;
     }
 
 };

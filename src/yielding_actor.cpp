@@ -98,7 +98,7 @@ void yielding_actor::yield_until_not_empty()
 
 void yielding_actor::dequeue(partial_function& fun)
 {
-    auto rm_fun = [&](queue_node& node) { return dq(node, fun) == dq_done; };
+    auto rm_fun = [&](queue_node_ptr& node) { return dq(*node, fun) == dq_done; };
     dequeue_impl(rm_fun);
 }
 
@@ -107,9 +107,9 @@ void yielding_actor::dequeue(behavior& bhvr)
     if (bhvr.timeout().valid())
     {
         request_timeout(bhvr.timeout());
-        auto rm_fun = [&](queue_node& node) -> bool
+        auto rm_fun = [&](queue_node_ptr& node) -> bool
         {
-            switch (dq(node, bhvr.get_partial_function()))
+            switch (dq(*node, bhvr.get_partial_function()))
             {
                 case dq_timeout_occured:
                     bhvr.handle_timeout();

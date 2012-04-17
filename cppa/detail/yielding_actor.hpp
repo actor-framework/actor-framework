@@ -78,17 +78,15 @@ class yielding_actor : public abstract_scheduled_actor
     template<typename Fun>
     void dequeue_impl(Fun rm_fun)
     {
-        auto iter = m_mailbox.cache().remove_first(rm_fun);
-        auto mbox_end = m_mailbox.cache().end();
+        auto& mbox_cache = m_mailbox.cache();
+        auto mbox_end = mbox_cache.end();
+        auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
         while (iter == mbox_end)
         {
             yield_until_not_empty();
-            iter = m_mailbox.try_fetch_more();
-            if (iter != mbox_end)
-            {
-                iter = m_mailbox.cache().remove_first(rm_fun, iter);
-            }
+            iter = std::find_if(m_mailbox.try_fetch_more(), mbox_end, rm_fun);
         }
+        mbox_cache.erase(iter);
     }
 
 };

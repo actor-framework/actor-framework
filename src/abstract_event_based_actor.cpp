@@ -40,7 +40,7 @@ namespace cppa {
 abstract_event_based_actor::abstract_event_based_actor()
     : super(abstract_event_based_actor::blocked)
 {
-    m_mailbox_pos = m_mailbox.cache().before_begin();
+    m_mailbox_pos = m_mailbox.cache().end();
 }
 
 void abstract_event_based_actor::dequeue(behavior&)
@@ -55,6 +55,7 @@ void abstract_event_based_actor::dequeue(partial_function&)
 
 bool abstract_event_based_actor::handle_message(queue_node& node)
 {
+    CPPA_REQUIRE(m_loop_stack.empty() == false);
     auto& bhvr = *(m_loop_stack.back());
     if (bhvr.timeout().valid())
     {
@@ -88,7 +89,7 @@ bool abstract_event_based_actor::handle_message(queue_node& node)
 void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
 {
     self.set(this);
-    auto done_cb = [&]()
+    auto done_cb = [this, callback]()
     {
         m_state.store(abstract_scheduled_actor::done);
         while (!m_loop_stack.empty()) m_loop_stack.pop_back();
@@ -101,16 +102,20 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
         done_cb();
         return;
     }
-    auto mbox_end = m_mailbox.cache().end();
-    auto rm_fun = [this](queue_node& node) { return handle_message(node); };
+    auto& mbox_cache = m_mailbox.cache();
+    auto mbox_end = mbox_cache.end();
+    auto rm_fun = [this](queue_node_ptr& ptr) { return handle_message(*ptr); };
     try
     {
         for (;;)
         {
-            auto iter = m_mailbox.cache().remove_first(rm_fun, m_mailbox_pos);
-            if (iter == mbox_end)
+            if (m_loop_stack.empty())
             {
-                m_mailbox_pos = m_mailbox.cache().before_end();
+                done_cb();
+                return;
+            }
+            while (m_mailbox_pos == mbox_end)
+            {
                 // try fetch more
                 if (m_mailbox.can_fetch_more() == false)
                 {
@@ -135,18 +140,13 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
                         };
                     }
                 }
-                m_mailbox.try_fetch_more();
+                m_mailbox_pos = m_mailbox.try_fetch_more();
             }
-            else if (m_loop_stack.empty())
+            m_mailbox_pos = std::find_if(m_mailbox_pos, mbox_end, rm_fun);
+            if (m_mailbox_pos != mbox_end)
             {
-                cleanup(exit_reason::normal);
-                done_cb();
-                return;
-            }
-            else
-            {
-                // prepare for next receive
-                m_mailbox_pos = m_mailbox.cache().before_begin();
+                mbox_cache.erase(m_mailbox_pos);
+                m_mailbox_pos = mbox_cache.begin();
             }
         }
     }

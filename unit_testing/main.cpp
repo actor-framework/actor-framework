@@ -145,6 +145,14 @@ int main(int argc, char** argv)
     return 0;
     //*/
 
+
+    /*
+    auto nao = remote_actor("192.168.1.148", 12000);
+    send(nao, atom("speak"), "i am an actor! seriously!");
+    return 0;
+    */
+
+
     auto args = get_kv_pairs(argc, argv);
     match_each(args)
     (

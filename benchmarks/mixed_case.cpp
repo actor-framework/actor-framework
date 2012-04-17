@@ -35,14 +35,14 @@
 
 #include "utility.hpp"
 
-#include "boost/threadpool.hpp"
+//#include "boost/threadpool.hpp"
 
 #include "cppa/cppa.hpp"
 #include "cppa/fsm_actor.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/yielding_actor.hpp"
 
-
+/*
 namespace cppa { namespace detail {
 
 struct pool_job
@@ -107,6 +107,7 @@ class boost_threadpool_scheduler : public scheduler
 };
 
 } } // namespace cppa::detail
+*/
 
 using std::cout;
 using std::cerr;
@@ -367,15 +368,17 @@ enum mode_type { event_based, fiber_based };
 int main(int argc, char** argv)
 {
     announce<factors>();
-    if (argc != 6 && argc != 7) usage();
+    if (argc != 6) usage();
     auto iter = argv;
     ++iter; // argv[0] (app name)
+    /*
     if (argc == 7)
     {
         if (strcmp(*iter++, "--boost_pool") == 0)
             cppa::set_scheduler(new cppa::detail::boost_threadpool_scheduler);
         else usage();
     }
+    */
     mode_type mode;
     std::string mode_str = *iter++;
     if (mode_str == "event-based") mode = event_based;
