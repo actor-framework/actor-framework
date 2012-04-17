@@ -55,7 +55,6 @@ post_office_msg::post_office_msg(native_socket_type arg0,
                                  const actor_proxy_ptr& arg2,
                                  std::unique_ptr<attachable>&& arg3)
     : next(nullptr)
-    , prev(nullptr)
     , m_type(add_peer_type)
 {
     new (&m_add_peer_msg) add_peer(arg0, arg1, arg2, std::move(arg3));
@@ -63,7 +62,6 @@ post_office_msg::post_office_msg(native_socket_type arg0,
 
 post_office_msg::post_office_msg(native_socket_type arg0, const actor_ptr& arg1)
     : next(nullptr)
-    , prev(nullptr)
     , m_type(add_server_socket_type)
 {
     new (&m_add_server_socket) add_server_socket(arg0, arg1);
@@ -71,7 +69,6 @@ post_office_msg::post_office_msg(native_socket_type arg0, const actor_ptr& arg1)
 
 post_office_msg::post_office_msg(const actor_proxy_ptr& proxy_ptr)
     : next(nullptr)
-    , prev(nullptr)
     , m_type(proxy_exited_type)
 {
     new (&m_proxy_exited) proxy_exited(proxy_ptr);

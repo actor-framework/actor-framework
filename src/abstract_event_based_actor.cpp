@@ -91,7 +91,9 @@ bool abstract_event_based_actor::invoke_from_cache()
 {
     for (auto i = m_mailbox_pos; i != m_mailbox.cache().end(); ++i)
     {
-        if (handle_message(*i))
+        auto& ptr = *i;
+        CPPA_REQUIRE(ptr.get() != nullptr);
+        if (handle_message(*ptr))
         {
             m_mailbox.cache().erase(i);
             return true;

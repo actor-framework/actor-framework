@@ -70,7 +70,7 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 
 void converted_thread_context::dequeue(partial_function& rules)  /*override*/
 {
-    auto rm_fun = [&](queue_node& node) { return dq(node, rules); };
+    auto rm_fun = [&](queue_node_ptr& node) { return dq(*node, rules); };
     auto& mbox_cache = m_mailbox.cache();
     auto mbox_end = mbox_cache.end();
     auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
@@ -87,9 +87,9 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
     {
         auto timeout = now();
         timeout += rules.timeout();
-        auto rm_fun = [&](queue_node& node)
+        auto rm_fun = [&](queue_node_ptr& node)
         {
-            return dq(node, rules.get_partial_function());
+            return dq(*node, rules.get_partial_function());
         };
         auto& mbox_cache = m_mailbox.cache();
         auto mbox_end = mbox_cache.end();
