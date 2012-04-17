@@ -52,13 +52,13 @@ mailman_job::mailman_job(process_information_ptr piptr,
                          const actor_ptr& from,
                          const channel_ptr& to,
                          const any_tuple& content)
-    : next(nullptr), m_type(send_job_type)
+    : next(nullptr), prev(nullptr), m_type(send_job_type)
 {
     new (&m_send_job) mailman_send_job (piptr, from, to, content);
 }
 
 mailman_job::mailman_job(native_socket_type sockfd, const process_information_ptr& pinfo)
-    : next(0), m_type(add_peer_type)
+    : next(nullptr), prev(nullptr), m_type(add_peer_type)
 {
     new (&m_add_socket) mailman_add_peer (sockfd, pinfo);
 }

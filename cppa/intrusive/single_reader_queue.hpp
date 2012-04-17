@@ -36,6 +36,7 @@
 #include <memory>
 
 #include "cppa/detail/thread.hpp"
+#include "cppa/intrusive/doubly_linked_list.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -60,8 +61,7 @@ class single_reader_queue
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
-    typedef std::unique_ptr<value_type> unique_value_ptr;
-    typedef std::list<unique_value_ptr> cache_type;
+    typedef doubly_linked_list<value_type> cache_type;
     typedef typename cache_type::iterator cache_iterator;
 
     /**
@@ -240,13 +240,12 @@ class single_reader_queue
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(unique_value_ptr{e});
-                    //m_cache.insert(iter, unique_value_ptr{e});
+                    tmp.push_front(e);
                     // next iteration
                     e = next;
                 }
                 if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), tmp);
+                m_cache.splice(m_cache.end(), std::move(tmp));
                 return true;
             }
             // next iteration
@@ -259,10 +258,7 @@ class single_reader_queue
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            auto result = m_cache.front().release();
-            m_cache.pop_front();
-            return result;
-            //return m_cache.take_after(m_cache.before_begin());
+            return m_cache.take(m_cache.begin());
         }
         return nullptr;
     }

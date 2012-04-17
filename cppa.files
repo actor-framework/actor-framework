@@ -266,3 +266,5 @@ cppa/detail/value_guard.hpp
 cppa/detail/tuple_iterator.hpp
 cppa/match_expr.hpp
 cppa/detail/pseudo_tuple.hpp
+cppa/intrusive/doubly_linked_list.hpp
+cppa/intrusive/bidirectional_iterator.hpp

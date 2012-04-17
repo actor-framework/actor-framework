@@ -67,9 +67,6 @@ struct mailman_add_peer
 class mailman_job
 {
 
-    friend class intrusive::singly_linked_list<mailman_job>;
-    friend class intrusive::single_reader_queue<mailman_job>;
-
  public:
 
     enum job_type
@@ -80,7 +77,7 @@ class mailman_job
         kill_type
     };
 
-    inline mailman_job() : next(nullptr), m_type(invalid_type) { }
+    inline mailman_job() : next(nullptr), prev(nullptr), m_type(invalid_type) { }
 
     mailman_job(process_information_ptr piptr,
                 actor_ptr const& from,
@@ -123,9 +120,11 @@ class mailman_job
         return m_type == kill_type;
     }
 
+    mailman_job* next;
+    mailman_job* prev;
+
  private:
 
-    mailman_job* next;
     job_type m_type;
     // unrestricted union
     union

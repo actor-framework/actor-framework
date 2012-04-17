@@ -65,12 +65,13 @@ class abstract_actor : public Base
     struct queue_node
     {
         queue_node* next;   // intrusive next pointer
+        queue_node* prev;   // intrusive previous pointer
         bool marked;        // denotes if this node is currently processed
         actor_ptr sender;
         any_tuple msg;
-        queue_node() : next(nullptr), marked(false) { }
+        queue_node() : next(nullptr), prev(nullptr), marked(false) { }
         queue_node(actor* from, any_tuple content)
-            : next(nullptr), marked(false), sender(from), msg(std::move(content))
+            : next(nullptr), prev(nullptr), marked(false), sender(from), msg(std::move(content))
         {
         }
     };

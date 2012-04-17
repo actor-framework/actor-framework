@@ -42,8 +42,9 @@ namespace { size_t s_iint_instances = 0; }
 struct iint
 {
     iint* next;
+    iint* prev;
     int value;
-    inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
+    inline iint(int val = 0) : next(0), prev(0), value(val) { ++s_iint_instances; }
     ~iint() { --s_iint_instances; }
 };
 
@@ -63,11 +64,28 @@ inline bool operator==(int lhs, iint const& rhs)
 }
 
 typedef cppa::intrusive::singly_linked_list<iint> iint_list;
+typedef cppa::intrusive::doubly_linked_list<iint> diint_list;
 typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
 size_t test__intrusive_containers()
 {
     CPPA_TEST(test__intrusive_containers);
+
+    {
+        diint_list dlist1;
+        dlist1.emplace_back(1);
+        dlist1.emplace_back(2);
+        dlist1.emplace_back(3);
+        CPPA_CHECK_EQUAL(1, dlist1.front().value);
+        CPPA_CHECK_EQUAL(3, dlist1.back().value);
+        dlist1.remove_if([](iint const& i) { return i.value % 2 == 1; });
+        CPPA_CHECK_EQUAL(2, dlist1.front().value);
+        CPPA_CHECK_EQUAL(2, dlist1.back().value);
+        dlist1.erase(dlist1.begin());
+        CPPA_CHECK(dlist1.empty());
+    }
+
+
     iint_list ilist1;
     ilist1.push_back(new iint(1));
     ilist1.emplace_back(2);

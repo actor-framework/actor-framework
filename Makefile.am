@@ -152,6 +152,8 @@ nobase_library_include_HEADERS = \
     cppa/get.hpp \
     cppa/group.hpp \
     cppa/guard_expr.hpp \
+    cppa/intrusive/bidirectional_iterator.hpp \
+    cppa/intrusive/doubly_linked_list.hpp \
     cppa/intrusive/forward_iterator.hpp \
     cppa/intrusive/single_reader_queue.hpp \
     cppa/intrusive/singly_linked_list.hpp \
