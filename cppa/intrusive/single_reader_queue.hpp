@@ -231,17 +231,20 @@ class single_reader_queue
         {
             if (m_stack.compare_exchange_weak(e, 0))
             {
-                auto insert_pos = m_cache.before_end();
+                // temporary list to convert LIFO to FIFO order
+                cache_type tmp;
                 while (e)
                 {
                     // next iteration element
                     pointer next = e->next;
                     // insert e to private cache (convert to LIFO order)
-                    m_cache.insert_after(insert_pos, e);
+                    tmp.push_front(e);
+                    //m_cache.insert(iter, unique_value_ptr{e});
                     // next iteration
                     e = next;
                 }
-                if (iter) *iter = insert_pos;
+                if (iter) *iter = m_cache.before_end();
+                m_cache.splice_after(m_cache.before_end(), std::move(tmp));
                 return true;
             }
             // next iteration

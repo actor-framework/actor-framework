@@ -142,7 +142,7 @@ void abstract_scheduled_actor::request_timeout(util::duration const& d)
     }
 }
 
-auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
+auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
 {
     if (   msg.size() == 2
         && msg.type_at(0) == t_atom_ui32_types[0]
@@ -194,11 +194,11 @@ auto abstract_scheduled_actor::dq(queue_node& node,
     std::swap(m_last_sender, node.sender);
     //m_last_dequeued = node.msg;
     //m_last_sender = node.sender;
-    // make sure no timeout is handled incorrectly
+    // make sure no timeout is handled incorrectly in a nested receive
     ++m_active_timeout_id;
     // lifetime scope of qguard
     {
-        // make sure nested received do not process this node again
+        // make sure nested receives do not process this node again
         queue_node_guard qguard{&node};
         // try to invoke given function
         if (rules(m_last_dequeued))
@@ -213,7 +213,7 @@ auto abstract_scheduled_actor::dq(queue_node& node,
             return dq_done;
         }
     }
-    // no match (restore members)
+    // no match, restore members
     --m_active_timeout_id;
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);

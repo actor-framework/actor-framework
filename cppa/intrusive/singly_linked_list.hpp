@@ -208,6 +208,7 @@ class singly_linked_list
         {
             if (next == m_tail) m_tail = pos.ptr();
             pos->next = next->next;
+            next->next = nullptr;
         }
         return next;
     }

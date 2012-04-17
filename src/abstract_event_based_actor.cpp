@@ -103,36 +103,45 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     }
     auto mbox_end = m_mailbox.cache().end();
     auto rm_fun = [this](queue_node& node) { return handle_message(node); };
-    for (;;)
+    try
     {
-        try
+        for (;;)
         {
             auto iter = m_mailbox.cache().remove_first(rm_fun, m_mailbox_pos);
             if (iter == mbox_end)
             {
-                // try fetch more
                 m_mailbox_pos = m_mailbox.cache().before_end();
+                // try fetch more
                 if (m_mailbox.can_fetch_more() == false)
                 {
                     m_state.store(abstract_scheduled_actor::about_to_block);
                     CPPA_MEMORY_BARRIER();
-                    if (   m_mailbox.can_fetch_more()
-                        || compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                                  abstract_scheduled_actor::blocked        ) != abstract_scheduled_actor::blocked)
+                    if (m_mailbox.can_fetch_more() == false)
                     {
-                        // someone preempt us
-                        m_mailbox.try_fetch_more();
-                    }
-                    else
-                    {
-                        // try again next time
-                        return;
+                        switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                                       abstract_scheduled_actor::blocked))
+                        {
+                            case abstract_scheduled_actor::ready:
+                            {
+                                // someone preempt us
+                                break;
+                            }
+                            case abstract_scheduled_actor::blocked:
+                            {
+                                // done
+                                return;
+                            }
+                            default: exit(7); // illegal state
+                        };
                     }
                 }
-                else
-                {
-                    m_mailbox.try_fetch_more();
-                }
+                m_mailbox.try_fetch_more();
+            }
+            else if (m_loop_stack.empty())
+            {
+                cleanup(exit_reason::normal);
+                done_cb();
+                return;
             }
             else
             {
@@ -140,25 +149,16 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
                 m_mailbox_pos = m_mailbox.cache().before_begin();
             }
         }
-        catch (actor_exited& what)
-        {
-            cleanup(what.reason());
-            done_cb();
-            return;
-        }
-        catch (...)
-        {
-            cleanup(exit_reason::unhandled_exception);
-            done_cb();
-            return;
-        }
-        if (m_loop_stack.empty())
-        {
-            cleanup(exit_reason::normal);
-            done_cb();
-            return;
-        }
     }
+    catch (actor_exited& what)
+    {
+        cleanup(what.reason());
+    }
+    catch (...)
+    {
+        cleanup(exit_reason::unhandled_exception);
+    }
+    done_cb();
 }
 
 void abstract_event_based_actor::on_exit()
