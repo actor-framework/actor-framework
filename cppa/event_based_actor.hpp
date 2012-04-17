@@ -51,6 +51,8 @@ class event_based_actor : public event_based_actor_base<event_based_actor>
 
  public:
 
+    event_based_actor();
+
     /**
      * @brief Terminates this actor with normal exit reason.
      */
