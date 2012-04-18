@@ -54,18 +54,12 @@ using std::endl;
 namespace {
 
 void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
-               cppa::scheduled_actor* behavior)
+               std::function<void()> what)
 {
     cppa::self.set(m_self.get());
-    if (behavior)
-    {
-        try { behavior->act(); }
-        catch (...) { }
-        try { behavior->on_exit(); }
-        catch (...) { }
-        delete behavior;
-        cppa::self.set(nullptr);
-    }
+    try { what(); }
+    catch (...) { }
+    cppa::self.set(nullptr);
     cppa::detail::dec_actor_count();
 }
 
@@ -73,30 +67,30 @@ void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
 
 namespace cppa { namespace detail {
 
-actor_ptr mock_scheduler::spawn(scheduled_actor* behavior)
+actor_ptr mock_scheduler::spawn(std::function<void()> what)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<local_actor> ctx(new detail::converted_thread_context);
-    thread(run_actor, ctx, behavior).detach();
+    thread(run_actor, ctx, std::move(what)).detach();
     return ctx;
 }
 
-actor_ptr mock_scheduler::spawn(abstract_event_based_actor* what)
+actor_ptr mock_scheduler::spawn(scheduled_actor*)
 {
-    // TODO: don't delete what :)
-    delete what;
+    cerr << "mock_scheduler::spawn(scheduled_actor*)" << endl;
+    abort();
     return nullptr;
 }
 
-actor_ptr mock_scheduler::spawn(scheduled_actor* behavior, scheduling_hint)
+actor_ptr mock_scheduler::spawn(std::function<void()> what, scheduling_hint)
 {
-    return spawn(behavior);
+    return spawn(std::move(what));
 }
 
-void mock_scheduler::enqueue(detail::abstract_scheduled_actor*)
+void mock_scheduler::enqueue(scheduled_actor*)
 {
-    cerr << "mock_scheduler::enqueue" << endl;
+    cerr << "mock_scheduler::enqueue(scheduled_actor)" << endl;
     abort();
 }
 

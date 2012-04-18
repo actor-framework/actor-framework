@@ -35,16 +35,46 @@
 #include <atomic>
 #include <memory>
 
+#include "cppa/config.hpp"
 #include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace intrusive {
+
+template<typename List>
+struct default_list_append
+{
+    template<typename T>
+    typename List::iterator operator()(List& l, T* e)
+    {
+        CPPA_REQUIRE(e != nullptr);
+        // temporary list to convert LIFO to FIFO order
+        List tmp;
+        // public_tail (e) has LIFO order,
+        // but private_head requires FIFO order
+        while (e)
+        {
+            // next iteration element
+            T* next = e->next;
+            // insert e to private cache (convert to LIFO order)
+            tmp.emplace_front(e);
+            e = next;
+        }
+        CPPA_REQUIRE(tmp.empty() == false);
+        auto result = tmp.begin();
+        l.splice(l.end(), tmp);
+        return result;
+    }
+
+};
 
 /**
  * @brief An intrusive, thread safe queue implementation.
  * @note For implementation details see
  *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
-template<typename T>
+template<typename T,
+         class CacheType = std::list<std::unique_ptr<T> >,
+         class CacheAppend = default_list_append<std::list<std::unique_ptr<T> > > >
 class single_reader_queue
 {
 
@@ -52,42 +82,39 @@ class single_reader_queue
 
  public:
 
-    typedef T                   value_type;
-    typedef size_t              size_type;
-    typedef ptrdiff_t           difference_type;
-    typedef value_type&         reference;
-    typedef value_type const&   const_reference;
-    typedef value_type*         pointer;
-    typedef value_type const*   const_pointer;
+    typedef T           value_type;
+    typedef value_type* pointer;
 
-    typedef std::unique_ptr<value_type> unique_value_ptr;
-    typedef std::list<unique_value_ptr> cache_type;
-    typedef typename cache_type::iterator cache_iterator;
+    typedef CacheType                            cache_type;
+    typedef typename cache_type::value_type      cache_value_type;
+    typedef typename cache_type::iterator        cache_iterator;
 
     /**
      * @warning call only from the reader (owner)
      */
-    pointer pop()
+    cache_value_type pop()
     {
         wait_for_data();
-        return take_head();
+        cache_value_type result;
+        take_head(result);
+        return result;
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    pointer try_pop()
+    bool try_pop(cache_value_type& result)
     {
-        return take_head();
+        return take_head(result);
     }
 
     /**
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    pointer try_pop(TimePoint const& abs_time)
+    bool try_pop(cache_value_type& result, TimePoint const& abs_time)
     {
-        return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
+        return (timed_wait_for_data(abs_time)) ? take_head(result) : false;
     }
 
     // returns true if the queue was empty
@@ -192,6 +219,7 @@ class single_reader_queue
 
     // accessed only by the owner
     cache_type m_cache;
+    CacheAppend m_append;
 
     // locked on enqueue/dequeue operations to/from an empty list
     detail::mutex m_mtx;
@@ -231,22 +259,8 @@ class single_reader_queue
         {
             if (m_stack.compare_exchange_weak(e, 0))
             {
-                // temporary list to convert LIFO to FIFO order
-                cache_type tmp;
-                // public_tail (e) has LIFO order,
-                // but private_head requires FIFO order
-                while (e)
-                {
-                    // next iteration element
-                    pointer next = e->next;
-                    // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(unique_value_ptr{e});
-                    //m_cache.insert(iter, unique_value_ptr{e});
-                    // next iteration
-                    e = next;
-                }
-                if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), tmp);
+                auto i = m_append(m_cache, e);
+                if (iter) *iter = i;
                 return true;
             }
             // next iteration
@@ -255,16 +269,15 @@ class single_reader_queue
         return false;
     }
 
-    pointer take_head()
+    bool take_head(cache_value_type& result)
     {
         if (!m_cache.empty() || fetch_new_data())
         {
-            auto result = m_cache.front().release();
+            result = std::move(m_cache.front());
             m_cache.pop_front();
-            return result;
-            //return m_cache.take_after(m_cache.before_begin());
+            return true;
         }
-        return nullptr;
+        return false;
     }
 
 };

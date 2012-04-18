@@ -33,6 +33,7 @@
 
 #include <tuple>
 #include <cstdint>
+#include <functional>
 #include <type_traits>
 
 #include "cppa/on.hpp"
@@ -474,7 +475,7 @@ void demonitor(actor_ptr& whom);
  */
 inline actor_ptr spawn(scheduled_actor* what)
 {
-    return get_scheduler()->spawn(what, scheduled);
+    return get_scheduler()->spawn(what);
 }
 
 /**
@@ -484,9 +485,9 @@ inline actor_ptr spawn(scheduled_actor* what)
  * @returns A pointer to the spawned {@link actor Actor}.
  */
 template<scheduling_hint Hint>
-inline actor_ptr spawn(scheduled_actor* what)
+inline actor_ptr spawn(std::function<void()> what)
 {
-    return get_scheduler()->spawn(what, Hint);
+    return get_scheduler()->spawn(std::move(what), Hint);
 }
 
 /**
@@ -494,19 +495,43 @@ inline actor_ptr spawn(scheduled_actor* what)
  * @brief Spans a new event-based actor.
  * @returns A pointer to the spawned {@link actor Actor}.
  */
-inline actor_ptr spawn(abstract_event_based_actor* what)
+inline actor_ptr spawn(std::function<void()> what)
 {
-    return get_scheduler()->spawn(what);
+    return get_scheduler()->spawn(std::move(what), scheduled);
 }
 
-/**
+template<typename T>
+struct spawn_fwd_
+{
+    static inline T&& _(T&& arg) { return std::move(arg); }
+    static inline T& _(T& arg) { return arg; }
+    static inline T const& _(T const& arg) { return arg; }
+};
+
+template<>
+struct spawn_fwd_<self_type>
+{
+    static inline actor_ptr _(self_type const&) { return self; }
+};
+
+
+template<typename F, typename Arg0, typename... Args>
+inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
+{
+    return spawn(std::bind(std::move(what),
+                           spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                           spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
+}
+
+/*
+/ **
  * @ingroup ActorManagement
  * @brief Spawns a new actor that executes @p what with given arguments.
  * @tparam Hint Hint to the scheduler for the best scheduling strategy.
  * @param what Function or functor that the spawned Actor should execute.
  * @param args Arguments needed to invoke @p what.
  * @returns A pointer to the spawned {@link actor actor}.
- */
+ * /
 template<scheduling_hint Hint, typename F, typename... Args>
 auto //actor_ptr
 spawn(F&& what, Args const&... args)
@@ -522,10 +547,10 @@ spawn(F&& what, Args const&... args)
     return get_scheduler()->spawn(ptr, Hint);
 }
 
-/**
+/ **
  * @ingroup ActorManagement
  * @brief Alias for <tt>spawn<scheduled>(what, args...)</tt>.
- */
+ * /
 template<typename F, typename... Args>
 auto // actor_ptr
 spawn(F&& what, Args const&... args)
@@ -537,6 +562,7 @@ spawn(F&& what, Args const&... args)
 {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
+*/
 
 #ifdef CPPA_DOCUMENTATION
 

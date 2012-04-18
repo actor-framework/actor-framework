@@ -28,29 +28,63 @@
 \******************************************************************************/
 
 
-#include "cppa/scheduled_actor.hpp"
+#ifndef RECURSIVE_QUEUE_NODE_HPP
+#define RECURSIVE_QUEUE_NODE_HPP
 
-namespace cppa {
+#include "cppa/actor.hpp"
+#include "cppa/any_tuple.hpp"
 
-scheduled_actor::scheduled_actor() : next(nullptr), m_scheduler(nullptr)
+namespace cppa { namespace detail {
+
+struct recursive_queue_node
 {
-}
+    recursive_queue_node* next; // intrusive next pointer
+    bool marked;                // denotes if this node is currently processed
+    actor_ptr sender;
+    any_tuple msg;
 
-void scheduled_actor::on_exit()
-{
-}
+    inline recursive_queue_node()
+        : next(nullptr)
+        , marked(false)
+    {
+    }
 
-void scheduled_actor::init()
-{
-}
+    inline recursive_queue_node(actor* from, any_tuple content)
+        : next(nullptr)
+        , marked(false)
+        , sender(from)
+        , msg(std::move(content))
+    {
+    }
 
-scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched)
-{
-    CPPA_REQUIRE(sched != nullptr);
-    m_scheduler = sched;
-    init();
-    return this;
-}
+    inline recursive_queue_node(recursive_queue_node&& other)
+        : next(nullptr)
+        , marked(false)
+        , sender(std::move(other.sender))
+        , msg(std::move(other.msg))
+    {
+    }
 
+    struct guard
+    {
+        recursive_queue_node* m_node;
+        inline guard(recursive_queue_node* ptr) : m_node(ptr)
+        {
+            ptr->marked = true;
+        }
 
-} // namespace cppa
+        inline void release()
+        {
+            m_node = nullptr;
+        }
+
+        inline ~guard()
+        {
+            if (m_node) m_node->marked = false;
+        }
+    };
+};
+
+} } // namespace cppa::detail
+
+#endif // RECURSIVE_QUEUE_NODE_HPP

@@ -44,14 +44,49 @@
 
 namespace cppa {
 
+struct vec_append
+{
+    inline std::vector<detail::recursive_queue_node>::iterator
+    operator()(std::vector<detail::recursive_queue_node>& result,
+               detail::recursive_queue_node* e) const
+    {
+        std::vector<std::unique_ptr<detail::recursive_queue_node> > tmp;
+        while (e)
+        {
+            auto next = e->next;
+            tmp.emplace_back(e);
+            e = next;
+        }
+        auto old_size = result.size();
+        for (auto i = tmp.rbegin(); i != tmp.rend(); ++i)
+        {
+            result.emplace_back(std::move(*(*i)));
+        }
+        return result.begin() + old_size;
+    }
+};
+
 /**
  * @brief Base class for all event-based actor implementations.
  */
-class abstract_event_based_actor : public detail::abstract_scheduled_actor
+class abstract_event_based_actor
+        : public detail::abstract_scheduled_actor<
+            intrusive::single_reader_queue<
+                detail::recursive_queue_node,
+                std::vector<detail::recursive_queue_node>,
+                vec_append
+            >
+          >
 {
 
-    typedef detail::abstract_scheduled_actor super;
-    typedef super::queue_node queue_node;
+    typedef detail::abstract_scheduled_actor<
+                intrusive::single_reader_queue<
+                    detail::recursive_queue_node,
+                    std::vector<detail::recursive_queue_node>,
+                    vec_append
+                >
+            >
+            super;
 
  public:
 
@@ -59,7 +94,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
     void dequeue(partial_function&); //override
 
-    void resume(util::fiber*, resume_callback* callback); //override
+    void resume(util::fiber*, scheduler::callback* cb); //override
 
     /**
      * @brief Initializes the actor by defining an initial behavior.
@@ -71,14 +106,6 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
      */
     virtual void on_exit();
 
-    inline abstract_event_based_actor* attach_to_scheduler(scheduler* sched)
-    {
-        CPPA_REQUIRE(sched != nullptr);
-        m_scheduler = sched;
-        init();
-        return this;
-    }
-
  protected:
 
     abstract_event_based_actor();
@@ -88,9 +115,6 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
             stack_element;
 
     std::vector<stack_element> m_loop_stack;
-
-    // current position in mailbox
-    mailbox_cache_type::iterator m_mailbox_pos;
 
     // provoke compiler errors for usage of receive() and related functions
 
@@ -135,8 +159,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
 
  private:
 
-    bool handle_message(queue_node& iter);
-    bool invoke_from_cache();
+    bool handle_message(mailbox_element& iter);
 
 };
 

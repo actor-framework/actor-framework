@@ -149,7 +149,7 @@ src/fiber.cpp
 cppa/detail/yield_interface.hpp
 src/yield_interface.cpp
 cppa/detail/abstract_scheduled_actor.hpp
-src/abstract_scheduled_actor.cpp
+src/scheduled_actor_dummy.cpp
 src/invokable.cpp
 cppa/detail/thread_pool_scheduler.hpp
 src/thread_pool_scheduler.cpp
@@ -265,3 +265,5 @@ cppa/detail/value_guard.hpp
 cppa/detail/tuple_iterator.hpp
 cppa/match_expr.hpp
 cppa/detail/pseudo_tuple.hpp
+cppa/detail/recursive_queue_node.hpp
+cppa/detail/scheduled_actor_dummy.hpp

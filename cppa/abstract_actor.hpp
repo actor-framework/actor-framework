@@ -45,6 +45,9 @@
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/thread.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa {
 
@@ -53,7 +56,8 @@ namespace cppa {
  * @tparam Base Either {@link cppa::actor actor}
  *              or {@link cppa::local_actor local_actor}.
  */
-template<class Base>
+template<class Base,
+         class MailboxType = intrusive::single_reader_queue<detail::recursive_queue_node> >
 class abstract_actor : public Base
 {
 
@@ -62,33 +66,12 @@ class abstract_actor : public Base
 
  public:
 
-    struct queue_node
-    {
-        queue_node* next;   // intrusive next pointer
-        bool marked;        // denotes if this node is currently processed
-        actor_ptr sender;
-        any_tuple msg;
-        queue_node() : next(nullptr), marked(false) { }
-        queue_node(actor* from, any_tuple content)
-            : next(nullptr), marked(false), sender(from), msg(std::move(content))
-        {
-        }
-    };
+    typedef MailboxType                             mailbox_type;
+    typedef typename mailbox_type::value_type       mailbox_element;
+    typedef typename mailbox_type::cache_type       mailbox_cache_type;
+    typedef typename mailbox_cache_type::value_type mailbox_cache_element;
 
-    struct queue_node_guard
-    {
-        queue_node* m_node;
-        queue_node_guard(queue_node* ptr) : m_node(ptr) { ptr->marked = true; }
-        inline void release() { m_node = nullptr; }
-        ~queue_node_guard() { if (m_node) m_node->marked = false; }
-    };
-
-    typedef intrusive::single_reader_queue<queue_node> mailbox_type;
-    typedef std::unique_ptr<queue_node> queue_node_ptr;
-    typedef typename mailbox_type::cache_type mailbox_cache_type;
-    typedef typename mailbox_cache_type::iterator queue_node_iterator;
-
-    bool attach(attachable* ptr) /*override*/
+    bool attach(attachable* ptr) // override
     {
         if (ptr == nullptr)
         {
@@ -114,7 +97,7 @@ class abstract_actor : public Base
         }
     }
 
-    void detach(attachable::token const& what) /*override*/
+    void detach(attachable::token const& what) // override
     {
         attachable_ptr uptr;
         // lifetime scope of guard
@@ -133,17 +116,17 @@ class abstract_actor : public Base
         // uptr will be destroyed here, without locked mutex
     }
 
-    void link_to(intrusive_ptr<actor>& other) /*override*/
+    void link_to(intrusive_ptr<actor>& other) // override
     {
         (void) link_to_impl(other);
     }
 
-    void unlink_from(intrusive_ptr<actor>& other) /*override*/
+    void unlink_from(intrusive_ptr<actor>& other) // override
     {
         (void) unlink_from_impl(other);
     }
 
-    bool remove_backlink(intrusive_ptr<actor>& other) /*override*/
+    bool remove_backlink(intrusive_ptr<actor>& other) // override
     {
         if (other && other != this)
         {
@@ -158,7 +141,7 @@ class abstract_actor : public Base
         return false;
     }
 
-    bool establish_backlink(intrusive_ptr<actor>& other) /*override*/
+    bool establish_backlink(intrusive_ptr<actor>& other) // override
     {
         std::uint32_t reason = exit_reason::not_exited;
         if (other && other != this)
@@ -188,9 +171,9 @@ class abstract_actor : public Base
     mailbox_type m_mailbox;
 
     template<typename T>
-    inline queue_node* fetch_node(actor* sender, T&& msg)
+    static inline mailbox_element* fetch_node(actor* sender, T&& msg)
     {
-        return new queue_node(sender, std::forward<T>(msg));
+        return new mailbox_element(sender, std::forward<T>(msg));
     }
 
     template<typename... Args>

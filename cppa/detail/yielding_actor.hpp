@@ -45,15 +45,13 @@
 
 namespace cppa { namespace detail {
 
-class yielding_actor : public abstract_scheduled_actor
+class yielding_actor : public abstract_scheduled_actor<>
 {
 
     typedef abstract_scheduled_actor super;
-    typedef super::queue_node queue_node;
-    typedef super::queue_node_ptr queue_node_ptr;
 
     util::fiber m_fiber;
-    scheduled_actor* m_behavior;
+    std::function<void()> m_behavior;
 
     static void run(void* _this);
 
@@ -63,15 +61,13 @@ class yielding_actor : public abstract_scheduled_actor
 
  public:
 
-    yielding_actor(scheduled_actor* behavior, scheduler* sched);
-
-    ~yielding_actor(); //override
+    yielding_actor(std::function<void()> fun);
 
     void dequeue(behavior& bhvr); //override
 
     void dequeue(partial_function& fun); //override
 
-    void resume(util::fiber* from, resume_callback* callback); //override
+    void resume(util::fiber* from, scheduler::callback* callback); //override
 
  private:
 
@@ -88,6 +84,15 @@ class yielding_actor : public abstract_scheduled_actor
         }
         mbox_cache.erase(iter);
     }
+
+    enum dq_result
+    {
+        dq_done,
+        dq_indeterminate,
+        dq_timeout_occured
+    };
+
+    auto dq(mailbox_element& node, partial_function& rules) -> dq_result;
 
 };
 

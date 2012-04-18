@@ -56,7 +56,7 @@ typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_que
 struct thread_pool_scheduler::worker
 {
 
-    typedef abstract_scheduled_actor* job_ptr;
+    typedef scheduled_actor* job_ptr;
 
     job_queue* m_job_queue;
     job_ptr m_dummy;
@@ -134,11 +134,10 @@ struct thread_pool_scheduler::worker
     void operator()()
     {
         util::fiber fself;
-        struct handler : abstract_scheduled_actor::resume_callback
+        struct handler : scheduler::callback
         {
-            abstract_scheduled_actor* job;
+            scheduled_actor* job;
             handler() : job(nullptr) { }
-            bool still_ready() { return true; }
             void exec_done()
             {
                 if (!job->deref()) delete job;
@@ -179,7 +178,7 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
 }
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
-                                            abstract_scheduled_actor* dummy)
+                                            scheduled_actor* dummy)
 {
     std::vector<worker_ptr> workers;
     size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
@@ -210,46 +209,48 @@ void thread_pool_scheduler::stop()
     super::stop();
 }
 
-void thread_pool_scheduler::enqueue(abstract_scheduled_actor* what)
+void thread_pool_scheduler::enqueue(scheduled_actor* what)
 {
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(abstract_scheduled_actor* what,
+actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
                                             bool push_to_queue)
 {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
-    intrusive_ptr<abstract_scheduled_actor> ctx(what);
+    intrusive_ptr<scheduled_actor> ctx(what);
     ctx->ref();
     if (push_to_queue) m_queue.push_back(ctx.get());
     return std::move(ctx);
 }
 
 
-actor_ptr thread_pool_scheduler::spawn(abstract_event_based_actor* what)
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what)
 {
     // do NOT push event-based actors to the queue on startup
     return spawn_impl(what->attach_to_scheduler(this), false);
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr,
+actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
                                        scheduling_hint hint)
 {
     if (hint == detached)
     {
-        return mock_scheduler::spawn(bhvr);
+        return mock_scheduler::spawn(std::move(what));
     }
     else
     {
-        return spawn_impl(new yielding_actor(bhvr, this));
+        auto new_actor = new yielding_actor(std::move(what));
+        return spawn_impl(new_actor->attach_to_scheduler(this));
     }
 }
 #else
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* bhvr, scheduling_hint)
+actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
+                                       scheduling_hint)
 {
-    return mock_scheduler::spawn(bhvr);
+    return mock_scheduler::spawn(what);
 }
 #endif
 

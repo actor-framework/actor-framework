@@ -59,8 +59,6 @@ class converted_thread_context : public abstract_actor<local_actor>
 {
 
     typedef abstract_actor<local_actor> super;
-    typedef super::queue_node queue_node;
-    typedef super::queue_node_ptr queue_node_ptr;
 
  public:
 
@@ -86,7 +84,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
  private:
 
-    typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
+    //typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
 
     enum throw_on_exit_result
     {
@@ -95,7 +93,7 @@ class converted_thread_context : public abstract_actor<local_actor>
     };
 
     // returns true if node->msg was accepted by rules
-    bool dq(queue_node& node, partial_function& rules);
+    bool dq(mailbox_element& node, partial_function& rules);
 
     throw_on_exit_result throw_on_exit(any_tuple const& msg);
 

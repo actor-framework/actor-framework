@@ -28,29 +28,51 @@
 \******************************************************************************/
 
 
-#include "cppa/scheduled_actor.hpp"
+#include "cppa/detail/scheduled_actor_dummy.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-scheduled_actor::scheduled_actor() : next(nullptr), m_scheduler(nullptr)
+void scheduled_actor_dummy::resume(util::fiber*, scheduler::callback*)
 {
 }
 
-void scheduled_actor::on_exit()
+void scheduled_actor_dummy::quit(std::uint32_t)
 {
 }
 
-void scheduled_actor::init()
+void scheduled_actor_dummy::dequeue(behavior&)
 {
 }
 
-scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched)
+void scheduled_actor_dummy::dequeue(partial_function&)
 {
-    CPPA_REQUIRE(sched != nullptr);
-    m_scheduler = sched;
-    init();
-    return this;
 }
 
+void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&)
+{
+}
 
-} // namespace cppa
+void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&)
+{
+}
+
+bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&)
+{
+    return false;
+}
+
+bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&)
+{
+    return false;
+}
+
+void scheduled_actor_dummy::detach(attachable::token const&)
+{
+}
+
+bool scheduled_actor_dummy::attach(attachable*)
+{
+    return false;
+}
+
+} } // namespace cppa::detail

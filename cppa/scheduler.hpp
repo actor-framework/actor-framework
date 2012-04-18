@@ -34,6 +34,7 @@
 #include <chrono>
 #include <memory>
 #include <cstdint>
+#include <functional>
 
 #include "cppa/self.hpp"
 #include "cppa/atom.hpp"
@@ -50,10 +51,6 @@ namespace cppa {
 
 class scheduled_actor;
 class scheduler_helper;
-class abstract_event_based_actor;
-
-namespace detail { class abstract_scheduled_actor; }
-
 /**
  * @brief
  */
@@ -70,6 +67,13 @@ class scheduler
 
  public:
 
+    struct callback
+    {
+        virtual ~callback();
+        // called if an actor finished execution during resume()
+        virtual void exec_done() = 0;
+    };
+
     virtual ~scheduler();
 
     /**
@@ -82,19 +86,19 @@ class scheduler
      */
     virtual void stop();
 
-    virtual void enqueue(detail::abstract_scheduled_actor*) = 0;
+    virtual void enqueue(scheduled_actor*) = 0;
 
     /**
      * @brief Spawns a new actor that executes <code>behavior->act()</code>
      *        with the scheduling policy @p hint if possible.
      */
-    virtual actor_ptr spawn(scheduled_actor* behavior,
+    virtual actor_ptr spawn(std::function<void()> behavior,
                             scheduling_hint hint) = 0;
 
     /**
      * @brief Spawns a new event-based actor.
      */
-    virtual actor_ptr spawn(abstract_event_based_actor* what) = 0;
+    virtual actor_ptr spawn(scheduled_actor* what) = 0;
 
     /**
      * @brief Informs the scheduler about a converted context

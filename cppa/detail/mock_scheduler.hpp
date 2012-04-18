@@ -40,13 +40,13 @@ class mock_scheduler : public scheduler
 
  public:
 
-    actor_ptr spawn(abstract_event_based_actor* what);
+    actor_ptr spawn(scheduled_actor* what);
 
-    actor_ptr spawn(scheduled_actor*, scheduling_hint);
+    actor_ptr spawn(std::function<void()> what, scheduling_hint);
 
-    static actor_ptr spawn(scheduled_actor*);
+    static actor_ptr spawn(std::function<void()> what);
 
-    void enqueue(detail::abstract_scheduled_actor*);
+    void enqueue(scheduled_actor* what);
 
 };
 

@@ -195,7 +195,7 @@ struct chopstick : public fsm_actor<chopstick>
 
 };
 
-class testee_actor : public scheduled_actor
+class testee_actor
 {
 
     void wait4string()
@@ -235,7 +235,7 @@ class testee_actor : public scheduled_actor
 
  public:
 
-    void act()
+    void operator()()
     {
         receive_loop
         (
@@ -295,11 +295,10 @@ void testee3(actor_ptr parent)
 }
 
 template<class Testee>
-std::string behavior_test()
+std::string behavior_test(actor_ptr et)
 {
     std::string result;
     std::string testee_name = detail::to_uniform_name(typeid(Testee));
-    auto et = spawn(new Testee);
     send(et, 1);
     send(et, 2);
     send(et, 3);
@@ -368,8 +367,8 @@ size_t test__spawn()
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(), "wait4int");
-    CPPA_CHECK_EQUAL(behavior_test<event_testee>(), "wait4int");
+    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(spawn(testee_actor{})), "wait4int");
+    CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn(new event_testee)), "wait4int");
 
     // create 20,000 actors linked to one single actor
     // and kill them all through killing the link

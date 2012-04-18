@@ -38,8 +38,7 @@
 namespace cppa {
 
 abstract_event_based_actor::abstract_event_based_actor()
-    : super(abstract_event_based_actor::blocked)
-    , m_mailbox_pos(m_mailbox.cache().end())
+    : super(super::blocked)
 {
     //m_mailbox_pos = m_mailbox.cache().end();
 }
@@ -54,58 +53,59 @@ void abstract_event_based_actor::dequeue(partial_function&)
     quit(exit_reason::unallowed_function_call);
 }
 
-bool abstract_event_based_actor::handle_message(queue_node& node)
+bool abstract_event_based_actor::handle_message(mailbox_element& node)
 {
     CPPA_REQUIRE(m_loop_stack.empty() == false);
+    if (node.marked) return false;
     auto& bhvr = *(m_loop_stack.back());
-    if (bhvr.timeout().valid())
+    switch (filter_msg(node.msg))
     {
-        switch (dq(node, bhvr.get_partial_function()))
-        {
-            case dq_timeout_occured:
-            {
-                bhvr.handle_timeout();
-                // fall through
-            }
-            case dq_done:
-            {
-                // callback might have called become()/unbecome()
-                // request next timeout if needed
-                if (!m_loop_stack.empty())
-                {
-                    auto& next_bhvr = *(m_loop_stack.back());
-                    request_timeout(next_bhvr.timeout());
-                }
-                return true;
-            }
-            default: return false;
-        }
-    }
-    else
-    {
-        return dq(node, bhvr.get_partial_function()) == dq_done;
-    }
-}
+        case normal_exit_signal:
+        case expired_timeout_message:
+            node.marked = true;
+            return false;
 
-bool abstract_event_based_actor::invoke_from_cache()
-{
-    for (auto i = m_mailbox_pos; i != m_mailbox.cache().end(); ++i)
-    {
-        auto& ptr = *i;
-        CPPA_REQUIRE(ptr.get() != nullptr);
-        if (handle_message(*ptr))
-        {
-            m_mailbox.cache().erase(i);
+        case timeout_message:
+            m_has_pending_timeout_request = false;
+            CPPA_REQUIRE(bhvr.timeout().valid());
+            bhvr.handle_timeout();
+            if (!m_loop_stack.empty())
+            {
+                auto& next_bhvr = *(m_loop_stack.back());
+                request_timeout(next_bhvr.timeout());
+            }
             return true;
-        }
+
+        default:
+            break;
     }
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
+    //m_last_dequeued = node.msg;
+    //m_last_sender = node.sender;
+    // make sure no timeout is handled incorrectly in a nested receive
+    ++m_active_timeout_id;
+    if ((bhvr.get_partial_function())(m_last_dequeued))
+    {
+        node.marked = true;
+        m_last_dequeued.reset();
+        m_last_sender.reset();
+        // we definitely don't have a pending timeout now
+        m_has_pending_timeout_request = false;
+        return true;
+    }
+    // no match, restore members
+    --m_active_timeout_id;
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
     return false;
 }
 
-void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
+void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
 {
     self.set(this);
     auto& mbox_cache = m_mailbox.cache();
+    auto pos = mbox_cache.end();
     try
     {
         for (;;)
@@ -116,14 +116,18 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
                 m_state.store(abstract_scheduled_actor::done);
                 m_loop_stack.clear();
                 on_exit();
-                callback->exec_done();
+                cb->exec_done();
                 return;
             }
-            while (m_mailbox_pos == mbox_cache.end())
+            while (pos == mbox_cache.end())
             {
                 // try fetch more
                 if (m_mailbox.can_fetch_more() == false)
                 {
+                    // sweep marked elements
+                    auto new_end = std::remove_if(mbox_cache.begin(), mbox_cache.end(),
+                                                  [](detail::recursive_queue_node const& n) { return n.marked; });
+                    mbox_cache.resize(std::distance(mbox_cache.begin(), new_end));
                     m_state.store(abstract_scheduled_actor::about_to_block);
                     CPPA_MEMORY_BARRIER();
                     if (m_mailbox.can_fetch_more() == false)
@@ -133,22 +137,27 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
                         {
                             case abstract_scheduled_actor::ready:
                             {
-                                // someone preempt us
+                                // someone preempt us, set position to new end()
+                                pos = mbox_cache.end();
                                 break;
                             }
                             case abstract_scheduled_actor::blocked:
                             {
-                                // done
                                 return;
                             }
                             default: exit(7); // illegal state
                         };
                     }
                 }
-                m_mailbox_pos = m_mailbox.try_fetch_more();
+                pos = m_mailbox.try_fetch_more();
             }
-            m_mailbox_pos = (invoke_from_cache()) ? mbox_cache.begin()
-                                                  : mbox_cache.end();
+            pos = std::find_if(pos, mbox_cache.end(),
+                               [&](mailbox_element& e) { return handle_message(e); });
+            if (pos != mbox_cache.end())
+            {
+                // handled a message, scan mailbox from start again
+                pos = mbox_cache.begin();
+            }
         }
     }
     catch (actor_exited& what)
@@ -162,7 +171,7 @@ void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
     m_state.store(abstract_scheduled_actor::done);
     m_loop_stack.clear();
     on_exit();
-    callback->exec_done();
+    cb->exec_done();
 }
 
 void abstract_event_based_actor::on_exit()

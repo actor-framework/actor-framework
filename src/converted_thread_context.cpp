@@ -70,7 +70,7 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
 
 void converted_thread_context::dequeue(partial_function& rules)  /*override*/
 {
-    auto rm_fun = [&](queue_node_ptr& node) { return dq(*node, rules); };
+    auto rm_fun = [&](mailbox_cache_element& node) { return dq(*node, rules); };
     auto& mbox_cache = m_mailbox.cache();
     auto mbox_end = mbox_cache.end();
     auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
@@ -87,7 +87,7 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
     {
         auto timeout = now();
         timeout += rules.timeout();
-        auto rm_fun = [&](queue_node_ptr& node)
+        auto rm_fun = [&](mailbox_cache_element& node)
         {
             return dq(*node, rules.get_partial_function());
         };
@@ -131,7 +131,7 @@ converted_thread_context::throw_on_exit(any_tuple const& msg)
     return not_an_exit_signal;
 }
 
-bool converted_thread_context::dq(queue_node& node, partial_function& rules)
+bool converted_thread_context::dq(mailbox_element& node, partial_function& rules)
 {
     if (   m_trap_exit == false
         && throw_on_exit(node.msg) == normal_exit_signal)
@@ -141,7 +141,7 @@ bool converted_thread_context::dq(queue_node& node, partial_function& rules)
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);
     {
-        queue_node_guard qguard{&node};
+        mailbox_element::guard qguard{&node};
         if (rules(m_last_dequeued))
         {
             // client calls erase(iter)

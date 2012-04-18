@@ -28,29 +28,27 @@
 \******************************************************************************/
 
 
-#include "cppa/scheduled_actor.hpp"
+#ifndef SCHEDULED_ACTOR_DUMMY_HPP
+#define SCHEDULED_ACTOR_DUMMY_HPP
 
-namespace cppa {
+#include "cppa/detail/abstract_scheduled_actor.hpp"
 
-scheduled_actor::scheduled_actor() : next(nullptr), m_scheduler(nullptr)
+namespace cppa { namespace detail {
+
+struct scheduled_actor_dummy : abstract_scheduled_actor<>
 {
-}
+    void resume(util::fiber*, scheduler::callback*);
+    void quit(std::uint32_t);
+    void dequeue(behavior&);
+    void dequeue(partial_function&);
+    void link_to(intrusive_ptr<actor>&);
+    void unlink_from(intrusive_ptr<actor>&);
+    bool establish_backlink(intrusive_ptr<actor>&);
+    bool remove_backlink(intrusive_ptr<actor>&);
+    void detach(attachable::token const&);
+    bool attach(attachable*);
+};
 
-void scheduled_actor::on_exit()
-{
-}
+} } // namespace cppa::detail
 
-void scheduled_actor::init()
-{
-}
-
-scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched)
-{
-    CPPA_REQUIRE(sched != nullptr);
-    m_scheduler = sched;
-    init();
-    return this;
-}
-
-
-} // namespace cppa
+#endif // SCHEDULED_ACTOR_DUMMY_HPP

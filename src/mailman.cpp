@@ -103,7 +103,7 @@ void mailman_loop()
     std::map<process_information, native_socket_type> peers;
     for (;;)
     {
-        job.reset(mqueue.pop());
+        job = mqueue.pop();
         if (job->is_send_job())
         {
             mailman_send_job& sjob = job->send_job();

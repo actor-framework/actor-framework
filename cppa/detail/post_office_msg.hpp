@@ -43,9 +43,6 @@ namespace cppa { namespace detail {
 class post_office_msg
 {
 
-    friend class intrusive::singly_linked_list<post_office_msg>;
-    friend class intrusive::single_reader_queue<post_office_msg>;
-
  public:
 
     enum msg_type
@@ -130,9 +127,9 @@ class post_office_msg
 
     ~post_office_msg();
 
- private:
-
     post_office_msg* next;
+
+ private:
 
     msg_type m_type;
 

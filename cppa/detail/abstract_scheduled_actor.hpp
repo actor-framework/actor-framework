@@ -31,46 +31,31 @@
 #ifndef SCHEDULED_ACTOR_HPP
 #define SCHEDULED_ACTOR_HPP
 
+#include <atomic>
+
+#include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
-
-#include "cppa/intrusive/singly_linked_list.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa { class scheduler; }
 
 namespace cppa { namespace detail {
 
 // A spawned, scheduled Actor.
-class abstract_scheduled_actor : public abstract_actor<local_actor>
+template<class MailboxType  = intrusive::single_reader_queue<detail::recursive_queue_node> >
+class abstract_scheduled_actor : public abstract_actor<scheduled_actor, MailboxType>
 {
 
-    friend class intrusive::single_reader_queue<abstract_scheduled_actor>;
-
-    abstract_scheduled_actor* next; // intrusive next pointer
-
-    void enqueue_node(queue_node* node);
+    typedef abstract_actor<scheduled_actor, MailboxType> super;
 
  protected:
 
     std::atomic<int> m_state;
-    scheduler* m_scheduler;
-
-    typedef abstract_actor super;
-    typedef super::queue_node_guard queue_node_guard;
-    typedef super::queue_node queue_node;
-    typedef super::queue_node_ptr queue_node_ptr;
-
-    enum dq_result
-    {
-        dq_done,
-        dq_indeterminate,
-        dq_timeout_occured
-    };
 
     enum filter_result
     {
@@ -80,16 +65,48 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
         ordinary_message
     };
 
-    filter_result filter_msg(any_tuple const& msg);
-
-    auto dq(queue_node& node, partial_function& rules) -> dq_result;
+    filter_result filter_msg(any_tuple const& msg)
+    {
+        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
+        if (   msg.size() == 2
+            && msg.type_at(0) == arr[0]
+            && msg.type_at(1) == arr[1])
+        {
+            auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
+            auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+            if (v0 == atom(":Exit"))
+            {
+                if (this->m_trap_exit == false)
+                {
+                    if (v1 != exit_reason::normal)
+                    {
+                        quit(v1);
+                    }
+                    return normal_exit_signal;
+                }
+            }
+            else if (v0 == atom(":Timeout"))
+            {
+                return (v1 == m_active_timeout_id) ? timeout_message
+                                                   : expired_timeout_message;
+            }
+        }
+        return ordinary_message;
+    }
 
     bool has_pending_timeout()
     {
         return m_has_pending_timeout_request;
     }
 
-    void request_timeout(util::duration const& d);
+    void request_timeout(util::duration const& d)
+    {
+        if (d.valid())
+        {
+            get_scheduler()->future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
+            m_has_pending_timeout_request = true;
+        }
+    }
 
     void reset_timeout()
     {
@@ -99,8 +116,6 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
             m_has_pending_timeout_request = false;
         }
     }
-
- private:
 
     bool m_has_pending_timeout_request;
     std::uint32_t m_active_timeout_id;
@@ -112,42 +127,78 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
     static constexpr int blocked        = 0x02;
     static constexpr int about_to_block = 0x04;
 
-    abstract_scheduled_actor(int state = done);
-
-    abstract_scheduled_actor(scheduler* sched);
-
-    void quit(std::uint32_t reason);
-
-    void enqueue(actor* sender, any_tuple&& msg);
-
-    void enqueue(actor* sender, any_tuple const& msg);
-
-    int compare_exchange_state(int expected, int new_value);
-
-    struct resume_callback
+    abstract_scheduled_actor(int state = done)
+        : m_state(state)
+        , m_has_pending_timeout_request(false)
+        , m_active_timeout_id(0)
     {
-        virtual ~resume_callback();
-        // called if an actor finished execution
-        virtual void exec_done() = 0;
-    };
+    }
 
-    // from = calling worker
-    virtual void resume(util::fiber* from, resume_callback* callback) = 0;
+    void quit(std::uint32_t reason)
+    {
+        this->cleanup(reason);
+        throw actor_exited(reason);
+    }
 
-};
+    void enqueue(actor* sender, any_tuple&& msg)
+    {
+        enqueue_node(super::fetch_node(sender, std::move(msg)));
+    }
 
-struct scheduled_actor_dummy : abstract_scheduled_actor
-{
-    void resume(util::fiber*, resume_callback*);
-    void quit(std::uint32_t);
-    void dequeue(behavior&);
-    void dequeue(partial_function&);
-    void link_to(intrusive_ptr<actor>&);
-    void unlink_from(intrusive_ptr<actor>&);
-    bool establish_backlink(intrusive_ptr<actor>&);
-    bool remove_backlink(intrusive_ptr<actor>&);
-    void detach(attachable::token const&);
-    bool attach(attachable*);
+    void enqueue(actor* sender, any_tuple const& msg)
+    {
+        enqueue_node(super::fetch_node(sender, msg));
+    }
+
+    int compare_exchange_state(int expected, int new_value)
+    {
+        int e = expected;
+        do
+        {
+            if (m_state.compare_exchange_weak(e, new_value))
+            {
+                return new_value;
+            }
+        }
+        while (e == expected);
+        return e;
+    }
+
+ private:
+
+    void enqueue_node(typename super::mailbox_element* node)
+    {
+        if (this->m_mailbox._push_back(node))
+        {
+            for (;;)
+            {
+                int state = m_state.load();
+                switch (state)
+                {
+                    case blocked:
+                    {
+                        if (m_state.compare_exchange_weak(state, ready))
+                        {
+                            CPPA_REQUIRE(this->m_scheduler != nullptr);
+                            this->m_scheduler->enqueue(this);
+                            return;
+                        }
+                        break;
+                    }
+                    case about_to_block:
+                    {
+                        if (m_state.compare_exchange_weak(state, ready))
+                        {
+                            return;
+                        }
+                        break;
+                    }
+                    default: return;
+                }
+            }
+        }
+    }
+
 };
 
 } } // namespace cppa::detail
