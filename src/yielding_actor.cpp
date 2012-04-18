@@ -91,16 +91,17 @@ void yielding_actor::dequeue(partial_function& fun)
 {
     if (m_invoke.invoke_from_cache(fun) == false)
     {
-        for (;;)
+        queue_node_ptr e;
+        do
         {
-            queue_node_ptr e{m_mailbox.try_pop()};
+            e.reset(m_mailbox.try_pop());
             while (!e)
             {
                 yield_until_not_empty();
                 e.reset(m_mailbox.try_pop());
             }
-            if (m_invoke.invoke(e, fun)) return;
         }
+        while (!m_invoke.invoke(e, fun));
     }
 }
 
@@ -116,20 +117,18 @@ void yielding_actor::dequeue(behavior& bhvr)
     {
         request_timeout(bhvr.timeout());
         bool timeout_occured = false;
-        for (;;)
+        queue_node_ptr e;
+        do
         {
-            queue_node_ptr e{m_mailbox.try_pop()};
+            e.reset(m_mailbox.try_pop());
             while (!e)
             {
                 yield_until_not_empty();
                 e.reset(m_mailbox.try_pop());
             }
-            if (   m_invoke.invoke(e, fun, &bhvr, &timeout_occured)
-                || timeout_occured)
-            {
-                return;
-            }
         }
+        while (   !m_invoke.invoke(e, fun, &bhvr, &timeout_occured)
+               && !timeout_occured);
     }
 }
 

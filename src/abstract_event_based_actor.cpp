@@ -110,9 +110,10 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
     self.set(this);
     try
     {
+        std::unique_ptr<detail::recursive_queue_node> e;
         for (;;)
         {
-            std::unique_ptr<detail::recursive_queue_node> e{m_mailbox.try_pop()};
+            e.reset(m_mailbox.try_pop());
             if (!e)
             {
                 m_state.store(abstract_scheduled_actor::about_to_block);
@@ -151,7 +152,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                         }
                         // try to match cached messages before receiving new ones
                         auto i = m_cache.begin();
-                        while (i != m_cache.end() && !m_loop_stack.empty())
+                        while (i != m_cache.end())
                         {
                             switch (handle_message(*(*i)))
                             {
@@ -179,6 +180,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                                 default: exit(7); // illegal state
                             }
                         }
+                        break;
                     }
                     case cache_msg:
                     {
