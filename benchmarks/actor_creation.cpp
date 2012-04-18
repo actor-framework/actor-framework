@@ -143,7 +143,10 @@ int main(int argc, char** argv)
                 //cout << "value = " << value << endl
                 //     << "expected => 2^" << num << " = "
                 //     << (1 << num) << endl;
-                assert(value == (((uint32_t) 1) << num));
+                if (value != (((uint32_t) 1) << num))
+                {
+                    cerr << "ERROR: received wrong result!\n";
+                }
             }
         );
         await_all_others_done();

@@ -128,6 +128,9 @@ void check_factors(factors const& vec)
     assert(vec.size() == 2);
     assert(vec[0] == s_factor1);
     assert(vec[1] == s_factor2);
+#   ifdef NDEBUG
+    static_cast<void>(vec);
+#   endif
 }
 
 struct fsm_worker : fsm_actor<fsm_worker>
