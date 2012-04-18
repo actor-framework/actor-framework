@@ -53,17 +53,15 @@ void abstract_event_based_actor::dequeue(partial_function&)
     quit(exit_reason::unallowed_function_call);
 }
 
-bool abstract_event_based_actor::handle_message(mailbox_element& node)
+auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result
 {
     CPPA_REQUIRE(m_loop_stack.empty() == false);
-    if (node.marked) return false;
     auto& bhvr = *(m_loop_stack.back());
     switch (filter_msg(node.msg))
     {
         case normal_exit_signal:
         case expired_timeout_message:
-            node.marked = true;
-            return false;
+            return drop_msg;
 
         case timeout_message:
             m_has_pending_timeout_request = false;
@@ -74,7 +72,7 @@ bool abstract_event_based_actor::handle_message(mailbox_element& node)
                 auto& next_bhvr = *(m_loop_stack.back());
                 request_timeout(next_bhvr.timeout());
             }
-            return true;
+            return msg_handled;
 
         default:
             break;
@@ -87,76 +85,91 @@ bool abstract_event_based_actor::handle_message(mailbox_element& node)
     ++m_active_timeout_id;
     if ((bhvr.get_partial_function())(m_last_dequeued))
     {
-        node.marked = true;
         m_last_dequeued.reset();
         m_last_sender.reset();
         // we definitely don't have a pending timeout now
         m_has_pending_timeout_request = false;
-        return true;
+        return msg_handled;
     }
     // no match, restore members
     --m_active_timeout_id;
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);
-    return false;
+    return cache_msg;
 }
 
 void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
 {
     self.set(this);
-    auto& mbox_cache = m_mailbox.cache();
-    auto pos = mbox_cache.end();
     try
     {
         for (;;)
         {
-            if (m_loop_stack.empty())
+            std::unique_ptr<detail::recursive_queue_node> e{m_mailbox.try_pop()};
+            if (!e)
             {
-                cleanup(exit_reason::normal);
-                m_state.store(abstract_scheduled_actor::done);
-                m_loop_stack.clear();
-                on_exit();
-                cb->exec_done();
-                return;
-            }
-            while (pos == mbox_cache.end())
-            {
-                // try fetch more
+                m_state.store(abstract_scheduled_actor::about_to_block);
+                CPPA_MEMORY_BARRIER();
                 if (m_mailbox.can_fetch_more() == false)
                 {
-                    // sweep marked elements
-                    auto new_end = std::remove_if(mbox_cache.begin(), mbox_cache.end(),
-                                                  [](detail::recursive_queue_node const& n) { return n.marked; });
-                    mbox_cache.resize(std::distance(mbox_cache.begin(), new_end));
-                    m_state.store(abstract_scheduled_actor::about_to_block);
-                    CPPA_MEMORY_BARRIER();
-                    if (m_mailbox.can_fetch_more() == false)
+                    switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                                   abstract_scheduled_actor::blocked))
                     {
-                        switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                                       abstract_scheduled_actor::blocked))
+                        case abstract_scheduled_actor::ready:
                         {
-                            case abstract_scheduled_actor::ready:
-                            {
-                                // someone preempt us, set position to new end()
-                                pos = mbox_cache.end();
-                                break;
-                            }
-                            case abstract_scheduled_actor::blocked:
-                            {
-                                return;
-                            }
-                            default: exit(7); // illegal state
-                        };
-                    }
+                            break;
+                        }
+                        case abstract_scheduled_actor::blocked:
+                        {
+                            return;
+                        }
+                        default: exit(7); // illegal state
+                    };
                 }
-                pos = m_mailbox.try_fetch_more();
             }
-            pos = std::find_if(pos, mbox_cache.end(),
-                               [&](mailbox_element& e) { return handle_message(e); });
-            if (pos != mbox_cache.end())
+            else
             {
-                // handled a message, scan mailbox from start again
-                pos = mbox_cache.begin();
+                switch (handle_message(*e))
+                {
+                    case drop_msg:
+                    {
+                        break; // nop
+                    }
+                    case msg_handled:
+                    {
+                        // try to match cached messages
+                        auto i = m_cache.begin();
+                        while (i != m_cache.end() && !m_loop_stack.empty())
+                        {
+                            switch (handle_message(*(*i)))
+                            {
+                                case drop_msg:
+                                {
+                                    i = m_cache.erase(i);
+                                    break;
+                                }
+                                case msg_handled:
+                                {
+                                    m_cache.erase(i);
+                                    i = m_cache.begin();
+                                    break;
+                                }
+                                case cache_msg:
+                                {
+                                    ++i;
+                                    break;
+                                }
+                                default: exit(7); // illegal state
+                            }
+                        }
+                    }
+                    case cache_msg:
+                    {
+                        m_cache.push_back(std::move(e));
+                        break;
+                    }
+                    default: exit(7); // illegal state
+                }
             }
         }
     }

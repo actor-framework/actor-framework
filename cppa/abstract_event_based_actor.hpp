@@ -44,49 +44,13 @@
 
 namespace cppa {
 
-struct vec_append
-{
-    inline std::vector<detail::recursive_queue_node>::iterator
-    operator()(std::vector<detail::recursive_queue_node>& result,
-               detail::recursive_queue_node* e) const
-    {
-        std::vector<std::unique_ptr<detail::recursive_queue_node> > tmp;
-        while (e)
-        {
-            auto next = e->next;
-            tmp.emplace_back(e);
-            e = next;
-        }
-        auto old_size = result.size();
-        for (auto i = tmp.rbegin(); i != tmp.rend(); ++i)
-        {
-            result.emplace_back(std::move(*(*i)));
-        }
-        return result.begin() + old_size;
-    }
-};
-
 /**
  * @brief Base class for all event-based actor implementations.
  */
-class abstract_event_based_actor
-        : public detail::abstract_scheduled_actor<
-            intrusive::single_reader_queue<
-                detail::recursive_queue_node,
-                std::vector<detail::recursive_queue_node>,
-                vec_append
-            >
-          >
+class abstract_event_based_actor : public detail::abstract_scheduled_actor
 {
 
-    typedef detail::abstract_scheduled_actor<
-                intrusive::single_reader_queue<
-                    detail::recursive_queue_node,
-                    std::vector<detail::recursive_queue_node>,
-                    vec_append
-                >
-            >
-            super;
+    typedef detail::abstract_scheduled_actor super;
 
  public:
 
@@ -107,6 +71,17 @@ class abstract_event_based_actor
     virtual void on_exit();
 
  protected:
+
+    std::vector<std::unique_ptr<detail::recursive_queue_node> > m_cache;
+
+    enum handle_message_result
+    {
+        drop_msg,
+        msg_handled,
+        cache_msg
+    };
+
+    auto handle_message(mailbox_element& iter) -> handle_message_result;
 
     abstract_event_based_actor();
 
@@ -156,10 +131,6 @@ class abstract_event_based_actor
     {
         receive(std::forward<Args>(args)...);
     }
-
- private:
-
-    bool handle_message(mailbox_element& iter);
 
 };
 

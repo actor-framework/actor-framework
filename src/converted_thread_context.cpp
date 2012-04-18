@@ -29,6 +29,7 @@
 
 
 #include <memory>
+#include <iostream>
 #include <algorithm>
 
 #include "cppa/self.hpp"
@@ -40,7 +41,7 @@
 namespace cppa { namespace detail {
 
 converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom(":Exit"))
+    : m_exit_msg_pattern(atom(":Exit")), m_invoke(this, this)
 {
 }
 
@@ -68,93 +69,38 @@ void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
     m_mailbox.push_back(fetch_node(sender, msg));
 }
 
-void converted_thread_context::dequeue(partial_function& rules)  /*override*/
+void converted_thread_context::dequeue(partial_function& fun) // override
 {
-    auto rm_fun = [&](mailbox_cache_element& node) { return dq(*node, rules); };
-    auto& mbox_cache = m_mailbox.cache();
-    auto mbox_end = mbox_cache.end();
-    auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-    while (iter == mbox_end)
+    if (m_invoke.invoke_from_cache(fun) == false)
     {
-        iter = std::find_if(m_mailbox.fetch_more(), mbox_end, rm_fun);
+        queue_node_ptr e{m_mailbox.pop()};
+        while (m_invoke.invoke(e, fun) == false)
+        {
+            e.reset(m_mailbox.pop());
+        }
     }
-    mbox_cache.erase(iter);
 }
 
-void converted_thread_context::dequeue(behavior& rules) /*override*/
+void converted_thread_context::dequeue(behavior& bhvr) // override
 {
-    if (rules.timeout().valid())
+    auto& fun = bhvr.get_partial_function();
+    if (bhvr.timeout().valid() == false)
+    {
+        dequeue(fun);
+        return;
+    }
+    if (m_invoke.invoke_from_cache(fun) == false)
     {
         auto timeout = now();
-        timeout += rules.timeout();
-        auto rm_fun = [&](mailbox_cache_element& node)
+        timeout += bhvr.timeout();
+        queue_node_ptr e{m_mailbox.try_pop(timeout)};
+        while (e)
         {
-            return dq(*node, rules.get_partial_function());
-        };
-        auto& mbox_cache = m_mailbox.cache();
-        auto mbox_end = mbox_cache.end();
-        auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-        while (iter == mbox_end)
-        {
-            auto next = m_mailbox.try_fetch_more(timeout);
-            if (next == mbox_end)
-            {
-                rules.handle_timeout();
-                return;
-            }
-            iter = std::find_if(next, mbox_end, rm_fun);
+            if (m_invoke.invoke(e, fun)) return;
+            else e.reset(m_mailbox.try_pop(timeout));
         }
-        mbox_cache.erase(iter);
+        bhvr.handle_timeout();
     }
-    else
-    {
-        converted_thread_context::dequeue(rules.get_partial_function());
-    }
-}
-
-converted_thread_context::throw_on_exit_result
-converted_thread_context::throw_on_exit(any_tuple const& msg)
-{
-    if (matches(msg, m_exit_msg_pattern))
-    {
-        auto reason = msg.get_as<std::uint32_t>(1);
-        if (reason != exit_reason::normal)
-        {
-            // throws
-            quit(reason);
-        }
-        else
-        {
-            return normal_exit_signal;
-        }
-    }
-    return not_an_exit_signal;
-}
-
-bool converted_thread_context::dq(mailbox_element& node, partial_function& rules)
-{
-    if (   m_trap_exit == false
-        && throw_on_exit(node.msg) == normal_exit_signal)
-    {
-        return false;
-    }
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    {
-        mailbox_element::guard qguard{&node};
-        if (rules(m_last_dequeued))
-        {
-            // client calls erase(iter)
-            qguard.release();
-            m_last_dequeued.reset();
-            m_last_sender.reset();
-            return true;
-        }
-    }
-    // no match (restore members)
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    return false;
 }
 
 } } // namespace cppa::detail

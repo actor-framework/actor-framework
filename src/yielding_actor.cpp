@@ -42,6 +42,7 @@ namespace cppa { namespace detail {
 yielding_actor::yielding_actor(std::function<void()> fun)
     : m_fiber(&yielding_actor::run, this)
     , m_behavior(fun)
+    , m_invoke(this, this)
 {
 }
 
@@ -88,37 +89,46 @@ void yielding_actor::yield_until_not_empty()
 
 void yielding_actor::dequeue(partial_function& fun)
 {
-    auto rm_fun = [&](mailbox_cache_element& node)
+    if (m_invoke.invoke_from_cache(fun) == false)
     {
-        return dq(*node, fun) == dq_done;
-    };
-    dequeue_impl(rm_fun);
+        for (;;)
+        {
+            queue_node_ptr e{m_mailbox.try_pop()};
+            while (!e)
+            {
+                yield_until_not_empty();
+                e.reset(m_mailbox.try_pop());
+            }
+            if (m_invoke.invoke(e, fun)) return;
+        }
+    }
 }
 
 void yielding_actor::dequeue(behavior& bhvr)
 {
-    if (bhvr.timeout().valid())
+    auto& fun = bhvr.get_partial_function();
+    if (bhvr.timeout().valid() == false)
     {
-        request_timeout(bhvr.timeout());
-        auto rm_fun = [&](mailbox_cache_element& node) -> bool
-        {
-            switch (dq(*node, bhvr.get_partial_function()))
-            {
-                case dq_timeout_occured:
-                    bhvr.handle_timeout();
-                    return true;
-                case dq_done:
-                    return true;
-                default:
-                    return false;
-            }
-        };
-        dequeue_impl(rm_fun);
+        dequeue(bhvr.get_partial_function());
+        return;
     }
-    else
+    if (m_invoke.invoke_from_cache(fun) == false)
     {
-        // suppress virtual function call
-        yielding_actor::dequeue(bhvr.get_partial_function());
+        bool timeout_occured = false;
+        for (;;)
+        {
+            queue_node_ptr e{m_mailbox.try_pop()};
+            while (!e)
+            {
+                yield_until_not_empty();
+                e.reset(m_mailbox.try_pop());
+            }
+            if (   m_invoke.invoke(e, fun, &bhvr, &timeout_occured)
+                || timeout_occured)
+            {
+                return;
+            }
+        }
     }
 }
 
@@ -167,57 +177,6 @@ void yielding_actor::resume(util::fiber* from, scheduler::callback* callback)
             }
         }
     }
-}
-
-auto yielding_actor::dq(mailbox_element& node,
-                        partial_function& fun) -> dq_result
-{
-    CPPA_REQUIRE(node.msg.cvals().get() != nullptr);
-    if (node.marked) return dq_indeterminate;
-    switch (filter_msg(node.msg))
-    {
-        case normal_exit_signal:
-        case expired_timeout_message:
-        {
-            // skip message
-            return dq_indeterminate;
-        }
-        case timeout_message:
-        {
-            // m_active_timeout_id is already invalid
-            m_has_pending_timeout_request = false;
-            return dq_timeout_occured;
-        }
-        default: break;
-    }
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    //m_last_dequeued = node.msg;
-    //m_last_sender = node.sender;
-    // make sure no timeout is handled incorrectly in a nested receive
-    ++m_active_timeout_id;
-    // lifetime scope of qguard
-    {
-        // make sure nested receives do not process this node again
-        mailbox_element::guard qguard{&node};
-        // try to invoke given function
-        if (fun(m_last_dequeued))
-        {
-            // client erases node later (keep it marked until it's removed)
-            qguard.release();
-            // this members are only valid during invocation
-            m_last_dequeued.reset();
-            m_last_sender.reset();
-            // we definitely don't have a pending timeout now
-            m_has_pending_timeout_request = false;
-            return dq_done;
-        }
-    }
-    // no match, restore members
-    --m_active_timeout_id;
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    return dq_indeterminate;
 }
 
 } } // namespace cppa::detail

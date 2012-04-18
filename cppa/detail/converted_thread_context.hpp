@@ -49,6 +49,7 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
+#include "cppa/detail/nestable_invoke_policy.hpp"
 
 namespace cppa { namespace detail {
 
@@ -59,6 +60,36 @@ class converted_thread_context : public abstract_actor<local_actor>
 {
 
     typedef abstract_actor<local_actor> super;
+
+    struct filter_policy;
+
+    friend struct filter_policy;
+
+    struct filter_policy
+    {
+
+        converted_thread_context* m_parent;
+
+        inline filter_policy(converted_thread_context* ptr) : m_parent(ptr)
+        {
+        }
+
+        inline bool operator()(any_tuple const& msg)
+        {
+            if (   m_parent->m_trap_exit == false
+                && matches(msg, m_parent->m_exit_msg_pattern))
+            {
+                auto reason = msg.get_as<std::uint32_t>(1);
+                if (reason != exit_reason::normal)
+                {
+                    m_parent->quit(reason);
+                }
+                return true;
+            }
+            return false;
+        }
+
+    };
 
  public:
 
@@ -75,7 +106,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void dequeue(behavior& rules); //override
 
-    void dequeue(partial_function& rules) ; //override
+    void dequeue(partial_function& rules); //override
 
     inline decltype(m_mailbox)& mailbox()
     {
@@ -84,20 +115,11 @@ class converted_thread_context : public abstract_actor<local_actor>
 
  private:
 
-    //typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
-
-    enum throw_on_exit_result
-    {
-        not_an_exit_signal,
-        normal_exit_signal
-    };
-
-    // returns true if node->msg was accepted by rules
-    bool dq(mailbox_element& node, partial_function& rules);
-
-    throw_on_exit_result throw_on_exit(any_tuple const& msg);
+    // a list is safe to use in a nested receive
+    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
 
     pattern<atom_value, std::uint32_t> m_exit_msg_pattern;
+    nestable_invoke_policy<filter_policy> m_invoke;
 
 };
 

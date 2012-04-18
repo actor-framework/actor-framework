@@ -56,8 +56,7 @@ namespace cppa {
  * @tparam Base Either {@link cppa::actor actor}
  *              or {@link cppa::local_actor local_actor}.
  */
-template<class Base,
-         class MailboxType = intrusive::single_reader_queue<detail::recursive_queue_node> >
+template<class Base>
 class abstract_actor : public Base
 {
 
@@ -66,10 +65,8 @@ class abstract_actor : public Base
 
  public:
 
-    typedef MailboxType                             mailbox_type;
-    typedef typename mailbox_type::value_type       mailbox_element;
-    typedef typename mailbox_type::cache_type       mailbox_cache_type;
-    typedef typename mailbox_cache_type::value_type mailbox_cache_element;
+    typedef detail::recursive_queue_node mailbox_element;
+    typedef intrusive::single_reader_queue<mailbox_element> mailbox_type;
 
     bool attach(attachable* ptr) // override
     {

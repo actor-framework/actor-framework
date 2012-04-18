@@ -47,11 +47,10 @@
 namespace cppa { namespace detail {
 
 // A spawned, scheduled Actor.
-template<class MailboxType  = intrusive::single_reader_queue<detail::recursive_queue_node> >
-class abstract_scheduled_actor : public abstract_actor<scheduled_actor, MailboxType>
+class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
 {
 
-    typedef abstract_actor<scheduled_actor, MailboxType> super;
+    typedef abstract_actor<scheduled_actor> super;
 
  protected:
 

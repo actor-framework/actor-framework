@@ -41,11 +41,12 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
+#include "cppa/detail/nestable_invoke_policy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class yielding_actor : public abstract_scheduled_actor<>
+class yielding_actor : public abstract_scheduled_actor
 {
 
     typedef abstract_scheduled_actor super;
@@ -55,9 +56,54 @@ class yielding_actor : public abstract_scheduled_actor<>
 
     static void run(void* _this);
 
-    void exec_loop_stack();
-
     void yield_until_not_empty();
+
+    struct filter_policy;
+
+    friend struct filter_policy;
+
+    struct filter_policy
+    {
+
+        yielding_actor* m_parent;
+
+        inline filter_policy(yielding_actor* parent) : m_parent(parent) { }
+
+        inline bool operator()(any_tuple const& msg)
+        {
+            return m_parent->filter_msg(msg) != ordinary_message;
+        }
+
+        inline bool operator()(any_tuple const& msg,
+                               behavior* bhvr,
+                               bool* timeout_occured)
+        {
+            switch (m_parent->filter_msg(msg))
+            {
+                case normal_exit_signal:
+                {
+                    return m_parent->m_trap_exit == false;
+                }
+                case timeout_message:
+                {
+                    bhvr->handle_timeout();
+                    *timeout_occured = true;
+                    return true;
+                }
+                case expired_timeout_message:
+                {
+                    return true;
+                }
+                case ordinary_message:
+                {
+                    return false;
+                }
+                default: exit(7); // illegal state
+            }
+            return false;
+        }
+
+    };
 
  public:
 
@@ -71,28 +117,9 @@ class yielding_actor : public abstract_scheduled_actor<>
 
  private:
 
-    template<typename Fun>
-    void dequeue_impl(Fun rm_fun)
-    {
-        auto& mbox_cache = m_mailbox.cache();
-        auto mbox_end = mbox_cache.end();
-        auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-        while (iter == mbox_end)
-        {
-            yield_until_not_empty();
-            iter = std::find_if(m_mailbox.try_fetch_more(), mbox_end, rm_fun);
-        }
-        mbox_cache.erase(iter);
-    }
+    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
 
-    enum dq_result
-    {
-        dq_done,
-        dq_indeterminate,
-        dq_timeout_occured
-    };
-
-    auto dq(mailbox_element& node, partial_function& rules) -> dq_result;
+    nestable_invoke_policy<filter_policy> m_invoke;
 
 };
 

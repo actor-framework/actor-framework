@@ -100,7 +100,7 @@ struct scheduler_helper
 void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
 {
     typedef abstract_actor<local_actor> impl_type;
-    typedef impl_type::mailbox_type::cache_value_type queue_node_ptr;
+    typedef std::unique_ptr<detail::recursive_queue_node> queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();
@@ -142,7 +142,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
         {
             if (messages.empty())
             {
-                msg_ptr = queue.pop();
+                msg_ptr.reset(queue.pop());
             }
             else
             {
@@ -167,8 +167,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 // wait for next message or next timeout
                 if (it != messages.end())
                 {
-                    msg_ptr.reset();
-                    queue.try_pop(msg_ptr, it->first);
+                    msg_ptr.reset(queue.try_pop(it->first));
                 }
             }
         }
