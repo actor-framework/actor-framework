@@ -206,6 +206,7 @@ class single_reader_queue
                     m_head = e;
                     e = next;
                 }
+                return true;
             }
             // next iteration
         }

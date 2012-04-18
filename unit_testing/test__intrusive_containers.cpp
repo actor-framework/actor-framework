@@ -112,14 +112,31 @@ size_t test__intrusive_containers()
     int iarr3[] = { 2, 4 };
     CPPA_CHECK((std::equal(begin(iarr3), end(iarr3), begin(ilist2))));
 
-    auto x = ilist2.take_after(ilist2.before_begin());
-    CPPA_CHECK_EQUAL(x->value, 2);
-    delete x;
+    auto xy = ilist2.take_after(ilist2.before_begin());
+    CPPA_CHECK_EQUAL(xy->value, 2);
+    delete xy;
 
     ilist2.clear();
     // two dummies
     CPPA_CHECK_EQUAL(s_iint_instances, 2);
     CPPA_CHECK(ilist2.empty());
+
+    cppa::intrusive::single_reader_queue<iint> q;
+    q.push_back(new iint(1));
+    q.push_back(new iint(2));
+    q.push_back(new iint(3));
+
+    auto x = q.pop();
+    CPPA_CHECK_EQUAL(1, x->value);
+    delete x;
+    x = q.pop();
+    CPPA_CHECK_EQUAL(2, x->value);
+    delete x;
+    x = q.pop();
+    CPPA_CHECK_EQUAL(3, x->value);
+    delete x;
+    x = q.try_pop();
+    CPPA_CHECK(x == nullptr);
 
     return CPPA_TEST_RESULT;
 }

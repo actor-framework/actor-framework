@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include <stack>
 #include <chrono>
 #include <iostream>
