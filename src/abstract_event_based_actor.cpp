@@ -100,6 +100,13 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
 
 void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
 {
+    auto done_cb = [&]()
+    {
+        m_state.store(abstract_scheduled_actor::done);
+        m_loop_stack.clear();
+        on_exit();
+        cb->exec_done();
+    };
     self.set(this);
     try
     {
@@ -137,7 +144,12 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                     }
                     case msg_handled:
                     {
-                        // try to match cached messages
+                        if (m_loop_stack.empty())
+                        {
+                            done_cb();
+                            return;
+                        }
+                        // try to match cached messages before receiving new ones
                         auto i = m_cache.begin();
                         while (i != m_cache.end() && !m_loop_stack.empty())
                         {
@@ -151,6 +163,11 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                                 case msg_handled:
                                 {
                                     m_cache.erase(i);
+                                    if (m_loop_stack.empty())
+                                    {
+                                        done_cb();
+                                        return;
+                                    }
                                     i = m_cache.begin();
                                     break;
                                 }
@@ -181,10 +198,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
     {
         cleanup(exit_reason::unhandled_exception);
     }
-    m_state.store(abstract_scheduled_actor::done);
-    m_loop_stack.clear();
-    on_exit();
-    cb->exec_done();
+    done_cb();
 }
 
 void abstract_event_based_actor::on_exit()

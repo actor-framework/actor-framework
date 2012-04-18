@@ -109,11 +109,12 @@ void yielding_actor::dequeue(behavior& bhvr)
     auto& fun = bhvr.get_partial_function();
     if (bhvr.timeout().valid() == false)
     {
-        dequeue(bhvr.get_partial_function());
+        dequeue(fun);
         return;
     }
     if (m_invoke.invoke_from_cache(fun) == false)
     {
+        request_timeout(bhvr.timeout());
         bool timeout_occured = false;
         for (;;)
         {
