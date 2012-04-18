@@ -39,7 +39,6 @@ cppa/util/is_legal_tuple_type.hpp
 cppa/util/replace_type.hpp
 cppa/detail/serialize_tuple.hpp
 unit_testing/test__atom.cpp
-unit_testing/test__queue_performance.cpp
 cppa/intrusive/single_reader_queue.hpp
 unit_testing/test__local_group.cpp
 cppa/detail/channel.hpp

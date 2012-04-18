@@ -132,8 +132,6 @@ size_t test__primitive_variant();
 size_t test__fixed_vector();
 size_t test__intrusive_containers();
 
-void test__queue_performance();
-
 std::vector<std::string> split(std::string const& str, char delim);
 
 using std::cout;
