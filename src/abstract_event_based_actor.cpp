@@ -81,8 +81,6 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
     std::swap(m_last_sender, node.sender);
     //m_last_dequeued = node.msg;
     //m_last_sender = node.sender;
-    // make sure no timeout is handled incorrectly in a nested receive
-    ++m_active_timeout_id;
     if ((bhvr.get_partial_function())(m_last_dequeued))
     {
         m_last_dequeued.reset();
@@ -92,7 +90,6 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
         return msg_handled;
     }
     // no match, restore members
-    --m_active_timeout_id;
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);
     return cache_msg;
