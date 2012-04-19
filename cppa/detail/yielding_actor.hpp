@@ -51,8 +51,19 @@ class yielding_actor : public abstract_scheduled_actor
 
     typedef abstract_scheduled_actor super;
 
-    util::fiber m_fiber;
-    std::function<void()> m_behavior;
+ public:
+
+    yielding_actor(std::function<void()> fun);
+
+    void dequeue(behavior& bhvr); //override
+
+    void dequeue(partial_function& fun); //override
+
+    void resume(util::fiber* from, scheduler::callback* callback); //override
+
+ private:
+
+    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
 
     static void run(void* _this);
 
@@ -105,20 +116,8 @@ class yielding_actor : public abstract_scheduled_actor
 
     };
 
- public:
-
-    yielding_actor(std::function<void()> fun);
-
-    void dequeue(behavior& bhvr); //override
-
-    void dequeue(partial_function& fun); //override
-
-    void resume(util::fiber* from, scheduler::callback* callback); //override
-
- private:
-
-    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
-
+    util::fiber m_fiber;
+    std::function<void()> m_behavior;
     nestable_invoke_policy<filter_policy> m_invoke;
 
 };

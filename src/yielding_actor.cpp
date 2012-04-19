@@ -110,10 +110,10 @@ void yielding_actor::dequeue(behavior& bhvr)
     auto& fun = bhvr.get_partial_function();
     if (bhvr.timeout().valid() == false)
     {
-        dequeue(fun);
-        return;
+        // suppress virtual function call
+        yielding_actor::dequeue(fun);
     }
-    if (m_invoke.invoke_from_cache(fun) == false)
+    else if (m_invoke.invoke_from_cache(fun) == false)
     {
         request_timeout(bhvr.timeout());
         bool timeout_occured = false;
