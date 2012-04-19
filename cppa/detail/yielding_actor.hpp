@@ -91,16 +91,13 @@ class yielding_actor : public abstract_scheduled_actor
         {
             switch (m_parent->filter_msg(msg))
             {
-                case normal_exit_signal:
-                {
-                    return m_parent->m_trap_exit == false;
-                }
                 case timeout_message:
                 {
                     bhvr->handle_timeout();
                     *timeout_occured = true;
                     return true;
                 }
+                case normal_exit_signal:
                 case expired_timeout_message:
                 {
                     return true;
