@@ -138,6 +138,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                 {
                     case drop_msg:
                     {
+                        release_node(e.release());
                         break; // nop
                     }
                     case msg_handled:
@@ -155,11 +156,13 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                             {
                                 case drop_msg:
                                 {
+                                    release_node(i->release());
                                     i = m_cache.erase(i);
                                     break;
                                 }
                                 case msg_handled:
                                 {
+                                    release_node(i->release());
                                     m_cache.erase(i);
                                     if (m_loop_stack.empty())
                                     {

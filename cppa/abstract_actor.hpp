@@ -166,17 +166,46 @@ class abstract_actor : public Base
  protected:
 
     mailbox_type m_mailbox;
+    util::fixed_vector<mailbox_element*, 10> m_nodes;
 
-    template<typename T>
-    static inline mailbox_element* fetch_node(actor* sender, T&& msg)
+    inline mailbox_element* fetch_node(actor* sender, any_tuple msg)
     {
-        return new mailbox_element(sender, std::forward<T>(msg));
+        if (m_nodes.empty())
+        {
+            return new mailbox_element(sender, std::move(msg));
+        }
+        else
+        {
+            auto result = m_nodes.back();
+            m_nodes.pop_back();
+            result->marked = false;
+            result->sender = sender;
+            result->msg = std::move(msg);
+            return result;
+        }
+
+    }
+
+    inline void release_node(mailbox_element* node)
+    {
+        if (m_nodes.full())
+        {
+            delete node;
+        }
+        else
+        {
+            m_nodes.push_back(node);
+        }
     }
 
     template<typename... Args>
     abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
                                    , m_exit_reason(exit_reason::not_exited)
     {
+        for (size_t i = 0; i < m_nodes.max_size(); ++i)
+        {
+            m_nodes.push_back(new mailbox_element);
+        }
     }
 
     void cleanup(std::uint32_t reason)
