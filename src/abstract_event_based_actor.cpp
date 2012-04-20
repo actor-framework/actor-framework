@@ -128,7 +128,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                         {
                             return;
                         }
-                        default: exit(7); // illegal state
+                        default: CPPA_CRITICAL("illegal actor state");
                     };
                 }
             }
@@ -178,7 +178,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                                     ++i;
                                     break;
                                 }
-                                default: exit(7); // illegal state
+                                default: CPPA_CRITICAL("illegal result of handle_message");
                             }
                         }
                         break;
@@ -188,7 +188,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                         m_cache.emplace_back(e);
                         break;
                     }
-                    default: exit(7); // illegal state
+                    default: CPPA_CRITICAL("illegal result of handle_message");
                 }
             }
         }

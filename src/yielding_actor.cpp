@@ -164,8 +164,7 @@ void yielding_actor::resume(util::fiber* from, scheduler::callback* callback)
                     }
                     default:
                     {
-                        // illegal state
-                        exit(7);
+                        CPPA_CRITICAL("illegal yield result");
                     }
                 }
                 break;

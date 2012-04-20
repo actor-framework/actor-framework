@@ -82,7 +82,7 @@ class nestable_invoke_policy
                     ++i;
                     break;
                 }
-                default: exit(7); // illegal state
+                default: CPPA_CRITICAL("illegal result of handle_message");
             }
         }
         return false;
@@ -107,9 +107,12 @@ class nestable_invoke_policy
                 break;
             }
             case hm_skip_msg:
+            {
+                CPPA_CRITICAL("received a marked node");
+            }
             default:
             {
-                exit(7); // illegal state
+                CPPA_CRITICAL("illegal result of handle_message");
             }
         }
         return false;

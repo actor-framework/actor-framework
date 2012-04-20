@@ -57,13 +57,8 @@ struct recursive_queue_node
     {
     }
 
-    inline recursive_queue_node(recursive_queue_node&& other)
-        : next(nullptr)
-        , marked(false)
-        , sender(std::move(other.sender))
-        , msg(std::move(other.msg))
-    {
-    }
+    recursive_queue_node(recursive_queue_node const&) = delete;
+    recursive_queue_node& operator=(recursive_queue_node const&) = delete;
 
     struct guard
     {

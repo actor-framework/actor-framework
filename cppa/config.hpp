@@ -63,7 +63,7 @@
 #elif defined(CPPA_GCC)
 #   define CPPA_MEMORY_BARRIER() __sync_synchronize()
 #else
-#  error Plattform and/or compiler not supportet
+#  error Plattform and/or compiler not supported
 #endif
 
 #ifdef CPPA_DEBUG
@@ -83,8 +83,18 @@
     if ((stmt) == false) {                                                     \
         CPPA_REQUIRE__(#stmt, __FILE__, __LINE__);                             \
     }((void) 0)
+#define CPPA_CRITICAL__(error, file, line)                                     \
+    printf("%s:%u: critical error: '%s'\n", file, line, error);                \
+    {                                                                          \
+        void *array[10];                                                       \
+        size_t size = backtrace(array, 10);                                    \
+        backtrace_symbols_fd(array, size, 2);                                  \
+    }                                                                          \
+    exit(7)
+#define CPPA_CRITICAL(error) CPPA_CRITICAL__(error, __FILE__, __LINE__)
 #else // CPPA_DEBUG
 #define CPPA_REQUIRE(unused) ((void) 0)
+#define CPPA_CRITICAL(unused) exit(7)
 #endif // CPPA_DEBUG
 
 #endif // CPPA_CONFIG_HPP

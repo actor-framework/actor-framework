@@ -106,7 +106,7 @@ class yielding_actor : public abstract_scheduled_actor
                 {
                     return false;
                 }
-                default: exit(7); // illegal state
+                default: CPPA_CRITICAL("illegal result of filter_msg");
             }
             return false;
         }

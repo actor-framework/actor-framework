@@ -176,14 +176,14 @@ class abstract_actor : public Base
         }
         else
         {
-            auto result = m_nodes.back();
+            mailbox_element* result = m_nodes.back();
             m_nodes.pop_back();
+            result->next = nullptr;
             result->marked = false;
             result->sender = sender;
             result->msg = std::move(msg);
             return result;
         }
-
     }
 
     inline void release_node(mailbox_element* node)
