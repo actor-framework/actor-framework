@@ -202,7 +202,8 @@ class abstract_actor : public Base
     abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
                                    , m_exit_reason(exit_reason::not_exited)
     {
-        for (size_t i = 0; i < m_nodes.max_size(); ++i)
+        // pre-allocate some nodes
+        for (size_t i = 0; i < m_nodes.max_size() / 2; ++i)
         {
             m_nodes.push_back(new mailbox_element);
         }
