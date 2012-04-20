@@ -32,7 +32,8 @@
 
 namespace cppa {
 
-scheduled_actor::scheduled_actor() : next(nullptr), m_scheduler(nullptr)
+scheduled_actor::scheduled_actor() : local_actor(true)
+                                   , next(nullptr), m_scheduler(nullptr)
 {
 }
 
