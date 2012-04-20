@@ -138,13 +138,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
 
     bool pending_enqueue(actor* sender, any_tuple msg)
     {
-        //return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
-        if (enqueue_node(super::fetch_node(sender, std::move(msg)), pending))
-        {
-            std::cout << "PENDING ENQUEUE SUCCESSFULL\n";
-            return true;
-        }
-        return false;
+        return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
     }
 
     void quit(std::uint32_t reason)
