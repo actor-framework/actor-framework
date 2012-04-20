@@ -137,9 +137,15 @@ struct thread_pool_scheduler::worker
         struct handler : scheduler::callback
         {
             scheduled_actor* job;
-            handler() : job(nullptr) { }
+            scheduled_actor* pending_job;
+            handler() : job(nullptr), pending_job(nullptr) { }
             void exec_done()
             {
+                if (job->pending_actor())
+                {
+                    pending_job = static_cast<scheduled_actor*>(job->pending_actor().get());
+                    job->pending_actor().reset();
+                }
                 if (!job->deref()) delete job;
                 dec_actor_count();
                 job = nullptr;
@@ -165,7 +171,28 @@ struct thread_pool_scheduler::worker
             }
             else
             {
-                h.job->resume(&fself, &h);
+                do
+                {
+                    h.job->resume(&fself, &h);
+                    if (h.job)
+                    {
+                        if (h.job->pending_actor())
+                        {
+                            h.pending_job = static_cast<scheduled_actor*>(h.job->pending_actor().get());
+                            h.job->pending_actor().reset();
+                        }
+                        else
+                        {
+                            h.job = nullptr;
+                        }
+                    }
+                    if (h.pending_job)
+                    {
+                        h.job = h.pending_job;
+                        h.pending_job = nullptr;
+                    }
+                }
+                while (h.job);
             }
         }
     }

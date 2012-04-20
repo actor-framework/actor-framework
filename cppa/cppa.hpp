@@ -591,7 +591,7 @@ template<class C, typename Arg0, typename... Args>
 void send(intrusive_ptr<C>& whom, Arg0 const& arg0, Args const&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
-    if (whom) whom->enqueue(self, make_cow_tuple(arg0, args...));
+    if (whom) self->send_message(whom.get(), make_cow_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
@@ -599,13 +599,14 @@ void send(intrusive_ptr<C>&& whom, Arg0 const& arg0, Args const&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self, make_cow_tuple(arg0, args...));
+    send(tmp, arg0, args...);
 }
 
 // matches "send(this, ...)" in event-based actors
 template<typename Arg0, typename... Args>
-void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
+inline void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
 {
+    CPPA_REQUIRE(whom != nullptr);
     whom->enqueue(whom, make_cow_tuple(arg0, args...));
 }
 
@@ -624,7 +625,7 @@ typename std::enable_if<
 >::type
 operator<<(intrusive_ptr<C>& whom, any_tuple const& what)
 {
-    if (whom) whom->enqueue(self, what);
+    if (whom) self->send_message(whom.get(), what);
     return whom;
 }
 
@@ -636,7 +637,7 @@ typename std::enable_if<
 operator<<(intrusive_ptr<C>&& whom, any_tuple const& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self, what);
+    tmp << what;
     return std::move(tmp);
 }
 
@@ -647,7 +648,7 @@ typename std::enable_if<
 >::type
 operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
 {
-    if (whom) whom->enqueue(self, std::move(what));
+    if (whom) self->send_message(whom.get(), std::move(what));
     return whom;
 }
 
@@ -659,7 +660,7 @@ typename std::enable_if<
 operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
-    if (tmp) tmp->enqueue(self, std::move(what));
+    tmp << std::move(what);
     return std::move(tmp);
 }
 

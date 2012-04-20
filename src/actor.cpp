@@ -36,6 +36,7 @@
 #include <stdexcept>
 
 #include "cppa/actor.hpp"
+#include "cppa/any_tuple.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
