@@ -31,6 +31,8 @@
 #ifndef SCHEDULED_ACTOR_HPP
 #define SCHEDULED_ACTOR_HPP
 
+#include <iostream>
+
 #include <atomic>
 
 #include "cppa/any_tuple.hpp"
@@ -136,7 +138,13 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
 
     bool pending_enqueue(actor* sender, any_tuple msg)
     {
-        return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
+        //return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
+        if (enqueue_node(super::fetch_node(sender, std::move(msg)), pending))
+        {
+            std::cout << "PENDING ENQUEUE SUCCESSFULL\n";
+            return true;
+        }
+        return false;
     }
 
     void quit(std::uint32_t reason)
@@ -181,16 +189,19 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
                         if (m_state.compare_exchange_weak(state, target_state))
                         {
                             CPPA_REQUIRE(this->m_scheduler != nullptr);
-                            this->m_scheduler->enqueue(this);
+                            if (target_state == ready)
+                            {
+                                this->m_scheduler->enqueue(this);
+                            }
                             return true;
                         }
                         break;
                     }
                     case about_to_block:
                     {
-                        if (m_state.compare_exchange_weak(state, target_state))
+                        if (m_state.compare_exchange_weak(state, ready))
                         {
-                            return true;
+                            return false;
                         }
                         break;
                     }
