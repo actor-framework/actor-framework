@@ -163,7 +163,7 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link>
         (
             on<atom("token"), int>() >> [=](int v)
             {
-                next->enqueue(nullptr, std::move(self->last_dequeued()));
+                next << std::move(last_dequeued());
                 if (v == 0) become_void();
             }
         );
@@ -249,11 +249,11 @@ void chain_link(actor_ptr next)
     (
         on<atom("token"), int>() >> [&](int v)
         {
-            next << self->last_dequeued();
             if (v == 0)
             {
                 done = true;
             }
+            next << std::move(self->last_dequeued());
         }
     )
     .until([&]() { return done == true; });
