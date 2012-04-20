@@ -100,9 +100,7 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void quit(std::uint32_t reason); //override
 
-    void enqueue(actor* sender, any_tuple&& msg); //override
-
-    void enqueue(actor* sender, any_tuple const& msg); //override
+    void enqueue(actor* sender, any_tuple msg); //override
 
     void dequeue(behavior& rules); //override
 

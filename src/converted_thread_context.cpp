@@ -59,14 +59,9 @@ void converted_thread_context::cleanup(std::uint32_t reason)
     super::cleanup(reason);
 }
 
-void converted_thread_context::enqueue(actor* sender, any_tuple&& msg)
+void converted_thread_context::enqueue(actor* sender, any_tuple msg)
 {
     m_mailbox.push_back(fetch_node(sender, std::move(msg)));
-}
-
-void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
-{
-    m_mailbox.push_back(fetch_node(sender, msg));
 }
 
 void converted_thread_context::dequeue(partial_function& fun) // override

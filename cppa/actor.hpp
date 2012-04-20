@@ -60,6 +60,13 @@ class actor : public channel
     ~actor();
 
     /**
+     * @brief Enqueues @p msg to the actor's mailbox and returns true if
+     *        this actor is an scheduled actor that successfully changed
+     *        its state to @p pending.
+     */
+    virtual bool pending_enqueue(actor* sender, any_tuple msg);
+
+    /**
      * @brief Attaches @p ptr to this actor.
      *
      * The actor will call <tt>ptr->detach(...)</tt> on exit, or immediately

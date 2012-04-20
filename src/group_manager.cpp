@@ -60,7 +60,7 @@ class group_impl : public group
 
  public:
 
-    void enqueue(actor* sender, const any_tuple& msg) /*override*/
+    void enqueue(actor* sender, any_tuple msg) /*override*/
     {
         shared_guard guard(m_shared_mtx);
         for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
@@ -69,12 +69,6 @@ class group_impl : public group
             // of *i, thus, the set remains in a consistent state
             const_cast<channel_ptr&>(*i)->enqueue(sender, msg);
         }
-    }
-
-    void enqueue(actor* sender, any_tuple&& msg) /*override*/
-    {
-        any_tuple tmp(std::move(msg));
-        enqueue(sender, tmp);
     }
 
     group::subscription subscribe(const channel_ptr& who) /*override*/

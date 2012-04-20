@@ -54,19 +54,13 @@ actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
 
 void actor_proxy::forward_message(const process_information_ptr& piptr,
                                   actor* sender,
-                                  const any_tuple& msg)
+                                  any_tuple&& msg)
 {
-    auto mailman_msg = new detail::mailman_job(piptr, sender, this, msg);
+    auto mailman_msg = new detail::mailman_job(piptr, sender, this, std::move(msg));
     detail::mailman_queue().push_back(mailman_msg);
 }
 
-void actor_proxy::enqueue(actor* sender, any_tuple&& msg)
-{
-    any_tuple tmp(std::move(msg));
-    enqueue(sender, tmp);
-}
-
-void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
+void actor_proxy::enqueue(actor* sender, any_tuple msg)
 {
     if (   msg.size() == 2
         && *(msg.type_at(0)) == typeid(atom_value)
@@ -76,7 +70,7 @@ void actor_proxy::enqueue(actor* sender, const any_tuple& msg)
         cleanup(msg.get_as<std::uint32_t>(1));
         return;
     }
-    forward_message(parent_process_ptr(), sender, msg);
+    forward_message(parent_process_ptr(), sender, std::move(msg));
 }
 
 void actor_proxy::link_to(intrusive_ptr<actor>& other)

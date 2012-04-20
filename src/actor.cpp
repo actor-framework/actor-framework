@@ -63,6 +63,12 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
     }
 }
 
+bool actor::pending_enqueue(actor* sender, any_tuple msg)
+{
+    enqueue(sender, std::move(msg));
+    return false;
+}
+
 actor::actor(const process_information_ptr& pptr)
     : m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr)
 {

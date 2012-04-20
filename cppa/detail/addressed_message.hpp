@@ -38,8 +38,6 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/detail/channel.hpp"
-
 namespace cppa { namespace detail {
 
 class addressed_message

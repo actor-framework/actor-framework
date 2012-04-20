@@ -139,14 +139,9 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
         throw actor_exited(reason);
     }
 
-    void enqueue(actor* sender, any_tuple&& msg)
+    void enqueue(actor* sender, any_tuple msg)
     {
         enqueue_node(super::fetch_node(sender, std::move(msg)));
-    }
-
-    void enqueue(actor* sender, any_tuple const& msg)
-    {
-        enqueue_node(super::fetch_node(sender, msg));
     }
 
     int compare_exchange_state(int expected, int new_value)

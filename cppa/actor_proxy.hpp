@@ -54,9 +54,7 @@ class actor_proxy : public abstract_actor<actor>
 
     actor_proxy(std::uint32_t mid, process_information_ptr const& parent);
 
-    void enqueue(actor* sender, any_tuple&& msg);
-
-    void enqueue(actor* sender, any_tuple const& msg);
+    void enqueue(actor* sender, any_tuple msg);
 
     void link_to(intrusive_ptr<actor>& other);
 
@@ -76,8 +74,7 @@ class actor_proxy : public abstract_actor<actor>
 
  public:
 
-    void forward_message(process_information_ptr const&,
-                         actor*, any_tuple const&);
+    void forward_message(process_information_ptr const&, actor*, any_tuple&&);
 
 };
 
