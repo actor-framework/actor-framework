@@ -107,10 +107,10 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
     self.set(this);
     try
     {
-        std::unique_ptr<detail::recursive_queue_node> e;
+        detail::recursive_queue_node* e;
         for (;;)
         {
-            e.reset(m_mailbox.try_pop());
+            e = m_mailbox.try_pop();
             if (!e)
             {
                 m_state.store(abstract_scheduled_actor::about_to_block);
@@ -138,11 +138,12 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                 {
                     case drop_msg:
                     {
-                        release_node(e.release());
+                        release_node(e);
                         break; // nop
                     }
                     case msg_handled:
                     {
+                        release_node(e);
                         if (m_loop_stack.empty())
                         {
                             done_cb();
@@ -184,7 +185,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
                     }
                     case cache_msg:
                     {
-                        m_cache.push_back(std::move(e));
+                        m_cache.emplace_back(e);
                         break;
                     }
                     default: exit(7); // illegal state
