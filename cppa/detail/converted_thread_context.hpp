@@ -49,47 +49,21 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
-#include "cppa/detail/nestable_invoke_policy.hpp"
+#include "cppa/detail/nestable_receive_actor.hpp"
 
 namespace cppa { namespace detail {
 
 /**
  * @brief Represents a thread that was converted to an Actor.
  */
-class converted_thread_context : public abstract_actor<local_actor>
+class converted_thread_context
+        : public nestable_receive_actor<converted_thread_context,
+                                        abstract_actor<local_actor> >
 {
 
-    typedef abstract_actor<local_actor> super;
-
-    struct filter_policy;
-
-    friend struct filter_policy;
-
-    struct filter_policy
-    {
-
-        converted_thread_context* m_parent;
-
-        inline filter_policy(converted_thread_context* ptr) : m_parent(ptr)
-        {
-        }
-
-        inline bool operator()(any_tuple const& msg)
-        {
-            if (   m_parent->m_trap_exit == false
-                && matches(msg, m_parent->m_exit_msg_pattern))
-            {
-                auto reason = msg.get_as<std::uint32_t>(1);
-                if (reason != exit_reason::normal)
-                {
-                    m_parent->quit(reason);
-                }
-                return true;
-            }
-            return false;
-        }
-
-    };
+    typedef nestable_receive_actor<converted_thread_context,
+                                   abstract_actor<local_actor> >
+            super;
 
  public:
 
@@ -106,18 +80,17 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void dequeue(partial_function& rules); //override
 
-    inline decltype(m_mailbox)& mailbox()
-    {
-        return m_mailbox;
-    }
+    inline void push_timeout() { }
+
+    inline void pop_timeout() { }
+
+    filter_result filter_msg(any_tuple const& msg);
+
+    inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
  private:
 
-    // a list is safe to use in a nested receive
-    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
-
     pattern<atom_value, std::uint32_t> m_exit_msg_pattern;
-    nestable_invoke_policy<filter_policy> m_invoke;
 
 };
 

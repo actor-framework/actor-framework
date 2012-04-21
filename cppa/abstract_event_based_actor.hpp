@@ -81,7 +81,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor
         cache_msg
     };
 
-    auto handle_message(mailbox_element& iter) -> handle_message_result;
+    auto handle_message(mailbox_element& node) -> handle_message_result;
 
     abstract_event_based_actor();
 

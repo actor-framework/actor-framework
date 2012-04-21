@@ -42,7 +42,6 @@ namespace cppa { namespace detail {
 yielding_actor::yielding_actor(std::function<void()> fun)
     : m_fiber(&yielding_actor::run, this)
     , m_behavior(fun)
-    , m_invoke(this, this)
 {
 }
 
@@ -89,19 +88,19 @@ void yielding_actor::yield_until_not_empty()
 
 void yielding_actor::dequeue(partial_function& fun)
 {
-    if (m_invoke.invoke_from_cache(fun) == false)
+    if (invoke_from_cache(fun) == false)
     {
-        queue_node_ptr e;
+        recursive_queue_node* e = nullptr;
         do
         {
-            e.reset(m_mailbox.try_pop());
+            e = m_mailbox.try_pop();
             while (!e)
             {
                 yield_until_not_empty();
-                e.reset(m_mailbox.try_pop());
+                e = m_mailbox.try_pop();
             }
         }
-        while (!m_invoke.invoke(e, fun));
+        while (invoke(e, fun) == false);
     }
 }
 
@@ -113,22 +112,20 @@ void yielding_actor::dequeue(behavior& bhvr)
         // suppress virtual function call
         yielding_actor::dequeue(fun);
     }
-    else if (m_invoke.invoke_from_cache(fun) == false)
+    else if (invoke_from_cache(bhvr) == false)
     {
         request_timeout(bhvr.timeout());
-        bool timeout_occured = false;
-        queue_node_ptr e;
+        recursive_queue_node* e = nullptr;
         do
         {
-            e.reset(m_mailbox.try_pop());
+            e  = m_mailbox.try_pop();
             while (!e)
             {
                 yield_until_not_empty();
-                e.reset(m_mailbox.try_pop());
+                e = m_mailbox.try_pop();
             }
         }
-        while (   !m_invoke.invoke(e, fun, &bhvr, &timeout_occured)
-               && !timeout_occured);
+        while (invoke(e, bhvr) == false);
     }
 }
 

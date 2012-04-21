@@ -110,7 +110,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     decltype(detail::now()) now;
     bool done = false;
     // message handling rules
-    auto handle_msg =
+    auto mfun =
     (
         on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
                                                        const actor_ptr&)
@@ -152,6 +152,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 while (it != messages.end() && (it->first) <= now)
                 {
                     queue_node_ptr ptr{std::move(it->second)};
+                    CPPA_REQUIRE(ptr->marked == false);
                     auto whom = const_cast<actor_ptr*>(
                                     reinterpret_cast<actor_ptr const*>(
                                         ptr->msg.at(1)));
@@ -171,7 +172,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
                 }
             }
         }
-        handle_msg(msg_ptr->msg);
+        mfun(msg_ptr->msg);
     }
 }
 

@@ -198,10 +198,10 @@ int main(int argc, char** argv)
     RUN_TEST(test__fixed_vector);
     RUN_TEST(test__tuple);
     RUN_TEST(test__serialization);
-    RUN_TEST(test__local_group);
     RUN_TEST(test__atom);
     RUN_TEST(test__yield_interface);
     RUN_TEST(test__spawn);
+    RUN_TEST(test__local_group);
     RUN_TEST_A3(test__remote_actor, argv[0], false, args);
     cout << endl
          << "error(s) in all tests: " << errors

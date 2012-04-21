@@ -32,8 +32,8 @@
 
 namespace cppa {
 
-scheduled_actor::scheduled_actor() : local_actor(true)
-                                   , next(nullptr), m_scheduler(nullptr)
+scheduled_actor::scheduled_actor(bool enable_pending_enqueue)
+    : local_actor(enable_pending_enqueue), next(nullptr), m_scheduler(nullptr)
 {
 }
 

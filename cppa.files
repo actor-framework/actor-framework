@@ -267,4 +267,5 @@ cppa/match_expr.hpp
 cppa/detail/pseudo_tuple.hpp
 cppa/detail/recursive_queue_node.hpp
 cppa/detail/scheduled_actor_dummy.hpp
-cppa/detail/nestable_invoke_policy.hpp
+cppa/detail/nestable_receive_actor.hpp
+cppa/detail/filter_result.hpp

@@ -33,6 +33,7 @@
 #include <algorithm>
 
 #include "cppa/self.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/invokable.hpp"
@@ -41,7 +42,7 @@
 namespace cppa { namespace detail {
 
 converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom(":Exit")), m_invoke(this, this)
+    : m_exit_msg_pattern(atom(":Exit"))
 {
 }
 
@@ -61,17 +62,24 @@ void converted_thread_context::cleanup(std::uint32_t reason)
 
 void converted_thread_context::enqueue(actor* sender, any_tuple msg)
 {
+#   ifdef CPPA_DEBUG
+    auto node = fetch_node(sender, std::move(msg));
+    CPPA_REQUIRE(node->marked == false);
+    m_mailbox.push_back(node);
+#   else
     m_mailbox.push_back(fetch_node(sender, std::move(msg)));
+#   endif
 }
 
 void converted_thread_context::dequeue(partial_function& fun) // override
 {
-    if (m_invoke.invoke_from_cache(fun) == false)
+    if (invoke_from_cache(fun) == false)
     {
-        queue_node_ptr e{m_mailbox.pop()};
-        while (m_invoke.invoke(e, fun) == false)
+        recursive_queue_node* e = m_mailbox.pop();
+        CPPA_REQUIRE(e->marked == false);
+        while (invoke(e, fun) == false)
         {
-            e.reset(m_mailbox.pop());
+            e = m_mailbox.pop();
         }
     }
 }
@@ -81,21 +89,40 @@ void converted_thread_context::dequeue(behavior& bhvr) // override
     auto& fun = bhvr.get_partial_function();
     if (bhvr.timeout().valid() == false)
     {
-        dequeue(fun);
-        return;
+        // suppress virtual function call
+        converted_thread_context::dequeue(fun);
     }
-    if (m_invoke.invoke_from_cache(fun) == false)
+    else if (invoke_from_cache(fun) == false)
     {
         auto timeout = now();
         timeout += bhvr.timeout();
-        queue_node_ptr e{m_mailbox.try_pop(timeout)};
-        while (e)
+        recursive_queue_node* e = m_mailbox.try_pop(timeout);
+        while (e != nullptr)
         {
-            if (m_invoke.invoke(e, fun)) return;
-            else e.reset(m_mailbox.try_pop(timeout));
+            if (e->marked)
+            {
+                std::cout << "ooops: " << to_string(e->msg) << std::endl;
+            }
+            CPPA_REQUIRE(e->marked == false);
+            if (invoke(e, fun)) return;
+            e = m_mailbox.try_pop(timeout);
         }
         bhvr.handle_timeout();
     }
+}
+
+filter_result converted_thread_context::filter_msg(any_tuple const& msg)
+{
+    if (m_trap_exit == false && matches(msg, m_exit_msg_pattern))
+    {
+        auto reason = msg.get_as<std::uint32_t>(1);
+        if (reason != exit_reason::normal)
+        {
+            quit(reason);
+        }
+        return normal_exit_signal;
+    }
+    return ordinary_message;
 }
 
 } } // namespace cppa::detail

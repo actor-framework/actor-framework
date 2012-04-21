@@ -42,6 +42,7 @@
 #include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
+#include "cppa/detail/filter_result.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -57,14 +58,6 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
  protected:
 
     std::atomic<int> m_state;
-
-    enum filter_result
-    {
-        normal_exit_signal,
-        expired_timeout_message,
-        timeout_message,
-        ordinary_message
-    };
 
     filter_result filter_msg(any_tuple const& msg)
     {
@@ -130,7 +123,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
     static constexpr int about_to_block = 0x04;
 
     abstract_scheduled_actor(int state = done)
-        : m_state(state)
+        : super(true), m_state(state)
         , m_has_pending_timeout_request(false)
         , m_active_timeout_id(0)
     {
@@ -171,6 +164,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
     bool enqueue_node(typename super::mailbox_element* node,
                       int target_state = ready)
     {
+        CPPA_REQUIRE(node->marked == false);
         if (this->m_mailbox._push_back(node))
         {
             for (;;)

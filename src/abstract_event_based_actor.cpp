@@ -32,8 +32,10 @@
 #include "cppa/to_string.hpp"
 
 #include "cppa/self.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
+
+#include "cppa/detail/invokable.hpp"
+#include "cppa/detail/filter_result.hpp"
 
 namespace cppa {
 
@@ -55,15 +57,16 @@ void abstract_event_based_actor::dequeue(partial_function&)
 
 auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result
 {
+    CPPA_REQUIRE(node.marked == false);
     CPPA_REQUIRE(m_loop_stack.empty() == false);
     auto& bhvr = *(m_loop_stack.back());
     switch (filter_msg(node.msg))
     {
-        case normal_exit_signal:
-        case expired_timeout_message:
+        case detail::normal_exit_signal:
+        case detail::expired_timeout_message:
             return drop_msg;
 
-        case timeout_message:
+        case detail::timeout_message:
             m_has_pending_timeout_request = false;
             CPPA_REQUIRE(bhvr.timeout().valid());
             bhvr.handle_timeout();
@@ -79,8 +82,6 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
     }
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);
-    //m_last_dequeued = node.msg;
-    //m_last_sender = node.sender;
     if ((bhvr.get_partial_function())(m_last_dequeued))
     {
         m_last_dequeued.reset();

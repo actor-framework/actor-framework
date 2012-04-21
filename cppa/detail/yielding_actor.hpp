@@ -41,15 +41,19 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/nestable_invoke_policy.hpp"
+#include "cppa/detail/nestable_receive_actor.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class yielding_actor : public abstract_scheduled_actor
+class yielding_actor
+        : public nestable_receive_actor<yielding_actor,
+                                        abstract_scheduled_actor>
 {
 
-    typedef abstract_scheduled_actor super;
+    typedef nestable_receive_actor<yielding_actor,
+                                   abstract_scheduled_actor>
+            super;
 
  public:
 
@@ -61,6 +65,16 @@ class yielding_actor : public abstract_scheduled_actor
 
     void resume(util::fiber* from, scheduler::callback* callback); //override
 
+    inline void push_timeout()
+    {
+        ++m_active_timeout_id;
+    }
+
+    inline void pop_timeout()
+    {
+        --m_active_timeout_id;
+    }
+
  private:
 
     typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
@@ -69,53 +83,8 @@ class yielding_actor : public abstract_scheduled_actor
 
     void yield_until_not_empty();
 
-    struct filter_policy;
-
-    friend struct filter_policy;
-
-    struct filter_policy
-    {
-
-        yielding_actor* m_parent;
-
-        inline filter_policy(yielding_actor* parent) : m_parent(parent) { }
-
-        inline bool operator()(any_tuple const& msg)
-        {
-            return m_parent->filter_msg(msg) != ordinary_message;
-        }
-
-        inline bool operator()(any_tuple const& msg,
-                               behavior* bhvr,
-                               bool* timeout_occured)
-        {
-            switch (m_parent->filter_msg(msg))
-            {
-                case timeout_message:
-                {
-                    bhvr->handle_timeout();
-                    *timeout_occured = true;
-                    return true;
-                }
-                case normal_exit_signal:
-                case expired_timeout_message:
-                {
-                    return true;
-                }
-                case ordinary_message:
-                {
-                    return false;
-                }
-                default: CPPA_CRITICAL("illegal result of filter_msg");
-            }
-            return false;
-        }
-
-    };
-
     util::fiber m_fiber;
     std::function<void()> m_behavior;
-    nestable_invoke_policy<filter_policy> m_invoke;
 
 };
 

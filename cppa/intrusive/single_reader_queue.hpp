@@ -131,7 +131,7 @@ class single_reader_queue
      */
     inline bool empty() const
     {
-        return !m_head && m_stack.load() == nullptr;
+        return m_head == nullptr && m_stack.load() == nullptr;
     }
 
     /**
@@ -170,7 +170,7 @@ class single_reader_queue
         if (empty())
         {
             lock_type guard(m_mtx);
-            while (!(m_stack.load()))
+            while (m_stack.load() == nullptr)
             {
                 if (detail::wait_until(guard, m_cv, timeout) == false)
                 {

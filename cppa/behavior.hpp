@@ -97,6 +97,21 @@ class behavior
         return m_fun;
     }
 
+    inline bool operator()(any_tuple& value)
+    {
+        return m_fun(value);
+    }
+
+    inline bool operator()(any_tuple const& value)
+    {
+        return m_fun(value);
+    }
+
+    inline bool operator()(any_tuple&& value)
+    {
+        return m_fun(std::move(value));
+    }
+
  private:
 
     // terminates recursion

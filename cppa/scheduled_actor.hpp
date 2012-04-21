@@ -54,7 +54,7 @@ class scheduled_actor : public local_actor
 
  public:
 
-    scheduled_actor();
+    scheduled_actor(bool enable_pending_enqueue = false);
 
     scheduled_actor* next; // intrusive next pointer
 
