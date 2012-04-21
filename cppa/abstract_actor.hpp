@@ -44,9 +44,10 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/util/shared_spinlock.hpp"
+
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
-
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa {
@@ -167,35 +168,48 @@ class abstract_actor : public Base
 
     mailbox_type m_mailbox;
     util::fixed_vector<mailbox_element*, 10> m_nodes;
+    util::shared_spinlock m_nodes_lock;
+
+    typedef detail::lock_guard<util::shared_spinlock> lock_type;
 
     inline mailbox_element* fetch_node(actor* sender, any_tuple msg)
     {
-        if (m_nodes.empty())
+        mailbox_element* result = nullptr;
+        // lifetime scope of guard
         {
-            return new mailbox_element(sender, std::move(msg));
+            lock_type guard{m_nodes_lock};
+            if (m_nodes.not_empty())
+            {
+                result = m_nodes.back();
+                m_nodes.pop_back();
+            }
         }
-        else
+        if (result)
         {
-            mailbox_element* result = m_nodes.back();
-            m_nodes.pop_back();
             result->next = nullptr;
             result->marked = false;
             result->sender = sender;
             result->msg = std::move(msg);
-            return result;
         }
+        else
+        {
+            result = new mailbox_element(sender, std::move(msg));
+        }
+        return result;
     }
 
     inline void release_node(mailbox_element* node)
     {
-        if (m_nodes.full())
+        // lifetime scope of guard
         {
-            delete node;
+            lock_type guard{m_nodes_lock};
+            if (m_nodes.full() == false)
+            {
+                m_nodes.push_back(node);
+                return;
+            }
         }
-        else
-        {
-            m_nodes.push_back(node);
-        }
+        delete node;
     }
 
     template<typename... Args>
