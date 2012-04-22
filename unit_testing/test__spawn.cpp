@@ -294,6 +294,17 @@ void testee3(actor_ptr parent)
     );
 }
 
+void echo_actor()
+{
+    receive
+    (
+        others() >> []()
+        {
+            self->last_sender() << self->last_dequeued();
+        }
+    );
+}
+
 template<class Testee>
 std::string behavior_test(actor_ptr et)
 {
@@ -341,6 +352,13 @@ size_t test__spawn()
 
     CPPA_IF_VERBOSE(cout << "test timeout ... " << std::flush);
     receive(after(std::chrono::seconds(1)) >> []() { });
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
+    auto mecho = spawn(echo_actor);
+    send(mecho, "hello echo");
+    receive(on("hello echo") >> []() { });
+    await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     CPPA_IF_VERBOSE(cout << "testee1 ... " << std::flush);
