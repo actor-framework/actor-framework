@@ -120,17 +120,11 @@ void mailman_loop()
                     DEBUG("--> " << to_string(sjob.msg));
                     // write size of serialized message
                     auto sent = ::send(peer, &size32, sizeof(std::uint32_t), 0);
-                    if (sent > 0)
+                    if (   sent != static_cast<int>(sizeof(std::uint32_t))
+                        || static_cast<int>(bs.size()) != ::send(peer, bs.data(), bs.size(), 0))
                     {
-                        // write message
-                        sent = ::send(peer, bs.data(), bs.size(), 0);
-                    }
-                    // disconnect peer if send() failed
-                    disconnect_peer = (sent <= 0);
-                    // make sure all bytes are written
-                    if (static_cast<std::uint32_t>(sent) != size32)
-                    {
-                        throw std::logic_error("send() not a synchronous socket");
+                        disconnect_peer = true;
+                        DEBUG("too few bytes written");
                     }
                 }
                 // something went wrong; close connection to this peer
@@ -166,7 +160,7 @@ void mailman_loop()
             }
             else
             {
-                // TODO: some kind of error handling?
+                DEBUG("add_peer_job failed: peer already known");
             }
         }
         else if (job->is_kill_job())

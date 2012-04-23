@@ -747,7 +747,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
         for (po_peer& pd : peers)
         {
             auto fd = pd.get_socket();
-            if (fd > maxfd) maxfd = fd;
+            maxfd = std::max(maxfd, fd);
             FD_SET(fd, &readset);
         }
         // iterate over key-value (actor id / doormen) pairs
