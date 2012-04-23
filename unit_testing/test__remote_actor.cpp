@@ -43,7 +43,7 @@ size_t test__remote_actor(char const* app_path, bool is_client,
         return 0;
     }
     CPPA_TEST(test__remote_actor);
-    auto ping_actor = spawn(ping);
+    auto ping_actor = spawn(ping, 10);
     std::uint16_t port = 4242;
     bool success = false;
     do
@@ -74,7 +74,9 @@ size_t test__remote_actor(char const* app_path, bool is_client,
         }
     });
     await_all_others_done();
-    CPPA_CHECK_EQUAL(pongs(), 5);
+    CPPA_CHECK_EQUAL(10, pongs());
+    // kill pong actor
+
     // wait until separate process (in sep. thread) finished execution
     child.join();
     return CPPA_TEST_RESULT;

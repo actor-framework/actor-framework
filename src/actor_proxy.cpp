@@ -64,7 +64,7 @@ void actor_proxy::enqueue(actor* sender, any_tuple msg)
 {
     if (   msg.size() == 2
         && *(msg.type_at(0)) == typeid(atom_value)
-        && msg.get_as<atom_value>(0) == atom(":KillProxy")
+        && msg.get_as<atom_value>(0) == atom("KILL_PROXY")
         && *(msg.type_at(1)) == typeid(std::uint32_t))
     {
         cleanup(msg.get_as<std::uint32_t>(1));
@@ -80,7 +80,7 @@ void actor_proxy::link_to(intrusive_ptr<actor>& other)
         // causes remote actor to link to (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_cow_tuple(atom(":Link"), other));
+                        make_cow_tuple(atom("LINK"), other));
     }
 }
 
@@ -96,7 +96,7 @@ void actor_proxy::unlink_from(intrusive_ptr<actor>& other)
         // causes remote actor to unlink from (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_cow_tuple(atom(":Unlink"), other));
+                        make_cow_tuple(atom("UNLINK"), other));
     }
 }
 
@@ -113,7 +113,7 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other)
         // causes remote actor to unlink from (proxy of) other
         forward_message(parent_process_ptr(),
                         other.get(),
-                        make_cow_tuple(atom(":Link"), other));
+                        make_cow_tuple(atom("LINK"), other));
     }
     return result;
 }
@@ -125,7 +125,7 @@ bool actor_proxy::remove_backlink(intrusive_ptr<actor>& other)
     {
         forward_message(parent_process_ptr(),
                         nullptr,
-                        make_cow_tuple(atom(":Unlink"), actor_ptr(this)));
+                        make_cow_tuple(atom("UNLINK"), actor_ptr(this)));
     }
     return result;
 }

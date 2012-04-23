@@ -157,7 +157,7 @@ class actor : public channel
     void link_to(intrusive_ptr<actor>&& other);
 
     /**
-     * @copydoc unlink_from(intrusive_ptr<actor>&)
+     * @copydoc :unlink_from(intrusive_ptr<actor>&)
      */
     void unlink_from(intrusive_ptr<actor>&& other);
 

@@ -45,7 +45,7 @@ class observer : public cppa::attachable
     void actor_exited(std::uint32_t reason)
     {
         using namespace cppa;
-        send(m_client, atom(":Down"), actor_ptr(self), reason);
+        send(m_client, atom("DOWN"), actor_ptr(self), reason);
     }
 
     bool matches(const cppa::attachable::token& match_token)

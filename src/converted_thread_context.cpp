@@ -42,7 +42,7 @@
 namespace cppa { namespace detail {
 
 converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom(":Exit"))
+    : m_exit_msg_pattern(atom("EXIT"))
 {
 }
 

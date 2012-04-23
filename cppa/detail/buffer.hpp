@@ -174,12 +174,16 @@ class buffer
         return m_data;
     }
 
+    inline bool full()
+    {
+        return remaining() == 0;
+    }
+
     bool append_from_file_descriptor(int fd, bool throw_on_error = false)
     {
-        auto _this = this;
-        auto fun = [_this, fd]() -> int
+        auto fun = [=]() -> int
         {
-            return ::read(fd, _this->wr_ptr(), _this->remaining());
+            return ::read(fd, this->wr_ptr(), this->remaining());
         };
         return append_impl(fun, throw_on_error);
     }
@@ -187,10 +191,9 @@ class buffer
     bool append_from(native_socket_type sfd, int rdflags,
                      bool throw_on_error = false)
     {
-        auto _this = this;
-        auto fun = [_this, sfd, rdflags]() -> int
+        auto fun = [=]() -> int
         {
-            return ::recv(sfd, _this->wr_ptr(), _this->remaining(), rdflags);
+            return ::recv(sfd, this->wr_ptr(), this->remaining(), rdflags);
         };
         return append_impl(fun, throw_on_error);
     }

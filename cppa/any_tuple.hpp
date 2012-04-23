@@ -33,9 +33,9 @@
 
 #include <type_traits>
 
-#include "cppa/cow_tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
+#include "cppa/cow_tuple.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/is_iterable.hpp"
@@ -271,6 +271,12 @@ inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
 inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
 {
     return !(lhs == rhs);
+}
+
+template<typename... Args>
+inline any_tuple make_any_tuple(Args&&... args)
+{
+    return make_cow_tuple(std::forward<Args>(args)...);
 }
 
 } // namespace cppa

@@ -331,7 +331,7 @@ std::string behavior_test(actor_ptr et)
             throw std::runtime_error(testee_name + " does not reply");
         }
     );
-    send(et, atom(":Exit"), exit_reason::user_defined);
+    send(et, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
     return result;
 }
@@ -395,61 +395,57 @@ size_t test__spawn()
     {
         link(my_link, spawn(new event_testee));
     }
-    send(my_link, atom(":Exit"), exit_reason::user_defined);
+    send(my_link, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
-
-    auto report_unexpected = [&]()
-    {
-        cerr << "unexpected message: "
-             << to_string(self->last_dequeued()) << endl;
-        CPPA_CHECK(false);
-    };
     self->trap_exit(true);
-    auto pong_actor = spawn(pong, spawn(ping));
+    auto ping_actor = spawn(ping, 10);
+    auto pong_actor = spawn(pong, ping_actor);
     monitor(pong_actor);
+    monitor(ping_actor);
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;
     future_send(self, std::chrono::seconds(1), atom("FooBar"));
-    // wait for :Down and :Exit messages of pong
-    receive_for(i, 3)
+    // wait for DOWN and EXIT messages of pong
+    receive_for(i, 4)
     (
-        on<atom(":Exit"), std::uint32_t>() >> [&](std::uint32_t reason)
+        on<atom("EXIT"), std::uint32_t>() >> [&](std::uint32_t reason)
         {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
-            //CPPA_CHECK_EQUAL(who, pong_actor);
+            CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
-        on<atom(":Down"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
-                                                             std::uint32_t reason)
+        on<atom("DOWN"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
+                                                            std::uint32_t reason)
         {
-            CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             if (who == pong_actor)
             {
                 flags |= 0x02;
+                CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
+            }
+            else if (who == ping_actor)
+            {
+                flags |= 0x04;
+                CPPA_CHECK_EQUAL(reason, exit_reason::normal);
             }
         },
         on<atom("FooBar")>() >> [&]()
         {
-            flags |= 0x04;
+            flags |= 0x08;
         },
         others() >> [&]()
         {
-            report_unexpected();
-            CPPA_CHECK(false);
+            CPPA_ERROR("unexpected message: " << to_string(self->last_dequeued()));
         },
         after(std::chrono::seconds(5)) >> [&]()
         {
-            cout << "!!! TIMEOUT !!!" << endl;
-            CPPA_CHECK(false);
+            CPPA_ERROR("timeout in file " << __FILE__ << " in line " << __LINE__);
         }
     );
     // wait for termination of all spawned actors
     await_all_others_done();
-    CPPA_CHECK_EQUAL(flags, 0x07);
+    CPPA_CHECK_EQUAL(0x0F, flags);
     // verify pong messages
-    CPPA_CHECK_EQUAL(pongs(), 5);
-
-    await_all_others_done();
+    CPPA_CHECK_EQUAL(10, pongs());
     return CPPA_TEST_RESULT;
 }

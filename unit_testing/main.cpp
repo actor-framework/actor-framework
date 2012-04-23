@@ -13,12 +13,13 @@
 #include <iostream>
 
 #include "test.hpp"
+#include "ping_pong.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/cow_tuple.hpp"
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
 #include "cppa/anything.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/detail/demangle.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
@@ -148,21 +149,40 @@ int main(int argc, char** argv)
 
     /*
     auto nao = remote_actor("192.168.1.148", 12000);
-    send(nao, atom("speak"), "i am an actor! seriously!");
+    send(nao, atom("speak"), "I am an actor! Seriously!");
     return 0;
     */
-
 
     auto args = get_kv_pairs(argc, argv);
     match_each(args)
     (
-        on("run", val<std::string>) >> [&](std::string const& what)
+        on("run", "remote_actor") >> [&]()
         {
-            if (what == "remote_actor")
+            test__remote_actor(argv[0], true, args);
+            exit(0);
+        },
+        on("run_ping", arg_match) >> [&](std::string const& num_pings)
+        {
+            auto ping_actor = spawn(ping, std::stoi(num_pings));
+            std::uint16_t port = 4242;
+            bool success = false;
+            do
             {
-                test__remote_actor(argv[0], true, args);
-                exit(0);
+                try
+                {
+                    publish(ping_actor, port);
+                    success = true;
+                }
+                catch (bind_failure&)
+                {
+                    // try next port
+                    ++port;
+                }
             }
+            while (!success);
+            cout << "port is " << port << endl;
+            await_all_others_done();
+            exit(0);
         },
         on("scheduler", val<std::string>) >> [](std::string const& sched)
         {
@@ -185,7 +205,6 @@ int main(int argc, char** argv)
     );
     std::cout << std::boolalpha;
     size_t errors = 0;
-
     //print_node_id();
     RUN_TEST(test__ripemd_160);
     RUN_TEST(test__primitive_variant);

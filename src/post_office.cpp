@@ -74,7 +74,7 @@
     std::cout << "[process id: "                                               \
               << cppa::process_information::get()->process_id()                \
               << "] " << arg << std::endl
-//*/
+*/
 
 #define DEBUG(unused) ((void) 0)
 
@@ -223,7 +223,7 @@ class po_peer
     {
         if (!m_children.empty())
         {
-            auto msg = make_cow_tuple(atom(":KillProxy"),
+            auto msg = make_cow_tuple(atom("KILL_PROXY"),
                                   exit_reason::remote_link_unreachable);
             for (actor_proxy_ptr& pptr : m_children)
             {
@@ -238,168 +238,175 @@ class po_peer
     {
         static constexpr size_t wfp_size =   sizeof(std::uint32_t)
                                            + process_information::node_id_size;
-        switch (m_state)
+        bool read_more = false;
+        do
         {
-            case wait_for_process_info:
+            read_more = false;
+            switch (m_state)
             {
-                if (m_rdbuf.final_size() != wfp_size)
+                case wait_for_process_info:
                 {
-                    m_rdbuf.reset(wfp_size);
+                    if (m_rdbuf.final_size() != wfp_size)
+                    {
+                        m_rdbuf.reset(wfp_size);
+                    }
+                    if (m_rdbuf.append_from(m_socket, s_rdflag) == false)
+                    {
+                        return false;
+                    }
+                    if (m_rdbuf.ready() == false)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        std::uint32_t process_id;
+                        memcpy(&process_id, m_rdbuf.data(), sizeof(std::uint32_t));
+                        process_information::node_id_type node_id;
+                        memcpy(node_id.data(),
+                               m_rdbuf.data() + sizeof(std::uint32_t),
+                               process_information::node_id_size);
+                        m_peer.reset(new process_information(process_id, node_id));
+                        // inform mailman about new peer
+                        mailman_queue().push_back(new mailman_job(m_socket,
+                                                                  m_peer));
+                        m_rdbuf.reset();
+                        m_state = wait_for_msg_size;
+                        DEBUG("pinfo read: "
+                              << m_peer->process_id()
+                              << "@"
+                              << to_string(m_peer->node_id()));
+                        // fall through and try to read more from socket
+                    }
                 }
-                if (m_rdbuf.append_from(m_socket, s_rdflag) == false)
+                case wait_for_msg_size:
                 {
-                    return false;
+                    if (m_rdbuf.final_size() != sizeof(std::uint32_t))
+                    {
+                        m_rdbuf.reset(sizeof(std::uint32_t));
+                    }
+                    if (!m_rdbuf.append_from(m_socket, s_rdflag)) return false;
+                    if (m_rdbuf.ready() == false)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        // read and set message size
+                        std::uint32_t msg_size;
+                        memcpy(&msg_size, m_rdbuf.data(), sizeof(std::uint32_t));
+                        m_rdbuf.reset(msg_size);
+                        m_state = read_message;
+                        // fall through and try to read more from socket
+                    }
                 }
-                if (m_rdbuf.ready() == false)
+                case read_message:
                 {
-                    break;
-                }
-                else
-                {
-                    std::uint32_t process_id;
-                    memcpy(&process_id, m_rdbuf.data(), sizeof(std::uint32_t));
-                    process_information::node_id_type node_id;
-                    memcpy(node_id.data(),
-                           m_rdbuf.data() + sizeof(std::uint32_t),
-                           process_information::node_id_size);
-                    m_peer.reset(new process_information(process_id, node_id));
-                    // inform mailman about new peer
-                    mailman_queue().push_back(new mailman_job(m_socket,
-                                                              m_peer));
+                    if (!m_rdbuf.append_from(m_socket, s_rdflag))
+                    {
+                        // could not read from socket
+                        return false;
+                    }
+                    if (m_rdbuf.ready() == false)
+                    {
+                        // wait for new data
+                        break;
+                    }
+                    addressed_message msg;
+                    binary_deserializer bd(m_rdbuf.data(), m_rdbuf.size());
+                    try
+                    {
+                        m_meta_msg->deserialize(&msg, &bd);
+                    }
+                    catch (std::exception& e)
+                    {
+                        // unable to deserialize message (format error)
+                        DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
+                        return false;
+                    }
+                    auto& content = msg.content();
+                    DEBUG("<-- " << to_string(msg));
+                    // intercept "MONITOR" messages
+                    if (   content.size() == 1
+                        && t_atom_actor_ptr_types[0] == content.type_at(0)
+                        && content.get_as<atom_value>(0) == atom("MONITOR"))
+                    {
+                        auto receiver = msg.receiver().downcast<actor>();
+                        CPPA_REQUIRE(receiver.get() != nullptr);
+                        if (!receiver)
+                        {
+                            DEBUG("empty receiver");
+                        }
+                        else if (receiver->parent_process() == *process_information::get())
+                        {
+                            //cout << pinfo << " ':Monitor'; actor id = "
+                            //     << sender->id() << endl;
+                            // local actor?
+                            // this message was send from a proxy
+                            receiver->attach_functor([=](std::uint32_t reason)
+                            {
+                                any_tuple kmsg = make_cow_tuple(atom("KILL_PROXY"),
+                                                            reason);
+                                auto mjob = new detail::mailman_job(m_peer,
+                                                                    receiver,
+                                                                    receiver,
+                                                                    kmsg);
+                                detail::mailman_queue().push_back(mjob);
+                            });
+                        }
+                        else
+                        {
+                            DEBUG(":Monitor received for an remote actor");
+                        }
+                    }
+                    // intercept "LINK" messages
+                    else if (   content.size() == 2
+                             && t_atom_actor_ptr_types[0] == content.type_at(0)
+                             && t_atom_actor_ptr_types[1] == content.type_at(1)
+                             && content.get_as<atom_value>(0) == atom("LINK"))
+                    {
+                        CPPA_REQUIRE(msg.sender()->is_proxy());
+                        auto whom = msg.sender().downcast<actor_proxy>();
+                        auto to = content.get_as<actor_ptr>(1);
+                        if ((whom) && (to))
+                            whom->local_link_to(to);
+                    }
+                    // intercept "UNLINK" messages
+                    else if (   content.size() == 2
+                             && t_atom_actor_ptr_types[0] == content.type_at(0)
+                             && t_atom_actor_ptr_types[1] == content.type_at(1)
+                             && content.get_as<atom_value>(0) == atom("LINK"))
+                    {
+                        CPPA_REQUIRE(msg.sender()->is_proxy());
+                        auto whom = msg.sender().downcast<actor_proxy>();
+                        auto from = content.get_as<actor_ptr>(1);
+                        if ((whom) && (from))
+                            whom->local_unlink_from(from);
+                    }
+                    else
+                    {
+                        if (msg.receiver())
+                        {
+                            msg.receiver()->enqueue(msg.sender().get(),
+                                                    std::move(msg.content()));
+                        }
+                        else
+                        {
+                            DEBUG("empty receiver");
+                        }
+                    }
                     m_rdbuf.reset();
                     m_state = wait_for_msg_size;
-                    DEBUG("pinfo read: "
-                          << m_peer->process_id()
-                          << "@"
-                          << to_string(m_peer->node_id()));
-                    // fall through and try to read more from socket
-                }
-            }
-            case wait_for_msg_size:
-            {
-                if (m_rdbuf.final_size() != sizeof(std::uint32_t))
-                {
-                    m_rdbuf.reset(sizeof(std::uint32_t));
-                }
-                if (!m_rdbuf.append_from(m_socket, s_rdflag)) return false;
-                if (m_rdbuf.ready() == false)
-                {
+                    read_more = true;
                     break;
                 }
-                else
+                default:
                 {
-                    // read and set message size
-                    std::uint32_t msg_size;
-                    memcpy(&msg_size, m_rdbuf.data(), sizeof(std::uint32_t));
-                    m_rdbuf.reset(msg_size);
-                    m_state = read_message;
-                    // fall through and try to read more from socket
+                    throw std::logic_error("illegal state");
                 }
-            }
-            case read_message:
-            {
-                if (!m_rdbuf.append_from(m_socket, s_rdflag))
-                {
-                    // could not read from socket
-                    return false;
-                }
-                if (m_rdbuf.ready() == false)
-                {
-                    // wait for new data
-                    break;
-                }
-                addressed_message msg;
-                binary_deserializer bd(m_rdbuf.data(), m_rdbuf.size());
-                try
-                {
-                    m_meta_msg->deserialize(&msg, &bd);
-                }
-                catch (std::exception& e)
-                {
-                    // unable to deserialize message (format error)
-                    DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
-                    return false;
-                }
-                auto& content = msg.content();
-                DEBUG("<-- " << to_string(content));
-                // intercept ":Monitor" messages
-                if (   content.size() == 1
-                    && t_atom_actor_ptr_types[0] == content.type_at(0)
-                    && content.get_as<atom_value>(0) == atom(":Monitor"))
-                {
-                    auto receiver = msg.receiver().downcast<actor>();
-                    CPPA_REQUIRE(receiver.get() != nullptr);
-                    if (!receiver)
-                    {
-                        DEBUG("empty receiver");
-                    }
-                    else if (receiver->parent_process() == *process_information::get())
-                    {
-                        //cout << pinfo << " ':Monitor'; actor id = "
-                        //     << sender->id() << endl;
-                        // local actor?
-                        // this message was send from a proxy
-                        receiver->attach_functor([=](std::uint32_t reason)
-                        {
-                            any_tuple kmsg = make_cow_tuple(atom(":KillProxy"),
-                                                        reason);
-                            auto mjob = new detail::mailman_job(m_peer,
-                                                                receiver,
-                                                                receiver,
-                                                                kmsg);
-                            detail::mailman_queue().push_back(mjob);
-                        });
-                    }
-                    else
-                    {
-                        DEBUG(":Monitor received for an remote actor");
-                    }
-                }
-                // intercept ":Link" messages
-                else if (   content.size() == 2
-                         && t_atom_actor_ptr_types[0] == content.type_at(0)
-                         && t_atom_actor_ptr_types[1] == content.type_at(1)
-                         && content.get_as<atom_value>(0) == atom(":Link"))
-                {
-                    CPPA_REQUIRE(msg.sender()->is_proxy());
-                    auto whom = msg.sender().downcast<actor_proxy>();
-                    auto to = content.get_as<actor_ptr>(1);
-                    if ((whom) && (to))
-                        whom->local_link_to(to);
-                }
-                // intercept ":Unlink" messages
-                else if (   content.size() == 2
-                         && t_atom_actor_ptr_types[0] == content.type_at(0)
-                         && t_atom_actor_ptr_types[1] == content.type_at(1)
-                         && content.get_as<atom_value>(0) == atom(":Link"))
-                {
-                    CPPA_REQUIRE(msg.sender()->is_proxy());
-                    auto whom = msg.sender().downcast<actor_proxy>();
-                    auto from = content.get_as<actor_ptr>(1);
-                    if ((whom) && (from))
-                        whom->local_unlink_from(from);
-                }
-                else
-                {
-                    if (msg.receiver())
-                    {
-                        msg.receiver()->enqueue(msg.sender().get(),
-                                                std::move(msg.content()));
-                    }
-                    else
-                    {
-                        DEBUG("empty receiver");
-                    }
-                }
-                m_rdbuf.reset();
-                m_state = wait_for_msg_size;
-                break;
-            }
-            default:
-            {
-                throw std::logic_error("illegal state");
             }
         }
+        while (read_more);
         return true;
     }
 
@@ -540,7 +547,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
             if (!pptr) DEBUG("pptr == nullptr");
             throw std::logic_error("selected_peer == nullptr");
         }
-        pptr->enqueue(nullptr, make_cow_tuple(atom(":Monitor")));
+        pptr->enqueue(nullptr, make_cow_tuple(atom("MONITOR")));
         selected_peer->add_child(pptr);
         auto aid = pptr->id();
         auto pptr_copy = pptr;

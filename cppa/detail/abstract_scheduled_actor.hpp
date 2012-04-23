@@ -68,7 +68,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
         {
             auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
             auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-            if (v0 == atom(":Exit"))
+            if (v0 == atom("EXIT"))
             {
                 if (this->m_trap_exit == false)
                 {

@@ -3,10 +3,11 @@
 
 #include "cppa/actor.hpp"
 
-void ping();
+void ping(size_t num_pings);
+
 void pong(cppa::actor_ptr ping_actor);
 
 // returns the number of messages ping received
-int pongs();
+size_t pongs();
 
 #endif // PING_PONG_HPP

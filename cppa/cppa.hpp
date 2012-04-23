@@ -455,7 +455,7 @@ void unlink(actor_ptr& lhs, actor_ptr& rhs);
  * @ingroup ActorManagement
  * @brief Adds a unidirectional @p monitor to @p whom.
  * @note Each calls to @p monitor creates a new, independent monitor.
- * @pre The calling actor receives a ":Down" message from @p whom when
+ * @pre The calling actor receives a "DOWN" message from @p whom when
  *      it terminates.
  */
 void monitor(actor_ptr& whom);

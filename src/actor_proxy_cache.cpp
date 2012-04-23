@@ -79,7 +79,7 @@ actor_proxy_ptr actor_proxy_cache::get(const key_tuple& key)
     m_proxies.insert(std::make_pair(key, result));
     if (m_new_cb) m_new_cb(result);
     // insert to m_proxies
-    //result->enqueue(message(result, nullptr, atom(":Monitor")));
+    //result->enqueue(message(result, nullptr, atom("MONITOR")));
     return result;
 }
 
