@@ -514,13 +514,20 @@ struct spawn_fwd_<self_type>
     static inline actor_ptr _(self_type const&) { return self; }
 };
 
-
 template<typename F, typename Arg0, typename... Args>
 inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
 {
     return spawn(std::bind(std::move(what),
                            spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                            spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
+}
+
+template<scheduling_hint Hint, typename F, typename Arg0, typename... Args>
+inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
+{
+    return spawn<Hint>(std::bind(std::move(what),
+                                 spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                                 spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
 }
 
 /*
