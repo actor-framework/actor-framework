@@ -48,6 +48,7 @@
 
 // used cppa classes
 #include "cppa/atom.hpp"
+#include "cppa/config.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/binary_deserializer.hpp"
@@ -69,15 +70,15 @@
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/addressed_message.hpp"
 
-/*
 #define DEBUG(arg)                                                             \
     std::cout << "[process id: "                                               \
               << cppa::process_information::get()->process_id()                \
               << "] " << arg << std::endl
-*/
 
+#undef DEBUG
 #define DEBUG(unused) ((void) 0)
 
+using std::cout;
 using std::cerr;
 using std::endl;
 
@@ -206,16 +207,16 @@ class po_peer
     // removes pptr from the list of children and returns
     // a <bool, size_t> pair, whereas: first = true if pptr is a child of this
     //                                 second = number of remaining children
-    std::pair<bool, size_t> remove_child(const actor_proxy_ptr& pptr)
+    bool remove_child(const actor_proxy_ptr& pptr)
     {
         auto end = m_children.end();
         auto i = std::find(m_children.begin(), end, pptr);
         if (i != end)
         {
             m_children.erase(i);
-            return { true, m_children.size() };
+            return true;
         }
-        return { false, m_children.size() };
+        return false;
     }
 
 
@@ -375,7 +376,7 @@ class po_peer
                     else if (   content.size() == 2
                              && t_atom_actor_ptr_types[0] == content.type_at(0)
                              && t_atom_actor_ptr_types[1] == content.type_at(1)
-                             && content.get_as<atom_value>(0) == atom("LINK"))
+                             && content.get_as<atom_value>(0) == atom("UNLINK"))
                     {
                         CPPA_REQUIRE(msg.sender()->is_proxy());
                         auto whom = msg.sender().downcast<actor_proxy>();
@@ -425,8 +426,8 @@ class po_doorman
 
  public:
 
-    explicit po_doorman(post_office_msg::add_server_socket& assm,
-                        std::list<po_peer>* peers)
+    po_doorman(post_office_msg::add_server_socket& assm,
+               std::list<po_peer>* peers)
         : m_socket(assm.server_sockfd)
         , published_actor(assm.published_actor)
         , m_peers(peers)
@@ -544,7 +545,6 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
         // is guaranteed to be executed in the same thread
         if (selected_peer == nullptr)
         {
-            if (!pptr) DEBUG("pptr == nullptr");
             throw std::logic_error("selected_peer == nullptr");
         }
         pptr->enqueue(nullptr, make_cow_tuple(atom("MONITOR")));
@@ -565,7 +565,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
     });
     for (;;)
     {
-        if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) < 0)
+        if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) <= 0)
         {
             // must not happen
             perror("select()");
@@ -609,7 +609,8 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
                 case rd_queue_event:
                 {
                     DEBUG("rd_queue_event");
-                    std::unique_ptr<post_office_msg> pom{msg_queue.pop()};
+                    std::unique_ptr<post_office_msg> pom{msg_queue.try_pop()};
+                    CPPA_REQUIRE(pom.get() != nullptr);
                     if (pom->is_add_peer_msg())
                     {
                         DEBUG("add_peer_msg");
@@ -661,11 +662,10 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
                             DEBUG("search parent of exited proxy");
                             while (i != end)
                             {
-                                auto result = i->remove_child(pptr);
-                                if (result.first) // true if pptr is a child
+                                if (i->remove_child(pptr))
                                 {
                                     DEBUG("found parent of proxy");
-                                    if (result.second == 0) // no more children?
+                                    if (i->children_count() == 0)
                                     {
                                         // disconnect peer if we don't know any
                                         // actor of it and if the published
@@ -757,7 +757,7 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
             for (auto& dm : kvp.second)
             {
                 auto fd = dm.get_socket();
-                if (fd > maxfd) maxfd = fd;
+                maxfd = std::max(maxfd, fd);
                 FD_SET(fd, &readset);
             }
         }
@@ -775,8 +775,9 @@ void post_office_add_peer(native_socket_type a0,
                           std::unique_ptr<attachable>&& a3)
 {
     auto nm = singleton_manager::get_network_manager();
-    nm->post_office_queue().push_back(new post_office_msg(a0, a1, a2,
-                                                          std::move(a3)));
+    nm->post_office_queue()._push_back(new post_office_msg(a0, a1, a2,
+                                                           std::move(a3)));
+    CPPA_MEMORY_BARRIER();
     pipe_msg msg = { rd_queue_event, 0 };
     nm->write_to_pipe(msg);
 }
@@ -786,8 +787,9 @@ void post_office_publish(native_socket_type server_socket,
 {
     DEBUG("post_office_publish(" << published_actor->id() << ")");
     auto nm = singleton_manager::get_network_manager();
-    nm->post_office_queue().push_back(new post_office_msg(server_socket,
+    nm->post_office_queue()._push_back(new post_office_msg(server_socket,
                                                           published_actor));
+    CPPA_MEMORY_BARRIER();
     pipe_msg msg = { rd_queue_event, 0 };
     nm->write_to_pipe(msg);
 }
@@ -796,6 +798,7 @@ void post_office_unpublish(actor_id whom)
 {
     DEBUG("post_office_unpublish(" << whom << ")");
     auto nm = singleton_manager::get_network_manager();
+    CPPA_MEMORY_BARRIER();
     pipe_msg msg = { unpublish_actor_event, whom };
     nm->write_to_pipe(msg);
 }
@@ -803,6 +806,7 @@ void post_office_unpublish(actor_id whom)
 void post_office_close_socket(native_socket_type sfd)
 {
     auto nm = singleton_manager::get_network_manager();
+    CPPA_MEMORY_BARRIER();
     pipe_msg msg = { close_socket_event, static_cast<std::uint32_t>(sfd) };
     nm->write_to_pipe(msg);
 }

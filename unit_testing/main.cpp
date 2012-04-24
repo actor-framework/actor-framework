@@ -161,9 +161,22 @@ int main(int argc, char** argv)
             test__remote_actor(argv[0], true, args);
             exit(0);
         },
+        on("run", "threaded_ping_pong") >> []()
+        {
+            spawn<detached>(pong, spawn<detached>(ping, 1000));
+            await_all_others_done();
+            exit(0);
+        },
+        on("run", "ping_pong") >> []()
+        {
+            spawn_event_based_pong(spawn_event_based_ping(1000000));
+            await_all_others_done();
+            exit(0);
+        },
         on("run_ping", arg_match) >> [&](std::string const& num_pings)
         {
-            auto ping_actor = spawn(ping, std::stoi(num_pings));
+            //auto ping_actor = spawn<detached>(ping, std::stoi(num_pings));
+            auto ping_actor = spawn_event_based_ping(std::stoi(num_pings));
             std::uint16_t port = 4242;
             bool success = false;
             do

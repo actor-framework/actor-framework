@@ -24,11 +24,9 @@ void client_part(std::vector<string_pair> const& args)
     {
         throw std::runtime_error("no port specified");
     }
-    std::istringstream iss(i->second);
-    std::uint16_t port;
-    iss >> port;
+    auto port = static_cast<std::uint16_t>(std::stoi(i->second));
     auto ping_actor = remote_actor("localhost", port);
-    spawn(pong, ping_actor);
+    spawn_event_based_pong(ping_actor);
     await_all_others_done();
 }
 
@@ -43,7 +41,8 @@ size_t test__remote_actor(char const* app_path, bool is_client,
         return 0;
     }
     CPPA_TEST(test__remote_actor);
-    auto ping_actor = spawn(ping, 10);
+    auto ping_actor = spawn_event_based_ping(10);
+    //auto ping_actor = spawn(ping, 10);
     std::uint16_t port = 4242;
     bool success = false;
     do
