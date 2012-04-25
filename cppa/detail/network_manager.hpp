@@ -31,8 +31,7 @@
 #ifndef NETWORK_MANAGER_HPP
 #define NETWORK_MANAGER_HPP
 
-#include "cppa/detail/mailman.hpp"
-#include "cppa/detail/post_office_msg.hpp"
+#include "cppa/detail/post_office.hpp"
 
 namespace cppa { namespace detail {
 
@@ -46,6 +45,8 @@ class network_manager
     virtual void start() = 0;
 
     virtual void stop() = 0;
+
+    virtual void send_to_post_office(po_message const& msg) = 0;
 
     virtual void send_to_post_office(any_tuple msg) = 0;
 

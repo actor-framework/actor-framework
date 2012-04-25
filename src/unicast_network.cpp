@@ -129,6 +129,14 @@ void publish(actor_ptr& whom, std::uint16_t port)
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port);
+    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
+    {
+        throw bind_failure(errno);
+    }
+    if (listen(sockfd, 10) != 0)
+    {
+        throw network_error("listen() failed");
+    }
     int flags = fcntl(sockfd, F_GETFL, 0);
     if (flags == -1)
     {
@@ -140,14 +148,6 @@ void publish(actor_ptr& whom, std::uint16_t port)
     }
     flags = 1;
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
-    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
-    {
-        throw bind_failure(errno);
-    }
-    if (listen(sockfd, 10) != 0)
-    {
-        throw network_error("listen() failed");
-    }
     // ok, no exceptions
     sguard.release();
     detail::post_office_publish(sockfd, whom);
@@ -195,6 +195,17 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     read_from_socket(sockfd, &remote_actor_id, sizeof(remote_actor_id));
     read_from_socket(sockfd, &peer_pid, sizeof(std::uint32_t));
     read_from_socket(sockfd, peer_node_id.data(), peer_node_id.size());
+
+    flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags == -1)
+    {
+        throw network_error("unable to get socket flags");
+    }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
+        throw network_error("unable to set socket to nonblock");
+    }
+
     auto peer_pinf = new process_information(peer_pid, peer_node_id);
     process_information_ptr pinfptr(peer_pinf);
     auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());

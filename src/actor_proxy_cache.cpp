@@ -86,14 +86,11 @@ actor_proxy_ptr actor_proxy_cache::get(key_tuple const& key)
         }
         m_entries.insert(std::make_pair(key, result));
     }
-    auto msg = make_any_tuple(atom("ADD_PROXY"), result);
-    singleton_manager::get_network_manager()->send_to_post_office(std::move(msg));
-    result->enqueue(nullptr, make_any_tuple(atom("MONITOR")));
     result->attach_functor([result](std::uint32_t)
     {
-       auto msg = make_any_tuple(atom("RM_PROXY"), result);
-       singleton_manager::get_network_manager()->send_to_post_office(std::move(msg));
+        get_actor_proxy_cache().erase(result);
     });
+    result->enqueue(nullptr, make_any_tuple(atom("MONITOR")));
     return result;
 }
 

@@ -33,12 +33,20 @@
 
 #include <memory>
 
+#include "cppa/atom.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/detail/native_socket.hpp"
 
 namespace cppa { namespace detail {
 
-void post_office_loop();
+struct po_message
+{
+    atom_value flag;
+    native_socket_type fd;
+    actor_id aid;
+};
+
+void post_office_loop(int input_fd);
 
 void post_office_add_peer(native_socket_type peer_socket,
                           process_information_ptr const& peer_ptr);

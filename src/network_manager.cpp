@@ -41,7 +41,6 @@
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
-#include "cppa/detail/post_office_msg.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/converted_thread_context.hpp"
 
@@ -59,10 +58,17 @@ struct network_manager_impl : network_manager
     local_actor_ptr m_post_office;
     thread m_post_office_thread;
 
+    int pipe_fd[2];
+
     void start() // override
     {
+        if (pipe(pipe_fd) != 0)
+        {
+            CPPA_CRITICAL("cannot create pipe");
+        }
+
         m_post_office.reset(new converted_thread_context);
-        m_post_office_thread = mock_scheduler::spawn_hidden_impl(post_office_loop, m_post_office);
+        m_post_office_thread = mock_scheduler::spawn_hidden_impl(std::bind(post_office_loop, pipe_fd[0]), m_post_office);
 
         m_mailman.reset(new converted_thread_context);
         m_mailman_thread = mock_scheduler::spawn_hidden_impl(mailman_loop, m_mailman);
@@ -74,6 +80,16 @@ struct network_manager_impl : network_manager
         m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
         m_post_office_thread.join();
         m_mailman_thread.join();
+        close(pipe_fd[0]);
+        close(pipe_fd[0]);
+    }
+
+    void send_to_post_office(po_message const& msg)
+    {
+        if (write(pipe_fd[1], &msg, sizeof(po_message)) != sizeof(po_message))
+        {
+            CPPA_CRITICAL("cannot write to pipe");
+        }
     }
 
     void send_to_post_office(any_tuple msg)
