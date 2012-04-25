@@ -133,6 +133,10 @@ void publish(actor_ptr& whom, std::uint16_t port)
     {
         throw network_error("unable to get socket flags");
     }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
+        throw network_error("unable to set socket to nonblock");
+    }
     if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
         throw bind_failure(errno);
@@ -172,7 +176,7 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     serv_addr.sin_family = AF_INET;
     memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
     serv_addr.sin_port = htons(port);
-    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
+    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0)
     {
         throw network_error("could not connect to host");
     }
@@ -189,12 +193,11 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     auto peer_pinf = new process_information(peer_pid, peer_node_id);
     process_information_ptr pinfptr(peer_pinf);
     auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
-    auto result = detail::get_actor_proxy_cache().get(key);
     detail::singleton_manager::get_network_manager()
     ->send_to_mailman(make_any_tuple(sockfd, pinfptr));
     detail::post_office_add_peer(sockfd, pinfptr);
+    return detail::get_actor_proxy_cache().get(key);
     //auto ptr = get_scheduler()->register_hidden_context();
-    return result;
 }
 
 } // namespace cppa

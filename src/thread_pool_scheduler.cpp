@@ -100,7 +100,8 @@ struct thread_pool_scheduler::worker
             {
                 return result;
             }
-#           ifdef __APPLE__
+#           if 1
+//#           ifdef __APPLE__
             auto timeout = boost::get_system_time();
             timeout += boost::posix_time::milliseconds(1);
             boost::this_thread::sleep(timeout);
@@ -121,7 +122,8 @@ struct thread_pool_scheduler::worker
             {
                 return result;
             }
-#           ifdef __APPLE__
+#           if 1
+//#           ifdef __APPLE__
             auto timeout = boost::get_system_time();
             timeout += boost::posix_time::milliseconds(10);
             boost::this_thread::sleep(timeout);
@@ -155,6 +157,9 @@ struct thread_pool_scheduler::worker
         for (;;)
         {
             h.job = aggressive_polling();
+            while (!h.job) h.job = less_aggressive_polling();
+            /*
+            h.job = aggressive_polling();
             if (!h.job)
             {
                 h.job = less_aggressive_polling();
@@ -163,6 +168,7 @@ struct thread_pool_scheduler::worker
                     h.job = relaxed_polling();
                 }
             }
+            */
             if (h.job == m_dummy)
             {
                 // dummy of doom received ...

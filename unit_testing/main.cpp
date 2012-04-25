@@ -175,8 +175,8 @@ int main(int argc, char** argv)
         },
         on("run_ping", arg_match) >> [&](std::string const& num_pings)
         {
-            //auto ping_actor = spawn<detached>(ping, std::stoi(num_pings));
-            auto ping_actor = spawn_event_based_ping(std::stoi(num_pings));
+            auto ping_actor = spawn<detached>(ping, std::stoi(num_pings));
+            //auto ping_actor = spawn_event_based_ping(std::stoi(num_pings));
             std::uint16_t port = 4242;
             bool success = false;
             do

@@ -26,7 +26,8 @@ void client_part(std::vector<string_pair> const& args)
     }
     auto port = static_cast<std::uint16_t>(std::stoi(i->second));
     auto ping_actor = remote_actor("localhost", port);
-    spawn_event_based_pong(ping_actor);
+    //spawn_event_based_pong(ping_actor);
+    spawn<detached>(pong, ping_actor);
     await_all_others_done();
 }
 

@@ -158,7 +158,7 @@ class void_type_tinfo : public util::abstract_uniform_type_info<void_type>
 
  protected:
 
-    void serialize(const void*, serializer* sink) const
+    void serialize(void const*, serializer* sink) const
     {
         serialize_nullptr(sink);
     }
@@ -251,7 +251,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 
  protected:
 
-    void serialize(const void* ptr, serializer* sink) const
+    void serialize(void const* ptr, serializer* sink) const
     {
         s_serialize(*reinterpret_cast<const actor_ptr*>(ptr),
                     sink,
@@ -317,7 +317,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
 
  protected:
 
-    void serialize(const void* ptr, serializer* sink) const
+    void serialize(void const* ptr, serializer* sink) const
     {
         s_serialize(*reinterpret_cast<const group_ptr*>(ptr),
                     sink,
@@ -411,7 +411,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
 
  protected:
 
-    void serialize(const void* instance, serializer* sink) const
+    void serialize(void const* instance, serializer* sink) const
     {
         s_serialize(*reinterpret_cast<const channel_ptr*>(instance),
                     sink,
@@ -479,7 +479,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple>
 
  protected:
 
-    void serialize(const void* instance, serializer* sink) const
+    void serialize(void const* instance, serializer* sink) const
     {
         s_serialize(*reinterpret_cast<const any_tuple*>(instance),sink,name());
     }
@@ -501,7 +501,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
 
  public:
 
-    virtual void serialize(const void* instance, serializer* sink) const
+    virtual void serialize(void const* instance, serializer* sink) const
     {
         const addressed_message& msg = *reinterpret_cast<const addressed_message*>(instance);
         const any_tuple& data = msg.content();
@@ -547,12 +547,68 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
 
 };
 
+class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_information_ptr>
+{
+
+    typedef process_information_ptr ptr_type;
+
+ public:
+
+    virtual void serialize(void const* instance, serializer* sink) const
+    {
+        auto& ptr = *reinterpret_cast<ptr_type const*>(instance);
+        if (ptr == nullptr)
+        {
+            serialize_nullptr(sink);
+        }
+        else
+        {
+            primitive_variant ptup[2];
+            ptup[0] = ptr->process_id();
+            ptup[1] = to_string(ptr->node_id());
+            sink->begin_object(name());
+            sink->write_tuple(2, ptup);
+            sink->end_object();
+        }
+    }
+
+    virtual void deserialize(void* instance, deserializer* source) const
+    {
+        auto& ptrref = *reinterpret_cast<ptr_type*>(instance);
+        std::string cname = source->seek_object();
+        if (cname != name())
+        {
+            if (cname == nullptr_type_name)
+            {
+                deserialize_nullptr(source);
+                ptrref.reset();
+            }
+            else
+            {
+                throw std::logic_error("wrong type name found");
+            }
+        }
+        else
+        {
+            primitive_variant ptup[2];
+            primitive_type ptypes[] = { pt_uint32, pt_u8string };
+            source->begin_object(cname);
+            source->read_tuple(2, ptypes, ptup);
+            source->end_object();
+            process_information::node_id_type nid;
+            node_id_from_string(get<std::string>(ptup[1]), nid);
+            ptrref.reset(new process_information{get<std::uint32_t>(ptup[0]), nid});
+        }
+    }
+
+};
+
 class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
 {
 
  public:
 
-    virtual void serialize(const void* instance, serializer* sink) const
+    virtual void serialize(void const* instance, serializer* sink) const
     {
         auto val = reinterpret_cast<const atom_value*>(instance);
         sink->begin_object(name());
@@ -576,7 +632,7 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value>
 class duration_tinfo : public util::abstract_uniform_type_info<util::duration>
 {
 
-    virtual void serialize(const void* instance, serializer* sink) const
+    virtual void serialize(void const* instance, serializer* sink) const
     {
         auto val = reinterpret_cast<const util::duration*>(instance);
         sink->begin_object(name());
@@ -694,6 +750,7 @@ class uniform_type_info_map_helper
         insert(d, new atom_value_tinfo, { raw_name<atom_value>() });
         insert(d, new addr_msg_tinfo, {raw_name<detail::addressed_message>() });
         insert(d, new void_type_tinfo, { raw_name<void_type>() });
+        insert(d, new process_info_ptr_tinfo, {raw_name<process_information_ptr>()});
         insert<float>(d);
         insert<double>(d);
         /*

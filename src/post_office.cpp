@@ -167,41 +167,29 @@ class po_peer
     // @returns false if an error occured; otherwise true
     void operator()()
     {
-        static constexpr size_t wfp_size =   sizeof(std::uint32_t)
-                                           + process_information::node_id_size;
         auto nm = singleton_manager::get_network_manager();
         auto meta_msg = uniform_typeid<addressed_message>();
-        buffer<s_chunk_size, s_max_buffer_size> rdbuf;
         auto guard = make_scope_guard([&]()
         {
+            DEBUG("po_peer loop done");
             send2po(atom("RM_PEER"), m_socket);
         });
+        DEBUG("po_peer loop started");
+        std::uint32_t msg_size;
+        std::vector<char> msg_buf;
         for (;;)
         {
             switch (m_state)
             {
                 case wait_for_process_info:
                 {
-                    if (rdbuf.final_size() != wfp_size)
-                    {
-                        rdbuf.reset(wfp_size);
-                    }
-                    if (rdbuf.append_from(m_socket) == false)
-                    {
-                        DEBUG("m_rdbuf.append_from() failed");
-                        return;
-                    }
-                    CPPA_REQUIRE(rdbuf.ready());
                     std::uint32_t process_id;
-                    memcpy(&process_id, rdbuf.data(), sizeof(std::uint32_t));
                     process_information::node_id_type node_id;
-                    memcpy(node_id.data(),
-                           rdbuf.data() + sizeof(std::uint32_t),
-                           process_information::node_id_size);
+                    recv(m_socket, &process_id, sizeof(std::uint32_t), 0);
+                    recv(m_socket, node_id.data(), node_id.size(), 0);
                     m_peer.reset(new process_information(process_id, node_id));
                     // inform mailman about new peer
                     nm->send_to_mailman(make_any_tuple(m_socket, m_peer));
-                    rdbuf.reset();
                     m_state = wait_for_msg_size;
                     DEBUG("pinfo read: "
                           << m_peer->process_id()
@@ -211,33 +199,24 @@ class po_peer
                 }
                 case wait_for_msg_size:
                 {
-                    if (rdbuf.final_size() != sizeof(std::uint32_t))
+                    recv(m_socket, &msg_size, sizeof(std::uint32_t), 0);
+                    if (msg_size > (16 * 1024 * 1024))
                     {
-                        rdbuf.reset(sizeof(std::uint32_t));
-                    }
-                    if (!rdbuf.append_from(m_socket))
-                    {
-                        DEBUG("m_rdbuf.append_from() failed");
+                        // maximum of 16MB
                         return;
                     }
-                    CPPA_REQUIRE(rdbuf.ready());
-                    // read and set message size
-                    std::uint32_t msg_size;
-                    memcpy(&msg_size, rdbuf.data(), sizeof(std::uint32_t));
-                    rdbuf.reset(msg_size);
+                    if (msg_buf.size() < msg_size)
+                    {
+                        msg_buf.resize(msg_size);
+                    }
                     m_state = read_message;
                     // fall through and try to read more from socket
                 }
                 case read_message:
                 {
-                    if (!rdbuf.append_from(m_socket))
-                    {
-                        DEBUG("m_rdbuf.append_from() failed");
-                        return;
-                    }
-                    CPPA_REQUIRE(rdbuf.ready());
+                    recv(m_socket, msg_buf.data(), msg_size, 0);
                     addressed_message msg;
-                    binary_deserializer bd(rdbuf.data(), rdbuf.size());
+                    binary_deserializer bd(msg_buf.data(), msg_size);
                     try
                     {
                         meta_msg->deserialize(&msg, &bd);
@@ -307,7 +286,6 @@ class po_peer
                             }
                         }
                     );
-                    rdbuf.reset();
                     m_state = wait_for_msg_size;
                     break;
                 }
@@ -325,27 +303,42 @@ class po_peer
 class po_doorman
 {
 
-    // server socket
-    native_socket_type m_socket;
     actor_ptr published_actor;
     // caches process_information::get()
     process_information_ptr m_pself;
 
+    int m_pipe_rd;
+    int m_pipe_wr;
+
     thread m_thread;
+
+    struct socket_aid_pair
+    {
+        native_socket_type fd;
+        actor_id aid;
+    };
 
  public:
 
-    po_doorman(native_socket_type fd, actor_ptr mactor)
-        : m_socket(fd)
-        , published_actor(std::move(mactor))
-        , m_pself(process_information::get())
+    po_doorman() : m_pself(process_information::get())
     {
+        int mpipe[2];
+        if (pipe(mpipe) < 0)
+        {
+            CPPA_CRITICAL("cannot open pipe");
+        }
+        m_pipe_rd = mpipe[0];
+        m_pipe_wr = mpipe[1];
     }
 
     ~po_doorman()
     {
-        if (m_socket != -1) closesocket(m_socket);
+        DEBUG(__PRETTY_FUNCTION__);
+        socket_aid_pair msg{-1, 0};
+        write(m_pipe_wr, &msg, sizeof(socket_aid_pair));
         m_thread.join();
+        close(m_pipe_rd);
+        close(m_pipe_wr);
     }
 
     void start()
@@ -353,27 +346,135 @@ class po_doorman
         m_thread = thread{std::bind(&po_doorman::operator(), this)};
     }
 
+    void add(native_socket_type fd, actor_id aid)
+    {
+        DEBUG("add, aid = " << aid);
+        CPPA_REQUIRE(fd != -1);
+        CPPA_REQUIRE(aid != 0);
+        socket_aid_pair msg{fd, aid};
+        if (write(m_pipe_wr, &msg, sizeof(socket_aid_pair)) != sizeof(socket_aid_pair))
+        {
+            CPPA_CRITICAL("cannot write to pipe");
+        }
+    }
+
+    void rm(actor_id aid)
+    {
+        CPPA_REQUIRE(aid != 0);
+        socket_aid_pair msg{-1, aid};
+        if (write(m_pipe_wr, &msg, sizeof(socket_aid_pair)) != sizeof(socket_aid_pair))
+        {
+            CPPA_CRITICAL("cannot write to pipe");
+        }
+    }
+
     void operator()()
     {
         sockaddr addr;
         socklen_t addrlen;
+        std::vector<socket_aid_pair> pvec;
+        int maxfd = 0;
+        fd_set readset;
+        auto guard = make_scope_guard([&]()
+        {
+            DEBUG(__PRETTY_FUNCTION__);
+            for (auto& pm : pvec)
+            {
+                closesocket(pm.fd);
+            }
+        });
         for (;;)
         {
-            memset(&addr, 0, sizeof(addr));
-            memset(&addrlen, 0, sizeof(addrlen));
-            auto sfd = ::accept(m_socket, &addr, &addrlen);
-            if (sfd < 0)
+            FD_ZERO(&readset);
+            FD_SET(m_pipe_rd, &readset);
+            maxfd = m_pipe_rd;
+            for (auto i = pvec.begin(); i != pvec.end(); ++i)
             {
-                DEBUG("accept failed (actor unpublished?)");
-                return;
+                maxfd = std::max(maxfd, i->fd);
+                FD_SET(i->fd, &readset);
             }
-            auto id = published_actor->id();
-            std::uint32_t process_id = m_pself->process_id();
-            ::send(sfd, &id, sizeof(std::uint32_t), 0);
-            ::send(sfd, &process_id, sizeof(std::uint32_t), 0);
-            ::send(sfd, m_pself->node_id().data(), m_pself->node_id().size(), 0);
-            send2po(atom("ADD_PEER"), sfd, process_information_ptr{});
-            DEBUG("socket accepted; published actor: " << id);
+            if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) < 0)
+            {
+                // must not happen
+                perror("select()");
+                exit(3);
+            }
+            // iterate over sockets
+            {
+                auto i = pvec.begin();
+                while (i != pvec.end())
+                {
+                    if (FD_ISSET(i->fd, &readset))
+                    {
+                        memset(&addr, 0, sizeof(addr));
+                        memset(&addrlen, 0, sizeof(addrlen));
+                        auto sfd = ::accept(i->fd, &addr, &addrlen);
+                        if (sfd < 0)
+                        {
+                            switch (errno)
+                            {
+                                case EAGAIN:
+#                               if EAGAIN != EWOULDBLOCK
+                                case EWOULDBLOCK:
+#                               endif
+                                    // just try again
+                                    ++i;
+                                    break;
+                                default:
+                                    // remove socket on failure
+                                    i = pvec.erase(i);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            auto id = i->aid;
+                            std::uint32_t process_id = m_pself->process_id();
+                            ::send(sfd, &id, sizeof(std::uint32_t), 0);
+                            ::send(sfd, &process_id, sizeof(std::uint32_t), 0);
+                            ::send(sfd, m_pself->node_id().data(), m_pself->node_id().size(), 0);
+                            send2po(atom("ADD_PEER"), sfd, process_information_ptr{});
+                            DEBUG("socket accepted; published actor: " << id);
+                            ++i;
+                        }
+                    }
+                }
+            }
+            if (FD_ISSET(m_pipe_rd, &readset))
+            {
+                DEBUG("po_doorman: read from pipe");
+                socket_aid_pair msg;
+                if (read(m_pipe_rd, &msg, sizeof(socket_aid_pair)) != sizeof(socket_aid_pair))
+                {
+                    CPPA_CRITICAL("cannot read from pipe");
+                }
+                if (msg.fd == -1)
+                {
+                    if (msg.aid == 0)
+                    {
+                        DEBUG("fd == -1 && aid == 0 [done]");
+                        return;
+                    }
+                    else
+                    {
+                        auto i = std::find_if(pvec.begin(), pvec.end(), [&](socket_aid_pair const& m)
+                        {
+                            return m.aid == msg.aid;
+                        });
+                        if (i != pvec.end())
+                        {
+                            DEBUG("removed socket of actor" << i->aid);
+                            closesocket(i->fd);
+                            pvec.erase(i);
+                        }
+                    }
+                }
+                else
+                {
+                    DEBUG("added socket for actor" << msg.aid);
+                    pvec.push_back(msg);
+                }
+            }
         }
     }
 
@@ -381,9 +482,9 @@ class po_doorman
 
 void post_office_loop()
 {
+    po_doorman doorman;
+    doorman.start();
     bool done = false;
-    // map of all published actors
-    std::map<actor_id, std::list<po_doorman> > doormen;
     // list of all peers to which we established a connection via remote_actor()
     std::list<po_peer> peers;
     do_receive
@@ -391,13 +492,13 @@ void post_office_loop()
         on(atom("ADD_PEER"), arg_match) >> [&](native_socket_type fd,
                                                process_information_ptr piptr)
         {
-            DEBUG("add_peer_msg");
+            DEBUG("post_office: add_peer");
             peers.emplace_back(fd, std::move(piptr));
             peers.back().start();
         },
         on(atom("RM_PEER"), arg_match) >> [&](native_socket_type fd)
         {
-            DEBUG("rm_peer_msg");
+            DEBUG("post_office: rm_peer");
             auto i = std::find_if(peers.begin(), peers.end(), [fd](po_peer& pp)
             {
                 return pp.get_socket() == fd;
@@ -406,40 +507,25 @@ void post_office_loop()
         },
         on(atom("ADD_PROXY"), arg_match) >> [&](actor_proxy_ptr)
         {
-            DEBUG("add_proxy_msg");
+            DEBUG("post_office: add_proxy");
         },
         on(atom("RM_PROXY"), arg_match) >> [&](actor_proxy_ptr pptr)
         {
-            DEBUG("rm_proxy_msg");
+            DEBUG("post_office: rm_proxy");
             CPPA_REQUIRE(pptr.get() != nullptr);
             get_actor_proxy_cache().erase(pptr);
         },
         on(atom("PUBLISH"), arg_match) >> [&](native_socket_type sockfd,
                                               actor_ptr whom)
         {
-            DEBUG("unpublish_actor_event");
+            DEBUG("post_office: publish_actor");
             CPPA_REQUIRE(whom.get() != nullptr);
-            auto aid = whom->id();
-            auto callback = [aid](std::uint32_t)
-            {
-                send2po(atom("UNPUBLISH"), aid);
-            };
-            if (whom->attach_functor(std::move(callback)))
-            {
-                auto& ls = doormen[aid];
-                ls.emplace_back(sockfd, whom);
-                ls.back().start();
-                DEBUG("new doorman");
-            }
-            else
-            {
-                closesocket(sockfd);
-            }
+            doorman.add(sockfd, whom->id());
         },
         on(atom("UNPUBLISH"), arg_match) >> [&](actor_id whom)
         {
-            DEBUG("unpublish_actor_event");
-            doormen.erase(whom);
+            DEBUG("post_office: unpublish_actor");
+            doorman.rm(whom);
         },
         on(atom("DONE")) >> [&]()
         {
@@ -461,8 +547,9 @@ void post_office_loop()
  ******************************************************************************/
 
 void post_office_add_peer(native_socket_type a0,
-                          const process_information_ptr& a1)
+                          process_information_ptr const& a1)
 {
+    DEBUG("post_office_add_peer(" << a0 << ", " << to_string(a1) << ")");
     send2po(atom("ADD_PEER"), a0, a1);
 }
 

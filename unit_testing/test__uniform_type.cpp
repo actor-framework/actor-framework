@@ -81,12 +81,13 @@ size_t test__uniform_type()
         "float", "double",              // floating points
         "@0",                           // cppa::util::void_type
         // default announced cppa types
-        "@atom",                        // cppa::atom_value
-        "@<>",                          // cppa::any_tuple
-        "@msg",                         // cppa::message
-        "@actor",                       // cppa::actor_ptr
-        "@group",                       // cppa::group_ptr
-        "@channel",                     // cppa::channel_ptr
+        "@atom",               // cppa::atom_value
+        "@<>",                 // cppa::any_tuple
+        "@msg",                // cppa::message
+        "@actor",              // cppa::actor_ptr
+        "@group",              // cppa::group_ptr
+        "@channel",            // cppa::channel_ptr
+        "@process_info",       // cppa::intrusive_ptr<cppa::process_information>
         "cppa::util::duration"
     };
     // holds the type names we see at runtime

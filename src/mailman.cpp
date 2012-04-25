@@ -99,11 +99,12 @@ void mailman_loop()
             }
             else
             {
-                DEBUG("message to an unknown peer");
+                DEBUG("message to an unknown peer: " << to_string(msg));
             }
         },
         on_arg_match >> [&](native_socket_type sockfd, process_information_ptr pinfo)
         {
+            DEBUG("mailman: add_peer");
             auto i = peers.find(*pinfo);
             if (i == peers.end())
             {

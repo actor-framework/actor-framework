@@ -45,13 +45,7 @@ class addressed_message
 
  public:
 
-    addressed_message(actor_ptr const& from,
-            channel_ptr const& to,
-            any_tuple const& ut);
-
-    addressed_message(actor_ptr const& from,
-            channel_ptr const& to,
-            any_tuple&& ut);
+    addressed_message(actor_ptr from, channel_ptr to, any_tuple ut);
 
     addressed_message() = default;
     addressed_message(addressed_message&&) = default;

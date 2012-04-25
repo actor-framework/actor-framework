@@ -33,17 +33,8 @@
 
 namespace cppa { namespace detail {
 
-addressed_message::addressed_message(const actor_ptr& from,
-                 const channel_ptr& to,
-                 const any_tuple& ut)
-    : m_sender(from), m_receiver(to), m_content(ut)
-{
-}
-
-addressed_message::addressed_message(const actor_ptr& from,
-                 const channel_ptr& to,
-                 any_tuple&& ut)
-    : m_sender(from), m_receiver(to), m_content(std::move(ut))
+addressed_message::addressed_message(actor_ptr from, channel_ptr to, any_tuple ut)
+    : m_sender(std::move(from)), m_receiver(std::move(to)), m_content(std::move(ut))
 {
 }
 

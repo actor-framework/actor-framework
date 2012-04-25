@@ -125,7 +125,8 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<cppa::actor_ptr>(), "@actor" },
       { demangled<cppa::group_ptr>(), "@group" },
       { demangled<cppa::channel_ptr>(), "@channel" },
-      { demangled<cppa::detail::addressed_message>(), "@msg" }
+      { demangled<cppa::detail::addressed_message>(), "@msg" },
+      { demangled< cppa::intrusive_ptr<cppa::process_information> >(), "@process_info" }
     };
 
     // check if we could find the whole string in our lookup map
