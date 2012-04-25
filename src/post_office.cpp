@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <netinet/tcp.h>
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
@@ -428,6 +429,8 @@ class po_doorman
                         }
                         else
                         {
+                            int flags = 1;
+                            setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
                             auto id = i->aid;
                             std::uint32_t process_id = m_pself->process_id();
                             ::send(sfd, &id, sizeof(std::uint32_t), 0);

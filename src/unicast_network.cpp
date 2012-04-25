@@ -38,6 +38,7 @@
 #include <stdexcept>
 
 #include <fcntl.h>
+#include <netinet/tcp.h>
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
@@ -137,6 +138,8 @@ void publish(actor_ptr& whom, std::uint16_t port)
     {
         throw network_error("unable to set socket to nonblock");
     }
+    flags = 1;
+    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
     if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
         throw bind_failure(errno);
@@ -182,6 +185,8 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
     }
     auto pinf = process_information::get();
     std::uint32_t process_id = pinf->process_id();
+    int flags = 1;
+    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
     ::send(sockfd, &process_id, sizeof(std::uint32_t), 0);
     ::send(sockfd, pinf->node_id().data(), pinf->node_id().size(), 0);
     std::uint32_t remote_actor_id;
