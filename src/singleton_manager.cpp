@@ -181,10 +181,7 @@ network_manager* singleton_manager::get_network_manager()
     {
         scheduler* s = new thread_pool_scheduler;
         // set_scheduler sets s_network_manager
-        if (set_scheduler(s) == false)
-        {
-            //delete s;
-        }
+        set_scheduler(s);
         return get_network_manager();
     }
     return result;

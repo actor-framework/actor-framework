@@ -41,18 +41,21 @@ struct match_helper
     match_helper(match_helper const&) = delete;
     match_helper& operator=(match_helper const&) = delete;
     any_tuple tup;
-    match_helper(any_tuple&& t) : tup(std::move(t)) { }
+    match_helper(any_tuple t) : tup(std::move(t)) { }
     match_helper(match_helper&&) = default;
+    /*
     void operator()(partial_function&& arg)
     {
         partial_function tmp{std::move(arg)};
         tmp(tup);
     }
+    */
     template<class Arg0, class... Args>
     void operator()(Arg0&& arg0, Args&&... args)
     {
-        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...));
+        auto tmp = mexpr_concat(std::forward<Arg0>(arg0),
+                                std::forward<Args>(args)...);
+        tmp(tup);
     }
 };
 

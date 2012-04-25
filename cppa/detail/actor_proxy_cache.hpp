@@ -32,10 +32,12 @@
 #define ACTOR_PROXY_CACHE_HPP
 
 #include <string>
+#include <vector>
 #include <functional>
 
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
+#include "cppa/util/shared_spinlock.hpp"
 
 namespace cppa { namespace detail {
 
@@ -49,42 +51,17 @@ class actor_proxy_cache
                        process_information::node_id_type> // node id
             key_tuple;
 
-    typedef std::function<void (actor_proxy_ptr&)> new_proxy_callback;
-
  private:
 
-    std::map<key_tuple, process_information_ptr> m_pinfos;
-    std::map<key_tuple, actor_proxy_ptr> m_proxies;
-
-    new_proxy_callback m_new_cb;
-
-    process_information_ptr get_pinfo(key_tuple const& key);
+    util::shared_spinlock m_lock;
+    std::map<key_tuple, actor_proxy_ptr> m_entries;
 
  public:
 
-    // this callback is called if a new proxy instance is created
-    template<typename F>
-    void set_new_proxy_callback(F&& cb)
-    {
-        m_new_cb = std::forward<F>(cb);
-    }
-
     actor_proxy_ptr get(key_tuple const& key);
 
-    void add(actor_proxy_ptr& pptr);
-
-    size_t size() const;
-
-    void erase(actor_proxy_ptr const& pptr);
-
-    template<typename F>
-    void for_each(F&& fun)
-    {
-        for (auto i = m_proxies.begin(); i != m_proxies.end(); ++i)
-        {
-            fun(i->second);
-        }
-    }
+    // @returns true if pptr was successfully removed, false otherwise
+    bool erase(actor_proxy_ptr const& pptr);
 
 };
 

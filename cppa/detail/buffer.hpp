@@ -188,7 +188,8 @@ class buffer
         return append_impl(fun, throw_on_error);
     }
 
-    bool append_from(native_socket_type sfd, int rdflags,
+    bool append_from(native_socket_type sfd,
+                     int rdflags = 0,
                      bool throw_on_error = false)
     {
         auto fun = [=]() -> int

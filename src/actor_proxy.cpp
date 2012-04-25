@@ -34,6 +34,8 @@
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/mailman.hpp"
+#include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
@@ -47,8 +49,8 @@ void actor_proxy::forward_message(process_information_ptr const& piptr,
                                   actor* sender,
                                   any_tuple&& msg)
 {
-    auto mailman_msg = new detail::mailman_job(piptr, sender, this, std::move(msg));
-    detail::mailman_queue().push_back(mailman_msg);
+    detail::singleton_manager::get_network_manager()
+    ->send_to_mailman(make_any_tuple(piptr, actor_ptr{sender}, std::move(msg)));
 }
 
 void actor_proxy::enqueue(actor* sender, any_tuple msg)

@@ -263,21 +263,21 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what)
 actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
                                        scheduling_hint hint)
 {
-    if (hint == detached)
-    {
-        return mock_scheduler::spawn(std::move(what));
-    }
-    else
+    if (hint == scheduled)
     {
         auto new_actor = new yielding_actor(std::move(what));
         return spawn_impl(new_actor->attach_to_scheduler(this));
     }
+    else
+    {
+        return mock_scheduler::spawn_impl(std::move(what));
+    }
 }
 #else
 actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
-                                       scheduling_hint)
+                                       scheduling_hint hint)
 {
-    return mock_scheduler::spawn(what);
+    return mock_scheduler::spawn(what, hint);
 }
 #endif
 
