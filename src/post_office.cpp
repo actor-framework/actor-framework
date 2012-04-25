@@ -73,8 +73,8 @@
               << cppa::process_information::get()->process_id()                \
               << "] " << arg << std::endl
 
-#undef DEBUG
-#define DEBUG(unused) ((void) 0)
+//#undef DEBUG
+//#define DEBUG(unused) ((void) 0)
 
 using std::cout;
 using std::cerr;
@@ -176,18 +176,28 @@ class po_peer
             send2po(atom("RM_PEER"), m_socket);
         });
         DEBUG("po_peer loop started");
-        std::uint32_t msg_size;
-        std::vector<char> msg_buf;
+        buffer<512, (16 * 1024 * 1024)> m_buf;
+        m_buf.reset(m_state == wait_for_process_info ? sizeof(std::uint32_t) + process_information::node_id_size
+                                                     : sizeof(std::uint32_t));
         for (;;)
         {
+            while(m_buf.ready() == false)
+            {
+                if (m_buf.append_from(m_socket, 0) == false)
+                {
+                    DEBUG("cannot read from socket");
+                    return;
+                }
+            }
             switch (m_state)
             {
                 case wait_for_process_info:
                 {
                     std::uint32_t process_id;
                     process_information::node_id_type node_id;
-                    recv(m_socket, &process_id, sizeof(std::uint32_t), 0);
-                    recv(m_socket, node_id.data(), node_id.size(), 0);
+                    memcpy(&process_id, m_buf.data(), sizeof(std::uint32_t));
+                    memcpy(node_id.data(), m_buf.data() + sizeof(std::uint32_t),
+                           process_information::node_id_size);
                     m_peer.reset(new process_information(process_id, node_id));
                     // inform mailman about new peer
                     nm->send_to_mailman(make_any_tuple(m_socket, m_peer));
@@ -196,28 +206,21 @@ class po_peer
                           << m_peer->process_id()
                           << "@"
                           << to_string(m_peer->node_id()));
-                    // fall through and try to read more from socket
+                    m_buf.reset(sizeof(std::uint32_t));
+                    break;
                 }
                 case wait_for_msg_size:
                 {
-                    recv(m_socket, &msg_size, sizeof(std::uint32_t), 0);
-                    if (msg_size > (16 * 1024 * 1024))
-                    {
-                        // maximum of 16MB
-                        return;
-                    }
-                    if (msg_buf.size() < msg_size)
-                    {
-                        msg_buf.resize(msg_size);
-                    }
+                    std::uint32_t msg_size;
+                    memcpy(&msg_size, m_buf.data(), sizeof(std::uint32_t));
+                    m_buf.reset(msg_size);
                     m_state = read_message;
-                    // fall through and try to read more from socket
+                    break;
                 }
                 case read_message:
                 {
-                    recv(m_socket, msg_buf.data(), msg_size, 0);
                     addressed_message msg;
-                    binary_deserializer bd(msg_buf.data(), msg_size);
+                    binary_deserializer bd(m_buf.data(), m_buf.size());
                     try
                     {
                         meta_msg->deserialize(&msg, &bd);
@@ -287,6 +290,7 @@ class po_peer
                             }
                         }
                     );
+                    m_buf.reset(sizeof(std::uint32_t));
                     m_state = wait_for_msg_size;
                     break;
                 }
