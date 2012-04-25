@@ -340,7 +340,10 @@ class po_doorman
     {
         DEBUG(__PRETTY_FUNCTION__);
         socket_aid_pair msg{-1, 0};
-        write(m_pipe_wr, &msg, sizeof(socket_aid_pair));
+        if (write(m_pipe_wr, &msg, sizeof(socket_aid_pair)) != sizeof(socket_aid_pair))
+        {
+            CPPA_CRITICAL("cannot write to pipe");
+        }
         m_thread.join();
         close(m_pipe_rd);
         close(m_pipe_wr);
