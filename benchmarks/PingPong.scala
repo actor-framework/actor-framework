@@ -12,9 +12,9 @@ object global {
     val latch = new java.util.concurrent.CountDownLatch(1)
 }
 
-class PingActor(pong: akka.actor.ActorRef) extends akka.actor.Actor {
+class PingActor(num: Int, pong: akka.actor.ActorRef) extends akka.actor.Actor {
     def receive = {
-        case Pong(1000) => {
+        case Pong(value) if value == num => {
             //println("Received final pong")
             global.latch.countDown
             self.exit
@@ -40,13 +40,13 @@ class PongActor extends akka.actor.Actor {
 
 object pingApp {
     def main(args: Array[String]) = {
-        if (args.size != 2) {
+        if (args.size != 3) {
             println("usage: pingApp (host) (port)")
             println("       (connects to pong-service of (host) on given port)")
             System.exit(1)
         }
         val pong = remote.actorFor("pong-service", args(0), args(1).toInt)
-        val myPing = actorOf(new PingActor(pong)).start
+        val myPing = actorOf(new PingActor(args(2).toInt, pong)).start
         remote.start("localhost", 64002).register("ping-service", myPing)
         myPing ! KickOff
         global.latch.await
