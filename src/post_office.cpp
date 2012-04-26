@@ -197,6 +197,25 @@ class po_peer : public po_socket_handler
     ~po_peer()
     {
         closesocket(m_socket);
+        if (m_peer)
+        {
+            // collect all children (proxies to actors of m_peer)
+            std::vector<actor_proxy_ptr> children;
+            children.reserve(20);
+            get_actor_proxy_cache().erase_all(m_peer->node_id(),
+                                              m_peer->process_id(),
+                                              [&](actor_proxy_ptr& pptr)
+            {
+                children.push_back(std::move(pptr));
+            });
+            // kill all proxies
+            for (actor_proxy_ptr& pptr: children)
+            {
+                pptr->enqueue(nullptr,
+                              make_any_tuple(atom("KILL_PROXY"),
+                                             exit_reason::remote_link_unreachable));
+            }
+        }
     }
 
     inline native_socket_type get_socket() const { return m_socket; }

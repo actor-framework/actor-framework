@@ -240,11 +240,18 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
             }
             else
             {
+                /*
                 actor_proxy_cache::key_tuple key;
                 std::get<0>(key) = get<std::uint32_t>(ptup[0]);
                 std::get<1>(key) = get<std::uint32_t>(ptup[1]);
                 node_id_from_string(nstr, std::get<2>(key));
                 ptrref = detail::get_actor_proxy_cache().get(key);
+                */
+                process_information::node_id_type nid;
+                node_id_from_string(nstr, nid);
+                ptrref = detail::get_actor_proxy_cache().get(get<std::uint32_t>(ptup[0]),
+                                                             get<std::uint32_t>(ptup[1]),
+                                                             nid);
             }
         }
     }

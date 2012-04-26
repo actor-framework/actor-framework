@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <cstring>
+
 #include "cppa/atom.hpp"
 #include "cppa/any_tuple.hpp"
 
@@ -40,7 +42,7 @@
 #include "cppa/detail/singleton_manager.hpp"
 
 // thread_specific_ptr
-#include <boost/thread/tss.hpp>
+//#include <boost/thread/tss.hpp>
 
 namespace {
 
@@ -64,7 +66,15 @@ actor_proxy_cache& get_actor_proxy_cache()
     return s_proxy_cache;
 }
 
-actor_proxy_ptr actor_proxy_cache::get(key_tuple const& key)
+actor_proxy_ptr actor_proxy_cache::get(actor_id aid,
+                                       std::uint32_t process_id,
+                                       process_information::node_id_type const& node_id)
+{
+    key_tuple k{node_id, process_id, aid};
+    return get_impl(k);
+}
+
+actor_proxy_ptr actor_proxy_cache::get_impl(key_tuple const& key)
 {
     // lifetime scope of shared guard
     {
@@ -75,7 +85,7 @@ actor_proxy_ptr actor_proxy_cache::get(key_tuple const& key)
             return i->second;
         }
     }
-    actor_proxy_ptr result{new actor_proxy(std::get<0>(key), new process_information(std::get<1>(key), std::get<2>(key)))};
+    actor_proxy_ptr result{new actor_proxy(std::get<2>(key), new process_information(std::get<1>(key), std::get<0>(key)))};
     // lifetime scope of exclusive guard
     {
         lock_guard<util::shared_spinlock> guard{m_lock};
@@ -97,12 +107,37 @@ actor_proxy_ptr actor_proxy_cache::get(key_tuple const& key)
 bool actor_proxy_cache::erase(actor_proxy_ptr const& pptr)
 {
     auto pinfo = pptr->parent_process_ptr();
-    key_tuple key(pptr->id(), pinfo->process_id(), pinfo->node_id());
+    key_tuple key(pinfo->node_id(), pinfo->process_id(), pptr->id());
     {
         lock_guard<util::shared_spinlock> guard{m_lock};
         return m_entries.erase(key) > 0;
     }
     return false;
 }
+
+bool actor_proxy_cache::key_tuple_less::operator()(key_tuple const& lhs,
+                                                   key_tuple const& rhs) const
+{
+    int cmp_res = strncmp(reinterpret_cast<char const*>(std::get<0>(lhs).data()),
+                          reinterpret_cast<char const*>(std::get<0>(rhs).data()),
+                          process_information::node_id_size);
+    if (cmp_res < 0)
+    {
+        return true;
+    }
+    else if (cmp_res == 0)
+    {
+        if (std::get<1>(lhs) < std::get<1>(rhs))
+        {
+            return true;
+        }
+        else if (std::get<1>(lhs) == std::get<1>(rhs))
+        {
+            return std::get<2>(lhs) < std::get<2>(rhs);
+        }
+    }
+    return false;
+}
+
 
 } } // namespace cppa::detail

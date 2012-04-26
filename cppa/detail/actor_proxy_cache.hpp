@@ -32,12 +32,16 @@
 #define ACTOR_PROXY_CACHE_HPP
 
 #include <string>
+#include <limits>
 #include <vector>
 #include <functional>
 
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
+
 #include "cppa/util/shared_spinlock.hpp"
+
+#include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace detail {
 
@@ -46,22 +50,52 @@ class actor_proxy_cache
 
  public:
 
-    typedef std::tuple<std::uint32_t,                     // actor id
-                       std::uint32_t,                     // process id
-                       process_information::node_id_type> // node id
-            key_tuple;
-
- private:
-
-    util::shared_spinlock m_lock;
-    std::map<key_tuple, actor_proxy_ptr> m_entries;
-
- public:
-
-    actor_proxy_ptr get(key_tuple const& key);
+    actor_proxy_ptr get(actor_id aid, std::uint32_t process_id,
+                        process_information::node_id_type const& node_id);
 
     // @returns true if pptr was successfully removed, false otherwise
     bool erase(actor_proxy_ptr const& pptr);
+
+    template<typename Fun>
+    void erase_all(process_information::node_id_type const& nid,
+                   std::uint32_t process_id,
+                   Fun fun)
+    {
+        key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
+        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()};
+        {
+            lock_guard<util::shared_spinlock> guard{m_lock};
+            auto e = m_entries.end();
+            auto first = m_entries.lower_bound(lb);
+            if (first != e)
+            {
+                auto last = m_entries.upper_bound(ub);
+                for (auto i = first; i != last; ++i)
+                {
+                    fun(i->second);
+                }
+                m_entries.erase(first, last);
+            }
+        }
+    }
+
+ private:
+
+    typedef std::tuple<process_information::node_id_type, // node id
+                       std::uint32_t,                     // process id
+                       actor_id>                          // (remote) actor id
+            key_tuple;
+
+    struct key_tuple_less
+    {
+        bool operator()(key_tuple const& lhs, key_tuple const& rhs) const;
+    };
+
+    util::shared_spinlock m_lock;
+    std::map<key_tuple, actor_proxy_ptr, key_tuple_less> m_entries;
+
+    actor_proxy_ptr get_impl(key_tuple const& key);
+
 
 };
 

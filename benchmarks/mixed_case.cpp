@@ -35,79 +35,11 @@
 
 #include "utility.hpp"
 
-//#include "boost/threadpool.hpp"
-
 #include "cppa/cppa.hpp"
+#include "cppa/match.hpp"
 #include "cppa/fsm_actor.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/yielding_actor.hpp"
-
-/*
-namespace cppa { namespace detail {
-
-struct pool_job
-{
-    abstract_event_based_actor* ptr;
-    pool_job(abstract_event_based_actor* mptr) : ptr(mptr) { }
-    void operator()()
-    {
-        struct handler : abstract_scheduled_actor::resume_callback
-        {
-            abstract_event_based_actor* job;
-            handler(abstract_event_based_actor* mjob) : job(mjob) { }
-            void exec_done()
-            {
-                if (!job->deref()) delete job;
-                dec_actor_count();
-            }
-        };
-        handler h{ptr};
-        ptr->resume(nullptr, &h);
-    }
-};
-
-class boost_threadpool_scheduler : public scheduler
-{
-
-    boost::threadpool::thread_pool<pool_job> m_pool;
-    //boost::threadpool::pool m_pool;
-
- public:
-
-    void start()
-    {
-        m_pool.size_controller().resize(std::max(num_cores(), 4));
-    }
-
-    void stop()
-    {
-        m_pool.wait();
-    }
-    void enqueue(abstract_scheduled_actor* what)
-    {
-        auto job = static_cast<abstract_event_based_actor*>(what);
-        boost::threadpool::schedule(m_pool, pool_job{job});
-    }
-
-    actor_ptr spawn(abstract_event_based_actor* what)
-    {
-        what->attach_to_scheduler(this);
-        inc_actor_count();
-        CPPA_MEMORY_BARRIER();
-        intrusive_ptr<abstract_event_based_actor> ctx(what);
-        ctx->ref();
-        return std::move(ctx);
-    }
-
-    actor_ptr spawn(scheduled_actor* bhvr, scheduling_hint)
-    {
-        return mock_scheduler::spawn(bhvr);
-    }
-
-};
-
-} } // namespace cppa::detail
-*/
 
 using std::cout;
 using std::cerr;
@@ -191,7 +123,7 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master>
     {
         init_state =
         (
-            on<atom("init"), int, int, int>() >> [=](int rs, int itv, int n)
+            on(atom("init"), arg_match) >> [=](int rs, int itv, int n)
             {
                 worker = spawn(new fsm_worker(msgcollector));
                 iteration = 0;
@@ -287,7 +219,7 @@ void chain_master(actor_ptr msgcollector)
     auto worker = spawn(worker_fun, msgcollector);
     receive
     (
-        on<atom("init"), int, int, int>() >> [&](int rs, int itv, int n)
+        on(atom("init"), arg_match) >> [&](int rs, int itv, int n)
         {
             int iteration = 0;
             auto next = new_ring(self, rs);
@@ -337,7 +269,7 @@ void supervisor(int num_msgs)
 }
 
 template<typename F>
-void run_test(F&& spawn_impl,
+void run_test(F spawn_impl,
               int num_rings, int ring_size,
               int initial_token_value, int repetitions)
 {
@@ -358,7 +290,7 @@ void run_test(F&& spawn_impl,
 
 void usage()
 {
-    cout << "usage: mailbox_performance [--boost_pool] "
+    cout << "usage: mailbox_performance "
             "(stacked|event-based) (num rings) (ring size) "
             "(initial token value) (repetitions)"
          << endl
@@ -368,46 +300,50 @@ void usage()
 
 enum mode_type { event_based, fiber_based };
 
+option<int> _2i(std::string const& str)
+{
+    char* endptr = nullptr;
+    int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
+    if (endptr == nullptr || *endptr != '\0')
+    {
+       return {};
+    }
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     announce<factors>();
     if (argc != 6) usage();
-    auto iter = argv;
-    ++iter; // argv[0] (app name)
-    /*
-    if (argc == 7)
-    {
-        if (strcmp(*iter++, "--boost_pool") == 0)
-            cppa::set_scheduler(new cppa::detail::boost_threadpool_scheduler);
-        else usage();
-    }
-    */
-    mode_type mode;
-    std::string mode_str = *iter++;
-    if (mode_str == "event-based") mode = event_based;
-    else if (mode_str == "stacked") mode = fiber_based;
-    else usage();
-    int num_rings = rd<int>(*iter++);
-    int ring_size = rd<int>(*iter++);
-    int initial_token_value = rd<int>(*iter++);
-    int repetitions = rd<int>(*iter++);
-    int num_msgs = num_rings + (num_rings * repetitions);
-    switch (mode)
-    {
-        case event_based:
+    // skip argv[0] (app name)
+    std::vector<std::string> args{argv + 1, argv + argc};
+    match(args)
+    (
+        on(val<std::string>, _2i, _2i, _2i, _2i) >> [](std::string const& mode,
+                                                       int num_rings,
+                                                       int ring_size,
+                                                       int initial_token_value,
+                                                       int repetitions)
         {
-            auto mc = spawn(new fsm_supervisor(num_msgs));
-            run_test([&]() { return spawn(new fsm_chain_master(mc)); },
-                     num_rings, ring_size, initial_token_value, repetitions);
-            break;
-        }
-        case fiber_based:
-        {
-            auto mc = spawn(supervisor, num_msgs);
-            run_test([&]() { return spawn(chain_master, mc); },
-                     num_rings, ring_size, initial_token_value, repetitions);
-            break;
-        }
-    }
+            int num_msgs = num_rings + (num_rings * repetitions);
+            if (mode == "event-based")
+            {
+                auto mc = spawn(new fsm_supervisor(num_msgs));
+                run_test([&]() { return spawn(new fsm_chain_master(mc)); },
+                         num_rings, ring_size, initial_token_value, repetitions);
+            }
+            else if (mode == "stacked")
+            {
+                auto mc = spawn(supervisor, num_msgs);
+                run_test([&]() { return spawn(chain_master, mc); },
+                         num_rings, ring_size, initial_token_value, repetitions);
+            }
+            else
+            {
+                usage();
+            }
+        },
+        others() >> usage
+    );
     return 0;
 }

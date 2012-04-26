@@ -208,11 +208,13 @@ actor_ptr remote_actor(const char* host, std::uint16_t port)
 
     auto peer_pinf = new process_information(peer_pid, peer_node_id);
     process_information_ptr pinfptr(peer_pinf);
-    auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
+    //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
     detail::singleton_manager::get_network_manager()
     ->send_to_mailman(make_any_tuple(sockfd, pinfptr));
     detail::post_office_add_peer(sockfd, pinfptr);
-    return detail::get_actor_proxy_cache().get(key);
+    return detail::get_actor_proxy_cache().get(remote_actor_id,
+                                               pinfptr->process_id(),
+                                               pinfptr->node_id());
     //auto ptr = get_scheduler()->register_hidden_context();
 }
 

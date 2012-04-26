@@ -31,9 +31,7 @@
 #ifndef THREAD_HPP
 #define THREAD_HPP
 
-//#ifdef __APPLE__
-
-#if 1
+#ifdef __APPLE__
 
 #include <boost/thread.hpp>
 #include "cppa/util/duration.hpp"
