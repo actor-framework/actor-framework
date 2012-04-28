@@ -48,7 +48,6 @@ namespace cppa { namespace detail {
 namespace {
 
 typedef unique_lock<mutex> guard_type;
-typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
 typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
 } // namespace <anonmyous>
@@ -147,6 +146,7 @@ struct thread_pool_scheduler::worker
                     job->pending_actor().reset();
                 }
                 if (!job->deref()) delete job;
+                CPPA_MEMORY_BARRIER();
                 dec_actor_count();
                 job = nullptr;
             }
@@ -207,13 +207,13 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             scheduled_actor* dummy)
 {
+    typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
     std::vector<worker_ptr> workers;
     size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
     for (size_t i = 0; i < num_workers; ++i)
     {
-        worker_ptr wptr(new worker(jqueue, dummy));
-        wptr->start();
-        workers.push_back(std::move(wptr));
+        workers.emplace_back(new worker(jqueue, dummy));
+        workers.back()->start();
     }
     // wait for workers
     for (auto& w : workers)
