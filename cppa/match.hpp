@@ -184,10 +184,10 @@ auto match_each(InputIterator first, InputIterator last)
 }
 
 template<typename InputIterator, typename Projection>
-auto pmatch_each(InputIterator first, InputIterator last, Projection&& proj)
-     -> detail::pmatch_each_helper<InputIterator, typename util::rm_ref<Projection>::type>
+auto match_each(InputIterator first, InputIterator last, Projection proj)
+     -> detail::pmatch_each_helper<InputIterator, Projection>
 {
-    return {first, last, std::forward<Projection>(proj)};
+    return {first, last, std::move(proj)};
 }
 
 } // namespace cppa
