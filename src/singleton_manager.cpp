@@ -76,38 +76,31 @@ void stop_and_kill(std::atomic<T*>& ptr)
     }
 }
 
-struct singleton_cleanup_helper
+void delete_singletons()
 {
-    ~singleton_cleanup_helper()
+    if (self.unchecked() != nullptr)
     {
-        if (self.unchecked() != nullptr)
-        {
-            try { self.unchecked()->quit(exit_reason::normal); }
-            catch (actor_exited&) { }
-        }
-        auto rptr = s_actor_registry.load();
-        if (rptr)
-        {
-            rptr->await_running_count_equal(0);
-        }
-        delete s_actor_registry.load();
-        // TODO: figure out why the ... Mac OS dies with a segfault here
-//#       ifndef __APPLE__
-        stop_and_kill(s_scheduler);
-//#       endif
-        stop_and_kill(s_network_manager);
-        // it's safe now to delete all other singletons now
-        delete s_group_manager.load();
-        auto et = s_empty_tuple.load();
-        if (et && !et->deref()) delete et;
-        delete s_actor_registry.load();
-        delete s_uniform_type_info_map.load();
+        try { self.unchecked()->quit(exit_reason::normal); }
+        catch (actor_exited&) { }
     }
+    auto rptr = s_actor_registry.load();
+    if (rptr)
+    {
+        rptr->await_running_count_equal(0);
+    }
+    stop_and_kill(s_scheduler);
+    stop_and_kill(s_network_manager);
+    CPPA_MEMORY_BARRIER();
+    // it's safe now to delete all other singletons now
+    delete s_actor_registry.load();
+    delete s_group_manager.load();
+    auto et = s_empty_tuple.load();
+    if (et && !et->deref()) delete et;
+    delete s_uniform_type_info_map.load();
 }
-;//s_cleanup_helper;
 
 template<typename T>
-T* lazy_get(std::atomic<T*>& ptr)
+T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false)
 {
     T* result = ptr.load();
     if (result == nullptr)
@@ -119,6 +112,13 @@ T* lazy_get(std::atomic<T*>& ptr)
         }
         else
         {
+            // ok, successfully created singleton, register exit fun?
+            if (register_atexit_fun)
+            {
+//#               ifndef __APPLE__
+                atexit(delete_singletons);
+//#               endif
+            }
             return tmp;
         }
     }
@@ -136,7 +136,7 @@ actor_registry* singleton_manager::get_actor_registry()
 
 uniform_type_info_map* singleton_manager::get_uniform_type_info_map()
 {
-    return lazy_get(s_uniform_type_info_map);
+    return lazy_get(s_uniform_type_info_map, true);
 }
 
 group_manager* singleton_manager::get_group_manager()
