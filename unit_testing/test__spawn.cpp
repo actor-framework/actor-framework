@@ -448,4 +448,39 @@ size_t test__spawn()
     // verify pong messages
     CPPA_CHECK_EQUAL(10, pongs());
     return CPPA_TEST_RESULT;
+
+    /****** TODO
+
+    int add_fun(int, int);
+    int sub_fun(int, int);
+
+    ...
+
+    class math
+    {
+     public:
+        int add_fun(int, int);
+        int sub_fun(int, int);
+    };
+
+    ...
+
+    auto factory1 = actor_prototype
+    (
+        on<atom("add"), int, int>().reply_with(atom("result"), add_fun),
+        on<atom("sub"), int, int>().reply_with(atom("result"), add_fun)
+    );
+    auto a1 = factory1.spawn();
+
+    ...
+
+    auto factory2 = actor_facade<math>
+    (
+        on<atom("add"), int, int>().reply_with(atom("result"), &math::add_fun), <-- possible?
+        on<atom("sub"), int, int>().reply_with(atom("result"), &math::sub_fun)
+    );
+    auto a2 = factory2.spawn();
+
+    */
+
 }
