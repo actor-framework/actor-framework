@@ -69,23 +69,36 @@ class value_guard
     typename tdata_from_type_list<FilteredPattern>::type m_args;
 
     template<typename... Args>
-    inline bool _eval(util::void_type const&, tdata<> const&, Args&&...) const
+    static inline bool _eval(util::void_type const&, tdata<> const&,
+                             Args const&...)
     {
         return true;
     }
 
     template<class Tail, typename Arg0, typename... Args>
-    inline bool _eval(util::void_type const&, Tail const& tail,
-                      Arg0 const&, Args const&... args         ) const
+    static inline bool _eval(util::void_type const&, Tail const& tail,
+                             Arg0 const&, Args const&... args         )
     {
         return _eval(tail.head, tail.tail(), args...);
     }
 
-    template<typename Head, class Tail, typename Arg0, typename... Args>
-    inline bool _eval(Head const& head, Tail const& tail,
-                      Arg0 const& arg0, Args const&... args) const
+    template<typename T0, typename T1>
+    static inline bool cmp(T0 const& lhs, T1 const& rhs)
     {
-        return head == arg0 && _eval(tail.head, tail.tail(), args...);
+        return lhs == rhs;
+    }
+
+    template<typename T0, typename T1>
+    static inline bool cmp(T0 const& lhs, std::reference_wrapper<T1> const& rhs)
+    {
+        return lhs == rhs.get();
+    }
+
+    template<typename Head, class Tail, typename Arg0, typename... Args>
+    static inline bool _eval(Head const& head, Tail const& tail,
+                             Arg0 const& arg0, Args const&... args)
+    {
+        return cmp(head, arg0) && _eval(tail.head, tail.tail(), args...);
     }
 
  public:
