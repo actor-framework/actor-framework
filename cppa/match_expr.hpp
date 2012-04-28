@@ -799,9 +799,14 @@ class match_expr
         }
     };
 
-    operator partial_function() const
+    inline partial_function as_partial_function() const
     {
         return {partial_function::impl_ptr{new pfun_impl(*this)}};
+    }
+
+    inline operator partial_function() const
+    {
+        return as_partial_function();
     }
 
  private:
