@@ -116,7 +116,7 @@ T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false)
             if (register_atexit_fun)
             {
 //#               ifndef __APPLE__
-                atexit(delete_singletons);
+//                atexit(delete_singletons);
 //#               endif
             }
             return tmp;
