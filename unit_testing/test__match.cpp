@@ -303,7 +303,7 @@ size_t test__match()
     /*,
     int pmatches = 0;
     using std::placeholders::_1;
-    pmatch_each(vec2.begin(), vec2.end(), std::bind(split, _1, '='))
+    match_each(vec2.begin(), vec2.end(), std::bind(split, _1, '='))
     (
         on("a", val<string>) >> [&](string const& value)
         {

@@ -130,7 +130,7 @@ int main(int argc, char** argv)
         }
     );
 
-    pmatch_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); })
+    match_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); })
     (
         on_arg_match >> [](std::string const& key, std::string const& value)
         {
