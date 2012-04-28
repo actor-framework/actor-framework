@@ -118,6 +118,29 @@ class behavior_rvalue_builder
 
 struct rvalue_builder_args_ctor { };
 
+template<class Left, class Right>
+struct disjunct_rvalue_builders
+{
+    Left m_left;
+    Right m_right;
+
+ public:
+
+    disjunct_rvalue_builders(Left l, Right r) : m_left(std::move(l))
+                                              , m_right(std::move(r))
+    {
+    }
+
+    template<typename Expr>
+    auto operator>>(Expr expr)
+         -> decltype((*(static_cast<Left*>(nullptr)) >> expr).or_else(
+                      *(static_cast<Right*>(nullptr)) >> expr)) const
+    {
+        return (m_left >> expr).or_else(m_right >> expr);
+    }
+
+};
+
 template<class Guard, class Transformers, class Pattern>
 struct rvalue_builder
 {
@@ -189,6 +212,12 @@ struct rvalue_builder
         return tpair{typename tpair::first_type{m_funs},
                      typename tpair::second_type{std::move(expr),
                                                  std::move(m_guard)}};
+    }
+
+    template<class Other>
+    disjunct_rvalue_builders<rvalue_builder, Other> operator||(Other other) const
+    {
+        return {*this, std::move(other)};
     }
 
 };
