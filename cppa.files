@@ -268,3 +268,4 @@ cppa/detail/scheduled_actor_dummy.hpp
 cppa/detail/nestable_receive_actor.hpp
 cppa/detail/filter_result.hpp
 benchmarks/PingPong.scala
+benchmarks/distributed.cpp

@@ -32,10 +32,32 @@
 #define UTILITY_HPP
 
 #include <vector>
+#include <string>
+#include <sstream>
 #include <stdexcept>
 #include <algorithm>
 
-#include "boost/thread.hpp"
+inline std::vector<std::string> split(std::string const& str, char delim)
+{
+    std::vector<std::string> result;
+    std::stringstream strs{str};
+    std::string tmp;
+    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+    return result;
+}
+
+inline std::string join(std::vector<std::string> const& vec,
+                        std::string const& delim = "")
+{
+    if (vec.empty()) return "";
+    auto result = vec.front();
+    for (auto i = vec.begin() + 1; i != vec.end(); ++i)
+    {
+        result += delim;
+        result += *i;
+    }
+    return result;
+}
 
 template<typename T>
 T rd(char const* cstr)
@@ -53,12 +75,6 @@ T rd(char const* cstr)
     return result;
 }
 
-#ifdef __APPLE__
-int num_cores()
-{
-    return static_cast<int>(boost::thread::hardware_concurrency());
-}
-#else
 int num_cores()
 {
     char cbuf[100];
@@ -73,7 +89,6 @@ int num_cores()
     *i = '\0';
     return rd<int>(cbuf);
 }
-#endif
 
 std::vector<uint64_t> factorize(uint64_t n)
 {
