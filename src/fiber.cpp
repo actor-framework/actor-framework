@@ -138,12 +138,22 @@ struct fiber_impl
     void* m_stack;
     void (*m_func)(void*);
     void* m_arg;
+
+#   ifdef __APPLE__
+    // ucontext implementation on macosx kinda sucks
+    static constexpr size_t ucontext_size = sizeof(ucontext_t) + 60;
+    char m_ctx_storage[sizeof(ucontext_t) + 60];
+    inline ucontext_t* ctx() { return reinterpret_cast<ucontext_t*>(m_ctx_storage); }
+#   else
+    static constexpr size_t ucontext_size = sizeof(ucontext_t);
     ucontext_t m_ctx;
+    inline ucontext_t* ctx() { return &m_ctx; }
+#   endif
 
     fiber_impl() throw() : m_initialized(true), m_stack(0), m_func(0), m_arg(0)
     {
-        memset(&m_ctx, 0, sizeof(ucontext_t));
-        getcontext(&m_ctx);
+        memset(ctx(), 0, ucontext_size);
+        getcontext(ctx());
     }
 
     fiber_impl(void (*func)(void*), void* arg)
@@ -156,19 +166,19 @@ struct fiber_impl
 
     inline void swap(fiber_impl* to)
     {
-        swapcontext(&(m_ctx), &(to->m_ctx));
+        swapcontext(ctx(), to->ctx());
     }
 
     void initialize()
     {
         m_initialized = true;
-        memset(&m_ctx, 0, sizeof(ucontext_t));
-        getcontext(&m_ctx);
+        memset(ctx(), 0, ucontext_size);
+        getcontext(ctx());
         m_stack = get_stack();
-        m_ctx.uc_stack.ss_sp = m_stack;
-        m_ctx.uc_stack.ss_size = s_stack_size;
-        m_ctx.uc_link = nullptr;
-        trampoline<sizeof(void*)>::prepare(&m_ctx, m_func, m_arg);
+        ctx()->uc_stack.ss_sp = m_stack;
+        ctx()->uc_stack.ss_size = s_stack_size;
+        ctx()->uc_link = nullptr;
+        trampoline<sizeof(void*)>::prepare(ctx(), m_func, m_arg);
     }
 
     inline void lazy_init()
