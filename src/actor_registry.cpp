@@ -101,7 +101,13 @@ void actor_registry::put(actor_id key, actor_ptr const& value)
 void actor_registry::erase(actor_id key)
 {
     exclusive_guard guard(m_instances_mtx);
-    m_instances.insert(std::pair<actor_id, actor_ptr>(key, nullptr));
+    auto i = std::find_if(m_instances.begin(), m_instances.end(),
+                          [=](std::pair<actor_id, actor_ptr> const& p)
+                          {
+                              return p.first == key;
+                          });
+    if (i != m_instances.end())
+        m_instances.erase(i);
 }
 
 std::uint32_t actor_registry::next_id()
