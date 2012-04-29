@@ -86,7 +86,13 @@ void usage()
          << "                   of given servers, use HOST:PORT syntax"  << endl
          << "  --num_pings=NUM  run benchmark with NUM messages per node"<< endl
          << endl
-         << "  example: --mode=benchmark 192.168.9.1:123 --num_pings=100"<< endl
+         << "  example: --mode=benchmark 192.168.9.1:1234 "
+                                        "192.168.9.2:1234 "
+                                        "--num_pings=100"                << endl
+         << endl
+         << endl
+         << "Shutdown servers:"                                          << endl
+         << "  --mode=shutdown  shuts down any number of given servers"  << endl
          << endl
          << endl
          << "Miscellaneous:"                                             << endl
@@ -224,6 +230,11 @@ struct server_actor : fsm_actor<server_actor>
                 });
                 if (i != m_pongs.end()) m_pongs.erase(i);
             },
+            on(atom("shutdown")) >> [=]()
+            {
+                m_pongs.clear();
+                become_void();
+            },
             others() >> [=]()
             {
                 cout << "unexpected: " << to_string(last_dequeued()) << endl;
@@ -324,6 +335,11 @@ void client_mode(Iterator first, Iterator last)
         cout << "no non-zero, non-negative init value given" << endl;
         exit(1);
     }
+    if (remotes.size() < 2)
+    {
+        cout << "less than two nodes given" << endl;
+        exit(1);
+    }
     std::vector<actor_ptr> remote_actors;
     for (auto& r : remotes)
     {
@@ -398,6 +414,48 @@ void client_mode(Iterator first, Iterator last)
     await_all_others_done();
 }
 
+template<typename Iterator>
+void shutdown_mode(Iterator first, Iterator last)
+{
+    std::vector<std::pair<string, uint16_t> > remotes;
+    match_each(first, last, std::bind(split, std::placeholders::_1, ':'))
+    (
+        on(val<string>, _2i) >> [&](string& host, int port)
+        {
+            if (port <= 1024 || port >= 65536)
+            {
+                throw std::invalid_argument("illegal port: " + std::to_string(port));
+            }
+            remotes.emplace_back(std::move(host), static_cast<uint16_t>(port));
+        }
+    );
+    for (auto& r : remotes)
+    {
+        try
+        {
+            actor_ptr x = remote_actor(r.first.c_str(), r.second);
+            monitor(x);
+            send(x, atom("shutdown"));
+            receive
+            (
+                on(atom("DOWN"), x, val<std::uint32_t>) >> []()
+                {
+                    // ok, done
+                },
+                after(std::chrono::seconds(10)) >> [&]()
+                {
+                    cout << r.first << ":" << r.second << " didn't shut down "
+                         << "within 10s"
+                         << endl;
+                }
+            );
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) usage();
@@ -405,12 +463,22 @@ int main(int argc, char** argv)
     auto last = argv + argc;
     match(*first)
     (
-        on<string>().when(_x1.in({"-h", "--help"})) >> []() { usage(); },
-        on("--mode=server") >> [=]() { server_mode(first + 1, last); },
+        on<string>().when(_x1.in({"-h", "--help"})) >> []()
+        {
+            usage();
+        },
+        on("--mode=server") >> [=]()
+        {
+            server_mode(first + 1, last);
+        },
         on("--mode=benchmark") >> [=]()
         {
             client_mode(first + 1, last);
             await_all_others_done();
+        },
+        on("--mode=shutdown") >> [=]()
+        {
+            shutdown_mode(first + 1, last);
         },
         others() >> [=]()
         {

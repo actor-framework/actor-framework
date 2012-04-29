@@ -31,29 +31,36 @@
 #include "cppa/cppa.hpp"
 #include "cppa/local_actor.hpp"
 
+namespace cppa {
+
 namespace {
 
-class observer : public cppa::attachable
+class down_observer : public attachable
 {
 
-    cppa::actor_ptr m_client;
+    actor_ptr m_observer;
+    actor_ptr m_observed;
 
  public:
 
-    observer(cppa::actor_ptr&& client) : m_client(std::move(client)) { }
+    down_observer(actor_ptr observer, actor_ptr observed)
+        : m_observer(std::move(observer))
+        , m_observed(std::move(observed))
+    {
+    }
 
     void actor_exited(std::uint32_t reason)
     {
         using namespace cppa;
-        send(m_client, atom("DOWN"), actor_ptr(self), reason);
+        send(m_observer, atom("DOWN"), m_observed, reason);
     }
 
-    bool matches(const cppa::attachable::token& match_token)
+    bool matches(const attachable::token& match_token)
     {
-        if (match_token.subtype == typeid(observer))
+        if (match_token.subtype == typeid(down_observer))
         {
-            auto ptr = reinterpret_cast<const cppa::local_actor*>(match_token.ptr);
-            return m_client == ptr;
+            auto ptr = reinterpret_cast<const local_actor*>(match_token.ptr);
+            return m_observer == ptr;
         }
         return false;
     }
@@ -61,8 +68,6 @@ class observer : public cppa::attachable
 };
 
 } // namespace <anonymous>
-
-namespace cppa {
 
 const self_type& operator<<(const self_type& s, const any_tuple& what)
 {
@@ -120,7 +125,7 @@ void unlink(actor_ptr& lhs, actor_ptr& rhs)
 
 void monitor(actor_ptr& whom)
 {
-    if (whom) whom->attach(new observer(actor_ptr(self)));
+    if (whom) whom->attach(new down_observer(self, whom));
 }
 
 void monitor(actor_ptr&& whom)
@@ -131,7 +136,7 @@ void monitor(actor_ptr&& whom)
 
 void demonitor(actor_ptr& whom)
 {
-    attachable::token mtoken(typeid(observer), self);
+    attachable::token mtoken(typeid(down_observer), self);
     if (whom) whom->detach(mtoken);
 }
 
