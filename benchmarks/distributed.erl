@@ -29,6 +29,9 @@ server_loop(Pongs) ->
                      end
             end;
         {purge} -> server_loop([]);
+        {get_pongs, Pid} ->
+            Pid ! Pongs,
+            server_loop(Pongs);
         {kickoff, Pid, NumPings} ->
             lists:foreach(fun({_, P}) -> spawn(distributed, ping_loop, [Pid, P]) ! {kickoff, NumPings} end, Pongs),
             server_loop(Pongs)
