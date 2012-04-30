@@ -9,7 +9,8 @@ ping_loop(Parent, Pong) ->
             ping_loop(Parent, Pong);
         {kickoff, X} ->
             Pong ! {ping, self(), X},
-            ping_loop(Parent, Pong)
+            ping_loop(Parent, Pong);
+        _ -> ping_loop(Parent, Pong)
     end.
 
 server_loop(Pongs) ->
@@ -41,7 +42,8 @@ server_loop(Pongs) ->
             server_loop(Pongs);
         {kickoff, Pid, NumPings} ->
             lists:foreach(fun({_, P}) -> spawn(distributed, ping_loop, [Pid, P]) ! {kickoff, NumPings} end, Pongs),
-            server_loop(Pongs)
+            server_loop(Pongs);
+        _ -> server_loop(Pongs)
     end.
 
 server_mode() ->
@@ -58,12 +60,15 @@ add_pong_fun(Pong, Node, [H|T]) ->
         after 10000 -> error(timeout)
     end.
 
+client_mode_receive_done_msgs(0) -> true;
+client_mode_receive_done_msgs(Left) ->
+    receive done -> client_mode_receive_done_msgs(Left - 1) end.
+
+
 % receive a {done} message for each node
-client_mode([], [], [], _) -> true;
-client_mode([], [], [_|T], NumPings) ->
-    receive done ->
-        client_mode([], [], T, NumPings)
-    end;
+client_mode([], [], [], _) -> error("no node, no fun");
+client_mode([], [], Nodes, _) ->
+    client_mode_receive_done_msgs(length(Nodes) * (length(Nodes) - 1));
 
 % send kickoff messages
 client_mode([Pong|Pongs], [], Nodes, NumPings) ->
