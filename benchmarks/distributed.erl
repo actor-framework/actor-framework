@@ -7,24 +7,31 @@ ping_loop(Parent, Pong) ->
         {pong, X} ->
             Pong ! {ping, self(), X - 1},
             ping_loop(Parent, Pong);
-        {kickoff, Value} ->
-            Pong ! {ping, self(), Value},
+        {kickoff, X} ->
+            Pong ! {ping, self(), X},
             ping_loop(Parent, Pong)
     end.
 
 server_loop(Pongs) ->
     receive
-        {ping, Pid, Value} -> Pid ! {pong, Value}, server_loop(Pongs);
+        {ping, Pid, X} ->
+             Pid ! {pong, X},
+             server_loop(Pongs);
         {add_pong, Pid, Node} ->
             case lists:any(fun({N, _}) -> N == Node end, Pongs) of
                 true ->
-                    Pid ! {ok},
+                    Pid ! {ok, cached},
                     server_loop(Pongs);
                 false ->
                     case rpc:call(Node, erlang, whereis, [pong]) of
-                        {badrpc, Reason} -> Pid ! {error, Reason};
+                        {badrpc, Reason} ->
+                            Pid ! {error, Reason},
+                            server_loop(Pongs);
+                        undefined ->
+                            Pid ! {error, 'pong is undefined'},
+                            server_loop(Pongs);
                         Pong ->
-                            Pid ! {ok},
+                            Pid ! {ok, added},
                             server_loop(Pongs ++ [{Node, Pong}])
                      end
             end;
@@ -43,7 +50,7 @@ add_pong_fun(Pong, Node, [Node|T]) -> add_pong_fun(Pong, Node, T);
 add_pong_fun(Pong, Node, [H|T]) ->
     Pong ! {add_pong, self(), H},
     receive
-        {ok} -> add_pong_fun(Pong, Node, T);
+        {ok, _} -> add_pong_fun(Pong, Node, T);
         {error, Reason} -> error(Reason)
         after 10000 -> error(timeout)
     end.
