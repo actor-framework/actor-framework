@@ -5,7 +5,7 @@ ping_loop(Parent, Pong) ->
     receive
         {pong, 0} -> Parent ! done;
         {pong, X} ->
-            Pong ! {self(), ping, X - 1},
+            Pong ! {ping, self(), X - 1},
             ping_loop(Parent, Pong);
         {kickoff, Value} ->
             Pong ! {ping, self(), Value},
@@ -14,7 +14,7 @@ ping_loop(Parent, Pong) ->
 
 server_loop(Pongs) ->
     receive
-        {ping, Pid, Value} -> Pid ! {pong, Value};
+        {ping, Pid, Value} -> Pid ! {pong, Value}, server_loop(Pongs);
         {add_pong, Pid, Node} ->
             case lists:any(fun({N, _}) -> N == Node end, Pongs) of
                 true ->
@@ -41,17 +41,17 @@ server_mode() ->
 add_pong_fun(_, _, []) -> true;
 add_pong_fun(Pong, Node, [Node|T]) -> add_pong_fun(Pong, Node, T);
 add_pong_fun(Pong, Node, [H|T]) ->
-    Pong ! {add_pong, H},
+    Pong ! {add_pong, self(), H},
     receive
         {ok} -> add_pong_fun(Pong, Node, T);
         {error, Reason} -> error(Reason)
+        after 10000 -> error(timeout)
     end.
 
 % receive a {done} message for each node
 client_mode([], [], [], _) -> true;
 client_mode([], [], [_|T], NumPings) ->
-    receive {done} ->
-
+    receive done ->
         client_mode([], [], T, NumPings)
     end;
 
@@ -65,29 +65,28 @@ client_mode(Pongs, [H|T], Nodes, NumPings) ->
         {badrpc, Reason} ->
             io:format("cannot connect to ~s~n", [atom_to_list(H)]),
             error(Reason);
+        undefined ->
+            io:format("no 'pong' defined on node ~s~n", [atom_to_list(H)]);
         P ->
             add_pong_fun(P, H, Nodes),
             client_mode(Pongs ++ [P], T, Nodes, NumPings)
     end.
 
-run([], undefined, ['mode=server']) -> server_mode();
-
 run(_, undefined, []) -> error("NumPings is undefined");
-
 run(Hosts, _, []) when length(Hosts) < 2 -> error("less than two nodes specified");
 run(Hosts, NumPings, []) -> client_mode([], Hosts, Hosts, NumPings);
-
 run(Hosts, NumPings, [H|T]) ->
     Arg = atom_to_list(H),
-    SetNumPings = lists:prefix("num_pings=", Arg),
-    if
-        SetNumPings == true andalso NumPings /= undefined ->
-            error("NumPings already set");
-        SetNumPings == true ->
-            run(Hosts, list_to_integer(lists:sublist(Arg, 11, length(Arg))), T);
-        true ->
-            run(Hosts ++ [H], NumPings, T)
+    case lists:prefix("num_pings=", Arg) of
+        true when NumPings /= undefined -> error("NumPings already set");
+        true -> run(Hosts, list_to_integer(lists:sublist(Arg, 11, length(Arg))), T);
+        false -> run(Hosts ++ [H], NumPings, T)
     end.
 
 start(X) ->
-    run([], undefined, X).
+    case X of
+        ['mode=server'|[]] -> server_mode();
+        ['mode=server'|_] -> io:format("too much arguments~n", []);
+        ['mode=benchmark'|T] -> run([], undefined, T);
+        _ -> io:format("invalid arguments~n", [])
+    end.
