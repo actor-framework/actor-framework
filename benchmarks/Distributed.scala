@@ -2,6 +2,7 @@ import akka.actor.{ Props, Actor, ActorRef, ActorSystem }
 import com.typesafe.config.ConfigFactory
 import Console.println
 
+case object Ok
 case object Done
 case class Error(msg: String)
 case class KickOff(value: Int)
