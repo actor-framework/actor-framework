@@ -76,15 +76,15 @@ inline option<int> _2i(std::string const& str)
 void usage()
 {
     cout << "Running in server mode:"                                    << endl
-         << "  mode=server  "                                          << endl
+         << "  mode=server  "                                            << endl
          << "  --port=NUM       publishes an actor at port NUM"          << endl
          << "  -p NUM           alias for --port=NUM"                    << endl
          << endl
          << endl
          << "Running the benchmark:"                                     << endl
-         << "  mode=benchmark run the benchmark, connect to any number"<< endl
+         << "  mode=benchmark run the benchmark, connect to any number"  << endl
          << "                   of given servers, use HOST:PORT syntax"  << endl
-         << "  num_pings=NUM  run benchmark with NUM messages per node"<< endl
+         << "  num_pings=NUM  run benchmark with NUM messages per node"  << endl
          << endl
          << "  example: mode=benchmark 192.168.9.1:1234 "
                                         "192.168.9.2:1234 "
@@ -92,7 +92,7 @@ void usage()
          << endl
          << endl
          << "Shutdown servers:"                                          << endl
-         << "  mode=shutdown  shuts down any number of given servers"  << endl
+         << "  mode=shutdown  shuts down any number of given servers"    << endl
          << endl
          << endl
          << "Miscellaneous:"                                             << endl
