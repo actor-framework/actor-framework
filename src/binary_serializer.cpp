@@ -41,7 +41,7 @@ using std::enable_if;
 namespace {
 
 constexpr size_t chunk_size = 512;
-constepxr size_t ui32_size = sizeof(std::uint32_t);
+constexpr size_t ui32_size = sizeof(std::uint32_t);
 
 } // namespace <anonymous>
 
@@ -224,12 +224,12 @@ char const* binary_serializer::sendable_data()
 {
     auto s = static_cast<std::uint32_t>(size());
     memcpy(m_begin, &s, ui32_size);
-    return m_begin();
+    return m_begin;
 }
 
 void binary_serializer::reset()
 {
-    m_wr_pos = m_begin;
+    m_wr_pos = m_begin + ui32_size;
 }
 
 } // namespace cppa

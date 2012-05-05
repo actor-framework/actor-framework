@@ -68,21 +68,69 @@ T rd(char const* cstr)
     return result;
 }
 
+void usage()
+{
+    cerr << "usage: matching (cow_tuple|object_array) {NUM_LOOPS}" << endl;
+    exit(1);
+}
+
 int main(int argc, char** argv)
 {
     announce<list<int>>();
-    if (argc != 2)
+    if (argc != 3) usage();
+    auto num_loops = rd<int64_t>(argv[2]);
+    any_tuple m1;
+    any_tuple m2;
+    any_tuple m3;
+    any_tuple m4;
+    any_tuple m5;
+    any_tuple m6;
+
+    if (strcmp(argv[1], "cow_tuple") == 0)
     {
-        cerr << "usage: matching {NUM_LOOPS}" << endl;
-        return 1;
+        m1 = make_cow_tuple(atom("msg1"), 0);
+        m2 = make_cow_tuple(atom("msg2"), 0.0);
+        m3 = make_cow_tuple(atom("msg3"), list<int>{0});
+        m4 = make_cow_tuple(atom("msg4"), 0, "0");
+        m5 = make_cow_tuple(atom("msg5"), 0, 0, 0);
+        m6 = make_cow_tuple(atom("msg6"), 0, 0.0, "0");
     }
-    auto num_loops = rd<int64_t>(argv[1]);
-    any_tuple m1 = make_cow_tuple(atom("msg1"), 0);
-    any_tuple m2 = make_cow_tuple(atom("msg2"), 0.0);
-    any_tuple m3 = cppa::make_cow_tuple(atom("msg3"), list<int>{0});
-    any_tuple m4 = make_cow_tuple(atom("msg4"), 0, "0");
-    any_tuple m5 = make_cow_tuple(atom("msg5"), 0, 0, 0);
-    any_tuple m6 = make_cow_tuple(atom("msg6"), 0, 0.0, "0");
+    else if (strcmp(argv[1], "object_array") == 0)
+    {
+        auto m1o = new detail::object_array;
+        m1o->push_back(object::from(atom("msg1")));
+        m1o->push_back(object::from(0));
+        m1 = any_tuple{m1o};
+        auto m2o = new detail::object_array;
+        m2o->push_back(object::from(atom("msg2")));
+        m2o->push_back(object::from(0.0));
+        m2 = any_tuple{m2o};
+        auto m3o = new detail::object_array;
+        m3o->push_back(object::from(atom("msg3")));
+        m3o->push_back(object::from(list<int>{0}));
+        m3 = any_tuple{m3o};
+        auto m4o = new detail::object_array;
+        m4o->push_back(object::from(atom("msg4")));
+        m4o->push_back(object::from(0));
+        m4o->push_back(object::from(std::string("0")));
+        m4 = any_tuple{m4o};
+        auto m5o = new detail::object_array;
+        m5o->push_back(object::from(atom("msg5")));
+        m5o->push_back(object::from(0));
+        m5o->push_back(object::from(0));
+        m5o->push_back(object::from(0));
+        m5 = any_tuple{m5o};
+        auto m6o = new detail::object_array;
+        m6o->push_back(object::from(atom("msg6")));
+        m6o->push_back(object::from(0));
+        m6o->push_back(object::from(0.0));
+        m6o->push_back(object::from(std::string("0")));
+        m6 = any_tuple{m6o};
+    }
+    else
+    {
+        usage();
+    }
     int64_t m1matched = 0;
     int64_t m2matched = 0;
     int64_t m3matched = 0;
@@ -107,4 +155,10 @@ int main(int argc, char** argv)
         part_fun(m5);
         part_fun(m6);
     }
+    assert(m1matched == num_loops);
+    assert(m2matched == num_loops);
+    assert(m3matched == num_loops);
+    assert(m4matched == num_loops);
+    assert(m5matched == num_loops);
+    assert(m6matched == num_loops);
 }
