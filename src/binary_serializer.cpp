@@ -41,6 +41,7 @@ using std::enable_if;
 namespace {
 
 constexpr size_t chunk_size = 512;
+constepxr size_t ui32_size = sizeof(std::uint32_t);
 
 } // namespace <anonymous>
 
@@ -133,6 +134,7 @@ void binary_serializer::acquire(size_t num_bytes)
 {
     if (!m_begin)
     {
+        num_bytes += ui32_size;
         size_t new_size = chunk_size;
         while (new_size <= num_bytes)
         {
@@ -140,7 +142,7 @@ void binary_serializer::acquire(size_t num_bytes)
         }
         m_begin = new char[new_size];
         m_end = m_begin + new_size;
-        m_wr_pos = m_begin;
+        m_wr_pos = m_begin + ui32_size;
     }
     else
     {
@@ -203,22 +205,26 @@ void binary_serializer::write_tuple(size_t size,
     }
 }
 
-std::pair<size_t, char*> binary_serializer::take_buffer()
-{
-    char* begin = m_begin;
-    char* end = m_end;
-    m_begin = m_end = m_wr_pos = nullptr;
-    return { static_cast<size_t>(end - begin), begin };
-}
-
-size_t binary_serializer::size() const
+size_t binary_serializer::sendable_size() const
 {
     return static_cast<size_t>(m_wr_pos - m_begin);
 }
 
-const char* binary_serializer::data() const
+size_t binary_serializer::size() const
 {
-    return m_begin;
+    return sendable_size() - ui32_size;
+}
+
+char const* binary_serializer::data() const
+{
+    return m_begin + ui32_size;
+}
+
+char const* binary_serializer::sendable_data()
+{
+    auto s = static_cast<std::uint32_t>(size());
+    memcpy(m_begin, &s, ui32_size);
+    return m_begin();
 }
 
 void binary_serializer::reset()

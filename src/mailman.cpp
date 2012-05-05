@@ -73,10 +73,8 @@ void mailman_loop()
                     bs << msg;
                     auto size32 = static_cast<std::uint32_t>(bs.size());
                     DEBUG("--> " << to_string(msg));
-                    // write size of serialized message
-                    auto sent = ::send(peer_fd, &size32, sizeof(std::uint32_t), 0);
-                    if (   sent != static_cast<int>(sizeof(std::uint32_t))
-                        || static_cast<int>(bs.size()) != ::send(peer_fd, bs.data(), bs.size(), 0))
+                    auto sent = ::send(peer_fd, bs.sendable_data(), bs.sendable_size());
+                    if (sent != bs.sendable_size())
                     {
                         disconnect_peer = true;
                         DEBUG("too few bytes written");

@@ -73,12 +73,6 @@ class binary_serializer : public serializer
     void write_tuple(size_t size, primitive_variant const* values);
 
     /**
-     * @brief Takes the internal buffer and returns it.
-     *
-     */
-    std::pair<size_t, char*> take_buffer();
-
-    /**
      * @brief Returns the number of written bytes.
      */
     size_t size() const;
@@ -87,6 +81,10 @@ class binary_serializer : public serializer
      * @brief Returns a pointer to the internal buffer.
      */
     char const* data() const;
+
+    size_t sendable_size() const;
+
+    char const* sendable_data();
 
     /**
      * @brief Resets the internal buffer.
