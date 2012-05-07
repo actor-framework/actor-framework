@@ -49,7 +49,7 @@ class option
     /**
      * @brief Typdef for @p T.
      */
-    typedef T value_type;
+    typedef T type;
 
     /**
      * @brief Default constructor.
@@ -61,13 +61,7 @@ class option
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
-    option(T&& value) : m_valid(false) { cr(std::move(value)); }
-
-    /**
-     * @brief Creates an @p option from @p value.
-     * @post <tt>valid() == true</tt>
-     */
-    option(T const& value) : m_valid(false) { cr(value); }
+    option(T value) : m_valid(false) { cr(std::move(value)); }
 
     option(option const& other) : m_valid(false)
     {
@@ -129,15 +123,17 @@ class option
      */
     inline bool valid() const { return m_valid; }
 
+    inline bool empty() const { return !m_valid; }
+
     /**
      * @copydoc valid()
      */
-    inline explicit operator bool() const { return m_valid; }
+    inline explicit operator bool() const { return valid(); }
 
     /**
      * @brief Returns <tt>!valid()</tt>
      */
-    inline bool operator!() const { return !m_valid; }
+    inline bool operator!() const { return empty(); }
 
     /**
      * @brief Returns the value.
@@ -180,19 +176,10 @@ class option
      *        if <tt>valid() == false</tt>.
      * @post <tt>valid() == true</tt>
      */
-    inline T& get_or_else(T const& default_value)
+    inline const T& get_or_else(const T& default_value) const
     {
-        if (!m_valid) cr(default_value);
-        return m_value;
-    }
-
-    /**
-     * @copydoc get_or_else(T const&)
-     */
-    inline T& get_or_else(T&& default_value)
-    {
-        if (!m_valid) cr(std::move(default_value));
-        return m_value;
+        if (valid()) return get();
+        return default_value;
     }
 
  private:
