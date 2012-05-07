@@ -35,6 +35,18 @@ size_t test__match()
     using namespace std::placeholders;
     using namespace cppa::placeholders;
 
+    auto fun =
+    (
+        on<int>() >> [](int i)
+        {
+            cout << "i = " << i << endl;
+        },
+        after(std::chrono::seconds(0)) >> []()
+        {
+            cout << "no int found in mailbox" << endl;
+        }
+    );
+
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));
     CPPA_CHECK(!ge_invoke(expr0_a, 3, 2, 1));
