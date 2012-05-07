@@ -72,7 +72,7 @@ auto moving_tuple_cast(any_tuple& tup)
         >::type>
 {
     typedef decltype(moving_tuple_cast<T...>(tup)) result_type;
-    typedef typename result_type::value_type tuple_type;
+    typedef typename result_type::type tuple_type;
     static constexpr auto impl =
             get_wildcard_position<util::type_list<T...>>();
     return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup);
