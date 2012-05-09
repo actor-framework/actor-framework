@@ -247,42 +247,6 @@ struct pattern_type : pattern_type_<util::is_callable<T>::value && !detail::is_b
 {
 };
 
-class on_the_fly_rvalue_builder
-{
-
- public:
-
-    constexpr on_the_fly_rvalue_builder()
-    {
-    }
-
-
-    template<typename Expr>
-    match_expr<
-        typename get_case<
-            false,
-            Expr,
-            value_guard< util::type_list<> >,
-            util::type_list<>,
-            util::type_list<>
-        >::type>
-    operator>>(Expr expr) const
-    {
-        typedef typename get_case<
-                    false,
-                    Expr,
-                    value_guard< util::type_list<> >,
-                    util::type_list<>,
-                    util::type_list<>
-                >::type
-                result;
-        return result{typename result::first_type{},
-                      typename result::second_type{
-                            std::move(expr),
-                            value_guard< util::type_list<> >{}}};
-    }
-
-};
 
 } } // cppa::detail
 
@@ -359,8 +323,6 @@ typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
 
 constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
-constexpr detail::on_the_fly_rvalue_builder on_arg_match;
-
 template<typename Arg0, typename... Args>
 detail::rvalue_builder<
     detail::value_guard<
@@ -428,6 +390,56 @@ inline decltype(on<anything>()) others()
 {
     return on<anything>();
 }
+
+// some more convenience
+
+namespace detail {
+
+class on_the_fly_rvalue_builder
+{
+
+ public:
+
+    constexpr on_the_fly_rvalue_builder()
+    {
+    }
+
+    template<typename Guard>
+    auto when(Guard g) const -> decltype(on(arg_match).when(g))
+    {
+        return on(arg_match).when(g);
+    }
+
+    template<typename Expr>
+    match_expr<
+        typename get_case<
+            false,
+            Expr,
+            value_guard< util::type_list<> >,
+            util::type_list<>,
+            util::type_list<>
+        >::type>
+    operator>>(Expr expr) const
+    {
+        typedef typename get_case<
+                    false,
+                    Expr,
+                    value_guard< util::type_list<> >,
+                    util::type_list<>,
+                    util::type_list<>
+                >::type
+                result;
+        return result{typename result::first_type{},
+                      typename result::second_type{
+                            std::move(expr),
+                            value_guard< util::type_list<> >{}}};
+    }
+
+};
+
+} // namespace detail
+
+constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 #endif
 
