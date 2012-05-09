@@ -152,6 +152,57 @@ size_t test__match()
 
 
     bool invoked = false;
+    auto kvp_split1 = [](const string& str) -> vector<string> {
+        auto pos = str.find('=');
+        if (pos != string::npos && pos == str.rfind('='))
+        {
+            return vector<string>{str.substr(0, pos), str.substr(pos+1)};
+        }
+        return {};
+    };
+    /*
+    auto kvp_split2 = [](const string& str) -> option<vector<string> > {
+        auto pos = str.find('=');
+        if (pos != string::npos && pos == str.rfind('='))
+        {
+            return vector<string>{str.substr(0, pos-1), str.substr(pos+1)};
+        }
+        return {};
+    };
+    */
+
+    match("value=42")
+    (
+        on(kvp_split1).when(_x1.not_empty()) >> [&](const vector<string>& vec)
+        {
+            CPPA_CHECK_EQUAL(vec[0], "value");
+            CPPA_CHECK_EQUAL(vec[1], "42");
+            invoked = true;
+        }
+    );
+    CPPA_CHECK(invoked);
+    invoked = false;
+
+    auto toint = [](const string& str) -> option<int> {
+        char* endptr = nullptr;
+        int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
+        if (endptr != nullptr && *endptr == '\0')
+        {
+            return result;
+        }
+        return {};
+    };
+    match("42")
+    (
+        on(toint) >> [&](int i)
+        {
+            CPPA_CHECK_EQUAL(i, 42);
+            invoked = true;
+        }
+    );
+    CPPA_CHECK(invoked);
+    invoked = false;
+
     match("abc")
     (
         on<string>().when(_x1 == "abc") >> [&]()
