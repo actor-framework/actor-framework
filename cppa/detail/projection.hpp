@@ -182,10 +182,10 @@ class projection<util::type_list<> >
 };
 
 template<class ProjectionFuns, class List>
-class projection_from_type_list;
+struct projection_from_type_list;
 
 template<class ProjectionFuns, typename... Args>
-class projection_from_type_list<ProjectionFuns, util::type_list<Args...> >
+struct projection_from_type_list<ProjectionFuns, util::type_list<Args...> >
 {
     typedef projection<ProjectionFuns, Args...> type;
 };
