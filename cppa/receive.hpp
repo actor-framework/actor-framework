@@ -122,8 +122,7 @@ inline void receive(behavior& bhvr) { self->dequeue(bhvr); }
 inline void receive(partial_function& fun) { self->dequeue(fun); }
 
 template<typename Arg0, typename... Args>
-void receive(Arg0&& arg0, Args&&... args)
-{
+void receive(Arg0&& arg0, Args&&... args) {
     auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
                                  std::forward<Args>(args)...);
     receive(tmp);
@@ -134,30 +133,26 @@ void receive_loop(behavior& rules);
 void receive_loop(partial_function& rules);
 
 template<typename Arg0, typename... Args>
-void receive_loop(Arg0&& arg0, Args&&... args)
-{
+void receive_loop(Arg0&& arg0, Args&&... args) {
     auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
                                  std::forward<Args>(args)...);
     receive_loop(tmp);
 }
 
 template<typename T>
-detail::receive_for_helper<T> receive_for(T& begin, T const& end)
-{
+detail::receive_for_helper<T> receive_for(T& begin, T const& end) {
     return {begin, end};
 }
 
 template<typename Statement>
-detail::receive_while_helper<Statement> receive_while(Statement&& stmt)
-{
+detail::receive_while_helper<Statement> receive_while(Statement&& stmt) {
     static_assert(std::is_same<bool, decltype(stmt())>::value,
                   "functor or function does not return a boolean");
     return std::move(stmt);
 }
 
 template<typename... Args>
-detail::do_receive_helper do_receive(Args&&... args)
-{
+detail::do_receive_helper do_receive(Args&&... args) {
     return detail::do_receive_helper(std::forward<Args>(args)...);
 }
 

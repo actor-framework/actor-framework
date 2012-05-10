@@ -41,8 +41,7 @@
 namespace cppa { namespace detail {
 
 template<class Container>
-class container_tuple_view : public abstract_tuple
-{
+class container_tuple_view : public abstract_tuple {
 
     typedef abstract_tuple super;
 
@@ -51,40 +50,34 @@ class container_tuple_view : public abstract_tuple
     typedef typename Container::value_type value_type;
 
     container_tuple_view(Container* c, bool take_ownership = false)
-        : super(tuple_impl_info::dynamically_typed), m_ptr(c)
-    {
+        : super(tuple_impl_info::dynamically_typed), m_ptr(c) {
         CPPA_REQUIRE(c != nullptr);
         if (!take_ownership) m_ptr.get_deleter().disable();
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         return m_ptr->size();
     }
 
-    abstract_tuple* copy() const
-    {
+    abstract_tuple* copy() const {
         return new container_tuple_view{new Container(*m_ptr), true};
     }
 
-    void const* at(size_t pos) const
-    {
+    void const* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         auto i = m_ptr->begin();
         std::advance(i, pos);
         return &(*i);
     }
 
-    void* mutable_at(size_t pos)
-    {
+    void* mutable_at(size_t pos) {
         CPPA_REQUIRE(pos < size());
         auto i = m_ptr->begin();
         std::advance(i, pos);
         return &(*i);
     }
 
-    uniform_type_info const* type_at(size_t) const
-    {
+    uniform_type_info const* type_at(size_t) const {
         return static_types_array<value_type>::arr[0];
     }
 

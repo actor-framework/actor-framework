@@ -11,15 +11,13 @@ using std::endl;
 using namespace cppa;
 
 // POD struct
-struct foo
-{
+struct foo {
     std::vector<int> a;
     int b;
 };
 
 // announce requires foo to have the equal operator implemented
-bool operator==(const foo& lhs, const foo& rhs)
-{
+bool operator==(const foo& lhs, const foo& rhs) {
     return    lhs.a == rhs.a
            && lhs.b == rhs.b;
 }
@@ -30,8 +28,7 @@ typedef std::pair<int,int> foo_pair;
 // another pair of two ints
 typedef std::pair<int,int> foo_pair2;
 
-int main(int, char**)
-{
+int main(int, char**) {
     // announces foo to the libcppa type system;
     // the function expects member pointers to all elements of foo
     assert(announce<foo>(&foo::a, &foo::b) == true);
@@ -58,27 +55,22 @@ int main(int, char**)
 
     // receive two messages
     int i = 0;
-    receive_for(i, 2)
-    (
+    receive_for(i, 2) (
         // note: we sent a foo_pair2, but match on foo_pair
         // that's safe because both are aliases for std::pair<int,int>
-        on<foo_pair>() >> [](const foo_pair& val)
-        {
+        on<foo_pair>() >> [](const foo_pair& val) {
             cout << "foo_pair("
                  << val.first << ","
                  << val.second << ")"
                  << endl;
         },
-        on<foo>() >> [](const foo& val)
-        {
+        on<foo>() >> [](const foo& val) {
             cout << "foo({";
             auto i = val.a.begin();
             auto end = val.a.end();
-            if (i != end)
-            {
+            if (i != end) {
                 cout << *i;
-                while (++i != end)
-                {
+                while (++i != end) {
                     cout << "," << *i;
                 }
             }

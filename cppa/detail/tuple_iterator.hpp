@@ -38,8 +38,7 @@
 namespace cppa { namespace detail {
 
 template<class Tuple>
-class tuple_iterator
-{
+class tuple_iterator {
 
     size_t m_pos;
     Tuple const* m_tuple;
@@ -47,57 +46,48 @@ class tuple_iterator
  public:
 
     inline tuple_iterator(Tuple const* tup, size_t pos = 0)
-        : m_pos(pos), m_tuple(tup)
-    {
+        : m_pos(pos), m_tuple(tup) {
     }
 
     tuple_iterator(tuple_iterator const&) = default;
 
     tuple_iterator& operator=(tuple_iterator const&) = default;
 
-    inline bool operator==(tuple_iterator const& other) const
-    {
+    inline bool operator==(tuple_iterator const& other) const {
         CPPA_REQUIRE(other.m_tuple == other.m_tuple);
         return other.m_pos == m_pos;
     }
 
-    inline bool operator!=(tuple_iterator const& other) const
-    {
+    inline bool operator!=(tuple_iterator const& other) const {
         return !(*this == other);
     }
 
-    inline tuple_iterator& operator++()
-    {
+    inline tuple_iterator& operator++() {
         ++m_pos;
         return *this;
     }
 
-    inline tuple_iterator& operator--()
-    {
+    inline tuple_iterator& operator--() {
         CPPA_REQUIRE(m_pos > 0);
         --m_pos;
         return *this;
     }
 
-    inline tuple_iterator operator+(size_t offset)
-    {
+    inline tuple_iterator operator+(size_t offset) {
         return {m_tuple, m_pos + offset};
     }
 
-    inline tuple_iterator& operator+=(size_t offset)
-    {
+    inline tuple_iterator& operator+=(size_t offset) {
         m_pos += offset;
         return *this;
     }
 
-    inline tuple_iterator operator-(size_t offset)
-    {
+    inline tuple_iterator operator-(size_t offset) {
         CPPA_REQUIRE(m_pos >= offset);
         return {m_tuple, m_pos - offset};
     }
 
-    inline tuple_iterator& operator-=(size_t offset)
-    {
+    inline tuple_iterator& operator-=(size_t offset) {
         CPPA_REQUIRE(m_pos >= offset);
         m_pos -= offset;
         return *this;
@@ -105,13 +95,11 @@ class tuple_iterator
 
     inline size_t position() const { return m_pos; }
 
-    inline void const* value() const
-    {
+    inline void const* value() const {
         return m_tuple->at(m_pos);
     }
 
-    inline uniform_type_info const* type() const
-    {
+    inline uniform_type_info const* type() const {
         return m_tuple->type_at(m_pos);
     }
 

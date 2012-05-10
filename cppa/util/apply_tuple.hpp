@@ -40,50 +40,41 @@
 namespace cppa { namespace util {
 
 template<typename Result, bool IsManipulator, size_t... Range>
-struct apply_tuple_impl
-{
+struct apply_tuple_impl {
     template<typename F, class Tuple>
-    static inline Result apply(F& f, Tuple const& args)
-    {
+    static inline Result apply(F& f, Tuple const& args) {
         return f(get<Range>(args)...);
     }
 };
 
 template<typename Result, size_t... Range>
-struct apply_tuple_impl<Result, true, Range...>
-{
+struct apply_tuple_impl<Result, true, Range...> {
     template<typename F, class Tuple>
-    static inline Result apply(F& f, Tuple& args)
-    {
+    static inline Result apply(F& f, Tuple& args) {
         return f(get_ref<Range>(args)...);
     }
 };
 
 template<typename Result, bool IsManipulator, int From, int To, int... Args>
 struct apply_tuple_util
-        : apply_tuple_util<Result, IsManipulator, From, To-1, To, Args...>
-{
+        : apply_tuple_util<Result, IsManipulator, From, To-1, To, Args...> {
 };
 
 template<typename Result, bool IsManipulator, int X, int... Args>
 struct apply_tuple_util<Result, IsManipulator, X, X, Args...>
-        : apply_tuple_impl<Result, IsManipulator, X, Args...>
-{
+        : apply_tuple_impl<Result, IsManipulator, X, Args...> {
 };
 
 template<typename Result, bool IsManipulator>
-struct apply_tuple_util<Result, IsManipulator, 1, 0>
-{
+struct apply_tuple_util<Result, IsManipulator, 1, 0> {
     template<typename F, class Unused>
-    static Result apply(F& f, Unused const&)
-    {
+    static Result apply(F& f, Unused const&) {
         return f();
     }
 };
 
 template<typename F, template<typename...> class Tuple, typename... T>
-typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...>& tup)
-{
+typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...>& tup) {
     typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
     static constexpr size_t tup_size = sizeof...(T);
@@ -97,8 +88,7 @@ typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...>& tup)
 }
 
 template<typename F, template<typename...> class Tuple, typename... T>
-typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup)
-{
+typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup) {
     typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
     static constexpr size_t tup_size = sizeof...(T);
@@ -113,16 +103,14 @@ typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup)
 
 template<typename Result, size_t From, size_t To,
          typename F, template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...> const& tup)
-{
+Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...> const& tup) {
     return apply_tuple_util<Result, false, From, To>
            ::apply(std::forward<F>(fun), tup);
 }
 
 template<typename Result, size_t From, size_t To,
          typename F, template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...>& tup)
-{
+Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...>& tup) {
     return apply_tuple_util<Result, true, From, To>
            ::apply(std::forward<F>(fun), tup);
 }
@@ -131,8 +119,7 @@ Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...>& tup)
 // does not evaluate result type of functor
 template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
-{
+Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup) {
     return apply_tuple_util<Result, false, 0, sizeof...(T) - 1>
            ::apply(std::forward<F>(fun), tup);
 }
@@ -141,8 +128,7 @@ Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
 // does not evaluate result type of functor
 template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup)
-{
+Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup) {
     return apply_tuple_util<Result, true, 0, sizeof...(T) - 1>
            ::apply(std::forward<F>(fun), tup);
 }

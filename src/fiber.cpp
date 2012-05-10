@@ -55,8 +55,7 @@ namespace {
 
 constexpr size_t s_stack_size = SIGSTKSZ;
 
-inline void* get_stack()
-{
+inline void* get_stack() {
     return mmap(0,
                 s_stack_size,
                 PROT_EXEC | PROT_READ | PROT_WRITE,
@@ -65,8 +64,7 @@ inline void* get_stack()
                 0);
 }
 
-inline void release_stack(void* mem)
-{
+inline void release_stack(void* mem) {
      munmap(mem, s_stack_size);
 }
 
@@ -79,36 +77,29 @@ template<size_t PointerSize,
 struct trampoline;
 
 template<typename FunType, typename IntType>
-struct trampoline<4, FunType, IntType>
-{
+struct trampoline<4, FunType, IntType> {
     static_assert(sizeof(int) == 4, "sizeof(int) != 4");
-    static void bounce(int func_ptr, int ptr)
-    {
+    static void bounce(int func_ptr, int ptr) {
         auto func = reinterpret_cast<void_ptr_function>(func_ptr);
         func(reinterpret_cast<void*>(ptr));
     }
-    static void prepare(ucontext_t* ctx, void_ptr_function func, void* arg)
-    {
+    static void prepare(ucontext_t* ctx, void_ptr_function func, void* arg) {
         makecontext(ctx, (FunType) &trampoline<4>::bounce,
                     2, (IntType) func, (IntType) arg);
     }
 };
 
 template<typename FunType, typename IntType>
-struct trampoline<8, FunType, IntType>
-{
+struct trampoline<8, FunType, IntType> {
     static_assert(sizeof(int) == 4, "sizeof(int) != 4");
     static void bounce(int func_first_4_byte, int func_second_4_byte,
-                       int arg_first_4_byte, int arg_second_4_byte)
-    {
-        std::uint64_t arg_ptr;
-        {
+                       int arg_first_4_byte, int arg_second_4_byte) {
+        std::uint64_t arg_ptr; {
             int* _addr = reinterpret_cast<int*>(&arg_ptr);
             _addr[0] = arg_first_4_byte;
             _addr[1] = arg_second_4_byte;
         }
-        std::uint64_t func_ptr;
-        {
+        std::uint64_t func_ptr; {
             int* _addr = reinterpret_cast<int*>(&func_ptr);
             _addr[0] = func_first_4_byte;
             _addr[1] = func_second_4_byte;
@@ -116,8 +107,7 @@ struct trampoline<8, FunType, IntType>
         auto func = reinterpret_cast<void_ptr_function>(func_ptr);
         func((void*) arg_ptr);
     }
-    static void prepare(ucontext_t* ctx, void_ptr_function func, void* arg)
-    {
+    static void prepare(ucontext_t* ctx, void_ptr_function func, void* arg) {
         std::uint64_t arg_ptr = reinterpret_cast<std::uint64_t>(arg);
         std::uint64_t func_ptr = reinterpret_cast<std::uint64_t>(func);
         int* func_addr = reinterpret_cast<int*>(&func_ptr);
@@ -131,8 +121,7 @@ struct trampoline<8, FunType, IntType>
 
 namespace cppa { namespace util {
 
-struct fiber_impl
-{
+struct fiber_impl {
 
     bool m_initialized;
     void* m_stack;
@@ -150,8 +139,7 @@ struct fiber_impl
     inline ucontext_t* ctx() { return &m_ctx; }
 #   endif
 
-    fiber_impl() throw() : m_initialized(true), m_stack(0), m_func(0), m_arg(0)
-    {
+    fiber_impl() throw() : m_initialized(true), m_stack(0), m_func(0), m_arg(0) {
         memset(ctx(), 0, ucontext_size);
         getcontext(ctx());
     }
@@ -160,17 +148,14 @@ struct fiber_impl
         : m_initialized(false)
         , m_stack(nullptr)
         , m_func(func)
-        , m_arg(arg)
-    {
+        , m_arg(arg) {
     }
 
-    inline void swap(fiber_impl* to)
-    {
+    inline void swap(fiber_impl* to) {
         swapcontext(ctx(), to->ctx());
     }
 
-    void initialize()
-    {
+    void initialize() {
         m_initialized = true;
         memset(ctx(), 0, ucontext_size);
         getcontext(ctx());
@@ -181,33 +166,27 @@ struct fiber_impl
         trampoline<sizeof(void*)>::prepare(ctx(), m_func, m_arg);
     }
 
-    inline void lazy_init()
-    {
+    inline void lazy_init() {
         if (!m_initialized) initialize();
     }
 
-    ~fiber_impl()
-    {
+    ~fiber_impl() {
         if (m_stack) release_stack(m_stack);
     }
 
 };
 
-fiber::fiber() throw() : m_impl(new fiber_impl)
-{
+fiber::fiber() throw() : m_impl(new fiber_impl) {
 }
 
-fiber::fiber(void (*func)(void*), void* arg) : m_impl(new fiber_impl(func, arg))
-{
+fiber::fiber(void (*func)(void*), void* arg) : m_impl(new fiber_impl(func, arg)) {
 }
 
-fiber::~fiber()
-{
+fiber::~fiber() {
     delete m_impl;
 }
 
-void fiber::swap(fiber& from, fiber& to)
-{
+void fiber::swap(fiber& from, fiber& to) {
     to.m_impl->lazy_init();
     from.m_impl->swap(to.m_impl);
 }
@@ -218,30 +197,24 @@ void fiber::swap(fiber& from, fiber& to)
 
 #include <stdexcept>
 
-fiber::fiber() : handle(nullptr), is_converted_thread(true)
-{
+fiber::fiber() : handle(nullptr), is_converted_thread(true) {
     handle = ConvertThreadToFiber(nullptr);
-    if (handle == nullptr)
-    {
+    if (handle == nullptr) {
         throw std::logic_error("handle == nullptr");
     }
 }
 
 fiber::fiber(LPFIBER_START_ROUTINE func, LPVOID arg1)
     : handle(nullptr)
-    , is_converted_thread(false)
-{
+    , is_converted_thread(false) {
     handle = CreateFiber(0, func, arg1);
-    if (handle == nullptr)
-    {
+    if (handle == nullptr) {
         throw std::logic_error("handle == nullptr");
     }
 }
 
-fiber::~fiber()
-{
-    if (handle != nullptr && !is_converted_thread)
-    {
+fiber::~fiber() {
+    if (handle != nullptr && !is_converted_thread) {
         DeleteFiber(handle);
     }
 }

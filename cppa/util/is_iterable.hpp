@@ -42,20 +42,17 @@ namespace cppa { namespace util {
  *        functions returning forward iterators.
  */
 template<typename T>
-class is_iterable
-{
+class is_iterable {
 
     // this horrible code would just disappear if we had concepts
     template<class C>
-    static bool sfinae_fun
-    (
+    static bool sfinae_fun (
         C const* cc,
         // check for 'C::begin()' returning a forward iterator
         typename std::enable_if<util::is_forward_iterator<decltype(cc->begin())>::value>::type* = 0,
         // check for 'C::end()' returning the same kind of forward iterator
         typename std::enable_if<std::is_same<decltype(cc->begin()), decltype(cc->end())>::value>::type* = 0
-    )
-    {
+    ) {
         return true;
     }
 

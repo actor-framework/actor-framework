@@ -39,26 +39,22 @@ namespace cppa { namespace util {
  * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
  */
 template<typename Left, typename Right>
-struct left_or_right
-{
+struct left_or_right {
     typedef Left type;
 };
 
 template<typename Right>
-struct left_or_right<util::void_type, Right>
-{
+struct left_or_right<util::void_type, Right> {
     typedef Right type;
 };
 
 template<typename Right>
-struct left_or_right<util::void_type&, Right>
-{
+struct left_or_right<util::void_type&, Right> {
     typedef Right type;
 };
 
 template<typename Right>
-struct left_or_right<util::void_type const&, Right>
-{
+struct left_or_right<util::void_type const&, Right> {
     typedef Right type;
 };
 
@@ -66,14 +62,12 @@ struct left_or_right<util::void_type const&, Right>
  * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
  */
 template<typename Left, typename Right>
-struct if_not_left
-{
+struct if_not_left {
     typedef void_type type;
 };
 
 template<typename Right>
-struct if_not_left<util::void_type, Right>
-{
+struct if_not_left<util::void_type, Right> {
     typedef Right type;
 };
 

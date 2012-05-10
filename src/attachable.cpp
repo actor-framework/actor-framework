@@ -32,8 +32,7 @@
 
 namespace cppa {
 
-attachable::~attachable()
-{
+attachable::~attachable() {
 }
 
 //void attachable::detach(std::uint32_t)

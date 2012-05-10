@@ -34,8 +34,7 @@
 namespace cppa { namespace detail {
 
 template<typename T>
-class ref_counted_impl
-{
+class ref_counted_impl {
 
     T m_rc;
 

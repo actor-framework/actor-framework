@@ -44,32 +44,23 @@ using std::uint32_t;
 
 using namespace cppa;
 
-struct testee : fsm_actor<testee>
-{
+struct testee : fsm_actor<testee> {
     actor_ptr parent;
     behavior init_state;
-    testee(actor_ptr const& pptr) : parent(pptr)
-    {
-        init_state =
-        (
-            on(atom("spread"), 0) >> [=]()
-            {
+    testee(actor_ptr const& pptr) : parent(pptr) {
+        init_state = (
+            on(atom("spread"), 0) >> [=]() {
                 send(parent, atom("result"), (uint32_t) 1);
                 become_void();
             },
-            on<atom("spread"), int>() >> [=](int x)
-            {
-                any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
+            on<atom("spread"), int>() >> [=](int x) {
+                auto msg = make_any_tuple(atom("spread"), x - 1);
                 spawn(new testee(this)) << msg;
                 spawn(new testee(this)) << msg;
-                become
-                (
-                    on<atom("result"), uint32_t>() >> [=](uint32_t r1)
-                    {
-                        become
-                        (
-                            on<atom("result"), uint32_t>() >> [=](uint32_t r2)
-                            {
+                become (
+                    on<atom("result"), uint32_t>() >> [=](uint32_t r1) {
+                        become (
+                            on<atom("result"), uint32_t>() >> [=](uint32_t r2) {
                                 send(parent, atom("result"), r1 + r2);
                                 become_void();
                             }
@@ -81,27 +72,19 @@ struct testee : fsm_actor<testee>
     }
 };
 
-void stacked_testee(actor_ptr parent)
-{
-    receive
-    (
-        on(atom("spread"), 0) >> [&]()
-        {
+void stacked_testee(actor_ptr parent) {
+    receive (
+        on(atom("spread"), 0) >> [&]() {
             send(parent, atom("result"), (uint32_t) 1);
         },
-        on<atom("spread"), int>() >> [&](int x)
-        {
+        on<atom("spread"), int>() >> [&](int x) {
             any_tuple msg = make_cow_tuple(atom("spread"), x-1);
             spawn(stacked_testee, self) << msg;
             spawn(stacked_testee, self) << msg;
-            receive
-            (
-                on<atom("result"), uint32_t>() >> [&](uint32_t v1)
-                {
-                    receive
-                    (
-                        on<atom("result"),uint32_t>() >> [&](uint32_t v2)
-                        {
+            receive (
+                on<atom("result"), uint32_t>() >> [&](uint32_t v1) {
+                    receive (
+                        on<atom("result"),uint32_t>() >> [&](uint32_t v2) {
                             send(parent, atom("result"), v1 + v2);
                         }
                     );
@@ -111,48 +94,38 @@ void stacked_testee(actor_ptr parent)
     );
 }
 
-void usage()
-{
+void usage() {
     cout << "usage: actor_creation (stacked|event-based) POW" << endl
          << "       creates 2^POW actors" << endl
          << endl;
 }
 
-int main(int argc, char** argv)
-{
-    if (argc == 3)
-    {
+int main(int argc, char** argv) {
+    if (argc == 3) {
         int num = rd<int>(argv[2]);
-        if (strcmp(argv[1], "stacked") == 0)
-        {
+        if (strcmp(argv[1], "stacked") == 0) {
             send(spawn(stacked_testee, self), atom("spread"), num);
         }
-        else if (strcmp(argv[1], "event-based") == 0)
-        {
+        else if (strcmp(argv[1], "event-based") == 0) {
             send(spawn(new testee(self)), atom("spread"), num);
         }
-        else
-        {
+        else {
             usage();
             return 1;
         }
-        receive
-        (
-            on<atom("result"),uint32_t>() >> [=](uint32_t value)
-            {
+        receive (
+            on<atom("result"),uint32_t>() >> [=](uint32_t value) {
                 //cout << "value = " << value << endl
                 //     << "expected => 2^" << num << " = "
                 //     << (1 << num) << endl;
-                if (value != (((uint32_t) 1) << num))
-                {
+                if (value != (((uint32_t) 1) << num)) {
                     cerr << "ERROR: received wrong result!\n";
                 }
             }
         );
         await_all_others_done();
     }
-    else
-    {
+    else {
         usage();
         return 1;
     }

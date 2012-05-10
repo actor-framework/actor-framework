@@ -38,21 +38,18 @@
 
 namespace cppa { namespace detail {
 
-struct tuple_view_copy_helper
-{
+struct tuple_view_copy_helper {
     size_t pos;
     abstract_tuple* target;
     tuple_view_copy_helper(abstract_tuple* trgt) : pos(0), target(trgt) { }
     template<typename T>
-    void operator()(T const* value)
-    {
+    void operator()(T const* value) {
         *(reinterpret_cast<T*>(target->mutable_at(pos++))) = *value;
     }
 };
 
 template<typename... ElementTypes>
-class tuple_view : public abstract_tuple
-{
+class tuple_view : public abstract_tuple {
 
     static_assert(sizeof...(ElementTypes) > 0,
                   "tuple_vals is not allowed to be empty");
@@ -72,53 +69,44 @@ class tuple_view : public abstract_tuple
      * @warning @p tuple_view does @b NOT takes ownership for given pointers
      */
     tuple_view(ElementTypes*... args)
-        : super(tuple_impl_info::statically_typed), m_data(args...)
-    {
+        : super(tuple_impl_info::statically_typed), m_data(args...) {
     }
 
-    inline data_type& data()
-    {
+    inline data_type& data() {
         return m_data;
     }
 
-    inline data_type const& data() const
-    {
+    inline data_type const& data() const {
         return m_data;
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         return sizeof...(ElementTypes);
     }
 
-    abstract_tuple* copy() const
-    {
+    abstract_tuple* copy() const {
         auto result = new tuple_vals<ElementTypes...>;
         tuple_view_copy_helper f{result};
         util::static_foreach<0, sizeof...(ElementTypes)>::_(m_data, f);
         return result;
     }
 
-    void const* at(size_t pos) const
-    {
+    void const* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_data.at(pos);
     }
 
-    void* mutable_at(size_t pos)
-    {
+    void* mutable_at(size_t pos) {
         CPPA_REQUIRE(pos < size());
         return m_data.mutable_at(pos);
     }
 
-    uniform_type_info const* type_at(size_t pos) const
-    {
+    uniform_type_info const* type_at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_types[pos];
     }
 
-    std::type_info const* type_token() const
-    {
+    std::type_info const* type_token() const {
         return detail::static_type_list<ElementTypes...>::list;
     }
 

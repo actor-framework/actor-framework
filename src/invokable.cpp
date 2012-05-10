@@ -32,8 +32,7 @@
 
 namespace cppa { namespace detail {
 
-invokable::~invokable()
-{
+invokable::~invokable() {
 }
 
 bool invokable::invoke(any_tuple&) const { return false; }

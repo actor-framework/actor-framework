@@ -40,26 +40,21 @@ namespace cppa { namespace detail {
 
 template<size_t N, template<typename...> class Tuple, typename... Types>
 const typename util::at<N, Types...>::type&
-do_get(Tuple<Types...> const& t)
-{
+do_get(Tuple<Types...> const& t) {
     return ::cppa::get<N, Types...>(t);
 }
 
 template<size_t N, typename LhsTuple, typename RhsTuple>
-struct cmp_helper
-{
-    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs)
-    {
+struct cmp_helper {
+    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs) {
         return    do_get<N>(lhs) == do_get<N>(rhs)
                && cmp_helper<N-1, LhsTuple, RhsTuple>::cmp(lhs, rhs);
     }
 };
 
 template<typename LhsTuple, typename RhsTuple>
-struct cmp_helper<0, LhsTuple, RhsTuple>
-{
-    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs)
-    {
+struct cmp_helper<0, LhsTuple, RhsTuple> {
+    inline static bool cmp(LhsTuple const& lhs, RhsTuple const& rhs) {
         return do_get<0>(lhs) == do_get<0>(rhs);
     }
 };
@@ -71,8 +66,7 @@ namespace cppa { namespace util {
 template<template<typename...> class LhsTuple, typename... LhsTypes,
          template<typename...> class RhsTuple, typename... RhsTypes>
 bool compare_tuples(LhsTuple<LhsTypes...> const& lhs,
-                    RhsTuple<RhsTypes...> const& rhs)
-{
+                    RhsTuple<RhsTypes...> const& rhs) {
     static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
                   "could not compare tuples of different size");
 
@@ -91,8 +85,7 @@ bool compare_tuples(LhsTuple<LhsTypes...> const& lhs,
 template<template<typename...> class LhsTuple, typename... LhsTypes,
          template<typename...> class RhsTuple, typename... RhsTypes>
 bool compare_first_elements(LhsTuple<LhsTypes...> const& lhs,
-                            RhsTuple<RhsTypes...> const& rhs)
-{
+                            RhsTuple<RhsTypes...> const& rhs) {
     typedef typename tl_zip<
                 util::type_list<LhsTypes...>,
                 util::type_list<RhsTypes...>

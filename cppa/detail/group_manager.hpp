@@ -39,8 +39,7 @@
 
 namespace cppa { namespace detail {
 
-class group_manager
-{
+class group_manager {
 
  public:
 

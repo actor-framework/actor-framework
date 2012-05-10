@@ -74,8 +74,7 @@ T const& get(object const& obj);
  * @brief An abstraction class that stores an instance of
  *        an announced type.
  */
-class object
-{
+class object {
 
     friend bool operator==(object const& lhs, object const& rhs);
 
@@ -161,38 +160,32 @@ class object
 };
 
 template<typename T>
-object object::from(T&& what)
-{
+object object::from(T&& what) {
     typedef typename util::rm_ref<T>::type plain_type;
     typedef typename detail::implicit_conversions<plain_type>::type value_type;
     auto rtti = uniform_typeid(typeid(value_type)); // throws on error
     return { new value_type(std::forward<T>(what)), rtti };
 }
 
-inline bool operator!=(object const& lhs, object const& rhs)
-{
+inline bool operator!=(object const& lhs, object const& rhs) {
     return !(lhs == rhs);
 }
 
 template<typename T>
-T& get_ref(object& obj)
-{
+T& get_ref(object& obj) {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(*(obj.type()) == typeid(T)))
-    {
+    if (!(*(obj.type()) == typeid(T))) {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
     return *reinterpret_cast<T*>(obj.mutable_value());
 }
 
 template<typename T>
-T const& get(object const& obj)
-{
+T const& get(object const& obj) {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(*(obj.type()) == typeid(T)))
-    {
+    if (!(*(obj.type()) == typeid(T))) {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
     return *reinterpret_cast<T const*>(obj.value());

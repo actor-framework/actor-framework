@@ -52,8 +52,7 @@ typedef std::uint32_t actor_id;
 /**
  * @brief Base class for all actor implementations.
  */
-class actor : public channel
-{
+class actor : public channel {
 
  public:
 
@@ -224,23 +223,19 @@ typedef intrusive_ptr<actor> actor_ptr;
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-inline process_information const& actor::parent_process() const
-{
+inline process_information const& actor::parent_process() const {
     return *m_parent_process;
 }
 
-inline process_information_ptr actor::parent_process_ptr() const
-{
+inline process_information_ptr actor::parent_process_ptr() const {
     return m_parent_process;
 }
 
-inline std::uint32_t actor::id() const
-{
+inline std::uint32_t actor::id() const {
     return m_id;
 }
 
-inline bool actor::is_proxy() const
-{
+inline bool actor::is_proxy() const {
     return m_is_proxy;
 }
 
@@ -248,39 +243,33 @@ template<typename T>
 bool actor::attach(std::unique_ptr<T>&& ptr,
                    typename std::enable_if<
                        std::is_base_of<attachable,T>::value
-                   >::type*)
-{
+                   >::type*) {
     return attach(static_cast<attachable*>(ptr.release()));
 }
 
 template<class F>
-class functor_attachable : public attachable
-{
+class functor_attachable : public attachable {
 
     F m_functor;
 
  public:
 
     template<class FArg>
-    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg))
-    {
+    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg)) {
     }
 
-    void actor_exited(std::uint32_t reason)
-    {
+    void actor_exited(std::uint32_t reason) {
         m_functor(reason);
     }
 
-    bool matches(attachable::token const&)
-    {
+    bool matches(attachable::token const&) {
         return false;
     }
 
 };
 
 template<typename F>
-bool actor::attach_functor(F&& ftor)
-{
+bool actor::attach_functor(F&& ftor) {
     typedef typename util::rm_ref<F>::type f_type;
     return attach(new functor_attachable<f_type>(std::forward<F>(ftor)));
 }

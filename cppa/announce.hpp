@@ -110,16 +110,14 @@ bool announce(std::type_info const& tinfo, uniform_type_info* utype);
  */
 template<class C, class Parent, typename... Args>
 std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
-compound_member(C Parent::*c_ptr, Args const&... args)
-{
+compound_member(C Parent::*c_ptr, Args const&... args) {
     return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
 }
 
 // deals with getter returning a mutable reference
 template<class C, class Parent, typename... Args>
 std::pair<C& (Parent::*)(), util::abstract_uniform_type_info<C>*>
-compound_member(C& (Parent::*c_ptr)(), Args const&... args)
-{
+compound_member(C& (Parent::*c_ptr)(), Args const&... args) {
     return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
 }
 
@@ -129,8 +127,7 @@ template<class Parent, typename GRes,
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>& gspair,
-                Args const&... args)
-{
+                Args const&... args) {
     return { gspair, new detail::default_uniform_type_info_impl<typename util::rm_ref<GRes>::type>(args...) };
 }
 
@@ -142,8 +139,7 @@ compound_member(const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)
  *         otherwise @c false.
  */
 template<typename T, typename... Args>
-inline bool announce(Args const&... args)
-{
+inline bool announce(Args const&... args) {
     return announce(typeid(T),
                     new detail::default_uniform_type_info_impl<T>(args...));
 }

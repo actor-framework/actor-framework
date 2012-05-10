@@ -9,8 +9,7 @@ using std::make_pair;
 using namespace cppa;
 
 // the foo class from example 3
-class foo
-{
+class foo {
 
     int m_a;
     int m_b;
@@ -36,29 +35,25 @@ class foo
 };
 
 // needed for operator==() of bar
-bool operator==(const foo& lhs, const foo& rhs)
-{
+bool operator==(const foo& lhs, const foo& rhs) {
     return    lhs.a() == rhs.a()
            && lhs.b() == rhs.b();
 }
 
 // simple struct that has foo as a member
-struct bar
-{
+struct bar {
     foo f;
     int i;
 };
 
 // announce requires bar to have the equal operator implemented
-bool operator==(const bar& lhs, const bar& rhs)
-{
+bool operator==(const bar& lhs, const bar& rhs) {
     return    lhs.f == rhs.f
            && lhs.i == rhs.i;
 }
 
 // "worst case" class ... not a good software design at all ;)
-class baz
-{
+class baz {
 
     foo m_f;
 
@@ -78,14 +73,12 @@ class baz
 };
 
 // even worst case classes have to implement operator==
-bool operator==(const baz& lhs, const baz& rhs)
-{
+bool operator==(const baz& lhs, const baz& rhs) {
     return    lhs.f() == rhs.f()
            && lhs.b == rhs.b;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     // bar has a non-trivial data member f, thus, we have to told
     // announce how to serialize/deserialize this member;
     // this is was the compound_member function is for;
@@ -116,18 +109,15 @@ int main(int, char**)
 
     // receive two messages
     int i = 0;
-    receive_for(i, 2)
-    (
-        on<bar>() >> [](bar const& val)
-        {
+    receive_for(i, 2) (
+        on<bar>() >> [](bar const& val) {
             cout << "bar(foo("
                  << val.f.a() << ","
                  << val.f.b() << "),"
                  << val.i << ")"
                  << endl;
         },
-        on<baz>() >> [](baz const& val)
-        {
+        on<baz>() >> [](baz const& val) {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
             cout << to_string(val) << endl;
         }

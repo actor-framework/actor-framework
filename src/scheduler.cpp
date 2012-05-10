@@ -49,17 +49,13 @@ namespace {
 
 typedef std::uint32_t ui32;
 
-struct exit_observer : cppa::attachable
-{
-    ~exit_observer()
-    {
+struct exit_observer : cppa::attachable {
+    ~exit_observer() {
         cppa::detail::dec_actor_count();
     }
-    void actor_exited(std::uint32_t)
-    {
+    void actor_exited(std::uint32_t) {
     }
-    bool matches(const token&)
-    {
+    bool matches(const token&) {
         return false;
     }
 };
@@ -68,22 +64,18 @@ struct exit_observer : cppa::attachable
 
 namespace cppa {
 
-struct scheduler_helper
-{
+struct scheduler_helper {
 
     typedef intrusive_ptr<detail::converted_thread_context> ptr_type;
 
-    scheduler_helper() : m_worker(new detail::converted_thread_context)
-    {
+    scheduler_helper() : m_worker(new detail::converted_thread_context) {
     }
 
-    void start()
-    {
+    void start() {
         m_thread = detail::thread(&scheduler_helper::time_emitter, m_worker);
     }
 
-    void stop()
-    {
+    void stop() {
         m_worker->enqueue(nullptr, make_cow_tuple(atom(":_DIE")));
         m_thread.join();
     }
@@ -97,8 +89,7 @@ struct scheduler_helper
 
 };
 
-void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
-{
+void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     typedef abstract_actor<local_actor> impl_type;
     typedef std::unique_ptr<detail::recursive_queue_node> queue_node_ptr;
     // setup & local variables
@@ -110,23 +101,19 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     decltype(detail::now()) now;
     bool done = false;
     // message handling rules
-    auto mfun =
-    (
+    auto mfun = (
         on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
-                                                       const actor_ptr&)
-        {
+                                                       const actor_ptr&) {
             // calculate timeout
             auto timeout = detail::now();
             timeout += d;
             messages.insert(std::make_pair(std::move(timeout),
                                            std::move(msg_ptr)));
         },
-        on<atom(":_DIE")>() >> [&]()
-        {
+        on<atom(":_DIE")>() >> [&]() {
             done = true;
         },
-        others() >> [&]()
-        {
+        others() >> [&]() {
 #           ifdef CPPA_DEBUG
                 std::cerr << "scheduler_helper::time_emitter: UNKNOWN MESSAGE: "
                           << to_string(msg_ptr->msg)
@@ -136,38 +123,30 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
         }
     );
     // loop
-    while (!done)
-    {
-        while (!msg_ptr)
-        {
-            if (messages.empty())
-            {
+    while (!done) {
+        while (!msg_ptr) {
+            if (messages.empty()) {
                 msg_ptr.reset(queue.pop());
             }
-            else
-            {
+            else {
                 now = detail::now();
                 // handle timeouts (send messages)
                 auto it = messages.begin();
-                while (it != messages.end() && (it->first) <= now)
-                {
+                while (it != messages.end() && (it->first) <= now) {
                     queue_node_ptr ptr{std::move(it->second)};
                     CPPA_REQUIRE(ptr->marked == false);
                     auto whom = const_cast<actor_ptr*>(
                                     reinterpret_cast<actor_ptr const*>(
                                         ptr->msg.at(1)));
-                    if (*whom)
-                    {
+                    if (*whom) {
                         any_tuple msg = *(reinterpret_cast<any_tuple const*>(
-                                                  ptr->msg.at(2)));
-                        (*whom)->enqueue(ptr->sender.get(), std::move(msg));
+                                                  ptr->msg.at(2))); (*whom)->enqueue(ptr->sender.get(), std::move(msg));
                     }
                     messages.erase(it);
                     it = messages.begin();
                 }
                 // wait for next message or next timeout
-                if (it != messages.end())
-                {
+                if (it != messages.end()) {
                     msg_ptr.reset(queue.try_pop(it->first));
                 }
             }
@@ -176,65 +155,51 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
     }
 }
 
-scheduler::scheduler() : m_helper(new scheduler_helper)
-{
+scheduler::scheduler() : m_helper(new scheduler_helper) {
 }
 
-void scheduler::start()
-{
+void scheduler::start() {
     m_helper->start();
 }
 
-void scheduler::stop()
-{
+void scheduler::stop() {
     m_helper->stop();
 }
 
-scheduler::~scheduler()
-{
+scheduler::~scheduler() {
     delete m_helper;
 }
 
-channel* scheduler::future_send_helper()
-{
+channel* scheduler::future_send_helper() {
     return m_helper->m_worker.get();
 }
 
-void scheduler::register_converted_context(local_actor* what)
-{
-    if (what)
-    {
+void scheduler::register_converted_context(local_actor* what) {
+    if (what) {
         detail::inc_actor_count();
         what->attach(new exit_observer);
     }
 }
 
-attachable* scheduler::register_hidden_context()
-{
+attachable* scheduler::register_hidden_context() {
     detail::inc_actor_count();
     return new exit_observer;
 }
 
-void set_scheduler(scheduler* sched)
-{
-    if (detail::singleton_manager::set_scheduler(sched) == false)
-    {
+void set_scheduler(scheduler* sched) {
+    if (detail::singleton_manager::set_scheduler(sched) == false) {
         throw std::runtime_error("scheduler already set");
     }
 }
 
-scheduler* get_scheduler()
-{
+scheduler* get_scheduler() {
     scheduler* result = detail::singleton_manager::get_scheduler();
-    if (result == nullptr)
-    {
+    if (result == nullptr) {
         result = new detail::thread_pool_scheduler;
-        try
-        {
+        try {
             set_scheduler(result);
         }
-        catch (std::runtime_error&)
-        {
+        catch (std::runtime_error&) {
             delete result;
             return detail::singleton_manager::get_scheduler();
         }

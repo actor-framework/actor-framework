@@ -43,8 +43,7 @@ namespace cppa { namespace detail {
 
 // default: <true, false, F>
 template<bool IsFunctionPtr, bool HasArguments, typename F, typename... Args>
-class ftor_behavior : public scheduled_actor
-{
+class ftor_behavior : public scheduled_actor {
 
     F m_fun;
 
@@ -57,8 +56,7 @@ class ftor_behavior : public scheduled_actor
 };
 
 template<typename F, typename... Args>
-class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
-{
+class ftor_behavior<true, true, F, Args...>  : public scheduled_actor {
 
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
 
@@ -80,8 +78,7 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
 };
 
 template<typename F>
-class ftor_behavior<false, false, F> : public scheduled_actor
-{
+class ftor_behavior<false, false, F> : public scheduled_actor {
 
     F m_fun;
 
@@ -96,8 +93,7 @@ class ftor_behavior<false, false, F> : public scheduled_actor
 };
 
 template<typename F, typename... Args>
-class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
-{
+class ftor_behavior<false, true, F, Args...>  : public scheduled_actor {
 
     static_assert(sizeof...(Args) > 0, "sizeof...(Args) == 0");
 
@@ -112,13 +108,11 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
 
  public:
 
-    ftor_behavior(F const& f, Args const&... args) : m_fun(f), m_args(args...)
-    {
+    ftor_behavior(F const& f, Args const&... args) : m_fun(f), m_args(args...) {
     }
 
     ftor_behavior(F&& f,Args const&... args) : m_fun(std::move(f))
-                                             , m_args(args...)
-    {
+                                             , m_args(args...) {
     }
 
     virtual void act() { util::apply_tuple(m_fun, m_args); }
@@ -126,8 +120,7 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
 };
 
 template<typename R>
-scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
-{
+scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)()) {
     static_assert(std::is_convertible<R, scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
@@ -136,8 +129,7 @@ scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)())
 }
 
 template<typename F>
-scheduled_actor* get_behavior(std::integral_constant<bool,false>, F&& ftor)
-{
+scheduled_actor* get_behavior(std::integral_constant<bool,false>, F&& ftor) {
     static_assert(std::is_convertible<decltype(ftor()), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
@@ -150,8 +142,7 @@ template<typename F, typename Arg0, typename... Args>
 scheduled_actor* get_behavior(std::integral_constant<bool,true>,
                              F fptr,
                              Arg0 const& arg0,
-                             Args const&... args)
-{
+                             Args const&... args) {
     static_assert(std::is_convertible<decltype(fptr(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
@@ -164,8 +155,7 @@ template<typename F, typename Arg0, typename... Args>
 scheduled_actor* get_behavior(std::integral_constant<bool,false>,
                              F ftor,
                              Arg0 const& arg0,
-                             Args const&... args)
-{
+                             Args const&... args) {
     static_assert(std::is_convertible<decltype(ftor(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "

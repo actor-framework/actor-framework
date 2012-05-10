@@ -39,8 +39,7 @@
 
 namespace cppa { namespace detail {
 
-class mock_scheduler : public scheduler
-{
+class mock_scheduler : public scheduler {
 
  public:
 

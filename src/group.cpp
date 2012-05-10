@@ -39,76 +39,61 @@
 namespace cppa {
 
 intrusive_ptr<group> group::get(std::string const& arg0,
-                                std::string const& arg1)
-{
+                                std::string const& arg1) {
     return detail::singleton_manager::get_group_manager()->get(arg0, arg1);
 }
 
-intrusive_ptr<group> group::anonymous()
-{
+intrusive_ptr<group> group::anonymous() {
     return detail::singleton_manager::get_group_manager()->anonymous();
 }
 
-void group::add_module(group::module* ptr)
-{
+void group::add_module(group::module* ptr) {
     detail::singleton_manager::get_group_manager()->add_module(ptr);
 }
 
 group::unsubscriber::unsubscriber(channel_ptr const& s,
                                   intrusive_ptr<group> const& g)
-    : m_self(s), m_group(g)
-{
+    : m_self(s), m_group(g) {
 }
 
-group::unsubscriber::~unsubscriber()
-{
+group::unsubscriber::~unsubscriber() {
     if (m_group && m_self) m_group->unsubscribe(m_self);
 }
 
-void group::unsubscriber::actor_exited(std::uint32_t)
-{
+void group::unsubscriber::actor_exited(std::uint32_t) {
     // unsubscription is done in destructor
 }
 
-bool group::unsubscriber::matches(attachable::token const& what)
-{
-    if (what.subtype == typeid(group::unsubscriber))
-    {
+bool group::unsubscriber::matches(attachable::token const& what) {
+    if (what.subtype == typeid(group::unsubscriber)) {
         return m_group == reinterpret_cast<const group*>(what.ptr);
     }
     return false;
 }
 
-group::module::module(std::string const& name) : m_name(name)
-{
+group::module::module(std::string const& name) : m_name(name) {
 }
 
-group::module::module(std::string&& name) : m_name(std::move(name))
-{
+group::module::module(std::string&& name) : m_name(std::move(name)) {
 }
 
-std::string const& group::module::name()
-{
+std::string const& group::module::name() {
     return m_name;
 }
 
 group::group(std::string&& id, std::string&& mod_name)
-    : m_identifier(std::move(id)), m_module_name(std::move(mod_name))
-{
+    : m_identifier(std::move(id)), m_module_name(std::move(mod_name)) {
 }
 
 group::group(std::string const& id, std::string const& mod_name)
-    : m_identifier(id), m_module_name(mod_name)
-{
+    : m_identifier(id), m_module_name(mod_name) {
 }
 
-std::string const& group::identifier() const
-{
+std::string const& group::identifier() const {
     return m_identifier;
 }
 
-std::string const& group::module_name() const
-{
+std::string const& group::module_name() const {
     return m_module_name;
 }
 

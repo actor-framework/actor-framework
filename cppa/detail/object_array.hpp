@@ -39,8 +39,7 @@
 
 namespace cppa { namespace detail {
 
-class object_array : public abstract_tuple
-{
+class object_array : public abstract_tuple {
 
     typedef abstract_tuple super;
 

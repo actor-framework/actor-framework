@@ -39,8 +39,7 @@ namespace cppa { namespace util {
 /**
  * @brief SI time units to specify timeouts.
  */
-enum class time_unit : std::uint32_t
-{
+enum class time_unit : std::uint32_t {
     none = 0,
     seconds = 1,
     milliseconds = 1000,
@@ -52,8 +51,7 @@ enum class time_unit : std::uint32_t
  *        {@link cppa::util::time_unit time_unit}.
  */
 template<typename Period>
-constexpr time_unit get_time_unit_from_period()
-{
+constexpr time_unit get_time_unit_from_period() {
     return (Period::num != 1
             ? time_unit::none
             : (Period::den == 1
@@ -69,23 +67,19 @@ constexpr time_unit get_time_unit_from_period()
  * @brief Time duration consisting of a {@link cppa::util::time_unit time_unit}
  *        and a 32 bit unsigned integer.
  */
-class duration
-{
+class duration {
 
  public:
 
-    constexpr duration() : unit(time_unit::none), count(0)
-    {
+    constexpr duration() : unit(time_unit::none), count(0) {
     }
 
-    constexpr duration(time_unit un, std::uint32_t val) : unit(un), count(val)
-    {
+    constexpr duration(time_unit un, std::uint32_t val) : unit(un), count(val) {
     }
 
     template<class Rep, class Period>
     constexpr duration(std::chrono::duration<Rep, Period> d)
-        : unit(get_time_unit_from_period<Period>()), count(d.count())
-    {
+        : unit(get_time_unit_from_period<Period>()), count(d.count()) {
         static_assert(get_time_unit_from_period<Period>() != time_unit::none,
                       "only seconds, milliseconds or microseconds allowed");
     }
@@ -109,8 +103,7 @@ bool operator==(duration const& lhs, duration const& rhs);
 /**
  * @relates duration
  */
-inline bool operator!=(duration const& lhs, duration const& rhs)
-{
+inline bool operator!=(duration const& lhs, duration const& rhs) {
     return !(lhs == rhs);
 }
 
@@ -122,10 +115,8 @@ inline bool operator!=(duration const& lhs, duration const& rhs)
 template<class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs,
-           cppa::util::duration const& rhs)
-{
-    switch (rhs.unit)
-    {
+           cppa::util::duration const& rhs) {
+    switch (rhs.unit) {
         case cppa::util::time_unit::seconds:
             lhs += std::chrono::seconds(rhs.count);
             break;

@@ -52,8 +52,7 @@ typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_que
 
 } // namespace <anonmyous>
 
-struct thread_pool_scheduler::worker
-{
+struct thread_pool_scheduler::worker {
 
     typedef scheduled_actor* job_ptr;
 
@@ -61,12 +60,10 @@ struct thread_pool_scheduler::worker
     job_ptr m_dummy;
     thread m_thread;
 
-    worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy)
-    {
+    worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) {
     }
 
-    void start()
-    {
+    void start() {
         m_thread = thread(&thread_pool_scheduler::worker_loop, this);
     }
 
@@ -74,14 +71,11 @@ struct thread_pool_scheduler::worker
 
     worker& operator=(const worker&) = delete;
 
-    job_ptr aggressive_polling()
-    {
+    job_ptr aggressive_polling() {
         job_ptr result = nullptr;
-        for (int i = 0; i < 3; ++i)
-        {
+        for (int i = 0; i < 3; ++i) {
             result = m_job_queue->try_pop();
-            if (result)
-            {
+            if (result) {
                 return result;
             }
             detail::this_thread::yield();
@@ -89,14 +83,11 @@ struct thread_pool_scheduler::worker
         return result;
     }
 
-    job_ptr less_aggressive_polling()
-    {
+    job_ptr less_aggressive_polling() {
         job_ptr result = nullptr;
-        for (int i = 0; i < 10; ++i)
-        {
+        for (int i = 0; i < 10; ++i) {
             result =  m_job_queue->try_pop();
-            if (result)
-            {
+            if (result) {
                 return result;
             }
 #           ifdef __APPLE__
@@ -110,14 +101,11 @@ struct thread_pool_scheduler::worker
         return result;
     }
 
-    job_ptr relaxed_polling()
-    {
+    job_ptr relaxed_polling() {
         job_ptr result = nullptr;
-        for (;;)
-        {
+        for (;;) {
             result =  m_job_queue->try_pop();
-            if (result)
-            {
+            if (result) {
                 return result;
             }
 #           ifdef __APPLE__
@@ -130,18 +118,14 @@ struct thread_pool_scheduler::worker
         }
     }
 
-    void operator()()
-    {
+    void operator()() {
         util::fiber fself;
-        struct handler : scheduler::callback
-        {
+        struct handler : scheduler::callback {
             scheduled_actor* job;
             scheduled_actor* pending_job;
             handler() : job(nullptr), pending_job(nullptr) { }
-            void exec_done()
-            {
-                if (job->pending_actor())
-                {
+            void exec_done() {
+                if (job->pending_actor()) {
                     pending_job = static_cast<scheduled_actor*>(job->pending_actor().get());
                     job->pending_actor().reset();
                 }
@@ -152,42 +136,32 @@ struct thread_pool_scheduler::worker
             }
         };
         handler h;
-        for (;;)
-        {
+        for (;;) {
             h.job = aggressive_polling();
-            if (!h.job)
-            {
+            if (!h.job) {
                 h.job = less_aggressive_polling();
-                if (!h.job)
-                {
+                if (!h.job) {
                     h.job = relaxed_polling();
                 }
             }
-            if (h.job == m_dummy)
-            {
+            if (h.job == m_dummy) {
                 // dummy of doom received ...
                 m_job_queue->push_back(h.job); // kill the next guy
                 return;                        // and say goodbye
             }
-            else
-            {
-                do
-                {
+            else {
+                do {
                     h.job->resume(&fself, &h);
-                    if (h.job)
-                    {
-                        if (h.job->pending_actor())
-                        {
+                    if (h.job) {
+                        if (h.job->pending_actor()) {
                             h.pending_job = static_cast<scheduled_actor*>(h.job->pending_actor().get());
                             h.job->pending_actor().reset();
                         }
-                        else
-                        {
+                        else {
                             h.job = nullptr;
                         }
                     }
-                    if (h.pending_job)
-                    {
+                    if (h.pending_job) {
                         h.job = h.pending_job;
                         h.pending_job = nullptr;
                     }
@@ -199,51 +173,42 @@ struct thread_pool_scheduler::worker
 
 };
 
-void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w)
-{
-    (*w)();
+void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) { (*w)();
 }
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
-                                            scheduled_actor* dummy)
-{
+                                            scheduled_actor* dummy) {
     typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
     std::vector<worker_ptr> workers;
     size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
-    for (size_t i = 0; i < num_workers; ++i)
-    {
+    for (size_t i = 0; i < num_workers; ++i) {
         workers.emplace_back(new worker(jqueue, dummy));
         workers.back()->start();
     }
     // wait for workers
-    for (auto& w : workers)
-    {
+    for (auto& w : workers) {
         w->m_thread.join();
     }
 }
 
-void thread_pool_scheduler::start()
-{
+void thread_pool_scheduler::start() {
     m_supervisor = thread(&thread_pool_scheduler::supervisor_loop,
                           &m_queue, &m_dummy);
     super::start();
 }
 
-void thread_pool_scheduler::stop()
-{
+void thread_pool_scheduler::stop() {
     m_queue.push_back(&m_dummy);
     m_supervisor.join();
     super::stop();
 }
 
-void thread_pool_scheduler::enqueue(scheduled_actor* what)
-{
+void thread_pool_scheduler::enqueue(scheduled_actor* what) {
     m_queue.push_back(what);
 }
 
 actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
-                                            bool push_to_queue)
-{
+                                            bool push_to_queue) {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<scheduled_actor> ctx(what);
@@ -253,30 +218,25 @@ actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
 }
 
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what)
-{
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what) {
     // do NOT push event-based actors to the queue on startup
     return spawn_impl(what->attach_to_scheduler(this), false);
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
-                                       scheduling_hint hint)
-{
-    if (hint == scheduled)
-    {
+                                       scheduling_hint hint) {
+    if (hint == scheduled) {
         auto new_actor = new yielding_actor(std::move(what));
         return spawn_impl(new_actor->attach_to_scheduler(this));
     }
-    else
-    {
+    else {
         return mock_scheduler::spawn_impl(std::move(what));
     }
 }
 #else
 actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
-                                       scheduling_hint hint)
-{
+                                       scheduling_hint hint) {
     return mock_scheduler::spawn(what, hint);
 }
 #endif

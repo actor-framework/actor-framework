@@ -44,14 +44,12 @@
 
 namespace cppa { namespace detail {
 
-enum tuple_impl_info
-{
+enum tuple_impl_info {
     statically_typed,
     dynamically_typed
 };
 
-class abstract_tuple : public ref_counted
-{
+class abstract_tuple : public ref_counted {
 
     tuple_impl_info m_impl_type;
 
@@ -97,31 +95,26 @@ class abstract_tuple : public ref_counted
 
 };
 
-struct full_eq_type
-{
+struct full_eq_type {
     constexpr full_eq_type() { }
     template<class Tuple>
     inline bool operator()(tuple_iterator<Tuple> const& lhs,
-                           tuple_iterator<Tuple> const& rhs) const
-    {
+                           tuple_iterator<Tuple> const& rhs) const {
         return    lhs.type() == rhs.type()
                && lhs.type()->equals(lhs.value(), rhs.value());
     }
 };
 
-struct types_only_eq_type
-{
+struct types_only_eq_type {
     constexpr types_only_eq_type() { }
     template<class Tuple>
     inline bool operator()(tuple_iterator<Tuple> const& lhs,
-                           uniform_type_info const* rhs     ) const
-    {
+                           uniform_type_info const* rhs     ) const {
         return lhs.type() == rhs;
     }
     template<class Tuple>
     inline bool operator()(uniform_type_info const* lhs,
-                           tuple_iterator<Tuple> const& rhs) const
-    {
+                           tuple_iterator<Tuple> const& rhs) const {
         return lhs == rhs.type();
     }
 };

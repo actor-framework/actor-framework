@@ -45,8 +45,7 @@ namespace cppa {
  * @brief Identifies a process.
  */
 class process_information : public ref_counted,
-                            util::comparable<process_information>
-{
+                            util::comparable<process_information> {
 
     typedef ref_counted super;
 
@@ -117,8 +116,7 @@ bool equal(std::string const& hash,
            process_information::node_id_type const& node_id);
 
 inline bool equal(process_information::node_id_type const& node_id,
-                  std::string const& hash)
-{
+                  std::string const& hash) {
     return equal(hash, node_id);
 }
 

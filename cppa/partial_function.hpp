@@ -47,16 +47,14 @@ class behavior;
  * @brief A partial function implementation
  *        for {@link cppa::any_tuple any_tuples}.
  */
-class partial_function
-{
+class partial_function {
 
     partial_function(partial_function const&) = delete;
     partial_function& operator=(partial_function const&) = delete;
 
  public:
 
-    struct impl
-    {
+    struct impl {
         virtual ~impl();
         virtual bool invoke(any_tuple&) = 0;
         virtual bool invoke(any_tuple const&) = 0;
@@ -71,23 +69,19 @@ class partial_function
 
     partial_function(impl_ptr&& ptr);
 
-    inline bool defined_at(any_tuple const& value)
-    {
+    inline bool defined_at(any_tuple const& value) {
         return ((m_impl) && m_impl->defined_at(value));
     }
 
-    inline bool operator()(any_tuple& value)
-    {
+    inline bool operator()(any_tuple& value) {
         return ((m_impl) && m_impl->invoke(value));
     }
 
-    inline bool operator()(any_tuple const& value)
-    {
+    inline bool operator()(any_tuple const& value) {
         return ((m_impl) && m_impl->invoke(value));
     }
 
-    inline bool operator()(any_tuple&& value)
-    {
+    inline bool operator()(any_tuple&& value) {
         any_tuple cpy{std::move(value)};
         return (*this)(cpy);
     }

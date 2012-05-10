@@ -43,8 +43,7 @@ utype const& uniform_type_info();
 namespace cppa { namespace detail {
 
 template<typename T>
-struct obj_impl : object
-{
+struct obj_impl : object {
 	T m_value;
 	obj_impl() : m_value() { }
 	obj_impl(T const& v) : m_value(v) { }
@@ -52,12 +51,10 @@ struct obj_impl : object
 	virtual utype const& type() const { return uniform_type_info<T>(); }
 	virtual void* mutable_value() { return &m_value; }
 	virtual void const* value() const { return &m_value; }
-	virtual void serialize(serializer& s) const
-	{
+	virtual void serialize(serializer& s) const {
 		s << m_value;
 	}
-	virtual void deserialize(deserializer& d)
-	{
+	virtual void deserialize(deserializer& d) {
 		d >> m_value;
 	}
 };

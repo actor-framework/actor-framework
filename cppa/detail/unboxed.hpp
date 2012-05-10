@@ -39,38 +39,32 @@
 namespace cppa { namespace detail {
 
 template<typename T>
-struct unboxed
-{
+struct unboxed {
     typedef T type;
 };
 
 template<typename T>
-struct unboxed< util::wrapped<T> >
-{
+struct unboxed< util::wrapped<T> > {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (&)()>
-{
+struct unboxed<util::wrapped<T> (&)()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> ()>
-{
+struct unboxed<util::wrapped<T> ()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (*)()>
-{
+struct unboxed<util::wrapped<T> (*)()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<std::unique_ptr<util::guard<T>>>
-{
+struct unboxed<std::unique_ptr<util::guard<T>>> {
     typedef T type;
 };
 

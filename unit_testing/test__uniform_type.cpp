@@ -27,19 +27,16 @@ using std::endl;
 
 namespace {
 
-struct foo
-{
+struct foo {
     int value;
     explicit foo(int val = 0) : value(val) { }
 };
 
-inline bool operator==(const foo& lhs, const foo& rhs)
-{
+inline bool operator==(const foo& lhs, const foo& rhs) {
     return lhs.value == rhs.value;
 }
 
-inline bool operator!=(const foo& lhs, const foo& rhs)
-{
+inline bool operator!=(const foo& lhs, const foo& rhs) {
     return !(lhs == rhs);
 }
 
@@ -47,14 +44,12 @@ inline bool operator!=(const foo& lhs, const foo& rhs)
 
 using namespace cppa;
 
-size_t test__uniform_type()
-{
+size_t test__uniform_type() {
     CPPA_TEST(test__uniform_type);
     bool announce1 = announce<foo>(&foo::value);
     bool announce2 = announce<foo>(&foo::value);
     bool announce3 = announce<foo>(&foo::value);
-    bool announce4 = announce<foo>(&foo::value);
-    {
+    bool announce4 = announce<foo>(&foo::value); {
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
         object obj2(obj1);
@@ -72,8 +67,7 @@ size_t test__uniform_type()
     CPPA_CHECK_EQUAL(successful_announces, 1);
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
-    std::set<std::string> expected =
-    {
+    std::set<std::string> expected = {
         "@_::foo",                      // <anonymous namespace>::foo
         "@i8", "@i16", "@i32", "@i64",  // signed integer names
         "@u8", "@u16", "@u32", "@u64",  // unsigned integer names
@@ -94,30 +88,25 @@ size_t test__uniform_type()
     std::set<std::string> found;
     // fetch all available type names
     auto types = uniform_type_info::instances();
-    for (uniform_type_info* tinfo : types)
-    {
+    for (uniform_type_info* tinfo : types) {
         found.insert(tinfo->name());
     }
     // compare the two sets
     CPPA_CHECK_EQUAL(expected.size(), found.size());
     bool expected_equals_found = false;
-    if (expected.size() == found.size())
-    {
+    if (expected.size() == found.size()) {
         expected_equals_found = std::equal(found.begin(),
                                            found.end(),
                                            expected.begin());
         CPPA_CHECK(expected_equals_found);
     }
-    if (!expected_equals_found)
-    {
+    if (!expected_equals_found) {
         cout << "found:" << endl;
-        for (const std::string& tname : found)
-        {
+        for (const std::string& tname : found) {
             cout << "    - " << tname << endl;
         }
         cout << "expected: " << endl;
-        for (const std::string& tname : expected)
-        {
+        for (const std::string& tname : expected) {
             cout << "    - " << tname << endl;
         }
     }

@@ -39,8 +39,7 @@
 
 namespace cppa { namespace detail {
 
-struct po_message
-{
+struct po_message {
     atom_value flag;
     native_socket_type fd;
     actor_id aid;
