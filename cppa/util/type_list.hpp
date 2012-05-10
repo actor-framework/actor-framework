@@ -43,7 +43,7 @@ namespace cppa {
 
 // forward declarations
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(std::type_info const&);
+uniform_type_info const* uniform_typeid(const std::type_info&);
 
 } // namespace cppa
 
@@ -194,12 +194,12 @@ template<class ListA, class ListB,
          template<typename, typename> class Fun = to_type_pair>
 struct tl_zip_impl;
 
-template<typename... LhsElements, typename... RhsElements,
+template<typename... LhsElements,
+         typename... RhsElements,
          template<typename, typename> class Fun>
 struct tl_zip_impl<type_list<LhsElements...>, type_list<RhsElements...>, Fun>
 {
-    static_assert(sizeof...(LhsElements) ==
-                  sizeof...(RhsElements),
+    static_assert(sizeof...(LhsElements) == sizeof...(RhsElements),
                   "Lists have different size");
     typedef type_list<typename Fun<LhsElements, RhsElements>::type...> type;
 };

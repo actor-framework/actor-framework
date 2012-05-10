@@ -46,62 +46,62 @@ template<class Subclass, class T = Subclass>
 class comparable
 {
 
-    friend bool operator==(Subclass const& lhs, T const& rhs)
+    friend bool operator==(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) == 0;
     }
 
-    friend bool operator==(T const& lhs, Subclass const& rhs)
+    friend bool operator==(const T& lhs, const Subclass& rhs)
     {
         return rhs.compare(lhs) == 0;
     }
 
-    friend bool operator!=(Subclass const& lhs, T const& rhs)
+    friend bool operator!=(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) != 0;
     }
 
-    friend bool operator!=(T const& lhs, Subclass const& rhs)
+    friend bool operator!=(const T& lhs, const Subclass& rhs)
     {
         return rhs.compare(lhs) != 0;
     }
 
-    friend bool operator<(Subclass const& lhs, T const& rhs)
+    friend bool operator<(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) < 0;
     }
 
-    friend bool operator>(Subclass const& lhs, T const& rhs)
+    friend bool operator>(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) > 0;
     }
 
-    friend bool operator<(T const& lhs, Subclass const& rhs)
+    friend bool operator<(const T& lhs, const Subclass& rhs)
     {
         return rhs > lhs;
     }
 
-    friend bool operator>(T const& lhs, Subclass const& rhs)
+    friend bool operator>(const T& lhs, const Subclass& rhs)
     {
         return rhs < lhs;
     }
 
-    friend bool operator<=(Subclass const& lhs, T const& rhs)
+    friend bool operator<=(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) <= 0;
     }
 
-    friend bool operator>=(Subclass const& lhs, T const& rhs)
+    friend bool operator>=(const Subclass& lhs, const T& rhs)
     {
         return lhs.compare(rhs) >= 0;
     }
 
-    friend bool operator<=(T const& lhs, Subclass const& rhs)
+    friend bool operator<=(const T& lhs, const Subclass& rhs)
     {
         return rhs >= lhs;
     }
 
-    friend bool operator>=(T const& lhs, Subclass const& rhs)
+    friend bool operator>=(const T& lhs, const Subclass& rhs)
     {
         return rhs <= lhs;
     }
@@ -112,32 +112,32 @@ template<class Subclass>
 class comparable<Subclass, Subclass>
 {
 
-    friend bool operator==(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator==(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) == 0;
     }
 
-    friend bool operator!=(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator!=(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) != 0;
     }
 
-    friend bool operator<(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator<(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) < 0;
     }
 
-    friend bool operator<=(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator<=(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) <= 0;
     }
 
-    friend bool operator>(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator>(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) > 0;
     }
 
-    friend bool operator>=(Subclass const& lhs, Subclass const& rhs)
+    friend bool operator>=(const Subclass& lhs, const Subclass& rhs)
     {
         return lhs.compare(rhs) >= 0;
     }

@@ -114,7 +114,7 @@ class abstract_actor : public Base
         }
     }
 
-    void detach(attachable::token const& what) /*override*/
+    void detach(const attachable::token& what) /*override*/
     {
         attachable_ptr uptr;
         // lifetime scope of guard

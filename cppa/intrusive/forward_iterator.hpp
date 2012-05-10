@@ -46,7 +46,7 @@ class forward_iterator
 
     typedef T                           value_type;
     typedef value_type&                 reference;
-    typedef value_type const&           const_reference;
+    typedef const value_type&           const_reference;
     typedef value_type*                 pointer;
     typedef value_type const*           const_pointer;
     typedef ptrdiff_t                   difference_type;
@@ -54,8 +54,8 @@ class forward_iterator
 
     inline forward_iterator(pointer ptr = nullptr) : m_ptr(ptr) { }
 
-    forward_iterator(forward_iterator const&) = default;
-    forward_iterator& operator=(forward_iterator const&) = default;
+    forward_iterator(const forward_iterator&) = default;
+    forward_iterator& operator=(const forward_iterator&) = default;
 
     inline forward_iterator& operator++()
     {
@@ -100,8 +100,8 @@ class forward_iterator
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(forward_iterator<T> const& lhs,
-                       forward_iterator<T> const& rhs)
+inline bool operator==(const forward_iterator<T>& lhs,
+                       const forward_iterator<T>& rhs)
 {
     return lhs.ptr() == rhs.ptr();
 }
@@ -110,7 +110,7 @@ inline bool operator==(forward_iterator<T> const& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(forward_iterator<T> const& lhs, T const* rhs)
+inline bool operator==(const forward_iterator<T>& lhs, T const* rhs)
 {
     return lhs.ptr() == rhs;
 }
@@ -119,7 +119,7 @@ inline bool operator==(forward_iterator<T> const& lhs, T const* rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(T const* lhs, forward_iterator<T> const& rhs)
+inline bool operator==(T const* lhs, const forward_iterator<T>& rhs)
 {
     return lhs == rhs.ptr();
 }
@@ -128,7 +128,7 @@ inline bool operator==(T const* lhs, forward_iterator<T> const& rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(forward_iterator<T> const& lhs, decltype(nullptr))
+inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr))
 {
     return lhs.ptr() == nullptr;
 }
@@ -137,7 +137,7 @@ inline bool operator==(forward_iterator<T> const& lhs, decltype(nullptr))
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(decltype(nullptr), forward_iterator<T> const& rhs)
+inline bool operator==(decltype(nullptr), const forward_iterator<T>& rhs)
 {
     return rhs.ptr() == nullptr;
 }
@@ -146,8 +146,8 @@ inline bool operator==(decltype(nullptr), forward_iterator<T> const& rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(forward_iterator<T> const& lhs,
-                       forward_iterator<T> const& rhs)
+inline bool operator!=(const forward_iterator<T>& lhs,
+                       const forward_iterator<T>& rhs)
 {
     return !(lhs == rhs);
 }
@@ -156,7 +156,7 @@ inline bool operator!=(forward_iterator<T> const& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(forward_iterator<T> const& lhs, T const* rhs)
+inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs)
 {
     return !(lhs == rhs);
 }
@@ -165,7 +165,7 @@ inline bool operator!=(forward_iterator<T> const& lhs, T const* rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(T const* lhs, forward_iterator<T> const& rhs)
+inline bool operator!=(T const* lhs, const forward_iterator<T>& rhs)
 {
     return !(lhs == rhs);
 }
@@ -174,7 +174,7 @@ inline bool operator!=(T const* lhs, forward_iterator<T> const& rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(forward_iterator<T> const& lhs, decltype(nullptr))
+inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr))
 {
     return !(lhs == nullptr);
 }
@@ -183,7 +183,7 @@ inline bool operator!=(forward_iterator<T> const& lhs, decltype(nullptr))
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(decltype(nullptr), forward_iterator<T> const& rhs)
+inline bool operator!=(decltype(nullptr), const forward_iterator<T>& rhs)
 {
     return !(nullptr == rhs);
 }

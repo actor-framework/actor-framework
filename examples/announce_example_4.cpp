@@ -118,7 +118,7 @@ int main(int, char**)
     int i = 0;
     receive_for(i, 2)
     (
-        on<bar>() >> [](bar const& val)
+        on<bar>() >> [](const bar& val)
         {
             cout << "bar(foo("
                  << val.f.a() << ","
@@ -126,7 +126,7 @@ int main(int, char**)
                  << val.i << ")"
                  << endl;
         },
-        on<baz>() >> [](baz const& val)
+        on<baz>() >> [](const baz& val)
         {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
             cout << to_string(val) << endl;

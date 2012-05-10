@@ -66,7 +66,7 @@ class exception : public std::exception
      * @brief Creates an exception with the error string @p what_str.
      * @param what_str Error message as string.
      */
-    exception(std::string const& what_str);
+    exception(const std::string& what_str);
 
  private:
 
@@ -107,7 +107,7 @@ class network_error : public exception
  public:
 
     network_error(std::string&& what_str);
-    network_error(std::string const& what_str);
+    network_error(const std::string& what_str);
 
 };
 

@@ -51,9 +51,9 @@ struct deduce_ref_type<T0&, T1>
 };
 
 template<typename T0, typename T1>
-struct deduce_ref_type<T0 const&, T1>
+struct deduce_ref_type<const T0&, T1>
 {
-    typedef typename util::rm_ref<T1>::type const& type;
+    typedef const typename util::rm_ref<T1>::type& type;
 };
 
 } } // namespace cppa::util

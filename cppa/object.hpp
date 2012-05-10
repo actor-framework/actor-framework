@@ -44,11 +44,11 @@ namespace cppa {
 
 // forward declarations
 class object;
-bool operator==(object const& lhs, object const& rhs);
+bool operator==(const object& lhs, const object& rhs);
 
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(std::type_info const&);
-bool operator==(uniform_type_info const& lhs, std::type_info const& rhs);
+uniform_type_info const* uniform_typeid(const std::type_info&);
+bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
 
 /**
  * @brief Grants mutable access to the stored value of @p obj.
@@ -68,7 +68,7 @@ T& get_ref(object& obj);
  * @throws std::invalid_argument if <tt>obj.type() != typeid(T)</tt>
  */
 template<typename T>
-T const& get(object const& obj);
+const T& get(const object& obj);
 
 /**
  * @brief An abstraction class that stores an instance of
@@ -77,7 +77,7 @@ T const& get(object const& obj);
 class object
 {
 
-    friend bool operator==(object const& lhs, object const& rhs);
+    friend bool operator==(const object& lhs, const object& rhs);
 
  public:
 
@@ -106,7 +106,7 @@ class object
      * @brief Creates a (deep) copy of @p other.
      * @post {*this == other}
      */
-    object(object const& other);
+    object(const object& other);
 
     /**
      * @brief Moves the content from @p other to this.
@@ -118,7 +118,7 @@ class object
      * @brief Creates a (deep) copy of @p other and assigns it to @p this.
      * @return @p *this
      */
-    object& operator=(object const& other);
+    object& operator=(const object& other);
 
     /**
      * @brief Gets the RTTI of this object.
@@ -130,7 +130,7 @@ class object
     /**
      * @brief Gets the stored value.
      * @returns A const pointer to the currently stored value.
-     * @see get(object const&)
+     * @see get(const object&)
      */
     void const* value() const;
 
@@ -169,7 +169,7 @@ object object::from(T&& what)
     return { new value_type(std::forward<T>(what)), rtti };
 }
 
-inline bool operator!=(object const& lhs, object const& rhs)
+inline bool operator!=(const object& lhs, const object& rhs)
 {
     return !(lhs == rhs);
 }
@@ -187,7 +187,7 @@ T& get_ref(object& obj)
 }
 
 template<typename T>
-T const& get(object const& obj)
+const T& get(const object& obj)
 {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");

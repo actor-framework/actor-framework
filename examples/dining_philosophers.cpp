@@ -18,7 +18,7 @@ struct chopstick : fsm_actor<chopstick>
     behavior& init_state; // a reference to available
     behavior available;
 
-    behavior taken_by(actor_ptr const& philos)
+    behavior taken_by(const actor_ptr& philos)
     {
         // create a behavior new on-the-fly
         return
@@ -97,7 +97,7 @@ struct philosopher : fsm_actor<philosopher>
     behavior init_state;
 
     // wait for second chopstick
-    behavior waiting_for(actor_ptr const& what)
+    behavior waiting_for(const actor_ptr& what)
     {
         return
         (
@@ -126,7 +126,7 @@ struct philosopher : fsm_actor<philosopher>
         );
     }
 
-    philosopher(std::string const& n, actor_ptr const& l, actor_ptr const& r)
+    philosopher(const std::string& n, const actor_ptr& l, const actor_ptr& r)
         : name(n), left(l), right(r)
     {
         // a philosopher that receives {eat} stops thinking and becomes hungry

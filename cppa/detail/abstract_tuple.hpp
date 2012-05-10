@@ -58,7 +58,7 @@ class abstract_tuple : public ref_counted
  public:
 
     inline abstract_tuple(tuple_impl_info tii) : m_impl_type(tii) { }
-    abstract_tuple(abstract_tuple const& other);
+    abstract_tuple(const abstract_tuple& other);
 
     // mutators
     virtual void* mutable_at(size_t pos) = 0;
@@ -85,7 +85,7 @@ class abstract_tuple : public ref_counted
     // (default returns &typeid(void))
     virtual std::type_info const* type_token() const;
 
-    bool equals(abstract_tuple const& other) const;
+    bool equals(const abstract_tuple& other) const;
 
     typedef tuple_iterator<abstract_tuple> const_iterator;
 
@@ -101,8 +101,8 @@ struct full_eq_type
 {
     constexpr full_eq_type() { }
     template<class Tuple>
-    inline bool operator()(tuple_iterator<Tuple> const& lhs,
-                           tuple_iterator<Tuple> const& rhs) const
+    inline bool operator()(const tuple_iterator<Tuple>& lhs,
+                           const tuple_iterator<Tuple>& rhs) const
     {
         return    lhs.type() == rhs.type()
                && lhs.type()->equals(lhs.value(), rhs.value());
@@ -113,14 +113,14 @@ struct types_only_eq_type
 {
     constexpr types_only_eq_type() { }
     template<class Tuple>
-    inline bool operator()(tuple_iterator<Tuple> const& lhs,
+    inline bool operator()(const tuple_iterator<Tuple>& lhs,
                            uniform_type_info const* rhs     ) const
     {
         return lhs.type() == rhs;
     }
     template<class Tuple>
     inline bool operator()(uniform_type_info const* lhs,
-                           tuple_iterator<Tuple> const& rhs) const
+                           const tuple_iterator<Tuple>& rhs) const
     {
         return lhs == rhs.type();
     }

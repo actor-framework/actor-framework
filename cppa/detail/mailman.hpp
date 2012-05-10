@@ -45,9 +45,9 @@ struct mailman_send_job
     process_information_ptr target_peer;
     addressed_message msg;
     inline mailman_send_job(process_information_ptr piptr,
-                            actor_ptr const& from,
-                            channel_ptr const& to,
-                            any_tuple const& content)
+                            const actor_ptr& from,
+                            const channel_ptr& to,
+                            const any_tuple& content)
         : target_peer(piptr), msg(from, to, content)
     {
     }
@@ -58,7 +58,7 @@ struct mailman_add_peer
     native_socket_type sockfd;
     process_information_ptr pinfo;
     inline mailman_add_peer(native_socket_type fd,
-                            process_information_ptr const& piptr)
+                            const process_information_ptr& piptr)
         : sockfd(fd), pinfo(piptr)
     {
     }
@@ -83,11 +83,11 @@ class mailman_job
     inline mailman_job() : next(nullptr), m_type(invalid_type) { }
 
     mailman_job(process_information_ptr piptr,
-                actor_ptr const& from,
-                channel_ptr const& to,
-                any_tuple const& omsg);
+                const actor_ptr& from,
+                const channel_ptr& to,
+                const any_tuple& omsg);
 
-    mailman_job(native_socket_type sockfd, process_information_ptr const& pinfo);
+    mailman_job(native_socket_type sockfd, const process_information_ptr& pinfo);
 
     static mailman_job* kill_job();
 

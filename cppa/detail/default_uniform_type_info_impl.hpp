@@ -127,8 +127,8 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
                             void*,
                             deserializer*            )> m_deserialize;
 
-        member(member const&) = delete;
-        member& operator=(member const&) = delete;
+        member(const member&) = delete;
+        member& operator=(const member&) = delete;
 
         void swap(member& other)
         {

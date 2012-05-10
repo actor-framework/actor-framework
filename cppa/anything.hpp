@@ -40,12 +40,12 @@ namespace cppa {
  */
 struct anything { };
 
-inline bool operator==(anything const&, anything const&)
+inline bool operator==(const anything&, const anything&)
 {
     return true;
 }
 
-inline bool operator!=(anything const&, anything const&)
+inline bool operator!=(const anything&, const anything&)
 {
     return false;
 }

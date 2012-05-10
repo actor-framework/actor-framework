@@ -50,11 +50,11 @@ class object_array : public abstract_tuple
 
     object_array();
     object_array(object_array&&) = default;
-    object_array(object_array const&) = default;
+    object_array(const object_array&) = default;
 
     void push_back(object&& what);
 
-    void push_back(object const& what);
+    void push_back(const object& what);
 
     void* mutable_at(size_t pos);
 
@@ -64,7 +64,7 @@ class object_array : public abstract_tuple
 
     void const* at(size_t pos) const;
 
-    bool equals(cppa::detail::abstract_tuple const&) const;
+    bool equals(const cppa::detail::abstract_tuple&) const;
 
     uniform_type_info const* type_at(size_t pos) const;
 

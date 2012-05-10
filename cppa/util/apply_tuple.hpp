@@ -43,7 +43,7 @@ template<typename Result, bool IsManipulator, size_t... Range>
 struct apply_tuple_impl
 {
     template<typename F, class Tuple>
-    static inline Result apply(F& f, Tuple const& args)
+    static inline Result apply(F& f, const Tuple& args)
     {
         return f(get<Range>(args)...);
     }
@@ -75,7 +75,7 @@ template<typename Result, bool IsManipulator>
 struct apply_tuple_util<Result, IsManipulator, 1, 0>
 {
     template<typename F, class Unused>
-    static Result apply(F& f, Unused const&)
+    static Result apply(F& f, const Unused&)
     {
         return f();
     }
@@ -97,7 +97,7 @@ typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...>& tup)
 }
 
 template<typename F, template<typename...> class Tuple, typename... T>
-typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup)
+typename get_result_type<F>::type apply_tuple(F&& fun, const Tuple<T...>& tup)
 {
     typedef typename get_result_type<F>::type result_type;
     typedef typename get_arg_types<F>::types fun_args;
@@ -113,7 +113,7 @@ typename get_result_type<F>::type apply_tuple(F&& fun, Tuple<T...> const& tup)
 
 template<typename Result, size_t From, size_t To,
          typename F, template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...> const& tup)
+Result unchecked_apply_tuple_in_range(F&& fun, const Tuple<T...>& tup)
 {
     return apply_tuple_util<Result, false, From, To>
            ::apply(std::forward<F>(fun), tup);
@@ -131,7 +131,7 @@ Result unchecked_apply_tuple_in_range(F&& fun, Tuple<T...>& tup)
 // does not evaluate result type of functor
 template<typename Result, typename F,
          template<typename...> class Tuple, typename... T>
-Result unchecked_apply_tuple(F&& fun, Tuple<T...> const& tup)
+Result unchecked_apply_tuple(F&& fun, const Tuple<T...>& tup)
 {
     return apply_tuple_util<Result, false, 0, sizeof...(T) - 1>
            ::apply(std::forward<F>(fun), tup);

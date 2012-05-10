@@ -56,7 +56,7 @@ any_tuple::any_tuple(any_tuple&& other) : m_vals(s_empty_tuple())
     m_vals.swap(other.m_vals);
 }
 
-any_tuple::any_tuple(cow_ptr<detail::abstract_tuple> const& vals) : m_vals(vals)
+any_tuple::any_tuple(const cow_ptr<detail::abstract_tuple>& vals) : m_vals(vals)
 {
 }
 
@@ -91,7 +91,7 @@ const uniform_type_info* any_tuple::type_at(size_t p) const
     return m_vals->type_at(p);
 }
 
-bool any_tuple::equals(any_tuple const& other) const
+bool any_tuple::equals(const any_tuple& other) const
 {
     return m_vals->equals(*other.vals());
 }

@@ -39,7 +39,7 @@ struct guard
 
     virtual ~guard() { }
 
-    virtual bool operator()(T const&) const = 0;
+    virtual bool operator()(const T&) const = 0;
 
 };
 

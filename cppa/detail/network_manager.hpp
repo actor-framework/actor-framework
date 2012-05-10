@@ -43,7 +43,7 @@ class network_manager
 
     virtual ~network_manager();
 
-    virtual void write_to_pipe(pipe_msg const& what) = 0;
+    virtual void write_to_pipe(const pipe_msg& what) = 0;
 
     virtual void start() = 0;
 

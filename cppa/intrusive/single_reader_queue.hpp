@@ -56,7 +56,7 @@ class single_reader_queue
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
     typedef value_type&         reference;
-    typedef value_type const&   const_reference;
+    typedef const value_type&   const_reference;
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
@@ -85,7 +85,7 @@ class single_reader_queue
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    pointer try_pop(TimePoint const& abs_time)
+    pointer try_pop(const TimePoint& abs_time)
     {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
@@ -170,7 +170,7 @@ class single_reader_queue
     }
 
     template<typename TimePoint>
-    cache_iterator try_fetch_more(TimePoint const& abs_time)
+    cache_iterator try_fetch_more(const TimePoint& abs_time)
     {
         cache_iterator result = m_cache.end();
         if (timed_wait_for_data(abs_time)) fetch_new_data(&result);
@@ -198,7 +198,7 @@ class single_reader_queue
     detail::condition_variable m_cv;
 
     template<typename TimePoint>
-    bool timed_wait_for_data(TimePoint const& timeout)
+    bool timed_wait_for_data(const TimePoint& timeout)
     {
         if (m_cache.empty() && !(m_stack.load()))
         {

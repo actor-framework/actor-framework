@@ -123,7 +123,7 @@ constexpr uint64_t s_task_n = uint64_t(86028157)*329545133;
 constexpr uint64_t s_factor1 = 86028157;
 constexpr uint64_t s_factor2 = 329545133;
 
-void check_factors(factors const& vec)
+void check_factors(const factors& vec)
 {
     assert(vec.size() == 2);
     assert(vec[0] == s_factor1);
@@ -134,7 +134,7 @@ struct fsm_worker : fsm_actor<fsm_worker>
 {
     actor_ptr mc;
     behavior init_state;
-    fsm_worker(actor_ptr const& msgcollector) : mc(msgcollector)
+    fsm_worker(const actor_ptr& msgcollector) : mc(msgcollector)
     {
         init_state =
         (
@@ -154,7 +154,7 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link>
 {
     actor_ptr next;
     behavior init_state;
-    fsm_chain_link(actor_ptr const& n) : next(n)
+    fsm_chain_link(const actor_ptr& n) : next(n)
     {
         init_state =
         (
@@ -230,7 +230,7 @@ struct fsm_supervisor : fsm_actor<fsm_supervisor>
             {
                 if (--left == 0) become_void();
             },
-            on<atom("result"), factors>() >> [=](factors const& vec)
+            on<atom("result"), factors>() >> [=](const factors& vec)
             {
                 check_factors(vec);
                 if (--left == 0) become_void();
@@ -324,7 +324,7 @@ void supervisor(int num_msgs)
         {
             --num_msgs;
         },
-        on<atom("result"), factors>() >> [&](factors const& vec)
+        on<atom("result"), factors>() >> [&](const factors& vec)
         {
             --num_msgs;
             check_factors(vec);

@@ -50,7 +50,7 @@ std::string int2str(int i)
     return std::to_string(i);
 }
 
-option<int> str2int(std::string const& str)
+option<int> str2int(const std::string& str)
 {
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
@@ -141,7 +141,7 @@ size_t test__tuple()
     CPPA_CHECK_EQUAL("f02", invoked);
     invoked = "";
 
-    auto f03 = on(42, val<int>) >> [&](int const& a, int&) { invoked = "f03"; CPPA_CHECK_EQUAL(42, a); };
+    auto f03 = on(42, val<int>) >> [&](const int& a, int&) { invoked = "f03"; CPPA_CHECK_EQUAL(42, a); };
     CPPA_CHECK_NOT_INVOKED(f03, (0, 0));
     CPPA_CHECK_INVOKED(f03, (42, 42));
 
@@ -219,8 +219,8 @@ size_t test__tuple()
     CPPA_CHECK(f10("a", "b", "c"));
     std::string foobar = "foobar";
     CPPA_CHECK(f10(foobar, "b", "c"));
-    CPPA_CHECK(f10("a", static_cast<std::string const&>(foobar), "b", "c"));
-    //CPPA_CHECK(f10(static_cast<std::string const&>(foobar), "b", "c"));
+    CPPA_CHECK(f10("a", static_cast<const std::string&>(foobar), "b", "c"));
+    //CPPA_CHECK(f10(const static_cast<std::string&>(foobar), "b", "c"));
 
     int f11_fun = 0;
     auto f11 =
@@ -265,7 +265,7 @@ size_t test__tuple()
     int f13_fun = 0;
     auto f13 =
     (
-        on<int, anything, std::string, anything, int>().when(_x1 < _x3 && _x2.starts_with("-")) >> [&](int a, std::string const& str, int b)
+        on<int, anything, std::string, anything, int>().when(_x1 < _x3 && _x2.starts_with("-")) >> [&](int a, const std::string& str, int b)
         {
             CPPA_CHECK_EQUAL("-h", str);
             CPPA_CHECK_EQUAL(1, a);
@@ -273,7 +273,7 @@ size_t test__tuple()
             f13_fun = 1;
             invoked = "f13";
         },
-        on<anything, std::string, anything, int, anything, float, anything>() >> [&](std::string const& str, int a, float b)
+        on<anything, std::string, anything, int, anything, float, anything>() >> [&](const std::string& str, int a, float b)
         {
             CPPA_CHECK_EQUAL("h", str);
             CPPA_CHECK_EQUAL(12, a);
@@ -537,7 +537,7 @@ size_t test__tuple()
     {
         auto& v0 = *v0opt;
         CPPA_CHECK((std::is_same<decltype(v0), cow_tuple<std::string>&>::value));
-        CPPA_CHECK((std::is_same<decltype(get<0>(v0)), std::string const&>::value));
+        CPPA_CHECK((std::is_same<decltype(get<0>(v0)), const std::string&>::value));
         CPPA_CHECK_EQUAL(v0.size(), 1);
         CPPA_CHECK_EQUAL(get<0>(v0), "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));

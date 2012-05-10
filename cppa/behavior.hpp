@@ -54,8 +54,8 @@ class behavior
 
     friend behavior operator,(partial_function&& lhs, behavior&& rhs);
 
-    behavior(behavior const&) = delete;
-    behavior& operator=(behavior const&) = delete;
+    behavior(const behavior&) = delete;
+    behavior& operator=(const behavior&) = delete;
 
  public:
 
@@ -67,7 +67,7 @@ class behavior
     }
 
     template<typename... Cases>
-    behavior(match_expr<Cases...> const& me) : m_fun(me) { }
+    behavior(const match_expr<Cases...>& me) : m_fun(me) { }
 
     inline behavior(util::duration tout, std::function<void()>&& handler)
         : m_timeout(tout), m_timeout_handler(std::move(handler))
@@ -87,7 +87,7 @@ class behavior
         m_timeout_handler();
     }
 
-    inline util::duration const& timeout() const
+    inline const util::duration& timeout() const
     {
         return m_timeout;
     }
@@ -109,7 +109,7 @@ class behavior
 };
 
 template<typename... Lhs>
-behavior operator,(match_expr<Lhs...> const& lhs,
+behavior operator,(const match_expr<Lhs...>& lhs,
                    behavior&& rhs)
 {
     rhs.get_partial_function() = lhs;

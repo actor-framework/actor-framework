@@ -80,7 +80,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
         ordinary_message
     };
 
-    filter_result filter_msg(any_tuple const& msg);
+    filter_result filter_msg(const any_tuple& msg);
 
     auto dq(queue_node& node, partial_function& rules) -> dq_result;
 
@@ -89,7 +89,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
         return m_has_pending_timeout_request;
     }
 
-    void request_timeout(util::duration const& d);
+    void request_timeout(const util::duration& d);
 
     void reset_timeout()
     {
@@ -120,7 +120,7 @@ class abstract_scheduled_actor : public abstract_actor<local_actor>
 
     void enqueue(actor* sender, any_tuple&& msg);
 
-    void enqueue(actor* sender, any_tuple const& msg);
+    void enqueue(actor* sender, const any_tuple& msg);
 
     int compare_exchange_state(int expected, int new_value);
 
@@ -146,7 +146,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor
     void unlink_from(intrusive_ptr<actor>&);
     bool establish_backlink(intrusive_ptr<actor>&);
     bool remove_backlink(intrusive_ptr<actor>&);
-    void detach(attachable::token const&);
+    void detach(const attachable::token&);
     bool attach(attachable*);
 };
 

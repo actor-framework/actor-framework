@@ -112,7 +112,7 @@ void abstract_scheduled_actor::enqueue(actor* sender, any_tuple&& msg)
     //enqueue_node(new queue_node(sender, std::move(msg)));
 }
 
-void abstract_scheduled_actor::enqueue(actor* sender, any_tuple const& msg)
+void abstract_scheduled_actor::enqueue(actor* sender, const any_tuple& msg)
 {
     enqueue_node(fetch_node(sender, msg));
     //enqueue_node(new queue_node(sender, msg));
@@ -133,7 +133,7 @@ int abstract_scheduled_actor::compare_exchange_state(int expected,
     return e;
 }
 
-void abstract_scheduled_actor::request_timeout(util::duration const& d)
+void abstract_scheduled_actor::request_timeout(const util::duration& d)
 {
     if (d.valid())
     {
@@ -142,7 +142,7 @@ void abstract_scheduled_actor::request_timeout(util::duration const& d)
     }
 }
 
-auto abstract_scheduled_actor::filter_msg(any_tuple const& msg) -> filter_result
+auto abstract_scheduled_actor::filter_msg(const any_tuple& msg) -> filter_result
 {
     if (   msg.size() == 2
         && msg.type_at(0) == t_atom_ui32_types[0]
@@ -257,7 +257,7 @@ bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&)
     return false;
 }
 
-void scheduled_actor_dummy::detach(attachable::token const&)
+void scheduled_actor_dummy::detach(const attachable::token&)
 {
 }
 

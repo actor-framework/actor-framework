@@ -66,7 +66,7 @@ class tuple_view : public abstract_tuple
     typedef types_array<ElementTypes...> element_types;
 
     tuple_view() = delete;
-    tuple_view(tuple_view const&) = delete;
+    tuple_view(const tuple_view&) = delete;
 
     /**
      * @warning @p tuple_view does @b NOT takes ownership for given pointers
@@ -81,7 +81,7 @@ class tuple_view : public abstract_tuple
         return m_data;
     }
 
-    inline data_type const& data() const
+    inline const data_type& data() const
     {
         return m_data;
     }

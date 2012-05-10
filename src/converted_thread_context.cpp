@@ -113,7 +113,7 @@ void converted_thread_context::dequeue(behavior& rules) /*override*/
 }
 
 converted_thread_context::throw_on_exit_result
-converted_thread_context::throw_on_exit(any_tuple const& msg)
+converted_thread_context::throw_on_exit(const any_tuple& msg)
 {
     if (matches(msg, m_exit_msg_pattern))
     {

@@ -38,8 +38,8 @@
 
 namespace cppa {
 
-intrusive_ptr<group> group::get(std::string const& arg0,
-                                std::string const& arg1)
+intrusive_ptr<group> group::get(const std::string& arg0,
+                                const std::string& arg1)
 {
     return detail::singleton_manager::get_group_manager()->get(arg0, arg1);
 }
@@ -54,8 +54,8 @@ void group::add_module(group::module* ptr)
     detail::singleton_manager::get_group_manager()->add_module(ptr);
 }
 
-group::unsubscriber::unsubscriber(channel_ptr const& s,
-                                  intrusive_ptr<group> const& g)
+group::unsubscriber::unsubscriber(const channel_ptr& s,
+                                  const intrusive_ptr<group>& g)
     : m_self(s), m_group(g)
 {
 }
@@ -70,7 +70,7 @@ void group::unsubscriber::actor_exited(std::uint32_t)
     // unsubscription is done in destructor
 }
 
-bool group::unsubscriber::matches(attachable::token const& what)
+bool group::unsubscriber::matches(const attachable::token& what)
 {
     if (what.subtype == typeid(group::unsubscriber))
     {
@@ -79,7 +79,7 @@ bool group::unsubscriber::matches(attachable::token const& what)
     return false;
 }
 
-group::module::module(std::string const& name) : m_name(name)
+group::module::module(const std::string& name) : m_name(name)
 {
 }
 
@@ -87,7 +87,7 @@ group::module::module(std::string&& name) : m_name(std::move(name))
 {
 }
 
-std::string const& group::module::name()
+const std::string& group::module::name()
 {
     return m_name;
 }
@@ -97,17 +97,17 @@ group::group(std::string&& id, std::string&& mod_name)
 {
 }
 
-group::group(std::string const& id, std::string const& mod_name)
+group::group(const std::string& id, const std::string& mod_name)
     : m_identifier(id), m_module_name(mod_name)
 {
 }
 
-std::string const& group::identifier() const
+const std::string& group::identifier() const
 {
     return m_identifier;
 }
 
-std::string const& group::module_name() const
+const std::string& group::module_name() const
 {
     return m_module_name;
 }

@@ -65,7 +65,7 @@ class fixed_vector
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
     typedef value_type&         reference;
-    typedef value_type const&   const_reference;
+    typedef const value_type&   const_reference;
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
@@ -76,12 +76,12 @@ class fixed_vector
 
     constexpr fixed_vector() : m_size(0) { }
 
-    fixed_vector(fixed_vector const& other) : m_size(other.m_size)
+    fixed_vector(const fixed_vector& other) : m_size(other.m_size)
     {
         std::copy(other.begin(), other.end(), begin());
     }
 
-    fixed_vector& operator=(fixed_vector const& other)
+    fixed_vector& operator=(const fixed_vector& other)
     {
         resize(other.size());
         std::copy(other.begin(), other.end(), begin());

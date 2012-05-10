@@ -17,7 +17,7 @@ namespace {
 
 constexpr auto s_foo = atom("FooBar");
 
-inline std::ostream& operator<<(std::ostream& out, atom_value const& a)
+inline std::ostream& operator<<(std::ostream& out, const atom_value& a)
 {
     return (out << to_string(a));
 }

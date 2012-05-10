@@ -400,7 +400,7 @@ void MDfinish(dword *MDbuf, const byte *strptr, dword lswlen, dword mswlen)
 
 namespace cppa { namespace util {
 
-void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data)
+void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data)
 {
     dword MDbuf[5]; // contains (A, B, C, D(, E))
     dword X[16];    // current 16-word chunk

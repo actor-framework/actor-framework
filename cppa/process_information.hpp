@@ -65,21 +65,21 @@ class process_information : public ref_counted,
     /**
      * @brief Copy constructor.
      */
-    process_information(process_information const&);
+    process_information(const process_information&);
 
     /**
      * @brief Creates @c this from @p process_id and @p hash.
      * @param process_id System-wide unique process identifier.
      * @param hash Unique node id as hexadecimal string representation.
      */
-    process_information(std::uint32_t process_id, std::string const& hash);
+    process_information(std::uint32_t process_id, const std::string& hash);
 
     /**
      * @brief Creates @c this from @p process_id and @p hash.
      * @param process_id System-wide unique process identifier.
      * @param hash Unique node id.
      */
-    process_information(std::uint32_t process_id, node_id_type const& node_id);
+    process_information(std::uint32_t process_id, const node_id_type& node_id);
 
     /**
      * @brief Identifies the running process.
@@ -92,16 +92,16 @@ class process_information : public ref_counted,
      * @returns A hash build from the MAC address of the first network device
      *          and the UUID of the root partition (mounted in "/" or "C:").
      */
-    inline node_id_type const& node_id() const { return m_node_id; }
+    inline const node_id_type& node_id() const { return m_node_id; }
 
     /**
      * @brief Returns the proccess_information for the running process.
      * @returns A pointer to the singleton of this process.
      */
-    static intrusive_ptr<process_information> const& get();
+    static const intrusive_ptr<process_information>& get();
 
     // "inherited" from comparable<process_information>
-    int compare(process_information const& other) const;
+    int compare(const process_information& other) const;
 
  private:
 
@@ -110,19 +110,19 @@ class process_information : public ref_counted,
 
 };
 
-void node_id_from_string(std::string const& hash,
+void node_id_from_string(const std::string& hash,
                          process_information::node_id_type& node_id);
 
-bool equal(std::string const& hash,
-           process_information::node_id_type const& node_id);
+bool equal(const std::string& hash,
+           const process_information::node_id_type& node_id);
 
-inline bool equal(process_information::node_id_type const& node_id,
-                  std::string const& hash)
+inline bool equal(const process_information::node_id_type& node_id,
+                  const std::string& hash)
 {
     return equal(hash, node_id);
 }
 
-std::string to_string(process_information const& what);
+std::string to_string(const process_information& what);
 
 /**
  * @brief Converts a {@link process_information::node_id_type node_id}
@@ -130,7 +130,7 @@ std::string to_string(process_information const& what);
  * @param node_id A unique node identifier.
  * @returns A hexadecimal representation of @p node_id.
  */
-std::string to_string(process_information::node_id_type const& node_id);
+std::string to_string(const process_information::node_id_type& node_id);
 
 /**
  * @brief A smart pointer type that manages instances of

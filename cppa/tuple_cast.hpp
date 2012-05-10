@@ -46,7 +46,7 @@ namespace cppa {
  *        of @p tup on success.
  */
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup, pattern<T...> const& p)
+auto moving_tuple_cast(any_tuple& tup, const pattern<T...>& p)
     -> option<
         typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
@@ -79,7 +79,7 @@ auto moving_tuple_cast(any_tuple& tup)
 }
 
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
+auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
     -> decltype(moving_tuple_cast<T...>(tup))
 {
     return moving_tuple_cast<T...>(tup);
@@ -89,7 +89,7 @@ auto moving_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
  * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
  */
 template<typename... T>
-auto tuple_cast(any_tuple tup, pattern<T...> const& p)
+auto tuple_cast(any_tuple tup, const pattern<T...>& p)
      -> option<
           typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
@@ -113,7 +113,7 @@ auto tuple_cast(any_tuple tup)
 }
 
 template<typename... T>
-auto tuple_cast(any_tuple tup, util::type_list<T...> const&)
+auto tuple_cast(any_tuple tup, const util::type_list<T...>&)
     -> decltype(tuple_cast<T...>(tup))
 {
     return moving_tuple_cast<T...>(tup);
@@ -123,7 +123,7 @@ auto tuple_cast(any_tuple tup, util::type_list<T...> const&)
 
 // (moving) cast using a pattern; does not perform type checking
 template<typename... T>
-auto unsafe_tuple_cast(any_tuple& tup, pattern<T...> const& p)
+auto unsafe_tuple_cast(any_tuple& tup, const pattern<T...>& p)
     -> option<
         typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
@@ -137,7 +137,7 @@ auto unsafe_tuple_cast(any_tuple& tup, pattern<T...> const& p)
 }
 
 template<typename... T>
-auto unsafe_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
+auto unsafe_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
     -> decltype(tuple_cast<T...>(tup))
 {
     return tuple_cast<T...>(tup);
@@ -145,7 +145,7 @@ auto unsafe_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
 
 // cast using a pattern; does neither perform type checking nor checks values
 template<typename... T>
-auto forced_tuple_cast(any_tuple& tup, pattern<T...> const& p)
+auto forced_tuple_cast(any_tuple& tup, const pattern<T...>& p)
     -> typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
        >::type

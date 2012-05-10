@@ -61,9 +61,9 @@ class tuple_vals : public abstract_tuple
 
     tuple_vals() : super(tuple_impl_info::statically_typed), m_data() { }
 
-    tuple_vals(tuple_vals const&) = default;
+    tuple_vals(const tuple_vals&) = default;
 
-    tuple_vals(ElementTypes const&... args)
+    tuple_vals(const ElementTypes&... args)
         : super(tuple_impl_info::statically_typed), m_data(args...)
     {
     }
@@ -83,7 +83,7 @@ class tuple_vals : public abstract_tuple
         return m_data;
     }
 
-    inline data_type const& data() const
+    inline const data_type& data() const
     {
         return m_data;
     }
@@ -116,7 +116,7 @@ class tuple_vals : public abstract_tuple
         return m_types[pos];
     }
 
-    bool equals(abstract_tuple const& other) const
+    bool equals(const abstract_tuple& other) const
     {
         if (size() != other.size()) return false;
         tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);

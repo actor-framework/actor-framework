@@ -60,8 +60,8 @@ class self_type : public convertible<self_type, actor*>
 
     static actor* convert_impl();
 
-    self_type(self_type const&) = delete;
-    self_type& operator=(self_type const&) = delete;
+    self_type(const self_type&) = delete;
+    self_type& operator=(const self_type&) = delete;
 
  public:
 

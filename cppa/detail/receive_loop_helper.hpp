@@ -86,7 +86,7 @@ class receive_for_helper
 
  public:
 
-    receive_for_helper(T& first, T const& last) : begin(first), end(last) { }
+    receive_for_helper(T& first, const T& last) : begin(first), end(last) { }
 
     void operator()(behavior& bhvr)
     {

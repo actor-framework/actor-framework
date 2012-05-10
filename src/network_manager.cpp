@@ -74,7 +74,7 @@ struct network_manager_impl : network_manager
         m_loop = thread(post_office_loop, m_pipe[0], m_pipe[1]);
     }
 
-    void write_to_pipe(pipe_msg const& what)
+    void write_to_pipe(const pipe_msg& what)
     {
         if (write(m_pipe[1], what, pipe_msg_size) != (int) pipe_msg_size)
         {

@@ -67,7 +67,7 @@ class any_tuple
      * @brief Creates a tuple from @p t.
      */
     template<typename... Args>
-    any_tuple(cow_tuple<Args...> const& t) : m_vals(t.vals()) { }
+    any_tuple(const cow_tuple<Args...>& t) : m_vals(t.vals()) { }
 
     /**
      * @brief Creates a tuple and moves the content from @p t.
@@ -85,7 +85,7 @@ class any_tuple
     /**
      * @brief Copy constructor.
      */
-    any_tuple(any_tuple const&) = default;
+    any_tuple(const any_tuple&) = default;
 
     /**
      * @brief Move assignment.
@@ -95,7 +95,7 @@ class any_tuple
     /**
      * @brief Copy assignment.
      */
-    any_tuple& operator=(any_tuple const&) = default;
+    any_tuple& operator=(const any_tuple&) = default;
 
     /**
      * @brief Gets the size of this tuple.
@@ -121,7 +121,7 @@ class any_tuple
     /**
      * @brief Returns @c true if <tt>*this == other</tt>, otherwise false.
      */
-    bool equals(any_tuple const& other) const;
+    bool equals(const any_tuple& other) const;
 
     /**
      * @brief Returns true if <tt>size() == 0</tt>, otherwise false.
@@ -129,7 +129,7 @@ class any_tuple
     inline bool empty() const { return size() == 0; }
 
     template<typename T>
-    inline T const& get_as(size_t p) const
+    inline const T& get_as(size_t p) const
     {
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T const*>(at(p));
@@ -147,8 +147,8 @@ class any_tuple
     inline const_iterator end() const { return m_vals->end(); }
 
     inline cow_ptr<detail::abstract_tuple>& vals()  { return m_vals; }
-    inline cow_ptr<detail::abstract_tuple> const& vals() const { return m_vals; }
-    inline cow_ptr<detail::abstract_tuple> const& cvals() const { return m_vals; }
+    inline const cow_ptr<detail::abstract_tuple>& vals() const { return m_vals; }
+    inline const cow_ptr<detail::abstract_tuple>& cvals() const { return m_vals; }
 
     inline std::type_info const* type_token() const
     {
@@ -205,7 +205,7 @@ class any_tuple
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
-    explicit any_tuple(cow_ptr<detail::abstract_tuple> const& vals);
+    explicit any_tuple(const cow_ptr<detail::abstract_tuple>& vals);
 
     typedef detail::abstract_tuple* tup_ptr;
 
@@ -260,7 +260,7 @@ class any_tuple
 /**
  * @relates any_tuple
  */
-inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
+inline bool operator==(const any_tuple& lhs, const any_tuple& rhs)
 {
     return lhs.equals(rhs);
 }
@@ -268,7 +268,7 @@ inline bool operator==(any_tuple const& lhs, any_tuple const& rhs)
 /**
  * @relates any_tuple
  */
-inline bool operator!=(any_tuple const& lhs, any_tuple const& rhs)
+inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs)
 {
     return !(lhs == rhs);
 }

@@ -48,7 +48,7 @@ std::string to_string_impl(void const* what, uniform_type_info const* utype);
  * @returns A string representation of @p what.
  */
 template<typename T>
-std::string to_string(T const& what)
+std::string to_string(const T& what)
 {
     auto utype = uniform_typeid<T>();
     if (utype == nullptr)

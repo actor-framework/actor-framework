@@ -54,7 +54,7 @@ class binary_deserializer : public deserializer
 
     std::string seek_object();
     std::string peek_object();
-    void begin_object(std::string const& type_name);
+    void begin_object(const std::string& type_name);
     void end_object();
     size_t begin_sequence();
     void end_sequence();

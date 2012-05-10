@@ -87,32 +87,32 @@ struct value_matcher
     const bool is_dummy;
     inline value_matcher(bool dummy_impl = false) : is_dummy(dummy_impl) { }
     virtual ~value_matcher();
-    virtual bool operator()(any_tuple const&) const = 0;
+    virtual bool operator()(const any_tuple&) const = 0;
 };
 
 struct dummy_matcher : value_matcher
 {
     inline dummy_matcher() : value_matcher(true) { }
-    bool operator()(any_tuple const&) const;
+    bool operator()(const any_tuple&) const;
 };
 
 struct cmp_helper
 {
     size_t i;
-    any_tuple const& tup;
-    cmp_helper(any_tuple const& tp, size_t pos = 0) : i(pos), tup(tp) { }
+    const any_tuple& tup;
+    cmp_helper(const any_tuple& tp, size_t pos = 0) : i(pos), tup(tp) { }
     template<typename T>
-    inline bool operator()(T const& what)
+    inline bool operator()(const T& what)
     {
         return what == tup.get_as<T>(i++);
     }
     template<typename T>
-    inline bool operator()(std::unique_ptr<util::guard<T> > const& g)
+    inline bool operator()(std::unique_ptr<util::guard<T> const >& g)
     {
         return (*g)(tup.get_as<T>(i++));
     }
     template<typename T>
-    inline bool operator()(util::wrapped<T> const&)
+    inline bool operator()(const util::wrapped<T>&)
     {
         ++i;
         return true;
@@ -135,7 +135,7 @@ class value_matcher_impl<wildcard_position::nil,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const
+    bool operator()(const any_tuple& tup) const
     {
         cmp_helper h{tup};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
@@ -177,7 +177,7 @@ class value_matcher_impl<wildcard_position::leading,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const
+    bool operator()(const any_tuple& tup) const
     {
         cmp_helper h{tup, tup.size() - sizeof...(Ts)};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
@@ -198,7 +198,7 @@ class value_matcher_impl<wildcard_position::in_between,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const
+    bool operator()(const any_tuple& tup) const
     {
         static constexpr size_t wcpos =
                 static_cast<size_t>(util::tl_find<util::type_list<Ts...>, anything>::value);
@@ -225,7 +225,7 @@ class value_matcher_impl<wildcard_position::multiple,
     template<typename... Args>
     value_matcher_impl(Args&&...) { }
 
-    bool operator()(any_tuple const&) const
+    bool operator()(const any_tuple&) const
     {
         throw std::runtime_error("not implemented yet, sorry");
     }
@@ -238,8 +238,8 @@ class pattern
 
     static_assert(sizeof...(Types) > 0, "empty pattern");
 
-    pattern(pattern const&) = delete;
-    pattern& operator=(pattern const&) = delete;
+    pattern(const pattern&) = delete;
+    pattern& operator=(const pattern&) = delete;
 
  public:
 
@@ -286,7 +286,7 @@ class pattern
     inline bool has_values() const { return m_vm->is_dummy == false; }
 
     // @warning does NOT check types
-    bool _matches_values(any_tuple const& tup) const
+    bool _matches_values(const any_tuple& tup) const
     {
         return (*m_vm)(tup);
     }
@@ -302,13 +302,13 @@ class pattern
     }
 
     template<typename... Args>
-    pattern(util::wrapped<head_type> const& arg0, Args&&... args)
+    pattern(const util::wrapped<head_type>& arg0, Args&&... args)
         : m_vm(get_value_matcher(arg0, std::forward<Args>(args)...))
     {
     }
 
     template<typename... Args>
-    pattern(detail::tdata<Args...> const& data)
+    pattern(const detail::tdata<Args...>& data)
     {
         m_vm.reset(new value_matcher_impl<wildcard_pos, types, util::type_list<Args...> >{data});
     }
@@ -354,7 +354,7 @@ class pattern
         init_helper(tvp_array& ptrs, detail::types_array<Types...>& tarr)
             : i(0), m_ptrs(ptrs), m_arr(tarr) { }
         template<typename T>
-        inline void operator()(option<T> const& what)
+        inline void operator()(const option<T>& what)
         {
             m_ptrs[i].first = m_arr[i];
             m_ptrs[i].second = (what) ? &(*what) : nullptr;

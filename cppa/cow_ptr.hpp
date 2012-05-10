@@ -58,10 +58,10 @@ class cow_ptr
 
     cow_ptr(cow_ptr&& other) : m_ptr(std::move(other.m_ptr)) { }
 
-    cow_ptr(cow_ptr const& other) : m_ptr(other.m_ptr) { }
+    cow_ptr(const cow_ptr& other) : m_ptr(other.m_ptr) { }
 
     template<typename Y>
-    cow_ptr(cow_ptr<Y> const& other) : m_ptr(const_cast<Y*>(other.get())) { }
+    cow_ptr(const cow_ptr<Y>& other) : m_ptr(const_cast<Y*>(other.get())) { }
 
     inline void swap(cow_ptr& other)
     {
@@ -74,7 +74,7 @@ class cow_ptr
         return *this;
     }
 
-    cow_ptr& operator=(cow_ptr const& other)
+    cow_ptr& operator=(const cow_ptr& other)
     {
         cow_ptr tmp{other};
         swap(tmp);
@@ -82,7 +82,7 @@ class cow_ptr
     }
 
     template<typename Y>
-    cow_ptr& operator=(cow_ptr<Y> const& other)
+    cow_ptr& operator=(const cow_ptr<Y>& other)
     {
         cow_ptr tmp{other};
         swap(tmp);
@@ -104,7 +104,7 @@ class cow_ptr
 
     inline T const* get() const { return ptr(); }
 
-    inline T const& operator*() const { return *ptr(); }
+    inline const T& operator*() const { return *ptr(); }
 
     inline T const* operator->() const { return ptr(); }
 

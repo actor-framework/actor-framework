@@ -57,9 +57,9 @@ class group : public channel
 
     group(std::string&& id, std::string&& mod_name);
 
-    group(std::string const& id, std::string const& mod_name);
+    group(const std::string& id, const std::string& mod_name);
 
-    virtual void unsubscribe(channel_ptr const& who) = 0;
+    virtual void unsubscribe(const channel_ptr& who) = 0;
 
  public:
 
@@ -79,14 +79,14 @@ class group : public channel
 
      public:
 
-        unsubscriber(channel_ptr const& s, intrusive_ptr<group> const& g);
+        unsubscriber(const channel_ptr& s, const intrusive_ptr<group>& g);
 
         ~unsubscriber();
 
         void actor_exited(std::uint32_t);
 
         // matches on m_group
-        bool matches(attachable::token const& what);
+        bool matches(const attachable::token& what);
 
     };
 
@@ -103,7 +103,7 @@ class group : public channel
      protected:
 
         module(std::string&& module_name);
-        module(std::string const& module_name);
+        module(const std::string& module_name);
 
      public:
 
@@ -112,14 +112,14 @@ class group : public channel
          * @returns The name of this module implementation.
          * @threadsafe
          */
-        std::string const& name();
+        const std::string& name();
 
         /**
          * @brief Get a pointer to the group associated with
          *        the name @p group_name.
          * @threadsafe
          */
-        virtual intrusive_ptr<group> get(std::string const& group_name) = 0;
+        virtual intrusive_ptr<group> get(const std::string& group_name) = 0;
 
     };
 
@@ -128,28 +128,28 @@ class group : public channel
      * @returns The group identifier as string (e.g. "224.0.0.1" for IPv4
      *         multicast or a user-defined string for local groups).
      */
-    std::string const& identifier() const;
+    const std::string& identifier() const;
 
     /**
      * @brief The name of the module.
      * @returns The module name of this group (e.g. "local").
      */
-    std::string const& module_name() const;
+    const std::string& module_name() const;
 
     /**
      * @brief Subscribe @p who to this group.
      * @returns A {@link subscription} object that unsubscribes @p who
      *         if the lifetime of @p who ends.
      */
-    virtual subscription subscribe(channel_ptr const& who) = 0;
+    virtual subscription subscribe(const channel_ptr& who) = 0;
 
     /**
      * @brief Get a pointer to the group associated with
      *        @p group_identifier from the module @p module_name.
      * @threadsafe
      */
-    static intrusive_ptr<group> get(std::string const& module_name,
-                                    std::string const& group_identifier);
+    static intrusive_ptr<group> get(const std::string& module_name,
+                                    const std::string& group_identifier);
 
     /**
      * @brief Returns an anonymous group.

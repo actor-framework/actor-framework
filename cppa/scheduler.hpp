@@ -112,8 +112,8 @@ class scheduler
     virtual attachable* register_hidden_context();
 
     template<typename Duration, typename... Data>
-    void future_send(actor_ptr const& to,
-                     Duration const& rel_time, Data const&... data)
+    void future_send(const actor_ptr& to,
+                     const Duration& rel_time, const Data&... data)
     {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple data_tup = make_cow_tuple(data...);

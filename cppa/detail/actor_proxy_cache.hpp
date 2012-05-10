@@ -58,7 +58,7 @@ class actor_proxy_cache
 
     new_proxy_callback m_new_cb;
 
-    process_information_ptr get_pinfo(key_tuple const& key);
+    process_information_ptr get_pinfo(const key_tuple& key);
 
  public:
 
@@ -69,13 +69,13 @@ class actor_proxy_cache
         m_new_cb = std::forward<F>(cb);
     }
 
-    actor_proxy_ptr get(key_tuple const& key);
+    actor_proxy_ptr get(const key_tuple& key);
 
     void add(actor_proxy_ptr& pptr);
 
     size_t size() const;
 
-    void erase(actor_proxy_ptr const& pptr);
+    void erase(const actor_proxy_ptr& pptr);
 
     template<typename F>
     void for_each(F&& fun)

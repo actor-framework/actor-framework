@@ -76,7 +76,7 @@ namespace cppa { namespace util {
 /**
  * @brief Creates a hash from @p data using the RIPEMD-160 algorithm.
  */
-void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data);
+void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data);
 
 } } // namespace cppa::util
 

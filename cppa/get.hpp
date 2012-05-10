@@ -47,17 +47,17 @@ template<typename...> struct pseudo_tuple;
 // forward declaration of cow_tuple
 template<typename...> class cow_tuple;
 
-// forward declaration of get(detail::tdata<...> const&)
+// forward declaration of get(const detail::tdata<...>&)
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type const& get(detail::tdata<Tn...> const&);
+const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>&);
 
-// forward declarations of get(tuple<...> const&)
+// forward declarations of get(const tuple<...>&)
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type const& get(cow_tuple<Tn...> const&);
+const typename util::at<N, Tn...>::type& get(const cow_tuple<Tn...>&);
 
 // forward declarations of get(detail::pseudo_tuple<...>&)
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type const& get(detail::pseudo_tuple<Tn...> const& tv);
+const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv);
 
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Tn>
@@ -73,7 +73,7 @@ typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
 
 // support container-like access for type lists containing tokens
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(util::type_list<Ts...> const&)
+typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&)
 {
     return {};
 }

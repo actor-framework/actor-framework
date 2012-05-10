@@ -72,7 +72,7 @@ object::~object()
     if (m_value != &s_void) m_type->delete_instance(m_value);
 }
 
-object::object(object const& other)
+object::object(const object& other)
 {
     m_type = other.m_type;
     m_value = (other.m_value == &s_void) ? other.m_value
@@ -91,14 +91,14 @@ object& object::operator=(object&& other)
     return *this;
 }
 
-object& object::operator=(object const& other)
+object& object::operator=(const object& other)
 {
     object tmp(other);
     swap(tmp);
     return *this;
 }
 
-bool operator==(object const& lhs, object const& rhs)
+bool operator==(const object& lhs, const object& rhs)
 {
     if (lhs.type() == rhs.type())
     {

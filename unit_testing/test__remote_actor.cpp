@@ -16,10 +16,10 @@ using namespace cppa;
 
 namespace {
 
-void client_part(std::vector<string_pair> const& args)
+void client_part(const std::vector<string_pair>& args)
 {
     auto i = std::find_if(args.begin(), args.end(),
-                          [](string_pair const& p) { return p.first == "port"; });
+                          [](const string_pair& p) { return p.first == "port"; });
     if (i == args.end())
     {
         throw std::runtime_error("no port specified");
@@ -35,7 +35,7 @@ void client_part(std::vector<string_pair> const& args)
 } // namespace <anonymous>
 
 size_t test__remote_actor(char const* app_path, bool is_client,
-                          std::vector<string_pair> const& args)
+                          const std::vector<string_pair>& args)
 {
     if (is_client)
     {

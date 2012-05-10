@@ -67,9 +67,9 @@ class option
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
-    option(T const& value) : m_valid(false) { cr(value); }
+    option(const T& value) : m_valid(false) { cr(value); }
 
-    option(option const& other) : m_valid(false)
+    option(const option& other) : m_valid(false)
     {
         if (other.m_valid) cr(other.m_value);
     }
@@ -81,7 +81,7 @@ class option
 
     ~option() { destroy(); }
 
-    option& operator=(option const& other)
+    option& operator=(const option& other)
     {
         if (m_valid)
         {
@@ -109,7 +109,7 @@ class option
         return *this;
     }
 
-    option& operator=(T const& value)
+    option& operator=(const T& value)
     {
         if (m_valid) m_value = value;
         else cr(value);
@@ -151,7 +151,7 @@ class option
     /**
      * @brief Returns the value.
      */
-    inline T const& operator*() const
+    inline const T& operator*() const
     {
         CPPA_REQUIRE(valid());
         return m_value;
@@ -169,7 +169,7 @@ class option
     /**
      * @brief Returns the value.
      */
-    inline T const& get() const
+    inline const T& get() const
     {
         CPPA_REQUIRE(valid());
         return m_value;
@@ -180,14 +180,14 @@ class option
      *        if <tt>valid() == false</tt>.
      * @post <tt>valid() == true</tt>
      */
-    inline T& get_or_else(T const& default_value)
+    inline T& get_or_else(const T& default_value)
     {
         if (!m_valid) cr(default_value);
         return m_value;
     }
 
     /**
-     * @copydoc get_or_else(T const&)
+     * @copydoc get_or_else(const T&)
      */
     inline T& get_or_else(T&& default_value)
     {
@@ -221,7 +221,7 @@ class option
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(option<T> const& lhs, option<U> const& rhs)
+bool operator==(const option<T>& lhs, const option<U>& rhs)
 {
     if ((lhs) && (rhs)) return *lhs == *rhs;
     return false;
@@ -229,7 +229,7 @@ bool operator==(option<T> const& lhs, option<U> const& rhs)
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(option<T> const& lhs, U const& rhs)
+bool operator==(const option<T>& lhs, const U& rhs)
 {
     if (lhs) return *lhs == rhs;
     return false;
@@ -237,28 +237,28 @@ bool operator==(option<T> const& lhs, U const& rhs)
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(T const& lhs, option<U> const& rhs)
+bool operator==(const T& lhs, const option<U>& rhs)
 {
     return rhs == lhs;
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(option<T> const& lhs, option<U> const& rhs)
+bool operator!=(const option<T>& lhs, const option<U>& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(option<T> const& lhs, U const& rhs)
+bool operator!=(const option<T>& lhs, const U& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(T const& lhs, option<U> const& rhs)
+bool operator!=(const T& lhs, const option<U>& rhs)
 {
     return !(lhs == rhs);
 }

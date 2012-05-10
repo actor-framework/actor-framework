@@ -52,7 +52,7 @@ class actor_registry
     // return nullptr if the actor wasn't put *or* finished execution
     actor_ptr get(actor_id key) const;
 
-    void put(actor_id key, actor_ptr const& value);
+    void put(actor_id key, const actor_ptr& value);
 
     void erase(actor_id key);
 

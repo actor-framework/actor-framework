@@ -32,7 +32,7 @@
 
 namespace cppa {
 
-std::string to_string(atom_value const& what)
+std::string to_string(const atom_value& what)
 {
     auto x = static_cast<std::uint64_t>(what);
     std::string result;

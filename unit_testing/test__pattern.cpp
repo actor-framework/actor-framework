@@ -28,7 +28,7 @@ using std::string;
 using namespace cppa;
 
 template<typename Arr>
-string plot(Arr const& arr)
+string plot(const Arr& arr)
 {
     std::ostringstream oss;
     oss << "{ ";
@@ -47,7 +47,7 @@ static detail::types_array<int,anything,float> arr1;
 static detail::types_array<int,anything,foobar> arr2;
 
 template<typename T>
-void match_test(T const& value)
+void match_test(const T& value)
 {
     match(value)
     (
@@ -55,7 +55,7 @@ void match_test(T const& value)
         {
             cout << "(" << a << ", " << b << ", " << c << ")" << endl;
         },
-        on_arg_match >> [&](string const& str)
+        on_arg_match >> [&](const string& str)
         {
             cout << str << endl;
         }

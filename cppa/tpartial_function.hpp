@@ -76,9 +76,9 @@ class tpartial_function
     {
     }
 
-    tpartial_function(tpartial_function const&) = default;
+    tpartial_function(const tpartial_function&) = default;
 
-    //bool defined_at(typename util::rm_ref<Args>::type const&... args) const
+    //bool defined_at(const typename util::rm_ref<Args>::type&... args) const
     bool defined_at(Args... args) const
     {
         return m_guard(args...);
@@ -126,7 +126,7 @@ struct get_tpartial_function<Expr, Guard,
                         typename ctrait::arg_types,
                         sizeof...(Args)
                     >::type,
-                    util::type_list<Args const&...>,
+                    util::type_list<const Args&...>,
                     util::left_or_right
                 >::type,
                 typename ctrait::result_type,

@@ -44,7 +44,7 @@ template<typename T>
 class abstract_uniform_type_info : public uniform_type_info
 {
 
-    inline static T const& deref(void const* ptr)
+    inline static const T& deref(void const* ptr)
     {
         return *reinterpret_cast<T const*>(ptr);
     }
@@ -56,7 +56,7 @@ class abstract_uniform_type_info : public uniform_type_info
 
  protected:
 
-    abstract_uniform_type_info(std::string const& uname
+    abstract_uniform_type_info(const std::string& uname
                            = detail::to_uniform_name(typeid(T)))
         : uniform_type_info(uname)
     {
@@ -79,7 +79,7 @@ class abstract_uniform_type_info : public uniform_type_info
 
  public:
 
-    bool equals(std::type_info const& tinfo) const
+    bool equals(const std::type_info& tinfo) const
     {
         return typeid(T) == tinfo;
     }

@@ -56,13 +56,13 @@ struct implicit_conversions
             subtype1;
 
     typedef typename util::replace_type<subtype1, std::u16string,
-                                        std::is_same<subtype1, char16_t const*>,
+                                        std::is_same<subtype1, const char16_t*>,
                                         std::is_same<subtype1, char16_t*>,
                                         util::is_array_of<subtype1, char16_t>>::type
             subtype2;
 
     typedef typename util::replace_type<subtype2, std::u32string,
-                                        std::is_same<subtype2, char32_t const*>,
+                                        std::is_same<subtype2, const char32_t*>,
                                         std::is_same<subtype2, char32_t*>,
                                         util::is_array_of<subtype2, char32_t>>::type
             subtype3;

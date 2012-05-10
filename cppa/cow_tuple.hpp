@@ -102,7 +102,7 @@ class cow_tuple
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    cow_tuple(ElementTypes const&... args) : m_vals(new data_type(args...))
+    cow_tuple(const ElementTypes&... args) : m_vals(new data_type(args...))
     {
     }
 
@@ -115,9 +115,9 @@ class cow_tuple
     }
 
     cow_tuple(cow_tuple&&) = default;
-    cow_tuple(cow_tuple const&) = default;
+    cow_tuple(const cow_tuple&) = default;
     cow_tuple& operator=(cow_tuple&&) = default;
-    cow_tuple& operator=(cow_tuple const&) = default;
+    cow_tuple& operator=(const cow_tuple&) = default;
 
     inline static cow_tuple from(cow_ptr_type ptr)
     {
@@ -125,7 +125,7 @@ class cow_tuple
     }
 
     inline static cow_tuple from(cow_ptr_type ptr,
-                             util::fixed_vector<size_t, num_elements> const& mv)
+                             const util::fixed_vector<size_t, num_elements>& mv)
     {
         return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
     }
@@ -169,7 +169,7 @@ class cow_tuple
         return m_vals->type_at(p);
     }
 
-    inline cow_ptr<detail::abstract_tuple> const& vals() const
+    inline const cow_ptr<detail::abstract_tuple>& vals() const
     {
         return m_vals;
     }
@@ -196,7 +196,7 @@ struct cow_tuple_from_type_list< util::type_list<Types...> >
  * @relates cow_tuple
  */
 template<size_t N, typename T>
-T const& get(cow_tuple<...> const& tup);
+const T& get(const cow_tuple<...>& tup);
 
 /**
  * @ingroup CopyOnWrite
@@ -223,7 +223,7 @@ cow_tuple<Args...> make_cow_tuple(Args&&... args);
 #else
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(cow_tuple<Types...> const& tup)
+const typename util::at<N, Types...>::type& get(const cow_tuple<Types...>& tup)
 {
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type const*>(tup.at(N));
@@ -253,8 +253,8 @@ make_cow_tuple(Args&&... args)
  * @relates cow_tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(cow_tuple<LhsTypes...> const& lhs,
-                       cow_tuple<RhsTypes...> const& rhs)
+inline bool operator==(const cow_tuple<LhsTypes...>& lhs,
+                       const cow_tuple<RhsTypes...>& rhs)
 {
     return util::compare_tuples(lhs, rhs);
 }
@@ -267,8 +267,8 @@ inline bool operator==(cow_tuple<LhsTypes...> const& lhs,
  * @relates cow_tuple
  */
 template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(cow_tuple<LhsTypes...> const& lhs,
-                       cow_tuple<RhsTypes...> const& rhs)
+inline bool operator!=(const cow_tuple<LhsTypes...>& lhs,
+                       const cow_tuple<RhsTypes...>& rhs)
 {
     return !(lhs == rhs);
 }

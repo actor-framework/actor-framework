@@ -24,7 +24,7 @@ class producer_consumer_list
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
     typedef value_type&         reference;
-    typedef value_type const&   const_reference;
+    typedef const value_type&   const_reference;
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
