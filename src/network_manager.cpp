@@ -49,7 +49,8 @@ namespace {
 using namespace cppa;
 using namespace cppa::detail;
 
-struct network_manager_impl : network_manager {
+struct network_manager_impl : network_manager
+{
 
     local_actor_ptr m_mailman;
     thread m_mailman_thread;
@@ -59,8 +60,10 @@ struct network_manager_impl : network_manager {
 
     int pipe_fd[2];
 
-    void start() { // override
-        if (pipe(pipe_fd) != 0) {
+    void start() // override
+    {
+        if (pipe(pipe_fd) != 0)
+        {
             CPPA_CRITICAL("cannot create pipe");
         }
 
@@ -71,7 +74,8 @@ struct network_manager_impl : network_manager {
         m_mailman_thread = mock_scheduler::spawn_hidden_impl(mailman_loop, m_mailman);
     }
 
-    void stop() { // override
+    void stop() // override
+    {
         m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
         m_mailman_thread.join();
         // wait until mailman is done; post_office closes all sockets
@@ -82,17 +86,21 @@ struct network_manager_impl : network_manager {
         close(pipe_fd[0]);
     }
 
-    void send_to_post_office(po_message const& msg) {
-        if (write(pipe_fd[1], &msg, sizeof(po_message)) != sizeof(po_message)) {
+    void send_to_post_office(po_message const& msg)
+    {
+        if (write(pipe_fd[1], &msg, sizeof(po_message)) != sizeof(po_message))
+        {
             CPPA_CRITICAL("cannot write to pipe");
         }
     }
 
-    void send_to_post_office(any_tuple msg) {
+    void send_to_post_office(any_tuple msg)
+    {
         m_post_office->enqueue(nullptr, std::move(msg));
     }
 
-    void send_to_mailman(any_tuple msg) {
+    void send_to_mailman(any_tuple msg)
+    {
         m_mailman->enqueue(nullptr, std::move(msg));
     }
 
@@ -102,10 +110,12 @@ struct network_manager_impl : network_manager {
 
 namespace cppa { namespace detail {
 
-network_manager::~network_manager() {
+network_manager::~network_manager()
+{
 }
 
-network_manager* network_manager::create_singleton() {
+network_manager* network_manager::create_singleton()
+{
     return new network_manager_impl;
 }
 

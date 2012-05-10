@@ -46,7 +46,8 @@ namespace cppa { class local_actor; }
 namespace cppa { namespace detail {
 
 template<typename T>
-struct implicit_conversions {
+struct implicit_conversions
+{
     typedef typename util::replace_type<T, std::string,
                                         std::is_same<T, char const*>,
                                         std::is_same<T, char*>,
@@ -75,7 +76,8 @@ struct implicit_conversions {
 };
 
 template<typename T>
-struct strip_and_convert {
+struct strip_and_convert
+{
     typedef typename implicit_conversions<typename util::rm_ref<T>::type>::type
             type;
 };

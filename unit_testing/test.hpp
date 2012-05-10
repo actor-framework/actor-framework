@@ -13,7 +13,8 @@ inline bool cppa_check_value_fun_eq(T1 const& value1, T2 const& value2,
                                     typename std::enable_if<
                                            !std::is_integral<T1>::value
                                         || !std::is_integral<T2>::value
-                                    >::type* = 0) {
+                                    >::type* = 0)
+{
     return value1 == value2;
 }
 
@@ -22,7 +23,8 @@ inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
                                     typename std::enable_if<
                                            std::is_integral<T1>::value
                                         && std::is_integral<T2>::value
-                                    >::type* = 0) {
+                                    >::type* = 0)
+{
     return value1 == static_cast<T1>(value2);
 }
 
@@ -30,8 +32,10 @@ template<typename T1, typename T2>
 inline bool cppa_check_value_fun(T1 const& value1, T2 const& value2,
                                  char const* file_name,
                                  int line_number,
-                                  size_t& error_count) {
-    if (cppa_check_value_fun_eq(value1, value2) == false) {
+                                  size_t& error_count)
+{
+    if (cppa_check_value_fun_eq(value1, value2) == false)
+    {
         std::cerr << "ERROR in file " << file_name << " on line " << line_number
                   << " => expected value: " << value1
                   << ", found: " << value2
@@ -46,18 +50,22 @@ template<typename T1, typename T2>
 inline void cppa_check_value_verbose_fun(T1 const& value1, T2 const& value2,
                                          char const* file_name,
                                          int line_number,
-                                         size_t& error_count) {
+                                         size_t& error_count)
+{
     if (cppa_check_value_fun(value1, value2, file_name,
-                             line_number, error_count)) {
+                             line_number, error_count))
+    {
          std::cout << "line " << line_number << " passed" << std::endl;
     }
 }
 
 #define CPPA_TEST(name)                                                        \
-struct cppa_test_scope {                                                       \
+struct cppa_test_scope                                                         \
+{                                                                              \
     size_t error_count;                                                        \
     cppa_test_scope() : error_count(0) { }                                     \
-    ~cppa_test_scope() {                                                       \
+    ~cppa_test_scope()                                                         \
+    {                                                                          \
         std::cout << error_count << " error(s) detected" << std::endl;         \
     }                                                                          \
 } cppa_ts;
@@ -67,12 +75,14 @@ struct cppa_test_scope {                                                       \
 #ifdef CPPA_VERBOSE_CHECK
 #define CPPA_IF_VERBOSE(line_of_code) line_of_code
 #define CPPA_CHECK(line_of_code)                                               \
-if (!(line_of_code)) {                                                         \
+if (!(line_of_code))                                                           \
+{                                                                              \
     std::cerr << "ERROR in file " << __FILE__ << " on line " << __LINE__       \
               << " => " << #line_of_code << std::endl;                         \
     ++cppa_ts.error_count;                                                     \
 }                                                                              \
-else {                                                                         \
+else                                                                           \
+{                                                                              \
     std::cout << "line " << __LINE__ << " passed" << std::endl;                \
 }                                                                              \
 ((void) 0)
@@ -83,7 +93,8 @@ else {                                                                         \
 #else
 #define CPPA_IF_VERBOSE(line_of_code) ((void) 0)
 #define CPPA_CHECK(line_of_code)                                               \
-if (!(line_of_code)) {                                                         \
+if (!(line_of_code))                                                           \
+{                                                                              \
     std::cerr << "ERROR in file " << __FILE__ << " on line " << __LINE__       \
               << " => " << #line_of_code << std::endl;                         \
     ++cppa_ts.error_count;                                                     \

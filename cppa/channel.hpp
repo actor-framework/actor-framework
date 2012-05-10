@@ -47,7 +47,8 @@ class any_tuple;
  * This interface describes an entity that can receive messages
  * and is implemented by {@link actor} and {@link group}.
  */
-class channel : public ref_counted {
+class channel : public ref_counted
+{
 
     friend class actor;
     friend class group;

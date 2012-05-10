@@ -65,15 +65,18 @@ namespace cppa {
 
 namespace {
 
-void read_from_socket(detail::native_socket_type sfd, void* buf, size_t buf_size) {
+void read_from_socket(detail::native_socket_type sfd, void* buf, size_t buf_size)
+{
     char* cbuf = reinterpret_cast<char*>(buf);
     size_t read_bytes = 0;
     size_t left = buf_size;
     int rres = 0;
     size_t urres = 0;
-    do {
+    do
+    {
         rres = ::recv(sfd, cbuf + read_bytes, left, 0);
-        if (rres <= 0) {
+        if (rres <= 0)
+        {
             throw std::ios_base::failure("cannot read from closed socket");
         }
         urres = static_cast<size_t>(rres);
@@ -85,33 +88,39 @@ void read_from_socket(detail::native_socket_type sfd, void* buf, size_t buf_size
 
 } // namespace <anonmyous>
 
-struct socket_guard {
+struct socket_guard
+{
 
     bool m_released;
     detail::native_socket_type m_socket;
 
  public:
 
-    socket_guard(detail::native_socket_type sfd) : m_released(false), m_socket(sfd) {
+    socket_guard(detail::native_socket_type sfd) : m_released(false), m_socket(sfd)
+    {
     }
 
-    ~socket_guard() {
+    ~socket_guard()
+    {
         if (!m_released) detail::closesocket(m_socket);
     }
 
-    void release() {
+    void release()
+    {
         m_released = true;
     }
 
 };
 
-void publish(actor_ptr& whom, std::uint16_t port) {
+void publish(actor_ptr& whom, std::uint16_t port)
+{
     if (!whom) return;
     detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
     detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == detail::invalid_socket) {
+    if (sockfd == detail::invalid_socket)
+    {
         throw network_error("could not create server socket");
     }
     // sguard closes the socket if an exception occurs
@@ -120,17 +129,21 @@ void publish(actor_ptr& whom, std::uint16_t port) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port);
-    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
+    {
         throw bind_failure(errno);
     }
-    if (listen(sockfd, 10) != 0) {
+    if (listen(sockfd, 10) != 0)
+    {
         throw network_error("listen() failed");
     }
     int flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags == -1) {
+    if (flags == -1)
+    {
         throw network_error("unable to get socket flags");
     }
-    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
         throw network_error("unable to set socket to nonblock");
     }
     flags = 1;
@@ -140,20 +153,24 @@ void publish(actor_ptr& whom, std::uint16_t port) {
     detail::post_office_publish(sockfd, whom);
 }
 
-void publish(actor_ptr&& whom, std::uint16_t port) {
+void publish(actor_ptr&& whom, std::uint16_t port)
+{
     publish(static_cast<actor_ptr&>(whom), port);
 }
 
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
+actor_ptr remote_actor(const char* host, std::uint16_t port)
+{
     detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     struct hostent* server;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == detail::invalid_socket) {
+    if (sockfd == detail::invalid_socket)
+    {
         throw network_error("socket creation failed");
     }
     server = gethostbyname(host);
-    if (!server) {
+    if (!server)
+    {
         std::string errstr = "no such host: ";
         errstr += host;
         throw network_error(std::move(errstr));
@@ -162,7 +179,8 @@ actor_ptr remote_actor(const char* host, std::uint16_t port) {
     serv_addr.sin_family = AF_INET;
     memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
     serv_addr.sin_port = htons(port);
-    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
+    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0)
+    {
         throw network_error("could not connect to host");
     }
     auto pinf = process_information::get();
@@ -179,10 +197,12 @@ actor_ptr remote_actor(const char* host, std::uint16_t port) {
     read_from_socket(sockfd, peer_node_id.data(), peer_node_id.size());
 
     flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags == -1) {
+    if (flags == -1)
+    {
         throw network_error("unable to get socket flags");
     }
-    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
         throw network_error("unable to set socket to nonblock");
     }
 

@@ -48,7 +48,8 @@ namespace cppa { namespace detail {
 
 class yielding_actor
         : public nestable_receive_actor<yielding_actor,
-                                        abstract_scheduled_actor> {
+                                        abstract_scheduled_actor>
+{
 
     typedef nestable_receive_actor<yielding_actor,
                                    abstract_scheduled_actor>
@@ -64,11 +65,13 @@ class yielding_actor
 
     void resume(util::fiber* from, scheduler::callback* callback); //override
 
-    inline void push_timeout() {
+    inline void push_timeout()
+    {
         ++m_active_timeout_id;
     }
 
-    inline void pop_timeout() {
+    inline void pop_timeout()
+    {
         --m_active_timeout_id;
     }
 

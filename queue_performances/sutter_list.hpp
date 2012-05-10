@@ -12,9 +12,11 @@
 
 // T is any type
 template<typename T>
-class sutter_list {
+class sutter_list
+{
 
-	struct node {
+	struct node
+	{
 		node(T* val = 0) : value(val), next(0) { }
 		T* value;
 		std::atomic<node*> next;
@@ -34,13 +36,16 @@ class sutter_list {
 
  public:
 
-	sutter_list() {
+	sutter_list()
+	{
 		m_first = m_last = new node;
 		m_producer_lock = false;
 	}
 
-	~sutter_list() {
-		while (m_first) {
+	~sutter_list()
+	{
+		while (m_first)
+		{
 			node* tmp = m_first;
 			m_first = tmp->next;
 			delete tmp;
@@ -48,10 +53,12 @@ class sutter_list {
 	}
 
 	// takes ownership of what
-	void push(T* what) {
+	void push(T* what)
+	{
 		node* tmp = new node(what);
 		// acquire exclusivity
-		while (m_producer_lock.exchange(true)) {
+		while (m_producer_lock.exchange(true))
+		{
 			std::this_thread::yield();
 		}
 		// publish & swing last forward
@@ -62,11 +69,13 @@ class sutter_list {
 	}
 
 	// returns nullptr on failure
-	T* try_pop() {
+	T* try_pop()
+	{
 		// no critical section; only one consumer allowed
 		node* first = m_first;
 		node* next = m_first->next;
-		if (next) {
+		if (next)
+		{
 			// queue is not empty
 			T* result = next->value; // take it out
 			next->value = 0;         // of the node
@@ -82,9 +91,11 @@ class sutter_list {
 	}
 
 	// polls the queue until an element was dequeued
-	T* pop() {
+	T* pop()
+	{
 		T* result = try_pop();
-		while (!result) {
+		while (!result)
+		{
 			std::this_thread::yield();
 			result = try_pop();
 		}

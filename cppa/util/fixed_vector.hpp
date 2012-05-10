@@ -48,7 +48,8 @@ namespace cppa { namespace util {
  * any non-arithmetic template parameter.
  */
 template<typename T, size_t MaxSize>
-class fixed_vector {
+class fixed_vector
+{
 
     //static_assert(std::is_arithmetic<T>::value || std::is_pointer<T>::value,
     //              "T must be an arithmetic or pointer type");
@@ -75,27 +76,32 @@ class fixed_vector {
 
     constexpr fixed_vector() : m_size(0) { }
 
-    fixed_vector(fixed_vector const& other) : m_size(other.m_size) {
+    fixed_vector(fixed_vector const& other) : m_size(other.m_size)
+    {
         std::copy(other.begin(), other.end(), begin());
     }
 
-    fixed_vector& operator=(fixed_vector const& other) {
+    fixed_vector& operator=(fixed_vector const& other)
+    {
         resize(other.size());
         std::copy(other.begin(), other.end(), begin());
         return *this;
     }
 
-    void resize(size_type s) {
+    void resize(size_type s)
+    {
         CPPA_REQUIRE(s <= MaxSize);
         m_size = s;
     }
 
-    fixed_vector(std::initializer_list<T> init) : m_size(init.size()) {
+    fixed_vector(std::initializer_list<T> init) : m_size(init.size())
+    {
         CPPA_REQUIRE(init.size() <= MaxSize);
         std::copy(init.begin(), init.end(), begin());
     }
 
-    void assign(size_type count, const_reference value) {
+    void assign(size_type count, const_reference value)
+    {
         resize(count);
         std::fill(begin(), end(), value);
     }
@@ -103,140 +109,172 @@ class fixed_vector {
     template<typename InputIterator>
     void assign(InputIterator first, InputIterator last,
                 // dummy SFINAE argument
-                typename std::iterator_traits<InputIterator>::pointer = 0) {
+                typename std::iterator_traits<InputIterator>::pointer = 0)
+    {
         resize(std::distance(first, last));
         std::copy(first, last, begin());
     }
 
-    inline size_type size() const {
+    inline size_type size() const
+    {
         return m_size;
     }
 
-    inline size_type max_size() const {
+    inline size_type max_size() const
+    {
         return MaxSize;
     }
 
-    inline size_type capacity() const {
+    inline size_type capacity() const
+    {
         return max_size() - size();
     }
 
-    inline void clear() {
+    inline void clear()
+    {
         m_size = 0;
     }
 
-    inline bool empty() const {
+    inline bool empty() const
+    {
         return m_size == 0;
     }
 
-    inline bool not_empty() const {
+    inline bool not_empty() const
+    {
         return m_size > 0;
     }
 
-    inline bool full() const {
+    inline bool full() const
+    {
         return m_size == MaxSize;
     }
 
-    inline void push_back(const_reference what) {
+    inline void push_back(const_reference what)
+    {
         CPPA_REQUIRE(!full());
         m_data[m_size++] = what;
     }
 
-    inline void pop_back() {
+    inline void pop_back()
+    {
         CPPA_REQUIRE(not_empty());
         --m_size;
     }
 
-    inline reference at(size_type pos) {
+    inline reference at(size_type pos)
+    {
         CPPA_REQUIRE(pos < m_size);
         return m_data[pos];
     }
 
-    inline const_reference at(size_type pos) const {
+    inline const_reference at(size_type pos) const
+    {
         CPPA_REQUIRE(pos < m_size);
         return m_data[pos];
     }
 
-    inline reference operator[](size_type pos) {
+    inline reference operator[](size_type pos)
+    {
         return at(pos);
     }
 
-    inline const_reference operator[](size_type pos) const {
+    inline const_reference operator[](size_type pos) const
+    {
         return at(pos);
     }
 
-    inline iterator begin() {
+    inline iterator begin()
+    {
         return m_data;
     }
 
-    inline const_iterator begin() const {
+    inline const_iterator begin() const
+    {
         return m_data;
     }
 
-    inline const_iterator cbegin() const {
+    inline const_iterator cbegin() const
+    {
         return begin();
     }
 
-    inline iterator end() {
+    inline iterator end()
+    {
         return begin() + m_size;
     }
 
-    inline const_iterator end() const {
+    inline const_iterator end() const
+    {
         return begin() + m_size;
     }
 
-    inline const_iterator cend() const {
+    inline const_iterator cend() const
+    {
         return end();
     }
 
-    inline reverse_iterator rbegin() {
+    inline reverse_iterator rbegin()
+    {
         return reverse_iterator(end());
     }
 
-    inline const_reverse_iterator rbegin() const {
+    inline const_reverse_iterator rbegin() const
+    {
         return reverse_iterator(end());
     }
 
-    inline const_reverse_iterator crbegin() const {
+    inline const_reverse_iterator crbegin() const
+    {
         return rbegin();
     }
 
-    inline reverse_iterator rend() {
+    inline reverse_iterator rend()
+    {
         return reverse_iterator(begin());
     }
 
-    inline const_reverse_iterator rend() const {
+    inline const_reverse_iterator rend() const
+    {
         return reverse_iterator(begin());
     }
 
-    inline const_reverse_iterator crend() const {
+    inline const_reverse_iterator crend() const
+    {
         return rend();
     }
 
-    inline reference front() {
+    inline reference front()
+    {
         CPPA_REQUIRE(!empty());
         return m_data[0];
     }
 
-    inline const_reference front() const {
+    inline const_reference front() const
+    {
         CPPA_REQUIRE(!empty());
         return m_data[0];
     }
 
-    inline reference back() {
+    inline reference back()
+    {
         CPPA_REQUIRE(!empty());
         return m_data[m_size - 1];
     }
 
-    inline const_reference back() const {
+    inline const_reference back() const
+    {
         CPPA_REQUIRE(!empty());
         return m_data[m_size - 1];
     }
 
-    inline T* data() {
+    inline T* data()
+    {
         return m_data;
     }
 
-    inline T const* data() const {
+    inline T const* data() const
+    {
         return m_data;
     }
 
@@ -246,16 +284,20 @@ class fixed_vector {
      *        <tt>size() + distance(first, last) > MaxSize</tt>
      */
     template<class InputIterator>
-    inline void insert(iterator pos, InputIterator first, InputIterator last) {
+    inline void insert(iterator pos, InputIterator first, InputIterator last)
+    {
         auto num_elements = std::distance(first, last);
-        if ((size() + num_elements) > MaxSize) {
+        if ((size() + num_elements) > MaxSize)
+        {
             throw std::length_error("fixed_vector::insert: too much elements");
         }
-        if (pos == end()) {
+        if (pos == end())
+        {
             resize(size() + num_elements);
             std::copy(first, last, pos);
         }
-        else {
+        else
+        {
             // move elements
             auto old_end = end();
             resize(size() + num_elements);

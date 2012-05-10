@@ -41,8 +41,10 @@
 namespace cppa {
 
 template<class From, class To>
-struct convertible {
-    To convert() const {
+struct convertible
+{
+    To convert() const
+    {
         return static_cast<From const*>(this)->do_convert();
     }
 };
@@ -53,11 +55,13 @@ struct convertible {
  */
 template<typename T>
 class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
-                      util::comparable<intrusive_ptr<T>> {
+                      util::comparable<intrusive_ptr<T>>
+{
 
     T* m_ptr;
 
-    inline void set_ptr(T* raw_ptr) {
+    inline void set_ptr(T* raw_ptr)
+    {
         m_ptr = raw_ptr;
         if (raw_ptr) raw_ptr->ref();
     }
@@ -74,25 +78,30 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
 
     // enables "actor_ptr s = self"
     template<typename From>
-    intrusive_ptr(convertible<From, T*> const& from) {
+    intrusive_ptr(convertible<From, T*> const& from)
+    {
         set_ptr(from.convert());
     }
 
     template<typename Y>
-    intrusive_ptr(intrusive_ptr<Y> const& other) {
+    intrusive_ptr(intrusive_ptr<Y> const& other)
+    {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
         set_ptr(const_cast<Y*>(other.get()));
     }
 
     template<typename Y>
-    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(other.take()) {
+    intrusive_ptr(intrusive_ptr<Y>&& other) : m_ptr(other.take())
+    {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
     }
 
-    ~intrusive_ptr() {
-        if (m_ptr && !m_ptr->deref()) {
+    ~intrusive_ptr()
+    {
+        if (m_ptr && !m_ptr->deref())
+        {
             delete m_ptr;
         }
     }
@@ -101,40 +110,47 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
 
     inline T const* get() const { return m_ptr; }
 
-    T* take() {
+    T* take()
+    {
         auto result = m_ptr;
         m_ptr = nullptr;
         return result;
     }
 
-    inline void swap(intrusive_ptr& other) {
+    inline void swap(intrusive_ptr& other)
+    {
         std::swap(m_ptr, other.m_ptr);
     }
 
-    void reset(T* new_value = nullptr) {
+    void reset(T* new_value = nullptr)
+    {
         if (m_ptr && !m_ptr->deref()) delete m_ptr;
         set_ptr(new_value);
     }
 
-    intrusive_ptr& operator=(T* ptr) {
+    intrusive_ptr& operator=(T* ptr)
+    {
         reset(ptr);
         return *this;
     }
 
-    intrusive_ptr& operator=(intrusive_ptr const& other) {
+    intrusive_ptr& operator=(intrusive_ptr const& other)
+    {
         intrusive_ptr tmp(other);
         swap(tmp);
         return *this;
     }
 
-    intrusive_ptr& operator=(intrusive_ptr&& other) {
+    intrusive_ptr& operator=(intrusive_ptr&& other)
+    {
         reset();
         swap(other);
         return *this;
     }
 
     template<typename Y>
-    intrusive_ptr& operator=(intrusive_ptr<Y> const& other) {
+    intrusive_ptr& operator=(intrusive_ptr<Y> const& other)
+    {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
         intrusive_ptr tmp(other);
@@ -143,13 +159,15 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
     }
 
     template<typename From>
-    intrusive_ptr& operator=(const convertible<From, T*>& from) {
+    intrusive_ptr& operator=(const convertible<From, T*>& from)
+    {
         reset(from.convert());
         return *this;
     }
 
     template<typename Y>
-    intrusive_ptr& operator=(intrusive_ptr<Y>&& other) {
+    intrusive_ptr& operator=(intrusive_ptr<Y>&& other)
+    {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
         reset();
@@ -167,43 +185,51 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T>, T const*>,
 
     inline explicit operator bool() const { return m_ptr != nullptr; }
 
-    inline ptrdiff_t compare(T const* ptr) const {
+    inline ptrdiff_t compare(T const* ptr) const
+    {
         return static_cast<ptrdiff_t>(get() - ptr);
     }
 
-    inline ptrdiff_t compare(intrusive_ptr const& other) const {
+    inline ptrdiff_t compare(intrusive_ptr const& other) const
+    {
         return compare(other.get());
     }
 
     template<class C>
-    intrusive_ptr<C> downcast() const {
+    intrusive_ptr<C> downcast() const
+    {
         return (m_ptr) ? dynamic_cast<C*>(const_cast<T*>(m_ptr)) : nullptr;
     }
 
     template<class C>
-    intrusive_ptr<C> upcast() const {
+    intrusive_ptr<C> upcast() const
+    {
         return (m_ptr) ? static_cast<C*>(const_cast<T*>(m_ptr)) : nullptr;
     }
 
 };
 
 template<typename X>
-inline bool operator==(intrusive_ptr<X> const& lhs, decltype(nullptr)) {
+inline bool operator==(intrusive_ptr<X> const& lhs, decltype(nullptr))
+{
     return lhs.get() == nullptr;
 }
 
 template<typename X>
-inline bool operator==(decltype(nullptr), intrusive_ptr<X> const& rhs) {
+inline bool operator==(decltype(nullptr), intrusive_ptr<X> const& rhs)
+{
     return rhs.get() == nullptr;
 }
 
 template<typename X, typename Y>
-bool operator==(intrusive_ptr<X> const& lhs, intrusive_ptr<Y> const& rhs) {
+bool operator==(intrusive_ptr<X> const& lhs, intrusive_ptr<Y> const& rhs)
+{
     return lhs.get() == rhs.get();
 }
 
 template<typename X, typename Y>
-inline bool operator!=(intrusive_ptr<X> const& lhs, intrusive_ptr<Y> const& rhs) {
+inline bool operator!=(intrusive_ptr<X> const& lhs, intrusive_ptr<Y> const& rhs)
+{
     return !(lhs == rhs);
 }
 

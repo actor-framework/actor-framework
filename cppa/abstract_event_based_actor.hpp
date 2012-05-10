@@ -47,7 +47,8 @@ namespace cppa {
 /**
  * @brief Base class for all event-based actor implementations.
  */
-class abstract_event_based_actor : public detail::abstract_scheduled_actor {
+class abstract_event_based_actor : public detail::abstract_scheduled_actor
+{
 
     typedef detail::abstract_scheduled_actor super;
 
@@ -73,7 +74,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
 
     std::vector<std::unique_ptr<detail::recursive_queue_node> > m_cache;
 
-    enum handle_message_result {
+    enum handle_message_result
+    {
         drop_msg,
         msg_handled,
         cache_msg
@@ -96,7 +98,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
      *        does not accidently uses receive() instead of become().
      */
     template<typename... Args>
-    void receive(Args&&...) {
+    void receive(Args&&...)
+    {
         static_assert((sizeof...(Args) + 1) < 1,
                       "You shall not use receive in an event-based actor. "
                       "Use become() instead.");
@@ -106,7 +109,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
      * @brief Provokes a compiler error.
      */
     template<typename... Args>
-    void receive_loop(Args&&... args) {
+    void receive_loop(Args&&... args)
+    {
         receive(std::forward<Args>(args)...);
     }
 
@@ -114,7 +118,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
      * @brief Provokes a compiler error.
      */
     template<typename... Args>
-    void receive_while(Args&&... args) {
+    void receive_while(Args&&... args)
+    {
         receive(std::forward<Args>(args)...);
     }
 
@@ -122,7 +127,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
      * @brief Provokes a compiler error.
      */
     template<typename... Args>
-    void do_receive(Args&&... args) {
+    void do_receive(Args&&... args)
+    {
         receive(std::forward<Args>(args)...);
     }
 

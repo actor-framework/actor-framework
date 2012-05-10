@@ -45,7 +45,8 @@ namespace cppa {
 /**
  * @brief A multicast group.
  */
-class group : public channel {
+class group : public channel
+{
 
     friend class detail::group_manager;
 
@@ -68,7 +69,8 @@ class group : public channel {
     friend class unsubscriber;
 
     // unsubscribes its channel from the group on destruction
-    class unsubscriber : public attachable {
+    class unsubscriber : public attachable
+    {
 
         friend class group;
 
@@ -93,7 +95,8 @@ class group : public channel {
     /**
      * @brief Module interface.
      */
-    class module {
+    class module
+    {
 
         std::string m_name;
 

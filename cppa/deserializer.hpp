@@ -45,7 +45,8 @@ class object;
  * @ingroup TypeSystem
  * @brief Technology-independent deserialization interface.
  */
-class deserializer {
+class deserializer
+{
 
     deserializer(deserializer const&) = delete;
     deserializer& operator=(deserializer const&) = delete;

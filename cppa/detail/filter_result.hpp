@@ -33,7 +33,8 @@
 
 namespace cppa { namespace detail {
 
-enum filter_result {
+enum filter_result
+{
     normal_exit_signal,
     expired_timeout_message,
     timeout_message,

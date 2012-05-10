@@ -43,13 +43,16 @@ namespace cppa {
 object from_string(std::string const& what);
 
 template<typename T>
-T from_string(const std::string &what) {
+T from_string(const std::string &what)
+{
     object o = from_string(what);
     std::type_info const& tinfo = typeid(T);
-    if (tinfo == *(o.type())) {
+    if (tinfo == *(o.type()))
+    {
         return std::move(get<T>(o));
     }
-    else {
+    else
+    {
         std::string error_msg = "expected type name ";
         error_msg += uniform_typeid(tinfo)->name();
         error_msg += " found ";

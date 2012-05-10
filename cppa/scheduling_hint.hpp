@@ -37,7 +37,8 @@ namespace cppa {
  * @brief Denotes whether a user wants an actor to take part in
  *        cooperative scheduling or not.
  */
-enum scheduling_hint {
+enum scheduling_hint
+{
 
     /**
      * @brief Indicates that an actor takes part in cooperative scheduling.

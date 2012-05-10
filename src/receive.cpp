@@ -32,16 +32,20 @@
 
 namespace cppa {
 
-void receive_loop(behavior& rules) {
+void receive_loop(behavior& rules)
+{
     local_actor* sptr = self;
-    for (;;) {
+    for (;;)
+    {
         sptr->dequeue(rules);
     }
 }
 
-void receive_loop(partial_function& rules) {
+void receive_loop(partial_function& rules)
+{
     local_actor* sptr = self;
-    for (;;) {
+    for (;;)
+    {
         sptr->dequeue(rules);
     }
 }

@@ -40,7 +40,8 @@ struct conjunction;
 
 template<typename Head, typename... Tail>
 struct conjunction<Head, Tail...>
-    : std::integral_constant<bool, Head::value && conjunction<Tail...>::value> {
+    : std::integral_constant<bool, Head::value && conjunction<Tail...>::value>
+{
 };
 
 template<>

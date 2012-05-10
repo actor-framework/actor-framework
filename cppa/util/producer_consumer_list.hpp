@@ -15,7 +15,8 @@ namespace cppa { namespace util {
  * For implementation details see http://drdobbs.com/cpp/211601363.
  */
 template<typename T>
-class producer_consumer_list {
+class producer_consumer_list
+{
 
  public:
 
@@ -27,13 +28,15 @@ class producer_consumer_list {
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
-    struct node {
+    struct node
+    {
         pointer value;
         std::atomic<node*> next;
         node(pointer val) : value(val), next(nullptr) { }
         static constexpr size_type payload_size =
                 sizeof(pointer) + sizeof(std::atomic<node*>);
-        static constexpr size_type pad_size = (CPPA_CACHE_LINE_SIZE * ((payload_size / CPPA_CACHE_LINE_SIZE) + 1)) - payload_size;
+        static constexpr size_type pad_size =
+                (CPPA_CACHE_LINE_SIZE * ((payload_size / CPPA_CACHE_LINE_SIZE) + 1)) - payload_size;
         // avoid false sharing
         char pad[pad_size];
 
@@ -56,9 +59,11 @@ class producer_consumer_list {
     std::atomic<bool> m_consumer_lock;
     std::atomic<bool> m_producer_lock;
 
-    void push_impl(node* tmp) {
+    void push_impl(node* tmp)
+    {
         // acquire exclusivity
-        while (m_producer_lock.exchange(true)) {
+        while (m_producer_lock.exchange(true))
+        {
             detail::this_thread::yield();
         }
         // publish & swing last forward
@@ -70,35 +75,42 @@ class producer_consumer_list {
 
  public:
 
-    producer_consumer_list() {
+    producer_consumer_list()
+    {
         m_first = m_last = new node(nullptr);
         m_consumer_lock = false;
         m_producer_lock = false;
     }
 
-    ~producer_consumer_list() {
-        while (m_first) {
+    ~producer_consumer_list()
+    {
+        while (m_first)
+        {
             node* tmp = m_first;
             m_first = tmp->next;
             delete tmp;
         }
     }
 
-    inline void push_back(pointer value) {
+    inline void push_back(pointer value)
+    {
         assert(value != nullptr);
         push_impl(new node(value));
     }
 
     // returns nullptr on failure
-    pointer try_pop() {
+    pointer try_pop()
+    {
         pointer result = nullptr;
-        while (m_consumer_lock.exchange(true)) {
+        while (m_consumer_lock.exchange(true))
+        {
             detail::this_thread::yield();
         }
         // only one consumer allowed
         node* first = m_first;
         node* next = m_first->next;
-        if (next) {
+        if (next)
+        {
             // queue is not empty
             result = next->value; // take it out of the node
             next->value = nullptr;
@@ -111,7 +123,8 @@ class producer_consumer_list {
             delete first;
             return result;
         }
-        else {
+        else
+        {
             // release exclusivity
             m_consumer_lock = false;
             return nullptr;

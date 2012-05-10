@@ -45,7 +45,8 @@
 namespace cppa { namespace detail {
 
 template<typename... ElementTypes>
-class tuple_vals : public abstract_tuple {
+class tuple_vals : public abstract_tuple
+{
 
     static_assert(sizeof...(ElementTypes) > 0,
                   "tuple_vals is not allowed to be empty");
@@ -63,58 +64,71 @@ class tuple_vals : public abstract_tuple {
     tuple_vals(tuple_vals const&) = default;
 
     tuple_vals(ElementTypes const&... args)
-        : super(tuple_impl_info::statically_typed), m_data(args...) {
+        : super(tuple_impl_info::statically_typed), m_data(args...)
+    {
     }
 
-    void const* native_data() const {
+    void const* native_data() const
+    {
         return &m_data;
     }
 
-    void* mutable_native_data() {
+    void* mutable_native_data()
+    {
         return &m_data;
     }
 
-    inline data_type& data() {
+    inline data_type& data()
+    {
         return m_data;
     }
 
-    inline data_type const& data() const {
+    inline data_type const& data() const
+    {
         return m_data;
     }
 
-    size_t size() const {
+    size_t size() const
+    {
         return sizeof...(ElementTypes);
     }
 
-    tuple_vals* copy() const {
+    tuple_vals* copy() const
+    {
         return new tuple_vals(*this);
     }
 
-    void const* at(size_t pos) const {
+    void const* at(size_t pos) const
+    {
         CPPA_REQUIRE(pos < size());
         return m_data.at(pos);
     }
 
-    void* mutable_at(size_t pos) {
+    void* mutable_at(size_t pos)
+    {
         CPPA_REQUIRE(pos < size());
         return const_cast<void*>(at(pos));
     }
 
-    uniform_type_info const* type_at(size_t pos) const {
+    uniform_type_info const* type_at(size_t pos) const
+    {
         CPPA_REQUIRE(pos < size());
         return m_types[pos];
     }
 
-    bool equals(abstract_tuple const& other) const {
+    bool equals(abstract_tuple const& other) const
+    {
         if (size() != other.size()) return false;
         tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);
-        if (o) {
+        if (o)
+        {
             return m_data == (o->m_data);
         }
         return abstract_tuple::equals(other);
     }
 
-    std::type_info const* type_token() const {
+    std::type_info const* type_token() const
+    {
         return detail::static_type_list<ElementTypes...>::list;
     }
 
@@ -133,7 +147,8 @@ template<typename TypeList>
 struct tuple_vals_from_type_list;
 
 template<typename... Types>
-struct tuple_vals_from_type_list< util::type_list<Types...> > {
+struct tuple_vals_from_type_list< util::type_list<Types...> >
+{
     typedef tuple_vals<Types...> type;
 };
 

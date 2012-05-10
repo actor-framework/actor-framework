@@ -63,7 +63,8 @@ class local_actor;
  * @brief A fixed-length copy-on-write cow_tuple.
  */
 template<typename... ElementTypes>
-class cow_tuple {
+class cow_tuple
+{
 
     static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
 
@@ -93,21 +94,24 @@ class cow_tuple {
     /**
      * @brief Initializes each element with its default constructor.
      */
-    cow_tuple() : m_vals(new data_type) {
+    cow_tuple() : m_vals(new data_type)
+    {
     }
 
     /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    cow_tuple(ElementTypes const&... args) : m_vals(new data_type(args...)) {
+    cow_tuple(ElementTypes const&... args) : m_vals(new data_type(args...))
+    {
     }
 
     /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    cow_tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...)) {
+    cow_tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...))
+    {
     }
 
     cow_tuple(cow_tuple&&) = default;
@@ -115,16 +119,19 @@ class cow_tuple {
     cow_tuple& operator=(cow_tuple&&) = default;
     cow_tuple& operator=(cow_tuple const&) = default;
 
-    inline static cow_tuple from(cow_ptr_type ptr) {
+    inline static cow_tuple from(cow_ptr_type ptr)
+    {
         return {priv_ctor{}, std::move(ptr)};
     }
 
     inline static cow_tuple from(cow_ptr_type ptr,
-                             util::fixed_vector<size_t, num_elements> const& mv) {
+                             util::fixed_vector<size_t, num_elements> const& mv)
+    {
         return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
     }
 
-    inline static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset) {
+    inline static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset)
+    {
         CPPA_REQUIRE(offset > 0);
         return {priv_ctor{}, decorated_type::create(std::move(ptr), offset)};
     }
@@ -132,21 +139,24 @@ class cow_tuple {
     /**
      * @brief Gets the size of this cow_tuple.
      */
-    inline size_t size() const {
+    inline size_t size() const
+    {
         return sizeof...(ElementTypes);
     }
 
     /**
      * @brief Gets a const pointer to the element at position @p p.
      */
-    inline void const* at(size_t p) const {
+    inline void const* at(size_t p) const
+    {
         return m_vals->at(p);
     }
 
     /**
      * @brief Gets a mutable pointer to the element at position @p p.
      */
-    inline void* mutable_at(size_t p) {
+    inline void* mutable_at(size_t p)
+    {
         return m_vals->mutable_at(p);
     }
 
@@ -154,11 +164,13 @@ class cow_tuple {
      * @brief Gets {@link uniform_type_info uniform type information}
      *        of the element at position @p p.
      */
-    inline uniform_type_info const* type_at(size_t p) const {
+    inline uniform_type_info const* type_at(size_t p) const
+    {
         return m_vals->type_at(p);
     }
 
-    inline cow_ptr<detail::abstract_tuple> const& vals() const {
+    inline cow_ptr<detail::abstract_tuple> const& vals() const
+    {
         return m_vals;
     }
 
@@ -168,7 +180,8 @@ template<typename TypeList>
 struct cow_tuple_from_type_list;
 
 template<typename... Types>
-struct cow_tuple_from_type_list< util::type_list<Types...> > {
+struct cow_tuple_from_type_list< util::type_list<Types...> >
+{
     typedef cow_tuple<Types...> type;
 };
 
@@ -210,20 +223,23 @@ cow_tuple<Args...> make_cow_tuple(Args&&... args);
 #else
 
 template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(cow_tuple<Types...> const& tup) {
+const typename util::at<N, Types...>::type& get(cow_tuple<Types...> const& tup)
+{
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type const*>(tup.at(N));
 }
 
 template<size_t N, typename... Types>
-typename util::at<N, Types...>::type& get_ref(cow_tuple<Types...>& tup) {
+typename util::at<N, Types...>::type& get_ref(cow_tuple<Types...>& tup)
+{
     typedef typename util::at<N, Types...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 
 template<typename... Args>
 cow_tuple<typename detail::strip_and_convert<Args>::type...>
-make_cow_tuple(Args&&... args) {
+make_cow_tuple(Args&&... args)
+{
     return {std::forward<Args>(args)...};
 }
 
@@ -238,7 +254,8 @@ make_cow_tuple(Args&&... args) {
  */
 template<typename... LhsTypes, typename... RhsTypes>
 inline bool operator==(cow_tuple<LhsTypes...> const& lhs,
-                       cow_tuple<RhsTypes...> const& rhs) {
+                       cow_tuple<RhsTypes...> const& rhs)
+{
     return util::compare_tuples(lhs, rhs);
 }
 
@@ -251,7 +268,8 @@ inline bool operator==(cow_tuple<LhsTypes...> const& lhs,
  */
 template<typename... LhsTypes, typename... RhsTypes>
 inline bool operator!=(cow_tuple<LhsTypes...> const& lhs,
-                       cow_tuple<RhsTypes...> const& rhs) {
+                       cow_tuple<RhsTypes...> const& rhs)
+{
     return !(lhs == rhs);
 }
 

@@ -34,15 +34,18 @@
 
 namespace cppa { namespace detail {
 
-void inc_actor_count() {
+void inc_actor_count()
+{
     singleton_manager::get_actor_registry()->inc_running();
 }
 
-void dec_actor_count() {
+void dec_actor_count()
+{
     singleton_manager::get_actor_registry()->dec_running();
 }
 
-void actor_count_wait_until(size_t value) {
+void actor_count_wait_until(size_t value)
+{
     singleton_manager::get_actor_registry()->await_running_count_equal(value);
 }
 

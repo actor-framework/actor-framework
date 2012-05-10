@@ -59,7 +59,8 @@
 
 namespace cppa {
 
-enum class wildcard_position {
+enum class wildcard_position
+{
     nil,
     trailing,
     leading,
@@ -68,7 +69,8 @@ enum class wildcard_position {
 };
 
 template<typename Types>
-constexpr wildcard_position get_wildcard_position() {
+constexpr wildcard_position get_wildcard_position()
+{
     return util::tl_exists<Types, is_anything>::value
            ? ((util::tl_count<Types, is_anything>::value == 1)
               ? (std::is_same<typename Types::head, anything>::value
@@ -80,32 +82,38 @@ constexpr wildcard_position get_wildcard_position() {
            : wildcard_position::nil;
 }
 
-struct value_matcher {
+struct value_matcher
+{
     const bool is_dummy;
     inline value_matcher(bool dummy_impl = false) : is_dummy(dummy_impl) { }
     virtual ~value_matcher();
     virtual bool operator()(any_tuple const&) const = 0;
 };
 
-struct dummy_matcher : value_matcher {
+struct dummy_matcher : value_matcher
+{
     inline dummy_matcher() : value_matcher(true) { }
     bool operator()(any_tuple const&) const;
 };
 
-struct cmp_helper {
+struct cmp_helper
+{
     size_t i;
     any_tuple const& tup;
     cmp_helper(any_tuple const& tp, size_t pos = 0) : i(pos), tup(tp) { }
     template<typename T>
-    inline bool operator()(T const& what) {
+    inline bool operator()(T const& what)
+    {
         return what == tup.get_as<T>(i++);
     }
     template<typename T>
-    inline bool operator()(std::unique_ptr<util::guard<T> > const& g) {
+    inline bool operator()(std::unique_ptr<util::guard<T> > const& g)
+    {
         return (*g)(tup.get_as<T>(i++));
     }
     template<typename T>
-    inline bool operator()(util::wrapped<T> const&) {
+    inline bool operator()(util::wrapped<T> const&)
+    {
         ++i;
         return true;
     }
@@ -117,7 +125,8 @@ class value_matcher_impl;
 template<typename... Ts, typename... Vs>
 class value_matcher_impl<wildcard_position::nil,
                          util::type_list<Ts...>,
-                         util::type_list<Vs...> > : public value_matcher {
+                         util::type_list<Vs...> > : public value_matcher
+{
 
     detail::tdata<Vs...> m_values;
 
@@ -126,7 +135,8 @@ class value_matcher_impl<wildcard_position::nil,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const {
+    bool operator()(any_tuple const& tup) const
+    {
         cmp_helper h{tup};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
     }
@@ -139,7 +149,8 @@ class value_matcher_impl<wildcard_position::trailing,
                          util::type_list<Vs...> >
         : public value_matcher_impl<wildcard_position::nil,
                                     util::type_list<Ts...>,
-                                    util::type_list<Vs...> > {
+                                    util::type_list<Vs...> >
+{
 
     typedef value_matcher_impl<wildcard_position::nil,
                                util::type_list<Ts...>,
@@ -156,7 +167,8 @@ class value_matcher_impl<wildcard_position::trailing,
 template<typename... Ts, typename... Vs>
 class value_matcher_impl<wildcard_position::leading,
                          util::type_list<Ts...>,
-                         util::type_list<Vs...> > : public value_matcher {
+                         util::type_list<Vs...> > : public value_matcher
+{
 
     detail::tdata<Vs...> m_values;
 
@@ -165,7 +177,8 @@ class value_matcher_impl<wildcard_position::leading,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const {
+    bool operator()(any_tuple const& tup) const
+    {
         cmp_helper h{tup, tup.size() - sizeof...(Ts)};
         return util::static_foreach<0, sizeof...(Vs)>::eval(m_values, h);
     }
@@ -175,7 +188,8 @@ class value_matcher_impl<wildcard_position::leading,
 template<typename... Ts, typename... Vs>
 class value_matcher_impl<wildcard_position::in_between,
                          util::type_list<Ts...>,
-                         util::type_list<Vs...> > : public value_matcher {
+                         util::type_list<Vs...> > : public value_matcher
+{
 
     detail::tdata<Vs...> m_values;
 
@@ -184,7 +198,8 @@ class value_matcher_impl<wildcard_position::in_between,
     template<typename... Args>
     value_matcher_impl(Args&&... args) : m_values(std::forward<Args>(args)...) { }
 
-    bool operator()(any_tuple const& tup) const {
+    bool operator()(any_tuple const& tup) const
+    {
         static constexpr size_t wcpos =
                 static_cast<size_t>(util::tl_find<util::type_list<Ts...>, anything>::value);
         static_assert(wcpos < sizeof...(Ts), "illegal wildcard position");
@@ -202,21 +217,24 @@ class value_matcher_impl<wildcard_position::in_between,
 template<typename... Ts, typename... Vs>
 class value_matcher_impl<wildcard_position::multiple,
                          util::type_list<Ts...>,
-                         util::type_list<Vs...> > : public value_matcher {
+                         util::type_list<Vs...> > : public value_matcher
+{
 
  public:
 
     template<typename... Args>
     value_matcher_impl(Args&&...) { }
 
-    bool operator()(any_tuple const&) const {
+    bool operator()(any_tuple const&) const
+    {
         throw std::runtime_error("not implemented yet, sorry");
     }
 
 };
 
 template<typename... Types>
-class pattern {
+class pattern
+{
 
     static_assert(sizeof...(Types) > 0, "empty pattern");
 
@@ -245,57 +263,69 @@ class pattern {
 
     typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 
-    inline const_iterator begin() const {
+    inline const_iterator begin() const
+    {
         return detail::static_types_array<Types...>::arr.begin();
     }
 
-    inline const_iterator end() const {
+    inline const_iterator end() const
+    {
         return detail::static_types_array<Types...>::arr.end();
     }
 
-    inline reverse_const_iterator rbegin() const {
+    inline reverse_const_iterator rbegin() const
+    {
         return reverse_const_iterator{end()};
     }
 
-    inline reverse_const_iterator rend() const {
+    inline reverse_const_iterator rend() const
+    {
         return reverse_const_iterator{begin()};
     }
 
     inline bool has_values() const { return m_vm->is_dummy == false; }
 
     // @warning does NOT check types
-    bool _matches_values(any_tuple const& tup) const {
+    bool _matches_values(any_tuple const& tup) const
+    {
         return (*m_vm)(tup);
     }
 
-    pattern() : m_vm(new dummy_matcher) {
+    pattern() : m_vm(new dummy_matcher)
+    {
     }
 
     template<typename... Args>
     pattern(head_type arg0, Args&&... args)
-        : m_vm(get_value_matcher(std::move(arg0), std::forward<Args>(args)...)) {
+        : m_vm(get_value_matcher(std::move(arg0), std::forward<Args>(args)...))
+    {
     }
 
     template<typename... Args>
     pattern(util::wrapped<head_type> const& arg0, Args&&... args)
-        : m_vm(get_value_matcher(arg0, std::forward<Args>(args)...)) {
+        : m_vm(get_value_matcher(arg0, std::forward<Args>(args)...))
+    {
     }
 
     template<typename... Args>
-    pattern(detail::tdata<Args...> const& data) {
+    pattern(detail::tdata<Args...> const& data)
+    {
         m_vm.reset(new value_matcher_impl<wildcard_pos, types, util::type_list<Args...> >{data});
     }
 
-    pattern(std::unique_ptr<value_matcher>&& vm) : m_vm(std::move(vm)) {
+    pattern(std::unique_ptr<value_matcher>&& vm) : m_vm(std::move(vm))
+    {
         if (!m_vm) m_vm.reset(new dummy_matcher);
     }
 
-    static inline value_matcher* get_value_matcher() {
+    static inline value_matcher* get_value_matcher()
+    {
         return nullptr;
     }
 
     template<typename Arg0, typename... Args>
-    static value_matcher* get_value_matcher(Arg0&& arg0, Args&&... args) {
+    static value_matcher* get_value_matcher(Arg0&& arg0, Args&&... args)
+    {
         using namespace util;
         typedef typename tl_filter_not<
                     type_list<typename detail::strip_and_convert<Arg0>::type,
@@ -304,7 +334,8 @@ class pattern {
                 >::type
                 arg_types;
         static_assert(arg_types::size <= size, "too many arguments");
-        if (tl_forall<arg_types, detail::is_boxed>::value) {
+        if (tl_forall<arg_types, detail::is_boxed>::value)
+        {
             return new dummy_matcher;
         }
         return new value_matcher_impl<wildcard_pos, types, arg_types>{std::forward<Arg0>(arg0), std::forward<Args>(args)...};
@@ -315,14 +346,16 @@ class pattern {
     typedef type_value_pair tvp_array[size];
 
     // a polymophic functor
-    struct init_helper {
+    struct init_helper
+    {
         size_t i;
         tvp_array& m_ptrs;
         detail::types_array<Types...>& m_arr;
         init_helper(tvp_array& ptrs, detail::types_array<Types...>& tarr)
             : i(0), m_ptrs(ptrs), m_arr(tarr) { }
         template<typename T>
-        inline void operator()(option<T> const& what) {
+        inline void operator()(option<T> const& what)
+        {
             m_ptrs[i].first = m_arr[i];
             m_ptrs[i].second = (what) ? &(*what) : nullptr;
             ++i;
@@ -337,7 +370,8 @@ template<typename TypeList>
 struct pattern_from_type_list;
 
 template<typename... Types>
-struct pattern_from_type_list<util::type_list<Types...>> {
+struct pattern_from_type_list<util::type_list<Types...>>
+{
     typedef pattern<Types...> type;
 };
 

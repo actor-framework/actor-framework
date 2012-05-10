@@ -39,34 +39,40 @@ using std::end;
 
 namespace { size_t s_iint_instances = 0; }
 
-struct iint {
+struct iint
+{
     iint* next;
     int value;
     inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
     ~iint() { --s_iint_instances; }
 };
 
-inline bool operator==(iint const& lhs, iint const& rhs) {
+inline bool operator==(iint const& lhs, iint const& rhs)
+{
     return lhs.value == rhs.value;
 }
 
-inline bool operator==(iint const& lhs, int rhs) {
+inline bool operator==(iint const& lhs, int rhs)
+{
     return lhs.value == rhs;
 }
 
-inline bool operator==(int lhs, iint const& rhs) {
+inline bool operator==(int lhs, iint const& rhs)
+{
     return lhs == rhs.value;
 }
 
 typedef cppa::intrusive::singly_linked_list<iint> iint_list;
 typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
-size_t test__intrusive_containers() {
+size_t test__intrusive_containers()
+{
     CPPA_TEST(test__intrusive_containers);
     iint_list ilist1;
     ilist1.push_back(new iint(1));
     ilist1.emplace_back(2);
-    ilist1.push_back(new iint(3)); {
+    ilist1.push_back(new iint(3));
+    {
         iint_list tmp;
         tmp.push_back(new iint(4));
         tmp.push_back(new iint(5));

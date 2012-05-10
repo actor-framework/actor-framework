@@ -33,34 +33,42 @@
 
 namespace cppa { namespace detail {
 
-empty_tuple::empty_tuple() : abstract_tuple(tuple_impl_info::statically_typed) {
+empty_tuple::empty_tuple() : abstract_tuple(tuple_impl_info::statically_typed)
+{
 }
 
-size_t empty_tuple::size() const {
+size_t empty_tuple::size() const
+{
     return 0;
 }
 
-void* empty_tuple::mutable_at(size_t) {
+void* empty_tuple::mutable_at(size_t)
+{
     throw std::range_error("empty_tuple::mutable_at()");
 }
 
-abstract_tuple* empty_tuple::copy() const {
+abstract_tuple* empty_tuple::copy() const
+{
     return new empty_tuple;
 }
 
-const void* empty_tuple::at(size_t) const {
+const void* empty_tuple::at(size_t) const
+{
     throw std::range_error("empty_tuple::at()");
 }
 
-const uniform_type_info* empty_tuple::type_at(size_t) const {
+const uniform_type_info* empty_tuple::type_at(size_t) const
+{
     throw std::range_error("empty_tuple::type_at()");
 }
 
-bool empty_tuple::equals(const abstract_tuple& other) const {
+bool empty_tuple::equals(const abstract_tuple& other) const
+{
     return other.size() == 0;
 }
 
-std::type_info const* empty_tuple::type_token() const {
+std::type_info const* empty_tuple::type_token() const
+{
     return &typeid(util::type_list<>);
 }
 

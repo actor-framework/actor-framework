@@ -50,7 +50,8 @@ auto moving_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> option<
         typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
-        >::type> {
+        >::type>
+{
     typedef typename pattern<T...>::filtered_types filtered_types;
     typedef typename cow_tuple_from_type_list<filtered_types>::type tuple_type;
     static constexpr auto impl =
@@ -68,7 +69,8 @@ auto moving_tuple_cast(any_tuple& tup)
         typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
                                          is_anything>::type
-        >::type> {
+        >::type>
+{
     typedef decltype(moving_tuple_cast<T...>(tup)) result_type;
     typedef typename result_type::type tuple_type;
     static constexpr auto impl =
@@ -78,7 +80,8 @@ auto moving_tuple_cast(any_tuple& tup)
 
 template<typename... T>
 auto moving_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
-    -> decltype(moving_tuple_cast<T...>(tup)) {
+    -> decltype(moving_tuple_cast<T...>(tup))
+{
     return moving_tuple_cast<T...>(tup);
 }
 
@@ -90,7 +93,8 @@ auto tuple_cast(any_tuple tup, pattern<T...> const& p)
      -> option<
           typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
-        >::type> {
+        >::type>
+{
     return moving_tuple_cast(tup, p);
 }
 
@@ -103,13 +107,15 @@ auto tuple_cast(any_tuple tup)
           typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
                                          is_anything>::type
-        >::type> {
+        >::type>
+{
     return moving_tuple_cast<T...>(tup);
 }
 
 template<typename... T>
 auto tuple_cast(any_tuple tup, util::type_list<T...> const&)
-    -> decltype(tuple_cast<T...>(tup)) {
+    -> decltype(tuple_cast<T...>(tup))
+{
     return moving_tuple_cast<T...>(tup);
 }
 
@@ -121,7 +127,8 @@ auto unsafe_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> option<
         typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
-        >::type> {
+        >::type>
+{
     typedef typename pattern<T...>::filtered_types filtered_types;
     typedef typename cow_tuple_from_type_list<filtered_types>::type tuple_type;
     static constexpr auto impl =
@@ -131,7 +138,8 @@ auto unsafe_tuple_cast(any_tuple& tup, pattern<T...> const& p)
 
 template<typename... T>
 auto unsafe_tuple_cast(any_tuple& tup, util::type_list<T...> const&)
-    -> decltype(tuple_cast<T...>(tup)) {
+    -> decltype(tuple_cast<T...>(tup))
+{
     return tuple_cast<T...>(tup);
 }
 
@@ -140,7 +148,8 @@ template<typename... T>
 auto forced_tuple_cast(any_tuple& tup, pattern<T...> const& p)
     -> typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
-       >::type {
+       >::type
+{
     typedef typename pattern<T...>::filtered_types filtered_types;
     typedef typename cow_tuple_from_type_list<filtered_types>::type tuple_type;
     static constexpr auto impl =

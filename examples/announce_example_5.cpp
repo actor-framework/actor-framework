@@ -21,14 +21,17 @@ using std::endl;
 using namespace cppa;
 
 // a node containing an integer and a vector of children
-struct tree_node {
+struct tree_node
+{
     std::uint32_t value;
     std::vector<tree_node> children;
 
-    tree_node(std::uint32_t v = 0) : value(v) {
+    tree_node(std::uint32_t v = 0) : value(v)
+    {
     }
 
-    tree_node& add_child(std::uint32_t v = 0) {
+    tree_node& add_child(std::uint32_t v = 0)
+    {
         children.push_back({ v });
         return *this;
     }
@@ -36,16 +39,20 @@ struct tree_node {
     tree_node(const tree_node&) = default;
 
     // recursively print this node and all of its children to stdout
-    void print() const {
+    void print() const
+    {
         // format is: value { children0, children1, ..., childrenN }
         // e.g., 10 { 20 { 21, 22 }, 30 }
         cout << value;
-        if (children.empty() == false) {
+        if (children.empty() == false)
+        {
             cout << " { ";
             auto begin = children.begin();
             auto end = children.end();
-            for (auto i = begin; i != end; ++i) {
-                if (i != begin) {
+            for (auto i = begin; i != end; ++i)
+            {
+                if (i != begin)
+                {
                     cout << ", ";
                 }
                 i->print();
@@ -57,11 +64,13 @@ struct tree_node {
 };
 
 // a very primitive tree implementation
-struct tree {
+struct tree
+{
     tree_node root;
 
     // print tree to stdout
-    void print() const {
+    void print() const
+    {
         cout << "tree::print: ";
         root.print();
         cout << endl;
@@ -70,11 +79,13 @@ struct tree {
 };
 
 // tree nodes are equals if values and all values of all children are equal
-bool operator==(const tree_node& lhs, const tree_node& rhs) {
+bool operator==(const tree_node& lhs, const tree_node& rhs)
+{
     return (lhs.value == rhs.value) && (lhs.children == rhs.children);
 }
 
-bool operator==(const tree& lhs, const tree& rhs) {
+bool operator==(const tree& lhs, const tree& rhs)
+{
     return lhs.root == rhs.root;
 }
 
@@ -83,11 +94,13 @@ bool operator==(const tree& lhs, const tree& rhs) {
 // - does have a default constructor
 // - does have a copy constructor
 // - does provide operator==
-class tree_type_info : public util::abstract_uniform_type_info<tree> {
+class tree_type_info : public util::abstract_uniform_type_info<tree>
+{
 
  protected:
 
-    void serialize(const void* ptr, serializer* sink) const {
+    void serialize(const void* ptr, serializer* sink) const
+    {
         // ptr is guaranteed to be a pointer of type tree
         auto tree_ptr = reinterpret_cast<const tree*>(ptr);
         // serialization always begins with begin_object(name())
@@ -99,12 +112,14 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
         sink->end_object();
     }
 
-    void deserialize(void* ptr, deserializer* source) const {
+    void deserialize(void* ptr, deserializer* source) const
+    {
         // seek_object() gets the uniform name of the next object in the
         // stream without modifying the deserializer
         std::string cname = source->seek_object();
         // this name has to be our type name
-        if (cname != name()) {
+        if (cname != name())
+        {
             throw std::logic_error("wrong type name found");
         }
         // ptr is guaranteed to be a pointer of type tree
@@ -119,22 +134,26 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
 
  private:
 
-    void serialize_node(const tree_node& node, serializer* sink) const {
+    void serialize_node(const tree_node& node, serializer* sink) const
+    {
         // value, ... children ...
         sink->write_value(node.value);
         sink->begin_sequence(node.children.size());
-        for (const tree_node& subnode : node.children) {
+        for (const tree_node& subnode : node.children)
+        {
             serialize_node(subnode, sink);
         }
         sink->end_sequence();
     }
 
-    void deserialize_node(tree_node& node, deserializer* source) const {
+    void deserialize_node(tree_node& node, deserializer* source) const
+    {
         // value, ... children ...
         auto value = get<std::uint32_t>(source->read_value(pt_uint32));
         node.value = value;
         auto num_children = source->begin_sequence();
-        for (size_t i = 0; i < num_children; ++i) {
+        for (size_t i = 0; i < num_children; ++i)
+        {
             node.add_child();
             deserialize_node(node.children.back(), source);
         }
@@ -143,7 +162,8 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
 
 };
 
-int main() {
+int main()
+{
     // the tree_type_info is owned by libcppa after this function call
     announce(typeid(tree), new tree_type_info);
 
@@ -180,9 +200,11 @@ int main() {
 
     // receive both messages
     int i = 0;
-    receive_for(i, 2) (
+    receive_for(i, 2)
+    (
         // ... and receive it
-        on<tree>() >> [](const tree& tmsg) {
+        on<tree>() >> [](const tree& tmsg)
+        {
             // prints the tree in its serialized format:
             // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
             cout << "to_string(self->last_dequeued()): "
@@ -192,7 +214,8 @@ int main() {
             // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
             tmsg.print();
         },
-        on<tree_vector>() >> [](const tree_vector& trees) {
+        on<tree_vector>() >> [](const tree_vector& trees)
+        {
             // prints "received 2 trees"
             cout << "received " << trees.size() << " trees" << endl;
             // prints:

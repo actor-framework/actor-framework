@@ -34,7 +34,8 @@ namespace cppa {
 
 value_matcher::~value_matcher() { }
 
-bool dummy_matcher::operator()(any_tuple const&) const {
+bool dummy_matcher::operator()(any_tuple const&) const
+{
     return true;
 }
 

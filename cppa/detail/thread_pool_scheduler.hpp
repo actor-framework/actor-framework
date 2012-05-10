@@ -39,7 +39,8 @@
 
 namespace cppa { namespace detail {
 
-class thread_pool_scheduler : public scheduler {
+class thread_pool_scheduler : public scheduler
+{
 
     typedef scheduler super;
 

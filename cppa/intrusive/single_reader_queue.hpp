@@ -46,7 +46,8 @@ namespace cppa { namespace intrusive {
  *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
 template<typename T>
-class single_reader_queue {
+class single_reader_queue
+{
 
     typedef detail::unique_lock<detail::mutex> lock_type;
 
@@ -58,7 +59,8 @@ class single_reader_queue {
     /**
      * @warning call only from the reader (owner)
      */
-    pointer pop() {
+    pointer pop()
+    {
         wait_for_data();
         return take_head();
     }
@@ -66,7 +68,8 @@ class single_reader_queue {
     /**
      * @warning call only from the reader (owner)
      */
-    pointer try_pop() {
+    pointer try_pop()
+    {
         return take_head();
     }
 
@@ -74,63 +77,79 @@ class single_reader_queue {
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    pointer try_pop(TimePoint const& abs_time) {
+    pointer try_pop(TimePoint const& abs_time)
+    {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
 
     // returns true if the queue was empty
-    bool _push_back(pointer new_element) {
+    bool _push_back(pointer new_element)
+    {
         pointer e = m_stack.load();
-        for (;;) {
+        for (;;)
+        {
             new_element->next = e;
-            if (m_stack.compare_exchange_weak(e, new_element)) {
+            if (m_stack.compare_exchange_weak(e, new_element))
+            {
                 return (e == nullptr);
             }
         }
     }
 
-    void push_back(pointer new_element) {
+    void push_back(pointer new_element)
+    {
         pointer e = m_stack.load();
-        for (;;) {
+        for (;;)
+        {
             new_element->next = e;
-            if (!e) {
+            if (!e)
+            {
                 lock_type guard(m_mtx);
-                if (m_stack.compare_exchange_weak(e, new_element)) {
+                if (m_stack.compare_exchange_weak(e, new_element))
+                {
                     m_cv.notify_one();
                     return;
                 }
             }
-            else {
-                if (m_stack.compare_exchange_weak(e, new_element)) {
+            else
+            {
+                if (m_stack.compare_exchange_weak(e, new_element))
+                {
                     return;
                 }
             }
         }
     }
 
-    inline bool can_fetch_more() const {
+    inline bool can_fetch_more() const
+    {
         return m_stack.load() != nullptr;
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    inline bool empty() const {
+    inline bool empty() const
+    {
         return m_head == nullptr && m_stack.load() == nullptr;
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    inline bool not_empty() const {
+    inline bool not_empty() const
+    {
         return !empty();
     }
 
-    single_reader_queue() : m_stack(nullptr), m_head(nullptr) {
+    single_reader_queue() : m_stack(nullptr), m_head(nullptr)
+    {
     }
 
-    ~single_reader_queue() {
-        // empty the stack (void) fetch_new_data();
+    ~single_reader_queue()
+    {
+        // empty the stack
+        (void) fetch_new_data();
     }
 
  private:
@@ -146,11 +165,15 @@ class single_reader_queue {
     detail::condition_variable m_cv;
 
     template<typename TimePoint>
-    bool timed_wait_for_data(TimePoint const& timeout) {
-        if (empty()) {
+    bool timed_wait_for_data(TimePoint const& timeout)
+    {
+        if (empty())
+        {
             lock_type guard(m_mtx);
-            while (m_stack.load() == nullptr) {
-                if (detail::wait_until(guard, m_cv, timeout) == false) {
+            while (m_stack.load() == nullptr)
+            {
+                if (detail::wait_until(guard, m_cv, timeout) == false)
+                {
                     return false;
                 }
             }
@@ -158,20 +181,26 @@ class single_reader_queue {
         return true;
     }
 
-    void wait_for_data() {
-        if (empty()) {
+    void wait_for_data()
+    {
+        if (empty())
+        {
             lock_type guard(m_mtx);
             while (!(m_stack.load())) m_cv.wait(guard);
         }
     }
 
     // atomically sets m_stack to nullptr and enqueues all elements to the cache
-    bool fetch_new_data() {
+    bool fetch_new_data()
+    {
         CPPA_REQUIRE(m_head == nullptr);
         pointer e = m_stack.load();
-        while (e) {
-            if (m_stack.compare_exchange_weak(e, 0)) {
-                while (e) {
+        while (e)
+        {
+            if (m_stack.compare_exchange_weak(e, 0))
+            {
+                while (e)
+                {
                     auto next = e->next;
                     e->next = m_head;
                     m_head = e;
@@ -185,8 +214,10 @@ class single_reader_queue {
         return false;
     }
 
-    pointer take_head() {
-        if (m_head != nullptr || fetch_new_data()) {
+    pointer take_head()
+    {
+        if (m_head != nullptr || fetch_new_data())
+        {
             auto result = m_head;
             m_head = m_head->next;
             return result;

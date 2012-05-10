@@ -45,7 +45,8 @@ namespace cppa {
  * @tparam Derived Subclass of fsm_actor.
  */
 template<class Derived>
-class fsm_actor : public event_based_actor {
+class fsm_actor : public event_based_actor
+{
 
  public:
 
@@ -53,7 +54,8 @@ class fsm_actor : public event_based_actor {
      * @brief Overrides abstract_event_based_actor::init() and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
-    void init() {
+    void init()
+    {
         become(&(static_cast<Derived*>(this)->init_state));
     }
 

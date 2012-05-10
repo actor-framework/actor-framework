@@ -41,19 +41,23 @@ namespace cppa { namespace detail {
 
 yielding_actor::yielding_actor(std::function<void()> fun)
     : m_fiber(&yielding_actor::run, this)
-    , m_behavior(fun) {
+    , m_behavior(fun)
+{
 }
 
-void yielding_actor::run(void* ptr_arg) {
+void yielding_actor::run(void* ptr_arg)
+{
     auto this_ptr = reinterpret_cast<yielding_actor*>(ptr_arg);
     CPPA_REQUIRE(static_cast<bool>(this_ptr->m_behavior));
     bool cleanup_called = false;
     try { this_ptr->m_behavior(); }
-    catch (actor_exited&) {
+    catch (actor_exited&)
+    {
         // cleanup already called by scheduled_actor::quit
         cleanup_called = true;
     }
-    catch (...) {
+    catch (...)
+    {
         this_ptr->cleanup(exit_reason::unhandled_exception);
         cleanup_called = true;
     }
@@ -63,27 +67,35 @@ void yielding_actor::run(void* ptr_arg) {
 }
 
 
-void yielding_actor::yield_until_not_empty() {
-    if (m_mailbox.can_fetch_more() == false) {
+void yielding_actor::yield_until_not_empty()
+{
+    if (m_mailbox.can_fetch_more() == false)
+    {
         m_state.store(abstract_scheduled_actor::about_to_block);
         CPPA_MEMORY_BARRIER();
         // make sure mailbox is 'empty'
-        if (m_mailbox.can_fetch_more() == false) {
+        if (m_mailbox.can_fetch_more() == false)
+        {
             m_state.store(abstract_scheduled_actor::ready);
             return;
         }
-        else {
+        else
+        {
             yield(yield_state::blocked);
         }
     }
 }
 
-void yielding_actor::dequeue(partial_function& fun) {
-    if (invoke_from_cache(fun) == false) {
+void yielding_actor::dequeue(partial_function& fun)
+{
+    if (invoke_from_cache(fun) == false)
+    {
         recursive_queue_node* e = nullptr;
-        do {
+        do
+        {
             e = m_mailbox.try_pop();
-            while (!e) {
+            while (!e)
+            {
                 yield_until_not_empty();
                 e = m_mailbox.try_pop();
             }
@@ -92,18 +104,23 @@ void yielding_actor::dequeue(partial_function& fun) {
     }
 }
 
-void yielding_actor::dequeue(behavior& bhvr) {
+void yielding_actor::dequeue(behavior& bhvr)
+{
     auto& fun = bhvr.get_partial_function();
-    if (bhvr.timeout().valid() == false) {
+    if (bhvr.timeout().valid() == false)
+    {
         // suppress virtual function call
         yielding_actor::dequeue(fun);
     }
-    else if (invoke_from_cache(bhvr) == false) {
+    else if (invoke_from_cache(bhvr) == false)
+    {
         request_timeout(bhvr.timeout());
         recursive_queue_node* e = nullptr;
-        do {
+        do
+        {
             e  = m_mailbox.try_pop();
-            while (!e) {
+            while (!e)
+            {
                 yield_until_not_empty();
                 e = m_mailbox.try_pop();
             }
@@ -112,34 +129,45 @@ void yielding_actor::dequeue(behavior& bhvr) {
     }
 }
 
-void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
+void yielding_actor::resume(util::fiber* from, scheduler::callback* callback)
+{
     self.set(this);
-    for (;;) {
-        switch (call(&m_fiber, from)) {
-            case yield_state::done: {
+    for (;;)
+    {
+        switch (call(&m_fiber, from))
+        {
+            case yield_state::done:
+            {
                 callback->exec_done();
                 return;
             }
-            case yield_state::ready: {
+            case yield_state::ready:
+            {
                 break;
             }
-            case yield_state::blocked: {
+            case yield_state::blocked:
+            {
                 switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                               abstract_scheduled_actor::blocked)) {
-                    case abstract_scheduled_actor::ready: {
+                                               abstract_scheduled_actor::blocked))
+                {
+                    case abstract_scheduled_actor::ready:
+                    {
                         break;
                     }
-                    case abstract_scheduled_actor::blocked: {
+                    case abstract_scheduled_actor::blocked:
+                    {
                         // wait until someone re-schedules that actor
                         return;
                     }
-                    default: {
+                    default:
+                    {
                         CPPA_CRITICAL("illegal yield result");
                     }
                 }
                 break;
             }
-            default: {
+            default:
+            {
                 // illegal state
                 exit(8);
             }

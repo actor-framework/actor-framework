@@ -58,7 +58,8 @@ namespace cppa {
  *              or {@link cppa::local_actor local_actor}.
  */
 template<class Base>
-class abstract_actor : public Base {
+class abstract_actor : public Base
+{
 
     typedef std::unique_ptr<attachable> attachable_ptr;
     typedef detail::lock_guard<detail::mutex> guard_type;
@@ -68,19 +69,23 @@ class abstract_actor : public Base {
     typedef detail::recursive_queue_node mailbox_element;
     typedef intrusive::single_reader_queue<mailbox_element> mailbox_type;
 
-    bool attach(attachable* ptr) { // override
-        if (ptr == nullptr) {
+    bool attach(attachable* ptr) // override
+    {
+        if (ptr == nullptr)
+        {
             guard_type guard(m_mtx);
             return m_exit_reason.load() == exit_reason::not_exited;
         }
-        else {
+        else
+        {
             attachable_ptr uptr(ptr);
             std::uint32_t reason;
             // lifetime scope of guard
             {
                 guard_type guard(m_mtx);
                 reason = m_exit_reason.load();
-                if (reason == exit_reason::not_exited) {
+                if (reason == exit_reason::not_exited)
+                {
                     m_attachables.push_back(std::move(uptr));
                     return true;
                 }
@@ -90,7 +95,8 @@ class abstract_actor : public Base {
         }
     }
 
-    void detach(attachable::token const& what) { // override
+    void detach(attachable::token const& what) // override
+    {
         attachable_ptr uptr;
         // lifetime scope of guard
         {
@@ -99,7 +105,8 @@ class abstract_actor : public Base {
             auto i = std::find_if(
                         m_attachables.begin(), end,
                         [&](attachable_ptr& p) { return p->matches(what); });
-            if (i != end) {
+            if (i != end)
+            {
                 uptr = std::move(*i);
                 m_attachables.erase(i);
             }
@@ -107,19 +114,24 @@ class abstract_actor : public Base {
         // uptr will be destroyed here, without locked mutex
     }
 
-    void link_to(intrusive_ptr<actor>& other) { // override
+    void link_to(intrusive_ptr<actor>& other) // override
+    {
         (void) link_to_impl(other);
     }
 
-    void unlink_from(intrusive_ptr<actor>& other) { // override
+    void unlink_from(intrusive_ptr<actor>& other) // override
+    {
         (void) unlink_from_impl(other);
     }
 
-    bool remove_backlink(intrusive_ptr<actor>& other) { // override
-        if (other && other != this) {
+    bool remove_backlink(intrusive_ptr<actor>& other) // override
+    {
+        if (other && other != this)
+        {
             guard_type guard(m_mtx);
             auto i = std::find(m_links.begin(), m_links.end(), other);
-            if (i != m_links.end()) {
+            if (i != m_links.end())
+            {
                 m_links.erase(i);
                 return true;
             }
@@ -127,21 +139,26 @@ class abstract_actor : public Base {
         return false;
     }
 
-    bool establish_backlink(intrusive_ptr<actor>& other) { // override
+    bool establish_backlink(intrusive_ptr<actor>& other) // override
+    {
         std::uint32_t reason = exit_reason::not_exited;
-        if (other && other != this) {
+        if (other && other != this)
+        {
             guard_type guard(m_mtx);
             reason = m_exit_reason.load();
-            if (reason == exit_reason::not_exited) {
+            if (reason == exit_reason::not_exited)
+            {
                 auto i = std::find(m_links.begin(), m_links.end(), other);
-                if (i == m_links.end()) {
+                if (i == m_links.end())
+                {
                     m_links.push_back(other);
                     return true;
                 }
             }
         }
         // send exit message without lock
-        if (reason != exit_reason::not_exited) {
+        if (reason != exit_reason::not_exited)
+        {
             other->enqueue(this, make_cow_tuple(atom("EXIT"), reason));
         }
         return false;
@@ -155,31 +172,39 @@ class abstract_actor : public Base {
 
     typedef detail::lock_guard<util::shared_spinlock> lock_type;
 
-    inline mailbox_element* fetch_node(actor* sender, any_tuple msg) {
+    inline mailbox_element* fetch_node(actor* sender, any_tuple msg)
+    {
         mailbox_element* result = nullptr;
-        { // lifetime scope of guard
+        // lifetime scope of guard
+        {
             lock_type guard{m_nodes_lock};
-            if (m_nodes.not_empty()) {
+            if (m_nodes.not_empty())
+            {
                 result = m_nodes.back();
                 m_nodes.pop_back();
             }
         }
-        if (result) {
+        if (result)
+        {
             result->next = nullptr;
             result->marked = false;
             result->sender = sender;
             result->msg = std::move(msg);
         }
-        else {
+        else
+        {
             result = new mailbox_element(sender, std::move(msg));
         }
         return result;
     }
 
-    inline void release_node(mailbox_element* node) {
-        { // lifetime scope of guard
+    inline void release_node(mailbox_element* node)
+    {
+        // lifetime scope of guard
+        {
             lock_type guard{m_nodes_lock};
-            if (m_nodes.full() == false) {
+            if (m_nodes.full() == false)
+            {
                 m_nodes.push_back(node);
                 return;
             }
@@ -189,20 +214,25 @@ class abstract_actor : public Base {
 
     template<typename... Args>
     abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
-                                   , m_exit_reason(exit_reason::not_exited) {
+                                   , m_exit_reason(exit_reason::not_exited)
+    {
         // pre-allocate some nodes
-        for (size_t i = 0; i < m_nodes.max_size() / 2; ++i) {
+        for (size_t i = 0; i < m_nodes.max_size() / 2; ++i)
+        {
             m_nodes.push_back(new mailbox_element);
         }
     }
 
-    void cleanup(std::uint32_t reason) {
+    void cleanup(std::uint32_t reason)
+    {
         if (reason == exit_reason::not_exited) return;
         decltype(m_links) mlinks;
         decltype(m_attachables) mattachables;
-        { // lifetime scope of guard
+        // lifetime scope of guard
+        {
             guard_type guard(m_mtx);
-            if (m_exit_reason != exit_reason::not_exited) {
+            if (m_exit_reason != exit_reason::not_exited)
+            {
                 // already exited
                 return;
             }
@@ -214,25 +244,31 @@ class abstract_actor : public Base {
             m_attachables.clear();
         }
         // send exit messages
-        for (actor_ptr& aptr : mlinks) {
+        for (actor_ptr& aptr : mlinks)
+        {
             aptr->enqueue(this, make_cow_tuple(atom("EXIT"), reason));
         }
-        for (attachable_ptr& ptr : mattachables) {
+        for (attachable_ptr& ptr : mattachables)
+        {
             ptr->actor_exited(reason);
         }
     }
 
-    bool link_to_impl(intrusive_ptr<actor>& other) {
-        if (other && other != this) {
+    bool link_to_impl(intrusive_ptr<actor>& other)
+    {
+        if (other && other != this)
+        {
             guard_type guard(m_mtx);
             // send exit message if already exited
-            if (exited()) {
+            if (exited())
+            {
                 other->enqueue(this, make_cow_tuple(atom("EXIT"),
                                                 m_exit_reason.load()));
             }
             // add link if not already linked to other
             // (checked by establish_backlink)
-            else if (other->establish_backlink(this)) {
+            else if (other->establish_backlink(this))
+            {
                 m_links.push_back(other);
                 return true;
             }
@@ -240,10 +276,12 @@ class abstract_actor : public Base {
         return false;
     }
 
-    bool unlink_from_impl(intrusive_ptr<actor>& other) {
+    bool unlink_from_impl(intrusive_ptr<actor>& other)
+    {
         guard_type guard(m_mtx);
         // remove_backlink returns true if this actor is linked to other
-        if (other && !exited() && other->remove_backlink(this)) {
+        if (other && !exited() && other->remove_backlink(this))
+        {
             auto i = std::find(m_links.begin(), m_links.end(), other);
             CPPA_REQUIRE(i != m_links.end());
             m_links.erase(i);
@@ -255,7 +293,8 @@ class abstract_actor : public Base {
  private:
 
     // @pre m_mtx.locked()
-    bool exited() const {
+    bool exited() const
+    {
         return m_exit_reason.load() != exit_reason::not_exited;
     }
 

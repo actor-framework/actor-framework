@@ -32,7 +32,8 @@
 
 namespace cppa {
 
-serializer::~serializer() {
+serializer::~serializer()
+{
 }
 
 } // namespace cppa

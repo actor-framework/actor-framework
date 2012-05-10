@@ -39,7 +39,8 @@ namespace cppa {
  * @brief Implements the deserializer interface with
  *        a binary serialization protocol.
  */
-class binary_deserializer : public deserializer {
+class binary_deserializer : public deserializer
+{
 
     char const* pos;
     char const* end;

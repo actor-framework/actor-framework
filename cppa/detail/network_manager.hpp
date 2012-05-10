@@ -35,7 +35,8 @@
 
 namespace cppa { namespace detail {
 
-class network_manager {
+class network_manager
+{
 
  public:
 

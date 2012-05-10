@@ -49,7 +49,8 @@ extern local_actor* self;
 class local_actor;
 
 // convertible<...> enables "actor_ptr this_actor = self;"
-class self_type : public convertible<self_type, actor*> {
+class self_type : public convertible<self_type, actor*>
+{
 
     static void set_impl(local_actor*);
 
@@ -67,27 +68,32 @@ class self_type : public convertible<self_type, actor*> {
     constexpr self_type() { }
 
     // "inherited" from convertible<...>
-    inline actor* do_convert() const {
+    inline actor* do_convert() const
+    {
         return convert_impl();
     }
 
     // allow "self" wherever an local_actor or actor pointer is expected
-    inline operator local_actor*() const {
+    inline operator local_actor*() const
+    {
         return get_impl();
     }
 
-    inline local_actor* operator->() const {
+    inline local_actor* operator->() const
+    {
         return get_impl();
     }
 
     // @pre get_unchecked() == nullptr
-    inline void set(local_actor* ptr) const {
+    inline void set(local_actor* ptr) const
+    {
         set_impl(ptr);
     }
 
     // @returns The current value without converting the calling context
     //          to an actor on-the-fly.
-    inline local_actor* unchecked() const {
+    inline local_actor* unchecked() const
+    {
         return get_unchecked_impl();
     }
 

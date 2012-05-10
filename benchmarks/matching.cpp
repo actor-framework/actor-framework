@@ -53,10 +53,12 @@ using std::int64_t;
 using namespace cppa;
 
 template<typename T>
-T rd(char const* cstr) {
+T rd(char const* cstr)
+{
     char* endptr = nullptr;
     T result = static_cast<T>(strtol(cstr, &endptr, 10));
-    if (endptr == nullptr || *endptr != '\0') {
+    if (endptr == nullptr || *endptr != '\0')
+    {
         std::string errstr;
         errstr += "\"";
         errstr += cstr;
@@ -66,12 +68,14 @@ T rd(char const* cstr) {
     return result;
 }
 
-void usage() {
+void usage()
+{
     cerr << "usage: matching (cow_tuple|object_array) {NUM_LOOPS}" << endl;
     exit(1);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     announce<list<int>>();
     if (argc != 3) usage();
     auto num_loops = rd<int64_t>(argv[2]);
@@ -82,7 +86,8 @@ int main(int argc, char** argv) {
     any_tuple m5;
     any_tuple m6;
 
-    if (strcmp(argv[1], "cow_tuple") == 0) {
+    if (strcmp(argv[1], "cow_tuple") == 0)
+    {
         m1 = make_cow_tuple(atom("msg1"), 0);
         m2 = make_cow_tuple(atom("msg2"), 0.0);
         m3 = make_cow_tuple(atom("msg3"), list<int>{0});
@@ -90,7 +95,8 @@ int main(int argc, char** argv) {
         m5 = make_cow_tuple(atom("msg5"), 0, 0, 0);
         m6 = make_cow_tuple(atom("msg6"), 0, 0.0, "0");
     }
-    else if (strcmp(argv[1], "object_array") == 0) {
+    else if (strcmp(argv[1], "object_array") == 0)
+    {
         auto m1o = new detail::object_array;
         m1o->push_back(object::from(atom("msg1")));
         m1o->push_back(object::from(0));
@@ -121,7 +127,8 @@ int main(int argc, char** argv) {
         m6o->push_back(object::from(std::string("0")));
         m6 = any_tuple{m6o};
     }
-    else {
+    else
+    {
         usage();
     }
     int64_t m1matched = 0;
@@ -130,7 +137,8 @@ int main(int argc, char** argv) {
     int64_t m4matched = 0;
     int64_t m5matched = 0;
     int64_t m6matched = 0;
-    auto part_fun = (
+    auto part_fun =
+    (
         on<atom("msg1"), int>() >> [&]() { ++m1matched; },
         on<atom("msg2"), double>() >> [&]() { ++m2matched; },
         on<atom("msg3"), list<int> >() >> [&]() { ++m3matched; },
@@ -138,7 +146,8 @@ int main(int argc, char** argv) {
         on<atom("msg5"), int, int, int>() >> [&]() { ++m5matched; },
         on<atom("msg6"), int, double, string>() >> [&]() { ++m6matched; }
     );
-    for (int64_t i = 0; i < num_loops; ++i) {
+    for (int64_t i = 0; i < num_loops; ++i)
+    {
         part_fun(m1);
         part_fun(m2);
         part_fun(m3);

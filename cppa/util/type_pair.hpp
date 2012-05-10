@@ -38,23 +38,27 @@ namespace cppa { namespace util {
  * @brief A pair of two types.
  */
 template<typename First, typename Second>
-struct type_pair {
+struct type_pair
+{
     typedef First first;
     typedef Second second;
 };
 
 template<typename First, typename Second>
-struct to_type_pair {
+struct to_type_pair
+{
     typedef type_pair<First, Second> type;
 };
 
 template<class What>
-struct is_type_pair {
+struct is_type_pair
+{
     static constexpr bool value = false;
 };
 
 template<typename First, typename Second>
-struct is_type_pair<type_pair<First, Second> > {
+struct is_type_pair<type_pair<First, Second> >
+{
     static constexpr bool value = true;
 };
 

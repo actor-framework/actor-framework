@@ -37,10 +37,12 @@
 
 namespace cppa {
 
-partial_function::partial_function(impl_ptr&& ptr) : m_impl(std::move(ptr)) {
+partial_function::partial_function(impl_ptr&& ptr) : m_impl(std::move(ptr))
+{
 }
 
-partial_function::impl::~impl() {
+partial_function::impl::~impl()
+{
 }
 
 } // namespace cppa

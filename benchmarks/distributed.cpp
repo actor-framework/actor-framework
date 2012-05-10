@@ -57,20 +57,24 @@ oss << to_string(self->parent_process()) << ": " << __PRETTY_FUNCTION__ << " ->"
 cout << oss.str(); \
 } ((void) 0)
 
-option<int> c_2i(char const* cstr) {
+option<int> c_2i(char const* cstr)
+{
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(cstr, &endptr, 10));
-    if (endptr == nullptr || *endptr != '\0') {
+    if (endptr == nullptr || *endptr != '\0')
+    {
        return {};
     }
     return result;
 }
 
-inline option<int> _2i(std::string const& str) {
+inline option<int> _2i(std::string const& str)
+{
     return c_2i(str.c_str());
 }
 
-void usage() {
+void usage()
+{
     cout << "Running in server mode:"                                    << endl
          << "  mode=server  "                                            << endl
          << "  --port=NUM       publishes an actor at port NUM"          << endl
@@ -98,7 +102,8 @@ void usage() {
 }
 
 template<class MatchExpr>
-class actor_template {
+class actor_template
+{
 
     MatchExpr m_expr;
 
@@ -106,10 +111,13 @@ class actor_template {
 
     actor_template(MatchExpr me) : m_expr(std::move(me)) { }
 
-    actor_ptr spawn() const {
-        struct impl : fsm_actor<impl> {
+    actor_ptr spawn() const
+    {
+        struct impl : fsm_actor<impl>
+        {
             behavior init_state;
-            impl(MatchExpr const& mx) : init_state(mx.as_partial_function()) {
+            impl(MatchExpr const& mx) : init_state(mx.as_partial_function())
+            {
             }
         };
         return cppa::spawn(new impl{m_expr});
@@ -117,31 +125,40 @@ class actor_template {
 
 };
 
-struct ping_actor : fsm_actor<ping_actor> {
+struct ping_actor : fsm_actor<ping_actor>
+{
 
     behavior init_state;
     actor_ptr parent;
 
-    ping_actor(actor_ptr parent_ptr) : parent(std::move(parent_ptr)) {
-        init_state = (
-            on(atom("kickoff"), arg_match) >> [=](actor_ptr pong, uint32_t value) {
+    ping_actor(actor_ptr parent_ptr) : parent(std::move(parent_ptr))
+    {
+        init_state =
+        (
+            on(atom("kickoff"), arg_match) >> [=](actor_ptr pong, uint32_t value)
+            {
                 send(pong, atom("ping"), value);
-                become (
-                    on<atom("pong"), uint32_t>().when(_x2 == uint32_t(0)) >> [=]() {
+                become
+                (
+                    on<atom("pong"), uint32_t>().when(_x2 == uint32_t(0)) >> [=]()
+                    {
                         send(parent, atom("done"));
                         become_void();
                     },
-                    on(atom("pong"), arg_match) >> [=](uint32_t value) {
+                    on(atom("pong"), arg_match) >> [=](uint32_t value)
+                    {
                         reply(atom("ping"), value - 1);
                     },
-                    others() >> [=]() {
+                    others() >> [=]()
+                    {
                         cout << "ping_actor: unexpected: "
                              << to_string(last_dequeued())
                              << endl;
                     }
                 );
             },
-            others() >> [=]() {
+            others() >> [=]()
+            {
                 cout << "ping_actor: unexpected: "
                      << to_string(last_dequeued())
                      << endl;
@@ -151,59 +168,75 @@ struct ping_actor : fsm_actor<ping_actor> {
 
 };
 
-struct server_actor : fsm_actor<server_actor> {
+struct server_actor : fsm_actor<server_actor>
+{
 
     typedef std::map<std::pair<string, uint16_t>, actor_ptr> pong_map;
 
     behavior init_state;
     pong_map m_pongs;
 
-    server_actor() {
+    server_actor()
+    {
         trap_exit(true);
-        init_state = (
-            on(atom("ping"), arg_match) >> [=](uint32_t value) {
+        init_state =
+        (
+            on(atom("ping"), arg_match) >> [=](uint32_t value)
+            {
                 reply(atom("pong"), value);
             },
-            on(atom("add_pong"), arg_match) >> [=](string const& host, uint16_t port) {
+            on(atom("add_pong"), arg_match) >> [=](string const& host, uint16_t port)
+            {
                 auto key = std::make_pair(host, port);
                 auto i = m_pongs.find(key);
-                if (i == m_pongs.end()) {
-                    try {
+                if (i == m_pongs.end())
+                {
+                    try
+                    {
                         auto p = remote_actor(host.c_str(), port);
                         link_to(p);
                         m_pongs.insert(std::make_pair(key, p));
                         reply(atom("ok"));
                     }
-                    catch (std::exception& e) {
+                    catch (std::exception& e)
+                    {
                         reply(atom("error"), e.what());
                     }
                 }
-                else {
+                else
+                {
                     reply(atom("ok"));
                 }
             },
-            on(atom("kickoff"), arg_match) >> [=](uint32_t num_pings) {
-                for (auto& kvp : m_pongs) {
+            on(atom("kickoff"), arg_match) >> [=](uint32_t num_pings)
+            {
+                for (auto& kvp : m_pongs)
+                {
                     auto ping = spawn(new ping_actor(last_sender()));
                     send(ping, atom("kickoff"), kvp.second, num_pings);
                 }
             },
-            on(atom("purge")) >> [=]() {
+            on(atom("purge")) >> [=]()
+            {
                 m_pongs.clear();
             },
-            on<atom("EXIT"), uint32_t>() >> [=]() {
+            on<atom("EXIT"), uint32_t>() >> [=]()
+            {
                 actor_ptr who = last_sender();
                 auto i = std::find_if(m_pongs.begin(), m_pongs.end(),
-                                      [&](pong_map::value_type const& kvp) {
+                                      [&](pong_map::value_type const& kvp)
+                {
                     return kvp.second == who;
                 });
                 if (i != m_pongs.end()) m_pongs.erase(i);
             },
-            on(atom("shutdown")) >> [=]() {
+            on(atom("shutdown")) >> [=]()
+            {
                 m_pongs.clear();
                 become_void();
             },
-            others() >> [=]() {
+            others() >> [=]()
+            {
                 cout << "unexpected: " << to_string(last_dequeued()) << endl;
             }
 
@@ -213,41 +246,53 @@ struct server_actor : fsm_actor<server_actor> {
 };
 
 template<typename... Args>
-auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
+auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))>
+{
     return {mexpr_concat(args...)};
 }
 
 template<typename Arg0>
-void usage(Arg0&& arg0) {
+void usage(Arg0&& arg0)
+{
     cout << std::forward<Arg0>(arg0) << endl << endl;
     usage();
 }
 
 template<typename Arg0, typename Arg1, typename... Args>
-void usage(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+void usage(Arg0&& arg0, Arg1&& arg1, Args&&... args)
+{
     cout << std::forward<Arg0>(arg0);
     usage(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 }
 
 template<typename Iterator>
-void server_mode(Iterator first, Iterator last) {
+void server_mode(Iterator first, Iterator last)
+{
     string port_prefix = "--port=";
     // extracts port from a key-value pair
-    auto kvp_port = [&](string const& str) -> option<int> {
-        if (std::equal(port_prefix.begin(), port_prefix.end(), str.begin())) {
+    auto kvp_port = [&](string const& str) -> option<int>
+    {
+        if (std::equal(port_prefix.begin(), port_prefix.end(), str.begin()))
+        {
             return c_2i(str.c_str() + port_prefix.size());
         }
         return {};
     };
-    match(std::vector<string>{first, last}) ( (on(kvp_port) || on("-p", _2i)) >> [](int port) {
-            if (port > 1024 && port < 65536) {
+    match(std::vector<string>{first, last})
+    (
+        (on(kvp_port) || on("-p", _2i)) >> [](int port)
+        {
+            if (port > 1024 && port < 65536)
+            {
                 publish(spawn(new server_actor), port);
             }
-            else {
+            else
+            {
                 usage("illegal port: ", port);
             }
         },
-        others() >> [=]() {
+        others() >> [=]()
+        {
             if (first != last) usage("illegal argument: ", *first);
             else usage();
         }
@@ -256,67 +301,87 @@ void server_mode(Iterator first, Iterator last) {
 }
 
 template<typename Iterator>
-void client_mode(Iterator first, Iterator last) {
+void client_mode(Iterator first, Iterator last)
+{
     if (first == last) usage("no server, no fun");
     std::uint32_t init_value = 0;
     std::vector<std::pair<string, uint16_t> > remotes;
     string pings_prefix = "--num_pings=";
-    auto num_msgs = [&](string const& str) -> option<int> {
-        if (std::equal(pings_prefix.begin(), pings_prefix.end(), str.begin())) {
+    auto num_msgs = [&](string const& str) -> option<int>
+    {
+        if (std::equal(pings_prefix.begin(), pings_prefix.end(), str.begin()))
+        {
             return c_2i(str.c_str() + pings_prefix.size());
         }
         return {};
     };
-    match_each(first, last, std::bind(split, std::placeholders::_1, ':')) (
-        on(val<string>, _2i) >> [&](string& host, int port) {
-            if (port <= 1024 || port >= 65536) {
+    match_each(first, last, std::bind(split, std::placeholders::_1, ':'))
+    (
+        on(val<string>, _2i) >> [&](string& host, int port)
+        {
+            if (port <= 1024 || port >= 65536)
+            {
                 throw std::invalid_argument("illegal port: " + std::to_string(port));
             }
             remotes.emplace_back(std::move(host), static_cast<uint16_t>(port));
         },
-        on(num_msgs) >> [&](int num) {
+        on(num_msgs) >> [&](int num)
+        {
             if (num > 0) init_value = static_cast<uint32_t>(num);
         }
     );
-    if (init_value == 0) {
+    if (init_value == 0)
+    {
         cout << "no non-zero, non-negative init value given" << endl;
         exit(1);
     }
-    if (remotes.size() < 2) {
+    if (remotes.size() < 2)
+    {
         cout << "less than two nodes given" << endl;
         exit(1);
     }
     std::vector<actor_ptr> remote_actors;
-    for (auto& r : remotes) {
+    for (auto& r : remotes)
+    {
         remote_actors.push_back(remote_actor(r.first.c_str(), r.second));
     }
     // setup phase
     //cout << "tell server nodes to connect to each other" << endl;
-    for (size_t i = 0; i < remotes.size(); ++i) {
-        for (size_t j = 0; j < remotes.size(); ++j) {
-            if (i != j) {
+    for (size_t i = 0; i < remotes.size(); ++i)
+    {
+        for (size_t j = 0; j < remotes.size(); ++j)
+        {
+            if (i != j)
+            {
                 auto& r = remotes[j];
                 send(remote_actors[i],
                      atom("add_pong"), r.first, r.second);
-                receive (
-                    on(atom("ok")) >> []() {
+                receive
+                (
+                    on(atom("ok")) >> []()
+                    {
                     },
-                    on(atom("error"), arg_match) >> [&](string const& str) {
+                    on(atom("error"), arg_match) >> [&](string const& str)
+                    {
                         cout << "error on node " << i << ": " << str << endl;
-                        for (auto& x : remote_actors) {
+                        for (auto& x : remote_actors)
+                        {
                             send(x, atom("purge"));
                         }
                         throw std::logic_error("");
                     },
-                    others() >> []() {
+                    others() >> []()
+                    {
                         cout << "expected {ok|error}, received: "
                              << to_string(self->last_dequeued())
                              << endl;
                         throw std::logic_error("");
                     },
-                    after(std::chrono::seconds(10)) >> [&]() {
+                    after(std::chrono::seconds(10)) >> [&]()
+                    {
                         cout << "remote didn't answer within 10sec." << endl;
-                        for (auto& x : remote_actors) {
+                        for (auto& x : remote_actors)
+                        {
                             send(x, atom("purge"));
                         }
                         throw std::logic_error("");
@@ -328,16 +393,20 @@ void client_mode(Iterator first, Iterator last) {
     // kickoff
     //cout << "setup done" << endl;
     //cout << "kickoff, init value = " << init_value << endl;
-    for (auto& r : remote_actors) {
+    for (auto& r : remote_actors)
+    {
         send(r, atom("kickoff"), init_value);
     }
     size_t i = 0;
     size_t num_pings = remote_actors.size() * (remote_actors.size() - 1);
-    receive_for(i, num_pings) (
-        on(atom("done")) >> []() {
+    receive_for(i, num_pings)
+    (
+        on(atom("done")) >> []()
+        {
             //cout << "...done..." << endl;
         },
-        others() >> []() {
+        others() >> []()
+        {
             cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
             throw std::logic_error("");
         }
@@ -346,56 +415,73 @@ void client_mode(Iterator first, Iterator last) {
 }
 
 template<typename Iterator>
-void shutdown_mode(Iterator first, Iterator last) {
+void shutdown_mode(Iterator first, Iterator last)
+{
     std::vector<std::pair<string, uint16_t> > remotes;
-    match_each(first, last, std::bind(split, std::placeholders::_1, ':')) (
-        on(val<string>, _2i) >> [&](string& host, int port) {
-            if (port <= 1024 || port >= 65536) {
+    match_each(first, last, std::bind(split, std::placeholders::_1, ':'))
+    (
+        on(val<string>, _2i) >> [&](string& host, int port)
+        {
+            if (port <= 1024 || port >= 65536)
+            {
                 throw std::invalid_argument("illegal port: " + std::to_string(port));
             }
             remotes.emplace_back(std::move(host), static_cast<uint16_t>(port));
         }
     );
-    for (auto& r : remotes) {
-        try {
+    for (auto& r : remotes)
+    {
+        try
+        {
             actor_ptr x = remote_actor(r.first.c_str(), r.second);
             monitor(x);
             send(x, atom("shutdown"));
-            receive (
-                on(atom("DOWN"), x, val<std::uint32_t>) >> []() {
+            receive
+            (
+                on(atom("DOWN"), x, val<std::uint32_t>) >> []()
+                {
                     // ok, done
                 },
-                after(std::chrono::seconds(10)) >> [&]() {
+                after(std::chrono::seconds(10)) >> [&]()
+                {
                     cout << r.first << ":" << r.second << " didn't shut down "
                          << "within 10s"
                          << endl;
                 }
             );
         }
-        catch (...) {
+        catch (...)
+        {
         }
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     if (argc < 2) usage();
     auto first = argv + 1;
     auto last = argv + argc;
-    match(*first) (
-        on<string>().when(_x1.in({"-h", "--help"})) >> []() {
+    match(*first)
+    (
+        on<string>().when(_x1.in({"-h", "--help"})) >> []()
+        {
             usage();
         },
-        on("mode=server") >> [=]() {
+        on("mode=server") >> [=]()
+        {
             server_mode(first + 1, last);
         },
-        on("mode=benchmark") >> [=]() {
+        on("mode=benchmark") >> [=]()
+        {
             client_mode(first + 1, last);
             await_all_others_done();
         },
-        on("mode=shutdown") >> [=]() {
+        on("mode=shutdown") >> [=]()
+        {
             shutdown_mode(first + 1, last);
         },
-        others() >> [=]() {
+        others() >> [=]()
+        {
             usage("unknown argument: ", *first);
         }
     );

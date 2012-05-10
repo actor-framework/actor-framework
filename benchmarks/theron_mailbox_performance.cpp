@@ -18,39 +18,47 @@ using namespace Theron;
 
 int64_t t_max = 0;
 
-struct receiver : Actor {
+struct receiver : Actor
+{
 
     int64_t m_num;
 
-    void handler(int64_t const&, const Address from) {
+    void handler(int64_t const&, const Address from)
+    {
         if (++m_num == t_max)
             Send(t_max, from);
     }
 
-    receiver() : m_num(0) {
+    receiver() : m_num(0)
+    {
         RegisterHandler(this, &receiver::handler);
     }
 
 };
 
-void send_sender(Framework& f, ActorRef ref, Address waiter, int64_t num) {
+void send_sender(Framework& f, ActorRef ref, Address waiter, int64_t num)
+{
     auto addr = ref.GetAddress();
     int64_t msg;
     for (int64_t i = 0; i < num; ++i) f.Send(msg, waiter, addr);
 }
 
-void push_sender(Framework& f, ActorRef ref, Address waiter, int64_t num) {
+void push_sender(Framework& f, ActorRef ref, Address waiter, int64_t num)
+{
     int64_t msg;
     for (int64_t i = 0; i < num; ++i) ref.Push(msg, waiter);
 }
 
-void usage() {
+void usage()
+{
     cout << "usage ('push'|'send') (num_threads) (num_messages)" << endl;
     exit(1);
 }
 
-int main(int argc, char** argv) {
-    if (argc != 4) {
+int main(int argc, char** argv)
+{
+    if (argc != 4)
+    {
         usage();
     }
     enum { invalid_impl, push_impl, send_impl } impl = invalid_impl;
@@ -66,7 +74,8 @@ int main(int argc, char** argv) {
     ActorRef aref(framework.CreateActor<receiver>());
     std::list<std::thread> threads;
     auto impl_fun = (impl == push_impl) ? send_sender : push_sender;
-    for (int64_t i = 0; i < num_sender; ++i) {
+    for (int64_t i = 0; i < num_sender; ++i)
+    {
         threads.push_back(std::thread(impl_fun, std::ref(framework), aref, receiverAddr, num_msgs));
     }
     r.Wait();

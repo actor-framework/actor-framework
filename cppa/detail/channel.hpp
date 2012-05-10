@@ -38,7 +38,8 @@ namespace cppa { class message; }
 namespace cppa { namespace detail {
 
 // public part of the actor interface
-struct channel : ref_counted {
+struct channel : ref_counted
+{
 	virtual void enqueue_msg(message const& msg) = 0;
 };
 

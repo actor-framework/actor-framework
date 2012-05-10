@@ -37,25 +37,30 @@ namespace cppa { namespace util {
  * @brief Similar to <tt>std::lock_guard</tt> but performs shared locking.
  */
 template<typename SharedLockable>
-class shared_lock_guard {
+class shared_lock_guard
+{
 
     SharedLockable* m_lockable;
 
  public:
 
-    explicit shared_lock_guard(SharedLockable& lockable) : m_lockable(&lockable) {
+    explicit shared_lock_guard(SharedLockable& lockable) : m_lockable(&lockable)
+    {
         m_lockable->lock_shared();
     }
 
-    ~shared_lock_guard() {
+    ~shared_lock_guard()
+    {
         if (m_lockable) m_lockable->unlock_shared();
     }
 
-    bool owns_lock() const {
+    bool owns_lock() const
+    {
         return m_lockable != nullptr;
     }
 
-    SharedLockable* release() {
+    SharedLockable* release()
+    {
         auto result = m_lockable;
         m_lockable = nullptr;
         return result;

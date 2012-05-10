@@ -42,7 +42,8 @@ struct element_at;
  * @brief Returns the n-th template parameter of @p C.
  */
 template<size_t N, template<typename...> class C, typename... Tn>
-struct element_at<N, C<Tn...>> : at<N, Tn...> {
+struct element_at<N, C<Tn...>> : at<N, Tn...>
+{
 };
 
 } } // namespace cppa::util

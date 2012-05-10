@@ -32,25 +32,31 @@
 
 namespace cppa {
 
-event_based_actor::event_based_actor() {
+event_based_actor::event_based_actor()
+{
     m_loop_stack.reserve(2);
 }
 
-void event_based_actor::become_void() {
+void event_based_actor::become_void()
+{
     cleanup(exit_reason::normal);
     m_loop_stack.clear();
 }
 
-void event_based_actor::quit(std::uint32_t reason) {
-    if (reason == exit_reason::normal) {
+void event_based_actor::quit(std::uint32_t reason)
+{
+    if (reason == exit_reason::normal)
+    {
         become_void();
     }
-    else {
+    else
+    {
         abstract_scheduled_actor::quit(reason);
     }
 }
 
-void event_based_actor::do_become(behavior* bhvr, bool has_ownership) {
+void event_based_actor::do_become(behavior* bhvr, bool has_ownership)
+{
     reset_timeout();
     request_timeout(bhvr->timeout());
     stack_element new_element{bhvr};
@@ -58,10 +64,12 @@ void event_based_actor::do_become(behavior* bhvr, bool has_ownership) {
     // keep always the latest element in the stack to prevent subtle errors,
     // e.g., the addresses of all variables in a lambda expression calling
     // become() suddenly are invalid if we would pop the behavior!
-    if (m_loop_stack.size() < 2) {
+    if (m_loop_stack.size() < 2)
+    {
         m_loop_stack.push_back(std::move(new_element));
     }
-    else {
+    else
+    {
         m_loop_stack[0] = std::move(m_loop_stack[1]);
         m_loop_stack[1] = std::move(new_element);
     }

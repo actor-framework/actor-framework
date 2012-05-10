@@ -54,7 +54,8 @@ using std::endl;
 namespace {
 
 void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
-               std::function<void()> what) {
+               std::function<void()> what)
+{
     cppa::self.set(m_self.get());
     try { what(); }
     catch (...) { }
@@ -63,7 +64,8 @@ void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
 }
 
 void run_hidden_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
-                      std::function<void()> what) {
+                      std::function<void()> what)
+{
     cppa::self.set(m_self.get());
     try { what(); }
     catch (...) { }
@@ -74,11 +76,13 @@ void run_hidden_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
 
 namespace cppa { namespace detail {
 
-thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx) {
+thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx)
+{
     return thread{run_hidden_actor, ctx, std::move(what)};
 }
 
-actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
+actor_ptr mock_scheduler::spawn_impl(std::function<void()> what)
+{
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<local_actor> ctx{new detail::converted_thread_context};
@@ -86,17 +90,20 @@ actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
     return std::move(ctx);
 }
 
-actor_ptr mock_scheduler::spawn(scheduled_actor*) {
+actor_ptr mock_scheduler::spawn(scheduled_actor*)
+{
     cerr << "mock_scheduler::spawn(scheduled_actor*)" << endl;
     abort();
     return nullptr;
 }
 
-actor_ptr mock_scheduler::spawn(std::function<void()> what, scheduling_hint) {
+actor_ptr mock_scheduler::spawn(std::function<void()> what, scheduling_hint)
+{
     return spawn_impl(what);
 }
 
-void mock_scheduler::enqueue(scheduled_actor*) {
+void mock_scheduler::enqueue(scheduled_actor*)
+{
     cerr << "mock_scheduler::enqueue(scheduled_actor)" << endl;
     abort();
 }

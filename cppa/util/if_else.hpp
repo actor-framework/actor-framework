@@ -37,12 +37,14 @@ namespace cppa { namespace util {
 
 // if (IfStmt == true) type = T; else type = Else::type;
 template<bool IfStmt, typename T, class Else>
-struct if_else_c {
+struct if_else_c
+{
     typedef T type;
 };
 
 template<typename T, class Else>
-struct if_else_c<false, T, Else> {
+struct if_else_c<false, T, Else>
+{
     typedef typename Else::type type;
 };
 

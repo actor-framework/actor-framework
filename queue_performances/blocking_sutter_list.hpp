@@ -12,9 +12,11 @@
 
 // T is any type
 template<typename T>
-class blocking_sutter_list {
+class blocking_sutter_list
+{
 
-    struct node {
+    struct node
+    {
         node(T* val = 0) : value(val), next(0) { }
         T* value;
         std::atomic<node*> next;
@@ -41,13 +43,16 @@ class blocking_sutter_list {
 
  public:
 
-    blocking_sutter_list() {
+    blocking_sutter_list()
+    {
         m_first = m_last = new node;
         m_producer_lock = false;
     }
 
-    ~blocking_sutter_list() {
-        while (m_first) {
+    ~blocking_sutter_list()
+    {
+        while (m_first)
+        {
             node* tmp = m_first;
             m_first = tmp->next;
             delete tmp;
@@ -55,11 +60,13 @@ class blocking_sutter_list {
     }
 
     // takes ownership of what
-    void push(T* what) {
+    void push(T* what)
+    {
         bool consumer_might_sleep = 0;
         node* tmp = new node(what);
         // acquire exclusivity
-        while (m_producer_lock.exchange(true)) {
+        while (m_producer_lock.exchange(true))
+        {
             std::this_thread::yield();
         }
         // do we have to wakeup a sleeping consumer?
@@ -72,19 +79,23 @@ class blocking_sutter_list {
         // release exclusivity
         m_producer_lock = false;
         // wakeup consumer if needed
-        if (consumer_might_sleep) {
+        if (consumer_might_sleep)
+        {
             lock_type lock(m_mtx);
             m_cv.notify_one();
         }
     }
 
     // polls the queue until an element was dequeued
-    T* pop() {
+    T* pop()
+    {
         node* first = m_first;
         node* next = m_first->next;
-        if (!next) {
+        if (!next)
+        {
             lock_type lock(m_mtx);
-            while (!(next = m_first->next)) {
+            while (!(next = m_first->next))
+            {
                 m_cv.wait(lock);
             }
         }

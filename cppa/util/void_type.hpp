@@ -36,7 +36,8 @@ namespace cppa { namespace util {
 // forward declaration
 template<typename... Types> struct type_list;
 
-struct void_type {
+struct void_type
+{
     typedef void_type head;
     typedef type_list<> tail;
 

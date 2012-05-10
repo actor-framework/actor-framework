@@ -71,7 +71,8 @@ T& get_ref(primitive_variant& pv);
  * @ingroup TypeSystem
  * @brief An union container for primitive data types.
  */
-class primitive_variant {
+class primitive_variant
+{
 
     friend bool operator==(primitive_variant const& lhs,
                            primitive_variant const& rhs);
@@ -84,7 +85,8 @@ class primitive_variant {
 
     primitive_type m_ptype;
 
-    union {
+    union
+    {
         std::int8_t i8;
         std::int16_t i16;
         std::int32_t i32;
@@ -120,17 +122,20 @@ class primitive_variant {
     // get(...) const overload
     template<primitive_type PT>
     const typename detail::ptype_to_type<PT>::type&
-    get(util::pt_token<PT> token) const {
+    get(util::pt_token<PT> token) const
+    {
         return const_cast<primitive_variant*>(this)->get(token);
     }
 
     template<class Self, typename Fun>
-    struct applier {
+    struct applier
+    {
         Self* m_parent;
         Fun& m_f;
         applier(Self* parent, Fun& f) : m_parent(parent), m_f(f) { }
         template<primitive_type FT>
-        inline void operator()(util::pt_token<FT> token) {
+        inline void operator()(util::pt_token<FT> token)
+        {
             m_f(m_parent->get(token));
         }
     };
@@ -138,12 +143,14 @@ class primitive_variant {
     void destroy();
 
     template<primitive_type PT>
-    void type_check() const {
+    void type_check() const
+    {
         if (m_ptype != PT) throw std::logic_error("type check failed");
     }
 
     template<primitive_type PT>
-    typename detail::ptype_to_type<PT>::type& get_as() {
+    typename detail::ptype_to_type<PT>::type& get_as()
+    {
         static_assert(PT != pt_null, "PT == pt_null");
         type_check<PT>();
         util::pt_token<PT> token;
@@ -151,7 +158,8 @@ class primitive_variant {
     }
 
     template<primitive_type PT>
-    const typename detail::ptype_to_type<PT>::type& get_as() const {
+    const typename detail::ptype_to_type<PT>::type& get_as() const
+    {
         static_assert(PT != pt_null, "PT == pt_null");
         type_check<PT>();
         util::pt_token<PT> token;
@@ -161,12 +169,14 @@ class primitive_variant {
  public:
 
     template<typename Fun>
-    void apply(Fun&& f) {
+    void apply(Fun&& f)
+    {
         util::pt_dispatch(m_ptype, applier<primitive_variant, Fun>(this, f));
     }
 
     template<typename Fun>
-    void apply(Fun&& f) const {
+    void apply(Fun&& f) const
+    {
         util::pt_dispatch(m_ptype,
                           applier<const primitive_variant, Fun>(this, f));
     }
@@ -183,7 +193,8 @@ class primitive_variant {
      * @pre @p value does have a primitive type.
      */
     template<typename V>
-    primitive_variant(V&& value) : m_ptype(pt_null) {
+    primitive_variant(V&& value) : m_ptype(pt_null)
+    {
         static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
         static_assert(ptype != pt_null, "V is not a primitive type");
         detail::ptv_set<ptype>(m_ptype,
@@ -217,14 +228,17 @@ class primitive_variant {
      * @returns <tt>*this</tt>.
      */
     template<typename V>
-    primitive_variant& operator=(V&& value) {
+    primitive_variant& operator=(V&& value)
+    {
         static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
         static_assert(ptype != pt_null, "V is not a primitive type");
         util::pt_token<ptype> token;
-        if (ptype == m_ptype) {
+        if (ptype == m_ptype)
+        {
             get(token) = std::forward<V>(value);
         }
-        else {
+        else
+        {
             destroy();
             detail::ptv_set<ptype>(m_ptype, get(token), std::forward<V>(value));
             //set(std::forward<V>(value));
@@ -273,7 +287,8 @@ class primitive_variant {
  * @throws std::logic_error if @p pv is not of type @p T.
  */
 template<typename T>
-T const& get(primitive_variant const& pv) {
+T const& get(primitive_variant const& pv)
+{
     static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
     return pv.get_as<ptype>();
 }
@@ -287,7 +302,8 @@ T const& get(primitive_variant const& pv) {
  * @throws std::logic_error if @p pv is not of type @p T.
  */
 template<typename T>
-T& get_ref(primitive_variant& pv) {
+T& get_ref(primitive_variant& pv)
+{
     static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
     return pv.get_as<ptype>();
 }
@@ -320,14 +336,16 @@ T& get_ref(primitive_variant& pv);
 
 template<primitive_type PT>
 inline const typename detail::ptype_to_type<PT>::type&
-get(primitive_variant const& pv) {
+get(primitive_variant const& pv)
+{
     static_assert(PT != pt_null, "PT == pt_null");
     return get<typename detail::ptype_to_type<PT>::type>(pv);
 }
 
 template<primitive_type PT>
 inline typename detail::ptype_to_type<PT>::type&
-get_ref(primitive_variant& pv) {
+get_ref(primitive_variant& pv)
+{
     static_assert(PT != pt_null, "PT == pt_null");
     return get_ref<typename detail::ptype_to_type<PT>::type>(pv);
 }
@@ -337,13 +355,15 @@ get_ref(primitive_variant& pv) {
 bool operator==(primitive_variant const& lhs, primitive_variant const& rhs);
 
 inline
-bool operator!=(primitive_variant const& lhs, primitive_variant const& rhs) {
+bool operator!=(primitive_variant const& lhs, primitive_variant const& rhs)
+{
     return !(lhs == rhs);
 }
 
 template<typename T>
 typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator==(T const& lhs, primitive_variant const& rhs) {
+operator==(T const& lhs, primitive_variant const& rhs)
+{
     static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
     static_assert(ptype != pt_null, "T is an incompatible type");
     return (rhs.ptype() == ptype) ? lhs == get<ptype>(rhs) : false;
@@ -351,19 +371,22 @@ operator==(T const& lhs, primitive_variant const& rhs) {
 
 template<typename T>
 typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator==(primitive_variant const& lhs, T const& rhs) {
+operator==(primitive_variant const& lhs, T const& rhs)
+{
     return (rhs == lhs);
 }
 
 template<typename T>
 typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator!=(primitive_variant const& lhs, T const& rhs) {
+operator!=(primitive_variant const& lhs, T const& rhs)
+{
     return !(lhs == rhs);
 }
 
 template<typename T>
 typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator!=(T const& lhs, primitive_variant const& rhs) {
+operator!=(T const& lhs, primitive_variant const& rhs)
+{
     return !(lhs == rhs);
 }
 
@@ -373,11 +396,14 @@ namespace cppa { namespace detail {
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename std::enable_if<!std::is_arithmetic<T>::value>::type*) {
-    if (FT == lhs_type) {
+             typename std::enable_if<!std::is_arithmetic<T>::value>::type*)
+{
+    if (FT == lhs_type)
+    {
         lhs = std::forward<V>(rhs);
     }
-    else {
+    else
+    {
         new (&lhs) T(std::forward<V>(rhs));
         lhs_type = FT;
     }
@@ -385,7 +411,8 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
-             typename std::enable_if<std::is_arithmetic<T>::value, int>::type*) {
+             typename std::enable_if<std::is_arithmetic<T>::value, int>::type*)
+{
     // don't call a constructor for arithmetic types
     lhs = rhs;
     lhs_type = FT;

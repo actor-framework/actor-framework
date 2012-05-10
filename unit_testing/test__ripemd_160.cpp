@@ -9,12 +9,14 @@ using cppa::util::ripemd_160;
 
 namespace {
 
-std::string str_hash(const std::string& what) {
+std::string str_hash(const std::string& what)
+{
     std::array<std::uint8_t, 20> hash;
     ripemd_160(hash, what);
     std::ostringstream oss;
     oss << std::hex;
-    for (auto i : hash) {
+    for (auto i : hash)
+    {
         oss.width(2);
         oss.fill('0');
         oss << static_cast<std::uint32_t>(i);
@@ -26,7 +28,8 @@ std::string str_hash(const std::string& what) {
 
 // verify ripemd implementation with example hash results from
 // http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-size_t test__ripemd_160() {
+size_t test__ripemd_160()
+{
     CPPA_TEST(test__ripemd_160);
     CPPA_CHECK_EQUAL(str_hash(""),
                      "9c1185a5c5e9fc54612808977ee8f548b2258d31");

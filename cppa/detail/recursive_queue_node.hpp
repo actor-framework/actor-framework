@@ -36,20 +36,23 @@
 
 namespace cppa { namespace detail {
 
-struct recursive_queue_node {
+struct recursive_queue_node
+{
     recursive_queue_node* next; // intrusive next pointer
     bool marked;                // denotes if this node is currently processed
     actor_ptr sender;
     any_tuple msg;
 
-    inline recursive_queue_node() : next(nullptr), marked(false) {
+    inline recursive_queue_node() : next(nullptr), marked(false)
+    {
     }
 
     inline recursive_queue_node(actor* from, any_tuple&& content)
         : next(nullptr)
         , marked(false)
         , sender(from)
-        , msg(std::move(content)) {
+        , msg(std::move(content))
+    {
     }
 
     recursive_queue_node(recursive_queue_node&&) = delete;

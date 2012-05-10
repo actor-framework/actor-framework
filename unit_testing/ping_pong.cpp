@@ -12,23 +12,30 @@ using std::cout;
 using std::endl;
 using namespace cppa;
 
-size_t pongs() {
+size_t pongs()
+{
     return s_pongs;
 }
 
-void ping(size_t num_pings) {
+void ping(size_t num_pings)
+{
     s_pongs = 0;
-    do_receive (
-        on<atom("pong"), int>() >> [&](int value) {
+    do_receive
+    (
+        on<atom("pong"), int>() >> [&](int value)
+        {
             //cout << to_string(self->last_dequeued()) << endl;
-            if (++s_pongs == num_pings) {
+            if (++s_pongs == num_pings)
+            {
                 reply(atom("EXIT"), exit_reason::user_defined);
             }
-            else {
+            else
+            {
                 reply(atom("ping"), value);
             }
         },
-        others() >> []() {
+        others() >> []()
+        {
             cout << __FILE__ << " line " << __LINE__ << ": "
                  << to_string(self->last_dequeued()) << endl;
         }
@@ -36,23 +43,31 @@ void ping(size_t num_pings) {
     .until(gref(s_pongs) == num_pings);
 }
 
-actor_ptr spawn_event_based_ping(size_t num_pings) {
+actor_ptr spawn_event_based_ping(size_t num_pings)
+{
     s_pongs = 0;
-    struct impl : public fsm_actor<impl> {
+    struct impl : public fsm_actor<impl>
+    {
         behavior init_state;
-        impl(size_t num_pings) {
-            init_state = (
-                on<atom("pong"), int>() >> [num_pings, this](int value) {
+        impl(size_t num_pings)
+        {
+            init_state =
+            (
+                on<atom("pong"), int>() >> [num_pings, this](int value)
+                {
                     //cout << to_string(self->last_dequeued()) << endl;
-                    if (++s_pongs >= num_pings) {
+                    if (++s_pongs >= num_pings)
+                    {
                         reply(atom("EXIT"), exit_reason::user_defined);
                         become_void();
                     }
-                    else {
+                    else
+                    {
                         reply(atom("ping"), value);
                     }
                 },
-                others() >> []() {
+                others() >> []()
+                {
                     cout << __FILE__ << " line " << __LINE__ << ": "
                          << to_string(self->last_dequeued()) << endl;
                 }
@@ -62,32 +77,42 @@ actor_ptr spawn_event_based_ping(size_t num_pings) {
     return spawn(new impl{num_pings});
 }
 
-void pong(actor_ptr ping_actor) {
+void pong(actor_ptr ping_actor)
+{
     // kickoff
     send(ping_actor, atom("pong"), 0);
-    receive_loop (
-        on<atom("ping"), int>() >> [](int value) {
+    receive_loop
+    (
+        on<atom("ping"), int>() >> [](int value)
+        {
             //cout << to_string(self->last_dequeued()) << endl;
             reply(atom("pong"), value + 1);
         },
-        others() >> []() {
+        others() >> []()
+        {
             cout << __FILE__ << " line " << __LINE__ << ": "
                  << to_string(self->last_dequeued()) << endl;
         }
     );
 }
 
-actor_ptr spawn_event_based_pong(actor_ptr ping_actor) {
+actor_ptr spawn_event_based_pong(actor_ptr ping_actor)
+{
     CPPA_REQUIRE(ping_actor.get() != nullptr);
-    struct impl : public fsm_actor<impl> {
+    struct impl : public fsm_actor<impl>
+    {
         behavior init_state;
-        impl() {
-            init_state = (
-                on<atom("ping"), int>() >> [](int value) {
+        impl()
+        {
+            init_state =
+            (
+                on<atom("ping"), int>() >> [](int value)
+                {
                     //cout << to_string(self->last_dequeued()) << endl;
                     reply(atom("pong"), value + 1);
                 },
-                others() >> []() {
+                others() >> []()
+                {
                     cout << __FILE__ << " line " << __LINE__ << ": "
                          << to_string(self->last_dequeued()) << endl;
                 }

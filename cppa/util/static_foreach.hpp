@@ -36,35 +36,42 @@
 namespace cppa { namespace util {
 
 template<bool BeginLessEnd, size_t Begin, size_t End>
-struct static_foreach_impl {
+struct static_foreach_impl
+{
     template<typename Container, typename Fun, typename... Args>
-    static inline void _(Container const& c, Fun& f, Args&&... args) {
+    static inline void _(Container const& c, Fun& f, Args&&... args)
+    {
         f(get<Begin>(c), std::forward<Args>(args)...);
         static_foreach_impl<(Begin+1 < End), Begin+1, End>
                ::_(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline void _ref(Container& c, Fun& f, Args&&... args) {
+    static inline void _ref(Container& c, Fun& f, Args&&... args)
+    {
         f(get_ref<Begin>(c), std::forward<Args>(args)...);
         static_foreach_impl<(Begin+1 < End), Begin+1, End>
                ::_ref(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline void _auto(Container& c, Fun& f, Args&&... args) {
+    static inline void _auto(Container& c, Fun& f, Args&&... args)
+    {
         _ref(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline void _auto(Container const& c, Fun& f, Args&&... args) {
+    static inline void _auto(Container const& c, Fun& f, Args&&... args)
+    {
         _(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline bool eval(Container const& c, Fun& f, Args&&... args) {
+    static inline bool eval(Container const& c, Fun& f, Args&&... args)
+    {
         return    f(get<Begin>(c), std::forward<Args>(args)...)
                && static_foreach_impl<(Begin+1 < End), Begin+1, End>
                   ::eval(c, f, std::forward<Args>(args)...);
     }
     template<typename Container, typename Fun, typename... Args>
-    static inline bool eval_or(Container const& c, Fun& f, Args&&... args) {
+    static inline bool eval_or(Container const& c, Fun& f, Args&&... args)
+    {
         return    f(get<Begin>(c), std::forward<Args>(args)...)
                || static_foreach_impl<(Begin+1 < End), Begin+1, End>
                   ::eval_or(c, f, std::forward<Args>(args)...);
@@ -72,7 +79,8 @@ struct static_foreach_impl {
 };
 
 template<size_t X, size_t Y>
-struct static_foreach_impl<false, X, Y> {
+struct static_foreach_impl<false, X, Y>
+{
     template<typename... Args>
     static inline void _(Args&&...) { }
     template<typename... Args>
@@ -90,7 +98,8 @@ struct static_foreach_impl<false, X, Y> {
  * @brief A for loop that can be used with tuples.
  */
 template<size_t Begin, size_t End>
-struct static_foreach : static_foreach_impl<(Begin < End), Begin, End> {
+struct static_foreach : static_foreach_impl<(Begin < End), Begin, End>
+{
 };
 
 } } // namespace cppa::util

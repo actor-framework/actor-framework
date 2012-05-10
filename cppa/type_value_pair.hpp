@@ -39,7 +39,8 @@ namespace cppa {
 
 typedef std::pair<uniform_type_info const*, void const*> type_value_pair;
 
-class type_value_pair_const_iterator {
+class type_value_pair_const_iterator
+{
 
     type_value_pair const* iter;
 
@@ -71,33 +72,39 @@ class type_value_pair_const_iterator {
 
     inline decltype(*iter) operator*() const { return *iter; }
 
-    inline type_value_pair_const_iterator& operator++() {
+    inline type_value_pair_const_iterator& operator++()
+    {
         ++iter;
         return *this;
     }
 
-    inline type_value_pair_const_iterator operator++(int) {
+    inline type_value_pair_const_iterator operator++(int)
+    {
         type_value_pair_const_iterator tmp{*this};
         ++iter;
         return tmp;
     }
 
-    inline type_value_pair_const_iterator& operator--() {
+    inline type_value_pair_const_iterator& operator--()
+    {
         --iter;
         return *this;
     }
 
-    inline type_value_pair_const_iterator operator--(int) {
+    inline type_value_pair_const_iterator operator--(int)
+    {
         type_value_pair_const_iterator tmp{*this};
         --iter;
         return tmp;
     }
 
-    inline type_value_pair_const_iterator operator+(size_t offset) {
+    inline type_value_pair_const_iterator operator+(size_t offset)
+    {
         return iter + offset;
     }
 
-    inline type_value_pair_const_iterator& operator+=(size_t offset) {
+    inline type_value_pair_const_iterator& operator+=(size_t offset)
+    {
         iter += offset;
         return *this;
     }
@@ -108,7 +115,8 @@ class type_value_pair_const_iterator {
  * @relates type_value_pair_const_iterator
  */
 inline bool operator==(type_value_pair_const_iterator const& lhs,
-                       type_value_pair_const_iterator const& rhs) {
+                       type_value_pair_const_iterator const& rhs)
+{
     return lhs.base() == rhs.base();
 }
 
@@ -116,7 +124,8 @@ inline bool operator==(type_value_pair_const_iterator const& lhs,
  * @relates type_value_pair_const_iterator
  */
 inline bool operator!=(type_value_pair_const_iterator const& lhs,
-                       type_value_pair_const_iterator const& rhs) {
+                       type_value_pair_const_iterator const& rhs)
+{
     return !(lhs == rhs);
 }
 

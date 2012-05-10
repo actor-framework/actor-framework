@@ -38,9 +38,11 @@ namespace cppa { namespace util {
  * @brief Predefines the first template parameter of @p Tp1.
  */
 template<template<typename, typename> class Tpl, typename Arg1>
-struct tbind {
+struct tbind
+{
     template<typename Arg2>
-    struct type {
+    struct type
+    {
         static constexpr bool value = Tpl<Arg1, Arg2>::value;
     };
 };

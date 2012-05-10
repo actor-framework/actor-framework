@@ -42,7 +42,8 @@
 
 namespace cppa { namespace detail {
 
-class actor_registry {
+class actor_registry
+{
 
  public:
 

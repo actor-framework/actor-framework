@@ -42,9 +42,11 @@ using cppa::detail::converted_thread_context;
 
 namespace {
 
-void cleanup_fun(cppa::local_actor* what) {
+void cleanup_fun(cppa::local_actor* what)
+{
     auto ptr = dynamic_cast<converted_thread_context*>(what);
-    if (ptr) {
+    if (ptr)
+    {
         // make sure "unspawned" actors quit properly
         ptr->cleanup(cppa::exit_reason::normal);
     }
@@ -59,14 +61,17 @@ namespace cppa {
 
 //self_type self;
 
-void self_type::set_impl(local_actor* ptr) {
+void self_type::set_impl(local_actor* ptr)
+{
     if (ptr) ptr->ref();
     t_this_context.reset(ptr);
 }
 
-local_actor* self_type::get_impl() {
+local_actor* self_type::get_impl()
+{
     auto result = t_this_context.get();
-    if (result == nullptr) {
+    if (result == nullptr)
+    {
         result = new converted_thread_context;
         result->ref();
         get_scheduler()->register_converted_context(result);
@@ -75,11 +80,13 @@ local_actor* self_type::get_impl() {
     return result;
 }
 
-actor* self_type::convert_impl() {
+actor* self_type::convert_impl()
+{
     return get_impl();
 }
 
-local_actor* self_type::get_unchecked_impl() {
+local_actor* self_type::get_unchecked_impl()
+{
     return t_this_context.get();
 }
 

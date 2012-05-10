@@ -48,19 +48,23 @@ namespace this_thread { using namespace boost::this_thread; }
 
 template<class Lock, class Condition>
 inline bool wait_until(Lock& lock, Condition& cond,
-                       boost::system_time const& timeout) {
+                       boost::system_time const& timeout)
+{
     return cond.timed_wait(lock, timeout);
 }
 
-inline boost::system_time now() {
+inline boost::system_time now()
+{
     return boost::get_system_time();
 }
 
 } } // namespace cppa::detail
 
 inline boost::system_time& operator+=(boost::system_time& lhs,
-                                      cppa::util::duration const& rhs) {
-    switch (rhs.unit) {
+                                      cppa::util::duration const& rhs)
+{
+    switch (rhs.unit)
+    {
         case cppa::util::time_unit::seconds:
             lhs += boost::posix_time::seconds(rhs.count);
             break;
@@ -96,11 +100,13 @@ namespace this_thread { using namespace std::this_thread; }
 
 // returns false if a timeout occured
 template<class Lock, class Condition, typename TimePoint>
-inline bool wait_until(Lock& lock, Condition& cond, TimePoint const& timeout) {
+inline bool wait_until(Lock& lock, Condition& cond, TimePoint const& timeout)
+{
     return cond.wait_until(lock, timeout) != std::cv_status::timeout;
 }
 
-inline auto now() -> decltype(std::chrono::high_resolution_clock::now()) {
+inline auto now() -> decltype(std::chrono::high_resolution_clock::now())
+{
     return std::chrono::high_resolution_clock::now();
 }
 

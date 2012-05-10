@@ -42,7 +42,8 @@ namespace detail { class binary_writer; }
  * @brief Implements the serializer interface with
  *        a binary serialization protocol.
  */
-class binary_serializer : public serializer {
+class binary_serializer : public serializer
+{
 
     friend class detail::binary_writer;
 

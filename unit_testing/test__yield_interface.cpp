@@ -14,8 +14,10 @@ using namespace cppa::detail;
 
 namespace {
 
-std::ostream& operator<<(std::ostream& o, yield_state ys) {
-    switch (ys) {
+std::ostream& operator<<(std::ostream& o, yield_state ys)
+{
+    switch (ys)
+    {
         case yield_state::invalid:
             return (o << "yield_state::invalid");
         case yield_state::ready:
@@ -31,19 +33,24 @@ std::ostream& operator<<(std::ostream& o, yield_state ys) {
 
 } // namespace <anonymous>
 
-struct pseudo_worker {
+struct pseudo_worker
+{
 
     int m_count;
     bool m_blocked;
 
     pseudo_worker() : m_count(0), m_blocked(true) { }
 
-    void operator()() {
-        for (;;) {
-            if (m_blocked) {
+    void operator()()
+    {
+        for (;;)
+        {
+            if (m_blocked)
+            {
                 yield(yield_state::blocked);
             }
-            else {
+            else
+            {
                 ++m_count;
                 yield(m_count < 10 ? yield_state::ready : yield_state::done);
             }
@@ -52,10 +59,13 @@ struct pseudo_worker {
 
 };
 
-void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))();
+void coroutine(void* worker)
+{
+    (*reinterpret_cast<pseudo_worker*>(worker))();
 }
 
-size_t test__yield_interface() {
+size_t test__yield_interface()
+{
     CPPA_TEST(test__yield_interface);
 #   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
     cout << "WARNING: context switching was explicitly disabled using "
@@ -67,7 +77,8 @@ size_t test__yield_interface() {
     fiber fcoroutine(coroutine, &worker);
     yield_state ys;
     int i = 0;
-    do {
+    do
+    {
         if (i == 2) worker.m_blocked = false;
         ys = call(&fcoroutine, &fself);
         ++i;

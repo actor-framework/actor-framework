@@ -8,7 +8,8 @@
 
 // This class is intrusive.
 template<typename T>
-class blocking_cached_stack2 {
+class blocking_cached_stack2
+{
 
     // singly linked list, serves as cache
     T* m_head;
@@ -30,15 +31,19 @@ class blocking_cached_stack2 {
     // read all elements of m_stack, convert them to FIFO order and store
     // them in m_head
     // precondition: m_head == nullptr
-    void consume_stack() {
+    void consume_stack()
+    {
         T* e = m_stack.load();
-        while (e) {
+        while (e)
+        {
             // enqueue dummy instead of nullptr to reduce
             // lock operations
-            if (m_stack.compare_exchange_weak(e, m_dummy)) {
+            if (m_stack.compare_exchange_weak(e, m_dummy))
+            {
                 // m_stack is now empty (m_stack == m_dummy)
                 // m_dummy marks always the end of the stack
-                while (e && e != m_dummy) {
+                while (e && e != m_dummy)
+                {
                     T* next = e->next;
                     // enqueue to m_head
                     e->next = m_head;
@@ -52,13 +57,17 @@ class blocking_cached_stack2 {
         // nothing to consume
     }
 
-    void wait_for_data() {
-        if (!m_head) {
+    void wait_for_data()
+    {
+        if (!m_head)
+        {
             T* e = m_stack.load();
-            while (e == m_dummy) {
+            while (e == m_dummy)
+            {
                 if (m_stack.compare_exchange_weak(e, 0)) e = 0;
             }
-            if (!e) {
+            if (!e)
+            {
                 lock_type lock(m_mtx);
                 while (!(m_stack.load())) m_cv.wait(lock);
             }
@@ -66,8 +75,10 @@ class blocking_cached_stack2 {
         }
     }
 
-    void delete_head() {
-        while (m_head) {
+    void delete_head()
+    {
+        while (m_head)
+        {
             T* next = m_head->next;
             delete m_head;
             m_head = next;
@@ -77,28 +88,35 @@ class blocking_cached_stack2 {
 
  public:
 
-    blocking_cached_stack2() : m_head(0) {
+    blocking_cached_stack2() : m_head(0)
+    {
         m_stack = 0;
         m_dummy = new T;
     }
 
-    ~blocking_cached_stack2() {
+    ~blocking_cached_stack2()
+    {
         delete_head();
         T* e = m_stack.load();
-        if (e && e != m_dummy) {
+        if (e && e != m_dummy)
+        {
             consume_stack();
             delete_head();
         }
         delete m_dummy;
     }
 
-    void push(T* what) {
+    void push(T* what)
+    {
         T* e = m_stack.load();
-        for (;;) {
+        for (;;)
+        {
             what->next = e;
-            if (!e) {
+            if (!e)
+            {
                 lock_type lock(m_mtx);
-                if (m_stack.compare_exchange_weak(e, what)) {
+                if (m_stack.compare_exchange_weak(e, what))
+                {
                     m_cv.notify_one();
                     return;
                 }
@@ -109,7 +127,8 @@ class blocking_cached_stack2 {
         }
     }
 
-    T* pop() {
+    T* pop()
+    {
         wait_for_data();
         T* result = m_head;
         m_head = m_head->next;

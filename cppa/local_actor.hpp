@@ -44,7 +44,8 @@ class scheduler;
 /**
  * @brief Base class for local running Actors.
  */
-class local_actor : public actor {
+class local_actor : public actor
+{
 
     friend class scheduler;
 
@@ -102,38 +103,48 @@ class local_actor : public actor {
 
 };
 
-inline bool local_actor::trap_exit() const {
+inline bool local_actor::trap_exit() const
+{
     return m_trap_exit;
 }
 
-inline void local_actor::trap_exit(bool new_value) {
+inline void local_actor::trap_exit(bool new_value)
+{
     m_trap_exit = new_value;
 }
 
-inline any_tuple& local_actor::last_dequeued() {
+inline any_tuple& local_actor::last_dequeued()
+{
     return m_last_dequeued;
 }
 
-inline actor_ptr& local_actor::last_sender() {
+inline actor_ptr& local_actor::last_sender()
+{
     return m_last_sender;
 }
 
-inline actor_ptr& local_actor::pending_actor() {
+inline actor_ptr& local_actor::pending_actor()
+{
     return m_pending;
 }
 
-inline void local_actor::send_message(actor* whom, any_tuple what) {
-    if (m_is_scheduled && !m_pending) {
-        if (whom->pending_enqueue(this, std::move(what))) {
+inline void local_actor::send_message(actor* whom, any_tuple what)
+{
+    if (m_is_scheduled && !m_pending)
+    {
+        if (whom->pending_enqueue(this, std::move(what)))
+        {
             m_pending = whom;
         }
     }
-    else {
+    else
+    {
         whom->enqueue(this, std::move(what));
     }
 }
 
-inline void local_actor::send_message(channel* whom, any_tuple what) {
+inline void local_actor::send_message(channel* whom, any_tuple what)
+{
     whom->enqueue(this, std::move(what));
 }
 

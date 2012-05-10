@@ -22,14 +22,18 @@ using std::endl;
 using std::string;
 using namespace cppa;
 
-size_t test__local_group() {
+size_t test__local_group()
+{
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
     actor_ptr master = self;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i)
+    {
         // spawn five workers and let them join local/foo
-        auto w = spawn([&master]() {
-                           receive(on<int>() >> [&master](int v) {
+        auto w = spawn([&master]()
+                       {
+                           receive(on<int>() >> [&master](int v)
+                           {
                                send(master, v);
                            });
                        });
@@ -37,12 +41,15 @@ size_t test__local_group() {
     }
     send(foo_group, 2);
     int result = 0;
-    do_receive (
-        on<int>() >> [&](int value) {
+    do_receive
+    (
+        on<int>() >> [&](int value)
+        {
             CPPA_CHECK(value == 2);
             result += value;
         },
-        after(std::chrono::seconds(2)) >> [&]() {
+        after(std::chrono::seconds(2)) >> [&]()
+        {
             CPPA_CHECK(false);
             result = 10;
         }

@@ -40,7 +40,8 @@
 
 namespace cppa { namespace detail {
 
-class addressed_message {
+class addressed_message
+{
 
  public:
 
@@ -52,31 +53,38 @@ class addressed_message {
     addressed_message& operator=(addressed_message&&) = default;
     addressed_message& operator=(addressed_message const&) = default;
 
-    inline actor_ptr& sender() {
+    inline actor_ptr& sender()
+    {
         return m_sender;
     }
 
-    inline actor_ptr const& sender() const {
+    inline actor_ptr const& sender() const
+    {
         return m_sender;
     }
 
-    inline channel_ptr& receiver() {
+    inline channel_ptr& receiver()
+    {
         return m_receiver;
     }
 
-    inline channel_ptr const& receiver() const {
+    inline channel_ptr const& receiver() const
+    {
         return m_receiver;
     }
 
-    inline any_tuple& content() {
+    inline any_tuple& content()
+    {
         return m_content;
     }
 
-    inline any_tuple const& content() const {
+    inline any_tuple const& content() const
+    {
         return m_content;
     }
 
-    inline bool empty() const {
+    inline bool empty() const
+    {
         return m_content.empty();
     }
 
@@ -90,7 +98,8 @@ class addressed_message {
 
 bool operator==(addressed_message const& lhs, addressed_message const& rhs);
 
-inline bool operator!=(addressed_message const& lhs, addressed_message const& rhs) {
+inline bool operator!=(addressed_message const& lhs, addressed_message const& rhs)
+{
     return !(lhs == rhs);
 }
 

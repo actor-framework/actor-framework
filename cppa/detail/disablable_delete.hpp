@@ -34,7 +34,8 @@
 namespace cppa { namespace detail {
 
 template<typename T>
-class disablable_delete {
+class disablable_delete
+{
 
     bool m_enabled;
 
@@ -44,7 +45,8 @@ class disablable_delete {
 
     inline void disable() { m_enabled = false; }
 
-    inline void operator()(T* ptr) {
+    inline void operator()(T* ptr)
+    {
         if (m_enabled) delete ptr;
     }
 

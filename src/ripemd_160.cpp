@@ -100,67 +100,78 @@ typedef std::uint32_t dword;
 #define J(x, y, z) ((x) ^ ((y) | ~(z)))
 
 // the ten basic operations FF() through III()
-#define FF(a, b, c, d, e, x, s) {                                              \
+#define FF(a, b, c, d, e, x, s)                                                \
+    {                                                                          \
         (a) += F((b), (c), (d)) + (x);                                         \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define GG(a, b, c, d, e, x, s) {                                              \
+#define GG(a, b, c, d, e, x, s)                                                \
+    {                                                                          \
         (a) += G((b), (c), (d)) + (x) + 0x5a827999UL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define HH(a, b, c, d, e, x, s) {                                              \
+#define HH(a, b, c, d, e, x, s)                                                \
+    {                                                                          \
         (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1UL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define II(a, b, c, d, e, x, s) {                                              \
+#define II(a, b, c, d, e, x, s)                                                \
+    {                                                                          \
         (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcUL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define JJ(a, b, c, d, e, x, s) {                                              \
+#define JJ(a, b, c, d, e, x, s)                                                \
+    {                                                                          \
         (a) += J((b), (c), (d)) + (x) + 0xa953fd4eUL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define FFF(a, b, c, d, e, x, s) {                                             \
+#define FFF(a, b, c, d, e, x, s)                                               \
+    {                                                                          \
         (a) += F((b), (c), (d)) + (x);                                         \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define GGG(a, b, c, d, e, x, s) {                                             \
+#define GGG(a, b, c, d, e, x, s)                                               \
+    {                                                                          \
         (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9UL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define HHH(a, b, c, d, e, x, s) {                                             \
+#define HHH(a, b, c, d, e, x, s)                                               \
+    {                                                                          \
         (a) += H((b), (c), (d)) + (x) + 0x6d703ef3UL;                          \
         (a) = ROL((a), (s)) + (e);                                             \
         (c) = ROL((c), 10);                                                    \
     }
 
-#define III(a, b, c, d, e, x, s) {                                             \
-        (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;                          \
-        (a) = ROL((a), (s)) + (e);                                             \
-        (c) = ROL((c), 10);                                                    \
+#define III(a, b, c, d, e, x, s)                                               \
+    {                                                                          \
+      (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;                            \
+      (a) = ROL((a), (s)) + (e);                                               \
+      (c) = ROL((c), 10);                                                      \
     }
 
-#define JJJ(a, b, c, d, e, x, s) {                                             \
-        (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;                          \
-        (a) = ROL((a), (s)) + (e);                                             \
-        (c) = ROL((c), 10);                                                    \
+#define JJJ(a, b, c, d, e, x, s)                                               \
+    {                                                                          \
+      (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;                            \
+      (a) = ROL((a), (s)) + (e);                                               \
+      (c) = ROL((c), 10);                                                      \
    }
 
-void MDinit(dword* MDbuf) {
+void MDinit(dword* MDbuf)
+{
     MDbuf[0] = 0x67452301UL;
     MDbuf[1] = 0xefcdab89UL;
     MDbuf[2] = 0x98badcfeUL;
@@ -168,7 +179,8 @@ void MDinit(dword* MDbuf) {
     MDbuf[4] = 0xc3d2e1f0UL;
 }
 
-void compress(dword* MDbuf, dword* X) {
+void compress(dword* MDbuf, dword* X)
+{
     // round 1-5 variables
     dword aa = MDbuf[0];
     dword bb = MDbuf[1];
@@ -360,17 +372,20 @@ void compress(dword* MDbuf, dword* X) {
     MDbuf[0] = ddd;
 }
 
-void MDfinish(dword *MDbuf, const byte *strptr, dword lswlen, dword mswlen) {
+void MDfinish(dword *MDbuf, const byte *strptr, dword lswlen, dword mswlen)
+{
     dword X[16]; // message words
     memset(X, 0, 16 * sizeof(dword));
     // put bytes from strptr into X
-    for (unsigned int i = 0; i < (lswlen & 63); ++i) {
+    for (unsigned int i = 0; i < (lswlen & 63); ++i)
+    {
         // byte i goes into word X[i div 4] at pos.  8*(i mod 4)
         X[i>>2] ^= (dword) *strptr++ << (8 * (i&3));
     }
     // append the bit m_n == 1
     X[(lswlen>>2)&15] ^= (dword)1 << (8*(lswlen&3) + 7);
-    if ((lswlen & 63) > 55) {
+    if ((lswlen & 63) > 55)
+    {
         // length goes to next block
         compress(MDbuf, X);
         memset(X, 0, 16*sizeof(dword));
@@ -385,7 +400,8 @@ void MDfinish(dword *MDbuf, const byte *strptr, dword lswlen, dword mswlen) {
 
 namespace cppa { namespace util {
 
-void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data) {
+void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data)
+{
     dword MDbuf[5]; // contains (A, B, C, D(, E))
     dword X[16];    // current 16-word chunk
     dword length;   // length in bytes of message
@@ -397,8 +413,10 @@ void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data) 
     length = data.size();
 
     // process message in 16-word chunks
-    for (dword nbytes = length; nbytes > 63; nbytes -= 64) {
-        for (dword i = 0; i < 16; ++i) {
+    for (dword nbytes = length; nbytes > 63; nbytes -= 64)
+    {
+        for (dword i = 0; i < 16; ++i)
+        {
              X[i] = BYTES_TO_DWORD(message);
              message += 4;
         }
@@ -409,7 +427,8 @@ void ripemd_160(std::array<std::uint8_t, 20>& storage, std::string const& data) 
     // finish:
     MDfinish(MDbuf, message, length, 0);
 
-    for (size_t i = 0; i < storage.size(); i += 4) {
+    for (size_t i = 0; i < storage.size(); i += 4)
+    {
         storage[i]   =  MDbuf[i>>2];         // implicit cast to byte
         storage[i+1] = (MDbuf[i>>2] >>  8);  //  extracts the 8 least
         storage[i+2] = (MDbuf[i>>2] >> 16);  //  significant bits.

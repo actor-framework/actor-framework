@@ -40,23 +40,28 @@
 namespace cppa {
 
 abstract_event_based_actor::abstract_event_based_actor()
-    : super(super::blocked) {
+    : super(super::blocked)
+{
     //m_mailbox_pos = m_mailbox.cache().end();
 }
 
-void abstract_event_based_actor::dequeue(behavior&) {
+void abstract_event_based_actor::dequeue(behavior&)
+{
     quit(exit_reason::unallowed_function_call);
 }
 
-void abstract_event_based_actor::dequeue(partial_function&) {
+void abstract_event_based_actor::dequeue(partial_function&)
+{
     quit(exit_reason::unallowed_function_call);
 }
 
-auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result {
+auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result
+{
     CPPA_REQUIRE(node.marked == false);
     CPPA_REQUIRE(m_loop_stack.empty() == false);
     auto& bhvr = *(m_loop_stack.back());
-    switch (filter_msg(node.msg)) {
+    switch (filter_msg(node.msg))
+    {
         case detail::normal_exit_signal:
         case detail::expired_timeout_message:
             return drop_msg;
@@ -65,7 +70,8 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
             m_has_pending_timeout_request = false;
             CPPA_REQUIRE(bhvr.timeout().valid());
             bhvr.handle_timeout();
-            if (!m_loop_stack.empty()) {
+            if (!m_loop_stack.empty())
+            {
                 auto& next_bhvr = *(m_loop_stack.back());
                 request_timeout(next_bhvr.timeout());
             }
@@ -76,7 +82,8 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
     }
     std::swap(m_last_dequeued, node.msg);
     std::swap(m_last_sender, node.sender);
-    if ((bhvr.get_partial_function())(m_last_dequeued)) {
+    if ((bhvr.get_partial_function())(m_last_dequeued))
+    {
         m_last_dequeued.reset();
         m_last_sender.reset();
         // we definitely don't have a pending timeout now
@@ -89,66 +96,86 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
     return cache_msg;
 }
 
-void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
-    auto done_cb = [&]() {
+void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb)
+{
+    auto done_cb = [&]()
+    {
         m_state.store(abstract_scheduled_actor::done);
         m_loop_stack.clear();
         on_exit();
         cb->exec_done();
     };
     self.set(this);
-    try {
+    try
+    {
         detail::recursive_queue_node* e;
-        for (;;) {
+        for (;;)
+        {
             e = m_mailbox.try_pop();
-            if (!e) {
+            if (!e)
+            {
                 m_state.store(abstract_scheduled_actor::about_to_block);
                 CPPA_MEMORY_BARRIER();
-                if (m_mailbox.can_fetch_more() == false) {
+                if (m_mailbox.can_fetch_more() == false)
+                {
                     switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                                   abstract_scheduled_actor::blocked)) {
-                        case abstract_scheduled_actor::ready: {
+                                                   abstract_scheduled_actor::blocked))
+                    {
+                        case abstract_scheduled_actor::ready:
+                        {
                             break;
                         }
-                        case abstract_scheduled_actor::blocked: {
+                        case abstract_scheduled_actor::blocked:
+                        {
                             return;
                         }
                         default: CPPA_CRITICAL("illegal actor state");
                     };
                 }
             }
-            else {
-                switch (handle_message(*e)) {
-                    case drop_msg: {
+            else
+            {
+                switch (handle_message(*e))
+                {
+                    case drop_msg:
+                    {
                         release_node(e);
                         break; // nop
                     }
-                    case msg_handled: {
+                    case msg_handled:
+                    {
                         release_node(e);
-                        if (m_loop_stack.empty()) {
+                        if (m_loop_stack.empty())
+                        {
                             done_cb();
                             return;
                         }
                         // try to match cached messages before receiving new ones
                         auto i = m_cache.begin();
-                        while (i != m_cache.end()) {
-                            switch (handle_message(*(*i))) {
-                                case drop_msg: {
+                        while (i != m_cache.end())
+                        {
+                            switch (handle_message(*(*i)))
+                            {
+                                case drop_msg:
+                                {
                                     release_node(i->release());
                                     i = m_cache.erase(i);
                                     break;
                                 }
-                                case msg_handled: {
+                                case msg_handled:
+                                {
                                     release_node(i->release());
                                     m_cache.erase(i);
-                                    if (m_loop_stack.empty()) {
+                                    if (m_loop_stack.empty())
+                                    {
                                         done_cb();
                                         return;
                                     }
                                     i = m_cache.begin();
                                     break;
                                 }
-                                case cache_msg: {
+                                case cache_msg:
+                                {
                                     ++i;
                                     break;
                                 }
@@ -157,7 +184,8 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
                         }
                         break;
                     }
-                    case cache_msg: {
+                    case cache_msg:
+                    {
                         m_cache.emplace_back(e);
                         break;
                     }
@@ -166,16 +194,19 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
             }
         }
     }
-    catch (actor_exited& what) {
+    catch (actor_exited& what)
+    {
         cleanup(what.reason());
     }
-    catch (...) {
+    catch (...)
+    {
         cleanup(exit_reason::unhandled_exception);
     }
     done_cb();
 }
 
-void abstract_event_based_actor::on_exit() {
+void abstract_event_based_actor::on_exit()
+{
 }
 
 } // namespace cppa

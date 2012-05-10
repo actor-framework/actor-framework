@@ -31,7 +31,8 @@
 #ifndef SINGLETON_MANAGER_HPP
 #define SINGLETON_MANAGER_HPP
 
-namespace cppa {
+namespace cppa
+{
 
 class scheduler;
 class msg_content;
@@ -47,7 +48,8 @@ class actor_registry;
 class network_manager;
 class uniform_type_info_map;
 
-class singleton_manager {
+class singleton_manager
+{
 
     singleton_manager() = delete;
 

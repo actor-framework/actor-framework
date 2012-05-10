@@ -50,7 +50,8 @@
 namespace cppa { namespace detail {
 
 // A spawned, scheduled Actor.
-class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
+class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
+{
 
     typedef abstract_actor<scheduled_actor> super;
 
@@ -58,22 +59,28 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     std::atomic<int> m_state;
 
-    filter_result filter_msg(any_tuple const& msg) {
+    filter_result filter_msg(any_tuple const& msg)
+    {
         auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
         if (   msg.size() == 2
             && msg.type_at(0) == arr[0]
-            && msg.type_at(1) == arr[1]) {
+            && msg.type_at(1) == arr[1])
+        {
             auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
             auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-            if (v0 == atom("EXIT")) {
-                if (this->m_trap_exit == false) {
-                    if (v1 != exit_reason::normal) {
+            if (v0 == atom("EXIT"))
+            {
+                if (this->m_trap_exit == false)
+                {
+                    if (v1 != exit_reason::normal)
+                    {
                         quit(v1);
                     }
                     return normal_exit_signal;
                 }
             }
-            else if (v0 == atom(":Timeout")) {
+            else if (v0 == atom(":Timeout"))
+            {
                 return (v1 == m_active_timeout_id) ? timeout_message
                                                    : expired_timeout_message;
             }
@@ -81,19 +88,24 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         return ordinary_message;
     }
 
-    bool has_pending_timeout() {
+    bool has_pending_timeout()
+    {
         return m_has_pending_timeout_request;
     }
 
-    void request_timeout(util::duration const& d) {
-        if (d.valid()) {
+    void request_timeout(util::duration const& d)
+    {
+        if (d.valid())
+        {
             get_scheduler()->future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
             m_has_pending_timeout_request = true;
         }
     }
 
-    void reset_timeout() {
-        if (m_has_pending_timeout_request) {
+    void reset_timeout()
+    {
+        if (m_has_pending_timeout_request)
+        {
             ++m_active_timeout_id;
             m_has_pending_timeout_request = false;
         }
@@ -113,26 +125,33 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
     abstract_scheduled_actor(int state = done)
         : super(true), m_state(state)
         , m_has_pending_timeout_request(false)
-        , m_active_timeout_id(0) {
+        , m_active_timeout_id(0)
+    {
     }
 
-    bool pending_enqueue(actor* sender, any_tuple msg) {
+    bool pending_enqueue(actor* sender, any_tuple msg)
+    {
         return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
     }
 
-    void quit(std::uint32_t reason) {
+    void quit(std::uint32_t reason)
+    {
         this->cleanup(reason);
         throw actor_exited(reason);
     }
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void enqueue(actor* sender, any_tuple msg)
+    {
         enqueue_node(super::fetch_node(sender, std::move(msg)));
     }
 
-    int compare_exchange_state(int expected, int new_value) {
+    int compare_exchange_state(int expected, int new_value)
+    {
         int e = expected;
-        do {
-            if (m_state.compare_exchange_weak(e, new_value)) {
+        do
+        {
+            if (m_state.compare_exchange_weak(e, new_value))
+            {
                 return new_value;
             }
         }
@@ -143,24 +162,33 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
  private:
 
     bool enqueue_node(typename super::mailbox_element* node,
-                      int target_state = ready) {
+                      int target_state = ready)
+    {
         CPPA_REQUIRE(node->marked == false);
-        if (this->m_mailbox._push_back(node)) {
-            for (;;) {
+        if (this->m_mailbox._push_back(node))
+        {
+            for (;;)
+            {
                 int state = m_state.load();
-                switch (state) {
-                    case blocked: {
-                        if (m_state.compare_exchange_weak(state, target_state)) {
+                switch (state)
+                {
+                    case blocked:
+                    {
+                        if (m_state.compare_exchange_weak(state, target_state))
+                        {
                             CPPA_REQUIRE(this->m_scheduler != nullptr);
-                            if (target_state == ready) {
+                            if (target_state == ready)
+                            {
                                 this->m_scheduler->enqueue(this);
                             }
                             return true;
                         }
                         break;
                     }
-                    case about_to_block: {
-                        if (m_state.compare_exchange_weak(state, ready)) {
+                    case about_to_block:
+                    {
+                        if (m_state.compare_exchange_weak(state, ready))
+                        {
                             return false;
                         }
                         break;
