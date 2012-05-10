@@ -38,8 +38,8 @@ namespace cppa { namespace detail {
 
 struct match_helper
 {
-    match_helper(match_helper const&) = delete;
-    match_helper& operator=(match_helper const&) = delete;
+    match_helper(const match_helper&) = delete;
+    match_helper& operator=(const match_helper&) = delete;
     any_tuple tup;
     match_helper(any_tuple t) : tup(std::move(t)) { }
     match_helper(match_helper&&) = default;
@@ -62,8 +62,8 @@ struct match_helper
 template<typename Iterator>
 struct match_each_helper
 {
-    match_each_helper(match_each_helper const&) = delete;
-    match_each_helper& operator=(match_each_helper const&) = delete;
+    match_each_helper(const match_each_helper&) = delete;
+    match_each_helper& operator=(const match_each_helper&) = delete;
     Iterator i;
     Iterator e;
     match_each_helper(Iterator first, Iterator last) : i(first), e(last) { }
@@ -87,8 +87,8 @@ struct match_each_helper
 template<class Container>
 struct copying_match_each_helper
 {
-    copying_match_each_helper(copying_match_each_helper const&) = delete;
-    copying_match_each_helper& operator=(copying_match_each_helper const&) = delete;
+    copying_match_each_helper(const copying_match_each_helper&) = delete;
+    copying_match_each_helper& operator=(const copying_match_each_helper&) = delete;
     Container vec;
     copying_match_each_helper(Container tmp) : vec(std::move(tmp)) { }
     copying_match_each_helper(copying_match_each_helper&&) = default;
@@ -111,8 +111,8 @@ struct copying_match_each_helper
 template<typename Iterator, typename Projection>
 struct pmatch_each_helper
 {
-    pmatch_each_helper(pmatch_each_helper const&) = delete;
-    pmatch_each_helper& operator=(pmatch_each_helper const&) = delete;
+    pmatch_each_helper(const pmatch_each_helper&) = delete;
+    pmatch_each_helper& operator=(const pmatch_each_helper&) = delete;
     Iterator i;
     Iterator e;
     Projection p;

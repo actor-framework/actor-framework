@@ -48,8 +48,8 @@ template<class T>
 class singly_linked_list
 {
 
-    singly_linked_list(singly_linked_list const&) = delete;
-    singly_linked_list& operator=(singly_linked_list const&) = delete;
+    singly_linked_list(const singly_linked_list&) = delete;
+    singly_linked_list& operator=(const singly_linked_list&) = delete;
 
  public:
 
@@ -57,7 +57,7 @@ class singly_linked_list
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
     typedef value_type&         reference;
-    typedef value_type const&   const_reference;
+    typedef const value_type&   const_reference;
     typedef value_type*         pointer;
     typedef value_type const*   const_pointer;
 
@@ -87,7 +87,7 @@ class singly_linked_list
     /**
      * @brief Creates a list from given [first, last] range.
      */
-    static singly_linked_list from(std::pair<pointer, pointer> const& p)
+    static singly_linked_list from(const std::pair<pointer, pointer>& p)
     {
         singly_linked_list result;
         result.m_head.next = p.first;
@@ -381,9 +381,9 @@ class singly_linked_list
     /**
      * @brief Removes all elements that are equal to @p value.
      */
-    void remove(value_type const& value)
+    void remove(const value_type& value)
     {
-        remove_if([&](value_type const& other) { return value == other; });
+        remove_if([&](const value_type& other) { return value == other; });
     }
 
  private:

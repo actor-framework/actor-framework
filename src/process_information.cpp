@@ -151,8 +151,8 @@ void node_id_from_string(const std::string& hash,
     }
 }
 
-bool equal(std::string const& hash,
-           process_information::node_id_type const& node_id)
+bool equal(const std::string& hash,
+           const process_information::node_id_type& node_id)
 {
     if (hash.size() != (node_id.size() * 2))
     {
@@ -180,23 +180,23 @@ bool equal(std::string const& hash,
     return true;
 }
 
-process_information::process_information(process_information const& other)
+process_information::process_information(const process_information& other)
     : super(), m_process_id(other.process_id()), m_node_id(other.node_id())
 {
 }
 
-process_information::process_information(std::uint32_t a, std::string const& b)
+process_information::process_information(std::uint32_t a, const std::string& b)
     : m_process_id(a)
 {
     node_id_from_string(b, m_node_id);
 }
 
-process_information::process_information(std::uint32_t a, node_id_type const& b)
+process_information::process_information(std::uint32_t a, const node_id_type& b)
     : m_process_id(a), m_node_id(b)
 {
 }
 
-std::string to_string(process_information::node_id_type const& node_id)
+std::string to_string(const process_information::node_id_type& node_id)
 {
     std::ostringstream oss;
     oss << std::hex;
@@ -209,12 +209,12 @@ std::string to_string(process_information::node_id_type const& node_id)
     return oss.str();
 }
 
-intrusive_ptr<process_information> const& process_information::get()
+const intrusive_ptr<process_information>& process_information::get()
 {
     return s_pinfo;
 }
 
-int process_information::compare(process_information const& other) const
+int process_information::compare(const process_information& other) const
 {
     int tmp = strncmp(reinterpret_cast<char const*>(node_id().data()),
                       reinterpret_cast<char const*>(other.node_id().data()),
@@ -228,7 +228,7 @@ int process_information::compare(process_information const& other) const
     return tmp;
 }
 
-std::string to_string(process_information const& what)
+std::string to_string(const process_information& what)
 {
     std::ostringstream oss;
     oss << what.process_id() << "@" << to_string(what.node_id());

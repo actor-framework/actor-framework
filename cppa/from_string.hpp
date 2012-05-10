@@ -40,13 +40,13 @@
 
 namespace cppa {
 
-object from_string(std::string const& what);
+object from_string(const std::string& what);
 
 template<typename T>
 T from_string(const std::string &what)
 {
     object o = from_string(what);
-    std::type_info const& tinfo = typeid(T);
+    const std::type_info& tinfo = typeid(T);
     if (tinfo == *(o.type()))
     {
         return std::move(get<T>(o));

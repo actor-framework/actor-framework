@@ -11,7 +11,7 @@
 // forward declarations
 namespace cppa {
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(std::type_info const&);
+uniform_type_info const* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace detail {

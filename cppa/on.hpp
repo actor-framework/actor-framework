@@ -104,7 +104,7 @@ class behavior_rvalue_builder
 
  public:
 
-    constexpr behavior_rvalue_builder(util::duration const& d) : m_timeout(d)
+    constexpr behavior_rvalue_builder(const util::duration& d) : m_timeout(d)
     {
     }
 
@@ -158,7 +158,7 @@ struct rvalue_builder
     rvalue_builder() = default;
 
     template<typename... Args>
-    rvalue_builder(rvalue_builder_args_ctor, Args const&... args)
+    rvalue_builder(rvalue_builder_args_ctor, const Args&... args)
         : m_guard(args...)
         , m_funs(args...)
     {
@@ -288,7 +288,7 @@ constexpr anything any_vals;
  * {@link cppa::any_vals any_vals} and {@link cppa::arg_match arg_match}.
  */
 template<typename Arg0, typename... Args>
-___ on(Arg0 const& arg0, Args const&... args);
+___ on(const Arg0& arg0, const Args&... args);
 
 /**
  * @brief Left-hand side of a partial function expression that matches types.
@@ -340,7 +340,7 @@ detail::rvalue_builder<
     >::type,
     util::type_list<typename detail::pattern_type<Arg0>::type,
                     typename detail::pattern_type<Args>::type...> >
-on(Arg0 const& arg0, Args const&... args)
+on(const Arg0& arg0, const Args&... args)
 {
     return {detail::rvalue_builder_args_ctor{}, arg0, args...};
 }
@@ -381,7 +381,7 @@ decltype(on(A0, A1, A2, A3, val<Ts>()...)) on()
 
 template<class Rep, class Period>
 constexpr detail::behavior_rvalue_builder
-after(std::chrono::duration<Rep, Period> const& d)
+after(const std::chrono::duration<Rep, Period>& d)
 {
     return { util::duration(d) };
 }

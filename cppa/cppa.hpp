@@ -217,7 +217,7 @@
  * @code
  * receive
  * (
- *     on<atom("hello"), std::string>() >> [](std::string const& msg)
+ *     on<atom("hello"), std::string>() >> [](const std::string& msg)
  *     {
  *         cout << "received hello message: " << msg << endl;
  *     },
@@ -242,7 +242,7 @@
  * @code
  * receive
  * (
- *     on(atom("hello"), val<std::string>()) >> [](std::string const& msg)
+ *     on(atom("hello"), val<std::string>()) >> [](const std::string& msg)
  *     {
  *         cout << "received hello message: " << msg << endl;
  *     },
@@ -541,7 +541,7 @@ inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
  * /
 template<scheduling_hint Hint, typename F, typename... Args>
 auto //actor_ptr
-spawn(F&& what, Args const&... args)
+spawn(F&& what, const Args&... args)
 -> typename std::enable_if<
            !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
         && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
@@ -560,7 +560,7 @@ spawn(F&& what, Args const&... args)
  * /
 template<typename F, typename... Args>
 auto // actor_ptr
-spawn(F&& what, Args const&... args)
+spawn(F&& what, const Args&... args)
 -> typename std::enable_if<
            !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
         && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
@@ -578,7 +578,7 @@ spawn(F&& what, Args const&... args)
  * @brief Sends <tt>{arg0, args...}</tt> as a message to @p whom.
  */
 template<typename Arg0, typename... Args>
-void send(channel_ptr& whom, Arg0 const& arg0, Args const&... args);
+void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
 
 /**
  * @ingroup MessageHandling
@@ -590,19 +590,19 @@ void send(channel_ptr& whom, Arg0 const& arg0, Args const&... args);
  * @endcode
  * @returns @p whom.
  */
-channel_ptr& operator<<(channel_ptr& whom, any_tuple const& what);
+channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
 
 #else
 
 template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>& whom, Arg0 const& arg0, Args const&... args)
+void send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     if (whom) self->send_message(whom.get(), make_cow_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>&& whom, Arg0 const& arg0, Args const&... args)
+void send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     intrusive_ptr<C> tmp(std::move(whom));
@@ -611,7 +611,7 @@ void send(intrusive_ptr<C>&& whom, Arg0 const& arg0, Args const&... args)
 
 // matches "send(this, ...)" in event-based actors
 template<typename Arg0, typename... Args>
-inline void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
+inline void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 {
     CPPA_REQUIRE(whom != nullptr);
     whom->enqueue(whom, make_cow_tuple(arg0, args...));
@@ -620,7 +620,7 @@ inline void send(local_actor* whom, Arg0 const& arg0, Args const&... args)
 
 // matches send(self, ...);
 template<typename Arg0, typename... Args>
-inline void send(self_type const&, Arg0 const& arg0, Args const&... args)
+inline void send(const self_type&, const Arg0& arg0, const Args&... args)
 {
     send(static_cast<local_actor*>(self), arg0, args...);
 }
@@ -630,7 +630,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>&
 >::type
-operator<<(intrusive_ptr<C>& whom, any_tuple const& what)
+operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
 {
     if (whom) self->send_message(whom.get(), what);
     return whom;
@@ -641,7 +641,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>
 >::type
-operator<<(intrusive_ptr<C>&& whom, any_tuple const& what)
+operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
 {
     intrusive_ptr<C> tmp(std::move(whom));
     tmp << what;
@@ -671,9 +671,9 @@ operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
     return std::move(tmp);
 }
 
-self_type const& operator<<(self_type const& s, any_tuple const& what);
+const self_type& operator<<(const self_type& s, const any_tuple& what);
 
-self_type const& operator<<(self_type const& s, any_tuple&& what);
+const self_type& operator<<(const self_type& s, any_tuple&& what);
 
 #endif // CPPA_DOCUMENTATION
 
@@ -682,7 +682,7 @@ self_type const& operator<<(self_type const& s, any_tuple&& what);
  * @brief Sends a message to the sender of the last received message.
  */
 template<typename Arg0, typename... Args>
-void reply(Arg0 const& arg0, Args const&... args)
+void reply(const Arg0& arg0, const Args&... args)
 {
     send(self->last_sender(), arg0, args...);
 }
@@ -695,7 +695,7 @@ void reply(Arg0 const& arg0, Args const&... args)
  * @param data Any number of values for the message content.
  */
 template<typename Duration, typename... Data>
-void future_send(actor_ptr whom, Duration const& rel_time, Data const&... data)
+void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
 {
     get_scheduler()->future_send(whom, rel_time, data...);
 }
@@ -706,7 +706,7 @@ void future_send(actor_ptr whom, Duration const& rel_time, Data const&... data)
  * @see future_send()
  */
 template<typename Duration, typename... Data>
-void delayed_reply(Duration const& rel_time, Data const... data)
+void delayed_reply(const Duration& rel_time, Data const... data)
 {
     future_send(self->last_sender(), rel_time, data...);
 }

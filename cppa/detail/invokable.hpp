@@ -51,8 +51,8 @@ namespace cppa { namespace detail {
 class invokable
 {
 
-    invokable(invokable const&) = delete;
-    invokable& operator=(invokable const&) = delete;
+    invokable(const invokable&) = delete;
+    invokable& operator=(const invokable&) = delete;
 
  public:
 
@@ -62,9 +62,9 @@ class invokable
     virtual ~invokable();
 
     // Checks whether the types of @p value match the pattern.
-    virtual bool types_match(any_tuple const& value) const;
+    virtual bool types_match(const any_tuple& value) const;
     // Checks whether this invokable could be invoked with @p value.
-    virtual bool could_invoke(any_tuple const& value) const;
+    virtual bool could_invoke(const any_tuple& value) const;
 
     // Type checking.
     virtual bool invoke(any_tuple& value) const;
@@ -86,22 +86,22 @@ struct pattern_policy
     Pattern m_pattern;
     template<typename... Args>
     pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
-    bool types_match(any_tuple const& value) const
+    bool types_match(const any_tuple& value) const
     {
         return matches_types(value, m_pattern);
     }
-    bool could_invoke(any_tuple const& value) const
+    bool could_invoke(const any_tuple& value) const
     {
         return matches(value, m_pattern);
     }
     template<typename Fun>
-    bool call(Fun const& fun, any_tuple& value) const
+    bool call(const Fun& fun, any_tuple& value) const
     {
         fun(value);
         return true;
     }
     template<typename Fun>
-    bool call_unsafe(Fun const& fun, any_tuple& value) const
+    bool call_unsafe(const Fun& fun, any_tuple& value) const
     {
         fun(value);
         return true;
@@ -114,16 +114,16 @@ struct pattern_policy<map_to_option, Pattern>
     Pattern m_pattern;
     template<typename... Args>
     pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
-    bool types_match(any_tuple const& value) const
+    bool types_match(const any_tuple& value) const
     {
         return matches_types(value, m_pattern);
     }
-    bool could_invoke(any_tuple const& value) const
+    bool could_invoke(const any_tuple& value) const
     {
         return matches(value, m_pattern);
     }
     template<typename Fun>
-    bool call(Fun const& fun, any_tuple& value) const
+    bool call(const Fun& fun, any_tuple& value) const
     {
         auto result = moving_tuple_cast(value, m_pattern);
         if (result)
@@ -134,7 +134,7 @@ struct pattern_policy<map_to_option, Pattern>
         return false;
     }
     template<typename Fun>
-    bool call_unsafe(Fun const& fun, any_tuple& value) const
+    bool call_unsafe(const Fun& fun, any_tuple& value) const
     {
         auto result = unsafe_tuple_cast(value, m_pattern);
         if (result)
@@ -152,16 +152,16 @@ struct pattern_policy<map_to_bool, Pattern>
     Pattern m_pattern;
     template<typename... Args>
     pattern_policy(Args&&... args) : m_pattern(std::forward<Args>(args)...) { }
-    bool types_match(any_tuple const& value) const
+    bool types_match(const any_tuple& value) const
     {
         return matches_types(value, m_pattern);
     }
-    bool could_invoke(any_tuple const& value) const
+    bool could_invoke(const any_tuple& value) const
     {
         return matches(value, m_pattern);
     }
     template<typename Fun>
-    bool call(Fun const& fun, any_tuple& value) const
+    bool call(const Fun& fun, any_tuple& value) const
     {
         if (could_invoke(value))
         {
@@ -171,7 +171,7 @@ struct pattern_policy<map_to_bool, Pattern>
         return false;
     }
     template<typename Fun>
-    bool call_unsafe(Fun const& fun, any_tuple& value) const
+    bool call_unsafe(const Fun& fun, any_tuple& value) const
     {
         if (could_invoke(value))
         {
@@ -184,22 +184,22 @@ struct pattern_policy<map_to_bool, Pattern>
 
 struct dummy_policy
 {
-    inline bool types_match(any_tuple const&) const
+    inline bool types_match(const any_tuple&) const
     {
         return true;
     }
-    inline bool could_invoke(any_tuple const&) const
+    inline bool could_invoke(const any_tuple&) const
     {
         return true;
     }
     template<typename Fun>
-    inline bool call(Fun const& fun, any_tuple&) const
+    inline bool call(const Fun& fun, any_tuple&) const
     {
         fun();
         return true;
     }
     template<typename Fun>
-    inline bool call_unsafe(Fun const& fun, any_tuple&) const
+    inline bool call_unsafe(const Fun& fun, any_tuple&) const
     {
         fun();
         return true;
@@ -230,12 +230,12 @@ struct invokable_impl : public invokable
         return m_policy.call_unsafe(m_fun, value);
     }
 
-    bool types_match(any_tuple const& value) const
+    bool types_match(const any_tuple& value) const
     {
         return m_policy.types_match(value);
     }
 
-    bool could_invoke(any_tuple const& value) const
+    bool could_invoke(const any_tuple& value) const
     {
         return m_policy.could_invoke(value);
     }

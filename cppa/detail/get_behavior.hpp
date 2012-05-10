@@ -73,7 +73,7 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor
 
  public:
 
-    ftor_behavior(F ptr, Args const&... args) : m_fun(ptr), m_args(args...) { }
+    ftor_behavior(F ptr, const Args&... args) : m_fun(ptr), m_args(args...) { }
 
     virtual void act() { util::apply_tuple(m_fun, m_args); }
 
@@ -87,7 +87,7 @@ class ftor_behavior<false, false, F> : public scheduled_actor
 
  public:
 
-    ftor_behavior(F const& arg) : m_fun(arg) { }
+    ftor_behavior(const F& arg) : m_fun(arg) { }
 
     ftor_behavior(F&& arg) : m_fun(std::move(arg)) { }
 
@@ -112,11 +112,11 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor
 
  public:
 
-    ftor_behavior(F const& f, Args const&... args) : m_fun(f), m_args(args...)
+    ftor_behavior(const F& f, const Args&... args) : m_fun(f), m_args(args...)
     {
     }
 
-    ftor_behavior(F&& f,Args const&... args) : m_fun(std::move(f))
+    ftor_behavior(F&& f,const Args&... args) : m_fun(std::move(f))
                                              , m_args(args...)
     {
     }
@@ -149,8 +149,8 @@ scheduled_actor* get_behavior(std::integral_constant<bool,false>, F&& ftor)
 template<typename F, typename Arg0, typename... Args>
 scheduled_actor* get_behavior(std::integral_constant<bool,true>,
                              F fptr,
-                             Arg0 const& arg0,
-                             Args const&... args)
+                             const Arg0& arg0,
+                             const Args&... args)
 {
     static_assert(std::is_convertible<decltype(fptr(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
@@ -163,8 +163,8 @@ scheduled_actor* get_behavior(std::integral_constant<bool,true>,
 template<typename F, typename Arg0, typename... Args>
 scheduled_actor* get_behavior(std::integral_constant<bool,false>,
                              F ftor,
-                             Arg0 const& arg0,
-                             Args const&... args)
+                             const Arg0& arg0,
+                             const Args&... args)
 {
     static_assert(std::is_convertible<decltype(ftor(arg0, args...)), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "

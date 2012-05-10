@@ -36,7 +36,7 @@ object_array::object_array() : super(tuple_impl_info::dynamically_typed)
 {
 }
 
-void object_array::push_back(object const& what)
+void object_array::push_back(const object& what)
 {
     m_elements.push_back(what);
 }

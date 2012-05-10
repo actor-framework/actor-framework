@@ -50,8 +50,8 @@ class behavior;
 class partial_function
 {
 
-    partial_function(partial_function const&) = delete;
-    partial_function& operator=(partial_function const&) = delete;
+    partial_function(const partial_function&) = delete;
+    partial_function& operator=(const partial_function&) = delete;
 
  public:
 
@@ -59,8 +59,8 @@ class partial_function
     {
         virtual ~impl();
         virtual bool invoke(any_tuple&) = 0;
-        virtual bool invoke(any_tuple const&) = 0;
-        virtual bool defined_at(any_tuple const&) = 0;
+        virtual bool invoke(const any_tuple&) = 0;
+        virtual bool defined_at(const any_tuple&) = 0;
     };
 
     typedef std::unique_ptr<impl> impl_ptr;
@@ -71,7 +71,7 @@ class partial_function
 
     partial_function(impl_ptr&& ptr);
 
-    inline bool defined_at(any_tuple const& value)
+    inline bool defined_at(const any_tuple& value)
     {
         return ((m_impl) && m_impl->defined_at(value));
     }
@@ -81,7 +81,7 @@ class partial_function
         return ((m_impl) && m_impl->invoke(value));
     }
 
-    inline bool operator()(any_tuple const& value)
+    inline bool operator()(const any_tuple& value)
     {
         return ((m_impl) && m_impl->invoke(value));
     }

@@ -93,7 +93,7 @@ auto receive_while(Statement&& stmt);
  * @returns A functor implementing the loop.
  */
 template<typename T>
-auto receive_for(T& begin, T const& end);
+auto receive_for(T& begin, const T& end);
 
 /**
  * @brief Receives messages until @p stmt returns true.
@@ -142,7 +142,7 @@ void receive_loop(Arg0&& arg0, Args&&... args)
 }
 
 template<typename T>
-detail::receive_for_helper<T> receive_for(T& begin, T const& end)
+detail::receive_for_helper<T> receive_for(T& begin, const T& end)
 {
     return {begin, end};
 }

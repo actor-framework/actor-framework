@@ -49,10 +49,10 @@ struct po_message
 void post_office_loop(int input_fd);
 
 void post_office_add_peer(native_socket_type peer_socket,
-                          process_information_ptr const& peer_ptr);
+                          const process_information_ptr& peer_ptr);
 
 void post_office_publish(native_socket_type server_socket,
-                         actor_ptr const& published_actor);
+                         const actor_ptr& published_actor);
 
 void post_office_unpublish(actor_id whom);
 

@@ -99,7 +99,7 @@ class local_group : public group_impl
 
     friend class local_group_module;
 
-    local_group(std::string const& gname) : group_impl(gname, "local") { }
+    local_group(const std::string& gname) : group_impl(gname, "local") { }
 
 };
 

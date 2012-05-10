@@ -62,7 +62,7 @@ actor_ptr actor_registry::get(actor_id key) const
     return nullptr;
 }
 
-void actor_registry::put(actor_id key, actor_ptr const& value)
+void actor_registry::put(actor_id key, const actor_ptr& value)
 {
     bool add_attachable = false;
     if (value != nullptr)
@@ -89,7 +89,7 @@ void actor_registry::put(actor_id key, actor_ptr const& value)
             {
                 m_singleton->erase(m_id);
             }
-            bool matches(token const&)
+            bool matches(const token&)
             {
                 return false;
             }

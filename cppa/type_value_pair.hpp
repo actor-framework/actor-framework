@@ -49,18 +49,18 @@ class type_value_pair_const_iterator
     typedef type_value_pair const               value_type;
     typedef std::ptrdiff_t                      difference_type;
     typedef type_value_pair const*              pointer;
-    typedef type_value_pair const&              reference;
+    typedef const type_value_pair&              reference;
     typedef std::bidirectional_iterator_tag     iterator_category;
 
     constexpr type_value_pair_const_iterator() : iter(nullptr) { }
 
     type_value_pair_const_iterator(type_value_pair const* i) : iter(i) { }
 
-    type_value_pair_const_iterator(type_value_pair_const_iterator const&)
+    type_value_pair_const_iterator(const type_value_pair_const_iterator&)
         = default;
 
     type_value_pair_const_iterator&
-    operator=(type_value_pair_const_iterator const&) = default;
+    operator=(const type_value_pair_const_iterator&) = default;
 
     inline uniform_type_info const* type() const { return iter->first; }
 
@@ -114,8 +114,8 @@ class type_value_pair_const_iterator
 /**
  * @relates type_value_pair_const_iterator
  */
-inline bool operator==(type_value_pair_const_iterator const& lhs,
-                       type_value_pair_const_iterator const& rhs)
+inline bool operator==(const type_value_pair_const_iterator& lhs,
+                       const type_value_pair_const_iterator& rhs)
 {
     return lhs.base() == rhs.base();
 }
@@ -123,8 +123,8 @@ inline bool operator==(type_value_pair_const_iterator const& lhs,
 /**
  * @relates type_value_pair_const_iterator
  */
-inline bool operator!=(type_value_pair_const_iterator const& lhs,
-                       type_value_pair_const_iterator const& rhs)
+inline bool operator!=(const type_value_pair_const_iterator& lhs,
+                       const type_value_pair_const_iterator& rhs)
 {
     return !(lhs == rhs);
 }

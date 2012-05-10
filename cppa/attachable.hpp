@@ -42,8 +42,8 @@ namespace cppa {
 class attachable
 {
 
-    attachable(attachable const&) = delete;
-    attachable& operator=(attachable const&) = delete;
+    attachable(const attachable&) = delete;
+    attachable& operator=(const attachable&) = delete;
 
  protected:
 
@@ -59,12 +59,12 @@ class attachable
         /**
          * @brief Denotes the type of @c ptr.
          */
-        std::type_info const& subtype;
+        const std::type_info& subtype;
         /**
          * @brief Any value, used to identify @c attachable instances.
          */
         void const* ptr;
-        inline token(std::type_info const& msubtype, void const* mptr)
+        inline token(const std::type_info& msubtype, void const* mptr)
             : subtype(msubtype), ptr(mptr)
         {
         }
@@ -85,7 +85,7 @@ class attachable
      * @param what A value that selects zero or more @c attachable instances.
      * @returns @c true if @p what selects this instance; otherwise @c false.
      */
-    virtual bool matches(token const& what) = 0;
+    virtual bool matches(const token& what) = 0;
 
 };
 

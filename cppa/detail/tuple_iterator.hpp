@@ -51,17 +51,17 @@ class tuple_iterator
     {
     }
 
-    tuple_iterator(tuple_iterator const&) = default;
+    tuple_iterator(const tuple_iterator&) = default;
 
-    tuple_iterator& operator=(tuple_iterator const&) = default;
+    tuple_iterator& operator=(const tuple_iterator&) = default;
 
-    inline bool operator==(tuple_iterator const& other) const
+    inline bool operator==(const tuple_iterator& other) const
     {
         CPPA_REQUIRE(other.m_tuple == other.m_tuple);
         return other.m_pos == m_pos;
     }
 
-    inline bool operator!=(tuple_iterator const& other) const
+    inline bool operator!=(const tuple_iterator& other) const
     {
         return !(*this == other);
     }

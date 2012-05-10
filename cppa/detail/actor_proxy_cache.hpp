@@ -54,7 +54,7 @@ class actor_proxy_cache
                         process_information::node_id_type const& node_id);
 
     // @returns true if pptr was successfully removed, false otherwise
-    bool erase(actor_proxy_ptr const& pptr);
+    bool erase(const actor_proxy_ptr& pptr);
 
     template<typename Fun>
     void erase_all(process_information::node_id_type const& nid,
@@ -94,7 +94,7 @@ class actor_proxy_cache
     util::shared_spinlock m_lock;
     std::map<key_tuple, actor_proxy_ptr, key_tuple_less> m_entries;
 
-    actor_proxy_ptr get_impl(key_tuple const& key);
+    actor_proxy_ptr get_impl(const key_tuple& key);
 
 
 };

@@ -57,8 +57,8 @@ struct invoke_policy_impl
     typedef FilteredPattern filtered_pattern;
 
     template<class Tuple>
-    static bool can_invoke(std::type_info const& type_token,
-                           Tuple const& tup)
+    static bool can_invoke(const std::type_info& type_token,
+                           const Tuple& tup)
     {
         typedef typename match_impl_from_type_list<Tuple, Pattern>::type mimpl;
         return type_token == typeid(filtered_pattern) ||  mimpl::_(tup);
@@ -66,7 +66,7 @@ struct invoke_policy_impl
 
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
-                       std::type_info const& type_token,
+                       const std::type_info& type_token,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple& tup)
@@ -91,7 +91,7 @@ struct invoke_policy_impl
             // ... we restore it here again
             typedef typename util::if_else<
                         std::is_const<Tuple>,
-                        ttup_type const&,
+                        const ttup_type&,
                         util::wrapped<ttup_type&>
                     >::type
                     ttup_ref;
@@ -127,7 +127,7 @@ struct invoke_policy_impl<wildcard_position::nil,
 
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
-                       std::type_info const&,
+                       const std::type_info&,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple& tup,
@@ -152,7 +152,7 @@ struct invoke_policy_impl<wildcard_position::nil,
 
     template<class Target, typename PtrType, typename Tuple>
     static bool invoke(Target& target,
-                       std::type_info const& arg_types,
+                       const std::type_info& arg_types,
                        detail::tuple_impl_info timpl,
                        PtrType* native_arg,
                        Tuple& tup,
@@ -206,7 +206,7 @@ struct invoke_policy_impl<wildcard_position::nil,
         // ... we restore it here again
         typedef typename util::if_else<
                     std::is_const<PtrType>,
-                    ttup_type const&,
+                    const ttup_type&,
                     util::wrapped<ttup_type&>
                 >::type
                 ttup_ref;
@@ -215,7 +215,7 @@ struct invoke_policy_impl<wildcard_position::nil,
     }
 
     template<class Tuple>
-    static bool can_invoke(std::type_info const& arg_types, Tuple const&)
+    static bool can_invoke(const std::type_info& arg_types, const Tuple&)
     {
         return arg_types == typeid(filtered_pattern);
     }
@@ -227,15 +227,15 @@ struct invoke_policy_impl<wildcard_position::leading,
                           util::type_list<> >
 {
     template<class Tuple>
-    static inline bool can_invoke(std::type_info const&,
-                                  Tuple const&)
+    static inline bool can_invoke(const std::type_info&,
+                                  const Tuple&)
     {
         return true;
     }
 
     template<class Target, typename PtrType, typename Tuple>
     static bool invoke(Target& target,
-                       std::type_info const&,
+                       const std::type_info&,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple&)
@@ -252,8 +252,8 @@ struct invoke_policy_impl<wildcard_position::trailing,
     typedef util::type_list<Ts...> filtered_pattern;
 
     template<class Tuple>
-    static bool can_invoke(std::type_info const& arg_types,
-                           Tuple const& tup)
+    static bool can_invoke(const std::type_info& arg_types,
+                           const Tuple& tup)
     {
         if (arg_types == typeid(filtered_pattern))
         {
@@ -277,7 +277,7 @@ struct invoke_policy_impl<wildcard_position::trailing,
 
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
-                       std::type_info const& arg_types,
+                       const std::type_info& arg_types,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple& tup)
@@ -290,7 +290,7 @@ struct invoke_policy_impl<wildcard_position::trailing,
         // ensure const-correctness
         typedef typename util::if_else<
                     std::is_const<Tuple>,
-                    ttup_type const&,
+                    const ttup_type&,
                     util::wrapped<ttup_type&>
                 >::type
                 ttup_ref;
@@ -307,8 +307,8 @@ struct invoke_policy_impl<wildcard_position::leading,
     typedef util::type_list<Ts...> filtered_pattern;
 
     template<class Tuple>
-    static bool can_invoke(std::type_info const& arg_types,
-                           Tuple const& tup)
+    static bool can_invoke(const std::type_info& arg_types,
+                           const Tuple& tup)
     {
         if (arg_types == typeid(filtered_pattern))
         {
@@ -334,7 +334,7 @@ struct invoke_policy_impl<wildcard_position::leading,
 
     template<class Target, typename PtrType, class Tuple>
     static bool invoke(Target& target,
-                       std::type_info const& arg_types,
+                       const std::type_info& arg_types,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple& tup)
@@ -351,7 +351,7 @@ struct invoke_policy_impl<wildcard_position::leading,
         // ensure const-correctness
         typedef typename util::if_else<
                     std::is_const<Tuple>,
-                    ttup_type const&,
+                    const ttup_type&,
                     util::wrapped<ttup_type&>
                 >::type
                 ttup_ref;
@@ -518,13 +518,13 @@ struct pjf_same_pattern
 template<typename Data>
 struct invoke_helper3
 {
-    Data const& data;
-    invoke_helper3(Data const& mdata) : data(mdata) { }
+    const Data& data;
+    invoke_helper3(const Data& mdata) : data(mdata) { }
     template<size_t Pos, typename T, typename... Args>
     inline bool operator()(util::type_pair<std::integral_constant<size_t, Pos>, T>,
                            Args&&... args) const
     {
-        auto const& target = get<Pos>(data);
+        const auto& target = get<Pos>(data);
         return target.first(target.second, std::forward<Args>(args)...);
         //return (get<Pos>(data))(args...);
     }
@@ -535,8 +535,8 @@ struct invoke_helper2
 {
     typedef Pattern pattern_type;
     typedef typename util::tl_filter_not_type<pattern_type, anything>::type arg_types;
-    Data const& data;
-    invoke_helper2(Data const& mdata) : data(mdata) { }
+    const Data& data;
+    invoke_helper2(const Data& mdata) : data(mdata) { }
     template<typename... Args>
     bool invoke(Args&&... args) const
     {
@@ -558,9 +558,9 @@ struct invoke_helper2
 template<typename Data>
 struct invoke_helper
 {
-    Data const& data;
+    const Data& data;
     std::uint64_t bitfield;
-    invoke_helper(Data const& mdata, std::uint64_t bits) : data(mdata), bitfield(bits) { }
+    invoke_helper(const Data& mdata, std::uint64_t bits) : data(mdata), bitfield(bits) { }
     // token: type_list<type_pair<integral_constant<size_t, X>,
     //                            std::pair<projection, tpartial_function>>,
     //                  ...>
@@ -618,7 +618,7 @@ struct mexpr_fwd_
 };
 
 template<typename T>
-struct mexpr_fwd_<false, T const&, T>
+struct mexpr_fwd_<false, const T&, T>
 {
     typedef std::reference_wrapper<const T> type;
 };
@@ -680,12 +680,12 @@ class match_expr
         init();
     }
 
-    match_expr(match_expr const& other) : m_cases(other.m_cases)
+    match_expr(const match_expr& other) : m_cases(other.m_cases)
     {
         init();
     }
 
-    bool invoke(any_tuple const& tup)
+    bool invoke(const any_tuple& tup)
     {
         return _invoke(tup);
     }
@@ -712,7 +712,7 @@ class match_expr
         return tmp != 0;
     }
 
-    bool operator()(any_tuple const& tup)
+    bool operator()(const any_tuple& tup)
     {
         return _invoke(tup);
     }
@@ -743,7 +743,7 @@ class match_expr
         typedef typename util::if_else_c<
                     has_manipulator,
                     tuple_type&,
-                    util::wrapped<tuple_type const&>
+                    const util::wrapped<tuple_type&>
                 >::type
                 ref_type;
 
@@ -767,7 +767,7 @@ class match_expr
 
     template<class... OtherCases>
     match_expr<Cases..., OtherCases...>
-    or_else(match_expr<OtherCases...> const& other) const
+    or_else(const match_expr<OtherCases...>& other) const
     {
         detail::tdata<ge_reference_wrapper<Cases>...,
                       ge_reference_wrapper<OtherCases>...    > all_cases;
@@ -775,7 +775,7 @@ class match_expr
         return {all_cases};
     }
 
-    inline detail::tdata<Cases...> const& cases() const
+    inline const detail::tdata<Cases...>& cases() const
     {
         return m_cases;
     }
@@ -784,16 +784,16 @@ class match_expr
     {
         match_expr pfun;
         template<typename Arg>
-        pfun_impl(Arg const& from) : pfun(from) { }
+        pfun_impl(const Arg& from) : pfun(from) { }
         bool invoke(any_tuple& tup)
         {
             return pfun.invoke(tup);
         }
-        bool invoke(any_tuple const& tup)
+        bool invoke(const any_tuple& tup)
         {
             return pfun.invoke(tup);
         }
-        bool defined_at(any_tuple const& tup)
+        bool defined_at(const any_tuple& tup)
         {
             return pfun.can_invoke(tup);
         }
@@ -849,7 +849,7 @@ class match_expr
 
     template<class Tuple>
     std::uint64_t get_cache_entry(std::type_info const* type_token,
-                                  Tuple const& value)
+                                  const Tuple& value)
     {
         CPPA_REQUIRE(type_token != nullptr);
         if (value.impl_type() == detail::dynamically_typed)
@@ -916,7 +916,7 @@ class match_expr
                      && has_manipulator == false
                  >::type* = 0)
     {
-        return _invoke(static_cast<AnyTuple const&>(tup));
+        return _invoke(static_cast<const AnyTuple&>(tup));
     }
 
     template<typename AnyTuple>
@@ -926,7 +926,7 @@ class match_expr
                      && has_manipulator == false
                  >::type* = 0)
     {
-        auto const& cvals = *(tup.cvals());
+        const auto& cvals = *(tup.cvals());
         return _do_invoke(cvals, cvals.native_data());
     }
 
@@ -953,8 +953,8 @@ struct match_expr_from_type_list<util::type_list<Args...> >
 };
 
 template<typename... Lhs, typename... Rhs>
-inline match_expr<Lhs..., Rhs...> operator,(match_expr<Lhs...> const& lhs,
-                                            match_expr<Rhs...> const& rhs)
+inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
+                                            const match_expr<Rhs...>& rhs)
 {
     return lhs.or_else(rhs);
 }
@@ -966,7 +966,7 @@ typename match_expr_from_type_list<
         typename Args::cases_list...
     >::type
 >::type
-mexpr_concat(Arg0 const& arg0, Args const&... args)
+mexpr_concat(const Arg0& arg0, const Args&... args)
 {
     typename detail::tdata_from_type_list<
         typename util::tl_map<
@@ -983,7 +983,7 @@ mexpr_concat(Arg0 const& arg0, Args const&... args)
 }
 
 template<typename Arg0, typename... Args>
-partial_function mexpr_concat_convert(Arg0 const& arg0, Args const&... args)
+partial_function mexpr_concat_convert(const Arg0& arg0, const Args&... args)
 {
     typename detail::tdata_from_type_list<
         typename util::tl_map<

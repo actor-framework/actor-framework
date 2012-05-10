@@ -242,7 +242,7 @@ size_t test__match()
 
     std::vector<int> expr21_vec_a{1, 2, 3};
     std::vector<int> expr21_vec_b{1, 0, 2};
-    auto vec_sorted = [](std::vector<int> const& vec)
+    auto vec_sorted = [](const std::vector<int>& vec)
     {
         return std::is_sorted(vec.begin(), vec.end());
     };
@@ -276,7 +276,7 @@ size_t test__match()
         {
             sum += s;
         },
-        on<string>().when(_x1.starts_with("-")) >> [&](string const& str)
+        on<string>().when(_x1.starts_with("-")) >> [&](const string& str)
         {
             match_each(str.begin() + 1, str.end())
             (
@@ -368,25 +368,25 @@ size_t test__match()
     using std::placeholders::_1;
     match_each(vec2.begin(), vec2.end(), std::bind(split, _1, '='))
     (
-        on("a", val<string>) >> [&](string const& value)
+        on("a", val<string>) >> [&](const string& value)
         {
             CPPA_CHECK_EQUAL("0", value);
             CPPA_CHECK_EQUAL(0, pmatches);
             ++pmatches;
         },
-        on("b", val<string>) >> [&](string const& value)
+        on("b", val<string>) >> [&](const string& value)
         {
             CPPA_CHECK_EQUAL("1", value);
             CPPA_CHECK_EQUAL(1, pmatches);
             ++pmatches;
         },
-        on("c", val<string>) >> [&](string const& value)
+        on("c", val<string>) >> [&](const string& value)
         {
             CPPA_CHECK_EQUAL("2", value);
             CPPA_CHECK_EQUAL(2, pmatches);
             ++pmatches;
         }
-        others() >> [](any_tuple const& value)
+        others() >> [](const any_tuple& value)
         {
             cout << to_string(value) << endl;
         }

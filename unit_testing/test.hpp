@@ -9,7 +9,7 @@
 #include <type_traits>
 
 template<typename T1, typename T2>
-inline bool cppa_check_value_fun_eq(T1 const& value1, T2 const& value2,
+inline bool cppa_check_value_fun_eq(const T1& value1, const T2& value2,
                                     typename std::enable_if<
                                            !std::is_integral<T1>::value
                                         || !std::is_integral<T2>::value
@@ -29,7 +29,7 @@ inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
 }
 
 template<typename T1, typename T2>
-inline bool cppa_check_value_fun(T1 const& value1, T2 const& value2,
+inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
                                  char const* file_name,
                                  int line_number,
                                   size_t& error_count)
@@ -47,7 +47,7 @@ inline bool cppa_check_value_fun(T1 const& value1, T2 const& value2,
 }
 
 template<typename T1, typename T2>
-inline void cppa_check_value_verbose_fun(T1 const& value1, T2 const& value2,
+inline void cppa_check_value_verbose_fun(const T1& value1, const T2& value2,
                                          char const* file_name,
                                          int line_number,
                                          size_t& error_count)
@@ -116,7 +116,7 @@ typedef std::pair<std::string, std::string> string_pair;
 
 size_t test__yield_interface();
 size_t test__remote_actor(char const* app_path, bool is_client,
-                          std::vector<string_pair> const& args);
+                          const std::vector<string_pair>& args);
 size_t test__ripemd_160();
 size_t test__uniform_type();
 size_t test__type_list();
@@ -132,7 +132,7 @@ size_t test__primitive_variant();
 size_t test__fixed_vector();
 size_t test__intrusive_containers();
 
-std::vector<std::string> split(std::string const& str, char delim);
+std::vector<std::string> split(const std::string& str, char delim);
 
 using std::cout;
 using std::endl;

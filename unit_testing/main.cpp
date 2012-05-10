@@ -66,7 +66,7 @@ using std::endl;
 
 using namespace cppa;
 
-std::vector<std::string> split(std::string const& str, char delim)
+std::vector<std::string> split(const std::string& str, char delim)
 {
     std::vector<std::string> result;
     std::stringstream strs{str};
@@ -99,7 +99,7 @@ std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1)
             cerr << "\"" << argv[i] << "\" is not a key-value pair" << endl;
         }
         else if (std::any_of(result.begin(), result.end(),
-                             [&](string_pair const& p) { return p.first == vec[0]; }))
+                             [&](const string_pair& p) { return p.first == vec[0]; }))
         {
             cerr << "key \"" << vec[0] << "\" is already defined" << endl;
         }
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
     /*
     match_each(argv + 1, argv + argc)
     (
-        on_arg_match >> [](std::string const& str)
+        on_arg_match >> [](const std::string& str)
         {
             cout << "matched \"" << str << "\"" << endl;
         }
@@ -132,12 +132,12 @@ int main(int argc, char** argv)
 
     match_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); })
     (
-        on_arg_match >> [](std::string const& key, std::string const& value)
+        on_arg_match >> [](const std::string& key, const std::string& value)
         {
             cout << "key = \"" << key << "\", value = \"" << value << "\""
                  << endl;
         },
-        others() >> [](any_tuple const& oops)
+        others() >> [](const any_tuple& oops)
         {
             cout << "not a key value pair: " << to_string(oops) << endl;
         }
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
             await_all_others_done();
             exit(0);
         },
-        on("scheduler", val<std::string>) >> [](std::string const& sched)
+        on("scheduler", val<std::string>) >> [](const std::string& sched)
         {
             if (sched == "thread_pool_scheduler")
             {

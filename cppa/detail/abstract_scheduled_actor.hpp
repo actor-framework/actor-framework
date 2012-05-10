@@ -93,7 +93,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor>
         return m_has_pending_timeout_request;
     }
 
-    void request_timeout(util::duration const& d)
+    void request_timeout(const util::duration& d)
     {
         if (d.valid())
         {

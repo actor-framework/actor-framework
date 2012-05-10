@@ -57,7 +57,7 @@ struct left_or_right<util::void_type&, Right>
 };
 
 template<typename Right>
-struct left_or_right<util::void_type const&, Right>
+struct left_or_right<const util::void_type&, Right>
 {
     typedef Right type;
 };

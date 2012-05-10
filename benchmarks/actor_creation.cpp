@@ -48,7 +48,7 @@ struct testee : fsm_actor<testee>
 {
     actor_ptr parent;
     behavior init_state;
-    testee(actor_ptr const& pptr) : parent(pptr)
+    testee(const actor_ptr& pptr) : parent(pptr)
     {
         init_state =
         (

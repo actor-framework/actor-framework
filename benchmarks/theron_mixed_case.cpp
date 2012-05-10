@@ -32,11 +32,11 @@ struct worker_done { };
 
 struct worker : Actor
 {
-    void handle_calc(calc_msg const& msg, Address from)
+    void handle_calc(const calc_msg& msg, Address from)
     {
         factorize(msg.value);
     }
-    void handle_master_done(master_done const&, Address from)
+    void handle_master_done(const master_done&, Address from)
     {
         Send(worker_done(), from);
     }
@@ -51,12 +51,12 @@ struct worker : Actor
 struct chain_link : Actor
 {
     Address next;
-    void handle_token(token_msg const& msg, Address)
+    void handle_token(const token_msg& msg, Address)
     {
         Send(msg, next);
     }
     typedef struct { Address next; } Parameters;
-    chain_link(Parameters const& p) : next(p.next)
+    chain_link(const Parameters& p) : next(p.next)
     {
         RegisterHandler(this, &chain_link::handle_token);
     }
@@ -84,7 +84,7 @@ struct master : Actor
         }
         Send(token_msg{initial_token_value}, next);
     }
-    void handle_init(init_msg const& msg, Address)
+    void handle_init(const init_msg& msg, Address)
     {
         w = GetFramework().CreateActor<worker>();
         iteration = 0;
@@ -93,7 +93,7 @@ struct master : Actor
         max_iterations = msg.iterations;
         new_ring();
     }
-    void handle_token(token_msg const& msg, Address)
+    void handle_token(const token_msg& msg, Address)
     {
         if (msg.value == 0)
         {
@@ -111,13 +111,13 @@ struct master : Actor
             Send(token_msg{msg.value - 1}, next);
         }
     }
-    void handle_worker_done(worker_done const&, Address)
+    void handle_worker_done(const worker_done&, Address)
     {
         Send(master_done(), mc);
         w = ActorRef::Null();
     }
     typedef struct { Address mc; } Parameters;
-    master(Parameters const& p) : mc(p.mc), iteration(0)
+    master(const Parameters& p) : mc(p.mc), iteration(0)
     {
         RegisterHandler(this, &master::handle_init);
         RegisterHandler(this, &master::handle_token);

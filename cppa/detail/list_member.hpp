@@ -41,7 +41,7 @@ struct list_member_util
 {
     typedef typename List::value_type value_type;
     static constexpr primitive_type vptype = type_to_ptype<value_type>::ptype;
-    void operator()(List const& list, serializer* s) const
+    void operator()(const List& list, serializer* s) const
     {
         s->begin_sequence(list.size());
         for (auto i = list.begin(); i != list.end(); ++i)
@@ -73,7 +73,7 @@ struct list_member_util<List, false>
     {
     }
 
-    void operator()(List const& list, serializer* s) const
+    void operator()(const List& list, serializer* s) const
     {
         s->begin_sequence(list.size());
         for (auto i = list.begin(); i != list.end(); ++i)

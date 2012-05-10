@@ -65,7 +65,7 @@ class decorated_tuple : public abstract_tuple
     typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
     static inline cow_pointer_type create(cow_pointer_type d,
-                                          vector_type const& v)
+                                          const vector_type& v)
     {
         return cow_pointer_type{new decorated_tuple(std::move(d), v)};
     }
@@ -114,12 +114,12 @@ class decorated_tuple : public abstract_tuple
     cow_pointer_type m_decorated;
     vector_type m_mapping;
 
-    decorated_tuple(cow_pointer_type d, vector_type const& v)
+    decorated_tuple(cow_pointer_type d, const vector_type& v)
         : super(tuple_impl_info::statically_typed)
         , m_decorated(std::move(d)), m_mapping(v)
     {
 #       ifdef CPPA_DEBUG
-        cow_pointer_type const& ptr = m_decorated; // prevent detaching
+        const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
         CPPA_REQUIRE(ptr->size() >= sizeof...(ElementTypes));
         CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
@@ -130,7 +130,7 @@ class decorated_tuple : public abstract_tuple
         : super(tuple_impl_info::statically_typed), m_decorated(std::move(d))
     {
 #       ifdef CPPA_DEBUG
-        cow_pointer_type const& ptr = m_decorated; // prevent detaching
+        const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
         CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(ElementTypes));
         CPPA_REQUIRE(offset > 0);
@@ -139,9 +139,9 @@ class decorated_tuple : public abstract_tuple
         std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
     }
 
-    decorated_tuple(decorated_tuple const&) = default;
+    decorated_tuple(const decorated_tuple&) = default;
 
-    decorated_tuple& operator=(decorated_tuple const&) = delete;
+    decorated_tuple& operator=(const decorated_tuple&) = delete;
 
 };
 

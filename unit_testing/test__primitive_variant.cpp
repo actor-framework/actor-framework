@@ -11,14 +11,14 @@ struct streamer
     std::ostream& o;
     streamer(std::ostream& mo) : o(mo) { }
     template<typename T>
-    void operator()(T const& value)
+    void operator()(const T& value)
     {
         o << value;
     }
 };
 
 inline std::ostream& operator<<(std::ostream& o,
-                                cppa::primitive_variant const& pv)
+                                const cppa::primitive_variant& pv)
 {
     streamer s{o};
     pv.apply(s);

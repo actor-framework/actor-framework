@@ -26,7 +26,7 @@ struct testee : Actor
     uint32_t m_first_result;
     std::vector<ActorRef> m_children;
 
-    void spread_handler(spread const& arg, const Address)
+    void spread_handler(const spread& arg, const Address)
     {
         if (arg.value == 0)
         {
@@ -44,7 +44,7 @@ struct testee : Actor
         }
     }
 
-    void result_handler(result const& arg, const Address)
+    void result_handler(const result& arg, const Address)
     {
         if (!m_first_result_received)
         {
@@ -60,7 +60,7 @@ struct testee : Actor
 
     typedef struct { Address arg0; } Parameters;
 
-    testee(Parameters const& p) : m_parent(p.arg0), m_first_result_received(false)
+    testee(const Parameters& p) : m_parent(p.arg0), m_first_result_received(false)
     {
         RegisterHandler(this, &testee::spread_handler);
         RegisterHandler(this, &testee::result_handler);

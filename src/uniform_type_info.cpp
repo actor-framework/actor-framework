@@ -180,7 +180,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr>
 
  public:
 
-    static void s_serialize(actor_ptr const& ptr,
+    static void s_serialize(const actor_ptr& ptr,
                             serializer* sink,
                             const std::string name)
     {
@@ -277,7 +277,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr>
 
  public:
 
-    static void s_serialize(group_ptr const& ptr,
+    static void s_serialize(const group_ptr& ptr,
                             serializer* sink,
                             const std::string& name)
     {
@@ -346,7 +346,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr>
 
  public:
 
-    static void s_serialize(channel_ptr const& ptr,
+    static void s_serialize(const channel_ptr& ptr,
                             serializer* sink,
                             const std::string& channel_type_name,
                             const std::string& actor_ptr_type_name,
@@ -686,15 +686,15 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T>
 
  public:
 
-    bool equals(std::type_info const& tinfo) const
+    bool equals(const std::type_info& tinfo) const
     {
         // TODO: string comparsion sucks & is slow; find a nicer solution
         auto map_iter = uti_map().int_names().find(sizeof(T));
-        string_set const& st = is_signed<T>::value ? map_iter->second.first
+        const string_set& st = is_signed<T>::value ? map_iter->second.first
                                                    : map_iter->second.second;
         auto x = raw_name(tinfo);
         return std::any_of(st.begin(), st.end(),
-                           [&](std::string const& y) { return x == y; });
+                           [&](const std::string& y) { return x == y; });
     }
 
 };
@@ -711,10 +711,10 @@ class uniform_type_info_map_helper
 
     static void insert(this_ptr d,
                        uniform_type_info* uti,
-                       std::set<std::string> const& tnames)
+                       const std::set<std::string>& tnames)
     {
         CPPA_REQUIRE(tnames.empty() == false);
-        for (std::string const& tname : tnames)
+        for (const std::string& tname : tnames)
         {
             d->m_by_rname.insert(std::make_pair(tname, uti));
         }
@@ -723,7 +723,7 @@ class uniform_type_info_map_helper
 
     template<typename T>
     static inline void insert(this_ptr d,
-                              std::set<std::string> const& tnames,
+                              const std::set<std::string>& tnames,
                               typename enable_if<is_integral<T>::value>::type* = 0)
     {
         insert(d, new int_tinfo<T>, tnames);
@@ -731,7 +731,7 @@ class uniform_type_info_map_helper
 
     template<typename T>
     static inline void insert(this_ptr d,
-                              std::set<std::string> const& tnames,
+                              const std::set<std::string>& tnames,
                               typename enable_if<!is_integral<T>::value>::type* = 0)
     {
         insert(d, new default_uniform_type_info_impl<T>(), tnames);

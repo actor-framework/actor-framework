@@ -40,8 +40,8 @@ bool invokable::invoke(any_tuple&) const { return false; }
 
 bool invokable::unsafe_invoke(any_tuple&) const { return false; }
 
-bool invokable::types_match(any_tuple const&) const { return false; }
+bool invokable::types_match(const any_tuple&) const { return false; }
 
-bool invokable::could_invoke(any_tuple const&) const { return false; }
+bool invokable::could_invoke(const any_tuple&) const { return false; }
 
 } } // namespace cppa::detail

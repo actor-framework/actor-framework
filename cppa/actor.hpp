@@ -96,7 +96,7 @@ class actor : public channel
     /**
      * @brief Detaches the first attached object that matches @p what.
      */
-    virtual void detach(attachable::token const& what) = 0;
+    virtual void detach(const attachable::token& what) = 0;
 
     template<typename T>
     bool attach(std::unique_ptr<T>&& ptr,
@@ -118,7 +118,7 @@ class actor : public channel
      * @note Groups are leaved automatically if the Actor finishes
      *       execution.
      */
-    void leave(group_ptr const& what);
+    void leave(const group_ptr& what);
 
     /**
      * @brief Links this actor to @p other.
@@ -175,7 +175,7 @@ class actor : public channel
      * @brief Gets the {@link process_information} of the parent process.
      * @returns The {@link process_information} of the parent process.
      */
-    inline process_information const& parent_process() const;
+    inline const process_information& parent_process() const;
 
     /**
      * @brief Gets the {@link process_information} pointer
@@ -202,10 +202,10 @@ class actor : public channel
 
  protected:
 
-    actor(process_information_ptr const& parent = process_information::get());
+    actor(const process_information_ptr& parent = process_information::get());
 
     actor(std::uint32_t aid,
-          process_information_ptr const& parent = process_information::get());
+          const process_information_ptr& parent = process_information::get());
 
  private:
 
@@ -224,7 +224,7 @@ typedef intrusive_ptr<actor> actor_ptr;
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-inline process_information const& actor::parent_process() const
+inline const process_information& actor::parent_process() const
 {
     return *m_parent_process;
 }
@@ -271,7 +271,7 @@ class functor_attachable : public attachable
         m_functor(reason);
     }
 
-    bool matches(attachable::token const&)
+    bool matches(const attachable::token&)
     {
         return false;
     }

@@ -47,8 +47,8 @@ namespace cppa { namespace detail {
 template<class PartialFun>
 struct projection_helper
 {
-    PartialFun const& fun;
-    projection_helper(PartialFun const& pfun) : fun(pfun) { }
+    const PartialFun& fun;
+    projection_helper(const PartialFun& pfun) : fun(pfun) { }
     template<typename... Args>
     bool operator()(Args&&... args) const
     {
@@ -76,9 +76,9 @@ class projection
 
     projection(fun_container&& args) : m_funs(std::move(args)) { }
 
-    projection(fun_container const& args) : m_funs(args) { }
+    projection(const fun_container& args) : m_funs(args) { }
 
-    projection(projection const&) = default;
+    projection(const projection&) = default;
 
     /**
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
@@ -130,24 +130,24 @@ class projection
     }
 
     template<class Storage, typename Fun, typename T>
-    static inline  bool fetch(Storage& storage, Fun const& fun, T&& arg)
+    static inline  bool fetch(Storage& storage, const Fun& fun, T&& arg)
     {
         return fetch_(storage, fun(std::forward<T>(arg)));
     }
 
     template<typename Storage, typename T>
-    static inline bool fetch(Storage& storage, util::void_type const&, T&& arg)
+    static inline bool fetch(Storage& storage, const util::void_type&, T&& arg)
     {
         return fetch_(storage, std::forward<T>(arg));
     }
 
-    static inline bool collect(tdata<>&, tdata<> const&)
+    static inline bool collect(tdata<>&, const tdata<>&)
     {
         return true;
     }
 
     template<class TData, class Trans, typename T0, typename... Ts>
-    static inline bool collect(TData& td, Trans const& tr,
+    static inline bool collect(TData& td, const Trans& tr,
                                T0&& arg0, Ts&&... args)
     {
         return    fetch(td.head, tr.head, std::forward<T0>(arg0))
@@ -165,8 +165,8 @@ class projection<util::type_list<> >
  public:
 
     projection() = default;
-    projection(tdata<> const&) { }
-    projection(projection const&) = default;
+    projection(const tdata<>&) { }
+    projection(const projection&) = default;
 
     template<class PartialFun>
     bool operator()(PartialFun& fun) const

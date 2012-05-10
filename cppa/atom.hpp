@@ -39,7 +39,7 @@ namespace cppa {
 
 enum class atom_value : std::uint64_t { dirty_little_hack = 37337 };
 
-std::string to_string(atom_value const& a);
+std::string to_string(const atom_value& a);
 
 /**
  * @brief Creates an atom from given string literal.

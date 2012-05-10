@@ -62,7 +62,7 @@ class either
     /**
      * @brief Creates a @p Left from @p value.
      */
-    either(left_type const& value) : m_is_left(true) { cr_left(value); }
+    either(const left_type& value) : m_is_left(true) { cr_left(value); }
 
     /**
      * @brief Creates a @p Left from @p value.
@@ -72,14 +72,14 @@ class either
     /**
      * @brief Creates a @p Right from @p value.
      */
-    either(right_type const& value) : m_is_left(false) { cr_right(value); }
+    either(const right_type& value) : m_is_left(false) { cr_right(value); }
 
     /**
      * @brief Creates a @p Right from @p value.
      */
     either(Right&& value) : m_is_left(false) { cr_right(std::move(value)); }
 
-    either(either const& other) : m_is_left(other.m_is_left)
+    either(const either& other) : m_is_left(other.m_is_left)
     {
         if (other.m_is_left) cr_left(other.m_left);
         else cr_right(other.m_right);
@@ -93,7 +93,7 @@ class either
 
     ~either() { destroy(); }
 
-    either& operator=(either const& other)
+    either& operator=(const either& other)
     {
         if (m_is_left == other.m_is_left)
         {
@@ -149,7 +149,7 @@ class either
     /**
      * @brief Returns this @p either as a @p Left.
      */
-    inline left_type const& left() const
+    inline const left_type& left() const
     {
         CPPA_REQUIRE(m_is_left);
         return m_left;
@@ -167,7 +167,7 @@ class either
     /**
      * @brief Returns this @p either as a @p Right.
      */
-    inline right_type const& right() const
+    inline const right_type& right() const
     {
         CPPA_REQUIRE(!m_is_left);
         return m_right;
@@ -205,7 +205,7 @@ class either
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator==(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
+bool operator==(const either<Left, Right>& lhs, const either<Left, Right>& rhs)
 {
     if (lhs.is_left() == rhs.is_left())
     {
@@ -217,63 +217,63 @@ bool operator==(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator==(either<Left, Right> const& lhs, Left const& rhs)
+bool operator==(const either<Left, Right>& lhs, const Left& rhs)
 {
     return lhs.is_left() && lhs.left() == rhs;
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator==(Left const& lhs, either<Left, Right> const& rhs)
+bool operator==(const Left& lhs, const either<Left, Right>& rhs)
 {
     return rhs == lhs;
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator==(either<Left, Right> const& lhs, Right const& rhs)
+bool operator==(const either<Left, Right>& lhs, const Right& rhs)
 {
     return lhs.is_right() && lhs.right() == rhs;
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator==(Right const& lhs, either<Left, Right> const& rhs)
+bool operator==(const Right& lhs, const either<Left, Right>& rhs)
 {
     return rhs == lhs;
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator!=(either<Left, Right> const& lhs, either<Left, Right> const& rhs)
+bool operator!=(const either<Left, Right>& lhs, const either<Left, Right>& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator!=(either<Left, Right> const& lhs, Left const& rhs)
+bool operator!=(const either<Left, Right>& lhs, const Left& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator!=(Left const& lhs, either<Left, Right> const& rhs)
+bool operator!=(const Left& lhs, const either<Left, Right>& rhs)
 {
     return !(rhs == lhs);
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator!=(either<Left, Right> const& lhs, Right const& rhs)
+bool operator!=(const either<Left, Right>& lhs, const Right& rhs)
 {
     return !(lhs == rhs);
 }
 
 /** @relates either */
 template<typename Left, typename Right>
-bool operator!=(Right const& lhs, either<Left, Right> const& rhs)
+bool operator!=(const Right& lhs, const either<Left, Right>& rhs)
 {
     return !(rhs == lhs);
 }

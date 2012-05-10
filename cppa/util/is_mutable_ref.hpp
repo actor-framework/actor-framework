@@ -43,7 +43,7 @@ struct is_mutable_ref
 };
 
 template<typename T>
-struct is_mutable_ref<T const&>
+struct is_mutable_ref<const T&>
 {
     static constexpr bool value = false;
 };

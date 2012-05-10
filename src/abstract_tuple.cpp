@@ -39,7 +39,7 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
                && std::equal(begin(), end(), other.begin(), detail::full_eq));
 }
 
-abstract_tuple::abstract_tuple(abstract_tuple const& other)
+abstract_tuple::abstract_tuple(const abstract_tuple& other)
     : ref_counted()
     , m_impl_type(other.m_impl_type)
 {

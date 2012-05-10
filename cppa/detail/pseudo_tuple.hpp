@@ -73,7 +73,7 @@ struct pseudo_tuple_from_type_list<util::type_list<Ts...> >
 namespace cppa {
 
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type const& get(detail::pseudo_tuple<Tn...> const& tv)
+const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv)
 {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
     return *reinterpret_cast<typename util::at<N, Tn...>::type const*>(tv.at(N));

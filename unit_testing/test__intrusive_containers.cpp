@@ -47,17 +47,17 @@ struct iint
     ~iint() { --s_iint_instances; }
 };
 
-inline bool operator==(iint const& lhs, iint const& rhs)
+inline bool operator==(const iint& lhs, const iint& rhs)
 {
     return lhs.value == rhs.value;
 }
 
-inline bool operator==(iint const& lhs, int rhs)
+inline bool operator==(const iint& lhs, int rhs)
 {
     return lhs.value == rhs;
 }
 
-inline bool operator==(int lhs, iint const& rhs)
+inline bool operator==(int lhs, const iint& rhs)
 {
     return lhs == rhs.value;
 }
@@ -104,7 +104,7 @@ size_t test__intrusive_containers()
     // five elements + two dummies
     CPPA_CHECK_EQUAL(s_iint_instances, 7);
 
-    ilist2.remove_if([](iint const& val) { return (val.value % 2) != 0; });
+    ilist2.remove_if([](const iint& val) { return (val.value % 2) != 0; });
 
     // two elements + two dummies
     CPPA_CHECK_EQUAL(s_iint_instances, 4);

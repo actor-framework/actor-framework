@@ -23,7 +23,7 @@ struct receiver : Actor
 
     int64_t m_num;
 
-    void handler(int64_t const&, const Address from)
+    void handler(const int64_t&, const Address from)
     {
         if (++m_num == t_max)
             Send(t_max, from);
