@@ -42,8 +42,7 @@ namespace cppa { namespace detail {
 class uniform_type_info_map_helper;
 
 // note: this class is implemented in uniform_type_info.cpp
-class uniform_type_info_map
-{
+class uniform_type_info_map {
 
     friend class uniform_type_info_map_helper;
 
@@ -59,8 +58,7 @@ class uniform_type_info_map
 
     ~uniform_type_info_map();
 
-    inline const int_map& int_names() const
-    {
+    inline const int_map& int_names() const {
         return m_ints;
     }
 

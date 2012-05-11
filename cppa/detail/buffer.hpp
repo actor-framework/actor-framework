@@ -41,8 +41,7 @@
 namespace cppa { namespace detail {
 
 template<size_t ChunkSize, size_t MaxBufferSize, typename DataType = char>
-class buffer
-{
+class buffer {
 
     DataType* m_data;
     size_t m_written;
@@ -50,33 +49,25 @@ class buffer
     size_t m_final_size;
 
     template<typename F>
-    bool append_impl(F&& fun, bool throw_on_error)
-    {
+    bool append_impl(F&& fun, bool throw_on_error) {
         auto recv_result = fun();
-        if (recv_result == 0)
-        {
+        if (recv_result == 0) {
             // connection closed
-            if (throw_on_error)
-            {
+            if (throw_on_error) {
                 std::ios_base::failure("cannot read from a closed pipe/socket");
             }
             return false;
         }
-        else if (recv_result < 0)
-        {
-            switch (errno)
-            {
-                case EAGAIN:
-                {
+        else if (recv_result < 0) {
+            switch (errno) {
+                case EAGAIN: {
                     // rdflags or sfd is set to non-blocking,
                     // this is not treated as error
                     return true;
                 }
-                default:
-                {
+                default: {
                     // a "real" error occured;
-                    if (throw_on_error)
-                    {
+                    if (throw_on_error) {
                         char* cstr = strerror(errno);
                         std::string errmsg = cstr;
                         free(cstr);
@@ -92,45 +83,36 @@ class buffer
 
  public:
 
-    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
-    {
+    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0) {
     }
 
     buffer(buffer&& other)
         : m_data(other.m_data), m_written(other.m_written)
-        , m_allocated(other.m_allocated), m_final_size(other.m_final_size)
-    {
+        , m_allocated(other.m_allocated), m_final_size(other.m_final_size) {
         other.m_data = nullptr;
         other.m_written = other.m_allocated = other.m_final_size = 0;
     }
 
-    ~buffer()
-    {
+    ~buffer() {
         delete[] m_data;
     }
 
-    void clear()
-    {
+    void clear() {
         m_written = 0;
     }
 
-    void reset(size_t new_final_size = 0)
-    {
+    void reset(size_t new_final_size = 0) {
         m_written = 0;
         m_final_size = new_final_size;
-        if (new_final_size > m_allocated)
-        {
-            if (new_final_size > MaxBufferSize)
-            {
+        if (new_final_size > m_allocated) {
+            if (new_final_size > MaxBufferSize) {
                 throw std::ios_base::failure("maximum buffer size exceeded");
             }
             auto remainder = (new_final_size % ChunkSize);
-            if (remainder == 0)
-            {
+            if (remainder == 0) {
                 m_allocated = new_final_size;
             }
-            else
-            {
+            else {
                 m_allocated = (new_final_size - remainder) + ChunkSize;
             }
             delete[] m_data;
@@ -138,51 +120,41 @@ class buffer
         }
     }
 
-    bool ready()
-    {
+    bool ready() {
         return m_written == m_final_size;
     }
 
     // pointer to the current write position
-    DataType* wr_ptr()
-    {
+    DataType* wr_ptr() {
         return m_data + m_written;
     }
 
-    size_t size()
-    {
+    size_t size() {
         return m_written;
     }
 
-    size_t final_size()
-    {
+    size_t final_size() {
         return m_final_size;
     }
 
-    size_t remaining()
-    {
+    size_t remaining() {
         return m_final_size - m_written;
     }
 
-    void inc_written(size_t value)
-    {
+    void inc_written(size_t value) {
         m_written += value;
     }
 
-    DataType* data()
-    {
+    DataType* data() {
         return m_data;
     }
 
-    inline bool full()
-    {
+    inline bool full() {
         return remaining() == 0;
     }
 
-    bool append_from_file_descriptor(int fd, bool throw_on_error = false)
-    {
-        auto fun = [=]() -> int
-        {
+    bool append_from_file_descriptor(int fd, bool throw_on_error = false) {
+        auto fun = [=]() -> int {
             return ::read(fd, this->wr_ptr(), this->remaining());
         };
         return append_impl(fun, throw_on_error);
@@ -190,10 +162,8 @@ class buffer
 
     bool append_from(native_socket_type sfd,
                      int rdflags = 0,
-                     bool throw_on_error = false)
-    {
-        auto fun = [=]() -> int
-        {
+                     bool throw_on_error = false) {
+        auto fun = [=]() -> int {
             return ::recv(sfd, this->wr_ptr(), this->remaining(), rdflags);
         };
         return append_impl(fun, throw_on_error);

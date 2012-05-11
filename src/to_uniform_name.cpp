@@ -51,45 +51,39 @@
 
 namespace {
 
-constexpr const char* mapped_int_names[][2] =
-{
-    { nullptr, nullptr }, // sizeof 0 { invalid }
+constexpr const char* mapped_int_names[][2] = {
+    { nullptr, nullptr }, // sizeof 0-> invalid
     { "@i8",   "@u8"   }, // sizeof 1 -> signed / unsigned int8
     { "@i16",  "@u16"  }, // sizeof 2 -> signed / unsigned int16
-    { nullptr, nullptr }, // sizeof 3 { invalid }
+    { nullptr, nullptr }, // sizeof 3-> invalid
     { "@i32",  "@u32"  }, // sizeof 4 -> signed / unsigned int32
-    { nullptr, nullptr }, // sizeof 5 { invalid }
-    { nullptr, nullptr }, // sizeof 6 { invalid }
-    { nullptr, nullptr }, // sizeof 7 { invalid }
+    { nullptr, nullptr }, // sizeof 5-> invalid
+    { nullptr, nullptr }, // sizeof 6-> invalid
+    { nullptr, nullptr }, // sizeof 7-> invalid
     { "@i64",  "@u64"  }  // sizeof 8 -> signed / unsigned int64
 };
 
 template<typename T>
-constexpr size_t sign_index()
-{
+constexpr size_t sign_index() {
     static_assert(std::numeric_limits<T>::is_integer, "T is not an integer");
     return std::numeric_limits<T>::is_signed ? 0 : 1;
 }
 
 template<typename T>
-inline std::string demangled()
-{
+inline std::string demangled() {
     return cppa::detail::demangle(typeid(T).name());
 }
 
 template<typename T>
-constexpr const char* mapped_int_name()
-{
+constexpr const char* mapped_int_name() {
     return mapped_int_names[sizeof(T)][sign_index<T>()];
 }
 
 template<typename Iterator>
 std::string to_uniform_name_impl(Iterator begin, Iterator end,
-                                 bool first_run = false)
-{
+                                 bool first_run = false) {
     // all integer type names as uniform representation
-    static std::map<std::string, std::string> mapped_demangled_names =
-    {
+    static std::map<std::string, std::string> mapped_demangled_names = {
       // integer types
       { demangled<char>(), mapped_int_name<char>() },
       { demangled<signed char>(), mapped_int_name<signed char>() },
@@ -130,12 +124,10 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     };
 
     // check if we could find the whole string in our lookup map
-    if (first_run)
-    {
+    if (first_run) {
         std::string tmp(begin, end);
         auto i = mapped_demangled_names.find(tmp);
-        if (i != mapped_demangled_names.end())
-        {
+        if (i != mapped_demangled_names.end()) {
             return i->second;
         }
     }
@@ -151,10 +143,8 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     int open_brackets = 0; // counts "open" '<'
     // denotes the begin of a possible subsequence
     Iterator anchor = begin;
-    for (Iterator i = begin; i != end; /* i is incemented in the loop */)
-    {
-        switch (*i)
-        {
+    for (Iterator i = begin; i != end; /* i is incemented in the loop */) {
+        switch (*i) {
 
          case '<':
             ++open_brackets;
@@ -162,22 +152,19 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
             break;
 
          case '>':
-            if (--open_brackets < 0)
-            {
+            if (--open_brackets < 0) {
                 throw std::runtime_error("malformed string");
             }
             ++i;
             break;
 
          case ',':
-            if (open_brackets == 0)
-            {
+            if (open_brackets == 0) {
                 substrings.push_back(std::make_pair(anchor, i));
                 ++i;
                 anchor = i;
             }
-            else
-            {
+            else {
                 ++i;
             }
             break;
@@ -189,24 +176,20 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
         }
     }
     // call recursively for each list argument
-    if (!substrings.empty())
-    {
+    if (!substrings.empty()) {
         std::string result;
         substrings.push_back(std::make_pair(anchor, end));
-        for (const subseq& sstr : substrings)
-        {
+        for (const subseq& sstr : substrings) {
             if (!result.empty()) result += ",";
             result += to_uniform_name_impl(sstr.first, sstr.second);
         }
         return result;
     }
     // we didn't got a list, compute unify name
-    else
-    {
+    else {
         // is [begin, end) a template?
         Iterator substr_begin = std::find(begin, end, '<');
-        if (substr_begin == end)
-        {
+        if (substr_begin == end) {
             // not a template, return mapping
             std::string arg(begin, end);
             auto mapped = mapped_demangled_names.find(arg);
@@ -222,8 +205,7 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
                               .base();
         // skip trailing '>'
         --substr_end;
-        if (substr_end == substr_begin)
-        {
+        if (substr_end == substr_begin) {
             throw std::runtime_error("substr_end == substr_begin");
         }
         std::string result;
@@ -240,17 +222,14 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
 
 namespace cppa { namespace detail {
 
-std::string to_uniform_name(const std::string& dname)
-{
+std::string to_uniform_name(const std::string& dname) {
     static std::string an = "(anonymous namespace)";
     static std::string an_replacement = "@_";
     auto r = to_uniform_name_impl(dname.begin(), dname.end(), true);
     // replace all occurrences of an with "@_"
-    if (r.size() > an.size())
-    {
+    if (r.size() > an.size()) {
         auto i = std::search(r.begin(), r.end(), an.begin(), an.end());
-        while (i != r.end())
-        {
+        while (i != r.end()) {
             auto substr_end = i + an.size();
             r.replace(i, substr_end, an_replacement);
             // next iteration
@@ -260,8 +239,7 @@ std::string to_uniform_name(const std::string& dname)
     return r;
 }
 
-std::string to_uniform_name(const std::type_info& tinfo)
-{
+std::string to_uniform_name(const std::type_info& tinfo) {
     return to_uniform_name(demangle(tinfo.name()));
 }
 

@@ -40,8 +40,7 @@ namespace cppa {
  * @brief Base class for event-based actor implementations.
  */
 template<typename Derived>
-class event_based_actor_base : public abstract_event_based_actor
-{
+class event_based_actor_base : public abstract_event_based_actor {
 
     typedef abstract_event_based_actor super;
 
@@ -56,15 +55,13 @@ class event_based_actor_base : public abstract_event_based_actor
      *       This member function should be used to use a member of
      *       a subclass as behavior.
      */
-    inline void become(behavior* bhvr)
-    {
+    inline void become(behavior* bhvr) {
         d_this()->do_become(bhvr, false);
     }
 
     /** @brief Sets the actor's behavior. */
     template<typename Arg0, typename... Args>
-    void become(Arg0&& arg0, Args&&... args)
-    {
+    void become(Arg0&& arg0, Args&&... args) {
         behavior tmp = match_expr_concat(std::forward<Arg0>(arg0),
                                          std::forward<Args>(args)...);
         d_this()->do_become(new behavior(std::move(tmp)), true);

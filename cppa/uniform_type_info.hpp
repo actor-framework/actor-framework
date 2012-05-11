@@ -145,8 +145,7 @@ uniform_type_info const* uniform_typeid(const std::type_info&);
  *   e.g.: <tt>namespace { class foo { }; }</tt> is mapped to
  *   @c \@_::foo
  */
-class uniform_type_info
-{
+class uniform_type_info {
 
     friend class object;
 
@@ -267,8 +266,7 @@ class uniform_type_info
  * @relates uniform_type_info
  */
 template<typename T>
-inline uniform_type_info const* uniform_typeid()
-{
+inline uniform_type_info const* uniform_typeid() {
     return uniform_typeid(typeid(T));
 }
 
@@ -276,8 +274,7 @@ inline uniform_type_info const* uniform_typeid()
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs)
-{
+                       const uniform_type_info& rhs) {
     // uniform_type_info instances are singletons,
     // thus, equal == identical
     return &lhs == &rhs;
@@ -287,40 +284,35 @@ inline bool operator==(const uniform_type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator!=(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs)
-{
+                       const uniform_type_info& rhs) {
     return !(lhs == rhs);
 }
 
 /**
  * @relates uniform_type_info
  */
-inline bool operator==(const uniform_type_info& lhs, const std::type_info& rhs)
-{
+inline bool operator==(const uniform_type_info& lhs, const std::type_info& rhs) {
     return lhs.equals(rhs);
 }
 
 /**
  * @relates uniform_type_info
  */
-inline bool operator!=(const uniform_type_info& lhs, const std::type_info& rhs)
-{
+inline bool operator!=(const uniform_type_info& lhs, const std::type_info& rhs) {
     return !(lhs.equals(rhs));
 }
 
 /**
  * @relates uniform_type_info
  */
-inline bool operator==(const std::type_info& lhs, const uniform_type_info& rhs)
-{
+inline bool operator==(const std::type_info& lhs, const uniform_type_info& rhs) {
     return rhs.equals(lhs);
 }
 
 /**
  * @relates uniform_type_info
  */
-inline bool operator!=(const std::type_info& lhs, const uniform_type_info& rhs)
-{
+inline bool operator!=(const std::type_info& lhs, const uniform_type_info& rhs) {
     return !(rhs.equals(lhs));
 }
 

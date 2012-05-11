@@ -35,8 +35,7 @@
 
 namespace cppa { namespace detail {
 
-enum class yield_state : int
-{
+enum class yield_state : int {
     // yield() wasn't called yet
     invalid,
     // actor is still ready

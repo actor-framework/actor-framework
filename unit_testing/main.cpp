@@ -27,15 +27,13 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 #define CPPA_TEST_CATCH_BLOCK()                                                \
-catch (std::exception& e)                                                      \
-{                                                                              \
+catch (std::exception& e) {                                                    \
     std::cerr << "test exited after throwing an instance of \""                \
               << ::cppa::detail::demangle(typeid(e).name())                    \
               << "\"\n what(): " << e.what() << std::endl;                     \
     errors += 1;                                                               \
 }                                                                              \
-catch (...)                                                                    \
-{                                                                              \
+catch (...) {                                                                  \
     std::cerr << "test exited because of an unknown exception" << std::endl;   \
     errors += 1;                                                               \
 }
@@ -66,8 +64,7 @@ using std::endl;
 
 using namespace cppa;
 
-std::vector<std::string> split(const std::string& str, char delim)
-{
+std::vector<std::string> split(const std::string& str, char delim) {
     std::vector<std::string> result;
     std::stringstream strs{str};
     std::string tmp;
@@ -75,8 +72,7 @@ std::vector<std::string> split(const std::string& str, char delim)
     return result;
 }
 
-void print_node_id()
-{
+void print_node_id() {
     auto pinfo = cppa::process_information::get();
     auto node_id_hash = cppa::to_string(pinfo->node_id());
     cout << "node id: " << node_id_hash << endl;
@@ -88,57 +84,45 @@ void print_node_id()
                                  << endl;
 }
 
-std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1)
-{
+std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     std::vector<string_pair> result;
-    for (int i = begin; i < argc; ++i)
-    {
+    for (int i = begin; i < argc; ++i) {
         auto vec = split(argv[i], '=');
-        if (vec.size() != 2)
-        {
+        if (vec.size() != 2) {
             cerr << "\"" << argv[i] << "\" is not a key-value pair" << endl;
         }
         else if (std::any_of(result.begin(), result.end(),
-                             [&](const string_pair& p) { return p.first == vec[0]; }))
-        {
+                             [&](const string_pair& p) { return p.first == vec[0]; })) {
             cerr << "key \"" << vec[0] << "\" is already defined" << endl;
         }
-        else
-        {
+        else {
             result.emplace_back(vec[0], vec[1]);
         }
     }
     return result;
 }
 
-void usage(char const* argv0)
-{
+void usage(char const* argv0) {
     cout << "usage: " << split(argv0, '/').back() << " "
          << "[run=remote_actor] "
          << "[scheduler=(thread_pool_scheduler|mock_scheduler)]"
          << endl;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     /*
-    match_each(argv + 1, argv + argc)
-    (
-        on_arg_match >> [](const std::string& str)
-        {
+    match_each(argv + 1, argv + argc) (
+        on_arg_match >> [](const std::string& str) {
             cout << "matched \"" << str << "\"" << endl;
         }
     );
 
-    match_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); })
-    (
-        on_arg_match >> [](const std::string& key, const std::string& value)
-        {
+    match_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); }) (
+        on_arg_match >> [](const std::string& key, const std::string& value) {
             cout << "key = \"" << key << "\", value = \"" << value << "\""
                  << endl;
         },
-        others() >> [](const any_tuple& oops)
-        {
+        others() >> [](const any_tuple& oops) {
             cout << "not a key value pair: " << to_string(oops) << endl;
         }
     );
@@ -154,40 +138,32 @@ int main(int argc, char** argv)
     */
 
     auto args = get_kv_pairs(argc, argv);
-    match_each(args)
-    (
-        on("run", "remote_actor") >> [&]()
-        {
+    match_each(args) (
+        on("run", "remote_actor") >> [&]() {
             test__remote_actor(argv[0], true, args);
             exit(0);
         },
-        on("run", "threaded_ping_pong") >> []()
-        {
+        on("run", "threaded_ping_pong") >> []() {
             spawn<detached>(pong, spawn<detached>(ping, 1000));
             await_all_others_done();
             exit(0);
         },
-        on("run", "ping_pong") >> []()
-        {
+        on("run", "ping_pong") >> []() {
             spawn_event_based_pong(spawn_event_based_ping(1000000));
             await_all_others_done();
             exit(0);
         },
-        on("run_ping", arg_match) >> [&](std::string const& num_pings)
-        {
+        on("run_ping", arg_match) >> [&](std::string const& num_pings) {
             auto ping_actor = spawn<detached>(ping, std::stoi(num_pings));
             //auto ping_actor = spawn_event_based_ping(std::stoi(num_pings));
             std::uint16_t port = 4242;
             bool success = false;
-            do
-            {
-                try
-                {
+            do {
+                try {
                     publish(ping_actor, port);
                     success = true;
                 }
-                catch (bind_failure&)
-                {
+                catch (bind_failure&) {
                     // try next port
                     ++port;
                 }
@@ -197,20 +173,16 @@ int main(int argc, char** argv)
             await_all_others_done();
             exit(0);
         },
-        on("scheduler", val<std::string>) >> [](const std::string& sched)
-        {
-            if (sched == "thread_pool_scheduler")
-            {
+        on("scheduler", val<std::string>) >> [](const std::string& sched) {
+            if (sched == "thread_pool_scheduler") {
                 cout << "using thread_pool_scheduler" << endl;
                 set_scheduler(new cppa::detail::thread_pool_scheduler);
             }
-            else if (sched == "mock_scheduler")
-            {
+            else if (sched == "mock_scheduler") {
                 cout << "using mock_scheduler" << endl;
                 set_scheduler(new cppa::detail::mock_scheduler);
             }
-            else
-            {
+            else {
                 cerr << "unknown scheduler: " << sched << endl;
                 exit(1);
             }

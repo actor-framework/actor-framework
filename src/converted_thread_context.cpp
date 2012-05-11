@@ -42,12 +42,10 @@
 namespace cppa { namespace detail {
 
 converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom("EXIT"))
-{
+    : m_exit_msg_pattern(atom("EXIT")) {
 }
 
-void converted_thread_context::quit(std::uint32_t reason)
-{
+void converted_thread_context::quit(std::uint32_t reason) {
     super::cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
     // self must point to a newly created instance
@@ -55,13 +53,11 @@ void converted_thread_context::quit(std::uint32_t reason)
     throw actor_exited(reason);
 }
 
-void converted_thread_context::cleanup(std::uint32_t reason)
-{
+void converted_thread_context::cleanup(std::uint32_t reason) {
     super::cleanup(reason);
 }
 
-void converted_thread_context::enqueue(actor* sender, any_tuple msg)
-{
+void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
 #   ifdef CPPA_DEBUG
     auto node = fetch_node(sender, std::move(msg));
     CPPA_REQUIRE(node->marked == false);
@@ -71,36 +67,28 @@ void converted_thread_context::enqueue(actor* sender, any_tuple msg)
 #   endif
 }
 
-void converted_thread_context::dequeue(partial_function& fun) // override
-{
-    if (invoke_from_cache(fun) == false)
-    {
+void converted_thread_context::dequeue(partial_function& fun) { // override
+    if (invoke_from_cache(fun) == false) {
         recursive_queue_node* e = m_mailbox.pop();
         CPPA_REQUIRE(e->marked == false);
-        while (invoke(e, fun) == false)
-        {
+        while (invoke(e, fun) == false) {
             e = m_mailbox.pop();
         }
     }
 }
 
-void converted_thread_context::dequeue(behavior& bhvr) // override
-{
+void converted_thread_context::dequeue(behavior& bhvr) { // override
     auto& fun = bhvr.get_partial_function();
-    if (bhvr.timeout().valid() == false)
-    {
+    if (bhvr.timeout().valid() == false) {
         // suppress virtual function call
         converted_thread_context::dequeue(fun);
     }
-    else if (invoke_from_cache(fun) == false)
-    {
+    else if (invoke_from_cache(fun) == false) {
         auto timeout = now();
         timeout += bhvr.timeout();
         recursive_queue_node* e = m_mailbox.try_pop(timeout);
-        while (e != nullptr)
-        {
-            if (e->marked)
-            {
+        while (e != nullptr) {
+            if (e->marked) {
                 std::cout << "ooops: " << to_string(e->msg) << std::endl;
             }
             CPPA_REQUIRE(e->marked == false);
@@ -111,13 +99,10 @@ void converted_thread_context::dequeue(behavior& bhvr) // override
     }
 }
 
-filter_result converted_thread_context::filter_msg(any_tuple const& msg)
-{
-    if (m_trap_exit == false && matches(msg, m_exit_msg_pattern))
-    {
+filter_result converted_thread_context::filter_msg(any_tuple const& msg) {
+    if (m_trap_exit == false && matches(msg, m_exit_msg_pattern)) {
         auto reason = msg.get_as<std::uint32_t>(1);
-        if (reason != exit_reason::normal)
-        {
+        if (reason != exit_reason::normal) {
             quit(reason);
         }
         return normal_exit_signal;

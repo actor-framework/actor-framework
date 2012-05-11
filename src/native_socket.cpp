@@ -39,26 +39,19 @@ namespace cppa { namespace detail {
 
 #ifndef CPPA_WINDOWS
 
-void closesocket(native_socket_type s)
-{
-    if(::close(s) != 0)
-    {
-        switch(errno)
-        {
-            case EBADF:
-            {
+void closesocket(native_socket_type s) {
+    if(::close(s) != 0) {
+        switch(errno) {
+            case EBADF: {
                 throw std::ios_base::failure("EBADF: invalid socket");
             }
-            case EINTR:
-            {
+            case EINTR: {
                 throw std::ios_base::failure("EINTR: interrupted");
             }
-            case EIO:
-            {
+            case EIO: {
                 throw std::ios_base::failure("EIO: an I/O error occured");
             }
-            default:
-            {
+            default: {
                 std::ostringstream oss;
                 throw std::ios_base::failure("");
             }

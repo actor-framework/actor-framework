@@ -17,16 +17,14 @@ namespace {
 
 constexpr auto s_foo = atom("FooBar");
 
-inline std::ostream& operator<<(std::ostream& out, const atom_value& a)
-{
+inline std::ostream& operator<<(std::ostream& out, const atom_value& a) {
     return (out << to_string(a));
 }
 
 } // namespace <anonymous>
 
 template<atom_value AtomValue, typename... Types>
-void foo()
-{
+void foo() {
     cout << "foo(" << static_cast<std::uint64_t>(AtomValue)
                    << " = "
                    << to_string(AtomValue)
@@ -34,8 +32,7 @@ void foo()
          << endl;
 }
 
-size_t test__atom()
-{
+size_t test__atom() {
     bool matched_pattern[3] = { false, false, false };
     CPPA_TEST(test__atom);
     // check if there are leading bits that distinguish "zzz" and "000 "
@@ -50,29 +47,23 @@ size_t test__atom()
          << make_cow_tuple(atom("b"), atom("a"), atom("c"), 23.f)
          << make_cow_tuple(atom("a"), atom("b"), atom("c"), 23.f);
     int i = 0;
-    receive_for(i, 3)
-    (
-        on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value)
-        {
+    receive_for(i, 3) (
+        on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value) {
             matched_pattern[0] = true;
             CPPA_CHECK_EQUAL(value, 42);
         },
-        on<atom(":Attach"), atom(":Baz"), string>() >> [&](const string& str)
-        {
+        on<atom(":Attach"), atom(":Baz"), string>() >> [&](const string& str) {
             matched_pattern[1] = true;
             CPPA_CHECK_EQUAL(str, "cstring");
         },
-        on<atom("a"), atom("b"), atom("c"), float>() >> [&](float value)
-        {
+        on<atom("a"), atom("b"), atom("c"), float>() >> [&](float value) {
             matched_pattern[2] = true;
             CPPA_CHECK_EQUAL(value, 23.f);
         }
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
-    receive
-    (
-        others() >> []()
-        {
+    receive (
+        others() >> []() {
             // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
         }
     );

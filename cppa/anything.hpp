@@ -40,19 +40,16 @@ namespace cppa {
  */
 struct anything { };
 
-inline bool operator==(const anything&, const anything&)
-{
+inline bool operator==(const anything&, const anything&) {
     return true;
 }
 
-inline bool operator!=(const anything&, const anything&)
-{
+inline bool operator!=(const anything&, const anything&) {
     return false;
 }
 
 template<typename T>
-struct is_anything
-{
+struct is_anything {
     static constexpr bool value = std::is_same<T, anything>::value;
 };
 

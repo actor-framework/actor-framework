@@ -10,8 +10,7 @@ using std::make_pair;
 using namespace cppa;
 
 // a simple class using overloaded getter and setter member functions
-class foo
-{
+class foo {
 
     int m_a;
     int m_b;
@@ -37,8 +36,7 @@ class foo
 };
 
 // announce requires foo to have the equal operator implemented
-bool operator==(const foo& lhs, const foo& rhs)
-{
+bool operator==(const foo& lhs, const foo& rhs) {
     return    lhs.a() == rhs.a()
            && lhs.b() == rhs.b();
 }
@@ -48,8 +46,7 @@ typedef int (foo::*foo_getter)() const;
 // a member function pointer to set an attribute of foo
 typedef void (foo::*foo_setter)(int);
 
-int main(int, char**)
-{
+int main(int, char**) {
     // since the member function "a" is ambiguous, the compiler
     // also needs a type to select the correct overload
     foo_getter g1 = &foo::a;
@@ -70,11 +67,9 @@ int main(int, char**)
 
     // send a foo to ourselves ...
     send(self, foo{1,2});
-    receive
-    (
+    receive (
         // ... and receive it
-        on<foo>() >> [](const foo& val)
-        {
+        on<foo>() >> [](const foo& val) {
             cout << "foo("
                  << val.a() << ","
                  << val.b() << ")"

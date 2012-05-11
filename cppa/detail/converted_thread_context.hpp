@@ -58,8 +58,7 @@ namespace cppa { namespace detail {
  */
 class converted_thread_context
         : public nestable_receive_actor<converted_thread_context,
-                                        abstract_actor<local_actor> >
-{
+                                        abstract_actor<local_actor> > {
 
     typedef nestable_receive_actor<converted_thread_context,
                                    abstract_actor<local_actor> >

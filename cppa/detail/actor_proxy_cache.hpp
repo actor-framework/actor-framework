@@ -45,8 +45,7 @@
 
 namespace cppa { namespace detail {
 
-class actor_proxy_cache
-{
+class actor_proxy_cache {
 
  public:
 
@@ -59,19 +58,15 @@ class actor_proxy_cache
     template<typename Fun>
     void erase_all(process_information::node_id_type const& nid,
                    std::uint32_t process_id,
-                   Fun fun)
-    {
+                   Fun fun) {
         key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
-        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()};
-        {
+        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()}; {
             lock_guard<util::shared_spinlock> guard{m_lock};
             auto e = m_entries.end();
             auto first = m_entries.lower_bound(lb);
-            if (first != e)
-            {
+            if (first != e) {
                 auto last = m_entries.upper_bound(ub);
-                for (auto i = first; i != last; ++i)
-                {
+                for (auto i = first; i != last; ++i) {
                     fun(i->second);
                 }
                 m_entries.erase(first, last);
@@ -86,8 +81,7 @@ class actor_proxy_cache
                        actor_id>                          // (remote) actor id
             key_tuple;
 
-    struct key_tuple_less
-    {
+    struct key_tuple_less {
         bool operator()(key_tuple const& lhs, key_tuple const& rhs) const;
     };
 

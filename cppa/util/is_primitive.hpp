@@ -49,8 +49,7 @@ namespace cppa { namespace util {
  * - @c std::u32string
  */
 template<typename T>
-struct is_primitive
-{
+struct is_primitive {
     static constexpr bool value = detail::type_to_ptype<T>::ptype != pt_null;
 };
 

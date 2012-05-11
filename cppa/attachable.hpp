@@ -39,8 +39,7 @@ namespace cppa {
 /**
  * @brief Callback utility class.
  */
-class attachable
-{
+class attachable {
 
     attachable(const attachable&) = delete;
     attachable& operator=(const attachable&) = delete;
@@ -54,8 +53,7 @@ class attachable
     /**
      * @brief Represents a pointer to a value with its RTTI.
      */
-    struct token
-    {
+    struct token {
         /**
          * @brief Denotes the type of @c ptr.
          */
@@ -65,8 +63,7 @@ class attachable
          */
         void const* ptr;
         inline token(const std::type_info& msubtype, void const* mptr)
-            : subtype(msubtype), ptr(mptr)
-        {
+            : subtype(msubtype), ptr(mptr) {
         }
     };
 

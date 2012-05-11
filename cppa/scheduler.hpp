@@ -54,8 +54,7 @@ class scheduler_helper;
 /**
  * @brief
  */
-class scheduler
-{
+class scheduler {
 
     scheduler_helper* m_helper;
 
@@ -67,8 +66,7 @@ class scheduler
 
  public:
 
-    struct callback
-    {
+    struct callback {
         virtual ~callback();
         // called if an actor finished execution during resume()
         virtual void exec_done() = 0;
@@ -117,8 +115,7 @@ class scheduler
 
     template<typename Duration, typename... Data>
     void future_send(const actor_ptr& to,
-                     const Duration& rel_time, const Data&... data)
-    {
+                     const Duration& rel_time, const Data&... data) {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple data_tup = make_cow_tuple(data...);
         any_tuple tup = make_cow_tuple(util::duration(rel_time), to, data_tup);

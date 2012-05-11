@@ -42,13 +42,11 @@
 namespace cppa { namespace detail {
 
 template<class Derived, class Base>
-class nestable_receive_actor : public Base
-{
+class nestable_receive_actor : public Base {
 
  protected:
 
-    enum handle_message_result
-    {
+    enum handle_message_result {
         hm_timeout_msg,
         hm_skip_msg,
         hm_drop_msg,
@@ -57,34 +55,27 @@ class nestable_receive_actor : public Base
     };
 
     template<class FunOrBehavior>
-    bool invoke_from_cache(FunOrBehavior& fun)
-    {
+    bool invoke_from_cache(FunOrBehavior& fun) {
         auto i = m_cache.begin();
         auto e = m_cache.end();
-        while (i != e)
-        {
-            switch (this->handle_message(*(*i), fun))
-            {
-                case hm_success:
-                {
+        while (i != e) {
+            switch (this->handle_message(*(*i), fun)) {
+                case hm_success: {
                     this->release_node(i->release());
                     m_cache.erase(i);
                     return true;
                 }
-                case hm_drop_msg:
-                {
+                case hm_drop_msg: {
                     this->release_node(i->release());
                     i = m_cache.erase(i);
                     break;
                 }
                 case hm_skip_msg:
-                case hm_cache_msg:
-                {
+                case hm_cache_msg: {
                     ++i;
                     break;
                 }
-                default:
-                {
+                default: {
                     CPPA_CRITICAL("illegal result of handle_message");
                 }
             }
@@ -93,31 +84,24 @@ class nestable_receive_actor : public Base
     }
 
     template<class FunOrBehavior>
-    bool invoke(recursive_queue_node* node, FunOrBehavior& fun)
-    {
-        switch (this->handle_message(*node, fun))
-        {
-            case hm_success:
-            {
+    bool invoke(recursive_queue_node* node, FunOrBehavior& fun) {
+        switch (this->handle_message(*node, fun)) {
+            case hm_success: {
                 this->release_node(node);
                 return true;
             }
-            case hm_drop_msg:
-            {
+            case hm_drop_msg: {
                 this->release_node(node);
                 break;
             }
-            case hm_cache_msg:
-            {
+            case hm_cache_msg: {
                 m_cache.emplace_back(node);
                 break;
             }
-            case hm_skip_msg:
-            {
+            case hm_skip_msg: {
                 CPPA_CRITICAL("received a marked node");
             }
-            default:
-            {
+            default: {
                 CPPA_CRITICAL("illegal result of handle_message");
             }
         }
@@ -128,52 +112,41 @@ class nestable_receive_actor : public Base
 
     std::list<std::unique_ptr<recursive_queue_node> > m_cache;
 
-    inline Derived* dthis()
-    {
+    inline Derived* dthis() {
         return static_cast<Derived*>(this);
     }
 
-    inline Derived const* dthis() const
-    {
+    inline Derived const* dthis() const {
         return static_cast<Derived const*>(this);
     }
 
-    void handle_timeout(behavior& bhvr)
-    {
+    void handle_timeout(behavior& bhvr) {
         bhvr.handle_timeout();
     }
 
-    void handle_timeout(partial_function&)
-    {
+    void handle_timeout(partial_function&) {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
     template<class FunOrBehavior>
     handle_message_result handle_message(recursive_queue_node& node,
-                                         FunOrBehavior& fun)
-    {
-        if (node.marked)
-        {
+                                         FunOrBehavior& fun) {
+        if (node.marked) {
             return hm_skip_msg;
         }
-        switch (dthis()->filter_msg(node.msg))
-        {
+        switch (dthis()->filter_msg(node.msg)) {
             case normal_exit_signal:
-            case expired_timeout_message:
-            {
+            case expired_timeout_message: {
                 return hm_drop_msg;
             }
-            case timeout_message:
-            {
+            case timeout_message: {
                 handle_timeout(fun);
                 return hm_success;
             }
-            case ordinary_message:
-            {
+            case ordinary_message: {
                 break;
             }
-            default:
-            {
+            default: {
                 CPPA_CRITICAL("illegal result of filter_msg");
             }
         }
@@ -181,8 +154,7 @@ class nestable_receive_actor : public Base
         std::swap(this->m_last_sender, node.sender);
         dthis()->push_timeout();
         node.marked = true;
-        if (fun(this->m_last_dequeued))
-        {
+        if (fun(this->m_last_dequeued)) {
             this->m_last_dequeued.reset();
             this->m_last_sender.reset();
             return hm_success;

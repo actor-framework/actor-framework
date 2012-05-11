@@ -32,22 +32,18 @@
 
 namespace cppa {
 
-void stacked_event_based_actor::become_void()
-{
+void stacked_event_based_actor::become_void() {
     m_loop_stack.clear();
 }
 
-void stacked_event_based_actor::unbecome()
-{
-    if (!m_loop_stack.empty())
-    {
+void stacked_event_based_actor::unbecome() {
+    if (!m_loop_stack.empty()) {
         m_loop_stack.pop_back();
     }
 }
 
 void stacked_event_based_actor::do_become(behavior* bhvr,
-                                          bool has_ownership)
-{
+                                          bool has_ownership) {
     reset_timeout();
     request_timeout(bhvr->timeout());
     stack_element se{bhvr};

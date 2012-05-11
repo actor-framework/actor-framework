@@ -45,8 +45,7 @@ class actor_proxy : public actor { };
 
 #else // CPPA_DOCUMENTATION
 
-class actor_proxy : public abstract_actor<actor>
-{
+class actor_proxy : public abstract_actor<actor> {
 
     typedef abstract_actor<actor> super;
 

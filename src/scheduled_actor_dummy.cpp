@@ -32,46 +32,36 @@
 
 namespace cppa { namespace detail {
 
-void scheduled_actor_dummy::resume(util::fiber*, scheduler::callback*)
-{
+void scheduled_actor_dummy::resume(util::fiber*, scheduler::callback*) {
 }
 
-void scheduled_actor_dummy::quit(std::uint32_t)
-{
+void scheduled_actor_dummy::quit(std::uint32_t) {
 }
 
-void scheduled_actor_dummy::dequeue(behavior&)
-{
+void scheduled_actor_dummy::dequeue(behavior&) {
 }
 
-void scheduled_actor_dummy::dequeue(partial_function&)
-{
+void scheduled_actor_dummy::dequeue(partial_function&) {
 }
 
-void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&)
-{
+void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) {
 }
 
-void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&)
-{
+void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) {
 }
 
-bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&)
-{
+bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&) {
     return false;
 }
 
-bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&)
-{
+bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
     return false;
 }
 
-void scheduled_actor_dummy::detach(attachable::token const&)
-{
+void scheduled_actor_dummy::detach(attachable::token const&) {
 }
 
-bool scheduled_actor_dummy::attach(attachable*)
-{
+bool scheduled_actor_dummy::attach(attachable*) {
     return false;
 }
 

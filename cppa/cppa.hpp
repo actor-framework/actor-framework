@@ -473,8 +473,7 @@ void demonitor(actor_ptr& whom);
  * @brief Spans a new context-switching actor.
  * @returns A pointer to the spawned {@link actor Actor}.
  */
-inline actor_ptr spawn(scheduled_actor* what)
-{
+inline actor_ptr spawn(scheduled_actor* what) {
     return get_scheduler()->spawn(what);
 }
 
@@ -485,8 +484,7 @@ inline actor_ptr spawn(scheduled_actor* what)
  * @returns A pointer to the spawned {@link actor Actor}.
  */
 template<scheduling_hint Hint>
-inline actor_ptr spawn(std::function<void()> what)
-{
+inline actor_ptr spawn(std::function<void()> what) {
     return get_scheduler()->spawn(std::move(what), Hint);
 }
 
@@ -495,36 +493,31 @@ inline actor_ptr spawn(std::function<void()> what)
  * @brief Spans a new event-based actor.
  * @returns A pointer to the spawned {@link actor Actor}.
  */
-inline actor_ptr spawn(std::function<void()> what)
-{
+inline actor_ptr spawn(std::function<void()> what) {
     return get_scheduler()->spawn(std::move(what), scheduled);
 }
 
 template<typename T>
-struct spawn_fwd_
-{
+struct spawn_fwd_ {
     static inline T&& _(T&& arg) { return std::move(arg); }
     static inline T& _(T& arg) { return arg; }
     static inline T const& _(T const& arg) { return arg; }
 };
 
 template<>
-struct spawn_fwd_<self_type>
-{
+struct spawn_fwd_<self_type> {
     static inline actor_ptr _(self_type const&) { return self; }
 };
 
 template<typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
-{
+inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args) {
     return spawn(std::bind(std::move(what),
                            spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                            spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
 }
 
 template<scheduling_hint Hint, typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args)
-{
+inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args) {
     return spawn<Hint>(std::bind(std::move(what),
                                  spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                                  spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
@@ -546,8 +539,7 @@ spawn(F&& what, const Args&... args)
            !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
         && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
         actor_ptr
-    >::type
-{
+    >::type {
     typedef typename util::rm_ref<F>::type ftype;
     std::integral_constant<bool, std::is_function<ftype>::value> is_fun;
     auto ptr = detail::get_behavior(is_fun, std::forward<F>(what), args...);
@@ -565,8 +557,7 @@ spawn(F&& what, const Args&... args)
            !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
         && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
         actor_ptr
-    >::type
-{
+    >::type {
     return spawn<scheduled>(std::forward<F>(what), args...);
 }
 */
@@ -595,15 +586,13 @@ channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
 #else
 
 template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args)
-{
+void send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args) {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     if (whom) self->send_message(whom.get(), make_cow_tuple(arg0, args...));
 }
 
 template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
-{
+void send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args) {
     static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
     intrusive_ptr<C> tmp(std::move(whom));
     send(tmp, arg0, args...);
@@ -611,8 +600,7 @@ void send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args)
 
 // matches "send(this, ...)" in event-based actors
 template<typename Arg0, typename... Args>
-inline void send(local_actor* whom, const Arg0& arg0, const Args&... args)
-{
+inline void send(local_actor* whom, const Arg0& arg0, const Args&... args) {
     CPPA_REQUIRE(whom != nullptr);
     whom->enqueue(whom, make_cow_tuple(arg0, args...));
 }
@@ -620,8 +608,7 @@ inline void send(local_actor* whom, const Arg0& arg0, const Args&... args)
 
 // matches send(self, ...);
 template<typename Arg0, typename... Args>
-inline void send(const self_type&, const Arg0& arg0, const Args&... args)
-{
+inline void send(const self_type&, const Arg0& arg0, const Args&... args) {
     send(static_cast<local_actor*>(self), arg0, args...);
 }
 
@@ -630,8 +617,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>&
 >::type
-operator<<(intrusive_ptr<C>& whom, const any_tuple& what)
-{
+operator<<(intrusive_ptr<C>& whom, const any_tuple& what) {
     if (whom) self->send_message(whom.get(), what);
     return whom;
 }
@@ -641,8 +627,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>
 >::type
-operator<<(intrusive_ptr<C>&& whom, const any_tuple& what)
-{
+operator<<(intrusive_ptr<C>&& whom, const any_tuple& what) {
     intrusive_ptr<C> tmp(std::move(whom));
     tmp << what;
     return std::move(tmp);
@@ -653,8 +638,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>&
 >::type
-operator<<(intrusive_ptr<C>& whom, any_tuple&& what)
-{
+operator<<(intrusive_ptr<C>& whom, any_tuple&& what) {
     if (whom) self->send_message(whom.get(), std::move(what));
     return whom;
 }
@@ -664,8 +648,7 @@ typename std::enable_if<
     std::is_base_of<channel, C>::value,
     intrusive_ptr<C>
 >::type
-operator<<(intrusive_ptr<C>&& whom, any_tuple&& what)
-{
+operator<<(intrusive_ptr<C>&& whom, any_tuple&& what) {
     intrusive_ptr<C> tmp(std::move(whom));
     tmp << std::move(what);
     return std::move(tmp);
@@ -682,8 +665,7 @@ const self_type& operator<<(const self_type& s, any_tuple&& what);
  * @brief Sends a message to the sender of the last received message.
  */
 template<typename Arg0, typename... Args>
-void reply(const Arg0& arg0, const Args&... args)
-{
+void reply(const Arg0& arg0, const Args&... args) {
     send(self->last_sender(), arg0, args...);
 }
 
@@ -695,8 +677,7 @@ void reply(const Arg0& arg0, const Args&... args)
  * @param data Any number of values for the message content.
  */
 template<typename Duration, typename... Data>
-void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
-{
+void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data) {
     get_scheduler()->future_send(whom, rel_time, data...);
 }
 
@@ -706,8 +687,7 @@ void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data)
  * @see future_send()
  */
 template<typename Duration, typename... Data>
-void delayed_reply(const Duration& rel_time, Data const... data)
-{
+void delayed_reply(const Duration& rel_time, Data const... data) {
     future_send(self->last_sender(), rel_time, data...);
 }
 
@@ -717,8 +697,7 @@ void delayed_reply(const Duration& rel_time, Data const... data)
  * @warning This function will cause a deadlock if
  *          called from multiple actors.
  */
-inline void await_all_others_done()
-{
+inline void await_all_others_done() {
     detail::actor_count_wait_until((self.unchecked() == nullptr) ? 0 : 1);
 }
 

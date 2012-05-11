@@ -36,22 +36,18 @@
 namespace cppa { namespace util {
 
 template<typename Result, size_t NumFunctorArgs, size_t NumArgs>
-struct apply_args
-{
+struct apply_args {
     template<class Fun, typename Arg0, typename... Args>
-    static Result _(const Fun& fun, Arg0&&, Args&&... args)
-    {
+    static Result _(const Fun& fun, Arg0&&, Args&&... args) {
         return apply_args<Result, NumFunctorArgs, sizeof...(Args)>
                ::_(fun, std::forward<Args>(args)...);
     }
 };
 
 template<typename Result, size_t X>
-struct apply_args<Result, X, X>
-{
+struct apply_args<Result, X, X> {
     template<class Fun, typename... Args>
-    static Result _(const Fun& fun, Args&&... args)
-    {
+    static Result _(const Fun& fun, Args&&... args) {
         return fun(std::forward<Args>(args)...);
     }
 };

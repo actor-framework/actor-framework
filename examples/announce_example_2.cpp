@@ -10,8 +10,7 @@ using std::make_pair;
 using namespace cppa;
 
 // a simple class using getter and setter member functions
-class foo
-{
+class foo {
 
     int m_a;
     int m_b;
@@ -37,14 +36,12 @@ class foo
 };
 
 // announce requires foo to have the equal operator implemented
-bool operator==(const foo& lhs, const foo& rhs)
-{
+bool operator==(const foo& lhs, const foo& rhs) {
     return    lhs.a() == rhs.a()
            && lhs.b() == rhs.b();
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     // if a class uses getter and setter member functions,
     // we pass those to the announce function as { getter, setter } pairs.
     announce<foo>(make_pair(&foo::a, &foo::set_a),
@@ -52,11 +49,9 @@ int main(int, char**)
 
     // send a foo to ourselves ...
     send(self, foo{1,2});
-    receive
-    (
+    receive (
         // ... and receive it
-        on<foo>() >> [](const foo& val)
-        {
+        on<foo>() >> [](const foo& val) {
             cout << "foo("
                  << val.a() << ","
                  << val.b() << ")"

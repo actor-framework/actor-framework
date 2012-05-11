@@ -49,8 +49,7 @@ namespace util { class fiber; }
  * blocking functions, or need to have your own thread for other reasons,
  * this class can be used to define a class-based actor.
  */
-class scheduled_actor : public local_actor
-{
+class scheduled_actor : public local_actor {
 
  public:
 

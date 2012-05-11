@@ -36,8 +36,7 @@
 namespace cppa { namespace util {
 
 template<typename T1, typename T2>
-class is_comparable
-{
+class is_comparable {
 
     // SFINAE: If you pass a "bool*" as third argument, then
     //         decltype(cmp_help_fun(...)) is bool if there's an
@@ -49,8 +48,7 @@ class is_comparable
 
     template<typename A, typename B>
     static bool cmp_help_fun(A const* arg0, B const* arg1,
-                             decltype(*arg0 == *arg1)* = nullptr)
-    {
+                             decltype(*arg0 == *arg1)* = nullptr) {
         return true;
     }
 

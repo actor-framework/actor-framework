@@ -44,8 +44,7 @@ namespace cppa { namespace util {
  * @brief Checks wheter functor or function @p F takes mutable references.
  */
 template<typename F>
-struct is_manipulator
-{
+struct is_manipulator {
     static constexpr bool value =
             tl_exists<typename get_arg_types<F>::types, is_mutable_ref>::value;
 };

@@ -88,8 +88,7 @@
 #define CPPA_REQUIRE(unused) ((void) 0)
 #endif // CPPA_DEBUG
 
-#define CPPA_CRITICAL__(error, file, line)                                     \
-    {                                                                          \
+#define CPPA_CRITICAL__(error, file, line) {                                   \
         printf("%s:%u: critical error: '%s'\n", file, line, error);            \
         exit(7);                                                               \
     } ((void) 0)
