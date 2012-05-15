@@ -18,8 +18,8 @@ case class Pong(value: Int)
 case class Ok(token: String)
 case class AddPong(path: String, token: String)
 
-case object Hello
-case object Olleh
+case class Hello(token: String)
+case class Olleh(token: String)
 
 case class NoTokenReceived(token: String)
 case class PongDidNotRespond(pong: AbstractActor)
@@ -68,16 +68,19 @@ class ServerActor(port: Int) extends Actor {
             reply(Pong(value))
             msgLoop
         }
-        case Olleh => {
-            val pong = sender
+        case Hello(token) => {
+            sender ! Olleh(token)
+        }
+        case Olleh(token) => {
             pendingPongs.filter(x => x match {
-                case (path, `pong`, ping, token) => {
+                case (path, pong, ping, `token`) => {
                     ping ! Ok(token)
                     pongs = (path, pong) :: pongs
                     true
                 }
                 case _ => false
             })
+            msgLoop
         }
         case PongDidNotRespond(pong) => {
             pendingPongs.filter(x => x match {
@@ -87,6 +90,7 @@ class ServerActor(port: Int) extends Actor {
                 }
                 case _ => false
             })
+            msgLoop
         }
         case AddPong(path, token) => {
             if (pongs.exists(x => x._1 == path)) {
@@ -99,6 +103,7 @@ class ServerActor(port: Int) extends Actor {
                             val pong = select(new Node(node, port.toInt), 'Pong)
                              (new DelayActor(5000, Actor.self, PongDidNotRespond(pong))).start
                             pendingPongs = (path, pong, sender, token) :: pendingPongs
+                            pong ! Hello(token)
                         }
                     }
                 }
@@ -210,7 +215,7 @@ class ServerAkkaActor(system: ActorSystem) extends AkkaActor {
         case Ping(value) => {
             sender ! Pong(value)
         }
-        case Olleh => {
+        case Olleh(_) => {
             pendingPongs.find(x => x == sender) match {
                 case Some((pong, ping, token)) if pong == sender => {
 println("added actor " + pong.path)
@@ -242,7 +247,7 @@ println("added actor " + pong.path)
 println("try to add actor " + path)
                 val pong = system.actorFor(path)
                 // wait at most 5sec. for response
-                pong ! Hello
+                pong ! Hello("")
                 system.scheduler.scheduleOnce(5 seconds, self, AkkaPongDidNotRespond(pong, sender))
                 become(recvLoop(pongs, (pong, sender, token) :: pendingPongs))
                 //pong ! Hello
@@ -255,8 +260,8 @@ println("try to add actor " + path)
 //println("KickOff(" + value + ") from " + client)
             pongs.foreach((x) => context.actorOf(Props(new PingAkkaActor(client, x))) ! KickOff(value))
         }
-        case Hello => {
-            sender ! Olleh
+        case Hello(token) => {
+            sender ! Olleh(token)
         }
     }
 
