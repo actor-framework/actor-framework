@@ -396,6 +396,7 @@ object DistributedServerApp {
         case "akka" :: tail if tail.length < 2 => {
             val system = ActorSystem(if (tail.isEmpty) "pongServer" else tail.head, ConfigFactory.load.getConfig("pongServer"))
             val pong = system.actorOf(Props(new ServerAkkaActor(system)), "pong")
+            pong
         }
         case "remote_actors" :: port :: Nil => {
             (new ServerActor(port.toInt)).start
