@@ -270,13 +270,80 @@ std::string behavior_test(actor_ptr et) {
     return result;
 }
 
+template<class MatchExpr>
+class actor_template {
+
+    MatchExpr m_expr;
+
+ public:
+
+    actor_template(MatchExpr me) : m_expr(std::move(me)) { }
+
+    actor_ptr spawn() const {
+        struct impl : fsm_actor<impl> {
+            behavior init_state;
+            impl(MatchExpr const& mx) : init_state(mx.as_partial_function()) {
+            }
+        };
+        return cppa::spawn(new impl{m_expr});
+    }
+
+    actor_ptr spawn_detached() const {
+        return cppa::spawn<detached>([m_expr]() {
+            receive_loop(m_expr);
+        });
+    }
+
+};
+
+template<typename... Args>
+auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
+    return {mexpr_concat(args...)};
+}
+
 size_t test__spawn() {
+    using std::string;
     CPPA_TEST(test__spawn);
 
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    auto mirror = actor_prototype (
+        others() >> []() {
+            self->last_sender() << self->last_dequeued();
+        }
+    ).spawn();
+
+    CPPA_IF_VERBOSE(cout << "test mirror ... " << std::flush);
+    send(mirror, "hello mirror");
+    receive(on("hello mirror") >> []() { });
+    send(mirror, atom("EXIT"), exit_reason::user_defined);
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    auto svec = std::make_shared<std::vector<string> >();
+    auto avec = actor_prototype (
+        on(atom("push_back"), arg_match) >> [svec](const string& str) {
+            svec->push_back(str);
+        },
+        on(atom("get")) >> [svec]() {
+            reply(*svec);
+        }
+    ).spawn();
+
+    send(avec, atom("push_back"), "hello");
+    send(avec, atom("push_back"), " world");
+    send(avec, atom("get"));
+    send(avec, atom("EXIT"), exit_reason::user_defined);
+    receive (
+        on_arg_match >> [](const std::vector<string>& vec) {
+            if (vec.size() == 2)
+            {
+                cout << vec.front() << vec.back() << endl;
+            }
+        }
+    );
 
     CPPA_IF_VERBOSE(cout << "test future_send() ... " << std::flush);
     future_send(self, std::chrono::seconds(1), 1, 2, 3);
