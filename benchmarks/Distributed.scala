@@ -70,6 +70,7 @@ class ServerActor(port: Int) extends Actor {
         }
         case Hello(token) => {
             sender ! Olleh(token)
+            msgLoop
         }
         case Olleh(token) => {
             pendingPongs.filter(x => x match {
