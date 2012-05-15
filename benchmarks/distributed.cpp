@@ -117,6 +117,11 @@ class actor_template {
 
 };
 
+template<typename... Args>
+auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
+    return {mexpr_concat(args...)};
+}
+
 struct ping_actor : fsm_actor<ping_actor> {
 
     behavior init_state;
@@ -211,11 +216,6 @@ struct server_actor : fsm_actor<server_actor> {
     }
 
 };
-
-template<typename... Args>
-auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
-    return {mexpr_concat(args...)};
-}
 
 template<typename Arg0>
 void usage(Arg0&& arg0) {
