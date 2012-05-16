@@ -301,6 +301,41 @@ auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_conca
     return {mexpr_concat(args...)};
 }
 
+class str_wrapper {
+
+    str_wrapper() = delete;
+    str_wrapper(str_wrapper&&) = delete;
+    str_wrapper(const str_wrapper&) = delete;
+
+ public:
+
+    inline str_wrapper(std::string s) : m_str(s) { }
+
+    const std::string& str() const {
+        return m_str;
+    }
+
+ private:
+
+    std::string m_str;
+
+};
+
+bool operator==(const str_wrapper& lhs, const std::string& rhs) {
+    return lhs.str() == rhs;
+}
+
+void foobar(const str_wrapper& x, const std::string& y) {
+    receive (
+        on(atom("same")).when(gref(x) == gref(y)) >> [&]() {
+            reply(atom("yes"));
+        },
+        on(atom("same")) >> [&]() {
+            reply(atom("no"));
+        }
+    );
+}
+
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);
@@ -382,6 +417,24 @@ size_t test__spawn() {
     );
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    {
+        bool invoked = false;
+        str_wrapper x{"x"};
+        std::string y{"y"};
+        auto foo_actor = spawn(foobar, std::cref(x), y);
+        send(foo_actor, atom("same"));
+        receive (
+            on(atom("yes")) >> [&]() {
+                CPPA_ERROR("x == y");
+            },
+            on(atom("no")) >> [&]() {
+                invoked = true;
+            }
+        );
+        CPPA_CHECK_EQUAL(true, invoked);
+        await_all_others_done();
+    }
 
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(spawn(testee_actor{})), "wait4int");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn(new event_testee)), "wait4int");

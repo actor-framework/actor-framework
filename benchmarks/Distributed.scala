@@ -1,30 +1,201 @@
-import akka.actor.{ Props, Actor, ActorRef, ActorSystem }
+import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
+
+import scala.actors.{Actor, AbstractActor, OutputChannel}
+import scala.actors.remote.RemoteActor
+import scala.actors.remote.RemoteActor._
+import scala.actors.remote.Node
+
 import com.typesafe.config.ConfigFactory
 import Console.println
 
-case object Ok
 case object Done
 case object OkTimeout
-case class Error(msg: String)
+case class Error(msg: String, token: String)
 case class KickOff(value: Int)
 case class Ping(value: Int)
 case class Pong(value: Int)
-case class AddPong(path: String)
-case object Hello
-case object Olleh
 
-case class PongDidNotRespond(pong: ActorRef, ping: ActorRef)
+case class Ok(token: String)
+case class AddPong(path: String, token: String)
 
-case class RunClient(pongs: List[ActorRef], numPings: Int)
+case class Hello(token: String)
+case class Olleh(token: String)
+
+case class NoTokenReceived(token: String)
+case class PongDidNotRespond(pong: AbstractActor)
+case class AkkaPongDidNotRespond(pong: AkkaActorRef, ping: AkkaActorRef)
+
+case class RemoteActorPath(uri: String, host: String, port: Int)
+
+case class RunClient(pongs: List[RemoteActorPath], numPings: Int)
+case class RunAkkaClient(pongs: List[AkkaActorRef], numPings: Int)
 
 object global {
     val latch = new java.util.concurrent.CountDownLatch(1)
 }
 
-class PingActor(parent: ActorRef, pong: ActorRef) extends Actor {
+class PingActor(parent: OutputChannel[Any], pong: OutputChannel[Any]) extends Actor {
+    override def act() = react {
+        case Pong(0) => {
+            parent ! Done
+        }
+        case Pong(value) => {
+            reply(Ping(value - 1))
+            act
+        }
+        case KickOff(value) => {
+            pong ! Ping(value)
+            act
+        }
+    }
+}
+
+class DelayActor(msec: Long, parent: AbstractActor, msg: Any) extends Actor {
+    override def act() {
+        reactWithin(msec) {
+            case scala.actors.TIMEOUT => parent ! msg
+        }
+    }
+}
+
+class ServerActor(port: Int) extends Actor {
+
+    private var pongs: List[(String,OutputChannel[Any])] = Nil
+    private var pendingPongs: List[(String,AbstractActor,OutputChannel[Any],String)] = Nil
+
+    final def msgLoop(): Nothing = react {
+        case Ping(value) => {
+            reply(Pong(value))
+            msgLoop
+        }
+        case Hello(token) => {
+            sender ! Olleh(token)
+            msgLoop
+        }
+        case Olleh(token) => {
+            pendingPongs.filter(x => x match {
+                case (path, pong, ping, `token`) => {
+                    ping ! Ok(token)
+                    pongs = (path, pong) :: pongs
+                    true
+                }
+                case _ => false
+            })
+            msgLoop
+        }
+        case PongDidNotRespond(pong) => {
+            pendingPongs.filter(x => x match {
+                case (_, `pong`, ping, token) => {
+                    ping ! Error(pong + " did not respond within 5 seconds", token)
+                    true
+                }
+                case _ => false
+            })
+            msgLoop
+        }
+        case AddPong(path, token) => {
+            if (pongs.exists(x => x._1 == path)) {
+                sender ! Ok(token)
+            }
+            else {
+                try {
+                    path.split(":") match {
+                        case Array(node, port) => {
+                            val pong = select(new Node(node, port.toInt), 'Pong)
+                             (new DelayActor(5000, Actor.self, PongDidNotRespond(pong))).start
+                            pendingPongs = (path, pong, sender, token) :: pendingPongs
+                            pong ! Hello(token)
+                        }
+                    }
+                }
+                catch {
+                    case e => {
+                        // catches match error and integer conversion failure
+                        reply(Error(e.toString, token))
+                    }
+                }
+            }
+            msgLoop
+        }
+        case KickOff(value) => {
+            val client = sender
+            pongs.foreach(x => (new PingActor(client, x._2)).start() ! KickOff(value))
+            msgLoop
+        }
+    }
+
+    override def act() {
+        RemoteActor.classLoader = getClass().getClassLoader
+        alive(port)
+        register('Pong, Actor.self)
+        msgLoop
+    }
+}
+
+class ClientActor extends Actor {
+
+    private var left: Int = 0
+    private var numPings: Int = 0
+    private var pongs: List[AbstractActor] = Nil
+    private var tokens: List[String] = Nil
+
+    def collectDoneMessages(): Nothing  = react {
+        case Done => {
+            if (left > 1) {
+                left -= 1
+                collectDoneMessages
+            }
+        }
+    }
+
+    def collectOkMessages(): Nothing = react {
+        case Ok(token) => {
+            tokens = token :: tokens
+            if (tokens.length == left) {
+                pongs.foreach(x => x ! KickOff(numPings))
+                collectDoneMessages
+            } else {
+                collectOkMessages
+            }
+        }
+        case NoTokenReceived(token) => {
+//println("NoTokenReceived("+token+")")
+            if (!tokens.contains(token)) {
+                println("Error: " + token + " did not respond within 10 seconds")
+            }
+        }
+        case Error(what, token) => {
+            println("Error [from " + token + "]: " + what)
+        }
+    }
+
+    override def act() = {
+        RemoteActor.classLoader = getClass().getClassLoader()
+        react {
+            case RunClient(pongPaths, numPings) => {
+                this.numPings = numPings
+                pongs = pongPaths.map(x => {
+//println("select pong ...")
+                    val pong = select(new Node(x.host, x.port), 'Pong)
+                    pongPaths.foreach(y => if (x != y) {
+//println("send AddPong")
+                        pong ! AddPong(y.uri, x.uri)
+//println("spawn DelayActor")
+                        (new DelayActor(10000, Actor.self, NoTokenReceived(x.uri))).start
+                    })
+                    pong
+                })
+                left = pongs.length * (pongs.length - 1)
+                collectOkMessages
+            }
+        }
+    }
+
+}
+
+class PingAkkaActor(parent: AkkaActorRef, pong: AkkaActorRef) extends AkkaActor {
     def receive = {
         case Pong(0) => {
-//println(parent + " ! Done")
             parent ! Done
             context.stop(self)
         }
@@ -32,56 +203,54 @@ class PingActor(parent: ActorRef, pong: ActorRef) extends Actor {
             sender ! Ping(value - 1)
         }
         case KickOff(value) => {
-//println("PingActor::KickOff " + value)
             pong ! Ping(value)
         }
     }
 }
 
-class ServerActor(system: ActorSystem) extends Actor {
+class ServerAkkaActor(system: ActorSystem) extends AkkaActor {
 
-    var pongs = List[ActorRef]()
-    var pendingPongs = List[Pair[ActorRef, ActorRef]]()
+    import context.become
 
-    def receive = {
+    def recvLoop(pongs: List[AkkaActorRef], pendingPongs: List[(AkkaActorRef, AkkaActorRef, String)]): Receive = {
         case Ping(value) => {
             sender ! Pong(value)
         }
-        case Olleh => {
-            pendingPongs.find(x => x._1 == sender) match {
-                case Some((pong, ping)) => {
+        case Olleh(_) => {
+            pendingPongs.find(x => x == sender) match {
+                case Some((pong, ping, token)) if pong == sender => {
 println("added actor " + pong.path)
-                    ping ! Ok
-                    pendingPongs = pendingPongs.filterNot(x => x._1 == sender)
-                    pongs = pong :: pongs
+                    ping ! Ok(token)
+                    become(recvLoop(pong :: pongs, pendingPongs.filterNot(x => x._1 == sender)))
                 }
                 case None => {
                     // operation already timed out
                 }
             }
         }
-        case PongDidNotRespond(pong, ping) => {
+        case AkkaPongDidNotRespond(pong, ping) => {
             pendingPongs.find(x => x._1 == sender) match {
-                case Some(Pair(_, y)) => {
-                    ping ! Error(pong + " did not respond")
-                    pendingPongs = pendingPongs.filterNot(x => x._1 == sender)
+                case Some((_, _, token)) => {
+                    ping ! Error(pong + " did not respond", token)
+                    become(recvLoop(pongs, pendingPongs.filterNot(x => x._1 == sender)))
                 }
                 case None => {
-                    // operation already succeeded
+                    // operation already succeeded (received Olleh)
                 }
             }
         }
-        case AddPong(path) => {
+        case AddPong(path, token) => {
             if (pongs.exists((x) => x.path == path)) {
-                sender ! Ok
-            } else {
+                sender ! Ok(token)
+            }
+            else {
                 import akka.util.duration._
 println("try to add actor " + path)
                 val pong = system.actorFor(path)
                 // wait at most 5sec. for response
-                pong ! Hello
-                pendingPongs = Pair(pong, sender) :: pendingPongs
-                system.scheduler.scheduleOnce(5 seconds, self, PongDidNotRespond(pong, sender))
+                pong ! Hello("")
+                system.scheduler.scheduleOnce(5 seconds, self, AkkaPongDidNotRespond(pong, sender))
+                become(recvLoop(pongs, (pong, sender, token) :: pendingPongs))
                 //pong ! Hello
                 //pongs = pong :: pongs
                 //sender ! Ok
@@ -90,110 +259,154 @@ println("try to add actor " + path)
         case KickOff(value) => {
             val client = sender
 //println("KickOff(" + value + ") from " + client)
-            pongs.foreach((x) => context.actorOf(Props(new PingActor(client, x))) ! KickOff(value))
+            pongs.foreach((x) => context.actorOf(Props(new PingAkkaActor(client, x))) ! KickOff(value))
         }
-        case Hello => {
-            sender ! Olleh
+        case Hello(token) => {
+            sender ! Olleh(token)
         }
     }
 
+    def receive = recvLoop(Nil, Nil)
+
 }
 
-class ClientActor extends Actor {
+class ClientAkkaActor extends AkkaActor {
 
     import context._
 
-    var left: Int = 0
-
-    def collectDoneMessages: Receive = {
+    def collectDoneMessages(left: Int): Receive = {
         case Done => {
 //println("Done")
             if (left == 1) {
                 global.latch.countDown
                 context.stop(self)
             } else {
-                left = left - 1
+                become(collectDoneMessages(left - 1))
             }
         }
-        case x => {
+        case _ => {
             // ignore any other message
         }
     }
 
-    def collectOkMessages(pongs: List[ActorRef], numPings: Int): Receive = {
-        case Ok => {
+    def collectOkMessages(pongs: List[AkkaActorRef], tokens: List[String], numPings: Int): Receive = {
+        case Ok(token) => {
 //println("Ok")
-            if (left == 1) {
-                left = pongs.length * (pongs.length - 1)
+            if (tokens.length + 1 == pongs.length) {
+                val left = pongs.length * (pongs.length - 1)
                 pongs.foreach(x => x ! KickOff(numPings))
-                become(collectDoneMessages)
-            } else {
-                left = left - 1
+                become(collectDoneMessages(left))
+            }
+            else {
+                become(collectOkMessages(pongs, token :: tokens, numPings))
             }
         }
-        case Error(what) => {
-            println("Error from " + sender + " => " + what)
+        case NoTokenReceived(token) => {
+            if (!tokens.contains(token)) {
+                println("Error: " + token + " did not reply within 10 seconds");
+            }
+        }
+        case Error(what, token) => {
+            println("Error [from " + token+ "]: " + what)
             global.latch.countDown
             context.stop(self)
-        }
-        case OkTimeout => {
-            println("At least one pong did not reply... left: " + left)
         }
     }
 
     def receive = {
-        case RunClient(pongs, numPings) => {
+        case RunAkkaClient(pongs, numPings) => {
             import akka.util.duration._
             pongs.foreach(x => pongs.foreach(y => if (x != y) {
-                x ! AddPong(y.path.toString)
+                val token = x.toString
+                x ! AddPong(y.path.toString, token)
+                system.scheduler.scheduleOnce(10 seconds, self, NoTokenReceived(token))
             }))
-            system.scheduler.scheduleOnce(10 seconds, self, OkTimeout)
-            left = pongs.length * (pongs.length - 1)
-            become(collectOkMessages(pongs, numPings))
+            become(collectOkMessages(pongs, Nil, numPings))
         }
     }
 }
 
 object DistributedClientApp {
-    def main(args: Array[String]): Unit = {
 
-        val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
+    val NumPings = "num_pings=([0-9]+)".r
+    val SimpleUri = "([0-9a-zA-Z\\.]+):([0-9]+)".r
 
-        var numPings: Int = 0
+    def runAkka(system: ActorSystem, args: List[String], pongs: List[AkkaActorRef], numPings: Option[Int]): Unit = args match {
+        case NumPings(num) :: tail => numPings match {
+            case Some(x) => {
+                println("\"num_pings\" already defined, first value = " + x + ", second value = " + num)
+            }
+            case None => runAkka(system, tail, pongs, Some(num.toInt))
+        }
+        case path :: tail => {
+            runAkka(system, tail, system.actorFor(path) :: pongs, numPings)
+        }
+        case Nil => numPings match {
+            case Some(x) => {
+                if (pongs isEmpty) throw new RuntimeException("No pong no fun")
+                system.actorOf(Props[ClientAkkaActor]) ! RunAkkaClient(pongs, x)
+                global.latch.await
+                system.shutdown
+                System.exit(0)
+            }
+            case None => {
+                throw new RuntimeException("no \"num_pings\" found")
+            }
+        }
+    }
 
-        var pongs = List[ActorRef]()
-
-        val NumPings = "num_pings=([0-9]+)".r
-        args.foreach(arg => arg match {
-            case NumPings(num) => {
-                numPings = num.toInt
+    def runRemoteActors(args: List[String], pongs: List[RemoteActorPath], numPings: Option[Int]): Unit = args match {
+        case NumPings(num) :: tail => numPings match {
+            case Some(x) => {
+                println("\"num_pings\" already defined, first value = " + x + ", second value = " + num)
+            }
+            case None => runRemoteActors(tail, pongs, Some(num.toInt))
+        }
+        case arg :: tail => arg match {
+            case SimpleUri(host, port) => {
+                runRemoteActors(tail, RemoteActorPath(arg, host, port.toInt) :: pongs, numPings)
             }
             case _ => {
-//println("add actor " + arg)
-                pongs = system.actorFor(arg) :: pongs
+                throw new IllegalArgumentException("illegal argument: " + arg)
             }
-        })
+        }
+        case Nil => numPings match {
+            case Some(x) => {
+                (new ClientActor).start ! RunClient(pongs, x)
+            }
+            case None => {
+                throw new RuntimeException("no \"num_pings\" found")
+            }
+        }
+    }
 
-        system.actorOf(Props[ClientActor]) ! RunClient(pongs, numPings)
-
-        global.latch.await
-        system.shutdown
-        System.exit(0)
+    def main(args: Array[String]): Unit = args.toList match {
+        case "akka" :: akkaArgs => {
+            val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
+            runAkka(system, akkaArgs, Nil, None)
+        }
+        case "remote_actors" :: tail => {
+            runRemoteActors(tail, Nil, None)
+        }
+        case Nil => {
+            println("usage: ...")
+        }
     }
 }
 
 object DistributedServerApp {
-    def main(args: Array[String]): Unit = {
 
-        val sysName = if (args.length > 0) args(0) else "pongServer"
+    def usage = println("usage: (akka [configName]) | (remote_actors {port})")
 
-        val system = ActorSystem(sysName, ConfigFactory.load.getConfig("pongServer"))
-
-        val pong = system.actorOf(Props(new ServerActor(system)), "pong")
-
-        //val subSystem = ActorSystem(sysName + "Client", ConfigFactory.load.getConfig("benchmark"))
-        //val pong = system.actorOf(Props(new ServerActor(subSystem)), "pong")
-
+    def main(args: Array[String]): Unit = args.toList match {
+        case "akka" :: tail if tail.length < 2 => {
+            val system = ActorSystem(if (tail.isEmpty) "pongServer" else tail.head, ConfigFactory.load.getConfig("pongServer"))
+            val pong = system.actorOf(Props(new ServerAkkaActor(system)), "pong")
+            pong
+        }
+        case "remote_actors" :: port :: Nil => {
+            (new ServerActor(port.toInt)).start
+        }
+        case _ => usage
     }
 }
-
