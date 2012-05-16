@@ -296,34 +296,37 @@ void client_mode(Iterator first, Iterator last) {
         for (size_t j = 0; j < remotes.size(); ++j) {
             if (i != j) {
                 auto& r = remotes[j];
-                send(remote_actors[i],
-                     atom("add_pong"), r.first, r.second);
-                receive (
-                    on(atom("ok")) >> []() {
-                    },
-                    on(atom("error"), arg_match) >> [&](string const& str) {
-                        cout << "error on node " << i << ": " << str << endl;
-                        for (auto& x : remote_actors) {
-                            send(x, atom("purge"));
-                        }
-                        throw std::logic_error("");
-                    },
-                    others() >> []() {
-                        cout << "expected {ok|error}, received: "
-                             << to_string(self->last_dequeued())
-                             << endl;
-                        throw std::logic_error("");
-                    },
-                    after(std::chrono::seconds(10)) >> [&]() {
-                        cout << "remote didn't answer within 10sec." << endl;
-                        for (auto& x : remote_actors) {
-                            send(x, atom("purge"));
-                        }
-                        throw std::logic_error("");
-                    }
-                );
+                send(remote_actors[i], atom("add_pong"), r.first, r.second);
             }
         }
+    }
+    { // collect {ok} messages
+        size_t i = 0;
+        size_t end = remote_actors.size() * (remote_actors.size() - 1);
+        receive_for(i, end) (
+            on(atom("ok")) >> []() {
+            },
+            on(atom("error"), arg_match) >> [&](string const& str) {
+                cout << "error: " << str << endl;
+                for (auto& x : remote_actors) {
+                    send(x, atom("purge"));
+                }
+                throw std::logic_error("");
+            },
+            others() >> []() {
+                cout << "expected {ok|error}, received: "
+                     << to_string(self->last_dequeued())
+                     << endl;
+                throw std::logic_error("");
+            },
+            after(std::chrono::seconds(10)) >> [&]() {
+                cout << "remote didn't answer within 10sec." << endl;
+                for (auto& x : remote_actors) {
+                    send(x, atom("purge"));
+                }
+                throw std::logic_error("");
+            }
+        );
     }
     // kickoff
     //cout << "setup done" << endl;
@@ -331,17 +334,19 @@ void client_mode(Iterator first, Iterator last) {
     for (auto& r : remote_actors) {
         send(r, atom("kickoff"), init_value);
     }
-    size_t i = 0;
-    size_t num_pings = remote_actors.size() * (remote_actors.size() - 1);
-    receive_for(i, num_pings) (
-        on(atom("done")) >> []() {
-            //cout << "...done..." << endl;
-        },
-        others() >> []() {
-            cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
-            throw std::logic_error("");
-        }
-    );
+    { // collect {done} messages
+        size_t i = 0;
+        size_t end = remote_actors.size() * (remote_actors.size() - 1);
+        receive_for(i, end) (
+            on(atom("done")) >> []() {
+                //cout << "...done..." << endl;
+            },
+            others() >> []() {
+                cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+                throw std::logic_error("");
+            }
+        );
+    }
     await_all_others_done();
 }
 
