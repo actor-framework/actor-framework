@@ -1,5 +1,6 @@
 benchmarks/ActorCreation.scala
 benchmarks/Distributed.scala
+benchmarks/DistributedRemoteActors.scala
 benchmarks/MailboxPerformance.scala
 benchmarks/Matching.scala
 benchmarks/MixedCase.scala
