@@ -163,15 +163,19 @@ class ClientActor(pongPaths: List[RemoteActorPath], numPings: Int) extends Actor
     }
 }
 
-class AkkaPingActor(parent: AkkaActorRef, pongs: List[AkkaActorRef]) extends AkkaActor {
+case class SetParent(parent: AkkaActorRef)
+
+class AkkaPingActor(pongs: List[AkkaActorRef]) extends AkkaActor {
 
     import context.become
 
+    private var parent: AkkaActorRef = null
     private var left = pongs.length
 
     private def recvLoop: Receive = {
         case Pong(0) => {
             parent ! Done
+            //println(parent.toString + " ! Done")
             if (left > 1) left -= 1
             else context.stop(self)
         }
@@ -179,6 +183,7 @@ class AkkaPingActor(parent: AkkaActorRef, pongs: List[AkkaActorRef]) extends Akk
     }
 
     def receive = {
+        case SetParent(p) => parent = p
         case KickOff(value) => pongs.foreach(_ ! Ping(value)); become(recvLoop)
     }
 }
@@ -194,12 +199,16 @@ class AkkaServerActor(system: ActorSystem) extends AkkaActor with ServerActorPro
     protected  def reply(what: Any): Unit = sender ! what
 
     protected def kickOff(peers: AkkaPeers, value: Int): Unit = {
-        context.actorOf(Props(new AkkaPingActor(sender, peers.connected map (_.channel)))) ! KickOff(value)
+        val ping = context.actorOf(Props(new AkkaPingActor(peers.connected map (_.channel))))
+        ping ! SetParent(sender)
+        ping ! KickOff(value)
+        //println("[" + peers + "]: KickOff(" + value + ")")
     }
 
     protected def connectionEstablished(peers: AkkaPeers, x: Any): AkkaPeers = x match {
         case PendingAkkaPeer(path, channel, client, token) => {
             client ! Ok(token)
+            //println("connected to " + path)
             AkkaPeers(AkkaPeer(path, channel) :: peers.connected, peers.pending filterNot (_.clientToken == token))
         }
     }
@@ -209,7 +218,7 @@ class AkkaServerActor(system: ActorSystem) extends AkkaActor with ServerActorPro
         channel ! Hello(token)
         import akka.util.duration._
         system.scheduler.scheduleOnce(5 seconds, self, AddPongTimeout(path, token))
-        //println("recv[" + peers + "]: sent 'Hello' to " + path)
+        //println("[" + peers + "]: sent 'Hello' to " + path)
         AkkaPeers(peers.connected, PendingAkkaPeer(path, channel, sender, token) :: peers.pending)
     }
 
@@ -217,6 +226,7 @@ class AkkaServerActor(system: ActorSystem) extends AkkaActor with ServerActorPro
         peers.pending find (x => x.path == path && x.clientToken == token) match {
             case Some(PendingAkkaPeer(_, channel, client, _)) => {
                 client ! Error(path + " did not respond", token)
+                //println(path + " did not respond")
                 (true, AkkaPeers(peers.connected, peers.pending filterNot (x => x.path == path && x.clientToken == token)))
             }
             case None => (false, peers)
@@ -237,7 +247,7 @@ class AkkaServerActor(system: ActorSystem) extends AkkaActor with ServerActorPro
 }
 
 case class TokenTimeout(token: String)
-case class RunAkkaClient(pongs: List[AkkaActorRef], numPings: Int)
+case class RunAkkaClient(paths: List[String], numPings: Int)
 
 class AkkaClientActor(system: ActorSystem) extends AkkaActor {
 
@@ -258,21 +268,23 @@ class AkkaClientActor(system: ActorSystem) extends AkkaActor {
         }
     }
 
-    def collectOkMessages(pongs: List[AkkaActorRef], tokens: List[String], numPings: Int): Receive = {
+    def collectOkMessages(pongs: List[AkkaActorRef], left: Int, receivedTokens: List[String], numPings: Int): Receive = {
         case Ok(token) => {
 //println("Ok")
-            if (tokens.length + 1 == pongs.length) {
-                val left = pongs.length * (pongs.length - 1)
-                pongs.foreach(x => x ! KickOff(numPings))
-                become(collectDoneMessages(left))
+            if (left == 1) {
+                //println("collected all Ok messages (wait for Done messages)")
+                pongs foreach (_ ! KickOff(numPings))
+                become(collectDoneMessages(pongs.length * (pongs.length - 1)))
             }
             else {
-                become(collectOkMessages(pongs, token :: tokens, numPings))
+                become(collectOkMessages(pongs, left - 1, token :: receivedTokens, numPings))
             }
         }
         case TokenTimeout(token) => {
-            if (!tokens.contains(token)) {
-                println("Error: " + token + " did not reply within 10 seconds");
+            if (!receivedTokens.contains(token)) {
+                println("Error: " + token + " did not reply within 10 seconds")
+                global.latch.countDown
+                context.stop(self)
             }
         }
         case Error(what, token) => {
@@ -283,14 +295,20 @@ class AkkaClientActor(system: ActorSystem) extends AkkaActor {
     }
 
     def receive = {
-        case RunAkkaClient(pongs, numPings) => {
+        case RunAkkaClient(paths, numPings) => {
+//println("RunAkkaClient(" + paths.toString + ", " + numPings + ")")
             import akka.util.duration._
-            pongs.foreach(x => pongs.foreach(y => if (x != y) {
-                val token = x.toString
-                x ! AddPong(y.path.toString, token)
-                system.scheduler.scheduleOnce(10 seconds, self, TokenTimeout(token))
-            }))
-            become(collectOkMessages(pongs, Nil, numPings))
+            val pongs = paths map (x => {
+                val pong = system.actorFor(x)
+                paths foreach (y => if (x != y) {
+                    val token = x + " -> " + y
+                    pong ! AddPong(y, token)
+//println(x + " ! AddPong(" + y + ", " + token + ")")
+                    system.scheduler.scheduleOnce(10 seconds, self, TokenTimeout(token))
+                })
+                pong
+            })
+            become(collectOkMessages(pongs, pongs.length * (pongs.length - 1), Nil, numPings))
         }
     }
 }
@@ -323,7 +341,7 @@ object DistributedClientApp {
                 }))
                 case "akka" => run(args.toList.drop(1), Nil, None, ((paths, x) => {
                     val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
-                    system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths map (system.actorFor(_)), x)
+                    system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths, x)
                     global.latch.await
                     system.shutdown
                     System.exit(0)
