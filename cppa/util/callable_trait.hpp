@@ -43,56 +43,48 @@ struct callable_trait;
 
 // member function pointer (const)
 template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...) const>
-{
+struct callable_trait<ResultType (C::*)(Args...) const> {
     typedef ResultType result_type;
     typedef type_list<Args...> arg_types;
 };
 
 // member function pointer
 template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...)>
-{
+struct callable_trait<ResultType (C::*)(Args...)> {
     typedef ResultType result_type;
     typedef type_list<Args...> arg_types;
 };
 
 // good ol' function
 template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (Args...)>
-{
+struct callable_trait<ResultType (Args...)> {
     typedef ResultType result_type;
     typedef type_list<Args...> arg_types;
 };
 
 // good ol' function pointer
 template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (*)(Args...)>
-{
+struct callable_trait<ResultType (*)(Args...)> {
     typedef ResultType result_type;
     typedef type_list<Args...> arg_types;
 };
 
 template<bool IsFun, bool IsMemberFun, typename C>
-struct get_callable_trait_helper
-{
+struct get_callable_trait_helper {
     typedef callable_trait<C> type;
 };
 
 template<typename C>
-struct get_callable_trait_helper<false, false, C>
-{
+struct get_callable_trait_helper<false, false, C> {
     // assuming functor
     typedef callable_trait<decltype(&C::operator())> type;
 };
 
 template<typename C>
-struct get_callable_trait
-{
+struct get_callable_trait {
     typedef typename rm_ref<C>::type fun_type;
     typedef typename
-            get_callable_trait_helper<
-                (   std::is_function<fun_type>::value
+            get_callable_trait_helper< (   std::is_function<fun_type>::value
                  || std::is_function<typename std::remove_pointer<fun_type>::type>::value),
                 std::is_member_function_pointer<fun_type>::value,
                 fun_type>::type
@@ -102,25 +94,21 @@ struct get_callable_trait
 };
 
 template<typename C>
-struct get_arg_types
-{
+struct get_arg_types {
     typedef typename get_callable_trait<C>::type trait_type;
     typedef typename trait_type::arg_types types;
 };
 
 template<typename T>
-struct is_callable
-{
+struct is_callable {
 
     template<typename C>
-    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr)
-    {
+    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr) {
         return true;
     }
 
     template<typename C>
-    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr)
-    {
+    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr) {
         return true;
     }
 
@@ -136,21 +124,18 @@ struct is_callable
 };
 
 template<bool IsCallable, typename C>
-struct get_result_type_impl
-{
+struct get_result_type_impl {
     typedef typename get_callable_trait<C>::type trait_type;
     typedef typename trait_type::result_type type;
 };
 
 template<typename C>
-struct get_result_type_impl<false, C>
-{
+struct get_result_type_impl<false, C> {
     typedef void_type type;
 };
 
 template<typename C>
-struct get_result_type
-{
+struct get_result_type {
     typedef typename get_result_type_impl<is_callable<C>::value, C>::type type;
 };
 

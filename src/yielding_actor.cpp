@@ -39,136 +39,107 @@
 
 namespace cppa { namespace detail {
 
-yielding_actor::yielding_actor(scheduled_actor* behavior, scheduler* sched)
-    : super(sched)
-    , m_fiber(&yielding_actor::run, this)
-    , m_behavior(behavior)
-{
+yielding_actor::yielding_actor(std::function<void()> fun)
+    : m_fiber(&yielding_actor::run, this)
+    , m_behavior(fun) {
 }
 
-yielding_actor::~yielding_actor()
-{
-    delete m_behavior;
-}
-
-void yielding_actor::run(void* ptr_arg)
-{
+void yielding_actor::run(void* ptr_arg) {
     auto this_ptr = reinterpret_cast<yielding_actor*>(ptr_arg);
-    auto behavior_ptr = this_ptr->m_behavior;
-    if (behavior_ptr)
-    {
-        bool cleanup_called = false;
-        try { behavior_ptr->act(); }
-        catch (actor_exited&)
-        {
-            // cleanup already called by scheduled_actor::quit
-            cleanup_called = true;
-        }
-        catch (...)
-        {
-            this_ptr->cleanup(exit_reason::unhandled_exception);
-            cleanup_called = true;
-        }
-        if (!cleanup_called) this_ptr->cleanup(exit_reason::normal);
-        try { behavior_ptr->on_exit(); }
-        catch (...) { }
+    CPPA_REQUIRE(static_cast<bool>(this_ptr->m_behavior));
+    bool cleanup_called = false;
+    try { this_ptr->m_behavior(); }
+    catch (actor_exited&) {
+        // cleanup already called by scheduled_actor::quit
+        cleanup_called = true;
     }
+    catch (...) {
+        this_ptr->cleanup(exit_reason::unhandled_exception);
+        cleanup_called = true;
+    }
+    if (!cleanup_called) this_ptr->cleanup(exit_reason::normal);
+    this_ptr->on_exit();
     yield(yield_state::done);
 }
 
 
-void yielding_actor::yield_until_not_empty()
-{
-    if (m_mailbox.can_fetch_more() == false)
-    {
+void yielding_actor::yield_until_not_empty() {
+    if (m_mailbox.can_fetch_more() == false) {
         m_state.store(abstract_scheduled_actor::about_to_block);
         CPPA_MEMORY_BARRIER();
         // make sure mailbox is 'empty'
-        if (m_mailbox.can_fetch_more() == false)
-        {
+        if (m_mailbox.can_fetch_more() == false) {
             m_state.store(abstract_scheduled_actor::ready);
             return;
         }
-        else
-        {
+        else {
             yield(yield_state::blocked);
         }
     }
 }
 
-void yielding_actor::dequeue(partial_function& fun)
-{
-    auto rm_fun = [&](queue_node_ptr& node) { return dq(*node, fun) == dq_done; };
-    dequeue_impl(rm_fun);
-}
-
-void yielding_actor::dequeue(behavior& bhvr)
-{
-    if (bhvr.timeout().valid())
-    {
-        request_timeout(bhvr.timeout());
-        auto rm_fun = [&](queue_node_ptr& node) -> bool
-        {
-            switch (dq(*node, bhvr.get_partial_function()))
-            {
-                case dq_timeout_occured:
-                    bhvr.handle_timeout();
-                    return true;
-                case dq_done:
-                    return true;
-                default:
-                    return false;
+void yielding_actor::dequeue(partial_function& fun) {
+    if (invoke_from_cache(fun) == false) {
+        recursive_queue_node* e = nullptr;
+        do {
+            e = m_mailbox.try_pop();
+            while (!e) {
+                yield_until_not_empty();
+                e = m_mailbox.try_pop();
             }
-        };
-        dequeue_impl(rm_fun);
-    }
-    else
-    {
-        // suppress virtual function call
-        yielding_actor::dequeue(bhvr.get_partial_function());
+        }
+        while (invoke(e, fun) == false);
     }
 }
 
-void yielding_actor::resume(util::fiber* from, resume_callback* callback)
-{
+void yielding_actor::dequeue(behavior& bhvr) {
+    auto& fun = bhvr.get_partial_function();
+    if (bhvr.timeout().valid() == false) {
+        // suppress virtual function call
+        yielding_actor::dequeue(fun);
+    }
+    else if (invoke_from_cache(bhvr) == false) {
+        request_timeout(bhvr.timeout());
+        recursive_queue_node* e = nullptr;
+        do {
+            e  = m_mailbox.try_pop();
+            while (!e) {
+                yield_until_not_empty();
+                e = m_mailbox.try_pop();
+            }
+        }
+        while (invoke(e, bhvr) == false);
+    }
+}
+
+void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
     self.set(this);
-    for (;;)
-    {
-        switch (call(&m_fiber, from))
-        {
-            case yield_state::done:
-            {
+    for (;;) {
+        switch (call(&m_fiber, from)) {
+            case yield_state::done: {
                 callback->exec_done();
                 return;
             }
-            case yield_state::ready:
-            {
+            case yield_state::ready: {
                 break;
             }
-            case yield_state::blocked:
-            {
+            case yield_state::blocked: {
                 switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                               abstract_scheduled_actor::blocked))
-                {
-                    case abstract_scheduled_actor::ready:
-                    {
+                                               abstract_scheduled_actor::blocked)) {
+                    case abstract_scheduled_actor::ready: {
                         break;
                     }
-                    case abstract_scheduled_actor::blocked:
-                    {
+                    case abstract_scheduled_actor::blocked: {
                         // wait until someone re-schedules that actor
                         return;
                     }
-                    default:
-                    {
-                        // illegal state
-                        exit(7);
+                    default: {
+                        CPPA_CRITICAL("illegal yield result");
                     }
                 }
                 break;
             }
-            default:
-            {
+            default: {
                 // illegal state
                 exit(8);
             }

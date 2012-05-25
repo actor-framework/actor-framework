@@ -39,8 +39,7 @@ namespace cppa { namespace intrusive {
  * @brief A forward iterator for intrusive lists.
  */
 template<class T>
-class forward_iterator
-{
+class forward_iterator {
 
  public:
 
@@ -57,14 +56,12 @@ class forward_iterator
     forward_iterator(const forward_iterator&) = default;
     forward_iterator& operator=(const forward_iterator&) = default;
 
-    inline forward_iterator& operator++()
-    {
+    inline forward_iterator& operator++() {
         m_ptr = m_ptr->next;
         return *this;
     }
 
-    inline forward_iterator operator++(int)
-    {
+    inline forward_iterator operator++(int) {
         forward_iterator tmp{*this};
         m_ptr = m_ptr->next;
         return tmp;
@@ -101,8 +98,7 @@ class forward_iterator
  */
 template<class T>
 inline bool operator==(const forward_iterator<T>& lhs,
-                       const forward_iterator<T>& rhs)
-{
+                       const forward_iterator<T>& rhs) {
     return lhs.ptr() == rhs.ptr();
 }
 
@@ -110,8 +106,7 @@ inline bool operator==(const forward_iterator<T>& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(const forward_iterator<T>& lhs, T const* rhs)
-{
+inline bool operator==(const forward_iterator<T>& lhs, T const* rhs) {
     return lhs.ptr() == rhs;
 }
 
@@ -119,8 +114,7 @@ inline bool operator==(const forward_iterator<T>& lhs, T const* rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(T const* lhs, const forward_iterator<T>& rhs)
-{
+inline bool operator==(T const* lhs, const forward_iterator<T>& rhs) {
     return lhs == rhs.ptr();
 }
 
@@ -128,8 +122,7 @@ inline bool operator==(T const* lhs, const forward_iterator<T>& rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr))
-{
+inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr)) {
     return lhs.ptr() == nullptr;
 }
 
@@ -137,8 +130,7 @@ inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr))
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(decltype(nullptr), const forward_iterator<T>& rhs)
-{
+inline bool operator==(decltype(nullptr), const forward_iterator<T>& rhs) {
     return rhs.ptr() == nullptr;
 }
 
@@ -147,8 +139,7 @@ inline bool operator==(decltype(nullptr), const forward_iterator<T>& rhs)
  */
 template<class T>
 inline bool operator!=(const forward_iterator<T>& lhs,
-                       const forward_iterator<T>& rhs)
-{
+                       const forward_iterator<T>& rhs) {
     return !(lhs == rhs);
 }
 
@@ -156,8 +147,7 @@ inline bool operator!=(const forward_iterator<T>& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs)
-{
+inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs) {
     return !(lhs == rhs);
 }
 
@@ -165,8 +155,7 @@ inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(T const* lhs, const forward_iterator<T>& rhs)
-{
+inline bool operator!=(T const* lhs, const forward_iterator<T>& rhs) {
     return !(lhs == rhs);
 }
 
@@ -174,8 +163,7 @@ inline bool operator!=(T const* lhs, const forward_iterator<T>& rhs)
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr))
-{
+inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr)) {
     return !(lhs == nullptr);
 }
 
@@ -183,8 +171,7 @@ inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr))
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(decltype(nullptr), const forward_iterator<T>& rhs)
-{
+inline bool operator!=(decltype(nullptr), const forward_iterator<T>& rhs) {
     return !(nullptr == rhs);
 }
 

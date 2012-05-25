@@ -38,14 +38,12 @@ namespace cppa { namespace util {
  * @brief A type wrapper as used in {@link cppa::util::if_else if_else}.
  */
 template<typename T>
-struct wrapped
-{
+struct wrapped {
     typedef T type;
 };
 
 template<typename T>
-struct wrapped< wrapped<T> >
-{
+struct wrapped< wrapped<T> > {
     typedef typename wrapped<T>::type type;
 };
 

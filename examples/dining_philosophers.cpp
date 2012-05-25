@@ -12,34 +12,26 @@ using std::chrono::seconds;
 using namespace cppa;
 
 // either taken by a philosopher or available
-struct chopstick : fsm_actor<chopstick>
-{
+struct chopstick : fsm_actor<chopstick> {
 
     behavior& init_state; // a reference to available
     behavior available;
 
-    behavior taken_by(const actor_ptr& philos)
-    {
+    behavior taken_by(const actor_ptr& philos) {
         // create a behavior new on-the-fly
-        return
-        (
-            on<atom("take"), actor_ptr>() >> [=](actor_ptr other)
-            {
+        return (
+            on<atom("take"), actor_ptr>() >> [=](actor_ptr other) {
                 send(other, atom("busy"), this);
             },
-            on(atom("put"), philos) >> [=]()
-            {
+            on(atom("put"), philos) >> [=]() {
                 become(&available);
             }
         );
     }
 
-    chopstick() : init_state(available)
-    {
-        available =
-        (
-            on<atom("take"), actor_ptr>() >> [=](actor_ptr philos)
-            {
+    chopstick() : init_state(available) {
+        available = (
+            on<atom("take"), actor_ptr>() >> [=](actor_ptr philos) {
                 send(philos, atom("taken"), this);
                 become(taken_by(philos));
             }
@@ -81,8 +73,7 @@ struct chopstick : fsm_actor<chopstick>
  * [ X = right => Y = left  ]
  */
 
-struct philosopher : fsm_actor<philosopher>
-{
+struct philosopher : fsm_actor<philosopher> {
 
     std::string name; // the name of this philosopher
     actor_ptr left;   // left chopstick
@@ -97,12 +88,9 @@ struct philosopher : fsm_actor<philosopher>
     behavior init_state;
 
     // wait for second chopstick
-    behavior waiting_for(const actor_ptr& what)
-    {
-        return
-        (
-            on(atom("taken"), what) >> [=]()
-            {
+    behavior waiting_for(const actor_ptr& what) {
+        return (
+            on(atom("taken"), what) >> [=]() {
                 // create message in memory to avoid interleaved
                 // messages on the terminal
                 std::ostringstream oss;
@@ -117,8 +105,7 @@ struct philosopher : fsm_actor<philosopher>
                 future_send(this, seconds(5), atom("think"));
                 become(&eating);
             },
-            on(atom("busy"), what) >> [=]()
-            {
+            on(atom("busy"), what) >> [=]() {
                 send((what == left) ? right : left, atom("put"), this);
                 send(this, atom("eat"));
                 become(&thinking);
@@ -127,54 +114,42 @@ struct philosopher : fsm_actor<philosopher>
     }
 
     philosopher(const std::string& n, const actor_ptr& l, const actor_ptr& r)
-        : name(n), left(l), right(r)
-    {
+        : name(n), left(l), right(r) {
         // a philosopher that receives {eat} stops thinking and becomes hungry
-        thinking =
-        (
-            on(atom("eat")) >> [=]()
-            {
+        thinking = (
+            on(atom("eat")) >> [=]() {
                 become(&hungry);
                 send(left, atom("take"), this);
                 send(right, atom("take"), this);
             }
         );
         // wait for the first answer of a chopstick
-        hungry =
-        (
-            on(atom("taken"), left) >> [=]()
-            {
+        hungry = (
+            on(atom("taken"), left) >> [=]() {
                 become(waiting_for(right));
             },
-            on(atom("taken"), right) >> [=]()
-            {
+            on(atom("taken"), right) >> [=]() {
                 become(waiting_for(left));
             },
-            on<atom("busy"), actor_ptr>() >> [=]()
-            {
+            on<atom("busy"), actor_ptr>() >> [=]() {
                 become(&denied);
             }
         );
         // philosopher was not able to obtain the first chopstick
-        denied =
-        (
-            on<atom("taken"), actor_ptr>() >> [=](actor_ptr& ptr)
-            {
+        denied = (
+            on<atom("taken"), actor_ptr>() >> [=](actor_ptr& ptr) {
                 send(ptr, atom("put"), this);
                 send(this, atom("eat"));
                 become(&thinking);
             },
-            on<atom("busy"), actor_ptr>() >> [=]()
-            {
+            on<atom("busy"), actor_ptr>() >> [=]() {
                 send(this, atom("eat"));
                 become(&thinking);
             }
         );
         // philosopher obtained both chopstick and eats (for five seconds)
-        eating =
-        (
-            on(atom("think")) >> [=]()
-            {
+        eating = (
+            on(atom("think")) >> [=]() {
                 send(left, atom("put"), this);
                 send(right, atom("put"), this);
                 future_send(this, seconds(5), atom("eat"));
@@ -184,10 +159,8 @@ struct philosopher : fsm_actor<philosopher>
             }
         );
         // philosophers start to think after receiving {think}
-        init_state =
-        (
-            on(atom("think")) >> [=]()
-            {
+        init_state = (
+            on(atom("think")) >> [=]() {
                 cout << (name + " starts to think\n");
                 future_send(this, seconds(5), atom("eat"));
                 become(&thinking);
@@ -197,13 +170,11 @@ struct philosopher : fsm_actor<philosopher>
 
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
     // create five chopsticks
     cout << "chopstick ids:";
     std::vector<actor_ptr> chopsticks;
-    for (size_t i = 0; i < 5; ++i)
-    {
+    for (size_t i = 0; i < 5; ++i) {
         chopsticks.push_back(spawn(new chopstick));
         cout << " " << chopsticks.back()->id();
     }
@@ -213,8 +184,7 @@ int main(int, char**)
     // spawn five philosopher, each joining the Dinner Club
     std::vector<std::string> names = { "Plato", "Hume", "Kant",
                                        "Nietzsche", "Descartes" };
-    for (size_t i = 0; i < 5; ++i)
-    {
+    for (size_t i = 0; i < 5; ++i) {
         spawn(new philosopher(names[i], chopsticks[i],
                               chopsticks[(i+1)%5])    )->join(dinner_club);
     }

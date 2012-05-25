@@ -39,8 +39,7 @@ namespace cppa {
 /**
  * @brief Base class for non-stacked event-based actor implementations.
  */
-class event_based_actor : public event_based_actor_base<event_based_actor>
-{
+class event_based_actor : public event_based_actor_base<event_based_actor> {
 
     friend class event_based_actor_base<event_based_actor>;
 

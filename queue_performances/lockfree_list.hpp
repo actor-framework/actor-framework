@@ -12,13 +12,11 @@
 
 // T is any type
 template<typename T>
-class lockfree_list
-{
+class lockfree_list {
 
  public:
 
-	struct node
-	{
+	struct node {
 		node(T val = T()) : value(val), next(0) { }
 		T value;
 		std::atomic<node*> next;
@@ -36,15 +34,12 @@ class lockfree_list
 
  public:
 
-	lockfree_list()
-	{
+	lockfree_list() {
 		m_first = m_last = new node;
 	}
 
-	~lockfree_list()
-	{
-		while (m_first)
-		{
+	~lockfree_list() {
+		while (m_first) {
 			node* tmp = m_first;
 			m_first = tmp->next;
 			delete tmp;
@@ -52,8 +47,7 @@ class lockfree_list
 	}
 
 	// takes ownership of what
-	void push(node* tmp)
-	{
+	void push(node* tmp) {
 		// m_last becomes our predecessor
 		node* predecessor = m_last.load();
 		// swing last forward
@@ -63,13 +57,11 @@ class lockfree_list
 	}
 
 	// returns nullptr on failure
-	bool try_pop(T& result)
-	{
+	bool try_pop(T& result) {
 		// no critical section; only one consumer allowed
 		node* first = m_first;
 		node* next = m_first->next;
-		if (next)
-		{
+		if (next) {
 			// queue is not empty
 			result = next->value; // take it out
 			next->value = 0;         // of the node
@@ -85,11 +77,9 @@ class lockfree_list
 	}
 
 	// polls the queue until an element was dequeued
-	T pop()
-	{
+	T pop() {
 		T result;
-		while (!try_pop(result))
-		{
+		while (!try_pop(result)) {
 			std::this_thread::yield();
 		}
 		return result;

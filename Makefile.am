@@ -4,7 +4,6 @@ lib_LTLIBRARIES = libcppa.la
 
 libcppa_la_SOURCES = \
     src/abstract_event_based_actor.cpp \
-    src/abstract_scheduled_actor.cpp \
     src/abstract_tuple.cpp \
     src/actor.cpp \
     src/actor_count.cpp \
@@ -40,12 +39,12 @@ libcppa_la_SOURCES = \
     src/partial_function.cpp \
     src/pattern.cpp \
     src/post_office.cpp \
-    src/post_office_msg.cpp \
     src/primitive_variant.cpp \
     src/process_information.cpp \
     src/receive.cpp \
     src/ripemd_160.cpp \
     src/scheduled_actor.cpp \
+    src/scheduled_actor_dummy.cpp \
     src/scheduler.cpp \
     src/self.cpp \
     src/serializer.cpp \
@@ -102,6 +101,7 @@ nobase_library_include_HEADERS = \
     cppa/detail/demangle.hpp \
     cppa/detail/disablable_delete.hpp \
     cppa/detail/empty_tuple.hpp \
+    cppa/detail/filter_result.hpp \
     cppa/detail/get_behavior.hpp \
     cppa/detail/group_manager.hpp \
     cppa/detail/implicit_conversions.hpp \
@@ -112,18 +112,20 @@ nobase_library_include_HEADERS = \
     cppa/detail/matches.hpp \
     cppa/detail/mock_scheduler.hpp \
     cppa/detail/native_socket.hpp \
+    cppa/detail/nestable_receive_actor.hpp \
     cppa/detail/network_manager.hpp \
     cppa/detail/object_array.hpp \
     cppa/detail/object_impl.hpp \
     cppa/detail/pair_member.hpp \
     cppa/detail/post_office.hpp \
-    cppa/detail/post_office_msg.hpp \
     cppa/detail/primitive_member.hpp \
     cppa/detail/projection.hpp \
     cppa/detail/pseudo_tuple.hpp \
     cppa/detail/ptype_to_type.hpp \
     cppa/detail/receive_loop_helper.hpp \
+    cppa/detail/recursive_queue_node.hpp \
     cppa/detail/ref_counted_impl.hpp \
+    cppa/detail/scheduled_actor_dummy.hpp \
     cppa/detail/serialize_tuple.hpp \
     cppa/detail/singleton_manager.hpp \
     cppa/detail/swap_bytes.hpp \

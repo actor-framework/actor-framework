@@ -31,27 +31,25 @@
 #ifndef NETWORK_MANAGER_HPP
 #define NETWORK_MANAGER_HPP
 
-#include "cppa/detail/mailman.hpp"
-#include "cppa/detail/post_office_msg.hpp"
+#include "cppa/detail/post_office.hpp"
 
 namespace cppa { namespace detail {
 
-class network_manager
-{
+class network_manager {
 
  public:
 
     virtual ~network_manager();
 
-    virtual void write_to_pipe(const pipe_msg& what) = 0;
-
     virtual void start() = 0;
 
     virtual void stop() = 0;
 
-    virtual intrusive::single_reader_queue<mailman_job>& mailman_queue() = 0;
+    virtual void send_to_post_office(po_message const& msg) = 0;
 
-    virtual intrusive::single_reader_queue<post_office_msg>& post_office_queue() = 0;
+    virtual void send_to_post_office(any_tuple msg) = 0;
+
+    virtual void send_to_mailman(any_tuple msg) = 0;
 
     static network_manager* create_singleton();
 

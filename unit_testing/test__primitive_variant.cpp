@@ -6,20 +6,17 @@ using namespace cppa;
 
 namespace {
 
-struct streamer
-{
+struct streamer {
     std::ostream& o;
     streamer(std::ostream& mo) : o(mo) { }
     template<typename T>
-    void operator()(const T& value)
-    {
+    void operator()(const T& value) {
         o << value;
     }
 };
 
 inline std::ostream& operator<<(std::ostream& o,
-                                const cppa::primitive_variant& pv)
-{
+                                const cppa::primitive_variant& pv) {
     streamer s{o};
     pv.apply(s);
     return o;
@@ -27,8 +24,7 @@ inline std::ostream& operator<<(std::ostream& o,
 
 } // namespace <anonymous>
 
-size_t test__primitive_variant()
-{
+size_t test__primitive_variant() {
     CPPA_TEST(test__primitive_variant);
 
     std::uint32_t forty_two = 42;

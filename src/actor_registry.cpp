@@ -47,50 +47,39 @@ typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guar
 
 namespace cppa { namespace detail {
 
-actor_registry::actor_registry() : m_running(0), m_ids(1)
-{
+actor_registry::actor_registry() : m_running(0), m_ids(1) {
 }
 
-actor_ptr actor_registry::get(actor_id key) const
-{
+actor_ptr actor_registry::get(actor_id key) const {
     shared_guard guard(m_instances_mtx);
     auto i = m_instances.find(key);
-    if (i != m_instances.end())
-    {
+    if (i != m_instances.end()) {
         return i->second;
     }
     return nullptr;
 }
 
-void actor_registry::put(actor_id key, const actor_ptr& value)
-{
+void actor_registry::put(actor_id key, const actor_ptr& value) {
     bool add_attachable = false;
-    if (value != nullptr)
-    {
+    if (value != nullptr) {
         shared_guard guard(m_instances_mtx);
         auto i = m_instances.find(key);
-        if (i == m_instances.end())
-        {
+        if (i == m_instances.end()) {
             upgrade_guard uguard(guard);
             m_instances.insert(std::make_pair(key, value));
             add_attachable = true;
         }
     }
-    if (add_attachable)
-    {
-        struct eraser : attachable
-        {
+    if (add_attachable) {
+        struct eraser : attachable {
             actor_id m_id;
             actor_registry* m_singleton;
-            eraser(actor_id id, actor_registry* s) : m_id(id), m_singleton(s)
-            {
+            eraser(actor_id id, actor_registry* s) : m_id(id), m_singleton(s) {
             }
-            void actor_exited(std::uint32_t)
-            {
+            void actor_exited(std::uint32_t) {
                 m_singleton->erase(m_id);
             }
-            bool matches(const token&)
-            {
+            bool matches(const token&) {
                 return false;
             }
         };
@@ -98,47 +87,43 @@ void actor_registry::put(actor_id key, const actor_ptr& value)
     }
 }
 
-void actor_registry::erase(actor_id key)
-{
+void actor_registry::erase(actor_id key) {
     exclusive_guard guard(m_instances_mtx);
-    m_instances.insert(std::pair<actor_id, actor_ptr>(key, nullptr));
+    auto i = std::find_if(m_instances.begin(), m_instances.end(),
+                          [=](std::pair<actor_id, actor_ptr> const& p) {
+                              return p.first == key;
+                          });
+    if (i != m_instances.end())
+        m_instances.erase(i);
 }
 
-std::uint32_t actor_registry::next_id()
-{
+std::uint32_t actor_registry::next_id() {
     return m_ids.fetch_add(1);
 }
 
-void actor_registry::inc_running()
-{
+void actor_registry::inc_running() {
     ++m_running;
 }
 
-size_t actor_registry::running() const
-{
+size_t actor_registry::running() const {
     return m_running.load();
 }
 
-void actor_registry::dec_running()
-{
+void actor_registry::dec_running() {
     size_t new_val = --m_running;
     /*
-    if (new_val == std::numeric_limits<size_t>::max())
-    {
+    if (new_val == std::numeric_limits<size_t>::max()) {
         throw std::underflow_error("actor_count::dec()");
     }
-    else*/ if (new_val <= 1)
-    {
+    else*/ if (new_val <= 1) {
         unique_lock<mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
     }
 }
 
-void actor_registry::await_running_count_equal(size_t expected)
-{
+void actor_registry::await_running_count_equal(size_t expected) {
     unique_lock<mutex> guard(m_running_mtx);
-    while (m_running.load() != expected)
-    {
+    while (m_running.load() != expected) {
         m_running_cv.wait(guard);
     }
 }

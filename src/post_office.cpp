@@ -45,17 +45,16 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <netinet/tcp.h>
 
-// used cppa classes
+#include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/match.hpp"
+#include "cppa/config.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-// used cppa intrusive containers
-#include "cppa/intrusive/single_reader_queue.hpp"
-
-// used cppa details
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/buffer.hpp"
 #include "cppa/detail/mailman.hpp"
@@ -64,20 +63,19 @@
 #include "cppa/detail/native_socket.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/network_manager.hpp"
-#include "cppa/detail/post_office_msg.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/addressed_message.hpp"
 
-/*
 #define DEBUG(arg)                                                             \
     std::cout << "[process id: "                                               \
               << cppa::process_information::get()->process_id()                \
               << "] " << arg << std::endl
-//*/
 
+#undef DEBUG
 #define DEBUG(unused) ((void) 0)
 
+using std::cout;
 using std::cerr;
 using std::endl;
 
@@ -97,25 +95,66 @@ static_assert((s_max_buffer_size % s_chunk_size) == 0,
 static_assert(sizeof(cppa::detail::native_socket_type) == sizeof(std::uint32_t),
               "sizeof(native_socket_t) != sizeof(std::uint32_t)");
 
-constexpr int s_rdflag = MSG_DONTWAIT;
-
 } // namespace <anonmyous>
 
 namespace cppa { namespace detail {
 
-intrusive::single_reader_queue<mailman_job>& mailman_queue()
-{
-    return singleton_manager::get_network_manager()->mailman_queue();
+inline void send2po_(network_manager*) { }
+
+template<typename Arg0, typename... Args>
+inline void send2po_(network_manager* nm, Arg0&& arg0, Args&&... args) {
+    nm->send_to_post_office(make_any_tuple(std::forward<Arg0>(arg0),
+                                           std::forward<Args>(args)...));
 }
 
-class po_doorman;
+
+template<typename... Args>
+inline void send2po(po_message const& msg, Args&&... args) {
+    auto nm = singleton_manager::get_network_manager();
+    nm->send_to_post_office(msg);
+    send2po_(nm, std::forward<Args>(args)...);
+}
+
+template<class Fun>
+struct scope_guard {
+    Fun m_fun;
+    scope_guard(Fun&& fun) : m_fun(fun) { }
+    ~scope_guard() { m_fun(); }
+};
+
+template<class Fun>
+scope_guard<Fun> make_scope_guard(Fun fun) { return {std::move(fun)}; }
+
+class po_socket_handler {
+
+ public:
+
+    po_socket_handler(native_socket_type fd) : m_socket(fd) { }
+
+    virtual ~po_socket_handler() { }
+
+    // returns bool if either done or an error occured
+    virtual bool read_and_continue() = 0;
+
+    native_socket_type get_socket() const {
+        return m_socket;
+    }
+
+    virtual bool is_doorman_of(actor_id) const { return false; }
+
+ protected:
+
+    native_socket_type m_socket;
+
+};
+
+typedef std::unique_ptr<po_socket_handler> po_socket_handler_ptr;
+typedef std::vector<po_socket_handler_ptr> po_socket_handler_vector;
 
 // represents a TCP connection to another peer
-class po_peer
-{
+class po_peer : public po_socket_handler {
 
-    enum state
-    {
+    enum state {
         // connection just established; waiting for process information
         wait_for_process_info,
         // wait for the size of the next message
@@ -125,636 +164,325 @@ class po_peer
     };
 
     state m_state;
-    // TCP socket to remote peer
-    native_socket_type m_socket;
-    // TCP socket identifying our parent (that accepted m_socket)
-    native_socket_type m_parent_socket;
     // caches process_information::get()
     process_information_ptr m_pself;
-    // the process information or our remote peer
+    // the process information of our remote peer
     process_information_ptr m_peer;
-    std::unique_ptr<attachable> m_observer;
-    buffer<s_chunk_size, s_max_buffer_size> m_rdbuf;
-    std::list<actor_proxy_ptr> m_children;
-
-    const uniform_type_info* m_meta_msg;
+    // caches uniform_typeid<addressed_message>()
+    uniform_type_info const* m_meta_msg;
+    // manages socket input
+    buffer<512, (16 * 1024 * 1024)> m_buf;
 
  public:
 
-    explicit po_peer(post_office_msg::add_peer& from)
-        : m_state(wait_for_msg_size)
-        , m_socket(from.sockfd)
-        , m_parent_socket(-1)
+    po_peer(native_socket_type fd, process_information_ptr peer = nullptr)
+        : po_socket_handler(fd)
+        , m_state((peer) ? wait_for_msg_size : wait_for_process_info)
         , m_pself(process_information::get())
-        , m_peer(std::move(from.peer))
-        , m_observer(std::move(from.attachable_ptr))
-        , m_meta_msg(uniform_typeid<detail::addressed_message>())
-    {
+        , m_peer(std::move(peer))
+        , m_meta_msg(uniform_typeid<addressed_message>()) {
+        m_buf.reset(m_state == wait_for_process_info
+                    ? sizeof(std::uint32_t) + process_information::node_id_size
+                    : sizeof(std::uint32_t));
     }
 
-    explicit po_peer(native_socket_type sockfd, native_socket_type parent_socket)
-        : m_state(wait_for_process_info)
-        , m_socket(sockfd)
-        , m_parent_socket(parent_socket)
-        , m_pself(process_information::get())
-        , m_meta_msg(uniform_typeid<detail::addressed_message>())
-    {
-        m_rdbuf.reset(  sizeof(std::uint32_t)
-                      + process_information::node_id_size);
-    }
-
-    po_peer(po_peer&& other)
-        : m_state(other.m_state)
-        , m_socket(other.m_socket)
-        , m_parent_socket(other.m_parent_socket)
-        , m_pself(process_information::get())
-        , m_peer(std::move(other.m_peer))
-        , m_observer(std::move(other.m_observer))
-        , m_rdbuf(std::move(other.m_rdbuf))
-        , m_children(std::move(other.m_children))
-        , m_meta_msg(other.m_meta_msg)
-    {
-        other.m_socket = -1;
-        other.m_parent_socket = -1;
-        // other.m_children.clear();
-    }
-
-    native_socket_type get_socket() const
-    {
-        return m_socket;
-    }
-
-    // returns true if @p pod is the parent of this
-    inline bool parent_exited(const po_doorman& pod);
-
-    void add_child(const actor_proxy_ptr& pptr)
-    {
-        CPPA_REQUIRE(pptr.get() != nullptr);
-        if (pptr) m_children.push_back(pptr);
-    }
-
-    inline size_t children_count() const
-    {
-        return m_children.size();
-    }
-
-    inline bool has_parent() const
-    {
-        return m_parent_socket != -1;
-    }
-
-    // removes pptr from the list of children and returns
-    // a <bool, size_t> pair, whereas: first = true if pptr is a child of this
-    //                                 second = number of remaining children
-    std::pair<bool, size_t> remove_child(const actor_proxy_ptr& pptr)
-    {
-        auto end = m_children.end();
-        auto i = std::find(m_children.begin(), end, pptr);
-        if (i != end)
-        {
-            m_children.erase(i);
-            return { true, m_children.size() };
-        }
-        return { false, m_children.size() };
-    }
-
-
-    ~po_peer()
-    {
-        if (!m_children.empty())
-        {
-            auto msg = make_cow_tuple(atom(":KillProxy"),
-                                  exit_reason::remote_link_unreachable);
-            for (actor_proxy_ptr& pptr : m_children)
-            {
-                pptr->enqueue(nullptr, msg);
+    ~po_peer() {
+        closesocket(m_socket);
+        if (m_peer) {
+            // collect all children (proxies to actors of m_peer)
+            std::vector<actor_proxy_ptr> children;
+            children.reserve(20);
+            get_actor_proxy_cache().erase_all(m_peer->node_id(),
+                                              m_peer->process_id(),
+                                              [&](actor_proxy_ptr& pptr) {
+                children.push_back(std::move(pptr));
+            });
+            // kill all proxies
+            for (actor_proxy_ptr& pptr: children) {
+                pptr->enqueue(nullptr,
+                              make_any_tuple(atom("KILL_PROXY"),
+                                             exit_reason::remote_link_unreachable));
             }
         }
-        if (m_socket != -1) closesocket(m_socket);
     }
 
+    inline native_socket_type get_socket() const { return m_socket; }
+
     // @returns false if an error occured; otherwise true
-    bool read_and_continue()
-    {
-        static constexpr size_t wfp_size =   sizeof(std::uint32_t)
-                                           + process_information::node_id_size;
-        switch (m_state)
-        {
-            case wait_for_process_info:
-            {
-                if (m_rdbuf.final_size() != wfp_size)
-                {
-                    m_rdbuf.reset(wfp_size);
-                }
-                if (m_rdbuf.append_from(m_socket, s_rdflag) == false)
-                {
-                    return false;
-                }
-                if (m_rdbuf.ready() == false)
-                {
-                    break;
-                }
-                else
-                {
+    bool read_and_continue() {
+        for (;;) {
+            if (m_buf.append_from(m_socket) == false) {
+                DEBUG("cannot read from socket");
+                return false;
+            }
+            if (m_buf.ready() == false) {
+                return true; // try again later
+            }
+            switch (m_state) {
+                case wait_for_process_info: {
                     std::uint32_t process_id;
-                    memcpy(&process_id, m_rdbuf.data(), sizeof(std::uint32_t));
                     process_information::node_id_type node_id;
-                    memcpy(node_id.data(),
-                           m_rdbuf.data() + sizeof(std::uint32_t),
+                    memcpy(&process_id, m_buf.data(), sizeof(std::uint32_t));
+                    memcpy(node_id.data(), m_buf.data() + sizeof(std::uint32_t),
                            process_information::node_id_size);
                     m_peer.reset(new process_information(process_id, node_id));
                     // inform mailman about new peer
-                    mailman_queue().push_back(new mailman_job(m_socket,
-                                                              m_peer));
-                    m_rdbuf.reset();
+                    singleton_manager::get_network_manager()
+                    ->send_to_mailman(make_any_tuple(m_socket, m_peer));
                     m_state = wait_for_msg_size;
+                    m_buf.reset(sizeof(std::uint32_t));
                     DEBUG("pinfo read: "
                           << m_peer->process_id()
                           << "@"
                           << to_string(m_peer->node_id()));
-                    // fall through and try to read more from socket
-                }
-            }
-            case wait_for_msg_size:
-            {
-                if (m_rdbuf.final_size() != sizeof(std::uint32_t))
-                {
-                    m_rdbuf.reset(sizeof(std::uint32_t));
-                }
-                if (!m_rdbuf.append_from(m_socket, s_rdflag)) return false;
-                if (m_rdbuf.ready() == false)
-                {
                     break;
                 }
-                else
-                {
-                    // read and set message size
+                case wait_for_msg_size: {
                     std::uint32_t msg_size;
-                    memcpy(&msg_size, m_rdbuf.data(), sizeof(std::uint32_t));
-                    m_rdbuf.reset(msg_size);
+                    memcpy(&msg_size, m_buf.data(), sizeof(std::uint32_t));
+                    m_buf.reset(msg_size);
                     m_state = read_message;
-                    // fall through and try to read more from socket
-                }
-            }
-            case read_message:
-            {
-                if (!m_rdbuf.append_from(m_socket, s_rdflag))
-                {
-                    // could not read from socket
-                    return false;
-                }
-                if (m_rdbuf.ready() == false)
-                {
-                    // wait for new data
                     break;
                 }
-                addressed_message msg;
-                binary_deserializer bd(m_rdbuf.data(), m_rdbuf.size());
-                try
-                {
-                    m_meta_msg->deserialize(&msg, &bd);
-                }
-                catch (std::exception& e)
-                {
-                    // unable to deserialize message (format error)
-                    DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
-                    return false;
-                }
-                auto& content = msg.content();
-                DEBUG("<-- " << to_string(content));
-                // intercept ":Monitor" messages
-                if (   content.size() == 1
-                    && t_atom_actor_ptr_types[0] == content.type_at(0)
-                    && content.get_as<atom_value>(0) == atom(":Monitor"))
-                {
-                    auto receiver = msg.receiver().downcast<actor>();
-                    CPPA_REQUIRE(receiver.get() != nullptr);
-                    if (!receiver)
-                    {
-                        DEBUG("empty receiver");
+                case read_message: {
+                    addressed_message msg;
+                    binary_deserializer bd(m_buf.data(), m_buf.size());
+                    try {
+                        m_meta_msg->deserialize(&msg, &bd);
                     }
-                    else if (receiver->parent_process() == *process_information::get())
-                    {
-                        //cout << pinfo << " ':Monitor'; actor id = "
-                        //     << sender->id() << endl;
-                        // local actor?
-                        // this message was send from a proxy
-                        receiver->attach_functor([=](std::uint32_t reason)
-                        {
-                            any_tuple kmsg = make_cow_tuple(atom(":KillProxy"),
-                                                        reason);
-                            auto mjob = new detail::mailman_job(m_peer,
-                                                                receiver,
-                                                                receiver,
-                                                                kmsg);
-                            detail::mailman_queue().push_back(mjob);
-                        });
+                    catch (std::exception& e) {
+                        // unable to deserialize message (format error)
+                        DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
+                        return false;
                     }
-                    else
-                    {
-                        DEBUG(":Monitor received for an remote actor");
-                    }
+                    auto& content = msg.content();
+                    DEBUG("<-- " << to_string(msg));
+                    match(content) (
+                        on(atom("MONITOR")) >> [&]() {
+                            auto receiver = msg.receiver().downcast<actor>();
+                            CPPA_REQUIRE(receiver.get() != nullptr);
+                            if (!receiver) {
+                                DEBUG("empty receiver");
+                            }
+                            else if (receiver->parent_process() == *process_information::get()) {
+                                // this message was send from a proxy
+                                receiver->attach_functor([=](std::uint32_t reason) {
+                                    addressed_message kmsg{receiver, receiver, make_any_tuple(atom("KILL_PROXY"), reason)};
+                                    singleton_manager::get_network_manager()
+                                    ->send_to_mailman(make_any_tuple(m_peer, kmsg));
+                                });
+                            }
+                            else {
+                                DEBUG("MONITOR received for a remote actor");
+                            }
+                        },
+                        on(atom("LINK"), arg_match) >> [&](actor_ptr ptr) {
+                            if (msg.sender()->is_proxy() == false) {
+                                DEBUG("msg.sender() is not a proxy");
+                                return;
+                            }
+                            auto whom = msg.sender().downcast<actor_proxy>();
+                            if ((whom) && (ptr)) whom->local_link_to(ptr);
+                        },
+                        on(atom("UNLINK"), arg_match) >> [](actor_ptr ptr) {
+                            if (ptr->is_proxy() == false) {
+                                DEBUG("msg.sender() is not a proxy");
+                                return;
+                            }
+                            auto whom = ptr.downcast<actor_proxy>();
+                            if ((whom) && (ptr)) whom->local_unlink_from(ptr);
+                        },
+                        others() >> [&]() {
+                            if (msg.receiver()) {
+                                msg.receiver()->enqueue(msg.sender().get(),
+                                                        std::move(msg.content()));
+                            }
+                            else {
+                                DEBUG("empty receiver");
+                            }
+                        }
+                    );
+                    m_buf.reset(sizeof(std::uint32_t));
+                    m_state = wait_for_msg_size;
+                    break;
                 }
-                // intercept ":Link" messages
-                else if (   content.size() == 2
-                         && t_atom_actor_ptr_types[0] == content.type_at(0)
-                         && t_atom_actor_ptr_types[1] == content.type_at(1)
-                         && content.get_as<atom_value>(0) == atom(":Link"))
-                {
-                    CPPA_REQUIRE(msg.sender()->is_proxy());
-                    auto whom = msg.sender().downcast<actor_proxy>();
-                    auto to = content.get_as<actor_ptr>(1);
-                    if ((whom) && (to))
-                        whom->local_link_to(to);
+                default: {
+                    CPPA_CRITICAL("illegal state");
                 }
-                // intercept ":Unlink" messages
-                else if (   content.size() == 2
-                         && t_atom_actor_ptr_types[0] == content.type_at(0)
-                         && t_atom_actor_ptr_types[1] == content.type_at(1)
-                         && content.get_as<atom_value>(0) == atom(":Link"))
-                {
-                    CPPA_REQUIRE(msg.sender()->is_proxy());
-                    auto whom = msg.sender().downcast<actor_proxy>();
-                    auto from = content.get_as<actor_ptr>(1);
-                    if ((whom) && (from))
-                        whom->local_unlink_from(from);
-                }
-                else
-                {
-                    if (msg.receiver())
-                    {
-                        msg.receiver()->enqueue(msg.sender().get(),
-                                                std::move(msg.content()));
-                    }
-                    else
-                    {
-                        DEBUG("empty receiver");
-                    }
-                }
-                m_rdbuf.reset();
-                m_state = wait_for_msg_size;
-                break;
             }
-            default:
-            {
-                throw std::logic_error("illegal state");
-            }
+            // try to read more (next iteration)
         }
-        return true;
     }
 
 };
 
 // accepts new connections to a published actor
-class po_doorman
-{
+class po_doorman : public po_socket_handler {
 
-    // server socket
-    native_socket_type m_socket;
-    actor_ptr published_actor;
-    std::list<po_peer>* m_peers;
+    actor_id m_actor_id;
     // caches process_information::get()
     process_information_ptr m_pself;
+    po_socket_handler_vector* new_handler;
 
  public:
 
-    explicit po_doorman(post_office_msg::add_server_socket& assm,
-                        std::list<po_peer>* peers)
-        : m_socket(assm.server_sockfd)
-        , published_actor(assm.published_actor)
-        , m_peers(peers)
-        , m_pself(process_information::get())
-    {
+    po_doorman(actor_id aid, native_socket_type fd, po_socket_handler_vector* v)
+        : po_socket_handler(fd)
+        , m_actor_id(aid), m_pself(process_information::get())
+        , new_handler(v) {
     }
 
-    ~po_doorman()
-    {
-        if (m_socket != -1) closesocket(m_socket);
+    bool is_doorman_of(actor_id aid) const {
+        return m_actor_id == aid;
     }
 
-    po_doorman(po_doorman&& other)
-        : m_socket(other.m_socket)
-        , published_actor(std::move(other.published_actor))
-        , m_peers(other.m_peers)
-        , m_pself(process_information::get())
-    {
-        other.m_socket = -1;
+    ~po_doorman() {
+        closesocket(m_socket);
     }
 
-    inline native_socket_type get_socket() const
-    {
-        return m_socket;
-    }
-
-    // @returns false if an error occured; otherwise true
-    bool read_and_continue()
-    {
-        sockaddr addr;
-        socklen_t addrlen;
-        memset(&addr, 0, sizeof(addr));
-        memset(&addrlen, 0, sizeof(addrlen));
-        auto sfd = ::accept(m_socket, &addr, &addrlen);
-        if (sfd < 0)
-        {
-            switch (errno)
-            {
-                case EAGAIN:
-#               if EAGAIN != EWOULDBLOCK
-                case EWOULDBLOCK:
-#               endif
-                {
-                    // just try again
-                    return true;
+    bool read_and_continue() {
+        for (;;) {
+            sockaddr addr;
+            socklen_t addrlen;
+            memset(&addr, 0, sizeof(addr));
+            memset(&addrlen, 0, sizeof(addrlen));
+            auto sfd = ::accept(m_socket, &addr, &addrlen);
+            if (sfd < 0) {
+                switch (errno) {
+                    case EAGAIN:
+#                   if EAGAIN != EWOULDBLOCK
+                    case EWOULDBLOCK:
+#                   endif
+                        // just try again
+                        return true;
+                    default:
+                        perror("accept()");
+                        DEBUG("accept failed (actor unpublished?)");
+                        return false;
                 }
-                default: return false;
             }
+            int flags = 1;
+            setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
+            flags = fcntl(sfd, F_GETFL, 0);
+            if (flags == -1) {
+                throw network_error("unable to get socket flags");
+            }
+            if (fcntl(sfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+                throw network_error("unable to set socket to nonblock");
+            }
+            auto id = m_actor_id;
+            std::uint32_t process_id = m_pself->process_id();
+            ::send(sfd, &id, sizeof(std::uint32_t), 0);
+            ::send(sfd, &process_id, sizeof(std::uint32_t), 0);
+            ::send(sfd, m_pself->node_id().data(), m_pself->node_id().size(), 0);
+            new_handler->emplace_back(new po_peer(sfd));
+            DEBUG("socket accepted; published actor: " << id);
         }
-        auto id = published_actor->id();
-        std::uint32_t process_id = m_pself->process_id();
-        ::send(sfd, &id, sizeof(std::uint32_t), 0);
-        ::send(sfd, &process_id, sizeof(std::uint32_t), 0);
-        ::send(sfd, m_pself->node_id().data(), m_pself->node_id().size(), 0);
-        m_peers->push_back(po_peer(sfd, m_socket));
-        DEBUG("socket accepted; published actor: " << id);
-        return true;
     }
 
 };
 
-inline bool po_peer::parent_exited(const po_doorman& pod)
-{
-    if (m_parent_socket == pod.get_socket())
-    {
-        m_parent_socket = -1;
-        return true;
-    }
-    return false;
+inline constexpr std::uint64_t valof(atom_value val) {
+    return static_cast<std::uint64_t>(val);
 }
 
-// starts and stops mailman_loop
-struct mailman_worker
-{
-    thread m_thread;
-    mailman_worker() : m_thread(mailman_loop)
-    {
-    }
-    ~mailman_worker()
-    {
-        mailman_queue().push_back(mailman_job::kill_job());
-        m_thread.join();
-    }
-};
-
-void post_office_loop(int pipe_read_handle, int pipe_write_handle)
-{
-    mailman_worker mworker;
-    // map of all published actors (actor_id => list<doorman>)
-    std::map<std::uint32_t, std::list<po_doorman> > doormen;
-    // list of all connected peers
-    std::list<po_peer> peers;
-    // readset for select()
-    fd_set readset;
-    // maximum number of all socket descriptors for select()
+void post_office_loop(int input_fd) {
     int maxfd = 0;
-    // initialize variables for select()
-    FD_ZERO(&readset);
-    maxfd = pipe_read_handle;
-    FD_SET(pipe_read_handle, &readset);
-    // keeps track about what peer we are iterating at the moment
-    po_peer* selected_peer = nullptr;
-    // our event queue
-    auto& msg_queue = singleton_manager::get_network_manager()->post_office_queue();
-    auto pself = process_information::get();
-    // needed for lookups in our proxy cache
-    actor_proxy_cache::key_tuple proxy_cache_key ( 0, // set on lookup
-                                                   pself->process_id(),
-                                                   pself->node_id()   );
-    // initialize proxy cache
-    get_actor_proxy_cache().set_new_proxy_callback([&](actor_proxy_ptr& pptr)
-    {
-        DEBUG("new_proxy_callback, actor id = " << pptr->id());
-        // it's ok to access objects on the stack, since this callback
-        // is guaranteed to be executed in the same thread
-        if (selected_peer == nullptr)
-        {
-            if (!pptr) DEBUG("pptr == nullptr");
-            throw std::logic_error("selected_peer == nullptr");
+    fd_set readset;
+    bool done = false;
+    po_socket_handler_vector handler;
+    po_socket_handler_vector new_handler;
+    do {
+        FD_ZERO(&readset);
+        FD_SET(input_fd, &readset);
+        maxfd = input_fd;
+        for (auto& hptr : handler) {
+            auto fd = hptr->get_socket();
+            maxfd = std::max(maxfd, fd);
+            FD_SET(fd, &readset);
         }
-        pptr->enqueue(nullptr, make_cow_tuple(atom(":Monitor")));
-        selected_peer->add_child(pptr);
-        auto aid = pptr->id();
-        auto pptr_copy = pptr;
-        pptr->attach_functor([&msg_queue,aid,pipe_write_handle,pptr_copy] (std::uint32_t)
-        {
-            // this callback is not guaranteed to be executed in the same thread
-            msg_queue.push_back(new post_office_msg(pptr_copy));
-            pipe_msg msg = { rd_queue_event, 0 };
-            if (write(pipe_write_handle, msg, pipe_msg_size) != (int) pipe_msg_size)
-            {
-                cerr << "FATAL: cannot write to pipe" << endl;
-                abort();
-            }
-        });
-    });
-    for (;;)
-    {
-        if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) < 0)
-        {
+        if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) < 0) {
             // must not happen
+            DEBUG("select failed!");
             perror("select()");
             exit(3);
         }
-        // iterate over all peers and remove peers on errors
-        peers.remove_if([&](po_peer& peer) -> bool
-        {
-            if (FD_ISSET(peer.get_socket(), &readset))
-            {
-                selected_peer = &peer;
-                return peer.read_and_continue() == false;
+        { // iterate over all handler and remove if needed
+            auto i = handler.begin();
+            while (i != handler.end()) {
+                if (   FD_ISSET((*i)->get_socket(), &readset)
+                    && (*i)->read_and_continue() == false) {
+                    DEBUG("handler erased");
+                    i = handler.erase(i);
+                }
+                else {
+                    ++i;
+                }
             }
-            return false;
-        });
-        selected_peer = nullptr;
-        // iterate over all doormen (accept new connections)
-        // and remove doormen on errors
-        for (auto& kvp : doormen)
-        {
-            // iterate over all doormen and remove doormen on error
-            kvp.second.remove_if([&](po_doorman& doorman) -> bool
-            {
-                return    FD_ISSET(doorman.get_socket(), &readset)
-                       && doorman.read_and_continue() == false;
-            });
         }
-        // read events from pipe
-        if (FD_ISSET(pipe_read_handle, &readset))
-        {
-            pipe_msg pmsg;
-            //memcpy(pmsg, pipe_msg_buf.data(), pipe_msg_buf.size());
-            //pipe_msg_buf.clear();
-            if (::read(pipe_read_handle, &pmsg, pipe_msg_size) != (int) pipe_msg_size)
-            {
-                cerr << "FATAL: cannot read from pipe" << endl;
-                abort();
+        if (FD_ISSET(input_fd, &readset)) {
+            DEBUG("post_office: read from pipe");
+            po_message msg;
+            if (read(input_fd, &msg, sizeof(po_message)) != sizeof(po_message)) {
+                CPPA_CRITICAL("cannot read from pipe");
             }
-            switch (pmsg[0])
-            {
-                case rd_queue_event:
-                {
-                    DEBUG("rd_queue_event");
-                    std::unique_ptr<post_office_msg> pom{msg_queue.pop()};
-                    if (pom->is_add_peer_msg())
-                    {
-                        DEBUG("add_peer_msg");
-                        auto& apm = pom->as_add_peer_msg();
-                        actor_proxy_ptr pptr = apm.first_peer_actor;
-                        peers.push_back(po_peer(apm));
-                        selected_peer = &(peers.back());
-                        if (pptr)
-                        {
-                            DEBUG("proxy added via post_office_msg");
-                            get_actor_proxy_cache().add(pptr);
+            switch (valof(msg.flag)) {
+                case valof(atom("ADD_PEER")): {
+                    receive (
+                        on_arg_match >> [&](native_socket_type fd,
+                                            process_information_ptr piptr) {
+                            DEBUG("post_office: add_peer");
+                            handler.emplace_back(new po_peer(fd, piptr));
                         }
-                        selected_peer = nullptr;
-                    }
-                    else if (pom->is_add_server_socket_msg())
-                    {
-                        DEBUG("add_server_socket_msg");
-                        auto& assm = pom->as_add_server_socket_msg();
-                        auto& pactor = assm.published_actor;
-                        if (pactor)
-                        {
-                            auto aid = pactor->id();
-                            auto callback = [aid](std::uint32_t)
-                            {
-                                DEBUG("call post_office_unpublish() ...");
-                                post_office_unpublish(aid);
-                            };
-                            if (pactor->attach_functor(std::move(callback)))
-                            {
-                                auto& dm = doormen[aid];
-                                dm.push_back(po_doorman(assm, &peers));
-                                DEBUG("new doorman");
-                            }
-                        }
-                        else
-                        {
-                            DEBUG("nullptr published");
-                        }
-                    }
-                    else if (pom->is_proxy_exited_msg())
-                    {
-                        DEBUG("proxy_exited_msg");
-                        auto pptr = std::move(pom->as_proxy_exited_msg().proxy_ptr);
-                        if (pptr)
-                        {
-                            // get parent of pptr
-                            auto i = peers.begin();
-                            auto end = peers.end();
-                            DEBUG("search parent of exited proxy");
-                            while (i != end)
-                            {
-                                auto result = i->remove_child(pptr);
-                                if (result.first) // true if pptr is a child
-                                {
-                                    DEBUG("found parent of proxy");
-                                    if (result.second == 0) // no more children?
-                                    {
-                                        // disconnect peer if we don't know any
-                                        // actor of it and if the published
-                                        // actor already exited
-                                        // (this is the case if the peer doesn't
-                                        //  have a parent)
-                                        if (i->has_parent() == false)
-                                        {
-                                            DEBUG("removed peer");
-                                            peers.erase(i);
-                                        }
-                                    }
-                                    i = end; // done
-                                }
-                                else
-                                {
-                                    DEBUG("... next iteration");
-                                    ++i; // next iteration
-                                }
-                            }
-                        }
-                        else DEBUG("pptr == nullptr");
-                    }
+                    );
                     break;
                 }
-                case unpublish_actor_event:
-                {
-                    DEBUG("unpublish_actor_event");
-                    auto kvp = doormen.find(pmsg[1]);
-                    if (kvp != doormen.end())
-                    {
-                        DEBUG("erase doorman from map");
-                        for (po_doorman& dm : kvp->second)
-                        {
-                            // remove peers with no children and no parent
-                            // (that are peers that connected to an already
-                            //  exited actor and where we don't know any
-                            //  actor from)
-                            peers.remove_if([&](po_peer& ppeer)
-                            {
-                                return    ppeer.parent_exited(dm)
-                                       && ppeer.children_count() == 0;
-                            });
-                        }
-                        doormen.erase(kvp);
-                    }
-                    break;
-                }
-                case close_socket_event:
-                {
-                    DEBUG("close_socket_event");
-                    auto sockfd = static_cast<native_socket_type>(pmsg[1]);
-                    auto end = peers.end();
-                    auto i = std::find_if(peers.begin(), end,
-                                          [sockfd](po_peer& peer) -> bool
-                    {
-                        return peer.get_socket() == sockfd;
+                case valof(atom("RM_PEER")): {
+                    DEBUG("post_office: rm_peer");
+                    auto i = std::find_if(handler.begin(), handler.end(),
+                                          [&](po_socket_handler_ptr const& hp) {
+                        return hp->get_socket() == msg.fd;
                     });
-                    if (i != end) peers.erase(i);
+                    if (i != handler.end()) handler.erase(i);
                     break;
                 }
-                case shutdown_event:
-                {
-                    // goodbye
-                    return;
+                case valof(atom("PUBLISH")): {
+                    receive (
+                        on_arg_match >> [&](native_socket_type sockfd,
+                                            actor_ptr whom) {
+                            DEBUG("post_office: publish_actor");
+                            CPPA_REQUIRE(sockfd > 0);
+                            CPPA_REQUIRE(whom.get() != nullptr);
+                            handler.emplace_back(new po_doorman(whom->id(), sockfd, &new_handler));
+                        }
+                    );
+                    break;
                 }
-                default:
-                {
-                    std::ostringstream oss;
-                    oss << "unexpected event type: " << pmsg[0];
-                    throw std::logic_error(oss.str());
+                case valof(atom("UNPUBLISH")): {
+                    DEBUG("post_office: unpublish_actor");
+                    auto i = std::find_if(handler.begin(), handler.end(),
+                                          [&](po_socket_handler_ptr const& hp) {
+                        return hp->is_doorman_of(msg.aid);
+                    });
+                    if (i != handler.end()) handler.erase(i);
+                    break;
+                }
+                case valof(atom("DONE")): {
+                    done = true;
+                    break;
+                }
+                default: {
+                    CPPA_CRITICAL("illegal pipe message");
                 }
             }
         }
-        // recalculate readset
-        FD_ZERO(&readset);
-        FD_SET(pipe_read_handle, &readset);
-        maxfd = pipe_read_handle;
-        for (po_peer& pd : peers)
-        {
-            auto fd = pd.get_socket();
-            if (fd > maxfd) maxfd = fd;
-            FD_SET(fd, &readset);
-        }
-        // iterate over key-value (actor id / doormen) pairs
-        for (auto& kvp : doormen)
-        {
-            // iterate over values (doormen)
-            for (auto& dm : kvp.second)
-            {
-                auto fd = dm.get_socket();
-                if (fd > maxfd) maxfd = fd;
-                FD_SET(fd, &readset);
-            }
+        if (new_handler.empty() == false) {
+            std::move(new_handler.begin(), new_handler.end(),
+                      std::back_inserter(handler));
+            new_handler.clear();
         }
     }
+    while (done == false);
 }
 
 /******************************************************************************
@@ -763,41 +491,25 @@ void post_office_loop(int pipe_read_handle, int pipe_write_handle)
  ******************************************************************************/
 
 void post_office_add_peer(native_socket_type a0,
-                          const process_information_ptr& a1,
-                          const actor_proxy_ptr& a2,
-                          std::unique_ptr<attachable>&& a3)
-{
-    auto nm = singleton_manager::get_network_manager();
-    nm->post_office_queue().push_back(new post_office_msg(a0, a1, a2,
-                                                          std::move(a3)));
-    pipe_msg msg = { rd_queue_event, 0 };
-    nm->write_to_pipe(msg);
+                          process_information_ptr const& a1) {
+    po_message msg{atom("ADD_PEER"), -1, 0};
+    send2po(msg, a0, a1);
 }
 
 void post_office_publish(native_socket_type server_socket,
-                         const actor_ptr& published_actor)
-{
-    DEBUG("post_office_publish(" << published_actor->id() << ")");
-    auto nm = singleton_manager::get_network_manager();
-    nm->post_office_queue().push_back(new post_office_msg(server_socket,
-                                                          published_actor));
-    pipe_msg msg = { rd_queue_event, 0 };
-    nm->write_to_pipe(msg);
+                         actor_ptr const& published_actor) {
+    po_message msg{atom("PUBLISH"), -1, 0};
+    send2po(msg, server_socket, published_actor);
 }
 
-void post_office_unpublish(actor_id whom)
-{
-    DEBUG("post_office_unpublish(" << whom << ")");
-    auto nm = singleton_manager::get_network_manager();
-    pipe_msg msg = { unpublish_actor_event, whom };
-    nm->write_to_pipe(msg);
+void post_office_unpublish(actor_id whom) {
+    po_message msg{atom("UNPUBLISH"), -1, whom};
+    send2po(msg);
 }
 
-void post_office_close_socket(native_socket_type sfd)
-{
-    auto nm = singleton_manager::get_network_manager();
-    pipe_msg msg = { close_socket_event, static_cast<std::uint32_t>(sfd) };
-    nm->write_to_pipe(msg);
+void post_office_close_socket(native_socket_type sfd) {
+    po_message msg{atom("RM_PEER"), sfd, 0};
+    send2po(msg);
 }
 
 } } // namespace cppa::detail

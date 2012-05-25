@@ -29,9 +29,11 @@
 
 
 #include <memory>
+#include <iostream>
 #include <algorithm>
 
 #include "cppa/self.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/invokable.hpp"
@@ -40,12 +42,10 @@
 namespace cppa { namespace detail {
 
 converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom(":Exit"))
-{
+    : m_exit_msg_pattern(atom("EXIT")) {
 }
 
-void converted_thread_context::quit(std::uint32_t reason)
-{
+void converted_thread_context::quit(std::uint32_t reason) {
     super::cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
     // self must point to a newly created instance
@@ -53,108 +53,61 @@ void converted_thread_context::quit(std::uint32_t reason)
     throw actor_exited(reason);
 }
 
-void converted_thread_context::cleanup(std::uint32_t reason)
-{
+void converted_thread_context::cleanup(std::uint32_t reason) {
     super::cleanup(reason);
 }
 
-void converted_thread_context::enqueue(actor* sender, any_tuple&& msg)
-{
+void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
+#   ifdef CPPA_DEBUG
+    auto node = fetch_node(sender, std::move(msg));
+    CPPA_REQUIRE(node->marked == false);
+    m_mailbox.push_back(node);
+#   else
     m_mailbox.push_back(fetch_node(sender, std::move(msg)));
+#   endif
 }
 
-void converted_thread_context::enqueue(actor* sender, const any_tuple& msg)
-{
-    m_mailbox.push_back(fetch_node(sender, msg));
-}
-
-void converted_thread_context::dequeue(partial_function& rules)  /*override*/
-{
-    auto rm_fun = [&](queue_node_ptr& node) { return dq(*node, rules); };
-    auto& mbox_cache = m_mailbox.cache();
-    auto mbox_end = mbox_cache.end();
-    auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-    while (iter == mbox_end)
-    {
-        iter = std::find_if(m_mailbox.fetch_more(), mbox_end, rm_fun);
-    }
-    mbox_cache.erase(iter);
-}
-
-void converted_thread_context::dequeue(behavior& rules) /*override*/
-{
-    if (rules.timeout().valid())
-    {
-        auto timeout = now();
-        timeout += rules.timeout();
-        auto rm_fun = [&](queue_node_ptr& node)
-        {
-            return dq(*node, rules.get_partial_function());
-        };
-        auto& mbox_cache = m_mailbox.cache();
-        auto mbox_end = mbox_cache.end();
-        auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-        while (iter == mbox_end)
-        {
-            auto next = m_mailbox.try_fetch_more(timeout);
-            if (next == mbox_end)
-            {
-                rules.handle_timeout();
-                return;
-            }
-            iter = std::find_if(next, mbox_end, rm_fun);
+void converted_thread_context::dequeue(partial_function& fun) { // override
+    if (invoke_from_cache(fun) == false) {
+        recursive_queue_node* e = m_mailbox.pop();
+        CPPA_REQUIRE(e->marked == false);
+        while (invoke(e, fun) == false) {
+            e = m_mailbox.pop();
         }
-        mbox_cache.erase(iter);
-    }
-    else
-    {
-        converted_thread_context::dequeue(rules.get_partial_function());
     }
 }
 
-converted_thread_context::throw_on_exit_result
-converted_thread_context::throw_on_exit(const any_tuple& msg)
-{
-    if (matches(msg, m_exit_msg_pattern))
-    {
+void converted_thread_context::dequeue(behavior& bhvr) { // override
+    auto& fun = bhvr.get_partial_function();
+    if (bhvr.timeout().valid() == false) {
+        // suppress virtual function call
+        converted_thread_context::dequeue(fun);
+    }
+    else if (invoke_from_cache(fun) == false) {
+        auto timeout = now();
+        timeout += bhvr.timeout();
+        recursive_queue_node* e = m_mailbox.try_pop(timeout);
+        while (e != nullptr) {
+            if (e->marked) {
+                std::cout << "ooops: " << to_string(e->msg) << std::endl;
+            }
+            CPPA_REQUIRE(e->marked == false);
+            if (invoke(e, fun)) return;
+            e = m_mailbox.try_pop(timeout);
+        }
+        bhvr.handle_timeout();
+    }
+}
+
+filter_result converted_thread_context::filter_msg(any_tuple const& msg) {
+    if (m_trap_exit == false && matches(msg, m_exit_msg_pattern)) {
         auto reason = msg.get_as<std::uint32_t>(1);
-        if (reason != exit_reason::normal)
-        {
-            // throws
+        if (reason != exit_reason::normal) {
             quit(reason);
         }
-        else
-        {
-            return normal_exit_signal;
-        }
+        return normal_exit_signal;
     }
-    return not_an_exit_signal;
-}
-
-bool converted_thread_context::dq(queue_node& node, partial_function& rules)
-{
-    if (   m_trap_exit == false
-        && throw_on_exit(node.msg) == normal_exit_signal)
-    {
-        return false;
-    }
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    {
-        queue_node_guard qguard{&node};
-        if (rules(m_last_dequeued))
-        {
-            // client calls erase(iter)
-            qguard.release();
-            m_last_dequeued.reset();
-            m_last_sender.reset();
-            return true;
-        }
-    }
-    // no match (restore members)
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    return false;
+    return ordinary_message;
 }
 
 } } // namespace cppa::detail

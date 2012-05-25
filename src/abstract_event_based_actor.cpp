@@ -32,141 +32,150 @@
 #include "cppa/to_string.hpp"
 
 #include "cppa/self.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
+
+#include "cppa/detail/invokable.hpp"
+#include "cppa/detail/filter_result.hpp"
 
 namespace cppa {
 
 abstract_event_based_actor::abstract_event_based_actor()
-    : super(abstract_event_based_actor::blocked)
-    , m_mailbox_pos(m_mailbox.cache().end())
-{
+    : super(super::blocked) {
     //m_mailbox_pos = m_mailbox.cache().end();
 }
 
-void abstract_event_based_actor::dequeue(behavior&)
-{
+void abstract_event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
 }
 
-void abstract_event_based_actor::dequeue(partial_function&)
-{
+void abstract_event_based_actor::dequeue(partial_function&) {
     quit(exit_reason::unallowed_function_call);
 }
 
-bool abstract_event_based_actor::handle_message(queue_node& node)
-{
+auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result {
+    CPPA_REQUIRE(node.marked == false);
     CPPA_REQUIRE(m_loop_stack.empty() == false);
     auto& bhvr = *(m_loop_stack.back());
-    if (bhvr.timeout().valid())
-    {
-        switch (dq(node, bhvr.get_partial_function()))
-        {
-            case dq_timeout_occured:
-            {
-                bhvr.handle_timeout();
-                // fall through
+    switch (filter_msg(node.msg)) {
+        case detail::normal_exit_signal:
+        case detail::expired_timeout_message:
+            return drop_msg;
+
+        case detail::timeout_message:
+            m_has_pending_timeout_request = false;
+            CPPA_REQUIRE(bhvr.timeout().valid());
+            bhvr.handle_timeout();
+            if (!m_loop_stack.empty()) {
+                auto& next_bhvr = *(m_loop_stack.back());
+                request_timeout(next_bhvr.timeout());
             }
-            case dq_done:
-            {
-                // callback might have called become()/unbecome()
-                // request next timeout if needed
-                if (!m_loop_stack.empty())
-                {
-                    auto& next_bhvr = *(m_loop_stack.back());
-                    request_timeout(next_bhvr.timeout());
-                }
-                return true;
-            }
-            default: return false;
-        }
+            return msg_handled;
+
+        default:
+            break;
     }
-    else
-    {
-        return dq(node, bhvr.get_partial_function()) == dq_done;
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
+    if ((bhvr.get_partial_function())(m_last_dequeued)) {
+        m_last_dequeued.reset();
+        m_last_sender.reset();
+        // we definitely don't have a pending timeout now
+        m_has_pending_timeout_request = false;
+        return msg_handled;
     }
+    // no match, restore members
+    std::swap(m_last_dequeued, node.msg);
+    std::swap(m_last_sender, node.sender);
+    return cache_msg;
 }
 
-bool abstract_event_based_actor::invoke_from_cache()
-{
-    for (auto i = m_mailbox_pos; i != m_mailbox.cache().end(); ++i)
-    {
-        auto& ptr = *i;
-        CPPA_REQUIRE(ptr.get() != nullptr);
-        if (handle_message(*ptr))
-        {
-            m_mailbox.cache().erase(i);
-            return true;
-        }
-    }
-    return false;
-}
-
-void abstract_event_based_actor::resume(util::fiber*, resume_callback* callback)
-{
+void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
+    auto done_cb = [&]() {
+        m_state.store(abstract_scheduled_actor::done);
+        m_loop_stack.clear();
+        on_exit();
+        cb->exec_done();
+    };
     self.set(this);
-    auto& mbox_cache = m_mailbox.cache();
-    try
-    {
-        for (;;)
-        {
-            if (m_loop_stack.empty())
-            {
-                cleanup(exit_reason::normal);
-                m_state.store(abstract_scheduled_actor::done);
-                m_loop_stack.clear();
-                on_exit();
-                callback->exec_done();
-                return;
-            }
-            while (m_mailbox_pos == mbox_cache.end())
-            {
-                // try fetch more
-                if (m_mailbox.can_fetch_more() == false)
-                {
-                    m_state.store(abstract_scheduled_actor::about_to_block);
-                    CPPA_MEMORY_BARRIER();
-                    if (m_mailbox.can_fetch_more() == false)
-                    {
-                        switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                                       abstract_scheduled_actor::blocked))
-                        {
-                            case abstract_scheduled_actor::ready:
-                            {
-                                // someone preempt us
-                                break;
-                            }
-                            case abstract_scheduled_actor::blocked:
-                            {
-                                // done
-                                return;
-                            }
-                            default: exit(7); // illegal state
-                        };
-                    }
+    try {
+        detail::recursive_queue_node* e;
+        for (;;) {
+            e = m_mailbox.try_pop();
+            if (!e) {
+                m_state.store(abstract_scheduled_actor::about_to_block);
+                CPPA_MEMORY_BARRIER();
+                if (m_mailbox.can_fetch_more() == false) {
+                    switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
+                                                   abstract_scheduled_actor::blocked)) {
+                        case abstract_scheduled_actor::ready: {
+                            break;
+                        }
+                        case abstract_scheduled_actor::blocked: {
+                            return;
+                        }
+                        default: CPPA_CRITICAL("illegal actor state");
+                    };
                 }
-                m_mailbox_pos = m_mailbox.try_fetch_more();
             }
-            m_mailbox_pos = (invoke_from_cache()) ? mbox_cache.begin()
-                                                  : mbox_cache.end();
+            else {
+                switch (handle_message(*e)) {
+                    case drop_msg: {
+                        release_node(e);
+                        break; // nop
+                    }
+                    case msg_handled: {
+                        release_node(e);
+                        if (m_loop_stack.empty()) {
+                            done_cb();
+                            return;
+                        }
+                        // try to match cached messages before receiving new ones
+                        auto i = m_cache.begin();
+                        while (i != m_cache.end()) {
+                            switch (handle_message(*(*i))) {
+                                case drop_msg: {
+                                    release_node(i->release());
+                                    i = m_cache.erase(i);
+                                    break;
+                                }
+                                case msg_handled: {
+                                    release_node(i->release());
+                                    m_cache.erase(i);
+                                    if (m_loop_stack.empty()) {
+                                        done_cb();
+                                        return;
+                                    }
+                                    i = m_cache.begin();
+                                    break;
+                                }
+                                case cache_msg: {
+                                    ++i;
+                                    break;
+                                }
+                                default: CPPA_CRITICAL("illegal result of handle_message");
+                            }
+                        }
+                        break;
+                    }
+                    case cache_msg: {
+                        m_cache.emplace_back(e);
+                        break;
+                    }
+                    default: CPPA_CRITICAL("illegal result of handle_message");
+                }
+            }
         }
     }
-    catch (actor_exited& what)
-    {
+    catch (actor_exited& what) {
         cleanup(what.reason());
     }
-    catch (...)
-    {
+    catch (...) {
         cleanup(exit_reason::unhandled_exception);
     }
-    m_state.store(abstract_scheduled_actor::done);
-    m_loop_stack.clear();
-    on_exit();
-    callback->exec_done();
+    done_cb();
 }
 
-void abstract_event_based_actor::on_exit()
-{
+void abstract_event_based_actor::on_exit() {
 }
 
 } // namespace cppa

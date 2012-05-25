@@ -34,8 +34,7 @@
 namespace cppa { namespace util {
 
 template<typename T>
-struct guard
-{
+struct guard {
 
     virtual ~guard() { }
 

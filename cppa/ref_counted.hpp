@@ -47,8 +47,7 @@ namespace cppa {
  * Serves the requirements of {@link intrusive_ptr}.
  * @relates intrusive_ptr
  */
-class ref_counted
-{
+class ref_counted {
 
  public:
 

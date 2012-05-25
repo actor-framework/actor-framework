@@ -47,8 +47,7 @@ typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 
 class local_group_module;
 
-class group_impl : public group
-{
+class group_impl : public group {
 
     util::shared_spinlock m_shared_mtx;
     std::set<channel_ptr> m_subscribers;
@@ -60,48 +59,35 @@ class group_impl : public group
 
  public:
 
-    void enqueue(actor* sender, const any_tuple& msg) /*override*/
-    {
+    void enqueue(actor* sender, any_tuple msg) /*override*/ {
         shared_guard guard(m_shared_mtx);
-        for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i)
-        {
+        for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i) {
             // this cast is safe because we don't affect the "value"
             // of *i, thus, the set remains in a consistent state
             const_cast<channel_ptr&>(*i)->enqueue(sender, msg);
         }
     }
 
-    void enqueue(actor* sender, any_tuple&& msg) /*override*/
-    {
-        any_tuple tmp(std::move(msg));
-        enqueue(sender, tmp);
-    }
-
-    group::subscription subscribe(const channel_ptr& who) /*override*/
-    {
+    group::subscription subscribe(const channel_ptr& who) /*override*/ {
         group::subscription result;
         exclusive_guard guard(m_shared_mtx);
-        if (m_subscribers.insert(who).second)
-        {
+        if (m_subscribers.insert(who).second) {
             result.reset(new group::unsubscriber(who, this));
         }
         return result;
     }
 
-    void unsubscribe(const channel_ptr& who) /*override*/
-    {
+    void unsubscribe(const channel_ptr& who) /*override*/ {
         exclusive_guard guard(m_shared_mtx);
         m_subscribers.erase(who);
     }
 };
 
-struct anonymous_group : group_impl
-{
+struct anonymous_group : group_impl {
     anonymous_group() : group_impl("anonymous", "anonymous") { }
 };
 
-class local_group : public group_impl
-{
+class local_group : public group_impl {
 
     friend class local_group_module;
 
@@ -109,8 +95,7 @@ class local_group : public group_impl
 
 };
 
-class local_group_module : public group::module
-{
+class local_group_module : public group::module {
 
     typedef group::module super;
 
@@ -121,19 +106,15 @@ class local_group_module : public group::module
 
     local_group_module() : super("local") { }
 
-    group_ptr get(const std::string& group_name)
-    {
+    group_ptr get(const std::string& group_name) {
         shared_guard guard(m_mtx);
         auto i = m_instances.find(group_name);
-        if (i != m_instances.end())
-        {
+        if (i != m_instances.end()) {
             return i->second;
         }
-        else
-        {
+        else {
             group_ptr tmp(new local_group(group_name));
-            // lifetime scope of uguard
-            {
+            { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(std::make_pair(group_name, tmp));
                 // someone might preempt us
@@ -148,26 +129,21 @@ class local_group_module : public group::module
 
 namespace cppa { namespace detail {
 
-group_manager::group_manager()
-{
+group_manager::group_manager() {
     std::unique_ptr<group::module> ptr(new local_group_module);
     m_mmap.insert(std::make_pair(std::string("local"), std::move(ptr)));
 }
 
-intrusive_ptr<group> group_manager::anonymous()
-{
+intrusive_ptr<group> group_manager::anonymous() {
     return new anonymous_group;
 }
 
 intrusive_ptr<group> group_manager::get(const std::string& module_name,
-                                        const std::string& group_identifier)
-{
-    // lifetime scope of guard
-    {
+                                        const std::string& group_identifier) {
+    { // lifetime scope of guard
         detail::lock_guard<detail::mutex> guard(m_mmap_mtx);
         auto i = m_mmap.find(module_name);
-        if (i != m_mmap.end())
-        {
+        if (i != m_mmap.end()) {
             return (i->second)->get(group_identifier);
         }
     }
@@ -177,15 +153,12 @@ intrusive_ptr<group> group_manager::get(const std::string& module_name,
     throw std::logic_error(error_msg);
 }
 
-void group_manager::add_module(group::module* mod)
-{
+void group_manager::add_module(group::module* mod) {
     const std::string& mname = mod->name();
     std::unique_ptr<group::module> mptr(mod);
-    // lifetime scope of guard
-    {
+    { // lifetime scope of guard
         detail::lock_guard<detail::mutex> guard(m_mmap_mtx);
-        if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second)
-        {
+        if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second) {
             return; // success; don't throw
         }
     }

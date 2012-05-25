@@ -44,14 +44,12 @@ __thread util::fiber* t_callee = nullptr;
 
 namespace cppa { namespace detail {
 
-void yield(yield_state ystate)
-{
+void yield(yield_state ystate) {
     *t_ystate = ystate;
     util::fiber::swap(*t_callee, *t_caller);
 }
 
-yield_state call(util::fiber* what, util::fiber* from)
-{
+yield_state call(util::fiber* what, util::fiber* from) {
     yield_state result;
     t_ystate = &result;
     t_caller = from;

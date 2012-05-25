@@ -49,18 +49,20 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
+#include "cppa/detail/nestable_receive_actor.hpp"
 
 namespace cppa { namespace detail {
 
 /**
  * @brief Represents a thread that was converted to an Actor.
  */
-class converted_thread_context : public abstract_actor<local_actor>
-{
+class converted_thread_context
+        : public nestable_receive_actor<converted_thread_context,
+                                        abstract_actor<local_actor> > {
 
-    typedef abstract_actor<local_actor> super;
-    typedef super::queue_node queue_node;
-    typedef super::queue_node_ptr queue_node_ptr;
+    typedef nestable_receive_actor<converted_thread_context,
+                                   abstract_actor<local_actor> >
+            super;
 
  public:
 
@@ -71,33 +73,21 @@ class converted_thread_context : public abstract_actor<local_actor>
 
     void quit(std::uint32_t reason); //override
 
-    void enqueue(actor* sender, any_tuple&& msg); //override
-
-    void enqueue(actor* sender, const any_tuple& msg); //override
+    void enqueue(actor* sender, any_tuple msg); //override
 
     void dequeue(behavior& rules); //override
 
-    void dequeue(partial_function& rules) ; //override
+    void dequeue(partial_function& rules); //override
 
-    inline decltype(m_mailbox)& mailbox()
-    {
-        return m_mailbox;
-    }
+    inline void push_timeout() { }
+
+    inline void pop_timeout() { }
+
+    filter_result filter_msg(any_tuple const& msg);
+
+    inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
  private:
-
-    typedef intrusive::singly_linked_list<queue_node> queue_node_buffer;
-
-    enum throw_on_exit_result
-    {
-        not_an_exit_signal,
-        normal_exit_signal
-    };
-
-    // returns true if node->msg was accepted by rules
-    bool dq(queue_node& node, partial_function& rules);
-
-    throw_on_exit_result throw_on_exit(const any_tuple& msg);
 
     pattern<atom_value, std::uint32_t> m_exit_msg_pattern;
 

@@ -73,8 +73,7 @@ typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
 
 // support container-like access for type lists containing tokens
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&)
-{
+typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&) {
     return {};
 }
 

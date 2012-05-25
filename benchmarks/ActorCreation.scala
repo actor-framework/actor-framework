@@ -104,14 +104,12 @@ object ActorCreation {
         if (args(0) == "threaded") {
             val newMax = (1 << n) + 100
             System.setProperty("actors.maxPoolSize", newMax.toString)
-            //actor {
-                (new ThreadedTestee(self)).start ! Spread(n)
-                receive {
-                    case Result(v) =>
-                        if (v != (1 << n))
-                            Console.println("ERROR: expected " + (1 << n) + ", received " + v)
-                }
-            //}
+            (new ThreadedTestee(self)).start ! Spread(n)
+            receive {
+                case Result(v) =>
+                    if (v != (1 << n))
+                        Console.println("ERROR: expected " + (1 << n) + ", received " + v)
+            }
         }
         else if (args(0) == "threadless") {
             actor {
