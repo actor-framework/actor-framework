@@ -235,9 +235,9 @@ actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
     }
 }
 #else
-actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
-                                       scheduling_hint hint) {
-    return mock_scheduler::spawn(what, hint);
+actor_ptr thread_pool_scheduler::spawn(std::function<void()> what
+                                       scheduling_hint) {
+    return mock_scheduler::spawn_impl(std::move(what));
 }
 #endif
 

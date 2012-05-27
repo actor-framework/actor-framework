@@ -56,7 +56,7 @@ class actor_proxy_cache {
     bool erase(const actor_proxy_ptr& pptr);
 
     template<typename Fun>
-    void erase_all(process_information::node_id_type const& nid,
+    void erase_all(const process_information::node_id_type& nid,
                    std::uint32_t process_id,
                    Fun fun) {
         key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
@@ -82,7 +82,7 @@ class actor_proxy_cache {
             key_tuple;
 
     struct key_tuple_less {
-        bool operator()(key_tuple const& lhs, key_tuple const& rhs) const;
+        bool operator()(const key_tuple& lhs, const key_tuple& rhs) const;
     };
 
     util::shared_spinlock m_lock;

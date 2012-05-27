@@ -44,7 +44,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     void unlink_from(intrusive_ptr<actor>&);
     bool establish_backlink(intrusive_ptr<actor>&);
     bool remove_backlink(intrusive_ptr<actor>&);
-    void detach(attachable::token const&);
+    void detach(const attachable::token&);
     bool attach(attachable*);
 };
 

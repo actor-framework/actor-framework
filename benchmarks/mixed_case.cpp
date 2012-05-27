@@ -250,7 +250,7 @@ void usage() {
 
 enum mode_type { event_based, fiber_based };
 
-option<int> _2i(std::string const& str) {
+option<int> _2i(const std::string& str) {
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
     if (endptr == nullptr || *endptr != '\0') {
@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
     // skip argv[0] (app name)
     std::vector<std::string> args{argv + 1, argv + argc};
     match(args) (
-        on(val<std::string>, _2i, _2i, _2i, _2i) >> [](std::string const& mode,
+        on(val<std::string>, _2i, _2i, _2i, _2i) >> [](const std::string& mode,
                                                        int num_rings,
                                                        int ring_size,
                                                        int initial_token_value,

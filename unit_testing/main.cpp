@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
             await_all_others_done();
             exit(0);
         },
-        on("run_ping", arg_match) >> [&](std::string const& num_pings) {
+        on("run_ping", arg_match) >> [&](const std::string& num_pings) {
             auto ping_actor = spawn<detached>(ping, std::stoi(num_pings));
             //auto ping_actor = spawn_event_based_ping(std::stoi(num_pings));
             std::uint16_t port = 4242;

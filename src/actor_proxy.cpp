@@ -39,12 +39,12 @@
 
 namespace cppa {
 
-actor_proxy::actor_proxy(std::uint32_t mid, process_information_ptr const& pptr)
+actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
     : super(mid, pptr) {
     //attach(get_scheduler()->register_hidden_context());
 }
 
-void actor_proxy::forward_message(process_information_ptr const& piptr,
+void actor_proxy::forward_message(const process_information_ptr& piptr,
                                   actor* sender,
                                   any_tuple&& msg) {
     detail::addressed_message amsg{sender, this, std::move(msg)};

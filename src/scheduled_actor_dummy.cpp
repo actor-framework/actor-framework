@@ -58,7 +58,7 @@ bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
     return false;
 }
 
-void scheduled_actor_dummy::detach(attachable::token const&) {
+void scheduled_actor_dummy::detach(const attachable::token&) {
 }
 
 bool scheduled_actor_dummy::attach(attachable*) {

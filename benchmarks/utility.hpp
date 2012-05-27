@@ -37,7 +37,7 @@
 #include <stdexcept>
 #include <algorithm>
 
-inline std::vector<std::string> split(std::string const& str, char delim) {
+inline std::vector<std::string> split(const std::string& str, char delim) {
     std::vector<std::string> result;
     std::stringstream strs{str};
     std::string tmp;
@@ -45,8 +45,8 @@ inline std::vector<std::string> split(std::string const& str, char delim) {
     return result;
 }
 
-inline std::string join(std::vector<std::string> const& vec,
-                        std::string const& delim = "") {
+inline std::string join(const std::vector<std::string>& vec,
+                        const std::string& delim = "") {
     if (vec.empty()) return "";
     auto result = vec.front();
     for (auto i = vec.begin() + 1; i != vec.end(); ++i) {

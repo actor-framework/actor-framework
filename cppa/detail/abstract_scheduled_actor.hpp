@@ -58,7 +58,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     std::atomic<int> m_state;
 
-    filter_result filter_msg(any_tuple const& msg) {
+    filter_result filter_msg(const any_tuple& msg) {
         auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
         if (   msg.size() == 2
             && msg.type_at(0) == arr[0]

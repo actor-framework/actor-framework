@@ -83,7 +83,7 @@ class converted_thread_context
 
     inline void pop_timeout() { }
 
-    filter_result filter_msg(any_tuple const& msg);
+    filter_result filter_msg(const any_tuple& msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 

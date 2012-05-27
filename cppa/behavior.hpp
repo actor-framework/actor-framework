@@ -53,16 +53,16 @@ class behavior {
 
     friend behavior operator,(partial_function&& lhs, behavior&& rhs);
 
-    behavior(const behavior&) = delete;
-    behavior& operator=(const behavior&) = delete;
 
  public:
 
     behavior() = default;
     behavior(behavior&&) = default;
+    behavior(const behavior&) = default;
+    behavior& operator=(behavior&&) = default;
+    behavior& operator=(const behavior&) = default;
 
-    inline behavior(partial_function&& fun) : m_fun(std::move(fun)) {
-    }
+    inline behavior(partial_function&& fun) : m_fun(std::move(fun)) { }
 
     template<typename... Cases>
     behavior(const match_expr<Cases...>& me) : m_fun(me) { }
@@ -70,8 +70,6 @@ class behavior {
     inline behavior(util::duration tout, std::function<void()>&& handler)
         : m_timeout(tout), m_timeout_handler(std::move(handler)) {
     }
-
-    behavior& operator=(behavior&&) = default;
 
     inline void handle_timeout() const {
         m_timeout_handler();
@@ -89,7 +87,7 @@ class behavior {
         return m_fun(value);
     }
 
-    inline bool operator()(any_tuple const& value) {
+    inline bool operator()(const any_tuple& value) {
         return m_fun(value);
     }
 

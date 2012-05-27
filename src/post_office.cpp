@@ -109,7 +109,7 @@ inline void send2po_(network_manager* nm, Arg0&& arg0, Args&&... args) {
 
 
 template<typename... Args>
-inline void send2po(po_message const& msg, Args&&... args) {
+inline void send2po(const po_message& msg, Args&&... args) {
     auto nm = singleton_manager::get_network_manager();
     nm->send_to_post_office(msg);
     send2po_(nm, std::forward<Args>(args)...);
@@ -440,7 +440,7 @@ void post_office_loop(int input_fd) {
                 case valof(atom("RM_PEER")): {
                     DEBUG("post_office: rm_peer");
                     auto i = std::find_if(handler.begin(), handler.end(),
-                                          [&](po_socket_handler_ptr const& hp) {
+                                          [&](const po_socket_handler_ptr& hp) {
                         return hp->get_socket() == msg.fd;
                     });
                     if (i != handler.end()) handler.erase(i);
@@ -461,7 +461,7 @@ void post_office_loop(int input_fd) {
                 case valof(atom("UNPUBLISH")): {
                     DEBUG("post_office: unpublish_actor");
                     auto i = std::find_if(handler.begin(), handler.end(),
-                                          [&](po_socket_handler_ptr const& hp) {
+                                          [&](const po_socket_handler_ptr& hp) {
                         return hp->is_doorman_of(msg.aid);
                     });
                     if (i != handler.end()) handler.erase(i);
@@ -491,13 +491,13 @@ void post_office_loop(int input_fd) {
  ******************************************************************************/
 
 void post_office_add_peer(native_socket_type a0,
-                          process_information_ptr const& a1) {
+                          const process_information_ptr& a1) {
     po_message msg{atom("ADD_PEER"), -1, 0};
     send2po(msg, a0, a1);
 }
 
 void post_office_publish(native_socket_type server_socket,
-                         actor_ptr const& published_actor) {
+                         const actor_ptr& published_actor) {
     po_message msg{atom("PUBLISH"), -1, 0};
     send2po(msg, server_socket, published_actor);
 }
