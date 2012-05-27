@@ -90,7 +90,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
 void actor_registry::erase(actor_id key) {
     exclusive_guard guard(m_instances_mtx);
     auto i = std::find_if(m_instances.begin(), m_instances.end(),
-                          [=](std::pair<actor_id, actor_ptr> const& p) {
+                          [=](const std::pair<actor_id, actor_ptr>& p) {
                               return p.first == key;
                           });
     if (i != m_instances.end())

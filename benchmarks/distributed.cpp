@@ -66,7 +66,7 @@ option<int> c_2i(char const* cstr) {
     return result;
 }
 
-inline option<int> _2i(std::string const& str) {
+inline option<int> _2i(const std::string& str) {
     return c_2i(str.c_str());
 }
 
@@ -109,7 +109,7 @@ class actor_template {
     actor_ptr spawn() const {
         struct impl : fsm_actor<impl> {
             behavior init_state;
-            impl(MatchExpr const& mx) : init_state(mx.as_partial_function()) {
+            impl(const MatchExpr& mx) : init_state(mx.as_partial_function()) {
             }
         };
         return cppa::spawn(new impl{m_expr});
@@ -118,7 +118,7 @@ class actor_template {
 };
 
 template<typename... Args>
-auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
+auto actor_prototype(const Args&... args) -> actor_template<decltype(mexpr_concat(args...))> {
     return {mexpr_concat(args...)};
 }
 
@@ -169,7 +169,7 @@ struct server_actor : fsm_actor<server_actor> {
             on(atom("ping"), arg_match) >> [=](uint32_t value) {
                 reply(atom("pong"), value);
             },
-            on(atom("add_pong"), arg_match) >> [=](string const& host, uint16_t port) {
+            on(atom("add_pong"), arg_match) >> [=](const string& host, uint16_t port) {
                 auto key = std::make_pair(host, port);
                 auto i = m_pongs.find(key);
                 if (i == m_pongs.end()) {
@@ -199,7 +199,7 @@ struct server_actor : fsm_actor<server_actor> {
             on<atom("EXIT"), uint32_t>() >> [=]() {
                 actor_ptr who = last_sender();
                 auto i = std::find_if(m_pongs.begin(), m_pongs.end(),
-                                      [&](pong_map::value_type const& kvp) {
+                                      [&](const pong_map::value_type& kvp) {
                     return kvp.second == who;
                 });
                 if (i != m_pongs.end()) m_pongs.erase(i);
@@ -233,7 +233,7 @@ template<typename Iterator>
 void server_mode(Iterator first, Iterator last) {
     string port_prefix = "--port=";
     // extracts port from a key-value pair
-    auto kvp_port = [&](string const& str) -> option<int> {
+    auto kvp_port = [&](const string& str) -> option<int> {
         if (std::equal(port_prefix.begin(), port_prefix.end(), str.begin())) {
             return c_2i(str.c_str() + port_prefix.size());
         }
@@ -261,7 +261,7 @@ void client_mode(Iterator first, Iterator last) {
     std::uint32_t init_value = 0;
     std::vector<std::pair<string, uint16_t> > remotes;
     string pings_prefix = "--num_pings=";
-    auto num_msgs = [&](string const& str) -> option<int> {
+    auto num_msgs = [&](const string& str) -> option<int> {
         if (std::equal(pings_prefix.begin(), pings_prefix.end(), str.begin())) {
             return c_2i(str.c_str() + pings_prefix.size());
         }

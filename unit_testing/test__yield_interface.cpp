@@ -73,9 +73,9 @@ size_t test__yield_interface() {
         ++i;
     }
     while (ys != yield_state::done && i < 12);
-    CPPA_CHECK_EQUAL(ys, yield_state::done);
-    CPPA_CHECK_EQUAL(worker.m_count, 10);
-    CPPA_CHECK_EQUAL(i, 12);
+    CPPA_CHECK_EQUAL(yield_state::done, ys);
+    CPPA_CHECK_EQUAL(10, worker.m_count);
+    CPPA_CHECK_EQUAL(12, i);
 #   endif
     return CPPA_TEST_RESULT;
 }

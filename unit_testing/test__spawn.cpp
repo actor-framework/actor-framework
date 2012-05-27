@@ -282,22 +282,16 @@ class actor_template {
     actor_ptr spawn() const {
         struct impl : fsm_actor<impl> {
             behavior init_state;
-            impl(MatchExpr const& mx) : init_state(mx.as_partial_function()) {
+            impl(const MatchExpr& mx) : init_state(mx.as_partial_function()) {
             }
         };
         return cppa::spawn(new impl{m_expr});
     }
 
-    actor_ptr spawn_detached() const {
-        return cppa::spawn<detached>([m_expr]() {
-            receive_loop(m_expr);
-        });
-    }
-
 };
 
 template<typename... Args>
-auto actor_prototype(Args const&... args) -> actor_template<decltype(mexpr_concat(args...))> {
+auto actor_prototype(const Args&... args) -> actor_template<decltype(mexpr_concat(args...))> {
     return {mexpr_concat(args...)};
 }
 
@@ -321,6 +315,29 @@ class str_wrapper {
 
 };
 
+struct some_integer {
+
+    void set(int value) { m_value = value; }
+
+    int get() const { return m_value; }
+
+ private:
+
+    int m_value;
+
+};
+
+template<class T, class MatchExpr = match_expr<>, class Parent = void>
+class actor_facade_builder {
+
+ public:
+
+ private:
+
+    MatchExpr m_expr;
+
+};
+
 bool operator==(const str_wrapper& lhs, const std::string& rhs) {
     return lhs.str() == rhs;
 }
@@ -336,9 +353,19 @@ void foobar(const str_wrapper& x, const std::string& y) {
     );
 }
 
+
+
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);
+
+    /*
+    actor_ptr tst =  actor_facade<some_integer>()
+                    .reply_to().when().with()
+                    .reply_to().when().with()
+                    .spawn();
+    send(tst, atom("EXIT"), exit_reason::user_defined);
+    */
 
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
@@ -420,9 +447,9 @@ size_t test__spawn() {
 
     {
         bool invoked = false;
-        str_wrapper x{"x"};
-        std::string y{"y"};
-        auto foo_actor = spawn(foobar, std::cref(x), y);
+        str_wrapper actor_facade_builder{"x"};
+        std::string actor_facade_builder_interim{"y"};
+        auto foo_actor = spawn(foobar, std::cref(actor_facade_builder), actor_facade_builder_interim);
         send(foo_actor, atom("same"));
         receive (
             on(atom("yes")) >> [&]() {

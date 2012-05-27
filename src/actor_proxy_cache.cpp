@@ -66,12 +66,12 @@ actor_proxy_cache& get_actor_proxy_cache() {
 
 actor_proxy_ptr actor_proxy_cache::get(actor_id aid,
                                        std::uint32_t process_id,
-                                       process_information::node_id_type const& node_id) {
+                                       const process_information::node_id_type& node_id) {
     key_tuple k{node_id, process_id, aid};
     return get_impl(k);
 }
 
-actor_proxy_ptr actor_proxy_cache::get_impl(key_tuple const& key) {
+actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
     { // lifetime scope of shared guard
         util::shared_lock_guard<util::shared_spinlock> guard{m_lock};
         auto i = m_entries.find(key);
@@ -95,7 +95,7 @@ actor_proxy_ptr actor_proxy_cache::get_impl(key_tuple const& key) {
     return result;
 }
 
-bool actor_proxy_cache::erase(actor_proxy_ptr const& pptr) {
+bool actor_proxy_cache::erase(const actor_proxy_ptr& pptr) {
     auto pinfo = pptr->parent_process_ptr();
     key_tuple key(pinfo->node_id(), pinfo->process_id(), pptr->id()); {
         lock_guard<util::shared_spinlock> guard{m_lock};
@@ -104,8 +104,8 @@ bool actor_proxy_cache::erase(actor_proxy_ptr const& pptr) {
     return false;
 }
 
-bool actor_proxy_cache::key_tuple_less::operator()(key_tuple const& lhs,
-                                                   key_tuple const& rhs) const {
+bool actor_proxy_cache::key_tuple_less::operator()(const key_tuple& lhs,
+                                                   const key_tuple& rhs) const {
     int cmp_res = strncmp(reinterpret_cast<char const*>(std::get<0>(lhs).data()),
                           reinterpret_cast<char const*>(std::get<0>(rhs).data()),
                           process_information::node_id_size);

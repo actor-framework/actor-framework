@@ -76,12 +76,12 @@ class value_guard {
     }
 
     template<typename T0, typename T1>
-    static inline bool cmp(T0 const& lhs, T1 const& rhs) {
+    static inline bool cmp(const T0& lhs, const T1& rhs) {
         return lhs == rhs;
     }
 
     template<typename T0, typename T1>
-    static inline bool cmp(T0 const& lhs, std::reference_wrapper<T1> const& rhs) {
+    static inline bool cmp(const T0& lhs, const std::reference_wrapper<T1>& rhs) {
         return lhs == rhs.get();
     }
 

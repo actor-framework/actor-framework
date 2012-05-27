@@ -27,11 +27,90 @@ bool ascending(int a, int b, int c) {
     return a < b && b < c;
 }
 
+vector<uniform_type_info const*> to_vec(util::type_list<>, vector<uniform_type_info const*> vec = vector<uniform_type_info const*>{}) {
+    return vec;
+}
+
+template<typename Head, typename... Tail>
+vector<uniform_type_info const*> to_vec(util::type_list<Head, Tail...>, vector<uniform_type_info const*> vec = vector<uniform_type_info const*>{}) {
+    vec.push_back(uniform_typeid<Head>());
+    return to_vec(util::type_list<Tail...>{}, std::move(vec));
+}
+
+template<typename Fun>
+class __ {
+
+    typedef typename util::get_callable_trait<Fun>::type trait;
+
+ public:
+
+    __(Fun f, string annotation = "") : m_fun(f), m_annotation(annotation) { }
+
+    __ operator[](const string& str) const {
+        return {m_fun, str};
+    }
+
+    template<typename... Args>
+    void operator()(Args&&... args) const {
+        m_fun(std::forward<Args>(args)...);
+    }
+
+    void plot_signature() {
+        auto vec = to_vec(typename trait::arg_types{});
+        for (auto i : vec) {
+            cout << i->name() << " ";
+        }
+        cout << endl;
+    }
+
+    const string& annotation() const {
+        return m_annotation;
+    }
+
+ private:
+
+    Fun m_fun;
+    string m_annotation;
+
+};
+
+template<typename Fun>
+__<Fun> get__(Fun f) {
+    return {f};
+}
+
+struct fobaz : fsm_actor<fobaz> {
+
+    behavior init_state;
+
+    void vfun() {
+        cout << "fobaz::mfun" << endl;
+    }
+
+    void ifun(int i) {
+        cout << "fobaz::ifun(" << i << ")" << endl;
+    }
+
+    fobaz() {
+        init_state = (
+            on<int>() >> [=](int i) { ifun(i); },
+            others() >> std::function<void()>{std::bind(&fobaz::vfun, this)}
+        );
+    }
+
+};
+
 size_t test__match() {
     CPPA_TEST(test__match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
+
+    /*
+    auto x_ = get__([](int, float) { cout << "yeeeehaaaa!" << endl; })["prints 'yeeeehaaaa'"];
+    cout << "x_: "; x_(1, 1.f);
+    cout << "x_.annotation() = " << x_.annotation() << endl;
+    cout << "x_.plot_signature: "; x_.plot_signature();
 
     auto fun = (
         on<int>() >> [](int i) {
@@ -41,6 +120,7 @@ size_t test__match() {
             cout << "no int found in mailbox" << endl;
         }
     );
+    */
 
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));

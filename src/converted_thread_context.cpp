@@ -99,7 +99,7 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
     }
 }
 
-filter_result converted_thread_context::filter_msg(any_tuple const& msg) {
+filter_result converted_thread_context::filter_msg(const any_tuple& msg) {
     if (m_trap_exit == false && matches(msg, m_exit_msg_pattern)) {
         auto reason = msg.get_as<std::uint32_t>(1);
         if (reason != exit_reason::normal) {

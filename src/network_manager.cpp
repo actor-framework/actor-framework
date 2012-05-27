@@ -82,7 +82,7 @@ struct network_manager_impl : network_manager {
         close(pipe_fd[0]);
     }
 
-    void send_to_post_office(po_message const& msg) {
+    void send_to_post_office(const po_message& msg) {
         if (write(pipe_fd[1], &msg, sizeof(po_message)) != sizeof(po_message)) {
             CPPA_CRITICAL("cannot write to pipe");
         }

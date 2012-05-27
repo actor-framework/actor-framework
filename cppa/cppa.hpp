@@ -501,12 +501,12 @@ template<typename T>
 struct spawn_fwd_ {
     static inline T&& _(T&& arg) { return std::move(arg); }
     static inline T& _(T& arg) { return arg; }
-    static inline T const& _(T const& arg) { return arg; }
+    static inline const T& _(const T& arg) { return arg; }
 };
 
 template<>
 struct spawn_fwd_<self_type> {
-    static inline actor_ptr _(self_type const&) { return self; }
+    static inline actor_ptr _(const self_type&) { return self; }
 };
 
 template<typename F, typename Arg0, typename... Args>
