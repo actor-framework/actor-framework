@@ -32,12 +32,22 @@
 
 namespace cppa {
 
-scheduled_actor::~scheduled_actor()
-{
+scheduled_actor::scheduled_actor(bool enable_pending_enqueue)
+    : local_actor(enable_pending_enqueue), next(nullptr), m_scheduler(nullptr) {
 }
 
-void scheduled_actor::on_exit()
-{
+void scheduled_actor::on_exit() {
 }
+
+void scheduled_actor::init() {
+}
+
+scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
+    CPPA_REQUIRE(sched != nullptr);
+    m_scheduler = sched;
+    init();
+    return this;
+}
+
 
 } // namespace cppa

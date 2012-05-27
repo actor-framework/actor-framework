@@ -54,49 +54,50 @@ using std::endl;
 namespace {
 
 void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
-               cppa::scheduled_actor* behavior)
-{
+               std::function<void()> what) {
     cppa::self.set(m_self.get());
-    if (behavior)
-    {
-        try { behavior->act(); }
-        catch (...) { }
-        try { behavior->on_exit(); }
-        catch (...) { }
-        delete behavior;
-        cppa::self.set(nullptr);
-    }
+    try { what(); }
+    catch (...) { }
+    cppa::self.set(nullptr);
     cppa::detail::dec_actor_count();
+}
+
+void run_hidden_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
+                      std::function<void()> what) {
+    cppa::self.set(m_self.get());
+    try { what(); }
+    catch (...) { }
+    cppa::self.set(nullptr);
 }
 
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
 
-actor_ptr mock_scheduler::spawn(scheduled_actor* behavior)
-{
-    inc_actor_count();
-    CPPA_MEMORY_BARRIER();
-    intrusive_ptr<local_actor> ctx(new detail::converted_thread_context);
-    thread(run_actor, ctx, behavior).detach();
-    return ctx;
+thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx) {
+    return thread{run_hidden_actor, ctx, std::move(what)};
 }
 
-actor_ptr mock_scheduler::spawn(abstract_event_based_actor* what)
-{
-    // TODO: don't delete what :)
-    delete what;
+actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
+    inc_actor_count();
+    CPPA_MEMORY_BARRIER();
+    intrusive_ptr<local_actor> ctx{new detail::converted_thread_context};
+    thread{run_actor, ctx, std::move(what)}.detach();
+    return std::move(ctx);
+}
+
+actor_ptr mock_scheduler::spawn(scheduled_actor*) {
+    cerr << "mock_scheduler::spawn(scheduled_actor*)" << endl;
+    abort();
     return nullptr;
 }
 
-actor_ptr mock_scheduler::spawn(scheduled_actor* behavior, scheduling_hint)
-{
-    return spawn(behavior);
+actor_ptr mock_scheduler::spawn(std::function<void()> what, scheduling_hint) {
+    return spawn_impl(what);
 }
 
-void mock_scheduler::enqueue(detail::abstract_scheduled_actor*)
-{
-    cerr << "mock_scheduler::enqueue" << endl;
+void mock_scheduler::enqueue(scheduled_actor*) {
+    cerr << "mock_scheduler::enqueue(scheduled_actor)" << endl;
     abort();
 }
 

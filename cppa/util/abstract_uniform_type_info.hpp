@@ -41,16 +41,13 @@ namespace cppa { namespace util {
  *        except serialize() and deserialize().
  */
 template<typename T>
-class abstract_uniform_type_info : public uniform_type_info
-{
+class abstract_uniform_type_info : public uniform_type_info {
 
-    inline static const T& deref(void const* ptr)
-    {
+    inline static const T& deref(void const* ptr) {
         return *reinterpret_cast<T const*>(ptr);
     }
 
-    inline static T& deref(void* ptr)
-    {
+    inline static T& deref(void* ptr) {
         return *reinterpret_cast<T*>(ptr);
     }
 
@@ -58,29 +55,24 @@ class abstract_uniform_type_info : public uniform_type_info
 
     abstract_uniform_type_info(const std::string& uname
                            = detail::to_uniform_name(typeid(T)))
-        : uniform_type_info(uname)
-    {
+        : uniform_type_info(uname) {
     }
 
-    bool equals(void const* lhs, void const* rhs) const
-    {
+    bool equals(void const* lhs, void const* rhs) const {
         return deref(lhs) == deref(rhs);
     }
 
-    void* new_instance(void const* ptr) const
-    {
+    void* new_instance(void const* ptr) const {
         return (ptr) ? new T(deref(ptr)) : new T();
     }
 
-    void delete_instance(void* instance) const
-    {
+    void delete_instance(void* instance) const {
         delete reinterpret_cast<T*>(instance);
     }
 
  public:
 
-    bool equals(const std::type_info& tinfo) const
-    {
+    bool equals(const std::type_info& tinfo) const {
         return typeid(T) == tinfo;
     }
 

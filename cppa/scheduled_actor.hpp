@@ -31,7 +31,13 @@
 #ifndef ACTOR_BEHAVIOR_HPP
 #define ACTOR_BEHAVIOR_HPP
 
+#include "cppa/config.hpp"
+#include "cppa/scheduler.hpp"
+#include "cppa/local_actor.hpp"
+
 namespace cppa {
+
+namespace util { class fiber; }
 
 /**
  * @brief A base class for context-switching or thread-mapped actor
@@ -43,12 +49,13 @@ namespace cppa {
  * blocking functions, or need to have your own thread for other reasons,
  * this class can be used to define a class-based actor.
  */
-class scheduled_actor
-{
+class scheduled_actor : public local_actor {
 
  public:
 
-    virtual ~scheduled_actor();
+    scheduled_actor(bool enable_pending_enqueue = false);
+
+    scheduled_actor* next; // intrusive next pointer
 
     /**
      * @brief Can be overridden to perform cleanup code after an actor
@@ -59,10 +66,19 @@ class scheduled_actor
     virtual void on_exit();
 
     /**
-     * @brief Implements the behavior of a context-switching or thread-mapped
-     *        actor.
+     * @brief Can be overridden to initialize and actor before any
+     *        message is handled.
      */
-    virtual void act() = 0;
+    virtual void init();
+
+    // called from worker thread
+    virtual void resume(util::fiber* from, scheduler::callback* cb) = 0;
+
+    scheduled_actor* attach_to_scheduler(scheduler* sched);
+
+ protected:
+
+    scheduler* m_scheduler;
 
 };
 

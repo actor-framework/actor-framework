@@ -41,11 +41,9 @@ namespace cppa { class serializer; }
 namespace cppa { namespace detail {
 
 template<typename List, size_t Pos = 0>
-struct serialize_tuple
-{
+struct serialize_tuple {
     template<typename T>
-    inline static void _(serializer& s, T const* tup)
-    {
+    inline static void _(serializer& s, T const* tup) {
         s << uniform_typeid<typename List::head>()->name()
           << *reinterpret_cast<const typename List::head*>(tup->at(Pos));
         serialize_tuple<typename List::tail, Pos + 1>::_(s, tup);
@@ -53,8 +51,7 @@ struct serialize_tuple
 };
 
 template<size_t Pos>
-struct serialize_tuple<util::type_list<>, Pos>
-{
+struct serialize_tuple<util::type_list<>, Pos> {
     template<typename T>
     inline static void _(serializer&, T const*) { }
 };

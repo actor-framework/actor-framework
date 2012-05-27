@@ -39,40 +39,34 @@ using std::end;
 
 namespace { size_t s_iint_instances = 0; }
 
-struct iint
-{
+struct iint {
     iint* next;
     int value;
     inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
     ~iint() { --s_iint_instances; }
 };
 
-inline bool operator==(const iint& lhs, const iint& rhs)
-{
+inline bool operator==(const iint& lhs, const iint& rhs) {
     return lhs.value == rhs.value;
 }
 
-inline bool operator==(const iint& lhs, int rhs)
-{
+inline bool operator==(const iint& lhs, int rhs) {
     return lhs.value == rhs;
 }
 
-inline bool operator==(int lhs, const iint& rhs)
-{
+inline bool operator==(int lhs, const iint& rhs) {
     return lhs == rhs.value;
 }
 
 typedef cppa::intrusive::singly_linked_list<iint> iint_list;
 typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
-size_t test__intrusive_containers()
-{
+size_t test__intrusive_containers() {
     CPPA_TEST(test__intrusive_containers);
     iint_list ilist1;
     ilist1.push_back(new iint(1));
     ilist1.emplace_back(2);
-    ilist1.push_back(new iint(3));
-    {
+    ilist1.push_back(new iint(3)); {
         iint_list tmp;
         tmp.push_back(new iint(4));
         tmp.push_back(new iint(5));
@@ -112,14 +106,31 @@ size_t test__intrusive_containers()
     int iarr3[] = { 2, 4 };
     CPPA_CHECK((std::equal(begin(iarr3), end(iarr3), begin(ilist2))));
 
-    auto x = ilist2.take_after(ilist2.before_begin());
-    CPPA_CHECK_EQUAL(x->value, 2);
-    delete x;
+    auto xy = ilist2.take_after(ilist2.before_begin());
+    CPPA_CHECK_EQUAL(xy->value, 2);
+    delete xy;
 
     ilist2.clear();
     // two dummies
     CPPA_CHECK_EQUAL(s_iint_instances, 2);
     CPPA_CHECK(ilist2.empty());
+
+    cppa::intrusive::single_reader_queue<iint> q;
+    q.push_back(new iint(1));
+    q.push_back(new iint(2));
+    q.push_back(new iint(3));
+
+    auto x = q.pop();
+    CPPA_CHECK_EQUAL(1, x->value);
+    delete x;
+    x = q.pop();
+    CPPA_CHECK_EQUAL(2, x->value);
+    delete x;
+    x = q.pop();
+    CPPA_CHECK_EQUAL(3, x->value);
+    delete x;
+    x = q.try_pop();
+    CPPA_CHECK(x == nullptr);
 
     return CPPA_TEST_RESULT;
 }

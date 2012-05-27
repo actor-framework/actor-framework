@@ -46,8 +46,7 @@ namespace cppa {
  *           {@link ref_counted}.
  */
 template<typename T>
-class cow_ptr
-{
+class cow_ptr {
 
  public:
 
@@ -63,35 +62,29 @@ class cow_ptr
     template<typename Y>
     cow_ptr(const cow_ptr<Y>& other) : m_ptr(const_cast<Y*>(other.get())) { }
 
-    inline void swap(cow_ptr& other)
-    {
+    inline void swap(cow_ptr& other) {
         m_ptr.swap(other.m_ptr);
     }
 
-    cow_ptr& operator=(cow_ptr&& other)
-    {
+    cow_ptr& operator=(cow_ptr&& other) {
         swap(other);
         return *this;
     }
 
-    cow_ptr& operator=(const cow_ptr& other)
-    {
+    cow_ptr& operator=(const cow_ptr& other) {
         cow_ptr tmp{other};
         swap(tmp);
         return *this;
     }
 
     template<typename Y>
-    cow_ptr& operator=(const cow_ptr<Y>& other)
-    {
+    cow_ptr& operator=(const cow_ptr<Y>& other) {
         cow_ptr tmp{other};
         swap(tmp);
         return *this;
     }
 
-    void detach()
-    {
-        (void) detached_ptr();
+    void detach() { (void) detached_ptr();
     }
 
     inline void reset(T* value = nullptr) { m_ptr.reset(value); }
@@ -114,11 +107,9 @@ class cow_ptr
 
     intrusive_ptr<T> m_ptr;
 
-    T* detached_ptr()
-    {
+    T* detached_ptr() {
         T* ptr = m_ptr.get();
-        if (!ptr->unique())
-        {
+        if (!ptr->unique()) {
             //T* new_ptr = detail::copy_of(ptr, copy_of_token());
             T* new_ptr = ptr->copy();
             cow_ptr tmp(new_ptr);

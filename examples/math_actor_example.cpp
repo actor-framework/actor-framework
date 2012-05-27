@@ -7,26 +7,20 @@ using std::cout;
 using std::endl;
 using namespace cppa;
 
-void math_fun()
-{
+void math_fun() {
     bool done = false;
-    // receive messages until we receive {quit}
-    do_receive
-    (
+    do_receive (
         // "arg_match" matches the parameter types of given lambda expression
         // thus, it's equal to
         // - on<atom("plus"), int, int>()
         // - on(atom("plus"), val<int>, val<int>)
-        on(atom("plus"), arg_match) >> [](int a, int b)
-        {
+        on(atom("plus"), arg_match) >> [](int a, int b) {
             reply(atom("result"), a + b);
         },
-        on<atom("minus"), int, int>() >> [](int a, int b)
-        {
+        on<atom("minus"), int, int>() >> [](int a, int b) {
             reply(atom("result"), a - b);
         },
-        on(atom("quit")) >> [&]()
-        {
+        on(atom("quit")) >> [&]() {
             // note: quit(exit_reason::normal) would terminate the actor
             //       but is best avoided since it forces stack unwinding
             //       by throwing an exception
@@ -34,28 +28,21 @@ void math_fun()
         }
     )
     .until(gref(done));
-    //.until([&]() { return done; });
 }
 
-struct math_actor : event_based_actor
-{
-    void init()
-    {
+struct math_actor : event_based_actor {
+    void init() {
         // execute this behavior until actor terminates
-        become
-        (
-            on(atom("plus"), arg_match) >> [](int a, int b)
-            {
+        become (
+            on(atom("plus"), arg_match) >> [](int a, int b) {
                 reply(atom("result"), a + b);
             },
-            on(atom("minus"), arg_match) >> [](int a, int b)
-            {
+            on(atom("minus"), arg_match) >> [](int a, int b) {
                 reply(atom("result"), a - b);
             },
             // the [=] capture copies the 'this' pointer into the lambda
             // thus, it has access to all members and member functions
-            on(atom("quit")) >> [=]()
-            {
+            on(atom("quit")) >> [=]() {
                 // set an empty behavior
                 // (terminates actor with normal exit reason)
                 become_void();
@@ -65,8 +52,7 @@ struct math_actor : event_based_actor
 };
 
 // utility function
-int fetch_result(actor_ptr& calculator, atom_value operation, int a, int b)
-{
+int fetch_result(actor_ptr& calculator, atom_value operation, int a, int b) {
     // send request
     send(calculator, operation, a, b);
     // wait for result
@@ -77,8 +63,7 @@ int fetch_result(actor_ptr& calculator, atom_value operation, int a, int b)
     return result;
 }
 
-int main()
-{
+int main() {
     // spawn a context-switching actor that invokes math_fun
     auto a1 = spawn(math_fun);
     // spawn an event-based math actor

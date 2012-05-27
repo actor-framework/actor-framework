@@ -45,8 +45,7 @@ class actor_proxy : public actor { };
 
 #else // CPPA_DOCUMENTATION
 
-class actor_proxy : public abstract_actor<actor>
-{
+class actor_proxy : public abstract_actor<actor> {
 
     typedef abstract_actor<actor> super;
 
@@ -54,19 +53,17 @@ class actor_proxy : public abstract_actor<actor>
 
     actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
 
-    void enqueue(actor* sender, any_tuple&& msg);
-
-    void enqueue(actor* sender, const any_tuple& msg);
+    void enqueue(actor* sender, any_tuple msg);
 
     void link_to(intrusive_ptr<actor>& other);
 
-    // do not cause to send this actor an ":Unlink" message
+    // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
     void local_link_to(intrusive_ptr<actor>& other);
 
     void unlink_from(intrusive_ptr<actor>& other);
 
-    // do not cause to send this actor an ":Unlink" message
+    // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
     void local_unlink_from(intrusive_ptr<actor>& other);
 
@@ -76,8 +73,7 @@ class actor_proxy : public abstract_actor<actor>
 
  public:
 
-    void forward_message(const process_information_ptr&,
-                         actor*, const any_tuple&);
+    void forward_message(const process_information_ptr&, actor*, any_tuple&&);
 
 };
 

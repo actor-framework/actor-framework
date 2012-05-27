@@ -36,14 +36,12 @@
 namespace cppa { namespace util {
 
 template<typename T>
-struct rm_option
-{
+struct rm_option {
     typedef T type;
 };
 
 template<typename T>
-struct rm_option<option<T> >
-{
+struct rm_option<option<T> > {
     typedef T type;
 };
 

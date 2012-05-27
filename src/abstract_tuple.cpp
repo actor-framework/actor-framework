@@ -32,8 +32,7 @@
 
 namespace cppa { namespace detail {
 
-bool abstract_tuple::equals(const abstract_tuple &other) const
-{
+bool abstract_tuple::equals(const abstract_tuple &other) const {
     return    this == &other
            || (   size() == other.size()
                && std::equal(begin(), end(), other.begin(), detail::full_eq));
@@ -41,22 +40,18 @@ bool abstract_tuple::equals(const abstract_tuple &other) const
 
 abstract_tuple::abstract_tuple(const abstract_tuple& other)
     : ref_counted()
-    , m_impl_type(other.m_impl_type)
-{
+    , m_impl_type(other.m_impl_type) {
 }
 
-std::type_info const* abstract_tuple::type_token() const
-{
+std::type_info const* abstract_tuple::type_token() const {
     return &typeid(void);
 }
 
-void const* abstract_tuple::native_data() const
-{
+void const* abstract_tuple::native_data() const {
     return nullptr;
 }
 
-void* abstract_tuple::mutable_native_data()
-{
+void* abstract_tuple::mutable_native_data() {
     return nullptr;
 }
 

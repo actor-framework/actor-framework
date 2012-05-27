@@ -40,72 +40,60 @@
 #include "cppa/detail/thread.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
-#include "cppa/detail/post_office_msg.hpp"
+#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
 using namespace cppa;
 using namespace cppa::detail;
 
-struct network_manager_impl : network_manager
-{
+struct network_manager_impl : network_manager {
 
-    typedef intrusive::single_reader_queue<post_office_msg> post_office_queue_t;
-    typedef intrusive::single_reader_queue<mailman_job> mailman_queue_t;
+    local_actor_ptr m_mailman;
+    thread m_mailman_thread;
 
-    int m_pipe[2]; // m_pipe[0]: read; m_pipe[1]: write
+    local_actor_ptr m_post_office;
+    thread m_post_office_thread;
 
-    mailman_queue_t m_mailman_queue;
-    post_office_queue_t m_post_office_queue;
+    int pipe_fd[2];
 
-    thread m_loop; // post office thread
-
-    void start() /*override*/
-    {
-        if (pipe(m_pipe) != 0)
-        {
-            char* error_cstr = strerror(errno);
-            std::string error_str = "pipe(): ";
-            error_str += error_cstr;
-            free(error_cstr);
-            throw std::logic_error(error_str);
+    void start() { // override
+        if (pipe(pipe_fd) != 0) {
+            CPPA_CRITICAL("cannot create pipe");
         }
-        m_loop = thread(post_office_loop, m_pipe[0], m_pipe[1]);
+
+        m_post_office.reset(new converted_thread_context);
+        m_post_office_thread = mock_scheduler::spawn_hidden_impl(std::bind(post_office_loop, pipe_fd[0]), m_post_office);
+
+        m_mailman.reset(new converted_thread_context);
+        m_mailman_thread = mock_scheduler::spawn_hidden_impl(mailman_loop, m_mailman);
     }
 
-    void write_to_pipe(const pipe_msg& what)
-    {
-        if (write(m_pipe[1], what, pipe_msg_size) != (int) pipe_msg_size)
-        {
-            std::cerr << "FATAL: cannot write to pipe" << std::endl;
-            abort();
+    void stop() { // override
+        m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
+        m_mailman_thread.join();
+        // wait until mailman is done; post_office closes all sockets
+        CPPA_MEMORY_BARRIER();
+        send_to_post_office(po_message{atom("DONE"), -1, 0});
+        m_post_office_thread.join();
+        close(pipe_fd[0]);
+        close(pipe_fd[0]);
+    }
+
+    void send_to_post_office(const po_message& msg) {
+        if (write(pipe_fd[1], &msg, sizeof(po_message)) != sizeof(po_message)) {
+            CPPA_CRITICAL("cannot write to pipe");
         }
     }
 
-    inline int write_handle() const
-    {
-        return m_pipe[1];
+    void send_to_post_office(any_tuple msg) {
+        m_post_office->enqueue(nullptr, std::move(msg));
     }
 
-    mailman_queue_t& mailman_queue()
-    {
-        return m_mailman_queue;
-    }
-
-    post_office_queue_t& post_office_queue()
-    {
-        return m_post_office_queue;
-    }
-
-    void stop() /*override*/
-    {
-        pipe_msg msg = { shutdown_event, 0 };
-        write_to_pipe(msg);
-        // m_loop calls close(m_pipe[0])
-        m_loop.join();
-        close(m_pipe[0]);
-        close(m_pipe[1]);
+    void send_to_mailman(any_tuple msg) {
+        m_mailman->enqueue(nullptr, std::move(msg));
     }
 
 };
@@ -114,12 +102,10 @@ struct network_manager_impl : network_manager
 
 namespace cppa { namespace detail {
 
-network_manager::~network_manager()
-{
+network_manager::~network_manager() {
 }
 
-network_manager* network_manager::create_singleton()
-{
+network_manager* network_manager::create_singleton() {
     return new network_manager_impl;
 }
 

@@ -42,8 +42,7 @@
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
 namespace cppa { namespace util {
-struct fiber
-{
+struct fiber {
     inline static void swap(fiber&, fiber&) { }
 };
 } }
@@ -54,8 +53,7 @@ namespace cppa { namespace util {
 
 struct fiber_impl;
 
-class fiber
-{
+class fiber {
 
     fiber_impl* m_impl;
 
@@ -80,8 +78,7 @@ public:
 
 namespace cppa { namespace util {
 
-class fiber
-{
+class fiber {
 
     LPVOID handle;
 
@@ -97,8 +94,7 @@ public:
 
     ~fiber();
 
-    inline static void swap(fiber&, fiber& to)
-    {
+    inline static void swap(fiber&, fiber& to) {
         SwitchToFiber(to.handle);
     }
 

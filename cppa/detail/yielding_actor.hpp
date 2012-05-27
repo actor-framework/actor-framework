@@ -41,53 +41,47 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
+#include "cppa/detail/nestable_receive_actor.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class yielding_actor : public abstract_scheduled_actor
-{
+class yielding_actor
+        : public nestable_receive_actor<yielding_actor,
+                                        abstract_scheduled_actor> {
 
-    typedef abstract_scheduled_actor super;
-    typedef super::queue_node queue_node;
-    typedef super::queue_node_ptr queue_node_ptr;
-
-    util::fiber m_fiber;
-    scheduled_actor* m_behavior;
-
-    static void run(void* _this);
-
-    void exec_loop_stack();
-
-    void yield_until_not_empty();
+    typedef nestable_receive_actor<yielding_actor,
+                                   abstract_scheduled_actor>
+            super;
 
  public:
 
-    yielding_actor(scheduled_actor* behavior, scheduler* sched);
-
-    ~yielding_actor(); //override
+    yielding_actor(std::function<void()> fun);
 
     void dequeue(behavior& bhvr); //override
 
     void dequeue(partial_function& fun); //override
 
-    void resume(util::fiber* from, resume_callback* callback); //override
+    void resume(util::fiber* from, scheduler::callback* callback); //override
+
+    inline void push_timeout() {
+        ++m_active_timeout_id;
+    }
+
+    inline void pop_timeout() {
+        --m_active_timeout_id;
+    }
 
  private:
 
-    template<typename Fun>
-    void dequeue_impl(Fun rm_fun)
-    {
-        auto& mbox_cache = m_mailbox.cache();
-        auto mbox_end = mbox_cache.end();
-        auto iter = std::find_if(mbox_cache.begin(), mbox_end, rm_fun);
-        while (iter == mbox_end)
-        {
-            yield_until_not_empty();
-            iter = std::find_if(m_mailbox.try_fetch_more(), mbox_end, rm_fun);
-        }
-        mbox_cache.erase(iter);
-    }
+    typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
+
+    static void run(void* _this);
+
+    void yield_until_not_empty();
+
+    util::fiber m_fiber;
+    std::function<void()> m_behavior;
 
 };
 

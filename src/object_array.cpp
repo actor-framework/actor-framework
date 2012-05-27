@@ -32,42 +32,34 @@
 
 namespace cppa { namespace detail {
 
-object_array::object_array() : super(tuple_impl_info::dynamically_typed)
-{
+object_array::object_array() : super(tuple_impl_info::dynamically_typed) {
 }
 
-void object_array::push_back(const object& what)
-{
+void object_array::push_back(const object& what) {
     m_elements.push_back(what);
 }
 
-void object_array::push_back(object&& what)
-{
+void object_array::push_back(object&& what) {
     m_elements.push_back(std::move(what));
 }
 
-void* object_array::mutable_at(size_t pos)
-{
+void* object_array::mutable_at(size_t pos) {
     return m_elements[pos].mutable_value();
 }
 
-size_t object_array::size() const
-{
+size_t object_array::size() const {
     return m_elements.size();
 }
 
-abstract_tuple* object_array::copy() const
-{
+abstract_tuple* object_array::copy() const {
     return new object_array(*this);
 }
 
-void const* object_array::at(size_t pos) const
-{
+void const* object_array::at(size_t pos) const {
     return m_elements[pos].value();
 }
 
-uniform_type_info const* object_array::type_at(size_t pos) const
-{
+uniform_type_info const* object_array::type_at(size_t pos) const {
     return m_elements[pos].type();
 }
 

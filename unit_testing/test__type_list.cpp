@@ -15,8 +15,7 @@ using std::is_same;
 
 using namespace cppa::util;
 
-size_t test__type_list()
-{
+size_t test__type_list() {
 
     CPPA_TEST(test__type_list);
 

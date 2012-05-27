@@ -41,8 +41,7 @@ namespace {
 
 cppa::util::void_type s_void;
 
-inline cppa::uniform_type_info const* tvoid()
-{
+inline cppa::uniform_type_info const* tvoid() {
     return cppa::detail::static_types_array<cppa::util::void_type>::arr[0];
 }
 
@@ -50,58 +49,48 @@ inline cppa::uniform_type_info const* tvoid()
 
 namespace cppa {
 
-void object::swap(object& other)
-{
+void object::swap(object& other) {
     std::swap(m_value, other.m_value);
     std::swap(m_type, other.m_type);
 }
 
 object::object(void* val, uniform_type_info const* utype)
-    : m_value(val), m_type(utype)
-{
+    : m_value(val), m_type(utype) {
     CPPA_REQUIRE(val != nullptr);
     CPPA_REQUIRE(utype != nullptr);
 }
 
-object::object() : m_value(&s_void), m_type(tvoid())
-{
+object::object() : m_value(&s_void), m_type(tvoid()) {
 }
 
-object::~object()
-{
+object::~object() {
     if (m_value != &s_void) m_type->delete_instance(m_value);
 }
 
-object::object(const object& other)
-{
+object::object(const object& other) {
     m_type = other.m_type;
     m_value = (other.m_value == &s_void) ? other.m_value
                                          : m_type->new_instance(other.m_value);
 }
 
-object::object(object&& other) : m_value(&s_void), m_type(tvoid())
-{
+object::object(object&& other) : m_value(&s_void), m_type(tvoid()) {
     swap(other);
 }
 
-object& object::operator=(object&& other)
-{
+object& object::operator=(object&& other) {
     object tmp(std::move(other));
     swap(tmp);
     return *this;
 }
 
-object& object::operator=(const object& other)
-{
+object& object::operator=(const object& other) {
     object tmp(other);
     swap(tmp);
     return *this;
 }
 
-bool operator==(const object& lhs, const object& rhs)
-{
-    if (lhs.type() == rhs.type())
-    {
+bool operator==(const object& lhs, const object& rhs) {
+    if (lhs.type() == rhs.type()) {
         // values might both point to s_void if lhs and rhs are "empty"
         return    lhs.value() == rhs.value()
                || lhs.type()->equals(lhs.value(), rhs.value());
@@ -109,18 +98,15 @@ bool operator==(const object& lhs, const object& rhs)
     return false;
 }
 
-uniform_type_info const* object::type() const
-{
+uniform_type_info const* object::type() const {
     return m_type;
 }
 
-void const* object::value() const
-{
+void const* object::value() const {
     return m_value;
 }
 
-void* object::mutable_value()
-{
+void* object::mutable_value() {
     return m_value;
 }
 

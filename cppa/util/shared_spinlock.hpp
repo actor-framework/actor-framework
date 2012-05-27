@@ -39,8 +39,7 @@ namespace cppa { namespace util {
 /**
  * @brief A spinlock implementation providing shared and exclusive locking.
  */
-class shared_spinlock
-{
+class shared_spinlock {
 
     std::atomic<long> m_flag;
 

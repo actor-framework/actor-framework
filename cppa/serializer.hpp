@@ -46,8 +46,7 @@ class primitive_variant;
  * @ingroup TypeSystem
  * @brief Technology-independent serialization interface.
  */
-class serializer
-{
+class serializer {
 
     serializer(const serializer&) = delete;
     serializer& operator=(const serializer&) = delete;
@@ -96,11 +95,9 @@ class serializer
 };
 
 template<typename T>
-serializer& operator<<(serializer& s, const T& what)
-{
+serializer& operator<<(serializer& s, const T& what) {
     auto mtype = uniform_typeid<T>();
-    if (mtype == nullptr)
-    {
+    if (mtype == nullptr) {
         throw std::logic_error(  "no uniform type info found for "
                                + cppa::detail::to_uniform_name(typeid(T)));
     }

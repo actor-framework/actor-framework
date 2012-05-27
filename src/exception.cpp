@@ -38,17 +38,14 @@
 
 namespace {
 
-std::string ae_what(std::uint32_t reason)
-{
+std::string ae_what(std::uint32_t reason) {
     std::ostringstream oss;
     oss << "actor exited with reason " << reason;
     return oss.str();
 }
 
-std::string be_what(int err_code)
-{
-    switch (err_code)
-    {
+std::string be_what(int err_code) {
+    switch (err_code) {
     case EACCES: return "EACCES: address is protected; root access needed";
     case EADDRINUSE: return "EADDRINUSE: address is already in use";
     case EBADF: return "EBADF: no valid socket descriptor";
@@ -66,39 +63,31 @@ std::string be_what(int err_code)
 
 namespace cppa {
 
-exception::exception(const std::string &what_str) : m_what(what_str)
-{
+exception::exception(const std::string &what_str) : m_what(what_str) {
 }
 
-exception::exception(std::string&& what_str) : m_what(std::move(what_str))
-{
+exception::exception(std::string&& what_str) : m_what(std::move(what_str)) {
 }
 
-exception::~exception() throw()
-{
+exception::~exception() throw() {
 }
 
-const char* exception::what() const throw()
-{
+const char* exception::what() const throw() {
     return m_what.c_str();
 }
 
-actor_exited::actor_exited(std::uint32_t reason) : exception(ae_what(reason))
-{
+actor_exited::actor_exited(std::uint32_t reason) : exception(ae_what(reason)) {
     m_reason = reason;
 }
 
-network_error::network_error(const std::string& str) : exception(str)
-{
+network_error::network_error(const std::string& str) : exception(str) {
 }
 
 network_error::network_error(std::string&& str)
-    : exception(std::move(str))
-{
+    : exception(std::move(str)) {
 }
 
-bind_failure::bind_failure(int err_code) : network_error(be_what(err_code))
-{
+bind_failure::bind_failure(int err_code) : network_error(be_what(err_code)) {
     m_errno = err_code;
 }
 

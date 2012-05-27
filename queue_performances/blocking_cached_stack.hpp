@@ -8,8 +8,7 @@
 
 // This class is intrusive.
 template<typename T>
-class blocking_cached_stack
-{
+class blocking_cached_stack {
 
     // singly linked list, serves as cache
     T* m_head;
@@ -28,16 +27,12 @@ class blocking_cached_stack
     // read all elements of m_stack, convert them to FIFO order and store
     // them in m_head
     // precondition: m_head == nullptr
-    bool consume_stack()
-    {
+    bool consume_stack() {
         T* e = m_stack.load();
-        while (e)
-        {
-            if (m_stack.compare_exchange_weak(e, 0))
-            {
+        while (e) {
+            if (m_stack.compare_exchange_weak(e, 0)) {
                 // m_stack is now empty (m_stack == nullptr)
-                while (e)
-                {
+                while (e) {
                     T* next = e->next;
                     // enqueue to m_head
                     e->next = m_head;
@@ -52,10 +47,8 @@ class blocking_cached_stack
         return false;
     }
 
-    void wait_for_data()
-    {
-        if (!m_head && !(m_stack.load()))
-        {
+    void wait_for_data() {
+        if (!m_head && !(m_stack.load())) {
             lock_type lock(m_mtx);
             while (!(m_stack.load())) m_cv.wait(lock);
         }
@@ -63,17 +56,13 @@ class blocking_cached_stack
 
  public:
 
-    blocking_cached_stack() : m_head(0)
-    {
+    blocking_cached_stack() : m_head(0) {
         m_stack = 0;
     }
 
-    ~blocking_cached_stack()
-    {
-        do
-        {
-            while (m_head)
-            {
+    ~blocking_cached_stack() {
+        do {
+            while (m_head) {
                 T* next = m_head->next;
                 delete m_head;
                 m_head = next;
@@ -83,17 +72,13 @@ class blocking_cached_stack
         while (consume_stack());
     }
 
-    void push(T* what)
-    {
+    void push(T* what) {
         T* e = m_stack.load();
-        for (;;)
-        {
+        for (;;) {
             what->next = e;
-            if (!e)
-            {
+            if (!e) {
                 lock_type lock(m_mtx);
-                if (m_stack.compare_exchange_weak(e, what))
-                {
+                if (m_stack.compare_exchange_weak(e, what)) {
                     m_cv.notify_one();
                     return;
                 }
@@ -104,10 +89,8 @@ class blocking_cached_stack
         }
     }
 
-    T* try_pop()
-    {
-        if (m_head || consume_stack())
-        {
+    T* try_pop() {
+        if (m_head || consume_stack()) {
             T* result = m_head;
             m_head = m_head->next;
             return result;
@@ -115,8 +98,7 @@ class blocking_cached_stack
         return 0;
     }
 
-    T* pop()
-    {
+    T* pop() {
         wait_for_data();
         return try_pop();
     }
