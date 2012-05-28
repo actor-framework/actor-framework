@@ -173,7 +173,8 @@ struct thread_pool_scheduler::worker {
 
 };
 
-void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) { (*w)();
+void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) {
+    (*w)();
 }
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
