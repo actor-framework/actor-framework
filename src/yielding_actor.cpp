@@ -99,16 +99,25 @@ void yielding_actor::dequeue(behavior& bhvr) {
         yielding_actor::dequeue(fun);
     }
     else if (invoke_from_cache(bhvr) == false) {
-        request_timeout(bhvr.timeout());
-        recursive_queue_node* e = nullptr;
-        do {
-            e  = m_mailbox.try_pop();
-            while (!e) {
-                yield_until_not_empty();
-                e = m_mailbox.try_pop();
+        if (bhvr.timeout().is_zero()) {
+            for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
+                CPPA_REQUIRE(e->marked == false);
+                if (invoke(e, bhvr)) return;
             }
+            bhvr.handle_timeout();
         }
-        while (invoke(e, bhvr) == false);
+        else {
+            request_timeout(bhvr.timeout());
+            recursive_queue_node* e = nullptr;
+            do {
+                e  = m_mailbox.try_pop();
+                while (!e) {
+                    CPPA_REQUIRE(e->marked == false);
+                    yield_until_not_empty();
+                    e = m_mailbox.try_pop();
+                }
+            } while (invoke(e, bhvr) == false);
+        }
     }
 }
 

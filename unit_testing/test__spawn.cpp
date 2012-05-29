@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -261,7 +263,8 @@ std::string behavior_test(actor_ptr et) {
         on_arg_match >> [&](const std::string& str) {
             result = str;
         },
-        after(std::chrono::seconds(2)) >> [&]() {
+        after(std::chrono::minutes(1)) >> [&]() {
+        //after(std::chrono::seconds(2)) >> [&]() {
             throw std::runtime_error(testee_name + " does not reply");
         }
     );
@@ -370,6 +373,18 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << std::flush);
+    receive (
+        others() >> []() {
+            cerr << "WTF?? received: " << to_string(self->last_dequeued())
+                 << endl;
+        },
+        after(std::chrono::seconds(0)) >> []() {
+            // mailbox empty
+        }
+    );
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     auto mirror = actor_prototype (

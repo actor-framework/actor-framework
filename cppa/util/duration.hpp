@@ -74,20 +74,30 @@ class duration {
     constexpr duration() : unit(time_unit::none), count(0) {
     }
 
-    constexpr duration(time_unit un, std::uint32_t val) : unit(un), count(val) {
+    constexpr duration(time_unit tu, std::uint32_t val) : unit(tu), count(val) {
     }
 
     template<class Rep, class Period>
     constexpr duration(std::chrono::duration<Rep, Period> d)
-        : unit(get_time_unit_from_period<Period>()), count(d.count()) {
+            : unit(get_time_unit_from_period<Period>()), count(d.count()) {
         static_assert(get_time_unit_from_period<Period>() != time_unit::none,
                       "only seconds, milliseconds or microseconds allowed");
+    }
+
+    template<class Rep>
+    constexpr duration(std::chrono::duration<Rep, std::ratio<60,1> > d)
+            : unit(time_unit::seconds), count(d.count() * 60) {
     }
 
     /**
      * @brief Returns true if <tt>unit != time_unit::none</tt>.
      */
     inline bool valid() const { return unit != time_unit::none; }
+
+    /**
+     * @brief Returns true if <tt>count == 0</tt>.
+     */
+    inline bool is_zero() const { return count == 0; }
 
     time_unit unit;
 

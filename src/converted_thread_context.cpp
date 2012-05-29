@@ -58,13 +58,9 @@ void converted_thread_context::cleanup(std::uint32_t reason) {
 }
 
 void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
-#   ifdef CPPA_DEBUG
     auto node = fetch_node(sender, std::move(msg));
     CPPA_REQUIRE(node->marked == false);
     m_mailbox.push_back(node);
-#   else
-    m_mailbox.push_back(fetch_node(sender, std::move(msg)));
-#   endif
 }
 
 void converted_thread_context::dequeue(partial_function& fun) { // override
@@ -84,18 +80,25 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
         converted_thread_context::dequeue(fun);
     }
     else if (invoke_from_cache(fun) == false) {
-        auto timeout = now();
-        timeout += bhvr.timeout();
-        recursive_queue_node* e = m_mailbox.try_pop(timeout);
-        while (e != nullptr) {
-            if (e->marked) {
-                std::cout << "ooops: " << to_string(e->msg) << std::endl;
+        if (bhvr.timeout().is_zero()) {
+            for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
+                CPPA_REQUIRE(e->marked == false);
+                if (invoke(e, bhvr)) return;
+                e = m_mailbox.try_pop();
             }
-            CPPA_REQUIRE(e->marked == false);
-            if (invoke(e, fun)) return;
-            e = m_mailbox.try_pop(timeout);
+            bhvr.handle_timeout();
         }
-        bhvr.handle_timeout();
+        else {
+            auto timeout = now();
+            timeout += bhvr.timeout();
+            recursive_queue_node* e = m_mailbox.try_pop(timeout);
+            while (e != nullptr) {
+                CPPA_REQUIRE(e->marked == false);
+                if (invoke(e, fun)) return;
+                e = m_mailbox.try_pop(timeout);
+            }
+            bhvr.handle_timeout();
+        }
     }
 }
 

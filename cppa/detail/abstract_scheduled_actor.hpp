@@ -73,7 +73,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
                     return normal_exit_signal;
                 }
             }
-            else if (v0 == atom(":Timeout")) {
+            else if (v0 == atom("TIMEOUT")) {
                 return (v1 == m_active_timeout_id) ? timeout_message
                                                    : expired_timeout_message;
             }
@@ -87,8 +87,14 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     void request_timeout(const util::duration& d) {
         if (d.valid()) {
-            get_scheduler()->future_send(this, d, atom(":Timeout"), ++m_active_timeout_id);
-            m_has_pending_timeout_request = true;
+            if (d.is_zero()) {
+                // immediately enqueue timeout
+                enqueue(nullptr, make_any_tuple(atom("TIMEOUT"), ++m_active_timeout_id));
+            }
+            else {
+                get_scheduler()->future_send(this, d, atom("TIMEOUT"), ++m_active_timeout_id);
+                m_has_pending_timeout_request = true;
+            }
         }
     }
 
