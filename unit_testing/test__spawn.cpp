@@ -445,10 +445,10 @@ size_t test__spawn() {
     send(avec, atom("get"));
     send(avec, atom("EXIT"), exit_reason::user_defined);
     receive (
-        on_arg_match >> [](const std::vector<string>& vec) {
+        on_arg_match >> [&](const std::vector<string>& vec) {
             if (vec.size() == 2)
             {
-                cout << vec.front() << vec.back() << endl;
+                CPPA_CHECK_EQUAL("hello world", vec.front() + vec.back());
             }
         }
     );
