@@ -425,52 +425,6 @@ namespace cppa {
 
 /**
  * @ingroup ActorManagement
- * @brief Links @p lhs and @p rhs;
- * @pre <tt>lhs != rhs</tt>
- */
-void link(actor_ptr&  lhs, actor_ptr&  rhs);
-
-/**
- * @copydoc link(actor_ptr&,actor_ptr&)
- */
-void link(actor_ptr&& lhs, actor_ptr&  rhs);
-
-/**
- * @copydoc link(actor_ptr&,actor_ptr&)
- */
-void link(actor_ptr&& lhs, actor_ptr&& rhs);
-
-/**
- * @copydoc link(actor_ptr&,actor_ptr&)
- */
-void link(actor_ptr&  lhs, actor_ptr&& rhs);
-
-/**
- * @ingroup ActorManagement
- * @brief Unlinks @p lhs from @p rhs;
- * @pre <tt>lhs != rhs</tt>
- */
-void unlink(actor_ptr& lhs, actor_ptr& rhs);
-
-/**
- * @ingroup ActorManagement
- * @brief Adds a unidirectional @p monitor to @p whom.
- * @note Each calls to @p monitor creates a new, independent monitor.
- * @pre The calling actor receives a "DOWN" message from @p whom when
- *      it terminates.
- */
-void monitor(actor_ptr& whom);
-
-void monitor(actor_ptr&& whom);
-
-/**
- * @ingroup ActorManagement
- * @brief Removes a monitor from @p whom.
- */
-void demonitor(actor_ptr& whom);
-
-/**
- * @ingroup ActorManagement
  * @brief Spans a new context-switching actor.
  * @returns A pointer to the spawned {@link actor Actor}.
  */
@@ -523,45 +477,6 @@ inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args) {
                                  spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                                  spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
 }
-
-/*
-/ **
- * @ingroup ActorManagement
- * @brief Spawns a new actor that executes @p what with given arguments.
- * @tparam Hint Hint to the scheduler for the best scheduling strategy.
- * @param what Function or functor that the spawned Actor should execute.
- * @param args Arguments needed to invoke @p what.
- * @returns A pointer to the spawned {@link actor actor}.
- * /
-template<scheduling_hint Hint, typename F, typename... Args>
-auto //actor_ptr
-spawn(F&& what, const Args&... args)
--> typename std::enable_if<
-           !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
-        && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
-        actor_ptr
-    >::type {
-    typedef typename util::rm_ref<F>::type ftype;
-    std::integral_constant<bool, std::is_function<ftype>::value> is_fun;
-    auto ptr = detail::get_behavior(is_fun, std::forward<F>(what), args...);
-    return get_scheduler()->spawn(ptr, Hint);
-}
-
-/ **
- * @ingroup ActorManagement
- * @brief Alias for <tt>spawn<scheduled>(what, args...)</tt>.
- * /
-template<typename F, typename... Args>
-auto // actor_ptr
-spawn(F&& what, const Args&... args)
--> typename std::enable_if<
-           !std::is_convertible<typename util::rm_ref<F>::type, scheduled_actor*>::value
-        && !std::is_convertible<typename util::rm_ref<F>::type, event_based_actor*>::value,
-        actor_ptr
-    >::type {
-    return spawn<scheduled>(std::forward<F>(what), args...);
-}
-*/
 
 #ifdef CPPA_DOCUMENTATION
 
@@ -713,12 +628,7 @@ inline void await_all_others_done() {
  * @param port Unused TCP port.
  * @throws bind_failure
  */
-void publish(actor_ptr& whom, std::uint16_t port);
-
-/**
- * @copydoc publish(actor_ptr&,std::uint16_t)
- */
-void publish(actor_ptr&& whom, std::uint16_t port);
+void publish(actor_ptr whom, std::uint16_t port);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.

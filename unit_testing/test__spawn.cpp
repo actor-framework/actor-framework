@@ -514,17 +514,23 @@ size_t test__spawn() {
 
     // create 20,000 actors linked to one single actor
     // and kill them all through killing the link
-    auto my_link = spawn(new event_testee);
-    for (int i = 0; i < 20000; ++i) {
-        link(my_link, spawn(new event_testee));
-    }
-    send(my_link, atom("EXIT"), exit_reason::user_defined);
+    auto twenty_thousand = spawn([]() {
+        for (int i = 0; i < 20000; ++i) {
+            self->link_to(spawn(new event_testee));
+        }
+        receive_loop (
+            others() >> []() {
+                cout << "wtf? => " << to_string(self->last_dequeued()) << endl;
+            }
+        );
+    });
+    send(twenty_thousand, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
     self->trap_exit(true);
     auto ping_actor = spawn(ping, 10);
     auto pong_actor = spawn(pong, ping_actor);
-    monitor(pong_actor);
-    monitor(ping_actor);
+    self->monitor(pong_actor);
+    self->monitor(ping_actor);
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;

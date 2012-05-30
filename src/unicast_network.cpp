@@ -105,7 +105,7 @@ struct socket_guard {
 
 };
 
-void publish(actor_ptr& whom, std::uint16_t port) {
+void publish(actor_ptr whom, std::uint16_t port) {
     if (!whom) return;
     detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
     detail::native_socket_type sockfd;
@@ -138,10 +138,6 @@ void publish(actor_ptr& whom, std::uint16_t port) {
     // ok, no exceptions
     sguard.release();
     detail::post_office_publish(sockfd, whom);
-}
-
-void publish(actor_ptr&& whom, std::uint16_t port) {
-    publish(static_cast<actor_ptr&>(whom), port);
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {

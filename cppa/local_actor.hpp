@@ -137,6 +137,21 @@ class local_actor : public actor {
         }
     }
 
+    /**
+     * @ingroup ActorManagement
+     * @brief Adds a unidirectional @p monitor to @p whom.
+     * @note Each calls to @p monitor creates a new, independent monitor.
+     * @pre The calling actor receives a "DOWN" message from @p whom when
+     *      it terminates.
+     */
+    void monitor(actor_ptr whom);
+
+    /**
+     * @ingroup ActorManagement
+     * @brief Removes a monitor from @p whom.
+     */
+    void demonitor(actor_ptr whom);
+
 };
 
 typedef intrusive_ptr<local_actor> local_actor_ptr;
