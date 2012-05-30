@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -23,6 +21,35 @@ using std::cout;
 using std::endl;
 
 using namespace cppa;
+
+
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
+
+struct simple_mirror : fsm_actor<simple_mirror> {
+
+    behavior init_state = (
+        others() >> []() {
+            self->last_sender() << self->last_dequeued();
+        }
+    );
+
+};
+
+#else
+
+struct simple_mirror : event_based_actor {
+
+    void init() {
+        become (
+            others() >> []() {
+                self->last_sender() << self->last_dequeued();
+            }
+        );
+    }
+
+};
+
+#endif
 
 // GCC 4.7 supports non-static member initialization
 #if 0 //(__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
@@ -113,7 +140,7 @@ abstract_event_based_actor* event_testee2() {
         behavior wait4timeout(int remaining) {
             return (
                 after(std::chrono::milliseconds(50)) >> [=]() {
-                    if (remaining == 1) become_void();
+                    if (remaining == 1) quit_normal();
                     else become(wait4timeout(remaining - 1));
                 }
             );
@@ -137,7 +164,7 @@ struct chopstick : public fsm_actor<chopstick> {
                 become(&init_state);
             },
             on(atom("break")) >> [=]() {
-                become_void();
+                quit_normal();
             }
         );
     }
@@ -151,7 +178,7 @@ struct chopstick : public fsm_actor<chopstick> {
                 reply(atom("taken"));
             },
             on(atom("break")) >> [=]() {
-                become_void();
+                quit_normal();
             },
             others() >> [=]() {
             }
@@ -224,8 +251,8 @@ void testee2(actor_ptr other) {
 }
 
 void testee3(actor_ptr parent) {
-    // test a future_send / delayed_reply based loop
-    future_send(self, std::chrono::milliseconds(50), atom("Poll"));
+    // test a delayed_send / delayed_reply based loop
+    delayed_send(self, std::chrono::milliseconds(50), atom("Poll"));
     int polls = 0;
     receive_for(polls, 5) (
         on(atom("Poll")) >> [&]() {
@@ -387,11 +414,15 @@ size_t test__spawn() {
     );
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    /*
     auto mirror = actor_prototype (
         others() >> []() {
             self->last_sender() << self->last_dequeued();
         }
     ).spawn();
+    */
+
+    auto mirror = spawn(new simple_mirror);
 
     CPPA_IF_VERBOSE(cout << "test mirror ... " << std::flush);
     send(mirror, "hello mirror");
@@ -422,8 +453,8 @@ size_t test__spawn() {
         }
     );
 
-    CPPA_IF_VERBOSE(cout << "test future_send() ... " << std::flush);
-    future_send(self, std::chrono::seconds(1), 1, 2, 3);
+    CPPA_IF_VERBOSE(cout << "test delayed_send() ... " << std::flush);
+    delayed_send(self, std::chrono::seconds(1), 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
@@ -497,7 +528,7 @@ size_t test__spawn() {
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;
-    future_send(self, std::chrono::seconds(1), atom("FooBar"));
+    delayed_send(self, std::chrono::seconds(1), atom("FooBar"));
     // wait for DOWN and EXIT messages of pong
     receive_for(i, 4) (
         on<atom("EXIT"), std::uint32_t>() >> [&](std::uint32_t reason) {

@@ -32,6 +32,7 @@
 #define CPPA_HPP
 
 #include <tuple>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <type_traits>
@@ -342,12 +343,12 @@
  *
  * @section FutureSend Send delayed messages
  *
- * The function @p future_send provides a simple way to delay a message.
+ * The function @p delayed_send provides a simple way to delay a message.
  * This is particularly useful for recurring events, e.g., periodical polling.
  * Usage example:
  *
  * @code
- * future_send(self, std::chrono::seconds(1), atom("poll"));
+ * delayed_send(self, std::chrono::seconds(1), atom("poll"));
  * receive_loop
  * (
  *     // ...
@@ -355,7 +356,7 @@
  *     {
  *         // ... poll something ...
  *         // and do it again after 1sec
- *         future_send(self, std::chrono::seconds(1), atom("poll"));
+ *         delayed_send(self, std::chrono::seconds(1), atom("poll"));
  *     }
  * );
  * @endcode
@@ -411,7 +412,7 @@
  */
 
 /**
- * @brief A simple example for a future_send based application.
+ * @brief A simple example for a delayed_send based application.
  * @example dancing_kirby.cpp
  */
 
@@ -665,7 +666,7 @@ const self_type& operator<<(const self_type& s, any_tuple&& what);
  * @brief Sends a message to the sender of the last received message.
  */
 template<typename Arg0, typename... Args>
-void reply(const Arg0& arg0, const Args&... args) {
+inline void reply(const Arg0& arg0, const Args&... args) {
     send(self->last_sender(), arg0, args...);
 }
 
@@ -676,19 +677,22 @@ void reply(const Arg0& arg0, const Args&... args) {
  * @param rel_time Relative time duration to delay the message.
  * @param data Any number of values for the message content.
  */
-template<typename Duration, typename... Data>
-void future_send(actor_ptr whom, const Duration& rel_time, const Data&... data) {
-    get_scheduler()->future_send(whom, rel_time, data...);
+template<class Rep, class Period, typename... Data>
+inline void delayed_send(actor_ptr whom,
+                         const std::chrono::duration<Rep, Period>& rel_time,
+                         const Data&... data) {
+    get_scheduler()->delayed_send(whom, rel_time, data...);
 }
 
 /**
  * @ingroup MessageHandling
  * @brief Sends a reply message that is delayed by @p rel_time.
- * @see future_send()
+ * @see delayed_send()
  */
-template<typename Duration, typename... Data>
-void delayed_reply(const Duration& rel_time, Data const... data) {
-    future_send(self->last_sender(), rel_time, data...);
+template<class Rep, class Period, typename... Data>
+inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
+                          const Data&... data) {
+    delayed_send(self->last_sender(), rel_time, data...);
 }
 
 /**

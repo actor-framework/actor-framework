@@ -53,7 +53,7 @@ struct fsm_receiver : fsm_actor<fsm_receiver> {
             on(atom("msg")) >> [=]() {
                 ++m_value;
                 if (m_value == max) {
-                    become_void();
+                    quit_normal();
                 }
             }
         );

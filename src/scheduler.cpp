@@ -170,7 +170,7 @@ scheduler::~scheduler() {
     delete m_helper;
 }
 
-channel* scheduler::future_send_helper() {
+channel* scheduler::delayed_send_helper() {
     return m_helper->m_worker.get();
 }
 

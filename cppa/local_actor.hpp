@@ -34,6 +34,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -50,9 +51,10 @@ class local_actor : public actor {
 
  protected:
 
+    bool m_chaining;
     bool m_trap_exit;
     bool m_is_scheduled;
-    actor_ptr m_pending;
+    actor_ptr m_chained;
     actor_ptr m_last_sender;
     any_tuple m_last_dequeued;
 
@@ -71,6 +73,10 @@ class local_actor : public actor {
      */
     virtual void quit(std::uint32_t reason) = 0;
 
+    inline void quit_normal() {
+        quit(exit_reason::normal);
+    }
+
     /**
      * @brief
      * @param rules
@@ -86,56 +92,52 @@ class local_actor : public actor {
      */
     virtual void dequeue(partial_function& rules) = 0;
 
-    inline bool trap_exit() const;
+    inline bool trap_exit() const {
+        return m_trap_exit;
+    }
 
-    inline void trap_exit(bool new_value);
+    inline void trap_exit(bool new_value) {
+        m_trap_exit = new_value;
+    }
 
-    inline any_tuple& last_dequeued();
+    inline bool chaining() const {
+        return m_chaining;
+    }
 
-    inline actor_ptr& last_sender();
-
-    inline actor_ptr& pending_actor();
-
-    inline void send_message(channel* whom, any_tuple what);
-
-    inline void send_message(actor* whom, any_tuple what);
-
-};
-
-inline bool local_actor::trap_exit() const {
-    return m_trap_exit;
-}
-
-inline void local_actor::trap_exit(bool new_value) {
-    m_trap_exit = new_value;
-}
-
-inline any_tuple& local_actor::last_dequeued() {
-    return m_last_dequeued;
-}
-
-inline actor_ptr& local_actor::last_sender() {
-    return m_last_sender;
-}
-
-inline actor_ptr& local_actor::pending_actor() {
-    return m_pending;
-}
-
-inline void local_actor::send_message(actor* whom, any_tuple what) {
-    if (m_is_scheduled && !m_pending) {
-        if (whom->pending_enqueue(this, std::move(what))) {
-            m_pending = whom;
+    inline void chaining(bool new_value) {
+        if (m_is_scheduled) {
+            m_chaining = new_value;
         }
     }
-    else {
+
+    inline any_tuple& last_dequeued() {
+        return m_last_dequeued;
+    }
+
+    inline actor_ptr& last_sender() {
+        return m_last_sender;
+    }
+
+    inline actor_ptr& chained_actor() {
+        return m_chained;
+    }
+
+    inline void send_message(channel* whom, any_tuple what) {
         whom->enqueue(this, std::move(what));
     }
-}
 
-inline void local_actor::send_message(channel* whom, any_tuple what) {
-    whom->enqueue(this, std::move(what));
-}
+    inline void send_message(actor* whom, any_tuple what) {
+        if (m_chaining && !m_chained) {
+            if (whom->chained_enqueue(this, std::move(what))) {
+                m_chained = whom;
+            }
+        }
+        else {
+            whom->enqueue(this, std::move(what));
+        }
+    }
+
+};
 
 typedef intrusive_ptr<local_actor> local_actor_ptr;
 

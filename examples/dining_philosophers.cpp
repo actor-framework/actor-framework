@@ -102,7 +102,7 @@ struct philosopher : fsm_actor<philosopher> {
                     << " and starts to eat\n";
                 cout << oss.str();
                 // eat some time
-                future_send(this, seconds(5), atom("think"));
+                delayed_send(this, seconds(5), atom("think"));
                 become(&eating);
             },
             on(atom("busy"), what) >> [=]() {
@@ -152,7 +152,7 @@ struct philosopher : fsm_actor<philosopher> {
             on(atom("think")) >> [=]() {
                 send(left, atom("put"), this);
                 send(right, atom("put"), this);
-                future_send(this, seconds(5), atom("eat"));
+                delayed_send(this, seconds(5), atom("eat"));
                 cout << (  name
                          + " puts down his chopsticks and starts to think\n");
                 become(&thinking);
@@ -162,7 +162,7 @@ struct philosopher : fsm_actor<philosopher> {
         init_state = (
             on(atom("think")) >> [=]() {
                 cout << (name + " starts to think\n");
-                future_send(this, seconds(5), atom("eat"));
+                delayed_send(this, seconds(5), atom("eat"));
                 become(&thinking);
             }
         );

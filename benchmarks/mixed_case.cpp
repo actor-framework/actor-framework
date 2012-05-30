@@ -73,7 +73,7 @@ struct fsm_worker : fsm_actor<fsm_worker> {
                 send(mc, atom("result"), factorize(what));
             },
             on(atom("done")) >> [=]() {
-                become_void();
+                quit_normal();
             }
         );
     }
@@ -86,7 +86,7 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link> {
         init_state = (
             on<atom("token"), int>() >> [=](int v) {
                 next << std::move(last_dequeued());
-                if (v == 0) become_void();
+                if (v == 0) quit_normal();
             }
         );
     }
@@ -120,7 +120,7 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master> {
                         else {
                             send(worker, atom("done"));
                             send(mc, atom("masterdone"));
-                            become_void();
+                            quit_normal();
                         }
                     },
                     on<atom("token"), int>() >> [=](int v) {
@@ -138,11 +138,11 @@ struct fsm_supervisor : fsm_actor<fsm_supervisor> {
     fsm_supervisor(int num_msgs) : left(num_msgs) {
         init_state = (
             on(atom("masterdone")) >> [=]() {
-                if (--left == 0) become_void();
+                if (--left == 0) quit_normal();
             },
             on<atom("result"), factors>() >> [=](const factors& vec) {
                 check_factors(vec);
-                if (--left == 0) become_void();
+                if (--left == 0) quit_normal();
             }
         );
     }

@@ -32,7 +32,7 @@
 
 namespace cppa {
 
-void stacked_event_based_actor::become_void() {
+void stacked_event_based_actor::quit_normal() {
     m_loop_stack.clear();
 }
 

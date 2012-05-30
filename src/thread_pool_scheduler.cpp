@@ -125,9 +125,9 @@ struct thread_pool_scheduler::worker {
             scheduled_actor* pending_job;
             handler() : job(nullptr), pending_job(nullptr) { }
             void exec_done() {
-                if (job->pending_actor()) {
-                    pending_job = static_cast<scheduled_actor*>(job->pending_actor().get());
-                    job->pending_actor().reset();
+                if (job->chained_actor()) {
+                    pending_job = static_cast<scheduled_actor*>(job->chained_actor().get());
+                    job->chained_actor().reset();
                 }
                 if (!job->deref()) delete job;
                 CPPA_MEMORY_BARRIER();
@@ -153,9 +153,9 @@ struct thread_pool_scheduler::worker {
                 do {
                     h.job->resume(&fself, &h);
                     if (h.job) {
-                        if (h.job->pending_actor()) {
-                            h.pending_job = static_cast<scheduled_actor*>(h.job->pending_actor().get());
-                            h.job->pending_actor().reset();
+                        if (h.job->chained_actor()) {
+                            h.pending_job = static_cast<scheduled_actor*>(h.job->chained_actor().get());
+                            h.job->chained_actor().reset();
                         }
                         else {
                             h.job = nullptr;

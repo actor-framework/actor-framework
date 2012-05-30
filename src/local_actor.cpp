@@ -32,7 +32,8 @@
 
 namespace cppa {
 
-local_actor::local_actor(bool sflag) : m_trap_exit(false), m_is_scheduled(sflag) {
+local_actor::local_actor(bool sflag)
+: m_chaining(sflag), m_trap_exit(false), m_is_scheduled(sflag) {
 }
 
 } // namespace cppa

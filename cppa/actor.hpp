@@ -63,7 +63,7 @@ class actor : public channel {
      *        this actor is an scheduled actor that successfully changed
      *        its state to @p pending.
      */
-    virtual bool pending_enqueue(actor* sender, any_tuple msg);
+    virtual bool chained_enqueue(actor* sender, any_tuple msg);
 
     /**
      * @brief Attaches @p ptr to this actor.

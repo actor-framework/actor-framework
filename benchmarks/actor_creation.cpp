@@ -51,7 +51,7 @@ struct testee : fsm_actor<testee> {
         init_state = (
             on(atom("spread"), 0) >> [=]() {
                 send(parent, atom("result"), (uint32_t) 1);
-                become_void();
+                quit_normal();
             },
             on<atom("spread"), int>() >> [=](int x) {
                 any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
@@ -62,7 +62,7 @@ struct testee : fsm_actor<testee> {
                         become (
                             on<atom("result"), uint32_t>() >> [=](uint32_t r2) {
                                 send(parent, atom("result"), r1 + r2);
-                                become_void();
+                                quit_normal();
                             }
                         );
                     }

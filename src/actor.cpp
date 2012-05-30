@@ -61,7 +61,7 @@ actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
     }
 }
 
-bool actor::pending_enqueue(actor* sender, any_tuple msg) {
+bool actor::chained_enqueue(actor* sender, any_tuple msg) {
     enqueue(sender, std::move(msg));
     return false;
 }

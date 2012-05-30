@@ -41,7 +41,7 @@ void dancing_kirby() {
         on<atom("Step")>() >> [&]() {
             draw_kirby(*i);
             // animate next step in 150ms
-            future_send(self, std::chrono::milliseconds(150), atom("Step"));
+            delayed_send(self, std::chrono::milliseconds(150), atom("Step"));
         }
     );
 }

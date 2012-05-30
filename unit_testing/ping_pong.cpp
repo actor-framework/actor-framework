@@ -46,7 +46,7 @@ actor_ptr spawn_event_based_ping(size_t num_pings) {
                     //cout << to_string(self->last_dequeued()) << endl;
                     if (++s_pongs >= num_pings) {
                         reply(atom("EXIT"), exit_reason::user_defined);
-                        become_void();
+                        quit_normal();
                     }
                     else {
                         reply(atom("ping"), value);

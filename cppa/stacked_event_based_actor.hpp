@@ -56,7 +56,7 @@ class stacked_event_based_actor : public event_based_actor_base<stacked_event_ba
     /**
      * @brief Terminates this actor with normal exit reason.
      */
-    void become_void();
+    void quit_normal();
 
 };
 

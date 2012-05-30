@@ -58,7 +58,7 @@ class scheduler {
 
     scheduler_helper* m_helper;
 
-    channel* future_send_helper();
+    channel* delayed_send_helper();
 
  protected:
 
@@ -114,12 +114,12 @@ class scheduler {
     virtual attachable* register_hidden_context();
 
     template<typename Duration, typename... Data>
-    void future_send(const actor_ptr& to,
+    void delayed_send(const actor_ptr& to,
                      const Duration& rel_time, const Data&... data) {
         static_assert(sizeof...(Data) > 0, "no message to send");
         any_tuple data_tup = make_cow_tuple(data...);
         any_tuple tup = make_cow_tuple(util::duration(rel_time), to, data_tup);
-        future_send_helper()->enqueue(self, std::move(tup));
+        delayed_send_helper()->enqueue(self, std::move(tup));
     }
 
 };

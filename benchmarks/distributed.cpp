@@ -134,7 +134,7 @@ struct ping_actor : fsm_actor<ping_actor> {
                 become (
                     on<atom("pong"), uint32_t>().when(_x2 == uint32_t(0)) >> [=]() {
                         send(parent, atom("done"));
-                        become_void();
+                        quit_normal();
                     },
                     on(atom("pong"), arg_match) >> [=](uint32_t value) {
                         reply(atom("ping"), value - 1);
@@ -206,7 +206,7 @@ struct server_actor : fsm_actor<server_actor> {
             },
             on(atom("shutdown")) >> [=]() {
                 m_pongs.clear();
-                become_void();
+                quit_normal();
             },
             others() >> [=]() {
                 cout << "unexpected: " << to_string(last_dequeued()) << endl;

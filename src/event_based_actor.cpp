@@ -36,14 +36,10 @@ event_based_actor::event_based_actor() {
     m_loop_stack.reserve(2);
 }
 
-void event_based_actor::become_void() {
-    cleanup(exit_reason::normal);
-    m_loop_stack.clear();
-}
-
 void event_based_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::normal) {
-        become_void();
+        cleanup(exit_reason::normal);
+        m_loop_stack.clear();
     }
     else {
         abstract_scheduled_actor::quit(reason);
