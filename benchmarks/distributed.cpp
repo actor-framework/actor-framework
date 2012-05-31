@@ -364,7 +364,7 @@ void shutdown_mode(Iterator first, Iterator last) {
     for (auto& r : remotes) {
         try {
             actor_ptr x = remote_actor(r.first.c_str(), r.second);
-            monitor(x);
+            self->monitor(x);
             send(x, atom("shutdown"));
             receive (
                 on(atom("DOWN"), x, val<std::uint32_t>) >> []() {
