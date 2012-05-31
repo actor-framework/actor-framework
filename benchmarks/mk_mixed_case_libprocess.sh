@@ -75,5 +75,5 @@ else
 fi
 LIBDIRS="-L$(dirname "$LIBFILE") -L$(dirname "$LIBGLOGFILE") -L$(dirname "$LIBEVFILE")"
 
-verbose_exec "$CXX -std=c++11 $CXXFLAGS -Imesos/third_party/libprocess/include/ $LIBDIRS -lprocess -lglog -lev mixed_case_libprocess.cpp -o mixed_case_libprocess"
+verbose_exec "$CXX --std=c++0x $CXXFLAGS -Imesos/third_party/libprocess/include/ $LIBDIRS mixed_case_libprocess.cpp -o mixed_case_libprocess -lprocess -lglog -lev"
 

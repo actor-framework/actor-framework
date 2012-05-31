@@ -52,7 +52,7 @@ public:
     {
     }
 
-    virtual ~chain_link() = default;
+    virtual ~chain_link() { }
 
     virtual void token(int v)
     {
