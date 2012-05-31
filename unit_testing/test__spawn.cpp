@@ -542,8 +542,8 @@ size_t test__spawn() {
             CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
-        on<atom("DOWN"), actor_ptr, std::uint32_t>() >> [&](const actor_ptr& who,
-                                                            std::uint32_t reason) {
+        on<atom("DOWN"), std::uint32_t>() >> [&](std::uint32_t reason) {
+            auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
                 CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);

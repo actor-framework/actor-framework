@@ -49,7 +49,10 @@ class down_observer : public attachable {
     }
 
     void actor_exited(std::uint32_t reason) {
-        send(m_observer, atom("DOWN"), m_observed, reason);
+        if (m_observer) {
+            m_observer->enqueue(m_observed.get(),
+                                make_any_tuple(atom("DOWN"), reason));
+        }
     }
 
     bool matches(const attachable::token& match_token) {

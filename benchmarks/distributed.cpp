@@ -367,7 +367,7 @@ void shutdown_mode(Iterator first, Iterator last) {
             self->monitor(x);
             send(x, atom("shutdown"));
             receive (
-                on(atom("DOWN"), x, val<std::uint32_t>) >> []() {
+                on(atom("DOWN"), val<std::uint32_t>) >> []() {
                     // ok, done
                 },
                 after(std::chrono::seconds(10)) >> [&]() {
