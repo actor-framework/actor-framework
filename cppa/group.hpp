@@ -99,8 +99,7 @@ class group : public channel {
 
      protected:
 
-        module(std::string&& module_name);
-        module(const std::string& module_name);
+        module(std::string module_name);
 
      public:
 

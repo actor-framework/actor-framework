@@ -71,11 +71,7 @@ bool group::unsubscriber::matches(const attachable::token& what) {
     return false;
 }
 
-group::module::module(const std::string& name) : m_name(name) {
-}
-
-group::module::module(std::string&& name) : m_name(std::move(name)) {
-}
+group::module::module(std::string name) : m_name(std::move(name)) { }
 
 const std::string& group::module::name() {
     return m_name;
