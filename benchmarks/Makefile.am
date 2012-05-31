@@ -15,7 +15,6 @@ EXAMPLES_LIBS = -L../.libs/ -lcppa $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
 
 actor_creation_LDADD = $(EXAMPLES_LIBS)
 mailbox_performance_LDADD = $(EXAMPLES_LIBS)
-mixed_case_libcppa_LDADD = $(EXAMPLES_LIBS)
-mixed_case_libprocess_LDADD = -L../.libs/ -lglog $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
+mixed_case_LDADD = $(EXAMPLES_LIBS)
 matching_LDADD = $(EXAMPLES_LIBS)
 distributed_LDADD = $(EXAMPLES_LIBS)
