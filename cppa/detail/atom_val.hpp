@@ -31,7 +31,9 @@
 #ifndef ATOM_VAL_HPP
 #define ATOM_VAL_HPP
 
-namespace cppa { namespace detail { namespace {
+namespace cppa { namespace detail {
+
+namespace {
 
 // encodes ASCII characters to 6bit encoding
 constexpr char encoding_table[] = {
@@ -51,6 +53,8 @@ constexpr char decoding_table[] = " 0123456789"
                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
                                   "abcdefghijklmnopqrstuvwxyz";
 
+} // namespace <anonymous>
+
 constexpr std::uint64_t next_interim(std::uint64_t current, size_t char_code) {
     return (current << 6) | encoding_table[(char_code <= 0x7F) ? char_code : 0];
 }
@@ -62,6 +66,6 @@ constexpr std::uint64_t atom_val(char const* cstr, std::uint64_t interim = 0) {
                                                    static_cast<size_t>(*cstr)));
 }
 
-} } } // namespace cppa::detail::<anonymous>
+} } // namespace cppa::detail
 
 #endif // ATOM_VAL_HPP
