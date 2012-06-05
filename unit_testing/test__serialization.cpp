@@ -87,8 +87,10 @@ bool operator!=(const struct_b& lhs, const struct_b& rhs) {
     return !(lhs == rhs);
 }
 
+typedef std::map<std::string, std::u16string> strmap;
+
 struct struct_c {
-    std::map<std::string, std::u16string> strings;
+    strmap strings;
     std::set<int> ints;
 };
 
@@ -213,7 +215,7 @@ size_t test__serialization() {
                            &struct_b::z,
                            &struct_b::ints);
         // testees
-        struct_b b1 = { { 1, 2 }, 3, { 4, 5, 6, 7, 8, 9, 10 } };
+        struct_b b1 = { { 1, 2 }, 3, std::list<int>{ 4, 5, 6, 7, 8, 9, 10 } };
         struct_b b2;
         struct_b b3;
         // expected result of to_string(&b1, meta_b)
@@ -245,7 +247,7 @@ size_t test__serialization() {
         // get meta type of struct_c and "announce"
         announce<struct_c>(&struct_c::strings, &struct_c::ints);
         // testees
-        struct_c c1 = { { { "abc", u"cba" }, { "x", u"y" } }, { 9, 4, 5 } };
+        struct_c c1{strmap{{"abc", u"cba" }, { "x", u"y" }}, std::set<int>{9, 4, 5}};
         struct_c c2; {
             // serialize c1 to buf
             binary_serializer bs;

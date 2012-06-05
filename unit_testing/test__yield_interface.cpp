@@ -8,11 +8,7 @@
 #include "cppa/util/fiber.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
-using namespace cppa;
-using namespace cppa::util;
-using namespace cppa::detail;
-
-namespace {
+namespace cppa { namespace detail {
 
 std::ostream& operator<<(std::ostream& o, yield_state ys) {
     switch (ys) {
@@ -29,7 +25,11 @@ std::ostream& operator<<(std::ostream& o, yield_state ys) {
     }
 }
 
-} // namespace <anonymous>
+} } // namespace cppa::detail
+
+using namespace cppa;
+using namespace cppa::util;
+using namespace cppa::detail;
 
 struct pseudo_worker {
 

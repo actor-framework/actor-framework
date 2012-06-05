@@ -36,10 +36,6 @@ inline bool operator==(const foo& lhs, const foo& rhs) {
     return lhs.value == rhs.value;
 }
 
-inline bool operator!=(const foo& lhs, const foo& rhs) {
-    return !(lhs == rhs);
-}
-
 } // namespace <anonymous>
 
 using namespace cppa;

@@ -35,7 +35,9 @@
 
 namespace cppa { namespace detail {
 
-struct empty_tuple : abstract_tuple {
+class empty_tuple : public abstract_tuple {
+
+ public:
 
     using abstract_tuple::const_iterator;
 

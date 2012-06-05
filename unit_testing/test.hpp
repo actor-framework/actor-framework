@@ -30,7 +30,7 @@ template<typename T1, typename T2>
 inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
                                  char const* file_name,
                                  int line_number,
-                                  size_t& error_count) {
+                                 size_t& error_count) {
     if (cppa_check_value_fun_eq(value1, value2) == false) {
         std::cerr << "ERROR in file " << file_name << " on line " << line_number
                   << " => expected value: " << value1

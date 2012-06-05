@@ -60,8 +60,9 @@ class actor_proxy_cache {
                    std::uint32_t process_id,
                    Fun fun) {
         key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
-        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()}; {
-            lock_guard<util::shared_spinlock> guard{m_lock};
+        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()};
+        { // lifetime scope of guard
+            lock_guard<util::shared_spinlock> guard(m_lock);
             auto e = m_entries.end();
             auto first = m_entries.lower_bound(lb);
             if (first != e) {

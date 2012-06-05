@@ -33,6 +33,7 @@
 
 #include <new>
 #include <cstdint>
+#include <typeinfo>
 #include <stdexcept>
 #include <type_traits>
 
@@ -102,20 +103,20 @@ class primitive_variant {
     };
 
     // use static call dispatching to select member
-    inline decltype(i8)&    get(util::pt_token<pt_int8>)        { return i8;  }
-    inline decltype(i16)&   get(util::pt_token<pt_int16>)       { return i16; }
-    inline decltype(i32)&   get(util::pt_token<pt_int32>)       { return i32; }
-    inline decltype(i64)&   get(util::pt_token<pt_int64>)       { return i64; }
-    inline decltype(u8)&    get(util::pt_token<pt_uint8>)       { return u8;  }
-    inline decltype(u16)&   get(util::pt_token<pt_uint16>)      { return u16; }
-    inline decltype(u32)&   get(util::pt_token<pt_uint32>)      { return u32; }
-    inline decltype(u64)&   get(util::pt_token<pt_uint64>)      { return u64; }
-    inline decltype(fl)&    get(util::pt_token<pt_float>)       { return fl;  }
-    inline decltype(db)&    get(util::pt_token<pt_double>)      { return db;  }
-    inline decltype(ldb)&   get(util::pt_token<pt_long_double>) { return ldb; }
-    inline decltype(s8)&    get(util::pt_token<pt_u8string>)    { return s8;  }
-    inline decltype(s16)&   get(util::pt_token<pt_u16string>)   { return s16; }
-    inline decltype(s32)&   get(util::pt_token<pt_u32string>)   { return s32; }
+    inline auto get(util::pt_token<pt_int8>)        -> decltype(i8)&  { return i8;  }
+    inline auto get(util::pt_token<pt_int16>)       -> decltype(i16)& { return i16; }
+    inline auto get(util::pt_token<pt_int32>)       -> decltype(i32)& { return i32; }
+    inline auto get(util::pt_token<pt_int64>)       -> decltype(i64)& { return i64; }
+    inline auto get(util::pt_token<pt_uint8>)       -> decltype(u8)&  { return u8;  }
+    inline auto get(util::pt_token<pt_uint16>)      -> decltype(u16)& { return u16; }
+    inline auto get(util::pt_token<pt_uint32>)      -> decltype(u32)& { return u32; }
+    inline auto get(util::pt_token<pt_uint64>)      -> decltype(u64)& { return u64; }
+    inline auto get(util::pt_token<pt_float>)       -> decltype(fl)& { return fl;  }
+    inline auto get(util::pt_token<pt_double>)      -> decltype(db)&  { return db;  }
+    inline auto get(util::pt_token<pt_long_double>) -> decltype(ldb)& { return ldb; }
+    inline auto get(util::pt_token<pt_u8string>)    -> decltype(s8)& { return s8;  }
+    inline auto get(util::pt_token<pt_u16string>)   -> decltype(s16)& { return s16; }
+    inline auto get(util::pt_token<pt_u32string>)   -> decltype(s32)& { return s32; }
 
     // get(...) const overload
     template<primitive_type PT>

@@ -385,8 +385,8 @@ struct tl_binary_forall {
 template<class List, template<typename> class Predicate>
 struct tl_exists {
     static constexpr bool value =
-               Predicate<class List::head>::value
-            || tl_exists<class List::tail, Predicate>::value;
+               Predicate<typename List::head>::value
+            || tl_exists<typename List::tail, Predicate>::value;
 };
 
 template<template<typename> class Predicate>
@@ -402,8 +402,8 @@ struct tl_exists<type_list<>, Predicate> {
  */
 template<class List, template<typename> class Predicate>
 struct tl_count {
-    static constexpr size_t value = (Predicate<class List::head>::value ? 1 : 0)
-            + tl_count<class List::tail, Predicate>::value;
+    static constexpr size_t value = (Predicate<typename List::head>::value ? 1 : 0)
+            + tl_count<typename List::tail, Predicate>::value;
 };
 
 template<template<typename> class Predicate>
@@ -418,8 +418,8 @@ struct tl_count<type_list<>, Predicate> {
  */
 template<class List, template<typename> class Predicate>
 struct tl_count_not {
-    static constexpr size_t value = (Predicate<class List::head>::value ? 0 : 1)
-            + tl_count_not<class List::tail, Predicate>::value;
+    static constexpr size_t value = (Predicate<typename List::head>::value ? 0 : 1)
+            + tl_count_not<typename List::tail, Predicate>::value;
 };
 
 template<template<typename> class Predicate>
@@ -837,7 +837,7 @@ struct tl_is_zipped {
 template<class List, typename What = void_type>
 struct tl_trim {
     typedef typename util::if_else<
-                std::is_same<class List::back, What>,
+                std::is_same<typename List::back, What>,
                 typename tl_trim<typename tl_pop_back<List>::type, What>::type,
                 util::wrapped<List>
             >::type

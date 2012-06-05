@@ -266,7 +266,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
     template<typename R, class C, typename... Args>
     typename std::enable_if<is_invalid<R>::value>::type
-    push_back(R C::*mem_ptr, Args&&... args) {
+    push_back(R C::*, Args&&...) {
         static_assert(util::is_primitive<R>::value,
                       "T is neither a primitive type nor a "
                       "stl-compliant list/map");

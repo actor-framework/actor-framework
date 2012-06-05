@@ -72,6 +72,7 @@ void stop_and_kill(std::atomic<T*>& ptr) {
     }
 }
 
+/*
 void delete_singletons() {
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
@@ -91,6 +92,7 @@ void delete_singletons() {
     if (et && !et->deref()) delete et;
     delete s_uniform_type_info_map.load();
 }
+*/
 
 template<typename T>
 T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {

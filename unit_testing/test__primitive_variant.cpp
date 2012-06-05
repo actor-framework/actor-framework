@@ -2,8 +2,6 @@
 
 #include "cppa/primitive_variant.hpp"
 
-using namespace cppa;
-
 namespace {
 
 struct streamer {
@@ -13,16 +11,25 @@ struct streamer {
     void operator()(const T& value) {
         o << value;
     }
+    void operator()(const std::u16string&) {
+    }
+    void operator()(const std::u32string&) {
+    }
 };
 
-inline std::ostream& operator<<(std::ostream& o,
-                                const cppa::primitive_variant& pv) {
+} // namespace <anonymous>
+
+
+namespace cppa {
+inline std::ostream& operator<<(std::ostream& o, const primitive_variant& pv) {
     streamer s{o};
     pv.apply(s);
     return o;
 }
+} // namespace cppa
 
-} // namespace <anonymous>
+
+using namespace cppa;
 
 size_t test__primitive_variant() {
     CPPA_TEST(test__primitive_variant);

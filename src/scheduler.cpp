@@ -64,7 +64,9 @@ struct exit_observer : cppa::attachable {
 
 namespace cppa {
 
-struct scheduler_helper {
+class scheduler_helper {
+
+ public:
 
     typedef intrusive_ptr<detail::converted_thread_context> ptr_type;
 

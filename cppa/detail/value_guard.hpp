@@ -31,6 +31,8 @@
 #ifndef VALUE_GUARD_HPP
 #define VALUE_GUARD_HPP
 
+#include <type_traits>
+
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/type_list.hpp"
@@ -69,12 +71,6 @@ class value_guard {
         return true;
     }
 
-    template<class Tail, typename Arg0, typename... Args>
-    static inline bool _eval(const util::void_type&, const Tail& tail,
-                             const Arg0&, const Args&... args         ) {
-        return _eval(tail.head, tail.tail(), args...);
-    }
-
     template<typename T0, typename T1>
     static inline bool cmp(const T0& lhs, const T1& rhs) {
         return lhs == rhs;
@@ -85,8 +81,8 @@ class value_guard {
         return lhs == rhs.get();
     }
 
-    template<typename Head, class Tail, typename Arg0, typename... Args>
-    static inline bool _eval(const Head& head, const Tail& tail,
+    template<typename Head, typename Tail0, typename... Tail, typename Arg0, typename... Args>
+    static inline bool _eval(const Head& head, const tdata<Tail0, Tail...>& tail,
                              const Arg0& arg0, const Args&... args) {
         return cmp(head, arg0) && _eval(tail.head, tail.tail(), args...);
     }

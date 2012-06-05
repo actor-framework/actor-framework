@@ -343,7 +343,7 @@ struct match_impl<wildcard_position::multiple, Tuple, Ts...> {
 };
 
 template<class Tuple, class List>
-class match_impl_from_type_list;
+struct match_impl_from_type_list;
 
 template<class Tuple, typename... Ts>
 struct match_impl_from_type_list<Tuple, util::type_list<Ts...> > {

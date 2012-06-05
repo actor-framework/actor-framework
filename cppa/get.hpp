@@ -40,7 +40,7 @@ namespace cppa {
 
 // forward declaration of details
 namespace detail {
-template<typename...> class tdata;
+template<typename...> struct tdata;
 template<typename...> struct pseudo_tuple;
 }
 

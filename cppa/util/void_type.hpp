@@ -33,23 +33,16 @@
 
 namespace cppa { namespace util {
 
-// forward declaration
-template<typename... Types> struct type_list;
-
 struct void_type {
-    typedef void_type head;
-    typedef type_list<> tail;
-
     constexpr void_type() { }
     constexpr void_type(const void_type&) { }
-    void_type& operator=(const void_type&) = default;
-
     // anything could be used to initialize a void...
-    template<typename Arg0, typename... Args>
-    void_type(Arg0&&, Args&&...) { }
+    template<typename Arg>
+    constexpr void_type(const Arg&) { }
 };
 
 inline bool operator==(const void_type&, const void_type&) { return true; }
+inline bool operator!=(const void_type&, const void_type&) { return false; }
 
 } } // namespace cppa::util
 
