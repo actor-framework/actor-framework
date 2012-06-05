@@ -83,6 +83,15 @@ class yielding_actor
     util::fiber m_fiber;
     std::function<void()> m_behavior;
 
+    inline recursive_queue_node* receive_node() {
+        recursive_queue_node* e = m_mailbox.try_pop();
+        while (e == nullptr) {
+            yield_until_not_empty();
+            e = m_mailbox.try_pop();
+        }
+        return e;
+    }
+
 };
 
 } } // namespace cppa::detail

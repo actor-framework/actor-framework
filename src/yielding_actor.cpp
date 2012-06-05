@@ -67,7 +67,7 @@ void yielding_actor::yield_until_not_empty() {
     if (m_mailbox.can_fetch_more() == false) {
         m_state.store(abstract_scheduled_actor::about_to_block);
         CPPA_MEMORY_BARRIER();
-        // make sure mailbox is 'empty'
+        // make sure mailbox is empty
         if (m_mailbox.can_fetch_more() == false) {
             m_state.store(abstract_scheduled_actor::ready);
             return;
@@ -80,23 +80,14 @@ void yielding_actor::yield_until_not_empty() {
 
 void yielding_actor::dequeue(partial_function& fun) {
     if (invoke_from_cache(fun) == false) {
-        recursive_queue_node* e = nullptr;
-        do {
-            e = m_mailbox.try_pop();
-            while (!e) {
-                yield_until_not_empty();
-                e = m_mailbox.try_pop();
-            }
-        }
-        while (invoke(e, fun) == false);
+        while (invoke(receive_node(), fun) == false) { }
     }
 }
 
 void yielding_actor::dequeue(behavior& bhvr) {
-    auto& fun = bhvr.get_partial_function();
     if (bhvr.timeout().valid() == false) {
         // suppress virtual function call
-        yielding_actor::dequeue(fun);
+        yielding_actor::dequeue(bhvr.get_partial_function());
     }
     else if (invoke_from_cache(bhvr) == false) {
         if (bhvr.timeout().is_zero()) {
@@ -108,15 +99,7 @@ void yielding_actor::dequeue(behavior& bhvr) {
         }
         else {
             request_timeout(bhvr.timeout());
-            recursive_queue_node* e = nullptr;
-            do {
-                e  = m_mailbox.try_pop();
-                while (!e) {
-                    CPPA_REQUIRE(e->marked == false);
-                    yield_until_not_empty();
-                    e = m_mailbox.try_pop();
-                }
-            } while (invoke(e, bhvr) == false);
+            while (invoke(receive_node(), bhvr) == false) { }
         }
     }
 }

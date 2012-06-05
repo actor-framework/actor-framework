@@ -39,9 +39,7 @@
 
 namespace cppa {
 
-abstract_event_based_actor::abstract_event_based_actor()
-    : super(super::blocked) {
-    //m_mailbox_pos = m_mailbox.cache().end();
+abstract_event_based_actor::abstract_event_based_actor() : super(super::blocked) {
 }
 
 void abstract_event_based_actor::dequeue(behavior&) {
