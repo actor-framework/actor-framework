@@ -55,7 +55,7 @@ abstract_tuple* object_array::copy() const {
     return new object_array(*this);
 }
 
-void const* object_array::at(size_t pos) const {
+const void* object_array::at(size_t pos) const {
     return m_elements[pos].value();
 }
 

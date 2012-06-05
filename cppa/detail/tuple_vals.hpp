@@ -66,7 +66,7 @@ class tuple_vals : public abstract_tuple {
         : super(tuple_impl_info::statically_typed), m_data(args...) {
     }
 
-    void const* native_data() const {
+    const void* native_data() const {
         return &m_data;
     }
 
@@ -90,7 +90,7 @@ class tuple_vals : public abstract_tuple {
         return new tuple_vals(*this);
     }
 
-    void const* at(size_t pos) const {
+    const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_data.at(pos);
     }

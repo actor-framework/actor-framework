@@ -109,7 +109,7 @@ class any_tuple {
     /**
      * @brief Gets a const pointer to the element at position @p p.
      */
-    void const* at(size_t p) const;
+    const void* at(size_t p) const;
 
     /**
      * @brief Gets {@link uniform_type_info uniform type information}

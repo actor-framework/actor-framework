@@ -95,7 +95,7 @@ class tuple_iterator {
 
     inline size_t position() const { return m_pos; }
 
-    inline void const* value() const {
+    inline const void* value() const {
         return m_tuple->at(m_pos);
     }
 

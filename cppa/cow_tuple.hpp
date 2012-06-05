@@ -139,7 +139,7 @@ class cow_tuple {
     /**
      * @brief Gets a const pointer to the element at position @p p.
      */
-    inline void const* at(size_t p) const {
+    inline const void* at(size_t p) const {
         return m_vals->at(p);
     }
 

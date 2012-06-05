@@ -63,7 +63,7 @@ class container_tuple_view : public abstract_tuple {
         return new container_tuple_view{new Container(*m_ptr), true};
     }
 
-    void const* at(size_t pos) const {
+    const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         auto i = m_ptr->begin();
         std::advance(i, pos);

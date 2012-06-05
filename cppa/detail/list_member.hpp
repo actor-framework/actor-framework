@@ -94,7 +94,7 @@ class list_member : public util::abstract_uniform_type_info<List> {
 
  public:
 
-    void serialize(void const* obj, serializer* s) const {
+    void serialize(const void* obj, serializer* s) const {
         auto& list = *reinterpret_cast<List const*>(obj);
         m_helper(list, s);
     }

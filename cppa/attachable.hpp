@@ -61,8 +61,8 @@ class attachable {
         /**
          * @brief Any value, used to identify @c attachable instances.
          */
-        void const* ptr;
-        inline token(const std::type_info& msubtype, void const* mptr)
+        const void* ptr;
+        inline token(const std::type_info& msubtype, const void* mptr)
             : subtype(msubtype), ptr(mptr) {
         }
     };

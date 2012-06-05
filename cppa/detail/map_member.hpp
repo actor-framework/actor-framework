@@ -124,7 +124,7 @@ class map_member : public util::abstract_uniform_type_info<Map> {
 
  public:
 
-    void serialize(void const* obj, serializer* s) const {
+    void serialize(const void* obj, serializer* s) const {
         auto& mp = *reinterpret_cast<Map const*>(obj);
         s->begin_sequence(mp.size());
         for (const auto& val : mp) {

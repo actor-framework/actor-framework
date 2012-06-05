@@ -51,7 +51,7 @@ namespace cppa { namespace detail {
     constexpr SOCKET invalid_socket = INVALID_SOCKET;
 #else
     typedef int native_socket_type;
-    typedef void const* socket_send_ptr;
+    typedef const void* socket_send_ptr;
     typedef void* socket_recv_ptr;
     constexpr int invalid_socket = -1;
     void closesocket(native_socket_type s);

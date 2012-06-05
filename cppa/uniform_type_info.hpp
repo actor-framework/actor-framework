@@ -216,7 +216,7 @@ class uniform_type_info {
      * @returns @p true if <tt>*instance1 == *instance2</tt>.
      * @pre @p instance1 and @p instance2 have the type of @p this.
      */
-    virtual bool equals(void const* instance1, void const* instance2) const = 0;
+    virtual bool equals(const void* instance1, const void* instance2) const = 0;
 
     /**
      * @brief Serializes @p instance to @p sink.
@@ -224,7 +224,7 @@ class uniform_type_info {
      * @param sink Target data sink.
      * @pre @p instance has the type of @p this.
      */
-    virtual void serialize(void const* instance, serializer* sink) const = 0;
+    virtual void serialize(const void* instance, serializer* sink) const = 0;
 
     /**
      * @brief Deserializes @p instance from @p source.
@@ -254,7 +254,7 @@ class uniform_type_info {
      *          with the default constructor.
      * @pre @p instance has the type of @p this or is set to @p nullptr.
      */
-    virtual void* new_instance(void const* instance = nullptr) const = 0;
+    virtual void* new_instance(const void* instance = nullptr) const = 0;
 
  private:
 

@@ -61,7 +61,7 @@ class object_array : public abstract_tuple {
 
     abstract_tuple* copy() const;
 
-    void const* at(size_t pos) const;
+    const void* at(size_t pos) const;
 
     bool equals(const cppa::detail::abstract_tuple&) const;
 

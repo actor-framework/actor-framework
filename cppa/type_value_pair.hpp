@@ -37,7 +37,7 @@
 
 namespace cppa {
 
-typedef std::pair<uniform_type_info const*, void const*> type_value_pair;
+typedef std::pair<uniform_type_info const*, const void*> type_value_pair;
 
 class type_value_pair_const_iterator {
 
@@ -63,7 +63,7 @@ class type_value_pair_const_iterator {
 
     inline uniform_type_info const* type() const { return iter->first; }
 
-    inline void const* value() const { return iter->second; }
+    inline const void* value() const { return iter->second; }
 
     inline decltype(iter) base() const { return iter; }
 

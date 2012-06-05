@@ -677,7 +677,7 @@ class match_expr {
         typedef typename util::if_else_c<
                     has_manipulator,
                     void*,
-                    util::wrapped<void const*>
+                    util::wrapped<const void*>
                 >::type
                 ptr_type;
 

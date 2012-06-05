@@ -131,7 +131,7 @@ class object {
      * @returns A const pointer to the currently stored value.
      * @see get(const object&)
      */
-    void const* value() const;
+    const void* value() const;
 
     /**
      * @brief Gets the stored value.

@@ -38,7 +38,7 @@ namespace cppa { namespace detail {
 template<typename... T>
 struct pseudo_tuple {
     typedef void* ptr_type;
-    typedef void const* const_ptr_type;
+    typedef const void* const_ptr_type;
 
     ptr_type data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 

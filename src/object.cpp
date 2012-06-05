@@ -102,7 +102,7 @@ uniform_type_info const* object::type() const {
     return m_type;
 }
 
-void const* object::value() const {
+const void* object::value() const {
     return m_value;
 }
 

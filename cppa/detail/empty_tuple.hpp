@@ -45,7 +45,7 @@ class empty_tuple : public abstract_tuple {
     size_t size() const;
     void* mutable_at(size_t);
     abstract_tuple* copy() const;
-    void const* at(size_t) const;
+    const void* at(size_t) const;
     bool equals(const abstract_tuple& other) const;
     uniform_type_info const* type_at(size_t) const;
     std::type_info const* type_token() const;

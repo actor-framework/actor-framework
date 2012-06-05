@@ -65,12 +65,12 @@ class abstract_tuple : public ref_counted {
     // accessors
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
-    virtual void const* at(size_t pos) const = 0;
+    virtual const void* at(size_t pos) const = 0;
     virtual uniform_type_info const* type_at(size_t pos) const = 0;
 
     // returns either tdata<...> object or nullptr (default) if tuple
     // is not a 'native' implementation
-    virtual void const* native_data() const;
+    virtual const void* native_data() const;
 
     // Identifies the type of the implementation.
     // A statically typed tuple implementation can use some optimizations,

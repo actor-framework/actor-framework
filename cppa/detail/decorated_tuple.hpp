@@ -86,7 +86,7 @@ class decorated_tuple : public abstract_tuple {
         return new decorated_tuple(*this);
     }
 
-    virtual void const* at(size_t pos) const {
+    virtual const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_decorated->at(m_mapping[pos]);
     }

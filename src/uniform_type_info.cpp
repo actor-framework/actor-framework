@@ -145,6 +145,14 @@ void deserialize_nullptr(deserializer* source) {
 
 class void_type_tinfo : public uniform_type_info {
 
+ public:
+
+    void_type_tinfo() : uniform_type_info(to_uniform_name(typeid(void_type))) {}
+
+    bool equals(const std::type_info &tinfo) const {
+        return typeid(void_type) == tinfo;
+    }
+
  protected:
 
     void serialize(const void*, serializer* sink) const {
@@ -164,19 +172,19 @@ class void_type_tinfo : public uniform_type_info {
     }
 
     void* new_instance(const void*) const {
-        return new void_type;
+        // const_cast cannot cause any harm, because void_type is immutable
+        return const_cast<void*>(static_cast<const void*>(&m_value));
     }
 
     void delete_instance(void* instance) const {
-        delete reinterpret_cast<void_type*>(instance);
+        CPPA_REQUIRE(instance == &m_value);
+        // keep compiler happy (suppress unused argument warning)
+        static_cast<void>(instance);
     }
 
+ private:
 
- public:
-
-    bool equals(const std::type_info &tinfo) const {
-        return typeid(void_type) == tinfo;
-    }
+    void_type m_value;
 
 };
 

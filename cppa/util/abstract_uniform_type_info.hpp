@@ -43,7 +43,7 @@ namespace cppa { namespace util {
 template<typename T>
 class abstract_uniform_type_info : public uniform_type_info {
 
-    inline static const T& deref(void const* ptr) {
+    inline static const T& deref(const void* ptr) {
         return *reinterpret_cast<T const*>(ptr);
     }
 
@@ -58,11 +58,11 @@ class abstract_uniform_type_info : public uniform_type_info {
         : uniform_type_info(uname) {
     }
 
-    bool equals(void const* lhs, void const* rhs) const {
+    bool equals(const void* lhs, const void* rhs) const {
         return deref(lhs) == deref(rhs);
     }
 
-    void* new_instance(void const* ptr) const {
+    void* new_instance(const void* ptr) const {
         return (ptr) ? new T(deref(ptr)) : new T();
     }
 

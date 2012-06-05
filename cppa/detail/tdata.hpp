@@ -60,13 +60,13 @@ template<typename T>
 inline void* ptr_to(T& what) { return &what; }
 
 template<typename T>
-inline void const* ptr_to(const T& what) { return &what; }
+inline const void* ptr_to(const T& what) { return &what; }
 
 template<typename T>
 inline void* ptr_to(T* what) { return what; }
 
 template<typename T>
-inline void const* ptr_to(T const* what) { return what; }
+inline const void* ptr_to(T const* what) { return what; }
 
 template<typename T>
 inline void* ptr_to(const std::reference_wrapper<T>& what) {
@@ -74,7 +74,7 @@ inline void* ptr_to(const std::reference_wrapper<T>& what) {
 }
 
 template<typename T>
-inline void const* ptr_to(const std::reference_wrapper<const T>& what) {
+inline const void* ptr_to(const std::reference_wrapper<const T>& what) {
     return &(what.get());
 }
 
@@ -160,7 +160,7 @@ struct tdata<> {
 
     const tdata<>& ctail() const { return *this; }
 
-    inline void const* at(size_t) const {
+    inline const void* at(size_t) const {
         throw std::out_of_range("tdata<>");
     }
 
@@ -307,7 +307,7 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
 
     inline const tdata<Tail...>& ctail() const { return *this; }
 
-    inline void const* at(size_t p) const {
+    inline const void* at(size_t p) const {
         CPPA_REQUIRE(p < num_elements);
         switch (p) {
             case  0: return ptr_to(head);
@@ -324,7 +324,7 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
     inline void* mutable_at(size_t p) {
 #       ifdef CPPA_DEBUG
         if (p == 0) {
-            if (std::is_same<decltype(ptr_to(head)), void const*>::value) {
+            if (std::is_same<decltype(ptr_to(head)), const void*>::value) {
                 throw std::logic_error{"mutable_at with const head"};
             }
             return const_cast<void*>(ptr_to(head));
