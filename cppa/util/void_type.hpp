@@ -41,9 +41,6 @@ struct void_type {
     constexpr void_type(const Arg&) { }
 };
 
-inline bool operator==(const void_type&, const void_type&) { return true; }
-inline bool operator!=(const void_type&, const void_type&) { return false; }
-
 } } // namespace cppa::util
 
 #endif // LIBCPPA_UTIL_VOID_TYPE_HPP

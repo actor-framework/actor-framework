@@ -143,11 +143,11 @@ void deserialize_nullptr(deserializer* source) {
     source->end_object();
 }
 
-class void_type_tinfo : public util::abstract_uniform_type_info<void_type> {
+class void_type_tinfo : public uniform_type_info {
 
  protected:
 
-    void serialize(void const*, serializer* sink) const {
+    void serialize(const void*, serializer* sink) const {
         serialize_nullptr(sink);
     }
 
@@ -157,6 +157,25 @@ class void_type_tinfo : public util::abstract_uniform_type_info<void_type> {
             throw std::logic_error("wrong type name found");
         }
         deserialize_nullptr(source);
+    }
+
+    bool equals(const void*, const void*) const {
+        return true;
+    }
+
+    void* new_instance(const void*) const {
+        return new void_type;
+    }
+
+    void delete_instance(void* instance) const {
+        delete reinterpret_cast<void_type*>(instance);
+    }
+
+
+ public:
+
+    bool equals(const std::type_info &tinfo) const {
+        return typeid(void_type) == tinfo;
     }
 
 };
@@ -232,7 +251,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
 
  protected:
 
-    void serialize(void const* ptr, serializer* sink) const {
+    void serialize(const void* ptr, serializer* sink) const {
         s_serialize(*reinterpret_cast<const actor_ptr*>(ptr),
                     sink,
                     name());
@@ -287,7 +306,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
 
  protected:
 
-    void serialize(void const* ptr, serializer* sink) const {
+    void serialize(const void* ptr, serializer* sink) const {
         s_serialize(*reinterpret_cast<const group_ptr*>(ptr),
                     sink,
                     name());
@@ -365,7 +384,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
 
  protected:
 
-    void serialize(void const* instance, serializer* sink) const {
+    void serialize(const void* instance, serializer* sink) const {
         s_serialize(*reinterpret_cast<const channel_ptr*>(instance),
                     sink,
                     name(),
@@ -425,7 +444,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
 
  protected:
 
-    void serialize(void const* instance, serializer* sink) const {
+    void serialize(const void* instance, serializer* sink) const {
         s_serialize(*reinterpret_cast<const any_tuple*>(instance),sink,name());
     }
 
@@ -444,7 +463,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
 
  public:
 
-    virtual void serialize(void const* instance, serializer* sink) const {
+    virtual void serialize(const void* instance, serializer* sink) const {
         const addressed_message& msg = *reinterpret_cast<const addressed_message*>(instance);
         const any_tuple& data = msg.content();
         sink->begin_object(name());
@@ -493,7 +512,7 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
 
  public:
 
-    virtual void serialize(void const* instance, serializer* sink) const {
+    virtual void serialize(const void* instance, serializer* sink) const {
         auto& ptr = *reinterpret_cast<ptr_type const*>(instance);
         if (ptr == nullptr) {
             serialize_nullptr(sink);
@@ -538,7 +557,7 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value> {
 
  public:
 
-    virtual void serialize(void const* instance, serializer* sink) const {
+    virtual void serialize(const void* instance, serializer* sink) const {
         auto val = reinterpret_cast<const atom_value*>(instance);
         sink->begin_object(name());
         sink->write_value(static_cast<std::uint64_t>(*val));
@@ -559,7 +578,7 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value> {
 
 class duration_tinfo : public util::abstract_uniform_type_info<util::duration> {
 
-    virtual void serialize(void const* instance, serializer* sink) const {
+    virtual void serialize(const void* instance, serializer* sink) const {
         auto val = reinterpret_cast<const util::duration*>(instance);
         sink->begin_object(name());
         sink->write_value(static_cast<std::uint32_t>(val->unit));
