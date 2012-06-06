@@ -21,7 +21,7 @@ int main() {
     // create a new actor that invokes the function echo_actor
     auto hello_actor = spawn(echo_actor);
     // send "Hello World!" to our new actor
-    // note: libcppa converts string literals to std::string objects
+    // note: libcppa converts string literals to std::string
     send(hello_actor, "Hello World!");
     // wait for a response and print it
     receive (
