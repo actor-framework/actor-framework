@@ -9,9 +9,9 @@ network transparent messaging, and more.
 On the Web
 ----------
 
-* _Blog_: http://libcppa.blogspot.com
-* _Manual_: http://neverlord.github.com/libcppa/manual/
-* _Documentation_: http://neverlord.github.com/libcppa/
+* *Blog*: http://libcppa.blogspot.com
+* *Manual*: http://neverlord.github.com/libcppa/manual/
+* *Documentation*: http://neverlord.github.com/libcppa/
 
 
 Get the Sources
