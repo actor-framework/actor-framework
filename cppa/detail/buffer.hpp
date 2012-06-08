@@ -54,7 +54,7 @@ class buffer {
         if (recv_result == 0) {
             // connection closed
             if (throw_on_error) {
-                std::ios_base::failure("cannot read from a closed pipe/socket");
+                throw std::ios_base::failure("cannot read from a closed pipe/socket");
             }
             return false;
         }
