@@ -31,6 +31,7 @@
 #ifndef MATCHES_HPP
 #define MATCHES_HPP
 
+#include <numeric>
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 
