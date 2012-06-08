@@ -31,7 +31,9 @@
 #ifndef THREAD_HPP
 #define THREAD_HPP
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && (__GNUC__ == 4) && (__GNUC_MINOR__ < 7) && !defined(__clang__)
+
+#define CPPA_USE_BOOST_THREADS
 
 #include <boost/thread.hpp>
 #include "cppa/util/duration.hpp"
@@ -79,6 +81,8 @@ inline boost::system_time& operator+=(boost::system_time& lhs,
 }
 
 #else
+
+#define CPPA_USE_STD_THREADS
 
 #include <mutex>
 #include <thread>
