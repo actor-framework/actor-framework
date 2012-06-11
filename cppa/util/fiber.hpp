@@ -31,13 +31,8 @@
 #ifndef FIBER_HPP
 #define FIBER_HPP
 
+#include <memory>
 #include "cppa/config.hpp"
-
-#if defined(CPPA_MACOS) || defined(CPPA_LINUX)
-#   define CPPA_USE_UCONTEXT_IMPL
-#elif defined (CPPA_WINDOWS)
-#   define CPPA_USE_FIBER_IMPL
-#endif
 
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
@@ -48,7 +43,7 @@ class fiber {
 };
 } } // namespace cppa::util
 
-#elif defined(CPPA_USE_UCONTEXT_IMPL)
+#else // CPPA_DISABLE_CONTEXT_SWITCHING
 
 namespace cppa { namespace util {
 
@@ -56,9 +51,7 @@ struct fiber_impl;
 
 class fiber {
 
-    fiber_impl* m_impl;
-
-public:
+ public:
 
     fiber() throw();
 
@@ -68,42 +61,14 @@ public:
 
     static void swap(fiber& from, fiber& to);
 
-};
+ private:
 
-} } // namespace cppa::util
-
-#elif defined(CPPA_USE_FIBER_IMPL)
-
-#include <Winsock2.h>
-#include <Windows.h>
-
-namespace cppa { namespace util {
-
-class fiber {
-
-    LPVOID handle;
-
-    // true if this fiber was created with ConvertThreadToFiber
-    bool is_converted_thread;
-
-    void init();
-
-public:
-
-    fiber();
-    fiber(LPFIBER_START_ROUTINE func, LPVOID arg1);
-
-    ~fiber();
-
-    inline static void swap(fiber&, fiber& to) {
-        SwitchToFiber(to.handle);
-    }
+    fiber_impl* m_impl;
 
 };
 
 } } // namespace cppa::util
-#endif // CPPA_USE_UCONTEXT_IMPL
 
-
+#endif // CPPA_DISABLE_CONTEXT_SWITCHING
 
 #endif // FIBER_HPP
