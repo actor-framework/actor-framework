@@ -73,6 +73,18 @@ void pong(actor_ptr ping_actor) {
         others() >> []() {
             cout << __FILE__ << " line " << __LINE__ << ": "
                  << to_string(self->last_dequeued()) << endl;
+            cout << "trap_exit? => " << std::boolalpha << self->trap_exit() << endl;
+            auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
+            auto msg = self->last_dequeued();
+            if (msg.size() == 2) {
+                cout << "msg.type_at(0) == arr[0] => " << (msg.type_at(0) == arr[0]) << endl;
+                cout << "msg.type_at(1) == arr[1] => " << (msg.type_at(1) == arr[1]) << endl;
+                cout << "msg.type_at(1)->name() => " << (msg.type_at(1)->name()) << endl;
+                cout << "arr[1]->name() => " << (arr[1]->name()) << endl;
+                cout << std::hex << "arr[1] => " << arr[1] << endl;
+                cout << "msg.type_at(1) => " << msg.type_at(1) << endl;
+            }
+            self->quit(exit_reason::normal);
         }
     );
 }

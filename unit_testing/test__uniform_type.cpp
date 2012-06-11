@@ -15,10 +15,12 @@
 
 #include "test.hpp"
 
+#include "cppa/atom.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
+#include "cppa/detail/types_array.hpp"
 
 #include "cppa/util/callable_trait.hpp"
 
@@ -106,5 +108,32 @@ size_t test__uniform_type() {
             cout << "    - " << tname << endl;
         }
     }
+
+    auto& arr0 = detail::static_types_array<atom_value, std::uint32_t>::arr;
+    CPPA_CHECK(arr0[0] == uniform_typeid<atom_value>());
+    CPPA_CHECK(arr0[0] == uniform_type_info::from("@atom"));
+    CPPA_CHECK(arr0[1] == uniform_typeid<std::uint32_t>());
+    CPPA_CHECK(arr0[1] == uniform_type_info::from("@u32"));
+    CPPA_CHECK(uniform_type_info::from("@u32") == uniform_typeid<std::uint32_t>());
+
+    auto& arr1 = detail::static_types_array<std::string, std::int8_t>::arr;
+    CPPA_CHECK(arr1[0] == uniform_typeid<std::string>());
+    CPPA_CHECK(arr1[0] == uniform_type_info::from("@str"));
+    CPPA_CHECK(arr1[1] == uniform_typeid<std::int8_t>());
+    CPPA_CHECK(arr1[1] == uniform_type_info::from("@i8"));
+
+    auto& arr2 = detail::static_types_array<std::uint8_t, std::int8_t>::arr;
+    CPPA_CHECK(arr2[0] == uniform_typeid<std::uint8_t>());
+    CPPA_CHECK(arr2[0] == uniform_type_info::from("@u8"));
+    CPPA_CHECK(arr2[1] == uniform_typeid<std::int8_t>());
+    CPPA_CHECK(arr2[1] == uniform_type_info::from("@i8"));
+
+    auto& arr3 = detail::static_types_array<atom_value, std::uint16_t>::arr;
+    CPPA_CHECK(arr3[0] == uniform_typeid<atom_value>());
+    CPPA_CHECK(arr3[0] == uniform_type_info::from("@atom"));
+    CPPA_CHECK(arr3[1] == uniform_typeid<std::uint16_t>());
+    CPPA_CHECK(arr3[1] == uniform_type_info::from("@u16"));
+    CPPA_CHECK(uniform_type_info::from("@u16") == uniform_typeid<std::uint16_t>());
+
     return CPPA_TEST_RESULT;
 }

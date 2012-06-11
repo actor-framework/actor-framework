@@ -8,6 +8,9 @@
 #include "cppa/util/fiber.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
+#include <boost/context/all.hpp>
+
+
 namespace cppa { namespace detail {
 
 std::ostream& operator<<(std::ostream& o, yield_state ys) {

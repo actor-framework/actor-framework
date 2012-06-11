@@ -74,11 +74,11 @@ size_t test__pattern() {
 
     static constexpr char const* arr1_as_string =
             "{ arr[0] = @i32, arr[1] = anything, arr[2] = float }";
-    CPPA_CHECK_EQUAL(plot(arr1), arr1_as_string);
+    CPPA_CHECK_EQUAL(arr1_as_string, plot(arr1));
     static constexpr char const* arr2_as_string =
             "{ arr[0] = @i32, arr[1] = anything, "
             "arr[2] = std::pair<@i32,@i32> }";
-    CPPA_CHECK_EQUAL(plot(arr2), arr2_as_string);
+    CPPA_CHECK_EQUAL(arr2_as_string, plot(arr2));
 
     // some pattern objects to play with
     pattern<atom_value, int, string> p0{util::wrapped<atom_value>{}};

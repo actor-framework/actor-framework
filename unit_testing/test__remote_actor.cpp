@@ -1,3 +1,4 @@
+#include <thread>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -6,7 +7,6 @@
 #include "ping_pong.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/exception.hpp"
-#include "cppa/detail/thread.hpp"
 
 using std::cout;
 using std::cerr;
@@ -57,7 +57,7 @@ size_t test__remote_actor(char const* app_path, bool is_client,
     oss << app_path << " run=remote_actor port=" << port;// << " &>/dev/null";
     // execute client_part() in a separate process,
     // connected via localhost socket
-    detail::thread child([&oss]() {
+    std::thread child([&oss]() {
         std::string cmdstr = oss.str();
         if (system(cmdstr.c_str()) != 0) {
             cerr << "FATAL: command \"" << cmdstr << "\" failed!" << endl;
