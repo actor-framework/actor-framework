@@ -1,6 +1,5 @@
-/Users/neverlord/libcppa
-/home/neverlord/libcppa
+.
+./unit_testing
+./third_party/boost_context/include/
 /opt/local/include/gcc46/c++
 /opt/local/include/
-/Users/neverlord/libcppa/unit_testing
-/home/neverlord/libcppa/unit_testing
