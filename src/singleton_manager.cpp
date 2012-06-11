@@ -98,10 +98,14 @@ template<typename T>
 T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
     T* result = ptr.load();
     if (result == nullptr) {
-        auto tmp = new T();
-        if (ptr.compare_exchange_weak(result, tmp) == false) {
+        auto tmp = new T;
+        if (ptr.compare_exchange_strong(result, tmp) == false) {
             delete tmp;
         }
+        else {
+            result = tmp;
+        }
+        /*
         else {
             // ok, successfully created singleton, register exit fun?
             if (register_atexit_fun) {
@@ -111,6 +115,8 @@ T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
             }
             return tmp;
         }
+        */
+        static_cast<void>(register_atexit_fun); // keep compiler happy
     }
     return result;
 }

@@ -41,7 +41,7 @@ namespace {
 
 using namespace cppa;
 
-typedef detail::lock_guard<util::shared_spinlock> exclusive_guard;
+typedef std::lock_guard<util::shared_spinlock> exclusive_guard;
 typedef util::shared_lock_guard<util::shared_spinlock> shared_guard;
 typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 
@@ -141,7 +141,7 @@ intrusive_ptr<group> group_manager::anonymous() {
 intrusive_ptr<group> group_manager::get(const std::string& module_name,
                                         const std::string& group_identifier) {
     { // lifetime scope of guard
-        detail::lock_guard<detail::mutex> guard(m_mmap_mtx);
+        std::lock_guard<std::mutex> guard(m_mmap_mtx);
         auto i = m_mmap.find(module_name);
         if (i != m_mmap.end()) {
             return (i->second)->get(group_identifier);
@@ -157,7 +157,7 @@ void group_manager::add_module(group::module* mod) {
     const std::string& mname = mod->name();
     std::unique_ptr<group::module> mptr(mod);
     { // lifetime scope of guard
-        detail::lock_guard<detail::mutex> guard(m_mmap_mtx);
+        std::lock_guard<std::mutex> guard(m_mmap_mtx);
         if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second) {
             return; // success; don't throw
         }

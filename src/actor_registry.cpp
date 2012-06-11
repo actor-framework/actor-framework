@@ -39,7 +39,7 @@
 
 namespace {
 
-typedef cppa::detail::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
+typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
 typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
 typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guard;
 
@@ -116,13 +116,13 @@ void actor_registry::dec_running() {
         throw std::underflow_error("actor_count::dec()");
     }
     else*/ if (new_val <= 1) {
-        unique_lock<mutex> guard(m_running_mtx);
+        std::unique_lock<std::mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
     }
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
-    unique_lock<mutex> guard(m_running_mtx);
+    std::unique_lock<std::mutex> guard(m_running_mtx);
     while (m_running.load() != expected) {
         m_running_cv.wait(guard);
     }

@@ -30,6 +30,7 @@
 
 #include "cppa/config.hpp"
 
+#include <thread>
 #include <atomic>
 #include <iostream>
 
@@ -41,7 +42,6 @@
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -74,15 +74,15 @@ void run_hidden_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
 
 namespace cppa { namespace detail {
 
-thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx) {
-    return thread{run_hidden_actor, ctx, std::move(what)};
+std::thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx) {
+    return std::thread{run_hidden_actor, ctx, std::move(what)};
 }
 
 actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
     inc_actor_count();
     CPPA_MEMORY_BARRIER();
     intrusive_ptr<local_actor> ctx{new detail::converted_thread_context};
-    thread{run_actor, ctx, std::move(what)}.detach();
+    std::thread{run_actor, ctx, std::move(what)}.detach();
     return std::move(ctx);
 }
 

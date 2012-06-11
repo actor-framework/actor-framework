@@ -55,9 +55,7 @@ struct types_array_impl {
     static constexpr bool builtin_only = true;
     // all types are builtin, perform lookup on constuction
     uniform_type_info const* data[sizeof...(T)];
-    types_array_impl()
-        : data{ta_util<cppa_tinf,util::is_builtin<T>::value,T>::get()...} {
-    }
+    types_array_impl() : data{ta_util<cppa_tinf, true, T>::get()...} { }
     inline uniform_type_info const* operator[](size_t p) const {
         return data[p];
     }

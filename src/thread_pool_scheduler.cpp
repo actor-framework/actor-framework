@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <mutex>
+#include <thread>
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
@@ -47,7 +49,7 @@ namespace cppa { namespace detail {
 
 namespace {
 
-typedef unique_lock<mutex> guard_type;
+typedef std::unique_lock<std::mutex> guard_type;
 typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
 } // namespace <anonmyous>
@@ -58,13 +60,13 @@ struct thread_pool_scheduler::worker {
 
     job_queue* m_job_queue;
     job_ptr m_dummy;
-    thread m_thread;
+    std::thread m_thread;
 
     worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) {
     }
 
     void start() {
-        m_thread = thread(&thread_pool_scheduler::worker_loop, this);
+        m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
     }
 
     worker(const worker&) = delete;
@@ -78,7 +80,7 @@ struct thread_pool_scheduler::worker {
             if (result) {
                 return result;
             }
-            detail::this_thread::yield();
+            std::this_thread::yield();
         }
         return result;
     }
@@ -90,13 +92,7 @@ struct thread_pool_scheduler::worker {
             if (result) {
                 return result;
             }
-#           ifdef CPPA_USE_BOOST_THREADS
-            auto timeout = boost::get_system_time();
-            timeout += boost::posix_time::milliseconds(1);
-            boost::this_thread::sleep(timeout);
-#           else
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#           endif
         }
         return result;
     }
@@ -181,7 +177,7 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             scheduled_actor* dummy) {
     typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
     std::vector<worker_ptr> workers;
-    size_t num_workers = std::max<size_t>(thread::hardware_concurrency() * 2, 8);
+    size_t num_workers = std::max<size_t>(std::thread::hardware_concurrency() * 2, 8);
     for (size_t i = 0; i < num_workers; ++i) {
         workers.emplace_back(new worker(jqueue, dummy));
         workers.back()->start();
@@ -193,8 +189,8 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
 }
 
 void thread_pool_scheduler::start() {
-    m_supervisor = thread(&thread_pool_scheduler::supervisor_loop,
-                          &m_queue, &m_dummy);
+    m_supervisor = std::thread(&thread_pool_scheduler::supervisor_loop,
+                               &m_queue, &m_dummy);
     super::start();
 }
 

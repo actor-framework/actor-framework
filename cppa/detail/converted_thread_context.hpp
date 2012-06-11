@@ -66,8 +66,6 @@ class converted_thread_context
 
  public:
 
-    converted_thread_context();
-
     // called if the converted thread finished execution
     void cleanup(std::uint32_t reason = exit_reason::normal);
 
@@ -86,10 +84,6 @@ class converted_thread_context
     filter_result filter_msg(const any_tuple& msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
-
- private:
-
-    pattern<atom_value, std::uint32_t> m_exit_msg_pattern;
 
 };
 

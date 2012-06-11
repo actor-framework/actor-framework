@@ -32,11 +32,13 @@
 #define SINGLE_READER_QUEUE_HPP
 
 #include <list>
+#include <mutex>
 #include <atomic>
 #include <memory>
+#include <thread>
+#include <condition_variable>
 
 #include "cppa/config.hpp"
-#include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -48,7 +50,7 @@ namespace cppa { namespace intrusive {
 template<typename T>
 class single_reader_queue {
 
-    typedef detail::unique_lock<detail::mutex> lock_type;
+    typedef std::unique_lock<std::mutex> lock_type;
 
  public:
 
@@ -142,15 +144,15 @@ class single_reader_queue {
     pointer m_head;
 
     // locked on enqueue/dequeue operations to/from an empty list
-    detail::mutex m_mtx;
-    detail::condition_variable m_cv;
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
 
     template<typename TimePoint>
     bool timed_wait_for_data(const TimePoint& timeout) {
         if (empty()) {
             lock_type guard(m_mtx);
             while (m_stack.load() == nullptr) {
-                if (detail::wait_until(guard, m_cv, timeout) == false) {
+                if (m_cv.wait_until(guard, timeout) == std::cv_status::timeout) {
                     return false;
                 }
             }

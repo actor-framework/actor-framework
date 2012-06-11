@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include <chrono>
 #include <memory>
 #include <iostream>
 #include <algorithm>
@@ -40,10 +41,6 @@
 #include "cppa/detail/converted_thread_context.hpp"
 
 namespace cppa { namespace detail {
-
-converted_thread_context::converted_thread_context()
-    : m_exit_msg_pattern(atom("EXIT")) {
-}
 
 void converted_thread_context::quit(std::uint32_t reason) {
     super::cleanup(reason);
@@ -89,7 +86,7 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
             bhvr.handle_timeout();
         }
         else {
-            auto timeout = now();
+            auto timeout = std::chrono::high_resolution_clock::now();
             timeout += bhvr.timeout();
             recursive_queue_node* e = m_mailbox.try_pop(timeout);
             while (e != nullptr) {
@@ -103,12 +100,21 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
 }
 
 filter_result converted_thread_context::filter_msg(const any_tuple& msg) {
-    if (m_trap_exit == false && matches(msg, m_exit_msg_pattern)) {
-        auto reason = msg.get_as<std::uint32_t>(1);
-        if (reason != exit_reason::normal) {
-            quit(reason);
+    auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
+    if (   msg.size() == 2
+        && msg.type_at(0) == arr[0]
+        && msg.type_at(1) == arr[1]) {
+        auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
+        auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+        if (v0 == atom("EXIT")) {
+            if (this->m_trap_exit == false) {
+                if (v1 != exit_reason::normal) {
+                    quit(v1);
+                }
+                return normal_exit_signal;
+            }
         }
-        return normal_exit_signal;
+
     }
     return ordinary_message;
 }

@@ -31,8 +31,9 @@
 #ifndef THREAD_POOL_SCHEDULER_HPP
 #define THREAD_POOL_SCHEDULER_HPP
 
+#include <thread>
+
 #include "cppa/scheduler.hpp"
-#include "cppa/detail/thread.hpp"
 #include "cppa/util/producer_consumer_list.hpp"
 #include "cppa/detail/scheduled_actor_dummy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
@@ -64,7 +65,7 @@ class thread_pool_scheduler : public scheduler {
 
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;
-    thread m_supervisor;
+    std::thread m_supervisor;
 
     actor_ptr spawn_impl(scheduled_actor* what,
                          bool push_to_queue = true);

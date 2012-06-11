@@ -657,6 +657,7 @@ class uniform_type_info_map_helper {
         for (const std::string& tname : tnames) {
             d->m_by_rname.insert(std::make_pair(tname, uti));
         }
+        CPPA_REQUIRE(d->m_by_uname.find(uti->name()) == d->m_by_uname.end());
         d->m_by_uname.insert(std::make_pair(uti->name(), uti));
     }
 

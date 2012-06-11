@@ -31,14 +31,15 @@
 #include <new>          // placement new
 #include <ios>          // ios_base::failure
 #include <list>         // std::list
+#include <thread>
 #include <vector>       // std::vector
+#include <sstream>
 #include <cstring>      // strerror
 #include <cstdint>      // std::uint32_t, std::uint64_t
 #include <iostream>     // std::cout, std::cerr, std::endl
 #include <exception>    // std::logic_error
 #include <algorithm>    // std::find_if
 #include <stdexcept>    // std::underflow_error
-#include <sstream>
 
 #include <cstdio>
 #include <fcntl.h>
@@ -55,7 +56,6 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/buffer.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/types_array.hpp"

@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include <thread>
 #include <cstring>
 
 #include "cppa/atom.hpp"
@@ -36,7 +37,6 @@
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -81,7 +81,7 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
     }
     actor_proxy_ptr result{new actor_proxy(std::get<2>(key), new process_information(std::get<1>(key), std::get<0>(key)))};
     { // lifetime scope of exclusive guard
-        lock_guard<util::shared_spinlock> guard{m_lock};
+        std::lock_guard<util::shared_spinlock> guard{m_lock};
         auto i = m_entries.find(key);
         if (i != m_entries.end()) {
             return i->second;
@@ -98,7 +98,7 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
 bool actor_proxy_cache::erase(const actor_proxy_ptr& pptr) {
     auto pinfo = pptr->parent_process_ptr();
     key_tuple key(pinfo->node_id(), pinfo->process_id(), pptr->id()); {
-        lock_guard<util::shared_spinlock> guard{m_lock};
+        std::lock_guard<util::shared_spinlock> guard{m_lock};
         return m_entries.erase(key) > 0;
     }
     return false;

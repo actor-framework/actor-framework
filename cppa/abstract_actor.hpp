@@ -34,9 +34,11 @@
 #include "cppa/config.hpp"
 
 #include <list>
+#include <mutex>
 #include <atomic>
 #include <vector>
 #include <memory>
+#include <thread>
 #include <algorithm>
 
 #include "cppa/atom.hpp"
@@ -46,7 +48,6 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -61,7 +62,7 @@ template<class Base>
 class abstract_actor : public Base {
 
     typedef std::unique_ptr<attachable> attachable_ptr;
-    typedef detail::lock_guard<detail::mutex> guard_type;
+    typedef std::lock_guard<std::mutex> guard_type;
 
  public:
 
@@ -151,7 +152,7 @@ class abstract_actor : public Base {
     util::fixed_vector<mailbox_element*, 10> m_nodes;
     util::shared_spinlock m_nodes_lock;
 
-    typedef detail::lock_guard<util::shared_spinlock> lock_type;
+    typedef std::lock_guard<util::shared_spinlock> lock_type;
 
     inline mailbox_element* fetch_node(actor* sender, any_tuple msg) {
         mailbox_element* result = nullptr;
@@ -260,7 +261,7 @@ class abstract_actor : public Base {
     // true if the associated thread has finished execution
     std::atomic<std::uint32_t> m_exit_reason;
     // guards access to m_exited, m_subscriptions and m_links
-    detail::mutex m_mtx;
+    std::mutex m_mtx;
     // links to other actors
     std::vector<actor_ptr> m_links;
     // code that is executed on cleanup

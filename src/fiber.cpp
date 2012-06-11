@@ -35,6 +35,7 @@
 #include "cppa/config.hpp"
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 
+#include <thread>
 #include <atomic>
 #include <cstddef>
 #include <cstring>
@@ -42,7 +43,6 @@
 #include <type_traits>
 
 #include "cppa/util/fiber.hpp"
-#include "cppa/detail/thread.hpp"
 
 #ifdef CPPA_USE_UCONTEXT_IMPL
 

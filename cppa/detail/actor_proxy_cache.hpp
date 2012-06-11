@@ -31,6 +31,8 @@
 #ifndef ACTOR_PROXY_CACHE_HPP
 #define ACTOR_PROXY_CACHE_HPP
 
+#include <mutex>
+#include <thread>
 #include <string>
 #include <limits>
 #include <vector>
@@ -40,8 +42,6 @@
 #include "cppa/process_information.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
-
-#include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace detail {
 
@@ -62,7 +62,7 @@ class actor_proxy_cache {
         key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
         key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()};
         { // lifetime scope of guard
-            lock_guard<util::shared_spinlock> guard(m_lock);
+            std::lock_guard<util::shared_spinlock> guard(m_lock);
             auto e = m_entries.end();
             auto first = m_entries.lower_bound(lb);
             if (first != e) {

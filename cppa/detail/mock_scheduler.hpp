@@ -31,11 +31,11 @@
 #ifndef MOCK_SCHEDULER_HPP
 #define MOCK_SCHEDULER_HPP
 
+#include <thread>
 #include <utility>
 
 #include "cppa/scheduler.hpp"
 #include "cppa/detail/tdata.hpp"
-#include "cppa/detail/thread.hpp"
 
 namespace cppa { namespace detail {
 
@@ -49,7 +49,7 @@ class mock_scheduler : public scheduler {
 
     static actor_ptr spawn_impl(std::function<void()> what);
 
-    static thread spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx);
+    static std::thread spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx);
 
     void enqueue(scheduled_actor* what);
 

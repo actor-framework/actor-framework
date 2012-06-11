@@ -28,7 +28,9 @@
 \******************************************************************************/
 
 
+#include <thread>
 #include <atomic>
+#include <chrono>
 #include <iostream>
 
 #include "cppa/on.hpp"
@@ -38,7 +40,6 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -60,6 +61,10 @@ struct exit_observer : cppa::attachable {
     }
 };
 
+inline decltype(std::chrono::high_resolution_clock::now()) now() {
+    return std::chrono::high_resolution_clock::now();
+}
+
 } // namespace <anonymous>
 
 namespace cppa {
@@ -74,7 +79,7 @@ class scheduler_helper {
     }
 
     void start() {
-        m_thread = detail::thread(&scheduler_helper::time_emitter, m_worker);
+        m_thread = std::thread(&scheduler_helper::time_emitter, m_worker);
     }
 
     void stop() {
@@ -83,7 +88,7 @@ class scheduler_helper {
     }
 
     ptr_type m_worker;
-    detail::thread m_thread;
+    std::thread m_thread;
 
  private:
 
@@ -97,17 +102,17 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();
-    std::multimap<decltype(detail::now()), queue_node_ptr> messages;
+    std::multimap<decltype(now()), queue_node_ptr> messages;
     queue_node_ptr msg_ptr;
     //decltype(queue.pop()) msg_ptr = nullptr;
-    decltype(detail::now()) now;
+    decltype(now()) tout;
     bool done = false;
     // message handling rules
     auto mfun = (
         on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
                                                        const actor_ptr&) {
             // calculate timeout
-            auto timeout = detail::now();
+            auto timeout = now();
             timeout += d;
             messages.insert(std::make_pair(std::move(timeout),
                                            std::move(msg_ptr)));
@@ -131,10 +136,10 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
                 msg_ptr.reset(queue.pop());
             }
             else {
-                now = detail::now();
+                tout = now();
                 // handle timeouts (send messages)
                 auto it = messages.begin();
-                while (it != messages.end() && (it->first) <= now) {
+                while (it != messages.end() && (it->first) <= tout) {
                     queue_node_ptr ptr{std::move(it->second)};
                     CPPA_REQUIRE(ptr->marked == false);
                     auto whom = const_cast<actor_ptr*>(

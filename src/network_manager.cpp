@@ -29,6 +29,7 @@
 
 
 #include <cstdio>
+#include <thread>
 #include <fcntl.h>
 #include <cstdint>
 #include <cstring>      // strerror
@@ -37,7 +38,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
@@ -52,10 +52,10 @@ using namespace cppa::detail;
 struct network_manager_impl : network_manager {
 
     local_actor_ptr m_mailman;
-    thread m_mailman_thread;
+    std::thread m_mailman_thread;
 
     local_actor_ptr m_post_office;
-    thread m_post_office_thread;
+    std::thread m_post_office_thread;
 
     int pipe_fd[2];
 
