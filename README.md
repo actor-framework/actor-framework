@@ -24,14 +24,14 @@ Get the Sources
 First Steps
 -----------
 
-* autoreconf -i
-* ./configure
+* mkdir build
+* cd build
+* cmake ..
 * make
-* make install [as root, optional]
 
 It is recommended to run the unit tests as well.
 
-* ./unit_testing/unit_tests
+* ./bin/unit_tests
 
 Please submit a bug report that includes (a) your compiler version, (b) your OS,
 and (c) the output of the unit tests if an error occurs.
@@ -40,8 +40,7 @@ and (c) the output of the unit tests if an error occurs.
 Dependencies
 ------------
 
-* Automake
-* Libtool
+* CMake
 * The Boost Library
 
 
