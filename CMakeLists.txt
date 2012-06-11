@@ -3,7 +3,7 @@ project(cppa)
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -Werror -pedantic") 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
 
 set(LIBCPPA_SRC
     src/abstract_event_based_actor.cpp
@@ -63,10 +63,44 @@ set(LIBCPPA_SRC
     src/yielding_actor.cpp
 )
 
+set(boost_context third_party/boost_context/)
+
+# add third_party boost_context sources
+if(APPLE)
+  set_property(SOURCE
+               ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
+               PROPERTY LANGUAGE C)
+  set(LIBCPPA_SRC
+      ${LIBCPPA_SRC}
+      ${boost_context}/src/stack_utils_posix.cpp
+      ${boost_context}/src/stack_allocator_posix.cpp
+      ${boost_context}/src/fcontext.cpp
+      ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
+  )
+elseif(UNIX)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set_property(SOURCE
+                 ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S
+                 PROPERTY LANGUAGE C)
+    set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
+  else()
+    set_property(SOURCE
+                 ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S
+                 PROPERTY LANGUAGE C)
+    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
+  endif()
+  set(LIBCPPA_SRC
+      ${LIBCPPA_SRC}
+      ${boost_context}/src/stack_utils_posix.cpp
+      ${boost_context}/src/stack_allocator_posix.cpp
+      ${boost_context}/src/fcontext.cpp
+  )
+endif()
+
 find_package(Boost COMPONENTS thread REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${Boost_INCLUDE_DIRS})
+include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include)
 
 add_library(libcppa SHARED ${LIBCPPA_SRC})
 
