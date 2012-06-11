@@ -12,7 +12,7 @@ On the Web
 * __Blog__: http://libcppa.blogspot.com
 * __Manual__: http://neverlord.github.com/libcppa/manual/
 * __Documentation__: http://neverlord.github.com/libcppa/
-
+* __Project Homepage__: http://www.realmv6.org/libcppa.html
 
 Get the Sources
 ---------------
