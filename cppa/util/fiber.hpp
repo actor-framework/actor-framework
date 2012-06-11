@@ -42,10 +42,11 @@
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
 namespace cppa { namespace util {
-struct fiber {
+class fiber {
+ public:
     inline static void swap(fiber&, fiber&) { }
 };
-} }
+} } // namespace cppa::util
 
 #elif defined(CPPA_USE_UCONTEXT_IMPL)
 

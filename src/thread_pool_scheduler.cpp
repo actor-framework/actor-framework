@@ -90,7 +90,7 @@ struct thread_pool_scheduler::worker {
             if (result) {
                 return result;
             }
-#           ifdef __APPLE__
+#           ifdef CPPA_USE_BOOST_THREADS
             auto timeout = boost::get_system_time();
             timeout += boost::posix_time::milliseconds(1);
             boost::this_thread::sleep(timeout);
@@ -108,7 +108,7 @@ struct thread_pool_scheduler::worker {
             if (result) {
                 return result;
             }
-#           ifdef __APPLE__
+#           ifdef CPPA_USE_BOOST_THREADS
             auto timeout = boost::get_system_time();
             timeout += boost::posix_time::milliseconds(10);
             boost::this_thread::sleep(timeout);

@@ -31,6 +31,7 @@
 #ifndef TYPE_TO_PTYPE_HPP
 #define TYPE_TO_PTYPE_HPP
 
+#include <string>
 #include <cstdint>
 #include <type_traits>
 
