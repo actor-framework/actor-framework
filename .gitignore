@@ -8,7 +8,6 @@
 *.lo
 *.o
 *.png
-*.s
 *.tmp
 .DS_Store
 .deps/
