@@ -149,6 +149,7 @@ set (EXECUTABLE_OUTPUT_PATH ${CPPA_BINARY_OUTPUT_PATH}
 
 add_subdirectory(unit_testing)
 add_subdirectory(examples)
+add_subdirectory(benchmarks)
 #add_subdirectory(benchmarks)
 #add_dependencies(unit_tests libcppa)
 #add_dependencies(benchmarks libcppa)
@@ -162,4 +163,8 @@ add_dependencies(dining_philosophers libcppa)
 add_dependencies(hello_world_example libcppa)
 add_dependencies(math_actor_example libcppa)
 add_dependencies(unit_tests libcppa)
-
+add_dependencies(actor_creation libcppa)
+add_dependencies(mailbox_performance libcppa)
+add_dependencies(mixed_case libcppa)
+add_dependencies(distributed libcppa)
+add_dependencies(matching libcppa)
