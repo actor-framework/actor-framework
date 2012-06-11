@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         for (int64_t i = 0; i < num_sender; ++i) {
-            detail::thread(sender, testee, num_msgs).detach();
+            std::thread(sender, testee, num_msgs).detach();
         }
         await_all_others_done();
     }
