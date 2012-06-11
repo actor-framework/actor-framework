@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include <thread>
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -36,7 +37,6 @@
 #include "utility.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/fsm_actor.hpp"
-#include "cppa/detail/thread.hpp"
 
 using std::cout;
 using std::cerr;
