@@ -55,19 +55,6 @@ namespace {
 
 constexpr size_t s_stack_size = SIGSTKSZ;
 
-inline void* get_stack() {
-    return mmap(0,
-                s_stack_size,
-                PROT_EXEC | PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANON,
-                -1,
-                0);
-}
-
-inline void release_stack(void* mem) {
-     munmap(mem, s_stack_size);
-}
-
 typedef void (*void_function)();
 typedef void (*void_ptr_function)(void*);
 
@@ -124,9 +111,9 @@ namespace cppa { namespace util {
 struct fiber_impl {
 
     bool m_initialized;
-    void* m_stack;
     void (*m_func)(void*);
     void* m_arg;
+    void* m_stack;
 
 #   ifdef __APPLE__
     // ucontext implementation on macosx kinda sucks
@@ -139,16 +126,16 @@ struct fiber_impl {
     inline ucontext_t* ctx() { return &m_ctx; }
 #   endif
 
-    fiber_impl() throw() : m_initialized(true), m_stack(0), m_func(0), m_arg(0) {
+    fiber_impl() throw() : m_initialized(true), m_func(0), m_arg(0), m_stack(0) {
         memset(ctx(), 0, ucontext_size);
         getcontext(ctx());
     }
 
     fiber_impl(void (*func)(void*), void* arg)
-        : m_initialized(false)
-        , m_stack(nullptr)
-        , m_func(func)
-        , m_arg(arg) {
+    : m_initialized(false)
+    , m_func(func)
+    , m_arg(arg)
+    , m_stack(nullptr) {
     }
 
     inline void swap(fiber_impl* to) {
@@ -159,7 +146,7 @@ struct fiber_impl {
         m_initialized = true;
         memset(ctx(), 0, ucontext_size);
         getcontext(ctx());
-        m_stack = get_stack();
+        m_stack = malloc(s_stack_size);
         ctx()->uc_stack.ss_sp = m_stack;
         ctx()->uc_stack.ss_size = s_stack_size;
         ctx()->uc_link = nullptr;
@@ -171,7 +158,7 @@ struct fiber_impl {
     }
 
     ~fiber_impl() {
-        if (m_stack) release_stack(m_stack);
+        if (m_stack) free(m_stack);
     }
 
 };
