@@ -57,13 +57,7 @@ void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
 }
 
 void converted_thread_context::dequeue(partial_function& fun) { // override
-    if (m_recv_policy.invoke_from_cache(this, fun) == false) {
-        recursive_queue_node* e = m_mailbox.pop();
-        CPPA_REQUIRE(e->marked == false);
-        while (m_recv_policy.invoke(this, e, fun) == false) {
-            e = m_mailbox.pop();
-        }
-    }
+    m_recv_policy.receive(this, fun);
 }
 
 void converted_thread_context::dequeue(behavior& bhvr) { // override

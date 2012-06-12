@@ -66,26 +66,30 @@ void yielding_actor::trampoline(void* ptr_arg) {
     reinterpret_cast<yielding_actor*>(ptr_arg)->run();
 }
 
-void yielding_actor::yield_until_not_empty() {
-    if (m_mailbox.can_fetch_more() == false) {
-        m_state.store(abstract_scheduled_actor::about_to_block);
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        //CPPA_MEMORY_BARRIER();
-        // make sure mailbox is empty
+recursive_queue_node* yielding_actor::receive_node() {
+    recursive_queue_node* e = m_mailbox.try_pop();
+    while (e == nullptr) {
         if (m_mailbox.can_fetch_more() == false) {
-            m_state.store(abstract_scheduled_actor::ready);
-            return;
+            m_state.store(abstract_scheduled_actor::about_to_block);
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            //CPPA_MEMORY_BARRIER();
+            // make sure mailbox is empty
+            if (m_mailbox.can_fetch_more()) {
+                // someone preempt us => continue
+                m_state.store(abstract_scheduled_actor::ready);
+            }
+            else {
+                // wait until actor becomes rescheduled
+                yield(yield_state::blocked);
+            }
         }
-        else {
-            yield(yield_state::blocked);
-        }
+        e = m_mailbox.try_pop();
     }
+    return e;
 }
 
 void yielding_actor::dequeue(partial_function& fun) {
-    if (m_recv_policy.invoke_from_cache(this, fun) == false) {
-        while (m_recv_policy.invoke(this, receive_node(), fun) == false) { }
-    }
+    m_recv_policy.receive(this, fun);
 }
 
 void yielding_actor::dequeue(behavior& bhvr) {

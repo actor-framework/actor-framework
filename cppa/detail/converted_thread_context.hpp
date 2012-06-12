@@ -84,6 +84,10 @@ class converted_thread_context : public abstract_actor<local_actor> {
 
     nestable_receive_policy m_recv_policy;
 
+    inline recursive_queue_node* receive_node() {
+        return m_mailbox.pop();
+    }
+
 };
 
 } } // namespace cppa::detail

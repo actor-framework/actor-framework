@@ -78,20 +78,11 @@ class yielding_actor : public abstract_scheduled_actor {
 
     static void trampoline(void* _this);
 
-    void yield_until_not_empty();
-
     util::fiber m_fiber;
     std::function<void()> m_behavior;
     nestable_receive_policy m_recv_policy;
 
-    inline recursive_queue_node* receive_node() {
-        recursive_queue_node* e = m_mailbox.try_pop();
-        while (e == nullptr) {
-            yield_until_not_empty();
-            e = m_mailbox.try_pop();
-        }
-        return e;
-    }
+    recursive_queue_node* receive_node();
 
 };
 

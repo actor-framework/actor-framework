@@ -107,6 +107,13 @@ class nestable_receive_policy {
         return false;
     }
 
+    template<class Client>
+    void receive(Client* client, partial_function& fun) {
+        if (invoke_from_cache(client, fun) == false) {
+            while (invoke(client, client->receive_node(), fun) == false) { }
+        }
+    }
+
  private:
 
     std::list<std::unique_ptr<recursive_queue_node> > m_cache;
@@ -136,27 +143,26 @@ class nestable_receive_policy {
                 return hm_success;
             }
             case ordinary_message: {
-                break;
+                std::swap(client->m_last_dequeued, node.msg);
+                std::swap(client->m_last_sender, node.sender);
+                client->push_timeout();
+                node.marked = true;
+                if (fun(client->m_last_dequeued)) {
+                    client->m_last_dequeued.reset();
+                    client->m_last_sender.reset();
+                    return hm_success;
+                }
+                // no match (restore client members)
+                std::swap(client->m_last_dequeued, node.msg);
+                std::swap(client->m_last_sender, node.sender);
+                client->pop_timeout();
+                node.marked = false;
+                return hm_cache_msg;
             }
             default: {
                 CPPA_CRITICAL("illegal result of filter_msg");
             }
         }
-        std::swap(client->m_last_dequeued, node.msg);
-        std::swap(client->m_last_sender, node.sender);
-        client->push_timeout();
-        node.marked = true;
-        if (fun(client->m_last_dequeued)) {
-            client->m_last_dequeued.reset();
-            client->m_last_sender.reset();
-            return hm_success;
-        }
-        // no match (restore client members)
-        std::swap(client->m_last_dequeued, node.msg);
-        std::swap(client->m_last_sender, node.sender);
-        client->pop_timeout();
-        node.marked = false;
-        return hm_cache_msg;
     }
 
 };
