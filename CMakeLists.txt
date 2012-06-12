@@ -69,7 +69,7 @@ set(boost_context third_party/boost_context/)
 if(APPLE)
   set_property(SOURCE
                ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
-               PROPERTY LANGUAGE C)
+               PROPERTY LANGUAGE CXX)
   set(LIBCPPA_SRC
       ${LIBCPPA_SRC}
       ${boost_context}/src/stack_utils_posix.cpp
@@ -81,12 +81,12 @@ elseif(UNIX)
   if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set_property(SOURCE
                  ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S
-                 PROPERTY LANGUAGE C)
+                 PROPERTY LANGUAGE CXX)
     set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
   else()
     set_property(SOURCE
                  ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S
-                 PROPERTY LANGUAGE C)
+                 PROPERTY LANGUAGE CXX)
     set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
   endif()
   set(LIBCPPA_SRC
