@@ -53,10 +53,6 @@
 #  error Plattform and/or compiler not supportet
 #endif
 
-#if defined(__amd64__) || defined(__LP64__)
-#  define CPPA_64BIT
-#endif
-
 #include <cstdio>
 #include <cstdlib>
 
