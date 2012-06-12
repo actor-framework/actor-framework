@@ -110,33 +110,6 @@ void usage(const char* argv0) {
 }
 
 int main(int argc, char** argv) {
-    /*
-    match_each(argv + 1, argv + argc) (
-        on_arg_match >> [](const std::string& str) {
-            cout << "matched \"" << str << "\"" << endl;
-        }
-    );
-
-    match_each(argv + 1, argv + argc, [](const char* cstr) { return split(cstr, '='); }) (
-        on_arg_match >> [](const std::string& key, const std::string& value) {
-            cout << "key = \"" << key << "\", value = \"" << value << "\""
-                 << endl;
-        },
-        others() >> [](const any_tuple& oops) {
-            cout << "not a key value pair: " << to_string(oops) << endl;
-        }
-    );
-
-    return 0;
-    //*/
-
-
-    /*
-    auto nao = remote_actor("192.168.1.148", 12000);
-    send(nao, atom("speak"), "I am an actor! Seriously!");
-    return 0;
-    */
-
     auto args = get_kv_pairs(argc, argv);
     match_each(args) (
         on("run", "remote_actor") >> [&]() {
