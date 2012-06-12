@@ -746,9 +746,9 @@ bool uniform_type_info_map::insert(const std::set<std::string>& raw_names,
         delete what;
         return false;
     }
-    m_by_uname.emplace(what->name(), what);
+    m_by_uname.insert(std::make_pair(what->name(), what));
     for (auto& plain_name : raw_names) {
-        if (!m_by_rname.emplace(plain_name, what).second) {
+        if (!m_by_rname.insert(std::make_pair(plain_name, what)).second) {
             std::string error_str = plain_name;
             error_str += " already mapped to an uniform_type_info";
             throw std::runtime_error(error_str);
