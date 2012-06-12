@@ -57,7 +57,7 @@ inline std::string join(const std::vector<std::string>& vec,
 }
 
 template<typename T>
-T rd(char const* cstr) {
+T rd(const char* cstr) {
     char* endptr = nullptr;
     T result = static_cast<T>(strtol(cstr, &endptr, 10));
     if (endptr == nullptr || *endptr != '\0') {

@@ -77,7 +77,7 @@ class container_tuple_view : public abstract_tuple {
         return &(*i);
     }
 
-    uniform_type_info const* type_at(size_t) const {
+    const uniform_type_info* type_at(size_t) const {
         return static_types_array<value_type>::arr[0];
     }
 

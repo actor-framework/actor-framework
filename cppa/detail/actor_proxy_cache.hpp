@@ -50,7 +50,7 @@ class actor_proxy_cache {
  public:
 
     actor_proxy_ptr get(actor_id aid, std::uint32_t process_id,
-                        process_information::node_id_type const& node_id);
+                        const process_information::node_id_type& node_id);
 
     // @returns true if pptr was successfully removed, false otherwise
     bool erase(const actor_proxy_ptr& pptr);

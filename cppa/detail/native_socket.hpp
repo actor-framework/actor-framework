@@ -46,7 +46,7 @@ namespace cppa { namespace detail {
 
 #ifdef CPPA_WINDOWS
     typedef SOCKET native_socket_type;
-    typedef char const* socket_send_ptr;
+    typedef const char* socket_send_ptr;
     typedef char* socket_recv_ptr;
     constexpr SOCKET invalid_socket = INVALID_SOCKET;
 #else

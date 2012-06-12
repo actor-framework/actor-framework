@@ -48,7 +48,7 @@ namespace cppa { namespace detail {
 template<typename T>
 struct implicit_conversions {
     typedef typename util::replace_type<T, std::string,
-                                        std::is_same<T, char const*>,
+                                        std::is_same<T, const char*>,
                                         std::is_same<T, char*>,
                                         util::is_array_of<T, char>,
                                         util::is_array_of<T, const char> >::type

@@ -11,7 +11,7 @@
 // forward declarations
 namespace cppa {
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace detail {
@@ -24,29 +24,29 @@ struct ta_util;
 
 template<bool IsBuiltin, typename T>
 struct ta_util<std_tinf, IsBuiltin, T> {
-    static inline std::type_info const* get() { return &(typeid(T)); }
+    static inline const std::type_info* get() { return &(typeid(T)); }
 };
 
 template<>
 struct ta_util<std_tinf, true, anything> {
-    static inline std::type_info const* get() { return nullptr; }
+    static inline const std::type_info* get() { return nullptr; }
 };
 
 template<typename T>
 struct ta_util<cppa_tinf, true, T> {
-    static inline uniform_type_info const* get() {
+    static inline const uniform_type_info* get() {
         return uniform_typeid(typeid(T));
     }
 };
 
 template<>
 struct ta_util<cppa_tinf, true, anything> {
-    static inline uniform_type_info const* get() { return nullptr; }
+    static inline const uniform_type_info* get() { return nullptr; }
 };
 
 template<typename T>
 struct ta_util<cppa_tinf, false, T> {
-    static inline uniform_type_info const* get() { return nullptr; }
+    static inline const uniform_type_info* get() { return nullptr; }
 };
 
 // implements types_array
@@ -54,12 +54,12 @@ template<bool BuiltinOnlyTypes, typename... T>
 struct types_array_impl {
     static constexpr bool builtin_only = true;
     // all types are builtin, perform lookup on constuction
-    uniform_type_info const* data[sizeof...(T)];
+    const uniform_type_info* data[sizeof...(T)];
     types_array_impl() : data{ta_util<cppa_tinf, true, T>::get()...} { }
-    inline uniform_type_info const* operator[](size_t p) const {
+    inline const uniform_type_info* operator[](size_t p) const {
         return data[p];
     }
-    typedef uniform_type_info const* const* const_iterator;
+    typedef const uniform_type_info* const* const_iterator;
     inline const_iterator begin() const { return std::begin(data); }
     inline const_iterator end() const { return std::end(data); }
 };
@@ -68,11 +68,11 @@ template<typename... T>
 struct types_array_impl<false, T...> {
     static constexpr bool builtin_only = false;
     // contains std::type_info for all non-builtin types
-    std::type_info const* tinfo_data[sizeof...(T)];
+    const std::type_info* tinfo_data[sizeof...(T)];
     // contains uniform_type_infos for builtin types and lazy initializes
     // non-builtin types at runtime
-    mutable std::atomic<uniform_type_info const*> data[sizeof...(T)];
-    mutable std::atomic<uniform_type_info const* *> pairs;
+    mutable std::atomic<const uniform_type_info*> data[sizeof...(T)];
+    mutable std::atomic<const uniform_type_info* *> pairs;
     // pairs[sizeof...(T)];
     types_array_impl()
         : tinfo_data{ta_util<std_tinf,util::is_builtin<T>::value,T>::get()...} {
@@ -85,7 +85,7 @@ struct types_array_impl<false, T...> {
             }
         }
     }
-    inline uniform_type_info const* operator[](size_t p) const {
+    inline const uniform_type_info* operator[](size_t p) const {
         auto result = data[p].load();
         if (result == nullptr) {
             auto tinfo = tinfo_data[p];
@@ -96,11 +96,11 @@ struct types_array_impl<false, T...> {
         }
         return result;
     }
-    typedef uniform_type_info const* const* const_iterator;
+    typedef const uniform_type_info* const* const_iterator;
     inline const_iterator begin() const {
         auto result = pairs.load();
         if (result == nullptr) {
-            auto parr = new uniform_type_info const*[sizeof...(T)];
+            auto parr = new const uniform_type_info*[sizeof...(T)];
             for (size_t i = 0; i < sizeof...(T); ++i) {
                 parr[i] = (*this)[i];
             }
@@ -152,11 +152,11 @@ struct static_types_array_from_type_list<util::type_list<T...>> {
 // utility for singleton-like access to a type_info instance of a type_list
 template<typename... T>
 struct static_type_list {
-    static std::type_info const* list;
+    static const std::type_info* list;
 };
 
 template<typename... T>
-std::type_info const* static_type_list<T...>::list = &typeid(util::type_list<T...>);
+const std::type_info* static_type_list<T...>::list = &typeid(util::type_list<T...>);
 
 } } // namespace cppa::detail
 

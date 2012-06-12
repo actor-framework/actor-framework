@@ -59,7 +59,7 @@ enum primitive_type {
     pt_null          /**< equivalent of @p void */
 };
 
-constexpr char const* primitive_type_names[] = {
+constexpr const char* primitive_type_names[] = {
     "pt_int8",        "pt_int16",       "pt_int32",       "pt_int64",
     "pt_uint8",       "pt_uint16",      "pt_uint32",      "pt_uint64",
     "pt_float",       "pt_double",      "pt_long_double",
@@ -73,7 +73,7 @@ constexpr char const* primitive_type_names[] = {
  * @param ptype Requestet @p primitive_type.
  * @returns A C-string representation of @p ptype.
  */
-constexpr char const* primitive_type_name(primitive_type ptype) {
+constexpr const char* primitive_type_name(primitive_type ptype) {
     return primitive_type_names[static_cast<int>(ptype)];
 }
 

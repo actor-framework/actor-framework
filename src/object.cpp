@@ -41,7 +41,7 @@ namespace {
 
 cppa::util::void_type s_void;
 
-inline cppa::uniform_type_info const* tvoid() {
+inline const cppa::uniform_type_info* tvoid() {
     return cppa::detail::static_types_array<cppa::util::void_type>::arr[0];
 }
 
@@ -54,7 +54,7 @@ void object::swap(object& other) {
     std::swap(m_type, other.m_type);
 }
 
-object::object(void* val, uniform_type_info const* utype)
+object::object(void* val, const uniform_type_info* utype)
     : m_value(val), m_type(utype) {
     CPPA_REQUIRE(val != nullptr);
     CPPA_REQUIRE(utype != nullptr);
@@ -98,7 +98,7 @@ bool operator==(const object& lhs, const object& rhs) {
     return false;
 }
 
-uniform_type_info const* object::type() const {
+const uniform_type_info* object::type() const {
     return m_type;
 }
 

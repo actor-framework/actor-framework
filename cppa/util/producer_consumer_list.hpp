@@ -85,7 +85,7 @@ class producer_consumer_list {
     typedef value_type&         reference;
     typedef const value_type&   const_reference;
     typedef value_type*         pointer;
-    typedef value_type const*   const_pointer;
+    typedef const value_type*   const_pointer;
 
     struct node {
         pointer value;

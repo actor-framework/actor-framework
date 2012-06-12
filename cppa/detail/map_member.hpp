@@ -67,7 +67,7 @@ struct map_member_util<T, false, true> {
 // std::set with non-primitive value
 template<typename T>
 struct map_member_util<T, false, false> {
-    uniform_type_info const* m_type;
+    const uniform_type_info* m_type;
 
     map_member_util() : m_type(uniform_typeid<T>()) {
     }
@@ -125,7 +125,7 @@ class map_member : public util::abstract_uniform_type_info<Map> {
  public:
 
     void serialize(const void* obj, serializer* s) const {
-        auto& mp = *reinterpret_cast<Map const*>(obj);
+        auto& mp = *reinterpret_cast<const Map*>(obj);
         s->begin_sequence(mp.size());
         for (const auto& val : mp) {
             m_helper.serialize_value(val, s);

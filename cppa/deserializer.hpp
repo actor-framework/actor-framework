@@ -105,7 +105,7 @@ class deserializer {
      * @param storage Array of size @p num, storing the result of this function.
      */
     virtual void read_tuple(size_t num,
-                            primitive_type const* ptypes,
+                            const primitive_type* ptypes,
                             primitive_variant* storage   ) = 0;
 
 };

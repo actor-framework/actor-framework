@@ -47,7 +47,7 @@ class forward_iterator {
     typedef value_type&                 reference;
     typedef const value_type&           const_reference;
     typedef value_type*                 pointer;
-    typedef value_type const*           const_pointer;
+    typedef const value_type*           const_pointer;
     typedef ptrdiff_t                   difference_type;
     typedef std::forward_iterator_tag   iterator_category;
 
@@ -106,7 +106,7 @@ inline bool operator==(const forward_iterator<T>& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(const forward_iterator<T>& lhs, T const* rhs) {
+inline bool operator==(const forward_iterator<T>& lhs, const T* rhs) {
     return lhs.ptr() == rhs;
 }
 
@@ -114,7 +114,7 @@ inline bool operator==(const forward_iterator<T>& lhs, T const* rhs) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(T const* lhs, const forward_iterator<T>& rhs) {
+inline bool operator==(const T* lhs, const forward_iterator<T>& rhs) {
     return lhs == rhs.ptr();
 }
 
@@ -147,7 +147,7 @@ inline bool operator!=(const forward_iterator<T>& lhs,
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs) {
+inline bool operator!=(const forward_iterator<T>& lhs, const T* rhs) {
     return !(lhs == rhs);
 }
 
@@ -155,7 +155,7 @@ inline bool operator!=(const forward_iterator<T>& lhs, T const* rhs) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(T const* lhs, const forward_iterator<T>& rhs) {
+inline bool operator!=(const T* lhs, const forward_iterator<T>& rhs) {
     return !(lhs == rhs);
 }
 

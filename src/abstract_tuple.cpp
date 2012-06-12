@@ -43,7 +43,7 @@ abstract_tuple::abstract_tuple(const abstract_tuple& other)
     , m_impl_type(other.m_impl_type) {
 }
 
-std::type_info const* abstract_tuple::type_token() const {
+const std::type_info* abstract_tuple::type_token() const {
     return &typeid(void);
 }
 

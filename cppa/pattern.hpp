@@ -241,7 +241,7 @@ class pattern {
 
     typedef util::fixed_vector<size_t, filtered_types::size> mapping_vector;
 
-    typedef uniform_type_info const* const_iterator;
+    typedef const uniform_type_info* const_iterator;
 
     typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 

@@ -43,7 +43,7 @@ struct tuple_view_copy_helper {
     abstract_tuple* target;
     tuple_view_copy_helper(abstract_tuple* trgt) : pos(0), target(trgt) { }
     template<typename T>
-    void operator()(T const* value) {
+    void operator()(const T* value) {
         *(reinterpret_cast<T*>(target->mutable_at(pos++))) = *value;
     }
 };
@@ -101,12 +101,12 @@ class tuple_view : public abstract_tuple {
         return m_data.mutable_at(pos);
     }
 
-    uniform_type_info const* type_at(size_t pos) const {
+    const uniform_type_info* type_at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_types[pos];
     }
 
-    std::type_info const* type_token() const {
+    const std::type_info* type_token() const {
         return detail::static_type_list<ElementTypes...>::list;
     }
 

@@ -59,7 +59,7 @@ constexpr std::uint64_t next_interim(std::uint64_t current, size_t char_code) {
     return (current << 6) | encoding_table[(char_code <= 0x7F) ? char_code : 0];
 }
 
-constexpr std::uint64_t atom_val(char const* cstr, std::uint64_t interim = 0) {
+constexpr std::uint64_t atom_val(const char* cstr, std::uint64_t interim = 0) {
     return (*cstr == '\0') ? interim
                            : atom_val(cstr + 1,
                                       next_interim(interim,

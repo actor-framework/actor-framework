@@ -66,7 +66,7 @@ class abstract_tuple : public ref_counted {
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
     virtual const void* at(size_t pos) const = 0;
-    virtual uniform_type_info const* type_at(size_t pos) const = 0;
+    virtual const uniform_type_info* type_at(size_t pos) const = 0;
 
     // returns either tdata<...> object or nullptr (default) if tuple
     // is not a 'native' implementation
@@ -81,7 +81,7 @@ class abstract_tuple : public ref_counted {
     // uniquely identifies this category (element types) of messages
     // override this member function only if impl_type() == statically_typed
     // (default returns &typeid(void))
-    virtual std::type_info const* type_token() const;
+    virtual const std::type_info* type_token() const;
 
     bool equals(const abstract_tuple& other) const;
 
@@ -109,11 +109,11 @@ struct types_only_eq_type {
     constexpr types_only_eq_type() { }
     template<class Tuple>
     inline bool operator()(const tuple_iterator<Tuple>& lhs,
-                           uniform_type_info const* rhs     ) const {
+                           const uniform_type_info* rhs     ) const {
         return lhs.type() == rhs;
     }
     template<class Tuple>
-    inline bool operator()(uniform_type_info const* lhs,
+    inline bool operator()(const uniform_type_info* lhs,
                            const tuple_iterator<Tuple>& rhs) const {
         return lhs == rhs.type();
     }

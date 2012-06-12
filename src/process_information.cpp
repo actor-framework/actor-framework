@@ -187,8 +187,8 @@ const intrusive_ptr<process_information>& process_information::get() {
 }
 
 int process_information::compare(const process_information& other) const {
-    int tmp = strncmp(reinterpret_cast<char const*>(node_id().data()),
-                      reinterpret_cast<char const*>(other.node_id().data()),
+    int tmp = strncmp(reinterpret_cast<const char*>(node_id().data()),
+                      reinterpret_cast<const char*>(other.node_id().data()),
                       node_id_size);
     if (tmp == 0) {
         if (m_process_id < other.process_id()) return -1;

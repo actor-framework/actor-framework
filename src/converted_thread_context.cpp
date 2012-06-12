@@ -57,10 +57,10 @@ void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
 }
 
 void converted_thread_context::dequeue(partial_function& fun) { // override
-    if (invoke_from_cache(fun) == false) {
+    if (m_recv_policy.invoke_from_cache(this, fun) == false) {
         recursive_queue_node* e = m_mailbox.pop();
         CPPA_REQUIRE(e->marked == false);
-        while (invoke(e, fun) == false) {
+        while (m_recv_policy.invoke(this, e, fun) == false) {
             e = m_mailbox.pop();
         }
     }
@@ -72,11 +72,11 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
         // suppress virtual function call
         converted_thread_context::dequeue(fun);
     }
-    else if (invoke_from_cache(fun) == false) {
+    else if (m_recv_policy.invoke_from_cache(this, fun) == false) {
         if (bhvr.timeout().is_zero()) {
             for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
                 CPPA_REQUIRE(e->marked == false);
-                if (invoke(e, bhvr)) return;
+                if (m_recv_policy.invoke(this, e, bhvr)) return;
                 e = m_mailbox.try_pop();
             }
             bhvr.handle_timeout();
@@ -87,7 +87,7 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
             recursive_queue_node* e = m_mailbox.try_pop(timeout);
             while (e != nullptr) {
                 CPPA_REQUIRE(e->marked == false);
-                if (invoke(e, fun)) return;
+                if (m_recv_policy.invoke(this, e, fun)) return;
                 e = m_mailbox.try_pop(timeout);
             }
             bhvr.handle_timeout();
@@ -97,18 +97,17 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
 
 filter_result converted_thread_context::filter_msg(const any_tuple& msg) {
     auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
-    if (   msg.size() == 2
+    if (   m_trap_exit == false
+        && msg.size() == 2
         && msg.type_at(0) == arr[0]
         && msg.type_at(1) == arr[1]) {
-        auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
-        auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
+        auto v0 = msg.get_as<atom_value>(0);
+        auto v1 = msg.get_as<std::uint32_t>(1);
         if (v0 == atom("EXIT")) {
-            if (this->m_trap_exit == false) {
-                if (v1 != exit_reason::normal) {
-                    quit(v1);
-                }
-                return normal_exit_signal;
+            if (v1 != exit_reason::normal) {
+                quit(v1);
             }
+            return normal_exit_signal;
         }
 
     }

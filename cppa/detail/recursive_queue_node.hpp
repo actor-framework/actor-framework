@@ -53,7 +53,7 @@ struct recursive_queue_node {
     }
 
     recursive_queue_node(recursive_queue_node&&) = delete;
-    recursive_queue_node(recursive_queue_node const&) = delete;
+    recursive_queue_node(const recursive_queue_node&) = delete;
     recursive_queue_node& operator=(recursive_queue_node&&) = delete;
     recursive_queue_node& operator=(const recursive_queue_node&) = delete;
 

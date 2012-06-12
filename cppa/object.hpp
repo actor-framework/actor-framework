@@ -47,7 +47,7 @@ class object;
 bool operator==(const object& lhs, const object& rhs);
 
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
 
 /**
@@ -87,7 +87,7 @@ class object {
      * @warning {@link object} takes ownership of @p val.
      * @pre {@code val != nullptr && utinfo != nullptr}
      */
-    object(void* val, uniform_type_info const* utinfo);
+    object(void* val, const uniform_type_info* utinfo);
 
     /**
      * @brief Creates an empty object.
@@ -124,7 +124,7 @@ class object {
      * @returns A {@link uniform_type_info} describing the current
      *          type of @p this.
      */
-    uniform_type_info const* type() const;
+    const uniform_type_info* type() const;
 
     /**
      * @brief Gets the stored value.
@@ -153,7 +153,7 @@ class object {
  private:
 
     void* m_value;
-    uniform_type_info const* m_type;
+    const uniform_type_info* m_type;
 
     void swap(object& other);
 
@@ -188,7 +188,7 @@ const T& get(const object& obj) {
     if (!(*(obj.type()) == typeid(T))) {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
-    return *reinterpret_cast<T const*>(obj.value());
+    return *reinterpret_cast<const T*>(obj.value());
 }
 
 } // namespace cppa

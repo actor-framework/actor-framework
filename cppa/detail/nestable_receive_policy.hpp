@@ -28,12 +28,12 @@
 \******************************************************************************/
 
 
-#ifndef NESTABLE_RECEIVE_ACTOR_HPP
-#define NESTABLE_RECEIVE_ACTOR_HPP
+#ifndef NESTABLE_RECEIVE_POLICY_HPP
+#define NESTABLE_RECEIVE_POLICY_HPP
 
+#include <list>
 #include <memory>
 
-#include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/detail/filter_result.hpp"
@@ -41,10 +41,9 @@
 
 namespace cppa { namespace detail {
 
-template<class Derived, class Base>
-class nestable_receive_actor : public Base {
+class nestable_receive_policy {
 
- protected:
+ public:
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -54,19 +53,19 @@ class nestable_receive_actor : public Base {
         hm_success
     };
 
-    template<class FunOrBehavior>
-    bool invoke_from_cache(FunOrBehavior& fun) {
+    template<class Client, class FunOrBehavior>
+    bool invoke_from_cache(Client* client, FunOrBehavior& fun) {
         auto i = m_cache.begin();
         auto e = m_cache.end();
         while (i != e) {
-            switch (this->handle_message(*(*i), fun)) {
+            switch (this->handle_message(client, *(*i), fun)) {
                 case hm_success: {
-                    this->release_node(i->release());
+                    client->release_node(i->release());
                     m_cache.erase(i);
                     return true;
                 }
                 case hm_drop_msg: {
-                    this->release_node(i->release());
+                    client->release_node(i->release());
                     i = m_cache.erase(i);
                     break;
                 }
@@ -83,15 +82,15 @@ class nestable_receive_actor : public Base {
         return false;
     }
 
-    template<class FunOrBehavior>
-    bool invoke(recursive_queue_node* node, FunOrBehavior& fun) {
-        switch (this->handle_message(*node, fun)) {
+    template<class Client, class FunOrBehavior>
+    bool invoke(Client* client, recursive_queue_node* node, FunOrBehavior& fun) {
+        switch (this->handle_message(client, *node, fun)) {
             case hm_success: {
-                this->release_node(node);
+                client->release_node(node);
                 return true;
             }
             case hm_drop_msg: {
-                this->release_node(node);
+                client->release_node(node);
                 break;
             }
             case hm_cache_msg: {
@@ -112,29 +111,22 @@ class nestable_receive_actor : public Base {
 
     std::list<std::unique_ptr<recursive_queue_node> > m_cache;
 
-    inline Derived* dthis() {
-        return static_cast<Derived*>(this);
-    }
-
-    inline Derived const* dthis() const {
-        return static_cast<Derived const*>(this);
-    }
-
-    void handle_timeout(behavior& bhvr) {
+    inline void handle_timeout(behavior& bhvr) {
         bhvr.handle_timeout();
     }
 
-    void handle_timeout(partial_function&) {
+    inline void handle_timeout(partial_function&) {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
-    template<class FunOrBehavior>
-    handle_message_result handle_message(recursive_queue_node& node,
+    template<class Client, class FunOrBehavior>
+    handle_message_result handle_message(Client* client,
+                                         recursive_queue_node& node,
                                          FunOrBehavior& fun) {
         if (node.marked) {
             return hm_skip_msg;
         }
-        switch (dthis()->filter_msg(node.msg)) {
+        switch (client->filter_msg(node.msg)) {
             case normal_exit_signal:
             case expired_timeout_message: {
                 return hm_drop_msg;
@@ -150,19 +142,19 @@ class nestable_receive_actor : public Base {
                 CPPA_CRITICAL("illegal result of filter_msg");
             }
         }
-        std::swap(this->m_last_dequeued, node.msg);
-        std::swap(this->m_last_sender, node.sender);
-        dthis()->push_timeout();
+        std::swap(client->m_last_dequeued, node.msg);
+        std::swap(client->m_last_sender, node.sender);
+        client->push_timeout();
         node.marked = true;
-        if (fun(this->m_last_dequeued)) {
-            this->m_last_dequeued.reset();
-            this->m_last_sender.reset();
+        if (fun(client->m_last_dequeued)) {
+            client->m_last_dequeued.reset();
+            client->m_last_sender.reset();
             return hm_success;
         }
-        // no match (restore members)
-        std::swap(this->m_last_dequeued, node.msg);
-        std::swap(this->m_last_sender, node.sender);
-        dthis()->pop_timeout();
+        // no match (restore client members)
+        std::swap(client->m_last_dequeued, node.msg);
+        std::swap(client->m_last_sender, node.sender);
+        client->pop_timeout();
         node.marked = false;
         return hm_cache_msg;
     }
@@ -171,4 +163,4 @@ class nestable_receive_actor : public Base {
 
 } } // namespace cppa::detail
 
-#endif // NESTABLE_RECEIVE_ACTOR_HPP
+#endif // NESTABLE_RECEIVE_POLICY_HPP

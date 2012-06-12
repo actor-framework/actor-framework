@@ -57,7 +57,7 @@ oss << to_string(self->parent_process()) << ": " << __PRETTY_FUNCTION__ << " ->"
 cout << oss.str(); \
 } ((void) 0)
 
-option<int> c_2i(char const* cstr) {
+option<int> c_2i(const char* cstr) {
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(cstr, &endptr, 10));
     if (endptr == nullptr || *endptr != '\0') {
@@ -306,7 +306,7 @@ void client_mode(Iterator first, Iterator last) {
         receive_for(i, end) (
             on(atom("ok")) >> []() {
             },
-            on(atom("error"), arg_match) >> [&](string const& str) {
+            on(atom("error"), arg_match) >> [&](const string& str) {
                 cout << "error: " << str << endl;
                 for (auto& x : remote_actors) {
                     send(x, atom("purge"));

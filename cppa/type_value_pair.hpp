@@ -37,23 +37,23 @@
 
 namespace cppa {
 
-typedef std::pair<uniform_type_info const*, const void*> type_value_pair;
+typedef std::pair<const uniform_type_info*, const void*> type_value_pair;
 
 class type_value_pair_const_iterator {
 
-    type_value_pair const* iter;
+    const type_value_pair* iter;
 
  public:
 
     typedef type_value_pair const               value_type;
     typedef std::ptrdiff_t                      difference_type;
-    typedef type_value_pair const*              pointer;
+    typedef const type_value_pair*              pointer;
     typedef const type_value_pair&              reference;
     typedef std::bidirectional_iterator_tag     iterator_category;
 
     constexpr type_value_pair_const_iterator() : iter(nullptr) { }
 
-    type_value_pair_const_iterator(type_value_pair const* i) : iter(i) { }
+    type_value_pair_const_iterator(const type_value_pair* i) : iter(i) { }
 
     type_value_pair_const_iterator(const type_value_pair_const_iterator&)
         = default;
@@ -61,7 +61,7 @@ class type_value_pair_const_iterator {
     type_value_pair_const_iterator&
     operator=(const type_value_pair_const_iterator&) = default;
 
-    inline uniform_type_info const* type() const { return iter->first; }
+    inline const uniform_type_info* type() const { return iter->first; }
 
     inline const void* value() const { return iter->second; }
 

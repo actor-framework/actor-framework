@@ -31,7 +31,7 @@ void client_part(const std::vector<string_pair>& args) {
 
 } // namespace <anonymous>
 
-size_t test__remote_actor(char const* app_path, bool is_client,
+size_t test__remote_actor(const char* app_path, bool is_client,
                           const std::vector<string_pair>& args) {
     if (is_client) {
         client_part(args);

@@ -69,7 +69,7 @@ class binary_serializer : public serializer {
 
     void write_value(const primitive_variant& value);
 
-    void write_tuple(size_t size, primitive_variant const* values);
+    void write_tuple(size_t size, const primitive_variant* values);
 
     /**
      * @brief Returns the number of written bytes.
@@ -79,11 +79,11 @@ class binary_serializer : public serializer {
     /**
      * @brief Returns a pointer to the internal buffer.
      */
-    char const* data() const;
+    const char* data() const;
 
     size_t sendable_size() const;
 
-    char const* sendable_data();
+    const char* sendable_data();
 
     /**
      * @brief Resets the internal buffer.

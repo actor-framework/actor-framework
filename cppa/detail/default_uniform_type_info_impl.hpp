@@ -110,11 +110,11 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
         uniform_type_info* m_meta;
 
-        std::function<void (uniform_type_info const*,
+        std::function<void (const uniform_type_info*,
                             const void*,
                             serializer*              )> m_serialize;
 
-        std::function<void (uniform_type_info const*,
+        std::function<void (const uniform_type_info*,
                             void*,
                             deserializer*            )> m_deserialize;
 
@@ -138,12 +138,12 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
         template<typename R, class C>
         member(uniform_type_info* mtptr, R C::*mem_ptr) : m_meta(mtptr) {
-            m_serialize = [mem_ptr] (uniform_type_info const* mt,
+            m_serialize = [mem_ptr] (const uniform_type_info* mt,
                                      const void* obj,
                                      serializer* s) {
-                mt->serialize(&(*reinterpret_cast<C const*>(obj).*mem_ptr), s);
+                mt->serialize(&(*reinterpret_cast<const C*>(obj).*mem_ptr), s);
             };
-            m_deserialize = [mem_ptr] (uniform_type_info const* mt,
+            m_deserialize = [mem_ptr] (const uniform_type_info* mt,
                                        void* obj,
                                        deserializer* d) {
                 mt->deserialize(&(*reinterpret_cast<C*>(obj).*mem_ptr), d);
@@ -158,13 +158,13 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
             typedef typename util::rm_ref<SArg>::type setter_arg;
             static_assert(std::is_same<getter_result, setter_arg>::value,
                           "getter result doesn't match setter argument");
-            m_serialize = [getter] (uniform_type_info const* mt,
+            m_serialize = [getter] (const uniform_type_info* mt,
                                     const void* obj,
                                     serializer* s) {
-                GRes v = (*reinterpret_cast<C const*>(obj).*getter)();
+                GRes v = (*reinterpret_cast<const C*>(obj).*getter)();
                 mt->serialize(&v, s);
             };
-            m_deserialize = [setter] (uniform_type_info const* mt,
+            m_deserialize = [setter] (const uniform_type_info* mt,
                                       void* obj,
                                       deserializer* d) {
                 setter_arg value;
@@ -181,10 +181,10 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         static member fake_member(uniform_type_info* mtptr) {
             return {
                 mtptr,
-                [] (uniform_type_info const* mt, const void* obj, serializer* s) {
+                [] (const uniform_type_info* mt, const void* obj, serializer* s) {
                     mt->serialize(obj, s);
                 },
-                [] (uniform_type_info const* mt, void* obj, deserializer* d) {
+                [] (const uniform_type_info* mt, void* obj, deserializer* d) {
                     mt->deserialize(obj, d);
                 }
             };

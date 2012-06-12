@@ -102,7 +102,7 @@ std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     return result;
 }
 
-void usage(char const* argv0) {
+void usage(const char* argv0) {
     cout << "usage: " << split(argv0, '/').back() << " "
          << "[run=remote_actor] "
          << "[scheduler=(thread_pool_scheduler|mock_scheduler)]"
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
         }
     );
 
-    match_each(argv + 1, argv + argc, [](char const* cstr) { return split(cstr, '='); }) (
+    match_each(argv + 1, argv + argc, [](const char* cstr) { return split(cstr, '='); }) (
         on_arg_match >> [](const std::string& key, const std::string& value) {
             cout << "key = \"" << key << "\", value = \"" << value << "\""
                  << endl;

@@ -106,8 +106,8 @@ bool actor_proxy_cache::erase(const actor_proxy_ptr& pptr) {
 
 bool actor_proxy_cache::key_tuple_less::operator()(const key_tuple& lhs,
                                                    const key_tuple& rhs) const {
-    int cmp_res = strncmp(reinterpret_cast<char const*>(std::get<0>(lhs).data()),
-                          reinterpret_cast<char const*>(std::get<0>(rhs).data()),
+    int cmp_res = strncmp(reinterpret_cast<const char*>(std::get<0>(lhs).data()),
+                          reinterpret_cast<const char*>(std::get<0>(rhs).data()),
                           process_information::node_id_size);
     if (cmp_res < 0) {
         return true;

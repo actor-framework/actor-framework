@@ -521,7 +521,7 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
-        auto& ptr = *reinterpret_cast<ptr_type const*>(instance);
+        auto& ptr = *reinterpret_cast<const ptr_type*>(instance);
         if (ptr == nullptr) {
             serialize_nullptr(sink);
         }

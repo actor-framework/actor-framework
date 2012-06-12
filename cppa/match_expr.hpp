@@ -157,7 +157,7 @@ struct invoke_policy_impl<wildcard_position::nil,
             if (native_arg) {
                 typedef typename util::if_else_c<
                             std::is_const<PtrType>::value,
-                            native_data_type const*,
+                            const native_data_type*,
                             util::wrapped<native_data_type*>
                         >::type
                         cast_type;
@@ -738,11 +738,11 @@ class match_expr {
     static constexpr size_t cache_size = 10;
     //typedef std::array<bool, eval_order::size> cache_entry;
     //typedef typename cache_entry::iterator cache_entry_iterator;
-    //typedef std::pair<std::type_info const*, cache_entry> cache_element;
+    //typedef std::pair<const std::type_info*, cache_entry> cache_element;
 
     // std::uint64_t is used as a bitmask to enable/disable groups
 
-    typedef std::pair<std::type_info const*, std::uint64_t> cache_element;
+    typedef std::pair<const std::type_info*, std::uint64_t> cache_element;
 
     util::fixed_vector<cache_element, cache_size> m_cache;
 
@@ -756,7 +756,7 @@ class match_expr {
         i = (i + 1) % cache_size;
     }
 
-    inline size_t find_token_pos(std::type_info const* type_token) {
+    inline size_t find_token_pos(const std::type_info* type_token) {
         for (size_t i = m_cache_begin ; i != m_cache_end; advance_(i)) {
             if (m_cache[i].first == type_token) return i;
         }
@@ -764,7 +764,7 @@ class match_expr {
     }
 
     template<class Tuple>
-    std::uint64_t get_cache_entry(std::type_info const* type_token,
+    std::uint64_t get_cache_entry(const std::type_info* type_token,
                                   const Tuple& value) {
         CPPA_REQUIRE(type_token != nullptr);
         if (value.impl_type() == detail::dynamically_typed) {
@@ -795,7 +795,7 @@ class match_expr {
 
     template<typename AbstractTuple, typename NativeDataPtr>
     bool _do_invoke(AbstractTuple& vals, NativeDataPtr ndp) {
-        std::type_info const* type_token = vals.type_token();
+        const std::type_info* type_token = vals.type_token();
         auto bitfield = get_cache_entry(type_token, vals);
         eval_order token;
         detail::invoke_helper<decltype(m_cases)> fun{m_cases, bitfield};

@@ -43,7 +43,7 @@ namespace cppa {
 
 // forward declarations
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 
 } // namespace cppa
 

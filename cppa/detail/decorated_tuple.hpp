@@ -91,12 +91,12 @@ class decorated_tuple : public abstract_tuple {
         return m_decorated->at(m_mapping[pos]);
     }
 
-    virtual uniform_type_info const* type_at(size_t pos) const {
+    virtual const uniform_type_info* type_at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_decorated->type_at(m_mapping[pos]);
     }
 
-    std::type_info const* type_token() const {
+    const std::type_info* type_token() const {
         return static_type_list<ElementTypes...>::list;
     }
 

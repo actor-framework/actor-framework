@@ -40,26 +40,30 @@
 namespace cppa { namespace detail {
 
 yielding_actor::yielding_actor(std::function<void()> fun)
-    : m_fiber(&yielding_actor::run, this)
+    : m_fiber(&yielding_actor::trampoline, this)
     , m_behavior(fun) {
 }
 
-void yielding_actor::run(void* ptr_arg) {
-    auto this_ptr = reinterpret_cast<yielding_actor*>(ptr_arg);
-    CPPA_REQUIRE(static_cast<bool>(this_ptr->m_behavior));
+void yielding_actor::run() {
+    CPPA_REQUIRE(static_cast<bool>(m_behavior));
     bool cleanup_called = false;
-    try { this_ptr->m_behavior(); }
+    try { m_behavior(); }
     catch (actor_exited&) {
         // cleanup already called by scheduled_actor::quit
         cleanup_called = true;
     }
     catch (...) {
-        this_ptr->cleanup(exit_reason::unhandled_exception);
+        cleanup(exit_reason::unhandled_exception);
         cleanup_called = true;
     }
-    if (!cleanup_called) this_ptr->cleanup(exit_reason::normal);
-    this_ptr->on_exit();
+    if (!cleanup_called) cleanup(exit_reason::normal);
+    on_exit();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     yield(yield_state::done);
+}
+
+void yielding_actor::trampoline(void* ptr_arg) {
+    reinterpret_cast<yielding_actor*>(ptr_arg)->run();
 }
 
 void yielding_actor::yield_until_not_empty() {
@@ -79,8 +83,8 @@ void yielding_actor::yield_until_not_empty() {
 }
 
 void yielding_actor::dequeue(partial_function& fun) {
-    if (invoke_from_cache(fun) == false) {
-        while (invoke(receive_node(), fun) == false) { }
+    if (m_recv_policy.invoke_from_cache(this, fun) == false) {
+        while (m_recv_policy.invoke(this, receive_node(), fun) == false) { }
     }
 }
 
@@ -89,17 +93,17 @@ void yielding_actor::dequeue(behavior& bhvr) {
         // suppress virtual function call
         yielding_actor::dequeue(bhvr.get_partial_function());
     }
-    else if (invoke_from_cache(bhvr) == false) {
+    else if (m_recv_policy.invoke_from_cache(this, bhvr) == false) {
         if (bhvr.timeout().is_zero()) {
             for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
                 CPPA_REQUIRE(e->marked == false);
-                if (invoke(e, bhvr)) return;
+                if (m_recv_policy.invoke(this, e, bhvr)) return;
             }
             bhvr.handle_timeout();
         }
         else {
             request_timeout(bhvr.timeout());
-            while (invoke(receive_node(), bhvr) == false) { }
+            while (m_recv_policy.invoke(this, receive_node(), bhvr) == false) { }
         }
     }
 }

@@ -53,7 +53,7 @@ using std::int64_t;
 using namespace cppa;
 
 template<typename T>
-T rd(char const* cstr) {
+T rd(const char* cstr) {
     char* endptr = nullptr;
     T result = static_cast<T>(strtol(cstr, &endptr, 10));
     if (endptr == nullptr || *endptr != '\0') {

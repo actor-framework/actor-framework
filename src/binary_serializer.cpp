@@ -187,11 +187,11 @@ size_t binary_serializer::size() const {
     return sendable_size() - ui32_size;
 }
 
-char const* binary_serializer::data() const {
+const char* binary_serializer::data() const {
     return m_begin + ui32_size;
 }
 
-char const* binary_serializer::sendable_data() {
+const char* binary_serializer::sendable_data() {
     auto s = static_cast<std::uint32_t>(size());
     memcpy(m_begin, &s, ui32_size);
     return m_begin;

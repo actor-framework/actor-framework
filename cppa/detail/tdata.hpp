@@ -51,7 +51,7 @@
 
 namespace cppa {
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace detail {
@@ -66,7 +66,7 @@ template<typename T>
 inline void* ptr_to(T* what) { return what; }
 
 template<typename T>
-inline const void* ptr_to(T const* what) { return what; }
+inline const void* ptr_to(const T* what) { return what; }
 
 template<typename T>
 inline void* ptr_to(const std::reference_wrapper<T>& what) {
@@ -79,17 +79,17 @@ inline const void* ptr_to(const std::reference_wrapper<const T>& what) {
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(const T&) {
+inline const uniform_type_info* utype_of(const T&) {
     return static_types_array<T>::arr[0];
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(const std::reference_wrapper<T>&) {
+inline const uniform_type_info* utype_of(const std::reference_wrapper<T>&) {
     return static_types_array<typename util::rm_ref<T>::type>::arr[0];
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(T const* ptr) {
+inline const uniform_type_info* utype_of(const T* ptr) {
     return utype_of(*ptr);
 }
 
@@ -168,7 +168,7 @@ struct tdata<> {
         throw std::out_of_range("tdata<>");
     }
 
-    inline uniform_type_info const* type_at(size_t) const {
+    inline const uniform_type_info* type_at(size_t) const {
         throw std::out_of_range("tdata<>");
     }
 
@@ -336,7 +336,7 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
 
     }
 
-    inline uniform_type_info const* type_at(size_t p) const {
+    inline const uniform_type_info* type_at(size_t p) const {
         return (p == 0) ? utype_of(head) : super::type_at(p-1);
     }
 

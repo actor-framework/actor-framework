@@ -51,7 +51,7 @@ class exception : public std::exception {
      * @brief Returns the error message.
      * @returns The error message as C-string.
      */
-    char const* what() const throw();
+    const char* what() const throw();
 
  protected:
 

@@ -28,7 +28,7 @@ inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
 
 template<typename T1, typename T2>
 inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
-                                 char const* file_name,
+                                 const char* file_name,
                                  int line_number,
                                  size_t& error_count) {
     if (cppa_check_value_fun_eq(value1, value2) == false) {
@@ -44,7 +44,7 @@ inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
 
 template<typename T1, typename T2>
 inline void cppa_check_value_verbose_fun(const T1& value1, const T2& value2,
-                                         char const* file_name,
+                                         const char* file_name,
                                          int line_number,
                                          size_t& error_count) {
     if (cppa_check_value_fun(value1, value2, file_name,
@@ -103,7 +103,7 @@ if (!(line_of_code)) {                                                         \
 typedef std::pair<std::string, std::string> string_pair;
 
 size_t test__yield_interface();
-size_t test__remote_actor(char const* app_path, bool is_client,
+size_t test__remote_actor(const char* app_path, bool is_client,
                           const std::vector<string_pair>& args);
 size_t test__ripemd_160();
 size_t test__uniform_type();

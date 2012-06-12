@@ -70,7 +70,7 @@ namespace cppa {
 template<size_t N, typename... Tn>
 const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv) {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return *reinterpret_cast<typename util::at<N, Tn...>::type const*>(tv.at(N));
+    return *reinterpret_cast<const typename util::at<N, Tn...>::type*>(tv.at(N));
 }
 
 template<size_t N, typename... Tn>

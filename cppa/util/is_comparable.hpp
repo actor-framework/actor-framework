@@ -47,13 +47,13 @@ class is_comparable {
     //         candidate and thus decltype(cmp_help_fun(...)) is void.
 
     template<typename A, typename B>
-    static bool cmp_help_fun(A const* arg0, B const* arg1,
+    static bool cmp_help_fun(const A* arg0, const B* arg1,
                              decltype(*arg0 == *arg1)* = nullptr) {
         return true;
     }
 
     template<typename A, typename B>
-    static void cmp_help_fun(A const*, B const*, void* = nullptr) { }
+    static void cmp_help_fun(const A*, const B*, void* = nullptr) { }
 
     typedef decltype(cmp_help_fun(static_cast<T1*>(nullptr),
                                   static_cast<T2*>(nullptr),

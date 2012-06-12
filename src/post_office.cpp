@@ -169,7 +169,7 @@ class po_peer : public po_socket_handler {
     // the process information of our remote peer
     process_information_ptr m_peer;
     // caches uniform_typeid<addressed_message>()
-    uniform_type_info const* m_meta_msg;
+    const uniform_type_info* m_meta_msg;
     // manages socket input
     buffer<512, (16 * 1024 * 1024)> m_buf;
 

@@ -44,7 +44,7 @@ template<typename T>
 class abstract_uniform_type_info : public uniform_type_info {
 
     inline static const T& deref(const void* ptr) {
-        return *reinterpret_cast<T const*>(ptr);
+        return *reinterpret_cast<const T*>(ptr);
     }
 
     inline static T& deref(void* ptr) {

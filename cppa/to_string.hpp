@@ -38,7 +38,7 @@ namespace cppa {
 
 namespace detail {
 
-std::string to_string_impl(const void* what, uniform_type_info const* utype);
+std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
 } // namespace detail
 

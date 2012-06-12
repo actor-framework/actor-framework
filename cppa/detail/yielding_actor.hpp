@@ -41,18 +41,16 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/nestable_receive_actor.hpp"
+#include "cppa/detail/nestable_receive_policy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class yielding_actor
-        : public nestable_receive_actor<yielding_actor,
-                                        abstract_scheduled_actor> {
+class yielding_actor : public abstract_scheduled_actor {
 
-    typedef nestable_receive_actor<yielding_actor,
-                                   abstract_scheduled_actor>
-            super;
+    friend class nestable_receive_policy;
+
+    typedef abstract_scheduled_actor super;
 
  public:
 
@@ -76,12 +74,15 @@ class yielding_actor
 
     typedef std::unique_ptr<recursive_queue_node> queue_node_ptr;
 
-    static void run(void* _this);
+    void run();
+
+    static void trampoline(void* _this);
 
     void yield_until_not_empty();
 
     util::fiber m_fiber;
     std::function<void()> m_behavior;
+    nestable_receive_policy m_recv_policy;
 
     inline recursive_queue_node* receive_node() {
         recursive_queue_node* e = m_mailbox.try_pop();

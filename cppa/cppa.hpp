@@ -367,7 +367,7 @@
  *
  * The message passing of @p libcppa prohibits pointers in messages because
  * it enforces network transparent messaging.
- * Unfortunately, string literals in @p C++ have the type <tt>char const*</tt>,
+ * Unfortunately, string literals in @p C++ have the type <tt>const char*</tt>,
  * resp. <tt>const char[]</tt>. Since @p libcppa is a user-friendly library,
  * it silently converts string literals and C-strings to @p std::string objects.
  * It also converts unicode literals to the corresponding STL container.
@@ -377,7 +377,7 @@
  * // sends an std::string containing "hello actor!" to itself
  * send(self, "hello actor!");
  *
- * char const* cstring = "cstring";
+ * const char* cstring = "cstring";
  * // sends an std::string containing "cstring" to itself
  * send(self, cstring);
  *

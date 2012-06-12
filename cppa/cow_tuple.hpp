@@ -154,7 +154,7 @@ class cow_tuple {
      * @brief Gets {@link uniform_type_info uniform type information}
      *        of the element at position @p p.
      */
-    inline uniform_type_info const* type_at(size_t p) const {
+    inline const uniform_type_info* type_at(size_t p) const {
         return m_vals->type_at(p);
     }
 
@@ -212,7 +212,7 @@ cow_tuple<Args...> make_cow_tuple(Args&&... args);
 template<size_t N, typename... Types>
 const typename util::at<N, Types...>::type& get(const cow_tuple<Types...>& tup) {
     typedef typename util::at<N, Types...>::type result_type;
-    return *reinterpret_cast<result_type const*>(tup.at(N));
+    return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
 template<size_t N, typename... Types>

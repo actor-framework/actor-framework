@@ -49,20 +49,18 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
-#include "cppa/detail/nestable_receive_actor.hpp"
+#include "cppa/detail/nestable_receive_policy.hpp"
 
 namespace cppa { namespace detail {
 
 /**
  * @brief Represents a thread that was converted to an Actor.
  */
-class converted_thread_context
-        : public nestable_receive_actor<converted_thread_context,
-                                        abstract_actor<local_actor> > {
+class converted_thread_context : public abstract_actor<local_actor> {
 
-    typedef nestable_receive_actor<converted_thread_context,
-                                   abstract_actor<local_actor> >
-            super;
+    friend class nestable_receive_policy;
+
+    typedef abstract_actor<local_actor> super;
 
  public:
 
@@ -81,6 +79,10 @@ class converted_thread_context
     filter_result filter_msg(const any_tuple& msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
+
+ private:
+
+    nestable_receive_policy m_recv_policy;
 
 };
 

@@ -59,7 +59,7 @@ const void* object_array::at(size_t pos) const {
     return m_elements[pos].value();
 }
 
-uniform_type_info const* object_array::type_at(size_t pos) const {
+const uniform_type_info* object_array::type_at(size_t pos) const {
     return m_elements[pos].type();
 }
 

@@ -27,12 +27,12 @@ bool ascending(int a, int b, int c) {
     return a < b && b < c;
 }
 
-vector<uniform_type_info const*> to_vec(util::type_list<>, vector<uniform_type_info const*> vec = vector<uniform_type_info const*>{}) {
+vector<const uniform_type_info*> to_vec(util::type_list<>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
     return vec;
 }
 
 template<typename Head, typename... Tail>
-vector<uniform_type_info const*> to_vec(util::type_list<Head, Tail...>, vector<uniform_type_info const*> vec = vector<uniform_type_info const*>{}) {
+vector<const uniform_type_info*> to_vec(util::type_list<Head, Tail...>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
     vec.push_back(uniform_typeid<Head>());
     return to_vec(util::type_list<Tail...>{}, std::move(vec));
 }

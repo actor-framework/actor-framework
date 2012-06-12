@@ -100,21 +100,21 @@ class tuple_vals : public abstract_tuple {
         return const_cast<void*>(at(pos));
     }
 
-    uniform_type_info const* type_at(size_t pos) const {
+    const uniform_type_info* type_at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_types[pos];
     }
 
     bool equals(const abstract_tuple& other) const {
         if (size() != other.size()) return false;
-        tuple_vals const* o = dynamic_cast<tuple_vals const*>(&other);
+        const tuple_vals* o = dynamic_cast<const tuple_vals*>(&other);
         if (o) {
             return m_data == (o->m_data);
         }
         return abstract_tuple::equals(other);
     }
 
-    std::type_info const* type_token() const {
+    const std::type_info* type_token() const {
         return detail::static_type_list<ElementTypes...>::list;
     }
 

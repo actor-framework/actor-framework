@@ -95,11 +95,11 @@ class cow_ptr {
 
     inline T* operator->() { return detached_ptr(); }
 
-    inline T const* get() const { return ptr(); }
+    inline const T* get() const { return ptr(); }
 
     inline const T& operator*() const { return *ptr(); }
 
-    inline T const* operator->() const { return ptr(); }
+    inline const T* operator->() const { return ptr(); }
 
     inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 
@@ -119,7 +119,7 @@ class cow_ptr {
         return ptr;
     }
 
-    inline T const* ptr() const { return m_ptr.get(); }
+    inline const T* ptr() const { return m_ptr.get(); }
 
 };
 

@@ -63,7 +63,6 @@ cppa/detail/map_member.hpp
 cppa/detail/matches.hpp
 cppa/detail/mock_scheduler.hpp
 cppa/detail/native_socket.hpp
-cppa/detail/nestable_receive_actor.hpp
 cppa/detail/network_manager.hpp
 cppa/detail/object_array.hpp
 cppa/detail/object_impl.hpp
@@ -81,7 +80,6 @@ cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
 cppa/detail/swap_bytes.hpp
 cppa/detail/tdata.hpp
-cppa/detail/thread.hpp
 cppa/detail/thread_pool_scheduler.hpp
 cppa/detail/to_uniform_name.hpp
 cppa/detail/tuple_cast_impl.hpp
@@ -270,3 +268,4 @@ unit_testing/test__tuple.cpp
 unit_testing/test__type_list.cpp
 unit_testing/test__uniform_type.cpp
 unit_testing/test__yield_interface.cpp
+cppa/detail/nestable_receive_policy.hpp

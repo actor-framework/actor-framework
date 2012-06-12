@@ -52,7 +52,7 @@ class serializer;
 class deserializer;
 class uniform_type_info;
 
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 
 /**
  * @defgroup TypeSystem libcppa's platform-independent type system.
@@ -178,7 +178,7 @@ class uniform_type_info {
      * @returns An instance describing the same type as @p tinfo.
      * @throws std::runtime_error if @p tinfo is not an announced type.
      */
-    static uniform_type_info const* from(const std::type_info& tinfo);
+    static const uniform_type_info* from(const std::type_info& tinfo);
 
     /**
      * @brief Get all instances.
@@ -266,7 +266,7 @@ class uniform_type_info {
  * @relates uniform_type_info
  */
 template<typename T>
-inline uniform_type_info const* uniform_typeid() {
+inline const uniform_type_info* uniform_typeid() {
     return uniform_typeid(typeid(T));
 }
 

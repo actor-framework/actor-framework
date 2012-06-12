@@ -41,11 +41,11 @@ template<class Tuple>
 class tuple_iterator {
 
     size_t m_pos;
-    Tuple const* m_tuple;
+    const Tuple* m_tuple;
 
  public:
 
-    inline tuple_iterator(Tuple const* tup, size_t pos = 0)
+    inline tuple_iterator(const Tuple* tup, size_t pos = 0)
         : m_pos(pos), m_tuple(tup) {
     }
 
@@ -99,7 +99,7 @@ class tuple_iterator {
         return m_tuple->at(m_pos);
     }
 
-    inline uniform_type_info const* type() const {
+    inline const uniform_type_info* type() const {
         return m_tuple->type_at(m_pos);
     }
 

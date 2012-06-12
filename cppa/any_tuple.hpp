@@ -115,7 +115,7 @@ class any_tuple {
      * @brief Gets {@link uniform_type_info uniform type information}
      *        of the element at position @p p.
      */
-    uniform_type_info const* type_at(size_t p) const;
+    const uniform_type_info* type_at(size_t p) const;
 
     /**
      * @brief Returns @c true if <tt>*this == other</tt>, otherwise false.
@@ -130,7 +130,7 @@ class any_tuple {
     template<typename T>
     inline const T& get_as(size_t p) const {
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
-        return *reinterpret_cast<T const*>(at(p));
+        return *reinterpret_cast<const T*>(at(p));
     }
 
     template<typename T>
@@ -147,7 +147,7 @@ class any_tuple {
     inline const cow_ptr<detail::abstract_tuple>& vals() const { return m_vals; }
     inline const cow_ptr<detail::abstract_tuple>& cvals() const { return m_vals; }
 
-    inline std::type_info const* type_token() const {
+    inline const std::type_info* type_token() const {
         return m_vals->type_token();
     }
 

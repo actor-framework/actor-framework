@@ -90,7 +90,7 @@ class serializer {
      * @param num Size of the array @p values.
      * @param values An array of size @p num of primitive data values.
      */
-    virtual void write_tuple(size_t num, primitive_variant const* values) = 0;
+    virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
 
 };
 

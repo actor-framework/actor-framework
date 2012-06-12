@@ -72,10 +72,10 @@ size_t test__pattern() {
 
     announce<foobar>(&foobar::first, &foobar::second);
 
-    static constexpr char const* arr1_as_string =
+    static constexpr const char* arr1_as_string =
             "{ arr[0] = @i32, arr[1] = anything, arr[2] = float }";
     CPPA_CHECK_EQUAL(arr1_as_string, plot(arr1));
-    static constexpr char const* arr2_as_string =
+    static constexpr const char* arr2_as_string =
             "{ arr[0] = @i32, arr[1] = anything, "
             "arr[2] = std::pair<@i32,@i32> }";
     CPPA_CHECK_EQUAL(arr2_as_string, plot(arr2));

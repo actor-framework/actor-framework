@@ -60,7 +60,7 @@ bool empty_tuple::equals(const abstract_tuple& other) const {
     return other.size() == 0;
 }
 
-std::type_info const* empty_tuple::type_token() const {
+const std::type_info* empty_tuple::type_token() const {
     return &typeid(util::type_list<>);
 }
 

@@ -143,10 +143,10 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
                     queue_node_ptr ptr{std::move(it->second)};
                     CPPA_REQUIRE(ptr->marked == false);
                     auto whom = const_cast<actor_ptr*>(
-                                    reinterpret_cast<actor_ptr const*>(
+                                    reinterpret_cast<const actor_ptr*>(
                                         ptr->msg.at(1)));
                     if (*whom) {
-                        any_tuple msg = *(reinterpret_cast<any_tuple const*>(
+                        any_tuple msg = *(reinterpret_cast<const any_tuple*>(
                                                   ptr->msg.at(2))); (*whom)->enqueue(ptr->sender.get(), std::move(msg));
                     }
                     messages.erase(it);

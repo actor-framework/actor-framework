@@ -66,10 +66,10 @@ class fixed_vector {
     typedef value_type&         reference;
     typedef const value_type&   const_reference;
     typedef value_type*         pointer;
-    typedef value_type const*   const_pointer;
+    typedef const value_type*   const_pointer;
 
     typedef T*                                      iterator;
-    typedef T const*                                const_iterator;
+    typedef const T*                                const_iterator;
     typedef std::reverse_iterator<iterator>         reverse_iterator;
     typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
 
@@ -236,7 +236,7 @@ class fixed_vector {
         return m_data;
     }
 
-    inline T const* data() const {
+    inline const T* data() const {
         return m_data;
     }
 

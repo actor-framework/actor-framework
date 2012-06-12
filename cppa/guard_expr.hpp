@@ -128,7 +128,7 @@ struct ge_mutable_reference_wrapper {
 
 template<typename T>
 struct ge_reference_wrapper {
-    T const* value;
+    const T* value;
     ge_reference_wrapper(T&&) = delete;
     ge_reference_wrapper() : value(nullptr) { }
     ge_reference_wrapper(const T& val_ref) : value(&val_ref) { }
@@ -145,7 +145,7 @@ struct ge_reference_wrapper {
 // support use of gref(BooleanVariable) as receive loop 'guard'
 template<>
 struct ge_reference_wrapper<bool> {
-    bool const* value;
+    const bool* value;
     ge_reference_wrapper(bool&&) = delete;
     ge_reference_wrapper(const bool& val_ref) : value(&val_ref) { }
     ge_reference_wrapper(const ge_reference_wrapper&) = default;
@@ -470,8 +470,8 @@ struct ge_result_<guard_expr<OP, First, Second>, Tuple> {
     typedef typename ge_result_<First, Tuple>::type lhs_type;
     typedef typename ge_result_<Second, Tuple>::type rhs_type;
     typedef decltype(
-            ge_eval_op<OP>::_(*static_cast<lhs_type const*>(nullptr),
-                              *static_cast<rhs_type const*>(nullptr))) type;
+            ge_eval_op<OP>::_(*static_cast<const lhs_type*>(nullptr),
+                              *static_cast<const rhs_type*>(nullptr))) type;
 };
 
 template<typename Fun, class Tuple>
@@ -483,8 +483,8 @@ template<typename First, typename Second, class Tuple>
 struct ge_result_<guard_expr<exec_fun1_op, First, Second>, Tuple> {
     typedef First type0;
     typedef typename ge_unbound<Second, Tuple>::type type1;
-    typedef decltype( (*static_cast<type0 const*>(nullptr))(
-                 *static_cast<type1 const*>(nullptr)
+    typedef decltype( (*static_cast<const type0*>(nullptr))(
+                 *static_cast<const type1*>(nullptr)
              )) type;
 };
 
@@ -493,9 +493,9 @@ struct ge_result_<guard_expr<exec_fun2_op, First, Second>, Tuple> {
     typedef typename First::first_type type0;
     typedef typename ge_unbound<typename First::second_type, Tuple>::type type1;
     typedef typename ge_unbound<Second, Tuple>::type type2;
-    typedef decltype( (*static_cast<type0 const*>(nullptr))(
-                 *static_cast<type1 const*>(nullptr),
-                 *static_cast<type2 const*>(nullptr)
+    typedef decltype( (*static_cast<const type0*>(nullptr))(
+                 *static_cast<const type1*>(nullptr),
+                 *static_cast<const type2*>(nullptr)
              )) type;
 };
 
@@ -505,10 +505,10 @@ struct ge_result_<guard_expr<exec_fun3_op, First, Second>, Tuple> {
     typedef typename ge_unbound<typename First::second_type,Tuple>::type type1;
     typedef typename ge_unbound<typename Second::first_type,Tuple>::type type2;
     typedef typename ge_unbound<typename Second::second_type,Tuple>::type type3;
-    typedef decltype( (*static_cast<type0 const*>(nullptr))(
-                 *static_cast<type1 const*>(nullptr),
-                 *static_cast<type2 const*>(nullptr),
-                 *static_cast<type3 const*>(nullptr)
+    typedef decltype( (*static_cast<const type0*>(nullptr))(
+                 *static_cast<const type1*>(nullptr),
+                 *static_cast<const type2*>(nullptr),
+                 *static_cast<const type3*>(nullptr)
              )) type;
 };
 
