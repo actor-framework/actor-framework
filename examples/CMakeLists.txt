@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-project(cppa_examples)
+project(cppa_examples CXX)
 
 # Set up environment paths to cmake modules and libcppa
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
