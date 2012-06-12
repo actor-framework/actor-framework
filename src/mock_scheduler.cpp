@@ -80,7 +80,7 @@ std::thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_
 
 actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
     inc_actor_count();
-    CPPA_MEMORY_BARRIER();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     intrusive_ptr<local_actor> ctx{new detail::converted_thread_context};
     std::thread{run_actor, ctx, std::move(what)}.detach();
     return std::move(ctx);

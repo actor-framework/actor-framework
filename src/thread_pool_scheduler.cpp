@@ -126,7 +126,7 @@ struct thread_pool_scheduler::worker {
                     job->chained_actor().reset();
                 }
                 if (!job->deref()) delete job;
-                CPPA_MEMORY_BARRIER();
+                std::atomic_thread_fence(std::memory_order_seq_cst);
                 dec_actor_count();
                 job = nullptr;
             }
@@ -207,7 +207,7 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
 actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
                                             bool push_to_queue) {
     inc_actor_count();
-    CPPA_MEMORY_BARRIER();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     intrusive_ptr<scheduled_actor> ctx(what);
     ctx->ref();
     if (push_to_queue) m_queue.push_back(ctx.get());

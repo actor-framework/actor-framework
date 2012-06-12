@@ -84,7 +84,7 @@ void delete_singletons() {
     }
     stop_and_kill(s_scheduler);
     stop_and_kill(s_network_manager);
-    CPPA_MEMORY_BARRIER();
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe now to delete all other singletons now
     delete s_actor_registry.load();
     delete s_group_manager.load();

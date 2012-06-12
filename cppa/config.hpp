@@ -57,15 +57,6 @@
 #  define CPPA_64BIT
 #endif
 
-#ifdef CPPA_MACOS
-#   include <libkern/OSAtomic.h>
-#   define CPPA_MEMORY_BARRIER() OSMemoryBarrier()
-#elif defined(CPPA_GCC)
-#   define CPPA_MEMORY_BARRIER() __sync_synchronize()
-#else
-#  error Plattform and/or compiler not supported
-#endif
-
 #include <cstdio>
 #include <cstdlib>
 

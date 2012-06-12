@@ -75,7 +75,7 @@ struct network_manager_impl : network_manager {
         m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
         m_mailman_thread.join();
         // wait until mailman is done; post_office closes all sockets
-        CPPA_MEMORY_BARRIER();
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         send_to_post_office(po_message{atom("DONE"), -1, 0});
         m_post_office_thread.join();
         close(pipe_fd[0]);
