@@ -125,7 +125,7 @@ size_t test__serialization() {
     catch (std::exception& e) {
         CPPA_ERROR("exception: " << e.what());
     }
- {
+    {
         any_tuple ttup = make_cow_tuple(1, 2, actor_ptr(self));
         binary_serializer bs;
         bs << ttup;
@@ -134,7 +134,7 @@ size_t test__serialization() {
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
         CPPA_CHECK(ttup == ttup2);
     }
- {
+    {
         // serialize b1 to buf
         binary_serializer bs;
         bs << atuple1;
@@ -156,7 +156,7 @@ size_t test__serialization() {
             CPPA_ERROR("exception: " << e.what());
         }
     }
- {
+    {
         any_tuple msg1 = cppa::make_cow_tuple(42, std::string("Hello \"World\"!"));
         auto msg1_tostring = to_string(msg1);
         if (msg1str != msg1_tostring) {

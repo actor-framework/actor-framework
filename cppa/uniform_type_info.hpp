@@ -170,7 +170,7 @@ class uniform_type_info {
      * @returns The instance associated to @p uniform_name.
      * @throws std::runtime_error if no type named @p uniform_name was found.
      */
-    static uniform_type_info* from(const std::string& uniform_name);
+    static const uniform_type_info* from(const std::string& uniform_name);
 
     /**
      * @brief Get instance by std::type_info.
@@ -184,7 +184,7 @@ class uniform_type_info {
      * @brief Get all instances.
      * @returns A vector with all known (announced) instances.
      */
-    static std::vector<uniform_type_info*> instances();
+    static std::vector<const uniform_type_info*> instances();
 
     /**
      * @brief Get the internal @p libcppa name for this type.

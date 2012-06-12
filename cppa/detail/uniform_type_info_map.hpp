@@ -35,6 +35,8 @@
 #include <string>
 #include <utility> // std::pair
 
+#include "cppa/detail/default_uniform_type_info_impl.hpp"
+
 namespace cppa { class uniform_type_info; }
 
 namespace cppa { namespace detail {
@@ -62,11 +64,11 @@ class uniform_type_info_map {
         return m_ints;
     }
 
-    uniform_type_info* by_raw_name(const std::string& name) const;
+    const uniform_type_info* by_raw_name(const std::string& name) const;
 
-    uniform_type_info* by_uniform_name(const std::string& name) const;
+    const uniform_type_info* by_uniform_name(const std::string& name) const;
 
-    std::vector<uniform_type_info*> get_all() const;
+    std::vector<const uniform_type_info*> get_all() const;
 
     // NOT thread safe!
     bool insert(const std::set<std::string>& raw_names, uniform_type_info* uti);
@@ -81,6 +83,8 @@ class uniform_type_info_map {
 
     // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
     int_map m_ints;
+
+
 
 };
 

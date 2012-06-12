@@ -47,7 +47,8 @@ size_t test__uniform_type() {
     bool announce1 = announce<foo>(&foo::value);
     bool announce2 = announce<foo>(&foo::value);
     bool announce3 = announce<foo>(&foo::value);
-    bool announce4 = announce<foo>(&foo::value); {
+    bool announce4 = announce<foo>(&foo::value);
+    {
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
         object obj2(obj1);
@@ -86,7 +87,7 @@ size_t test__uniform_type() {
     std::set<std::string> found;
     // fetch all available type names
     auto types = uniform_type_info::instances();
-    for (uniform_type_info* tinfo : types) {
+    for (auto tinfo : types) {
         found.insert(tinfo->name());
     }
     // compare the two sets

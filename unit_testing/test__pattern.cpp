@@ -39,10 +39,10 @@ string plot(const Arr& arr) {
     return oss.str();
 }
 
-typedef std::pair<int,int> foobar;
+typedef std::pair<std::int32_t, std::int32_t> foobar;
 
-static detail::types_array<int,anything,float> arr1;
-static detail::types_array<int,anything,foobar> arr2;
+static detail::types_array<int, anything, float> arr1;
+static detail::types_array<int, anything, foobar> arr2;
 
 template<typename T>
 void match_test(const T& value) {
