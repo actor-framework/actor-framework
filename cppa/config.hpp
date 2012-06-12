@@ -31,9 +31,8 @@
 #ifndef CPPA_CONFIG_HPP
 #define CPPA_CONFIG_HPP
 
-// uncomment this line or use
-// ./configure CXXFLAGS="-DCPPA_DISABLE_CONTEXT_SWITCHING"
-// if ucontext_t is not available on your platform
+// uncomment this line or use define CPPA_DISABLE_CONTEXT_SWITCHING using CMAKE
+// if boost.context is not available on your platform
 //#define CPPA_DISABLE_CONTEXT_SWITCHING
 
 #if defined(__GNUC__)
