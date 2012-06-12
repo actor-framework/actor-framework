@@ -94,12 +94,11 @@ void yielding_actor::dequeue(partial_function& fun) {
 
 void yielding_actor::dequeue(behavior& bhvr) {
     if (bhvr.timeout().valid() == false) {
-        // suppress virtual function call
-        yielding_actor::dequeue(bhvr.get_partial_function());
+        m_recv_policy.receive(this, bhvr.get_partial_function());
     }
     else if (m_recv_policy.invoke_from_cache(this, bhvr) == false) {
         if (bhvr.timeout().is_zero()) {
-            for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
+            for (auto e = m_mailbox.try_pop(); e != 0; e = m_mailbox.try_pop()) {
                 CPPA_REQUIRE(e->marked == false);
                 if (m_recv_policy.invoke(this, e, bhvr)) return;
             }
@@ -140,8 +139,7 @@ void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
                 break;
             }
             default: {
-                // illegal state
-                exit(8);
+                CPPA_CRITICAL("illegal state");
             }
         }
     }
