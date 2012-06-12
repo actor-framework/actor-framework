@@ -21,6 +21,7 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/types_array.hpp"
+#include "cppa/detail/addressed_message.hpp"
 
 #include "cppa/util/callable_trait.hpp"
 
@@ -76,7 +77,7 @@ size_t test__uniform_type() {
         // default announced cppa types
         "@atom",               // cppa::atom_value
         "@<>",                 // cppa::any_tuple
-        "@msg",                // cppa::message
+        "@msg",                // cppa::detail::addressed_message
         "@actor",              // cppa::actor_ptr
         "@group",              // cppa::group_ptr
         "@channel",            // cppa::channel_ptr
@@ -110,7 +111,49 @@ size_t test__uniform_type() {
         }
     }
 
+    // check if static types are identical to runtime types
+    auto& sarr = detail::static_types_array<
+                    std::int8_t, std::int16_t, std::int32_t, std::int64_t,
+                    std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t,
+                    std::string, std::u16string, std::u32string,
+                    float, double,
+                    atom_value, any_tuple, detail::addressed_message,
+                    actor_ptr, group_ptr,
+                    channel_ptr, intrusive_ptr<process_information>
+                 >::arr;
+
+    std::vector<const uniform_type_info*> rarr{
+        uniform_typeid<std::int8_t>(),
+        uniform_typeid<std::int16_t>(),
+        uniform_typeid<std::int32_t>(),
+        uniform_typeid<std::int64_t>(),
+        uniform_typeid<std::uint8_t>(),
+        uniform_typeid<std::uint16_t>(),
+        uniform_typeid<std::uint32_t>(),
+        uniform_typeid<std::uint64_t>(),
+        uniform_typeid<std::string>(),
+        uniform_typeid<std::u16string>(),
+        uniform_typeid<std::u32string>(),
+        uniform_typeid<float>(),
+        uniform_typeid<double>(),
+        uniform_typeid<atom_value>(),
+        uniform_typeid<any_tuple>(),
+        uniform_typeid<detail::addressed_message>(),
+        uniform_typeid<actor_ptr>(),
+        uniform_typeid<group_ptr>(),
+        uniform_typeid<channel_ptr>(),
+        uniform_typeid<intrusive_ptr<process_information> >()
+    };
+
+    CPPA_CHECK_EQUAL(true, sarr.is_pure());
+
+    for (size_t i = 0; i < sarr.size; ++i) {
+        CPPA_CHECK_EQUAL(sarr[i]->name(), rarr[i]->name());
+        CPPA_CHECK(sarr[i] == rarr[i]);
+    }
+
     auto& arr0 = detail::static_types_array<atom_value, std::uint32_t>::arr;
+    CPPA_CHECK(arr0.is_pure());
     CPPA_CHECK(arr0[0] == uniform_typeid<atom_value>());
     CPPA_CHECK(arr0[0] == uniform_type_info::from("@atom"));
     CPPA_CHECK(arr0[1] == uniform_typeid<std::uint32_t>());

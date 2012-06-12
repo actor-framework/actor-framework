@@ -49,10 +49,14 @@ struct ta_util<cppa_tinf, false, T> {
     static inline const uniform_type_info* get() { return nullptr; }
 };
 
+// only built-in types are guaranteed to be available at static initialization
+// time, other types are announced at runtime
+
 // implements types_array
 template<bool BuiltinOnlyTypes, typename... T>
 struct types_array_impl {
     static constexpr bool builtin_only = true;
+    inline bool is_pure() const { return true; }
     // all types are builtin, perform lookup on constuction
     const uniform_type_info* data[sizeof...(T)];
     types_array_impl() : data{ta_util<cppa_tinf, true, T>::get()...} { }
@@ -67,6 +71,7 @@ struct types_array_impl {
 template<typename... T>
 struct types_array_impl<false, T...> {
     static constexpr bool builtin_only = false;
+    inline bool is_pure() const { return false; }
     // contains std::type_info for all non-builtin types
     const std::type_info* tinfo_data[sizeof...(T)];
     // contains uniform_type_infos for builtin types and lazy initializes

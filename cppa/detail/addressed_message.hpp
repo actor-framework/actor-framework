@@ -32,8 +32,9 @@
 #define ADDRESSED_MESSAGE_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/cow_tuple.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
