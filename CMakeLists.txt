@@ -91,6 +91,7 @@ elseif(UNIX)
   endif()
   set(LIBCPPA_SRC
       ${LIBCPPA_SRC}
+      ${fcontext_asm}
       ${boost_context}/src/stack_utils_posix.cpp
       ${boost_context}/src/stack_allocator_posix.cpp
       ${boost_context}/src/fcontext.cpp
