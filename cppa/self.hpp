@@ -51,14 +51,6 @@ class local_actor;
 // convertible<...> enables "actor_ptr this_actor = self;"
 class self_type : public convertible<self_type, actor*> {
 
-    static void set_impl(local_actor*);
-
-    static local_actor* get_unchecked_impl();
-
-    static local_actor* get_impl();
-
-    static actor* convert_impl();
-
     self_type(const self_type&) = delete;
     self_type& operator=(const self_type&) = delete;
 
@@ -90,6 +82,18 @@ class self_type : public convertible<self_type, actor*> {
     inline local_actor* unchecked() const {
         return get_unchecked_impl();
     }
+
+    static void cleanup_fun(local_actor*);
+
+ private:
+
+    static void set_impl(local_actor*);
+
+    static local_actor* get_unchecked_impl();
+
+    static local_actor* get_impl();
+
+    static actor* convert_impl();
 
 };
 

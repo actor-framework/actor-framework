@@ -62,11 +62,11 @@ void yielding_actor::run(void* ptr_arg) {
     yield(yield_state::done);
 }
 
-
 void yielding_actor::yield_until_not_empty() {
     if (m_mailbox.can_fetch_more() == false) {
         m_state.store(abstract_scheduled_actor::about_to_block);
-        CPPA_MEMORY_BARRIER();
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        //CPPA_MEMORY_BARRIER();
         // make sure mailbox is empty
         if (m_mailbox.can_fetch_more() == false) {
             m_state.store(abstract_scheduled_actor::ready);

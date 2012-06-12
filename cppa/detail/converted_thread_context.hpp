@@ -66,9 +66,6 @@ class converted_thread_context
 
  public:
 
-    // called if the converted thread finished execution
-    void cleanup(std::uint32_t reason = exit_reason::normal);
-
     void quit(std::uint32_t reason); //override
 
     void enqueue(actor* sender, any_tuple msg); //override

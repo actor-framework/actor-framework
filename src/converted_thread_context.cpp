@@ -50,10 +50,6 @@ void converted_thread_context::quit(std::uint32_t reason) {
     throw actor_exited(reason);
 }
 
-void converted_thread_context::cleanup(std::uint32_t reason) {
-    super::cleanup(reason);
-}
-
 void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
     auto node = fetch_node(sender, std::move(msg));
     CPPA_REQUIRE(node->marked == false);

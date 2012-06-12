@@ -53,6 +53,8 @@
 
 namespace cppa {
 
+class self_type;
+
 /**
  * @brief Implements linking and monitoring for actors.
  * @tparam Base Either {@link cppa::actor actor}
@@ -60,6 +62,8 @@ namespace cppa {
  */
 template<class Base>
 class abstract_actor : public Base {
+
+    friend class self_type;
 
     typedef std::unique_ptr<attachable> attachable_ptr;
     typedef std::lock_guard<std::mutex> guard_type;
