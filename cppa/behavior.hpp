@@ -53,7 +53,6 @@ class behavior {
 
     friend behavior operator,(partial_function&& lhs, behavior&& rhs);
 
-
  public:
 
     behavior() = default;
@@ -95,10 +94,11 @@ class behavior {
         return m_fun(std::move(value));
     }
 
- private:
+    inline bool undefined() const {
+        return m_fun.undefined() && m_timeout.valid() == false;
+    }
 
-    // terminates recursion
-    inline behavior& splice() { return *this; }
+ private:
 
     partial_function m_fun;
     util::duration m_timeout;
@@ -106,9 +106,13 @@ class behavior {
 
 };
 
+/**
+ * @brief Concatenates a match expression and a timeout specification
+ *        represented by an rvalue behavior object.
+ */
 template<typename... Lhs>
-behavior operator,(const match_expr<Lhs...>& lhs,
-                   behavior&& rhs) {
+behavior operator,(const match_expr<Lhs...>& lhs, behavior&& rhs) {
+    CPPA_REQUIRE(rhs.get_partial_function().undefined());
     rhs.get_partial_function() = lhs;
     return std::move(rhs);
 }

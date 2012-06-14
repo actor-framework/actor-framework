@@ -47,6 +47,12 @@ namespace cppa {
 class serializer;
 class deserializer;
 
+class actor;
+
+/**
+ * @brief A unique actor ID.
+ * @relates actor
+ */
 typedef std::uint32_t actor_id;
 
 /**
@@ -216,6 +222,7 @@ class actor : public channel {
 
 /**
  * @brief A smart pointer type that manages instances of {@link actor}.
+ * @relates actor
  */
 typedef intrusive_ptr<actor> actor_ptr;
 

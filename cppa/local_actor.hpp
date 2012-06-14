@@ -140,7 +140,8 @@ class local_actor : public actor {
     /**
      * @ingroup ActorManagement
      * @brief Adds a unidirectional @p monitor to @p whom.
-     * @note Each calls to @p monitor creates a new, independent monitor.
+     * @param whom The actor that should be monitored by this actor.
+     * @note Each call to @p monitor creates a new, independent monitor.
      * @pre The calling actor receives a "DOWN" message from @p whom when
      *      it terminates.
      */
@@ -149,11 +150,16 @@ class local_actor : public actor {
     /**
      * @ingroup ActorManagement
      * @brief Removes a monitor from @p whom.
+     * @param whom A monitored actor.
      */
     void demonitor(actor_ptr whom);
 
 };
 
+/**
+ * @brief A smart pointer to a {@link local_actor} instance.
+ * @relates local_actor
+ */
 typedef intrusive_ptr<local_actor> local_actor_ptr;
 
 } // namespace cppa

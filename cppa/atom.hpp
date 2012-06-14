@@ -37,12 +37,22 @@
 
 namespace cppa {
 
+/**
+ * @brief The value type of atoms.
+ */
 enum class atom_value : std::uint64_t { dirty_little_hack = 37337 };
 
-std::string to_string(const atom_value& a);
+/**
+ * @brief Returns @p what as a string representation.
+ * @param what Compact representation of an atom.
+ * @returns @p what as string.
+ */
+std::string to_string(const atom_value& what);
 
 /**
  * @brief Creates an atom from given string literal.
+ * @param str String constant representing an atom.
+ * @returns A compact representation of @p str.
  */
 template<size_t Size>
 constexpr atom_value atom(char const (&str) [Size]) {

@@ -79,6 +79,9 @@ class actor_proxy : public abstract_actor<actor> {
 
 #endif // CPPA_DOCUMENTATION
 
+/**
+ * @brief A smart pointer to an {@link actor_proxy} instance.
+ */
 typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
 
 } // namespace cppa

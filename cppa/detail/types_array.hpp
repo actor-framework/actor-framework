@@ -3,8 +3,6 @@
 
 #include <typeinfo>
 
-#include "cppa/type_value_pair.hpp"
-
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/is_builtin.hpp"
 

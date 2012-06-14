@@ -35,10 +35,11 @@ namespace cppa {
 
 /**
  * @ingroup TypeSystem
- * @brief Represents a type flag of {@link primitive_variant}.
+ * @brief Represents the type flag of
+ *        {@link cppa::primitive_variant primitive_variant}.
  *
  * Includes integers (signed and unsigned), floating points
- * and unicode strings (std::string, std::u16string and std::u32string).
+ * and strings (std::string, std::u16string and std::u32string).
  * @relates primitive_variant
  */
 enum primitive_type {

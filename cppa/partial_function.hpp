@@ -86,13 +86,15 @@ class partial_function {
         return (*this)(cpy);
     }
 
+    inline bool undefined() const {
+        return m_impl == nullptr;
+    }
+
  private:
 
     impl_ptr m_impl;
 
 };
-
-//behavior operator,(partial_function&& lhs, behavior&& rhs);
 
 } // namespace cppa
 

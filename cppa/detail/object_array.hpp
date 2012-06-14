@@ -34,7 +34,6 @@
 #include <vector>
 
 #include "cppa/object.hpp"
-#include "cppa/type_value_pair.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {

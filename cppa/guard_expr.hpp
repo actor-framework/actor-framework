@@ -156,7 +156,7 @@ struct ge_reference_wrapper<bool> {
 };
 
 /**
- * @brief Create a reference wrapper similar to std::reference_wrapper<const T>
+ * @brief Creates a reference wrapper similar to std::reference_wrapper<const T>
  *        that could be used in guard expressions or to enforce lazy evaluation.
  */
 template<typename T>

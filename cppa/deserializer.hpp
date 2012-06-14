@@ -110,7 +110,14 @@ class deserializer {
 
 };
 
-deserializer& operator>>(deserializer& d, object& what);
+/**
+ * @brief Deserializes a value and stores the result in @p storage.
+ * @param d A valid deserializer.
+ * @param storage An that should contain the deserialized value.
+ * @returns @p d
+ * @relates deserializer
+ */
+deserializer& operator>>(deserializer& d, object& storage);
 
 } // namespace cppa
 

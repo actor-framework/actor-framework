@@ -135,8 +135,9 @@
  * @p libcppa uses a copy-on-write optimization for its message
  * passing implementation.
  *
- * {@link cppa::tuple Tuples} should @b always be used with by-value semantic,
- * since tuples use a copy-on-write smart pointer internally. Let's assume two
+ * {@link cppa::cow_tuple Tuples} should @b always be used with by-value
+ * semantic,since tuples use a copy-on-write smart pointer internally.
+ * Let's assume two
  * tuple @p x and @p y, whereas @p y is a copy of @p x:
  *
  * @code
@@ -425,33 +426,38 @@ namespace cppa {
 
 /**
  * @ingroup ActorManagement
- * @brief Spans a new context-switching actor.
- * @returns A pointer to the spawned {@link actor Actor}.
+ * @brief Spawns a new context-switching actor.
+ * @param whom Instance of an event-based actor.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-inline actor_ptr spawn(scheduled_actor* what) {
-    return get_scheduler()->spawn(what);
+inline actor_ptr spawn(scheduled_actor* whom) {
+    return get_scheduler()->spawn(whom);
 }
 
 /**
  * @ingroup ActorManagement
- * @brief Spans a new context-switching actor.
- * @tparam Hint Hint to the scheduler for the best scheduling strategy.
- * @returns A pointer to the spawned {@link actor Actor}.
+ * @brief Spawns a new context-switching actor.
+ * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @param bhvr A function implementing the actor's behavior.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<scheduling_hint Hint>
-inline actor_ptr spawn(std::function<void()> what) {
-    return get_scheduler()->spawn(std::move(what), Hint);
+inline actor_ptr spawn(std::function<void()> bhvr) {
+    return get_scheduler()->spawn(std::move(bhvr), Hint);
 }
 
 /**
  * @ingroup ActorManagement
- * @brief Spans a new event-based actor.
- * @returns A pointer to the spawned {@link actor Actor}.
+ * @brief Spawns a new context-switching actor,
+ *        equal to <tt>spawn<detached>(bhvr)</tt>.
+ * @param bhvr A function implementing the actor's behavior.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-inline actor_ptr spawn(std::function<void()> what) {
-    return get_scheduler()->spawn(std::move(what), scheduled);
+inline actor_ptr spawn(std::function<void()> bhvr) {
+    return get_scheduler()->spawn(std::move(bhvr), scheduled);
 }
 
+// forwards self_type as actor_ptr
 template<typename T>
 struct spawn_fwd_ {
     static inline T&& _(T&& arg) { return std::move(arg); }
@@ -464,28 +470,50 @@ struct spawn_fwd_<self_type> {
     static inline actor_ptr _(const self_type&) { return self; }
 };
 
-template<typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args) {
-    return spawn(std::bind(std::move(what),
-                           spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                           spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
-}
-
+/**
+ * @ingroup ActorManagement
+ * @brief Spawns a new context-switching actor that executes
+ *        <tt>bhvr(arg0, args...)</tt>.
+ * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @param bhvr A functor implementing the actor's behavior.
+ * @param arg0 First argument to @p bhvr.
+ * @param args Further argumetns to @p bhvr.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
 template<scheduling_hint Hint, typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F&& what, Arg0&& arg0, Args&&... args) {
-    return spawn<Hint>(std::bind(std::move(what),
+inline actor_ptr spawn(F bhvr, Arg0&& arg0, Args&&... args) {
+    return spawn<Hint>(std::bind(std::move(bhvr),
                                  spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                                  spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
+}
+
+/**
+ * @ingroup ActorManagement
+ * @brief Spawns a new context-switching actor that executes
+ *        <tt>bhvr(arg0, args...)</tt>, equal to
+ *        <tt>spawn<scheduled>(bhvr, arg0, args...)</tt>.
+ * @param bhvr A functor implementing the actor's behavior.
+ * @param arg0 First argument to @p bhvr.
+ * @param args Further argumetns to @p bhvr.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<typename F, typename Arg0, typename... Args>
+inline actor_ptr spawn(F&& bhvr, Arg0&& arg0, Args&&... args) {
+    return spawn<scheduled>(std::forward<F>(bhvr),
+                            std::forward<Arg0>(arg0),
+                            std::forward<Args>(args)...);
 }
 
 #ifdef CPPA_DOCUMENTATION
 
 /**
  * @ingroup MessageHandling
- * @brief Sends <tt>{arg0, args...}</tt> as a message to @p whom.
+ * @brief Sends <tt>{what...}</tt> as a message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
  */
-template<typename Arg0, typename... Args>
-void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
+template<typename... Args>
+void send(channel_ptr& whom, const Args&... what);
 
 /**
  * @ingroup MessageHandling
@@ -493,8 +521,10 @@ void send(channel_ptr& whom, const Arg0& arg0, const Args&... args);
  *
  * <b>Usage example:</b>
  * @code
- * self << make_cow_tuple(1, 2, 3);
+ * self << make_any_tuple(1, 2, 3);
  * @endcode
+ * @param whom Receiver of the message.
+ * @param what Message as instance of {@link any_tuple}.
  * @returns @p whom.
  */
 channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
@@ -579,52 +609,57 @@ const self_type& operator<<(const self_type& s, any_tuple&& what);
 /**
  * @ingroup MessageHandling
  * @brief Sends a message to the sender of the last received message.
+ * @param what Message elements.
  */
-template<typename Arg0, typename... Args>
-inline void reply(const Arg0& arg0, const Args&... args) {
-    send(self->last_sender(), arg0, args...);
+template<typename... Args>
+inline void reply(const Args&... what) {
+    send(self->last_sender(), what...);
 }
 
 /**
  * @ingroup MessageHandling
  * @brief Sends a message to @p whom that is delayed by @p rel_time.
  * @param whom Receiver of the message.
- * @param rel_time Relative time duration to delay the message.
- * @param data Any number of values for the message content.
+ * @param rel_time Relative time duration to delay the message in
+ *                 microseconds, milliseconds, seconds or minutes.
+ * @param what Message elements.
  */
-template<class Rep, class Period, typename... Data>
+template<class Rep, class Period, typename... Args>
 inline void delayed_send(actor_ptr whom,
                          const std::chrono::duration<Rep, Period>& rel_time,
-                         const Data&... data) {
-    get_scheduler()->delayed_send(whom, rel_time, data...);
+                         const Args&... what) {
+    get_scheduler()->delayed_send(whom, rel_time, what...);
 }
 
 /**
  * @ingroup MessageHandling
  * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rel_time Relative time duration to delay the message in
+ *                 microseconds, milliseconds, seconds or minutes.
+ * @param what Message elements.
  * @see delayed_send()
  */
-template<class Rep, class Period, typename... Data>
+template<class Rep, class Period, typename... Args>
 inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
-                          const Data&... data) {
-    delayed_send(self->last_sender(), rel_time, data...);
+                          const Args&... what) {
+    delayed_send(self->last_sender(), rel_time, what...);
 }
 
 /**
  * @brief Blocks execution of this actor until all
  *        other actors finished execution.
- * @warning This function will cause a deadlock if
- *          called from multiple actors.
+ * @warning This function will cause a deadlock if called from multiple actors.
+ * @warning Do not call this function in cooperatively scheduled actors.
  */
 inline void await_all_others_done() {
     detail::actor_count_wait_until((self.unchecked() == nullptr) ? 0 : 1);
 }
 
 /**
- * @brief Publishes @p whom at given @p port.
+ * @brief Publishes @p whom at @p port.
  *
  * The connection is automatically closed if the lifetime of @p whom ends.
- * @param whom Actor that should be published at given @p port.
+ * @param whom Actor that should be published at @p port.
  * @param port Unused TCP port.
  * @throws bind_failure
  */
@@ -634,7 +669,8 @@ void publish(actor_ptr whom, std::uint16_t port);
  * @brief Establish a new connection to the actor at @p host on given @p port.
  * @param host Valid hostname or IP address.
  * @param port TCP port.
- * @returns A pointer to the proxy instance that represents the remote Actor.
+ * @returns An {@link actor_ptr} to the proxy instance
+ *          representing a remote actor.
  */
 actor_ptr remote_actor(const char* host, std::uint16_t port);
 

@@ -166,6 +166,7 @@ class group : public channel {
 
 /**
  * @brief A smart pointer type that manages instances of {@link group}.
+ * @relates group
  */
 typedef intrusive_ptr<group> group_ptr;
 

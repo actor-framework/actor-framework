@@ -129,7 +129,6 @@ cppa/stacked_event_based_actor.hpp
 cppa/to_string.hpp
 cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
-cppa/type_value_pair.hpp
 cppa/uniform_type_info.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/apply_args.hpp

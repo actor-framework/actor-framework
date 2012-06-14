@@ -335,12 +335,46 @@ get_ref(primitive_variant& pv) {
 
 #endif
 
+/**
+ * @relates primitive_variant
+ */
 bool operator==(const primitive_variant& lhs, const primitive_variant& rhs);
 
-inline
-bool operator!=(const primitive_variant& lhs, const primitive_variant& rhs) {
+/**
+ * @relates primitive_variant
+ */
+inline bool operator!=(const primitive_variant& lhs, const primitive_variant& rhs) {
     return !(lhs == rhs);
 }
+
+#ifndef CPPA_DOCUMENTATION
+
+/**
+ * @relates primitive_variant
+ */
+template<typename T>
+bool operator==(const T& lhs, const primitive_variant& rhs);
+
+/**
+ * @relates primitive_variant
+ */
+template<typename T>
+bool operator==(const primitive_variant& lhs, const T& rhs);
+
+/**
+ * @relates primitive_variant
+ */
+template<typename T>
+bool operator!=(const T& lhs, const primitive_variant& rhs);
+
+/**
+ * @relates primitive_variant
+ */
+template<typename T>
+bool operator!=(const primitive_variant& lhs, const T& rhs);
+
+
+#else
 
 template<typename T>
 typename std::enable_if<util::is_primitive<T>::value, bool>::type
@@ -368,6 +402,8 @@ operator!=(const T& lhs, const primitive_variant& rhs) {
     return !(lhs == rhs);
 }
 
+#endif // CPPA_DOCUMENTATION
+
 } // namespace cppa
 
 namespace cppa { namespace detail {
@@ -387,7 +423,7 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
              typename std::enable_if<std::is_arithmetic<T>::value, int>::type*) {
-    // don't call a constructor for arithmetic types
+    // never call constructors for arithmetic types
     lhs = rhs;
     lhs_type = FT;
 }

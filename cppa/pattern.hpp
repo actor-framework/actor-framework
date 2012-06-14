@@ -42,7 +42,6 @@
 #include "cppa/option.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/type_value_pair.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/guard.hpp"
@@ -59,6 +58,10 @@
 
 namespace cppa {
 
+/**
+ * @brief Denotes the position of {@link cppa::anything anything} in a
+ *        template parameter pack.
+ */
 enum class wildcard_position {
     nil,
     trailing,
@@ -67,6 +70,11 @@ enum class wildcard_position {
     multiple
 };
 
+/**
+ * @brief Gets the position of {@link cppa::anything anything} from the
+ *        type list @p Types.
+ * @tparam A template parameter pack as {@link cppa::util::type_list type_list}.
+ */
 template<typename Types>
 constexpr wildcard_position get_wildcard_position() {
     return util::tl_exists<Types, is_anything>::value
@@ -215,6 +223,9 @@ class value_matcher_impl<wildcard_position::multiple,
 
 };
 
+/**
+ * @brief A pattern matching for type and optionally value of tuple elements.
+ */
 template<typename... Types>
 class pattern {
 
@@ -230,6 +241,9 @@ class pattern {
     static constexpr wildcard_position wildcard_pos =
             get_wildcard_position<util::type_list<Types...> >();
 
+    /**
+     * @brief Parameter pack as {@link cppa::util::type_list type_list}.
+     */
     typedef util::type_list<Types...> types;
 
     typedef typename types::head head_type;
@@ -311,23 +325,6 @@ class pattern {
     }
 
  private:
-
-    typedef type_value_pair tvp_array[size];
-
-    // a polymophic functor
-    struct init_helper {
-        size_t i;
-        tvp_array& m_ptrs;
-        detail::types_array<Types...>& m_arr;
-        init_helper(tvp_array& ptrs, detail::types_array<Types...>& tarr)
-            : i(0), m_ptrs(ptrs), m_arr(tarr) { }
-        template<typename T>
-        inline void operator()(const option<T>& what) {
-            m_ptrs[i].first = m_arr[i];
-            m_ptrs[i].second = (what) ? &(*what) : nullptr;
-            ++i;
-        }
-    };
 
     std::unique_ptr<value_matcher> m_vm;
 

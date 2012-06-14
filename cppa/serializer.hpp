@@ -94,6 +94,13 @@ class serializer {
 
 };
 
+/**
+ * @brief Serializes a value to @p s.
+ * @param s A valid serializer.
+ * @param what A value of an announced or primitive type.
+ * @returns @p s
+ * @relates serializer
+ */
 template<typename T>
 serializer& operator<<(serializer& s, const T& what) {
     auto mtype = uniform_typeid<T>();

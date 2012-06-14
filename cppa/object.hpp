@@ -44,6 +44,10 @@ namespace cppa {
 
 // forward declarations
 class object;
+
+/**
+ * @relates object
+ */
 bool operator==(const object& lhs, const object& rhs);
 
 class uniform_type_info;

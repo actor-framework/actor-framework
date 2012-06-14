@@ -44,8 +44,8 @@ namespace cppa { namespace util {
 /**
  * @brief A vector with a fixed maximum size.
  *
- * This implementation is highly optimized for arithmetic types and refuses
- * any non-arithmetic template parameter.
+ * This implementation is highly optimized for arithmetic types and does
+ * <b>not</b> call constructors or destructors properly.
  */
 template<typename T, size_t MaxSize>
 class fixed_vector {
@@ -73,7 +73,7 @@ class fixed_vector {
     typedef std::reverse_iterator<iterator>         reverse_iterator;
     typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
 
-    constexpr fixed_vector() : m_size(0) { }
+    inline fixed_vector() : m_size(0) { }
 
     fixed_vector(const fixed_vector& other) : m_size(other.m_size) {
         std::copy(other.begin(), other.end(), begin());

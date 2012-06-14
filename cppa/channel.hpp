@@ -71,6 +71,7 @@ class channel : public ref_counted {
 
 /**
  * @brief A smart pointer type that manages instances of {@link channel}.
+ * @relates channel
  */
 typedef intrusive_ptr<channel> channel_ptr;
 

@@ -123,12 +123,17 @@ struct pmatch_each_helper {
 
 namespace cppa {
 
-inline detail::match_helper match(any_tuple t) {
-    return std::move(t);
+/**
+ * @brief Starts a match expression.
+ * @param what Tuple or value that should be matched against a pattern.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
+inline detail::match_helper match(any_tuple what) {
+    return std::move(what);
 }
 
 /**
- * @brief Match expression.
+ * @copydoc match(any_tuple)
  */
 template<typename T>
 detail::match_helper match(T&& what) {
@@ -136,7 +141,9 @@ detail::match_helper match(T&& what) {
 }
 
 /**
- * @brief Match expression that matches against all elements of @p what.
+ * @brief Starts a match expression that matches each element of @p what.
+ * @param what An STL-compliant container.
+ * @returns A helper object providing <tt>operator(...)</tt>.
  */
 template<class Container>
 auto match_each(Container& what)
@@ -144,21 +151,41 @@ auto match_each(Container& what)
     return {std::begin(what), std::end(what)};
 }
 
+/**
+ * @brief Starts a match expression that matches each element of @p what.
+ * @param what An STL-compliant container.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename T>
-auto match_each(std::initializer_list<T> list)
+auto match_each(std::initializer_list<T> what)
     -> detail::copying_match_each_helper<std::vector<typename detail::strip_and_convert<T>::type>> {
     std::vector<typename detail::strip_and_convert<T>::type> vec;
-    vec.reserve(list.size());
-    for (auto& i : list) vec.emplace_back(std::move(i));
+    vec.reserve(what.size());
+    for (auto& i : what) vec.emplace_back(std::move(i));
     return vec;
 }
 
+/**
+ * @brief Starts a match expression that matches each element in
+ *        range [first, last).
+ * @param first Iterator to the first element.
+ * @param last Iterator to the last element (excluded).
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename InputIterator>
 auto match_each(InputIterator first, InputIterator last)
      -> detail::match_each_helper<InputIterator> {
     return {first, last};
 }
 
+/**
+ * @brief Starts a match expression that matches <tt>proj(i)</tt> for
+ *        each element @p i in range [first, last).
+ * @param first Iterator to the first element.
+ * @param last Iterator to the last element (excluded).
+ * @param proj Projection or extractor functor.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename InputIterator, typename Projection>
 auto match_each(InputIterator first, InputIterator last, Projection proj)
      -> detail::pmatch_each_helper<InputIterator, Projection> {

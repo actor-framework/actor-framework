@@ -41,27 +41,86 @@
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}; moves content
- *        of @p tup on success.
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>} and moves
+ *        the content of @p tup to the returned tuple on success.
+ * @param tup Dynamically typed tuple.
+ * @param pttrn Requested types with optional guard values.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from @p pttrn.
+ * @relates any_tuple
+ */
+auto moving_tuple_cast(any_tuple& tup, const pattern<T...>& pttrn);
+
+/**
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>} and moves
+ *        the content of @p tup to the returned tuple on success.
+ * @param tup Dynamically typed tuple.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from {T...}.
+ * @relates any_tuple
  */
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup, const pattern<T...>& p)
+auto moving_tuple_cast(any_tuple& tup);
+
+/**
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>} and moves
+ *        the content of @p tup to the returned tuple on success.
+ * @param tup Dynamically typed tuple.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from {T...}.
+ * @relates any_tuple
+ */
+template<typename... T>
+auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&);
+
+/**
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>}.
+ * @param tup Dynamically typed tuple.
+ * @param pttrn Requested types with optional guard values.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from @p pttrn.
+ * @relates any_tuple
+ */
+template<typename... T>
+auto tuple_cast(any_tuple tup, const pattern<T...>& pttrn);
+
+/**
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>}.
+ * @param tup Dynamically typed tuple.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from {T...}.
+ * @relates any_tuple
+ */
+template<typename... T>
+auto tuple_cast(any_tuple tup);
+
+/**
+ * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>}.
+ * @param tup Dynamically typed tuple.
+ * @returns An {@link option} for a {@link cow_tuple} with the types
+ *          deduced from {T...}.
+ * @relates any_tuple
+ */
+template<typename... T>
+auto tuple_cast(any_tuple tup, const util::type_list<T...>&);
+
+#else
+
+template<typename... T>
+auto moving_tuple_cast(any_tuple& tup, const pattern<T...>& pttrn)
     -> option<
         typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
         >::type> {
     typedef typename pattern<T...>::filtered_types filtered_types;
     typedef typename cow_tuple_from_type_list<filtered_types>::type tuple_type;
-    static constexpr auto impl =
-            get_wildcard_position<util::type_list<T...>>();
-    return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup, p);
+    static constexpr auto impl = get_wildcard_position<util::type_list<T...>>();
+    return detail::tuple_cast_impl<impl, tuple_type, T...>::safe(tup, pttrn);
 }
 
-/**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}; moves content
- *        of @p tup on success.
- */
 template<typename... T>
 auto moving_tuple_cast(any_tuple& tup)
     -> option<
@@ -82,21 +141,15 @@ auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
     return moving_tuple_cast<T...>(tup);
 }
 
-/**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
- */
 template<typename... T>
-auto tuple_cast(any_tuple tup, const pattern<T...>& p)
+auto tuple_cast(any_tuple tup, const pattern<T...>& pttrn)
      -> option<
           typename cow_tuple_from_type_list<
             typename pattern<T...>::filtered_types
         >::type> {
-    return moving_tuple_cast(tup, p);
+    return moving_tuple_cast(tup, pttrn);
 }
 
-/**
- * @brief Tries to cast @p tup to {@link tuple tuple<T...>}.
- */
 template<typename... T>
 auto tuple_cast(any_tuple tup)
      -> option<
@@ -113,7 +166,7 @@ auto tuple_cast(any_tuple tup, const util::type_list<T...>&)
     return moving_tuple_cast<T...>(tup);
 }
 
-/////////////////////////// for in-library use only! ///////////////////////////
+// ************************ for in-library use only! ************************ //
 
 // (moving) cast using a pattern; does not perform type checking
 template<typename... T>
@@ -148,6 +201,7 @@ auto forced_tuple_cast(any_tuple& tup, const pattern<T...>& p)
     return detail::tuple_cast_impl<impl, tuple_type, T...>::force(tup, p);
 }
 
+#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

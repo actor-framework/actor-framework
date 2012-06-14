@@ -120,6 +120,9 @@ inline bool equal(const process_information::node_id_type& node_id,
     return equal(hash, node_id);
 }
 
+/**
+ * @relates process_information
+ */
 std::string to_string(const process_information& what);
 
 /**
@@ -127,12 +130,14 @@ std::string to_string(const process_information& what);
  *        to a hexadecimal string.
  * @param node_id A unique node identifier.
  * @returns A hexadecimal representation of @p node_id.
+ * @relates process_information
  */
 std::string to_string(const process_information::node_id_type& node_id);
 
 /**
  * @brief A smart pointer type that manages instances of
  *        {@link process_information}.
+ * @relates process_information
  */
 typedef intrusive_ptr<process_information> process_information_ptr;
 

@@ -33,8 +33,6 @@
 
 #include <stdexcept>
 
-#include "cppa/type_value_pair.hpp"
-
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tdata.hpp"

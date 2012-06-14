@@ -257,6 +257,10 @@ inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs) {
     return !(lhs == rhs);
 }
 
+/**
+ * @brief Creates an {@link any_tuple} containing the elements @p args.
+ * @param args Values to initialize the tuple elements.
+ */
 template<typename... Args>
 inline any_tuple make_any_tuple(Args&&... args) {
     return make_cow_tuple(std::forward<Args>(args)...);

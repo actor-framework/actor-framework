@@ -40,14 +40,27 @@
 
 namespace cppa {
 
+/**
+ * @brief Converts a string created by {@link cppa::to_string to_string}
+ *        to its original value.
+ * @param what String representation of a serialized value.
+ * @returns An {@link cppa::object object} instance that contains
+ *          the deserialized value.
+ */
 object from_string(const std::string& what);
 
+/**
+ * @brief Convenience function that deserializes a value from @p what and
+ *        converts the result to @p T.
+ * @throws std::logic_error if the result is not of type @p T.
+ * @returns The deserialized value as instance of @p T.
+ */
 template<typename T>
-T from_string(const std::string &what) {
+T from_string(const std::string& what) {
     object o = from_string(what);
     const std::type_info& tinfo = typeid(T);
     if (tinfo == *(o.type())) {
-        return std::move(get<T>(o));
+        return std::move(get_ref<T>(o));
     }
     else {
         std::string error_msg = "expected type name ";

@@ -33,7 +33,6 @@
 
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/type_value_pair.hpp"
 
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/tuple_vals.hpp"
