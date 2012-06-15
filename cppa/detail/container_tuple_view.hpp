@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONTAINER_TUPLE_VIEW_HPP
-#define CONTAINER_TUPLE_VIEW_HPP
+#ifndef CPPA_CONTAINER_TUPLE_VIEW_HPP
+#define CPPA_CONTAINER_TUPLE_VIEW_HPP
 
 #include <iostream>
 
@@ -89,4 +89,4 @@ class container_tuple_view : public abstract_tuple {
 
 } } // namespace cppa::detail
 
-#endif // CONTAINER_TUPLE_VIEW_HPP
+#endif // CPPA_CONTAINER_TUPLE_VIEW_HPP

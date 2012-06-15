@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_FORWARD_ITERATOR_HPP
-#define IS_FORWARD_ITERATOR_HPP
+#ifndef CPPA_IS_FORWARD_ITERATOR_HPP
+#define CPPA_IS_FORWARD_ITERATOR_HPP
 
 #include <type_traits>
 
@@ -71,4 +71,4 @@ class is_forward_iterator {
 
 } } // namespace cppa::util
 
-#endif // IS_FORWARD_ITERATOR_HPP
+#endif // CPPA_IS_FORWARD_ITERATOR_HPP

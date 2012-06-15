@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef UNBOXED_HPP
-#define UNBOXED_HPP
+#ifndef CPPA_UNBOXED_HPP
+#define CPPA_UNBOXED_HPP
 
 #include <memory>
 
@@ -70,4 +70,4 @@ struct unboxed<std::unique_ptr<util::guard<T>>> {
 
 } } // namespace cppa::detail
 
-#endif // UNBOXED_HPP
+#endif // CPPA_UNBOXED_HPP

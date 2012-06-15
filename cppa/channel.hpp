@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#ifndef CPPA_CHANNEL_HPP
+#define CPPA_CHANNEL_HPP
 
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -77,4 +77,4 @@ typedef intrusive_ptr<channel> channel_ptr;
 
 } // namespace cppa
 
-#endif // CHANNEL_HPP
+#endif // CPPA_CHANNEL_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SINGLY_LINKED_LIST_HPP
-#define SINGLY_LINKED_LIST_HPP
+#ifndef CPPA_SINGLY_LINKED_LIST_HPP
+#define CPPA_SINGLY_LINKED_LIST_HPP
 
 #include <cstddef>
 #include <utility>
@@ -354,4 +354,4 @@ class singly_linked_list {
 
 } } // namespace cppa::intrusive
 
-#endif // SINGLY_LINKED_LIST_HPP
+#endif // CPPA_SINGLY_LINKED_LIST_HPP

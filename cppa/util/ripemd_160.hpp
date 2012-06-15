@@ -65,8 +65,8 @@
  *
 \******************************************************************************/
 
-#ifndef RIPEMD_160_HPP
-#define RIPEMD_160_HPP
+#ifndef CPPA_RIPEMD_160_HPP
+#define CPPA_RIPEMD_160_HPP
 
 #include <array>
 #include <string>
@@ -80,4 +80,4 @@ void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data);
 
 } } // namespace cppa::util
 
-#endif // RIPEMD_160_HPP
+#endif // CPPA_RIPEMD_160_HPP

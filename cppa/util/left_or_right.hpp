@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LEFT_OR_RIGHT_HPP
-#define LEFT_OR_RIGHT_HPP
+#ifndef CPPA_LEFT_OR_RIGHT_HPP
+#define CPPA_LEFT_OR_RIGHT_HPP
 
 #include "cppa/util/void_type.hpp"
 
@@ -73,4 +73,4 @@ struct if_not_left<util::void_type, Right> {
 
 } } // namespace cppa::util
 
-#endif // LEFT_OR_RIGHT_HPP
+#endif // CPPA_LEFT_OR_RIGHT_HPP

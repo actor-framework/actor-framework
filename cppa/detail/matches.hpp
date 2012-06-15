@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MATCHES_HPP
-#define MATCHES_HPP
+#ifndef CPPA_MATCHES_HPP
+#define CPPA_MATCHES_HPP
 
 #include <numeric>
 #include "cppa/pattern.hpp"
@@ -432,4 +432,4 @@ inline bool matches_types(const any_tuple& tup, const util::type_list<Ts...>&) {
 
 } } // namespace cppa::detail
 
-#endif // MATCHES_HPP
+#endif // CPPA_MATCHES_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef APPLY_ARGS_HPP
-#define APPLY_ARGS_HPP
+#ifndef CPPA_APPLY_ARGS_HPP
+#define CPPA_APPLY_ARGS_HPP
 
 #include <cstddef>
 
@@ -54,4 +54,4 @@ struct apply_args<Result, X, X> {
 
 } } // namespace cppa::util
 
-#endif // APPLY_ARGS_HPP
+#endif // CPPA_APPLY_ARGS_HPP

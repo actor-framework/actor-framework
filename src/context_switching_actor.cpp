@@ -28,46 +28,48 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/yielding_actor.hpp"
+#include "cppa/context_switching_actor.hpp"
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 
 #include <iostream>
 
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
-#include "cppa/detail/invokable.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
-yielding_actor::yielding_actor(std::function<void()> fun)
-    : m_fiber(&yielding_actor::trampoline, this)
-    , m_behavior(fun) {
+context_switching_actor::context_switching_actor()
+: m_fiber(&context_switching_actor::trampoline, this) {
 }
 
-void yielding_actor::run() {
-    CPPA_REQUIRE(static_cast<bool>(m_behavior));
+context_switching_actor::context_switching_actor(std::function<void()> fun)
+: m_fiber(&context_switching_actor::trampoline, this), m_behavior(fun) {
+}
+
+void context_switching_actor::run() {
+    if (m_behavior) m_behavior();
+}
+
+void context_switching_actor::trampoline(void* this_ptr) {
+    auto _this = reinterpret_cast<context_switching_actor*>(this_ptr);
     bool cleanup_called = false;
-    try { m_behavior(); }
+    try { _this->run(); }
     catch (actor_exited&) {
         // cleanup already called by scheduled_actor::quit
         cleanup_called = true;
     }
     catch (...) {
-        cleanup(exit_reason::unhandled_exception);
+        _this->cleanup(exit_reason::unhandled_exception);
         cleanup_called = true;
     }
-    if (!cleanup_called) cleanup(exit_reason::normal);
-    on_exit();
+    if (!cleanup_called) _this->cleanup(exit_reason::normal);
+    _this->on_exit();
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    yield(yield_state::done);
+    detail::yield(detail::yield_state::done);
 }
 
-void yielding_actor::trampoline(void* ptr_arg) {
-    reinterpret_cast<yielding_actor*>(ptr_arg)->run();
-}
-
-recursive_queue_node* yielding_actor::receive_node() {
-    recursive_queue_node* e = m_mailbox.try_pop();
+detail::recursive_queue_node* context_switching_actor::receive_node() {
+    detail::recursive_queue_node* e = m_mailbox.try_pop();
     while (e == nullptr) {
         if (m_mailbox.can_fetch_more() == false) {
             m_state.store(abstract_scheduled_actor::about_to_block);
@@ -79,7 +81,7 @@ recursive_queue_node* yielding_actor::receive_node() {
             }
             else {
                 // wait until actor becomes rescheduled
-                yield(yield_state::blocked);
+                detail::yield(detail::yield_state::blocked);
             }
         }
         e = m_mailbox.try_pop();
@@ -87,11 +89,11 @@ recursive_queue_node* yielding_actor::receive_node() {
     return e;
 }
 
-void yielding_actor::dequeue(partial_function& fun) {
+void context_switching_actor::dequeue(partial_function& fun) {
     m_recv_policy.receive(this, fun);
 }
 
-void yielding_actor::dequeue(behavior& bhvr) {
+void context_switching_actor::dequeue(behavior& bhvr) {
     if (bhvr.timeout().valid() == false) {
         m_recv_policy.receive(this, bhvr.get_partial_function());
     }
@@ -110,13 +112,13 @@ void yielding_actor::dequeue(behavior& bhvr) {
     }
 }
 
-void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
+resume_result context_switching_actor::resume(util::fiber* from) {
+    using namespace detail;
     self.set(this);
     for (;;) {
         switch (call(&m_fiber, from)) {
             case yield_state::done: {
-                callback->exec_done();
-                return;
+                return resume_result::actor_done;
             }
             case yield_state::ready: {
                 break;
@@ -129,7 +131,7 @@ void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
                     }
                     case abstract_scheduled_actor::blocked: {
                         // wait until someone re-schedules that actor
-                        return;
+                        return resume_result::actor_blocked;
                     }
                     default: {
                         CPPA_CRITICAL("illegal yield result");
@@ -144,7 +146,7 @@ void yielding_actor::resume(util::fiber* from, scheduler::callback* callback) {
     }
 }
 
-} } // namespace cppa::detail
+} // namespace cppa
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 

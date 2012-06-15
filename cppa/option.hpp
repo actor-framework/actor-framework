@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef OPTION_HPP
-#define OPTION_HPP
+#ifndef CPPA_OPTION_HPP
+#define CPPA_OPTION_HPP
 
 #include <new>
 #include <utility>
@@ -227,4 +227,4 @@ bool operator!=(const T& lhs, const option<U>& rhs) {
 
 } // namespace cppa
 
-#endif // OPTION_HPP
+#endif // CPPA_OPTION_HPP

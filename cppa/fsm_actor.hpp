@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FSM_ACTOR_HPP
-#define FSM_ACTOR_HPP
+#ifndef CPPA_FSM_ACTOR_HPP
+#define CPPA_FSM_ACTOR_HPP
 
 #include <type_traits>
 
@@ -61,4 +61,4 @@ class fsm_actor : public event_based_actor {
 
 } // namespace cppa
 
-#endif // FSM_ACTOR_HPP
+#endif // CPPA_FSM_ACTOR_HPP

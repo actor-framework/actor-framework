@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ABSTRACT_UNIFORM_TYPE_INFO_HPP
-#define ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#ifndef CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#define CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -80,4 +80,4 @@ class abstract_uniform_type_info : public uniform_type_info {
 
 } }
 
-#endif // ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#endif // CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP

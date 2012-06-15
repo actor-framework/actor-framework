@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BOXED_HPP
-#define BOXED_HPP
+#ifndef CPPA_BOXED_HPP
+#define CPPA_BOXED_HPP
 
 #include "cppa/anything.hpp"
 #include "cppa/util/wrapped.hpp"
@@ -78,4 +78,4 @@ struct is_boxed<util::wrapped<T>(*)()> {
 
 } } // namespace cppa::detail
 
-#endif // BOXED_HPP
+#endif // CPPA_BOXED_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ANNOUNCE_HPP
-#define ANNOUNCE_HPP
+#ifndef CPPA_ANNOUNCE_HPP
+#define CPPA_ANNOUNCE_HPP
 
 #include <typeinfo>
 
@@ -169,4 +169,4 @@ inline bool announce(const Args&... args) {
 
 } // namespace cppa
 
-#endif // ANNOUNCE_HPP
+#endif // CPPA_ANNOUNCE_HPP

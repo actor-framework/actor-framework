@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EVENT_BASED_ACTOR_MIXIN_HPP
-#define EVENT_BASED_ACTOR_MIXIN_HPP
+#ifndef CPPA_EVENT_BASED_ACTOR_BASE_HPP
+#define CPPA_EVENT_BASED_ACTOR_BASE_HPP
 
 #include "cppa/behavior.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
@@ -71,4 +71,4 @@ class event_based_actor_base : public abstract_event_based_actor {
 
 } // namespace cppa
 
-#endif // EVENT_BASED_ACTOR_MIXIN_HPP
+#endif // CPPA_EVENT_BASED_ACTOR_BASE_HPP

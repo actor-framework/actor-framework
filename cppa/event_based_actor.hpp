@@ -28,17 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef EVENT_BASED_ACTOR_HPP
-#define EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_EVENT_BASED_ACTOR_HPP
+#define CPPA_EVENT_BASED_ACTOR_HPP
 
 #include "cppa/behavior.hpp"
 #include "cppa/event_based_actor_base.hpp"
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
  * @brief Base class for non-stacked event-based actor implementations.
  */
+class event_based_actor : public scheduled_actor {
+
+ protected:
+
+    /**
+     * @brief Sets the actor's behavior to @p bhvr.
+     * @note @p bhvr is owned by the caller and must remain valid until
+     *       the actor terminates.
+     * @note The recommended way of using this member function is to pass
+     *       a pointer to a member variable.
+     */
+    void become(behavior* bhvr);
+
+    /**
+     * @brief Sets the actor's behavior.
+     */
+    template<typename Arg0, typename... Args>
+    void become(Arg0&& arg0, Args&&... args):
+
+};
+
+#else
+
 class event_based_actor : public event_based_actor_base<event_based_actor> {
 
     friend class event_based_actor_base<event_based_actor>;
@@ -52,10 +77,12 @@ class event_based_actor : public event_based_actor_base<event_based_actor> {
 
     event_based_actor();
 
-    void quit(std::uint32_t reason);
+    virtual void quit(std::uint32_t reason = exit_reason::normal);
 
 };
 
+#endif
+
 } // namespace cppa
 
-#endif // EVENT_BASED_ACTOR_HPP
+#endif // CPPA_EVENT_BASED_ACTOR_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RECURSIVE_QUEUE_NODE_HPP
-#define RECURSIVE_QUEUE_NODE_HPP
+#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
+#define CPPA_RECURSIVE_QUEUE_NODE_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
@@ -61,4 +61,4 @@ struct recursive_queue_node {
 
 } } // namespace cppa::detail
 
-#endif // RECURSIVE_QUEUE_NODE_HPP
+#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP

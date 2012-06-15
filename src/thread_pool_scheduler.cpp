@@ -36,10 +36,9 @@
 
 #include "cppa/abstract_event_based_actor.hpp"
 
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
-#include "cppa/detail/yielding_actor.hpp"
+#include "cppa/context_switching_actor.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 using std::cout;
@@ -116,53 +115,45 @@ struct thread_pool_scheduler::worker {
 
     void operator()() {
         util::fiber fself;
-        struct handler : scheduler::callback {
-            scheduled_actor* job;
-            scheduled_actor* pending_job;
-            handler() : job(nullptr), pending_job(nullptr) { }
-            void exec_done() {
-                if (job->chained_actor()) {
-                    pending_job = static_cast<scheduled_actor*>(job->chained_actor().get());
-                    job->chained_actor().reset();
-                }
-                if (!job->deref()) delete job;
-                std::atomic_thread_fence(std::memory_order_seq_cst);
-                dec_actor_count();
-                job = nullptr;
+        scheduled_actor* job = nullptr;
+        auto fetch_pending = [&job]() -> scheduled_actor* {
+            CPPA_REQUIRE(job != nullptr);
+            scheduled_actor* result = nullptr;
+            if (job->chained_actor() != nullptr) {
+                result = static_cast<scheduled_actor*>(job->chained_actor().release());
             }
+            return result;
         };
-        handler h;
         for (;;) {
-            h.job = aggressive_polling();
-            if (!h.job) {
-                h.job = less_aggressive_polling();
-                if (!h.job) {
-                    h.job = relaxed_polling();
+            job = aggressive_polling();
+            if (job == nullptr) {
+                job = less_aggressive_polling();
+                if (job == nullptr) {
+                    job = relaxed_polling();
                 }
             }
-            if (h.job == m_dummy) {
+            if (job == m_dummy) {
                 // dummy of doom received ...
-                m_job_queue->push_back(h.job); // kill the next guy
+                m_job_queue->push_back(job); // kill the next guy
                 return;                        // and say goodbye
             }
             else {
                 do {
-                    h.job->resume(&fself, &h);
-                    if (h.job) {
-                        if (h.job->chained_actor()) {
-                            h.pending_job = static_cast<scheduled_actor*>(h.job->chained_actor().get());
-                            h.job->chained_actor().reset();
+                    switch (job->resume(&fself)) {
+                        case resume_result::actor_done: {
+                            scheduled_actor* pending = fetch_pending();
+                            if (!job->deref()) delete job;
+                            std::atomic_thread_fence(std::memory_order_seq_cst);
+                            dec_actor_count();
+                            job = pending;
+                            break;
                         }
-                        else {
-                            h.job = nullptr;
+                        case resume_result::actor_blocked: {
+                            job = fetch_pending();
                         }
-                    }
-                    if (h.pending_job) {
-                        h.job = h.pending_job;
-                        h.pending_job = nullptr;
                     }
                 }
-                while (h.job);
+                while (job);
             }
         }
     }
@@ -224,7 +215,7 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what) {
 actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
                                        scheduling_hint hint) {
     if (hint == scheduled) {
-        auto new_actor = new yielding_actor(std::move(what));
+        auto new_actor = new context_switching_actor(std::move(what));
         return spawn_impl(new_actor->attach_to_scheduler(this));
     }
     else {

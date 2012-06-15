@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef THREAD_POOL_SCHEDULER_HPP
-#define THREAD_POOL_SCHEDULER_HPP
+#ifndef CPPA_THREAD_POOL_SCHEDULER_HPP
+#define CPPA_THREAD_POOL_SCHEDULER_HPP
 
 #include <thread>
 
@@ -77,4 +77,4 @@ class thread_pool_scheduler : public scheduler {
 
 } } // namespace cppa::detail
 
-#endif // THREAD_POOL_SCHEDULER_HPP
+#endif // CPPA_THREAD_POOL_SCHEDULER_HPP

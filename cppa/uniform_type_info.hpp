@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef UNIFORM_TYPE_INFO_HPP
-#define UNIFORM_TYPE_INFO_HPP
+#ifndef CPPA_UNIFORM_TYPE_INFO_HPP
+#define CPPA_UNIFORM_TYPE_INFO_HPP
 
 #include <map>
 #include <vector>
@@ -318,4 +318,4 @@ inline bool operator!=(const std::type_info& lhs, const uniform_type_info& rhs) 
 
 } // namespace cppa
 
-#endif // UNIFORM_TYPE_INFO_HPP
+#endif // CPPA_UNIFORM_TYPE_INFO_HPP

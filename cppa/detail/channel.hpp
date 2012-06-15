@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#ifndef CPPA_CHANNEL_HPP
+#define CPPA_CHANNEL_HPP
 
 #include "cppa/ref_counted.hpp"
 
@@ -39,9 +39,9 @@ namespace cppa { namespace detail {
 
 // public part of the actor interface
 struct channel : ref_counted {
-	virtual void enqueue_msg(const message& msg) = 0;
+    virtual void enqueue_msg(const message& msg) = 0;
 };
 
 } } // namespace cppa::detail
 
-#endif // CHANNEL_HPP
+#endif // CPPA_CHANNEL_HPP

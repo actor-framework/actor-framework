@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MATCH_HPP
-#define MATCH_HPP
+#ifndef CPPA_MATCH_HPP
+#define CPPA_MATCH_HPP
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/partial_function.hpp"
@@ -194,4 +194,4 @@ auto match_each(InputIterator first, InputIterator last, Projection proj)
 
 } // namespace cppa
 
-#endif // MATCH_HPP
+#endif // CPPA_MATCH_HPP

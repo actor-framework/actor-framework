@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MATCH_EXPR_HPP
-#define MATCH_EXPR_HPP
+#ifndef CPPA_MATCH_EXPR_HPP
+#define CPPA_MATCH_EXPR_HPP
 
 #include "cppa/option.hpp"
 #include "cppa/pattern.hpp"
@@ -44,6 +44,7 @@
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/deduce_ref_type.hpp"
 
+#include "cppa/detail/matches.hpp"
 #include "cppa/detail/projection.hpp"
 #include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/pseudo_tuple.hpp"
@@ -912,4 +913,4 @@ partial_function mexpr_concat_convert(const Arg0& arg0, const Args&... args) {
 
 } // namespace cppa
 
-#endif // MATCH_EXPR_HPP
+#endif // CPPA_MATCH_EXPR_HPP

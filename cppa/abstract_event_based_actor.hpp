@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EVENT_DRIVEN_ACTOR_HPP
-#define EVENT_DRIVEN_ACTOR_HPP
+#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
 #include <stack>
 #include <memory>
@@ -57,7 +57,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
 
     void dequeue(partial_function&); //override
 
-    void resume(util::fiber*, scheduler::callback* cb); //override
+    resume_result resume(util::fiber*); //override
 
     /**
      * @brief Initializes the actor by defining an initial behavior.
@@ -130,4 +130,4 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
 
 } // namespace cppa
 
-#endif // EVENT_DRIVEN_ACTOR_HPP
+#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP

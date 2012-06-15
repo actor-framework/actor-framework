@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ABSTRACT_TUPLE_HPP
-#define ABSTRACT_TUPLE_HPP
+#ifndef CPPA_ABSTRACT_TUPLE_HPP
+#define CPPA_ABSTRACT_TUPLE_HPP
 
 #include <iterator>
 #include <typeinfo>
@@ -128,4 +128,4 @@ constexpr types_only_eq_type types_only_eq;
 
 } } // namespace cppa::detail
 
-#endif // ABSTRACT_TUPLE_HPP
+#endif // CPPA_ABSTRACT_TUPLE_HPP

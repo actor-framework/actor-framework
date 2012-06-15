@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GROUP_MANAGER_HPP
-#define GROUP_MANAGER_HPP
+#ifndef CPPA_GROUP_MANAGER_HPP
+#define CPPA_GROUP_MANAGER_HPP
 
 #include <map>
 #include <mutex>
@@ -64,4 +64,4 @@ class group_manager {
 
 } } // namespace cppa::detail
 
-#endif // GROUP_MANAGER_HPP
+#endif // CPPA_GROUP_MANAGER_HPP

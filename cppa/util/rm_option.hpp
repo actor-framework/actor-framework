@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RM_OPTION_HPP
-#define RM_OPTION_HPP
+#ifndef CPPA_RM_OPTION_HPP
+#define CPPA_RM_OPTION_HPP
 
 #include "cppa/option.hpp"
 
@@ -47,4 +47,4 @@ struct rm_option<option<T> > {
 
 } } // namespace cppa::util
 
-#endif // RM_OPTION_HPP
+#endif // CPPA_RM_OPTION_HPP

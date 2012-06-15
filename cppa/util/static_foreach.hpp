@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef STATIC_FOREACH_HPP
-#define STATIC_FOREACH_HPP
+#ifndef CPPA_STATIC_FOREACH_HPP
+#define CPPA_STATIC_FOREACH_HPP
 
 #include "cppa/get.hpp"
 
@@ -95,4 +95,4 @@ struct static_foreach : static_foreach_impl<(Begin < End), Begin, End> {
 
 } } // namespace cppa::util
 
-#endif // STATIC_FOREACH_HPP
+#endif // CPPA_STATIC_FOREACH_HPP

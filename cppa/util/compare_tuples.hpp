@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef COMPARE_TUPLES_HPP
-#define COMPARE_TUPLES_HPP
+#ifndef CPPA_COMPARE_TUPLES_HPP
+#define CPPA_COMPARE_TUPLES_HPP
 
 #include "cppa/get.hpp"
 #include "cppa/util/at.hpp"
@@ -102,4 +102,4 @@ bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
 
 } } // namespace cppa::util
 
-#endif // COMPARE_TUPLES_HPP
+#endif // CPPA_COMPARE_TUPLES_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRIMITIVE_MEMBER_HPP
-#define PRIMITIVE_MEMBER_HPP
+#ifndef CPPA_PRIMITIVE_MEMBER_HPP
+#define CPPA_PRIMITIVE_MEMBER_HPP
 
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
@@ -63,4 +63,4 @@ class primitive_member : public util::abstract_uniform_type_info<T> {
 
 } } // namespace cppa::detail
 
-#endif // PRIMITIVE_MEMBER_HPP
+#endif // CPPA_PRIMITIVE_MEMBER_HPP

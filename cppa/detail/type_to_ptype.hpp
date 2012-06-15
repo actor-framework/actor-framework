@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_TO_PTYPE_HPP
-#define TYPE_TO_PTYPE_HPP
+#ifndef CPPA_TYPE_TO_PTYPE_HPP
+#define CPPA_TYPE_TO_PTYPE_HPP
 
 #include <string>
 #include <cstdint>
@@ -93,4 +93,4 @@ struct type_to_ptype {
 
 } } // namespace cppa::detail
 
-#endif // TYPE_TO_PTYPE_HPP
+#endif // CPPA_TYPE_TO_PTYPE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BINARY_SERIALIZER_HPP
-#define BINARY_SERIALIZER_HPP
+#ifndef CPPA_BINARY_SERIALIZER_HPP
+#define CPPA_BINARY_SERIALIZER_HPP
 
 #include <utility>
 #include "cppa/serializer.hpp"
@@ -94,4 +94,4 @@ class binary_serializer : public serializer {
 
 } // namespace cppa
 
-#endif // BINARY_SERIALIZER_HPP
+#endif // CPPA_BINARY_SERIALIZER_HPP

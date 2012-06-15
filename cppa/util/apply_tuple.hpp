@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef APPLY_TUPLE_HPP
-#define APPLY_TUPLE_HPP
+#ifndef CPPA_APPLY_TUPLE_HPP
+#define CPPA_APPLY_TUPLE_HPP
 
 #include <type_traits>
 
@@ -135,4 +135,4 @@ Result unchecked_apply_tuple(F&& fun, Tuple<T...>& tup) {
 
 } } // namespace cppa::util
 
-#endif // APPLY_TUPLE_HPP
+#endif // CPPA_APPLY_TUPLE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRODUCER_CONSUMER_LIST_HPP
-#define PRODUCER_CONSUMER_LIST_HPP
+#ifndef CPPA_PRODUCER_CONSUMER_LIST_HPP
+#define CPPA_PRODUCER_CONSUMER_LIST_HPP
 
 #define CPPA_CACHE_LINE_SIZE 64
 
@@ -182,4 +182,4 @@ class producer_consumer_list {
 
 } } // namespace cppa::util
 
-#endif // PRODUCER_CONSUMER_LIST_HPP
+#endif // CPPA_PRODUCER_CONSUMER_LIST_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRIMITIVE_TYPE_HPP
-#define PRIMITIVE_TYPE_HPP
+#ifndef CPPA_PRIMITIVE_TYPE_HPP
+#define CPPA_PRIMITIVE_TYPE_HPP
 
 namespace cppa {
 
@@ -80,4 +80,4 @@ constexpr const char* primitive_type_name(primitive_type ptype) {
 
 } // namespace cppa
 
-#endif // PRIMITIVE_TYPE_HPP
+#endif // CPPA_PRIMITIVE_TYPE_HPP

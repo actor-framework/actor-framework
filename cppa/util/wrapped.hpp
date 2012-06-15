@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef WRAPPED_HPP
-#define WRAPPED_HPP
+#ifndef CPPA_WRAPPED_HPP
+#define CPPA_WRAPPED_HPP
 
 namespace cppa { namespace util {
 
@@ -49,4 +49,4 @@ struct wrapped< wrapped<T> > {
 
 } } // namespace cppa::util
 
-#endif // WRAPPED_HPP
+#endif // CPPA_WRAPPED_HPP

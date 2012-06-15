@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GET_HPP
-#define GET_HPP
+#ifndef CPPA_GET_HPP
+#define CPPA_GET_HPP
 
 // functions are documented in the implementation headers
 #ifndef CPPA_DOCUMENTATION
@@ -83,4 +83,4 @@ typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&) {
 } // namespace cppa
 
 #endif // CPPA_DOCUMENTATION
-#endif // GET_HPP
+#endif // CPPA_GET_HPP

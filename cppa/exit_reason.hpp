@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EXIT_REASON_HPP
-#define EXIT_REASON_HPP
+#ifndef CPPA_EXIT_REASON_HPP
+#define CPPA_EXIT_REASON_HPP
 
 #include <cstdint>
 
@@ -78,4 +78,4 @@ static constexpr std::uint32_t user_defined = 0x10000;
 
 } } // namespace cppa::exit_reason
 
-#endif // EXIT_REASON_HPP
+#endif // CPPA_EXIT_REASON_HPP

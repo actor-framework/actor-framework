@@ -46,7 +46,7 @@ cppa/detail/boxed.hpp
 cppa/detail/buffer.hpp
 cppa/detail/channel.hpp
 cppa/detail/container_tuple_view.hpp
-cppa/detail/converted_thread_context.hpp
+cppa/thread_mapped_actor.hpp
 cppa/detail/decorated_tuple.hpp
 cppa/detail/default_uniform_type_info_impl.hpp
 cppa/detail/demangle.hpp
@@ -56,7 +56,6 @@ cppa/detail/filter_result.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/implicit_conversions.hpp
-cppa/detail/invokable.hpp
 cppa/detail/list_member.hpp
 cppa/detail/mailman.hpp
 cppa/detail/map_member.hpp
@@ -92,7 +91,7 @@ cppa/detail/unboxed.hpp
 cppa/detail/uniform_type_info_map.hpp
 cppa/detail/value_guard.hpp
 cppa/detail/yield_interface.hpp
-cppa/detail/yielding_actor.hpp
+cppa/context_switching_actor.hpp
 cppa/either.hpp
 cppa/event_based_actor.hpp
 cppa/event_based_actor_base.hpp
@@ -157,7 +156,6 @@ cppa/util/is_mutable_ref.hpp
 cppa/util/is_primitive.hpp
 cppa/util/left_or_right.hpp
 cppa/util/producer_consumer_list.hpp
-cppa/util/projection.hpp
 cppa/util/pt_dispatch.hpp
 cppa/util/pt_token.hpp
 cppa/util/purge_refs.hpp
@@ -206,7 +204,7 @@ src/attachable.cpp
 src/binary_deserializer.cpp
 src/binary_serializer.cpp
 src/channel.cpp
-src/converted_thread_context.cpp
+src/thread_mapped_actor.cpp
 src/cppa.cpp
 src/demangle.cpp
 src/deserializer.cpp
@@ -217,7 +215,6 @@ src/exception.cpp
 src/fiber.cpp
 src/group.cpp
 src/group_manager.cpp
-src/invokable.cpp
 src/local_actor.cpp
 src/mailman.cpp
 src/mock_scheduler.cpp
@@ -246,7 +243,7 @@ src/to_uniform_name.cpp
 src/unicast_network.cpp
 src/uniform_type_info.cpp
 src/yield_interface.cpp
-src/yielding_actor.cpp
+src/context_switching_actor.cpp
 unit_testing/main.cpp
 unit_testing/ping_pong.cpp
 unit_testing/ping_pong.hpp

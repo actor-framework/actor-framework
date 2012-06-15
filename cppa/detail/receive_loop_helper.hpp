@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RECEIVE_LOOP_HELPER_HPP
-#define RECEIVE_LOOP_HELPER_HPP
+#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
+#define CPPA_RECEIVE_LOOP_HELPER_HPP
 
 #include <new>
 
@@ -40,9 +40,6 @@
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
-
-#include "cppa/detail/invokable.hpp"
-
 
 namespace cppa { namespace detail {
 
@@ -136,4 +133,4 @@ class do_receive_helper {
 
 } } // namespace cppa::detail
 
-#endif // RECEIVE_LOOP_HELPER_HPP
+#endif // CPPA_RECEIVE_LOOP_HELPER_HPP

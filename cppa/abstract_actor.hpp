@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ABSTRACT_ACTOR_HPP
-#define ABSTRACT_ACTOR_HPP
+#ifndef CPPA_ABSTRACT_ACTOR_HPP
+#define CPPA_ABSTRACT_ACTOR_HPP
 
 #include "cppa/config.hpp"
 
@@ -275,4 +275,4 @@ class abstract_actor : public Base {
 
 } // namespace cppa
 
-#endif // ABSTRACT_ACTOR_HPP
+#endif // CPPA_ABSTRACT_ACTOR_HPP

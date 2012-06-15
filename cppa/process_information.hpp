@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PROCESS_INFORMATION_HPP
-#define PROCESS_INFORMATION_HPP
+#ifndef CPPA_PROCESS_INFORMATION_HPP
+#define CPPA_PROCESS_INFORMATION_HPP
 
 #include <array>
 #include <string>
@@ -143,4 +143,4 @@ typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa
 
-#endif // PROCESS_INFORMATION_HPP
+#endif // CPPA_PROCESS_INFORMATION_HPP

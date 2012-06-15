@@ -39,12 +39,12 @@
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
@@ -73,9 +73,9 @@ class scheduler_helper {
 
  public:
 
-    typedef intrusive_ptr<detail::converted_thread_context> ptr_type;
+    typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
-    scheduler_helper() : m_worker(new detail::converted_thread_context) {
+    scheduler_helper() : m_worker(new thread_mapped_actor) {
     }
 
     void start() {
@@ -213,7 +213,5 @@ scheduler* get_scheduler() {
     }
     return result;
 }
-
-scheduler::callback::~callback() { }
 
 } // namespace cppa

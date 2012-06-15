@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IF_ELSE_HPP
-#define IF_ELSE_HPP
+#ifndef CPPA_IF_ELSE_HPP
+#define CPPA_IF_ELSE_HPP
 
 #include "cppa/util/wrapped.hpp"
 
@@ -58,4 +58,4 @@ struct if_else : if_else_c<Stmt::value, T, Else> { };
 
 } } // namespace cppa::util
 
-#endif // IF_ELSE_HPP
+#endif // CPPA_IF_ELSE_HPP

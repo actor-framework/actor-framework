@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULED_ACTOR_HPP
-#define SCHEDULED_ACTOR_HPP
+#ifndef CPPA_SCHEDULED_ACTOR_HPP
+#define CPPA_SCHEDULED_ACTOR_HPP
 
 #include <iostream>
 
@@ -182,4 +182,4 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
 } } // namespace cppa::detail
 
-#endif // SCHEDULED_ACTOR_HPP
+#endif // CPPA_SCHEDULED_ACTOR_HPP

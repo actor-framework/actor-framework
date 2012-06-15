@@ -40,12 +40,12 @@
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
 
 using std::cout;
 using std::cerr;
@@ -81,7 +81,7 @@ std::thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_
 actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
     inc_actor_count();
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    intrusive_ptr<local_actor> ctx{new detail::converted_thread_context};
+    intrusive_ptr<local_actor> ctx{new thread_mapped_actor};
     std::thread{run_actor, ctx, std::move(what)}.detach();
     return std::move(ctx);
 }

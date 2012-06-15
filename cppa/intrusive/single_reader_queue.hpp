@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SINGLE_READER_QUEUE_HPP
-#define SINGLE_READER_QUEUE_HPP
+#ifndef CPPA_SINGLE_READER_QUEUE_HPP
+#define CPPA_SINGLE_READER_QUEUE_HPP
 
 #include <list>
 #include <mutex>
@@ -200,4 +200,4 @@ class single_reader_queue {
 
 } } // namespace cppa::util
 
-#endif // SINGLE_READER_QUEUE_HPP
+#endif // CPPA_SINGLE_READER_QUEUE_HPP

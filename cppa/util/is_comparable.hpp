@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_COMPARABLE_HPP
-#define IS_COMPARABLE_HPP
+#ifndef CPPA_IS_COMPARABLE_HPP
+#define CPPA_IS_COMPARABLE_HPP
 
 #include <type_traits>
 
@@ -68,4 +68,4 @@ class is_comparable {
 
 } } // namespace cppa::util
 
-#endif // IS_COMPARABLE_HPP
+#endif // CPPA_IS_COMPARABLE_HPP

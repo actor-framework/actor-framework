@@ -31,10 +31,11 @@
 #include <atomic>
 #include <iostream>
 
-#include "cppa/any_tuple.hpp"
-#include "cppa/local_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/empty_tuple.hpp"
@@ -44,19 +45,20 @@
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
 using namespace cppa;
 using namespace cppa::detail;
 
-std::atomic<uniform_type_info_map*> s_uniform_type_info_map(nullptr);
-std::atomic<network_manager*> s_network_manager(nullptr);
-std::atomic<actor_registry*> s_actor_registry(nullptr);
-std::atomic<group_manager*> s_group_manager(nullptr);
-std::atomic<empty_tuple*> s_empty_tuple(nullptr);
-std::atomic<scheduler*> s_scheduler(nullptr);
+//volatile uniform_type_info_map* s_uniform_type_info_map = 0;
+
+std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
+std::atomic<network_manager*> s_network_manager;
+std::atomic<actor_registry*> s_actor_registry;
+std::atomic<group_manager*> s_group_manager;
+std::atomic<empty_tuple*> s_empty_tuple;
+std::atomic<scheduler*> s_scheduler;
 
 template<typename T>
 void stop_and_kill(std::atomic<T*>& ptr) {
@@ -96,14 +98,15 @@ void delete_singletons() {
 
 template<typename T>
 T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
-    T* result = ptr.load();
+    T* result = ptr.load(std::memory_order_seq_cst);
     if (result == nullptr) {
         auto tmp = new T;
-        if (ptr.compare_exchange_strong(result, tmp) == false) {
-            delete tmp;
+        if (ptr.compare_exchange_strong(result, tmp, std::memory_order_seq_cst)) {
+            return tmp;
         }
         else {
-            result = tmp;
+            delete tmp;
+            return lazy_get(ptr, register_atexit_fun);
         }
         /*
         else {
@@ -130,6 +133,15 @@ actor_registry* singleton_manager::get_actor_registry() {
 }
 
 uniform_type_info_map* singleton_manager::get_uniform_type_info_map() {
+    /*
+    auto result = const_cast<uniform_type_info_map*>(s_uniform_type_info_map);
+    if (result == nullptr) {
+        auto tmp = new uniform_type_info_map;
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+
+    }
+    return result;
+    */
     return lazy_get(s_uniform_type_info_map, true);
 }
 

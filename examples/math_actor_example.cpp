@@ -45,7 +45,7 @@ struct math_actor : event_based_actor {
             on(atom("quit")) >> [=]() {
                 // set an empty behavior
                 // (terminates actor with normal exit reason)
-                quit_normal();
+                quit();
             }
         );
     }

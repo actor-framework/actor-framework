@@ -20,7 +20,7 @@ set(LIBCPPA_SRC
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
     src/channel.cpp
-    src/converted_thread_context.cpp
+    src/thread_mapped_actor.cpp
     src/cppa.cpp
     src/demangle.cpp
     src/deserializer.cpp
@@ -31,7 +31,6 @@ set(LIBCPPA_SRC
     src/fiber.cpp
     src/group.cpp
     src/group_manager.cpp
-    src/invokable.cpp
     src/local_actor.cpp
     src/mailman.cpp
     src/mock_scheduler.cpp
@@ -60,7 +59,7 @@ set(LIBCPPA_SRC
     src/unicast_network.cpp
     src/uniform_type_info.cpp
     src/yield_interface.cpp
-    src/yielding_actor.cpp
+    src/context_switching_actor.cpp
 )
 
 set(boost_context third_party/boost_context/)

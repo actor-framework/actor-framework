@@ -39,7 +39,7 @@
 #include "cppa/match.hpp"
 #include "cppa/fsm_actor.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
-#include "cppa/detail/yielding_actor.hpp"
+#include "cppa/context_switching_actor.hpp"
 
 using std::cout;
 using std::cerr;
@@ -73,7 +73,7 @@ struct fsm_worker : fsm_actor<fsm_worker> {
                 send(mc, atom("result"), factorize(what));
             },
             on(atom("done")) >> [=]() {
-                quit_normal();
+                quit();
             }
         );
     }
@@ -86,7 +86,7 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link> {
         init_state = (
             on<atom("token"), int>() >> [=](int v) {
                 next << std::move(last_dequeued());
-                if (v == 0) quit_normal();
+                if (v == 0) quit();
             }
         );
     }
@@ -120,7 +120,7 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master> {
                         else {
                             send(worker, atom("done"));
                             send(mc, atom("masterdone"));
-                            quit_normal();
+                            quit();
                         }
                     },
                     on<atom("token"), int>() >> [=](int v) {
@@ -138,11 +138,11 @@ struct fsm_supervisor : fsm_actor<fsm_supervisor> {
     fsm_supervisor(int num_msgs) : left(num_msgs) {
         init_state = (
             on(atom("masterdone")) >> [=]() {
-                if (--left == 0) quit_normal();
+                if (--left == 0) quit();
             },
             on<atom("result"), factors>() >> [=](const factors& vec) {
                 check_factors(vec);
-                if (--left == 0) quit_normal();
+                if (--left == 0) quit();
             }
         );
     }

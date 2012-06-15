@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EITHER_HPP
-#define EITHER_HPP
+#ifndef CPPA_EITHER_HPP
+#define CPPA_EITHER_HPP
 
 #include <new>
 #include <utility>
@@ -252,4 +252,4 @@ bool operator!=(const Right& lhs, const either<Left, Right>& rhs) {
 
 } // namespace cppa
 
-#endif // EITHER_HPP
+#endif // CPPA_EITHER_HPP

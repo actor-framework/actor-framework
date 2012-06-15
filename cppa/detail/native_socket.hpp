@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef NATIVE_SOCKET_HPP
-#define NATIVE_SOCKET_HPP
+#ifndef CPPA_NATIVE_SOCKET_HPP
+#define CPPA_NATIVE_SOCKET_HPP
 
 #include "cppa/config.hpp"
 
@@ -59,4 +59,4 @@ namespace cppa { namespace detail {
 
 } } // namespace cppa::detail
 
-#endif // NATIVE_SOCKET_HPP
+#endif // CPPA_NATIVE_SOCKET_HPP

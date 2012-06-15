@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TUPLE_ITERATOR_HPP
-#define TUPLE_ITERATOR_HPP
+#ifndef CPPA_TUPLE_ITERATOR_HPP
+#define CPPA_TUPLE_ITERATOR_HPP
 
 #include <cstddef>
 
@@ -109,4 +109,4 @@ class tuple_iterator {
 
 } } // namespace cppa::detail
 
-#endif // TUPLE_ITERATOR_HPP
+#endif // CPPA_TUPLE_ITERATOR_HPP

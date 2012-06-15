@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DEMANGLE_HPP
-#define DEMANGLE_HPP
+#ifndef CPPA_DEMANGLE_HPP
+#define CPPA_DEMANGLE_HPP
 
 #include <string>
 
@@ -39,4 +39,4 @@ std::string demangle(const char* typeid_name);
 
 } } // namespace cppa::detail
 
-#endif // DEMANGLE_HPP
+#endif // CPPA_DEMANGLE_HPP

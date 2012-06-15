@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef COMPARABLE_HPP
-#define COMPARABLE_HPP
+#ifndef CPPA_COMPARABLE_HPP
+#define CPPA_COMPARABLE_HPP
 
 namespace cppa { namespace util {
 
@@ -126,4 +126,4 @@ class comparable<Subclass, Subclass> {
 
 } } // cppa::util
 
-#endif // COMPARABLE_HPP
+#endif // CPPA_COMPARABLE_HPP

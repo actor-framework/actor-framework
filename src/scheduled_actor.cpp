@@ -28,19 +28,17 @@
 \******************************************************************************/
 
 
+#include "cppa/scheduler.hpp"
 #include "cppa/scheduled_actor.hpp"
 
 namespace cppa {
 
-scheduled_actor::scheduled_actor(bool enable_pending_enqueue)
-    : local_actor(enable_pending_enqueue), next(nullptr), m_scheduler(nullptr) {
-}
+scheduled_actor::scheduled_actor(bool enable_chained_send)
+: local_actor(enable_chained_send), next(nullptr), m_scheduler(nullptr) { }
 
-void scheduled_actor::on_exit() {
-}
+void scheduled_actor::on_exit() { }
 
-void scheduled_actor::init() {
-}
+void scheduled_actor::init() { }
 
 scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
     CPPA_REQUIRE(sched != nullptr);
@@ -48,6 +46,5 @@ scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
     init();
     return this;
 }
-
 
 } // namespace cppa

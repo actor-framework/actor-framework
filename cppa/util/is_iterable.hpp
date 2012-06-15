@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_ITERABLE_HPP
-#define IS_ITERABLE_HPP
+#ifndef CPPA_IS_ITERABLE_HPP
+#define CPPA_IS_ITERABLE_HPP
 
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_forward_iterator.hpp"
@@ -70,4 +70,4 @@ class is_iterable {
 
 } } // namespace cppa::util
 
-#endif // IS_ITERABLE_HPP
+#endif // CPPA_IS_ITERABLE_HPP

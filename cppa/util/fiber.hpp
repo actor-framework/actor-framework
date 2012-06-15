@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FIBER_HPP
-#define FIBER_HPP
+#ifndef CPPA_FIBER_HPP
+#define CPPA_FIBER_HPP
 
 #include <memory>
 #include "cppa/config.hpp"
@@ -71,4 +71,4 @@ class fiber {
 
 #endif // CPPA_DISABLE_CONTEXT_SWITCHING
 
-#endif // FIBER_HPP
+#endif // CPPA_FIBER_HPP

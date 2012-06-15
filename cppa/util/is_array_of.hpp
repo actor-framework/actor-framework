@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_ARRAY_OF_HPP
-#define IS_ARRAY_OF_HPP
+#ifndef CPPA_IS_ARRAY_OF_HPP
+#define CPPA_IS_ARRAY_OF_HPP
 
 #include <type_traits>
 
@@ -50,4 +50,4 @@ struct is_array_of {
 
 } } // namespace cppa::util
 
-#endif // IS_ARRAY_OF_HPP
+#endif // CPPA_IS_ARRAY_OF_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ATOM_HPP
-#define ATOM_HPP
+#ifndef CPPA_ATOM_HPP
+#define CPPA_ATOM_HPP
 
 #include <string>
 
@@ -63,4 +63,4 @@ constexpr atom_value atom(char const (&str) [Size]) {
 
 } // namespace cppa
 
-#endif // ATOM_HPP
+#endif // CPPA_ATOM_HPP

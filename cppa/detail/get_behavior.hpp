@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GET_BEHAVIOR_HPP
-#define GET_BEHAVIOR_HPP
+#ifndef CPPA_GET_BEHAVIOR_HPP
+#define CPPA_GET_BEHAVIOR_HPP
 
 #include <type_traits>
 
@@ -167,4 +167,4 @@ scheduled_actor* get_behavior(std::integral_constant<bool,false>,
 
 } } // namespace cppa::detail
 
-#endif // GET_BEHAVIOR_HPP
+#endif // CPPA_GET_BEHAVIOR_HPP

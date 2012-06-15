@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef YIELD_INTERFACE_HPP
-#define YIELD_INTERFACE_HPP
+#ifndef CPPA_YIELD_INTERFACE_HPP
+#define CPPA_YIELD_INTERFACE_HPP
 
 #include "cppa/util/fiber.hpp"
 
@@ -54,4 +54,4 @@ yield_state call(util::fiber* what, util::fiber* from);
 
 } } // namespace cppa::detail
 
-#endif // YIELD_INTERFACE_HPP
+#endif // CPPA_YIELD_INTERFACE_HPP

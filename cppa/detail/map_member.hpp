@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MAP_MEMBER_HPP
-#define MAP_MEMBER_HPP
+#ifndef CPPA_MAP_MEMBER_HPP
+#define CPPA_MAP_MEMBER_HPP
 
 #include <type_traits>
 #include "cppa/detail/pair_member.hpp"
@@ -147,4 +147,4 @@ class map_member : public util::abstract_uniform_type_info<Map> {
 
 } } // namespace cppa::detail
 
-#endif // MAP_MEMBER_HPP
+#endif // CPPA_MAP_MEMBER_HPP

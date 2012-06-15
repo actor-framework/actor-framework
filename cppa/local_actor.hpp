@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONTEXT_HPP
-#define CONTEXT_HPP
+#ifndef CPPA_CONTEXT_HPP
+#define CPPA_CONTEXT_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
@@ -49,78 +49,112 @@ class local_actor : public actor {
 
     friend class scheduler;
 
- protected:
-
-    bool m_chaining;
-    bool m_trap_exit;
-    bool m_is_scheduled;
-    actor_ptr m_chained;
-    actor_ptr m_last_sender;
-    any_tuple m_last_dequeued;
-
  public:
-
-    local_actor(bool is_scheduled = false);
 
     /**
      * @brief Finishes execution of this actor.
      *
-     * Causes this actor to send an exit signal to all of its
-     * linked actors, sets its state to @c exited and throws
-     * {@link actor_exited} to cleanup the stack.
-     * @param reason Exit reason that will be send to linked actors.
-     * @throws actor_exited
+     * Causes this actor to send an exit message to all of its
+     * linked actors, sets its state to @c exited and finishes execution.
+     * @param reason Exit reason that will be send to
+     *        linked actors and monitors.
      */
-    virtual void quit(std::uint32_t reason) = 0;
-
-    inline void quit_normal() {
-        quit(exit_reason::normal);
-    }
+    virtual void quit(std::uint32_t reason = exit_reason::normal) = 0;
 
     /**
-     * @brief
-     * @param rules
-     * @warning Call only from the owner of the queue.
+     * @brief Removes the first element from the mailbox @p pfun is defined
+     *        for and invokes @p pfun with the removed element.
+     *        Blocks until a matching message arrives if @p pfun is not
+     *        defined for any message in the actor's mailbox.
+     * @param pfun A partial function denoting the actor's response to the
+     *             next incoming message.
+     * @warning You should not call this member function by hand.
+     *          Use the {@link cppa::receive receive} function or
+     *          the @p become member function in case of event-based actors.
      */
-    virtual void dequeue(behavior& rules) = 0;
+    virtual void dequeue(partial_function& pfun) = 0;
 
     /**
-     * @brief Removes the first element from the queue that is matched
-     *        by @p rules and invokes the corresponding callback.
-     * @param rules
-     * @warning Call only from the owner of the queue.
+     * @brief Removes the first element from the mailbox @p bhvr is defined
+     *        for and invokes @p bhvr with the removed element.
+     *        Blocks until either a matching message arrives if @p bhvr is not
+     *        defined for any message in the actor's mailbox or until a
+     *        timeout occurs.
+     * @param bhvr A partial function with optional timeout denoting the
+     *             actor's response to the next incoming message.
+     * @warning You should not call this member function by hand.
+     *          Use the {@link cppa::receive receive} function or
+     *          the @p become member function in case of event-based actors.
      */
-    virtual void dequeue(partial_function& rules) = 0;
+    virtual void dequeue(behavior& bhvr) = 0;
 
+    /**
+     * @brief Checks whether this actor traps exit messages.
+     */
     inline bool trap_exit() const {
         return m_trap_exit;
     }
 
+    /**
+     * @brief Enables or disables trapping of exit messages.
+     */
     inline void trap_exit(bool new_value) {
         m_trap_exit = new_value;
     }
 
+    /**
+     * @brief Checks whether this actor uses the "chained send" optimization.
+     */
     inline bool chaining() const {
         return m_chaining;
     }
 
+    /**
+     * @brief Enables or disables chained send.
+     */
     inline void chaining(bool new_value) {
-        if (m_is_scheduled) {
-            m_chaining = new_value;
-        }
+        m_chaining = m_is_scheduled && new_value;
     }
 
+    /**
+     * @brief Returns the last message that was dequeued
+     *        from the actor's mailbox.
+     * @note Only set during callback invocation.
+     */
     inline any_tuple& last_dequeued() {
         return m_last_dequeued;
     }
 
+    /**
+     * @brief Returns the sender of the last dequeued message.
+     * @note Only set during callback invocation.
+     * @note Implicitly used by the function {@link cppa::reply}.
+     */
     inline actor_ptr& last_sender() {
         return m_last_sender;
     }
 
-    inline actor_ptr& chained_actor() {
-        return m_chained;
-    }
+    /**
+     * @brief Adds a unidirectional @p monitor to @p whom.
+     *
+     * @whom sends a "DOWN" message to this actor as part of its termination.
+     * @param whom The actor that should be monitored by this actor.
+     * @note Each call to @p monitor creates a new, independent monitor.
+     */
+    void monitor(actor_ptr whom);
+
+    /**
+     * @brief Removes a monitor from @p whom.
+     * @param whom A monitored actor.
+     */
+    void demonitor(actor_ptr whom);
+
+    // library-internal members and member functions that shall
+    // not appear in the documentation
+
+#   ifndef CPPA_DOCUMENTATION
+
+    local_actor(bool is_scheduled = false);
 
     inline void send_message(channel* whom, any_tuple what) {
         whom->enqueue(this, std::move(what));
@@ -137,22 +171,20 @@ class local_actor : public actor {
         }
     }
 
-    /**
-     * @ingroup ActorManagement
-     * @brief Adds a unidirectional @p monitor to @p whom.
-     * @param whom The actor that should be monitored by this actor.
-     * @note Each call to @p monitor creates a new, independent monitor.
-     * @pre The calling actor receives a "DOWN" message from @p whom when
-     *      it terminates.
-     */
-    void monitor(actor_ptr whom);
+    inline actor_ptr& chained_actor() {
+        return m_chained;
+    }
 
-    /**
-     * @ingroup ActorManagement
-     * @brief Removes a monitor from @p whom.
-     * @param whom A monitored actor.
-     */
-    void demonitor(actor_ptr whom);
+ protected:
+
+    bool m_chaining;
+    bool m_trap_exit;
+    bool m_is_scheduled;
+    actor_ptr m_chained;
+    actor_ptr m_last_sender;
+    any_tuple m_last_dequeued;
+
+#   endif // CPPA_DOCUMENTATION
 
 };
 
@@ -164,4 +196,4 @@ typedef intrusive_ptr<local_actor> local_actor_ptr;
 
 } // namespace cppa
 
-#endif // CONTEXT_HPP
+#endif // CPPA_CONTEXT_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef POST_OFFICE_HPP
-#define POST_OFFICE_HPP
+#ifndef CPPA_POST_OFFICE_HPP
+#define CPPA_POST_OFFICE_HPP
 
 #include <memory>
 
@@ -59,4 +59,4 @@ void post_office_close_socket(native_socket_type sfd);
 
 } } // namespace cppa::detail
 
-#endif // POST_OFFICE_HPP
+#endif // CPPA_POST_OFFICE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BUFFER_HPP
-#define BUFFER_HPP
+#ifndef CPPA_BUFFER_HPP
+#define CPPA_BUFFER_HPP
 
 #include <ios> // std::ios_base::failure
 #include <iostream>
@@ -173,4 +173,4 @@ class buffer {
 
 } } // namespace cppa::detail
 
-#endif // BUFFER_HPP
+#endif // CPPA_BUFFER_HPP

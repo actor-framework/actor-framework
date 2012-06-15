@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_PAIR_HPP
-#define TYPE_PAIR_HPP
+#ifndef CPPA_TYPE_PAIR_HPP
+#define CPPA_TYPE_PAIR_HPP
 
 namespace cppa { namespace util {
 
@@ -60,4 +60,4 @@ struct is_type_pair<type_pair<First, Second> > {
 
 } } // namespace cppa::util
 
-#endif // TYPE_PAIR_HPP
+#endif // CPPA_TYPE_PAIR_HPP

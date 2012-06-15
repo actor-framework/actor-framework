@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ITERATOR_HPP
-#define ITERATOR_HPP
+#ifndef CPPA_FORWARD_ITERATOR_HPP
+#define CPPA_FORWARD_ITERATOR_HPP
 
 #include <iterator>
 
@@ -122,7 +122,7 @@ inline bool operator==(const T* lhs, const forward_iterator<T>& rhs) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr)) {
+inline bool operator==(const forward_iterator<T>& lhs, std::nullptr_t) {
     return lhs.ptr() == nullptr;
 }
 
@@ -130,7 +130,7 @@ inline bool operator==(const forward_iterator<T>& lhs, decltype(nullptr)) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator==(decltype(nullptr), const forward_iterator<T>& rhs) {
+inline bool operator==(std::nullptr_t, const forward_iterator<T>& rhs) {
     return rhs.ptr() == nullptr;
 }
 
@@ -163,7 +163,7 @@ inline bool operator!=(const T* lhs, const forward_iterator<T>& rhs) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr)) {
+inline bool operator!=(const forward_iterator<T>& lhs, std::nullptr_t) {
     return !(lhs == nullptr);
 }
 
@@ -171,11 +171,11 @@ inline bool operator!=(const forward_iterator<T>& lhs, decltype(nullptr)) {
  * @relates forward_iterator
  */
 template<class T>
-inline bool operator!=(decltype(nullptr), const forward_iterator<T>& rhs) {
+inline bool operator!=(std::nullptr_t, const forward_iterator<T>& rhs) {
     return !(nullptr == rhs);
 }
 
 } } // namespace cppa::intrusive
 
 
-#endif // ITERATOR_HPP
+#endif // CPPA_FORWARD_ITERATOR_HPP

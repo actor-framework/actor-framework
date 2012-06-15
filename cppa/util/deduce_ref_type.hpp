@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DEDUCE_REF_TYPE_HPP
-#define DEDUCE_REF_TYPE_HPP
+#ifndef CPPA_DEDUCE_REF_TYPE_HPP
+#define CPPA_DEDUCE_REF_TYPE_HPP
 
 #include "cppa/util/rm_ref.hpp"
 
@@ -55,4 +55,4 @@ struct deduce_ref_type<const T0&, T1> {
 
 } } // namespace cppa::util
 
-#endif // DEDUCE_REF_TYPE_HPP
+#endif // CPPA_DEDUCE_REF_TYPE_HPP

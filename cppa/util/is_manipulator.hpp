@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_MANIPULATOR_HPP
-#define IS_MANIPULATOR_HPP
+#ifndef CPPA_IS_MANIPULATOR_HPP
+#define CPPA_IS_MANIPULATOR_HPP
 
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
@@ -51,4 +51,4 @@ struct is_manipulator {
 
 } } // namespace cppa::util
 
-#endif // IS_MANIPULATOR_HPP
+#endif // CPPA_IS_MANIPULATOR_HPP

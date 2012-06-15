@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONJUNCTION_HPP
-#define CONJUNCTION_HPP
+#ifndef CPPA_CONJUNCTION_HPP
+#define CPPA_CONJUNCTION_HPP
 
 #include <type_traits>
 
@@ -48,4 +48,4 @@ struct conjunction<> : std::true_type { };
 
 } } // namespace cppa::util
 
-#endif // CONJUNCTION_HPP
+#endif // CPPA_CONJUNCTION_HPP

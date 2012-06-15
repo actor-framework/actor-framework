@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PURGE_REFS_HPP
-#define PURGE_REFS_HPP
+#ifndef CPPA_PURGE_REFS_HPP
+#define CPPA_PURGE_REFS_HPP
 
 #include <functional>
 
@@ -68,4 +68,4 @@ struct purge_refs {
 
 } } // namespace cppa::util
 
-#endif // PURGE_REFS_HPP
+#endif // CPPA_PURGE_REFS_HPP

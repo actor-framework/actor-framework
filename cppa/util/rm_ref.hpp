@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RM_REF_HPP
-#define RM_REF_HPP
+#ifndef CPPA_RM_REF_HPP
+#define CPPA_RM_REF_HPP
 
 namespace cppa { namespace util {
 
@@ -54,4 +54,4 @@ struct rm_ref<void> { };
 
 } } // namespace cppa::util
 
-#endif // RM_REF_HPP
+#endif // CPPA_RM_REF_HPP

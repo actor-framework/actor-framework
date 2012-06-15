@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONVERTED_THREAD_CONTEXT_HPP
-#define CONVERTED_THREAD_CONTEXT_HPP
+#ifndef CPPA_THREAD_BASED_ACTOR_HPP
+#define CPPA_THREAD_BASED_ACTOR_HPP
 
 #include "cppa/config.hpp"
 
@@ -48,17 +48,27 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/abstract_actor.hpp"
+
 #include "cppa/intrusive/singly_linked_list.hpp"
+
+#include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/detail/nestable_receive_policy.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+
+#ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Represents a thread that was converted to an Actor.
+ * @brief An actor running in its own thread.
  */
-class converted_thread_context : public abstract_actor<local_actor> {
+class thread_mapped_actor : public local_actor { };
 
-    friend class nestable_receive_policy;
+
+#else // CPPA_DOCUMENTATION
+
+class thread_mapped_actor : public abstract_actor<local_actor> {
+
+    friend class detail::nestable_receive_policy;
 
     typedef abstract_actor<local_actor> super;
 
@@ -72,24 +82,25 @@ class converted_thread_context : public abstract_actor<local_actor> {
 
     void dequeue(partial_function& rules); //override
 
-    inline void push_timeout() { }
-
-    inline void pop_timeout() { }
-
-    filter_result filter_msg(const any_tuple& msg);
+    detail::filter_result filter_msg(const any_tuple& msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
  private:
 
-    nestable_receive_policy m_recv_policy;
+    detail::nestable_receive_policy m_recv_policy;
 
-    inline recursive_queue_node* receive_node() {
+    // required by nestable_receive_policy
+    inline void push_timeout() { }
+    inline void pop_timeout() { }
+    inline detail::recursive_queue_node* receive_node() {
         return m_mailbox.pop();
     }
 
 };
 
-} } // namespace cppa::detail
+#endif // CPPA_DOCUMENTATION
 
-#endif // CONVERTED_THREAD_CONTEXT_HPP
+} // namespace cppa
+
+#endif // CPPA_THREAD_BASED_ACTOR_HPP

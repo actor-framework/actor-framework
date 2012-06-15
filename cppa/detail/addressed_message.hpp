@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ADDRESSED_MESSAGE_HPP
-#define ADDRESSED_MESSAGE_HPP
+#ifndef CPPA_ADDRESSED_MESSAGE_HPP
+#define CPPA_ADDRESSED_MESSAGE_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
@@ -97,4 +97,4 @@ inline bool operator!=(const addressed_message& lhs, const addressed_message& rh
 
 } } // namespace cppa::detail
 
-#endif // ADDRESSED_MESSAGE_HPP
+#endif // CPPA_ADDRESSED_MESSAGE_HPP

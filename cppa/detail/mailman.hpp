@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MAILMAN_HPP
-#define MAILMAN_HPP
+#ifndef CPPA_MAILMAN_HPP
+#define CPPA_MAILMAN_HPP
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/actor_proxy.hpp"
@@ -44,4 +44,4 @@ void mailman_loop();
 
 }} // namespace cppa::detail
 
-#endif // MAILMAN_HPP
+#endif // CPPA_MAILMAN_HPP

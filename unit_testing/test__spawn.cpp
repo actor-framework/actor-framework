@@ -140,7 +140,7 @@ abstract_event_based_actor* event_testee2() {
         behavior wait4timeout(int remaining) {
             return (
                 after(std::chrono::milliseconds(50)) >> [=]() {
-                    if (remaining == 1) quit_normal();
+                    if (remaining == 1) quit();
                     else become(wait4timeout(remaining - 1));
                 }
             );
@@ -164,7 +164,7 @@ struct chopstick : public fsm_actor<chopstick> {
                 become(&init_state);
             },
             on(atom("break")) >> [=]() {
-                quit_normal();
+                quit();
             }
         );
     }
@@ -178,7 +178,7 @@ struct chopstick : public fsm_actor<chopstick> {
                 reply(atom("taken"));
             },
             on(atom("break")) >> [=]() {
-                quit_normal();
+                quit();
             },
             others() >> [=]() {
             }

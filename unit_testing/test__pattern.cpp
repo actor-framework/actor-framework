@@ -18,7 +18,6 @@
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
 
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
 

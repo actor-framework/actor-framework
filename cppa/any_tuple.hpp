@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ANY_TUPLE_HPP
-#define ANY_TUPLE_HPP
+#ifndef CPPA_ANY_TUPLE_HPP
+#define CPPA_ANY_TUPLE_HPP
 
 #include <type_traits>
 
@@ -268,4 +268,4 @@ inline any_tuple make_any_tuple(Args&&... args) {
 
 } // namespace cppa
 
-#endif // ANY_TUPLE_HPP
+#endif // CPPA_ANY_TUPLE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BINARY_DESERIALIZER_HPP
-#define BINARY_DESERIALIZER_HPP
+#ifndef CPPA_BINARY_DESERIALIZER_HPP
+#define CPPA_BINARY_DESERIALIZER_HPP
 
 #include "cppa/deserializer.hpp"
 
@@ -66,4 +66,4 @@ class binary_deserializer : public deserializer {
 
 } // namespace cppa
 
-#endif // BINARY_DESERIALIZER_HPP
+#endif // CPPA_BINARY_DESERIALIZER_HPP

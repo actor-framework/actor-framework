@@ -28,15 +28,15 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULED_ACTOR_DUMMY_HPP
-#define SCHEDULED_ACTOR_DUMMY_HPP
+#ifndef CPPA_SCHEDULED_ACTOR_DUMMY_HPP
+#define CPPA_SCHEDULED_ACTOR_DUMMY_HPP
 
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
 struct scheduled_actor_dummy : abstract_scheduled_actor {
-    void resume(util::fiber*, scheduler::callback*);
+    resume_result resume(util::fiber*);
     void quit(std::uint32_t);
     void dequeue(behavior&);
     void dequeue(partial_function&);
@@ -50,4 +50,4 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
 
 } } // namespace cppa::detail
 
-#endif // SCHEDULED_ACTOR_DUMMY_HPP
+#endif // CPPA_SCHEDULED_ACTOR_DUMMY_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SELF_HPP
-#define SELF_HPP
+#ifndef CPPA_SELF_HPP
+#define CPPA_SELF_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -107,4 +107,4 @@ constexpr self_type self;
 
 } // namespace cppa
 
-#endif // SELF_HPP
+#endif // CPPA_SELF_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FROM_STRING_HPP
-#define FROM_STRING_HPP
+#ifndef CPPA_FROM_STRING_HPP
+#define CPPA_FROM_STRING_HPP
 
 #include <string>
 #include <typeinfo>
@@ -73,4 +73,4 @@ T from_string(const std::string& what) {
 
 } // namespace cppa
 
-#endif // FROM_STRING_HPP
+#endif // CPPA_FROM_STRING_HPP

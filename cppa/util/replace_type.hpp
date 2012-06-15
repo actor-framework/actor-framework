@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef REPLACE_TYPE_HPP
-#define REPLACE_TYPE_HPP
+#ifndef CPPA_REPLACE_TYPE_HPP
+#define CPPA_REPLACE_TYPE_HPP
 
 #include <type_traits>
 
@@ -60,4 +60,4 @@ struct replace_type {
 
 } } // namespace cppa::util
 
-#endif // REPLACE_TYPE_HPP
+#endif // CPPA_REPLACE_TYPE_HPP

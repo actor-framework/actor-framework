@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TO_STRING_HPP
-#define TO_STRING_HPP
+#ifndef CPPA_TO_STRING_HPP
+#define CPPA_TO_STRING_HPP
 
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -59,4 +59,4 @@ std::string to_string(const T& what) {
 
 } // namespace cppa
 
-#endif // TO_STRING_HPP
+#endif // CPPA_TO_STRING_HPP

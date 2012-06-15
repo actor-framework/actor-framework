@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef NETWORK_MANAGER_HPP
-#define NETWORK_MANAGER_HPP
+#ifndef CPPA_NETWORK_MANAGER_HPP
+#define CPPA_NETWORK_MANAGER_HPP
 
 #include "cppa/detail/post_office.hpp"
 
@@ -57,4 +57,4 @@ class network_manager {
 
 } } // namespace cppa::detail
 
-#endif // NETWORK_MANAGER_HPP
+#endif // CPPA_NETWORK_MANAGER_HPP

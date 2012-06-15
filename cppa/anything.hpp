@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_ANYTHING_HPP
-#define LIBCPPA_ANYTHING_HPP
+#ifndef CPPA_ANYTHING_HPP
+#define CPPA_ANYTHING_HPP
 
 #include <type_traits>
 
@@ -65,4 +65,4 @@ struct is_anything {
 
 } // namespace cppa
 
-#endif // ANYTHING_HPP
+#endif // CPPA_ANYTHING_HPP

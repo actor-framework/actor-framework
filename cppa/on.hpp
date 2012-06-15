@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ON_HPP
-#define ON_HPP
+#ifndef CPPA_ON_HPP
+#define CPPA_ON_HPP
 
 #include <chrono>
 #include <memory>
@@ -51,7 +51,6 @@
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/ref_counted_impl.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
@@ -409,4 +408,4 @@ constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 } // namespace cppa
 
-#endif // ON_HPP
+#endif // CPPA_ON_HPP

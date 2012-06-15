@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef UPGRADE_LOCK_GUARD_HPP
-#define UPGRADE_LOCK_GUARD_HPP
+#ifndef CPPA_UPGRADE_LOCK_GUARD_HPP
+#define CPPA_UPGRADE_LOCK_GUARD_HPP
 
 namespace cppa { namespace util {
 
@@ -61,4 +61,4 @@ class upgrade_lock_guard {
 
 } } // namespace cppa::util
 
-#endif // UPGRADE_LOCK_GUARD_HPP
+#endif // CPPA_UPGRADE_LOCK_GUARD_HPP

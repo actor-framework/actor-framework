@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EXCEPTION_HPP
-#define EXCEPTION_HPP
+#ifndef CPPA_EXCEPTION_HPP
+#define CPPA_EXCEPTION_HPP
 
 #include <string>
 #include <cstdint>
@@ -140,4 +140,4 @@ inline int bind_failure::error_code() const throw() {
 
 } // namespace cppa
 
-#endif // EXCEPTION_HPP
+#endif // CPPA_EXCEPTION_HPP

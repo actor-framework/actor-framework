@@ -144,7 +144,7 @@ primitive_variant& primitive_variant::operator=(primitive_variant&& other) {
     return *this;
 }
 
-bool operator==(const primitive_variant& lhs, const primitive_variant& rhs) {
+bool equal(const primitive_variant& lhs, const primitive_variant& rhs) {
     comparator cmp(lhs, rhs);
     util::pt_dispatch(lhs.m_ptype, cmp);
     return cmp.result;

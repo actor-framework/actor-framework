@@ -34,7 +34,6 @@
 #include "cppa/self.hpp"
 #include "cppa/abstract_event_based_actor.hpp"
 
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/filter_result.hpp"
 
 namespace cppa {
@@ -87,12 +86,11 @@ auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle
     return cache_msg;
 }
 
-void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
+resume_result abstract_event_based_actor::resume(util::fiber*) {
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
         m_loop_stack.clear();
         on_exit();
-        cb->exec_done();
     };
     self.set(this);
     try {
@@ -109,7 +107,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
                             break;
                         }
                         case abstract_scheduled_actor::blocked: {
-                            return;
+                            return resume_result::actor_blocked;
                         }
                         default: CPPA_CRITICAL("illegal actor state");
                     };
@@ -125,7 +123,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
                         release_node(e);
                         if (m_loop_stack.empty()) {
                             done_cb();
-                            return;
+                            return resume_result::actor_done;
                         }
                         // try to match cached messages before receiving new ones
                         auto i = m_cache.begin();
@@ -141,7 +139,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
                                     m_cache.erase(i);
                                     if (m_loop_stack.empty()) {
                                         done_cb();
-                                        return;
+                                        return resume_result::actor_done;
                                     }
                                     i = m_cache.begin();
                                     break;
@@ -171,6 +169,7 @@ void abstract_event_based_actor::resume(util::fiber*, scheduler::callback* cb) {
         cleanup(exit_reason::unhandled_exception);
     }
     done_cb();
+    return resume_result::actor_done;
 }
 
 void abstract_event_based_actor::on_exit() {

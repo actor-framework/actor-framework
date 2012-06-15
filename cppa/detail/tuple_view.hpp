@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TUPLE_VIEW_HPP
-#define TUPLE_VIEW_HPP
+#ifndef CPPA_TUPLE_VIEW_HPP
+#define CPPA_TUPLE_VIEW_HPP
 
 #include "cppa/util/static_foreach.hpp"
 
@@ -123,4 +123,4 @@ types_array<ElementTypes...> tuple_view<ElementTypes...>::m_types;
 
 } } // namespace cppa::detail
 
-#endif // TUPLE_VIEW_HPP
+#endif // CPPA_TUPLE_VIEW_HPP

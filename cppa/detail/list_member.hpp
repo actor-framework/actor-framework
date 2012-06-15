@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIST_MEMBER_HPP
-#define LIST_MEMBER_HPP
+#ifndef CPPA_LIST_MEMBER_HPP
+#define CPPA_LIST_MEMBER_HPP
 
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
@@ -108,4 +108,4 @@ class list_member : public util::abstract_uniform_type_info<List> {
 
 } } // namespace cppa::detail
 
-#endif // LIST_MEMBER_HPP
+#endif // CPPA_LIST_MEMBER_HPP

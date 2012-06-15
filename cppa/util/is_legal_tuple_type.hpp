@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_LEGAL_TUPLE_TYPE_HPP
-#define IS_LEGAL_TUPLE_TYPE_HPP
+#ifndef CPPA_IS_LEGAL_TUPLE_TYPE_HPP
+#define CPPA_IS_LEGAL_TUPLE_TYPE_HPP
 
 #include <type_traits>
 
@@ -48,4 +48,4 @@ struct is_legal_tuple_type {
 
 } } // namespace cppa::util
 
-#endif // IS_LEGAL_TUPLE_TYPE_HPP
+#endif // CPPA_IS_LEGAL_TUPLE_TYPE_HPP

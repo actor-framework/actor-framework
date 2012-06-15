@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef OBJECT_HPP
-#define OBJECT_HPP
+#ifndef CPPA_OBJECT_HPP
+#define CPPA_OBJECT_HPP
 
 #include <string>
 #include <typeinfo>
@@ -197,4 +197,4 @@ const T& get(const object& obj) {
 
 } // namespace cppa
 
-#endif // OBJECT_HPP
+#endif // CPPA_OBJECT_HPP

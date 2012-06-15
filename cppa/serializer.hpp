@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SERIALIZER_HPP
-#define SERIALIZER_HPP
+#ifndef CPPA_SERIALIZER_HPP
+#define CPPA_SERIALIZER_HPP
 
 #include <string>
 #include <cstddef> // size_t
@@ -114,4 +114,4 @@ serializer& operator<<(serializer& s, const T& what) {
 
 } // namespace cppa
 
-#endif // SERIALIZER_HPP
+#endif // CPPA_SERIALIZER_HPP

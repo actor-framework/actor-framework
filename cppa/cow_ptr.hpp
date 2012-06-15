@@ -28,13 +28,15 @@
 \******************************************************************************/
 
 
-#ifndef COW_PTR_HPP
-#define COW_PTR_HPP
+#ifndef CPPA_COW_PTR_HPP
+#define CPPA_COW_PTR_HPP
 
+#include <cstddef>
 #include <stdexcept>
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
@@ -46,83 +48,93 @@ namespace cppa {
  *           {@link ref_counted}.
  */
 template<typename T>
-class cow_ptr {
+class cow_ptr : util::comparable<cow_ptr<T> >,
+                util::comparable<cow_ptr<T>, const T*>,
+                util::comparable<cow_ptr<T>, std::nullptr_t> {
 
  public:
 
+    typedef T*       pointer;
+    typedef const T* const_pointer;
+    typedef T        element_type;
+    typedef T&       reference;
+    typedef const T& const_reference;
+
+    constexpr cow_ptr() : m_ptr() { }
+
+    cow_ptr(pointer raw_ptr) : m_ptr(raw_ptr) { }
+
+    cow_ptr(cow_ptr&&) = default;
+    cow_ptr(const cow_ptr&) = default;
+    cow_ptr& operator=(cow_ptr&&) = default;
+    cow_ptr& operator=(const cow_ptr&) = default;
+
     template<typename Y>
-    explicit cow_ptr(Y* raw_ptr) : m_ptr(raw_ptr) { }
-
-    explicit cow_ptr(T* raw_ptr) : m_ptr(raw_ptr) { }
-
-    cow_ptr(cow_ptr&& other) : m_ptr(std::move(other.m_ptr)) { }
-
-    cow_ptr(const cow_ptr& other) : m_ptr(other.m_ptr) { }
-
-    template<typename Y>
-    cow_ptr(const cow_ptr<Y>& other) : m_ptr(const_cast<Y*>(other.get())) { }
-
-    inline void swap(cow_ptr& other) {
-        m_ptr.swap(other.m_ptr);
+    cow_ptr(cow_ptr<Y> other) : m_ptr(other.m_ptr.release()) {
+        static_assert(std::is_convertible<Y*, T*>::value,
+                      "Y* is not assignable to T*");
     }
 
-    cow_ptr& operator=(cow_ptr&& other) {
-        swap(other);
+    inline void swap(cow_ptr& other) { m_ptr.swap(other.m_ptr); }
+
+    template<typename Y>
+    cow_ptr& operator=(cow_ptr<Y> other) {
+        m_ptr = std::move(other.m_ptr);
         return *this;
     }
 
-    cow_ptr& operator=(const cow_ptr& other) {
-        cow_ptr tmp{other};
-        swap(tmp);
-        return *this;
-    }
-
-    template<typename Y>
-    cow_ptr& operator=(const cow_ptr<Y>& other) {
-        cow_ptr tmp{other};
-        swap(tmp);
-        return *this;
-    }
-
-    void detach() { (void) detached_ptr();
-    }
+    void detach() { static_cast<void>(get_detached()); }
 
     inline void reset(T* value = nullptr) { m_ptr.reset(value); }
 
-    inline T* get() { return (m_ptr) ? detached_ptr() : nullptr; }
+    // non-const access (detaches this pointer)
+    inline pointer get() { return (m_ptr) ? get_detached() : nullptr; }
+    inline pointer operator->() { return get_detached(); }
+    inline reference operator*() { return *get_detached(); }
 
-    inline T& operator*() { return *detached_ptr(); }
-
-    inline T* operator->() { return detached_ptr(); }
-
-    inline const T* get() const { return ptr(); }
-
-    inline const T& operator*() const { return *ptr(); }
-
-    inline const T* operator->() const { return ptr(); }
-
+    // const access (does not detach this pointer)
+    inline const_pointer get() const { return m_ptr.get(); }
+    inline const_pointer operator->() const { return get(); }
+    inline const_reference operator*() const { return *get(); }
     inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
+
+    template<typename Arg>
+    inline ptrdiff_t compare(Arg&& what) const {
+        return m_ptr.compare(std::forward<Arg>(what));
+    }
 
  private:
 
     intrusive_ptr<T> m_ptr;
 
-    T* detached_ptr() {
-        T* ptr = m_ptr.get();
+    pointer get_detached() {
+        auto ptr = m_ptr.get();
         if (!ptr->unique()) {
-            //T* new_ptr = detail::copy_of(ptr, copy_of_token());
-            T* new_ptr = ptr->copy();
-            cow_ptr tmp(new_ptr);
-            swap(tmp);
+            pointer new_ptr = ptr->copy();
+            reset(new_ptr);
             return new_ptr;
         }
         return ptr;
     }
 
-    inline const T* ptr() const { return m_ptr.get(); }
-
 };
+
+/**
+ * @relates cow_ptr
+ */
+template<typename X, typename Y>
+inline bool operator==(const cow_ptr<X>& lhs, const cow_ptr<Y>& rhs) {
+    return lhs.get() == rhs.get();
+}
+
+/**
+ * @relates cow_ptr
+ */
+template<typename X, typename Y>
+inline bool operator!=(const cow_ptr<X>& lhs, const cow_ptr<Y>& rhs) {
+    return !(lhs == rhs);
+}
 
 } // namespace cppa
 
-#endif // COW_PTR_HPP
+#endif // CPPA_COW_PTR_HPP

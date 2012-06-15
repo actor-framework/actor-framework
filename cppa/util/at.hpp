@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef AT_HPP
-#define AT_HPP
+#ifndef CPPA_AT_HPP
+#define CPPA_AT_HPP
 
 namespace cppa { namespace util {
 
@@ -48,4 +48,4 @@ struct at<0, T0, Tn...> {
 
 } } // namespace cppa::util
 
-#endif // AT_HPP
+#endif // CPPA_AT_HPP

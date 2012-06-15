@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
-#define DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
+#ifndef CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
+#define CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 
 #include "cppa/anything.hpp"
 
@@ -334,4 +334,4 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
 
 } } // namespace detail
 
-#endif // DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
+#endif // CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_UTIL_VOID_TYPE_HPP
-#define LIBCPPA_UTIL_VOID_TYPE_HPP
+#ifndef CPPA_UTIL_VOID_TYPE_HPP
+#define CPPA_UTIL_VOID_TYPE_HPP
 
 namespace cppa { namespace util {
 
@@ -43,4 +43,4 @@ struct void_type {
 
 } } // namespace cppa::util
 
-#endif // LIBCPPA_UTIL_VOID_TYPE_HPP
+#endif // CPPA_UTIL_VOID_TYPE_HPP

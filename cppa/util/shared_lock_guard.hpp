@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SHARED_LOCK_GUARD_HPP
-#define SHARED_LOCK_GUARD_HPP
+#ifndef CPPA_SHARED_LOCK_GUARD_HPP
+#define CPPA_SHARED_LOCK_GUARD_HPP
 
 namespace cppa { namespace util {
 
@@ -64,4 +64,4 @@ class shared_lock_guard {
 
 } } // namespace cppa::util
 
-#endif // SHARED_LOCK_GUARD_HPP
+#endif // CPPA_SHARED_LOCK_GUARD_HPP

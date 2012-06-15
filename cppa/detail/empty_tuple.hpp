@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EMPTY_TUPLE_HPP
-#define EMPTY_TUPLE_HPP
+#ifndef CPPA_EMPTY_TUPLE_HPP
+#define CPPA_EMPTY_TUPLE_HPP
 
 #include "cppa/detail/abstract_tuple.hpp"
 
@@ -54,4 +54,4 @@ class empty_tuple : public abstract_tuple {
 
 } } // namespace cppa::detail
 
-#endif // EMPTY_TUPLE_HPP
+#endif // CPPA_EMPTY_TUPLE_HPP

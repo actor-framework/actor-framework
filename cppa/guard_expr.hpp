@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GUARD_EXPR_HPP
-#define GUARD_EXPR_HPP
+#ifndef CPPA_GUARD_EXPR_HPP
+#define CPPA_GUARD_EXPR_HPP
 
 #include <string>
 #include <vector>
@@ -742,4 +742,4 @@ constexpr guard_placeholder<8> _x9;
 
 } // namespace cppa
 
-#endif // GUARD_EXPR_HPP
+#endif // CPPA_GUARD_EXPR_HPP

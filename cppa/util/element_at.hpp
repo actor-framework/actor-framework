@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ELEMENT_AT_HPP
-#define ELEMENT_AT_HPP
+#ifndef CPPA_ELEMENT_AT_HPP
+#define CPPA_ELEMENT_AT_HPP
 
 #include "cppa/util/at.hpp"
 
@@ -47,4 +47,4 @@ struct element_at<N, C<Tn...>> : at<N, Tn...> {
 
 } } // namespace cppa::util
 
-#endif // ELEMENT_AT_HPP
+#endif // CPPA_ELEMENT_AT_HPP

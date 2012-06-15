@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DESERIALIZER_HPP
-#define DESERIALIZER_HPP
+#ifndef CPPA_DESERIALIZER_HPP
+#define CPPA_DESERIALIZER_HPP
 
 #include <string>
 #include <cstddef>
@@ -121,4 +121,4 @@ deserializer& operator>>(deserializer& d, object& storage);
 
 } // namespace cppa
 
-#endif // DESERIALIZER_HPP
+#endif // CPPA_DESERIALIZER_HPP

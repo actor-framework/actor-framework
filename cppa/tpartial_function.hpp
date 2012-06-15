@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TPARTIAL_FUNCTION_HPP
-#define TPARTIAL_FUNCTION_HPP
+#ifndef CPPA_TPARTIAL_FUNCTION_HPP
+#define CPPA_TPARTIAL_FUNCTION_HPP
 
 #include <cstddef>
 #include <type_traits>
@@ -130,4 +130,4 @@ struct get_tpartial_function<Expr, Guard,
 
 } // namespace cppa
 
-#endif // TPARTIAL_FUNCTION_HPP
+#endif // CPPA_TPARTIAL_FUNCTION_HPP

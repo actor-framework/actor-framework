@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PROJECTION_HPP
-#define PROJECTION_HPP
+#ifndef CPPA_PROJECTION_HPP
+#define CPPA_PROJECTION_HPP
 
 #include "cppa/option.hpp"
 #include "cppa/guard_expr.hpp"
@@ -175,4 +175,4 @@ struct projection_from_type_list<ProjectionFuns, util::type_list<Args...> > {
 
 } } // namespace cppa::detail
 
-#endif // PROJECTION_HPP
+#endif // CPPA_PROJECTION_HPP

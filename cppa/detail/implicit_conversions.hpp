@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IMPLICIT_CONVERSIONS_HPP
-#define IMPLICIT_CONVERSIONS_HPP
+#ifndef CPPA_IMPLICIT_CONVERSIONS_HPP
+#define CPPA_IMPLICIT_CONVERSIONS_HPP
 
 #include <string>
 #include <type_traits>
@@ -82,4 +82,4 @@ struct strip_and_convert {
 
 } } // namespace cppa::detail
 
-#endif // IMPLICIT_CONVERSIONS_HPP
+#endif // CPPA_IMPLICIT_CONVERSIONS_HPP

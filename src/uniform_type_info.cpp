@@ -81,7 +81,7 @@ istream& operator>>(istream& i, cppa::util::void_type&) { return i; }
 namespace {
 
 inline cppa::detail::uniform_type_info_map& uti_map() {
-    return *(cppa::detail::singleton_manager::get_uniform_type_info_map());
+    return *cppa::detail::singleton_manager::get_uniform_type_info_map();
 }
 
 inline const char* raw_name(const std::type_info& tinfo) {
@@ -784,8 +784,7 @@ object uniform_type_info::create() const {
     return { new_instance(), this };
 }
 
-const uniform_type_info*
-uniform_type_info::from(const std::type_info& tinf) {
+const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
     auto result = uti_map().by_raw_name(raw_name(tinf));
     if (result == nullptr) {
         std::string error = "uniform_type_info::by_type_info(): ";

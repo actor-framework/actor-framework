@@ -36,7 +36,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 
 namespace {
 
@@ -47,7 +47,7 @@ boost::thread_specific_ptr<cppa::local_actor> t_this_context(&cppa::self_type::c
 namespace cppa {
 
 void self_type::cleanup_fun(cppa::local_actor* what) {
-    auto ptr = dynamic_cast<detail::converted_thread_context*>(what);
+    auto ptr = dynamic_cast<thread_mapped_actor*>(what);
     if (ptr) {
         // make sure "unspawned" actors quit properly
         ptr->cleanup(cppa::exit_reason::normal);
@@ -63,7 +63,7 @@ void self_type::set_impl(local_actor* ptr) {
 local_actor* self_type::get_impl() {
     auto result = t_this_context.get();
     if (result == nullptr) {
-        result = new detail::converted_thread_context;
+        result = new thread_mapped_actor;
         result->ref();
         get_scheduler()->register_converted_context(result);
         t_this_context.reset(result);

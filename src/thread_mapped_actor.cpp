@@ -36,13 +36,13 @@
 #include "cppa/self.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/thread_mapped_actor.hpp"
+
 #include "cppa/detail/matches.hpp"
-#include "cppa/detail/invokable.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
-void converted_thread_context::quit(std::uint32_t reason) {
+void thread_mapped_actor::quit(std::uint32_t reason) {
     super::cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
     // self must point to a newly created instance
@@ -50,21 +50,21 @@ void converted_thread_context::quit(std::uint32_t reason) {
     throw actor_exited(reason);
 }
 
-void converted_thread_context::enqueue(actor* sender, any_tuple msg) {
+void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
     auto node = fetch_node(sender, std::move(msg));
     CPPA_REQUIRE(node->marked == false);
     m_mailbox.push_back(node);
 }
 
-void converted_thread_context::dequeue(partial_function& fun) { // override
+void thread_mapped_actor::dequeue(partial_function& fun) { // override
     m_recv_policy.receive(this, fun);
 }
 
-void converted_thread_context::dequeue(behavior& bhvr) { // override
+void thread_mapped_actor::dequeue(behavior& bhvr) { // override
     auto& fun = bhvr.get_partial_function();
     if (bhvr.timeout().valid() == false) {
         // suppress virtual function call
-        converted_thread_context::dequeue(fun);
+        thread_mapped_actor::dequeue(fun);
     }
     else if (m_recv_policy.invoke_from_cache(this, fun) == false) {
         if (bhvr.timeout().is_zero()) {
@@ -78,7 +78,7 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
         else {
             auto timeout = std::chrono::high_resolution_clock::now();
             timeout += bhvr.timeout();
-            recursive_queue_node* e = m_mailbox.try_pop(timeout);
+            detail::recursive_queue_node* e = m_mailbox.try_pop(timeout);
             while (e != nullptr) {
                 CPPA_REQUIRE(e->marked == false);
                 if (m_recv_policy.invoke(this, e, fun)) return;
@@ -89,7 +89,7 @@ void converted_thread_context::dequeue(behavior& bhvr) { // override
     }
 }
 
-filter_result converted_thread_context::filter_msg(const any_tuple& msg) {
+detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {
     auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
     if (   m_trap_exit == false
         && msg.size() == 2
@@ -101,11 +101,11 @@ filter_result converted_thread_context::filter_msg(const any_tuple& msg) {
             if (v1 != exit_reason::normal) {
                 quit(v1);
             }
-            return normal_exit_signal;
+            return detail::normal_exit_signal;
         }
 
     }
-    return ordinary_message;
+    return detail::ordinary_message;
 }
 
-} } // namespace cppa::detail
+} // namespace cppa::detail

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ATTACHABLE_HPP
-#define ATTACHABLE_HPP
+#ifndef CPPA_ATTACHABLE_HPP
+#define CPPA_ATTACHABLE_HPP
 
 #include <cstdint>
 #include <typeinfo>
@@ -88,4 +88,4 @@ class attachable {
 
 } // namespace cppa
 
-#endif // ATTACHABLE_HPP
+#endif // CPPA_ATTACHABLE_HPP

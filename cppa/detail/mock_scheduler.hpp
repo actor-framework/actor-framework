@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MOCK_SCHEDULER_HPP
-#define MOCK_SCHEDULER_HPP
+#ifndef CPPA_MOCK_SCHEDULER_HPP
+#define CPPA_MOCK_SCHEDULER_HPP
 
 #include <thread>
 #include <utility>
@@ -57,4 +57,4 @@ class mock_scheduler : public scheduler {
 
 } } // namespace cppa::detail
 
-#endif // MOCK_SCHEDULER_HPP
+#endif // CPPA_MOCK_SCHEDULER_HPP

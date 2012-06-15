@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_PATTERN_HPP
-#define LIBCPPA_PATTERN_HPP
+#ifndef CPPA_PATTERN_HPP
+#define CPPA_PATTERN_HPP
 
 #include <iostream>
 
@@ -340,4 +340,4 @@ struct pattern_from_type_list<util::type_list<Types...>> {
 
 } // namespace cppa
 
-#endif // PATTERN_HPP
+#endif // CPPA_PATTERN_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TUPLE_HPP
-#define CPPA_TUPLE_HPP
+#ifndef CPPA_COW_TUPLE_HPP
+#define CPPA_COW_TUPLE_HPP
 
 #include <cstddef>
 #include <string>
@@ -257,4 +257,4 @@ inline bool operator!=(const cow_tuple<LhsTypes...>& lhs,
 
 } // namespace cppa
 
-#endif
+#endif // CPPA_COW_TUPLE_HPP

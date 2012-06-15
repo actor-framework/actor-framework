@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRIMITIVE_VARIANT_HPP
-#define PRIMITIVE_VARIANT_HPP
+#ifndef CPPA_PRIMITIVE_VARIANT_HPP
+#define CPPA_PRIMITIVE_VARIANT_HPP
 
 #include <new>
 #include <cstdint>
@@ -74,8 +74,8 @@ T& get_ref(primitive_variant& pv);
  */
 class primitive_variant {
 
-    friend bool operator==(const primitive_variant& lhs,
-                           const primitive_variant& rhs);
+    friend bool equal(const primitive_variant& lhs,
+                      const primitive_variant& rhs);
 
     template<typename T>
     friend const T& get(const primitive_variant& pv);
@@ -338,71 +338,25 @@ get_ref(primitive_variant& pv) {
 /**
  * @relates primitive_variant
  */
-bool operator==(const primitive_variant& lhs, const primitive_variant& rhs);
-
-/**
- * @relates primitive_variant
- */
-inline bool operator!=(const primitive_variant& lhs, const primitive_variant& rhs) {
-    return !(lhs == rhs);
-}
-
-#ifndef CPPA_DOCUMENTATION
+bool equal(const primitive_variant& lhs, const primitive_variant& rhs);
 
 /**
  * @relates primitive_variant
  */
 template<typename T>
-bool operator==(const T& lhs, const primitive_variant& rhs);
-
-/**
- * @relates primitive_variant
- */
-template<typename T>
-bool operator==(const primitive_variant& lhs, const T& rhs);
-
-/**
- * @relates primitive_variant
- */
-template<typename T>
-bool operator!=(const T& lhs, const primitive_variant& rhs);
-
-/**
- * @relates primitive_variant
- */
-template<typename T>
-bool operator!=(const primitive_variant& lhs, const T& rhs);
-
-
-#else
-
-template<typename T>
-typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator==(const T& lhs, const primitive_variant& rhs) {
+bool equal(const T& lhs, const primitive_variant& rhs) {
     static constexpr primitive_type ptype = detail::type_to_ptype<T>::ptype;
     static_assert(ptype != pt_null, "T is an incompatible type");
     return (rhs.ptype() == ptype) ? lhs == get<ptype>(rhs) : false;
 }
 
+/**
+ * @relates primitive_variant
+ */
 template<typename T>
-typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator==(const primitive_variant& lhs, const T& rhs) {
-    return (rhs == lhs);
+inline bool equal(const primitive_variant& lhs, const T& rhs) {
+    return equal(rhs, lhs);
 }
-
-template<typename T>
-typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator!=(const primitive_variant& lhs, const T& rhs) {
-    return !(lhs == rhs);
-}
-
-template<typename T>
-typename std::enable_if<util::is_primitive<T>::value, bool>::type
-operator!=(const T& lhs, const primitive_variant& rhs) {
-    return !(lhs == rhs);
-}
-
-#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 
@@ -431,4 +385,4 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 } } // namespace cppa::detail
 
 
-#endif // PRIMITIVE_VARIANT_HPP
+#endif // CPPA_PRIMITIVE_VARIANT_HPP

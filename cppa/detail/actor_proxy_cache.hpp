@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_PROXY_CACHE_HPP
-#define ACTOR_PROXY_CACHE_HPP
+#ifndef CPPA_ACTOR_PROXY_CACHE_HPP
+#define CPPA_ACTOR_PROXY_CACHE_HPP
 
 #include <mutex>
 #include <thread>
@@ -99,4 +99,4 @@ actor_proxy_cache& get_actor_proxy_cache();
 
 } } // namespace cppa::detail
 
-#endif // ACTOR_PROXY_CACHE_HPP
+#endif // CPPA_ACTOR_PROXY_CACHE_HPP

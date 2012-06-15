@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_HPP
-#define ACTOR_HPP
+#ifndef CPPA_ACTOR_HPP
+#define CPPA_ACTOR_HPP
 
 #include <memory>
 #include <cstdint>
@@ -283,4 +283,4 @@ bool actor::attach_functor(F&& ftor) {
 
 } // namespace cppa
 
-#endif // ACTOR_HPP
+#endif // CPPA_ACTOR_HPP

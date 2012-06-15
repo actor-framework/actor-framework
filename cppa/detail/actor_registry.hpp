@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_REGISTRY_HPP
-#define ACTOR_REGISTRY_HPP
+#ifndef CPPA_ACTOR_REGISTRY_HPP
+#define CPPA_ACTOR_REGISTRY_HPP
 
 #include <map>
 #include <mutex>
@@ -86,4 +86,4 @@ class actor_registry {
 
 } } // namespace cppa::detail
 
-#endif // ACTOR_REGISTRY_HPP
+#endif // CPPA_ACTOR_REGISTRY_HPP

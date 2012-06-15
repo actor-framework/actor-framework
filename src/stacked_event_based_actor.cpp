@@ -32,10 +32,6 @@
 
 namespace cppa {
 
-void stacked_event_based_actor::quit_normal() {
-    m_loop_stack.clear();
-}
-
 void stacked_event_based_actor::unbecome() {
     if (!m_loop_stack.empty()) {
         m_loop_stack.pop_back();

@@ -89,18 +89,26 @@
  *
  * The usual build steps on Linux and Mac OS X are:
  *
- * - <tt>mkdir build</tt>
- * - <tt>cd build</tt>
- * - <tt>cmake ..</tt>
- * - <tt>make</tt> (as root, optionally)
- * - <tt>make install</tt> (as root, optionally)
+ *- <tt>mkdir build</tt>
+ *- <tt>cd build</tt>
+ *- <tt>cmake ..</tt>
+ *- <tt>make</tt>
+ *- <tt>make install</tt> (as root, optionally)
+ *
+ * Please run the unit tests as well to verify that @p libcppa works properly.
+ *
+ *- <tt>./bin/unit_tests</tt>
+ *
+ * Please submit a bug report that includes (a) your compiler version,
+ * (b) your OS, and (c) the output of the unit tests if an error occurs.
  *
  * Windows is not supported yet, because MVSC++ doesn't implement the
  * C++11 features needed to compile @p libcppa.
  *
  * Please read the <b>Manual</b> for an introduction to @p libcppa.
  * It is available online at
- * http://neverlord.github.com/libcppa/manual/
+ * http://neverlord.github.com/libcppa/manual/index.html or as PDF version at
+ * http://neverlord.github.com/libcppa/manual/libcppa_manual.pdf
  *
  * @section IntroHelloWorld Hello World Example
  *

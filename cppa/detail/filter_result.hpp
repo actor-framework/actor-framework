@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FILTER_RESULT_HPP
-#define FILTER_RESULT_HPP
+#ifndef CPPA_FILTER_RESULT_HPP
+#define CPPA_FILTER_RESULT_HPP
 
 namespace cppa { namespace detail {
 
@@ -42,4 +42,4 @@ enum filter_result {
 
 } } // namespace cppa::detail
 
-#endif // FILTER_RESULT_HPP
+#endif // CPPA_FILTER_RESULT_HPP

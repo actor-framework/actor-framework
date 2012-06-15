@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULING_HINT_HPP
-#define SCHEDULING_HINT_HPP
+#ifndef CPPA_SCHEDULING_HINT_HPP
+#define CPPA_SCHEDULING_HINT_HPP
 
 namespace cppa {
 
@@ -53,4 +53,4 @@ enum scheduling_hint {
 
 } // namespace cppa
 
-#endif // SCHEDULING_HINT_HPP
+#endif // CPPA_SCHEDULING_HINT_HPP

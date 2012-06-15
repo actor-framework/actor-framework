@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_COUNT_HPP
-#define ACTOR_COUNT_HPP
+#ifndef CPPA_ACTOR_COUNT_HPP
+#define CPPA_ACTOR_COUNT_HPP
 
 #include <cstddef>
 
@@ -45,4 +45,4 @@ void actor_count_wait_until(size_t expected);
 
 } } // namespace cppa::detail
 
-#endif // ACTOR_COUNT_HPP
+#endif // CPPA_ACTOR_COUNT_HPP

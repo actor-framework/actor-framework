@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SINGLETON_MANAGER_HPP
-#define SINGLETON_MANAGER_HPP
+#ifndef CPPA_SINGLETON_MANAGER_HPP
+#define CPPA_SINGLETON_MANAGER_HPP
 
 namespace cppa {
 
@@ -74,4 +74,4 @@ class singleton_manager {
 
 } } // namespace cppa::detail
 
-#endif // SINGLETON_MANAGER_HPP
+#endif // CPPA_SINGLETON_MANAGER_HPP

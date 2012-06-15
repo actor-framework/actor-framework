@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef NESTABLE_RECEIVE_POLICY_HPP
-#define NESTABLE_RECEIVE_POLICY_HPP
+#ifndef CPPA_NESTABLE_RECEIVE_POLICY_HPP
+#define CPPA_NESTABLE_RECEIVE_POLICY_HPP
 
 #include <list>
 #include <memory>
@@ -169,4 +169,4 @@ class nestable_receive_policy {
 
 } } // namespace cppa::detail
 
-#endif // NESTABLE_RECEIVE_POLICY_HPP
+#endif // CPPA_NESTABLE_RECEIVE_POLICY_HPP

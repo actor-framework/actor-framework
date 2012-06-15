@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DECORATED_TUPLE_HPP
-#define DECORATED_TUPLE_HPP
+#ifndef CPPA_DECORATED_TUPLE_HPP
+#define CPPA_DECORATED_TUPLE_HPP
 
 #include <vector>
 #include <algorithm>
@@ -144,4 +144,4 @@ struct decorated_cow_tuple_from_type_list< util::type_list<Types...> > {
 
 } } // namespace cppa::detail
 
-#endif // DECORATED_TUPLE_HPP
+#endif // CPPA_DECORATED_TUPLE_HPP

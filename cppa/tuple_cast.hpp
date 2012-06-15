@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TUPLE_CAST_HPP
-#define TUPLE_CAST_HPP
+#ifndef CPPA_TUPLE_CAST_HPP
+#define CPPA_TUPLE_CAST_HPP
 
 #include <type_traits>
 
@@ -205,4 +205,4 @@ auto forced_tuple_cast(any_tuple& tup, const pattern<T...>& p)
 
 } // namespace cppa
 
-#endif // TUPLE_CAST_HPP
+#endif // CPPA_TUPLE_CAST_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DURATION_HPP
-#define DURATION_HPP
+#ifndef CPPA_DURATION_HPP
+#define CPPA_DURATION_HPP
 
 #include <chrono>
 #include <cstdint>
@@ -141,4 +141,4 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs,
     return lhs;
 }
 
-#endif // DURATION_HPP
+#endif // CPPA_DURATION_HPP

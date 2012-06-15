@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_PRIMITIVE_HPP
-#define IS_PRIMITIVE_HPP
+#ifndef CPPA_IS_PRIMITIVE_HPP
+#define CPPA_IS_PRIMITIVE_HPP
 
 #include "cppa/detail/type_to_ptype.hpp"
 
@@ -55,4 +55,4 @@ struct is_primitive {
 
 } } // namespace cppa::util
 
-#endif // IS_PRIMITIVE_HPP
+#endif // CPPA_IS_PRIMITIVE_HPP

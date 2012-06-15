@@ -26,7 +26,6 @@
 #include "cppa/util/deduce_ref_type.hpp"
 
 #include "cppa/detail/matches.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/projection.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/value_guard.hpp"

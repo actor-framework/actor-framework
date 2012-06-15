@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_PROXY_HPP
-#define ACTOR_PROXY_HPP
+#ifndef CPPA_ACTOR_PROXY_HPP
+#define CPPA_ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/abstract_actor.hpp"
@@ -39,7 +39,7 @@ namespace cppa {
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Represents a remote Actor.
+ * @brief Represents a remote actor.
  */
 class actor_proxy : public actor { };
 
@@ -81,9 +81,10 @@ class actor_proxy : public abstract_actor<actor> {
 
 /**
  * @brief A smart pointer to an {@link actor_proxy} instance.
+ * @relates actor_proxy
  */
 typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
 
 } // namespace cppa
 
-#endif // ACTOR_PROXY_HPP
+#endif // CPPA_ACTOR_PROXY_HPP

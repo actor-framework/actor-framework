@@ -28,16 +28,31 @@
 \******************************************************************************/
 
 
-#ifndef STACKED_EVENT_BASED_ACTOR_HPP
-#define STACKED_EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_STACKED_EVENT_BASED_ACTOR_HPP
+#define CPPA_STACKED_EVENT_BASED_ACTOR_HPP
 
 #include "cppa/event_based_actor_base.hpp"
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
  * @brief A base class for event-based actors using a behavior stack.
  */
+class stacked_event_based_actor : public event_based_actor {
+
+ protected:
+
+    /**
+     * @brief Restores the last behavior.
+     */
+    void unbecome();
+
+};
+
+#else
+
 class stacked_event_based_actor : public event_based_actor_base<stacked_event_based_actor> {
 
     friend class event_based_actor_base<stacked_event_based_actor>;
@@ -48,18 +63,12 @@ class stacked_event_based_actor : public event_based_actor_base<stacked_event_ba
 
  protected:
 
-    /**
-     * @brief Restores the last behavior.
-     */
     void unbecome();
-
-    /**
-     * @brief Terminates this actor with normal exit reason.
-     */
-    void quit_normal();
 
 };
 
+#endif
+
 } // namespace cppa
 
-#endif // STACKED_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_STACKED_EVENT_BASED_ACTOR_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RECEIVE_HPP
-#define RECEIVE_HPP
+#ifndef CPPA_RECEIVE_HPP
+#define CPPA_RECEIVE_HPP
 
 #include "cppa/self.hpp"
 #include "cppa/behavior.hpp"
@@ -160,4 +160,4 @@ detail::do_receive_helper do_receive(Args&&... args) {
 
 } // namespace cppa
 
-#endif // RECEIVE_HPP
+#endif // CPPA_RECEIVE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_MUTABLE_REF_HPP
-#define IS_MUTABLE_REF_HPP
+#ifndef CPPA_IS_MUTABLE_REF_HPP
+#define CPPA_IS_MUTABLE_REF_HPP
 
 namespace cppa { namespace util {
 
@@ -53,4 +53,4 @@ struct is_mutable_ref<T&> {
 
 } } // namespace cppa::util
 
-#endif // IS_MUTABLE_REF_HPP
+#endif // CPPA_IS_MUTABLE_REF_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BEHAVIOR_HPP
-#define BEHAVIOR_HPP
+#ifndef CPPA_BEHAVIOR_HPP
+#define CPPA_BEHAVIOR_HPP
 
 #include <functional>
 #include <type_traits>
@@ -175,4 +175,4 @@ struct select_bhvr {
 
 } // namespace cppa
 
-#endif // BEHAVIOR_HPP
+#endif // CPPA_BEHAVIOR_HPP

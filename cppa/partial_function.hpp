@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PARTIAL_FUNCTION_HPP
-#define PARTIAL_FUNCTION_HPP
+#ifndef CPPA_PARTIAL_FUNCTION_HPP
+#define CPPA_PARTIAL_FUNCTION_HPP
 
 #include <list>
 #include <vector>
@@ -38,7 +38,6 @@
 
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa {
@@ -98,4 +97,4 @@ class partial_function {
 
 } // namespace cppa
 
-#endif // PARTIAL_FUNCTION_HPP
+#endif // CPPA_PARTIAL_FUNCTION_HPP

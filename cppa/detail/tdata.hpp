@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TDATA_HPP
-#define TDATA_HPP
+#ifndef CPPA_TDATA_HPP
+#define CPPA_TDATA_HPP
 
 #include <typeinfo>
 #include <functional>
@@ -439,4 +439,4 @@ typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv) {
 
 } // namespace cppa
 
-#endif // TDATA_HPP
+#endif // CPPA_TDATA_HPP

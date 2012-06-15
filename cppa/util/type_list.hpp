@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_UTIL_TYPE_LIST_HPP
-#define LIBCPPA_UTIL_TYPE_LIST_HPP
+#ifndef CPPA_UTIL_TYPE_LIST_HPP
+#define CPPA_UTIL_TYPE_LIST_HPP
 
 #include <typeinfo>
 #include <type_traits>
@@ -921,4 +921,4 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
  */
 } } // namespace cppa::util
 
-#endif // LIBCPPA_UTIL_TYPE_LIST_HPP
+#endif // CPPA_UTIL_TYPE_LIST_HPP

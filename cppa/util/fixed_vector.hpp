@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FIXED_VECTOR_HPP
-#define FIXED_VECTOR_HPP
+#ifndef CPPA_FIXED_VECTOR_HPP
+#define CPPA_FIXED_VECTOR_HPP
 
 #include <iterator>
 #include <algorithm>
@@ -269,4 +269,4 @@ class fixed_vector {
 
 } } // namespace cppa::util
 
-#endif // FIXED_VECTOR_HPP
+#endif // CPPA_FIXED_VECTOR_HPP

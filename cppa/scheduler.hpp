@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULER_HPP
-#define SCHEDULER_HPP
+#ifndef CPPA_SCHEDULER_HPP
+#define CPPA_SCHEDULER_HPP
 
 #include <chrono>
 #include <memory>
@@ -65,12 +65,6 @@ class scheduler {
     scheduler();
 
  public:
-
-    struct callback {
-        virtual ~callback();
-        // called if an actor finished execution during resume()
-        virtual void exec_done() = 0;
-    };
 
     virtual ~scheduler();
 
@@ -140,4 +134,4 @@ scheduler* get_scheduler();
 
 } // namespace cppa::detail
 
-#endif // SCHEDULER_HPP
+#endif // CPPA_SCHEDULER_HPP

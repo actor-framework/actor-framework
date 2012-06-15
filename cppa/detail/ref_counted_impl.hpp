@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef REF_COUNTED_IMPL_HPP
-#define REF_COUNTED_IMPL_HPP
+#ifndef CPPA_REF_COUNTED_IMPL_HPP
+#define CPPA_REF_COUNTED_IMPL_HPP
 
 namespace cppa { namespace detail {
 
@@ -58,4 +58,4 @@ class ref_counted_impl {
 
 } } // namespace cppa::detail
 
-#endif // REF_COUNTED_IMPL_HPP
+#endif // CPPA_REF_COUNTED_IMPL_HPP

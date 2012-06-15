@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GROUP_HPP
-#define GROUP_HPP
+#ifndef CPPA_GROUP_HPP
+#define CPPA_GROUP_HPP
 
 #include <string>
 #include <memory>
@@ -172,4 +172,4 @@ typedef intrusive_ptr<group> group_ptr;
 
 } // namespace cppa
 
-#endif // GROUP_HPP
+#endif // CPPA_GROUP_HPP
