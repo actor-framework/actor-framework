@@ -79,6 +79,14 @@ std::string demangle(const char* decorated) {
         }
     }
     free(undecorated);
+#   ifdef __clang__
+    // replace "std::__1::" with "std::" (fixes strange clang names)
+    std::string needle = "std::__1::";
+    std::string fixed_string = "std::";
+    for (auto pos = result.find(needle); pos != std::string::npos; pos = result.find(needle)) {
+        result.replace(pos, needle.size(), fixed_string);
+    }
+#   endif
     return result;
 }
 
