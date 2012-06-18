@@ -85,6 +85,7 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
             stack_element;
 
     std::vector<stack_element> m_behavior_stack;
+    std::vector<stack_element> m_erased_stack_elements;
     detail::receive_policy m_recv_policy;
 
     // provoke compiler errors for usage of receive() and related functions

@@ -79,6 +79,7 @@ resume_result abstract_event_based_actor::resume(util::fiber*) {
                 if (m_recv_policy.invoke(this, e, current_behavior())) {
                     // try to match cached message before receiving new ones
                     do {
+                        m_erased_stack_elements.clear();
                         if (m_behavior_stack.empty()) {
                             done_cb();
                             return resume_result::actor_done;

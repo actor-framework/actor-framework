@@ -33,7 +33,8 @@
 namespace cppa {
 
 void stacked_event_based_actor::unbecome() {
-    if (!m_behavior_stack.empty()) {
+    if (m_behavior_stack.empty() == false) {
+        m_erased_stack_elements.emplace_back(std::move(m_behavior_stack.back()));
         m_behavior_stack.pop_back();
     }
 }
