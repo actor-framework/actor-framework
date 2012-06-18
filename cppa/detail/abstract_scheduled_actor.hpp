@@ -105,6 +105,11 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         }
     }
 
+    inline void handle_timeout(behavior& bhvr) {
+        bhvr.handle_timeout();
+        reset_timeout();
+    }
+
     bool m_has_pending_timeout_request;
     std::uint32_t m_active_timeout_id;
 

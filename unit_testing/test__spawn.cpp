@@ -383,8 +383,6 @@ void foobar(const str_wrapper& x, const std::string& y) {
     );
 }
 
-
-
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);

@@ -61,8 +61,7 @@ struct thread_pool_scheduler::worker {
     job_ptr m_dummy;
     std::thread m_thread;
 
-    worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) {
-    }
+    worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) { }
 
     void start() {
         m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
@@ -103,26 +102,17 @@ struct thread_pool_scheduler::worker {
             if (result) {
                 return result;
             }
-#           ifdef CPPA_USE_BOOST_THREADS
-            auto timeout = boost::get_system_time();
-            timeout += boost::posix_time::milliseconds(10);
-            boost::this_thread::sleep(timeout);
-#           else
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-#           endif
         }
     }
 
     void operator()() {
         util::fiber fself;
-        scheduled_actor* job = nullptr;
-        auto fetch_pending = [&job]() -> scheduled_actor* {
+        job_ptr job = nullptr;
+        auto fetch_pending = [&job]() -> job_ptr {
             CPPA_REQUIRE(job != nullptr);
-            scheduled_actor* result = nullptr;
-            if (job->chained_actor() != nullptr) {
-                result = static_cast<scheduled_actor*>(job->chained_actor().release());
-            }
-            return result;
+            auto ptr = job->chained_actor().release();
+            return ptr ? static_cast<scheduled_actor*>(ptr) : nullptr;
         };
         for (;;) {
             job = aggressive_polling();
@@ -135,13 +125,13 @@ struct thread_pool_scheduler::worker {
             if (job == m_dummy) {
                 // dummy of doom received ...
                 m_job_queue->push_back(job); // kill the next guy
-                return;                        // and say goodbye
+                return;                      // and say goodbye
             }
             else {
                 do {
                     switch (job->resume(&fself)) {
                         case resume_result::actor_done: {
-                            scheduled_actor* pending = fetch_pending();
+                            auto pending = fetch_pending();
                             if (!job->deref()) delete job;
                             std::atomic_thread_fence(std::memory_order_seq_cst);
                             dec_actor_count();
@@ -166,9 +156,8 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) {
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             scheduled_actor* dummy) {
-    typedef std::unique_ptr<thread_pool_scheduler::worker> worker_ptr;
-    std::vector<worker_ptr> workers;
-    size_t num_workers = std::max<size_t>(std::thread::hardware_concurrency() * 2, 8);
+    std::vector<std::unique_ptr<thread_pool_scheduler::worker> > workers;
+    size_t num_workers = std::max<size_t>(std::thread::hardware_concurrency() * 2, 4);
     for (size_t i = 0; i < num_workers; ++i) {
         workers.emplace_back(new worker(jqueue, dummy));
         workers.back()->start();
@@ -188,6 +177,17 @@ void thread_pool_scheduler::start() {
 void thread_pool_scheduler::stop() {
     m_queue.push_back(&m_dummy);
     m_supervisor.join();
+    // make sure job queue is empty, because destructor of m_queue would
+    // otherwise delete elements it shouldn't
+    auto ptr = m_queue.try_pop();
+    while (ptr != nullptr) {
+        if (ptr != &m_dummy) {
+            if (!ptr->deref()) delete ptr;
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            dec_actor_count();
+            ptr = m_queue.try_pop();
+        }
+    }
     super::stop();
 }
 
@@ -204,7 +204,6 @@ actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
     if (push_to_queue) m_queue.push_back(ctx.get());
     return std::move(ctx);
 }
-
 
 actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what) {
     // do NOT push event-based actors to the queue on startup

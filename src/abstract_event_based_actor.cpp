@@ -38,8 +38,8 @@
 
 namespace cppa {
 
-abstract_event_based_actor::abstract_event_based_actor() : super(super::blocked) {
-}
+abstract_event_based_actor::abstract_event_based_actor()
+: super(super::blocked) { }
 
 void abstract_event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
@@ -49,47 +49,10 @@ void abstract_event_based_actor::dequeue(partial_function&) {
     quit(exit_reason::unallowed_function_call);
 }
 
-auto abstract_event_based_actor::handle_message(mailbox_element& node) -> handle_message_result {
-    CPPA_REQUIRE(node.marked == false);
-    CPPA_REQUIRE(m_loop_stack.empty() == false);
-    auto& bhvr = *(m_loop_stack.back());
-    switch (filter_msg(node.msg)) {
-        case detail::normal_exit_signal:
-        case detail::expired_timeout_message:
-            return drop_msg;
-
-        case detail::timeout_message:
-            m_has_pending_timeout_request = false;
-            CPPA_REQUIRE(bhvr.timeout().valid());
-            bhvr.handle_timeout();
-            if (!m_loop_stack.empty()) {
-                auto& next_bhvr = *(m_loop_stack.back());
-                request_timeout(next_bhvr.timeout());
-            }
-            return msg_handled;
-
-        default:
-            break;
-    }
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    if ((bhvr.get_partial_function())(m_last_dequeued)) {
-        m_last_dequeued.reset();
-        m_last_sender.reset();
-        // we definitely don't have a pending timeout now
-        m_has_pending_timeout_request = false;
-        return msg_handled;
-    }
-    // no match, restore members
-    std::swap(m_last_dequeued, node.msg);
-    std::swap(m_last_sender, node.sender);
-    return cache_msg;
-}
-
 resume_result abstract_event_based_actor::resume(util::fiber*) {
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
-        m_loop_stack.clear();
+        m_behavior_stack.clear();
         on_exit();
     };
     self.set(this);
@@ -113,50 +76,14 @@ resume_result abstract_event_based_actor::resume(util::fiber*) {
                 }
             }
             else {
-                switch (handle_message(*e)) {
-                    case drop_msg: {
-                        release_node(e);
-                        break; // nop
-                    }
-                    case msg_handled: {
-                        release_node(e);
-                        if (m_loop_stack.empty()) {
+                if (m_recv_policy.invoke(this, e, current_behavior())) {
+                    // try to match cached message before receiving new ones
+                    do {
+                        if (m_behavior_stack.empty()) {
                             done_cb();
                             return resume_result::actor_done;
                         }
-                        // try to match cached messages before receiving new ones
-                        auto i = m_cache.begin();
-                        while (i != m_cache.end()) {
-                            switch (handle_message(*(*i))) {
-                                case drop_msg: {
-                                    release_node(i->release());
-                                    i = m_cache.erase(i);
-                                    break;
-                                }
-                                case msg_handled: {
-                                    release_node(i->release());
-                                    m_cache.erase(i);
-                                    if (m_loop_stack.empty()) {
-                                        done_cb();
-                                        return resume_result::actor_done;
-                                    }
-                                    i = m_cache.begin();
-                                    break;
-                                }
-                                case cache_msg: {
-                                    ++i;
-                                    break;
-                                }
-                                default: CPPA_CRITICAL("illegal result of handle_message");
-                            }
-                        }
-                        break;
-                    }
-                    case cache_msg: {
-                        m_cache.emplace_back(e);
-                        break;
-                    }
-                    default: CPPA_CRITICAL("illegal result of handle_message");
+                    } while (m_recv_policy.invoke_from_cache(this, current_behavior()));
                 }
             }
         }

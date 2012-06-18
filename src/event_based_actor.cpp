@@ -33,13 +33,13 @@
 namespace cppa {
 
 event_based_actor::event_based_actor() {
-    m_loop_stack.reserve(2);
+    m_behavior_stack.reserve(2);
 }
 
 void event_based_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::normal) {
         cleanup(exit_reason::normal);
-        m_loop_stack.clear();
+        m_behavior_stack.clear();
     }
     else {
         abstract_scheduled_actor::quit(reason);
@@ -54,12 +54,12 @@ void event_based_actor::do_become(behavior* bhvr, bool has_ownership) {
     // keep always the latest element in the stack to prevent subtle errors,
     // e.g., the addresses of all variables in a lambda expression calling
     // become() suddenly are invalid if we would pop the behavior!
-    if (m_loop_stack.size() < 2) {
-        m_loop_stack.push_back(std::move(new_element));
+    if (m_behavior_stack.size() < 2) {
+        m_behavior_stack.push_back(std::move(new_element));
     }
     else {
-        m_loop_stack[0] = std::move(m_loop_stack[1]);
-        m_loop_stack[1] = std::move(new_element);
+        m_behavior_stack[0] = std::move(m_behavior_stack[1]);
+        m_behavior_stack[1] = std::move(new_element);
     }
 }
 

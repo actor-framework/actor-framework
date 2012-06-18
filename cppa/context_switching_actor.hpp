@@ -41,7 +41,7 @@
 #include "cppa/pattern.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/nestable_receive_policy.hpp"
+#include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -69,7 +69,7 @@ class context_switching_actor : public scheduled_actor {
 
 class context_switching_actor : public detail::abstract_scheduled_actor {
 
-    friend class detail::nestable_receive_policy;
+    friend class detail::receive_policy;
 
     typedef detail::abstract_scheduled_actor super;
 
@@ -92,6 +92,7 @@ class context_switching_actor : public detail::abstract_scheduled_actor {
  private:
 
     // required by detail::nestable_receive_policy
+    static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
     detail::recursive_queue_node* receive_node();
     inline void push_timeout() { ++m_active_timeout_id; }
     inline void pop_timeout() { --m_active_timeout_id; }
@@ -102,7 +103,7 @@ class context_switching_actor : public detail::abstract_scheduled_actor {
     // members
     util::fiber m_fiber;
     std::function<void()> m_behavior;
-    detail::nestable_receive_policy m_recv_policy;
+    detail::receive_policy m_recv_policy;
 
 };
 

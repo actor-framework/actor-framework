@@ -52,7 +52,7 @@
 #include "cppa/intrusive/singly_linked_list.hpp"
 
 #include "cppa/detail/recursive_queue_node.hpp"
-#include "cppa/detail/nestable_receive_policy.hpp"
+#include "cppa/detail/receive_policy.hpp"
 
 namespace cppa {
 
@@ -68,7 +68,7 @@ class thread_mapped_actor : public local_actor { };
 
 class thread_mapped_actor : public abstract_actor<local_actor> {
 
-    friend class detail::nestable_receive_policy;
+    friend class detail::receive_policy;
 
     typedef abstract_actor<local_actor> super;
 
@@ -88,13 +88,17 @@ class thread_mapped_actor : public abstract_actor<local_actor> {
 
  private:
 
-    detail::nestable_receive_policy m_recv_policy;
+    detail::receive_policy m_recv_policy;
 
     // required by nestable_receive_policy
+    static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
     inline void push_timeout() { }
     inline void pop_timeout() { }
     inline detail::recursive_queue_node* receive_node() {
         return m_mailbox.pop();
+    }
+    inline void handle_timeout(behavior& bhvr) {
+        bhvr.handle_timeout();
     }
 
 };

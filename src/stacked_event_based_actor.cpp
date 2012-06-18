@@ -33,8 +33,8 @@
 namespace cppa {
 
 void stacked_event_based_actor::unbecome() {
-    if (!m_loop_stack.empty()) {
-        m_loop_stack.pop_back();
+    if (!m_behavior_stack.empty()) {
+        m_behavior_stack.pop_back();
     }
 }
 
@@ -44,7 +44,7 @@ void stacked_event_based_actor::do_become(behavior* bhvr,
     request_timeout(bhvr->timeout());
     stack_element se{bhvr};
     if (!has_ownership) se.get_deleter().disable();
-    m_loop_stack.push_back(std::move(se));
+    m_behavior_stack.push_back(std::move(se));
 }
 
 } // namespace cppa

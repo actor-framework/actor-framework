@@ -40,6 +40,7 @@
 #include "cppa/pattern.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/detail/disablable_delete.hpp"
+#include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -49,6 +50,7 @@ namespace cppa {
  */
 class abstract_event_based_actor : public detail::abstract_scheduled_actor {
 
+    friend class detail::receive_policy;
     typedef detail::abstract_scheduled_actor super;
 
  public:
@@ -71,15 +73,10 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
 
  protected:
 
-    std::vector<std::unique_ptr<detail::recursive_queue_node> > m_cache;
-
-    enum handle_message_result {
-        drop_msg,
-        msg_handled,
-        cache_msg
-    };
-
-    auto handle_message(mailbox_element& node) -> handle_message_result;
+    inline behavior& current_behavior() {
+        CPPA_REQUIRE(m_behavior_stack.empty() == false);
+        return *(m_behavior_stack.back());
+    }
 
     abstract_event_based_actor();
 
@@ -87,7 +84,8 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
     typedef std::unique_ptr<behavior, detail::disablable_delete<behavior>>
             stack_element;
 
-    std::vector<stack_element> m_loop_stack;
+    std::vector<stack_element> m_behavior_stack;
+    detail::receive_policy m_recv_policy;
 
     // provoke compiler errors for usage of receive() and related functions
 
@@ -124,6 +122,20 @@ class abstract_event_based_actor : public detail::abstract_scheduled_actor {
     template<typename... Args>
     void do_receive(Args&&... args) {
         receive(std::forward<Args>(args)...);
+    }
+
+ private:
+
+    // required by detail::nestable_receive_policy
+    static const detail::receive_policy_flag receive_flag = detail::rp_event_based;
+    inline void handle_timeout(behavior& bhvr) {
+        m_has_pending_timeout_request = false;
+        CPPA_REQUIRE(bhvr.timeout().valid());
+        bhvr.handle_timeout();
+        if (!m_behavior_stack.empty()) {
+            auto& next_bhvr = *(m_behavior_stack.back());
+            request_timeout(next_bhvr.timeout());
+        }
     }
 
 };
