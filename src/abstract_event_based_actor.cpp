@@ -99,7 +99,6 @@ resume_result abstract_event_based_actor::resume(util::fiber*) {
             e = m_mailbox.try_pop();
             if (!e) {
                 m_state.store(abstract_scheduled_actor::about_to_block);
-                std::atomic_thread_fence(std::memory_order_seq_cst);
                 if (m_mailbox.can_fetch_more() == false) {
                     switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
                                                    abstract_scheduled_actor::blocked)) {

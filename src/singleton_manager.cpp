@@ -133,15 +133,6 @@ actor_registry* singleton_manager::get_actor_registry() {
 }
 
 uniform_type_info_map* singleton_manager::get_uniform_type_info_map() {
-    /*
-    auto result = const_cast<uniform_type_info_map*>(s_uniform_type_info_map);
-    if (result == nullptr) {
-        auto tmp = new uniform_type_info_map;
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-
-    }
-    return result;
-    */
     return lazy_get(s_uniform_type_info_map, true);
 }
 

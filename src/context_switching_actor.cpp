@@ -73,7 +73,6 @@ detail::recursive_queue_node* context_switching_actor::receive_node() {
     while (e == nullptr) {
         if (m_mailbox.can_fetch_more() == false) {
             m_state.store(abstract_scheduled_actor::about_to_block);
-            std::atomic_thread_fence(std::memory_order_seq_cst);
             // make sure mailbox is empty
             if (m_mailbox.can_fetch_more()) {
                 // someone preempt us => continue
