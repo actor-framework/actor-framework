@@ -38,7 +38,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/abstract_actor.hpp"
+#include "cppa/detail/abstract_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/fiber.hpp"

@@ -32,7 +32,7 @@
 #define CPPA_ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/abstract_actor.hpp"
+#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa {
 
@@ -45,7 +45,7 @@ class actor_proxy : public actor { };
 
 #else // CPPA_DOCUMENTATION
 
-class actor_proxy : public abstract_actor<actor> {
+class actor_proxy : public detail::abstract_actor<actor> {
 
     typedef abstract_actor<actor> super;
 

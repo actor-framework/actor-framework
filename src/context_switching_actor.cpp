@@ -146,8 +146,8 @@ resume_result context_switching_actor::resume(util::fiber* from) {
 }
 
 void context_switching_actor::unbecome() {
-    if (m_stack_ptr) {
-        m_stack_ptr->pop_back();
+    if (m_bhvr_stack_ptr) {
+        m_bhvr_stack_ptr->pop_back();
     }
     else {
         quit();
@@ -155,13 +155,13 @@ void context_switching_actor::unbecome() {
 }
 
 void context_switching_actor::do_become(behavior* bhvr, bool ownership, bool discard) {
-    if (m_stack_ptr) {
-        if (discard) m_stack_ptr->pop_back();
-        m_stack_ptr->push_back(bhvr, ownership);
+    if (m_bhvr_stack_ptr) {
+        if (discard) m_bhvr_stack_ptr->pop_back();
+        m_bhvr_stack_ptr->push_back(bhvr, ownership);
     }
     else {
-        m_stack_ptr.reset(new detail::behavior_stack);
-        m_stack_ptr->exec();
+        m_bhvr_stack_ptr.reset(new detail::behavior_stack);
+        m_bhvr_stack_ptr->exec();
         quit();
     }
 }

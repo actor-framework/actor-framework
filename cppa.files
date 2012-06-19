@@ -17,7 +17,7 @@ benchmarks/theron_actor_creation.cpp
 benchmarks/theron_mailbox_performance.cpp
 benchmarks/theron_mixed_case.cpp
 benchmarks/utility.hpp
-cppa/abstract_actor.hpp
+cppa/detail/abstract_actor.hpp
 cppa/event_based_actor.hpp
 cppa/actor.hpp
 cppa/actor_proxy.hpp

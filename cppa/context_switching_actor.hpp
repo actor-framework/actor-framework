@@ -109,7 +109,7 @@ class context_switching_actor : public detail::abstract_scheduled_actor {
     util::fiber m_fiber;
     std::function<void()> m_behavior;
     detail::receive_policy m_recv_policy;
-    std::unique_ptr<detail::behavior_stack> m_stack_ptr;
+    std::unique_ptr<detail::behavior_stack> m_bhvr_stack_ptr;
 
 };
 

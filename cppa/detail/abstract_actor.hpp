@@ -51,9 +51,9 @@
 #include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa {
+namespace cppa { class self_type; }
 
-class self_type;
+namespace cppa { namespace detail {
 
 /**
  * @brief Implements linking and monitoring for actors.
@@ -273,6 +273,6 @@ class abstract_actor : public Base {
 
 };
 
-} // namespace cppa
+} } // namespace cppa::detail
 
 #endif // CPPA_ABSTRACT_ACTOR_HPP

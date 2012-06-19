@@ -47,7 +47,7 @@
 #include "cppa/pattern.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/abstract_actor.hpp"
+#include "cppa/detail/abstract_actor.hpp"
 
 #include "cppa/intrusive/singly_linked_list.hpp"
 
@@ -67,11 +67,14 @@ class thread_mapped_actor : public local_actor { };
 
 #else // CPPA_DOCUMENTATION
 
-class thread_mapped_actor : public abstract_actor<local_actor> {
+class self_type;
 
+class thread_mapped_actor : public detail::abstract_actor<local_actor> {
+
+    friend class self_type;
     friend class detail::receive_policy;
 
-    typedef abstract_actor<local_actor> super;
+    typedef detail::abstract_actor<local_actor> super;
 
  public:
 
@@ -96,7 +99,7 @@ class thread_mapped_actor : public abstract_actor<local_actor> {
  private:
 
     detail::receive_policy m_recv_policy;
-    std::unique_ptr<detail::behavior_stack> m_stack_ptr;
+    std::unique_ptr<detail::behavior_stack> m_bhvr_stack_ptr;
 
     // required by nestable_receive_policy
     static const detail::receive_policy_flag receive_flag = detail::rp_nestable;

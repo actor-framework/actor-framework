@@ -31,9 +31,6 @@
 #ifndef CPPA_FSM_ACTOR_HPP
 #define CPPA_FSM_ACTOR_HPP
 
-#include <type_traits>
-
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
@@ -50,7 +47,7 @@ class fsm_actor : public event_based_actor {
  public:
 
     /**
-     * @brief Overrides abstract_event_based_actor::init() and sets
+     * @brief Overrides {@link event_based_actor::init()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
     void init() {

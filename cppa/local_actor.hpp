@@ -53,14 +53,14 @@ namespace {
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to
  *        discard the current behavior.
- * @relates event_based_actor
+ * @relates local_actor
  */
 constexpr discard_behavior_t discard_behavior = discard_behavior_t();
 
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to
  *        keep the current behavior available.
- * @relates event_based_actor
+ * @relates local_actor
  */
 constexpr keep_behavior_t keep_behavior = keep_behavior_t();
 
@@ -226,7 +226,7 @@ class local_actor : public actor {
      */
     template<typename... Cases, typename... Args>
     inline void become(discard_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(discard_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+        become(discard_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**
@@ -234,18 +234,12 @@ class local_actor : public actor {
      */
     template<typename... Cases, typename... Args>
     inline void become(keep_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(keep_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+        become(keep_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
     }
 
-    /**
-     * @brief Sets the actor's behavior. Equal to
-     *        <tt>become(discard_old, arg0, args...)</tt>.
-     */
-    template<typename Arg0, typename... Args>
-    void become(Arg0&& arg0, Args&&... args);
     template<typename... Cases, typename... Args>
     inline void become(match_expr<Cases...> arg0, Args&&... args) {
-        become(discard_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+        become(discard_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**

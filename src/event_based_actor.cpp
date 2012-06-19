@@ -51,7 +51,7 @@ void event_based_actor::dequeue(partial_function&) {
 resume_result event_based_actor::resume(util::fiber*) {
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
-        m_stack.clear();
+        m_bhvr_stack.clear();
         on_exit();
     };
     self.set(this);
@@ -78,8 +78,8 @@ resume_result event_based_actor::resume(util::fiber*) {
                 if (m_recv_policy.invoke(this, e, current_behavior())) {
                     // try to match cached message before receiving new ones
                     do {
-                        m_stack.cleanup();
-                        if (m_stack.empty()) {
+                        m_bhvr_stack.cleanup();
+                        if (m_bhvr_stack.empty()) {
                             done_cb();
                             return resume_result::actor_done;
                         }
@@ -103,15 +103,15 @@ void event_based_actor::do_become(behavior* bhvr,
                                   bool discard_old_bhvr) {
     reset_timeout();
     request_timeout(bhvr->timeout());
-    if (discard_old_bhvr) m_stack.pop_back();
-    m_stack.push_back(bhvr, has_ownership);
+    if (discard_old_bhvr) m_bhvr_stack.pop_back();
+    m_bhvr_stack.push_back(bhvr, has_ownership);
 }
 
 void event_based_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::normal) {
         cleanup(exit_reason::normal);
-        m_stack.clear();
-        m_stack.cleanup();
+        m_bhvr_stack.clear();
+        m_bhvr_stack.cleanup();
     }
     else {
         abstract_scheduled_actor::quit(reason);
@@ -119,9 +119,7 @@ void event_based_actor::quit(std::uint32_t reason) {
 }
 
 void event_based_actor::unbecome() {
-    m_stack.pop_back();
+    m_bhvr_stack.pop_back();
 }
-
-void event_based_actor::on_exit() { }
 
 } // namespace cppa

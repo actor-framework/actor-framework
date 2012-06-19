@@ -59,8 +59,15 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
  public:
 
+    /**
+     * @brief Finishes execution with exit reason
+     *        {@link exit_reason::unallowed_function_call unallowed_function_call}.
+     */
     void dequeue(behavior&); //override
 
+    /**
+     * @copydoc dequeue(behavior&)
+     */
     void dequeue(partial_function&); //override
 
     resume_result resume(util::fiber*); //override
@@ -69,8 +76,6 @@ class event_based_actor : public detail::abstract_scheduled_actor {
      * @brief Initializes the actor.
      */
     virtual void init() = 0;
-
-    virtual void on_exit();
 
     void quit(std::uint32_t reason = exit_reason::normal);
 
@@ -117,11 +122,13 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         receive(std::forward<Args>(args)...);
     }
 
+    void do_become(behavior* bhvr, bool has_ownership, bool discard_old_bhvr);
+
  private:
 
     inline behavior& current_behavior() {
-        CPPA_REQUIRE(m_stack.empty() == false);
-        return m_stack.back();
+        CPPA_REQUIRE(m_bhvr_stack.empty() == false);
+        return m_bhvr_stack.back();
     }
 
         // required by detail::nestable_receive_policy
@@ -130,17 +137,15 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         CPPA_REQUIRE(bhvr.timeout().valid());
         m_has_pending_timeout_request = false;
         bhvr.handle_timeout();
-        if (m_stack.empty() == false) {
+        if (m_bhvr_stack.empty() == false) {
             request_timeout(current_behavior().timeout());
         }
     }
 
-    void do_become(behavior* bhvr, bool has_ownership, bool discard_old_bhvr);
-
     // stack elements are moved to m_erased_stack_elements and erased later
     // to prevent possible segfaults that can occur if a currently executed
     // lambda gets deleted
-    detail::behavior_stack m_stack;
+    detail::behavior_stack m_bhvr_stack;
     detail::receive_policy m_recv_policy;
 
 };
