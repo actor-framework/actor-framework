@@ -131,7 +131,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
     }
 
-    void quit(std::uint32_t reason) {
+    void quit(std::uint32_t reason = exit_reason::normal) {
         this->cleanup(reason);
         throw actor_exited(reason);
     }

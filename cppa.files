@@ -18,7 +18,7 @@ benchmarks/theron_mailbox_performance.cpp
 benchmarks/theron_mixed_case.cpp
 benchmarks/utility.hpp
 cppa/abstract_actor.hpp
-cppa/abstract_event_based_actor.hpp
+cppa/event_based_actor.hpp
 cppa/actor.hpp
 cppa/actor_proxy.hpp
 cppa/announce.hpp
@@ -93,8 +93,6 @@ cppa/detail/value_guard.hpp
 cppa/detail/yield_interface.hpp
 cppa/context_switching_actor.hpp
 cppa/either.hpp
-cppa/event_based_actor.hpp
-cppa/event_based_actor_base.hpp
 cppa/exception.hpp
 cppa/exit_reason.hpp
 cppa/from_string.hpp
@@ -124,7 +122,6 @@ cppa/scheduler.hpp
 cppa/scheduling_hint.hpp
 cppa/self.hpp
 cppa/serializer.hpp
-cppa/stacked_event_based_actor.hpp
 cppa/to_string.hpp
 cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
@@ -190,7 +187,7 @@ queue_performances/intrusive_sutter_list.hpp
 queue_performances/lockfree_list.hpp
 queue_performances/main.cpp
 queue_performances/sutter_list.hpp
-src/abstract_event_based_actor.cpp
+src/event_based_actor.cpp
 src/abstract_tuple.cpp
 src/actor.cpp
 src/actor_count.cpp
@@ -210,7 +207,6 @@ src/demangle.cpp
 src/deserializer.cpp
 src/duration.cpp
 src/empty_tuple.cpp
-src/event_based_actor.cpp
 src/exception.cpp
 src/fiber.cpp
 src/group.cpp
@@ -236,7 +232,6 @@ src/self.cpp
 src/serializer.cpp
 src/shared_spinlock.cpp
 src/singleton_manager.cpp
-src/stacked_event_based_actor.cpp
 src/string_serialization.cpp
 src/thread_pool_scheduler.cpp
 src/to_uniform_name.cpp
@@ -265,3 +260,5 @@ unit_testing/test__type_list.cpp
 unit_testing/test__uniform_type.cpp
 unit_testing/test__yield_interface.cpp
 cppa/detail/receive_policy.hpp
+cppa/detail/behavior_stack.hpp
+src/behavior_stack.cpp

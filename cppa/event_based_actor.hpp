@@ -28,61 +28,123 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_EVENT_BASED_ACTOR_HPP
-#define CPPA_EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
+#include <stack>
+#include <memory>
+#include <vector>
+
+#include "cppa/config.hpp"
+#include "cppa/either.hpp"
+#include "cppa/pattern.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/event_based_actor_base.hpp"
+#include "cppa/detail/receive_policy.hpp"
+#include "cppa/detail/behavior_stack.hpp"
+#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
 
 #ifdef CPPA_DOCUMENTATION
-
 /**
- * @brief Base class for non-stacked event-based actor implementations.
+ * @brief Base class for all event-based actor implementations.
  */
 class event_based_actor : public scheduled_actor {
+#else // CPPA_DOCUMENTATION
+class event_based_actor : public detail::abstract_scheduled_actor {
+#endif // CPPA_DOCUMENTATION
 
- protected:
-
-    /**
-     * @brief Sets the actor's behavior to @p bhvr.
-     * @note @p bhvr is owned by the caller and must remain valid until
-     *       the actor terminates.
-     * @note The recommended way of using this member function is to pass
-     *       a pointer to a member variable.
-     */
-    void become(behavior* bhvr);
-
-    /**
-     * @brief Sets the actor's behavior.
-     */
-    template<typename Arg0, typename... Args>
-    void become(Arg0&& arg0, Args&&... args):
-
-};
-
-#else
-
-class event_based_actor : public event_based_actor_base<event_based_actor> {
-
-    friend class event_based_actor_base<event_based_actor>;
-
-    typedef abstract_event_based_actor::stack_element stack_element;
-
-    // has_ownership == false
-    void do_become(behavior* bhvr, bool has_ownership);
+    friend class detail::receive_policy;
+    typedef detail::abstract_scheduled_actor super;
 
  public:
 
+    void dequeue(behavior&); //override
+
+    void dequeue(partial_function&); //override
+
+    resume_result resume(util::fiber*); //override
+
+    /**
+     * @brief Initializes the actor.
+     */
+    virtual void init() = 0;
+
+    virtual void on_exit();
+
+    void quit(std::uint32_t reason = exit_reason::normal);
+
+    void unbecome();
+
+ protected:
+
     event_based_actor();
 
-    virtual void quit(std::uint32_t reason = exit_reason::normal);
+    // provoke compiler errors for usage of receive() and related functions
+
+    /**
+     * @brief Provokes a compiler error to ensure that an event-based actor
+     *        does not accidently uses receive() instead of become().
+     */
+    template<typename... Args>
+    void receive(Args&&...) {
+        static_assert((sizeof...(Args) + 1) < 1,
+                      "You shall not use receive in an event-based actor. "
+                      "Use become() instead.");
+    }
+
+    /**
+     * @brief Provokes a compiler error.
+     */
+    template<typename... Args>
+    void receive_loop(Args&&... args) {
+        receive(std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Provokes a compiler error.
+     */
+    template<typename... Args>
+    void receive_while(Args&&... args) {
+        receive(std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Provokes a compiler error.
+     */
+    template<typename... Args>
+    void do_receive(Args&&... args) {
+        receive(std::forward<Args>(args)...);
+    }
+
+ private:
+
+    inline behavior& current_behavior() {
+        CPPA_REQUIRE(m_stack.empty() == false);
+        return m_stack.back();
+    }
+
+        // required by detail::nestable_receive_policy
+    static const detail::receive_policy_flag receive_flag = detail::rp_callback;
+    inline void handle_timeout(behavior& bhvr) {
+        CPPA_REQUIRE(bhvr.timeout().valid());
+        m_has_pending_timeout_request = false;
+        bhvr.handle_timeout();
+        if (m_stack.empty() == false) {
+            request_timeout(current_behavior().timeout());
+        }
+    }
+
+    void do_become(behavior* bhvr, bool has_ownership, bool discard_old_bhvr);
+
+    // stack elements are moved to m_erased_stack_elements and erased later
+    // to prevent possible segfaults that can occur if a currently executed
+    // lambda gets deleted
+    detail::behavior_stack m_stack;
+    detail::receive_policy m_recv_policy;
 
 };
 
-#endif
-
 } // namespace cppa
 
-#endif // CPPA_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP

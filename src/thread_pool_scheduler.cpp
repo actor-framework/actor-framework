@@ -34,7 +34,7 @@
 #include <cstddef>
 #include <iostream>
 
-#include "cppa/abstract_event_based_actor.hpp"
+#include "cppa/event_based_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/mock_scheduler.hpp"

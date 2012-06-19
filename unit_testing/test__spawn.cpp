@@ -14,7 +14,6 @@
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/event_based_actor.hpp"
-#include "cppa/stacked_event_based_actor.hpp"
 
 using std::cerr;
 using std::cout;
@@ -135,7 +134,7 @@ class event_testee : public fsm_actor<event_testee> {
 #endif
 
 // quits after 5 timeouts
-abstract_event_based_actor* event_testee2() {
+event_based_actor* event_testee2() {
     struct impl : fsm_actor<impl> {
         behavior wait4timeout(int remaining) {
             return (

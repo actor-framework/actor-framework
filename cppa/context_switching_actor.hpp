@@ -40,8 +40,9 @@
 #include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
 
-#include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/receive_policy.hpp"
+#include "cppa/detail/behavior_stack.hpp"
+#include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -83,11 +84,15 @@ class context_switching_actor : public detail::abstract_scheduled_actor {
 
     resume_result resume(util::fiber* from); //override
 
+    void unbecome();
+
  protected:
 
     context_switching_actor();
 
     virtual void run();
+
+    void do_become(behavior* bhvr, bool ownership, bool discard);
 
  private:
 
@@ -104,6 +109,7 @@ class context_switching_actor : public detail::abstract_scheduled_actor {
     util::fiber m_fiber;
     std::function<void()> m_behavior;
     detail::receive_policy m_recv_policy;
+    std::unique_ptr<detail::behavior_stack> m_stack_ptr;
 
 };
 

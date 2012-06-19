@@ -28,47 +28,52 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_EVENT_BASED_ACTOR_BASE_HPP
-#define CPPA_EVENT_BASED_ACTOR_BASE_HPP
+#ifndef BEHAVIOR_STACK_HPP
+#define BEHAVIOR_STACK_HPP
+
+#include <vector>
+#include <memory>
 
 #include "cppa/behavior.hpp"
-#include "cppa/abstract_event_based_actor.hpp"
+#include "cppa/detail/disablable_delete.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-/**
- * @brief Base class for event-based actor implementations.
- */
-template<typename Derived>
-class event_based_actor_base : public abstract_event_based_actor {
+class behavior_stack
+{
 
-    typedef abstract_event_based_actor super;
+    behavior_stack(const behavior_stack&) = delete;
+    behavior_stack& operator=(const behavior_stack&) = delete;
 
-    inline Derived* d_this() { return static_cast<Derived*>(this); }
+ public:
 
- protected:
+    behavior_stack() = default;
 
-    /**
-     * @brief Sets the actor's behavior to @p bhvr.
-     * @note @p bhvr is owned by caller and must remain valid until
-     *       the actor terminates.
-     *       This member function should be used to use a member of
-     *       a subclass as behavior.
-     */
-    inline void become(behavior* bhvr) {
-        d_this()->do_become(bhvr, false);
-    }
+    typedef detail::disablable_delete<behavior> deleter;
+    typedef std::unique_ptr<behavior, deleter> value_type;
 
-    /** @brief Sets the actor's behavior. */
-    template<typename Arg0, typename... Args>
-    void become(Arg0&& arg0, Args&&... args) {
-        behavior tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                         std::forward<Args>(args)...);
-        d_this()->do_become(new behavior(std::move(tmp)), true);
-    }
+    inline bool empty() const { return m_elements.empty(); }
+
+    inline behavior& back() { return *m_elements.back(); }
+
+    // executes the behavior stack
+    void exec();
+
+    void pop_back();
+
+    void push_back(behavior* what, bool has_ownership);
+
+    void cleanup();
+
+    void clear();
+
+ private:
+
+    std::vector<value_type> m_elements;
+    std::vector<value_type> m_erased_elements;
 
 };
 
-} // namespace cppa
+} } // namespace cppa::detail
 
-#endif // CPPA_EVENT_BASED_ACTOR_BASE_HPP
+#endif // BEHAVIOR_STACK_HPP

@@ -6,7 +6,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
 
 set(LIBCPPA_SRC
-    src/abstract_event_based_actor.cpp
     src/abstract_tuple.cpp
     src/actor.cpp
     src/actor_count.cpp
@@ -17,6 +16,7 @@ set(LIBCPPA_SRC
     src/any_tuple.cpp
     src/atom.cpp
     src/attachable.cpp
+    src/behavior_stack.cpp
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
     src/channel.cpp
@@ -52,7 +52,6 @@ set(LIBCPPA_SRC
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
-    src/stacked_event_based_actor.cpp
     src/string_serialization.cpp
     src/thread_pool_scheduler.cpp
     src/to_uniform_name.cpp

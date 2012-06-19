@@ -28,47 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_STACKED_EVENT_BASED_ACTOR_HPP
-#define CPPA_STACKED_EVENT_BASED_ACTOR_HPP
+#include "cppa/local_actor.hpp"
+#include "cppa/detail/behavior_stack.hpp"
 
-#include "cppa/event_based_actor_base.hpp"
+namespace cppa { namespace detail {
 
-namespace cppa {
+// executes the behavior stack
+void behavior_stack::exec() {
+    while (!empty()) {
+        self->dequeue(back());
+        cleanup();
+    }
+}
 
-#ifdef CPPA_DOCUMENTATION
+void behavior_stack::pop_back() {
+    if (m_elements.empty() == false) {
+        m_erased_elements.emplace_back(std::move(m_elements.back()));
+        m_elements.pop_back();
+    }
+}
 
-/**
- * @brief A base class for event-based actors using a behavior stack.
- */
-class stacked_event_based_actor : public event_based_actor {
+void behavior_stack::push_back(behavior* what, bool has_ownership) {
+    value_type new_element{what};
+    if (!has_ownership) new_element.get_deleter().disable();
+    m_elements.push_back(std::move(new_element));
+}
 
- protected:
+void behavior_stack::clear() {
+    if (m_elements.empty() == false) {
+        std::move(m_elements.begin(), m_elements.end(),
+                  std::back_inserter(m_erased_elements));
+        m_elements.clear();
+    }
+}
 
-    /**
-     * @brief Restores the last behavior.
-     */
-    void unbecome();
+void behavior_stack::cleanup() {
+    m_erased_elements.clear();
+}
 
-};
-
-#else
-
-class stacked_event_based_actor : public event_based_actor_base<stacked_event_based_actor> {
-
-    friend class event_based_actor_base<stacked_event_based_actor>;
-
-    typedef abstract_event_based_actor::stack_element stack_element;
-
-    void do_become(behavior* behavior, bool has_ownership);
-
- protected:
-
-    void unbecome();
-
-};
-
-#endif
-
-} // namespace cppa
-
-#endif // CPPA_STACKED_EVENT_BASED_ACTOR_HPP
+} } // namespace cppa::detail

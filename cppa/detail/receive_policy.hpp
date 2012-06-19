@@ -43,8 +43,10 @@
 namespace cppa { namespace detail {
 
 enum receive_policy_flag {
+    // blocking message processing: thread-mapped & context-switching actors
     rp_nestable,
-    rp_event_based
+    // callback-based message processing: event-based actors
+    rp_callback
 };
 
 class receive_policy {
@@ -124,8 +126,8 @@ class receive_policy {
 
  private:
 
-    typedef std::integral_constant<receive_policy_flag, rp_nestable> rp_n;
-    typedef std::integral_constant<receive_policy_flag, rp_event_based> rp_eb;
+    typedef std::integral_constant<receive_policy_flag, rp_nestable> nestable;
+    typedef std::integral_constant<receive_policy_flag, rp_callback> callback;
 
     std::list<std::unique_ptr<recursive_queue_node> > m_cache;
 
@@ -143,7 +145,7 @@ class receive_policy {
     handle_message_result handle_message(Client* client,
                                          recursive_queue_node& node,
                                          FunOrBehavior& fun,
-                                         rp_n) {
+                                         nestable) {
         if (node.marked) {
             return hm_skip_msg;
         }
@@ -181,7 +183,7 @@ class receive_policy {
     handle_message_result handle_message(Client* client,
                                          recursive_queue_node& node,
                                          FunOrBehavior& fun,
-                                         rp_eb) {
+                                         callback) {
         CPPA_REQUIRE(node.marked == false);
         switch (client->filter_msg(node.msg)) {
             case normal_exit_signal:

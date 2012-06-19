@@ -41,6 +41,32 @@
 namespace cppa {
 
 class scheduler;
+class local_scheduler;
+
+struct discard_behavior_t { };
+struct keep_behavior_t { };
+
+#ifndef CPPA_DOCUMENTATION
+namespace {
+#endif // CPPA_DOCUMENTATION
+
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        discard the current behavior.
+ * @relates event_based_actor
+ */
+constexpr discard_behavior_t discard_behavior = discard_behavior_t();
+
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        keep the current behavior available.
+ * @relates event_based_actor
+ */
+constexpr keep_behavior_t keep_behavior = keep_behavior_t();
+
+#ifndef CPPA_DOCUMENTATION
+} // namespace <anonymous>
+#endif // CPPA_DOCUMENTATION
 
 /**
  * @brief Base class for local running Actors.
@@ -149,6 +175,85 @@ class local_actor : public actor {
      */
     void demonitor(actor_ptr whom);
 
+    // become/unbecome API
+
+    /**
+     * @brief Sets the actor's behavior to @p bhvr and discards the
+     *        previous behavior.
+     * @note The recommended way of using this member function is to pass
+     *       a pointer to a member variable.
+     * @warning @p bhvr is owned by the caller and must remain valid until
+     *          the actor terminates.
+     */
+    inline void become(discard_behavior_t, behavior* bhvr) {
+        do_become(bhvr, false, true);
+    }
+
+    inline void become(discard_behavior_t, behavior&& bhvr) {
+        do_become(new behavior(std::move(bhvr)), true, true);
+    }
+
+    /**
+     * @brief Sets the actor's behavior to @p bhvr and keeps the
+     *        previous behavior, so that it can be restored by calling
+     *        {@link unbecome()}.
+     * @note The recommended way of using this member function is to pass
+     *       a pointer to a member variable.
+     * @warning @p bhvr is owned by the caller and must remain valid until
+     *          the actor terminates.
+     */
+    inline void become(keep_behavior_t, behavior* bhvr) {
+        do_become(bhvr, false, false);
+    }
+
+    inline void become(keep_behavior_t, behavior&& bhvr) {
+        do_become(new behavior(std::move(bhvr)), true, false);
+    }
+
+    inline void become(behavior&& bhvr) {
+        become(discard_behavior, std::move(bhvr));
+    }
+
+    /**
+     * @brief Equal to <tt>become(discard_old, bhvr)</tt>.
+     */
+    inline void become(behavior* bhvr) {
+        become(discard_behavior, bhvr);
+    }
+
+    /**
+     * @brief Sets the actor's behavior.
+     */
+    template<typename... Cases, typename... Args>
+    inline void become(discard_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
+        become(discard_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+    }
+
+    /**
+     * @brief Sets the actor's behavior.
+     */
+    template<typename... Cases, typename... Args>
+    inline void become(keep_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
+        become(keep_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+    }
+
+    /**
+     * @brief Sets the actor's behavior. Equal to
+     *        <tt>become(discard_old, arg0, args...)</tt>.
+     */
+    template<typename Arg0, typename... Args>
+    void become(Arg0&& arg0, Args&&... args);
+    template<typename... Cases, typename... Args>
+    inline void become(match_expr<Cases...> arg0, Args&&... args) {
+        become(discard_behavior, bhvr_collapse(std::move(arg0), std::forward<Args>(args)...));
+    }
+
+    /**
+     * @brief Returns to a previous behavior or finishes execution
+     *        if no previous behavior is available.
+     */
+    virtual void unbecome() = 0;
+
     // library-internal members and member functions that shall
     // not appear in the documentation
 
@@ -185,6 +290,10 @@ class local_actor : public actor {
     any_tuple m_last_dequeued;
 
 #   endif // CPPA_DOCUMENTATION
+
+ protected:
+
+    virtual void do_become(behavior* bhvr, bool ownership, bool discard) = 0;
 
 };
 

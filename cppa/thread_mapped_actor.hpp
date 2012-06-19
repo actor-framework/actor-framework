@@ -51,8 +51,9 @@
 
 #include "cppa/intrusive/singly_linked_list.hpp"
 
-#include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/detail/receive_policy.hpp"
+#include "cppa/detail/behavior_stack.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
 
@@ -74,7 +75,7 @@ class thread_mapped_actor : public abstract_actor<local_actor> {
 
  public:
 
-    void quit(std::uint32_t reason); //override
+    void quit(std::uint32_t reason = exit_reason::normal); //override
 
     void enqueue(actor* sender, any_tuple msg); //override
 
@@ -86,9 +87,16 @@ class thread_mapped_actor : public abstract_actor<local_actor> {
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
+    void unbecome();
+
+ protected:
+
+    void do_become(behavior* bhvr, bool ownership, bool discard);
+
  private:
 
     detail::receive_policy m_recv_policy;
+    std::unique_ptr<detail::behavior_stack> m_stack_ptr;
 
     // required by nestable_receive_policy
     static const detail::receive_policy_flag receive_flag = detail::rp_nestable;

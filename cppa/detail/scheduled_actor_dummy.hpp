@@ -46,6 +46,8 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     bool remove_backlink(intrusive_ptr<actor>&);
     void detach(const attachable::token&);
     bool attach(attachable*);
+    void unbecome();
+    void do_become(behavior*, bool, bool);
 };
 
 } } // namespace cppa::detail

@@ -108,4 +108,25 @@ detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {
     return detail::ordinary_message;
 }
 
+void thread_mapped_actor::unbecome() {
+    if (m_stack_ptr) {
+        m_stack_ptr->pop_back();
+    }
+    else {
+        quit();
+    }
+}
+
+void thread_mapped_actor::do_become(behavior* ptr, bool owns_ptr, bool discard){
+    if (m_stack_ptr) {
+        if (discard) m_stack_ptr->pop_back();
+        m_stack_ptr->push_back(ptr, owns_ptr);
+    }
+    else {
+        m_stack_ptr.reset(new detail::behavior_stack);
+        m_stack_ptr->exec();
+        quit();
+    }
+}
+
 } // namespace cppa::detail
