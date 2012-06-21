@@ -109,10 +109,11 @@ class scheduler {
 
     template<typename Duration, typename... Data>
     void delayed_send(const actor_ptr& to,
-                     const Duration& rel_time, const Data&... data) {
+                      const Duration& rel_time,
+                      Data&&... data) {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        any_tuple data_tup = make_cow_tuple(data...);
-        any_tuple tup = make_cow_tuple(util::duration(rel_time), to, data_tup);
+        auto sub = make_any_tuple(std::forward<Data>(data)...);
+        auto tup = make_any_tuple(util::duration{rel_time}, to, std::move(sub));
         delayed_send_helper()->enqueue(self, std::move(tup));
     }
 

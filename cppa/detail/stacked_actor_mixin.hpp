@@ -28,98 +28,65 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
-#define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#ifndef CPPA_STACKED_ACTOR_MIXIN_HPP
+#define CPPA_STACKED_ACTOR_MIXIN_HPP
 
-#include "cppa/config.hpp"
+#include <memory>
 
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#include "cppa/behavior.hpp"
 
-#include <stack>
-
-#include "cppa/either.hpp"
-#include "cppa/pattern.hpp"
-
-#include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
-#include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/stacked_actor_mixin.hpp"
-#include "cppa/detail/abstract_scheduled_actor.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-#ifdef CPPA_DOCUMENTATION
+template<class Derived, class Base>
+class stacked_actor_mixin : public Base {
 
-/**
- * @brief Context-switching actor implementation.
- */
-class context_switching_actor : public scheduled_actor {
-
- protected:
-
-    /**
-     * @brief Implements the actor's behavior.
-     *        Reimplemented this function for a class-based context-switching
-     *        actor. Returning from this member function will end the
-     *        execution of the actor.
-     */
-    virtual void run();
-
-};
-
-#else
-
-class context_switching_actor : public detail::stacked_actor_mixin<
-                                           context_switching_actor,
-                                           detail::abstract_scheduled_actor> {
-
-    friend class detail::receive_policy;
+    inline Derived* dthis() {
+        return static_cast<Derived*>(this);
+    }
 
  public:
 
-    context_switching_actor(std::function<void()> fun);
+    virtual void unbecome() {
+        if (m_bhvr_stack_ptr) {
+            m_bhvr_stack_ptr->pop_back();
+        }
+        else if (this->initialized()) {
+            this->quit();
+        }
+    }
 
-    resume_result resume(util::fiber* from); //override
+    virtual void dequeue(partial_function& fun) {
+        m_recv_policy.receive(dthis(), fun);
+    }
+
+    virtual void dequeue(behavior& bhvr) {
+        m_recv_policy.receive(dthis(), bhvr);
+    }
 
  protected:
 
-    context_switching_actor();
+    receive_policy m_recv_policy;
+    std::unique_ptr<behavior_stack> m_bhvr_stack_ptr;
 
-    virtual void run();
-
- private:
-
-    // required by detail::nestable_receive_policy
-    static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
-    detail::recursive_queue_node* receive_node();
-    inline int init_timeout(const util::duration& timeout) {
-        // request timeout message
-        request_timeout(timeout);
-        return 0;
+    virtual void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old) {
+        if (this->m_bhvr_stack_ptr) {
+            if (discard_old) this->m_bhvr_stack_ptr->pop_back();
+            this->m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
+        }
+        else {
+            this->m_bhvr_stack_ptr.reset(new behavior_stack);
+            if (this->initialized()) {
+                this->m_bhvr_stack_ptr->exec();
+                this->quit();
+            }
+        }
     }
-    inline detail::recursive_queue_node* try_receive_node() {
-        return m_mailbox.try_pop();
-    }
-    inline detail::recursive_queue_node* try_receive_node(int) {
-        // timeout is triggered from an explicit timeout message
-        return receive_node();
-    }
-
-    // required by util::fiber
-    static void trampoline(void* _this);
-
-    // members
-    util::fiber m_fiber;
-    std::function<void()> m_behavior;
-    detail::receive_policy m_recv_policy;
-    std::unique_ptr<detail::behavior_stack> m_bhvr_stack_ptr;
 
 };
 
-#endif // CPPA_DOCUMENTATION
+} } // namespace cppa::detail
 
-} // namespace cppa
-
-#endif // CPPA_DISABLE_CONTEXT_SWITCHING
-
-#endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#endif // CPPA_STACKED_ACTOR_MIXIN_HPP

@@ -255,14 +255,16 @@ class local_actor : public actor {
 
     local_actor(bool is_scheduled = false);
 
-    inline void send_message(channel* whom, any_tuple what) {
+    virtual bool initialized() = 0;
+
+    inline void send_message(channel* whom, any_tuple&& what) {
         whom->enqueue(this, std::move(what));
     }
 
-    inline void send_message(actor* whom, any_tuple what) {
-        if (m_chaining && !m_chained) {
+    inline void send_message(actor* whom, any_tuple&& what) {
+        if (m_chaining && !m_chained_actor) {
             if (whom->chained_enqueue(this, std::move(what))) {
-                m_chained = whom;
+                m_chained_actor = whom;
             }
         }
         else {
@@ -271,7 +273,7 @@ class local_actor : public actor {
     }
 
     inline actor_ptr& chained_actor() {
-        return m_chained;
+        return m_chained_actor;
     }
 
  protected:
@@ -279,15 +281,15 @@ class local_actor : public actor {
     bool m_chaining;
     bool m_trap_exit;
     bool m_is_scheduled;
-    actor_ptr m_chained;
     actor_ptr m_last_sender;
+    actor_ptr m_chained_actor;
     any_tuple m_last_dequeued;
 
 #   endif // CPPA_DOCUMENTATION
 
  protected:
 
-    virtual void do_become(behavior* bhvr, bool ownership, bool discard) = 0;
+    virtual void do_become(behavior* bhvr, bool owns_ptr, bool discard_old) = 0;
 
 };
 

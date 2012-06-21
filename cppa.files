@@ -261,3 +261,4 @@ unit_testing/test__yield_interface.cpp
 cppa/detail/receive_policy.hpp
 cppa/detail/behavior_stack.hpp
 src/behavior_stack.cpp
+cppa/detail/stacked_actor_mixin.hpp

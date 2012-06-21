@@ -43,7 +43,7 @@
 namespace cppa {
 
 void thread_mapped_actor::quit(std::uint32_t reason) {
-    super::cleanup(reason);
+    cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
     // self must point to a newly created instance
     //self.set(nullptr);
@@ -56,37 +56,8 @@ void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
     m_mailbox.push_back(node);
 }
 
-void thread_mapped_actor::dequeue(partial_function& fun) { // override
-    m_recv_policy.receive(this, fun);
-}
-
-void thread_mapped_actor::dequeue(behavior& bhvr) { // override
-    auto& fun = bhvr.get_partial_function();
-    if (bhvr.timeout().valid() == false) {
-        // suppress virtual function call
-        thread_mapped_actor::dequeue(fun);
-    }
-    else if (m_recv_policy.invoke_from_cache(this, fun) == false) {
-        if (bhvr.timeout().is_zero()) {
-            for (auto e = m_mailbox.try_pop(); e != nullptr; e = m_mailbox.try_pop()) {
-                CPPA_REQUIRE(e->marked == false);
-                if (m_recv_policy.invoke(this, e, bhvr)) return;
-                e = m_mailbox.try_pop();
-            }
-            bhvr.handle_timeout();
-        }
-        else {
-            auto timeout = std::chrono::high_resolution_clock::now();
-            timeout += bhvr.timeout();
-            detail::recursive_queue_node* e = m_mailbox.try_pop(timeout);
-            while (e != nullptr) {
-                CPPA_REQUIRE(e->marked == false);
-                if (m_recv_policy.invoke(this, e, fun)) return;
-                e = m_mailbox.try_pop(timeout);
-            }
-            bhvr.handle_timeout();
-        }
-    }
+bool thread_mapped_actor::initialized() {
+    return true;
 }
 
 detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {
@@ -108,25 +79,6 @@ detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {
     return detail::ordinary_message;
 }
 
-void thread_mapped_actor::unbecome() {
-    if (m_bhvr_stack_ptr) {
-        m_bhvr_stack_ptr->pop_back();
-    }
-    else {
-        quit();
-    }
-}
 
-void thread_mapped_actor::do_become(behavior* ptr, bool owns_ptr, bool discard){
-    if (m_bhvr_stack_ptr) {
-        if (discard) m_bhvr_stack_ptr->pop_back();
-        m_bhvr_stack_ptr->push_back(ptr, owns_ptr);
-    }
-    else {
-        m_bhvr_stack_ptr.reset(new detail::behavior_stack);
-        m_bhvr_stack_ptr->exec();
-        quit();
-    }
-}
 
 } // namespace cppa::detail

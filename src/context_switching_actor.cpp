@@ -93,29 +93,6 @@ detail::recursive_queue_node* context_switching_actor::receive_node() {
     return e;
 }
 
-void context_switching_actor::dequeue(partial_function& fun) {
-    m_recv_policy.receive(this, fun);
-}
-
-void context_switching_actor::dequeue(behavior& bhvr) {
-    if (bhvr.timeout().valid() == false) {
-        m_recv_policy.receive(this, bhvr.get_partial_function());
-    }
-    else if (m_recv_policy.invoke_from_cache(this, bhvr) == false) {
-        if (bhvr.timeout().is_zero()) {
-            for (auto e = m_mailbox.try_pop(); e != 0; e = m_mailbox.try_pop()){
-                CPPA_REQUIRE(e->marked == false);
-                if (m_recv_policy.invoke(this, e, bhvr)) return;
-            }
-            bhvr.handle_timeout();
-        }
-        else {
-            request_timeout(bhvr.timeout());
-            while (m_recv_policy.invoke(this, receive_node(), bhvr) == false) {}
-        }
-    }
-}
-
 resume_result context_switching_actor::resume(util::fiber* from) {
     using namespace detail;
     scoped_self_setter sss{this};
@@ -149,31 +126,6 @@ resume_result context_switching_actor::resume(util::fiber* from) {
         }
     }
 }
-
-void context_switching_actor::unbecome() {
-    if (m_bhvr_stack_ptr) {
-        m_bhvr_stack_ptr->pop_back();
-    }
-    else if (m_scheduler != nullptr) {
-        quit();
-    }
-}
-
-void context_switching_actor::do_become(behavior* bhvr, bool ownership, bool discard) {
-    if (m_bhvr_stack_ptr) {
-        if (discard) m_bhvr_stack_ptr->pop_back();
-        m_bhvr_stack_ptr->push_back(bhvr, ownership);
-    }
-    else {
-        m_bhvr_stack_ptr.reset(new detail::behavior_stack);
-        // scheduler == nullptr if and only if become() is called inside init()
-        if (m_scheduler != nullptr) {
-            m_bhvr_stack_ptr->exec();
-            quit();
-        }
-    }
-}
-
 
 } // namespace cppa
 

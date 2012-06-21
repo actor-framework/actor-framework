@@ -471,7 +471,7 @@ struct spawn_fwd_ {
 
 template<>
 struct spawn_fwd_<self_type> {
-    static inline actor_ptr _(const self_type&) { return self; }
+    static inline actor_ptr _(const self_type& s) { return s.get(); }
 };
 
 /**
@@ -494,7 +494,7 @@ inline actor_ptr spawn(F bhvr, Arg0&& arg0, Args&&... args) {
 /**
  * @ingroup ActorManagement
  * @brief Spawns a new context-switching actor that executes
- *        <tt>bhvr(arg0, args...)</tt>, equal to
+ *        <tt>bhvr(arg0, args...)</tt>. Equal to
  *        <tt>spawn<scheduled>(bhvr, arg0, args...)</tt>.
  * @param bhvr A functor implementing the actor's behavior.
  * @param arg0 First argument to @p bhvr.
@@ -517,7 +517,7 @@ inline actor_ptr spawn(F&& bhvr, Arg0&& arg0, Args&&... args) {
  * @param what Message elements.
  */
 template<typename... Args>
-void send(channel_ptr& whom, const Args&... what);
+void send(const channel_ptr& whom, Args&&... what);
 
 /**
  * @ingroup MessageHandling
@@ -531,30 +531,18 @@ void send(channel_ptr& whom, const Args&... what);
  * @param what Message as instance of {@link any_tuple}.
  * @returns @p whom.
  */
-channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
+const channel_ptr& operator<<(const channel_ptr& whom, any_tuple what);
 
 #else
 
 namespace detail {
 
 inline void send_impl(channel* whom, any_tuple&& what) {
-    if (whom != nullptr) whom->enqueue(self.get(), std::move(what));
-}
-
-template<typename Arg0, typename... Args>
-inline void send_tpl_impl(channel* whom, Arg0&& arg0, Args&&... args) {
-    if (whom != nullptr) {
-        whom->enqueue(self.get(), make_any_tuple(std::forward<Arg0>(arg0),
-                                                 std::forward<Args>(args)...));
-    }
-}
-
-inline void send_impl(actor* whom, any_tuple&& what) {
     if (whom) self->send_message(whom, std::move(what));
 }
 
 template<typename Arg0, typename... Args>
-inline void send_tpl_impl(actor* whom, Arg0&& arg0, Args&&... args) {
+inline void send_tpl_impl(channel* whom, Arg0&& arg0, Args&&... args) {
     if (whom) {
         self->send_message(whom, make_any_tuple(std::forward<Arg0>(arg0),
                                                 std::forward<Args>(args)...));
@@ -564,8 +552,8 @@ inline void send_tpl_impl(actor* whom, Arg0&& arg0, Args&&... args) {
 } // namespace detail
 
 template<class C>
-typename std::enable_if<std::is_base_of<channel, C>::value,
-                        const intrusive_ptr<C>&            >::type
+inline typename std::enable_if<std::is_base_of<channel, C>::value,
+                               const intrusive_ptr<C>&            >::type
 operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
     detail::send_impl(whom.get(), std::move(what));
     return whom;
@@ -576,7 +564,6 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
     return s;
 }
 
-
 template<class C, typename Arg0, typename... Args>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
 send(const intrusive_ptr<C>& whom, Arg0&& arg0, Args&&... args) {
@@ -585,7 +572,7 @@ send(const intrusive_ptr<C>& whom, Arg0&& arg0, Args&&... args) {
                           std::forward<Args>(args)...);
 }
 
-// matches "send(this, ...)" in event-based actors
+// matches "send(this, ...)" and "send(self, ...)"
 template<typename Arg0, typename... Args>
 inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
     detail::send_tpl_impl(whom,
@@ -601,8 +588,8 @@ inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
  * @param what Message elements.
  */
 template<typename... Args>
-inline void reply(const Args&... what) {
-    send(self->last_sender(), what...);
+inline void reply(Args&&... what) {
+    send(self->last_sender(), std::forward<Args>(what)...);
 }
 
 /**
@@ -614,10 +601,13 @@ inline void reply(const Args&... what) {
  * @param what Message elements.
  */
 template<class Rep, class Period, typename... Args>
-inline void delayed_send(actor_ptr whom,
+inline void delayed_send(const actor_ptr& whom,
                          const std::chrono::duration<Rep, Period>& rel_time,
-                         const Args&... what) {
-    get_scheduler()->delayed_send(whom, rel_time, what...);
+                         Args&&... what) {
+    if (whom) {
+        get_scheduler()->delayed_send(whom, rel_time,
+                                      std::forward<Args>(what)...);
+    }
 }
 
 /**
@@ -630,8 +620,8 @@ inline void delayed_send(actor_ptr whom,
  */
 template<class Rep, class Period, typename... Args>
 inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
-                          const Args&... what) {
-    delayed_send(self->last_sender(), rel_time, what...);
+                          Args&&... what) {
+    delayed_send(self->last_sender(), rel_time, std::forward<Args>(what)...);
 }
 
 /**

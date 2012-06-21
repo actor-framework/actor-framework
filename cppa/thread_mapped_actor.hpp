@@ -53,6 +53,7 @@
 
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
+#include "cppa/detail/stacked_actor_mixin.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -69,12 +70,11 @@ class thread_mapped_actor : public local_actor { };
 
 class self_type;
 
-class thread_mapped_actor : public detail::abstract_actor<local_actor> {
+class thread_mapped_actor : public detail::stacked_actor_mixin<
+                                       thread_mapped_actor,
+                                       detail::abstract_actor<local_actor> > {
 
-    friend class self_type;
     friend class detail::receive_policy;
-
-    typedef detail::abstract_actor<local_actor> super;
 
  public:
 
@@ -82,24 +82,15 @@ class thread_mapped_actor : public detail::abstract_actor<local_actor> {
 
     void enqueue(actor* sender, any_tuple msg); //override
 
-    void dequeue(behavior& rules); //override
-
-    void dequeue(partial_function& rules); //override
-
     detail::filter_result filter_msg(const any_tuple& msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
-    void unbecome();
-
  protected:
 
-    void do_become(behavior* bhvr, bool ownership, bool discard);
+    bool initialized();
 
  private:
-
-    detail::receive_policy m_recv_policy;
-    std::unique_ptr<detail::behavior_stack> m_bhvr_stack_ptr;
 
     // required by nestable_receive_policy
     static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
@@ -107,6 +98,18 @@ class thread_mapped_actor : public detail::abstract_actor<local_actor> {
     inline void pop_timeout() { }
     inline detail::recursive_queue_node* receive_node() {
         return m_mailbox.pop();
+    }
+    inline auto init_timeout(const util::duration& tout) -> decltype(std::chrono::high_resolution_clock::now()) {
+        auto result = std::chrono::high_resolution_clock::now();
+        result += tout;
+        return result;
+    }
+    inline detail::recursive_queue_node* try_receive_node() {
+        return m_mailbox.try_pop();
+    }
+    template<typename Timeout>
+    inline detail::recursive_queue_node* try_receive_node(const Timeout& tout) {
+        return m_mailbox.try_pop(tout);
     }
     inline void handle_timeout(behavior& bhvr) {
         bhvr.handle_timeout();

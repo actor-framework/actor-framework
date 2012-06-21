@@ -54,4 +54,8 @@ scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
     return this;
 }
 
+bool scheduled_actor::initialized() {
+    return m_scheduler != nullptr;
+}
+
 } // namespace cppa

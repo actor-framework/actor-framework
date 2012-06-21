@@ -336,22 +336,26 @@ class actor_factory {
 
 };
 
-template<typename InitFun, typename... Members>
+template<typename InitFun, typename CleanupFun, typename... Members>
 class simple_event_based_actor_impl : public event_based_actor {
 
  public:
 
-    simple_event_based_actor_impl(InitFun fun) : m_fun(std::move(fun)) { }
+    simple_event_based_actor_impl(InitFun fun, CleanupFun cfun)
+    : m_init(std::move(fun)), m_cleanup(std::move(cfun)) { }
 
     void init() { apply(); }
 
+    void on_exit() { m_cleanup(); }
+
  private:
 
-    InitFun m_fun;
+    InitFun m_init;
+    CleanupFun m_cleanup;
     std::tuple<Members...> m_members;
 
     void apply(typename std::add_pointer<Members>::type... args) {
-        m_fun(args...);
+        m_init(args...);
     }
 
     template<typename... Args>
@@ -371,7 +375,8 @@ class actor_tpl : public actor_factory {
     actor_tpl(InitFun fun) : m_init_fun(std::move(fun)) { }
 
     actor_ptr spawn() {
-        return cppa::spawn(new simple_event_based_actor_impl<InitFun, Members...>(m_init_fun));
+        auto void_fun = []() { };
+        return cppa::spawn(new simple_event_based_actor_impl<InitFun, decltype(void_fun), Members...>(m_init_fun, void_fun));
     }
 
 };
@@ -383,64 +388,6 @@ template<typename InitFun, typename... Ts>
 struct actor_tpl_from_type_list<InitFun, util::type_list<Ts...> > {
     typedef actor_tpl<InitFun, Ts...> type;
 };
-
-class str_wrapper {
-
-    str_wrapper() = delete;
-    str_wrapper(str_wrapper&&) = delete;
-    str_wrapper(const str_wrapper&) = delete;
-
- public:
-
-    inline str_wrapper(std::string s) : m_str(s) { }
-
-    const std::string& str() const {
-        return m_str;
-    }
-
- private:
-
-    std::string m_str;
-
-};
-
-struct some_integer {
-
-    void set(int value) { m_value = value; }
-
-    int get() const { return m_value; }
-
- private:
-
-    int m_value;
-
-};
-
-template<class T, class MatchExpr = match_expr<>, class Parent = void>
-class actor_facade_builder {
-
- public:
-
- private:
-
-    MatchExpr m_expr;
-
-};
-
-bool operator==(const str_wrapper& lhs, const std::string& rhs) {
-    return lhs.str() == rhs;
-}
-
-void foobar(const str_wrapper& x, const std::string& y) {
-    receive (
-        on(atom("same")).when(gref(x) == gref(y)) >> [&]() {
-            reply(atom("yes"));
-        },
-        on(atom("same")) >> [&]() {
-            reply(atom("no"));
-        }
-    );
-}
 
 template<typename Fun>
 std::unique_ptr<actor_factory> foobaz(Fun fun) {
@@ -456,21 +403,6 @@ std::unique_ptr<actor_factory> foobaz(Fun fun) {
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);
-
-/*
-    actor_tpl<int, float, std::string> atpl;
-    atpl([](int* i, float* f, std::string* s) {
-        cout << "SUCCESS: " << *i << ", " << *f << ", \"" << *s << "\"" << endl;
-    });
-*/
-
-    /*
-    actor_ptr tst =  actor_facade<some_integer>()
-                    .reply_to().when().with()
-                    .reply_to().when().with()
-                    .spawn();
-    send(tst, atom("EXIT"), exit_reason::user_defined);
-    */
 
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
@@ -566,7 +498,6 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-/*
     CPPA_IF_VERBOSE(cout << "test factory ... " << std::flush);
     auto factory = foobaz([&](int* i, float*, std::string*) {
         self->become (
@@ -581,7 +512,6 @@ size_t test__spawn() {
             }
         );
     });
-
     auto foobaz_actor = factory->spawn();
     send(foobaz_actor, atom("set_int"), 42);
     send(foobaz_actor, atom("get_int"));
@@ -593,25 +523,6 @@ size_t test__spawn() {
     );
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
-*/
-
-    {
-        bool invoked = false;
-        str_wrapper actor_facade_builder{"x"};
-        std::string actor_facade_builder_interim{"y"};
-        auto foo_actor = spawn(foobar, std::cref(actor_facade_builder), actor_facade_builder_interim);
-        send(foo_actor, atom("same"));
-        receive (
-            on(atom("yes")) >> [&]() {
-                CPPA_ERROR("x == y");
-            },
-            on(atom("no")) >> [&]() {
-                invoked = true;
-            }
-        );
-        CPPA_CHECK_EQUAL(true, invoked);
-        await_all_others_done();
-    }
 
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(spawn(testee_actor{})), "wait4int");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn(new event_testee)), "wait4int");

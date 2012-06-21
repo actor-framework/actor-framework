@@ -124,6 +124,37 @@ class receive_policy {
         }
     }
 
+    template<class Client>
+    void receive(Client* client, behavior& bhvr) {
+        auto& fun = bhvr.get_partial_function();
+        if (bhvr.timeout().valid() == false) {
+            receive(client, fun);
+        }
+        else if (invoke_from_cache(client, fun) == false) {
+            if (bhvr.timeout().is_zero()) {
+                recursive_queue_node* e = nullptr;
+                while ((e = client->try_receive_node()) != nullptr) {
+                    CPPA_REQUIRE(e->marked == false);
+                    if (invoke(client, e, bhvr)) {
+                        return; // done
+                    }
+                }
+                handle_timeout(client, bhvr);
+            }
+            else {
+                auto timeout = client->init_timeout(bhvr.timeout());
+                recursive_queue_node* e = nullptr;
+                while ((e = client->try_receive_node(timeout)) != nullptr) {
+                    CPPA_REQUIRE(e->marked == false);
+                    if (invoke(client, e, bhvr)) {
+                        return; // done
+                    }
+                }
+                handle_timeout(client, bhvr);
+            }
+        }
+    }
+
  private:
 
     typedef std::integral_constant<receive_policy_flag, rp_nestable> nestable;

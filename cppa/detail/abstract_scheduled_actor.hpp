@@ -110,6 +110,14 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         reset_timeout();
     }
 
+    inline void push_timeout() {
+        ++m_active_timeout_id;
+    }
+
+    inline void pop_timeout() {
+        --m_active_timeout_id;
+    }
+
     bool m_has_pending_timeout_request;
     std::uint32_t m_active_timeout_id;
 

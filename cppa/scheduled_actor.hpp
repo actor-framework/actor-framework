@@ -81,6 +81,8 @@ class scheduled_actor : public local_actor {
 
     scheduler* m_scheduler;
 
+    bool initialized();
+
 };
 
 } // namespace cppa
