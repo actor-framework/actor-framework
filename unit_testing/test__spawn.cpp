@@ -326,25 +326,17 @@ auto actor_prototype(const Args&... args) -> actor_template<decltype(mexpr_conca
     return {mexpr_concat(args...)};
 }
 
-class actor_factory {
-
- public:
-
-    virtual ~actor_factory() { }
-
-    virtual actor_ptr spawn() = 0;
-
-};
-
 template<typename InitFun, typename CleanupFun, typename... Members>
 class simple_event_based_actor_impl : public event_based_actor {
 
  public:
 
-    simple_event_based_actor_impl(InitFun fun, CleanupFun cfun)
-    : m_init(std::move(fun)), m_cleanup(std::move(cfun)) { }
+    template<typename... Args>
+    simple_event_based_actor_impl(InitFun fun, CleanupFun cfun, Args&&... args)
+    : m_init(std::move(fun)), m_cleanup(std::move(cfun))
+    , m_members(std::forward<Args>(args)...) { }
 
-    void init() { apply(); }
+    void init() { apply(m_init); }
 
     void on_exit() { m_cleanup(); }
 
@@ -352,53 +344,74 @@ class simple_event_based_actor_impl : public event_based_actor {
 
     InitFun m_init;
     CleanupFun m_cleanup;
-    std::tuple<Members...> m_members;
+    detail::tdata<Members...> m_members;
 
-    void apply(typename std::add_pointer<Members>::type... args) {
-        m_init(args...);
+    template<typename F>
+    void apply(F& f, typename std::add_pointer<Members>::type... args) {
+        f(args...);
     }
 
-    template<typename... Args>
-    void apply(Args... args) {
-        apply(args..., &std::get<sizeof...(Args)>(m_members));
+    template<typename F, typename... Args>
+    void apply(F& f, Args... args) {
+        apply(f, args..., &get_ref<sizeof...(Args)>(m_members));
     }
 
 };
 
-template<typename InitFun, typename... Members>
-class actor_tpl : public actor_factory {
-
-    InitFun m_init_fun;
+template<typename InitFun, typename CleanupFun, typename... Members>
+class simple_event_based_actor_factory {
 
  public:
 
-    actor_tpl(InitFun fun) : m_init_fun(std::move(fun)) { }
+    typedef simple_event_based_actor_impl<InitFun, CleanupFun, Members...> impl;
 
-    actor_ptr spawn() {
-        auto void_fun = []() { };
-        return cppa::spawn(new simple_event_based_actor_impl<InitFun, decltype(void_fun), Members...>(m_init_fun, void_fun));
+    simple_event_based_actor_factory(InitFun fun, CleanupFun cfun)
+    : m_init(std::move(fun)), m_cleanup(std::move(cfun)) { }
+
+    template<typename... Args>
+    actor_ptr spawn(Args&&... args) {
+        return cppa::spawn(new impl(m_init, m_cleanup, std::forward<Args>(args)...));
+    }
+
+ private:
+
+    InitFun m_init;
+    CleanupFun m_cleanup;
+
+};
+
+template<typename InitFun, typename CleanupFun, class TypeList>
+struct actor_tpl_from_type_list;
+
+template<typename InitFun, typename CleanupFun, typename... Ts>
+struct actor_tpl_from_type_list<InitFun, CleanupFun, util::type_list<Ts...> > {
+    typedef simple_event_based_actor_factory<InitFun, CleanupFun, Ts...> type;
+};
+
+template<typename Init, typename Cleanup>
+struct actor_tpl_from_fun {
+    typedef typename util::get_arg_types<Init>::types arg_types;
+    typedef typename util::get_arg_types<Cleanup>::types arg_types2;
+    static_assert(util::tl_forall<arg_types, std::is_pointer>::value,
+                  "First functor takes non-pointer arguments");
+    static_assert(   std::is_same<arg_types, arg_types2>::value
+                  || std::is_same<util::type_list<>, arg_types2>::value,
+                  "Second functor must provide either the same signature "
+                  " as the first one or take zero arguments");
+    typedef typename util::tl_map<arg_types, std::remove_pointer>::type mems;
+    typedef typename actor_tpl_from_type_list<Init, Cleanup, mems>::type type;
+};
+
+void dummy_function() { }
+
+struct factory {
+
+    template<typename Fun>
+    static inline typename actor_tpl_from_fun<Fun, void (*)()>::type event_based(Fun fun) {
+        return {std::move(fun), dummy_function};
     }
 
 };
-
-template<typename InitFun, class TypeList>
-struct actor_tpl_from_type_list;
-
-template<typename InitFun, typename... Ts>
-struct actor_tpl_from_type_list<InitFun, util::type_list<Ts...> > {
-    typedef actor_tpl<InitFun, Ts...> type;
-};
-
-template<typename Fun>
-std::unique_ptr<actor_factory> foobaz(Fun fun) {
-    typedef typename util::get_callable_trait<Fun>::type ctrait;
-    typedef typename ctrait::arg_types arg_types;
-    static_assert(util::tl_forall<arg_types, std::is_pointer>::value,
-                  "Functor takes non-pointer arguments");
-    typedef typename util::tl_map<arg_types, std::remove_pointer>::type mems;
-    typedef typename actor_tpl_from_type_list<Fun, mems>::type tpl_type;
-    return std::unique_ptr<actor_factory>{new tpl_type(fun)};
-}
 
 size_t test__spawn() {
     using std::string;
@@ -420,14 +433,6 @@ size_t test__spawn() {
         }
     );
     CPPA_IF_VERBOSE(cout << "ok" << endl);
-
-    /*
-    auto mirror = actor_prototype (
-        others() >> []() {
-            self->last_sender() << self->last_dequeued();
-        }
-    ).spawn();
-    */
 
     CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
     auto mecho = spawn(echo_actor);
@@ -498,8 +503,8 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test factory ... " << std::flush);
-    auto factory = foobaz([&](int* i, float*, std::string*) {
+    CPPA_IF_VERBOSE(cout << "test event-based factory ... " << std::flush);
+    auto factory = factory::event_based([&](int* i, float*, std::string*) {
         self->become (
             on(atom("get_int")) >> [i]() {
                 reply(*i);
@@ -512,10 +517,16 @@ size_t test__spawn() {
             }
         );
     });
-    auto foobaz_actor = factory->spawn();
+    auto foobaz_actor = factory.spawn(23);
+    send(foobaz_actor, atom("get_int"));
     send(foobaz_actor, atom("set_int"), 42);
     send(foobaz_actor, atom("get_int"));
     send(foobaz_actor, atom("done"));
+    receive (
+        on_arg_match >> [&](int value) {
+            CPPA_CHECK_EQUAL(23, value);
+        }
+    );
     receive (
         on_arg_match >> [&](int value) {
             CPPA_CHECK_EQUAL(42, value);

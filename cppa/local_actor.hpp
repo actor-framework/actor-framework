@@ -189,6 +189,9 @@ class local_actor : public actor {
         do_become(bhvr, false, true);
     }
 
+    /**
+     * @brief Sets the actor's behavior.
+     */
     inline void become(discard_behavior_t, behavior&& bhvr) {
         do_become(new behavior(std::move(bhvr)), true, true);
     }
@@ -206,10 +209,16 @@ class local_actor : public actor {
         do_become(bhvr, false, false);
     }
 
+    /**
+     * @brief Sets the actor's behavior.
+     */
     inline void become(keep_behavior_t, behavior&& bhvr) {
         do_become(new behavior(std::move(bhvr)), true, false);
     }
 
+    /**
+     * @brief Sets the actor's behavior.
+     */
     inline void become(behavior&& bhvr) {
         become(discard_behavior, std::move(bhvr));
     }
@@ -237,21 +246,25 @@ class local_actor : public actor {
         become(keep_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
     }
 
+    /**
+     * @brief Sets the actor's behavior.
+     */
     template<typename... Cases, typename... Args>
     inline void become(match_expr<Cases...> arg0, Args&&... args) {
         become(discard_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**
-     * @brief Returns to a previous behavior or finishes execution
-     *        if no previous behavior is available.
+     * @brief Returns to a previous behavior if available.
      */
     virtual void unbecome() = 0;
 
     /**
      * @brief Can be overridden to initialize an actor before any
      *        message is handled.
-     * @warning Must not call blocking functions.
+     * @warning Must not call blocking functions such as
+     *          {@link cppa::receive receive}.
+     * @note Calling {@link become} to set an initial behavior is supported.
      */
     virtual void init();
 

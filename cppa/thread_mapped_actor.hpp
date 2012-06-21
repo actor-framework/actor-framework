@@ -79,10 +79,13 @@ class thread_mapped_actor : public local_actor {
 
 #else // CPPA_DOCUMENTATION
 
+class self_type;
+
 class thread_mapped_actor : public detail::stacked_actor_mixin<
                                        thread_mapped_actor,
                                        detail::abstract_actor<local_actor> > {
 
+    friend class self_type; // needs access to cleanup()
     friend class detail::receive_policy;
 
     typedef detail::stacked_actor_mixin<

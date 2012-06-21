@@ -31,6 +31,7 @@
 #ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
 #define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
+#include <tuple>
 #include <stack>
 #include <memory>
 #include <vector>

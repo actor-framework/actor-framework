@@ -126,24 +126,33 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P
     ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-set (CPPA_BINARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-set (CPPA_LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
+
+
+if (LIBRARY_OUTPUT_PATH)
+  set (CPPA_LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH})
+  set (CPPA_LIBRARY_PATH ${LIBRARY_OUTPUT_PATH})
+else()
+  set (CPPA_LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
+  set (CPPA_LIBRARY_PATH ${CPPA_LIBRARY_OUTPUT_PATH})
+  set (LIBRARY_OUTPUT_PATH ${CPPA_LIBRARY_OUTPUT_PATH} CACHE PATH "Single directory for all libraries")
+endif()
+
 # setting path to cppa headers and libcppa
 set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
-set (CPPA_LIBRARY_PATH ${CPPA_LIBRARY_OUTPUT_PATH})
 set (CPPA_INCLUDE ${CPPA_INCLUDE_PATH})
+
 if (APPLE)
-    set (CPPA_LIBRARY ${CPPA_LIBRARY_PATH}/libcppa.dylib)
+  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
 elseif (UNIX)
-    set (CPPA_LIBRARY ${CPPA_LIBRARY_PATH}/libcppa.so)
+  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
 else ()
-    message (SEND_FATAL "Host platform not supported ...")
+  message (SEND_FATAL "Host platform not supported ...")
 endif ()
 
-set (LIBRARY_OUTPUT_PATH ${CPPA_LIBRARY_OUTPUT_PATH}
-        CACHE PATH "Single directory for all libraries")
-set (EXECUTABLE_OUTPUT_PATH ${CPPA_BINARY_OUTPUT_PATH}
-        CACHE PATH "Single directory for all executables")
+if (EXECUTABLE_OUTPUT_PATH)
+else ()
+  set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
+endif ()
 
 add_subdirectory(unit_testing)
 add_subdirectory(examples)

@@ -774,8 +774,7 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype) {
     return uti_map().insert({ raw_name(tinfo) }, utype);
 }
 
-uniform_type_info::uniform_type_info(const std::string& uname) : m_name(uname) {
-}
+uniform_type_info::uniform_type_info(const std::string& str) : m_name(str) { }
 
 uniform_type_info::~uniform_type_info() {
 }

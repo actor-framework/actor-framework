@@ -586,10 +586,6 @@ struct mexpr_fwd {
 
 namespace cppa {
 
-/**
- * @brief A function that works on the projection of given data rather than
- *        on the data itself.
- */
 template<class... Cases>
 class match_expr {
 
