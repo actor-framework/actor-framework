@@ -32,9 +32,11 @@
 #define CPPA_STACKED_ACTOR_MIXIN_HPP
 
 #include <memory>
+#include <functional>
 
 #include "cppa/behavior.hpp"
 
+#include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
@@ -43,18 +45,11 @@ namespace cppa { namespace detail {
 template<class Derived, class Base>
 class stacked_actor_mixin : public Base {
 
-    inline Derived* dthis() {
-        return static_cast<Derived*>(this);
-    }
-
  public:
 
     virtual void unbecome() {
         if (m_bhvr_stack_ptr) {
             m_bhvr_stack_ptr->pop_back();
-        }
-        else if (this->initialized()) {
-            this->quit();
         }
     }
 
@@ -66,23 +61,45 @@ class stacked_actor_mixin : public Base {
         m_recv_policy.receive(dthis(), bhvr);
     }
 
+    virtual void run() {
+        if (m_bhvr_stack_ptr) {
+            m_bhvr_stack_ptr->exec();
+            m_bhvr_stack_ptr.reset();
+        }
+        if (m_behavior) {
+            m_behavior();
+        }
+    }
+
  protected:
 
+    stacked_actor_mixin() = default;
+
+    stacked_actor_mixin(std::function<void()> f) : m_behavior(std::move(f)) { }
+
+    virtual void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old) {
+        if (m_bhvr_stack_ptr) {
+            if (discard_old) m_bhvr_stack_ptr->pop_back();
+            m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
+        }
+        else {
+            m_bhvr_stack_ptr.reset(new behavior_stack);
+            m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
+            if (this->initialized()) {
+                m_bhvr_stack_ptr->exec();
+                m_bhvr_stack_ptr.reset();
+            }
+        }
+    }
+
+ private:
+
+    std::function<void()> m_behavior;
     receive_policy m_recv_policy;
     std::unique_ptr<behavior_stack> m_bhvr_stack_ptr;
 
-    virtual void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old) {
-        if (this->m_bhvr_stack_ptr) {
-            if (discard_old) this->m_bhvr_stack_ptr->pop_back();
-            this->m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
-        }
-        else {
-            this->m_bhvr_stack_ptr.reset(new behavior_stack);
-            if (this->initialized()) {
-                this->m_bhvr_stack_ptr->exec();
-                this->quit();
-            }
-        }
+    inline Derived* dthis() {
+        return static_cast<Derived*>(this);
     }
 
 };

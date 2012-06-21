@@ -63,12 +63,21 @@ namespace cppa {
 /**
  * @brief An actor running in its own thread.
  */
-class thread_mapped_actor : public local_actor { };
+class thread_mapped_actor : public local_actor {
 
+ protected:
+
+    /**
+     * @brief Implements the actor's behavior.
+     *        Reimplemented this function for a class-based actor.
+     *        Returning from this member function will end the
+     *        execution of the actor.
+     */
+    virtual void run();
+
+};
 
 #else // CPPA_DOCUMENTATION
-
-class self_type;
 
 class thread_mapped_actor : public detail::stacked_actor_mixin<
                                        thread_mapped_actor,
@@ -76,7 +85,15 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
 
     friend class detail::receive_policy;
 
+    typedef detail::stacked_actor_mixin<
+                thread_mapped_actor,
+                detail::abstract_actor<local_actor> > super;
+
  public:
+
+    thread_mapped_actor();
+
+    thread_mapped_actor(std::function<void()> fun);
 
     void quit(std::uint32_t reason = exit_reason::normal); //override
 
@@ -86,11 +103,15 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
+    inline void initialized(bool value) { m_initialized = value; }
+
  protected:
 
     bool initialized();
 
  private:
+
+    bool m_initialized;
 
     // required by nestable_receive_policy
     static const detail::receive_policy_flag receive_flag = detail::rp_nestable;

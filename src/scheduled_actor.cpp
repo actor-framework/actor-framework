@@ -36,10 +36,6 @@ namespace cppa {
 scheduled_actor::scheduled_actor(bool enable_chained_send)
 : local_actor(enable_chained_send), next(nullptr), m_scheduler(nullptr) { }
 
-void scheduled_actor::on_exit() { }
-
-void scheduled_actor::init() { }
-
 scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
     CPPA_REQUIRE(sched != nullptr);
     // init is called by the spawning actor, manipulate self to

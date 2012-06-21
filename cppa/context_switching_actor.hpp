@@ -59,21 +59,25 @@ class context_switching_actor : public scheduled_actor {
 
     /**
      * @brief Implements the actor's behavior.
-     *        Reimplemented this function for a class-based context-switching
-     *        actor. Returning from this member function will end the
+     *        Reimplemented this function for a class-based actor.
+     *        Returning from this member function will end the
      *        execution of the actor.
      */
     virtual void run();
 
 };
 
-#else
+#else // CPPA_DOCUMENTATION
 
 class context_switching_actor : public detail::stacked_actor_mixin<
                                            context_switching_actor,
                                            detail::abstract_scheduled_actor> {
 
     friend class detail::receive_policy;
+
+    typedef detail::stacked_actor_mixin<
+                context_switching_actor,
+                detail::abstract_scheduled_actor> super;
 
  public:
 
@@ -84,8 +88,6 @@ class context_switching_actor : public detail::stacked_actor_mixin<
  protected:
 
     context_switching_actor();
-
-    virtual void run();
 
  private:
 
@@ -110,9 +112,6 @@ class context_switching_actor : public detail::stacked_actor_mixin<
 
     // members
     util::fiber m_fiber;
-    std::function<void()> m_behavior;
-    detail::receive_policy m_recv_policy;
-    std::unique_ptr<detail::behavior_stack> m_bhvr_stack_ptr;
 
 };
 

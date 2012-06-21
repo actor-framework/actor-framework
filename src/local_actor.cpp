@@ -80,4 +80,8 @@ void local_actor::demonitor(actor_ptr whom) {
     if (whom) whom->detach(mtoken);
 }
 
+void local_actor::on_exit() { }
+
+void local_actor::init() { }
+
 } // namespace cppa

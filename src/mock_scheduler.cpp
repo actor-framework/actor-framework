@@ -51,38 +51,46 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+namespace cppa { namespace detail {
+
+typedef intrusive_ptr<thread_mapped_actor> thread_mapped_actor_ptr;
+
 namespace {
 
-void run_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
-               std::function<void()> what) {
-    cppa::self.set(m_self.get());
-    try { what(); }
+void run_actor(thread_mapped_actor_ptr m_self) {
+    self.set(m_self.get());
+    try {
+        m_self->init();
+        m_self->initialized(true);
+        m_self->run();
+        m_self->on_exit();
+    }
     catch (...) { }
-    cppa::self.set(nullptr);
-    cppa::detail::dec_actor_count();
+    self.set(nullptr);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    dec_actor_count();
 }
 
-void run_hidden_actor(cppa::intrusive_ptr<cppa::local_actor> m_self,
+void run_hidden_actor(local_actor_ptr m_self,
                       std::function<void()> what) {
-    cppa::self.set(m_self.get());
+    self.set(m_self.get());
     try { what(); }
     catch (...) { }
-    cppa::self.set(nullptr);
+    self.set(nullptr);
 }
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail {
-
-std::thread mock_scheduler::spawn_hidden_impl(std::function<void()> what, local_actor_ptr ctx) {
-    return std::thread{run_hidden_actor, ctx, std::move(what)};
+std::thread mock_scheduler::spawn_hidden_impl(std::function<void()> what,
+                                              local_actor_ptr ctx) {
+    return std::thread{run_hidden_actor, std::move(ctx), std::move(what)};
 }
 
 actor_ptr mock_scheduler::spawn_impl(std::function<void()> what) {
     inc_actor_count();
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    intrusive_ptr<local_actor> ctx{new thread_mapped_actor};
-    std::thread{run_actor, ctx, std::move(what)}.detach();
+    thread_mapped_actor_ptr ctx{new thread_mapped_actor(std::move(what))};
+    std::thread{run_actor, ctx}.detach();
     return std::move(ctx);
 }
 

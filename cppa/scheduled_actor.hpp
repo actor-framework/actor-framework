@@ -58,20 +58,6 @@ class scheduled_actor : public local_actor {
      */
     scheduled_actor* next;
 
-    /**
-     * @brief Can be overridden to perform cleanup code after an actor
-     *        finished execution.
-     * @warning Must not call any function manipulating the actor's state such
-     *          as join, leave, link, or monitor.
-     */
-    virtual void on_exit();
-
-    /**
-     * @brief Can be overridden to initialize and actor before any
-     *        message is handled.
-     */
-    virtual void init();
-
     // called from worker thread
     virtual resume_result resume(util::fiber* from) = 0;
 

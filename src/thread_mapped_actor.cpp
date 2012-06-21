@@ -42,6 +42,11 @@
 
 namespace cppa {
 
+thread_mapped_actor::thread_mapped_actor() : m_initialized(false) { }
+
+thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
+: super(std::move(fun)), m_initialized(false) { }
+
 void thread_mapped_actor::quit(std::uint32_t reason) {
     cleanup(reason);
     // actor_exited should not be catched, but if anyone does,
@@ -57,7 +62,7 @@ void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
 }
 
 bool thread_mapped_actor::initialized() {
-    return true;
+    return m_initialized;
 }
 
 detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {

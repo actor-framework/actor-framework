@@ -248,6 +248,21 @@ class local_actor : public actor {
      */
     virtual void unbecome() = 0;
 
+    /**
+     * @brief Can be overridden to initialize an actor before any
+     *        message is handled.
+     * @warning Must not call blocking functions.
+     */
+    virtual void init();
+
+    /**
+     * @brief Can be overridden to perform cleanup code after an actor
+     *        finished execution.
+     * @warning Must not call any function manipulating the actor's state such
+     *          as join, leave, link, or monitor.
+     */
+    virtual void on_exit();
+
     // library-internal members and member functions that shall
     // not appear in the documentation
 

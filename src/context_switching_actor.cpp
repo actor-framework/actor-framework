@@ -43,16 +43,7 @@ context_switching_actor::context_switching_actor()
 }
 
 context_switching_actor::context_switching_actor(std::function<void()> fun)
-: m_fiber(&context_switching_actor::trampoline, this), m_behavior(fun) {
-}
-
-void context_switching_actor::run() {
-    if (m_bhvr_stack_ptr) {
-        m_bhvr_stack_ptr->exec();
-    }
-    else if (m_behavior) {
-        m_behavior();
-    }
+: super(std::move(fun)), m_fiber(&context_switching_actor::trampoline, this) {
 }
 
 void context_switching_actor::trampoline(void* this_ptr) {
