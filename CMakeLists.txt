@@ -21,7 +21,6 @@ set(LIBCPPA_SRC
     src/binary_serializer.cpp
     src/channel.cpp
     src/thread_mapped_actor.cpp
-    src/cppa.cpp
     src/demangle.cpp
     src/deserializer.cpp
     src/duration.cpp

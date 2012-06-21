@@ -1,3 +1,5 @@
+//#define CPPA_VERBOSE_CHECK
+
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -14,13 +16,13 @@
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/event_based_actor.hpp"
+#include "cppa/util/callable_trait.hpp"
 
 using std::cerr;
 using std::cout;
 using std::endl;
 
 using namespace cppa;
-
 
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
 
@@ -324,6 +326,64 @@ auto actor_prototype(const Args&... args) -> actor_template<decltype(mexpr_conca
     return {mexpr_concat(args...)};
 }
 
+class actor_factory {
+
+ public:
+
+    virtual ~actor_factory() { }
+
+    virtual actor_ptr spawn() = 0;
+
+};
+
+template<typename InitFun, typename... Members>
+class simple_event_based_actor_impl : public event_based_actor {
+
+ public:
+
+    simple_event_based_actor_impl(InitFun fun) : m_fun(std::move(fun)) { }
+
+    void init() { apply(); }
+
+ private:
+
+    InitFun m_fun;
+    std::tuple<Members...> m_members;
+
+    void apply(typename std::add_pointer<Members>::type... args) {
+        m_fun(args...);
+    }
+
+    template<typename... Args>
+    void apply(Args... args) {
+        apply(args..., &std::get<sizeof...(Args)>(m_members));
+    }
+
+};
+
+template<typename InitFun, typename... Members>
+class actor_tpl : public actor_factory {
+
+    InitFun m_init_fun;
+
+ public:
+
+    actor_tpl(InitFun fun) : m_init_fun(std::move(fun)) { }
+
+    actor_ptr spawn() {
+        return cppa::spawn(new simple_event_based_actor_impl<InitFun, Members...>(m_init_fun));
+    }
+
+};
+
+template<typename InitFun, class TypeList>
+struct actor_tpl_from_type_list;
+
+template<typename InitFun, typename... Ts>
+struct actor_tpl_from_type_list<InitFun, util::type_list<Ts...> > {
+    typedef actor_tpl<InitFun, Ts...> type;
+};
+
 class str_wrapper {
 
     str_wrapper() = delete;
@@ -382,9 +442,27 @@ void foobar(const str_wrapper& x, const std::string& y) {
     );
 }
 
+template<typename Fun>
+std::unique_ptr<actor_factory> foobaz(Fun fun) {
+    typedef typename util::get_callable_trait<Fun>::type ctrait;
+    typedef typename ctrait::arg_types arg_types;
+    static_assert(util::tl_forall<arg_types, std::is_pointer>::value,
+                  "Functor takes non-pointer arguments");
+    typedef typename util::tl_map<arg_types, std::remove_pointer>::type mems;
+    typedef typename actor_tpl_from_type_list<Fun, mems>::type tpl_type;
+    return std::unique_ptr<actor_factory>{new tpl_type(fun)};
+}
+
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);
+
+/*
+    actor_tpl<int, float, std::string> atpl;
+    atpl([](int* i, float* f, std::string* s) {
+        cout << "SUCCESS: " << *i << ", " << *f << ", \"" << *s << "\"" << endl;
+    });
+*/
 
     /*
     actor_ptr tst =  actor_facade<some_integer>()
@@ -418,6 +496,13 @@ size_t test__spawn() {
         }
     ).spawn();
     */
+
+    CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
+    auto mecho = spawn(echo_actor);
+    send(mecho, "hello echo");
+    receive(on("hello echo") >> []() { });
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     auto mirror = spawn(new simple_mirror);
 
@@ -459,13 +544,6 @@ size_t test__spawn() {
     receive(after(std::chrono::seconds(1)) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
-    auto mecho = spawn(echo_actor);
-    send(mecho, "hello echo");
-    receive(on("hello echo") >> []() { });
-    await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
-
     CPPA_IF_VERBOSE(cout << "testee1 ... " << std::flush);
     spawn(testee1);
     await_all_others_done();
@@ -487,6 +565,35 @@ size_t test__spawn() {
     );
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+/*
+    CPPA_IF_VERBOSE(cout << "test factory ... " << std::flush);
+    auto factory = foobaz([&](int* i, float*, std::string*) {
+        self->become (
+            on(atom("get_int")) >> [i]() {
+                reply(*i);
+            },
+            on(atom("set_int"), arg_match) >> [i](int new_value) {
+                *i = new_value;
+            },
+            on(atom("done")) >> []() {
+                self->quit();
+            }
+        );
+    });
+
+    auto foobaz_actor = factory->spawn();
+    send(foobaz_actor, atom("set_int"), 42);
+    send(foobaz_actor, atom("get_int"));
+    send(foobaz_actor, atom("done"));
+    receive (
+        on_arg_match >> [&](int value) {
+            CPPA_CHECK_EQUAL(42, value);
+        }
+    );
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+*/
 
     {
         bool invoked = false;

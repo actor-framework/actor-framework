@@ -49,12 +49,12 @@ void event_based_actor::dequeue(partial_function&) {
 }
 
 resume_result event_based_actor::resume(util::fiber*) {
+    scoped_self_setter sss{this};
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
         m_bhvr_stack.clear();
         on_exit();
     };
-    self.set(this);
     try {
         detail::recursive_queue_node* e;
         for (;;) {
@@ -88,12 +88,8 @@ resume_result event_based_actor::resume(util::fiber*) {
             }
         }
     }
-    catch (actor_exited& what) {
-        cleanup(what.reason());
-    }
-    catch (...) {
-        cleanup(exit_reason::unhandled_exception);
-    }
+    catch (actor_exited& what) { cleanup(what.reason()); }
+    catch (...)                { cleanup(exit_reason::unhandled_exception); }
     done_cb();
     return resume_result::actor_done;
 }

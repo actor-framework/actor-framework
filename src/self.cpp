@@ -40,33 +40,35 @@
 
 namespace {
 
-boost::thread_specific_ptr<cppa::local_actor> t_this_context(&cppa::self_type::cleanup_fun);
+boost::thread_specific_ptr<cppa::local_actor> t_this_actor(&cppa::self_type::cleanup_fun);
 
 } // namespace <anonymous>
 
 namespace cppa {
 
 void self_type::cleanup_fun(cppa::local_actor* what) {
-    auto ptr = dynamic_cast<thread_mapped_actor*>(what);
-    if (ptr) {
-        // make sure "unspawned" actors quit properly
-        ptr->cleanup(cppa::exit_reason::normal);
+    if (what) {
+        auto ptr = dynamic_cast<thread_mapped_actor*>(what);
+        if (ptr) {
+            // make sure "unspawned" actors quit properly
+            ptr->cleanup(cppa::exit_reason::normal);
+        }
+        if (what->deref() == false) delete what;
     }
-    if (what && !what->deref()) delete what;
 }
 
-void self_type::set_impl(local_actor* ptr) {
+void self_type::set_impl(self_type::pointer ptr) {
     if (ptr) ptr->ref();
-    t_this_context.reset(ptr);
+    t_this_actor.reset(ptr);
 }
 
-local_actor* self_type::get_impl() {
-    auto result = t_this_context.get();
+self_type::pointer self_type::get_impl() {
+    auto result = t_this_actor.get();
     if (result == nullptr) {
         result = new thread_mapped_actor;
         result->ref();
         get_scheduler()->register_converted_context(result);
-        t_this_context.reset(result);
+        t_this_actor.reset(result);
     }
     return result;
 }
@@ -75,8 +77,16 @@ actor* self_type::convert_impl() {
     return get_impl();
 }
 
-local_actor* self_type::get_unchecked_impl() {
-    return t_this_context.get();
+self_type::pointer self_type::get_unchecked_impl() {
+    return t_this_actor.get();
+}
+
+void self_type::adopt_impl(self_type::pointer ptr) {
+    t_this_actor.reset(ptr);
+}
+
+self_type::pointer self_type::release_impl() {
+    return t_this_actor.release();
 }
 
 } // namespace cppa

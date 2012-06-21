@@ -47,7 +47,12 @@ context_switching_actor::context_switching_actor(std::function<void()> fun)
 }
 
 void context_switching_actor::run() {
-    if (m_behavior) m_behavior();
+    if (m_bhvr_stack_ptr) {
+        m_bhvr_stack_ptr->exec();
+    }
+    else if (m_behavior) {
+        m_behavior();
+    }
 }
 
 void context_switching_actor::trampoline(void* this_ptr) {
@@ -98,7 +103,7 @@ void context_switching_actor::dequeue(behavior& bhvr) {
     }
     else if (m_recv_policy.invoke_from_cache(this, bhvr) == false) {
         if (bhvr.timeout().is_zero()) {
-            for (auto e = m_mailbox.try_pop(); e != 0; e = m_mailbox.try_pop()) {
+            for (auto e = m_mailbox.try_pop(); e != 0; e = m_mailbox.try_pop()){
                 CPPA_REQUIRE(e->marked == false);
                 if (m_recv_policy.invoke(this, e, bhvr)) return;
             }
@@ -106,14 +111,14 @@ void context_switching_actor::dequeue(behavior& bhvr) {
         }
         else {
             request_timeout(bhvr.timeout());
-            while (m_recv_policy.invoke(this, receive_node(), bhvr) == false) { }
+            while (m_recv_policy.invoke(this, receive_node(), bhvr) == false) {}
         }
     }
 }
 
 resume_result context_switching_actor::resume(util::fiber* from) {
     using namespace detail;
-    self.set(this);
+    scoped_self_setter sss{this};
     for (;;) {
         switch (call(&m_fiber, from)) {
             case yield_state::done: {
@@ -149,7 +154,7 @@ void context_switching_actor::unbecome() {
     if (m_bhvr_stack_ptr) {
         m_bhvr_stack_ptr->pop_back();
     }
-    else {
+    else if (m_scheduler != nullptr) {
         quit();
     }
 }
@@ -161,8 +166,11 @@ void context_switching_actor::do_become(behavior* bhvr, bool ownership, bool dis
     }
     else {
         m_bhvr_stack_ptr.reset(new detail::behavior_stack);
-        m_bhvr_stack_ptr->exec();
-        quit();
+        // scheduler == nullptr if and only if become() is called inside init()
+        if (m_scheduler != nullptr) {
+            m_bhvr_stack_ptr->exec();
+            quit();
+        }
     }
 }
 

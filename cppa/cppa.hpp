@@ -535,78 +535,63 @@ channel_ptr& operator<<(channel_ptr& whom, const any_tuple& what);
 
 #else
 
-template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>& whom, const Arg0& arg0, const Args&... args) {
-    static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
-    if (whom) self->send_message(whom.get(), make_cow_tuple(arg0, args...));
+namespace detail {
+
+inline void send_impl(channel* whom, any_tuple&& what) {
+    if (whom != nullptr) whom->enqueue(self.get(), std::move(what));
 }
 
+template<typename Arg0, typename... Args>
+inline void send_tpl_impl(channel* whom, Arg0&& arg0, Args&&... args) {
+    if (whom != nullptr) {
+        whom->enqueue(self.get(), make_any_tuple(std::forward<Arg0>(arg0),
+                                                 std::forward<Args>(args)...));
+    }
+}
+
+inline void send_impl(actor* whom, any_tuple&& what) {
+    if (whom) self->send_message(whom, std::move(what));
+}
+
+template<typename Arg0, typename... Args>
+inline void send_tpl_impl(actor* whom, Arg0&& arg0, Args&&... args) {
+    if (whom) {
+        self->send_message(whom, make_any_tuple(std::forward<Arg0>(arg0),
+                                                std::forward<Args>(args)...));
+    }
+}
+
+} // namespace detail
+
+template<class C>
+typename std::enable_if<std::is_base_of<channel, C>::value,
+                        const intrusive_ptr<C>&            >::type
+operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
+    detail::send_impl(whom.get(), std::move(what));
+    return whom;
+}
+
+inline const self_type& operator<<(const self_type& s, any_tuple what) {
+    detail::send_impl(s.get(), std::move(what));
+    return s;
+}
+
+
 template<class C, typename Arg0, typename... Args>
-void send(intrusive_ptr<C>&& whom, const Arg0& arg0, const Args&... args) {
-    static_assert(std::is_base_of<channel, C>::value, "C is not a channel");
-    intrusive_ptr<C> tmp(std::move(whom));
-    send(tmp, arg0, args...);
+inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+send(const intrusive_ptr<C>& whom, Arg0&& arg0, Args&&... args) {
+    detail::send_tpl_impl(whom.get(),
+                          std::forward<Arg0>(arg0),
+                          std::forward<Args>(args)...);
 }
 
 // matches "send(this, ...)" in event-based actors
 template<typename Arg0, typename... Args>
-inline void send(local_actor* whom, const Arg0& arg0, const Args&... args) {
-    CPPA_REQUIRE(whom != nullptr);
-    whom->enqueue(whom, make_cow_tuple(arg0, args...));
+inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
+    detail::send_tpl_impl(whom,
+                          std::forward<Arg0>(arg0),
+                          std::forward<Args>(args)...);
 }
-
-
-// matches send(self, ...);
-template<typename Arg0, typename... Args>
-inline void send(const self_type&, const Arg0& arg0, const Args&... args) {
-    send(static_cast<local_actor*>(self), arg0, args...);
-}
-
-template<class C>
-typename std::enable_if<
-    std::is_base_of<channel, C>::value,
-    intrusive_ptr<C>&
->::type
-operator<<(intrusive_ptr<C>& whom, const any_tuple& what) {
-    if (whom) self->send_message(whom.get(), what);
-    return whom;
-}
-
-template<class C>
-typename std::enable_if<
-    std::is_base_of<channel, C>::value,
-    intrusive_ptr<C>
->::type
-operator<<(intrusive_ptr<C>&& whom, const any_tuple& what) {
-    intrusive_ptr<C> tmp(std::move(whom));
-    tmp << what;
-    return std::move(tmp);
-}
-
-template<class C>
-typename std::enable_if<
-    std::is_base_of<channel, C>::value,
-    intrusive_ptr<C>&
->::type
-operator<<(intrusive_ptr<C>& whom, any_tuple&& what) {
-    if (whom) self->send_message(whom.get(), std::move(what));
-    return whom;
-}
-
-template<class C>
-typename std::enable_if<
-    std::is_base_of<channel, C>::value,
-    intrusive_ptr<C>
->::type
-operator<<(intrusive_ptr<C>&& whom, any_tuple&& what) {
-    intrusive_ptr<C> tmp(std::move(whom));
-    tmp << std::move(what);
-    return std::move(tmp);
-}
-
-const self_type& operator<<(const self_type& s, const any_tuple& what);
-
-const self_type& operator<<(const self_type& s, any_tuple&& what);
 
 #endif // CPPA_DOCUMENTATION
 

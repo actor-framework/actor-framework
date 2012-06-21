@@ -92,10 +92,21 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         std::swap(m_ptr, other.m_ptr);
     }
 
+    /**
+     * @brief Returns the raw pointer without modifying reference count.
+     */
     pointer release() {
         auto result = m_ptr;
         m_ptr = nullptr;
         return result;
+    }
+
+    /**
+     * @brief Sets this pointer to @p ptr without modifying reference count.
+     */
+    void adopt(pointer ptr) {
+        reset();
+        m_ptr = ptr;
     }
 
     void reset(pointer new_value = nullptr) {
@@ -136,6 +147,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     inline pointer operator->() const { return m_ptr; }
     inline reference operator*() const { return *m_ptr; }
 
+    inline bool operator!() const { return m_ptr == nullptr; }
     inline explicit operator bool() const { return m_ptr != nullptr; }
 
     inline ptrdiff_t compare(const_pointer ptr) const {
