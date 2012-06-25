@@ -37,7 +37,7 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/match.hpp"
-#include "cppa/fsm_actor.hpp"
+#include "cppa/sb_actor.hpp"
 #include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/context_switching_actor.hpp"
 
@@ -64,7 +64,7 @@ void check_factors(const factors& vec) {
 #   endif
 }
 
-struct fsm_worker : fsm_actor<fsm_worker> {
+struct fsm_worker : sb_actor<fsm_worker> {
     actor_ptr mc;
     behavior init_state;
     fsm_worker(const actor_ptr& msgcollector) : mc(msgcollector) {
@@ -79,7 +79,7 @@ struct fsm_worker : fsm_actor<fsm_worker> {
     }
 };
 
-struct fsm_chain_link : fsm_actor<fsm_chain_link> {
+struct fsm_chain_link : sb_actor<fsm_chain_link> {
     actor_ptr next;
     behavior init_state;
     fsm_chain_link(const actor_ptr& n) : next(n) {
@@ -92,7 +92,7 @@ struct fsm_chain_link : fsm_actor<fsm_chain_link> {
     }
 };
 
-struct fsm_chain_master : fsm_actor<fsm_chain_master> {
+struct fsm_chain_master : sb_actor<fsm_chain_master> {
     int iteration;
     actor_ptr mc;
     actor_ptr next;
@@ -132,7 +132,7 @@ struct fsm_chain_master : fsm_actor<fsm_chain_master> {
     }
 };
 
-struct fsm_supervisor : fsm_actor<fsm_supervisor> {
+struct fsm_supervisor : sb_actor<fsm_supervisor> {
     int left;
     behavior init_state;
     fsm_supervisor(int num_msgs) : left(num_msgs) {

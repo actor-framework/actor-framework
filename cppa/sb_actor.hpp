@@ -36,13 +36,13 @@
 namespace cppa {
 
 /**
- * @brief A base class for event-based actors using the
+ * @brief A base class for state-based actors using the
  *        Curiously Recurring Template Pattern
  *        to initialize the derived actor with its @p init_state member.
- * @tparam Derived Subclass of fsm_actor.
+ * @tparam Derived Direct subclass of @p sb_actor.
  */
 template<class Derived>
-class fsm_actor : public event_based_actor {
+class sb_actor : public event_based_actor {
 
  public:
 

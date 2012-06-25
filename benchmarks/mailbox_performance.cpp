@@ -36,7 +36,7 @@
 
 #include "utility.hpp"
 #include "cppa/cppa.hpp"
-#include "cppa/fsm_actor.hpp"
+#include "cppa/sb_actor.hpp"
 
 using std::cout;
 using std::cerr;
@@ -45,7 +45,7 @@ using std::int64_t;
 
 using namespace cppa;
 
-struct fsm_receiver : fsm_actor<fsm_receiver> {
+struct fsm_receiver : sb_actor<fsm_receiver> {
     int64_t m_value;
     behavior init_state;
     fsm_receiver(int64_t max) : m_value(0) {

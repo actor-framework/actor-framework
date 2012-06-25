@@ -12,7 +12,7 @@ using std::chrono::seconds;
 using namespace cppa;
 
 // either taken by a philosopher or available
-struct chopstick : fsm_actor<chopstick> {
+struct chopstick : sb_actor<chopstick> {
 
     behavior& init_state; // a reference to available
     behavior available;
@@ -73,7 +73,7 @@ struct chopstick : fsm_actor<chopstick> {
  * [ X = right => Y = left  ]
  */
 
-struct philosopher : fsm_actor<philosopher> {
+struct philosopher : sb_actor<philosopher> {
 
     std::string name; // the name of this philosopher
     actor_ptr left;   // left chopstick

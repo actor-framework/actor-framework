@@ -96,7 +96,7 @@ cppa/either.hpp
 cppa/exception.hpp
 cppa/exit_reason.hpp
 cppa/from_string.hpp
-cppa/fsm_actor.hpp
+cppa/sb_actor.hpp
 cppa/get.hpp
 cppa/group.hpp
 cppa/guard_expr.hpp

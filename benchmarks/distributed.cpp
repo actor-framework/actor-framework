@@ -107,7 +107,7 @@ class actor_template {
     actor_template(MatchExpr me) : m_expr(std::move(me)) { }
 
     actor_ptr spawn() const {
-        struct impl : fsm_actor<impl> {
+        struct impl : sb_actor<impl> {
             behavior init_state;
             impl(const MatchExpr& mx) : init_state(mx.as_partial_function()) {
             }
@@ -122,7 +122,7 @@ auto actor_prototype(const Args&... args) -> actor_template<decltype(mexpr_conca
     return {mexpr_concat(args...)};
 }
 
-struct ping_actor : fsm_actor<ping_actor> {
+struct ping_actor : sb_actor<ping_actor> {
 
     behavior init_state;
     actor_ptr parent;
@@ -156,7 +156,7 @@ struct ping_actor : fsm_actor<ping_actor> {
 
 };
 
-struct server_actor : fsm_actor<server_actor> {
+struct server_actor : sb_actor<server_actor> {
 
     typedef std::map<std::pair<string, uint16_t>, actor_ptr> pong_map;
 

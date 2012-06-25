@@ -3,7 +3,7 @@
 #include "ping_pong.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/fsm_actor.hpp"
+#include "cppa/sb_actor.hpp"
 #include "cppa/to_string.hpp"
 
 namespace { size_t s_pongs = 0; }
@@ -40,7 +40,7 @@ void ping(size_t num_pings) {
 
 actor_ptr spawn_event_based_ping(size_t num_pings) {
     s_pongs = 0;
-    struct impl : public fsm_actor<impl> {
+    struct impl : public sb_actor<impl> {
         behavior init_state;
         impl(size_t num_pings) {
             init_state = (
@@ -85,7 +85,7 @@ void pong(actor_ptr ping_actor) {
 
 actor_ptr spawn_event_based_pong(actor_ptr ping_actor) {
     CPPA_REQUIRE(ping_actor.get() != nullptr);
-    struct impl : public fsm_actor<impl> {
+    struct impl : public sb_actor<impl> {
         behavior init_state;
         impl() {
             init_state = (

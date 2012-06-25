@@ -79,7 +79,7 @@ __<Fun> get__(Fun f) {
     return {f};
 }
 
-struct fobaz : fsm_actor<fobaz> {
+struct fobaz : sb_actor<fobaz> {
 
     behavior init_state;
 

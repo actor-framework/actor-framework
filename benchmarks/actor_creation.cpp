@@ -35,7 +35,7 @@
 
 #include "utility.hpp"
 #include "cppa/cppa.hpp"
-#include "cppa/fsm_actor.hpp"
+#include "cppa/sb_actor.hpp"
 
 using std::cout;
 using std::cerr;
@@ -44,7 +44,7 @@ using std::uint32_t;
 
 using namespace cppa;
 
-struct testee : fsm_actor<testee> {
+struct testee : sb_actor<testee> {
     actor_ptr parent;
     behavior init_state;
     testee(const actor_ptr& pptr) : parent(pptr) {

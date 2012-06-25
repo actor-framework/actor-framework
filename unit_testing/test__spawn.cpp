@@ -13,7 +13,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/factory.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/fsm_actor.hpp"
+#include "cppa/sb_actor.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/event_based_actor.hpp"
@@ -27,7 +27,7 @@ using namespace cppa;
 
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
 
-struct simple_mirror : fsm_actor<simple_mirror> {
+struct simple_mirror : sb_actor<simple_mirror> {
 
     behavior init_state = (
         others() >> []() {
@@ -91,9 +91,9 @@ struct event_testee : public fsm_actor<event_testee> {
 
 #else
 
-class event_testee : public fsm_actor<event_testee> {
+class event_testee : public sb_actor<event_testee> {
 
-    friend class fsm_actor<event_testee>;
+    friend class sb_actor<event_testee>;
 
     behavior wait4string;
     behavior wait4float;
@@ -138,7 +138,7 @@ class event_testee : public fsm_actor<event_testee> {
 
 // quits after 5 timeouts
 event_based_actor* event_testee2() {
-    struct impl : fsm_actor<impl> {
+    struct impl : sb_actor<impl> {
         behavior wait4timeout(int remaining) {
             return (
                 after(std::chrono::milliseconds(50)) >> [=]() {
@@ -155,7 +155,7 @@ event_based_actor* event_testee2() {
     return new impl;
 }
 
-struct chopstick : public fsm_actor<chopstick> {
+struct chopstick : public sb_actor<chopstick> {
 
     behavior taken_by(actor_ptr hakker) {
         return (
