@@ -86,6 +86,10 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
     event_based_actor();
 
+    bool has_behavior() {
+        return m_bhvr_stack.empty() == false;
+    }
+
     // provoke compiler errors for usage of receive() and related functions
 
     /**

@@ -63,6 +63,8 @@ class scheduled_actor : public local_actor {
 
     scheduled_actor* attach_to_scheduler(scheduler* sched);
 
+    virtual bool has_behavior() = 0;
+
  protected:
 
     scheduler* m_scheduler;
@@ -70,6 +72,8 @@ class scheduled_actor : public local_actor {
     bool initialized();
 
 };
+
+typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
 
 } // namespace cppa
 

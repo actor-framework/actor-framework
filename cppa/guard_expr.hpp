@@ -726,7 +726,12 @@ struct mutable_gref_wrapped<T&> {
 
 // finally ...
 
-namespace placeholders { namespace {
+namespace placeholders {
+
+// doxygen cannot handle anonymous namespaces
+#ifndef CPPA_DOCUMENTATION
+namespace {
+#endif // CPPA_DOCUMENTATION
 
 constexpr guard_placeholder<0> _x1;
 constexpr guard_placeholder<1> _x2;
@@ -738,7 +743,12 @@ constexpr guard_placeholder<6> _x7;
 constexpr guard_placeholder<7> _x8;
 constexpr guard_placeholder<8> _x9;
 
-} } // namespace placeholders::<anonymous>
+// doxygen cannot handle anonymous namespaces
+#ifndef CPPA_DOCUMENTATION
+} // namespace <anonymous>
+#endif // CPPA_DOCUMENTATION
+
+} // namespace placeholders
 
 } // namespace cppa
 

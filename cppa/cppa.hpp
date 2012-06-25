@@ -40,18 +40,19 @@
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/self.hpp"
-#include "cppa/cow_tuple.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/receive.hpp"
+#include "cppa/factory.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/fsm_actor.hpp"
-#include "cppa/local_actor.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
 #include "cppa/event_based_actor.hpp"
@@ -123,17 +124,24 @@
  * features.
  *
  * @namespace cppa
- * @brief This is the root namespace of libcppa.
- *
- * Thie @b cppa namespace contains all functions and classes to
- * implement Actor based applications.
+ * @brief Root namespace of libcppa.
  *
  * @namespace cppa::util
- * @brief This namespace contains utility classes and metaprogramming
+ * @brief Contains utility classes and metaprogramming
  *        utilities used by the libcppa implementation.
  *
  * @namespace cppa::intrusive
- * @brief This namespace contains intrusive container implementations.
+ * @brief Contains intrusive container implementations.
+ *
+ * @namespace cppa::factory
+ * @brief Contains factory functions to create actors from lambdas or
+ *        other functors.
+ *
+ * @namespace cppa::exit_reason
+ * @brief Contains all predefined exit reasons.
+ *
+ * @namespace cppa::placeholders
+ * @brief Contains the guard placeholders @p _x1 to @p _x9.
  *
  * @defgroup CopyOnWrite Copy-on-write optimization.
  * @p libcppa uses a copy-on-write optimization for its message
@@ -246,16 +254,13 @@
  * to define patterns:
  *
  * @code
- * receive
- * (
- *     on(atom("hello"), val<std::string>()) >> [](const std::string& msg)
- *     {
+ * receive (
+ *     on(atom("hello"), val<std::string>()) >> [](const std::string& msg) {
  *         cout << "received hello message: " << msg << endl;
  *     },
- *     on(atom("compute"), val<int>(), val<int>(), val<int>()>() >> [](int i0, int i1, int i2)
- *     {
+ *     on(atom("compute"), val<int>(), val<int>()>() >> [](int i0, int i1) {
  *         // send our result back to the sender of this messages
- *         reply(atom("result"), i0 + i1 + i2);
+ *         reply(atom("result"), i0 + i1);
  *     }
  * );
  * @endcode
@@ -270,16 +275,12 @@
  *
  * Example actor:
  * @code
- * void math_actor()
- * {
- *     receive_loop
- *     (
- *         on<atom("plus"), int, int>() >> [](int a, int b)
- *         {
+ * void math_actor() {
+ *     receive_loop (
+ *         on<atom("plus"), int, int>() >> [](int a, int b) {
  *             reply(atom("result"), a + b);
  *         },
- *         on<atom("minus"), int, int>() >> [](int a, int b)
- *         {
+ *         on<atom("minus"), int, int>() >> [](int a, int b) {
  *             reply(atom("result"), a - b);
  *         }
  *     );
@@ -307,10 +308,8 @@
  * @code
  * // receive two integers
  * vector<int> received_values;
- * receive_while([&]() { return received_values.size() < 2; })
- * (
- *     on<int>() >> [](int value)
- *     {
+ * receive_while([&]() { return received_values.size() < 2; }) (
+ *     on<int>() >> [](int value) {
  *         received_values.push_back(value);
  *     }
  * );
@@ -322,8 +321,7 @@
  * @code
  * std::vector<int> vec {1, 2, 3, 4};
  * auto i = vec.begin();
- * receive_for(i, vec.end())
- * (
+ * receive_for(i, vec.end()) (
  *     on(atom("get")) >> [&]() { reply(atom("result"), *i); }
  * );
  * @endcode
@@ -335,10 +333,8 @@
  * @code
  * // receive ints until zero was received
  * vector<int> received_values;
- * do_receive
- * (
- *     on<int>() >> [](int value)
- *     {
+ * do_receive (
+ *     on<int>() >> [](int value) {
  *         received_values.push_back(value);
  *     }
  * )
@@ -354,11 +350,9 @@
  *
  * @code
  * delayed_send(self, std::chrono::seconds(1), atom("poll"));
- * receive_loop
- * (
+ * receive_loop (
  *     // ...
- *     on<atom("poll")>() >> []()
- *     {
+ *     on<atom("poll")>() >> []() {
  *         // ... poll something ...
  *         // and do it again after 1sec
  *         delayed_send(self, std::chrono::seconds(1), atom("poll"));
@@ -392,8 +386,7 @@
  * // x has the type cppa::tuple<std::string, std::string>
  * auto x = make_cow_tuple("hello", "tuple");
  *
- * receive
- * (
+ * receive (
  *     // equal to: on(std::string("hello actor!"))
  *     on("hello actor!") >> []() { }
  * );
@@ -486,9 +479,11 @@ struct spawn_fwd_<self_type> {
  */
 template<scheduling_hint Hint, typename F, typename Arg0, typename... Args>
 inline actor_ptr spawn(F bhvr, Arg0&& arg0, Args&&... args) {
-    return spawn<Hint>(std::bind(std::move(bhvr),
-                                 spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                                 spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
+    return spawn<Hint>(
+                std::bind(
+                    std::move(bhvr),
+                    spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                    spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
 }
 
 /**

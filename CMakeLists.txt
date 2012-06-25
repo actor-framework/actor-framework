@@ -27,6 +27,7 @@ set(LIBCPPA_SRC
     src/empty_tuple.cpp
     src/event_based_actor.cpp
     src/exception.cpp
+    src/factory.cpp
     src/fiber.cpp
     src/group.cpp
     src/group_manager.cpp

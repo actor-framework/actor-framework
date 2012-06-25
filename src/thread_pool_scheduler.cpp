@@ -195,30 +195,36 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor* what,
+actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what,
                                             bool push_to_queue) {
-    inc_actor_count();
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    intrusive_ptr<scheduled_actor> ctx(what);
-    ctx->ref();
-    if (push_to_queue) m_queue.push_back(ctx.get());
-    return std::move(ctx);
+    if (what->has_behavior()) {
+        inc_actor_count();
+        what->ref();
+        if (push_to_queue) m_queue.push_back(what.get());
+    }
+    else {
+        what->on_exit();
+    }
+    return std::move(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* what) {
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* ptr) {
     // do NOT push event-based actors to the queue on startup
-    return spawn_impl(what->attach_to_scheduler(this), false);
+    scheduled_actor_ptr what{ptr};
+    what->attach_to_scheduler(this);
+    return spawn_impl(std::move(what), false);
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
+actor_ptr thread_pool_scheduler::spawn(std::function<void()> bhvr,
                                        scheduling_hint hint) {
     if (hint == scheduled) {
-        auto new_actor = new context_switching_actor(std::move(what));
-        return spawn_impl(new_actor->attach_to_scheduler(this));
+        scheduled_actor_ptr ptr{new context_switching_actor(std::move(bhvr))};
+        ptr->attach_to_scheduler(this);
+        return spawn_impl(std::move(ptr));
     }
     else {
-        return mock_scheduler::spawn_impl(std::move(what));
+        return mock_scheduler::spawn_impl(std::move(bhvr));
     }
 }
 #else

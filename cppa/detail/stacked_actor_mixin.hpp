@@ -92,6 +92,12 @@ class stacked_actor_mixin : public Base {
         }
     }
 
+    virtual bool has_behavior() {
+        return     static_cast<bool>(m_behavior)
+                || (   static_cast<bool>(m_bhvr_stack_ptr)
+                    && m_bhvr_stack_ptr->empty() == false);
+    }
+
  private:
 
     std::function<void()> m_behavior;

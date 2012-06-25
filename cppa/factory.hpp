@@ -28,32 +28,64 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#ifndef CPPA_FACTORY_HPP
+#define CPPA_FACTORY_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/detail/event_based_actor_factory.hpp"
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
+namespace cppa { namespace factory {
+
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @brief Returns a factory for event-based actors using @p fun as
+ *        implementation for {@link cppa::event_based_actor::init() init()}.
+ *
+ * @p fun must take pointer arguments only. The factory creates an event-based
+ * actor implementation with member variables according to the functor's
+ * signature, as shown in the example below.
+ *
+ * @code
+ * auto f = factory::event_based([](int* a, int* b) { ... });
+ * auto actor1 = f.spawn();
+ * auto actor2 = f.spawn(1);
+ * auto actor3 = f.spawn(1, 2);
+ * @endcode
+ *
+ * The arguments @p a and @p b will point to @p int member variables of the
+ * actor. All member variables are initialized using the default constructor
+ * unless an initial value is passed to @p spawn.
+ */
+template<typename InitFun>
+auto event_based(InitFun fun);
+
+/**
+ * @brief Returns a factory for event-based actors using @p fun0 as
+ *        implementation for {@link cppa::event_based_actor::init() init()}
+ *        and @p fun1 as implementation for
+ *        {@link cppa::event_based_actor::on_exit() on_exit()}.
+ */
+template<typename InitFun, OnExitFun>
+auto event_based(InitFun fun0, OnExitFun fun1);
+
+#else // CPPA_DOCUMENTATION
+
+void default_cleanup();
+
+template<typename InitFun>
+inline typename detail::ebaf_from_functor<InitFun, void (*)()>::type
+event_based(InitFun init) {
+    return {std::move(init), default_cleanup};
 }
 
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue(partial_function&) { }
-void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) { }
-
-bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&) {
-    return false;
+template<typename InitFun, typename OnExitFun>
+inline typename detail::ebaf_from_functor<InitFun, OnExitFun>::type
+event_based(InitFun init, OnExitFun on_exit) {
+    return {std::move(init), on_exit};
 }
 
-bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
-    return false;
-}
+#endif // CPPA_DOCUMENTATION
 
-void scheduled_actor_dummy::detach(const attachable::token&) { }
-bool scheduled_actor_dummy::attach(attachable*) { return false; }
-void scheduled_actor_dummy::unbecome() { }
-void scheduled_actor_dummy::do_become(behavior*, bool, bool) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+} } // namespace cppa::factory
 
-} } // namespace cppa::detail
+#endif // CPPA_FACTORY_HPP

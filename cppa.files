@@ -262,3 +262,6 @@ cppa/detail/receive_policy.hpp
 cppa/detail/behavior_stack.hpp
 src/behavior_stack.cpp
 cppa/detail/stacked_actor_mixin.hpp
+cppa/detail/event_based_actor_factory.hpp
+cppa/factory.hpp
+src/factory.cpp
