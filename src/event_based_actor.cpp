@@ -62,8 +62,9 @@ resume_result event_based_actor::resume(util::fiber*) {
             if (!e) {
                 m_state.store(abstract_scheduled_actor::about_to_block);
                 if (m_mailbox.can_fetch_more() == false) {
-                    switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                                   abstract_scheduled_actor::blocked)) {
+                    switch (compare_exchange_state(
+                                abstract_scheduled_actor::about_to_block,
+                                abstract_scheduled_actor::blocked)) {
                         case abstract_scheduled_actor::ready: {
                             break;
                         }
@@ -75,7 +76,7 @@ resume_result event_based_actor::resume(util::fiber*) {
                 }
             }
             else {
-                if (m_recv_policy.invoke(this, e, current_behavior())) {
+                if (m_policy.invoke(this, e, get_behavior())) {
                     // try to match cached message before receiving new ones
                     do {
                         m_bhvr_stack.cleanup();
@@ -83,7 +84,7 @@ resume_result event_based_actor::resume(util::fiber*) {
                             done_cb();
                             return resume_result::actor_done;
                         }
-                    } while (m_recv_policy.invoke_from_cache(this, current_behavior()));
+                    } while (m_policy.invoke_from_cache(this, get_behavior()));
                 }
             }
         }
@@ -94,13 +95,15 @@ resume_result event_based_actor::resume(util::fiber*) {
     return resume_result::actor_done;
 }
 
-void event_based_actor::do_become(behavior* bhvr,
-                                  bool has_ownership,
-                                  bool discard_old_bhvr) {
+bool event_based_actor::has_behavior() {
+    return m_bhvr_stack.empty() == false;
+}
+
+void event_based_actor::do_become(behavior* ptr, bool owner, bool discard_old) {
     reset_timeout();
-    request_timeout(bhvr->timeout());
-    if (discard_old_bhvr) m_bhvr_stack.pop_back();
-    m_bhvr_stack.push_back(bhvr, has_ownership);
+    request_timeout(ptr->timeout());
+    if (discard_old) m_bhvr_stack.pop_back();
+    m_bhvr_stack.push_back(ptr, owner);
 }
 
 void event_based_actor::quit(std::uint32_t reason) {

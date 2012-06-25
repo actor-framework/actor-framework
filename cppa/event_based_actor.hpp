@@ -86,9 +86,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
     event_based_actor();
 
-    bool has_behavior() {
-        return m_bhvr_stack.empty() == false;
-    }
+    virtual bool has_behavior();
 
     // provoke compiler errors for usage of receive() and related functions
 
@@ -127,11 +125,11 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         receive(std::forward<Args>(args)...);
     }
 
-    void do_become(behavior* bhvr, bool has_ownership, bool discard_old_bhvr);
+    void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old);
 
  private:
 
-    inline behavior& current_behavior() {
+    inline behavior& get_behavior() {
         CPPA_REQUIRE(m_bhvr_stack.empty() == false);
         return m_bhvr_stack.back();
     }
@@ -143,7 +141,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         m_has_pending_timeout_request = false;
         bhvr.handle_timeout();
         if (m_bhvr_stack.empty() == false) {
-            request_timeout(current_behavior().timeout());
+            request_timeout(get_behavior().timeout());
         }
     }
 
@@ -151,7 +149,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
     // to prevent possible segfaults that can occur if a currently executed
     // lambda gets deleted
     detail::behavior_stack m_bhvr_stack;
-    detail::receive_policy m_recv_policy;
+    detail::receive_policy m_policy;
 
 };
 

@@ -89,10 +89,12 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         if (d.valid()) {
             if (d.is_zero()) {
                 // immediately enqueue timeout
-                enqueue(nullptr, make_any_tuple(atom("TIMEOUT"), ++m_active_timeout_id));
+                enqueue(nullptr, make_any_tuple(atom("TIMEOUT"),
+                                                ++m_active_timeout_id));
             }
             else {
-                get_scheduler()->delayed_send(this, d, atom("TIMEOUT"), ++m_active_timeout_id);
+                get_scheduler()->delayed_send(this, d, atom("TIMEOUT"),
+                                              ++m_active_timeout_id);
                 m_has_pending_timeout_request = true;
             }
         }
@@ -162,16 +164,16 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
  private:
 
     bool enqueue_node(typename super::mailbox_element* node,
-                      int target_state = ready) {
+                      int next_state = ready) {
         CPPA_REQUIRE(node->marked == false);
         if (this->m_mailbox._push_back(node)) {
             for (;;) {
                 int state = m_state.load();
                 switch (state) {
                     case blocked: {
-                        if (m_state.compare_exchange_weak(state, target_state)) {
+                        if (m_state.compare_exchange_weak(state, next_state)) {
                             CPPA_REQUIRE(this->m_scheduler != nullptr);
-                            if (target_state == ready) {
+                            if (next_state == ready) {
                                 this->m_scheduler->enqueue(this);
                             }
                             return true;
