@@ -185,8 +185,10 @@ int main(int, char**) {
     std::vector<std::string> names = { "Plato", "Hume", "Kant",
                                        "Nietzsche", "Descartes" };
     for (size_t i = 0; i < 5; ++i) {
-        spawn(new philosopher(names[i], chopsticks[i],
-                              chopsticks[(i+1)%5])    )->join(dinner_club);
+        spawn_in_group(dinner_club,
+                       new philosopher(names[i],
+                                       chopsticks[i],
+                                       chopsticks[(i+1)%5]));
     }
     // tell philosophers to start thinking
     send(dinner_club, atom("think"));

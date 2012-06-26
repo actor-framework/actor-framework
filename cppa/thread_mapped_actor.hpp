@@ -47,6 +47,7 @@
 #include "cppa/pattern.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/intrusive_ptr.hpp"
 #include "cppa/detail/abstract_actor.hpp"
 
 #include "cppa/intrusive/singly_linked_list.hpp"
@@ -140,6 +141,8 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
     }
 
 };
+
+typedef intrusive_ptr<thread_mapped_actor> thread_mapped_actor_ptr;
 
 #endif // CPPA_DOCUMENTATION
 

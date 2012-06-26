@@ -44,6 +44,11 @@ enum class resume_result {
     actor_done
 };
 
+enum scheduled_actor_type {
+    context_switching_impl,
+    event_based_impl
+};
+
 /**
  * @brief A base class for cooperatively scheduled actors.
  */
@@ -61,9 +66,11 @@ class scheduled_actor : public local_actor {
     // called from worker thread
     virtual resume_result resume(util::fiber* from) = 0;
 
-    scheduled_actor* attach_to_scheduler(scheduler* sched);
+    void attach_to_scheduler(scheduler* sched);
 
     virtual bool has_behavior() = 0;
+
+    virtual scheduled_actor_type impl_type() = 0;
 
  protected:
 

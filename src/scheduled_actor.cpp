@@ -36,7 +36,7 @@ namespace cppa {
 scheduled_actor::scheduled_actor(bool enable_chained_send)
 : local_actor(enable_chained_send), next(nullptr), m_scheduler(nullptr) { }
 
-scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
+void scheduled_actor::attach_to_scheduler(scheduler* sched) {
     CPPA_REQUIRE(sched != nullptr);
     // init is called by the spawning actor, manipulate self to
     // point to this actor
@@ -47,7 +47,6 @@ scheduled_actor* scheduled_actor::attach_to_scheduler(scheduler* sched) {
     // make sure scheduler is not set until init() is done
     std::atomic_thread_fence(std::memory_order_seq_cst);
     m_scheduler = sched;
-    return this;
 }
 
 bool scheduled_actor::initialized() {

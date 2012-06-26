@@ -23,7 +23,6 @@
 #include "cppa/detail/demangle.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 #define CPPA_TEST_CATCH_BLOCK()                                                \
@@ -150,10 +149,6 @@ int main(int argc, char** argv) {
             if (sched == "thread_pool_scheduler") {
                 cout << "using thread_pool_scheduler" << endl;
                 set_scheduler(new cppa::detail::thread_pool_scheduler);
-            }
-            else if (sched == "mock_scheduler") {
-                cout << "using mock_scheduler" << endl;
-                set_scheduler(new cppa::detail::mock_scheduler);
             }
             else {
                 cerr << "unknown scheduler: " << sched << endl;

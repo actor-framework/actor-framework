@@ -84,6 +84,10 @@ detail::recursive_queue_node* context_switching_actor::receive_node() {
     return e;
 }
 
+scheduled_actor_type context_switching_actor::impl_type() {
+    return context_switching_impl;
+}
+
 resume_result context_switching_actor::resume(util::fiber* from) {
     using namespace detail;
     scoped_self_setter sss{this};

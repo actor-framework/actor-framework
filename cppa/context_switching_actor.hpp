@@ -85,6 +85,8 @@ class context_switching_actor : public detail::stacked_actor_mixin<
 
     resume_result resume(util::fiber* from); //override
 
+    scheduled_actor_type impl_type();
+
  protected:
 
     context_switching_actor();

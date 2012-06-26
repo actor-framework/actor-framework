@@ -35,9 +35,9 @@
 #include <iostream>
 
 #include "cppa/event_based_actor.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/context_switching_actor.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
@@ -195,12 +195,35 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what,
-                                            bool push_to_queue) {
+actor_ptr thread_pool_scheduler::spawn_as_thread(void_function fun,
+                                                 init_callback cb,
+                                                 bool hidden) {
+    if (!hidden) inc_actor_count();
+    thread_mapped_actor_ptr ptr{new thread_mapped_actor(std::move(fun))};
+    ptr->init();
+    ptr->initialized(true);
+    cb(ptr.get());
+    std::thread([hidden, ptr]() {
+        scoped_self_setter sss{ptr.get()};
+        try {
+            ptr->run();
+            ptr->on_exit();
+        }
+        catch (...) { }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        if (!hidden) dec_actor_count();
+    }).detach();
+    return ptr;
+}
+
+actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what) {
     if (what->has_behavior()) {
         inc_actor_count();
         what->ref();
-        if (push_to_queue) m_queue.push_back(what.get());
+        // event-based actors are not pushed to the job queue on startup
+        if (what->impl_type() == context_switching_impl) {
+            m_queue.push_back(what.get());
+        }
     }
     else {
         what->on_exit();
@@ -208,29 +231,53 @@ actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what,
     return std::move(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* ptr) {
-    // do NOT push event-based actors to the queue on startup
-    scheduled_actor_ptr what{ptr};
-    what->attach_to_scheduler(this);
-    return spawn_impl(std::move(what), false);
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw) {
+    scheduled_actor_ptr ptr{raw};
+    ptr->attach_to_scheduler(this);
+    return spawn_impl(std::move(ptr));
+}
+
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw, init_callback cb) {
+    scheduled_actor_ptr ptr{raw};
+    ptr->attach_to_scheduler(this);
+    cb(ptr.get());
+    return spawn_impl(std::move(ptr));
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-actor_ptr thread_pool_scheduler::spawn(std::function<void()> bhvr,
-                                       scheduling_hint hint) {
-    if (hint == scheduled) {
-        scheduled_actor_ptr ptr{new context_switching_actor(std::move(bhvr))};
+actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint sh) {
+    if (sh == scheduled) {
+        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
         ptr->attach_to_scheduler(this);
         return spawn_impl(std::move(ptr));
     }
     else {
-        return mock_scheduler::spawn_impl(std::move(bhvr));
+        return spawn_as_thread(std::move(fun),
+                               [](local_actor*) { },
+                               sh == detached_and_hidden);
+    }
+}
+actor_ptr thread_pool_scheduler::spawn(void_function fun,
+                                       scheduling_hint sh,
+                                       init_callback init_cb) {
+    if (sh == scheduled) {
+        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+        ptr->attach_to_scheduler(this);
+        init_cb(ptr.get());
+        return spawn_impl(std::move(ptr));
+    }
+    else {
+        return spawn_as_thread(std::move(fun), std::move(init_cb), sh == detached_and_hidden);
     }
 }
 #else
-actor_ptr thread_pool_scheduler::spawn(std::function<void()> what,
-                                       scheduling_hint) {
-    return mock_scheduler::spawn_impl(std::move(what));
+actor_ptr thread_pool_scheduler::spawn(void_function what, scheduling_hint) {
+    return spawn_as_thread(std::move(what), [](local_actor*) { });
+}
+actor_ptr thread_pool_scheduler::spawn(void_function what,
+                                       scheduling_hint,
+                                       init_callback init_cb) {
+    return spawn_as_thread(std::move(what), std::move(init_cb));
 }
 #endif
 

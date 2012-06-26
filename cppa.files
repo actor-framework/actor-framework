@@ -60,7 +60,6 @@ cppa/detail/list_member.hpp
 cppa/detail/mailman.hpp
 cppa/detail/map_member.hpp
 cppa/detail/matches.hpp
-cppa/detail/mock_scheduler.hpp
 cppa/detail/native_socket.hpp
 cppa/detail/network_manager.hpp
 cppa/detail/object_array.hpp
@@ -212,7 +211,6 @@ src/group.cpp
 src/group_manager.cpp
 src/local_actor.cpp
 src/mailman.cpp
-src/mock_scheduler.cpp
 src/native_socket.cpp
 src/network_manager.cpp
 src/object.cpp

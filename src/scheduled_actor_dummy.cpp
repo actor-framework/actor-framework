@@ -32,15 +32,20 @@
 
 namespace cppa { namespace detail {
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
-}
-
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue(partial_function&) { }
 void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) { }
+void scheduled_actor_dummy::detach(const attachable::token&) { }
+bool scheduled_actor_dummy::attach(attachable*) { return false; }
+void scheduled_actor_dummy::unbecome() { }
+void scheduled_actor_dummy::do_become(behavior*, bool, bool) { }
+bool scheduled_actor_dummy::has_behavior() { return false; }
+
+resume_result scheduled_actor_dummy::resume(util::fiber*) {
+    return resume_result::actor_blocked;
+}
 
 bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&) {
     return false;
@@ -50,10 +55,8 @@ bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
     return false;
 }
 
-void scheduled_actor_dummy::detach(const attachable::token&) { }
-bool scheduled_actor_dummy::attach(attachable*) { return false; }
-void scheduled_actor_dummy::unbecome() { }
-void scheduled_actor_dummy::do_become(behavior*, bool, bool) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+scheduled_actor_type scheduled_actor_dummy::impl_type() {
+    return event_based_impl;
+}
 
 } } // namespace cppa::detail

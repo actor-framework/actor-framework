@@ -51,6 +51,10 @@ namespace cppa {
 
 class scheduled_actor;
 class scheduler_helper;
+
+typedef std::function<void()> void_function;
+typedef std::function<void(local_actor*)> init_callback;
+
 /**
  * @brief
  */
@@ -81,16 +85,32 @@ class scheduler {
     virtual void enqueue(scheduled_actor*) = 0;
 
     /**
-     * @brief Spawns a new actor that executes <code>behavior->act()</code>
+     * @brief Spawns a new actor that executes <code>fun()</code>
      *        with the scheduling policy @p hint if possible.
      */
-    virtual actor_ptr spawn(std::function<void()> behavior,
-                            scheduling_hint hint) = 0;
+    virtual actor_ptr spawn(void_function fun, scheduling_hint hint) = 0;
+
+    /**
+     * @brief Spawns a new actor that executes <code>behavior()</code>
+     *        with the scheduling policy @p hint if possible and calls
+     *        <code>init_cb</code> after the actor is initialized but before
+     *        it starts execution.
+     */
+    virtual actor_ptr spawn(void_function fun,
+                            scheduling_hint hint,
+                            init_callback init_cb) = 0;
 
     /**
      * @brief Spawns a new event-based actor.
      */
     virtual actor_ptr spawn(scheduled_actor* what) = 0;
+
+    /**
+     * @brief Spawns a new event-based actor and calls
+     *        <code>init_cb</code> after the actor is initialized but before
+     *        it starts execution.
+     */
+    virtual actor_ptr spawn(scheduled_actor* what, init_callback init_cb) = 0;
 
     /**
      * @brief Informs the scheduler about a converted context

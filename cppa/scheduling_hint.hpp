@@ -47,7 +47,13 @@ enum scheduling_hint {
     /**
      * @brief Indicates that an actor should run in its own thread.
      */
-    detached
+    detached,
+
+    /**
+     * @brief Indicates that an actor should run in its own thread but should
+     *        be ignored by {@link await_others_done()}.
+     */
+    detached_and_hidden
 
 };
 

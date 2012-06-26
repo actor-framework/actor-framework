@@ -38,11 +38,12 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
+#include "cppa/self.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/post_office.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/network_manager.hpp"
 
 namespace {
@@ -64,12 +65,22 @@ struct network_manager_impl : network_manager {
         if (pipe(pipe_fd) != 0) {
             CPPA_CRITICAL("cannot create pipe");
         }
-
+        // create actors
         m_post_office.reset(new thread_mapped_actor);
-        m_post_office_thread = mock_scheduler::spawn_hidden_impl(std::bind(post_office_loop, pipe_fd[0]), m_post_office);
-
         m_mailman.reset(new thread_mapped_actor);
-        m_mailman_thread = mock_scheduler::spawn_hidden_impl(mailman_loop, m_mailman);
+        // store some data in local variables for lambdas
+        int pipe_fd0 = pipe_fd[0];
+        auto po_ptr = m_post_office;
+        auto mm_ptr = m_mailman;
+        // start threads
+        m_post_office_thread = std::thread([pipe_fd0, po_ptr]() {
+            scoped_self_setter sss{po_ptr.get()};
+            post_office_loop(pipe_fd0);
+        });
+        m_mailman_thread = std::thread([mm_ptr]() {
+            scoped_self_setter sss{mm_ptr.get()};
+            mailman_loop();
+        });
     }
 
     void stop() { // override

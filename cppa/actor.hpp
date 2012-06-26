@@ -62,8 +62,6 @@ class actor : public channel {
 
  public:
 
-    ~actor();
-
     /**
      * @brief Enqueues @p msg to the actor's mailbox and returns true if
      *        this actor is an scheduled actor that successfully changed
@@ -108,22 +106,6 @@ class actor : public channel {
                 typename std::enable_if<
                     std::is_base_of<attachable,T>::value
                 >::type* = 0);
-
-    /**
-     * @brief Forces this actor to subscribe to the group @p what.
-     *
-     * The group will be unsubscribed if the actor finishes execution.
-     * @param what Group instance that should be joined.
-     */
-    void join(group_ptr& what);
-
-    /**
-     * @brief Forces this actor to leave the group @p what.
-     * @param what Joined group that should be leaved.
-     * @note Groups are leaved automatically if the Actor finishes
-     *       execution.
-     */
-    void leave(const group_ptr& what);
 
     /**
      * @brief Links this actor to @p other.

@@ -82,11 +82,13 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
     void unbecome();
 
+    bool has_behavior();
+
+    scheduled_actor_type impl_type();
+
  protected:
 
     event_based_actor();
-
-    virtual bool has_behavior();
 
     // provoke compiler errors for usage of receive() and related functions
 

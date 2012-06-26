@@ -424,11 +424,11 @@ namespace cppa {
 /**
  * @ingroup ActorManagement
  * @brief Spawns a new context-switching actor.
- * @param whom Instance of an event-based actor.
+ * @param impl Instance of an event-based actor.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-inline actor_ptr spawn(scheduled_actor* whom) {
-    return get_scheduler()->spawn(whom);
+inline actor_ptr spawn(scheduled_actor* impl) {
+    return get_scheduler()->spawn(impl);
 }
 
 /**
@@ -439,8 +439,8 @@ inline actor_ptr spawn(scheduled_actor* whom) {
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<scheduling_hint Hint>
-inline actor_ptr spawn(std::function<void()> bhvr) {
-    return get_scheduler()->spawn(std::move(bhvr), Hint);
+inline actor_ptr spawn(void_function fun) {
+    return get_scheduler()->spawn(std::move(fun), Hint);
 }
 
 /**
@@ -450,8 +450,8 @@ inline actor_ptr spawn(std::function<void()> bhvr) {
  * @param bhvr A function implementing the actor's behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-inline actor_ptr spawn(std::function<void()> bhvr) {
-    return get_scheduler()->spawn(std::move(bhvr), scheduled);
+inline actor_ptr spawn(void_function fun) {
+    return get_scheduler()->spawn(std::move(fun), scheduled);
 }
 
 // forwards self_type as actor_ptr
@@ -477,11 +477,11 @@ struct spawn_fwd_<self_type> {
  * @param args Further argumetns to @p bhvr.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<scheduling_hint Hint, typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F bhvr, Arg0&& arg0, Args&&... args) {
+template<scheduling_hint Hint, typename Fun, typename Arg0, typename... Args>
+inline actor_ptr spawn(Fun fun, Arg0&& arg0, Args&&... args) {
     return spawn<Hint>(
                 std::bind(
-                    std::move(bhvr),
+                    std::move(fun),
                     spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                     spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
 }
@@ -496,11 +496,48 @@ inline actor_ptr spawn(F bhvr, Arg0&& arg0, Args&&... args) {
  * @param args Further argumetns to @p bhvr.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<typename F, typename Arg0, typename... Args>
-inline actor_ptr spawn(F&& bhvr, Arg0&& arg0, Args&&... args) {
-    return spawn<scheduled>(std::forward<F>(bhvr),
+template<typename Fun, typename Arg0, typename... Args>
+inline actor_ptr spawn(Fun&& fun, Arg0&& arg0, Args&&... args) {
+    return spawn<scheduled>(std::forward<Fun>(fun),
                             std::forward<Arg0>(arg0),
                             std::forward<Args>(args)...);
+}
+
+inline actor_ptr spawn_in_group(const group_ptr& grp, event_based_actor* impl) {
+    return get_scheduler()->spawn(impl, [grp](local_actor* ptr) {
+        ptr->join(grp);
+    });
+}
+
+template<scheduling_hint Hint>
+inline actor_ptr spawn_in_group(const group_ptr& grp, void_function fun) {
+    return get_scheduler()->spawn(std::move(fun), Hint, [grp](local_actor* ptr){
+        ptr->join(grp);
+    });
+}
+
+inline actor_ptr spawn_in_group(const group_ptr& grp, void_function fun) {
+    return spawn_in_group<scheduled>(grp, std::move(fun));
+}
+
+template<scheduling_hint Hint, typename Fun, typename Arg0, typename... Args>
+inline actor_ptr spawn_in_group(const group_ptr& grp,
+                                Fun fun, Arg0&& arg0, Args&&... args) {
+    return spawn_in_group<Hint>(
+                grp,
+                std::bind(
+                    std::move(fun),
+                    spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                    spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
+}
+
+template<typename Fun, typename Arg0, typename... Args>
+inline actor_ptr spawn_in_group(const group_ptr& grp,
+                                Fun&& fun, Arg0&& arg0, Args&&... args) {
+    return spawn_in_group<scheduled>(grp,
+                                     std::forward<Fun>(fun),
+                                     std::forward<Arg0>(arg0),
+                                     std::forward<Args>(args)...);
 }
 
 #ifdef CPPA_DOCUMENTATION

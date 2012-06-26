@@ -78,6 +78,22 @@ class local_actor : public actor {
  public:
 
     /**
+     * @brief Causes this actor to subscribe to the group @p what.
+     *
+     * The group will be unsubscribed if the actor finishes execution.
+     * @param what Group instance that should be joined.
+     */
+    void join(const group_ptr& what);
+
+    /**
+     * @brief Causes this actor to leave the group @p what.
+     * @param what Joined group that should be leaved.
+     * @note Groups are leaved automatically if the Actor finishes
+     *       execution.
+     */
+    void leave(const group_ptr& what);
+
+    /**
      * @brief Finishes execution of this actor.
      *
      * Causes this actor to send an exit message to all of its

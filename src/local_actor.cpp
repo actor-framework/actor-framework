@@ -84,4 +84,15 @@ void local_actor::on_exit() { }
 
 void local_actor::init() { }
 
+void local_actor::join(const group_ptr& what) {
+    if (!what) return;
+    attach(what->subscribe(this));
+}
+
+void local_actor::leave(const group_ptr& what) {
+    if (!what) return;
+    attachable::token group_token(typeid(group::unsubscriber), what.get());
+    detach(group_token);
+}
+
 } // namespace cppa

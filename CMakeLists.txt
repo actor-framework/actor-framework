@@ -33,7 +33,6 @@ set(LIBCPPA_SRC
     src/group_manager.cpp
     src/local_actor.cpp
     src/mailman.cpp
-    src/mock_scheduler.cpp
     src/native_socket.cpp
     src/network_manager.cpp
     src/object.cpp

@@ -49,6 +49,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     void unbecome();
     void do_become(behavior*, bool, bool);
     bool has_behavior();
+    scheduled_actor_type impl_type();
 };
 
 } } // namespace cppa::detail

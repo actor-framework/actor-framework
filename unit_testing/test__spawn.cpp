@@ -302,6 +302,107 @@ std::string behavior_test(actor_ptr et) {
     return result;
 }
 
+#ifdef __clang__
+class fixed_stack : public sb_actor<fixed_stack> {
+
+    friend class sb_actor<fixed_stack>;
+
+    static constexpr size_t max_size = 10;
+
+    std::vector<int> data;
+
+    behavior full = (
+        on(atom("push"), arg_match) >> [=](int) { },
+        on(atom("pop")) >> [=]() {
+            reply(atom("ok"), data.back());
+            data.pop_back();
+            become(&filled);
+        }
+    );
+
+    behavior filled = (
+        on(atom("push"), arg_match) >> [=](int what) {
+            data.push_back(what);
+            if (data.size() == max_size)
+                become(&full);
+        },
+        on(atom("pop")) >> [=]() {
+            reply(atom("ok"), data.back());
+            data.pop_back();
+            if (data.empty())
+                become(&empty);
+        }
+    );
+
+    behavior empty = (
+        on(atom("push"), arg_match) >> [=](int what) {
+            data.push_back(what);
+            become(&filled);
+        },
+        on(atom("pop")) >> [=]() {
+            reply(atom("failure"));
+        }
+    );
+
+    behavior& init_state = empty;
+
+};
+#else
+class fixed_stack : public sb_actor<fixed_stack> {
+
+    friend class sb_actor<fixed_stack>;
+
+    static constexpr size_t max_size = 10;
+
+    std::vector<int> data;
+
+    behavior full;
+    behavior filled;
+    behavior empty;
+    behavior& init_state;
+
+ public:
+
+    fixed_stack() : init_state(empty) {
+
+        full = (
+            on(atom("push"), arg_match) >> [=](int) { },
+            on(atom("pop")) >> [=]() {
+                reply(atom("ok"), data.back());
+                data.pop_back();
+                become(&filled);
+            }
+        );
+
+        filled = (
+            on(atom("push"), arg_match) >> [=](int what) {
+                data.push_back(what);
+                if (data.size() == max_size)
+                    become(&full);
+            },
+            on(atom("pop")) >> [=]() {
+                reply(atom("ok"), data.back());
+                data.pop_back();
+                if (data.empty())
+                    become(&empty);
+            }
+        );
+
+        empty = (
+            on(atom("push"), arg_match) >> [=](int what) {
+                data.push_back(what);
+                become(&filled);
+            },
+            on(atom("pop")) >> [=]() {
+                reply(atom("failure"));
+            }
+        );
+
+    }
+
+};
+#endif
+
 size_t test__spawn() {
     using std::string;
     CPPA_TEST(test__spawn);
@@ -401,6 +502,36 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    CPPA_IF_VERBOSE(cout << "test fixed_stack ... " << std::flush);
+    auto st = spawn(new fixed_stack);
+    // push 20 values
+    for (int i = 0; i < 20; ++i) send(st, atom("push"), i);
+    // pop 20 times
+    for (int i = 0; i < 20; ++i) send(st, atom("pop"));
+    // expect 10 failure messages
+    {
+        int i = 0;
+        receive_for(i, 10) (
+            on(atom("failure")) >> []() { }
+        );
+    }
+    // expect 10 {'ok', value} messages
+    {
+        std::vector<int> values;
+        int i = 0;
+        receive_for(i, 10) (
+            on(atom("ok"), arg_match) >> [&](int value) {
+                values.push_back(value);
+            }
+        );
+        std::vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+        CPPA_CHECK(values == expected);
+    }
+    // terminate st
+    send(st, atom("EXIT"), exit_reason::user_defined);
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
     factory::event_based([&]() {
@@ -433,6 +564,32 @@ size_t test__spawn() {
     .spawn(23);
     CPPA_CHECK_EQUAL(3, zombie_init_called);
     CPPA_CHECK_EQUAL(3, zombie_on_exit_called);
+
+    auto f = factory::event_based([](std::string* name) {
+        self->become (
+            on(atom("get_name")) >> [name]() {
+                reply(atom("name"), *name);
+            }
+        );
+    });
+    auto a1 = f.spawn("alice");
+    auto a2 = f.spawn("bob");
+    send(a1, atom("get_name"));
+    receive (
+        on(atom("name"), arg_match) >> [&](const std::string& name) {
+            CPPA_CHECK_EQUAL("alice", name);
+        }
+    );
+    send(a2, atom("get_name"));
+    receive (
+        on(atom("name"), arg_match) >> [&](const std::string& name) {
+            CPPA_CHECK_EQUAL("bob", name);
+        }
+    );
+    auto kill_msg = make_any_tuple(atom("EXIT"), exit_reason::user_defined);
+    a1 << kill_msg;
+    a2 << kill_msg;
+    await_all_others_done();
 
     CPPA_CHECK_EQUAL(behavior_test<testee_actor>(spawn(testee_actor{})), "wait4int");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn(new event_testee)), "wait4int");

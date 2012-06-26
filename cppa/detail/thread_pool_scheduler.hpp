@@ -34,6 +34,7 @@
 #include <thread>
 
 #include "cppa/scheduler.hpp"
+#include "cppa/context_switching_actor.hpp"
 #include "cppa/util/producer_consumer_list.hpp"
 #include "cppa/detail/scheduled_actor_dummy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
@@ -56,7 +57,13 @@ class thread_pool_scheduler : public scheduler {
 
     actor_ptr spawn(scheduled_actor* what);
 
-    actor_ptr spawn(std::function<void()> what, scheduling_hint hint);
+    actor_ptr spawn(scheduled_actor* what, init_callback init_cb);
+
+    actor_ptr spawn(void_function fun, scheduling_hint hint);
+
+    actor_ptr spawn(void_function what,
+                    scheduling_hint hint,
+                    init_callback init_cb);
 
  private:
 
@@ -67,11 +74,27 @@ class thread_pool_scheduler : public scheduler {
     scheduled_actor_dummy m_dummy;
     std::thread m_supervisor;
 
-    actor_ptr spawn_impl(scheduled_actor_ptr what, bool push_to_queue = true);
-
     static void worker_loop(worker*);
     static void supervisor_loop(job_queue*, scheduled_actor*);
 
+    actor_ptr spawn_impl(scheduled_actor_ptr what);
+
+    actor_ptr spawn_as_thread(void_function fun, init_callback cb, bool hidden);
+
+#   ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+    template<typename F>
+    actor_ptr spawn_impl(void_function fun, scheduling_hint sh, F cb) {
+        if (sh == scheduled) {
+            scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+            ptr->attach_to_scheduler(this);
+            cb(ptr.get());
+            return spawn_impl(std::move(ptr));
+        }
+        else {
+            return spawn_as_thread(std::move(fun), std::move(cb));
+        }
+    }
+#   endif
 };
 
 } } // namespace cppa::detail

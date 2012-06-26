@@ -42,7 +42,6 @@
 #include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 

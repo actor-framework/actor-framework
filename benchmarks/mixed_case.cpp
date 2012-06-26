@@ -38,7 +38,6 @@
 #include "cppa/cppa.hpp"
 #include "cppa/match.hpp"
 #include "cppa/sb_actor.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/context_switching_actor.hpp"
 
 using std::cout;

@@ -121,4 +121,8 @@ void event_based_actor::unbecome() {
     m_bhvr_stack.pop_back();
 }
 
+scheduled_actor_type event_based_actor::impl_type() {
+    return event_based_impl;
+}
+
 } // namespace cppa

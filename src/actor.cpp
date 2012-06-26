@@ -73,20 +73,6 @@ actor::actor(const process_information_ptr& pptr)
     }
 }
 
-actor::~actor() {
-}
-
-void actor::join(group_ptr& what) {
-    if (!what) return;
-    attach(what->subscribe(this));
-}
-
-void actor::leave(const group_ptr& what) {
-    if (!what) return;
-    attachable::token group_token(typeid(group::unsubscriber), what.get());
-    detach(group_token);
-}
-
 void actor::link_to(intrusive_ptr<actor>&& other) {
     intrusive_ptr<actor> tmp(std::move(other));
     link_to(tmp);
