@@ -307,7 +307,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
     friend class sb_actor<fixed_stack>;
 
-    static constexpr size_t max_size = 10;
+    size_t max_size;
 
     std::vector<int> data;
 
@@ -346,13 +346,17 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
     behavior& init_state = empty;
 
+ public:
+
+    fixed_stack(size_t max) : max_size(max) { }
+
 };
 #else
 class fixed_stack : public sb_actor<fixed_stack> {
 
     friend class sb_actor<fixed_stack>;
 
-    static constexpr size_t max_size = 10;
+    size_t max_size = 10;
 
     std::vector<int> data;
 
@@ -363,7 +367,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
  public:
 
-    fixed_stack() : init_state(empty) {
+    fixed_stack(size_t max) : max_size(max), init_state(empty) {
 
         full = (
             on(atom("push"), arg_match) >> [=](int) { },
@@ -431,7 +435,7 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    auto mirror = spawn(new simple_mirror);
+    auto mirror = spawn<simple_mirror>();
 
     CPPA_IF_VERBOSE(cout << "test mirror ... " << std::flush);
     send(mirror, "hello mirror");
@@ -459,7 +463,7 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     CPPA_IF_VERBOSE(cout << "chopstick ... " << std::flush);
-    auto cstk = spawn(new chopstick);
+    auto cstk = spawn<chopstick>();
     send(cstk, atom("take"), self);
     receive (
         on(atom("taken")) >> [&]() {
@@ -503,7 +507,7 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     CPPA_IF_VERBOSE(cout << "test fixed_stack ... " << std::flush);
-    auto st = spawn(new fixed_stack);
+    auto st = spawn<fixed_stack>(10);
     // push 20 values
     for (int i = 0; i < 20; ++i) send(st, atom("push"), i);
     // pop 20 times
@@ -591,14 +595,15 @@ size_t test__spawn() {
     a2 << kill_msg;
     await_all_others_done();
 
-    CPPA_CHECK_EQUAL(behavior_test<testee_actor>(spawn(testee_actor{})), "wait4int");
-    CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn(new event_testee)), "wait4int");
+    auto res1 = behavior_test<testee_actor>(spawn(testee_actor{}));
+    CPPA_CHECK_EQUAL(res1, "wait4int");
+    CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");
 
     // create 20,000 actors linked to one single actor
     // and kill them all through killing the link
     auto twenty_thousand = spawn([]() {
         for (int i = 0; i < 20000; ++i) {
-            self->link_to(spawn(new event_testee));
+            self->link_to(spawn<event_testee>());
         }
         receive_loop (
             others() >> []() {

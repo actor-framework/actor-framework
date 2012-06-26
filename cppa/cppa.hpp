@@ -46,10 +46,10 @@
 #include "cppa/factory.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/announce.hpp"
+#include "cppa/sb_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/sb_actor.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
@@ -503,6 +503,11 @@ inline actor_ptr spawn(Fun&& fun, Arg0&& arg0, Args&&... args) {
                             std::forward<Args>(args)...);
 }
 
+template<class ActorImpl, typename... Args>
+inline actor_ptr spawn(Args&&... args) {
+    return spawn(new ActorImpl(std::forward<Args>(args)...));
+}
+
 inline actor_ptr spawn_in_group(const group_ptr& grp, event_based_actor* impl) {
     return get_scheduler()->spawn(impl, [grp](local_actor* ptr) {
         ptr->join(grp);
@@ -538,6 +543,11 @@ inline actor_ptr spawn_in_group(const group_ptr& grp,
                                      std::forward<Fun>(fun),
                                      std::forward<Arg0>(arg0),
                                      std::forward<Args>(args)...);
+}
+
+template<class ActorImpl, typename... Args>
+inline actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
+    return spawn_in_group(grp, new ActorImpl(std::forward<Args>(args)...));
 }
 
 #ifdef CPPA_DOCUMENTATION
