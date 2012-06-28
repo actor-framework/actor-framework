@@ -32,28 +32,23 @@
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace {
-
-inline cppa::detail::empty_tuple* s_empty_tuple() {
-    return cppa::detail::singleton_manager::get_empty_tuple();
-}
-
-} // namespace <anonymous>
-
 namespace cppa {
 
-any_tuple::any_tuple() : m_vals(s_empty_tuple()) {
+namespace {
+inline detail::empty_tuple* s_empty_tuple() {
+    return detail::singleton_manager::get_empty_tuple();
 }
+} // namespace <anonymous>
 
-any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) {
-}
+any_tuple::any_tuple() : m_vals(s_empty_tuple()) { }
+
+any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
 
 any_tuple::any_tuple(any_tuple&& other) : m_vals(s_empty_tuple()) {
     m_vals.swap(other.m_vals);
 }
 
-any_tuple::any_tuple(const cow_ptr<detail::abstract_tuple>& vals) : m_vals(vals) {
-}
+any_tuple::any_tuple(const value_ptr& vals) : m_vals(vals) { }
 
 any_tuple& any_tuple::operator=(any_tuple&& other) {
     m_vals.swap(other.m_vals);

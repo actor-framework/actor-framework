@@ -84,8 +84,6 @@ class uniform_type_info_map {
     // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
     int_map m_ints;
 
-
-
 };
 
 } } // namespace cppa::detail

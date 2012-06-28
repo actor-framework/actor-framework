@@ -38,13 +38,13 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 
+namespace cppa {
+
 namespace {
 
-boost::thread_specific_ptr<cppa::local_actor> t_this_actor(&cppa::self_type::cleanup_fun);
+boost::thread_specific_ptr<local_actor> t_this_actor(&self_type::cleanup_fun);
 
 } // namespace <anonymous>
-
-namespace cppa {
 
 void self_type::cleanup_fun(cppa::local_actor* what) {
     if (what) {

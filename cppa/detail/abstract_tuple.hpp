@@ -87,10 +87,10 @@ class abstract_tuple : public ref_counted {
 
     typedef tuple_iterator<abstract_tuple> const_iterator;
 
-    inline const_iterator begin() const { return {this}; }
+    inline const_iterator  begin() const { return {this}; }
     inline const_iterator cbegin() const { return {this}; }
 
-    inline const_iterator end() const { return {this, size()}; }
+    inline const_iterator  end() const { return {this, size()}; }
     inline const_iterator cend() const { return {this, size()}; }
 
 };

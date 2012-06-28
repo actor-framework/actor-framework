@@ -136,7 +136,8 @@ class string_serializer : public serializer {
                 throw std::runtime_error("expected uint64 value after @atom");
             }
             // write atoms as strings instead of integer values
-            auto av = static_cast<atom_value>(get<std::uint64_t>(value)); (pt_writer(out))(to_string(av));
+            auto av = static_cast<atom_value>(get<std::uint64_t>(value));
+            (pt_writer(out))(to_string(av));
         }
         else {
             value.apply(pt_writer(out));
@@ -202,13 +203,17 @@ class string_deserializer : public deserializer {
     inline std::string::iterator next_delimiter() {
         return std::find_if(m_pos, m_str.end(), [] (char c) -> bool {
             switch (c) {
-             case '(':
-             case ')':
-             case '{':
-             case '}':
-             case ' ':
-             case ',': return true;
-             default : return false;
+                case '(':
+                case ')':
+                case '{':
+                case '}':
+                case ' ':
+                case ',': {
+                    return true;
+                }
+                default: {
+                    return false;
+                }
             }
         });
     }
@@ -284,8 +289,7 @@ class string_deserializer : public deserializer {
     size_t begin_sequence() {
         integrity_check();
         consume('{');
-        auto list_end = std::find(m_pos, m_str.end(), '}');
-        return std::count(m_pos, list_end, ',') + 1;
+        return std::count(m_pos, std::find(m_pos, m_str.end(), '}'), ',') + 1;
     }
 
     void end_sequence() {

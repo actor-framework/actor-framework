@@ -38,8 +38,6 @@
 #include <limits>
 #include <cstring>
 #include <cstdint>
-#include <sstream>
-#include <iostream>
 #include <type_traits>
 
 #include "cppa/atom.hpp"
@@ -64,24 +62,12 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
-using std::cout;
-using std::endl;
-using cppa::util::void_type;
-
-namespace std {
-
-ostream& operator<<(ostream& o, const cppa::actor_ptr&) { return o; }
-istream& operator>>(istream& i, cppa::actor_ptr&) { return i; }
-
-ostream& operator<<(ostream& o, const cppa::util::void_type&) { return o; }
-istream& operator>>(istream& i, cppa::util::void_type&) { return i; }
-
-} // namespace std
+namespace cppa { namespace detail {
 
 namespace {
 
-inline cppa::detail::uniform_type_info_map& uti_map() {
-    return *cppa::detail::singleton_manager::get_uniform_type_info_map();
+inline uniform_type_info_map& uti_map() {
+    return *singleton_manager::get_uniform_type_info_map();
 }
 
 inline const char* raw_name(const std::type_info& tinfo) {
@@ -93,9 +79,8 @@ inline const char* raw_name(const std::type_info& tinfo) {
 }
 
 template<typename T>
-struct is_signed
-        : std::integral_constant<bool, std::numeric_limits<T>::is_signed> {
-};
+struct is_signed :
+       std::integral_constant<bool, std::numeric_limits<T>::is_signed> { };
 
 template<typename T>
 inline const char* raw_name() {
@@ -103,54 +88,51 @@ inline const char* raw_name() {
 }
 
 typedef std::set<std::string> string_set;
+typedef std::map<int, std::pair<string_set, string_set> > int_name_mapping;
 
 template<typename Int>
-void push(std::map<int, std::pair<string_set, string_set>>& ints,
-          std::integral_constant<bool, true>) { // signed version
-    ints[sizeof(Int)].first.insert(raw_name<Int>());
+inline void push_impl(int_name_mapping& ints, std::true_type) {
+    ints[sizeof(Int)].first.insert(raw_name<Int>()); // signed version
 }
 
 template<typename Int>
-void push(std::map<int, std::pair<string_set, string_set>>& ints,
-          std::integral_constant<bool, false>) { // unsigned version
-    ints[sizeof(Int)].second.insert(raw_name<Int>());
+inline void push_impl(int_name_mapping& ints, std::false_type) {
+    ints[sizeof(Int)].second.insert(raw_name<Int>()); // unsigned version
 }
 
 template<typename Int>
-void push(std::map<int, std::pair<string_set, string_set>>& ints) {
-    push<Int>(ints, is_signed<Int>());
+inline void push(int_name_mapping& ints) {
+    push_impl<Int>(ints, is_signed<Int>{});
 }
 
 template<typename Int0, typename Int1, typename... Ints>
-void push(std::map<int, std::pair<string_set, string_set>>& ints) {
-    push<Int0>(ints, is_signed<Int0>());
+inline void push(int_name_mapping& ints) {
+    push_impl<Int0>(ints, is_signed<Int0>{});
     push<Int1, Ints...>(ints);
 }
 
-} // namespace <anonymous>
-
-namespace cppa { namespace detail {
-
-const std::string nullptr_type_name = "@0";
+const std::string s_nullptr_type_name{"@0"};
 
 void serialize_nullptr(serializer* sink) {
-    sink->begin_object(nullptr_type_name);
+    sink->begin_object(s_nullptr_type_name);
     sink->end_object();
 }
 
 void deserialize_nullptr(deserializer* source) {
-    source->begin_object(nullptr_type_name);
+    source->begin_object(s_nullptr_type_name);
     source->end_object();
 }
+
+} // namespace <anonymous>
 
 class void_type_tinfo : public uniform_type_info {
 
  public:
 
-    void_type_tinfo() : uniform_type_info(to_uniform_name(typeid(void_type))) {}
+    void_type_tinfo() : uniform_type_info(to_uniform_name<util::void_type>()) {}
 
     bool equals(const std::type_info &tinfo) const {
-        return typeid(void_type) == tinfo;
+        return typeid(util::void_type) == tinfo;
     }
 
  protected:
@@ -184,7 +166,7 @@ class void_type_tinfo : public uniform_type_info {
 
  private:
 
-    void_type m_value;
+    util::void_type m_value;
 
 };
 
@@ -194,7 +176,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
 
     static void s_serialize(const actor_ptr& ptr,
                             serializer* sink,
-                            const std::string name) {
+                            const std::string& name) {
         if (ptr == nullptr) {
             serialize_nullptr(sink);
         }
@@ -214,10 +196,10 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
 
     static void s_deserialize(actor_ptr& ptrref,
                               deserializer* source,
-                              const std::string name) {
+                              const std::string& name) {
         std::string cname = source->seek_object();
         if (cname != name) {
-            if (cname == nullptr_type_name) {
+            if (cname == s_nullptr_type_name) {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
@@ -260,9 +242,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
  protected:
 
     void serialize(const void* ptr, serializer* sink) const {
-        s_serialize(*reinterpret_cast<const actor_ptr*>(ptr),
-                    sink,
-                    name());
+        s_serialize(*reinterpret_cast<const actor_ptr*>(ptr), sink, name());
     }
 
     void deserialize(void* ptr, deserializer* source) const {
@@ -294,7 +274,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
                               const std::string& name) {
         std::string cname = source->seek_object();
         if (cname != name) {
-            if (cname == nullptr_type_name) {
+            if (cname == s_nullptr_type_name) {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
@@ -380,7 +360,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
             group_ptr_tinfo::s_deserialize(tmp, source, group_ptr_type_name);
             ptrref = tmp;
         }
-        else if (subobj == nullptr_type_name) { (void) source->seek_object();
+        else if (subobj == s_nullptr_type_name) { (void) source->seek_object();
             deserialize_nullptr(source);
             ptrref.reset();
         }
@@ -411,8 +391,7 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
  public:
 
     channel_ptr_tinfo() : group_ptr_name(to_uniform_name(typeid(group_ptr)))
-                        , actor_ptr_name(to_uniform_name(typeid(actor_ptr))) {
-    }
+                        , actor_ptr_name(to_uniform_name(typeid(actor_ptr))) { }
 
 };
 
@@ -447,7 +426,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
         }
         source->end_sequence();
         source->end_object();
-        atref = any_tuple(result);
+        atref = any_tuple{result};
     }
 
  protected:
@@ -472,8 +451,8 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
-        const addressed_message& msg = *reinterpret_cast<const addressed_message*>(instance);
-        const any_tuple& data = msg.content();
+        auto& msg = *reinterpret_cast<const addressed_message*>(instance);
+        auto& data = msg.content();
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(msg.sender(), sink, actor_ptr_name);
         channel_ptr_tinfo::s_serialize(msg.receiver(),
@@ -489,7 +468,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
         auto tname = source->seek_object();
         if (tname != name()) throw 42;
         source->begin_object(tname);
-        addressed_message& msg = *reinterpret_cast<addressed_message*>(instance);
+        auto& msg = *reinterpret_cast<addressed_message*>(instance);
         //actor_ptr sender;
         //channel_ptr receiver;
         //any_tuple content;
@@ -506,11 +485,10 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
         //                                                    content);
     }
 
-    addr_msg_tinfo() : any_tuple_name(to_uniform_name(typeid(any_tuple)))
-                     , actor_ptr_name(to_uniform_name(typeid(actor_ptr)))
-                     , group_ptr_name(to_uniform_name(typeid(group_ptr)))
-                     , channel_ptr_name(to_uniform_name(typeid(channel_ptr))) {
-    }
+    addr_msg_tinfo() : any_tuple_name(to_uniform_name<any_tuple>())
+                     , actor_ptr_name(to_uniform_name<actor_ptr>())
+                     , group_ptr_name(to_uniform_name<group_ptr>())
+                     , channel_ptr_name(to_uniform_name<channel_ptr>()) { }
 
 };
 
@@ -539,7 +517,7 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
         auto& ptrref = *reinterpret_cast<ptr_type*>(instance);
         std::string cname = source->seek_object();
         if (cname != name()) {
-            if (cname == nullptr_type_name) {
+            if (cname == s_nullptr_type_name) {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
@@ -636,7 +614,7 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T> {
                                                    : map_iter->second.second;
         auto x = raw_name(tinfo);
         return std::any_of(st.begin(), st.end(),
-                           [&](const std::string& y) { return x == y; });
+                           [&x](const std::string& y) { return x == y; });
     }
 
 };
@@ -669,6 +647,7 @@ class uniform_type_info_map_helper {
 };
 
 uniform_type_info_map::uniform_type_info_map() {
+    // inserts all compiler generated raw-names to m_ings
     push<char,                  signed char,
          unsigned char,         short,
          signed short,          unsigned short,
@@ -687,8 +666,8 @@ uniform_type_info_map::uniform_type_info_map() {
          char16_t,              char32_t,
          size_t,                ptrdiff_t,
          intptr_t                               >(m_ints);
-    // insert integers
     uniform_type_info_map_helper helper{this};
+    // inserts integer type infos
     helper.insert_int<std::int8_t>();
     helper.insert_int<std::int16_t>();
     helper.insert_int<std::int32_t>();
@@ -697,7 +676,7 @@ uniform_type_info_map::uniform_type_info_map() {
     helper.insert_uint<std::uint16_t>();
     helper.insert_uint<std::uint32_t>();
     helper.insert_uint<std::uint64_t>();
-    // insert built-in types
+    // insert type infos for "built-in" types
     helper.insert_builtin<float>();
     helper.insert_builtin<double>();
     helper.insert_builtin<std::string>();
@@ -711,7 +690,7 @@ uniform_type_info_map::uniform_type_info_map() {
     insert({raw_name<channel_ptr>()}, new channel_ptr_tinfo);
     insert({raw_name<atom_value>()}, new atom_value_tinfo);
     insert({raw_name<detail::addressed_message>()}, new addr_msg_tinfo);
-    insert({raw_name<void_type>()}, new void_type_tinfo);
+    insert({raw_name<util::void_type>()}, new void_type_tinfo);
     insert({raw_name<process_information_ptr>()}, new process_info_ptr_tinfo);
 }
 
@@ -771,7 +750,7 @@ std::vector<const uniform_type_info*> uniform_type_info_map::get_all() const {
 namespace cppa {
 
 bool announce(const std::type_info& tinfo, uniform_type_info* utype) {
-    return uti_map().insert({ raw_name(tinfo) }, utype);
+    return detail::uti_map().insert({detail::raw_name(tinfo)}, utype);
 }
 
 uniform_type_info::uniform_type_info(const std::string& str) : m_name(str) { }
@@ -780,11 +759,11 @@ uniform_type_info::~uniform_type_info() {
 }
 
 object uniform_type_info::create() const {
-    return { new_instance(), this };
+    return {new_instance(), this};
 }
 
 const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
-    auto result = uti_map().by_raw_name(raw_name(tinf));
+    auto result = detail::uti_map().by_raw_name(detail::raw_name(tinf));
     if (result == nullptr) {
         std::string error = "uniform_type_info::by_type_info(): ";
         error += detail::to_uniform_name(tinf);
@@ -795,7 +774,7 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
 }
 
 const uniform_type_info* uniform_type_info::from(const std::string& name) {
-    auto result = uti_map().by_uniform_name(name);
+    auto result = detail::uti_map().by_uniform_name(name);
     if (result == nullptr) {
         throw std::runtime_error(name + " is an unknown typeid name");
     }
@@ -805,11 +784,11 @@ const uniform_type_info* uniform_type_info::from(const std::string& name) {
 object uniform_type_info::deserialize(deserializer* from) const {
     auto ptr = new_instance();
     deserialize(ptr, from);
-    return { ptr, this };
+    return {ptr, this};
 }
 
 std::vector<const uniform_type_info*> uniform_type_info::instances() {
-    return uti_map().get_all();
+    return detail::uti_map().get_all();
 }
 
 const uniform_type_info* uniform_typeid(const std::type_info& tinfo) {
