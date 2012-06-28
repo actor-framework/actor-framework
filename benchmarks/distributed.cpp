@@ -189,7 +189,7 @@ struct server_actor : sb_actor<server_actor> {
             },
             on(atom("kickoff"), arg_match) >> [=](uint32_t num_pings) {
                 for (auto& kvp : m_pongs) {
-                    auto ping = spawn(new ping_actor(last_sender()));
+                    auto ping = spawn<ping_actor>(last_sender());
                     send(ping, atom("kickoff"), kvp.second, num_pings);
                 }
             },
@@ -241,7 +241,7 @@ void server_mode(Iterator first, Iterator last) {
     };
     match(std::vector<string>{first, last}) ( (on(kvp_port) || on("-p", _2i)) >> [](int port) {
             if (port > 1024 && port < 65536) {
-                publish(spawn(new server_actor), port);
+                publish(spawn<server_actor>(), port);
             }
             else {
                 usage("illegal port: ", port);

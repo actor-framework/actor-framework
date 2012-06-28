@@ -101,14 +101,14 @@ struct fsm_chain_master : sb_actor<fsm_chain_master> {
         send(worker, atom("calc"), s_task_n);
         next = self;
         for (int i = 1; i < ring_size; ++i) {
-            next = spawn(new fsm_chain_link(next));
+            next = spawn<fsm_chain_link>(next);
         }
         send(next, atom("token"), initial_token_value);
     }
     fsm_chain_master(actor_ptr msgcollector) : iteration(0), mc(msgcollector) {
         init_state = (
             on(atom("init"), arg_match) >> [=](int rs, int itv, int n) {
-                worker = spawn(new fsm_worker(msgcollector));
+                worker = spawn<fsm_worker>(msgcollector);
                 iteration = 0;
                 new_ring(rs, itv);
                 become (
@@ -271,8 +271,8 @@ int main(int argc, char** argv) {
                                                        int repetitions) {
             int num_msgs = num_rings + (num_rings * repetitions);
             if (mode == "event-based") {
-                auto mc = spawn(new fsm_supervisor(num_msgs));
-                run_test([&]() { return spawn(new fsm_chain_master(mc)); },
+                auto mc = spawn<fsm_supervisor>(num_msgs);
+                run_test([&]() { return spawn<fsm_chain_master>(mc); },
                          num_rings, ring_size, initial_token_value, repetitions);
             }
             else if (mode == "stacked") {

@@ -739,7 +739,7 @@ bool uniform_type_info_map::insert(const std::set<std::string>& raw_names,
 std::vector<const uniform_type_info*> uniform_type_info_map::get_all() const {
     std::vector<const uniform_type_info*> result;
     result.reserve(m_by_uname.size());
-    for (const uti_map::value_type& i : m_by_uname) {
+    for (const uti_map_type::value_type& i : m_by_uname) {
         result.push_back(i.second);
     }
     return std::move(result);

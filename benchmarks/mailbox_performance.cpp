@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
             testee = spawn(receiver, num_sender * num_msgs);
         }
         else if (strcmp(argv[1], "event-based") == 0) {
-            testee = spawn(new fsm_receiver(num_sender * num_msgs));
+            testee = spawn<fsm_receiver>(num_sender * num_msgs);
         }
         else {
             usage();

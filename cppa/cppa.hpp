@@ -423,19 +423,9 @@ namespace cppa {
 
 /**
  * @ingroup ActorManagement
- * @brief Spawns a new context-switching actor.
- * @param impl Instance of an event-based actor.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-inline actor_ptr spawn(scheduled_actor* impl) {
-    return get_scheduler()->spawn(impl);
-}
-
-/**
- * @ingroup ActorManagement
- * @brief Spawns a new context-switching actor.
+ * @brief Spawns a new context-switching or thread-mapped {@link actor}.
  * @tparam Hint A hint to the scheduler for the best scheduling strategy.
- * @param bhvr A function implementing the actor's behavior.
+ * @param fun A function implementing the actor's behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<scheduling_hint Hint>
@@ -447,7 +437,7 @@ inline actor_ptr spawn(void_function fun) {
  * @ingroup ActorManagement
  * @brief Spawns a new context-switching actor,
  *        equal to <tt>spawn<detached>(bhvr)</tt>.
- * @param bhvr A function implementing the actor's behavior.
+ * @param fun A function implementing the actor's behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 inline actor_ptr spawn(void_function fun) {
@@ -493,7 +483,7 @@ inline actor_ptr spawn(Fun fun, Arg0&& arg0, Args&&... args) {
  *        <tt>spawn<scheduled>(bhvr, arg0, args...)</tt>.
  * @param bhvr A functor implementing the actor's behavior.
  * @param arg0 First argument to @p bhvr.
- * @param args Further argumetns to @p bhvr.
+ * @param args Further arguments to @p bhvr.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<typename Fun, typename Arg0, typename... Args>
@@ -503,17 +493,30 @@ inline actor_ptr spawn(Fun&& fun, Arg0&& arg0, Args&&... args) {
                             std::forward<Args>(args)...);
 }
 
+/**
+ * @ingroup ActorManagement
+ * @brief Spawns a new actor of type @p ActorImpl.
+ * @tparam ActorImpl An event-based actor implementation.
+ * @param args Constructor arguments for @p ActorImpl.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
 template<class ActorImpl, typename... Args>
 inline actor_ptr spawn(Args&&... args) {
-    return spawn(new ActorImpl(std::forward<Args>(args)...));
+    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...));
 }
 
-inline actor_ptr spawn_in_group(const group_ptr& grp, event_based_actor* impl) {
-    return get_scheduler()->spawn(impl, [grp](local_actor* ptr) {
-        ptr->join(grp);
-    });
-}
-
+/**
+ * @ingroup ActorManagement
+ * @brief Spawns a new context-switching or thread-mapped {@link actor}
+ *        that joins @p grp immediately.
+ * @note The spawned actor joins @p grp after its
+ *       {@link local_actor::init() init} member function is called but
+ *       before it is executed. Hence, the spawned actor already joined
+ *       the group before this function returns.
+ * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @param bhvr A function implementing the actor's behavior.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
 template<scheduling_hint Hint>
 inline actor_ptr spawn_in_group(const group_ptr& grp, void_function fun) {
     return get_scheduler()->spawn(std::move(fun), Hint, [grp](local_actor* ptr){
@@ -547,7 +550,8 @@ inline actor_ptr spawn_in_group(const group_ptr& grp,
 
 template<class ActorImpl, typename... Args>
 inline actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
-    return spawn_in_group(grp, new ActorImpl(std::forward<Args>(args)...));
+    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
+                                  [&grp](local_actor* ptr) { ptr->join(grp); });
 }
 
 #ifdef CPPA_DOCUMENTATION

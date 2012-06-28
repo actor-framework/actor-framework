@@ -63,7 +63,7 @@ actor_ptr spawn_event_based_ping(size_t num_pings) {
             );
         }
     };
-    return spawn(new impl{num_pings});
+    return spawn<impl>(num_pings);
 }
 
 void pong(actor_ptr ping_actor) {
@@ -102,7 +102,7 @@ actor_ptr spawn_event_based_pong(actor_ptr ping_actor) {
             );
         }
     };
-    auto pptr = spawn(new impl);
+    auto pptr = spawn<impl>();
     // kickoff
     ping_actor->enqueue(pptr.get(), make_any_tuple(atom("pong"), 0));
     return pptr;

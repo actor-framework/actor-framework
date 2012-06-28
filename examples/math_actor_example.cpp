@@ -67,7 +67,7 @@ int main() {
     // spawn a context-switching actor that invokes math_fun
     auto a1 = spawn(math_fun);
     // spawn an event-based math actor
-    auto a2 = spawn(new math_actor);
+    auto a2 = spawn<math_actor>();
     // do some testing on both implementations
     assert((fetch_result(a1, atom("plus"), 1, 2) == 3));
     assert((fetch_result(a2, atom("plus"), 1, 2) == 3));

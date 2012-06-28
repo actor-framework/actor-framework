@@ -55,8 +55,8 @@ struct testee : sb_actor<testee> {
             },
             on<atom("spread"), int>() >> [=](int x) {
                 any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
-                spawn(new testee(this)) << msg;
-                spawn(new testee(this)) << msg;
+                spawn<testee>(this) << msg;
+                spawn<testee>(this) << msg;
                 become (
                     on<atom("result"), uint32_t>() >> [=](uint32_t r1) {
                         become (
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
             send(spawn(stacked_testee, self), atom("spread"), num);
         }
         else if (strcmp(argv[1], "event-based") == 0) {
-            send(spawn(new testee(self)), atom("spread"), num);
+            send(spawn<testee>(self), atom("spread"), num);
         }
         else {
             usage();

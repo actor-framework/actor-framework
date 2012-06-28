@@ -137,7 +137,7 @@ class event_testee : public sb_actor<event_testee> {
 #endif
 
 // quits after 5 timeouts
-event_based_actor* event_testee2() {
+actor_ptr spawn_event_testee2() {
     struct impl : sb_actor<impl> {
         behavior wait4timeout(int remaining) {
             return (
@@ -152,7 +152,7 @@ event_based_actor* event_testee2() {
 
         impl() : init_state(wait4timeout(5)) { }
     };
-    return new impl;
+    return spawn<impl>();
 }
 
 struct chopstick : public sb_actor<chopstick> {
@@ -458,7 +458,7 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     CPPA_IF_VERBOSE(cout << "event_testee2 ... " << std::flush);
-    spawn(event_testee2());
+    spawn_event_testee2();
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 

@@ -175,7 +175,7 @@ int main(int, char**) {
     cout << "chopstick ids:";
     std::vector<actor_ptr> chopsticks;
     for (size_t i = 0; i < 5; ++i) {
-        chopsticks.push_back(spawn(new chopstick));
+        chopsticks.push_back(spawn<chopstick>());
         cout << " " << chopsticks.back()->id();
     }
     cout << endl;
@@ -185,10 +185,10 @@ int main(int, char**) {
     std::vector<std::string> names = { "Plato", "Hume", "Kant",
                                        "Nietzsche", "Descartes" };
     for (size_t i = 0; i < 5; ++i) {
-        spawn_in_group(dinner_club,
-                       new philosopher(names[i],
-                                       chopsticks[i],
-                                       chopsticks[(i+1)%5]));
+        spawn_in_group<philosopher>(dinner_club,
+                                    names[i],
+                                    chopsticks[i],
+                                    chopsticks[(i+1) % chopsticks.size()]);
     }
     // tell philosophers to start thinking
     send(dinner_club, atom("think"));
