@@ -1,0 +1,12 @@
+Version 0.2
+
+2012-06-29
+
+- Removed become_void() [use quit() instead]
+- Renamed "future_send()" to "delayed_send()"
+- Removed "stacked_actor"; moved functionality to "event_based_actor"
+- Renamed "fsm_actor" to "sb_actor"
+- Refactored "spawn": spawn(new T(...)) => spawn<T>(...)
+- Implemented become()/unbecome() for context-switching & thread-mapped actors
+- Moved become()/unbecome() to local_actor
+- Ported libcppa from <ucontext.h> to Boost.Context library
