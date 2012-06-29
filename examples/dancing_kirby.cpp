@@ -1,4 +1,6 @@
+#include <chrono>
 #include <iostream>
+#include <algorithm>
 #include "cppa/cppa.hpp"
 
 using std::cout;
