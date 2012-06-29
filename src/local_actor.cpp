@@ -68,8 +68,7 @@ class down_observer : public attachable {
 } // namespace <anonymous>
 
 local_actor::local_actor(bool sflag)
-: m_chaining(sflag), m_trap_exit(false), m_is_scheduled(sflag) {
-}
+: m_chaining(sflag), m_trap_exit(false), m_is_scheduled(sflag) { }
 
 void local_actor::monitor(actor_ptr whom) {
     if (whom) whom->attach(new down_observer(this, whom));
@@ -85,14 +84,14 @@ void local_actor::on_exit() { }
 void local_actor::init() { }
 
 void local_actor::join(const group_ptr& what) {
-    if (!what) return;
-    attach(what->subscribe(this));
+    if (what) attach(what->subscribe(this));
 }
 
 void local_actor::leave(const group_ptr& what) {
-    if (!what) return;
-    attachable::token group_token(typeid(group::unsubscriber), what.get());
-    detach(group_token);
+    if (what) {
+        attachable::token group_token(typeid(group::unsubscriber), what.get());
+        detach(group_token);
+    }
 }
 
 } // namespace cppa

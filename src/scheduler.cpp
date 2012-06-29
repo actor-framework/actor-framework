@@ -108,8 +108,8 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     bool done = false;
     // message handling rules
     auto mfun = (
-        on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
-                                                       const actor_ptr&) {
+        on<util::duration,channel_ptr,anything>() >> [&](const util::duration& d,
+                                                         const channel_ptr&) {
             // calculate timeout
             auto timeout = now();
             timeout += d;

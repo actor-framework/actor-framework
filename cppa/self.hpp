@@ -49,7 +49,8 @@ extern local_actor* self;
 class local_actor;
 
 // convertible<...> enables "actor_ptr this_actor = self;"
-class self_type : public convertible<self_type, actor*> {
+class self_type : public convertible<self_type, actor*>,
+                  public convertible<self_type, channel*> {
 
     self_type(const self_type&) = delete;
     self_type& operator=(const self_type&) = delete;

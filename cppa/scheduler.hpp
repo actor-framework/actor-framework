@@ -55,6 +55,20 @@ class scheduler_helper;
 typedef std::function<void()> void_function;
 typedef std::function<void(local_actor*)> init_callback;
 
+namespace detail {
+// forwards self_type as actor_ptr, otherwise equal to std::forward
+template<typename T>
+struct spawn_fwd_ {
+static inline T&& _(T&& arg) { return std::move(arg); }
+static inline T& _(T& arg) { return arg; }
+static inline const T& _(const T& arg) { return arg; }
+};
+template<>
+struct spawn_fwd_<self_type> {
+static inline actor_ptr _(const self_type& s) { return s.get(); }
+};
+} // namespace detail
+
 /**
  * @brief
  */
@@ -85,6 +99,31 @@ class scheduler {
     virtual void enqueue(scheduled_actor*) = 0;
 
     /**
+     * @brief Informs the scheduler about a converted context
+     *        (a thread that acts as actor).
+     * @note Calls <tt>what->attach(...)</tt>.
+     */
+    virtual void register_converted_context(local_actor* what);
+
+    /**
+     * @brief Informs the scheduler about a hidden (non-actor)
+     *        context that should be counted by await_others_done().
+     * @returns An {@link attachable} that the hidden context has to destroy
+     *         if his lifetime ends.
+     */
+    virtual attachable* register_hidden_context();
+
+    template<typename Duration, typename... Data>
+    void delayed_send(const channel_ptr& to,
+                      const Duration& rel_time,
+                      Data&&... data) {
+        static_assert(sizeof...(Data) > 0, "no message to send");
+        auto sub = make_any_tuple(std::forward<Data>(data)...);
+        auto tup = make_any_tuple(util::duration{rel_time}, to, std::move(sub));
+        delayed_send_helper()->enqueue(self, std::move(tup));
+    }
+
+    /**
      * @brief Spawns a new actor that executes <code>fun()</code>
      *        with the scheduling policy @p hint if possible.
      */
@@ -112,30 +151,45 @@ class scheduler {
      */
     virtual actor_ptr spawn(scheduled_actor* what, init_callback init_cb) = 0;
 
-    /**
-     * @brief Informs the scheduler about a converted context
-     *        (a thread that acts as actor).
-     * @note Calls <tt>what->attach(...)</tt>.
-     */
-    virtual void register_converted_context(local_actor* what);
+    // hide implementation details for documentation
+#   ifndef CPPA_DOCUMENTATION
 
-    /**
-     * @brief Informs the scheduler about a hidden (non-actor)
-     *        context that should be counted by await_others_done().
-     * @returns An {@link attachable} that the hidden context has to destroy
-     *         if his lifetime ends.
-     */
-    virtual attachable* register_hidden_context();
-
-    template<typename Duration, typename... Data>
-    void delayed_send(const actor_ptr& to,
-                      const Duration& rel_time,
-                      Data&&... data) {
-        static_assert(sizeof...(Data) > 0, "no message to send");
-        auto sub = make_any_tuple(std::forward<Data>(data)...);
-        auto tup = make_any_tuple(util::duration{rel_time}, to, std::move(sub));
-        delayed_send_helper()->enqueue(self, std::move(tup));
+    template<typename Fun, typename Arg0, typename... Args>
+    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun, Arg0&& arg0, Args&&... args) {
+        return this->spawn(
+                    std::bind(
+                        std::forward<Fun>(fun),
+                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
+                    hint);
     }
+
+    template<typename Fun>
+    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun) {
+        return this->spawn(std::forward<Fun>(fun), hint);
+    }
+
+    template<typename InitCallback, typename Fun, typename Arg0, typename... Args>
+    actor_ptr spawn_cb_impl(scheduling_hint hint,
+                            InitCallback&& init_cb,
+                            Fun&& fun, Arg0&& arg0, Args&&... args) {
+        return this->spawn(
+                    std::bind(
+                        std::forward<Fun>(fun),
+                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
+                    hint,
+                    std::forward<InitCallback>(init_cb));
+    }
+
+    template<typename InitCallback, typename Fun>
+    actor_ptr spawn_cb_impl(scheduling_hint hint, InitCallback&& init_cb, Fun&& fun) {
+        return this->spawn(std::forward<Fun>(fun),
+                           hint,
+                           std::forward<InitCallback>(init_cb));
+    }
+
+#   endif // CPPA_DOCUMENTATION
 
 };
 

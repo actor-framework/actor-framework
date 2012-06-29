@@ -193,8 +193,8 @@
  * The first argument is the receiver of the message followed by any number
  * of values. @p send creates a tuple from the given values and enqueues the
  * tuple to the receivers mailbox. Thus, send should @b not be used to send
- * a message to multiple receivers. You should use the @p enqueue
- * member function of the receivers instead as in the following example:
+ * a message to multiple receivers. You should use @p operator<<
+ * instead as in the following example:
  *
  * @code
  * // spawn some actors
@@ -207,20 +207,20 @@
  *
  * // send a message to a1, a2 and a3
  * auto msg = make_cow_tuple(atom("compute"), 1, 2, 3);
- * auto s = self; // cache self pointer
+ *
  * // note: this is more efficient then using send() three times because
  * //       send() would create a new tuple each time;
  * //       this safes both time and memory thanks to libcppa's copy-on-write
- * a1->enqueue(s, msg);
- * a2->enqueue(s, msg);
- * a3->enqueue(s, msg);
+ * a1 << msg;
+ * a2 << msg;
+ * a3 << msg;
  *
  * // modify msg and send it again
  * // (msg becomes detached due to copy-on-write optimization)
  * get_ref<1>(msg) = 10; // msg is now { atom("compute"), 10, 2, 3 }
- * a1->enqueue(s, msg);
- * a2->enqueue(s, msg);
- * a3->enqueue(s, msg);
+ * a1 << msg;
+ * a2 << msg;
+ * a3 << msg;
  * @endcode
  *
  * @section Receive Receive messages
@@ -231,11 +231,11 @@
  * @code
  * receive
  * (
- *     on<atom("hello"), std::string>() >> [](const std::string& msg)
+ *     on(atom("hello"), arg_match) >> [](const std::string& msg)
  *     {
  *         cout << "received hello message: " << msg << endl;
  *     },
- *     on<atom("compute"), int, int, int>() >> [](int i0, int i1, int i2)
+ *     on(atom("compute"), arg_match) >> [](int i0, int i1, int i2)
  *     {
  *         // send our result back to the sender of this messages
  *         reply(atom("result"), i0 + i1 + i2);
@@ -243,27 +243,7 @@
  * );
  * @endcode
  *
- * The function @p on creates a pattern.
- * It provides two ways of defining patterns:
- * either by template parameters (prefixed by up to four atoms) or by arguments.
- * The first way matches for types only (exept for the prefixing atoms).
- * The second way compares values.
- * Use the template function @p val to match for the type only.
- *
- * This example is equivalent to the previous one but uses the second way
- * to define patterns:
- *
- * @code
- * receive (
- *     on(atom("hello"), val<std::string>()) >> [](const std::string& msg) {
- *         cout << "received hello message: " << msg << endl;
- *     },
- *     on(atom("compute"), val<int>(), val<int>()>() >> [](int i0, int i1) {
- *         // send our result back to the sender of this messages
- *         reply(atom("result"), i0 + i1);
- *     }
- * );
- * @endcode
+ * Please read the manual for further details about pattern matching.
  *
  * @section Atoms Atoms
  *
@@ -277,10 +257,10 @@
  * @code
  * void math_actor() {
  *     receive_loop (
- *         on<atom("plus"), int, int>() >> [](int a, int b) {
+ *         on(atom("plus"), arg_match) >> [](int a, int b) {
  *             reply(atom("result"), a + b);
  *         },
- *         on<atom("minus"), int, int>() >> [](int a, int b) {
+ *         on(atom("minus"), arg_match) >> [](int a, int b) {
  *             reply(atom("result"), a - b);
  *         }
  *     );
@@ -352,7 +332,7 @@
  * delayed_send(self, std::chrono::seconds(1), atom("poll"));
  * receive_loop (
  *     // ...
- *     on<atom("poll")>() >> []() {
+ *     on(atom("poll")) >> []() {
  *         // ... poll something ...
  *         // and do it again after 1sec
  *         delayed_send(self, std::chrono::seconds(1), atom("poll"));
@@ -421,7 +401,20 @@
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
+namespace detail {
+
+template<typename T>
+inline void send_impl(T* whom, any_tuple&& what) {
+    if (whom) self->send_message(whom, std::move(what));
+}
+
+template<typename T, typename... Args>
+inline void send_tpl_impl(T* whom, Args&&... what) {
+    if (whom) self->send_message(whom,
+                                 make_any_tuple(std::forward<Args>(what)...));
+}
+
+} // namespace detail
 
 /**
  * @ingroup MessageHandling
@@ -429,15 +422,7 @@ namespace cppa {
  */
 
 /**
- * @brief Sends <tt>{what...}</tt> as a message to @p whom.
- * @param whom Receiver of the message.
- * @param what Message elements.
- */
-template<typename... Args>
-void send(const channel_ptr& whom, Args&&... what);
-
-/**
- * @brief Send a message to @p whom.
+ * @brief Sends a message to @p whom.
  *
  * <b>Usage example:</b>
  * @code
@@ -447,9 +432,84 @@ void send(const channel_ptr& whom, Args&&... what);
  * @param what Message as instance of {@link any_tuple}.
  * @returns @p whom.
  */
-const channel_ptr& operator<<(const channel_ptr& whom, any_tuple what);
+template<class C>
+inline typename std::enable_if<std::is_base_of<channel, C>::value,
+                               const intrusive_ptr<C>&            >::type
+operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
+    detail::send_impl(whom.get(), std::move(what));
+    return whom;
+}
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @pre <tt>sizeof...(Args) > 0</tt>
+ */
+template<class C, typename... Args>
+inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+send(const intrusive_ptr<C>& whom, Args&&... what) {
+    static_assert(sizeof...(Args) > 0, "no message to send");
+    detail::send_tpl_impl(whom.get(), std::forward<Args>(what)...);
+}
+
+
+/**
+ * @brief Sends a message to the sender of the last received message.
+ * @param what Message elements.
+ * @note Equal to <tt>send(self->last_received(), what...)</tt>.
+ */
+template<typename... Args>
+inline void reply(Args&&... what) {
+    send(self->last_sender(), std::forward<Args>(what)...);
+}
+
+/**
+ * @brief Sends a message to @p whom that is delayed by @p rel_time.
+ * @param whom Receiver of the message.
+ * @param rel_time Relative time duration to delay the message in
+ *                 microseconds, milliseconds, seconds or minutes.
+ * @param what Message elements.
+ */
+template<class Rep, class Period, typename... Args>
+inline void delayed_send(const channel_ptr& whom,
+                         const std::chrono::duration<Rep, Period>& rel_time,
+                         Args&&... what) {
+    if (whom) {
+        get_scheduler()->delayed_send(whom, rel_time,
+                                      std::forward<Args>(what)...);
+    }
+}
+
+/**
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rel_time Relative time duration to delay the message in
+ *                 microseconds, milliseconds, seconds or minutes.
+ * @param what Message elements.
+ * @note Equal to <tt>delayed_send(self->last_sender(), rel_time, what...)</tt>.
+ * @see delayed_send()
+ */
+template<class Rep, class Period, typename... Args>
+inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
+                          Args&&... what) {
+    delayed_send(self->last_sender(), rel_time, std::forward<Args>(what)...);
+}
 
 /** @} */
+
+#ifndef CPPA_DOCUMENTATION
+// matches "send(this, ...)" and "send(self, ...)"
+template<typename Arg0, typename... Args>
+inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
+    detail::send_tpl_impl(whom,
+                          std::forward<Arg0>(arg0),
+                          std::forward<Args>(args)...);
+}
+inline const self_type& operator<<(const self_type& s, any_tuple what) {
+    detail::send_impl(s.get(), std::move(what));
+    return s;
+}
+#endif // CPPA_DOCUMENTATION
 
 /**
  * @ingroup ActorCreation
@@ -466,7 +526,11 @@ const channel_ptr& operator<<(const channel_ptr& whom, any_tuple what);
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn(Fun fun, Args&&... args);
+actor_ptr spawn(Fun&& fun, Args&&... args) {
+    return get_scheduler()->spawn_impl(Hint,
+                                       std::forward<Fun>(fun),
+                                       std::forward<Args>(args)...);
+}
 
 /**
  * @brief Spawns a new context-switching {@link actor}
@@ -477,7 +541,10 @@ actor_ptr spawn(Fun fun, Args&&... args);
  * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
  */
 template<typename Fun, typename... Args>
-actor_ptr spawn(Fun fun, Args&&... args);
+actor_ptr spawn(Fun&& fun, Args&&... args) {
+    return spawn<scheduled>(std::forward<Fun>(fun),
+                            std::forward<Args>(args)...);
+}
 
 /**
  * @brief Spawns a new context-switching or thread-mapped {@link actor}
@@ -493,7 +560,14 @@ actor_ptr spawn(Fun fun, Args&&... args);
  *       the group before this function returns.
  */
 template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn_in_group(Fun fun, Args&&... args);
+actor_ptr spawn_in_group(const group_ptr& grp, Fun&& fun, Args&&... args) {
+    return get_scheduler()->spawn_cb_impl(Hint,
+                                          [grp](local_actor* ptr) {
+                                              ptr->join(grp);
+                                          },
+                                          std::forward<Fun>(fun),
+                                          std::forward<Args>(args)...);
+}
 
 /**
  * @brief Spawns a new context-switching {@link actor}
@@ -510,7 +584,10 @@ actor_ptr spawn_in_group(Fun fun, Args&&... args);
  *       <tt>spawn_in_group<scheduled>(fun, args...)</tt>.
  */
 template<typename Fun, typename... Args>
-actor_ptr spawn_in_group(Fun fun, Args&&... args);
+actor_ptr spawn_in_group(Fun&& fun, Args&&... args) {
+    return spawn_in_group<scheduled>(std::forward<Fun>(fun),
+                                     std::forward<Args>(args)...);
+}
 
 /**
  * @brief Spawns an actor of type @p ActorImpl.
@@ -519,7 +596,9 @@ actor_ptr spawn_in_group(Fun fun, Args&&... args);
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<class ActorImpl, typename... Args>
-actor_ptr spawn(const group_ptr& grp, Args&&... args);
+actor_ptr spawn(Args&&... args) {
+    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...));
+}
 
 /**
  * @brief Spawns an actor of type @p ActorImpl that joins @p grp immediately.
@@ -533,182 +612,12 @@ actor_ptr spawn(const group_ptr& grp, Args&&... args);
  *       the group before this function returns.
  */
 template<class ActorImpl, typename... Args>
-actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args);
-
-/** @} */
-
-#else
-
-
-inline actor_ptr spawn(void_function fun) {
-    return get_scheduler()->spawn(std::move(fun), scheduled);
-}
-
-template<scheduling_hint Hint>
-inline actor_ptr spawn(void_function fun) {
-    return get_scheduler()->spawn(std::move(fun), Hint);
-}
-
-// forwards self_type as actor_ptr
-template<typename T>
-struct spawn_fwd_ {
-    static inline T&& _(T&& arg) { return std::move(arg); }
-    static inline T& _(T& arg) { return arg; }
-    static inline const T& _(const T& arg) { return arg; }
-};
-
-template<>
-struct spawn_fwd_<self_type> {
-    static inline actor_ptr _(const self_type& s) { return s.get(); }
-};
-
-template<scheduling_hint Hint, typename Fun, typename Arg0, typename... Args>
-inline actor_ptr spawn(Fun fun, Arg0&& arg0, Args&&... args) {
-    return get_scheduler()->spawn(
-                std::bind(
-                    std::move(fun),
-                    spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                    spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
-                Hint);
-}
-
-template<typename Fun, typename Arg0, typename... Args>
-inline actor_ptr spawn(Fun&& fun, Arg0&& arg0, Args&&... args) {
-    return spawn<scheduled>(std::forward<Fun>(fun),
-                            std::forward<Arg0>(arg0),
-                            std::forward<Args>(args)...);
-}
-
-template<class ActorImpl, typename... Args>
-inline actor_ptr spawn(Args&&... args) {
-    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...));
-}
-
-template<scheduling_hint Hint>
-inline actor_ptr spawn_in_group(const group_ptr& grp, void_function fun) {
-    return get_scheduler()->spawn(std::move(fun), Hint, [grp](local_actor* ptr){
-        ptr->join(grp);
-    });
-}
-
-inline actor_ptr spawn_in_group(const group_ptr& grp, void_function fun) {
-    return spawn_in_group<scheduled>(grp, std::move(fun));
-}
-
-template<scheduling_hint Hint, typename Fun, typename Arg0, typename... Args>
-inline actor_ptr spawn_in_group(const group_ptr& grp,
-                                Fun fun, Arg0&& arg0, Args&&... args) {
-    return spawn_in_group<Hint>(
-                grp,
-                std::bind(
-                    std::move(fun),
-                    spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                    spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...));
-}
-
-template<typename Fun, typename Arg0, typename... Args>
-inline actor_ptr spawn_in_group(const group_ptr& grp,
-                                Fun&& fun, Arg0&& arg0, Args&&... args) {
-    return spawn_in_group<scheduled>(grp,
-                                     std::forward<Fun>(fun),
-                                     std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...);
-}
-
-template<class ActorImpl, typename... Args>
-inline actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
+actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
     return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
                                   [&grp](local_actor* ptr) { ptr->join(grp); });
 }
 
-namespace detail {
-
-inline void send_impl(channel* whom, any_tuple&& what) {
-    if (whom) self->send_message(whom, std::move(what));
-}
-
-template<typename Arg0, typename... Args>
-inline void send_tpl_impl(channel* whom, Arg0&& arg0, Args&&... args) {
-    if (whom) {
-        self->send_message(whom, make_any_tuple(std::forward<Arg0>(arg0),
-                                                std::forward<Args>(args)...));
-    }
-}
-
-} // namespace detail
-
-template<class C>
-inline typename std::enable_if<std::is_base_of<channel, C>::value,
-                               const intrusive_ptr<C>&            >::type
-operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
-    detail::send_impl(whom.get(), std::move(what));
-    return whom;
-}
-
-inline const self_type& operator<<(const self_type& s, any_tuple what) {
-    detail::send_impl(s.get(), std::move(what));
-    return s;
-}
-
-template<class C, typename Arg0, typename... Args>
-inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
-send(const intrusive_ptr<C>& whom, Arg0&& arg0, Args&&... args) {
-    detail::send_tpl_impl(whom.get(),
-                          std::forward<Arg0>(arg0),
-                          std::forward<Args>(args)...);
-}
-
-// matches "send(this, ...)" and "send(self, ...)"
-template<typename Arg0, typename... Args>
-inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
-    detail::send_tpl_impl(whom,
-                          std::forward<Arg0>(arg0),
-                          std::forward<Args>(args)...);
-}
-
-#endif // CPPA_DOCUMENTATION
-
-/**
- * @ingroup MessageHandling
- * @brief Sends a message to the sender of the last received message.
- * @param what Message elements.
- */
-template<typename... Args>
-inline void reply(Args&&... what) {
-    send(self->last_sender(), std::forward<Args>(what)...);
-}
-
-/**
- * @ingroup MessageHandling
- * @brief Sends a message to @p whom that is delayed by @p rel_time.
- * @param whom Receiver of the message.
- * @param rel_time Relative time duration to delay the message in
- *                 microseconds, milliseconds, seconds or minutes.
- * @param what Message elements.
- */
-template<class Rep, class Period, typename... Args>
-inline void delayed_send(const actor_ptr& whom,
-                         const std::chrono::duration<Rep, Period>& rel_time,
-                         Args&&... what) {
-    if (whom) {
-        get_scheduler()->delayed_send(whom, rel_time,
-                                      std::forward<Args>(what)...);
-    }
-}
-
-/**
- * @ingroup MessageHandling
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rel_time Relative time duration to delay the message in
- *                 microseconds, milliseconds, seconds or minutes.
- * @param what Message elements.
- * @see delayed_send()
- */
-template<class Rep, class Period, typename... Args>
-inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
-                          Args&&... what) {
-    delayed_send(self->last_sender(), rel_time, std::forward<Args>(what)...);
-}
+/** @} */
 
 /**
  * @brief Blocks execution of this actor until all
