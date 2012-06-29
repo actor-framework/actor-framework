@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef RECEIVE_LOOP_HELPER_HPP
-#define RECEIVE_LOOP_HELPER_HPP
+#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
+#define CPPA_RECEIVE_LOOP_HELPER_HPP
 
 #include <new>
 
@@ -41,45 +41,36 @@
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
-#include "cppa/detail/invokable.hpp"
-
-
 namespace cppa { namespace detail {
 
 template<typename Statement>
-struct receive_while_helper
-{
+struct receive_while_helper {
     Statement m_stmt;
 
     template<typename S>
     receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt)) { }
 
-    void operator()(behavior& bhvr)
-    {
+    void operator()(behavior& bhvr) {
         local_actor* sptr = self;
         while (m_stmt()) sptr->dequeue(bhvr);
     }
 
-    void operator()(partial_function& fun)
-    {
+    void operator()(partial_function& fun) {
         local_actor* sptr = self;
         while (m_stmt()) sptr->dequeue(fun);
     }
 
     template<typename Arg0, typename... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
+    void operator()(Arg0&& arg0, Args&&... args) {
         auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...);
-        (*this)(tmp);
+                                     std::forward<Args>(args)...); (*this)(tmp);
     }
 
 
 };
 
 template<typename T>
-class receive_for_helper
-{
+class receive_for_helper {
 
     T& begin;
     T end;
@@ -88,30 +79,25 @@ class receive_for_helper
 
     receive_for_helper(T& first, const T& last) : begin(first), end(last) { }
 
-    void operator()(behavior& bhvr)
-    {
+    void operator()(behavior& bhvr) {
         local_actor* sptr = self;
         for ( ; begin != end; ++begin) sptr->dequeue(bhvr);
     }
 
-    void operator()(partial_function& fun)
-    {
+    void operator()(partial_function& fun) {
         local_actor* sptr = self;
         for ( ; begin != end; ++begin) sptr->dequeue(fun);
     }
 
     template<typename Arg0, typename... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
+    void operator()(Arg0&& arg0, Args&&... args) {
         auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...);
-        (*this)(tmp);
+                                     std::forward<Args>(args)...); (*this)(tmp);
     }
 
 };
 
-class do_receive_helper
-{
+class do_receive_helper {
 
     behavior m_bhvr;
 
@@ -119,30 +105,24 @@ class do_receive_helper
 
     template<typename... Args>
     do_receive_helper(Args&&... args)
-        : m_bhvr(match_expr_concat(std::forward<Args>(args)...))
-    {
+        : m_bhvr(match_expr_concat(std::forward<Args>(args)...)) {
     }
 
     do_receive_helper(do_receive_helper&&) = default;
 
     template<typename Statement>
-    void until(Statement&& stmt)
-    {
+    void until(Statement&& stmt) {
         static_assert(std::is_same<bool, decltype(stmt())>::value,
                       "functor or function does not return a boolean");
         local_actor* sptr = self;
-        if (m_bhvr.timeout().valid())
-        {
-            do
-            {
+        if (m_bhvr.timeout().valid()) {
+            do {
                 sptr->dequeue(m_bhvr);
             }
             while (stmt() == false);
         }
-        else
-        {
-            do
-            {
+        else {
+            do {
                 sptr->dequeue(m_bhvr.get_partial_function());
             }
             while (stmt() == false);
@@ -153,4 +133,4 @@ class do_receive_helper
 
 } } // namespace cppa::detail
 
-#endif // RECEIVE_LOOP_HELPER_HPP
+#endif // CPPA_RECEIVE_LOOP_HELPER_HPP

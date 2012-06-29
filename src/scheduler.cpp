@@ -28,7 +28,9 @@
 \******************************************************************************/
 
 
+#include <thread>
 #include <atomic>
+#include <chrono>
 #include <iostream>
 
 #include "cppa/on.hpp"
@@ -37,59 +39,55 @@
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/thread_mapped_actor.hpp"
 
-#include "cppa/detail/thread.hpp"
 #include "cppa/detail/actor_count.hpp"
-#include "cppa/detail/mock_scheduler.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
 
 namespace {
 
 typedef std::uint32_t ui32;
 
-struct exit_observer : cppa::attachable
-{
-    ~exit_observer()
-    {
+struct exit_observer : cppa::attachable {
+    ~exit_observer() {
         cppa::detail::dec_actor_count();
     }
-    void actor_exited(std::uint32_t)
-    {
+    void actor_exited(std::uint32_t) {
     }
-    bool matches(const token&)
-    {
+    bool matches(const token&) {
         return false;
     }
 };
+
+inline decltype(std::chrono::high_resolution_clock::now()) now() {
+    return std::chrono::high_resolution_clock::now();
+}
 
 } // namespace <anonymous>
 
 namespace cppa {
 
-struct scheduler_helper
-{
+class scheduler_helper {
 
-    typedef intrusive_ptr<detail::converted_thread_context> ptr_type;
+ public:
 
-    scheduler_helper() : m_worker(new detail::converted_thread_context)
-    {
+    typedef intrusive_ptr<thread_mapped_actor> ptr_type;
+
+    scheduler_helper() : m_worker(new thread_mapped_actor) {
     }
 
-    void start()
-    {
-        m_thread = detail::thread(&scheduler_helper::time_emitter, m_worker);
+    void start() {
+        m_thread = std::thread(&scheduler_helper::time_emitter, m_worker);
     }
 
-    void stop()
-    {
+    void stop() {
         m_worker->enqueue(nullptr, make_cow_tuple(atom(":_DIE")));
         m_thread.join();
     }
 
     ptr_type m_worker;
-    detail::thread m_thread;
+    std::thread m_thread;
 
  private:
 
@@ -97,35 +95,31 @@ struct scheduler_helper
 
 };
 
-void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
-{
-    typedef abstract_actor<local_actor>::queue_node_ptr queue_node_ptr;
+void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
+    typedef detail::abstract_actor<local_actor> impl_type;
+    typedef std::unique_ptr<detail::recursive_queue_node> queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();
-    std::multimap<decltype(detail::now()), queue_node_ptr> messages;
+    std::multimap<decltype(now()), queue_node_ptr> messages;
     queue_node_ptr msg_ptr;
     //decltype(queue.pop()) msg_ptr = nullptr;
-    decltype(detail::now()) now;
+    decltype(now()) tout;
     bool done = false;
     // message handling rules
-    auto handle_msg =
-    (
-        on<util::duration,actor_ptr,anything>() >> [&](const util::duration& d,
-                                                       const actor_ptr&)
-        {
+    auto mfun = (
+        on<util::duration,channel_ptr,anything>() >> [&](const util::duration& d,
+                                                         const channel_ptr&) {
             // calculate timeout
-            auto timeout = detail::now();
+            auto timeout = now();
             timeout += d;
             messages.insert(std::make_pair(std::move(timeout),
                                            std::move(msg_ptr)));
         },
-        on<atom(":_DIE")>() >> [&]()
-        {
+        on<atom(":_DIE")>() >> [&]() {
             done = true;
         },
-        others() >> [&]()
-        {
+        others() >> [&]() {
 #           ifdef CPPA_DEBUG
                 std::cerr << "scheduler_helper::time_emitter: UNKNOWN MESSAGE: "
                           << to_string(msg_ptr->msg)
@@ -135,107 +129,83 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self)
         }
     );
     // loop
-    while (!done)
-    {
-        while (!msg_ptr)
-        {
-            if (messages.empty())
-            {
+    while (!done) {
+        while (!msg_ptr) {
+            if (messages.empty()) {
                 msg_ptr.reset(queue.pop());
             }
-            else
-            {
-                now = detail::now();
+            else {
+                tout = now();
                 // handle timeouts (send messages)
                 auto it = messages.begin();
-                while (it != messages.end() && (it->first) <= now)
-                {
-                    abstract_actor<local_actor>::queue_node_ptr ptr(std::move(it->second));
-                    //auto ptr = it->second;
+                while (it != messages.end() && (it->first) <= tout) {
+                    queue_node_ptr ptr{std::move(it->second)};
+                    CPPA_REQUIRE(ptr->marked == false);
                     auto whom = const_cast<actor_ptr*>(
-                                    reinterpret_cast<actor_ptr const*>(
+                                    reinterpret_cast<const actor_ptr*>(
                                         ptr->msg.at(1)));
-                    if (*whom)
-                    {
-                        any_tuple msg = *(reinterpret_cast<any_tuple const*>(
-                                                  ptr->msg.at(2)));
-                        (*whom)->enqueue(ptr->sender.get(), std::move(msg));
+                    if (*whom) {
+                        any_tuple msg = *(reinterpret_cast<const any_tuple*>(
+                                                  ptr->msg.at(2))); (*whom)->enqueue(ptr->sender.get(), std::move(msg));
                     }
                     messages.erase(it);
                     it = messages.begin();
-                    //delete ptr;
                 }
                 // wait for next message or next timeout
-                if (it != messages.end())
-                {
+                if (it != messages.end()) {
                     msg_ptr.reset(queue.try_pop(it->first));
                 }
             }
         }
-        handle_msg(msg_ptr->msg);
-        //delete msg_ptr;
+        mfun(msg_ptr->msg);
     }
 }
 
-scheduler::scheduler() : m_helper(new scheduler_helper)
-{
+scheduler::scheduler() : m_helper(new scheduler_helper) {
 }
 
-void scheduler::start()
-{
+void scheduler::start() {
     m_helper->start();
 }
 
-void scheduler::stop()
-{
+void scheduler::stop() {
     m_helper->stop();
 }
 
-scheduler::~scheduler()
-{
+scheduler::~scheduler() {
     delete m_helper;
 }
 
-channel* scheduler::future_send_helper()
-{
+channel* scheduler::delayed_send_helper() {
     return m_helper->m_worker.get();
 }
 
-void scheduler::register_converted_context(local_actor* what)
-{
-    if (what)
-    {
+void scheduler::register_converted_context(local_actor* what) {
+    if (what) {
         detail::inc_actor_count();
         what->attach(new exit_observer);
     }
 }
 
-attachable* scheduler::register_hidden_context()
-{
+attachable* scheduler::register_hidden_context() {
     detail::inc_actor_count();
     return new exit_observer;
 }
 
-void set_scheduler(scheduler* sched)
-{
-    if (detail::singleton_manager::set_scheduler(sched) == false)
-    {
+void set_scheduler(scheduler* sched) {
+    if (detail::singleton_manager::set_scheduler(sched) == false) {
         throw std::runtime_error("scheduler already set");
     }
 }
 
-scheduler* get_scheduler()
-{
+scheduler* get_scheduler() {
     scheduler* result = detail::singleton_manager::get_scheduler();
-    if (result == nullptr)
-    {
+    if (result == nullptr) {
         result = new detail::thread_pool_scheduler;
-        try
-        {
+        try {
             set_scheduler(result);
         }
-        catch (std::runtime_error&)
-        {
+        catch (std::runtime_error&) {
             delete result;
             return detail::singleton_manager::get_scheduler();
         }

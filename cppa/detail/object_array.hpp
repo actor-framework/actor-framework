@@ -28,19 +28,17 @@
 \******************************************************************************/
 
 
-#ifndef OBJECT_ARRAY_HPP
-#define OBJECT_ARRAY_HPP
+#ifndef CPPA_OBJECT_ARRAY_HPP
+#define CPPA_OBJECT_ARRAY_HPP
 
 #include <vector>
 
 #include "cppa/object.hpp"
-#include "cppa/type_value_pair.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {
 
-class object_array : public abstract_tuple
-{
+class object_array : public abstract_tuple {
 
     typedef abstract_tuple super;
 
@@ -62,11 +60,11 @@ class object_array : public abstract_tuple
 
     abstract_tuple* copy() const;
 
-    void const* at(size_t pos) const;
+    const void* at(size_t pos) const;
 
     bool equals(const cppa::detail::abstract_tuple&) const;
 
-    uniform_type_info const* type_at(size_t pos) const;
+    const uniform_type_info* type_at(size_t pos) const;
 
  private:
 
@@ -76,4 +74,4 @@ class object_array : public abstract_tuple
 
 } } // namespace cppa::detail
 
-#endif // OBJECT_ARRAY_HPP
+#endif // CPPA_OBJECT_ARRAY_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#ifndef CPPA_CHANNEL_HPP
+#define CPPA_CHANNEL_HPP
 
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -47,8 +47,7 @@ class any_tuple;
  * This interface describes an entity that can receive messages
  * and is implemented by {@link actor} and {@link group}.
  */
-class channel : public ref_counted
-{
+class channel : public ref_counted {
 
     friend class actor;
     friend class group;
@@ -60,9 +59,7 @@ class channel : public ref_counted
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
-    virtual void enqueue(actor* sender, const any_tuple& msg) = 0;
-
-    virtual void enqueue(actor* sender, any_tuple&& msg) = 0;
+    virtual void enqueue(actor* sender, any_tuple msg) = 0;
 
  private:
 
@@ -74,9 +71,10 @@ class channel : public ref_counted
 
 /**
  * @brief A smart pointer type that manages instances of {@link channel}.
+ * @relates channel
  */
 typedef intrusive_ptr<channel> channel_ptr;
 
 } // namespace cppa
 
-#endif // CHANNEL_HPP
+#endif // CPPA_CHANNEL_HPP

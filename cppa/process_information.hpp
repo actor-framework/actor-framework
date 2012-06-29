@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PROCESS_INFORMATION_HPP
-#define PROCESS_INFORMATION_HPP
+#ifndef CPPA_PROCESS_INFORMATION_HPP
+#define CPPA_PROCESS_INFORMATION_HPP
 
 #include <array>
 #include <string>
@@ -45,8 +45,7 @@ namespace cppa {
  * @brief Identifies a process.
  */
 class process_information : public ref_counted,
-                            util::comparable<process_information>
-{
+                            util::comparable<process_information> {
 
     typedef ref_counted super;
 
@@ -117,11 +116,13 @@ bool equal(const std::string& hash,
            const process_information::node_id_type& node_id);
 
 inline bool equal(const process_information::node_id_type& node_id,
-                  const std::string& hash)
-{
+                  const std::string& hash) {
     return equal(hash, node_id);
 }
 
+/**
+ * @relates process_information
+ */
 std::string to_string(const process_information& what);
 
 /**
@@ -129,15 +130,17 @@ std::string to_string(const process_information& what);
  *        to a hexadecimal string.
  * @param node_id A unique node identifier.
  * @returns A hexadecimal representation of @p node_id.
+ * @relates process_information
  */
 std::string to_string(const process_information::node_id_type& node_id);
 
 /**
  * @brief A smart pointer type that manages instances of
  *        {@link process_information}.
+ * @relates process_information
  */
 typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa
 
-#endif // PROCESS_INFORMATION_HPP
+#endif // CPPA_PROCESS_INFORMATION_HPP

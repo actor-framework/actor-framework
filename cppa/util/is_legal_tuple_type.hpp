@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_LEGAL_TUPLE_TYPE_HPP
-#define IS_LEGAL_TUPLE_TYPE_HPP
+#ifndef CPPA_IS_LEGAL_TUPLE_TYPE_HPP
+#define CPPA_IS_LEGAL_TUPLE_TYPE_HPP
 
 #include <type_traits>
 
@@ -40,8 +40,7 @@ namespace cppa { namespace util {
  * @brief Checks wheter @p T is neither a reference nor a pointer nor an array.
  */
 template<typename T>
-struct is_legal_tuple_type
-{
+struct is_legal_tuple_type {
     static constexpr bool value =    std::is_reference<T>::value == false
                                   && std::is_pointer<T>::value == false
                                   && std::is_array<T>::value == false;
@@ -49,4 +48,4 @@ struct is_legal_tuple_type
 
 } } // namespace cppa::util
 
-#endif // IS_LEGAL_TUPLE_TYPE_HPP
+#endif // CPPA_IS_LEGAL_TUPLE_TYPE_HPP

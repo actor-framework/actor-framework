@@ -18,7 +18,6 @@
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
 
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
 
@@ -28,12 +27,10 @@ using std::string;
 using namespace cppa;
 
 template<typename Arr>
-string plot(const Arr& arr)
-{
+string plot(const Arr& arr) {
     std::ostringstream oss;
     oss << "{ ";
-    for (size_t i = 0; i < Arr::size; ++i)
-    {
+    for (size_t i = 0; i < Arr::size; ++i) {
         if (i > 0) oss << ", ";
         oss << "arr[" << i << "] = " << ((arr[i]) ? arr[i]->name() : "anything");
     }
@@ -41,66 +38,46 @@ string plot(const Arr& arr)
     return oss.str();
 }
 
-typedef std::pair<int,int> foobar;
+typedef std::pair<std::int32_t, std::int32_t> foobar;
 
-static detail::types_array<int,anything,float> arr1;
-static detail::types_array<int,anything,foobar> arr2;
+static detail::types_array<int, anything, float> arr1;
+static detail::types_array<int, anything, foobar> arr2;
 
 template<typename T>
-void match_test(const T& value)
-{
-    match(value)
-    (
-        on<int, int, int, anything>() >> [&](int a, int b, int c)
-        {
+void match_test(const T& value) {
+    match(value) (
+        on<int, int, int, anything>() >> [&](int a, int b, int c) {
             cout << "(" << a << ", " << b << ", " << c << ")" << endl;
         },
-        on_arg_match >> [&](const string& str)
-        {
+        on_arg_match >> [&](const string& str) {
             cout << str << endl;
         }
     );
 }
 
 template<class Testee>
-void invoke_test(std::vector<any_tuple>& test_tuples, Testee& x)
-{
+void invoke_test(std::vector<any_tuple>& test_tuples, Testee& x) {
     boost::progress_timer t;
-    for (int i = 0; i < 1000000; ++i)
-    {
+    for (int i = 0; i < 1000000; ++i) {
         for (auto& t : test_tuples) x(t);
     }
 }
 
-size_t test__pattern()
-{
+size_t test__pattern() {
     CPPA_TEST(test__pattern);
-
-    //match_test(make_cow_tuple(1,2,3));
-    //match_test(std::list<int>{1, 2, 3});
-    //match_test("abc");
 
     pattern<int, anything, int> i3;
     any_tuple i3_any_tup = make_cow_tuple(1, 2, 3);
-    /*
-    auto opt = tuple_cast(i3_any_tup, i3);
-    CPPA_CHECK(opt.valid());
-    if (opt.valid())
-    {
-        CPPA_CHECK_EQUAL(get<0>(*opt), 1);
-        CPPA_CHECK_EQUAL(get<1>(*opt), 3);
-    }
-    */
 
     announce<foobar>(&foobar::first, &foobar::second);
 
-    static constexpr char const* arr1_as_string =
+    static constexpr const char* arr1_as_string =
             "{ arr[0] = @i32, arr[1] = anything, arr[2] = float }";
-    CPPA_CHECK_EQUAL(plot(arr1), arr1_as_string);
-    static constexpr char const* arr2_as_string =
+    CPPA_CHECK_EQUAL(arr1_as_string, plot(arr1));
+    static constexpr const char* arr2_as_string =
             "{ arr[0] = @i32, arr[1] = anything, "
             "arr[2] = std::pair<@i32,@i32> }";
-    CPPA_CHECK_EQUAL(plot(arr2), arr2_as_string);
+    CPPA_CHECK_EQUAL(arr2_as_string, plot(arr2));
 
     // some pattern objects to play with
     pattern<atom_value, int, string> p0{util::wrapped<atom_value>{}};
@@ -159,10 +136,8 @@ size_t test__pattern()
     CPPA_CHECK(p11._matches_values(t3));
 
     bool invoked = false;
-    match(t3)
-    (
-        on<atom("foo"), int>() >> [&](int i)
-        {
+    match(t3) (
+        on<atom("foo"), int>() >> [&](int i) {
             invoked = true;
             CPPA_CHECK_EQUAL(42, i);
         }
@@ -178,10 +153,8 @@ size_t test__pattern()
     CPPA_CHECK(p13._matches_values(t4));
 
     invoked = false;
-    match('a')
-    (
-        on<char>() >> [&](char c)
-        {
+    match('a') (
+        on<char>() >> [&](char c) {
             invoked = true;
             CPPA_CHECK_EQUAL('a', c);
         }
@@ -190,10 +163,8 @@ size_t test__pattern()
 
     invoked = false;
     const char muhaha = 'a';
-    match(muhaha)
-    (
-        on<char>() >> [&](char c)
-        {
+    match(muhaha) (
+        on<char>() >> [&](char c) {
             invoked = true;
             CPPA_CHECK_EQUAL('a', c);
         }
@@ -224,44 +195,35 @@ size_t test__pattern()
     // let's check some invoke rules
     constexpr size_t num_lambdas = 6;
     bool lambda_invoked[num_lambdas];
-    auto reset_invoke_states = [&]()
-    {
-        for (size_t i = 0; i < num_lambdas; ++i)
-        {
+    auto reset_invoke_states = [&]() {
+        for (size_t i = 0; i < num_lambdas; ++i) {
             lambda_invoked[i] = false;
         }
     };
     reset_invoke_states();
-    auto patterns =
-    (
-        on<int, anything, int>() >> [&](int v1, int v2)
-        {
+    auto patterns = (
+        on<int, anything, int>() >> [&](int v1, int v2) {
             CPPA_CHECK_EQUAL(v1, 1);
             CPPA_CHECK_EQUAL(v2, 3);
             lambda_invoked[0] = true;
         },
-        on<string>() >> [&](const string& str)
-        {
+        on<string>() >> [&](const string& str) {
             CPPA_CHECK_EQUAL(str, "hello foo");
             lambda_invoked[1] = true;
         },
-        on("1", val<int>, any_vals) >> [&](int value)
-        {
+        on("1", val<int>, any_vals) >> [&](int value) {
             CPPA_CHECK_EQUAL(value, 2);
             lambda_invoked[2] = true;
         },
-        on(1, val<string>(), any_vals) >> [&](const string& str)
-        {
+        on(1, val<string>(), any_vals) >> [&](const string& str) {
             CPPA_CHECK_EQUAL(str, "2");
             lambda_invoked[3] = true;
         },
-        on<atom("Foo"), int>() >> [&](int value)
-        {
+        on<atom("Foo"), int>() >> [&](int value) {
             CPPA_CHECK_EQUAL(value, 1);
             lambda_invoked[4] = true;
         },
-        on_arg_match >> [&](double v1, const float& v2)
-        {
+        on_arg_match >> [&](double v1, const float& v2) {
             CPPA_CHECK_EQUAL(v1, 1.0);
             CPPA_CHECK_EQUAL(v2, 2.0f);
             lambda_invoked[5] = true;

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_REF_COUNTED_HPP
-#define LIBCPPA_REF_COUNTED_HPP
+#ifndef CPPA_REF_COUNTED_HPP
+#define CPPA_REF_COUNTED_HPP
 
 #include <atomic>
 #include <cstddef>
@@ -47,8 +47,7 @@ namespace cppa {
  * Serves the requirements of {@link intrusive_ptr}.
  * @relates intrusive_ptr
  */
-class ref_counted
-{
+class ref_counted {
 
  public:
 
@@ -80,4 +79,4 @@ typedef detail::ref_counted_impl< std::atomic<size_t> > ref_counted;
 
 } // namespace cppa
 
-#endif // LIBCPPA_REF_COUNTED_HPP
+#endif // CPPA_REF_COUNTED_HPP

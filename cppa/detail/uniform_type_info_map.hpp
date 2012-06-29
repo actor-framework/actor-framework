@@ -28,12 +28,14 @@
 \******************************************************************************/
 
 
-#ifndef UNIFORM_TYPE_INFO_MAP_HPP
-#define UNIFORM_TYPE_INFO_MAP_HPP
+#ifndef CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#define CPPA_UNIFORM_TYPE_INFO_MAP_HPP
 
 #include <set>
 #include <string>
 #include <utility> // std::pair
+
+#include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 namespace cppa { class uniform_type_info; }
 
@@ -42,33 +44,29 @@ namespace cppa { namespace detail {
 class uniform_type_info_map_helper;
 
 // note: this class is implemented in uniform_type_info.cpp
-class uniform_type_info_map
-{
+class uniform_type_info_map {
 
     friend class uniform_type_info_map_helper;
 
  public:
 
-    typedef std::set<std::string> string_set;
-
-    typedef std::map<std::string, uniform_type_info*> uti_map;
-
-    typedef std::map< int, std::pair<string_set, string_set> > int_map;
+    typedef std::set<std::string> set_type;
+    typedef std::map<std::string, uniform_type_info*> uti_map_type;
+    typedef std::map<int, std::pair<set_type, set_type> > int_map_type;
 
     uniform_type_info_map();
 
     ~uniform_type_info_map();
 
-    inline const int_map& int_names() const
-    {
+    inline const int_map_type& int_names() const {
         return m_ints;
     }
 
-    uniform_type_info* by_raw_name(const std::string& name) const;
+    const uniform_type_info* by_raw_name(const std::string& name) const;
 
-    uniform_type_info* by_uniform_name(const std::string& name) const;
+    const uniform_type_info* by_uniform_name(const std::string& name) const;
 
-    std::vector<uniform_type_info*> get_all() const;
+    std::vector<const uniform_type_info*> get_all() const;
 
     // NOT thread safe!
     bool insert(const std::set<std::string>& raw_names, uniform_type_info* uti);
@@ -76,16 +74,16 @@ class uniform_type_info_map
  private:
 
     // maps raw typeid names to uniform type informations
-    uti_map m_by_rname;
+    uti_map_type m_by_rname;
 
     // maps uniform names to uniform type informations
-    uti_map m_by_uname;
+    uti_map_type m_by_uname;
 
     // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
-    int_map m_ints;
+    int_map_type m_ints;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // UNIFORM_TYPE_INFO_MAP_HPP
+#endif // CPPA_UNIFORM_TYPE_INFO_MAP_HPP

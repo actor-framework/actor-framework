@@ -28,15 +28,16 @@
 \******************************************************************************/
 
 
-#ifndef EMPTY_TUPLE_HPP
-#define EMPTY_TUPLE_HPP
+#ifndef CPPA_EMPTY_TUPLE_HPP
+#define CPPA_EMPTY_TUPLE_HPP
 
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {
 
-struct empty_tuple : abstract_tuple
-{
+class empty_tuple : public abstract_tuple {
+
+ public:
 
     using abstract_tuple::const_iterator;
 
@@ -44,13 +45,13 @@ struct empty_tuple : abstract_tuple
     size_t size() const;
     void* mutable_at(size_t);
     abstract_tuple* copy() const;
-    void const* at(size_t) const;
+    const void* at(size_t) const;
     bool equals(const abstract_tuple& other) const;
-    uniform_type_info const* type_at(size_t) const;
-    std::type_info const* type_token() const;
+    const uniform_type_info* type_at(size_t) const;
+    const std::type_info* type_token() const;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // EMPTY_TUPLE_HPP
+#endif // CPPA_EMPTY_TUPLE_HPP

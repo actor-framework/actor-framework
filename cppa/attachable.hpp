@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ATTACHABLE_HPP
-#define ATTACHABLE_HPP
+#ifndef CPPA_ATTACHABLE_HPP
+#define CPPA_ATTACHABLE_HPP
 
 #include <cstdint>
 #include <typeinfo>
@@ -39,8 +39,7 @@ namespace cppa {
 /**
  * @brief Callback utility class.
  */
-class attachable
-{
+class attachable {
 
     attachable(const attachable&) = delete;
     attachable& operator=(const attachable&) = delete;
@@ -54,8 +53,7 @@ class attachable
     /**
      * @brief Represents a pointer to a value with its RTTI.
      */
-    struct token
-    {
+    struct token {
         /**
          * @brief Denotes the type of @c ptr.
          */
@@ -63,10 +61,9 @@ class attachable
         /**
          * @brief Any value, used to identify @c attachable instances.
          */
-        void const* ptr;
-        inline token(const std::type_info& msubtype, void const* mptr)
-            : subtype(msubtype), ptr(mptr)
-        {
+        const void* ptr;
+        inline token(const std::type_info& msubtype, const void* mptr)
+            : subtype(msubtype), ptr(mptr) {
         }
     };
 
@@ -91,4 +88,4 @@ class attachable
 
 } // namespace cppa
 
-#endif // ATTACHABLE_HPP
+#endif // CPPA_ATTACHABLE_HPP

@@ -28,9 +28,10 @@
 \******************************************************************************/
 
 
-#ifndef TYPE_TO_PTYPE_HPP
-#define TYPE_TO_PTYPE_HPP
+#ifndef CPPA_TYPE_TO_PTYPE_HPP
+#define CPPA_TYPE_TO_PTYPE_HPP
 
+#include <string>
 #include <cstdint>
 #include <type_traits>
 
@@ -40,14 +41,12 @@ namespace cppa { namespace detail {
 
 // if (IfStmt == true) ptype = PT; else ptype = Else::ptype;
 template<bool IfStmt, primitive_type PT, class Else>
-struct if_else_ptype_c
-{
+struct if_else_ptype_c {
     static const primitive_type ptype = PT;
 };
 
 template<primitive_type PT, class Else>
-struct if_else_ptype_c<false, PT, Else>
-{
+struct if_else_ptype_c<false, PT, Else> {
     static const primitive_type ptype = Else::ptype;
 };
 
@@ -80,13 +79,11 @@ struct type_to_ptype_impl :
     if_else_ptype<std::is_convertible<T, std::u16string>, pt_u16string,
     if_else_ptype<std::is_convertible<T, std::u32string>, pt_u32string,
     // default case
-    wrapped_ptype<pt_null> > > > > > > > > > > > > > >
-{
+    wrapped_ptype<pt_null> > > > > > > > > > > > > > > {
 };
 
 template<typename T>
-struct type_to_ptype
-{
+struct type_to_ptype {
 
     typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
 
@@ -96,4 +93,4 @@ struct type_to_ptype
 
 } } // namespace cppa::detail
 
-#endif // TYPE_TO_PTYPE_HPP
+#endif // CPPA_TYPE_TO_PTYPE_HPP

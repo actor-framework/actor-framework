@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DISJUNCTION_HPP
-#define DISJUNCTION_HPP
+#ifndef CPPA_DISJUNCTION_HPP
+#define CPPA_DISJUNCTION_HPP
 
 #include <type_traits>
 
@@ -40,8 +40,7 @@ struct disjunction;
 
 template<typename Head, typename... Tail>
 struct disjunction<Head, Tail...>
-    : std::integral_constant<bool, Head::value || disjunction<Tail...>::value>
-{
+    : std::integral_constant<bool, Head::value || disjunction<Tail...>::value> {
 };
 
 template<>
@@ -49,4 +48,4 @@ struct disjunction<> : std::false_type { };
 
 } } // namespace cppa::util
 
-#endif // DISJUNCTION_HPP
+#endif // CPPA_DISJUNCTION_HPP

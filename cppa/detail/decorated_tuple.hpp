@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DECORATED_TUPLE_HPP
-#define DECORATED_TUPLE_HPP
+#ifndef CPPA_DECORATED_TUPLE_HPP
+#define CPPA_DECORATED_TUPLE_HPP
 
 #include <vector>
 #include <algorithm>
@@ -50,8 +50,7 @@
 namespace cppa { namespace detail {
 
 template<typename... ElementTypes>
-class decorated_tuple : public abstract_tuple
-{
+class decorated_tuple : public abstract_tuple {
 
     typedef abstract_tuple super;
 
@@ -65,47 +64,39 @@ class decorated_tuple : public abstract_tuple
     typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
     static inline cow_pointer_type create(cow_pointer_type d,
-                                          const vector_type& v)
-    {
+                                          const vector_type& v) {
         return cow_pointer_type{new decorated_tuple(std::move(d), v)};
     }
 
     // creates a subtuple form @p d with an offset
-    static inline cow_pointer_type create(cow_pointer_type d, size_t offset)
-    {
+    static inline cow_pointer_type create(cow_pointer_type d, size_t offset) {
         return cow_pointer_type{new decorated_tuple(std::move(d), offset)};
     }
 
-    virtual void* mutable_at(size_t pos)
-    {
+    virtual void* mutable_at(size_t pos) {
         CPPA_REQUIRE(pos < size());
         return m_decorated->mutable_at(m_mapping[pos]);
     }
 
-    virtual size_t size() const
-    {
+    virtual size_t size() const {
         return sizeof...(ElementTypes);
     }
 
-    virtual decorated_tuple* copy() const
-    {
+    virtual decorated_tuple* copy() const {
         return new decorated_tuple(*this);
     }
 
-    virtual void const* at(size_t pos) const
-    {
+    virtual const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_decorated->at(m_mapping[pos]);
     }
 
-    virtual uniform_type_info const* type_at(size_t pos) const
-    {
+    virtual const uniform_type_info* type_at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
         return m_decorated->type_at(m_mapping[pos]);
     }
 
-    std::type_info const* type_token() const
-    {
+    const std::type_info* type_token() const {
         return static_type_list<ElementTypes...>::list;
     }
 
@@ -116,8 +107,7 @@ class decorated_tuple : public abstract_tuple
 
     decorated_tuple(cow_pointer_type d, const vector_type& v)
         : super(tuple_impl_info::statically_typed)
-        , m_decorated(std::move(d)), m_mapping(v)
-    {
+        , m_decorated(std::move(d)), m_mapping(v) {
 #       ifdef CPPA_DEBUG
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
@@ -127,8 +117,7 @@ class decorated_tuple : public abstract_tuple
     }
 
     decorated_tuple(cow_pointer_type d, size_t offset)
-        : super(tuple_impl_info::statically_typed), m_decorated(std::move(d))
-    {
+        : super(tuple_impl_info::statically_typed), m_decorated(std::move(d)) {
 #       ifdef CPPA_DEBUG
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
@@ -149,11 +138,10 @@ template<typename TypeList>
 struct decorated_cow_tuple_from_type_list;
 
 template<typename... Types>
-struct decorated_cow_tuple_from_type_list< util::type_list<Types...> >
-{
+struct decorated_cow_tuple_from_type_list< util::type_list<Types...> > {
     typedef decorated_tuple<Types...> type;
 };
 
 } } // namespace cppa::detail
 
-#endif // DECORATED_TUPLE_HPP
+#endif // CPPA_DECORATED_TUPLE_HPP

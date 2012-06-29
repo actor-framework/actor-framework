@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_MANIPULATOR_HPP
-#define IS_MANIPULATOR_HPP
+#ifndef CPPA_IS_MANIPULATOR_HPP
+#define CPPA_IS_MANIPULATOR_HPP
 
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/is_mutable_ref.hpp"
@@ -44,12 +44,11 @@ namespace cppa { namespace util {
  * @brief Checks wheter functor or function @p F takes mutable references.
  */
 template<typename F>
-struct is_manipulator
-{
+struct is_manipulator {
     static constexpr bool value =
             tl_exists<typename get_arg_types<F>::types, is_mutable_ref>::value;
 };
 
 } } // namespace cppa::util
 
-#endif // IS_MANIPULATOR_HPP
+#endif // CPPA_IS_MANIPULATOR_HPP

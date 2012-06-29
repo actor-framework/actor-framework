@@ -28,14 +28,15 @@
 \******************************************************************************/
 
 
-#ifndef ATOM_VAL_HPP
-#define ATOM_VAL_HPP
+#ifndef CPPA_ATOM_VAL_HPP
+#define CPPA_ATOM_VAL_HPP
 
-namespace cppa { namespace detail { namespace {
+namespace cppa { namespace detail {
+
+namespace {
 
 // encodes ASCII characters to 6bit encoding
-constexpr char encoding_table[] =
-{
+constexpr char encoding_table[] = {
 /*         ..0 ..1 ..2 ..3 ..4 ..5 ..6 ..7 ..8 ..9 ..A ..B ..C ..D ..E ..F    */
 /* 0.. */    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 /* 1.. */    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -52,19 +53,19 @@ constexpr char decoding_table[] = " 0123456789"
                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
                                   "abcdefghijklmnopqrstuvwxyz";
 
-constexpr std::uint64_t next_interim(std::uint64_t current, size_t char_code)
-{
+} // namespace <anonymous>
+
+constexpr std::uint64_t next_interim(std::uint64_t current, size_t char_code) {
     return (current << 6) | encoding_table[(char_code <= 0x7F) ? char_code : 0];
 }
 
-constexpr std::uint64_t atom_val(char const* cstr, std::uint64_t interim = 0)
-{
+constexpr std::uint64_t atom_val(const char* cstr, std::uint64_t interim = 0) {
     return (*cstr == '\0') ? interim
                            : atom_val(cstr + 1,
                                       next_interim(interim,
                                                    static_cast<size_t>(*cstr)));
 }
 
-} } } // namespace cppa::detail::<anonymous>
+} } // namespace cppa::detail
 
-#endif // ATOM_VAL_HPP
+#endif // CPPA_ATOM_VAL_HPP

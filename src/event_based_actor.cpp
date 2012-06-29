@@ -28,51 +28,101 @@
 \******************************************************************************/
 
 
+#include <iostream>
+#include "cppa/to_string.hpp"
+
+#include "cppa/self.hpp"
 #include "cppa/event_based_actor.hpp"
+
+#include "cppa/detail/filter_result.hpp"
 
 namespace cppa {
 
-event_based_actor::event_based_actor()
-{
-    m_loop_stack.reserve(2);
+event_based_actor::event_based_actor() : super(super::blocked) { }
+
+void event_based_actor::dequeue(behavior&) {
+    quit(exit_reason::unallowed_function_call);
 }
 
-void event_based_actor::become_void()
-{
-    cleanup(exit_reason::normal);
-    m_loop_stack.clear();
+void event_based_actor::dequeue(partial_function&) {
+    quit(exit_reason::unallowed_function_call);
 }
 
-void event_based_actor::quit(std::uint32_t reason)
-{
-    if (reason == exit_reason::normal)
-    {
-        become_void();
+resume_result event_based_actor::resume(util::fiber*) {
+    scoped_self_setter sss{this};
+    auto done_cb = [&]() {
+        m_state.store(abstract_scheduled_actor::done);
+        m_bhvr_stack.clear();
+        on_exit();
+    };
+    try {
+        detail::recursive_queue_node* e;
+        for (;;) {
+            e = m_mailbox.try_pop();
+            if (!e) {
+                m_state.store(abstract_scheduled_actor::about_to_block);
+                if (m_mailbox.can_fetch_more() == false) {
+                    switch (compare_exchange_state(
+                                abstract_scheduled_actor::about_to_block,
+                                abstract_scheduled_actor::blocked)) {
+                        case abstract_scheduled_actor::ready: {
+                            break;
+                        }
+                        case abstract_scheduled_actor::blocked: {
+                            return resume_result::actor_blocked;
+                        }
+                        default: CPPA_CRITICAL("illegal actor state");
+                    };
+                }
+            }
+            else {
+                if (m_policy.invoke(this, e, get_behavior())) {
+                    // try to match cached message before receiving new ones
+                    do {
+                        m_bhvr_stack.cleanup();
+                        if (m_bhvr_stack.empty()) {
+                            done_cb();
+                            return resume_result::actor_done;
+                        }
+                    } while (m_policy.invoke_from_cache(this, get_behavior()));
+                }
+            }
+        }
     }
-    else
-    {
+    catch (actor_exited& what) { cleanup(what.reason()); }
+    catch (...)                { cleanup(exit_reason::unhandled_exception); }
+    done_cb();
+    return resume_result::actor_done;
+}
+
+bool event_based_actor::has_behavior() {
+    return m_bhvr_stack.empty() == false;
+}
+
+void event_based_actor::do_become(behavior* ptr, bool owner, bool discard_old) {
+    reset_timeout();
+    request_timeout(ptr->timeout());
+    if (discard_old) m_bhvr_stack.pop_back();
+    m_bhvr_stack.push_back(ptr, owner);
+}
+
+void event_based_actor::quit(std::uint32_t reason) {
+    if (reason == exit_reason::normal) {
+        cleanup(exit_reason::normal);
+        m_bhvr_stack.clear();
+        m_bhvr_stack.cleanup();
+    }
+    else {
         abstract_scheduled_actor::quit(reason);
     }
 }
 
-void event_based_actor::do_become(behavior* bhvr, bool has_ownership)
-{
-    reset_timeout();
-    request_timeout(bhvr->timeout());
-    stack_element new_element{bhvr};
-    if (!has_ownership) new_element.get_deleter().disable();
-    // keep always the latest element in the stack to prevent subtle errors,
-    // e.g., the addresses of all variables in a lambda expression calling
-    // become() suddenly are invalid if we would pop the behavior!
-    if (m_loop_stack.size() < 2)
-    {
-        m_loop_stack.push_back(std::move(new_element));
-    }
-    else
-    {
-        m_loop_stack[0] = std::move(m_loop_stack[1]);
-        m_loop_stack[1] = std::move(new_element);
-    }
+void event_based_actor::unbecome() {
+    m_bhvr_stack.pop_back();
+}
+
+scheduled_actor_type event_based_actor::impl_type() {
+    return event_based_impl;
 }
 
 } // namespace cppa

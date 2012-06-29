@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TO_STRING_HPP
-#define TO_STRING_HPP
+#ifndef CPPA_TO_STRING_HPP
+#define CPPA_TO_STRING_HPP
 
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -38,7 +38,7 @@ namespace cppa {
 
 namespace detail {
 
-std::string to_string_impl(void const* what, uniform_type_info const* utype);
+std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
 } // namespace detail
 
@@ -48,11 +48,9 @@ std::string to_string_impl(void const* what, uniform_type_info const* utype);
  * @returns A string representation of @p what.
  */
 template<typename T>
-std::string to_string(const T& what)
-{
+std::string to_string(const T& what) {
     auto utype = uniform_typeid<T>();
-    if (utype == nullptr)
-    {
+    if (utype == nullptr) {
         throw std::logic_error(  detail::to_uniform_name(typeid(T))
                                + " is not announced");
     }
@@ -61,4 +59,4 @@ std::string to_string(const T& what)
 
 } // namespace cppa
 
-#endif // TO_STRING_HPP
+#endif // CPPA_TO_STRING_HPP

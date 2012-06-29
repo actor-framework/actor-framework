@@ -8,8 +8,7 @@
 
 // This class is intrusive.
 template<typename T>
-class cached_stack
-{
+class cached_stack {
 
 	// singly linked list, serves as cache
 	T* m_head;
@@ -21,16 +20,12 @@ class cached_stack
 	// read all elements of m_stack, convert them to FIFO order and store
 	// them in m_head
 	// precondition: m_head == nullptr
-	bool consume_stack()
-	{
+	bool consume_stack() {
 		T* e = m_stack.load();
-		while (e)
-		{
-			if (m_stack.compare_exchange_weak(e, 0))
-			{
+		while (e) {
+			if (m_stack.compare_exchange_weak(e, 0)) {
 				// m_stack is now empty (m_stack == nullptr)
-				while (e)
-				{
+				while (e) {
 					T* next = e->next;
 					// enqueue to m_head
 					e->next = m_head;
@@ -47,17 +42,13 @@ class cached_stack
 
  public:
 
-	cached_stack() : m_head(0)
-	{
+	cached_stack() : m_head(0) {
 		m_stack = 0;
 	}
 
-	~cached_stack()
-	{
-		do
-		{
-			while (m_head)
-			{
+	~cached_stack() {
+		do {
+			while (m_head) {
 				T* next = m_head->next;
 				delete m_head;
 				m_head = next;
@@ -67,11 +58,9 @@ class cached_stack
 		while (consume_stack());
 	}
 
-	void push(T* what)
-	{
+	void push(T* what) {
 		T* e = m_stack.load();
-		for (;;)
-		{
+		for (;;) {
 			what->next = e;
 			// compare_exchange_weak stores the
 			// new value to e if the operation fails
@@ -79,10 +68,8 @@ class cached_stack
 		}
 	}
 
-	T* try_pop()
-	{
-		if (m_head || consume_stack())
-		{
+	T* try_pop() {
+		if (m_head || consume_stack()) {
 			T* result = m_head;
 			m_head = m_head->next;
 			return result;
@@ -90,11 +77,9 @@ class cached_stack
 		return 0;
 	}
 
-	T* pop()
-	{
+	T* pop() {
 		T* result = try_pop();
-		while (!result)
-		{
+		while (!result) {
 			std::this_thread::yield();
 			result = try_pop();
 		}

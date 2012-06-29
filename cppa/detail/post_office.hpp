@@ -28,22 +28,27 @@
 \******************************************************************************/
 
 
-#ifndef POST_OFFICE_HPP
-#define POST_OFFICE_HPP
+#ifndef CPPA_POST_OFFICE_HPP
+#define CPPA_POST_OFFICE_HPP
 
 #include <memory>
 
+#include "cppa/atom.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/detail/native_socket.hpp"
 
 namespace cppa { namespace detail {
 
-void post_office_loop(int pipe_read_handle, int pipe_write_handle);
+struct po_message {
+    atom_value flag;
+    native_socket_type fd;
+    actor_id aid;
+};
+
+void post_office_loop(int input_fd);
 
 void post_office_add_peer(native_socket_type peer_socket,
-                          const process_information_ptr& peer_ptr,
-                          const actor_proxy_ptr& peer_actor_ptr,
-                          std::unique_ptr<attachable>&& peer_observer);
+                          const process_information_ptr& peer_ptr);
 
 void post_office_publish(native_socket_type server_socket,
                          const actor_ptr& published_actor);
@@ -54,4 +59,4 @@ void post_office_close_socket(native_socket_type sfd);
 
 } } // namespace cppa::detail
 
-#endif // POST_OFFICE_HPP
+#endif // CPPA_POST_OFFICE_HPP

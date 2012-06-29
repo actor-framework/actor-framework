@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_ANYTHING_HPP
-#define LIBCPPA_ANYTHING_HPP
+#ifndef CPPA_ANYTHING_HPP
+#define CPPA_ANYTHING_HPP
 
 #include <type_traits>
 
@@ -40,23 +40,29 @@ namespace cppa {
  */
 struct anything { };
 
-inline bool operator==(const anything&, const anything&)
-{
-    return true;
-}
+/**
+ * @brief Compares two instances of {@link anything}.
+ * @returns @p false
+ * @relates anything
+ */
+inline bool operator==(const anything&, const anything&) { return true; }
 
-inline bool operator!=(const anything&, const anything&)
-{
-    return false;
-}
+/**
+ * @brief Compares two instances of {@link anything}.
+ * @returns @p false
+ * @relates anything
+ */
+inline bool operator!=(const anything&, const anything&) { return false; }
 
+/**
+ * @brief Checks wheter @p T is {@link anything}.
+ */
 template<typename T>
-struct is_anything
-{
+struct is_anything {
     static constexpr bool value = std::is_same<T, anything>::value;
 };
 
 
 } // namespace cppa
 
-#endif // ANYTHING_HPP
+#endif // CPPA_ANYTHING_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TDATA_HPP
-#define TDATA_HPP
+#ifndef CPPA_TDATA_HPP
+#define CPPA_TDATA_HPP
 
 #include <typeinfo>
 #include <functional>
@@ -51,7 +51,7 @@
 
 namespace cppa {
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace detail {
@@ -60,65 +60,56 @@ template<typename T>
 inline void* ptr_to(T& what) { return &what; }
 
 template<typename T>
-inline void const* ptr_to(const T& what) { return &what; }
+inline const void* ptr_to(const T& what) { return &what; }
 
 template<typename T>
 inline void* ptr_to(T* what) { return what; }
 
 template<typename T>
-inline void const* ptr_to(T const* what) { return what; }
+inline const void* ptr_to(const T* what) { return what; }
 
 template<typename T>
-inline void* ptr_to(const std::reference_wrapper<T>& what)
-{
+inline void* ptr_to(const std::reference_wrapper<T>& what) {
     return &(what.get());
 }
 
 template<typename T>
-inline void const* ptr_to(const std::reference_wrapper<const T>& what)
-{
+inline const void* ptr_to(const std::reference_wrapper<const T>& what) {
     return &(what.get());
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(const T&)
-{
+inline const uniform_type_info* utype_of(const T&) {
     return static_types_array<T>::arr[0];
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(const std::reference_wrapper<T>&)
-{
+inline const uniform_type_info* utype_of(const std::reference_wrapper<T>&) {
     return static_types_array<typename util::rm_ref<T>::type>::arr[0];
 }
 
 template<typename T>
-inline uniform_type_info const* utype_of(T const* ptr)
-{
+inline const uniform_type_info* utype_of(const T* ptr) {
     return utype_of(*ptr);
 }
 
 template<typename T>
-struct boxed_or_void
-{
+struct boxed_or_void {
     static constexpr bool value = is_boxed<T>::value;
 };
 
 template<>
-struct boxed_or_void<util::void_type>
-{
+struct boxed_or_void<util::void_type> {
     static constexpr bool value = true;
 };
 
 template<typename T>
-struct unbox_ref
-{
+struct unbox_ref {
     typedef T type;
 };
 
 template<typename T>
-struct unbox_ref<std::reference_wrapper<T> >
-{
+struct unbox_ref<std::reference_wrapper<T> > {
     typedef T type;
 };
 
@@ -129,8 +120,7 @@ template<typename...>
 struct tdata;
 
 template<>
-struct tdata<>
-{
+struct tdata<> {
 
     typedef tdata super;
 
@@ -147,8 +137,7 @@ struct tdata<>
 
     // swallow any number of additional boxed or void_type arguments silently
     template<typename... Args>
-    tdata(Args&&...)
-    {
+    tdata(Args&&...) {
         typedef util::type_list<typename util::rm_ref<Args>::type...> incoming;
         typedef typename util::tl_filter_not_type<incoming, tdata>::type iargs;
         static_assert(util::tl_forall<iargs, boxed_or_void>::value,
@@ -171,18 +160,15 @@ struct tdata<>
 
     const tdata<>& ctail() const { return *this; }
 
-    inline void const* at(size_t) const
-    {
+    inline const void* at(size_t) const {
         throw std::out_of_range("tdata<>");
     }
 
-    inline void* mutable_at(size_t)
-    {
+    inline void* mutable_at(size_t) {
         throw std::out_of_range("tdata<>");
     }
 
-    inline uniform_type_info const* type_at(size_t) const
-    {
+    inline const uniform_type_info* type_at(size_t) const {
         throw std::out_of_range("tdata<>");
     }
 
@@ -190,36 +176,31 @@ struct tdata<>
 
     inline bool operator==(const tdata&) const { return true; }
 
-    inline tuple_impl_info impl_type() const
-    {
+    inline tuple_impl_info impl_type() const {
         return statically_typed;
     }
 
 };
 
 template<bool IsBoxed, bool IsFunction, typename Head, typename T>
-struct td_filter_
-{
+struct td_filter_ {
     static inline const T& _(const T& arg) { return arg; }
     static inline T&& _(T&& arg) { return std::move(arg); }
     static inline T& _(T& arg) { return arg; }
 };
 
 template<typename Head, typename T>
-struct td_filter_<false, true, Head, T>
-{
+struct td_filter_<false, true, Head, T> {
     static inline T* _(T* arg) { return arg; }
 };
 
 template<typename Head, typename T>
-struct td_filter_<true, false, Head, T>
-{
+struct td_filter_<true, false, Head, T> {
     static inline Head _(const T&) { return Head{}; }
 };
 
 template<typename Head, typename T>
-struct td_filter_<true, true, Head, T> : td_filter_<true, false, Head, T>
-{
+struct td_filter_<true, true, Head, T> : td_filter_<true, false, Head, T> {
 };
 
 template<typename Head, typename T>
@@ -230,8 +211,7 @@ auto td_filter(T&& arg)
             std::is_function<typename util::rm_ref<T>::type>::value,
             Head,
             typename util::rm_ref<T>::type
-        >::_(std::forward<T>(arg)))
-{
+        >::_(std::forward<T>(arg))) {
     return  td_filter_<
                 is_boxed<typename util::rm_ref<T>::type>::value,
                 std::is_function<typename util::rm_ref<T>::type>::value,
@@ -244,8 +224,7 @@ template<typename... X, typename... Y>
 void tdata_set(tdata<X...>& rhs, const tdata<Y...>& lhs);
 
 template<typename Head, typename... Tail>
-struct tdata<Head, Tail...> : tdata<Tail...>
-{
+struct tdata<Head, Tail...> : tdata<Tail...> {
 
     typedef tdata<Tail...> super;
 
@@ -261,8 +240,7 @@ struct tdata<Head, Tail...> : tdata<Tail...>
     typedef Head head_type;
     typedef tdata<Tail...> tail_type;
 
-    typedef typename util::if_else_c<
-                (sizeof...(Tail) > 0),
+    typedef typename util::if_else_c< (sizeof...(Tail) > 0),
                 typename tdata<Tail...>::back_type,
                 util::wrapped<Head>
             >::type
@@ -270,52 +248,43 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline tdata() : super(), head() { }
 
-    //tdata(const Head& v0, const Tail&... vals) : super(vals...), head(v0) { }
-
     tdata(Head arg) : super(), head(std::move(arg)) { }
 
     template<typename Arg0, typename Arg1, typename... Args>
     tdata(Arg0&& arg0, Arg1&& arg1, Args&&... args)
         : super(std::forward<Arg1>(arg1), std::forward<Args>(args)...)
-        , head(td_filter<Head>(std::forward<Arg0>(arg0)))
-    {
+        , head(td_filter<Head>(std::forward<Arg0>(arg0))) {
     }
 
     tdata(const tdata&) = default;
 
     tdata(tdata&& other)
-        : super(std::move(other.tail())), head(std::move(other.head))
-    {
+        : super(std::move(other.tail())), head(std::move(other.head)) {
     }
 
     // allow (partial) initialization from a different tdata
 
     template<typename... Y>
-    tdata(tdata<Y...>& other) : super(other.tail()), head(other.head)
-    {
+    tdata(tdata<Y...>& other) : super(other.tail()), head(other.head) {
     }
 
     template<typename... Y>
-    tdata(const tdata<Y...>& other) : super(other.tail()), head(other.head)
-    {
+    tdata(const tdata<Y...>& other) : super(other.tail()), head(other.head) {
     }
 
     template<typename... Y>
     tdata(tdata<Y...>&& other)
-        : super(std::move(other.tail())), head(std::move(other.head))
-    {
+        : super(std::move(other.tail())), head(std::move(other.head)) {
     }
 
     template<typename... Y>
-    tdata& operator=(const tdata<Y...>& other)
-    {
+    tdata& operator=(const tdata<Y...>& other) {
         tdata_set(*this, other);
         return *this;
     }
 
     template<typename Arg0, typename... Args>
-    inline void set(Arg0&& arg0, Args&&... args)
-    {
+    inline void set(Arg0&& arg0, Args&&... args) {
         head = std::forward<Arg0>(arg0);
         super::set(std::forward<Args>(args)...);
     }
@@ -338,11 +307,9 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     inline const tdata<Tail...>& ctail() const { return *this; }
 
-    inline void const* at(size_t p) const
-    {
+    inline const void* at(size_t p) const {
         CPPA_REQUIRE(p < num_elements);
-        switch (p)
-        {
+        switch (p) {
             case  0: return ptr_to(head);
             case  1: return ptr_to(super::head);
             case  2: return ptr_to(super::super::head);
@@ -354,13 +321,10 @@ struct tdata<Head, Tail...> : tdata<Tail...>
         //return (p == 0) ? ptr_to(head) : super::at(p - 1);
     }
 
-    inline void* mutable_at(size_t p)
-    {
+    inline void* mutable_at(size_t p) {
 #       ifdef CPPA_DEBUG
-        if (p == 0)
-        {
-            if (std::is_same<decltype(ptr_to(head)), void const*>::value)
-            {
+        if (p == 0) {
+            if (std::is_same<decltype(ptr_to(head)), const void*>::value) {
                 throw std::logic_error{"mutable_at with const head"};
             }
             return const_cast<void*>(ptr_to(head));
@@ -372,43 +336,36 @@ struct tdata<Head, Tail...> : tdata<Tail...>
 
     }
 
-    inline uniform_type_info const* type_at(size_t p) const
-    {
+    inline const uniform_type_info* type_at(size_t p) const {
         return (p == 0) ? utype_of(head) : super::type_at(p-1);
     }
 
-    Head& _back(std::integral_constant<size_t, 0>)
-    {
+    Head& _back(std::integral_constant<size_t, 0>) {
         return head;
     }
 
     template<size_t Pos>
-    back_type& _back(std::integral_constant<size_t, Pos>)
-    {
+    back_type& _back(std::integral_constant<size_t, Pos>) {
         std::integral_constant<size_t, Pos - 1> token;
         return super::_back(token);
     }
 
-    back_type& back()
-    {
+    back_type& back() {
         std::integral_constant<size_t, sizeof...(Tail)> token;
         return _back(token);
     }
 
-    const Head& _back(std::integral_constant<size_t, 0>) const
-    {
+    const Head& _back(std::integral_constant<size_t, 0>) const {
         return head;
     }
 
     template<size_t Pos>
-    const back_type& _back(std::integral_constant<size_t, Pos>) const
-    {
+    const back_type& _back(std::integral_constant<size_t, Pos>) const {
         std::integral_constant<size_t, Pos - 1> token;
         return super::_back(token);
     }
 
-    const back_type& back() const
-    {
+    const back_type& back() const {
         std::integral_constant<size_t, sizeof...(Tail)> token;
         return _back(token);
     }
@@ -418,8 +375,7 @@ template<typename... X>
 void tdata_set(tdata<X...>&, const tdata<>&) { }
 
 template<typename Head, typename... X, typename... Y>
-void tdata_set(tdata<Head, X...>& lhs, tdata<Head, const Y...>& rhs)
-{
+void tdata_set(tdata<Head, X...>& lhs, tdata<Head, const Y...>& rhs) {
     lhs.head = rhs.head;
     tdata_set(lhs.tail(), rhs.tail());
 }
@@ -428,14 +384,12 @@ template<size_t N, typename... Tn>
 struct tdata_upcast_helper;
 
 template<size_t N, typename Head, typename... Tail>
-struct tdata_upcast_helper<N, Head, Tail...>
-{
+struct tdata_upcast_helper<N, Head, Tail...> {
     typedef typename tdata_upcast_helper<N-1, Tail...>::type type;
 };
 
 template<typename Head, typename... Tail>
-struct tdata_upcast_helper<0, Head, Tail...>
-{
+struct tdata_upcast_helper<0, Head, Tail...> {
     typedef tdata<Head, Tail...> type;
 };
 
@@ -443,8 +397,7 @@ template<typename T>
 struct tdata_from_type_list;
 
 template<typename... T>
-struct tdata_from_type_list<util::type_list<T...>>
-{
+struct tdata_from_type_list<util::type_list<T...>> {
     typedef tdata<T...> type;
 };
 
@@ -452,14 +405,12 @@ template<typename... T>
 inline void collect_tdata(tdata<T...>&) { }
 
 template<typename Storage, typename... Args>
-void collect_tdata(Storage& storage, const tdata<>&, const Args&... args)
-{
+void collect_tdata(Storage& storage, const tdata<>&, const Args&... args) {
     collect_tdata(storage, args...);
 }
 
 template<typename Storage, typename Arg0, typename... Args>
-void collect_tdata(Storage& storage, const Arg0& arg0, const Args&... args)
-{
+void collect_tdata(Storage& storage, const Arg0& arg0, const Args&... args) {
     storage.head = arg0.head;
     collect_tdata(storage.tail(), arg0.tail(), args...);
 }
@@ -470,25 +421,22 @@ namespace cppa {
 
 template<typename... Args>
 detail::tdata<typename detail::implicit_conversions<typename util::rm_ref<Args>::type>::type...>
-mk_tdata(Args&&... args)
-{
+mk_tdata(Args&&... args) {
     return {std::forward<Args>(args)...};
 }
 
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv)
-{
+const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv) {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
     return static_cast<const typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
 }
 
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv)
-{
+typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv) {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
     return static_cast<typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
 }
 
 } // namespace cppa
 
-#endif // TDATA_HPP
+#endif // CPPA_TDATA_HPP

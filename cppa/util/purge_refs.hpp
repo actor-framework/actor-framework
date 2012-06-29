@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PURGE_REFS_HPP
-#define PURGE_REFS_HPP
+#ifndef CPPA_PURGE_REFS_HPP
+#define CPPA_PURGE_REFS_HPP
 
 #include <functional>
 
@@ -39,26 +39,22 @@
 namespace cppa { namespace util {
 
 template<typename T>
-struct purge_refs_impl
-{
+struct purge_refs_impl {
     typedef T type;
 };
 
 template<typename T>
-struct purge_refs_impl<ge_reference_wrapper<T> >
-{
+struct purge_refs_impl<ge_reference_wrapper<T> > {
     typedef T type;
 };
 
 template<typename T>
-struct purge_refs_impl<ge_mutable_reference_wrapper<T> >
-{
+struct purge_refs_impl<ge_mutable_reference_wrapper<T> > {
     typedef T type;
 };
 
 template<typename T>
-struct purge_refs_impl<std::reference_wrapper<T> >
-{
+struct purge_refs_impl<std::reference_wrapper<T> > {
     typedef T type;
 };
 
@@ -66,11 +62,10 @@ struct purge_refs_impl<std::reference_wrapper<T> >
  * @brief Removes references and reference wrappers.
  */
 template<typename T>
-struct purge_refs
-{
+struct purge_refs {
     typedef typename purge_refs_impl<typename util::rm_ref<T>::type>::type type;
 };
 
 } } // namespace cppa::util
 
-#endif // PURGE_REFS_HPP
+#endif // CPPA_PURGE_REFS_HPP

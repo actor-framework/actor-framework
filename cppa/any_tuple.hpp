@@ -28,16 +28,17 @@
 \******************************************************************************/
 
 
-#ifndef ANY_TUPLE_HPP
-#define ANY_TUPLE_HPP
+#ifndef CPPA_ANY_TUPLE_HPP
+#define CPPA_ANY_TUPLE_HPP
 
 #include <type_traits>
 
-#include "cppa/cow_tuple.hpp"
 #include "cppa/config.hpp"
 #include "cppa/cow_ptr.hpp"
+#include "cppa/cow_tuple.hpp"
 
 #include "cppa/util/rm_ref.hpp"
+#include "cppa/util/comparable.hpp"
 #include "cppa/util/is_iterable.hpp"
 
 #include "cppa/detail/tuple_view.hpp"
@@ -51,11 +52,11 @@ namespace cppa {
  * @brief Describes a fixed-length copy-on-write tuple
  *        with elements of any type.
  */
-class any_tuple
-{
+class any_tuple {
 
  public:
 
+    typedef cow_ptr<detail::abstract_tuple> value_ptr;
     typedef detail::abstract_tuple::const_iterator const_iterator;
 
     /**
@@ -74,8 +75,6 @@ class any_tuple
      */
     template<typename... Args>
     any_tuple(cow_tuple<Args...>&& t) : m_vals(std::move(t.m_vals)) { }
-
-    explicit any_tuple(detail::abstract_tuple*);
 
     /**
      * @brief Move constructor.
@@ -110,13 +109,13 @@ class any_tuple
     /**
      * @brief Gets a const pointer to the element at position @p p.
      */
-    void const* at(size_t p) const;
+    const void* at(size_t p) const;
 
     /**
      * @brief Gets {@link uniform_type_info uniform type information}
      *        of the element at position @p p.
      */
-    uniform_type_info const* type_at(size_t p) const;
+    const uniform_type_info* type_at(size_t p) const;
 
     /**
      * @brief Returns @c true if <tt>*this == other</tt>, otherwise false.
@@ -129,15 +128,13 @@ class any_tuple
     inline bool empty() const { return size() == 0; }
 
     template<typename T>
-    inline const T& get_as(size_t p) const
-    {
+    inline const T& get_as(size_t p) const {
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
-        return *reinterpret_cast<T const*>(at(p));
+        return *reinterpret_cast<const T*>(at(p));
     }
 
     template<typename T>
-    inline T& get_as_mutable(size_t p)
-    {
+    inline T& get_as_mutable(size_t p) {
         CPPA_REQUIRE(*(type_at(p)) == typeid(T));
         return *reinterpret_cast<T*>(mutable_at(p));
     }
@@ -146,17 +143,15 @@ class any_tuple
 
     inline const_iterator end() const { return m_vals->end(); }
 
-    inline cow_ptr<detail::abstract_tuple>& vals()  { return m_vals; }
-    inline const cow_ptr<detail::abstract_tuple>& vals() const { return m_vals; }
-    inline const cow_ptr<detail::abstract_tuple>& cvals() const { return m_vals; }
+    inline       value_ptr&  vals()       { return m_vals; }
+    inline const value_ptr&  vals() const { return m_vals; }
+    inline const value_ptr& cvals() const { return m_vals; }
 
-    inline std::type_info const* type_token() const
-    {
+    inline const std::type_info* type_token() const {
         return m_vals->type_token();
     }
 
-    inline detail::tuple_impl_info impl_type() const
-    {
+    inline detail::tuple_impl_info impl_type() const {
         return m_vals->impl_type();
     }
 
@@ -166,9 +161,8 @@ class any_tuple
                                      util::is_iterable<
                                          typename util::rm_ref<T>::type
                                      >::value
-                                 >::type* = 0)
-    {
-        static constexpr bool can_optimize =    std::is_reference<T>::value
+                                 >::type* = 0) {
+        static constexpr bool can_optimize =     std::is_reference<T>::value
                                              && !std::is_const<T>::value;
         std::integral_constant<bool, can_optimize> token;
         return any_tuple{container_view(std::forward<T>(value), token)};
@@ -180,79 +174,68 @@ class any_tuple
                                      util::is_iterable<
                                          typename util::rm_ref<T>::type
                                      >::value == false
-                                 >::type* = 0)
-    {
+                                 >::type* = 0) {
         typedef typename util::rm_ref<T>::type vtype;
         typedef typename detail::implicit_conversions<vtype>::type converted;
         static_assert(util::is_legal_tuple_type<converted>::value,
                       "T is not a valid tuple type");
+        typedef typename std::remove_reference<T>::type plain_type;
         static constexpr bool can_optimize =
-                   std::is_same<converted, vtype>::value
-                && std::is_reference<T>::value
-                && !std::is_const<typename std::remove_reference<T>::type>::value;
+                    std::is_same<converted, vtype>::value
+                &&  std::is_reference<T>::value
+                && !std::is_const<plain_type>::value;
         std::integral_constant<bool, can_optimize> token;
         return any_tuple{simple_view(std::forward<T>(value), token)};
     }
 
-    void force_detach()
-    {
-        m_vals.detach();
-    }
+    inline void force_detach() { m_vals.detach(); }
 
     void reset();
 
+    explicit any_tuple(detail::abstract_tuple*);
+
  private:
 
-    cow_ptr<detail::abstract_tuple> m_vals;
+    value_ptr m_vals;
 
-    explicit any_tuple(const cow_ptr<detail::abstract_tuple>& vals);
+    explicit any_tuple(const value_ptr& vals);
 
-    typedef detail::abstract_tuple* tup_ptr;
+    typedef detail::abstract_tuple* abstract_ptr;
 
     template<typename T>
-    static inline tup_ptr simple_view(T& value,
-                                      std::integral_constant<bool, true>)
-    {
+    static inline abstract_ptr simple_view(T& value, std::true_type) {
         return new detail::tuple_view<T>(&value);
     }
 
     template<typename First, typename Second>
-    static inline tup_ptr simple_view(std::pair<First, Second>& p,
-                                      std::integral_constant<bool, true>)
-    {
+    static inline abstract_ptr simple_view(std::pair<First, Second>& p,
+                                           std::true_type) {
         return new detail::tuple_view<First, Second>(&p.first, &p.second);
     }
 
     template<typename T>
-    static inline tup_ptr simple_view(T&& value,
-                                      std::integral_constant<bool, false>)
-    {
+    static inline abstract_ptr simple_view(T&& value, std::false_type) {
         typedef typename util::rm_ref<T>::type vtype;
         typedef typename detail::implicit_conversions<vtype>::type converted;
         return new detail::tuple_vals<converted>(std::forward<T>(value));
     }
 
     template<typename First, typename Second>
-    static inline any_tuple view(std::pair<First, Second> p,
-                                 std::integral_constant<bool, false>)
-    {
+    static inline any_tuple view(std::pair<First, Second> p, std::false_type) {
        return new detail::tuple_vals<First, Second>(std::move(p.first),
                                                     std::move(p.second));
     }
 
     template<typename T>
-    static inline detail::abstract_tuple* container_view(T& value,
-                                                 std::integral_constant<bool, true>)
-    {
+    static inline abstract_ptr container_view(T& value, std::true_type) {
         return new detail::container_tuple_view<T>(&value);
     }
 
     template<typename T>
-    static inline detail::abstract_tuple* container_view(T&& value,
-                                                 std::integral_constant<bool, false>)
-    {
+    static inline abstract_ptr container_view(T&& value, std::false_type) {
         typedef typename util::rm_ref<T>::type ctype;
-        return new detail::container_tuple_view<T>(new ctype(std::forward<T>(value)), true);
+        auto cptr = new ctype(std::forward<T>(value));
+        return new detail::container_tuple_view<T>(cptr, true);
     }
 
 };
@@ -260,19 +243,26 @@ class any_tuple
 /**
  * @relates any_tuple
  */
-inline bool operator==(const any_tuple& lhs, const any_tuple& rhs)
-{
+inline bool operator==(const any_tuple& lhs, const any_tuple& rhs) {
     return lhs.equals(rhs);
 }
 
 /**
  * @relates any_tuple
  */
-inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs)
-{
+inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs) {
     return !(lhs == rhs);
+}
+
+/**
+ * @brief Creates an {@link any_tuple} containing the elements @p args.
+ * @param args Values to initialize the tuple elements.
+ */
+template<typename... Args>
+inline any_tuple make_any_tuple(Args&&... args) {
+    return make_cow_tuple(std::forward<Args>(args)...);
 }
 
 } // namespace cppa
 
-#endif // ANY_TUPLE_HPP
+#endif // CPPA_ANY_TUPLE_HPP

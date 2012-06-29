@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SELF_HPP
-#define SELF_HPP
+#ifndef CPPA_SELF_HPP
+#define CPPA_SELF_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -44,58 +44,75 @@ namespace cppa {
  */
 extern local_actor* self;
 
-#else
+#else // CPPA_DOCUMENTATION
 
 class local_actor;
 
 // convertible<...> enables "actor_ptr this_actor = self;"
-class self_type : public convertible<self_type, actor*>
-{
-
-    static void set_impl(local_actor*);
-
-    static local_actor* get_unchecked_impl();
-
-    static local_actor* get_impl();
-
-    static actor* convert_impl();
+class self_type : public convertible<self_type, actor*>,
+                  public convertible<self_type, channel*> {
 
     self_type(const self_type&) = delete;
     self_type& operator=(const self_type&) = delete;
 
  public:
 
+    typedef local_actor* pointer;
+
     constexpr self_type() { }
 
     // "inherited" from convertible<...>
-    inline actor* do_convert() const
-    {
+    inline actor* do_convert() const {
         return convert_impl();
     }
 
-    // allow "self" wherever an local_actor or actor pointer is expected
-    inline operator local_actor*() const
-    {
+    inline pointer get() const {
         return get_impl();
     }
 
-    inline local_actor* operator->() const
-    {
+    // allow "self" wherever an local_actor or actor pointer is expected
+    inline operator pointer() const {
+        return get_impl();
+    }
+
+    inline pointer operator->() const {
         return get_impl();
     }
 
     // @pre get_unchecked() == nullptr
-    inline void set(local_actor* ptr) const
-    {
+    inline void set(pointer ptr) const {
         set_impl(ptr);
     }
 
     // @returns The current value without converting the calling context
     //          to an actor on-the-fly.
-    inline local_actor* unchecked() const
-    {
+    inline pointer unchecked() const {
         return get_unchecked_impl();
     }
+
+    inline pointer release() const {
+        return release_impl();
+    }
+
+    inline void adopt(pointer ptr) const {
+        adopt_impl(ptr);
+    }
+
+    static void cleanup_fun(pointer);
+
+ private:
+
+    static void set_impl(pointer);
+
+    static pointer get_unchecked_impl();
+
+    static pointer get_impl();
+
+    static actor* convert_impl();
+
+    static pointer release_impl();
+
+    static void adopt_impl(pointer);
 
 };
 
@@ -105,8 +122,32 @@ class self_type : public convertible<self_type, actor*>
  */
 constexpr self_type self;
 
-#endif
+class scoped_self_setter {
+
+    scoped_self_setter(const scoped_self_setter&) = delete;
+    scoped_self_setter& operator=(const scoped_self_setter&) = delete;
+
+ public:
+
+    inline scoped_self_setter(local_actor* new_value) {
+        m_original_value = self.release();
+        self.adopt(new_value);
+    }
+
+    inline ~scoped_self_setter() {
+        // restore self
+        static_cast<void>(self.release());
+        self.adopt(m_original_value);
+    }
+
+ private:
+
+    local_actor* m_original_value;
+
+};
+
+#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 
-#endif // SELF_HPP
+#endif // CPPA_SELF_HPP

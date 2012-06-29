@@ -40,24 +40,21 @@
 
 namespace cppa { namespace detail {
 
-class post_office_msg
-{
+class post_office_msg {
 
     friend class intrusive::singly_linked_list<post_office_msg>;
     friend class intrusive::single_reader_queue<post_office_msg>;
 
  public:
 
-    enum msg_type
-    {
+    enum msg_type {
         invalid_type,
         add_peer_type,
         add_server_socket_type,
         proxy_exited_type
     };
 
-    struct add_peer
-    {
+    struct add_peer {
 
         native_socket_type sockfd;
         process_information_ptr peer;
@@ -71,8 +68,7 @@ class post_office_msg
 
     };
 
-    struct add_server_socket
-    {
+    struct add_server_socket {
 
         native_socket_type server_sockfd;
         actor_ptr published_actor;
@@ -81,8 +77,7 @@ class post_office_msg
 
     };
 
-    struct proxy_exited
-    {
+    struct proxy_exited {
         actor_proxy_ptr proxy_ptr;
         inline proxy_exited(const actor_proxy_ptr& who) : proxy_ptr(who) { }
     };
@@ -98,33 +93,27 @@ class post_office_msg
 
     post_office_msg(const actor_proxy_ptr& proxy_ptr);
 
-    inline bool is_add_peer_msg() const
-    {
+    inline bool is_add_peer_msg() const {
         return m_type == add_peer_type;
     }
 
-    inline bool is_add_server_socket_msg() const
-    {
+    inline bool is_add_server_socket_msg() const {
         return m_type == add_server_socket_type;
     }
 
-    inline bool is_proxy_exited_msg() const
-    {
+    inline bool is_proxy_exited_msg() const {
         return m_type == proxy_exited_type;
     }
 
-    inline add_peer& as_add_peer_msg()
-    {
+    inline add_peer& as_add_peer_msg() {
         return m_add_peer_msg;
     }
 
-    inline add_server_socket& as_add_server_socket_msg()
-    {
+    inline add_server_socket& as_add_server_socket_msg() {
         return m_add_server_socket;
     }
 
-    inline proxy_exited& as_proxy_exited_msg()
-    {
+    inline proxy_exited& as_proxy_exited_msg() {
         return m_proxy_exited;
     }
 
@@ -136,8 +125,7 @@ class post_office_msg
 
     msg_type m_type;
 
-    union
-    {
+    union {
         add_peer m_add_peer_msg;
         add_server_socket m_add_server_socket;
         proxy_exited m_proxy_exited;

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EXCEPTION_HPP
-#define EXCEPTION_HPP
+#ifndef CPPA_EXCEPTION_HPP
+#define CPPA_EXCEPTION_HPP
 
 #include <string>
 #include <cstdint>
@@ -41,8 +41,7 @@ namespace cppa {
 /**
  * @brief Base class for libcppa exceptions.
  */
-class exception : public std::exception
-{
+class exception : public std::exception {
 
  public:
 
@@ -52,7 +51,7 @@ class exception : public std::exception
      * @brief Returns the error message.
      * @returns The error message as C-string.
      */
-    char const* what() const throw();
+    const char* what() const throw();
 
  protected:
 
@@ -77,8 +76,7 @@ class exception : public std::exception
 /**
  * @brief Thrown if an actor finished execution.
  */
-class actor_exited : public exception
-{
+class actor_exited : public exception {
 
  public:
 
@@ -101,8 +99,7 @@ class actor_exited : public exception
  * @brief Thrown to indicate that either an actor publishing failed or
  *        @p libcppa was unable to connect to a remote host.
  */
-class network_error : public exception
-{
+class network_error : public exception {
 
  public:
 
@@ -115,8 +112,7 @@ class network_error : public exception
  * @brief Thrown to indicate that an actor publishing failed because
  *        the requested port could not be used.
  */
-class bind_failure : public network_error
-{
+class bind_failure : public network_error {
 
  public:
 
@@ -134,16 +130,14 @@ class bind_failure : public network_error
 
 };
 
-inline std::uint32_t actor_exited::reason() const throw()
-{
+inline std::uint32_t actor_exited::reason() const throw() {
     return m_reason;
 }
 
-inline int bind_failure::error_code() const throw()
-{
+inline int bind_failure::error_code() const throw() {
     return m_errno;
 }
 
 } // namespace cppa
 
-#endif // EXCEPTION_HPP
+#endif // CPPA_EXCEPTION_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PTYPE_TO_TYPE_HPP
-#define PTYPE_TO_TYPE_HPP
+#ifndef CPPA_PTYPE_TO_TYPE_HPP
+#define CPPA_PTYPE_TO_TYPE_HPP
 
 #include <cstdint>
 
@@ -62,10 +62,9 @@ struct ptype_to_type :
     util::if_else_c<PT == pt_u16string, std::u16string,
     util::if_else_c<PT == pt_u32string, std::u32string,
     // default case
-    void > > > > > > > > > > > > > >
-{
+    void > > > > > > > > > > > > > > {
 };
 
 } } // namespace cppa::detail
 
-#endif // PTYPE_TO_TYPE_HPP
+#endif // CPPA_PTYPE_TO_TYPE_HPP

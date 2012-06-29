@@ -33,16 +33,9 @@
 #include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/partial_function.hpp"
-#include "cppa/detail/invokable.hpp"
 
 namespace cppa {
 
-partial_function::partial_function(impl_ptr&& ptr) : m_impl(std::move(ptr))
-{
-}
-
-partial_function::impl::~impl()
-{
-}
+partial_function::partial_function(impl_ptr&& ptr) : m_impl(std::move(ptr)) { }
 
 } // namespace cppa

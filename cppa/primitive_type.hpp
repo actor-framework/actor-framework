@@ -28,21 +28,21 @@
 \******************************************************************************/
 
 
-#ifndef PRIMITIVE_TYPE_HPP
-#define PRIMITIVE_TYPE_HPP
+#ifndef CPPA_PRIMITIVE_TYPE_HPP
+#define CPPA_PRIMITIVE_TYPE_HPP
 
 namespace cppa {
 
 /**
  * @ingroup TypeSystem
- * @brief Represents a type flag of {@link primitive_variant}.
+ * @brief Represents the type flag of
+ *        {@link cppa::primitive_variant primitive_variant}.
  *
  * Includes integers (signed and unsigned), floating points
- * and unicode strings (std::string, std::u16string and std::u32string).
+ * and strings (std::string, std::u16string and std::u32string).
  * @relates primitive_variant
  */
-enum primitive_type
-{
+enum primitive_type {
     pt_int8,         /**< equivalent of @p std::int8_t */
     pt_int16,        /**< equivalent of @p std::int16_t */
     pt_int32,        /**< equivalent of @p std::int32_t */
@@ -60,8 +60,7 @@ enum primitive_type
     pt_null          /**< equivalent of @p void */
 };
 
-constexpr char const* primitive_type_names[] =
-{
+constexpr const char* primitive_type_names[] = {
     "pt_int8",        "pt_int16",       "pt_int32",       "pt_int64",
     "pt_uint8",       "pt_uint16",      "pt_uint32",      "pt_uint64",
     "pt_float",       "pt_double",      "pt_long_double",
@@ -75,11 +74,10 @@ constexpr char const* primitive_type_names[] =
  * @param ptype Requestet @p primitive_type.
  * @returns A C-string representation of @p ptype.
  */
-constexpr char const* primitive_type_name(primitive_type ptype)
-{
+constexpr const char* primitive_type_name(primitive_type ptype) {
     return primitive_type_names[static_cast<int>(ptype)];
 }
 
 } // namespace cppa
 
-#endif // PRIMITIVE_TYPE_HPP
+#endif // CPPA_PRIMITIVE_TYPE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef COMPARABLE_HPP
-#define COMPARABLE_HPP
+#ifndef CPPA_COMPARABLE_HPP
+#define CPPA_COMPARABLE_HPP
 
 namespace cppa { namespace util {
 
@@ -43,102 +43,82 @@ namespace cppa { namespace util {
  * - <tt>x == 0</tt> if <tt>*this == other</tt>
  */
 template<class Subclass, class T = Subclass>
-class comparable
-{
+class comparable {
 
-    friend bool operator==(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator==(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) == 0;
     }
 
-    friend bool operator==(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator==(const T& lhs, const Subclass& rhs) {
         return rhs.compare(lhs) == 0;
     }
 
-    friend bool operator!=(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator!=(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) != 0;
     }
 
-    friend bool operator!=(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator!=(const T& lhs, const Subclass& rhs) {
         return rhs.compare(lhs) != 0;
     }
 
-    friend bool operator<(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator<(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) < 0;
     }
 
-    friend bool operator>(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator>(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) > 0;
     }
 
-    friend bool operator<(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator<(const T& lhs, const Subclass& rhs) {
         return rhs > lhs;
     }
 
-    friend bool operator>(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator>(const T& lhs, const Subclass& rhs) {
         return rhs < lhs;
     }
 
-    friend bool operator<=(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator<=(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) <= 0;
     }
 
-    friend bool operator>=(const Subclass& lhs, const T& rhs)
-    {
+    friend bool operator>=(const Subclass& lhs, const T& rhs) {
         return lhs.compare(rhs) >= 0;
     }
 
-    friend bool operator<=(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator<=(const T& lhs, const Subclass& rhs) {
         return rhs >= lhs;
     }
 
-    friend bool operator>=(const T& lhs, const Subclass& rhs)
-    {
+    friend bool operator>=(const T& lhs, const Subclass& rhs) {
         return rhs <= lhs;
     }
 
 };
 
 template<class Subclass>
-class comparable<Subclass, Subclass>
-{
+class comparable<Subclass, Subclass> {
 
-    friend bool operator==(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator==(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) == 0;
     }
 
-    friend bool operator!=(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator!=(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) != 0;
     }
 
-    friend bool operator<(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator<(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) < 0;
     }
 
-    friend bool operator<=(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator<=(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) <= 0;
     }
 
-    friend bool operator>(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator>(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) > 0;
     }
 
-    friend bool operator>=(const Subclass& lhs, const Subclass& rhs)
-    {
+    friend bool operator>=(const Subclass& lhs, const Subclass& rhs) {
         return lhs.compare(rhs) >= 0;
     }
 
@@ -146,4 +126,4 @@ class comparable<Subclass, Subclass>
 
 } } // cppa::util
 
-#endif // COMPARABLE_HPP
+#endif // CPPA_COMPARABLE_HPP

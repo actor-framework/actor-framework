@@ -28,14 +28,17 @@
 \******************************************************************************/
 
 
-#ifndef SINGLE_READER_QUEUE_HPP
-#define SINGLE_READER_QUEUE_HPP
+#ifndef CPPA_SINGLE_READER_QUEUE_HPP
+#define CPPA_SINGLE_READER_QUEUE_HPP
 
 #include <list>
+#include <mutex>
 #include <atomic>
 #include <memory>
+#include <thread>
+#include <condition_variable>
 
-#include "cppa/detail/thread.hpp"
+#include "cppa/config.hpp"
 
 namespace cppa { namespace intrusive {
 
@@ -45,30 +48,19 @@ namespace cppa { namespace intrusive {
  *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
 template<typename T>
-class single_reader_queue
-{
+class single_reader_queue {
 
-    typedef detail::unique_lock<detail::mutex> lock_type;
+    typedef std::unique_lock<std::mutex> lock_type;
 
  public:
 
-    typedef T                   value_type;
-    typedef size_t              size_type;
-    typedef ptrdiff_t           difference_type;
-    typedef value_type&         reference;
-    typedef const value_type&   const_reference;
-    typedef value_type*         pointer;
-    typedef value_type const*   const_pointer;
-
-    typedef std::unique_ptr<value_type> unique_value_ptr;
-    typedef std::list<unique_value_ptr> cache_type;
-    typedef typename cache_type::iterator cache_iterator;
+    typedef T           value_type;
+    typedef value_type* pointer;
 
     /**
      * @warning call only from the reader (owner)
      */
-    pointer pop()
-    {
+    pointer pop() {
         wait_for_data();
         return take_head();
     }
@@ -76,8 +68,7 @@ class single_reader_queue
     /**
      * @warning call only from the reader (owner)
      */
-    pointer try_pop()
-    {
+    pointer try_pop() {
         return take_head();
     }
 
@@ -85,104 +76,63 @@ class single_reader_queue
      * @warning call only from the reader (owner)
      */
     template<typename TimePoint>
-    pointer try_pop(const TimePoint& abs_time)
-    {
+    pointer try_pop(const TimePoint& abs_time) {
         return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
     }
 
     // returns true if the queue was empty
-    bool _push_back(pointer new_element)
-    {
+    bool _push_back(pointer new_element) {
         pointer e = m_stack.load();
-        for (;;)
-        {
+        for (;;) {
             new_element->next = e;
-            if (m_stack.compare_exchange_weak(e, new_element))
-            {
+            if (m_stack.compare_exchange_weak(e, new_element)) {
                 return (e == nullptr);
             }
         }
     }
 
-    void push_back(pointer new_element)
-    {
+    void push_back(pointer new_element) {
         pointer e = m_stack.load();
-        for (;;)
-        {
+        for (;;) {
             new_element->next = e;
-            if (!e)
-            {
+            if (!e) {
                 lock_type guard(m_mtx);
-                if (m_stack.compare_exchange_weak(e, new_element))
-                {
+                if (m_stack.compare_exchange_weak(e, new_element)) {
                     m_cv.notify_one();
                     return;
                 }
             }
-            else
-            {
-                if (m_stack.compare_exchange_weak(e, new_element))
-                {
+            else {
+                if (m_stack.compare_exchange_weak(e, new_element)) {
                     return;
                 }
             }
         }
     }
 
-    inline cache_type& cache() { return m_cache; }
-
-    inline bool can_fetch_more() const
-    {
+    inline bool can_fetch_more() const {
         return m_stack.load() != nullptr;
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    inline bool empty() const
-    {
-        return m_cache.empty() && m_stack.load() == nullptr;
+    inline bool empty() const {
+        return m_head == nullptr && m_stack.load() == nullptr;
     }
 
     /**
      * @warning call only from the reader (owner)
      */
-    inline bool not_empty() const
-    {
+    inline bool not_empty() const {
         return !empty();
     }
 
-    single_reader_queue() : m_stack(nullptr)
-    {
+    single_reader_queue() : m_stack(nullptr), m_head(nullptr) {
     }
 
-    ~single_reader_queue()
-    {
-        // empty the stack
-        (void) fetch_new_data();
-    }
-
-    cache_iterator try_fetch_more()
-    {
-        cache_iterator result = m_cache.end();
-        fetch_new_data(&result);
-        return result;
-    }
-
-    template<typename TimePoint>
-    cache_iterator try_fetch_more(const TimePoint& abs_time)
-    {
-        cache_iterator result = m_cache.end();
-        if (timed_wait_for_data(abs_time)) fetch_new_data(&result);
-        return result;
-    }
-
-    cache_iterator fetch_more()
-    {
-        cache_iterator result = m_cache.end();
-        wait_for_data();
-        fetch_new_data(&result);
-        return result;
+    ~single_reader_queue() {
+        // empty the stack (void) fetch_new_data();
     }
 
  private:
@@ -191,22 +141,18 @@ class single_reader_queue
     std::atomic<pointer> m_stack;
 
     // accessed only by the owner
-    cache_type m_cache;
+    pointer m_head;
 
     // locked on enqueue/dequeue operations to/from an empty list
-    detail::mutex m_mtx;
-    detail::condition_variable m_cv;
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
 
     template<typename TimePoint>
-    bool timed_wait_for_data(const TimePoint& timeout)
-    {
-        if (m_cache.empty() && !(m_stack.load()))
-        {
+    bool timed_wait_for_data(const TimePoint& timeout) {
+        if (empty()) {
             lock_type guard(m_mtx);
-            while (!(m_stack.load()))
-            {
-                if (detail::wait_until(guard, m_cv, timeout) == false)
-                {
+            while (m_stack.load() == nullptr) {
+                if (m_cv.wait_until(guard, timeout) == std::cv_status::timeout) {
                     return false;
                 }
             }
@@ -214,39 +160,25 @@ class single_reader_queue
         return true;
     }
 
-    void wait_for_data()
-    {
-        if (m_cache.empty() && !(m_stack.load()))
-        {
+    void wait_for_data() {
+        if (empty()) {
             lock_type guard(m_mtx);
             while (!(m_stack.load())) m_cv.wait(guard);
         }
     }
 
     // atomically sets m_stack to nullptr and enqueues all elements to the cache
-    bool fetch_new_data(cache_iterator* iter = nullptr)
-    {
+    bool fetch_new_data() {
+        CPPA_REQUIRE(m_head == nullptr);
         pointer e = m_stack.load();
-        while (e)
-        {
-            if (m_stack.compare_exchange_weak(e, 0))
-            {
-                // temporary list to convert LIFO to FIFO order
-                cache_type tmp;
-                // public_tail (e) has LIFO order,
-                // but private_head requires FIFO order
-                while (e)
-                {
-                    // next iteration element
-                    pointer next = e->next;
-                    // insert e to private cache (convert to LIFO order)
-                    tmp.push_front(unique_value_ptr{e});
-                    //m_cache.insert(iter, unique_value_ptr{e});
-                    // next iteration
+        while (e) {
+            if (m_stack.compare_exchange_weak(e, 0)) {
+                while (e) {
+                    auto next = e->next;
+                    e->next = m_head;
+                    m_head = e;
                     e = next;
                 }
-                if (iter) *iter = tmp.begin();
-                m_cache.splice(m_cache.end(), tmp);
                 return true;
             }
             // next iteration
@@ -255,14 +187,11 @@ class single_reader_queue
         return false;
     }
 
-    pointer take_head()
-    {
-        if (!m_cache.empty() || fetch_new_data())
-        {
-            auto result = m_cache.front().release();
-            m_cache.pop_front();
+    pointer take_head() {
+        if (m_head != nullptr || fetch_new_data()) {
+            auto result = m_head;
+            m_head = m_head->next;
             return result;
-            //return m_cache.take_after(m_cache.before_begin());
         }
         return nullptr;
     }
@@ -271,4 +200,4 @@ class single_reader_queue
 
 } } // namespace cppa::util
 
-#endif // SINGLE_READER_QUEUE_HPP
+#endif // CPPA_SINGLE_READER_QUEUE_HPP

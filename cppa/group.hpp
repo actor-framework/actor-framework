@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef GROUP_HPP
-#define GROUP_HPP
+#ifndef CPPA_GROUP_HPP
+#define CPPA_GROUP_HPP
 
 #include <string>
 #include <memory>
@@ -45,8 +45,7 @@ namespace cppa {
 /**
  * @brief A multicast group.
  */
-class group : public channel
-{
+class group : public channel {
 
     friend class detail::group_manager;
 
@@ -69,8 +68,7 @@ class group : public channel
     friend class unsubscriber;
 
     // unsubscribes its channel from the group on destruction
-    class unsubscriber : public attachable
-    {
+    class unsubscriber : public attachable {
 
         friend class group;
 
@@ -95,15 +93,13 @@ class group : public channel
     /**
      * @brief Module interface.
      */
-    class module
-    {
+    class module {
 
         std::string m_name;
 
      protected:
 
-        module(std::string&& module_name);
-        module(const std::string& module_name);
+        module(std::string module_name);
 
      public:
 
@@ -170,9 +166,10 @@ class group : public channel
 
 /**
  * @brief A smart pointer type that manages instances of {@link group}.
+ * @relates group
  */
 typedef intrusive_ptr<group> group_ptr;
 
 } // namespace cppa
 
-#endif // GROUP_HPP
+#endif // CPPA_GROUP_HPP

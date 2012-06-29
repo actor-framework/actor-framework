@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BINARY_SERIALIZER_HPP
-#define BINARY_SERIALIZER_HPP
+#ifndef CPPA_BINARY_SERIALIZER_HPP
+#define CPPA_BINARY_SERIALIZER_HPP
 
 #include <utility>
 #include "cppa/serializer.hpp"
@@ -42,8 +42,7 @@ namespace detail { class binary_writer; }
  * @brief Implements the serializer interface with
  *        a binary serialization protocol.
  */
-class binary_serializer : public serializer
-{
+class binary_serializer : public serializer {
 
     friend class detail::binary_writer;
 
@@ -70,13 +69,7 @@ class binary_serializer : public serializer
 
     void write_value(const primitive_variant& value);
 
-    void write_tuple(size_t size, primitive_variant const* values);
-
-    /**
-     * @brief Takes the internal buffer and returns it.
-     *
-     */
-    std::pair<size_t, char*> take_buffer();
+    void write_tuple(size_t size, const primitive_variant* values);
 
     /**
      * @brief Returns the number of written bytes.
@@ -86,7 +79,11 @@ class binary_serializer : public serializer
     /**
      * @brief Returns a pointer to the internal buffer.
      */
-    char const* data() const;
+    const char* data() const;
+
+    size_t sendable_size() const;
+
+    const char* sendable_data();
 
     /**
      * @brief Resets the internal buffer.
@@ -97,4 +94,4 @@ class binary_serializer : public serializer
 
 } // namespace cppa
 
-#endif // BINARY_SERIALIZER_HPP
+#endif // CPPA_BINARY_SERIALIZER_HPP

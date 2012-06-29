@@ -28,25 +28,24 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_PROXY_HPP
-#define ACTOR_PROXY_HPP
+#ifndef CPPA_ACTOR_PROXY_HPP
+#define CPPA_ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/abstract_actor.hpp"
+#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa {
 
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Represents a remote Actor.
+ * @brief Represents a remote actor.
  */
 class actor_proxy : public actor { };
 
 #else // CPPA_DOCUMENTATION
 
-class actor_proxy : public abstract_actor<actor>
-{
+class actor_proxy : public detail::abstract_actor<actor> {
 
     typedef abstract_actor<actor> super;
 
@@ -54,19 +53,17 @@ class actor_proxy : public abstract_actor<actor>
 
     actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
 
-    void enqueue(actor* sender, any_tuple&& msg);
-
-    void enqueue(actor* sender, const any_tuple& msg);
+    void enqueue(actor* sender, any_tuple msg);
 
     void link_to(intrusive_ptr<actor>& other);
 
-    // do not cause to send this actor an ":Unlink" message
+    // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
     void local_link_to(intrusive_ptr<actor>& other);
 
     void unlink_from(intrusive_ptr<actor>& other);
 
-    // do not cause to send this actor an ":Unlink" message
+    // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
     void local_unlink_from(intrusive_ptr<actor>& other);
 
@@ -76,15 +73,18 @@ class actor_proxy : public abstract_actor<actor>
 
  public:
 
-    void forward_message(const process_information_ptr&,
-                         actor*, const any_tuple&);
+    void forward_message(const process_information_ptr&, actor*, any_tuple&&);
 
 };
 
 #endif // CPPA_DOCUMENTATION
 
+/**
+ * @brief A smart pointer to an {@link actor_proxy} instance.
+ * @relates actor_proxy
+ */
 typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
 
 } // namespace cppa
 
-#endif // ACTOR_PROXY_HPP
+#endif // CPPA_ACTOR_PROXY_HPP

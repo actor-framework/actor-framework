@@ -36,58 +36,57 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/detail/converted_thread_context.hpp"
-
-using cppa::detail::converted_thread_context;
-
-namespace {
-
-void cleanup_fun(cppa::local_actor* what)
-{
-    auto ptr = dynamic_cast<converted_thread_context*>(what);
-    if (ptr)
-    {
-        // make sure "unspawned" actors quit properly
-        ptr->cleanup(cppa::exit_reason::normal);
-    }
-    if (what && !what->deref()) delete what;
-}
-
-boost::thread_specific_ptr<cppa::local_actor> t_this_context(cleanup_fun);
-
-} // namespace <anonymous>
+#include "cppa/thread_mapped_actor.hpp"
 
 namespace cppa {
 
-//self_type self;
+namespace {
 
-void self_type::set_impl(local_actor* ptr)
-{
-    if (ptr) ptr->ref();
-    t_this_context.reset(ptr);
+boost::thread_specific_ptr<local_actor> t_this_actor(&self_type::cleanup_fun);
+
+} // namespace <anonymous>
+
+void self_type::cleanup_fun(cppa::local_actor* what) {
+    if (what) {
+        auto ptr = dynamic_cast<thread_mapped_actor*>(what);
+        if (ptr) {
+            // make sure "unspawned" actors quit properly
+            ptr->cleanup(cppa::exit_reason::normal);
+        }
+        if (what->deref() == false) delete what;
+    }
 }
 
-local_actor* self_type::get_impl()
-{
-    auto result = t_this_context.get();
-    if (result == nullptr)
-    {
-        result = new converted_thread_context;
+void self_type::set_impl(self_type::pointer ptr) {
+    if (ptr) ptr->ref();
+    t_this_actor.reset(ptr);
+}
+
+self_type::pointer self_type::get_impl() {
+    auto result = t_this_actor.get();
+    if (result == nullptr) {
+        result = new thread_mapped_actor;
         result->ref();
         get_scheduler()->register_converted_context(result);
-        t_this_context.reset(result);
+        t_this_actor.reset(result);
     }
     return result;
 }
 
-actor* self_type::convert_impl()
-{
+actor* self_type::convert_impl() {
     return get_impl();
 }
 
-local_actor* self_type::get_unchecked_impl()
-{
-    return t_this_context.get();
+self_type::pointer self_type::get_unchecked_impl() {
+    return t_this_actor.get();
+}
+
+void self_type::adopt_impl(self_type::pointer ptr) {
+    t_this_actor.reset(ptr);
+}
+
+self_type::pointer self_type::release_impl() {
+    return t_this_actor.release();
 }
 
 } // namespace cppa

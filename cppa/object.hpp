@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef OBJECT_HPP
-#define OBJECT_HPP
+#ifndef CPPA_OBJECT_HPP
+#define CPPA_OBJECT_HPP
 
 #include <string>
 #include <typeinfo>
@@ -44,10 +44,14 @@ namespace cppa {
 
 // forward declarations
 class object;
+
+/**
+ * @relates object
+ */
 bool operator==(const object& lhs, const object& rhs);
 
 class uniform_type_info;
-uniform_type_info const* uniform_typeid(const std::type_info&);
+const uniform_type_info* uniform_typeid(const std::type_info&);
 bool operator==(const uniform_type_info& lhs, const std::type_info& rhs);
 
 /**
@@ -74,8 +78,7 @@ const T& get(const object& obj);
  * @brief An abstraction class that stores an instance of
  *        an announced type.
  */
-class object
-{
+class object {
 
     friend bool operator==(const object& lhs, const object& rhs);
 
@@ -88,7 +91,7 @@ class object
      * @warning {@link object} takes ownership of @p val.
      * @pre {@code val != nullptr && utinfo != nullptr}
      */
-    object(void* val, uniform_type_info const* utinfo);
+    object(void* val, const uniform_type_info* utinfo);
 
     /**
      * @brief Creates an empty object.
@@ -125,14 +128,14 @@ class object
      * @returns A {@link uniform_type_info} describing the current
      *          type of @p this.
      */
-    uniform_type_info const* type() const;
+    const uniform_type_info* type() const;
 
     /**
      * @brief Gets the stored value.
      * @returns A const pointer to the currently stored value.
      * @see get(const object&)
      */
-    void const* value() const;
+    const void* value() const;
 
     /**
      * @brief Gets the stored value.
@@ -154,50 +157,44 @@ class object
  private:
 
     void* m_value;
-    uniform_type_info const* m_type;
+    const uniform_type_info* m_type;
 
     void swap(object& other);
 
 };
 
 template<typename T>
-object object::from(T&& what)
-{
+object object::from(T&& what) {
     typedef typename util::rm_ref<T>::type plain_type;
     typedef typename detail::implicit_conversions<plain_type>::type value_type;
     auto rtti = uniform_typeid(typeid(value_type)); // throws on error
     return { new value_type(std::forward<T>(what)), rtti };
 }
 
-inline bool operator!=(const object& lhs, const object& rhs)
-{
+inline bool operator!=(const object& lhs, const object& rhs) {
     return !(lhs == rhs);
 }
 
 template<typename T>
-T& get_ref(object& obj)
-{
+T& get_ref(object& obj) {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(*(obj.type()) == typeid(T)))
-    {
+    if (!(*(obj.type()) == typeid(T))) {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
     return *reinterpret_cast<T*>(obj.mutable_value());
 }
 
 template<typename T>
-const T& get(const object& obj)
-{
+const T& get(const object& obj) {
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
                   "T is a reference or a pointer type.");
-    if (!(*(obj.type()) == typeid(T)))
-    {
+    if (!(*(obj.type()) == typeid(T))) {
         throw std::invalid_argument("obj.type() != typeid(T)");
     }
-    return *reinterpret_cast<T const*>(obj.value());
+    return *reinterpret_cast<const T*>(obj.value());
 }
 
 } // namespace cppa
 
-#endif // OBJECT_HPP
+#endif // CPPA_OBJECT_HPP

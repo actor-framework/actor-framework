@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef NATIVE_SOCKET_HPP
-#define NATIVE_SOCKET_HPP
+#ifndef CPPA_NATIVE_SOCKET_HPP
+#define CPPA_NATIVE_SOCKET_HPP
 
 #include "cppa/config.hpp"
 
@@ -46,12 +46,12 @@ namespace cppa { namespace detail {
 
 #ifdef CPPA_WINDOWS
     typedef SOCKET native_socket_type;
-    typedef char const* socket_send_ptr;
+    typedef const char* socket_send_ptr;
     typedef char* socket_recv_ptr;
     constexpr SOCKET invalid_socket = INVALID_SOCKET;
 #else
     typedef int native_socket_type;
-    typedef void const* socket_send_ptr;
+    typedef const void* socket_send_ptr;
     typedef void* socket_recv_ptr;
     constexpr int invalid_socket = -1;
     void closesocket(native_socket_type s);
@@ -59,4 +59,4 @@ namespace cppa { namespace detail {
 
 } } // namespace cppa::detail
 
-#endif // NATIVE_SOCKET_HPP
+#endif // CPPA_NATIVE_SOCKET_HPP

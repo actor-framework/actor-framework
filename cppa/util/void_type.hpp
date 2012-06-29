@@ -28,30 +28,19 @@
 \******************************************************************************/
 
 
-#ifndef LIBCPPA_UTIL_VOID_TYPE_HPP
-#define LIBCPPA_UTIL_VOID_TYPE_HPP
+#ifndef CPPA_UTIL_VOID_TYPE_HPP
+#define CPPA_UTIL_VOID_TYPE_HPP
 
 namespace cppa { namespace util {
 
-// forward declaration
-template<typename... Types> struct type_list;
-
-struct void_type
-{
-    typedef void_type head;
-    typedef type_list<> tail;
-
+struct void_type {
     constexpr void_type() { }
     constexpr void_type(const void_type&) { }
-    void_type& operator=(const void_type&) = default;
-
     // anything could be used to initialize a void...
-    template<typename Arg0, typename... Args>
-    void_type(Arg0&&, Args&&...) { }
+    template<typename Arg>
+    constexpr void_type(const Arg&) { }
 };
-
-inline bool operator==(const void_type&, const void_type&) { return true; }
 
 } } // namespace cppa::util
 
-#endif // LIBCPPA_UTIL_VOID_TYPE_HPP
+#endif // CPPA_UTIL_VOID_TYPE_HPP

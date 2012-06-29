@@ -28,18 +28,20 @@
 \******************************************************************************/
 
 
-#ifndef THREAD_POOL_SCHEDULER_HPP
-#define THREAD_POOL_SCHEDULER_HPP
+#ifndef CPPA_THREAD_POOL_SCHEDULER_HPP
+#define CPPA_THREAD_POOL_SCHEDULER_HPP
+
+#include <thread>
 
 #include "cppa/scheduler.hpp"
-#include "cppa/detail/thread.hpp"
+#include "cppa/context_switching_actor.hpp"
 #include "cppa/util/producer_consumer_list.hpp"
+#include "cppa/detail/scheduled_actor_dummy.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class thread_pool_scheduler : public scheduler
-{
+class thread_pool_scheduler : public scheduler {
 
     typedef scheduler super;
 
@@ -51,29 +53,50 @@ class thread_pool_scheduler : public scheduler
 
     void stop() /*override*/;
 
-    void enqueue(abstract_scheduled_actor* what) /*override*/;
+    void enqueue(scheduled_actor* what) /*override*/;
 
-    actor_ptr spawn(abstract_event_based_actor* what);
+    actor_ptr spawn(scheduled_actor* what);
 
-    actor_ptr spawn(scheduled_actor* behavior, scheduling_hint hint);
+    actor_ptr spawn(scheduled_actor* what, init_callback init_cb);
+
+    actor_ptr spawn(void_function fun, scheduling_hint hint);
+
+    actor_ptr spawn(void_function what,
+                    scheduling_hint hint,
+                    init_callback init_cb);
 
  private:
 
     //typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
-    typedef util::producer_consumer_list<abstract_scheduled_actor> job_queue;
+    typedef util::producer_consumer_list<scheduled_actor> job_queue;
 
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;
-    thread m_supervisor;
-
-    actor_ptr spawn_impl(abstract_scheduled_actor* what,
-                         bool push_to_queue = true);
+    std::thread m_supervisor;
 
     static void worker_loop(worker*);
-    static void supervisor_loop(job_queue*, abstract_scheduled_actor*);
+    static void supervisor_loop(job_queue*, scheduled_actor*);
 
+    actor_ptr spawn_impl(scheduled_actor_ptr what);
+
+    actor_ptr spawn_as_thread(void_function fun, init_callback cb, bool hidden);
+
+#   ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+    template<typename F>
+    actor_ptr spawn_impl(void_function fun, scheduling_hint sh, F cb) {
+        if (sh == scheduled) {
+            scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+            ptr->attach_to_scheduler(this);
+            cb(ptr.get());
+            return spawn_impl(std::move(ptr));
+        }
+        else {
+            return spawn_as_thread(std::move(fun), std::move(cb));
+        }
+    }
+#   endif
 };
 
 } } // namespace cppa::detail
 
-#endif // THREAD_POOL_SCHEDULER_HPP
+#endif // CPPA_THREAD_POOL_SCHEDULER_HPP

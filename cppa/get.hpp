@@ -28,8 +28,11 @@
 \******************************************************************************/
 
 
-#ifndef GET_HPP
-#define GET_HPP
+#ifndef CPPA_GET_HPP
+#define CPPA_GET_HPP
+
+// functions are documented in the implementation headers
+#ifndef CPPA_DOCUMENTATION
 
 #include <cstddef>
 
@@ -40,7 +43,7 @@ namespace cppa {
 
 // forward declaration of details
 namespace detail {
-template<typename...> class tdata;
+template<typename...> struct tdata;
 template<typename...> struct pseudo_tuple;
 }
 
@@ -73,11 +76,11 @@ typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
 
 // support container-like access for type lists containing tokens
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&)
-{
+typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&) {
     return {};
 }
 
 } // namespace cppa
 
-#endif // GET_HPP
+#endif // CPPA_DOCUMENTATION
+#endif // CPPA_GET_HPP

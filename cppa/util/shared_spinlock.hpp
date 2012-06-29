@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SHARED_SPINLOCK_HPP
-#define SHARED_SPINLOCK_HPP
+#ifndef CPPA_SHARED_SPINLOCK_HPP
+#define CPPA_SHARED_SPINLOCK_HPP
 
 #include <atomic>
 #include <cstddef>
@@ -39,8 +39,7 @@ namespace cppa { namespace util {
 /**
  * @brief A spinlock implementation providing shared and exclusive locking.
  */
-class shared_spinlock
-{
+class shared_spinlock {
 
     std::atomic<long> m_flag;
 
@@ -66,4 +65,4 @@ class shared_spinlock
 
 } } // namespace cppa::util
 
-#endif // SHARED_SPINLOCK_HPP
+#endif // CPPA_SHARED_SPINLOCK_HPP

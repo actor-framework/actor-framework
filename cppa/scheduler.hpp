@@ -28,12 +28,13 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULER_HPP
-#define SCHEDULER_HPP
+#ifndef CPPA_SCHEDULER_HPP
+#define CPPA_SCHEDULER_HPP
 
 #include <chrono>
 #include <memory>
 #include <cstdint>
+#include <functional>
 
 #include "cppa/self.hpp"
 #include "cppa/atom.hpp"
@@ -50,19 +51,32 @@ namespace cppa {
 
 class scheduled_actor;
 class scheduler_helper;
-class abstract_event_based_actor;
 
-namespace detail { class abstract_scheduled_actor; }
+typedef std::function<void()> void_function;
+typedef std::function<void(local_actor*)> init_callback;
+
+namespace detail {
+// forwards self_type as actor_ptr, otherwise equal to std::forward
+template<typename T>
+struct spawn_fwd_ {
+static inline T&& _(T&& arg) { return std::move(arg); }
+static inline T& _(T& arg) { return arg; }
+static inline const T& _(const T& arg) { return arg; }
+};
+template<>
+struct spawn_fwd_<self_type> {
+static inline actor_ptr _(const self_type& s) { return s.get(); }
+};
+} // namespace detail
 
 /**
  * @brief
  */
-class scheduler
-{
+class scheduler {
 
     scheduler_helper* m_helper;
 
-    channel* future_send_helper();
+    channel* delayed_send_helper();
 
  protected:
 
@@ -82,19 +96,7 @@ class scheduler
      */
     virtual void stop();
 
-    virtual void enqueue(detail::abstract_scheduled_actor*) = 0;
-
-    /**
-     * @brief Spawns a new actor that executes <code>behavior->act()</code>
-     *        with the scheduling policy @p hint if possible.
-     */
-    virtual actor_ptr spawn(scheduled_actor* behavior,
-                            scheduling_hint hint) = 0;
-
-    /**
-     * @brief Spawns a new event-based actor.
-     */
-    virtual actor_ptr spawn(abstract_event_based_actor* what) = 0;
+    virtual void enqueue(scheduled_actor*) = 0;
 
     /**
      * @brief Informs the scheduler about a converted context
@@ -112,14 +114,82 @@ class scheduler
     virtual attachable* register_hidden_context();
 
     template<typename Duration, typename... Data>
-    void future_send(const actor_ptr& to,
-                     const Duration& rel_time, const Data&... data)
-    {
+    void delayed_send(const channel_ptr& to,
+                      const Duration& rel_time,
+                      Data&&... data) {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        any_tuple data_tup = make_cow_tuple(data...);
-        any_tuple tup = make_cow_tuple(util::duration(rel_time), to, data_tup);
-        future_send_helper()->enqueue(self, std::move(tup));
+        auto sub = make_any_tuple(std::forward<Data>(data)...);
+        auto tup = make_any_tuple(util::duration{rel_time}, to, std::move(sub));
+        delayed_send_helper()->enqueue(self, std::move(tup));
     }
+
+    /**
+     * @brief Spawns a new actor that executes <code>fun()</code>
+     *        with the scheduling policy @p hint if possible.
+     */
+    virtual actor_ptr spawn(void_function fun, scheduling_hint hint) = 0;
+
+    /**
+     * @brief Spawns a new actor that executes <code>behavior()</code>
+     *        with the scheduling policy @p hint if possible and calls
+     *        <code>init_cb</code> after the actor is initialized but before
+     *        it starts execution.
+     */
+    virtual actor_ptr spawn(void_function fun,
+                            scheduling_hint hint,
+                            init_callback init_cb) = 0;
+
+    /**
+     * @brief Spawns a new event-based actor.
+     */
+    virtual actor_ptr spawn(scheduled_actor* what) = 0;
+
+    /**
+     * @brief Spawns a new event-based actor and calls
+     *        <code>init_cb</code> after the actor is initialized but before
+     *        it starts execution.
+     */
+    virtual actor_ptr spawn(scheduled_actor* what, init_callback init_cb) = 0;
+
+    // hide implementation details for documentation
+#   ifndef CPPA_DOCUMENTATION
+
+    template<typename Fun, typename Arg0, typename... Args>
+    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun, Arg0&& arg0, Args&&... args) {
+        return this->spawn(
+                    std::bind(
+                        std::forward<Fun>(fun),
+                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
+                    hint);
+    }
+
+    template<typename Fun>
+    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun) {
+        return this->spawn(std::forward<Fun>(fun), hint);
+    }
+
+    template<typename InitCallback, typename Fun, typename Arg0, typename... Args>
+    actor_ptr spawn_cb_impl(scheduling_hint hint,
+                            InitCallback&& init_cb,
+                            Fun&& fun, Arg0&& arg0, Args&&... args) {
+        return this->spawn(
+                    std::bind(
+                        std::forward<Fun>(fun),
+                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
+                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
+                    hint,
+                    std::forward<InitCallback>(init_cb));
+    }
+
+    template<typename InitCallback, typename Fun>
+    actor_ptr spawn_cb_impl(scheduling_hint hint, InitCallback&& init_cb, Fun&& fun) {
+        return this->spawn(std::forward<Fun>(fun),
+                           hint,
+                           std::forward<InitCallback>(init_cb));
+    }
+
+#   endif // CPPA_DOCUMENTATION
 
 };
 
@@ -139,4 +209,4 @@ scheduler* get_scheduler();
 
 } // namespace cppa::detail
 
-#endif // SCHEDULER_HPP
+#endif // CPPA_SCHEDULER_HPP

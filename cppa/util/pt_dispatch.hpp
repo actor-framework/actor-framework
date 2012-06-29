@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PT_DISPATCH_HPP
-#define PT_DISPATCH_HPP
+#ifndef CPPA_PT_DISPATCH_HPP
+#define CPPA_PT_DISPATCH_HPP
 
 namespace cppa { namespace util {
 
@@ -39,10 +39,8 @@ namespace cppa { namespace util {
  * @note Does nothing if ptype == pt_null.
  */
 template<typename Fun>
-void pt_dispatch(primitive_type ptype, Fun&& f)
-{
-    switch (ptype)
-    {
+void pt_dispatch(primitive_type ptype, Fun&& f) {
+    switch (ptype) {
      case pt_int8:        f(pt_token<pt_int8>());        break;
      case pt_int16:       f(pt_token<pt_int16>());       break;
      case pt_int32:       f(pt_token<pt_int32>());       break;
@@ -63,4 +61,4 @@ void pt_dispatch(primitive_type ptype, Fun&& f)
 
 } } // namespace cppa::util
 
-#endif // PT_DISPATCH_HPP
+#endif // CPPA_PT_DISPATCH_HPP

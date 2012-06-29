@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef WRAPPED_HPP
-#define WRAPPED_HPP
+#ifndef CPPA_WRAPPED_HPP
+#define CPPA_WRAPPED_HPP
 
 namespace cppa { namespace util {
 
@@ -38,17 +38,15 @@ namespace cppa { namespace util {
  * @brief A type wrapper as used in {@link cppa::util::if_else if_else}.
  */
 template<typename T>
-struct wrapped
-{
+struct wrapped {
     typedef T type;
 };
 
 template<typename T>
-struct wrapped< wrapped<T> >
-{
+struct wrapped< wrapped<T> > {
     typedef typename wrapped<T>::type type;
 };
 
 } } // namespace cppa::util
 
-#endif // WRAPPED_HPP
+#endif // CPPA_WRAPPED_HPP

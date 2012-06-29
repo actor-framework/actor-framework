@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BINARY_DESERIALIZER_HPP
-#define BINARY_DESERIALIZER_HPP
+#ifndef CPPA_BINARY_DESERIALIZER_HPP
+#define CPPA_BINARY_DESERIALIZER_HPP
 
 #include "cppa/deserializer.hpp"
 
@@ -39,18 +39,17 @@ namespace cppa {
  * @brief Implements the deserializer interface with
  *        a binary serialization protocol.
  */
-class binary_deserializer : public deserializer
-{
+class binary_deserializer : public deserializer {
 
-    char const* pos;
-    char const* end;
+    const char* pos;
+    const char* end;
 
     void range_check(size_t read_size);
 
  public:
 
-    binary_deserializer(char const* buf, size_t buf_size);
-    binary_deserializer(char const* begin, char const* end);
+    binary_deserializer(const char* buf, size_t buf_size);
+    binary_deserializer(const char* begin, const char* end);
 
     std::string seek_object();
     std::string peek_object();
@@ -60,11 +59,11 @@ class binary_deserializer : public deserializer
     void end_sequence();
     primitive_variant read_value(primitive_type ptype);
     void read_tuple(size_t size,
-                    primitive_type const* ptypes,
+                    const primitive_type* ptypes,
                     primitive_variant* storage);
 
 };
 
 } // namespace cppa
 
-#endif // BINARY_DESERIALIZER_HPP
+#endif // CPPA_BINARY_DESERIALIZER_HPP

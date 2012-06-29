@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PAIR_MEMBER_HPP
-#define PAIR_MEMBER_HPP
+#ifndef CPPA_PAIR_MEMBER_HPP
+#define CPPA_PAIR_MEMBER_HPP
 
 #include <utility>
 
@@ -42,8 +42,7 @@
 namespace cppa { namespace detail {
 
 template<typename T1, typename T2>
-class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>>
-{
+class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>> {
 
     static constexpr primitive_type ptype1 = type_to_ptype<T1>::ptype;
     static constexpr primitive_type ptype2 = type_to_ptype<T2>::ptype;
@@ -55,15 +54,13 @@ class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>>
 
  public:
 
-    void serialize(void const* obj, serializer* s) const
-    {
-        auto& p = *reinterpret_cast<pair_type const*>(obj);
+    void serialize(const void* obj, serializer* s) const {
+        auto& p = *reinterpret_cast<const pair_type*>(obj);
         primitive_variant values[2] = { p.first, p.second };
         s->write_tuple(2, values);
     }
 
-    void deserialize(void* obj, deserializer* d) const
-    {
+    void deserialize(void* obj, deserializer* d) const {
         primitive_type ptypes[2] = { ptype1, ptype2 };
         primitive_variant values[2];
         d->read_tuple(2, ptypes, values);
@@ -76,4 +73,4 @@ class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>>
 
 } } // namespace cppa::detail
 
-#endif // PAIR_MEMBER_HPP
+#endif // CPPA_PAIR_MEMBER_HPP

@@ -28,15 +28,16 @@
 \******************************************************************************/
 
 
-#ifndef PARTIAL_FUNCTION_HPP
-#define PARTIAL_FUNCTION_HPP
+#ifndef CPPA_PARTIAL_FUNCTION_HPP
+#define CPPA_PARTIAL_FUNCTION_HPP
 
 #include <list>
 #include <vector>
 #include <memory>
 #include <utility>
 
-#include "cppa/detail/invokable.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 #include "cppa/intrusive/singly_linked_list.hpp"
 
 namespace cppa {
@@ -47,49 +48,45 @@ class behavior;
  * @brief A partial function implementation
  *        for {@link cppa::any_tuple any_tuples}.
  */
-class partial_function
-{
-
-    partial_function(const partial_function&) = delete;
-    partial_function& operator=(const partial_function&) = delete;
+class partial_function {
 
  public:
 
-    struct impl
-    {
-        virtual ~impl();
+    struct impl : ref_counted {
         virtual bool invoke(any_tuple&) = 0;
         virtual bool invoke(const any_tuple&) = 0;
         virtual bool defined_at(const any_tuple&) = 0;
     };
 
-    typedef std::unique_ptr<impl> impl_ptr;
+    typedef intrusive_ptr<impl> impl_ptr;
 
     partial_function() = default;
     partial_function(partial_function&&) = default;
+    partial_function(const partial_function&) = default;
     partial_function& operator=(partial_function&&) = default;
+    partial_function& operator=(const partial_function&) = default;
 
     partial_function(impl_ptr&& ptr);
 
-    inline bool defined_at(const any_tuple& value)
-    {
-        return ((m_impl) && m_impl->defined_at(value));
+    inline bool defined_at(const any_tuple& value) {
+        return (m_impl) && m_impl->defined_at(value);
     }
 
-    inline bool operator()(any_tuple& value)
-    {
-        return ((m_impl) && m_impl->invoke(value));
+    inline bool operator()(any_tuple& value) {
+        return (m_impl) && m_impl->invoke(value);
     }
 
-    inline bool operator()(const any_tuple& value)
-    {
-        return ((m_impl) && m_impl->invoke(value));
+    inline bool operator()(const any_tuple& value) {
+        return (m_impl) && m_impl->invoke(value);
     }
 
-    inline bool operator()(any_tuple&& value)
-    {
+    inline bool operator()(any_tuple&& value) {
         any_tuple cpy{std::move(value)};
         return (*this)(cpy);
+    }
+
+    inline bool undefined() const {
+        return m_impl == nullptr;
     }
 
  private:
@@ -98,8 +95,6 @@ class partial_function
 
 };
 
-//behavior operator,(partial_function&& lhs, behavior&& rhs);
-
 } // namespace cppa
 
-#endif // PARTIAL_FUNCTION_HPP
+#endif // CPPA_PARTIAL_FUNCTION_HPP

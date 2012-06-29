@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONJUNCTION_HPP
-#define CONJUNCTION_HPP
+#ifndef CPPA_CONJUNCTION_HPP
+#define CPPA_CONJUNCTION_HPP
 
 #include <type_traits>
 
@@ -40,8 +40,7 @@ struct conjunction;
 
 template<typename Head, typename... Tail>
 struct conjunction<Head, Tail...>
-    : std::integral_constant<bool, Head::value && conjunction<Tail...>::value>
-{
+    : std::integral_constant<bool, Head::value && conjunction<Tail...>::value> {
 };
 
 template<>
@@ -49,4 +48,4 @@ struct conjunction<> : std::true_type { };
 
 } } // namespace cppa::util
 
-#endif // CONJUNCTION_HPP
+#endif // CPPA_CONJUNCTION_HPP

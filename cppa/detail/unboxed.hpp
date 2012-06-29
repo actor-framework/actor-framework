@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef UNBOXED_HPP
-#define UNBOXED_HPP
+#ifndef CPPA_UNBOXED_HPP
+#define CPPA_UNBOXED_HPP
 
 #include <memory>
 
@@ -39,41 +39,35 @@
 namespace cppa { namespace detail {
 
 template<typename T>
-struct unboxed
-{
+struct unboxed {
     typedef T type;
 };
 
 template<typename T>
-struct unboxed< util::wrapped<T> >
-{
+struct unboxed< util::wrapped<T> > {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (&)()>
-{
+struct unboxed<util::wrapped<T> (&)()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> ()>
-{
+struct unboxed<util::wrapped<T> ()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (*)()>
-{
+struct unboxed<util::wrapped<T> (*)()> {
     typedef typename util::wrapped<T>::type type;
 };
 
 template<typename T>
-struct unboxed<std::unique_ptr<util::guard<T>>>
-{
+struct unboxed<std::unique_ptr<util::guard<T>>> {
     typedef T type;
 };
 
 } } // namespace cppa::detail
 
-#endif // UNBOXED_HPP
+#endif // CPPA_UNBOXED_HPP

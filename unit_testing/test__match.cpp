@@ -23,17 +23,104 @@ bool is_even(int i) { return i % 2 == 0; }
  *
  */
 
-bool ascending(int a, int b, int c)
-{
+bool ascending(int a, int b, int c) {
     return a < b && b < c;
 }
 
-size_t test__match()
-{
+vector<const uniform_type_info*> to_vec(util::type_list<>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
+    return vec;
+}
+
+template<typename Head, typename... Tail>
+vector<const uniform_type_info*> to_vec(util::type_list<Head, Tail...>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
+    vec.push_back(uniform_typeid<Head>());
+    return to_vec(util::type_list<Tail...>{}, std::move(vec));
+}
+
+template<typename Fun>
+class __ {
+
+    typedef typename util::get_callable_trait<Fun>::type trait;
+
+ public:
+
+    __(Fun f, string annotation = "") : m_fun(f), m_annotation(annotation) { }
+
+    __ operator[](const string& str) const {
+        return {m_fun, str};
+    }
+
+    template<typename... Args>
+    void operator()(Args&&... args) const {
+        m_fun(std::forward<Args>(args)...);
+    }
+
+    void plot_signature() {
+        auto vec = to_vec(typename trait::arg_types{});
+        for (auto i : vec) {
+            cout << i->name() << " ";
+        }
+        cout << endl;
+    }
+
+    const string& annotation() const {
+        return m_annotation;
+    }
+
+ private:
+
+    Fun m_fun;
+    string m_annotation;
+
+};
+
+template<typename Fun>
+__<Fun> get__(Fun f) {
+    return {f};
+}
+
+struct fobaz : sb_actor<fobaz> {
+
+    behavior init_state;
+
+    void vfun() {
+        cout << "fobaz::mfun" << endl;
+    }
+
+    void ifun(int i) {
+        cout << "fobaz::ifun(" << i << ")" << endl;
+    }
+
+    fobaz() {
+        init_state = (
+            on<int>() >> [=](int i) { ifun(i); },
+            others() >> std::function<void()>{std::bind(&fobaz::vfun, this)}
+        );
+    }
+
+};
+
+size_t test__match() {
     CPPA_TEST(test__match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
+
+    /*
+    auto x_ = get__([](int, float) { cout << "yeeeehaaaa!" << endl; })["prints 'yeeeehaaaa'"];
+    cout << "x_: "; x_(1, 1.f);
+    cout << "x_.annotation() = " << x_.annotation() << endl;
+    cout << "x_.plot_signature: "; x_.plot_signature();
+
+    auto fun = (
+        on<int>() >> [](int i) {
+            cout << "i = " << i << endl;
+        },
+        after(std::chrono::seconds(0)) >> []() {
+            cout << "no int found in mailbox" << endl;
+        }
+    );
+    */
 
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));
@@ -140,10 +227,52 @@ size_t test__match()
 
 
     bool invoked = false;
-    match("abc")
-    (
-        on<string>().when(_x1 == "abc") >> [&]()
-        {
+    auto kvp_split1 = [](const string& str) -> vector<string> {
+        auto pos = str.find('=');
+        if (pos != string::npos && pos == str.rfind('=')) {
+            return vector<string>{str.substr(0, pos), str.substr(pos+1)};
+        }
+        return {};
+    };
+    /*
+    auto kvp_split2 = [](const string& str) -> option<vector<string> > {
+        auto pos = str.find('=');
+        if (pos != string::npos && pos == str.rfind('=')) {
+            return vector<string>{str.substr(0, pos-1), str.substr(pos+1)};
+        }
+        return {};
+    };
+    */
+
+    match("value=42") (
+        on(kvp_split1).when(_x1.not_empty()) >> [&](const vector<string>& vec) {
+            CPPA_CHECK_EQUAL(vec[0], "value");
+            CPPA_CHECK_EQUAL(vec[1], "42");
+            invoked = true;
+        }
+    );
+    CPPA_CHECK(invoked);
+    invoked = false;
+
+    auto toint = [](const string& str) -> option<int> {
+        char* endptr = nullptr;
+        int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
+        if (endptr != nullptr && *endptr == '\0') {
+            return result;
+        }
+        return {};
+    };
+    match("42") (
+        on(toint) >> [&](int i) {
+            CPPA_CHECK_EQUAL(i, 42);
+            invoked = true;
+        }
+    );
+    CPPA_CHECK(invoked);
+    invoked = false;
+
+    match("abc") (
+        on<string>().when(_x1 == "abc") >> [&]() {
             invoked = true;
         }
     );
@@ -153,14 +282,11 @@ size_t test__match()
     bool disable_case1 = true;
     bool case1_invoked = false;
     bool case2_invoked = false;
-    auto expr19 =
-    (
-        on<anything>().when(gref(disable_case1) == false) >> [&]()
-        {
+    auto expr19 = (
+        on<anything>().when(gref(disable_case1) == false) >> [&]() {
             case1_invoked = true;
         },
-        on<anything>() >> [&]()
-        {
+        on<anything>() >> [&]() {
             case2_invoked = true;
         }
     );
@@ -179,8 +305,7 @@ size_t test__match()
 
     std::vector<int> expr21_vec_a{1, 2, 3};
     std::vector<int> expr21_vec_b{1, 0, 2};
-    auto vec_sorted = [](const std::vector<int>& vec)
-    {
+    auto vec_sorted = [](const std::vector<int>& vec) {
         return std::is_sorted(vec.begin(), vec.end());
     };
     auto expr21 = gcall(vec_sorted, _x1);
@@ -190,12 +315,10 @@ size_t test__match()
     auto expr22 = _x1.empty() && _x2.not_empty();
     CPPA_CHECK(ge_invoke(expr22, std::string(""), std::string("abc")));
 
-    match(std::vector<int>{1, 2, 3})
-    (
+    match(std::vector<int>{1, 2, 3}) (
         on<int, int, int>().when(   _x1 + _x2 + _x3 == 6
                                  && _x2(is_even)
-                                 && _x3 % 2 == 1) >> [&]()
-        {
+                                 && _x3 % 2 == 1) >> [&]() {
             invoked = true;
         }
     );
@@ -203,41 +326,31 @@ size_t test__match()
     invoked = false;
 
     string sum;
-    match_each({"-h", "--version", "-wtf"})
-    (
-        on<string>().when(_x1.in({"-h", "--help"})) >> [&](string s)
-        {
+    match_each({"-h", "--version", "-wtf"}) (
+        on<string>().when(_x1.in({"-h", "--help"})) >> [&](string s) {
             sum += s;
         },
-        on<string>().when(_x1 == "-v" || _x1 == "--version") >> [&](string s)
-        {
+        on<string>().when(_x1 == "-v" || _x1 == "--version") >> [&](string s) {
             sum += s;
         },
-        on<string>().when(_x1.starts_with("-")) >> [&](const string& str)
-        {
-            match_each(str.begin() + 1, str.end())
-            (
-                on<char>().when(_x1.in({'w', 't', 'f'})) >> [&](char c)
-                {
+        on<string>().when(_x1.starts_with("-")) >> [&](const string& str) {
+            match_each(str.begin() + 1, str.end()) (
+                on<char>().when(_x1.in({'w', 't', 'f'})) >> [&](char c) {
                     sum += c;
                 },
-                others() >> [&]()
-                {
+                others() >> [&]() {
                     CPPA_ERROR("unexpected match");
                 }
             );
         },
-        others() >> [&]()
-        {
+        others() >> [&]() {
             CPPA_ERROR("unexpected match");
         }
     );
     CPPA_CHECK_EQUAL("-h--versionwtf", sum);
 
-    match(5)
-    (
-        on<int>().when(_x1 < 6) >> [&](int i)
-        {
+    match(5) (
+        on<int>().when(_x1 < 6) >> [&](int i) {
             CPPA_CHECK_EQUAL(5, i);
             invoked = true;
         }
@@ -246,10 +359,8 @@ size_t test__match()
     invoked = false;
 
     vector<string> vec{"a", "b", "c"};
-    match(vec)
-    (
-        on("a", "b", val<string>) >> [&](string& str)
-        {
+    match(vec) (
+        on("a", "b", val<string>) >> [&](string& str) {
             invoked = true;
             str = "C";
         }
@@ -258,10 +369,8 @@ size_t test__match()
     CPPA_CHECK_EQUAL("C", vec.back());
     invoked = false;
 
-    match_each(vec)
-    (
-        on("a") >> [&](string& str)
-        {
+    match_each(vec) (
+        on("a") >> [&](string& str) {
             invoked = true;
             str = "A";
         }
@@ -271,16 +380,12 @@ size_t test__match()
     invoked = false;
 
     /*
-    match(vec)
-    (
-        others() >> [&](any_tuple& tup)
-        {
-            if (detail::matches<string, string, string>(tup))
-            {
+    match(vec) (
+        others() >> [&](any_tuple& tup) {
+            if (detail::matches<string, string, string>(tup)) {
                 tup.get_as_mutable<string>(1) = "B";
             }
-            else
-            {
+            else {
                 CPPA_ERROR("matches<string, string, string>(tup) == false");
             }
             invoked = true;
@@ -293,8 +398,7 @@ size_t test__match()
     vector<string> vec2{"a=0", "b=1", "c=2"};
 
     auto c2 = split(vec2.back(), '=');
-    match(c2)
-    (
+    match(c2) (
         on("c", "2") >> [&]() { invoked = true; }
     );
     CPPA_CHECK_EQUAL(true, invoked);
@@ -303,28 +407,23 @@ size_t test__match()
     /*,
     int pmatches = 0;
     using std::placeholders::_1;
-    pmatch_each(vec2.begin(), vec2.end(), std::bind(split, _1, '='))
-    (
-        on("a", val<string>) >> [&](const string& value)
-        {
+    match_each(vec2.begin(), vec2.end(), std::bind(split, _1, '=')) (
+        on("a", val<string>) >> [&](const string& value) {
             CPPA_CHECK_EQUAL("0", value);
             CPPA_CHECK_EQUAL(0, pmatches);
             ++pmatches;
         },
-        on("b", val<string>) >> [&](const string& value)
-        {
+        on("b", val<string>) >> [&](const string& value) {
             CPPA_CHECK_EQUAL("1", value);
             CPPA_CHECK_EQUAL(1, pmatches);
             ++pmatches;
         },
-        on("c", val<string>) >> [&](const string& value)
-        {
+        on("c", val<string>) >> [&](const string& value) {
             CPPA_CHECK_EQUAL("2", value);
             CPPA_CHECK_EQUAL(2, pmatches);
             ++pmatches;
         }
-        others() >> [](const any_tuple& value)
-        {
+        others() >> [](const any_tuple& value) {
             cout << to_string(value) << endl;
         }
     );

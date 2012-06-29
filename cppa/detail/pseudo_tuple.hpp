@@ -28,33 +28,29 @@
 \******************************************************************************/
 
 
-#ifndef PSEUDO_TUPLE_HPP
-#define PSEUDO_TUPLE_HPP
+#ifndef CPPA_PSEUDO_TUPLE_HPP
+#define CPPA_PSEUDO_TUPLE_HPP
 
 #include "cppa/util/at.hpp"
 
 namespace cppa { namespace detail {
 
 template<typename... T>
-struct pseudo_tuple
-{
+struct pseudo_tuple {
     typedef void* ptr_type;
-    typedef void const* const_ptr_type;
+    typedef const void* const_ptr_type;
 
     ptr_type data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 
-    inline const_ptr_type at(size_t p) const
-    {
+    inline const_ptr_type at(size_t p) const {
         return data[p];
     }
 
-    inline ptr_type mutable_at(size_t p)
-    {
+    inline ptr_type mutable_at(size_t p) {
         return const_cast<ptr_type>(data[p]);
     }
 
-    inline void*& operator[](size_t p)
-    {
+    inline void*& operator[](size_t p) {
         return data[p];
     }
 };
@@ -63,8 +59,7 @@ template<class List>
 struct pseudo_tuple_from_type_list;
 
 template<typename... Ts>
-struct pseudo_tuple_from_type_list<util::type_list<Ts...> >
-{
+struct pseudo_tuple_from_type_list<util::type_list<Ts...> > {
     typedef pseudo_tuple<Ts...> type;
 };
 
@@ -73,19 +68,17 @@ struct pseudo_tuple_from_type_list<util::type_list<Ts...> >
 namespace cppa {
 
 template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv)
-{
+const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv) {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return *reinterpret_cast<typename util::at<N, Tn...>::type const*>(tv.at(N));
+    return *reinterpret_cast<const typename util::at<N, Tn...>::type*>(tv.at(N));
 }
 
 template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv)
-{
+typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv) {
     static_assert(N < sizeof...(Tn), "N >= tv.size()");
     return *reinterpret_cast<typename util::at<N, Tn...>::type*>(tv.mutable_at(N));
 }
 
 } // namespace cppa
 
-#endif // PSEUDO_TUPLE_HPP
+#endif // CPPA_PSEUDO_TUPLE_HPP

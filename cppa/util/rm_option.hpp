@@ -28,25 +28,23 @@
 \******************************************************************************/
 
 
-#ifndef RM_OPTION_HPP
-#define RM_OPTION_HPP
+#ifndef CPPA_RM_OPTION_HPP
+#define CPPA_RM_OPTION_HPP
 
 #include "cppa/option.hpp"
 
 namespace cppa { namespace util {
 
 template<typename T>
-struct rm_option
-{
+struct rm_option {
     typedef T type;
 };
 
 template<typename T>
-struct rm_option<option<T> >
-{
+struct rm_option<option<T> > {
     typedef T type;
 };
 
 } } // namespace cppa::util
 
-#endif // RM_OPTION_HPP
+#endif // CPPA_RM_OPTION_HPP

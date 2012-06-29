@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TPARTIAL_FUNCTION_HPP
-#define TPARTIAL_FUNCTION_HPP
+#ifndef CPPA_TPARTIAL_FUNCTION_HPP
+#define CPPA_TPARTIAL_FUNCTION_HPP
 
 #include <cstddef>
 #include <type_traits>
@@ -44,8 +44,7 @@
 namespace cppa {
 
 template<class Expr, class Guard, typename Result, typename... Args>
-class tpartial_function
-{
+class tpartial_function {
 
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types ctrait_args;
@@ -66,26 +65,22 @@ class tpartial_function
     template<typename Fun, typename... G>
     tpartial_function(Fun&& fun, G&&... guard_args)
         : m_guard(std::forward<G>(guard_args)...)
-        , m_expr(std::forward<Fun>(fun))
-    {
+        , m_expr(std::forward<Fun>(fun)) {
     }
 
     tpartial_function(tpartial_function&& other)
         : m_guard(std::move(other.m_guard))
-        , m_expr(std::move(other.m_expr))
-    {
+        , m_expr(std::move(other.m_expr)) {
     }
 
     tpartial_function(const tpartial_function&) = default;
 
     //bool defined_at(const typename util::rm_ref<Args>::type&... args) const
-    bool defined_at(Args... args) const
-    {
+    bool defined_at(Args... args) const {
         return m_guard(args...);
     }
 
-    Result operator()(Args... args) const
-    {
+    Result operator()(Args... args) const {
         return util::apply_args<Result, ctrait_args::size, sizeof...(Args)>
                ::_(m_expr, args...);
     }
@@ -102,15 +97,13 @@ template<class Expr, class Guard, typename Args,
 struct get_tpartial_function;
 
 template<class Expr, class Guard, typename... Args, typename Result>
-struct get_tpartial_function<Expr, Guard, util::type_list<Args...>, Result, 1>
-{
+struct get_tpartial_function<Expr, Guard, util::type_list<Args...>, Result, 1> {
     typedef tpartial_function<Expr, Guard, Result, Args...> type;
 };
 
 template<class Expr, class Guard, typename... Args>
 struct get_tpartial_function<Expr, Guard,
-                             util::type_list<Args...>, util::void_type, 0>
-{
+                             util::type_list<Args...>, util::void_type, 0> {
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types arg_types;
 
@@ -137,4 +130,4 @@ struct get_tpartial_function<Expr, Guard,
 
 } // namespace cppa
 
-#endif // TPARTIAL_FUNCTION_HPP
+#endif // CPPA_TPARTIAL_FUNCTION_HPP

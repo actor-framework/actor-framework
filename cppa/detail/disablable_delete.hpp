@@ -28,14 +28,13 @@
 \******************************************************************************/
 
 
-#ifndef DISABLABLE_DELETE_HPP
-#define DISABLABLE_DELETE_HPP
+#ifndef CPPA_DISABLABLE_DELETE_HPP
+#define CPPA_DISABLABLE_DELETE_HPP
 
 namespace cppa { namespace detail {
 
 template<typename T>
-class disablable_delete
-{
+class disablable_delete {
 
     bool m_enabled;
 
@@ -45,8 +44,7 @@ class disablable_delete
 
     inline void disable() { m_enabled = false; }
 
-    inline void operator()(T* ptr)
-    {
+    inline void operator()(T* ptr) {
         if (m_enabled) delete ptr;
     }
 
@@ -54,4 +52,4 @@ class disablable_delete
 
 } } // namespace cppa::detail
 
-#endif // DISABLABLE_DELETE_HPP
+#endif // CPPA_DISABLABLE_DELETE_HPP

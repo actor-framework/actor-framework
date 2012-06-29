@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ABSTRACT_TUPLE_HPP
-#define ABSTRACT_TUPLE_HPP
+#ifndef CPPA_ABSTRACT_TUPLE_HPP
+#define CPPA_ABSTRACT_TUPLE_HPP
 
 #include <iterator>
 #include <typeinfo>
@@ -44,14 +44,12 @@
 
 namespace cppa { namespace detail {
 
-enum tuple_impl_info
-{
+enum tuple_impl_info {
     statically_typed,
     dynamically_typed
 };
 
-class abstract_tuple : public ref_counted
-{
+class abstract_tuple : public ref_counted {
 
     tuple_impl_info m_impl_type;
 
@@ -67,12 +65,12 @@ class abstract_tuple : public ref_counted
     // accessors
     virtual size_t size() const = 0;
     virtual abstract_tuple* copy() const = 0;
-    virtual void const* at(size_t pos) const = 0;
-    virtual uniform_type_info const* type_at(size_t pos) const = 0;
+    virtual const void* at(size_t pos) const = 0;
+    virtual const uniform_type_info* type_at(size_t pos) const = 0;
 
     // returns either tdata<...> object or nullptr (default) if tuple
     // is not a 'native' implementation
-    virtual void const* native_data() const;
+    virtual const void* native_data() const;
 
     // Identifies the type of the implementation.
     // A statically typed tuple implementation can use some optimizations,
@@ -83,56 +81,49 @@ class abstract_tuple : public ref_counted
     // uniquely identifies this category (element types) of messages
     // override this member function only if impl_type() == statically_typed
     // (default returns &typeid(void))
-    virtual std::type_info const* type_token() const;
+    virtual const std::type_info* type_token() const;
 
     bool equals(const abstract_tuple& other) const;
 
     typedef tuple_iterator<abstract_tuple> const_iterator;
 
-    inline const_iterator begin() const { return {this}; }
+    inline const_iterator  begin() const { return {this}; }
     inline const_iterator cbegin() const { return {this}; }
 
-    inline const_iterator end() const { return {this, size()}; }
+    inline const_iterator  end() const { return {this, size()}; }
     inline const_iterator cend() const { return {this, size()}; }
 
 };
 
-struct full_eq_type
-{
+struct full_eq_type {
     constexpr full_eq_type() { }
     template<class Tuple>
     inline bool operator()(const tuple_iterator<Tuple>& lhs,
-                           const tuple_iterator<Tuple>& rhs) const
-    {
+                           const tuple_iterator<Tuple>& rhs) const {
         return    lhs.type() == rhs.type()
                && lhs.type()->equals(lhs.value(), rhs.value());
     }
 };
 
-struct types_only_eq_type
-{
+struct types_only_eq_type {
     constexpr types_only_eq_type() { }
     template<class Tuple>
     inline bool operator()(const tuple_iterator<Tuple>& lhs,
-                           uniform_type_info const* rhs     ) const
-    {
+                           const uniform_type_info* rhs     ) const {
         return lhs.type() == rhs;
     }
     template<class Tuple>
-    inline bool operator()(uniform_type_info const* lhs,
-                           const tuple_iterator<Tuple>& rhs) const
-    {
+    inline bool operator()(const uniform_type_info* lhs,
+                           const tuple_iterator<Tuple>& rhs) const {
         return lhs == rhs.type();
     }
 };
 
 namespace {
-
 constexpr full_eq_type full_eq;
 constexpr types_only_eq_type types_only_eq;
-
 } // namespace <anonymous>
 
 } } // namespace cppa::detail
 
-#endif // ABSTRACT_TUPLE_HPP
+#endif // CPPA_ABSTRACT_TUPLE_HPP

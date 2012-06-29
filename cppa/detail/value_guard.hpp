@@ -28,8 +28,10 @@
 \******************************************************************************/
 
 
-#ifndef VALUE_GUARD_HPP
-#define VALUE_GUARD_HPP
+#ifndef CPPA_VALUE_GUARD_HPP
+#define CPPA_VALUE_GUARD_HPP
+
+#include <type_traits>
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
@@ -41,16 +43,14 @@
 namespace cppa { namespace detail {
 
 template<bool IsFun, typename T>
-struct vg_fwd_
-{
+struct vg_fwd_ {
     static inline const T& _(const T& arg) { return arg; }
     static inline T&& _(T&& arg) { return std::move(arg); }
     static inline T& _(T& arg) { return arg; }
 };
 
 template<typename T>
-struct vg_fwd_<true, T>
-{
+struct vg_fwd_<true, T> {
     template<typename Arg>
     static inline util::void_type _(Arg&&) { return {}; }
 };
@@ -59,34 +59,27 @@ struct vg_fwd_<true, T>
 template<typename T>
 struct vg_fwd
         : vg_fwd_<util::is_callable<typename util::rm_ref<T>::type>::value,
-                  typename util::rm_ref<T>::type>
-{
+                  typename util::rm_ref<T>::type> {
+};
+
+template<typename T>
+struct vg_cmp {
+    template<typename U>
+    inline static bool _(const T& lhs, const U& rhs) {
+        return lhs == rhs;
+    }
+};
+
+template<>
+struct vg_cmp<util::void_type> {
+    template<typename T>
+    inline static bool _(const util::void_type&, const T&) {
+        return true;
+    }
 };
 
 template<typename FilteredPattern>
-class value_guard
-{
-    typename tdata_from_type_list<FilteredPattern>::type m_args;
-
-    template<typename... Args>
-    inline bool _eval(const util::void_type&, const tdata<>&, Args&&...) const
-    {
-        return true;
-    }
-
-    template<class Tail, typename Arg0, typename... Args>
-    inline bool _eval(const util::void_type&, const Tail& tail,
-                      const Arg0&, const Args&... args         ) const
-    {
-        return _eval(tail.head, tail.tail(), args...);
-    }
-
-    template<typename Head, class Tail, typename Arg0, typename... Args>
-    inline bool _eval(const Head& head, const Tail& tail,
-                      const Arg0& arg0, const Args&... args) const
-    {
-        return head == arg0 && _eval(tail.head, tail.tail(), args...);
-    }
+class value_guard {
 
  public:
 
@@ -94,17 +87,48 @@ class value_guard
     value_guard(const value_guard&) = default;
 
     template<typename... Args>
-    value_guard(const Args&... args) : m_args(vg_fwd<Args>::_(args)...)
-    {
+    value_guard(const Args&... args) : m_args(vg_fwd<Args>::_(args)...) {
     }
 
     template<typename... Args>
-    inline bool operator()(const Args&... args) const
-    {
+    inline bool operator()(const Args&... args) const {
         return _eval(m_args.head, m_args.tail(), args...);
     }
+
+ private:
+
+    typename tdata_from_type_list<FilteredPattern>::type m_args;
+
+    template<typename T, typename U>
+    static inline bool cmp(const T& lhs, const U& rhs) {
+        return vg_cmp<T>::_(lhs, rhs);
+    }
+
+    template<typename T, typename U>
+    static inline bool cmp(const T& lhs, const std::reference_wrapper<U>& rhs) {
+        return vg_cmp<T>::_(lhs, rhs.get());
+    }
+
+    static inline bool _eval(const util::void_type&, const tdata<>&) {
+        return true;
+    }
+
+    template<typename Head, typename Arg0, typename... Args>
+    static inline bool _eval(const Head& head, const tdata<>&,
+                             const Arg0& arg0, const Args&...) {
+        return cmp(head, arg0);
+    }
+
+    template<typename Head,
+             typename Tail0, typename... Tail,
+             typename Arg0, typename... Args>
+    static inline bool _eval(const Head& head, const tdata<Tail0,Tail...>& tail,
+                             const Arg0& arg0, const Args&... args) {
+        return cmp(head, arg0) && _eval(tail.head, tail.tail(), args...);
+    }
+
 };
 
 } } // namespace cppa::detail
 
-#endif // VALUE_GUARD_HPP
+#endif // CPPA_VALUE_GUARD_HPP

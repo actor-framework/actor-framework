@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ANNOUNCE_HPP
-#define ANNOUNCE_HPP
+#ifndef CPPA_ANNOUNCE_HPP
+#define CPPA_ANNOUNCE_HPP
 
 #include <typeinfo>
 
@@ -110,40 +110,55 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype);
  */
 template<class C, class Parent, typename... Args>
 std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
-compound_member(C Parent::*c_ptr, const Args&... args)
-{
-    return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
+compound_member(C Parent::*c_ptr, const Args&... args) {
+    return {c_ptr, new detail::default_uniform_type_info_impl<C>(args...)};
 }
 
 // deals with getter returning a mutable reference
+/**
+ * @brief Creates meta informations for a non-trivial member accessed
+ *        via a getter returning a mutable reference.
+ * @param getter Member function pointer to the getter.
+ * @param args "Sub-members" of @p c_ptr
+ * @see {@link announce_example_4.cpp announce example 4}
+ * @returns A pair of @p c_ptr and the created meta informations.
+ */
 template<class C, class Parent, typename... Args>
 std::pair<C& (Parent::*)(), util::abstract_uniform_type_info<C>*>
-compound_member(C& (Parent::*c_ptr)(), const Args&... args)
-{
-    return { c_ptr, new detail::default_uniform_type_info_impl<C>(args...) };
+compound_member(C& (Parent::*getter)(), const Args&... args) {
+    return {getter, new detail::default_uniform_type_info_impl<C>(args...)};
 }
 
 // deals with getter/setter pair
+/**
+ * @brief Creates meta informations for a non-trivial member accessed
+ *        via a getter/setter pair.
+ * @param gspair A pair of two member function pointers representing
+ *               getter and setter.
+ * @param args "Sub-members" of @p c_ptr
+ * @see {@link announce_example_4.cpp announce example 4}
+ * @returns A pair of @p c_ptr and the created meta informations.
+ */
 template<class Parent, typename GRes,
          typename SRes, typename SArg, typename... Args>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>
-compound_member(const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>& gspair,
-                const Args&... args)
-{
-    return { gspair, new detail::default_uniform_type_info_impl<typename util::rm_ref<GRes>::type>(args...) };
+compound_member(const std::pair<GRes (Parent::*)() const,
+                                SRes (Parent::*)(SArg)  >& gspair,
+                const Args&... args) {
+    typedef typename util::rm_ref<GRes>::type mtype;
+    return {gspair, new detail::default_uniform_type_info_impl<mtype>(args...)};
 }
 
 
 /**
  * @brief Adds a new type mapping for @p T to the libcppa type system.
  * @param args Members of @p T.
- * @returns @c true if @p T was added to the libcppa type system;
- *         otherwise @c false.
+ * @returns @c true if @p T was added to the libcppa type system,
+ *          @c false otherwise.
  */
 template<typename T, typename... Args>
-inline bool announce(const Args&... args)
-{
+inline bool announce(const Args&... args) {
     return announce(typeid(T),
                     new detail::default_uniform_type_info_impl<T>(args...));
 }
@@ -154,4 +169,4 @@ inline bool announce(const Args&... args)
 
 } // namespace cppa
 
-#endif // ANNOUNCE_HPP
+#endif // CPPA_ANNOUNCE_HPP

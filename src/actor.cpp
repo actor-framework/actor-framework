@@ -36,6 +36,7 @@
 #include <stdexcept>
 
 #include "cppa/actor.hpp"
+#include "cppa/any_tuple.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -45,8 +46,7 @@
 
 namespace {
 
-inline cppa::detail::actor_registry& registry()
-{
+inline cppa::detail::actor_registry& registry() {
     return *(cppa::detail::singleton_manager::get_actor_registry());
 }
 
@@ -55,60 +55,40 @@ inline cppa::detail::actor_registry& registry()
 namespace cppa {
 
 actor::actor(std::uint32_t aid, const process_information_ptr& pptr)
-    : m_id(aid), m_is_proxy(true), m_parent_process(pptr)
-{
-    if (!pptr)
-    {
+    : m_id(aid), m_is_proxy(true), m_parent_process(pptr) {
+    if (!pptr) {
         throw std::logic_error("parent == nullptr");
     }
+}
+
+bool actor::chained_enqueue(actor* sender, any_tuple msg) {
+    enqueue(sender, std::move(msg));
+    return false;
 }
 
 actor::actor(const process_information_ptr& pptr)
-    : m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr)
-{
-    if (!pptr)
-    {
+    : m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr) {
+    if (!pptr) {
         throw std::logic_error("parent == nullptr");
     }
 }
 
-actor::~actor()
-{
-}
-
-void actor::join(group_ptr& what)
-{
-    if (!what) return;
-    attach(what->subscribe(this));
-}
-
-void actor::leave(const group_ptr& what)
-{
-    if (!what) return;
-    attachable::token group_token(typeid(group::unsubscriber), what.get());
-    detach(group_token);
-}
-
-void actor::link_to(intrusive_ptr<actor>&& other)
-{
+void actor::link_to(intrusive_ptr<actor>&& other) {
     intrusive_ptr<actor> tmp(std::move(other));
     link_to(tmp);
 }
 
-void actor::unlink_from(intrusive_ptr<actor>&& other)
-{
+void actor::unlink_from(intrusive_ptr<actor>&& other) {
     intrusive_ptr<actor> tmp(std::move(other));
     unlink_from(tmp);
 }
 
-bool actor::remove_backlink(intrusive_ptr<actor>&& to)
-{
+bool actor::remove_backlink(intrusive_ptr<actor>&& to) {
     intrusive_ptr<actor> tmp(std::move(to));
     return remove_backlink(tmp);
 }
 
-bool actor::establish_backlink(intrusive_ptr<actor>&& to)
-{
+bool actor::establish_backlink(intrusive_ptr<actor>&& to) {
     intrusive_ptr<actor> tmp(std::move(to));
     return establish_backlink(tmp);
 }

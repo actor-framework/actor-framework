@@ -28,86 +28,75 @@
 \******************************************************************************/
 
 
-#ifndef MATCH_HPP
-#define MATCH_HPP
+#ifndef CPPA_MATCH_HPP
+#define CPPA_MATCH_HPP
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/partial_function.hpp"
 
 namespace cppa { namespace detail {
 
-struct match_helper
-{
+struct match_helper {
     match_helper(const match_helper&) = delete;
     match_helper& operator=(const match_helper&) = delete;
     any_tuple tup;
-    match_helper(any_tuple&& t) : tup(std::move(t)) { }
+    match_helper(any_tuple t) : tup(std::move(t)) { }
     match_helper(match_helper&&) = default;
-    void operator()(partial_function&& arg)
-    {
+    /*
+    void operator()(partial_function&& arg) {
         partial_function tmp{std::move(arg)};
         tmp(tup);
     }
+    */
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
-        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...));
+    void operator()(Arg0&& arg0, Args&&... args) {
+        auto tmp = mexpr_concat(std::forward<Arg0>(arg0),
+                                std::forward<Args>(args)...);
+        tmp(tup);
     }
 };
 
 template<typename Iterator>
-struct match_each_helper
-{
+struct match_each_helper {
     match_each_helper(const match_each_helper&) = delete;
     match_each_helper& operator=(const match_each_helper&) = delete;
     Iterator i;
     Iterator e;
     match_each_helper(Iterator first, Iterator last) : i(first), e(last) { }
     match_each_helper(match_each_helper&&) = default;
-    void operator()(partial_function&& arg)
-    {
+    void operator()(partial_function&& arg) {
         partial_function tmp{std::move(arg)};
-        for (; i != e; ++i)
-        {
+        for (; i != e; ++i) {
             tmp(any_tuple::view(*i));
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
-        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
                                      std::forward<Args>(args)...));
     }
 };
 
 template<class Container>
-struct copying_match_each_helper
-{
+struct copying_match_each_helper {
     copying_match_each_helper(const copying_match_each_helper&) = delete;
     copying_match_each_helper& operator=(const copying_match_each_helper&) = delete;
     Container vec;
     copying_match_each_helper(Container tmp) : vec(std::move(tmp)) { }
     copying_match_each_helper(copying_match_each_helper&&) = default;
-    void operator()(partial_function&& arg)
-    {
+    void operator()(partial_function&& arg) {
         partial_function tmp{std::move(arg)};
-        for (auto& i : vec)
-        {
+        for (auto& i : vec) {
             tmp(any_tuple::view(i));
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
-        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
                                      std::forward<Args>(args)...));
     }
 };
 
 template<typename Iterator, typename Projection>
-struct pmatch_each_helper
-{
+struct pmatch_each_helper {
     pmatch_each_helper(const pmatch_each_helper&) = delete;
     pmatch_each_helper& operator=(const pmatch_each_helper&) = delete;
     Iterator i;
@@ -116,21 +105,16 @@ struct pmatch_each_helper
     pmatch_each_helper(pmatch_each_helper&&) = default;
     template<typename PJ>
     pmatch_each_helper(Iterator first, Iterator last, PJ&& proj)
-        : i(first), e(last), p(std::forward<PJ>(proj))
-    {
+        : i(first), e(last), p(std::forward<PJ>(proj)) {
     }
-    void operator()(partial_function&& arg)
-    {
+    void operator()(partial_function&& arg) {
         partial_function tmp{std::move(arg)};
-        for (; i != e; ++i)
-        {
+        for (; i != e; ++i) {
             tmp(any_tuple::view(p(*i)));
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args)
-    {
-        (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
+    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
                                      std::forward<Args>(args)...));
     }
 };
@@ -139,54 +123,75 @@ struct pmatch_each_helper
 
 namespace cppa {
 
-inline detail::match_helper match(any_tuple t)
-{
-    return std::move(t);
+/**
+ * @brief Starts a match expression.
+ * @param what Tuple or value that should be matched against a pattern.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
+inline detail::match_helper match(any_tuple what) {
+    return std::move(what);
 }
 
 /**
- * @brief Match expression.
+ * @copydoc match(any_tuple)
  */
 template<typename T>
-detail::match_helper match(T&& what)
-{
+detail::match_helper match(T&& what) {
     return any_tuple::view(std::forward<T>(what));
 }
 
 /**
- * @brief Match expression that matches against all elements of @p what.
+ * @brief Starts a match expression that matches each element of @p what.
+ * @param what An STL-compliant container.
+ * @returns A helper object providing <tt>operator(...)</tt>.
  */
 template<class Container>
 auto match_each(Container& what)
-     -> detail::match_each_helper<decltype(std::begin(what))>
-{
+     -> detail::match_each_helper<decltype(std::begin(what))> {
     return {std::begin(what), std::end(what)};
 }
 
+/**
+ * @brief Starts a match expression that matches each element of @p what.
+ * @param what An STL-compliant container.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename T>
-auto match_each(std::initializer_list<T> list)
-    -> detail::copying_match_each_helper<std::vector<typename detail::strip_and_convert<T>::type>>
-{
+auto match_each(std::initializer_list<T> what)
+    -> detail::copying_match_each_helper<std::vector<typename detail::strip_and_convert<T>::type>> {
     std::vector<typename detail::strip_and_convert<T>::type> vec;
-    vec.reserve(list.size());
-    for (auto& i : list) vec.emplace_back(std::move(i));
+    vec.reserve(what.size());
+    for (auto& i : what) vec.emplace_back(std::move(i));
     return vec;
 }
 
+/**
+ * @brief Starts a match expression that matches each element in
+ *        range [first, last).
+ * @param first Iterator to the first element.
+ * @param last Iterator to the last element (excluded).
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename InputIterator>
 auto match_each(InputIterator first, InputIterator last)
-     -> detail::match_each_helper<InputIterator>
-{
+     -> detail::match_each_helper<InputIterator> {
     return {first, last};
 }
 
+/**
+ * @brief Starts a match expression that matches <tt>proj(i)</tt> for
+ *        each element @p i in range [first, last).
+ * @param first Iterator to the first element.
+ * @param last Iterator to the last element (excluded).
+ * @param proj Projection or extractor functor.
+ * @returns A helper object providing <tt>operator(...)</tt>.
+ */
 template<typename InputIterator, typename Projection>
-auto pmatch_each(InputIterator first, InputIterator last, Projection&& proj)
-     -> detail::pmatch_each_helper<InputIterator, typename util::rm_ref<Projection>::type>
-{
-    return {first, last, std::forward<Projection>(proj)};
+auto match_each(InputIterator first, InputIterator last, Projection proj)
+     -> detail::pmatch_each_helper<InputIterator, Projection> {
+    return {first, last, std::move(proj)};
 }
 
 } // namespace cppa
 
-#endif // MATCH_HPP
+#endif // CPPA_MATCH_HPP

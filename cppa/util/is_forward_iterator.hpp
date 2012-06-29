@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_FORWARD_ITERATOR_HPP
-#define IS_FORWARD_ITERATOR_HPP
+#ifndef CPPA_IS_FORWARD_ITERATOR_HPP
+#define CPPA_IS_FORWARD_ITERATOR_HPP
 
 #include <type_traits>
 
@@ -42,12 +42,10 @@ namespace cppa { namespace util {
  * @brief Checks wheter @p T behaves like a forward iterator.
  */
 template<typename T>
-class is_forward_iterator
-{
+class is_forward_iterator {
 
     template<class C>
-    static bool sfinae_fun
-    (
+    static bool sfinae_fun (
         C* iter,
         // check for 'C::value_type C::operator*()' returning a non-void type
         typename rm_ref<decltype(*(*iter))>::type* = 0,
@@ -57,8 +55,7 @@ class is_forward_iterator
         typename std::enable_if<std::is_same<bool, decltype(*iter == *iter)>::value>::type* = 0,
         // check for 'bool C::operator!=()'
         typename std::enable_if<std::is_same<bool, decltype(*iter != *iter)>::value>::type* = 0
-    )
-    {
+    ) {
         return true;
     }
 
@@ -74,4 +71,4 @@ class is_forward_iterator
 
 } } // namespace cppa::util
 
-#endif // IS_FORWARD_ITERATOR_HPP
+#endif // CPPA_IS_FORWARD_ITERATOR_HPP

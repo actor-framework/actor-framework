@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ELEMENT_AT_HPP
-#define ELEMENT_AT_HPP
+#ifndef CPPA_ELEMENT_AT_HPP
+#define CPPA_ELEMENT_AT_HPP
 
 #include "cppa/util/at.hpp"
 
@@ -42,10 +42,9 @@ struct element_at;
  * @brief Returns the n-th template parameter of @p C.
  */
 template<size_t N, template<typename...> class C, typename... Tn>
-struct element_at<N, C<Tn...>> : at<N, Tn...>
-{
+struct element_at<N, C<Tn...>> : at<N, Tn...> {
 };
 
 } } // namespace cppa::util
 
-#endif // ELEMENT_AT_HPP
+#endif // CPPA_ELEMENT_AT_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ATOM_HPP
-#define ATOM_HPP
+#ifndef CPPA_ATOM_HPP
+#define CPPA_ATOM_HPP
 
 #include <string>
 
@@ -37,16 +37,25 @@
 
 namespace cppa {
 
+/**
+ * @brief The value type of atoms.
+ */
 enum class atom_value : std::uint64_t { dirty_little_hack = 37337 };
 
-std::string to_string(const atom_value& a);
+/**
+ * @brief Returns @p what as a string representation.
+ * @param what Compact representation of an atom.
+ * @returns @p what as string.
+ */
+std::string to_string(const atom_value& what);
 
 /**
  * @brief Creates an atom from given string literal.
+ * @param str String constant representing an atom.
+ * @returns A compact representation of @p str.
  */
 template<size_t Size>
-constexpr atom_value atom(char const (&str) [Size])
-{
+constexpr atom_value atom(char const (&str) [Size]) {
     // last character is the NULL terminator
     static_assert(Size <= 11, "only 10 characters are allowed");
     return static_cast<atom_value>(detail::atom_val(str, 0xF));
@@ -54,4 +63,4 @@ constexpr atom_value atom(char const (&str) [Size])
 
 } // namespace cppa
 
-#endif // ATOM_HPP
+#endif // CPPA_ATOM_HPP

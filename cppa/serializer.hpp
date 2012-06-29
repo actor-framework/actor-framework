@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SERIALIZER_HPP
-#define SERIALIZER_HPP
+#ifndef CPPA_SERIALIZER_HPP
+#define CPPA_SERIALIZER_HPP
 
 #include <string>
 #include <cstddef> // size_t
@@ -46,8 +46,7 @@ class primitive_variant;
  * @ingroup TypeSystem
  * @brief Technology-independent serialization interface.
  */
-class serializer
-{
+class serializer {
 
     serializer(const serializer&) = delete;
     serializer& operator=(const serializer&) = delete;
@@ -91,16 +90,21 @@ class serializer
      * @param num Size of the array @p values.
      * @param values An array of size @p num of primitive data values.
      */
-    virtual void write_tuple(size_t num, primitive_variant const* values) = 0;
+    virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
 
 };
 
+/**
+ * @brief Serializes a value to @p s.
+ * @param s A valid serializer.
+ * @param what A value of an announced or primitive type.
+ * @returns @p s
+ * @relates serializer
+ */
 template<typename T>
-serializer& operator<<(serializer& s, const T& what)
-{
+serializer& operator<<(serializer& s, const T& what) {
     auto mtype = uniform_typeid<T>();
-    if (mtype == nullptr)
-    {
+    if (mtype == nullptr) {
         throw std::logic_error(  "no uniform type info found for "
                                + cppa::detail::to_uniform_name(typeid(T)));
     }
@@ -110,4 +114,4 @@ serializer& operator<<(serializer& s, const T& what)
 
 } // namespace cppa
 
-#endif // SERIALIZER_HPP
+#endif // CPPA_SERIALIZER_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_HPP
-#define ACTOR_HPP
+#ifndef CPPA_ACTOR_HPP
+#define CPPA_ACTOR_HPP
 
 #include <memory>
 #include <cstdint>
@@ -47,17 +47,27 @@ namespace cppa {
 class serializer;
 class deserializer;
 
+class actor;
+
+/**
+ * @brief A unique actor ID.
+ * @relates actor
+ */
 typedef std::uint32_t actor_id;
 
 /**
  * @brief Base class for all actor implementations.
  */
-class actor : public channel
-{
+class actor : public channel {
 
  public:
 
-    ~actor();
+    /**
+     * @brief Enqueues @p msg to the actor's mailbox and returns true if
+     *        this actor is an scheduled actor that successfully changed
+     *        its state to @p pending.
+     */
+    virtual bool chained_enqueue(actor* sender, any_tuple msg);
 
     /**
      * @brief Attaches @p ptr to this actor.
@@ -98,22 +108,6 @@ class actor : public channel
                 >::type* = 0);
 
     /**
-     * @brief Forces this actor to subscribe to the group @p what.
-     *
-     * The group will be unsubscribed if the actor finishes execution.
-     * @param what Group instance that should be joined.
-     */
-    void join(group_ptr& what);
-
-    /**
-     * @brief Forces this actor to leave the group @p what.
-     * @param what Joined group that should be leaved.
-     * @note Groups are leaved automatically if the Actor finishes
-     *       execution.
-     */
-    void leave(const group_ptr& what);
-
-    /**
      * @brief Links this actor to @p other.
      * @param other Actor instance that whose execution is coupled to the
      *              execution of this Actor.
@@ -150,7 +144,7 @@ class actor : public channel
     void link_to(intrusive_ptr<actor>&& other);
 
     /**
-     * @copydoc unlink_from(intrusive_ptr<actor>&)
+     * @copydoc :unlink_from(intrusive_ptr<actor>&)
      */
     void unlink_from(intrusive_ptr<actor>&& other);
 
@@ -210,6 +204,7 @@ class actor : public channel
 
 /**
  * @brief A smart pointer type that manages instances of {@link actor}.
+ * @relates actor
  */
 typedef intrusive_ptr<actor> actor_ptr;
 
@@ -217,23 +212,19 @@ typedef intrusive_ptr<actor> actor_ptr;
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-inline const process_information& actor::parent_process() const
-{
+inline const process_information& actor::parent_process() const {
     return *m_parent_process;
 }
 
-inline process_information_ptr actor::parent_process_ptr() const
-{
+inline process_information_ptr actor::parent_process_ptr() const {
     return m_parent_process;
 }
 
-inline std::uint32_t actor::id() const
-{
+inline std::uint32_t actor::id() const {
     return m_id;
 }
 
-inline bool actor::is_proxy() const
-{
+inline bool actor::is_proxy() const {
     return m_is_proxy;
 }
 
@@ -241,43 +232,37 @@ template<typename T>
 bool actor::attach(std::unique_ptr<T>&& ptr,
                    typename std::enable_if<
                        std::is_base_of<attachable,T>::value
-                   >::type*)
-{
+                   >::type*) {
     return attach(static_cast<attachable*>(ptr.release()));
 }
 
 template<class F>
-class functor_attachable : public attachable
-{
+class functor_attachable : public attachable {
 
     F m_functor;
 
  public:
 
     template<class FArg>
-    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg))
-    {
+    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg)) {
     }
 
-    void actor_exited(std::uint32_t reason)
-    {
+    void actor_exited(std::uint32_t reason) {
         m_functor(reason);
     }
 
-    bool matches(const attachable::token&)
-    {
+    bool matches(const attachable::token&) {
         return false;
     }
 
 };
 
 template<typename F>
-bool actor::attach_functor(F&& ftor)
-{
+bool actor::attach_functor(F&& ftor) {
     typedef typename util::rm_ref<F>::type f_type;
     return attach(new functor_attachable<f_type>(std::forward<F>(ftor)));
 }
 
 } // namespace cppa
 
-#endif // ACTOR_HPP
+#endif // CPPA_ACTOR_HPP

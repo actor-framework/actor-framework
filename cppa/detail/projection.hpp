@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PROJECTION_HPP
-#define PROJECTION_HPP
+#ifndef CPPA_PROJECTION_HPP
+#define CPPA_PROJECTION_HPP
 
 #include "cppa/option.hpp"
 #include "cppa/guard_expr.hpp"
@@ -45,15 +45,12 @@
 namespace cppa { namespace detail {
 
 template<class PartialFun>
-struct projection_helper
-{
+struct projection_helper {
     const PartialFun& fun;
     projection_helper(const PartialFun& pfun) : fun(pfun) { }
     template<typename... Args>
-    bool operator()(Args&&... args) const
-    {
-        if (fun.defined_at(std::forward<Args>(args)...))
-        {
+    bool operator()(Args&&... args) const {
+        if (fun.defined_at(std::forward<Args>(args)...)) {
             fun(std::forward<Args>(args)...);
             return true;
         }
@@ -65,8 +62,7 @@ struct projection_helper
  * @brief Projection implemented by a set of functors.
  */
 template<class ProjectionFuns, typename... Args>
-class projection
-{
+class projection {
 
  public:
 
@@ -84,8 +80,7 @@ class projection
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
      */
     template<class PartialFun>
-    bool operator()(PartialFun& fun, Args... args) const
-    {
+    bool operator()(PartialFun& fun, Args... args) const {
         typedef typename util::tl_zip<
                     typename util::tl_map<
                         ProjectionFuns,
@@ -101,8 +96,7 @@ class projection
                 collected_args;
 
         typename tdata_from_type_list<collected_args>::type pargs;
-        if (collect(pargs, m_funs, std::forward<Args>(args)...))
-        {
+        if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
             projection_helper<PartialFun> helper{fun};
             return util::unchecked_apply_tuple<bool>(helper, pargs);
         }
@@ -112,17 +106,14 @@ class projection
  private:
 
     template<typename Storage, typename T>
-    static inline  bool fetch_(Storage& storage, T&& value)
-    {
+    static inline  bool fetch_(Storage& storage, T&& value) {
         storage = std::forward<T>(value);
         return true;
     }
 
     template<class Storage>
-    static inline bool fetch_(Storage& storage, option<Storage>&& value)
-    {
-        if (value)
-        {
+    static inline bool fetch_(Storage& storage, option<Storage>&& value) {
+        if (value) {
             storage = std::move(*value);
             return true;
         }
@@ -130,26 +121,22 @@ class projection
     }
 
     template<class Storage, typename Fun, typename T>
-    static inline  bool fetch(Storage& storage, const Fun& fun, T&& arg)
-    {
+    static inline  bool fetch(Storage& storage, const Fun& fun, T&& arg) {
         return fetch_(storage, fun(std::forward<T>(arg)));
     }
 
     template<typename Storage, typename T>
-    static inline bool fetch(Storage& storage, const util::void_type&, T&& arg)
-    {
+    static inline bool fetch(Storage& storage, const util::void_type&, T&& arg) {
         return fetch_(storage, std::forward<T>(arg));
     }
 
-    static inline bool collect(tdata<>&, const tdata<>&)
-    {
+    static inline bool collect(tdata<>&, const tdata<>&) {
         return true;
     }
 
     template<class TData, class Trans, typename T0, typename... Ts>
     static inline bool collect(TData& td, const Trans& tr,
-                               T0&& arg0, Ts&&... args)
-    {
+                               T0&& arg0, Ts&&... args) {
         return    fetch(td.head, tr.head, std::forward<T0>(arg0))
                && collect(td.tail(), tr.tail(), std::forward<Ts>(args)...);
     }
@@ -159,8 +146,7 @@ class projection
 };
 
 template<>
-class projection<util::type_list<> >
-{
+class projection<util::type_list<> > {
 
  public:
 
@@ -169,10 +155,8 @@ class projection<util::type_list<> >
     projection(const projection&) = default;
 
     template<class PartialFun>
-    bool operator()(PartialFun& fun) const
-    {
-        if (fun.defined_at())
-        {
+    bool operator()(PartialFun& fun) const {
+        if (fun.defined_at()) {
             fun();
             return true;
         }
@@ -182,14 +166,13 @@ class projection<util::type_list<> >
 };
 
 template<class ProjectionFuns, class List>
-class projection_from_type_list;
+struct projection_from_type_list;
 
 template<class ProjectionFuns, typename... Args>
-class projection_from_type_list<ProjectionFuns, util::type_list<Args...> >
-{
+struct projection_from_type_list<ProjectionFuns, util::type_list<Args...> > {
     typedef projection<ProjectionFuns, Args...> type;
 };
 
 } } // namespace cppa::detail
 
-#endif // PROJECTION_HPP
+#endif // CPPA_PROJECTION_HPP

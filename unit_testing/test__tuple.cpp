@@ -26,7 +26,6 @@
 #include "cppa/util/deduce_ref_type.hpp"
 
 #include "cppa/detail/matches.hpp"
-#include "cppa/detail/invokable.hpp"
 #include "cppa/detail/projection.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/value_guard.hpp"
@@ -45,17 +44,14 @@ using namespace cppa::detail;
 #define VERBOSE(LineOfCode) cout << #LineOfCode << " = " << (LineOfCode) << endl
 
 
-std::string int2str(int i)
-{
+std::string int2str(int i) {
     return std::to_string(i);
 }
 
-option<int> str2int(const std::string& str)
-{
+option<int> str2int(const std::string& str) {
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
-    if (endptr != nullptr && *endptr == '\0')
-    {
+    if (endptr != nullptr && *endptr == '\0') {
         return result;
     }
     return {};
@@ -89,8 +85,7 @@ typedef util::type_list<
 
 
 template<typename First, typename Second>
-struct is_same_ : std::is_same<typename First::second, typename Second::second>
-{
+struct is_same_ : std::is_same<typename First::second, typename Second::second> {
 };
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
@@ -103,8 +98,7 @@ struct is_same_ : std::is_same<typename First::second, typename Second::second>
         CPPA_ERROR(#FunName " erroneously invoked");                           \
     } invoked = ""
 
-size_t test__tuple()
-{
+size_t test__tuple() {
     CPPA_TEST(test__tuple);
 
     using namespace cppa::placeholders;
@@ -145,8 +139,7 @@ size_t test__tuple()
     CPPA_CHECK_NOT_INVOKED(f03, (0, 0));
     CPPA_CHECK_INVOKED(f03, (42, 42));
 
-    auto f04 = on(42, int2str).when(_x2 == "42") >> [&](std::string& str)
-    {
+    auto f04 = on(42, int2str).when(_x2 == "42") >> [&](std::string& str) {
         CPPA_CHECK_EQUAL("42", str);
         invoked = "f04";
     };
@@ -202,8 +195,7 @@ size_t test__tuple()
     // no longer the same data
     CPPA_CHECK_NOT_EQUAL(f09_any_val.at(0), f09_any_val_copy.at(0));
 
-    auto f10 =
-    (
+    auto f10 = (
         on<int>().when(_x1 < 10)    >> [&]() { invoked = "f10.0"; },
         on<int>()                   >> [&]() { invoked = "f10.1"; },
         on<std::string, anything>() >> [&](std::string&) { invoked = "f10.2"; }
@@ -223,8 +215,7 @@ size_t test__tuple()
     //CPPA_CHECK(f10(const static_cast<std::string&>(foobar), "b", "c"));
 
     int f11_fun = 0;
-    auto f11 =
-    (
+    auto f11 = (
         on<int>().when(_x1 == 1) >> [&]() { f11_fun =  1; },
         on<int>().when(_x1 == 2) >> [&]() { f11_fun =  2; },
         on<int>().when(_x1 == 3) >> [&]() { f11_fun =  3; },
@@ -251,10 +242,8 @@ size_t test__tuple()
     CPPA_CHECK(f11("10"));
     CPPA_CHECK_EQUAL(10, f11_fun);
 
-    auto f12 =
-    (
-        on<int, anything, int>().when(_x1 < _x2) >> [&](int a, int b)
-        {
+    auto f12 = (
+        on<int, anything, int>().when(_x1 < _x2) >> [&](int a, int b) {
             CPPA_CHECK_EQUAL(1, a);
             CPPA_CHECK_EQUAL(5, b);
             invoked = "f12";
@@ -263,26 +252,22 @@ size_t test__tuple()
     CPPA_CHECK_INVOKED(f12, (1, 2, 3, 4, 5));
 
     int f13_fun = 0;
-    auto f13 =
-    (
-        on<int, anything, std::string, anything, int>().when(_x1 < _x3 && _x2.starts_with("-")) >> [&](int a, const std::string& str, int b)
-        {
+    auto f13 = (
+        on<int, anything, std::string, anything, int>().when(_x1 < _x3 && _x2.starts_with("-")) >> [&](int a, const std::string& str, int b) {
             CPPA_CHECK_EQUAL("-h", str);
             CPPA_CHECK_EQUAL(1, a);
             CPPA_CHECK_EQUAL(10, b);
             f13_fun = 1;
             invoked = "f13";
         },
-        on<anything, std::string, anything, int, anything, float, anything>() >> [&](const std::string& str, int a, float b)
-        {
+        on<anything, std::string, anything, int, anything, float, anything>() >> [&](const std::string& str, int a, float b) {
             CPPA_CHECK_EQUAL("h", str);
             CPPA_CHECK_EQUAL(12, a);
             CPPA_CHECK_EQUAL(1.f, b);
             f13_fun = 2;
             invoked = "f13";
         },
-        on<float, anything, float>().when(_x1 * 2 == _x2) >> [&](float a, float b)
-        {
+        on<float, anything, float>().when(_x1 * 2 == _x2) >> [&](float a, float b) {
             CPPA_CHECK_EQUAL(1.f, a);
             CPPA_CHECK_EQUAL(2.f, b);
             f13_fun = 3;
@@ -300,16 +285,14 @@ size_t test__tuple()
 
     return CPPA_TEST_RESULT;
 
-    auto old_pf =
-    (
+    auto old_pf = (
         on(42) >> []() { },
         on("abc") >> []() { },
         on<int, int>() >> []() { },
         on<anything>() >> []() { }
     );
 
-    auto new_pf =
-    (
+    auto new_pf = (
         on(42) >> []() { },
         on(std::string("abc")) >> []() { },
         on<int, int>() >> []() { },
@@ -339,84 +322,69 @@ size_t test__tuple()
 
     int dummy_counter = 0;
 
-    cout << "time for for " << numInvokes << " guards(1)*" << endl;
-    {
+    cout << "time for for " << numInvokes << " guards(1)*" << endl; {
         boost::progress_timer t0;
         for (size_t i = 0; i < numInvokes; ++i)
             if (guard1(1, 2, *p3))//const_cast<std::string&>(three)))
                 ++dummy_counter;
     }
 
-    cout << "time for for " << numInvokes << " guards(1)*" << endl;
-    {
+    cout << "time for for " << numInvokes << " guards(1)*" << endl; {
         boost::progress_timer t0;
         for (size_t i = 0; i < numInvokes; ++i)
             if (guard1(get_ref<0>(xvals), get_ref<1>(xvals), get_ref<2>(xvals)))
                 ++dummy_counter;
     }
 
-    cout << "time for for " << numInvokes << " guards(1)" << endl;
-    {
+    cout << "time for for " << numInvokes << " guards(1)" << endl; {
         boost::progress_timer t0;
         for (size_t i = 0; i < numInvokes; ++i)
             if (util::unchecked_apply_tuple<bool>(guard1, xvals))
                 ++dummy_counter;
     }
 
-    cout << "time for for " << numInvokes << " guards(2)" << endl;
-    {
+    cout << "time for for " << numInvokes << " guards(2)" << endl; {
         boost::progress_timer t0;
         for (size_t i = 0; i < numInvokes; ++i)
             if (util::unchecked_apply_tuple<bool>(guard2, xvals))
                 ++dummy_counter;
     }
 
-    cout << "time for for " << numInvokes << " guards(3)" << endl;
-    {
+    cout << "time for for " << numInvokes << " guards(3)" << endl; {
         boost::progress_timer t0;
         for (size_t i = 0; i < numInvokes; ++i)
             if (util::unchecked_apply_tuple<bool>(guard3, xvals))
                 ++dummy_counter;
     }
 
-    cout << "time for " << numInvokes << " equal if-statements" << endl;
-    {
+    cout << "time for " << numInvokes << " equal if-statements" << endl; {
         boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i)
-        {
-            if (get<0>(xvals) + get<1>(xvals) == 3 && get<2>(xvals) == "3")
-            {
+        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
+            if (get<0>(xvals) + get<1>(xvals) == 3 && get<2>(xvals) == "3") {
                 ++dummy_counter;
             }
         }
     }
     */
 
-    cout << "old partial function implementation for " << numInvokes << " matches" << endl;
-    {
+    cout << "old partial function implementation for " << numInvokes << " matches" << endl; {
         boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i)
-        {
+        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
             for (auto& x : testee) { old_pf(x); }
         }
     }
 
-    cout << "new partial function implementation for " << numInvokes << " matches" << endl;
-    {
+    cout << "new partial function implementation for " << numInvokes << " matches" << endl; {
         boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i)
-        {
+        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
             for (auto& x : testee) { new_pf.invoke(x); }
         }
     }
 
-    cout << "old partial function with on() inside loop" << endl;
-    {
+    cout << "old partial function with on() inside loop" << endl; {
         boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i)
-        {
-            auto tmp =
-            (
+        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
+            auto tmp = (
                 on(42) >> []() { },
                 on("abc") >> []() { },
                 on<int, int>() >> []() { },
@@ -426,13 +394,10 @@ size_t test__tuple()
         }
     }
 
-    cout << "new partial function with on() inside loop" << endl;
-    {
+    cout << "new partial function with on() inside loop" << endl; {
         boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i)
-        {
-            auto tmp =
-            (
+        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
+            auto tmp = (
                 on(42) >> []() { },
                 on(std::string("abc")) >> []() { },
                 on<int, int>() >> []() { },
@@ -501,8 +466,7 @@ size_t test__tuple()
     VERBOSE(f0.invoke(*i2.vals()->type_token(), i2.vals()->impl_type(), i2.vals()->native_data(), *(i2.vals())));
     VERBOSE(f1.invoke(*i2.vals()->type_token(), i2.vals()->impl_type(), i2.vals()->native_data(), *(i2.vals())));
 
-    any_tuple dt1;
-    {
+    any_tuple dt1; {
         auto oarr = new detail::object_array;
         oarr->push_back(object::from(1));
         oarr->push_back(object::from(2));
@@ -533,8 +497,7 @@ size_t test__tuple()
     CPPA_CHECK(   at0.size() == 2
                && at0.at(0) == &get<0>(t0)
                && at0.at(1) == &get<1>(t0));
-    if (v0opt)
-    {
+    if (v0opt) {
         auto& v0 = *v0opt;
         CPPA_CHECK((std::is_same<decltype(v0), cow_tuple<std::string>&>::value));
         CPPA_CHECK((std::is_same<decltype(get<0>(v0)), const std::string&>::value));
@@ -553,13 +516,11 @@ size_t test__tuple()
         CPPA_CHECK(lhs == rhs);
         CPPA_CHECK(rhs == lhs);
     }
-    any_tuple at1 = make_cow_tuple("one", 2, 3.f, 4.0);
-    {
+    any_tuple at1 = make_cow_tuple("one", 2, 3.f, 4.0); {
         // perfect match
         auto opt0 = tuple_cast<std::string, int, float, double>(at1);
         CPPA_CHECK(opt0);
-        if (opt0)
-        {
+        if (opt0) {
             CPPA_CHECK((*opt0 == make_cow_tuple("one", 2, 3.f, 4.0)));
             CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
             CPPA_CHECK_EQUAL(&get<1>(*opt0), at1.at(1));
@@ -569,24 +530,21 @@ size_t test__tuple()
         // leading wildcard
         auto opt1 = tuple_cast<anything, double>(at1);
         CPPA_CHECK(opt1);
-        if (opt1)
-        {
+        if (opt1) {
             CPPA_CHECK_EQUAL(get<0>(*opt1), 4.0);
             CPPA_CHECK_EQUAL(&get<0>(*opt1), at1.at(3));
         }
         // trailing wildcard
         auto opt2 = tuple_cast<std::string, anything>(at1);
         CPPA_CHECK(opt2);
-        if (opt2)
-        {
+        if (opt2) {
             CPPA_CHECK_EQUAL(get<0>(*opt2), "one");
             CPPA_CHECK_EQUAL(&get<0>(*opt2), at1.at(0));
         }
         // wildcard in between
         auto opt3 = tuple_cast<std::string, anything, double>(at1);
         CPPA_CHECK(opt3);
-        if (opt3)
-        {
+        if (opt3) {
             CPPA_CHECK((*opt3 == make_cow_tuple("one", 4.0)));
             CPPA_CHECK_EQUAL(get<0>(*opt3), "one");
             CPPA_CHECK_EQUAL(get<1>(*opt3), 4.0);

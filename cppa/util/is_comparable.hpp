@@ -28,16 +28,15 @@
 \******************************************************************************/
 
 
-#ifndef IS_COMPARABLE_HPP
-#define IS_COMPARABLE_HPP
+#ifndef CPPA_IS_COMPARABLE_HPP
+#define CPPA_IS_COMPARABLE_HPP
 
 #include <type_traits>
 
 namespace cppa { namespace util {
 
 template<typename T1, typename T2>
-class is_comparable
-{
+class is_comparable {
 
     // SFINAE: If you pass a "bool*" as third argument, then
     //         decltype(cmp_help_fun(...)) is bool if there's an
@@ -48,14 +47,13 @@ class is_comparable
     //         candidate and thus decltype(cmp_help_fun(...)) is void.
 
     template<typename A, typename B>
-    static bool cmp_help_fun(A const* arg0, B const* arg1,
-                             decltype(*arg0 == *arg1)* = nullptr)
-    {
+    static bool cmp_help_fun(const A* arg0, const B* arg1,
+                             decltype(*arg0 == *arg1)* = nullptr) {
         return true;
     }
 
     template<typename A, typename B>
-    static void cmp_help_fun(A const*, B const*, void* = nullptr) { }
+    static void cmp_help_fun(const A*, const B*, void* = nullptr) { }
 
     typedef decltype(cmp_help_fun(static_cast<T1*>(nullptr),
                                   static_cast<T2*>(nullptr),
@@ -70,4 +68,4 @@ class is_comparable
 
 } } // namespace cppa::util
 
-#endif // IS_COMPARABLE_HPP
+#endif // CPPA_IS_COMPARABLE_HPP

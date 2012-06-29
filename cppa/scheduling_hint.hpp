@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef SCHEDULING_HINT_HPP
-#define SCHEDULING_HINT_HPP
+#ifndef CPPA_SCHEDULING_HINT_HPP
+#define CPPA_SCHEDULING_HINT_HPP
 
 namespace cppa {
 
@@ -37,8 +37,7 @@ namespace cppa {
  * @brief Denotes whether a user wants an actor to take part in
  *        cooperative scheduling or not.
  */
-enum scheduling_hint
-{
+enum scheduling_hint {
 
     /**
      * @brief Indicates that an actor takes part in cooperative scheduling.
@@ -48,10 +47,16 @@ enum scheduling_hint
     /**
      * @brief Indicates that an actor should run in its own thread.
      */
-    detached
+    detached,
+
+    /**
+     * @brief Indicates that an actor should run in its own thread but should
+     *        be ignored by {@link await_others_done()}.
+     */
+    detached_and_hidden
 
 };
 
 } // namespace cppa
 
-#endif // SCHEDULING_HINT_HPP
+#endif // CPPA_SCHEDULING_HINT_HPP

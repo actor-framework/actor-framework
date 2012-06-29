@@ -28,44 +28,60 @@
 \******************************************************************************/
 
 
-#ifndef ACTOR_BEHAVIOR_HPP
-#define ACTOR_BEHAVIOR_HPP
+#ifndef CPPA_ACTOR_BEHAVIOR_HPP
+#define CPPA_ACTOR_BEHAVIOR_HPP
+
+#include "cppa/config.hpp"
+#include "cppa/local_actor.hpp"
 
 namespace cppa {
 
+class scheduler;
+namespace util { class fiber; }
+
+enum class resume_result {
+    actor_blocked,
+    actor_done
+};
+
+enum scheduled_actor_type {
+    context_switching_impl,
+    event_based_impl
+};
+
 /**
- * @brief A base class for context-switching or thread-mapped actor
- *        implementations.
- *
- * This abstract class provides a class-based way to define context-switching
- * or thread-mapped actors. In general,
- * you always should use event-based actors. However, if you need to call
- * blocking functions, or need to have your own thread for other reasons,
- * this class can be used to define a class-based actor.
+ * @brief A base class for cooperatively scheduled actors.
  */
-class scheduled_actor
-{
+class scheduled_actor : public local_actor {
 
  public:
 
-    virtual ~scheduled_actor();
+    scheduled_actor(bool enable_chained_send = false);
 
     /**
-     * @brief Can be overridden to perform cleanup code after an actor
-     *        finished execution.
-     * @warning Must not call any function manipulating the actor's state such
-     *          as join, leave, link, or monitor.
+     * @brief Intrusive next pointer needed by the scheduler's job queue.
      */
-    virtual void on_exit();
+    scheduled_actor* next;
 
-    /**
-     * @brief Implements the behavior of a context-switching or thread-mapped
-     *        actor.
-     */
-    virtual void act() = 0;
+    // called from worker thread
+    virtual resume_result resume(util::fiber* from) = 0;
+
+    void attach_to_scheduler(scheduler* sched);
+
+    virtual bool has_behavior() = 0;
+
+    virtual scheduled_actor_type impl_type() = 0;
+
+ protected:
+
+    scheduler* m_scheduler;
+
+    bool initialized();
 
 };
 
+typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
+
 } // namespace cppa
 
-#endif // ACTOR_BEHAVIOR_HPP
+#endif // CPPA_ACTOR_BEHAVIOR_HPP

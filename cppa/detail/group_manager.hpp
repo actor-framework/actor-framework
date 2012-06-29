@@ -28,19 +28,19 @@
 \******************************************************************************/
 
 
-#ifndef GROUP_MANAGER_HPP
-#define GROUP_MANAGER_HPP
+#ifndef CPPA_GROUP_MANAGER_HPP
+#define CPPA_GROUP_MANAGER_HPP
 
 #include <map>
+#include <mutex>
+#include <thread>
 
 #include "cppa/group.hpp"
-#include "cppa/detail/thread.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
 namespace cppa { namespace detail {
 
-class group_manager
-{
+class group_manager {
 
  public:
 
@@ -58,10 +58,10 @@ class group_manager
     typedef std::map< std::string, std::unique_ptr<group::module> > modules_map;
 
     modules_map m_mmap;
-    detail::mutex m_mmap_mtx;
+    std::mutex m_mmap_mtx;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // GROUP_MANAGER_HPP
+#endif // CPPA_GROUP_MANAGER_HPP

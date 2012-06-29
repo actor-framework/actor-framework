@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef DESERIALIZER_HPP
-#define DESERIALIZER_HPP
+#ifndef CPPA_DESERIALIZER_HPP
+#define CPPA_DESERIALIZER_HPP
 
 #include <string>
 #include <cstddef>
@@ -45,8 +45,7 @@ class object;
  * @ingroup TypeSystem
  * @brief Technology-independent deserialization interface.
  */
-class deserializer
-{
+class deserializer {
 
     deserializer(const deserializer&) = delete;
     deserializer& operator=(const deserializer&) = delete;
@@ -106,13 +105,20 @@ class deserializer
      * @param storage Array of size @p num, storing the result of this function.
      */
     virtual void read_tuple(size_t num,
-                            primitive_type const* ptypes,
+                            const primitive_type* ptypes,
                             primitive_variant* storage   ) = 0;
 
 };
 
-deserializer& operator>>(deserializer& d, object& what);
+/**
+ * @brief Deserializes a value and stores the result in @p storage.
+ * @param d A valid deserializer.
+ * @param storage An that should contain the deserialized value.
+ * @returns @p d
+ * @relates deserializer
+ */
+deserializer& operator>>(deserializer& d, object& storage);
 
 } // namespace cppa
 
-#endif // DESERIALIZER_HPP
+#endif // CPPA_DESERIALIZER_HPP

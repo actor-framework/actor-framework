@@ -32,18 +32,35 @@
 #define UTILITY_HPP
 
 #include <vector>
+#include <string>
+#include <sstream>
 #include <stdexcept>
 #include <algorithm>
 
-#include "boost/thread.hpp"
+inline std::vector<std::string> split(const std::string& str, char delim) {
+    std::vector<std::string> result;
+    std::stringstream strs{str};
+    std::string tmp;
+    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+    return result;
+}
+
+inline std::string join(const std::vector<std::string>& vec,
+                        const std::string& delim = "") {
+    if (vec.empty()) return "";
+    auto result = vec.front();
+    for (auto i = vec.begin() + 1; i != vec.end(); ++i) {
+        result += delim;
+        result += *i;
+    }
+    return result;
+}
 
 template<typename T>
-T rd(char const* cstr)
-{
+T rd(const char* cstr) {
     char* endptr = nullptr;
     T result = static_cast<T>(strtol(cstr, &endptr, 10));
-    if (endptr == nullptr || *endptr != '\0')
-    {
+    if (endptr == nullptr || *endptr != '\0') {
         std::string errstr;
         errstr += "\"";
         errstr += cstr;
@@ -53,18 +70,10 @@ T rd(char const* cstr)
     return result;
 }
 
-#ifdef __APPLE__
-int num_cores()
-{
-    return static_cast<int>(boost::thread::hardware_concurrency());
-}
-#else
-int num_cores()
-{
+int num_cores() {
     char cbuf[100];
     FILE* cmd = popen("/bin/cat /proc/cpuinfo | /bin/grep processor | /usr/bin/wc -l", "r");
-    if (fgets(cbuf, 100, cmd) == 0)
-    {
+    if (fgets(cbuf, 100, cmd) == 0) {
         throw std::runtime_error("cannot determine number of cores");
     }
     pclose(cmd);
@@ -73,26 +82,20 @@ int num_cores()
     *i = '\0';
     return rd<int>(cbuf);
 }
-#endif
 
-std::vector<uint64_t> factorize(uint64_t n)
-{
+std::vector<uint64_t> factorize(uint64_t n) {
     std::vector<uint64_t> result;
-    if (n <= 3)
-    {
+    if (n <= 3) {
         result.push_back(n);
         return std::move(result);
     }
     uint64_t d = 2;
-    while(d < n)
-    {
-        if((n % d) == 0)
-        {
+    while(d < n) {
+        if((n % d) == 0) {
             result.push_back(d);
             n /= d;
         }
-        else
-        {
+        else {
             d = (d == 2) ? 3 : (d + 2);
         }
     }

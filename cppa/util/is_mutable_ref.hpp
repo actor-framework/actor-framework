@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IS_MUTABLE_REF_HPP
-#define IS_MUTABLE_REF_HPP
+#ifndef CPPA_IS_MUTABLE_REF_HPP
+#define CPPA_IS_MUTABLE_REF_HPP
 
 namespace cppa { namespace util {
 
@@ -37,23 +37,20 @@ namespace cppa { namespace util {
  * @brief Checks wheter @p T is a non-const reference.
  */
 template<typename T>
-struct is_mutable_ref
-{
+struct is_mutable_ref {
     static constexpr bool value = false;
 };
 
 template<typename T>
-struct is_mutable_ref<const T&>
-{
+struct is_mutable_ref<const T&> {
     static constexpr bool value = false;
 };
 
 template<typename T>
-struct is_mutable_ref<T&>
-{
+struct is_mutable_ref<T&> {
     static constexpr bool value = true;
 };
 
 } } // namespace cppa::util
 
-#endif // IS_MUTABLE_REF_HPP
+#endif // CPPA_IS_MUTABLE_REF_HPP
