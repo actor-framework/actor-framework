@@ -43,7 +43,6 @@
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/fixed_vector.hpp"
-#include "cppa/util/replace_type.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/is_legal_tuple_type.hpp"

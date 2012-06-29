@@ -120,10 +120,8 @@ struct types_only_eq_type {
 };
 
 namespace {
-
 constexpr full_eq_type full_eq;
 constexpr types_only_eq_type types_only_eq;
-
 } // namespace <anonymous>
 
 } } // namespace cppa::detail
