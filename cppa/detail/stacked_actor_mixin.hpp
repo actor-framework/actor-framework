@@ -77,14 +77,14 @@ class stacked_actor_mixin : public Base {
 
     stacked_actor_mixin(std::function<void()> f) : m_behavior(std::move(f)) { }
 
-    virtual void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old) {
+    virtual void do_become(behavior&& bhvr, bool discard_old) {
         if (m_bhvr_stack_ptr) {
             if (discard_old) m_bhvr_stack_ptr->pop_back();
-            m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
+            m_bhvr_stack_ptr->push_back(std::move(bhvr));
         }
         else {
             m_bhvr_stack_ptr.reset(new behavior_stack);
-            m_bhvr_stack_ptr->push_back(bhvr, owns_bhvr);
+            m_bhvr_stack_ptr->push_back(std::move(bhvr));
             if (this->initialized()) {
                 m_bhvr_stack_ptr->exec();
                 m_bhvr_stack_ptr.reset();

@@ -35,6 +35,7 @@
 
 #include "cppa/self.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/match_expr.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/partial_function.hpp"
 
@@ -62,8 +63,9 @@ struct receive_while_helper {
 
     template<typename Arg0, typename... Args>
     void operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...); (*this)(tmp);
+        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
+                                      std::forward<Args>(args)...);
+        (*this)(tmp);
     }
 
 
@@ -91,8 +93,9 @@ class receive_for_helper {
 
     template<typename Arg0, typename... Args>
     void operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...); (*this)(tmp);
+        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
+                                      std::forward<Args>(args)...);
+        (*this)(tmp);
     }
 
 };
@@ -122,8 +125,9 @@ class do_receive_helper {
             while (stmt() == false);
         }
         else {
+            partial_function& pfun = m_bhvr;
             do {
-                sptr->dequeue(m_bhvr.get_partial_function());
+                sptr->dequeue(pfun);
             }
             while (stmt() == false);
         }

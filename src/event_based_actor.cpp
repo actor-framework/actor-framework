@@ -99,11 +99,11 @@ bool event_based_actor::has_behavior() {
     return m_bhvr_stack.empty() == false;
 }
 
-void event_based_actor::do_become(behavior* ptr, bool owner, bool discard_old) {
+void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
     reset_timeout();
-    request_timeout(ptr->timeout());
+    request_timeout(bhvr.timeout());
     if (discard_old) m_bhvr_stack.pop_back();
-    m_bhvr_stack.push_back(ptr, owner);
+    m_bhvr_stack.push_back(std::move(bhvr));
 }
 
 void event_based_actor::quit(std::uint32_t reason) {

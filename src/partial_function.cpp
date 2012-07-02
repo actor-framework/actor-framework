@@ -36,6 +36,10 @@
 
 namespace cppa {
 
-partial_function::partial_function(impl_ptr&& ptr) : m_impl(std::move(ptr)) { }
+partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+
+behavior_impl::behavior_impl(util::duration tout) : m_timeout(tout) { }
+
+void behavior_impl::handle_timeout() { }
 
 } // namespace cppa

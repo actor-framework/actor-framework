@@ -31,6 +31,8 @@
 #ifndef CPPA_MATCH_HPP
 #define CPPA_MATCH_HPP
 
+#include <type_traits>
+
 #include "cppa/any_tuple.hpp"
 #include "cppa/partial_function.hpp"
 
@@ -50,8 +52,10 @@ struct match_helper {
     */
     template<class Arg0, class... Args>
     void operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = mexpr_concat(std::forward<Arg0>(arg0),
-                                std::forward<Args>(args)...);
+        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
+                                      std::forward<Args>(args)...);
+        static_assert(std::is_same<partial_function, decltype(tmp)>::value,
+                      "match statement contains timeout");
         tmp(tup);
     }
 };
@@ -71,8 +75,9 @@ struct match_each_helper {
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...));
+    void operator()(Arg0&& arg0, Args&&... args) {
+        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
+                                   std::forward<Args>(args)...));
     }
 };
 
@@ -90,8 +95,9 @@ struct copying_match_each_helper {
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...));
+    void operator()(Arg0&& arg0, Args&&... args) {
+        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
+                                   std::forward<Args>(args)...));
     }
 };
 
@@ -114,8 +120,9 @@ struct pmatch_each_helper {
         }
     }
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) { (*this)(mexpr_concat_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Args>(args)...));
+    void operator()(Arg0&& arg0, Args&&... args) {
+        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
+                                   std::forward<Args>(args)...));
     }
 };
 

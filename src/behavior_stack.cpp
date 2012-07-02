@@ -48,10 +48,8 @@ void behavior_stack::pop_back() {
     }
 }
 
-void behavior_stack::push_back(behavior* what, bool has_ownership) {
-    value_type new_element{what};
-    if (!has_ownership) new_element.get_deleter().disable();
-    m_elements.push_back(std::move(new_element));
+void behavior_stack::push_back(behavior&& what) {
+    m_elements.emplace_back(std::move(what));
 }
 
 void behavior_stack::clear() {

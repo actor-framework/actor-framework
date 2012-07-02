@@ -49,9 +49,9 @@ namespace cppa {
 /**
  * @brief Describes the behavior of an actor.
  */
-class behavior {
+class behavior : public partial_function {
 
-    friend behavior operator,(partial_function&& lhs, behavior&& rhs);
+    typedef partial_function super;
 
  public:
 
@@ -61,57 +61,60 @@ class behavior {
     behavior& operator=(behavior&&) = default;
     behavior& operator=(const behavior&) = default;
 
-    inline behavior(partial_function&& fun) : m_fun(std::move(fun)) { }
+    inline behavior(partial_function fun) : super(std::move(fun)) { }
 
-    template<typename... Cases>
-    behavior(const match_expr<Cases...>& me) : m_fun(me) { }
+    inline behavior(partial_function::impl_ptr ptr) : super(std::move(ptr)) { }
 
-    inline behavior(util::duration tout, std::function<void()>&& handler)
-        : m_timeout(tout), m_timeout_handler(std::move(handler)) {
+    template<typename F>
+    behavior(const timeout_definition<F>& arg)
+    : super(new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{},
+                                                           arg.timeout,
+                                                           arg.handler)) {
     }
 
-    inline void handle_timeout() const {
-        m_timeout_handler();
+    template<typename F>
+    behavior(util::duration d, F f)
+    : super(new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{},
+                                                           d, f)) {
+    }
+
+    template<typename... Cases, typename... Args>
+    behavior(const match_expr<Cases...>& arg0, const Args&... args)
+    : super(match_expr_concat(arg0, args...)) { }
+
+    inline void handle_timeout() {
+        m_impl->handle_timeout();
     }
 
     inline const util::duration& timeout() const {
-        return m_timeout;
-    }
-
-    inline partial_function& get_partial_function() {
-        return m_fun;
-    }
-
-    inline bool operator()(any_tuple& value) {
-        return m_fun(value);
-    }
-
-    inline bool operator()(const any_tuple& value) {
-        return m_fun(value);
-    }
-
-    inline bool operator()(any_tuple&& value) {
-        return m_fun(std::move(value));
+        return m_impl->timeout();
     }
 
     inline bool undefined() const {
-        return m_fun.undefined() && m_timeout.valid() == false;
+        return m_impl == nullptr && m_impl->timeout().valid();
     }
-
- private:
-
-    partial_function m_fun;
-    util::duration m_timeout;
-    std::function<void()> m_timeout_handler;
 
 };
 
-/**
+template<typename Arg0, typename... Args>
+typename util::if_else<
+            util::disjunction<
+                is_timeout_definition<Arg0>,
+                is_timeout_definition<Args>...>,
+            behavior,
+            util::wrapped<partial_function> >::type
+match_expr_convert(const Arg0& arg0, const Args&... args) {
+    return {match_expr_concat(arg0, args...)};
+}
+
+/*
+
+/ *
  * @brief Concatenates a match expression and a timeout specification
  *        represented by an rvalue behavior object.
- */
-template<typename... Lhs>
-behavior operator,(const match_expr<Lhs...>& lhs, behavior&& rhs) {
+ * /
+template<typename F, typename... Lhs>
+behavior operator,(const match_expr<Lhs...>& lhs, timeout_definition<F>&& rhs) {
     CPPA_REQUIRE(rhs.get_partial_function().undefined());
     rhs.get_partial_function() = lhs;
     return std::move(rhs);
@@ -172,6 +175,8 @@ struct select_bhvr {
 };
 
 } // namespace detail
+
+*/
 
 } // namespace cppa
 

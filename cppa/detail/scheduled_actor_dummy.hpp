@@ -47,7 +47,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     void detach(const attachable::token&);
     bool attach(attachable*);
     void unbecome();
-    void do_become(behavior*, bool, bool);
+    void do_become(behavior&&, bool);
     bool has_behavior();
     scheduled_actor_type impl_type();
 };

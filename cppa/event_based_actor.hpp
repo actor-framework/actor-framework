@@ -127,7 +127,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         receive(std::forward<Args>(args)...);
     }
 
-    void do_become(behavior* bhvr, bool owns_bhvr, bool discard_old);
+    void do_become(behavior&& bhvr, bool discard_old);
 
  private:
 

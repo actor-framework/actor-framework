@@ -99,8 +99,8 @@ class behavior_rvalue_builder {
     }
 
     template<typename F>
-    behavior operator>>(F&& f) {
-        return {m_timeout, std::function<void()>{std::forward<F>(f)}};
+    timeout_definition<F> operator>>(F&& f) {
+        return {m_timeout, std::forward<F>(f)};
     }
 
 };

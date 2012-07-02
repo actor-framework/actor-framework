@@ -24,7 +24,7 @@ struct chopstick : sb_actor<chopstick> {
                 send(other, atom("busy"), this);
             },
             on(atom("put"), philos) >> [=]() {
-                become(&available);
+                become(available);
             }
         );
     }
@@ -103,12 +103,12 @@ struct philosopher : sb_actor<philosopher> {
                 cout << oss.str();
                 // eat some time
                 delayed_send(this, seconds(5), atom("think"));
-                become(&eating);
+                become(eating);
             },
             on(atom("busy"), what) >> [=]() {
                 send((what == left) ? right : left, atom("put"), this);
                 send(this, atom("eat"));
-                become(&thinking);
+                become(thinking);
             }
         );
     }
@@ -118,7 +118,7 @@ struct philosopher : sb_actor<philosopher> {
         // a philosopher that receives {eat} stops thinking and becomes hungry
         thinking = (
             on(atom("eat")) >> [=]() {
-                become(&hungry);
+                become(hungry);
                 send(left, atom("take"), this);
                 send(right, atom("take"), this);
             }
@@ -132,7 +132,7 @@ struct philosopher : sb_actor<philosopher> {
                 become(waiting_for(left));
             },
             on<atom("busy"), actor_ptr>() >> [=]() {
-                become(&denied);
+                become(denied);
             }
         );
         // philosopher was not able to obtain the first chopstick
@@ -140,11 +140,11 @@ struct philosopher : sb_actor<philosopher> {
             on<atom("taken"), actor_ptr>() >> [=](actor_ptr& ptr) {
                 send(ptr, atom("put"), this);
                 send(this, atom("eat"));
-                become(&thinking);
+                become(thinking);
             },
             on<atom("busy"), actor_ptr>() >> [=]() {
                 send(this, atom("eat"));
-                become(&thinking);
+                become(thinking);
             }
         );
         // philosopher obtained both chopstick and eats (for five seconds)
@@ -155,7 +155,7 @@ struct philosopher : sb_actor<philosopher> {
                 delayed_send(this, seconds(5), atom("eat"));
                 cout << (  name
                          + " puts down his chopsticks and starts to think\n");
-                become(&thinking);
+                become(thinking);
             }
         );
         // philosophers start to think after receiving {think}
@@ -163,7 +163,7 @@ struct philosopher : sb_actor<philosopher> {
             on(atom("think")) >> [=]() {
                 cout << (name + " starts to think\n");
                 delayed_send(this, seconds(5), atom("eat"));
-                become(&thinking);
+                become(thinking);
             }
         );
     }

@@ -702,7 +702,7 @@ class match_expr {
         return m_cases;
     }
 
-    struct pfun_impl : partial_function::impl {
+    struct pfun_impl : behavior_impl {
         match_expr pfun;
         template<typename Arg>
         pfun_impl(const Arg& from) : pfun(from) { }
@@ -716,6 +716,8 @@ class match_expr {
             return pfun.can_invoke(tup);
         }
     };
+
+
 
     inline partial_function as_partial_function() const {
         return {partial_function::impl_ptr{new pfun_impl(*this)}};
@@ -861,6 +863,7 @@ inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
     return lhs.or_else(rhs);
 }
 
+/*
 template<typename Arg0, typename... Args>
 typename match_expr_from_type_list<
     typename util::tl_concat<
@@ -882,29 +885,94 @@ mexpr_concat(const Arg0& arg0, const Args&... args) {
     detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
     return {all_cases};
 }
+*/
 
-template<typename Arg0, typename... Args>
-partial_function mexpr_concat_convert(const Arg0& arg0, const Args&... args) {
-    typename detail::tdata_from_type_list<
-        typename util::tl_map<
-            typename util::tl_concat<
-                typename Arg0::cases_list,
-                typename Args::cases_list...
-            >::type,
-            gref_wrapped
-        >::type
-    >::type
-    all_cases;
-    typedef typename match_expr_from_type_list<
+template<bool HasTimeout>
+struct match_expr_concat_impl {
+    template<typename Arg0, typename... Args>
+    static behavior_impl* _(const Arg0& arg0, const Args&... args) {
+        typename detail::tdata_from_type_list<
+            typename util::tl_map<
                 typename util::tl_concat<
                     typename Arg0::cases_list,
                     typename Args::cases_list...
+                >::type,
+                gref_wrapped
+            >::type
+        >::type
+        all_cases;
+        typedef typename match_expr_from_type_list<
+                    typename util::tl_concat<
+                        typename Arg0::cases_list,
+                        typename Args::cases_list...
+                    >::type
+                >::type
+                combined_type;
+        auto lvoid = []() { };
+        typedef default_behavior_impl<combined_type, decltype(lvoid)> impl_type;
+        detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
+        return new impl_type(all_cases, util::duration{}, lvoid);
+    }
+};
+
+template<>
+struct match_expr_concat_impl<true> {
+
+    template<class TData, typename Cases, typename F>
+    static behavior_impl* __(const TData& data, Cases, const timeout_definition<F>& arg0) {
+        typedef typename match_expr_from_type_list<Cases>::type combined_type;
+        typedef default_behavior_impl<combined_type, F> impl_type;
+        return new impl_type(data, arg0);
+    }
+
+    template<class TData, typename Token, typename... Cases, typename... Args>
+    static behavior_impl* __(const TData& data, Token, const match_expr<Cases...>& arg0, const Args&... args) {
+        typedef typename util::tl_concat<
+                Token,
+                util::type_list<Cases...>
+            >::type
+            next_token_type;
+        typename detail::tdata_from_type_list<
+                typename util::tl_map<
+                    next_token_type,
+                    gref_wrapped
                 >::type
             >::type
-            combined_type;
-    typedef typename combined_type::pfun_impl impl_type;
-    detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
-    return {partial_function::impl_ptr{new impl_type(all_cases)}};
+            next_data;
+        next_token_type next_token;
+        detail::collect_tdata(next_data, data, arg0.cases());
+        return __(next_data, next_token, args...);
+    }
+
+    template<typename F>
+    static behavior_impl* _(const timeout_definition<F>& arg0) {
+        typedef default_behavior_impl<dummy_match_expr, F> impl_type;
+        return new impl_type(dummy_match_expr{}, arg0);
+    }
+
+    template<typename... Cases, typename... Args>
+    static behavior_impl* _(const match_expr<Cases...>& arg0, const Args&... args) {
+        util::type_list<Cases...> token;
+        typename detail::tdata_from_type_list<
+                typename util::tl_map<
+                    util::type_list<Cases...>,
+                    gref_wrapped
+                >::type
+            >::type
+            wrapper;
+        detail::collect_tdata(wrapper, arg0.cases());
+        return __(wrapper, token, args...);
+    }
+
+};
+
+template<typename Arg0, typename... Args>
+intrusive_ptr<behavior_impl> match_expr_concat(const Arg0& arg0,
+                                               const Args&... args) {
+    constexpr bool has_timeout = util::disjunction<
+                                     is_timeout_definition<Arg0>,
+                                     is_timeout_definition<Args>...>::value;
+    return {match_expr_concat_impl<has_timeout>::_(arg0, args...)};
 }
 
 } // namespace cppa

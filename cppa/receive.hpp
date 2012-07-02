@@ -123,8 +123,8 @@ inline void receive(partial_function& fun) { self->dequeue(fun); }
 
 template<typename Arg0, typename... Args>
 void receive(Arg0&& arg0, Args&&... args) {
-    auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                 std::forward<Args>(args)...);
+    auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
+                                  std::forward<Args>(args)...);
     receive(tmp);
 }
 
@@ -134,8 +134,8 @@ void receive_loop(partial_function& rules);
 
 template<typename Arg0, typename... Args>
 void receive_loop(Arg0&& arg0, Args&&... args) {
-    auto tmp = match_expr_concat(std::forward<Arg0>(arg0),
-                                 std::forward<Args>(args)...);
+    auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
+                                  std::forward<Args>(args)...);
     receive_loop(tmp);
 }
 

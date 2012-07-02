@@ -60,7 +60,7 @@ struct event_testee : public fsm_actor<event_testee> {
 
     behavior wait4string = (
         on<std::string>() >> [=]() {
-            become(&wait4int);
+            become(wait4int);
         },
         on<atom("get_state")>() >> [=]() {
             reply("wait4string");
@@ -69,7 +69,7 @@ struct event_testee : public fsm_actor<event_testee> {
 
     behavior wait4float = (
         on<float>() >> [=]() {
-            become(&wait4string);
+            become(wait4string);
         },
         on<atom("get_state")>() >> [=]() {
             reply("wait4float");
@@ -78,7 +78,7 @@ struct event_testee : public fsm_actor<event_testee> {
 
     behavior wait4int = (
         on<int>() >> [=]() {
-            become(&wait4float);
+            become(wait4float);
         },
         on<atom("get_state")>() >> [=]() {
             reply("wait4int");
@@ -106,7 +106,7 @@ class event_testee : public sb_actor<event_testee> {
     event_testee() : init_state(wait4int) {
         wait4string = (
             on<std::string>() >> [=]() {
-                become(&wait4int);
+                become(wait4int);
             },
             on<atom("get_state")>() >> [=]() {
                 reply("wait4string");
@@ -115,7 +115,7 @@ class event_testee : public sb_actor<event_testee> {
 
         wait4float = (
             on<float>() >> [=]() {
-                become(&wait4string);
+                become(wait4string);
             },
             on<atom("get_state")>() >> [=]() {
                 reply("wait4float");
@@ -124,7 +124,7 @@ class event_testee : public sb_actor<event_testee> {
 
         wait4int = (
             on<int>() >> [=]() {
-                become(&wait4float);
+                become(wait4float);
             },
             on<atom("get_state")>() >> [=]() {
                 reply("wait4int");
@@ -163,7 +163,7 @@ struct chopstick : public sb_actor<chopstick> {
                 reply(atom("busy"));
             },
             on(atom("put"), hakker) >> [=]() {
-                become(&init_state);
+                become(init_state);
             },
             on(atom("break")) >> [=]() {
                 quit();
@@ -316,7 +316,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
         on(atom("pop")) >> [=]() {
             reply(atom("ok"), data.back());
             data.pop_back();
-            become(&filled);
+            become(filled);
         }
     );
 
@@ -324,20 +324,20 @@ class fixed_stack : public sb_actor<fixed_stack> {
         on(atom("push"), arg_match) >> [=](int what) {
             data.push_back(what);
             if (data.size() == max_size)
-                become(&full);
+                become(full);
         },
         on(atom("pop")) >> [=]() {
             reply(atom("ok"), data.back());
             data.pop_back();
             if (data.empty())
-                become(&empty);
+                become(empty);
         }
     );
 
     behavior empty = (
         on(atom("push"), arg_match) >> [=](int what) {
             data.push_back(what);
-            become(&filled);
+            become(filled);
         },
         on(atom("pop")) >> [=]() {
             reply(atom("failure"));
@@ -374,7 +374,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
             on(atom("pop")) >> [=]() {
                 reply(atom("ok"), data.back());
                 data.pop_back();
-                become(&filled);
+                become(filled);
             }
         );
 
@@ -382,20 +382,20 @@ class fixed_stack : public sb_actor<fixed_stack> {
             on(atom("push"), arg_match) >> [=](int what) {
                 data.push_back(what);
                 if (data.size() == max_size)
-                    become(&full);
+                    become(full);
             },
             on(atom("pop")) >> [=]() {
                 reply(atom("ok"), data.back());
                 data.pop_back();
                 if (data.empty())
-                    become(&empty);
+                    become(empty);
             }
         );
 
         empty = (
             on(atom("push"), arg_match) >> [=](int what) {
                 data.push_back(what);
-                become(&filled);
+                become(filled);
             },
             on(atom("pop")) >> [=]() {
                 reply(atom("failure"));

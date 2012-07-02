@@ -126,7 +126,7 @@ class receive_policy {
 
     template<class Client>
     void receive(Client* client, behavior& bhvr) {
-        auto& fun = bhvr.get_partial_function();
+        partial_function& fun = bhvr;
         if (bhvr.timeout().valid() == false) {
             receive(client, fun);
         }

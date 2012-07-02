@@ -35,7 +35,6 @@
 #include <memory>
 
 #include "cppa/behavior.hpp"
-#include "cppa/detail/disablable_delete.hpp"
 
 namespace cppa { namespace detail {
 
@@ -49,19 +48,16 @@ class behavior_stack
 
     behavior_stack() = default;
 
-    typedef detail::disablable_delete<behavior> deleter;
-    typedef std::unique_ptr<behavior, deleter> value_type;
-
     inline bool empty() const { return m_elements.empty(); }
 
-    inline behavior& back() { return *m_elements.back(); }
+    inline behavior& back() { return m_elements.back(); }
 
     // executes the behavior stack
     void exec();
 
     void pop_back();
 
-    void push_back(behavior* what, bool has_ownership);
+    void push_back(behavior&& what);
 
     void cleanup();
 
@@ -69,8 +65,8 @@ class behavior_stack
 
  private:
 
-    std::vector<value_type> m_elements;
-    std::vector<value_type> m_erased_elements;
+    std::vector<behavior> m_elements;
+    std::vector<behavior> m_erased_elements;
 
 };
 

@@ -34,6 +34,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
@@ -202,14 +203,14 @@ class local_actor : public actor {
      *          the actor terminates.
      */
     inline void become(discard_behavior_t, behavior* bhvr) {
-        do_become(bhvr, false, true);
+        do_become(*bhvr, true);
     }
 
     /**
      * @brief Sets the actor's behavior.
      */
-    inline void become(discard_behavior_t, behavior&& bhvr) {
-        do_become(new behavior(std::move(bhvr)), true, true);
+    inline void become(discard_behavior_t, behavior bhvr) {
+        do_become(std::move(bhvr), true);
     }
 
     /**
@@ -222,20 +223,20 @@ class local_actor : public actor {
      *          the actor terminates.
      */
     inline void become(keep_behavior_t, behavior* bhvr) {
-        do_become(bhvr, false, false);
+        do_become(*bhvr, false);
     }
 
     /**
      * @brief Sets the actor's behavior.
      */
-    inline void become(keep_behavior_t, behavior&& bhvr) {
-        do_become(new behavior(std::move(bhvr)), true, false);
+    inline void become(keep_behavior_t, behavior bhvr) {
+        do_become(std::move(bhvr), false);
     }
 
     /**
      * @brief Sets the actor's behavior.
      */
-    inline void become(behavior&& bhvr) {
+    inline void become(behavior bhvr) {
         become(discard_behavior, std::move(bhvr));
     }
 
@@ -243,7 +244,7 @@ class local_actor : public actor {
      * @brief Equal to <tt>become(discard_old, bhvr)</tt>.
      */
     inline void become(behavior* bhvr) {
-        become(discard_behavior, bhvr);
+        become(discard_behavior, *bhvr);
     }
 
     /**
@@ -251,7 +252,7 @@ class local_actor : public actor {
      */
     template<typename... Cases, typename... Args>
     inline void become(discard_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(discard_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
+        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**
@@ -259,7 +260,7 @@ class local_actor : public actor {
      */
     template<typename... Cases, typename... Args>
     inline void become(keep_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(keep_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
+        become(keep_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**
@@ -267,7 +268,7 @@ class local_actor : public actor {
      */
     template<typename... Cases, typename... Args>
     inline void become(match_expr<Cases...> arg0, Args&&... args) {
-        become(discard_behavior, match_expr_concat(std::move(arg0), std::forward<Args>(args)...));
+        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
     }
 
     /**
@@ -333,7 +334,12 @@ class local_actor : public actor {
 
  protected:
 
-    virtual void do_become(behavior* bhvr, bool owns_ptr, bool discard_old) = 0;
+    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
+
+    inline void do_become(const behavior& bhvr, bool discard_old) {
+        behavior copy{bhvr};
+        do_become(std::move(copy), discard_old);
+    }
 
 };
 
