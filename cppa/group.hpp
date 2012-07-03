@@ -62,33 +62,35 @@ class group : public channel {
 
  public:
 
-    class unsubscriber;
+    class subscription;
 
     // needs access to unsubscribe()
-    friend class unsubscriber;
+    friend class subscription;
 
     // unsubscribes its channel from the group on destruction
-    class unsubscriber : public attachable {
+    class subscription {
 
         friend class group;
 
-        channel_ptr m_self;
-        intrusive_ptr<group> m_group;
+        subscription(const subscription&) = delete;
+        subscription& operator=(const subscription&) = delete;
 
      public:
 
-        unsubscriber(const channel_ptr& s, const intrusive_ptr<group>& g);
+        subscription() = default;
+        subscription(subscription&&) = default;
+        subscription(const channel_ptr& s, const intrusive_ptr<group>& g);
 
-        ~unsubscriber();
+        ~subscription();
 
-        void actor_exited(std::uint32_t);
+        inline bool valid() const { return (m_subscriber) && (m_group); }
 
-        // matches on m_group
-        bool matches(const attachable::token& what);
+     private:
+
+        channel_ptr m_subscriber;
+        intrusive_ptr<group> m_group;
 
     };
-
-    typedef std::unique_ptr<unsubscriber> subscription;
 
     /**
      * @brief Module interface.

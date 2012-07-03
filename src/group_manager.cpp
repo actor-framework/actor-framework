@@ -69,12 +69,11 @@ class group_impl : public group {
     }
 
     group::subscription subscribe(const channel_ptr& who) /*override*/ {
-        group::subscription result;
         exclusive_guard guard(m_shared_mtx);
         if (m_subscribers.insert(who).second) {
-            result.reset(new group::unsubscriber(who, this));
+            return {who, this};
         }
-        return result;
+        return {};
     }
 
     void unsubscribe(const channel_ptr& who) /*override*/ {

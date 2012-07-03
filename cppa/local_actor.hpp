@@ -31,6 +31,7 @@
 #ifndef CPPA_CONTEXT_HPP
 #define CPPA_CONTEXT_HPP
 
+#include "cppa/group.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
@@ -332,6 +333,7 @@ class local_actor : public actor {
     actor_ptr m_chained_actor;
     detail::recursive_queue_node m_dummy_node;
     detail::recursive_queue_node* m_current_node;
+    std::map<group_ptr, group::subscription> m_subscriptions;
 
 #   endif // CPPA_DOCUMENTATION
 

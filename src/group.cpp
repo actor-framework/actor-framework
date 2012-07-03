@@ -51,24 +51,12 @@ void group::add_module(group::module* ptr) {
     detail::singleton_manager::get_group_manager()->add_module(ptr);
 }
 
-group::unsubscriber::unsubscriber(const channel_ptr& s,
+group::subscription::subscription(const channel_ptr& s,
                                   const intrusive_ptr<group>& g)
-    : m_self(s), m_group(g) {
-}
+: m_subscriber(s), m_group(g) { }
 
-group::unsubscriber::~unsubscriber() {
-    if (m_group && m_self) m_group->unsubscribe(m_self);
-}
-
-void group::unsubscriber::actor_exited(std::uint32_t) {
-    // unsubscription is done in destructor
-}
-
-bool group::unsubscriber::matches(const attachable::token& what) {
-    if (what.subtype == typeid(group::unsubscriber)) {
-        return m_group == reinterpret_cast<const group*>(what.ptr);
-    }
-    return false;
+group::subscription::~subscription() {
+    if (valid()) m_group->unsubscribe(m_subscriber);
 }
 
 group::module::module(std::string name) : m_name(std::move(name)) { }

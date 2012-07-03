@@ -85,14 +85,13 @@ void local_actor::on_exit() { }
 void local_actor::init() { }
 
 void local_actor::join(const group_ptr& what) {
-    if (what) attach(what->subscribe(this));
+    if (what && m_subscriptions.count(what) == 0) {
+        m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
+    }
 }
 
 void local_actor::leave(const group_ptr& what) {
-    if (what) {
-        attachable::token group_token(typeid(group::unsubscriber), what.get());
-        detach(group_token);
-    }
+    if (what) m_subscriptions.erase(what);
 }
 
 } // namespace cppa
