@@ -46,8 +46,11 @@ namespace cppa {
 class scheduler;
 class local_scheduler;
 
-struct discard_behavior_t { };
-struct keep_behavior_t { };
+template<bool DiscardOld>
+struct behavior_policy { static const bool discard_old = DiscardOld; };
+
+typedef behavior_policy<false> keep_behavior;
+typedef behavior_policy<true > discard_behavior_t;
 
 // doxygen doesn't parse anonymous namespaces correctly
 #ifndef CPPA_DOCUMENTATION
@@ -254,17 +257,13 @@ class local_actor : public actor {
     /**
      * @brief Sets the actor's behavior.
      */
-    template<typename... Cases, typename... Args>
-    inline void become(discard_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
-     */
-    template<typename... Cases, typename... Args>
-    inline void become(keep_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(keep_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
+    template<bool DiscardOld, typename Arg0, typename Arg1, typename... Args>
+    void become(behavior_policy<DiscardOld>,
+                Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+        do_become(match_expr_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Arg1>(arg1),
+                                     std::forward<Args>(args)...),
+                  DiscardOld);
     }
 
     /**
