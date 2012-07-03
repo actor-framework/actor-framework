@@ -297,6 +297,11 @@ class local_actor : public actor {
      */
     virtual void on_exit();
 
+    /**
+     * @brief Returns all joined groups of this actor.
+     */
+    std::vector<group_ptr> joined_groups();
+
     // library-internal members and member functions that shall
     // not appear in the documentation
 

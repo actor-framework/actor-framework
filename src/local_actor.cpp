@@ -94,4 +94,12 @@ void local_actor::leave(const group_ptr& what) {
     if (what) m_subscriptions.erase(what);
 }
 
+std::vector<group_ptr> local_actor::joined_groups() {
+    std::vector<group_ptr> result;
+    for (auto& kvp : m_subscriptions) {
+        result.emplace_back(kvp.first);
+    }
+    return result;
+}
+
 } // namespace cppa
