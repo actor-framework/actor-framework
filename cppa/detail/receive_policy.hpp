@@ -43,11 +43,14 @@
 namespace cppa { namespace detail {
 
 enum receive_policy_flag {
-    // blocking message processing: thread-mapped & context-switching actors
+    // receives can be nested
     rp_nestable,
-    // callback-based message processing: event-based actors
-    rp_callback
+    // receives are guaranteed to be sequential
+    rp_sequential
 };
+
+template<receive_policy_flag X>
+struct rp_flag { typedef std::integral_constant<receive_policy_flag, X> type; };
 
 class receive_policy {
 
@@ -67,7 +70,7 @@ class receive_policy {
         auto i = m_cache.begin();
         auto e = m_cache.end();
         while (i != e) {
-            switch (this->handle_message(client, *(*i), fun, token)) {
+            switch (this->handle_message(client, i->get(), fun, token)) {
                 case hm_msg_handled: {
                     client->release_node(i->release());
                     m_cache.erase(i);
@@ -92,9 +95,9 @@ class receive_policy {
     }
 
     template<class Client, class FunOrBehavior>
-    bool invoke(Client* client, recursive_queue_node* node, FunOrBehavior& fun) {
+    bool invoke(Client* client, recursive_queue_node* node, FunOrBehavior& fun){
         std::integral_constant<receive_policy_flag, Client::receive_flag> token;
-        switch (this->handle_message(client, *node, fun, token)) {
+        switch (this->handle_message(client, node, fun, token)) {
             case hm_msg_handled: {
                 client->release_node(node);
                 return true;
@@ -157,8 +160,8 @@ class receive_policy {
 
  private:
 
-    typedef std::integral_constant<receive_policy_flag, rp_nestable> nestable;
-    typedef std::integral_constant<receive_policy_flag, rp_callback> callback;
+    typedef typename rp_flag<rp_nestable>::type nestable;
+    typedef typename rp_flag<rp_sequential>::type sequential;
 
     std::list<std::unique_ptr<recursive_queue_node> > m_cache;
 
@@ -174,13 +177,13 @@ class receive_policy {
 
     template<class Client, class FunOrBehavior>
     handle_message_result handle_message(Client* client,
-                                         recursive_queue_node& node,
+                                         recursive_queue_node* node,
                                          FunOrBehavior& fun,
                                          nestable) {
-        if (node.marked) {
+        if (node->marked) {
             return hm_skip_msg;
         }
-        switch (client->filter_msg(node.msg)) {
+        switch (client->filter_msg(node->msg)) {
             case normal_exit_signal:
             case expired_timeout_message: {
                 return hm_drop_msg;
@@ -190,20 +193,18 @@ class receive_policy {
                 return hm_msg_handled;
             }
             case ordinary_message: {
-                std::swap(client->m_last_dequeued, node.msg);
-                std::swap(client->m_last_sender, node.sender);
+                auto previous_node = client->m_current_node;
+                client->m_current_node = node;
                 client->push_timeout();
-                node.marked = true;
-                if (fun(client->m_last_dequeued)) {
-                    client->m_last_dequeued.reset();
-                    client->m_last_sender.reset();
+                node->marked = true;
+                if (fun(node->msg)) {
+                    client->m_current_node = &(client->m_dummy_node);
                     return hm_msg_handled;
                 }
                 // no match (restore client members)
-                std::swap(client->m_last_dequeued, node.msg);
-                std::swap(client->m_last_sender, node.sender);
+                client->m_current_node = previous_node;
                 client->pop_timeout();
-                node.marked = false;
+                node->marked = false;
                 return hm_cache_msg;
             }
             default: CPPA_CRITICAL("illegal result of filter_msg");
@@ -212,11 +213,11 @@ class receive_policy {
 
     template<class Client, class FunOrBehavior>
     handle_message_result handle_message(Client* client,
-                                         recursive_queue_node& node,
+                                         recursive_queue_node* node,
                                          FunOrBehavior& fun,
-                                         callback) {
-        CPPA_REQUIRE(node.marked == false);
-        switch (client->filter_msg(node.msg)) {
+                                         sequential) {
+        CPPA_REQUIRE(node->marked == false);
+        switch (client->filter_msg(node->msg)) {
             case normal_exit_signal:
             case expired_timeout_message: {
                 return hm_drop_msg;
@@ -226,18 +227,16 @@ class receive_policy {
                 return hm_msg_handled;
             }
             case ordinary_message: {
-                std::swap(client->m_last_dequeued, node.msg);
-                std::swap(client->m_last_sender, node.sender);
-                if (fun(client->m_last_dequeued)) {
-                    client->m_last_dequeued.reset();
-                    client->m_last_sender.reset();
+                auto previous_node = client->m_current_node;
+                client->m_current_node = node;
+                if (fun(node->msg)) {
+                    client->m_current_node = &(client->m_dummy_node);
                     // we definitely don't have a pending timeout now
                     client->m_has_pending_timeout_request = false;
                     return hm_msg_handled;
                 }
                 // no match, restore members
-                std::swap(client->m_last_dequeued, node.msg);
-                std::swap(client->m_last_sender, node.sender);
+                client->m_current_node = previous_node;
                 return hm_cache_msg;
             }
             default: CPPA_CRITICAL("illegal result of filter_msg");

@@ -68,7 +68,8 @@ class down_observer : public attachable {
 } // namespace <anonymous>
 
 local_actor::local_actor(bool sflag)
-: m_chaining(sflag), m_trap_exit(false), m_is_scheduled(sflag) { }
+: m_chaining(sflag), m_trap_exit(false)
+, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
 
 void local_actor::monitor(actor_ptr whom) {
     if (whom) whom->attach(new down_observer(this, whom));

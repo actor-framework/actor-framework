@@ -132,7 +132,7 @@ struct ebaf_from_functor {
     static_assert(   std::is_same<arg_types, arg_types2>::value
                   || std::is_same<util::type_list<>, arg_types2>::value,
                   "Second functor must provide either the same signature "
-                  " as the first one or must take zero arguments");
+                  "as the first one or must take zero arguments");
     typedef typename util::tl_map<arg_types, std::remove_pointer>::type mems;
     typedef typename ebaf_from_type_list<Init, Cleanup, mems>::type type;
 };

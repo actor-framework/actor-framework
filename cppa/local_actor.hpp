@@ -37,16 +37,18 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
 
+// forward declarations
 class scheduler;
 class local_scheduler;
 
 struct discard_behavior_t { };
 struct keep_behavior_t { };
 
+// doxygen doesn't parse anonymous namespaces correctly
 #ifndef CPPA_DOCUMENTATION
 namespace {
 #endif // CPPA_DOCUMENTATION
@@ -162,19 +164,20 @@ class local_actor : public actor {
     /**
      * @brief Returns the last message that was dequeued
      *        from the actor's mailbox.
-     * @note Only set during callback invocation.
+     * @warning Only set during callback invocation.
      */
     inline any_tuple& last_dequeued() {
-        return m_last_dequeued;
+        return m_current_node->msg;
     }
 
     /**
      * @brief Returns the sender of the last dequeued message.
-     * @note Only set during callback invocation.
+     * @warning Only set during callback invocation.
      * @note Implicitly used by the function {@link cppa::reply}.
+     * @see cppa::reply()
      */
     inline actor_ptr& last_sender() {
-        return m_last_sender;
+        return m_current_node->sender;
     }
 
     /**
@@ -326,9 +329,9 @@ class local_actor : public actor {
     bool m_chaining;
     bool m_trap_exit;
     bool m_is_scheduled;
-    actor_ptr m_last_sender;
     actor_ptr m_chained_actor;
-    any_tuple m_last_dequeued;
+    detail::recursive_queue_node m_dummy_node;
+    detail::recursive_queue_node* m_current_node;
 
 #   endif // CPPA_DOCUMENTATION
 
