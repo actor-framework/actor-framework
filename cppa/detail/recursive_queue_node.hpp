@@ -46,11 +46,7 @@ struct recursive_queue_node {
     inline recursive_queue_node() : next(nullptr), marked(false) { }
 
     inline recursive_queue_node(actor* from, any_tuple&& content)
-        : next(nullptr)
-        , marked(false)
-        , sender(from)
-        , msg(std::move(content)) {
-    }
+    : next(nullptr), marked(false), sender(from), msg(std::move(content)) { }
 
     recursive_queue_node(recursive_queue_node&&) = delete;
     recursive_queue_node(const recursive_queue_node&) = delete;
