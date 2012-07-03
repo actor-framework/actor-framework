@@ -27,12 +27,16 @@ bool ascending(int a, int b, int c) {
     return a < b && b < c;
 }
 
-vector<const uniform_type_info*> to_vec(util::type_list<>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
+vector<const uniform_type_info*>
+to_vec(util::empty_type_list,
+       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
     return vec;
 }
 
 template<typename Head, typename... Tail>
-vector<const uniform_type_info*> to_vec(util::type_list<Head, Tail...>, vector<const uniform_type_info*> vec = vector<const uniform_type_info*>{}) {
+vector<const uniform_type_info*>
+to_vec(util::type_list<Head, Tail...>,
+       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
     vec.push_back(uniform_typeid<Head>());
     return to_vec(util::type_list<Tail...>{}, std::move(vec));
 }
@@ -105,22 +109,6 @@ size_t test__match() {
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
-
-    /*
-    auto x_ = get__([](int, float) { cout << "yeeeehaaaa!" << endl; })["prints 'yeeeehaaaa'"];
-    cout << "x_: "; x_(1, 1.f);
-    cout << "x_.annotation() = " << x_.annotation() << endl;
-    cout << "x_.plot_signature: "; x_.plot_signature();
-
-    auto fun = (
-        on<int>() >> [](int i) {
-            cout << "i = " << i << endl;
-        },
-        after(std::chrono::seconds(0)) >> []() {
-            cout << "no int found in mailbox" << endl;
-        }
-    );
-    */
 
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));

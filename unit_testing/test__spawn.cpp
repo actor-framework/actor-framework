@@ -595,6 +595,16 @@ size_t test__spawn() {
     a2 << kill_msg;
     await_all_others_done();
 
+    factory::event_based([](int* i) {
+        self->become(
+            after(std::chrono::milliseconds(50)) >> [=]() {
+                if (++(*i) >= 5) self->quit();
+            }
+
+        );
+    }).spawn();
+    await_all_others_done();
+
     auto res1 = behavior_test<testee_actor>(spawn(testee_actor{}));
     CPPA_CHECK_EQUAL(res1, "wait4int");
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");

@@ -146,7 +146,7 @@ class projection {
 };
 
 template<>
-class projection<util::type_list<> > {
+class projection<util::empty_type_list> {
 
  public:
 

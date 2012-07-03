@@ -129,7 +129,7 @@ struct tdata<> {
     typedef util::void_type head_type;
     typedef tdata<> tail_type;
     typedef util::void_type back_type;
-    typedef util::type_list<> types;
+    typedef util::empty_type_list types;
 
     static constexpr size_t num_elements = 0;
 

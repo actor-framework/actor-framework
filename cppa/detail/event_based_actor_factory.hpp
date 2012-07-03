@@ -130,7 +130,7 @@ struct ebaf_from_functor {
     static_assert(util::tl_forall<arg_types, std::is_pointer>::value,
                   "First functor takes non-pointer arguments");
     static_assert(   std::is_same<arg_types, arg_types2>::value
-                  || std::is_same<util::type_list<>, arg_types2>::value,
+                  || util::tl_empty<arg_types2>::value,
                   "Second functor must provide either the same signature "
                   "as the first one or must take zero arguments");
     typedef typename util::tl_map<arg_types, std::remove_pointer>::type mems;

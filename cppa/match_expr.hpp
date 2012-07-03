@@ -207,7 +207,7 @@ struct invoke_policy_impl<wildcard_position::nil,
 template<>
 struct invoke_policy_impl<wildcard_position::leading,
                           util::type_list<anything>,
-                          util::type_list<> > {
+                          util::empty_type_list> {
     template<class Tuple>
     static inline bool can_invoke(const std::type_info&,
                                   const Tuple&) {
@@ -450,20 +450,6 @@ struct get_case<false, Expr, Guard, Transformers, Pattern> {
             >::type
             type;
 };
-
-/*
-template<class Expr>
-struct get_case<true, Expr, value_guard<util::type_list<> >,
-                util::type_list<>, util::type_list<anything> > {
-    typedef typename get_case_<
-                Expr,
-                value_guard<util::type_list<> >,
-                util::type_list<>,
-                util::type_list<anything>
-            >::type
-            type;
-};
-*/
 
 template<typename First, typename Second>
 struct pjf_same_pattern
