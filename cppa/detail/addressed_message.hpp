@@ -45,7 +45,8 @@ class addressed_message {
 
  public:
 
-    addressed_message(actor_ptr from, channel_ptr to, any_tuple ut);
+    addressed_message(actor_ptr from, channel_ptr to,
+                      std::uint64_t seq_id, any_tuple ut);
 
     addressed_message() = default;
     addressed_message(addressed_message&&) = default;
@@ -77,6 +78,10 @@ class addressed_message {
         return m_content;
     }
 
+    inline std::uint64_t sequence_id() const {
+        return m_sequence_id;
+    }
+
     inline bool empty() const {
         return m_content.empty();
     }
@@ -85,6 +90,7 @@ class addressed_message {
 
     actor_ptr m_sender;
     channel_ptr m_receiver;
+    std::uint64_t m_sequence_id;
     any_tuple m_content;
 
 };

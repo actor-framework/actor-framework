@@ -39,6 +39,7 @@
 #include <vector>
 #include <memory>
 #include <thread>
+#include <cstdint>
 #include <algorithm>
 
 #include "cppa/atom.hpp"
@@ -188,7 +189,9 @@ class abstract_actor : public abstract_actor_base<Base> {
 
     typedef std::lock_guard<util::shared_spinlock> lock_type;
 
-    inline mailbox_element* fetch_node(actor* sender, any_tuple msg) {
+    inline mailbox_element* fetch_node(actor* sender,
+                                       any_tuple msg,
+                                       std::uint64_t seq_id = 0) {
         mailbox_element* result = nullptr;
         { // lifetime scope of guard
             lock_type guard{m_nodes_lock};
@@ -202,9 +205,10 @@ class abstract_actor : public abstract_actor_base<Base> {
             result->marked = false;
             result->sender = sender;
             result->msg = std::move(msg);
+            result->seq_id = seq_id;
         }
         else {
-            result = new mailbox_element(sender, std::move(msg));
+            result = new mailbox_element(sender, std::move(msg), seq_id);
         }
         return result;
     }

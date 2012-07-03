@@ -45,7 +45,7 @@
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
-namespace {
+namespace cppa { namespace {
 
 typedef std::uint32_t ui32;
 
@@ -64,9 +64,55 @@ inline decltype(std::chrono::high_resolution_clock::now()) now() {
     return std::chrono::high_resolution_clock::now();
 }
 
-} // namespace <anonymous>
+void async_send_impl(void* to, actor* from, std::uint64_t, const any_tuple& msg) {
+    reinterpret_cast<channel*>(to)->enqueue(from, msg);
+}
 
-namespace cppa {
+void sync_reply_impl(void* to, actor* from, std::uint64_t id, const any_tuple& msg) {
+    reinterpret_cast<actor*>(to)->sync_enqueue(from, id, msg);
+}
+
+typedef void (*impl_fun_ptr)(void*, actor*, std::uint64_t, const any_tuple&);
+
+class delayed_msg {
+
+ public:
+
+    delayed_msg(impl_fun_ptr       arg0,
+                const channel_ptr& arg1,
+                const actor_ptr&   arg2,
+                std::uint64_t      arg3,
+                const any_tuple&   arg4)
+    : fun(arg0), ptr_a(arg1), ptr_b(), from(arg2), id(arg3), msg(arg4) { }
+
+    delayed_msg(impl_fun_ptr       arg0,
+                const actor_ptr& arg1,
+                const actor_ptr&   arg2,
+                std::uint64_t      arg3,
+                const any_tuple&   arg4)
+    : fun(arg0), ptr_a(), ptr_b(arg1), from(arg2), id(arg3), msg(arg4) { }
+
+    delayed_msg(delayed_msg&&) = default;
+    delayed_msg(const delayed_msg&) = default;
+    delayed_msg& operator=(delayed_msg&&) = default;
+    delayed_msg& operator=(const delayed_msg&) = default;
+
+    inline void eval() {
+        fun((ptr_a) ? ptr_a.get() : ptr_b.get(), from.get(), id, msg);
+    }
+
+ private:
+
+    impl_fun_ptr  fun;
+    channel_ptr   ptr_a;
+    actor_ptr     ptr_b;
+    actor_ptr     from;
+    std::uint64_t id;
+    any_tuple     msg;
+
+};
+
+} // namespace <anonymous>
 
 class scheduler_helper {
 
@@ -74,15 +120,14 @@ class scheduler_helper {
 
     typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
-    scheduler_helper() : m_worker(new thread_mapped_actor) {
-    }
+    scheduler_helper() : m_worker(new thread_mapped_actor) { }
 
     void start() {
         m_thread = std::thread(&scheduler_helper::time_emitter, m_worker);
     }
 
     void stop() {
-        m_worker->enqueue(nullptr, make_cow_tuple(atom(":_DIE")));
+        m_worker->enqueue(nullptr, make_cow_tuple(atom("DIE")));
         m_thread.join();
     }
 
@@ -95,28 +140,47 @@ class scheduler_helper {
 
 };
 
+template<class Map, class T>
+void insert_dmsg(Map& storage,
+                 const util::duration& d,
+                 impl_fun_ptr fun_ptr,
+                 const T& to,
+                 const actor_ptr& sender,
+                 std::uint64_t id,
+                 const any_tuple& tup    ) {
+    auto tout = now();
+    tout += d;
+    delayed_msg dmsg{fun_ptr, to, sender, id, tup};
+    storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
+}
+
 void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     typedef detail::abstract_actor<local_actor> impl_type;
     typedef std::unique_ptr<detail::recursive_queue_node> queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();
-    std::multimap<decltype(now()), queue_node_ptr> messages;
+    std::multimap<decltype(now()), delayed_msg> messages;
     queue_node_ptr msg_ptr;
     //decltype(queue.pop()) msg_ptr = nullptr;
     decltype(now()) tout;
     bool done = false;
     // message handling rules
     auto mfun = (
-        on<util::duration,channel_ptr,anything>() >> [&](const util::duration& d,
-                                                         const channel_ptr&) {
-            // calculate timeout
-            auto timeout = now();
-            timeout += d;
-            messages.insert(std::make_pair(std::move(timeout),
-                                           std::move(msg_ptr)));
+        on(atom("SEND"), arg_match) >> [&](const util::duration& d,
+                                           const channel_ptr& ptr,
+                                           const any_tuple& tup) {
+            insert_dmsg(messages, d, async_send_impl,
+                        ptr, msg_ptr->sender, 0, tup);
         },
-        on<atom(":_DIE")>() >> [&]() {
+        on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
+                                            const actor_ptr& ptr,
+                                            std::uint64_t id,
+                                            const any_tuple& tup) {
+            insert_dmsg(messages, d, sync_reply_impl,
+                        ptr, msg_ptr->sender, id, tup);
+        },
+        on<atom("DIE")>() >> [&]() {
             done = true;
         },
         others() >> [&]() {
@@ -125,7 +189,6 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
                           << to_string(msg_ptr->msg)
                           << std::endl;
 #           endif
-            msg_ptr.reset();
         }
     );
     // loop
@@ -139,15 +202,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
                 // handle timeouts (send messages)
                 auto it = messages.begin();
                 while (it != messages.end() && (it->first) <= tout) {
-                    queue_node_ptr ptr{std::move(it->second)};
-                    CPPA_REQUIRE(ptr->marked == false);
-                    auto whom = const_cast<actor_ptr*>(
-                                    reinterpret_cast<const actor_ptr*>(
-                                        ptr->msg.at(1)));
-                    if (*whom) {
-                        any_tuple msg = *(reinterpret_cast<const any_tuple*>(
-                                                  ptr->msg.at(2))); (*whom)->enqueue(ptr->sender.get(), std::move(msg));
-                    }
+                    it->second.eval();
                     messages.erase(it);
                     it = messages.begin();
                 }
@@ -158,6 +213,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
             }
         }
         mfun(msg_ptr->msg);
+        msg_ptr.reset();
     }
 }
 

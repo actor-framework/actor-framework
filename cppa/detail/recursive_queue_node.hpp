@@ -31,6 +31,8 @@
 #ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
 #define CPPA_RECURSIVE_QUEUE_NODE_HPP
 
+#include <cstdint>
+
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
 
@@ -38,15 +40,25 @@ namespace cppa { namespace detail {
 
 struct recursive_queue_node {
 
-    recursive_queue_node* next; // intrusive next pointer
-    bool marked;                // denotes if this node is currently processed
-    actor_ptr sender;
-    any_tuple msg;
+    typedef std::uint64_t seq_id_t;
+    typedef recursive_queue_node* pointer;
 
-    inline recursive_queue_node() : next(nullptr), marked(false) { }
+    pointer   next;   // intrusive next pointer
+    bool      marked; // denotes if this node is currently processed
+    actor_ptr sender; // points to the sender of msg
+    any_tuple msg;    // 'content field'
+    seq_id_t  seq_id; // sequence id:
+                      // - equals to 0 for asynchronous messages
+                      // - first bit is 1 if this messages is a
+                      //   response messages, otherwise 0
+                      // - the trailing 63 bit uniquely identify a
+                      //   request/response message pair
 
-    inline recursive_queue_node(actor* from, any_tuple&& content)
-    : next(nullptr), marked(false), sender(from), msg(std::move(content)) { }
+    inline recursive_queue_node() : next(nullptr), marked(false), seq_id(0) { }
+
+    inline recursive_queue_node(actor* ptr, any_tuple&& data, seq_id_t id = 0)
+    : next(nullptr), marked(false), sender(std::move(ptr))
+    , msg(std::move(data)), seq_id(id) { }
 
     recursive_queue_node(recursive_queue_node&&) = delete;
     recursive_queue_node(const recursive_queue_node&) = delete;

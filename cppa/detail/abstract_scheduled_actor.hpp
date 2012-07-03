@@ -46,7 +46,6 @@
 #include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-
 namespace cppa { namespace detail {
 
 // A spawned, scheduled Actor.
@@ -57,29 +56,6 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
  protected:
 
     std::atomic<int> m_state;
-
-    filter_result filter_msg(const any_tuple& msg) {
-        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
-        if (   msg.size() == 2
-            && msg.type_at(0) == arr[0]
-            && msg.type_at(1) == arr[1]) {
-            auto v0 = *reinterpret_cast<const atom_value*>(msg.at(0));
-            auto v1 = *reinterpret_cast<const std::uint32_t*>(msg.at(1));
-            if (v0 == atom("EXIT")) {
-                if (this->m_trap_exit == false) {
-                    if (v1 != exit_reason::normal) {
-                        quit(v1);
-                    }
-                    return normal_exit_signal;
-                }
-            }
-            else if (v0 == atom("TIMEOUT")) {
-                return (v1 == m_active_timeout_id) ? timeout_message
-                                                   : expired_timeout_message;
-            }
-        }
-        return ordinary_message;
-    }
 
     bool has_pending_timeout() {
         return m_has_pending_timeout_request;
@@ -120,6 +96,10 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         --m_active_timeout_id;
     }
 
+    inline bool waits_for_timeout(std::uint32_t timeout_id) {
+        return m_active_timeout_id == timeout_id;
+    }
+
     bool m_has_pending_timeout_request;
     std::uint32_t m_active_timeout_id;
 
@@ -148,6 +128,10 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     void enqueue(actor* sender, any_tuple msg) {
         enqueue_node(super::fetch_node(sender, std::move(msg)));
+    }
+
+    void sync_enqueue(actor* sender, std::uint64_t seq_id, any_tuple msg) {
+        enqueue_node(super::fetch_node(sender, std::move(msg), seq_id));
     }
 
     int compare_exchange_state(int expected, int new_value) {

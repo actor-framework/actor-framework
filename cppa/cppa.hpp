@@ -461,7 +461,7 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
  */
 template<typename... Args>
 inline void reply(Args&&... what) {
-    send(self->last_sender(), std::forward<Args>(what)...);
+    self->reply_message(make_any_tuple(std::forward<Args>(what)...));
 }
 
 /**
@@ -492,7 +492,8 @@ inline void delayed_send(const channel_ptr& whom,
 template<class Rep, class Period, typename... Args>
 inline void delayed_reply(const std::chrono::duration<Rep, Period>& rel_time,
                           Args&&... what) {
-    delayed_send(self->last_sender(), rel_time, std::forward<Args>(what)...);
+    delayed_send(self->last_sender(), rel_time, self->get_response_id(),
+                 std::forward<Args>(what)...);
 }
 
 /** @} */

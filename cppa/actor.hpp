@@ -65,9 +65,27 @@ class actor : public channel {
     /**
      * @brief Enqueues @p msg to the actor's mailbox and returns true if
      *        this actor is an scheduled actor that successfully changed
-     *        its state to @p pending.
+     *        its state to @p pending in response to the enqueue operation.
      */
     virtual bool chained_enqueue(actor* sender, any_tuple msg);
+
+    /**
+     * @brief Enqueues @p msg as a reply to @p request_id
+     *        to this actor's mailbox.
+     */
+    virtual void sync_enqueue(actor* sender,
+                               std::uint64_t sequence_id,
+                               any_tuple msg             ) = 0;
+
+    /**
+     * @brief Enqueues @p msg as a reply to @p request_id
+     *        to this actor's mailbox and returns true if
+     *        this actor is an scheduled actor that successfully changed
+     *        its state to @p pending in response to the enqueue operation.
+     */
+    virtual bool chained_sync_enqueue(actor* sender,
+                                       std::uint64_t response_id,
+                                       any_tuple msg);
 
     /**
      * @brief Attaches @p ptr to this actor.

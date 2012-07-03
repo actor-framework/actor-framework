@@ -36,6 +36,7 @@
 #include <type_traits>
 
 #include "cppa/behavior.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/detail/filter_result.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
@@ -175,6 +176,44 @@ class receive_policy {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
+    template<class Client>
+    filter_result filter_msg(Client* client, recursive_queue_node* node) {
+        const any_tuple& msg = node->msg;
+        bool is_sync_msg = node->seq_id != 0;
+        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
+        if (   msg.size() == 2
+            && msg.type_at(0) == arr[0]
+            && msg.type_at(1) == arr[1]) {
+            auto v0 = msg.get_as<atom_value>(0);
+            auto v1 = msg.get_as<std::uint32_t>(1);
+            if (v0 == atom("EXIT")) {
+                CPPA_REQUIRE(is_sync_msg == false);
+                if (client->m_trap_exit == false) {
+                    if (v1 != exit_reason::normal) {
+                        // TODO: check for possible memory leak here
+                        // ('node' might not get destroyed)
+                        client->quit(v1);
+                    }
+                    return normal_exit_signal;
+                }
+            }
+            else if (v0 == atom("TIMEOUT")) {
+                CPPA_REQUIRE(is_sync_msg == false);
+                return client->waits_for_timeout(v1) ? timeout_message
+                                                     : expired_timeout_message;
+            }
+        }
+        constexpr std::uint64_t is_response_mask = 0x8000000000000000;
+        constexpr std::uint64_t  request_id_mask = 0x7FFFFFFFFFFFFFFF;
+        // first bit is 1 if this is a response message
+        if (   is_sync_msg
+            && (node->seq_id & is_response_mask) != 0
+            && (node->seq_id &  request_id_mask) != client->m_sync_request_id) {
+            return expired_sync_enqueue;
+        }
+        return ordinary_message;
+    }
+
     template<class Client, class FunOrBehavior>
     handle_message_result handle_message(Client* client,
                                          recursive_queue_node* node,
@@ -183,8 +222,9 @@ class receive_policy {
         if (node->marked) {
             return hm_skip_msg;
         }
-        switch (client->filter_msg(node->msg)) {
+        switch (this->filter_msg(client, node)) {
             case normal_exit_signal:
+            case expired_sync_enqueue:
             case expired_timeout_message: {
                 return hm_drop_msg;
             }
@@ -217,8 +257,9 @@ class receive_policy {
                                          FunOrBehavior& fun,
                                          sequential) {
         CPPA_REQUIRE(node->marked == false);
-        switch (client->filter_msg(node->msg)) {
+        switch (this->filter_msg(client, node)) {
             case normal_exit_signal:
+            case expired_sync_enqueue:
             case expired_timeout_message: {
                 return hm_drop_msg;
             }

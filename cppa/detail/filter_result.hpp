@@ -35,7 +35,9 @@ namespace cppa { namespace detail {
 
 enum filter_result {
     normal_exit_signal,
+    non_normal_exit_signal,
     expired_timeout_message,
+    expired_sync_enqueue,
     timeout_message,
     ordinary_message
 };

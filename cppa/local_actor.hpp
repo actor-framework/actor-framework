@@ -31,6 +31,8 @@
 #ifndef CPPA_CONTEXT_HPP
 #define CPPA_CONTEXT_HPP
 
+#include <cstdint>
+
 #include "cppa/group.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
@@ -309,8 +311,38 @@ class local_actor : public actor {
                 m_chained_actor = whom;
             }
         }
-        else {
-            whom->enqueue(this, std::move(what));
+        else whom->enqueue(this, std::move(what));
+    }
+
+    inline std::uint64_t get_response_id() {
+        constexpr std::uint64_t response_mask = 0x8000000000000000;
+        auto& whom = last_sender();
+        if (whom) {
+            auto seq_id = m_current_node->seq_id;
+            if (seq_id != 0 && (seq_id & response_mask) == 0) {
+                return seq_id | response_mask;
+            }
+        }
+        return 0;
+    }
+
+    inline void reply_message(any_tuple&& what) {
+        auto& whom = last_sender();
+        if (whom) {
+            auto response_id = get_response_id();
+            if (response_id == 0) {
+                send_message(whom.get(), std::move(what));
+            }
+            else {
+                if (m_chaining && !m_chained_actor) {
+                    if (whom->chained_sync_enqueue(this,
+                                                   response_id,
+                                                   std::move(what))) {
+                        m_chained_actor = whom;
+                    }
+                }
+                else whom->sync_enqueue(this, response_id, std::move(what));
+            }
         }
     }
 
@@ -320,12 +352,22 @@ class local_actor : public actor {
 
  protected:
 
+    // true if this actor uses the chained_send optimization
     bool m_chaining;
+    // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
+    // true if this actor takes part in cooperative scheduling
     bool m_is_scheduled;
+    // pointer to the actor that is marked as successor due to a chained send
     actor_ptr m_chained_actor;
+    // identifies the ID of the last sent synchronous request
+    std::uint64_t m_sync_request_id;
+    // "default value" for m_current_node
     detail::recursive_queue_node m_dummy_node;
+    // points to m_dummy_node if no callback is currently invoked,
+    // points to the node under processing otherwise
     detail::recursive_queue_node* m_current_node;
+    // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;
 
 #   endif // CPPA_DOCUMENTATION
