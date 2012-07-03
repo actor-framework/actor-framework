@@ -1,3 +1,10 @@
+Version 0.2.1
+
+2012-07-02
+
+- More efficient behavior implementation
+- Relaxed definition of become() to accept const lvalue references as well
+
 Version 0.2
 
 2012-06-29
