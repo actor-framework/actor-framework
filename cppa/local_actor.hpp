@@ -49,7 +49,7 @@ class local_scheduler;
 template<bool DiscardOld>
 struct behavior_policy { static const bool discard_old = DiscardOld; };
 
-typedef behavior_policy<false> keep_behavior;
+typedef behavior_policy<false> keep_behavior_t;
 typedef behavior_policy<true > discard_behavior_t;
 
 // doxygen doesn't parse anonymous namespaces correctly
@@ -203,63 +203,33 @@ class local_actor : public actor {
 
     /**
      * @brief Sets the actor's behavior to @p bhvr and discards the
-     *        previous behavior.
+     *        previous behavior if the policy is {@link discard_behavior}.
      * @note The recommended way of using this member function is to pass
      *       a pointer to a member variable.
      * @warning @p bhvr is owned by the caller and must remain valid until
      *          the actor terminates.
      */
-    inline void become(discard_behavior_t, behavior* bhvr) {
-        do_become(*bhvr, true);
+    template<bool DiscardOld>
+    inline void become(behavior_policy<DiscardOld>, behavior* bhvr) {
+        do_become(*bhvr, DiscardOld);
     }
 
     /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior to @p bhvr and discards the
+     *        previous behavior if the policy is {@link discard_behavior}.
      */
-    inline void become(discard_behavior_t, behavior bhvr) {
+    template<bool DiscardOld>
+    inline void become(behavior_policy<DiscardOld>, behavior bhvr) {
         do_become(std::move(bhvr), true);
     }
 
     /**
-     * @brief Sets the actor's behavior to @p bhvr and keeps the
-     *        previous behavior, so that it can be restored by calling
-     *        {@link unbecome()}.
-     * @note The recommended way of using this member function is to pass
-     *       a pointer to a member variable.
-     * @warning @p bhvr is owned by the caller and must remain valid until
-     *          the actor terminates.
-     */
-    inline void become(keep_behavior_t, behavior* bhvr) {
-        do_become(*bhvr, false);
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
-     */
-    inline void become(keep_behavior_t, behavior bhvr) {
-        do_become(std::move(bhvr), false);
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
-     */
-    inline void become(behavior bhvr) {
-        become(discard_behavior, std::move(bhvr));
-    }
-
-    /**
-     * @brief Equal to <tt>become(discard_old, bhvr)</tt>.
-     */
-    inline void become(behavior* bhvr) {
-        become(discard_behavior, *bhvr);
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior and discards the
+     *        previous behavior if the policy is {@link discard_behavior}.
      */
     template<bool DiscardOld, typename Arg0, typename Arg1, typename... Args>
-    void become(behavior_policy<DiscardOld>,
-                Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+    inline void become(behavior_policy<DiscardOld>,
+                       Arg0&& arg0, Arg1&& arg1, Args&&... args) {
         do_become(match_expr_convert(std::forward<Arg0>(arg0),
                                      std::forward<Arg1>(arg1),
                                      std::forward<Args>(args)...),
@@ -267,11 +237,30 @@ class local_actor : public actor {
     }
 
     /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
+     */
+    inline void become(behavior bhvr) {
+        become(discard_behavior, std::move(bhvr));
+    }
+
+    /**
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
+     */
+    inline void become(behavior* bhvr) {
+        become(discard_behavior, bhvr);
+    }
+
+    /**
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
      */
     template<typename... Cases, typename... Args>
     inline void become(match_expr<Cases...> arg0, Args&&... args) {
-        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
+        do_become(match_expr_convert(std::move(arg0),
+                                     std::forward<Args>(args)...),
+                  true);
     }
 
     /**
