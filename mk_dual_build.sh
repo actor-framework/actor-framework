@@ -15,12 +15,12 @@ topDir=$PWD
 
 mkdir clang_build
 cd clang_build
-cmake .. -DCMAKE_CXX_COMPILER="$1" -DCMAKE_CXX_FLAGS="-stdlib=libc++ -pedantic -Wall -Wextra -Werror" -DEXECUTABLE_OUTPUT_PATH="$topDir/clang_bin/" -DLIBRARY_OUTPUT_PATH="$topDir/clang_lib"
+cmake .. -DCMAKE_CXX_COMPILER="$1" -DCMAKE_CXX_FLAGS="-stdlib=libc++ -DCPPA_DEBUG -pedantic -Wall -Wextra -Werror" -DEXECUTABLE_OUTPUT_PATH="$topDir/clang_bin/" -DLIBRARY_OUTPUT_PATH="$topDir/clang_lib"
 cd ..
 
 mkdir gcc_build
 cd gcc_build
-cmake .. -DCMAKE_CXX_COMPILER="$2" -DCMAKE_CXX_FLAGS="-pedantic -Wall -Wextra -Werror" -DEXECUTABLE_OUTPUT_PATH="$topDir/gcc_bin/" -DLIBRARY_OUTPUT_PATH="$topDir/gcc_lib"
+cmake .. -DCMAKE_CXX_COMPILER="$2" -DCMAKE_CXX_FLAGS="-DCPPA_DEBUG -pedantic -Wall -Wextra -Werror" -DEXECUTABLE_OUTPUT_PATH="$topDir/gcc_bin/" -DLIBRARY_OUTPUT_PATH="$topDir/gcc_lib"
 cd ..
 
 exec > Makefile
