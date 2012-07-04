@@ -10,7 +10,27 @@ endif ()
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
+set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
+set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+if (ENABLE_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    add_definitions("-DCPPA_DEBUG")
+endif ()
+
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
+                    OUTPUT_VARIABLE GCC_VERSION)
+    if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
+        message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+    endif ()
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+else()
+    message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+endif ()
 
 set(LIBCPPA_SRC
     src/abstract_tuple.cpp
@@ -123,12 +143,12 @@ install(TARGETS libcppa LIBRARY DESTINATION lib)
 # install includes
 install(DIRECTORY cppa/ DESTINATION include/cppa
     FILES_MATCHING PATTERN "*.hpp")
+
 # uninstall target
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
-
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P
     ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
