@@ -57,6 +57,8 @@ class receive_policy {
 
  public:
 
+    typedef recursive_queue_node* pointer;
+
     enum handle_message_result {
         hm_timeout_msg,
         hm_skip_msg,
@@ -96,7 +98,7 @@ class receive_policy {
     }
 
     template<class Client, class FunOrBehavior>
-    bool invoke(Client* client, recursive_queue_node* node, FunOrBehavior& fun){
+    bool invoke(Client* client, pointer node, FunOrBehavior& fun){
         std::integral_constant<receive_policy_flag, Client::receive_flag> token;
         switch (this->handle_message(client, node, fun, token)) {
             case hm_msg_handled: {
@@ -136,7 +138,7 @@ class receive_policy {
         }
         else if (invoke_from_cache(client, fun) == false) {
             if (bhvr.timeout().is_zero()) {
-                recursive_queue_node* e = nullptr;
+                pointer e = nullptr;
                 while ((e = client->try_receive_node()) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr)) {
@@ -147,7 +149,7 @@ class receive_policy {
             }
             else {
                 auto timeout = client->init_timeout(bhvr.timeout());
-                recursive_queue_node* e = nullptr;
+                pointer e = nullptr;
                 while ((e = client->try_receive_node(timeout)) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr)) {
@@ -177,7 +179,7 @@ class receive_policy {
     }
 
     template<class Client>
-    filter_result filter_msg(Client* client, recursive_queue_node* node) {
+    filter_result filter_msg(Client* client, pointer node) {
         const any_tuple& msg = node->msg;
         bool is_sync_msg = node->seq_id != 0;
         auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
@@ -214,12 +216,34 @@ class receive_policy {
         return ordinary_message;
     }
 
-    template<class Client, class FunOrBehavior>
+    static inline bool hm_should_skip(pointer node, nestable) {
+        return node->marked;
+    }
+
+    template<class Client>
+    static inline pointer hm_begin(Client* client, pointer node, nestable) {
+        auto previous_node = client->m_current_node;
+        client->m_current_node = node;
+        client->push_timeout();
+        node->marked = true;
+        return previous_node;
+    }
+
+    template<class Client>
+    static inline void hm_cleanup(Client* client, pointer, pointer, nestable) {
+        client->m_current_node = &(client->m_dummy_node);
+    }
+
+    static inline bool hm_should_skip(pointer, sequential) {
+        return false;
+    }
+
+    template<class Client, class FunOrBehavior, class Policy>
     handle_message_result handle_message(Client* client,
-                                         recursive_queue_node* node,
+                                         pointer node,
                                          FunOrBehavior& fun,
-                                         nestable) {
-        if (node->marked) {
+                                         Policy token) {
+        if (hm_should_skip(node, token)) {
             return hm_skip_msg;
         }
         switch (this->filter_msg(client, node)) {
@@ -253,7 +277,7 @@ class receive_policy {
 
     template<class Client, class FunOrBehavior>
     handle_message_result handle_message(Client* client,
-                                         recursive_queue_node* node,
+                                         pointer node,
                                          FunOrBehavior& fun,
                                          sequential) {
         CPPA_REQUIRE(node->marked == false);

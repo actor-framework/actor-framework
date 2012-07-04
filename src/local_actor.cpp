@@ -102,4 +102,24 @@ std::vector<group_ptr> local_actor::joined_groups() {
     return result;
 }
 
+void local_actor::reply_message(any_tuple&& what) {
+    auto& whom = last_sender();
+    if (whom) {
+        auto response_id = get_response_id();
+        if (response_id == 0) {
+            send_message(whom.get(), std::move(what));
+        }
+        else {
+            if (m_chaining && !m_chained_actor) {
+                if (whom->chained_sync_enqueue(this,
+                                               response_id,
+                                               std::move(what))) {
+                    m_chained_actor = whom;
+                }
+            }
+            else whom->sync_enqueue(this, response_id, std::move(what));
+        }
+    }
+}
+
 } // namespace cppa

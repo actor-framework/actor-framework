@@ -314,37 +314,16 @@ class local_actor : public actor {
         else whom->enqueue(this, std::move(what));
     }
 
+    // returns 0 if last_dequeued() is an asynchronous or sync request message,
+    // a response id generated from the request id otherwise
     inline std::uint64_t get_response_id() {
-        constexpr std::uint64_t response_mask = 0x8000000000000000;
-        auto& whom = last_sender();
-        if (whom) {
-            auto seq_id = m_current_node->seq_id;
-            if (seq_id != 0 && (seq_id & response_mask) == 0) {
-                return seq_id | response_mask;
-            }
-        }
-        return 0;
+        // mask extracts the first bit that is only set on response messages
+        constexpr std::uint64_t mask = 0x8000000000000000;
+        auto seq_id = m_current_node->seq_id;
+        return (seq_id != 0 && (seq_id & mask) == 0) ? (seq_id | mask) : 0;
     }
 
-    inline void reply_message(any_tuple&& what) {
-        auto& whom = last_sender();
-        if (whom) {
-            auto response_id = get_response_id();
-            if (response_id == 0) {
-                send_message(whom.get(), std::move(what));
-            }
-            else {
-                if (m_chaining && !m_chained_actor) {
-                    if (whom->chained_sync_enqueue(this,
-                                                   response_id,
-                                                   std::move(what))) {
-                        m_chained_actor = whom;
-                    }
-                }
-                else whom->sync_enqueue(this, response_id, std::move(what));
-            }
-        }
-    }
+    void reply_message(any_tuple&& what);
 
     inline actor_ptr& chained_actor() {
         return m_chained_actor;
