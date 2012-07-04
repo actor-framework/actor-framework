@@ -181,6 +181,7 @@ else ()
   set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
 endif ()
 
+enable_testing()
 add_subdirectory(unit_testing)
 add_subdirectory(examples)
 add_subdirectory(benchmarks)
