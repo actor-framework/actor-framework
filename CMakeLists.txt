@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 2.4)
 project(cppa CXX)
 
+# Prohibit in-source builds.
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+    message(FATAL_ERROR "In-source builds are not allowed. Please use "
+                        "./configure to choose a build directory and "
+                        "initialize the build configuration.")
+endif ()
+
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
