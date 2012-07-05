@@ -202,33 +202,25 @@ fi
 
 echo "DIRS :=$workdirs\n" > $sourcedir/Makefile
 read -d '' makefile <<"EOT"
-all: configured
+all:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-configured:
-	@for i in $(DIRS); do \\
-		test -d $$i || \\
-			( echo "Error: No build directory found. Did you run configure?" && exit 1 ); \\
-		test -e $$i/Makefile || \\
-			( echo "Error: No Makefile in build directory found. Did you run configure?" && exit 1 ); \\
-	done
-
-test: configured
+test:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 install:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-uninstall: configured
+uninstall:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-clean: configured
+clean:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 distclean:
 	rm -rf $(DIRS) Makefile
 
-.PHONY: all configured test install uninstall clean distclean
+.PHONY: all test install uninstall clean distclean
 EOT
 
 echo "$makefile" >> $sourcedir/Makefile
