@@ -1,8 +1,6 @@
 #!/bin/sh
 # Convenience wrapper for easily viewing/setting options that
-# the project's CMake scripts will recognize
-
-command="$0 $*"
+# the project's CMake scripts will recognize.
 
 # check for `cmake` command
 type cmake > /dev/null 2>&1 || {
@@ -13,12 +11,19 @@ use this configure script to access CMake equivalent functionality.\
     exit 1;
 }
 
+command="$0 $*"
+sourcedir="$( cd "$( dirname "$0" )" && pwd )"
 usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Build Options:
     --builddir=DIR         place build files in directory [build]
     --generator=GENERATOR  CMake generator to use (see cmake --help)
+    --with-clang=FILE      path to clang++ executable
+    --with-gcc=FILE        path to g++ executable
+    --bin-dir=DIR          executable directory [build/bin]
+    --lib-dir=DIR          library directory [build/lib]
+    --dual-build           build both with gcc and clang
 
   Installation Directories:
     --prefix=PREFIX        installation directory [/usr/local]
@@ -37,24 +42,91 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
 "
 
 
-sourcedir="$( cd "$( dirname "$0" )" && pwd )"
-
-# Function to append a CMake cache entry definition to the
-# CMakeCacheEntries variable
+# Appends a CMake cache entry definition to the CMakeCacheEntries variable.
 #   $1 is the cache entry variable name
 #   $2 is the cache entry variable type
 #   $3 is the cache entry variable value
-append_cache_entry () {
+append_cache_entry ()
+{
     CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
 }
 
-# Set defaults
-builddir=build
+# Creates a build directory via CMake.
+#   $1 is the path to a compiler executable.
+#   $2 is the suffix of the build directory.
+#   $3 is the executable output path.
+#   $4 is the library output path.
+#   $5 is the CMake generator.
+configure ()
+{
+    CMakeCacheEntries=""
+
+    echo "-------------------------------------------------"
+
+    if [ -n "$1" ]; then
+        append_cache_entry CMAKE_CXX_COMPILER FILEPATH $1
+		echo "compiler:                    $1"
+	else
+		echo "compiler:                    system default"
+    fi
+
+    if [ -n "$2" ]; then
+        workdir="$builddir-$2"
+    else
+        workdir=$builddir
+    fi
+    workdirs="$workdirs $workdir"
+    echo "build directory:             $workdir"
+
+    if [ -n "$3" ]; then
+        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH $3
+		echo "executable output directory: $3"
+    else
+        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$workdir/bin"
+		echo "executable output directory: $workdir/bin"
+    fi
+
+    if [ -n "$4" ]; then
+        append_cache_entry LIBRARY_OUTPUT_PATH PATH $4
+		echo "library output directory:    $4"
+    else
+        append_cache_entry LIBRARY_OUTPUT_PATH PATH "$workdir/lib"
+		echo "library output directory:    $workdir/lib"
+    fi
+
+    echo "-------------------------------------------------"
+
+    if [ -d $workdir ]; then
+        # If a build directory exists, check if it has a CMake cache.
+        if [ -f $workdir/CMakeCache.txt ]; then
+            # If the CMake cache exists, delete it so that this configuration
+            # is not tainted by a previous one.
+            rm -f $workdir/CMakeCache.txt
+        fi
+    else
+        mkdir -p $workdir
+    fi
+
+    cd $workdir
+
+    if [ -n "$5" ]; then
+        cmake -G "$5" $CMakeCacheEntries $sourcedir
+    else
+        cmake $CMakeCacheEntries $sourcedir
+    fi
+
+    echo "# This is the command used to configure this build" > config.status
+    echo $command >> config.status
+    chmod u+x config.status
+}
+
+# Set defaults.
+builddir="$sourcedir/build"
 CMakeCacheEntries=""
 append_cache_entry CMAKE_INSTALL_PREFIX PATH   /usr/local
 append_cache_entry ENABLE_DEBUG         BOOL   false
 
-# parse arguments
+# Parse arguments.
 while [ $# -ne 0 ]; do
     case "$1" in
         -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
@@ -81,6 +153,21 @@ while [ $# -ne 0 ]; do
         --with-boost=*)
             append_cache_entry BOOST_ROOT PATH $optarg
             ;;
+        --with-clang=*)
+            clang=$optarg
+            ;;
+        --with-gcc=*)
+            gcc=$optarg
+            ;;
+        --bin-dir=*)
+            bindir=$optarg
+            ;;
+        --lib-dir=*)
+            libdir=$optarg
+            ;;
+        --dual-build)
+            dualbuild=1
+            ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
             exit 1
@@ -89,61 +176,59 @@ while [ $# -ne 0 ]; do
     shift
 done
 
-if [ -d $builddir ]; then
-    # If build directory exists, check if it has a CMake cache
-    if [ -f $builddir/CMakeCache.txt ]; then
-        # If the CMake cache exists, delete it so that this configuration
-        # is not tainted by a previous one
-        rm -f $builddir/CMakeCache.txt
+if [ -n "$dualbuild" ]; then
+    # Use what we got in $PATH if --with-clang or --with-gcc is not specified.
+    if [ -z "$clang" ]; then
+        clang=clang++
     fi
+    if [ -z "$gcc" ]; then
+        gcc=g++
+    fi
+
+    for i in gcc clang; do
+        compiler="$(eval echo \$$i)"
+        configure $compiler $i "" "" $CMakeGenerator
+    done
 else
-    # Create build directory
-    mkdir -p $builddir
+    # Prefer Clang to GCC.
+    if [ -n "$clang" ]; then
+        compiler=$clang
+    elif [ -n "$gcc" ]; then
+        compiler=$gcc
+    fi
+
+    configure $compiler "" $bindir $libdir $CMakeGenerator
 fi
 
-echo "Build Directory : $builddir"
-echo "Source Directory: $sourcedir"
-cd $builddir
-
-if [ -n "$CMakeGenerator" ]; then
-    cmake -G "$CMakeGenerator" $CMakeCacheEntries $sourcedir
-else
-    cmake $CMakeCacheEntries $sourcedir
-fi
-
-echo "# This is the command used to configure this build" > config.status
-echo $command >> config.status
-chmod u+x config.status
-
-echo "BUILD=$builddir\n" > $sourcedir/Makefile
-
+echo "DIRS :=$workdirs\n" > $sourcedir/Makefile
 read -d '' makefile <<"EOT"
 all: configured
-	@$(MAKE) -C $(BUILD) $@
+	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 configured:
-	@test -d $(BUILD) || ( echo "Error: No build/ directory found. Did you run configure?" && exit 1 )
-	@test -e $(BUILD)/Makefile || ( echo "Error: No build/Makefile found. Did you run configure?" && exit 1 )
+	@for i in $(DIRS); do \\
+		test -d $$i || \\
+			( echo "Error: No build directory found. Did you run configure?" && exit 1 ); \\
+		test -e $$i/Makefile || \\
+			( echo "Error: No Makefile in build directory found. Did you run configure?" && exit 1 ); \\
+	done
 
 test: configured
-	@$(MAKE) -C $(BUILD) $@
+	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 install:
-	@$(MAKE) -C $(BUILD) $@
+	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 uninstall: configured
-	@$(MAKE) -C $(BUILD) $@
+	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 clean: configured
-	@$(MAKE) -C $(BUILD) $@
+	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 distclean:
-	rm -rf $(BUILD)
+	rm -rf $(DIRS) Makefile
 
-doc:
-	@$(MAKE) -C $(BUILD) $@
-
-.PHONY : all configured test install uninstall clean distclean doc
+.PHONY: all configured test install uninstall clean distclean
 EOT
 
 echo "$makefile" >> $sourcedir/Makefile
