@@ -12,3 +12,4 @@ libcppa.pc
 bin/*
 build/*
 lib/*
+Makefile
