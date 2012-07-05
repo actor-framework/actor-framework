@@ -178,6 +178,11 @@ class receive_policy {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
+
+    // identifies 'special' messages that should not be processed normally:
+    // - system messages such as EXIT (if client doesn't trap exits) and TIMEOUT
+    // - expired synchronous response messages
+
     template<class Client>
     filter_result filter_msg(Client* client, pointer node) {
         const any_tuple& msg = node->msg;
@@ -216,34 +221,78 @@ class receive_policy {
         return ordinary_message;
     }
 
+
+    // the workflow of handle_message (hm) is as follows:
+    // - should_skip? if yes: return hm_skip_msg
+    // - msg is ordinary message? if yes:
+    //   - begin(...) -> prepares a client for message handling
+    //   - client could process message?
+    //     - yes: cleanup()
+    //     - no: revert(...) -> set client back to state it had before begin()
+
+
+    // workflow implementation for nestable receive policy
+
     static inline bool hm_should_skip(pointer node, nestable) {
         return node->marked;
     }
 
     template<class Client>
     static inline pointer hm_begin(Client* client, pointer node, nestable) {
-        auto previous_node = client->m_current_node;
+        auto previous = client->m_current_node;
         client->m_current_node = node;
         client->push_timeout();
         node->marked = true;
-        return previous_node;
+        return previous;
     }
 
     template<class Client>
-    static inline void hm_cleanup(Client* client, pointer, pointer, nestable) {
+    static inline void hm_cleanup(Client* client, nestable) {
         client->m_current_node = &(client->m_dummy_node);
     }
+
+    template<class Client>
+    static inline void hm_revert(Client* client, pointer previous, nestable) {
+        client->m_current_node->marked = false;
+        client->m_current_node = previous;
+        client->pop_timeout();
+    }
+
+
+    // workflow implementation for sequential receive policy
 
     static inline bool hm_should_skip(pointer, sequential) {
         return false;
     }
 
+    template<class Client>
+    static inline pointer hm_begin(Client* client, pointer node, sequential) {
+        auto previous = client->m_current_node;
+        client->m_current_node = node;
+        return previous;
+    }
+
+    template<class Client>
+    static inline void hm_cleanup(Client* client, sequential) {
+        client->m_current_node = &(client->m_dummy_node);
+        // we definitely don't have a pending timeout now
+        client->m_has_pending_timeout_request = false;
+    }
+
+    template<class Client>
+    static inline void hm_revert(Client* client, pointer previous, sequential) {
+        client->m_current_node = previous;
+    }
+
+
+    // workflow 'template'
+
     template<class Client, class FunOrBehavior, class Policy>
     handle_message_result handle_message(Client* client,
                                          pointer node,
                                          FunOrBehavior& fun,
-                                         Policy token) {
-        if (hm_should_skip(node, token)) {
+                                         Policy policy) {
+        if (hm_should_skip(node, policy)) {
             return hm_skip_msg;
         }
         switch (this->filter_msg(client, node)) {
@@ -257,51 +306,13 @@ class receive_policy {
                 return hm_msg_handled;
             }
             case ordinary_message: {
-                auto previous_node = client->m_current_node;
-                client->m_current_node = node;
-                client->push_timeout();
-                node->marked = true;
+                auto previous_node = hm_begin(client, node, policy);
                 if (fun(node->msg)) {
-                    client->m_current_node = &(client->m_dummy_node);
+                    hm_cleanup(client, policy);
                     return hm_msg_handled;
                 }
                 // no match (restore client members)
-                client->m_current_node = previous_node;
-                client->pop_timeout();
-                node->marked = false;
-                return hm_cache_msg;
-            }
-            default: CPPA_CRITICAL("illegal result of filter_msg");
-        }
-    }
-
-    template<class Client, class FunOrBehavior>
-    handle_message_result handle_message(Client* client,
-                                         pointer node,
-                                         FunOrBehavior& fun,
-                                         sequential) {
-        CPPA_REQUIRE(node->marked == false);
-        switch (this->filter_msg(client, node)) {
-            case normal_exit_signal:
-            case expired_sync_enqueue:
-            case expired_timeout_message: {
-                return hm_drop_msg;
-            }
-            case timeout_message: {
-                handle_timeout(client, fun);
-                return hm_msg_handled;
-            }
-            case ordinary_message: {
-                auto previous_node = client->m_current_node;
-                client->m_current_node = node;
-                if (fun(node->msg)) {
-                    client->m_current_node = &(client->m_dummy_node);
-                    // we definitely don't have a pending timeout now
-                    client->m_has_pending_timeout_request = false;
-                    return hm_msg_handled;
-                }
-                // no match, restore members
-                client->m_current_node = previous_node;
+                hm_revert(client, previous_node, policy);
                 return hm_cache_msg;
             }
             default: CPPA_CRITICAL("illegal result of filter_msg");
