@@ -59,15 +59,10 @@ append_cache_entry ()
 #   $5 is the CMake generator.
 configure ()
 {
-    CMakeCacheEntries=""
-
-    echo "-------------------------------------------------"
+    CMakeCacheEntries=$CMakeDefaultCache
 
     if [ -n "$1" ]; then
         append_cache_entry CMAKE_CXX_COMPILER FILEPATH $1
-		echo "compiler:                    $1"
-	else
-		echo "compiler:                    system default"
     fi
 
     if [ -n "$2" ]; then
@@ -76,25 +71,18 @@ configure ()
         workdir=$builddir
     fi
     workdirs="$workdirs $workdir"
-    echo "build directory:             $workdir"
 
     if [ -n "$3" ]; then
         append_cache_entry EXECUTABLE_OUTPUT_PATH PATH $3
-		echo "executable output directory: $3"
     else
         append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$workdir/bin"
-		echo "executable output directory: $workdir/bin"
     fi
 
     if [ -n "$4" ]; then
         append_cache_entry LIBRARY_OUTPUT_PATH PATH $4
-		echo "library output directory:    $4"
     else
         append_cache_entry LIBRARY_OUTPUT_PATH PATH "$workdir/lib"
-		echo "library output directory:    $workdir/lib"
     fi
-
-    echo "-------------------------------------------------"
 
     if [ -d $workdir ]; then
         # If a build directory exists, check if it has a CMake cache.
@@ -176,6 +164,10 @@ while [ $# -ne 0 ]; do
     shift
 done
 
+# At this point we save the global CMake variables so that configure() can
+# later use them.
+CMakeDefaultCache=$CMakeCacheEntries
+
 if [ -n "$dualbuild" ]; then
     # Use what we got in $PATH if --with-clang or --with-gcc is not specified.
     if [ -z "$clang" ]; then
@@ -202,33 +194,25 @@ fi
 
 echo "DIRS :=$workdirs\n" > $sourcedir/Makefile
 read -d '' makefile <<"EOT"
-all: configured
+all:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-configured:
-	@for i in $(DIRS); do \\
-		test -d $$i || \\
-			( echo "Error: No build directory found. Did you run configure?" && exit 1 ); \\
-		test -e $$i/Makefile || \\
-			( echo "Error: No Makefile in build directory found. Did you run configure?" && exit 1 ); \\
-	done
-
-test: configured
+test:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 install:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-uninstall: configured
+uninstall:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
-clean: configured
+clean:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
 distclean:
 	rm -rf $(DIRS) Makefile
 
-.PHONY: all configured test install uninstall clean distclean
+.PHONY: all test install uninstall clean distclean
 EOT
 
 echo "$makefile" >> $sourcedir/Makefile
