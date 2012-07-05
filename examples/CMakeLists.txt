@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(cppa_examples CXX)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
+
 # Set up environment paths to cmake modules and libcppa
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -22,7 +24,7 @@ endif (NOT cppa_LIBRARY)
 find_package(Boost COMPONENTS thread REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS})
+include_directories(. ${CPPA_INCLUDE} ${Boost_INCLUDE_DIRS})
 
 set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY})
 
