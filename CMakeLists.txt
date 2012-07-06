@@ -17,7 +17,9 @@ set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 if (ENABLE_DEBUG)
     set(CMAKE_BUILD_TYPE Debug)
-    add_definitions("-DCPPA_DEBUG")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
+else ()
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
@@ -203,3 +205,24 @@ add_dependencies(mailbox_performance libcppa)
 add_dependencies(mixed_case libcppa)
 add_dependencies(distributed libcppa)
 add_dependencies(matching libcppa)
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+message(
+    "\n====================|  Build Summary  |===================="
+    "\n"
+    "\nLibcppa version:  ${LIBRARY_VERSION}"
+    "\n"
+    "\nSource directory: ${CMAKE_SOURCE_DIR}"
+    "\nBuild directory:  ${CMAKE_BINARY_DIR}"
+    "\nExecutable path:  ${EXECUTABLE_OUTPUT_PATH}"
+    "\nLibrary path:     ${LIBRARY_OUTPUT_PATH}"
+    "\nInstall prefix:   ${CMAKE_INSTALL_PREFIX}"
+    "\nDebug mode:       ${ENABLE_DEBUG}"
+    "\n"
+    "\nCXX:              ${CMAKE_CXX_COMPILER}"
+    "\nCXXFLAGS:         ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+    "\n"
+    "\nBoost:            ${Boost_INCLUDE_DIR}"
+    "\n"
+    "\n===========================================================\n"
+)
