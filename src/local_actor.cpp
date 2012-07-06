@@ -108,10 +108,10 @@ void local_actor::reply_message(any_tuple&& what) {
         return;
     }
     auto response_id = get_response_id();
-    if (response_id.is_async()) {
+    if (!response_id.valid()) {
         send_message(whom.get(), std::move(what));
     }
-    else if (m_chaining && !m_chained_actor) {
+    else if (chaining_enabled()) {
         if (whom->chained_sync_enqueue(this, response_id, std::move(what))) {
             m_chained_actor = whom;
         }

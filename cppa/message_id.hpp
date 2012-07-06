@@ -35,6 +35,10 @@
 
 namespace cppa {
 
+/**
+ * @brief
+ * @note Asynchronous messages always have an invalid message id.
+ */
 class message_id_t {
 
     static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
@@ -65,16 +69,16 @@ class message_id_t {
         return (m_value & answered_flag_mask) != 0;
     }
 
-    inline bool is_async() const {
-        return m_value == 0;
+    inline bool valid() const {
+        return m_value != 0;
     }
 
     inline bool is_request() const {
-        return !is_async() && !is_response();
+        return valid() && !is_response();
     }
 
     inline message_id_t response_id() const {
-        return message_id_t(is_async() ? 0 : m_value | response_flag_mask);
+        return message_id_t(valid() ? m_value | response_flag_mask : 0);
     }
 
     inline message_id_t request_id() const {

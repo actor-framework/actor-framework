@@ -72,7 +72,7 @@ class actor : public channel {
 
     /**
      * @brief Enqueues @p msg as a synchronous message to this actor's mailbox.
-     * @pre <tt>id.is_async() == false</tt>
+     * @pre <tt>id.valid()</tt>
      */
     virtual void sync_enqueue(actor* sender, message_id_t id, any_tuple msg) = 0;
 

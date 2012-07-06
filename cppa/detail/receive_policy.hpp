@@ -71,13 +71,13 @@ class receive_policy {
     template<class Client, class Fun>
     bool invoke_from_cache(Client* client,
                            Fun& fun,
-                           message_id_t active_request = message_id_t()) {
+                           message_id_t awaited_response = message_id_t()) {
         std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
         auto i = m_cache.begin();
         auto e = m_cache.end();
         while (i != e) {
             switch (this->handle_message(client, i->get(), fun,
-                                         active_request, policy)) {
+                                         awaited_response, policy)) {
                 case hm_msg_handled: {
                     client->release_node(i->release());
                     m_cache.erase(i);
@@ -105,10 +105,10 @@ class receive_policy {
     bool invoke(Client* client,
                 pointer node,
                 Fun& fun,
-                message_id_t active_request = message_id_t()) {
+                message_id_t awaited_response = message_id_t()) {
         std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
         switch (this->handle_message(client, node, fun,
-                                     active_request, policy)) {
+                                     awaited_response, policy)) {
             case hm_msg_handled: {
                 client->release_node(node);
                 return true;
@@ -170,15 +170,15 @@ class receive_policy {
     }
 
     template<class Client>
-    void receive(Client* client, behavior& bhvr, message_id_t active_request) {
+    void receive(Client* client, behavior& bhvr, message_id_t awaited_response) {
         CPPA_REQUIRE(bhvr.timeout().valid());
         CPPA_REQUIRE(bhvr.timeout().is_zero() == false);
-        if (invoke_from_cache(client, bhvr, active_request) == false) {
+        if (invoke_from_cache(client, bhvr, awaited_response) == false) {
             auto timeout = client->init_timeout(bhvr.timeout());
             pointer e = nullptr;
             while ((e = client->try_receive_node(timeout)) != nullptr) {
                 CPPA_REQUIRE(e->marked == false);
-                if (invoke(client, e, bhvr, active_request)) {
+                if (invoke(client, e, bhvr, awaited_response)) {
                     return; // done
                 }
             }
@@ -229,7 +229,7 @@ class receive_policy {
             auto v0 = msg.get_as<atom_value>(0);
             auto v1 = msg.get_as<std::uint32_t>(1);
             if (v0 == atom("EXIT")) {
-                CPPA_REQUIRE(message_id.is_async());
+                CPPA_REQUIRE(!message_id.valid());
                 if (client->m_trap_exit == false) {
                     if (v1 != exit_reason::normal) {
                         // TODO: check for possible memory leak here
@@ -240,7 +240,7 @@ class receive_policy {
                 }
             }
             else if (v0 == atom("TIMEOUT")) {
-                CPPA_REQUIRE(message_id.is_async());
+                CPPA_REQUIRE(!message_id.valid());
                 return client->waits_for_timeout(v1) ? timeout_message
                                                      : expired_timeout_message;
             }
@@ -322,8 +322,8 @@ class receive_policy {
     handle_message_result handle_message(Client* client,
                                          pointer node,
                                          Fun& fun,
-                                         message_id_t active_request,
-                                         Policy policy               ) {
+                                         message_id_t awaited_response,
+                                         Policy policy                 ) {
         if (hm_should_skip(node, policy)) {
             return hm_skip_msg;
         }
@@ -337,11 +337,13 @@ class receive_policy {
             }
             case timeout_message: {
                 handle_timeout(client, fun);
+                if (awaited_response.valid()) {
+                    client->mark_arrived(awaited_response);
+                }
                 return hm_msg_handled;
             }
             case sync_response: {
-                if (   active_request.is_async() == false
-                    && node->mid.request_id() == active_request) {
+                if (awaited_response.valid() && node->mid == awaited_response) {
                     hm_begin(client, node, policy);
 #                   ifdef CPPA_DEBUG
                     if (!fun(node->msg)) {
@@ -352,19 +354,20 @@ class receive_policy {
                     fun(node->msg);
 #                   endif
                     hm_cleanup(client, policy);
+                    client->mark_arrived(awaited_response);
                     return hm_msg_handled;
                 }
                 return hm_cache_msg;
             }
             case ordinary_message: {
-                if (active_request.is_async()) {
+                if (!awaited_response.valid()) {
                     auto previous_node = hm_begin(client, node, policy);
                     if (fun(node->msg)) {
                         // make sure synchronous request
                         // always receive a response
                         auto id = node->mid;
                         auto sender = node->sender;
-                        if (!id.is_async() && !id.is_answered() && sender) {
+                        if (id.valid() && !id.is_answered() && sender) {
                             sender->sync_enqueue(client,
                                                  id.response_id(),
                                                  any_tuple());

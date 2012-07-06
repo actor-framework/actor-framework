@@ -471,8 +471,9 @@ template<typename... Args>
 inline unspecified_handle sync_send(const actor_ptr& whom, Args&&... what) {
     static_assert(sizeof...(Args) > 0, "no message to send");
     if (whom) {
-        self->send_sync_message(whom.get(),
-                                make_any_tuple(std::forward<Args>(what)...));
+        return self->send_sync_message(
+                    whom.get(),
+                    make_any_tuple(std::forward<Args>(what)...));
     }
     else throw std::invalid_argument("whom == nullptr");
 }

@@ -333,7 +333,7 @@ class local_actor : public actor {
     }
 
     inline message_id_t send_sync_message(actor* whom, any_tuple&& what) {
-        auto id = ++m_current_message_id;
+        auto id = ++m_last_request_id;
         CPPA_REQUIRE(id.is_request());
         if (chaining_enabled()) {
             if (whom->chained_sync_enqueue(this, id, std::move(what))) {
@@ -341,8 +341,9 @@ class local_actor : public actor {
             }
         }
         else whom->sync_enqueue(this, id, std::move(what));
-        m_requests.push_back(id);
-        return id;
+        auto awaited_response = id.response_id();
+        m_awaited_responses.push_back(awaited_response);
+        return awaited_response;
     }
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
@@ -357,10 +358,19 @@ class local_actor : public actor {
         return m_chained_actor;
     }
 
-    bool awaits(message_id_t id) {
-        auto req_id = id.request_id();
-        return std::any_of(m_requests.begin(), m_requests.end(),
-                           [req_id](message_id_t id) { return id == req_id; });
+    bool awaits(message_id_t response_id) {
+        CPPA_REQUIRE(response_id.is_response());
+        return std::any_of(m_awaited_responses.begin(),
+                           m_awaited_responses.end(),
+                           [=](message_id_t other) {
+                               return response_id == other;
+                           });
+    }
+
+    void mark_arrived(message_id_t response_id) {
+        auto last = m_awaited_responses.end();
+        auto i = std::find(m_awaited_responses.begin(), last, response_id);
+        if (i != last) m_awaited_responses.erase(i);
     }
 
  protected:
@@ -374,9 +384,9 @@ class local_actor : public actor {
     // pointer to the actor that is marked as successor due to a chained send
     actor_ptr m_chained_actor;
     // identifies the ID of the last sent synchronous request
-    message_id_t m_current_message_id;
+    message_id_t m_last_request_id;
     // identifies all IDs of sync messages waiting for a response
-    std::vector<message_id_t> m_requests;
+    std::vector<message_id_t> m_awaited_responses;
     // "default value" for m_current_node
     detail::recursive_queue_node m_dummy_node;
     // points to m_dummy_node if no callback is currently invoked,

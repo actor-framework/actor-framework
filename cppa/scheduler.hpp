@@ -132,11 +132,8 @@ class scheduler {
                        message_id_t id,
                        Data&&... data            ) {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        CPPA_REQUIRE(id.is_async() || id.is_response());
-        if (id.is_async()) {
-            delayed_send(to, rel_time, id, std::forward<Data>(data)...);
-        }
-        else {
+        CPPA_REQUIRE(!id.valid() || id.is_response());
+        if (id.valid()) {
             auto sub = make_any_tuple(std::forward<Data>(data)...);
             auto tup = make_any_tuple(atom("REPLY"),
                                       util::duration{rel_time},
@@ -144,6 +141,9 @@ class scheduler {
                                       id,
                                       std::move(sub));
             delayed_send_helper()->enqueue(self, std::move(tup));
+        }
+        else {
+            delayed_send(to, rel_time, id, std::forward<Data>(data)...);
         }
     }
 
