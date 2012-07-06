@@ -98,9 +98,33 @@ struct invoke_policy_impl {
     }
 };
 
+template<>
+struct invoke_policy_impl<wildcard_position::nil,
+                          util::empty_type_list,
+                          util::empty_type_list  > {
+
+    template<class Target, typename PtrType, typename Tuple>
+    static bool invoke(Target& target,
+                       const std::type_info&,
+                       detail::tuple_impl_info,
+                       PtrType*,
+                       Tuple&) {
+        target();
+        return true;
+    }
+
+    template<class Tuple>
+    static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
+        return arg_types == typeid(util::empty_type_list);
+    }
+
+};
+
 template<class Pattern, typename... Ts>
 struct invoke_policy_impl<wildcard_position::nil,
-                          Pattern, util::type_list<Ts...> > {
+                          Pattern,
+                          util::type_list<Ts...> > {
+
     typedef util::type_list<Ts...> filtered_pattern;
 
     typedef detail::tdata<Ts...> native_data_type;
@@ -202,6 +226,7 @@ struct invoke_policy_impl<wildcard_position::nil,
     static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
         return arg_types == typeid(filtered_pattern);
     }
+
 };
 
 template<>

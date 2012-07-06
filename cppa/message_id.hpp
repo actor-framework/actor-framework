@@ -28,23 +28,79 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/addressed_message.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#ifndef CPPA_MESSAGE_ID_HPP
+#define CPPA_MESSAGE_ID_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/config.hpp"
 
-addressed_message::addressed_message(actor_ptr from,
-                                     channel_ptr to,
-                                     any_tuple ut,
-                                     message_id_t id  )
-: m_sender(std::move(from)), m_receiver(std::move(to))
-, m_msg_id(id), m_content(std::move(ut))      { }
+namespace cppa {
 
-bool operator==(const addressed_message& lhs, const addressed_message& rhs) {
-    return    lhs.sender() == rhs.sender()
-           && lhs.receiver() == rhs.receiver()
-           && lhs.id() == rhs.id()
-           && lhs.content() == rhs.content();
+class message_id_t {
+
+    static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
+    static constexpr std::uint64_t answered_flag_mask = 0x4000000000000000;
+    static constexpr std::uint64_t request_id_mask    = 0x3FFFFFFFFFFFFFFF;
+
+    friend bool operator==(const message_id_t& lhs, const message_id_t& rhs);
+
+ public:
+
+    constexpr message_id_t() : m_value(0) { }
+
+    message_id_t(message_id_t&&) = default;
+    message_id_t(const message_id_t&) = default;
+    message_id_t& operator=(message_id_t&&) = default;
+    message_id_t& operator=(const message_id_t&) = default;
+
+    inline message_id_t& operator++() {
+        ++m_value;
+        return *this;
+    }
+
+    inline bool is_response() const {
+        return (m_value & response_flag_mask) != 0;
+    }
+
+    inline bool is_answered() const {
+        return (m_value & answered_flag_mask) != 0;
+    }
+
+    inline bool is_async() const {
+        return m_value == 0;
+    }
+
+    inline bool is_request() const {
+        return !is_async() && !is_response();
+    }
+
+    inline message_id_t response_id() const {
+        return message_id_t(is_async() ? 0 : m_value | response_flag_mask);
+    }
+
+    inline message_id_t request_id() const {
+        return message_id_t(m_value & request_id_mask);
+    }
+
+    inline void mark_as_answered() {
+        m_value |= answered_flag_mask;
+    }
+
+ private:
+
+    explicit message_id_t(std::uint64_t value) : m_value(value) { }
+
+    std::uint64_t m_value;
+
+};
+
+inline bool operator==(const message_id_t& lhs, const message_id_t& rhs) {
+    return lhs.m_value == rhs.m_value;
 }
 
-} } // namespace cppa
+inline bool operator!=(const message_id_t& lhs, const message_id_t& rhs) {
+    return !(lhs == rhs);
+}
+
+} // namespace cppa
+
+#endif // CPPA_MESSAGE_ID_HPP

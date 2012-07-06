@@ -36,29 +36,37 @@
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
 
+#include "cppa/message_id.hpp"
+
 namespace cppa { namespace detail {
 
 struct recursive_queue_node {
 
-    typedef std::uint64_t seq_id_t;
     typedef recursive_queue_node* pointer;
 
-    pointer   next;   // intrusive next pointer
-    bool      marked; // denotes if this node is currently processed
-    actor_ptr sender; // points to the sender of msg
-    any_tuple msg;    // 'content field'
-    seq_id_t  seq_id; // sequence id:
-                      // - equals to 0 for asynchronous messages
-                      // - first bit is 1 if this messages is a
-                      //   response messages, otherwise 0
-                      // - the trailing 63 bit uniquely identify a
-                      //   request/response message pair
+    pointer    next;   // intrusive next pointer
+    bool       marked; // denotes if this node is currently processed
+    actor_ptr  sender; // points to the sender of msg
+    any_tuple  msg;    // 'content field'
+    message_id_t mid;
 
-    inline recursive_queue_node() : next(nullptr), marked(false), seq_id(0) { }
+    inline void reset(actor* sptr, message_id_t id, bool reset_msg = true) {
+        next = nullptr;
+        marked = false;
+        sender = sptr;
+        mid = id;
+        if (reset_msg) msg.reset();
+    }
 
-    inline recursive_queue_node(actor* ptr, any_tuple&& data, seq_id_t id = 0)
-    : next(nullptr), marked(false), sender(std::move(ptr))
-    , msg(std::move(data)), seq_id(id) { }
+    inline void reset(actor* sptr, message_id_t id, any_tuple&& data) {
+        reset(sptr, id, false);
+        msg = std::move(data);
+    }
+
+    inline recursive_queue_node() { reset(nullptr, message_id_t(), false); }
+
+    inline recursive_queue_node(actor* ptr, any_tuple&& data, message_id_t id = message_id_t())
+    : msg(std::move(data)) { reset(ptr, id, false); }
 
     recursive_queue_node(recursive_queue_node&&) = delete;
     recursive_queue_node(const recursive_queue_node&) = delete;

@@ -42,7 +42,6 @@
 #include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
-#include "cppa/detail/filter_result.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -130,8 +129,8 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         enqueue_node(super::fetch_node(sender, std::move(msg)));
     }
 
-    void sync_enqueue(actor* sender, std::uint64_t seq_id, any_tuple msg) {
-        enqueue_node(super::fetch_node(sender, std::move(msg), seq_id));
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
+        enqueue_node(super::fetch_node(sender, std::move(msg), id));
     }
 
     int compare_exchange_state(int expected, int new_value) {

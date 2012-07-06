@@ -103,7 +103,7 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
 
     void enqueue(actor* sender, any_tuple msg); //override
 
-    void sync_enqueue(actor* sender, std::uint64_t response_id, any_tuple msg);
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 

@@ -34,8 +34,6 @@
 #include "cppa/self.hpp"
 #include "cppa/event_based_actor.hpp"
 
-#include "cppa/detail/filter_result.hpp"
-
 namespace cppa {
 
 event_based_actor::event_based_actor() : super(super::blocked) { }
@@ -45,6 +43,10 @@ void event_based_actor::dequeue(behavior&) {
 }
 
 void event_based_actor::dequeue(partial_function&) {
+    quit(exit_reason::unallowed_function_call);
+}
+
+void event_based_actor::dequeue_response(behavior&, message_id_t) {
     quit(exit_reason::unallowed_function_call);
 }
 

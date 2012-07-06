@@ -55,7 +55,7 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     void enqueue(actor* sender, any_tuple msg);
 
-    void sync_enqueue(actor* sender, std::uint64_t response_id, any_tuple msg);
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
     void link_to(intrusive_ptr<actor>& other);
 
@@ -75,8 +75,8 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     void forward_message(const process_information_ptr&,
                          actor*,
-                         std::uint64_t,
-                         any_tuple&&                    );
+                         any_tuple&&,
+                         message_id_t = message_id_t()      );
 
 };
 

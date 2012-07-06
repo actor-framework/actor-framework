@@ -64,15 +64,15 @@ inline decltype(std::chrono::high_resolution_clock::now()) now() {
     return std::chrono::high_resolution_clock::now();
 }
 
-void async_send_impl(void* to, actor* from, std::uint64_t, const any_tuple& msg) {
+void async_send_impl(void* to, actor* from, message_id_t, const any_tuple& msg) {
     reinterpret_cast<channel*>(to)->enqueue(from, msg);
 }
 
-void sync_reply_impl(void* to, actor* from, std::uint64_t id, const any_tuple& msg) {
+void sync_reply_impl(void* to, actor* from, message_id_t id, const any_tuple& msg) {
     reinterpret_cast<actor*>(to)->sync_enqueue(from, id, msg);
 }
 
-typedef void (*impl_fun_ptr)(void*, actor*, std::uint64_t, const any_tuple&);
+typedef void (*impl_fun_ptr)(void*, actor*, message_id_t, const any_tuple&);
 
 class delayed_msg {
 
@@ -81,14 +81,14 @@ class delayed_msg {
     delayed_msg(impl_fun_ptr       arg0,
                 const channel_ptr& arg1,
                 const actor_ptr&   arg2,
-                std::uint64_t      arg3,
+                message_id_t         arg3,
                 const any_tuple&   arg4)
     : fun(arg0), ptr_a(arg1), ptr_b(), from(arg2), id(arg3), msg(arg4) { }
 
     delayed_msg(impl_fun_ptr       arg0,
-                const actor_ptr& arg1,
+                const actor_ptr&   arg1,
                 const actor_ptr&   arg2,
-                std::uint64_t      arg3,
+                message_id_t         arg3,
                 const any_tuple&   arg4)
     : fun(arg0), ptr_a(), ptr_b(arg1), from(arg2), id(arg3), msg(arg4) { }
 
@@ -107,7 +107,7 @@ class delayed_msg {
     channel_ptr   ptr_a;
     actor_ptr     ptr_b;
     actor_ptr     from;
-    std::uint64_t id;
+    message_id_t    id;
     any_tuple     msg;
 
 };
@@ -146,7 +146,7 @@ void insert_dmsg(Map& storage,
                  impl_fun_ptr fun_ptr,
                  const T& to,
                  const actor_ptr& sender,
-                 std::uint64_t id,
+                 message_id_t id,
                  const any_tuple& tup    ) {
     auto tout = now();
     tout += d;
@@ -171,11 +171,11 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
                                            const channel_ptr& ptr,
                                            const any_tuple& tup) {
             insert_dmsg(messages, d, async_send_impl,
-                        ptr, msg_ptr->sender, 0, tup);
+                        ptr, msg_ptr->sender, message_id_t(), tup);
         },
         on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
                                             const actor_ptr& ptr,
-                                            std::uint64_t id,
+                                            message_id_t id,
                                             const any_tuple& tup) {
             insert_dmsg(messages, d, sync_reply_impl,
                         ptr, msg_ptr->sender, id, tup);

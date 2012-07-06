@@ -40,6 +40,8 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
+
+#include "cppa/message_id.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -138,6 +140,18 @@ class local_actor : public actor {
      *          the @p become member function in case of event-based actors.
      */
     virtual void dequeue(behavior& bhvr) = 0;
+
+    /**
+     * @brief Waits for a response to @p request_id.
+     *        Blocks until either a response message arrives or until a
+     *        timeout occurs.
+     * @param bhvr A behavior with timeout denoting the
+     *             actor's response to the response message.
+     * @warning You should not call this member function by hand.
+     *          Use always the {@link cppa::receive_response receive_response}
+     *          function.
+     */
+    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) = 0;
 
     /**
      * @brief Checks whether this actor traps exit messages.
@@ -301,12 +315,16 @@ class local_actor : public actor {
 
     virtual bool initialized() = 0;
 
+    inline bool chaining_enabled() {
+        return m_chaining && !m_chained_actor;
+    }
+
     inline void send_message(channel* whom, any_tuple&& what) {
         whom->enqueue(this, std::move(what));
     }
 
     inline void send_message(actor* whom, any_tuple&& what) {
-        if (m_chaining && !m_chained_actor) {
+        if (chaining_enabled()) {
             if (whom->chained_enqueue(this, std::move(what))) {
                 m_chained_actor = whom;
             }
@@ -314,19 +332,35 @@ class local_actor : public actor {
         else whom->enqueue(this, std::move(what));
     }
 
+    inline message_id_t send_sync_message(actor* whom, any_tuple&& what) {
+        auto id = ++m_current_message_id;
+        CPPA_REQUIRE(id.is_request());
+        if (chaining_enabled()) {
+            if (whom->chained_sync_enqueue(this, id, std::move(what))) {
+                m_chained_actor = whom;
+            }
+        }
+        else whom->sync_enqueue(this, id, std::move(what));
+        m_requests.push_back(id);
+        return id;
+    }
+
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise
-    inline std::uint64_t get_response_id() {
-        // mask extracts the first bit that is only set on response messages
-        constexpr std::uint64_t mask = 0x8000000000000000;
-        auto seq_id = m_current_node->seq_id;
-        return (seq_id != 0 && (seq_id & mask) == 0) ? (seq_id | mask) : 0;
+    inline message_id_t get_response_id() {
+        return m_current_node->mid.response_id();
     }
 
     void reply_message(any_tuple&& what);
 
     inline actor_ptr& chained_actor() {
         return m_chained_actor;
+    }
+
+    bool awaits(message_id_t id) {
+        auto req_id = id.request_id();
+        return std::any_of(m_requests.begin(), m_requests.end(),
+                           [req_id](message_id_t id) { return id == req_id; });
     }
 
  protected:
@@ -340,7 +374,9 @@ class local_actor : public actor {
     // pointer to the actor that is marked as successor due to a chained send
     actor_ptr m_chained_actor;
     // identifies the ID of the last sent synchronous request
-    std::uint64_t m_sync_request_id;
+    message_id_t m_current_message_id;
+    // identifies all IDs of sync messages waiting for a response
+    std::vector<message_id_t> m_requests;
     // "default value" for m_current_node
     detail::recursive_queue_node m_dummy_node;
     // points to m_dummy_node if no callback is currently invoked,

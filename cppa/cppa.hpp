@@ -453,6 +453,49 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
     detail::send_tpl_impl(whom.get(), std::forward<Args>(what)...);
 }
 
+#ifndef CPPA_DOCUMENTATION
+typedef message_id_t unspecified_handle;
+#endif // CPPA_DOCUMENTATION
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @returns A handle identifying a future to the response of @p whom.
+ * @warning The returned handle is actor specific and the response to the sent
+ *          message cannot be received by another actor.
+ * @pre <tt>sizeof...(Args) > 0</tt>
+ * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+ */
+template<typename... Args>
+inline unspecified_handle sync_send(const actor_ptr& whom, Args&&... what) {
+    static_assert(sizeof...(Args) > 0, "no message to send");
+    if (whom) {
+        self->send_sync_message(whom.get(),
+                                make_any_tuple(std::forward<Args>(what)...));
+    }
+    else throw std::invalid_argument("whom == nullptr");
+}
+
+struct receive_response_helper {
+    unspecified_handle m_handle;
+    inline receive_response_helper(unspecified_handle handle)
+    : m_handle(handle) { }
+    template<typename... Expression>
+    inline void operator()(Expression&&... mexpr) const {
+        auto bhvr = match_expr_convert(std::forward<Expression>(mexpr)...);
+        static_assert(std::is_same<decltype(bhvr), behavior>::value,
+                      "no timeout specified");
+        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
+            throw std::invalid_argument("specified timeout is invalid or zero");
+        }
+
+    }
+};
+
+inline receive_response_helper receive_response(unspecified_handle handle) {
+    return {handle};
+}
 
 /**
  * @brief Sends a message to the sender of the last received message.

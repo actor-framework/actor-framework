@@ -61,9 +61,9 @@ void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
 }
 
 void thread_mapped_actor::sync_enqueue(actor* sender,
-                                        std::uint64_t response_id,
-                                        any_tuple msg             ) {
-    m_mailbox.push_back(fetch_node(sender, std::move(msg), response_id));
+                                       message_id_t id,
+                                       any_tuple msg ) {
+    m_mailbox.push_back(fetch_node(sender, std::move(msg), id));
 }
 
 bool thread_mapped_actor::initialized() {

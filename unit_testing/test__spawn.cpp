@@ -414,7 +414,30 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
+    CPPA_IF_VERBOSE(cout << "... with empty message... " << std::flush);
+    self << any_tuple{};
+    receive(on() >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    self << any_tuple{};
+    receive(on() >> []() { });
+
+
+    /*
+    // (2) sync_send returning a 'future'
+    auto future = sync_send(foo, atom("get_state"));
+
+    //  *  blocking
+    receive_response(future) (
+        // ...
+    );
+
+    //  *  event-based
+    become_waiting_for(future) (
+        // ...
+    );
+    */
+
 
     CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << std::flush);
     receive (

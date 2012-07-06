@@ -61,6 +61,10 @@ class stacked_actor_mixin : public Base {
         m_recv_policy.receive(dthis(), bhvr);
     }
 
+    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) {
+        m_recv_policy.receive(dthis(), bhvr, request_id );
+    }
+
     virtual void run() {
         if (m_bhvr_stack_ptr) {
             m_bhvr_stack_ptr->exec();

@@ -191,7 +191,7 @@ class abstract_actor : public abstract_actor_base<Base> {
 
     inline mailbox_element* fetch_node(actor* sender,
                                        any_tuple msg,
-                                       std::uint64_t seq_id = 0) {
+                                       message_id_t id = message_id_t()) {
         mailbox_element* result = nullptr;
         { // lifetime scope of guard
             lock_type guard{m_nodes_lock};
@@ -200,16 +200,8 @@ class abstract_actor : public abstract_actor_base<Base> {
                 m_nodes.pop_back();
             }
         }
-        if (result) {
-            result->next = nullptr;
-            result->marked = false;
-            result->sender = sender;
-            result->msg = std::move(msg);
-            result->seq_id = seq_id;
-        }
-        else {
-            result = new mailbox_element(sender, std::move(msg), seq_id);
-        }
+        if (result) result->reset(sender, id, std::move(msg));
+        else result = new mailbox_element(sender, std::move(msg), id);
         return result;
     }
 

@@ -129,19 +129,19 @@ class scheduler {
     template<typename Duration, typename... Data>
     void delayed_reply(const actor_ptr& to,
                        const Duration& rel_time,
-                       std::uint64_t sequence_id,
+                       message_id_t id,
                        Data&&... data            ) {
         static_assert(sizeof...(Data) > 0, "no message to send");
-        if (sequence_id == 0) {
-            delayed_send(to, rel_time, sequence_id,
-                         std::forward<Data>(data)...);
+        CPPA_REQUIRE(id.is_async() || id.is_response());
+        if (id.is_async()) {
+            delayed_send(to, rel_time, id, std::forward<Data>(data)...);
         }
         else {
             auto sub = make_any_tuple(std::forward<Data>(data)...);
             auto tup = make_any_tuple(atom("REPLY"),
                                       util::duration{rel_time},
                                       to,
-                                      sequence_id,
+                                      id,
                                       std::move(sub));
             delayed_send_helper()->enqueue(self, std::move(tup));
         }

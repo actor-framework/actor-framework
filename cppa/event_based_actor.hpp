@@ -71,6 +71,11 @@ class event_based_actor : public detail::abstract_scheduled_actor {
      */
     void dequeue(partial_function&); //override
 
+    /**
+     * @copydoc dequeue(behavior&)
+     */
+    void dequeue_response(behavior&, message_id_t);
+
     resume_result resume(util::fiber*); //override
 
     /**

@@ -313,10 +313,16 @@ on(const Arg0& arg0, const Args&... args) {
     return {detail::rvalue_builder_args_ctor{}, arg0, args...};
 }
 
-template<typename... T>
+inline detail::rvalue_builder<detail::empty_value_guard,
+                              util::empty_type_list,
+                              util::empty_type_list     > on() {
+    return {};
+}
+
+template<typename T0, typename... Ts>
 detail::rvalue_builder<detail::empty_value_guard,
                        util::empty_type_list,
-                       util::type_list<T...> >
+                       util::type_list<T0, Ts...> >
 on() {
     return {};
 }

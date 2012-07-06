@@ -52,7 +52,6 @@ cppa/detail/default_uniform_type_info_impl.hpp
 cppa/detail/demangle.hpp
 cppa/detail/disablable_delete.hpp
 cppa/detail/empty_tuple.hpp
-cppa/detail/filter_result.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/implicit_conversions.hpp
@@ -263,3 +262,5 @@ cppa/detail/stacked_actor_mixin.hpp
 cppa/detail/event_based_actor_factory.hpp
 cppa/factory.hpp
 src/factory.cpp
+cppa/message_id.hpp
+cppa/message_future.hpp

@@ -267,7 +267,7 @@ class po_peer : public po_socket_handler {
                             else if (receiver->parent_process() == *process_information::get()) {
                                 // this message was send from a proxy
                                 receiver->attach_functor([=](std::uint32_t reason) {
-                                    addressed_message kmsg{receiver, receiver, 0, make_any_tuple(atom("KILL_PROXY"), reason)};
+                                    addressed_message kmsg{receiver, receiver, make_any_tuple(atom("KILL_PROXY"), reason)};
                                     singleton_manager::get_network_manager()
                                     ->send_to_mailman(make_any_tuple(m_peer, kmsg));
                                 });

@@ -38,6 +38,7 @@
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/attachable.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/process_information.hpp"
 
 #include "cppa/util/rm_ref.hpp"
@@ -70,12 +71,10 @@ class actor : public channel {
     virtual bool chained_enqueue(actor* sender, any_tuple msg);
 
     /**
-     * @brief Enqueues @p msg as a reply to @p request_id
-     *        to this actor's mailbox.
+     * @brief Enqueues @p msg as a synchronous message to this actor's mailbox.
+     * @pre <tt>id.is_async() == false</tt>
      */
-    virtual void sync_enqueue(actor* sender,
-                               std::uint64_t sequence_id,
-                               any_tuple msg             ) = 0;
+    virtual void sync_enqueue(actor* sender, message_id_t id, any_tuple msg) = 0;
 
     /**
      * @brief Enqueues @p msg as a reply to @p request_id
@@ -84,8 +83,8 @@ class actor : public channel {
      *        its state to @p pending in response to the enqueue operation.
      */
     virtual bool chained_sync_enqueue(actor* sender,
-                                       std::uint64_t response_id,
-                                       any_tuple msg);
+                                      message_id_t id,
+                                      any_tuple msg);
 
     /**
      * @brief Attaches @p ptr to this actor.

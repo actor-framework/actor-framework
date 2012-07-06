@@ -40,6 +40,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     void quit(std::uint32_t);
     void dequeue(behavior&);
     void dequeue(partial_function&);
+    void dequeue_response(behavior&, message_id_t);
     void link_to(intrusive_ptr<actor>&);
     void unlink_from(intrusive_ptr<actor>&);
     bool establish_backlink(intrusive_ptr<actor>&);
