@@ -155,6 +155,11 @@ class string_serializer : public serializer {
         out << (m_after_value ? " }" : "}");
     }
 
+    void write_raw(size_t, const void*) {
+        throw std::runtime_error("string_serializer::write_raw: "
+                                 "not implemented yet");
+    }
+
 };
 
 class string_deserializer : public deserializer {
@@ -415,6 +420,11 @@ class string_deserializer : public deserializer {
             ++storage;
         }
         consume('}');
+    }
+
+    void read_raw(size_t, void*) {
+        throw std::runtime_error("string_deserializer::read_raw: "
+                                 "not implemented yet");
     }
 
 };

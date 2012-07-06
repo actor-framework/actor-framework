@@ -44,8 +44,6 @@ class binary_deserializer : public deserializer {
     const char* pos;
     const char* end;
 
-    void range_check(size_t read_size);
-
  public:
 
     binary_deserializer(const char* buf, size_t buf_size);
@@ -61,6 +59,7 @@ class binary_deserializer : public deserializer {
     void read_tuple(size_t size,
                     const primitive_type* ptypes,
                     primitive_variant* storage);
+    void read_raw(size_t num_bytes, void* storage);
 
 };
 

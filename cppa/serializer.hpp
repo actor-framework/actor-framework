@@ -86,6 +86,13 @@ class serializer {
     virtual void write_value(const primitive_variant& value) = 0;
 
     /**
+     * @brief Writes a raw block of data.
+     * @param num_bytes The size of @p data in bytes.
+     * @param data Raw data.
+     */
+    virtual void write_raw(size_t num_bytes, const void* data) = 0;
+
+    /**
      * @brief Writes @p num values as a tuple to the data sink.
      * @param num Size of the array @p values.
      * @param values An array of size @p num of primitive data values.

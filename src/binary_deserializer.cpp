@@ -172,4 +172,10 @@ void binary_deserializer::read_tuple(size_t size,
     }
 }
 
+void binary_deserializer::read_raw(size_t num_bytes, void* storage) {
+    range_check(pos, end, num_bytes);
+    memcpy(&storage, pos, num_bytes);
+    pos += num_bytes;
+}
+
 } // namespace cppa

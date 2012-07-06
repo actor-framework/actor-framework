@@ -108,6 +108,11 @@ class deserializer {
                             const primitive_type* ptypes,
                             primitive_variant* storage   ) = 0;
 
+    /**
+     * @brief Reads a raw memory block.
+     */
+    virtual void read_raw(size_t num_bytes, void* storage) = 0;
+
 };
 
 /**

@@ -71,6 +71,8 @@ class binary_serializer : public serializer {
 
     void write_tuple(size_t size, const primitive_variant* values);
 
+    void write_raw(size_t num_bytes, const void* data);
+
     /**
      * @brief Returns the number of written bytes.
      */
