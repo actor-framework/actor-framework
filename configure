@@ -193,7 +193,7 @@ else
 fi
 
 echo "DIRS :=$workdirs\n" > $sourcedir/Makefile
-makefile=$(cat<<'EOT'
+makefile=$(cat <<'EOT'
 all:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
