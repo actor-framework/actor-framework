@@ -342,7 +342,7 @@ class local_actor : public actor {
         }
         else whom->sync_enqueue(this, id, std::move(what));
         auto awaited_response = id.response_id();
-        m_awaited_responses.push_back(awaited_response);
+        m_pending_responses.push_back(awaited_response);
         return awaited_response;
     }
 
@@ -358,19 +358,19 @@ class local_actor : public actor {
         return m_chained_actor;
     }
 
-    bool awaits(message_id_t response_id) {
+    inline bool awaits(message_id_t response_id) {
         CPPA_REQUIRE(response_id.is_response());
-        return std::any_of(m_awaited_responses.begin(),
-                           m_awaited_responses.end(),
+        return std::any_of(m_pending_responses.begin(),
+                           m_pending_responses.end(),
                            [=](message_id_t other) {
                                return response_id == other;
                            });
     }
 
-    void mark_arrived(message_id_t response_id) {
-        auto last = m_awaited_responses.end();
-        auto i = std::find(m_awaited_responses.begin(), last, response_id);
-        if (i != last) m_awaited_responses.erase(i);
+    inline void mark_arrived(message_id_t response_id) {
+        auto last = m_pending_responses.end();
+        auto i = std::find(m_pending_responses.begin(), last, response_id);
+        if (i != last) m_pending_responses.erase(i);
     }
 
  protected:
@@ -386,7 +386,7 @@ class local_actor : public actor {
     // identifies the ID of the last sent synchronous request
     message_id_t m_last_request_id;
     // identifies all IDs of sync messages waiting for a response
-    std::vector<message_id_t> m_awaited_responses;
+    std::vector<message_id_t> m_pending_responses;
     // "default value" for m_current_node
     detail::recursive_queue_node m_dummy_node;
     // points to m_dummy_node if no callback is currently invoked,

@@ -87,6 +87,8 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
                                        detail::abstract_actor<local_actor> > {
 
     friend class self_type; // needs access to cleanup()
+
+    friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
     typedef detail::stacked_actor_mixin<

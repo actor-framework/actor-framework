@@ -73,6 +73,7 @@ class context_switching_actor : public detail::stacked_actor_mixin<
                                            context_switching_actor,
                                            detail::abstract_scheduled_actor> {
 
+    friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
     typedef detail::stacked_actor_mixin<

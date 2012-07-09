@@ -77,16 +77,10 @@ resume_result event_based_actor::resume(util::fiber*) {
                     };
                 }
             }
-            else {
-                if (m_policy.invoke(this, e, get_behavior())) {
-                    // try to match cached message before receiving new ones
-                    do {
-                        m_bhvr_stack.cleanup();
-                        if (m_bhvr_stack.empty()) {
-                            done_cb();
-                            return resume_result::actor_done;
-                        }
-                    } while (m_policy.invoke_from_cache(this, get_behavior()));
+            else if (m_bhvr_stack.invoke(m_policy, this, e)) {
+                if (m_bhvr_stack.empty()) {
+                    done_cb();
+                    return resume_result::actor_done;
                 }
             }
         }
@@ -104,7 +98,7 @@ bool event_based_actor::has_behavior() {
 void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
     reset_timeout();
     request_timeout(bhvr.timeout());
-    if (discard_old) m_bhvr_stack.pop_back();
+    if (discard_old) m_bhvr_stack.pop_async_back();
     m_bhvr_stack.push_back(std::move(bhvr));
 }
 
@@ -120,7 +114,7 @@ void event_based_actor::quit(std::uint32_t reason) {
 }
 
 void event_based_actor::unbecome() {
-    m_bhvr_stack.pop_back();
+    m_bhvr_stack.pop_async_back();
 }
 
 scheduled_actor_type event_based_actor::impl_type() {

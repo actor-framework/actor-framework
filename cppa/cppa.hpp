@@ -498,6 +498,8 @@ inline receive_response_helper receive_response(unspecified_handle handle) {
     return {handle};
 }
 
+
+
 /**
  * @brief Sends a message to the sender of the last received message.
  * @param what Message elements.

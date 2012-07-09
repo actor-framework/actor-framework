@@ -49,7 +49,7 @@ class stacked_actor_mixin : public Base {
 
     virtual void unbecome() {
         if (m_bhvr_stack_ptr) {
-            m_bhvr_stack_ptr->pop_back();
+            m_bhvr_stack_ptr->pop_async_back();
         }
     }
 
@@ -62,12 +62,12 @@ class stacked_actor_mixin : public Base {
     }
 
     virtual void dequeue_response(behavior& bhvr, message_id_t request_id) {
-        m_recv_policy.receive(dthis(), bhvr, request_id );
+        m_recv_policy.receive(dthis(), bhvr, request_id);
     }
 
     virtual void run() {
         if (m_bhvr_stack_ptr) {
-            m_bhvr_stack_ptr->exec();
+            m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
             m_bhvr_stack_ptr.reset();
         }
         if (m_behavior) {
@@ -83,14 +83,14 @@ class stacked_actor_mixin : public Base {
 
     virtual void do_become(behavior&& bhvr, bool discard_old) {
         if (m_bhvr_stack_ptr) {
-            if (discard_old) m_bhvr_stack_ptr->pop_back();
+            if (discard_old) m_bhvr_stack_ptr->pop_async_back();
             m_bhvr_stack_ptr->push_back(std::move(bhvr));
         }
         else {
             m_bhvr_stack_ptr.reset(new behavior_stack);
             m_bhvr_stack_ptr->push_back(std::move(bhvr));
             if (this->initialized()) {
-                m_bhvr_stack_ptr->exec();
+                m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
                 m_bhvr_stack_ptr.reset();
             }
         }

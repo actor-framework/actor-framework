@@ -559,6 +559,51 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    CPPA_IF_VERBOSE(cout << "test sync send/receive ... " << std::flush);
+    auto sync_testee1 = spawn([]() {
+        receive (
+            on(atom("get")) >> []() {
+                reply(42, 2);
+            }
+        );
+    });
+    send(self, 0, 0);
+    auto handle = sync_send(sync_testee1, atom("get"));
+    // wait for some time (until sync response arrived in mailbox)
+    receive (after(std::chrono::milliseconds(50)) >> []() { });
+    // enqueue async messages (must be skipped by receive_response)
+    send(self, 42, 1);
+    // must skip sync message
+    receive (
+        on(42, arg_match) >> [&](int i) {
+            CPPA_CHECK_EQUAL(1, i);
+        }
+    );
+    // must skip remaining async message
+    receive_response (handle) (
+        on_arg_match >> [&](int a, int b) {
+            CPPA_CHECK_EQUAL(42, a);
+            CPPA_CHECK_EQUAL(2, b);
+        },
+        others() >> [&]() {
+            CPPA_ERROR("unexpected message");
+        },
+        after(std::chrono::seconds(10)) >> [&]() {
+            CPPA_ERROR("timeout during receive_response");
+        }
+    );
+    // dequeue remaining async. message
+    receive (on(0, 0) >> []() { });
+    // make sure there's no other message in our mailbox
+    receive (
+        others() >> [&]() {
+            CPPA_ERROR("unexpected message");
+        },
+        after(std::chrono::seconds(0)) >> []() { }
+    );
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
     factory::event_based([&]() {

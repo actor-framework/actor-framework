@@ -28,34 +28,74 @@
 \******************************************************************************/
 
 
+#include <iterator>
 #include "cppa/local_actor.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 
 namespace cppa { namespace detail {
 
-// executes the behavior stack
-void behavior_stack::exec() {
-    while (!empty()) {
-        self->dequeue(back());
-        cleanup();
-    }
-}
+class behavior_stack_help_iterator
+: public std::iterator<std::output_iterator_tag, void, void, void, void> {
 
-void behavior_stack::pop_back() {
+ public:
+
+    typedef behavior_stack::element_type element_type;
+
+    explicit behavior_stack_help_iterator(behavior_stack& st) : m_stack(&st) { }
+
+    behavior_stack_help_iterator& operator=(element_type&& rval) {
+        m_stack->m_erased_elements.emplace_back(std::move(rval.first));
+        return *this;
+    }
+
+    behavior_stack_help_iterator& operator*() { return *this; }
+
+    behavior_stack_help_iterator& operator++() { return *this; }
+
+    behavior_stack_help_iterator operator++(int) { return *this; }
+
+ private:
+
+    behavior_stack* m_stack;
+
+};
+
+void behavior_stack::pop_async_back() {
+    if (m_elements.empty()) {
+        // nothing to do
+    }
+    else if (m_elements.back().second.valid() == false) {
+        m_erased_elements.emplace_back(std::move(m_elements.back().first));
+        m_elements.pop_back();
+    }
+    else {
+        auto rlast = m_elements.rend();
+        auto ri = std::find_if(m_elements.rbegin(), rlast,
+                              [](element_type& e) {
+                                  return e.second.valid() == false;
+                              });
+        if (ri != rlast) {
+            m_erased_elements.emplace_back(std::move(ri->first));
+            auto i = ri.base();
+            --i; // adjust 'normal' iterator to point to the correct element
+            m_elements.erase(i);
+        }
+    }
+
     if (m_elements.empty() == false) {
-        m_erased_elements.emplace_back(std::move(m_elements.back()));
+        m_erased_elements.emplace_back(std::move(m_elements.back().first));
         m_elements.pop_back();
     }
 }
 
-void behavior_stack::push_back(behavior&& what) {
-    m_elements.emplace_back(std::move(what));
+void behavior_stack::push_back(behavior&& what, message_id_t response_id) {
+    m_elements.emplace_back(std::move(what), response_id);
 }
 
 void behavior_stack::clear() {
     if (m_elements.empty() == false) {
         std::move(m_elements.begin(), m_elements.end(),
-                  std::back_inserter(m_erased_elements));
+                  behavior_stack_help_iterator{*this});
         m_elements.clear();
     }
 }
