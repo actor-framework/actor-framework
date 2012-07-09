@@ -193,7 +193,7 @@ else
 fi
 
 echo "DIRS :=$workdirs\n" > $sourcedir/Makefile
-read -d '' makefile <<"EOT"
+makefile=$(cat<<'EOT'
 all:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
 
@@ -214,5 +214,6 @@ distclean:
 
 .PHONY: all test install uninstall clean distclean
 EOT
+)
 
 echo "$makefile" >> $sourcedir/Makefile
