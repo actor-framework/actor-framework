@@ -93,15 +93,23 @@ set(boost_context third_party/boost_context/)
 
 # add third_party boost_context sources
 if(APPLE)
-  set_property(SOURCE
-               ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
-               PROPERTY LANGUAGE CXX)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set_property(SOURCE
+                 ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S
+                 PROPERTY LANGUAGE CXX)
+    set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
+  else()
+    set_property(SOURCE
+                 ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
+                 PROPERTY LANGUAGE CXX)
+    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
+  endif()
   set(LIBCPPA_SRC
       ${LIBCPPA_SRC}
       ${boost_context}/src/stack_utils_posix.cpp
       ${boost_context}/src/stack_allocator_posix.cpp
       ${boost_context}/src/fcontext.cpp
-      ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
+      ${fcontext_asm}
   )
 elseif(UNIX)
   if(CMAKE_SIZEOF_VOID_P EQUAL 4)
