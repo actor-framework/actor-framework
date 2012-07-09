@@ -454,7 +454,7 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
 }
 
 #ifndef CPPA_DOCUMENTATION
-typedef message_id_t unspecified_handle;
+typedef message_id_t message_future;
 #endif // CPPA_DOCUMENTATION
 
 /**
@@ -468,7 +468,7 @@ typedef message_id_t unspecified_handle;
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
 template<typename... Args>
-inline unspecified_handle sync_send(const actor_ptr& whom, Args&&... what) {
+inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
     static_assert(sizeof...(Args) > 0, "no message to send");
     if (whom) {
         return self->send_sync_message(
@@ -479,8 +479,8 @@ inline unspecified_handle sync_send(const actor_ptr& whom, Args&&... what) {
 }
 
 struct receive_response_helper {
-    unspecified_handle m_handle;
-    inline receive_response_helper(unspecified_handle handle)
+    message_future m_handle;
+    inline receive_response_helper(message_future handle)
     : m_handle(handle) { }
     template<typename... Expression>
     inline void operator()(Expression&&... mexpr) const {
@@ -490,15 +490,27 @@ struct receive_response_helper {
         if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
             throw std::invalid_argument("specified timeout is invalid or zero");
         }
-
+        else if (!m_handle.valid() || !m_handle.is_response()) {
+            throw std::logic_error("handle does not point to a response");
+        }
+        else if (!self->awaits(m_handle)) {
+            throw std::logic_error("response already received");
+        }
+        self->dequeue_response(bhvr, m_handle);
     }
 };
 
-inline receive_response_helper receive_response(unspecified_handle handle) {
+/**
+ * @brief Receives a synchronous response message.
+ * @param handle A future for a synchronous response.
+ * @throws std::invalid_argument if given behavior does not has a valid
+ *                               timeout definition
+ * @throws std::logic_error if @p handle is not valid or if the actor
+ *                          already received the response for @p handle
+ */
+inline receive_response_helper receive_response(message_future handle) {
     return {handle};
 }
-
-
 
 /**
  * @brief Sends a message to the sender of the last received message.
