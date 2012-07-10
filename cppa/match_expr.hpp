@@ -98,9 +98,33 @@ struct invoke_policy_impl {
     }
 };
 
+template<>
+struct invoke_policy_impl<wildcard_position::nil,
+                          util::empty_type_list,
+                          util::empty_type_list  > {
+
+    template<class Target, typename PtrType, typename Tuple>
+    static bool invoke(Target& target,
+                       const std::type_info&,
+                       detail::tuple_impl_info,
+                       PtrType*,
+                       Tuple&) {
+        target();
+        return true;
+    }
+
+    template<class Tuple>
+    static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
+        return arg_types == typeid(util::empty_type_list);
+    }
+
+};
+
 template<class Pattern, typename... Ts>
 struct invoke_policy_impl<wildcard_position::nil,
-                          Pattern, util::type_list<Ts...> > {
+                          Pattern,
+                          util::type_list<Ts...> > {
+
     typedef util::type_list<Ts...> filtered_pattern;
 
     typedef detail::tdata<Ts...> native_data_type;
@@ -202,12 +226,13 @@ struct invoke_policy_impl<wildcard_position::nil,
     static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
         return arg_types == typeid(filtered_pattern);
     }
+
 };
 
 template<>
 struct invoke_policy_impl<wildcard_position::leading,
                           util::type_list<anything>,
-                          util::type_list<> > {
+                          util::empty_type_list> {
     template<class Tuple>
     static inline bool can_invoke(const std::type_info&,
                                   const Tuple&) {
@@ -451,20 +476,6 @@ struct get_case<false, Expr, Guard, Transformers, Pattern> {
             type;
 };
 
-/*
-template<class Expr>
-struct get_case<true, Expr, value_guard<util::type_list<> >,
-                util::type_list<>, util::type_list<anything> > {
-    typedef typename get_case_<
-                Expr,
-                value_guard<util::type_list<> >,
-                util::type_list<>,
-                util::type_list<anything>
-            >::type
-            type;
-};
-*/
-
 template<typename First, typename Second>
 struct pjf_same_pattern
         : std::is_same<typename First::second::pattern_type,
@@ -476,10 +487,10 @@ template<typename Data>
 struct invoke_helper3 {
     const Data& data;
     invoke_helper3(const Data& mdata) : data(mdata) { }
-    template<size_t Pos, typename T, typename... Args>
-    inline bool operator()(util::type_pair<std::integral_constant<size_t, Pos>, T>,
+    template<size_t P, typename T, typename... Args>
+    inline bool operator()(util::type_pair<std::integral_constant<size_t,P>,T>,
                            Args&&... args) const {
-        const auto& target = get<Pos>(data);
+        const auto& target = get<P>(data);
         return target.first(target.second, std::forward<Args>(args)...);
         //return (get<Pos>(data))(args...);
     }
@@ -488,7 +499,7 @@ struct invoke_helper3 {
 template<class Data, class Token, class Pattern>
 struct invoke_helper2 {
     typedef Pattern pattern_type;
-    typedef typename util::tl_filter_not_type<pattern_type, anything>::type arg_types;
+    typedef typename util::tl_filter_not_type<Pattern,anything>::type arg_types;
     const Data& data;
     invoke_helper2(const Data& mdata) : data(mdata) { }
     template<typename... Args>
@@ -502,7 +513,8 @@ struct invoke_helper2 {
         //static_assert(false, "foo");
         Token token;
         invoke_helper3<Data> fun{data};
-        return util::static_foreach<0, Token::size>::eval_or(token, fun, std::forward<Args>(args)...);
+        return util::static_foreach<0, Token::size>
+               ::eval_or(token, fun, std::forward<Args>(args)...);
     }
 };
 
@@ -511,7 +523,8 @@ template<typename Data>
 struct invoke_helper {
     const Data& data;
     std::uint64_t bitfield;
-    invoke_helper(const Data& mdata, std::uint64_t bits) : data(mdata), bitfield(bits) { }
+    invoke_helper(const Data& mdata, std::uint64_t bits)
+    : data(mdata), bitfield(bits) { }
     // token: type_list<type_pair<integral_constant<size_t, X>,
     //                            std::pair<projection, tpartial_function>>,
     //                  ...>
@@ -863,30 +876,6 @@ inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
     return lhs.or_else(rhs);
 }
 
-/*
-template<typename Arg0, typename... Args>
-typename match_expr_from_type_list<
-    typename util::tl_concat<
-        typename Arg0::cases_list,
-        typename Args::cases_list...
-    >::type
->::type
-mexpr_concat(const Arg0& arg0, const Args&... args) {
-    typename detail::tdata_from_type_list<
-        typename util::tl_map<
-            typename util::tl_concat<
-                typename Arg0::cases_list,
-                typename Args::cases_list...
-            >::type,
-            gref_wrapped
-        >::type
-    >::type
-    all_cases;
-    detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
-    return {all_cases};
-}
-*/
-
 template<bool HasTimeout>
 struct match_expr_concat_impl {
     template<typename Arg0, typename... Args>
@@ -918,14 +907,14 @@ struct match_expr_concat_impl {
 template<>
 struct match_expr_concat_impl<true> {
 
-    template<class TData, typename Cases, typename F>
-    static behavior_impl* __(const TData& data, Cases, const timeout_definition<F>& arg0) {
-        typedef typename match_expr_from_type_list<Cases>::type combined_type;
+    template<class TData, class Token, typename F>
+    static behavior_impl* __(const TData& data, Token, const timeout_definition<F>& arg0) {
+        typedef typename match_expr_from_type_list<Token>::type combined_type;
         typedef default_behavior_impl<combined_type, F> impl_type;
         return new impl_type(data, arg0);
     }
 
-    template<class TData, typename Token, typename... Cases, typename... Args>
+    template<class TData, class Token, typename... Cases, typename... Args>
     static behavior_impl* __(const TData& data, Token, const match_expr<Cases...>& arg0, const Args&... args) {
         typedef typename util::tl_concat<
                 Token,

@@ -37,3 +37,5 @@ include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS})
 set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY})
 
 target_link_libraries(unit_tests ${EXAMPLE_LIBS})
+
+add_test(unit_tests ${EXECUTABLE_OUTPUT_PATH}/unit_tests)

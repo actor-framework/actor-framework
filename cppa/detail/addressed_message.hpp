@@ -45,7 +45,8 @@ class addressed_message {
 
  public:
 
-    addressed_message(actor_ptr from, channel_ptr to, any_tuple ut);
+    addressed_message(actor_ptr from, channel_ptr to,
+                      any_tuple ut, message_id_t id = message_id_t());
 
     addressed_message() = default;
     addressed_message(addressed_message&&) = default;
@@ -77,6 +78,10 @@ class addressed_message {
         return m_content;
     }
 
+    inline message_id_t id() const {
+        return m_msg_id;
+    }
+
     inline bool empty() const {
         return m_content.empty();
     }
@@ -85,13 +90,15 @@ class addressed_message {
 
     actor_ptr m_sender;
     channel_ptr m_receiver;
+    message_id_t m_msg_id;
     any_tuple m_content;
 
 };
 
 bool operator==(const addressed_message& lhs, const addressed_message& rhs);
 
-inline bool operator!=(const addressed_message& lhs, const addressed_message& rhs) {
+inline bool operator!=(const addressed_message& lhs,
+                       const addressed_message& rhs) {
     return !(lhs == rhs);
 }
 

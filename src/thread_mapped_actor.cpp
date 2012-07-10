@@ -36,6 +36,7 @@
 #include "cppa/self.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 
 #include "cppa/detail/matches.hpp"
@@ -56,34 +57,17 @@ void thread_mapped_actor::quit(std::uint32_t reason) {
 }
 
 void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
-    auto node = fetch_node(sender, std::move(msg));
-    CPPA_REQUIRE(node->marked == false);
-    m_mailbox.push_back(node);
+    m_mailbox.push_back(fetch_node(sender, std::move(msg)));
+}
+
+void thread_mapped_actor::sync_enqueue(actor* sender,
+                                       message_id_t id,
+                                       any_tuple msg ) {
+    m_mailbox.push_back(fetch_node(sender, std::move(msg), id));
 }
 
 bool thread_mapped_actor::initialized() {
     return m_initialized;
 }
-
-detail::filter_result thread_mapped_actor::filter_msg(const any_tuple& msg) {
-    auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
-    if (   m_trap_exit == false
-        && msg.size() == 2
-        && msg.type_at(0) == arr[0]
-        && msg.type_at(1) == arr[1]) {
-        auto v0 = msg.get_as<atom_value>(0);
-        auto v1 = msg.get_as<std::uint32_t>(1);
-        if (v0 == atom("EXIT")) {
-            if (v1 != exit_reason::normal) {
-                quit(v1);
-            }
-            return detail::normal_exit_signal;
-        }
-
-    }
-    return detail::ordinary_message;
-}
-
-
 
 } // namespace cppa::detail

@@ -39,6 +39,7 @@
 #include <vector>
 #include <memory>
 #include <thread>
+#include <cstdint>
 #include <algorithm>
 
 #include "cppa/atom.hpp"
@@ -55,18 +56,48 @@ namespace cppa { class self_type; }
 
 namespace cppa { namespace detail {
 
-/**
+template<class Base>
+class abstract_actor_base : public Base {
+
+ protected:
+
+    template<typename... Args>
+    abstract_actor_base(Args&&... args) : Base(std::forward<Args>(args)...) { }
+
+    inline void base_cleanup(std::uint32_t) { }
+
+};
+
+template<>
+class abstract_actor_base<local_actor> : public local_actor {
+
+    typedef local_actor super;
+
+ protected:
+
+    template<typename... Args>
+    abstract_actor_base(Args&&... args) : super(std::forward<Args>(args)...) { }
+
+    inline void base_cleanup(std::uint32_t) {
+        // leave groups
+        this->m_subscriptions.clear();
+    }
+
+};
+
+/*
  * @brief Implements linking and monitoring for actors.
  * @tparam Base Either {@link cppa::actor actor}
  *              or {@link cppa::local_actor local_actor}.
  */
 template<class Base>
-class abstract_actor : public Base {
+class abstract_actor : public abstract_actor_base<Base> {
 
     friend class self_type;
 
-    typedef std::unique_ptr<attachable> attachable_ptr;
+    typedef abstract_actor_base<Base> super;
     typedef std::lock_guard<std::mutex> guard_type;
+    typedef std::unique_ptr<attachable> attachable_ptr;
 
  public:
 
@@ -158,7 +189,9 @@ class abstract_actor : public Base {
 
     typedef std::lock_guard<util::shared_spinlock> lock_type;
 
-    inline mailbox_element* fetch_node(actor* sender, any_tuple msg) {
+    inline mailbox_element* fetch_node(actor* sender,
+                                       any_tuple msg,
+                                       message_id_t id = message_id_t()) {
         mailbox_element* result = nullptr;
         { // lifetime scope of guard
             lock_type guard{m_nodes_lock};
@@ -167,15 +200,8 @@ class abstract_actor : public Base {
                 m_nodes.pop_back();
             }
         }
-        if (result) {
-            result->next = nullptr;
-            result->marked = false;
-            result->sender = sender;
-            result->msg = std::move(msg);
-        }
-        else {
-            result = new mailbox_element(sender, std::move(msg));
-        }
+        if (result) result->reset(sender, id, std::move(msg));
+        else result = new mailbox_element(sender, std::move(msg), id);
         return result;
     }
 
@@ -191,8 +217,8 @@ class abstract_actor : public Base {
     }
 
     template<typename... Args>
-    abstract_actor(Args&&... args) : Base(std::forward<Args>(args)...)
-                                   , m_exit_reason(exit_reason::not_exited) {
+    abstract_actor(Args&&... args)
+    : super(std::forward<Args>(args)...),m_exit_reason(exit_reason::not_exited){
         // pre-allocate some nodes
         for (size_t i = 0; i < m_nodes.max_size() / 2; ++i) {
             m_nodes.push_back(new mailbox_element);
@@ -201,6 +227,7 @@ class abstract_actor : public Base {
 
     void cleanup(std::uint32_t reason) {
         if (reason == exit_reason::not_exited) return;
+        this->base_cleanup(reason);
         decltype(m_links) mlinks;
         decltype(m_attachables) mattachables;
         { // lifetime scope of guard

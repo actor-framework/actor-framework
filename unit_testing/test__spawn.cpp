@@ -414,7 +414,30 @@ size_t test__spawn() {
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
     send(self, 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
+    CPPA_IF_VERBOSE(cout << "... with empty message... " << std::flush);
+    self << any_tuple{};
+    receive(on() >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    self << any_tuple{};
+    receive(on() >> []() { });
+
+
+    /*
+    // (2) sync_send returning a 'future'
+    auto future = sync_send(foo, atom("get_state"));
+
+    //  *  blocking
+    receive_response(future) (
+        // ...
+    );
+
+    //  *  event-based
+    become_waiting_for(future) (
+        // ...
+    );
+    */
+
 
     CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << std::flush);
     receive (
@@ -536,6 +559,108 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    CPPA_IF_VERBOSE(cout << "test sync send/receive ... " << std::flush);
+    auto sync_testee1 = spawn([]() {
+        receive (
+            on(atom("get")) >> []() {
+                reply(42, 2);
+            }
+        );
+    });
+    send(self, 0, 0);
+    auto handle = sync_send(sync_testee1, atom("get"));
+    // wait for some time (until sync response arrived in mailbox)
+    receive (after(std::chrono::milliseconds(50)) >> []() { });
+    // enqueue async messages (must be skipped by receive_response)
+    send(self, 42, 1);
+    // must skip sync message
+    receive (
+        on(42, arg_match) >> [&](int i) {
+            CPPA_CHECK_EQUAL(1, i);
+        }
+    );
+    // must skip remaining async message
+    receive_response (handle) (
+        on_arg_match >> [&](int a, int b) {
+            CPPA_CHECK_EQUAL(42, a);
+            CPPA_CHECK_EQUAL(2, b);
+        },
+        others() >> [&]() {
+            CPPA_ERROR("unexpected message");
+        },
+        after(std::chrono::seconds(10)) >> [&]() {
+            CPPA_ERROR("timeout during receive_response");
+        }
+    );
+    // dequeue remaining async. message
+    receive (on(0, 0) >> []() { });
+    // make sure there's no other message in our mailbox
+    receive (
+        others() >> [&]() {
+            CPPA_ERROR("unexpected message");
+        },
+        after(std::chrono::seconds(0)) >> []() { }
+    );
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    auto inflater = factory::event_based(
+        [](std::string*, actor_ptr* receiver) {
+            self->become(
+                on_arg_match >> [=](int n, const std::string& s) {
+                    send(*receiver, n * 2, s);
+                },
+                on(atom("done")) >> []() {
+                    self->quit();
+                }
+            );
+        }
+    );
+    auto joe = inflater.spawn("Joe", self);
+    auto bob = inflater.spawn("Bob", joe);
+    send(bob, 1, "hello actor");
+    receive (
+        on(4, "hello actor") >> []() {
+            // done
+        },
+        others() >> [] {
+            cerr << "unexpected: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
+    // kill joe and bob
+    auto poison_pill = make_any_tuple(atom("done"));
+    joe << poison_pill;
+    bob << poison_pill;
+    await_all_others_done();
+
+    std::function<actor_ptr (const std::string&, const actor_ptr&)> spawn_next;
+    auto kr34t0r = factory::event_based(
+        // it's safe to pass spawn_next as reference here, because
+        // - it is guaranteeed to outlive kr34t0r by general scoping rules
+        // - the lambda is always executed in the current actor's thread
+        // but using spawn_next in a message handler could
+        // still cause undefined behavior!
+        [&spawn_next](std::string* name, actor_ptr* pal) {
+            if (*name == "Joe" && !*pal) {
+                *pal = spawn_next("Bob", self);
+            }
+            self->become (
+                others() >> [pal,name]() {
+                    cout << "hello & bye from " << *name << endl;
+                    // forward message and die
+                    *pal << self->last_dequeued();
+                    self->quit();
+                }
+            );
+        }
+    );
+    spawn_next = [&kr34t0r](const std::string& name, const actor_ptr& pal) {
+        return kr34t0r.spawn(name, pal);
+    };
+    auto joe_the_second = kr34t0r.spawn("Joe");
+    send(joe_the_second, atom("done"));
+    await_all_others_done();
+
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
     factory::event_based([&]() {
@@ -593,6 +718,16 @@ size_t test__spawn() {
     auto kill_msg = make_any_tuple(atom("EXIT"), exit_reason::user_defined);
     a1 << kill_msg;
     a2 << kill_msg;
+    await_all_others_done();
+
+    factory::event_based([](int* i) {
+        self->become(
+            after(std::chrono::milliseconds(50)) >> [=]() {
+                if (++(*i) >= 5) self->quit();
+            }
+
+        );
+    }).spawn();
     await_all_others_done();
 
     auto res1 = behavior_test<testee_actor>(spawn(testee_actor{}));

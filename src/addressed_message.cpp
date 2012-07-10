@@ -33,13 +33,17 @@
 
 namespace cppa { namespace detail {
 
-addressed_message::addressed_message(actor_ptr from, channel_ptr to, any_tuple ut)
-    : m_sender(std::move(from)), m_receiver(std::move(to)), m_content(std::move(ut)) {
-}
+addressed_message::addressed_message(actor_ptr from,
+                                     channel_ptr to,
+                                     any_tuple ut,
+                                     message_id_t id  )
+: m_sender(std::move(from)), m_receiver(std::move(to))
+, m_msg_id(id), m_content(std::move(ut))      { }
 
 bool operator==(const addressed_message& lhs, const addressed_message& rhs) {
     return    lhs.sender() == rhs.sender()
            && lhs.receiver() == rhs.receiver()
+           && lhs.id() == rhs.id()
            && lhs.content() == rhs.content();
 }
 

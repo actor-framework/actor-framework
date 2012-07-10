@@ -1,6 +1,6 @@
 import scala.actors.Actor
 import scala.actors.Actor._
-import akka.actor.Actor.actorOf
+import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
 
 case object GoAhead
 
@@ -57,37 +57,37 @@ class ThreadlessTestee(parent: Actor) extends Actor {
     }
 }
 
-class AkkaTestee(parent: akka.actor.ActorRef) extends akka.actor.Actor {
+class AkkaTestee(parent: AkkaActorRef) extends AkkaActor {
     def receive = {
         case Spread(0) =>
             parent ! Result(1)
-            self.stop
+            context.stop(self)
         case Spread(s) =>
             val msg = Spread(s-1)
-            actorOf(new AkkaTestee(self)).start ! msg
-            actorOf(new AkkaTestee(self)).start ! msg
-            become {
+            context.actorOf(Props(new AkkaTestee(self))) ! msg
+            context.actorOf(Props(new AkkaTestee(self))) ! msg
+            context.become {
                 case Result(r1) =>
-                    become {
+                    context.become {
                         case Result(r2) =>
                             parent ! Result(r1 + r2)
-                            self.exit
+                            context.stop(self)
                     }
             }
     }
 }
 
-class AkkaRootTestee(n: Int) extends akka.actor.Actor {
+class AkkaRootTestee(n: Int) extends AkkaActor {
     def receive = {
         case GoAhead =>
-            actorOf(new AkkaTestee(self)).start ! Spread(n)
+            context.actorOf(Props(new AkkaTestee(self))) ! Spread(n)
         case Result(v) =>
             if (v != (1 << n)) {
                 Console.println("Expected " + (1 << n) + ", received " + v)
                 System.exit(42)
             }
             global.latch.countDown
-            self.exit
+            context.stop(self)
     }
 }
 
@@ -122,9 +122,11 @@ object ActorCreation {
             }
         }
         else if (args(0) == "akka") {
-            actorOf(new AkkaRootTestee(n)).start ! GoAhead
+            val system = ActorSystem()
+            system.actorOf(Props(new AkkaRootTestee(n))) ! GoAhead
             global.latch.await
         }
         else usage
     }
 }
+

@@ -1,9 +1,57 @@
 cmake_minimum_required(VERSION 2.4)
 project(cppa CXX)
 
+# Prohibit in-source builds.
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+    message(FATAL_ERROR "In-source builds are not allowed. Please use "
+                        "./configure to choose a build directory and "
+                        "initialize the build configuration.")
+endif ()
+
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wextra -Wall -pedantic") 
+# Check if the user provided CXXFLAGS on the command line.
+if (CMAKE_CXX_FLAGS)
+    set(CXXFLAGS_PROVIDED true)
+ENDIF ()
+
+if (CXXFLAGS_PROVIDED)
+    set(CMAKE_CXX_FLAGS_DEBUG          "")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
+    set(CMAKE_CXX_FLAGS_RELEASE        "")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
+else ()
+    set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
+    set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+endif ()
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
+                    OUTPUT_VARIABLE GCC_VERSION)
+    if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
+        message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+    endif ()
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    if (NOT CXXFLAGS_PROVIDED)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    endif ()
+else ()
+    message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+endif ()
+
+if (ENABLE_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
+else ()
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif ()
+
+if (DISABLE_CONTEXT_SWITCHING)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
+endif()
 
 set(LIBCPPA_SRC
     src/abstract_tuple.cpp
@@ -60,40 +108,26 @@ set(LIBCPPA_SRC
     src/context_switching_actor.cpp
 )
 
-set(boost_context third_party/boost_context/)
+set(boost_context third_party/boost_context)
 
-# add third_party boost_context sources
-if(APPLE)
+# add third party Boost.Context sources if context-switching is enabled
+if(NOT DISABLE_CONTEXT_SWITCHING)
   if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S
-                 PROPERTY LANGUAGE CXX)
-    set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
+    if(APPLE)
+      set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
+    else()
+      set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
+    endif()
+  elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if(APPLE)
+      set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
+    else()
+      set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
+    endif()
   else()
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
-                 PROPERTY LANGUAGE CXX)
-    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
+    message(FATAL_ERROR "Unsupported platform (neither 32 nor 64 bit)")
   endif()
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
-      ${boost_context}/src/stack_utils_posix.cpp
-      ${boost_context}/src/stack_allocator_posix.cpp
-      ${boost_context}/src/fcontext.cpp
-      ${fcontext_asm}
-  )
-elseif(UNIX)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S
-                 PROPERTY LANGUAGE CXX)
-    set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
-  else()
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S
-                 PROPERTY LANGUAGE CXX)
-    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
-  endif()
+  set_property(SOURCE ${fcontext_asm} PROPERTY LANGUAGE CXX)
   set(LIBCPPA_SRC
       ${LIBCPPA_SRC}
       ${fcontext_asm}
@@ -113,8 +147,9 @@ add_library(libcppa SHARED ${LIBCPPA_SRC})
 target_link_libraries(libcppa ${CMAKE_LD_LIBS} ${Boost_THREAD_LIBRARY})
 
 set(LIBCPPA_VERSION_MAJOR 0)
-set(LIBCPPA_VERSION_MINOR 2)
+set(LIBCPPA_VERSION_MINOR 3)
 set(LIBCPPA_VERSION_PATCH 0)
+
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
 
@@ -124,12 +159,12 @@ install(TARGETS libcppa LIBRARY DESTINATION lib)
 # install includes
 install(DIRECTORY cppa/ DESTINATION include/cppa
     FILES_MATCHING PATTERN "*.hpp")
+
 # uninstall target
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
-
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P
     ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
@@ -162,6 +197,7 @@ else ()
   set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
 endif ()
 
+enable_testing()
 add_subdirectory(unit_testing)
 add_subdirectory(examples)
 add_subdirectory(benchmarks)
@@ -183,3 +219,32 @@ add_dependencies(mailbox_performance libcppa)
 add_dependencies(mixed_case libcppa)
 add_dependencies(distributed libcppa)
 add_dependencies(matching libcppa)
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+set(CONTEXT_SWITCHING true)
+if (DISABLE_CONTEXT_SWITCHING)
+    set(CONTEXT_SWITCHING false)
+endif()
+
+message(
+    "\n====================|  Build Summary  |===================="
+    "\n"
+    "\nLibcppa version:   ${LIBRARY_VERSION}"
+    "\n"
+    "\nBuild type:        ${CMAKE_BUILD_TYPE}"
+    "\nDebug mode:        ${ENABLE_DEBUG}"
+    "\nContext switching: ${CONTEXT_SWITCHING}"
+    "\n"
+    "\nCXX:               ${CMAKE_CXX_COMPILER}"
+    "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+    "\n"
+    "\nSource directory:  ${CMAKE_SOURCE_DIR}"
+    "\nBuild directory:   ${CMAKE_BINARY_DIR}"
+    "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
+    "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
+    "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+    "\n"
+    "\nBoost:             ${Boost_INCLUDE_DIR}"
+    "\n"
+    "\n===========================================================\n"
+)

@@ -87,6 +87,8 @@ struct type_list<Head, Tail...> {
 
 };
 
+typedef type_list<> empty_type_list;
+
 template<typename T>
 struct is_type_list {
     static constexpr bool value = false;
@@ -95,6 +97,16 @@ struct is_type_list {
 template<typename... Ts>
 struct is_type_list<type_list<Ts...> > {
     static constexpr bool value = true;
+};
+
+// bool empty(type_list)
+
+/**
+ * @brief Tests whether a list is empty.
+ */
+template<class List>
+struct tl_empty {
+    static constexpr bool value = std::is_same<empty_type_list, List>::value;
 };
 
 // list slice(size_t, size_t)
@@ -125,12 +137,12 @@ struct tl_slice_impl<0, Remaining, PadType, List, T...> {
 };
 
 template<size_t Remaining, typename PadType, typename... T>
-struct tl_slice_impl<0, Remaining, PadType, type_list<>, T...> {
+struct tl_slice_impl<0, Remaining, PadType, empty_type_list, T...> {
     typedef typename tl_slice_impl<
                 0,
                 Remaining - 1,
                 PadType,
-                type_list<>,
+                empty_type_list,
                 T..., PadType
             >::type
             type;
@@ -142,7 +154,7 @@ struct tl_slice_impl<0, 0, PadType, List, T...> {
 };
 
 template<typename PadType, typename... T>
-struct tl_slice_impl<0, 0, PadType, type_list<>, T...> {
+struct tl_slice_impl<0, 0, PadType, empty_type_list, T...> {
     typedef type_list<T...> type;
 };
 
@@ -263,8 +275,8 @@ struct tl_zip_with_index {
 };
 
 template<>
-struct tl_zip_with_index<type_list<> > {
-    typedef type_list<> type;
+struct tl_zip_with_index<empty_type_list> {
+    typedef empty_type_list type;
 };
 
 // list reverse()
@@ -278,7 +290,7 @@ struct tl_reverse_impl<type_list<T0, T...>, E...> {
 };
 
 template<typename... E>
-struct tl_reverse_impl<type_list<>, E...> {
+struct tl_reverse_impl<empty_type_list, E...> {
     typedef type_list<E...> type;
 };
 
@@ -300,7 +312,7 @@ template<class List, template<typename> class Predicate, int Pos = 0>
 struct tl_find_impl;
 
 template<template<typename> class Predicate, int Pos>
-struct tl_find_impl<type_list<>, Predicate, Pos> {
+struct tl_find_impl<empty_type_list, Predicate, Pos> {
     static constexpr int value = -1;
 };
 
@@ -348,7 +360,7 @@ struct tl_forall {
 };
 
 template<template<typename> class Predicate>
-struct tl_forall<type_list<>, Predicate> {
+struct tl_forall<empty_type_list, Predicate> {
     static constexpr bool value = true;
 };
 
@@ -364,7 +376,7 @@ struct tl_forall2_impl {
 };
 
 template<template<typename, typename> class Predicate>
-struct tl_forall2_impl<type_list<>, type_list<>, Predicate> {
+struct tl_forall2_impl<empty_type_list, empty_type_list, Predicate> {
     static constexpr bool value = true;
 };
 
@@ -390,7 +402,7 @@ struct tl_exists {
 };
 
 template<template<typename> class Predicate>
-struct tl_exists<type_list<>, Predicate> {
+struct tl_exists<empty_type_list, Predicate> {
     static constexpr bool value = false;
 };
 
@@ -407,7 +419,7 @@ struct tl_count {
 };
 
 template<template<typename> class Predicate>
-struct tl_count<type_list<>, Predicate> {
+struct tl_count<empty_type_list, Predicate> {
     static constexpr size_t value = 0;
 };
 
@@ -423,7 +435,7 @@ struct tl_count_not {
 };
 
 template<template<typename> class Predicate>
-struct tl_count_not<type_list<>, Predicate> {
+struct tl_count_not<empty_type_list, Predicate> {
     static constexpr size_t value = 0;
 };
 
@@ -441,7 +453,7 @@ struct tl_zipped_forall {
 };
 
 template<template<typename, typename> class Predicate>
-struct tl_zipped_forall<type_list<>, Predicate> {
+struct tl_zipped_forall<empty_type_list, Predicate> {
     static constexpr bool value = true;
 };
 
@@ -561,8 +573,8 @@ struct tl_map_conditional {
 template<template<typename> class Trait,
          bool TraitResult,
          template<typename> class... Funs>
-struct tl_map_conditional<type_list<>, Trait, TraitResult, Funs...> {
-    typedef type_list<> type;
+struct tl_map_conditional<empty_type_list, Trait, TraitResult, Funs...> {
+    typedef empty_type_list type;
 };
 
 /*
@@ -611,8 +623,8 @@ struct tl_pop_back {
 };
 
 template<>
-struct tl_pop_back<type_list<> > {
-    typedef type_list<> type;
+struct tl_pop_back<empty_type_list> {
+    typedef empty_type_list type;
 };
 
 // type at(size_t)
@@ -664,8 +676,8 @@ template<class List, bool... Selected>
 struct tl_filter_impl;
 
 template<>
-struct tl_filter_impl< type_list<> > {
-    typedef type_list<> type;
+struct tl_filter_impl<empty_type_list> {
+    typedef empty_type_list type;
 };
 
 template<typename T0, typename... T, bool... S>
@@ -697,8 +709,8 @@ template<class List, template<typename> class Predicate>
 struct tl_filter_not;
 
 template<template<typename> class Predicate>
-struct tl_filter_not<type_list<>, Predicate> {
-    typedef type_list<> type;
+struct tl_filter_not<empty_type_list, Predicate> {
+    typedef empty_type_list type;
 };
 
 template<template<typename> class Predicate, typename... T>
@@ -739,7 +751,7 @@ template<class List>
 struct tl_distinct;
 
 template<>
-struct tl_distinct<type_list<> > { typedef type_list<> type; };
+struct tl_distinct<empty_type_list> { typedef empty_type_list type; };
 
 template<typename Head, typename... Tail>
 struct tl_distinct<type_list<Head, Tail...> > {
@@ -845,8 +857,8 @@ struct tl_trim {
 };
 
 template<typename What>
-struct tl_trim<type_list<>, What> {
-    typedef type_list<> type;
+struct tl_trim<empty_type_list, What> {
+    typedef empty_type_list type;
 };
 
 // list group_by(list, predicate)
@@ -885,7 +897,7 @@ struct tl_group_by_impl {
 };
 
 template<template<typename, typename> class Predicate, typename Head, typename... Tail>
-struct tl_group_by_impl<type_list<Head, Tail...>, type_list<>, Predicate> {
+struct tl_group_by_impl<type_list<Head, Tail...>, empty_type_list, Predicate> {
     typedef typename tl_group_by_impl<
                 type_list<Tail...>,
                 type_list<type_list<Head> >,
@@ -895,14 +907,14 @@ struct tl_group_by_impl<type_list<Head, Tail...>, type_list<>, Predicate> {
 };
 
 template<class Out, template<typename, typename> class Predicate>
-struct tl_group_by_impl<type_list<>, Out, Predicate> {
+struct tl_group_by_impl<empty_type_list, Out, Predicate> {
     typedef Out type;
 };
 
 
 template<class List, template<typename, typename> class Predicate>
 struct tl_group_by {
-    typedef typename tl_group_by_impl<List, type_list<>, Predicate>::type type;
+    typedef typename tl_group_by_impl<List, empty_type_list, Predicate>::type type;
 };
 
 /**

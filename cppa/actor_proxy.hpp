@@ -55,6 +55,8 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     void enqueue(actor* sender, any_tuple msg);
 
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
+
     void link_to(intrusive_ptr<actor>& other);
 
     // do not cause to send this actor an "UNLINK" message
@@ -71,9 +73,10 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     bool establish_backlink(intrusive_ptr<actor>& to);
 
- public:
-
-    void forward_message(const process_information_ptr&, actor*, any_tuple&&);
+    void forward_message(const process_information_ptr&,
+                         actor*,
+                         any_tuple&&,
+                         message_id_t = message_id_t()      );
 
 };
 

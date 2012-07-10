@@ -171,6 +171,12 @@ void binary_serializer::write_value(const primitive_variant& value) {
     value.apply(detail::binary_writer(this));
 }
 
+void binary_serializer::write_raw(size_t num_bytes, const void* data) {
+    acquire(num_bytes);
+    memcpy(m_wr_pos, data, num_bytes);
+    m_wr_pos += num_bytes;
+}
+
 void binary_serializer::write_tuple(size_t size,
                                     const primitive_variant* values) {
     const primitive_variant* end = values + size;

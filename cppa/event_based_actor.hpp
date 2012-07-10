@@ -71,6 +71,11 @@ class event_based_actor : public detail::abstract_scheduled_actor {
      */
     void dequeue(partial_function&); //override
 
+    /**
+     * @copydoc dequeue(behavior&)
+     */
+    void dequeue_response(behavior&, message_id_t);
+
     resume_result resume(util::fiber*); //override
 
     /**
@@ -137,7 +142,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
     }
 
         // required by detail::nestable_receive_policy
-    static const detail::receive_policy_flag receive_flag = detail::rp_callback;
+    static const detail::receive_policy_flag receive_flag = detail::rp_sequential;
     inline void handle_timeout(behavior& bhvr) {
         CPPA_REQUIRE(bhvr.timeout().valid());
         m_has_pending_timeout_request = false;

@@ -81,20 +81,6 @@ class thread_pool_scheduler : public scheduler {
 
     actor_ptr spawn_as_thread(void_function fun, init_callback cb, bool hidden);
 
-#   ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-    template<typename F>
-    actor_ptr spawn_impl(void_function fun, scheduling_hint sh, F cb) {
-        if (sh == scheduled) {
-            scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
-            ptr->attach_to_scheduler(this);
-            cb(ptr.get());
-            return spawn_impl(std::move(ptr));
-        }
-        else {
-            return spawn_as_thread(std::move(fun), std::move(cb));
-        }
-    }
-#   endif
 };
 
 } } // namespace cppa::detail

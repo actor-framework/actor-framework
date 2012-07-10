@@ -31,12 +31,9 @@
 #ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 #define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 
-#include "cppa/config.hpp"
-
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-
 #include <stack>
 
+#include "cppa/config.hpp"
 #include "cppa/either.hpp"
 #include "cppa/pattern.hpp"
 
@@ -73,6 +70,7 @@ class context_switching_actor : public detail::stacked_actor_mixin<
                                            context_switching_actor,
                                            detail::abstract_scheduled_actor> {
 
+    friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
     typedef detail::stacked_actor_mixin<
@@ -120,7 +118,5 @@ class context_switching_actor : public detail::stacked_actor_mixin<
 #endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
-
-#endif // CPPA_DISABLE_CONTEXT_SWITCHING
 
 #endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP

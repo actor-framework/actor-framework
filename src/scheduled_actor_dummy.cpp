@@ -35,6 +35,7 @@ namespace cppa { namespace detail {
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue(partial_function&) { }
+void scheduled_actor_dummy::dequeue_response(behavior&, message_id_t) { }
 void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::detach(const attachable::token&) { }

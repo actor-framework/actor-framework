@@ -87,6 +87,8 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
                                        detail::abstract_actor<local_actor> > {
 
     friend class self_type; // needs access to cleanup()
+
+    friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
     typedef detail::stacked_actor_mixin<
@@ -103,7 +105,7 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
 
     void enqueue(actor* sender, any_tuple msg); //override
 
-    detail::filter_result filter_msg(const any_tuple& msg);
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
     inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
 
@@ -121,6 +123,7 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
     static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
     inline void push_timeout() { }
     inline void pop_timeout() { }
+    inline bool waits_for_timeout(std::uint32_t) { return false; }
     inline detail::recursive_queue_node* receive_node() {
         return m_mailbox.pop();
     }

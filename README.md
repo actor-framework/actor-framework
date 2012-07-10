@@ -24,14 +24,12 @@ Get the Sources
 First Steps
 -----------
 
-* mkdir build
-* cd build
-* cmake ..
+* ./configure
 * make
 
 It is recommended to run the unit tests as well.
 
-* ./bin/unit_tests
+* make test
 
 Please submit a bug report that includes (a) your compiler version, (b) your OS,
 and (c) the output of the unit tests if an error occurs.

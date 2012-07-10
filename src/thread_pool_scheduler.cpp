@@ -51,6 +51,24 @@ namespace {
 typedef std::unique_lock<std::mutex> guard_type;
 typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
+/*
+template<typename F>
+actor_ptr spawn_void_fun_impl(thread_pool_scheduler* _this,
+                              void_function fun,
+                              scheduling_hint sh,
+                              F cb                         ) {
+    if (sh == scheduled) {
+        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+        ptr->attach_to_scheduler(_this);
+        cb(ptr.get());
+        return _this->spawn_impl(std::move(ptr));
+    }
+    else {
+        return _this->spawn_as_thread(std::move(fun), std::move(cb));
+    }
+}
+*/
+
 } // namespace <anonmyous>
 
 struct thread_pool_scheduler::worker {
@@ -245,6 +263,7 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw, init_callback cb) {
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+
 actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint sh) {
     if (sh == scheduled) {
         scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
@@ -267,17 +286,26 @@ actor_ptr thread_pool_scheduler::spawn(void_function fun,
         return spawn_impl(std::move(ptr));
     }
     else {
-        return spawn_as_thread(std::move(fun), std::move(init_cb), sh == detached_and_hidden);
+        return spawn_as_thread(std::move(fun),
+                               std::move(init_cb),
+                               sh == detached_and_hidden);
     }
 }
-#else
-actor_ptr thread_pool_scheduler::spawn(void_function what, scheduling_hint) {
-    return spawn_as_thread(std::move(what), [](local_actor*) { });
+
+#else // CPPA_DISABLE_CONTEXT_SWITCHING
+
+actor_ptr thread_pool_scheduler::spawn(void_function what, scheduling_hint sh) {
+    return spawn_as_thread(std::move(what),
+                           [](local_actor*) { },
+                           sh == detached_and_hidden);
 }
+
 actor_ptr thread_pool_scheduler::spawn(void_function what,
-                                       scheduling_hint,
+                                       scheduling_hint sh,
                                        init_callback init_cb) {
-    return spawn_as_thread(std::move(what), std::move(init_cb));
+    return spawn_as_thread(std::move(what),
+                           std::move(init_cb),
+                           sh == detached_and_hidden);
 }
 #endif
 

@@ -50,7 +50,7 @@ class container_tuple_view : public abstract_tuple {
     typedef typename Container::value_type value_type;
 
     container_tuple_view(Container* c, bool take_ownership = false)
-        : super(tuple_impl_info::dynamically_typed), m_ptr(c) {
+    : super(tuple_impl_info::dynamically_typed), m_ptr(c) {
         CPPA_REQUIRE(c != nullptr);
         if (!take_ownership) m_ptr.get_deleter().disable();
     }
@@ -65,7 +65,7 @@ class container_tuple_view : public abstract_tuple {
 
     const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
-        auto i = m_ptr->begin();
+        auto i = m_ptr->cbegin();
         std::advance(i, pos);
         return &(*i);
     }

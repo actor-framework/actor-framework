@@ -28,18 +28,83 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FILTER_RESULT_HPP
-#define CPPA_FILTER_RESULT_HPP
+#ifndef CPPA_MESSAGE_ID_HPP
+#define CPPA_MESSAGE_ID_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/config.hpp"
 
-enum filter_result {
-    normal_exit_signal,
-    expired_timeout_message,
-    timeout_message,
-    ordinary_message
+namespace cppa {
+
+/**
+ * @brief
+ * @note Asynchronous messages always have an invalid message id.
+ */
+class message_id_t {
+
+    static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
+    static constexpr std::uint64_t answered_flag_mask = 0x4000000000000000;
+    static constexpr std::uint64_t request_id_mask    = 0x3FFFFFFFFFFFFFFF;
+
+    friend bool operator==(const message_id_t& lhs, const message_id_t& rhs);
+
+ public:
+
+    constexpr message_id_t() : m_value(0) { }
+
+    message_id_t(message_id_t&&) = default;
+    message_id_t(const message_id_t&) = default;
+    message_id_t& operator=(message_id_t&&) = default;
+    message_id_t& operator=(const message_id_t&) = default;
+
+    inline message_id_t& operator++() {
+        ++m_value;
+        return *this;
+    }
+
+    inline bool is_response() const {
+        return (m_value & response_flag_mask) != 0;
+    }
+
+    inline bool is_answered() const {
+        return (m_value & answered_flag_mask) != 0;
+    }
+
+    inline bool valid() const {
+        return m_value != 0;
+    }
+
+    inline bool is_request() const {
+        return valid() && !is_response();
+    }
+
+    inline message_id_t response_id() const {
+        return message_id_t(valid() ? m_value | response_flag_mask : 0);
+    }
+
+    inline message_id_t request_id() const {
+        return message_id_t(m_value & request_id_mask);
+    }
+
+    inline void mark_as_answered() {
+        m_value |= answered_flag_mask;
+    }
+
+ private:
+
+    explicit message_id_t(std::uint64_t value) : m_value(value) { }
+
+    std::uint64_t m_value;
+
 };
 
-} } // namespace cppa::detail
+inline bool operator==(const message_id_t& lhs, const message_id_t& rhs) {
+    return lhs.m_value == rhs.m_value;
+}
 
-#endif // CPPA_FILTER_RESULT_HPP
+inline bool operator!=(const message_id_t& lhs, const message_id_t& rhs) {
+    return !(lhs == rhs);
+}
+
+} // namespace cppa
+
+#endif // CPPA_MESSAGE_ID_HPP

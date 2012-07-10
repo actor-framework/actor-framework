@@ -61,7 +61,7 @@ bool empty_tuple::equals(const abstract_tuple& other) const {
 }
 
 const std::type_info* empty_tuple::type_token() const {
-    return &typeid(util::type_list<>);
+    return &typeid(util::empty_type_list);
 }
 
 } } // namespace cppa::detail

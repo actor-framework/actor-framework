@@ -129,6 +129,8 @@ class value_guard {
 
 };
 
+typedef value_guard<util::empty_type_list> empty_value_guard;
+
 } } // namespace cppa::detail
 
 #endif // CPPA_VALUE_GUARD_HPP

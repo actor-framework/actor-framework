@@ -58,50 +58,42 @@
 namespace cppa { namespace detail {
 
 template<bool IsFun, typename T>
-struct add_ptr_to_fun_ {
-    typedef T* type;
-};
+struct add_ptr_to_fun_ { typedef T* type; };
 
 template<typename T>
-struct add_ptr_to_fun_<false, T> {
-    typedef T type;
-};
+struct add_ptr_to_fun_<false, T> { typedef T type; };
 
 template<typename T>
-struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> {
-};
+struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> { };
 
 template<bool ToVoid, typename T>
-struct to_void_impl {
-    typedef util::void_type type;
-};
+struct to_void_impl { typedef util::void_type type; };
 
 template<typename T>
-struct to_void_impl<false, T> {
-    typedef typename add_ptr_to_fun<T>::type type;
-};
+struct to_void_impl<false,T> { typedef typename add_ptr_to_fun<T>::type type; };
 
 template<typename T>
-struct not_callable_to_void : to_void_impl<detail::is_boxed<T>::value || !util::is_callable<T>::value, T> {
-};
+struct boxed_and_not_callable_to_void
+: to_void_impl<is_boxed<T>::value || !util::is_callable<T>::value, T> { };
 
 template<typename T>
-struct boxed_and_callable_to_void : to_void_impl<detail::is_boxed<T>::value || util::is_callable<T>::value, T> {
-};
+struct boxed_and_callable_to_void
+: to_void_impl<is_boxed<T>::value || util::is_callable<T>::value, T> { };
 
 class behavior_rvalue_builder {
 
-    util::duration m_timeout;
-
  public:
 
-    constexpr behavior_rvalue_builder(const util::duration& d) : m_timeout(d) {
-    }
+    constexpr behavior_rvalue_builder(const util::duration& d) : m_tout(d) { }
 
     template<typename F>
-    timeout_definition<F> operator>>(F&& f) {
-        return {m_timeout, std::forward<F>(f)};
+    timeout_definition<F> operator>>(F&& f) const {
+        return {m_tout, std::forward<F>(f)};
     }
+
+ private:
+
+    util::duration m_tout;
 
 };
 
@@ -109,14 +101,11 @@ struct rvalue_builder_args_ctor { };
 
 template<class Left, class Right>
 struct disjunct_rvalue_builders {
-    Left m_left;
-    Right m_right;
 
  public:
 
-    disjunct_rvalue_builders(Left l, Right r) : m_left(std::move(l))
-                                              , m_right(std::move(r)) {
-    }
+    disjunct_rvalue_builders(Left l, Right r)
+    : m_left(std::move(l)), m_right(std::move(r)) { }
 
     template<typename Expr>
     auto operator>>(Expr expr)
@@ -124,6 +113,11 @@ struct disjunct_rvalue_builders {
                       *(static_cast<Right*>(nullptr)) >> expr)) const {
         return (m_left >> expr).or_else(m_right >> expr);
     }
+
+ private:
+
+    Left m_left;
+    Right m_right;
 
 };
 
@@ -163,7 +157,7 @@ struct rvalue_builder {
     when(NewGuard ng,
          typename std::enable_if<
                std::is_same<NewGuard, NewGuard>::value
-            && !std::is_same<Guard, value_guard< util::type_list<> >>::value
+            && !std::is_same<Guard, empty_value_guard>::value
          >::type* = 0                                 ) const {
         return {(ge_sub_function(m_guard) && ng), std::move(m_funs)};
     }
@@ -173,8 +167,8 @@ struct rvalue_builder {
     when(NewGuard ng,
          typename std::enable_if<
                std::is_same<NewGuard, NewGuard>::value
-            && std::is_same<Guard, value_guard< util::type_list<> >>::value
-         >::type* = 0                                 ) const {
+            && std::is_same<Guard, empty_value_guard>::value
+         >::type* = 0                                       ) const {
         return {std::move(ng), std::move(m_funs)};
     }
 
@@ -311,7 +305,7 @@ detail::rvalue_builder<
     >,
     typename util::tl_map<
         util::type_list<Arg0, Args...>,
-        detail::not_callable_to_void
+        detail::boxed_and_not_callable_to_void
     >::type,
     util::type_list<typename detail::pattern_type<Arg0>::type,
                     typename detail::pattern_type<Args>::type...> >
@@ -319,10 +313,16 @@ on(const Arg0& arg0, const Args&... args) {
     return {detail::rvalue_builder_args_ctor{}, arg0, args...};
 }
 
-template<typename... T>
-detail::rvalue_builder<detail::value_guard<util::type_list<> >,
-                      util::type_list<>,
-                      util::type_list<T...> >
+inline detail::rvalue_builder<detail::empty_value_guard,
+                              util::empty_type_list,
+                              util::empty_type_list     > on() {
+    return {};
+}
+
+template<typename T0, typename... Ts>
+detail::rvalue_builder<detail::empty_value_guard,
+                       util::empty_type_list,
+                       util::type_list<T0, Ts...> >
 on() {
     return {};
 }
@@ -366,8 +366,7 @@ class on_the_fly_rvalue_builder {
 
  public:
 
-    constexpr on_the_fly_rvalue_builder() {
-    }
+    constexpr on_the_fly_rvalue_builder() { }
 
     template<typename Guard>
     auto when(Guard g) const -> decltype(on(arg_match).when(g)) {
@@ -379,23 +378,23 @@ class on_the_fly_rvalue_builder {
         typename get_case<
             false,
             Expr,
-            value_guard< util::type_list<> >,
-            util::type_list<>,
-            util::type_list<>
+            empty_value_guard,
+            util::empty_type_list,
+            util::empty_type_list
         >::type>
     operator>>(Expr expr) const {
         typedef typename get_case<
                     false,
                     Expr,
-                    value_guard< util::type_list<> >,
-                    util::type_list<>,
-                    util::type_list<>
+                    empty_value_guard,
+                    util::empty_type_list,
+                    util::empty_type_list
                 >::type
-                result;
-        return result{typename result::first_type{},
-                      typename result::second_type{
-                            std::move(expr),
-                            value_guard< util::type_list<> >{}}};
+                result_type;
+        return result_type{typename result_type::first_type{},
+                           typename result_type::second_type{
+                               std::move(expr),
+                               empty_value_guard{}}};
     }
 
 };

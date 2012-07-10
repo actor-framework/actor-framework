@@ -68,7 +68,8 @@ class down_observer : public attachable {
 } // namespace <anonymous>
 
 local_actor::local_actor(bool sflag)
-: m_chaining(sflag), m_trap_exit(false), m_is_scheduled(sflag) { }
+: m_chaining(sflag), m_trap_exit(false)
+, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
 
 void local_actor::monitor(actor_ptr whom) {
     if (whom) whom->attach(new down_observer(this, whom));
@@ -84,14 +85,38 @@ void local_actor::on_exit() { }
 void local_actor::init() { }
 
 void local_actor::join(const group_ptr& what) {
-    if (what) attach(what->subscribe(this));
+    if (what && m_subscriptions.count(what) == 0) {
+        m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
+    }
 }
 
 void local_actor::leave(const group_ptr& what) {
-    if (what) {
-        attachable::token group_token(typeid(group::unsubscriber), what.get());
-        detach(group_token);
+    if (what) m_subscriptions.erase(what);
+}
+
+std::vector<group_ptr> local_actor::joined_groups() {
+    std::vector<group_ptr> result;
+    for (auto& kvp : m_subscriptions) {
+        result.emplace_back(kvp.first);
     }
+    return result;
+}
+
+void local_actor::reply_message(any_tuple&& what) {
+    auto& whom = last_sender();
+    if (whom == nullptr) {
+        return;
+    }
+    auto response_id = get_response_id();
+    if (!response_id.valid()) {
+        send_message(whom.get(), std::move(what));
+    }
+    else if (chaining_enabled()) {
+        if (whom->chained_sync_enqueue(this, response_id, std::move(what))) {
+            m_chained_actor = whom;
+        }
+    }
+    else whom->sync_enqueue(this, response_id, std::move(what));
 }
 
 } // namespace cppa

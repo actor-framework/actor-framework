@@ -116,11 +116,35 @@ class scheduler {
     template<typename Duration, typename... Data>
     void delayed_send(const channel_ptr& to,
                       const Duration& rel_time,
-                      Data&&... data) {
+                      Data&&... data           ) {
         static_assert(sizeof...(Data) > 0, "no message to send");
         auto sub = make_any_tuple(std::forward<Data>(data)...);
-        auto tup = make_any_tuple(util::duration{rel_time}, to, std::move(sub));
+        auto tup = make_any_tuple(atom("SEND"),
+                                  util::duration{rel_time},
+                                  to,
+                                  std::move(sub));
         delayed_send_helper()->enqueue(self, std::move(tup));
+    }
+
+    template<typename Duration, typename... Data>
+    void delayed_reply(const actor_ptr& to,
+                       const Duration& rel_time,
+                       message_id_t id,
+                       Data&&... data            ) {
+        static_assert(sizeof...(Data) > 0, "no message to send");
+        CPPA_REQUIRE(!id.valid() || id.is_response());
+        if (id.valid()) {
+            auto sub = make_any_tuple(std::forward<Data>(data)...);
+            auto tup = make_any_tuple(atom("REPLY"),
+                                      util::duration{rel_time},
+                                      to,
+                                      id,
+                                      std::move(sub));
+            delayed_send_helper()->enqueue(self, std::move(tup));
+        }
+        else {
+            delayed_send(to, rel_time, id, std::forward<Data>(data)...);
+        }
     }
 
     /**

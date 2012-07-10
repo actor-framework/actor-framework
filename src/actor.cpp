@@ -66,6 +66,11 @@ bool actor::chained_enqueue(actor* sender, any_tuple msg) {
     return false;
 }
 
+bool actor::chained_sync_enqueue(actor* ptr, message_id_t id, any_tuple msg) {
+    sync_enqueue(ptr, id, std::move(msg));
+    return false;
+}
+
 actor::actor(const process_information_ptr& pptr)
     : m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr) {
     if (!pptr) {

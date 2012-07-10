@@ -31,22 +31,32 @@
 #ifndef CPPA_CONTEXT_HPP
 #define CPPA_CONTEXT_HPP
 
+#include <cstdint>
+
+#include "cppa/group.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
+
+#include "cppa/message_id.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
 
+// forward declarations
 class scheduler;
 class local_scheduler;
 
-struct discard_behavior_t { };
-struct keep_behavior_t { };
+template<bool DiscardOld>
+struct behavior_policy { static const bool discard_old = DiscardOld; };
 
+typedef behavior_policy<false> keep_behavior_t;
+typedef behavior_policy<true > discard_behavior_t;
+
+// doxygen doesn't parse anonymous namespaces correctly
 #ifndef CPPA_DOCUMENTATION
 namespace {
 #endif // CPPA_DOCUMENTATION
@@ -132,6 +142,18 @@ class local_actor : public actor {
     virtual void dequeue(behavior& bhvr) = 0;
 
     /**
+     * @brief Waits for a response to @p request_id.
+     *        Blocks until either a response message arrives or until a
+     *        timeout occurs.
+     * @param bhvr A behavior with timeout denoting the
+     *             actor's response to the response message.
+     * @warning You should not call this member function by hand.
+     *          Use always the {@link cppa::receive_response receive_response}
+     *          function.
+     */
+    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) = 0;
+
+    /**
      * @brief Checks whether this actor traps exit messages.
      */
     inline bool trap_exit() const {
@@ -162,19 +184,20 @@ class local_actor : public actor {
     /**
      * @brief Returns the last message that was dequeued
      *        from the actor's mailbox.
-     * @note Only set during callback invocation.
+     * @warning Only set during callback invocation.
      */
     inline any_tuple& last_dequeued() {
-        return m_last_dequeued;
+        return m_current_node->msg;
     }
 
     /**
      * @brief Returns the sender of the last dequeued message.
-     * @note Only set during callback invocation.
+     * @warning Only set during callback invocation.
      * @note Implicitly used by the function {@link cppa::reply}.
+     * @see cppa::reply()
      */
     inline actor_ptr& last_sender() {
-        return m_last_sender;
+        return m_current_node->sender;
     }
 
     /**
@@ -196,79 +219,64 @@ class local_actor : public actor {
 
     /**
      * @brief Sets the actor's behavior to @p bhvr and discards the
-     *        previous behavior.
+     *        previous behavior if the policy is {@link discard_behavior}.
      * @note The recommended way of using this member function is to pass
      *       a pointer to a member variable.
      * @warning @p bhvr is owned by the caller and must remain valid until
      *          the actor terminates.
      */
-    inline void become(discard_behavior_t, behavior* bhvr) {
-        do_become(*bhvr, true);
+    template<bool DiscardOld>
+    inline void become(behavior_policy<DiscardOld>, behavior* bhvr) {
+        do_become(*bhvr, DiscardOld);
     }
 
     /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior to @p bhvr and discards the
+     *        previous behavior if the policy is {@link discard_behavior}.
      */
-    inline void become(discard_behavior_t, behavior bhvr) {
+    template<bool DiscardOld>
+    inline void become(behavior_policy<DiscardOld>, behavior bhvr) {
         do_become(std::move(bhvr), true);
     }
 
     /**
-     * @brief Sets the actor's behavior to @p bhvr and keeps the
-     *        previous behavior, so that it can be restored by calling
-     *        {@link unbecome()}.
-     * @note The recommended way of using this member function is to pass
-     *       a pointer to a member variable.
-     * @warning @p bhvr is owned by the caller and must remain valid until
-     *          the actor terminates.
+     * @brief Sets the actor's behavior and discards the
+     *        previous behavior if the policy is {@link discard_behavior}.
      */
-    inline void become(keep_behavior_t, behavior* bhvr) {
-        do_become(*bhvr, false);
+    template<bool DiscardOld, typename Arg0, typename Arg1, typename... Args>
+    inline void become(behavior_policy<DiscardOld>,
+                       Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+        do_become(match_expr_convert(std::forward<Arg0>(arg0),
+                                     std::forward<Arg1>(arg1),
+                                     std::forward<Args>(args)...),
+                  DiscardOld);
     }
 
     /**
-     * @brief Sets the actor's behavior.
-     */
-    inline void become(keep_behavior_t, behavior bhvr) {
-        do_become(std::move(bhvr), false);
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
      */
     inline void become(behavior bhvr) {
         become(discard_behavior, std::move(bhvr));
     }
 
     /**
-     * @brief Equal to <tt>become(discard_old, bhvr)</tt>.
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
      */
     inline void become(behavior* bhvr) {
-        become(discard_behavior, *bhvr);
+        become(discard_behavior, bhvr);
     }
 
     /**
-     * @brief Sets the actor's behavior.
-     */
-    template<typename... Cases, typename... Args>
-    inline void become(discard_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
-     */
-    template<typename... Cases, typename... Args>
-    inline void become(keep_behavior_t, match_expr<Cases...>&& arg0, Args&&... args) {
-        become(keep_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
-    }
-
-    /**
-     * @brief Sets the actor's behavior.
+     * @brief Sets the actor's behavior;
+     *        equal to <tt>become(discard_old, bhvr</tt>.
      */
     template<typename... Cases, typename... Args>
     inline void become(match_expr<Cases...> arg0, Args&&... args) {
-        become(discard_behavior, match_expr_convert(std::move(arg0), std::forward<Args>(args)...));
+        do_become(match_expr_convert(std::move(arg0),
+                                     std::forward<Args>(args)...),
+                  true);
     }
 
     /**
@@ -293,6 +301,11 @@ class local_actor : public actor {
      */
     virtual void on_exit();
 
+    /**
+     * @brief Returns all joined groups of this actor.
+     */
+    std::vector<group_ptr> joined_groups();
+
     // library-internal members and member functions that shall
     // not appear in the documentation
 
@@ -302,33 +315,85 @@ class local_actor : public actor {
 
     virtual bool initialized() = 0;
 
+    inline bool chaining_enabled() {
+        return m_chaining && !m_chained_actor;
+    }
+
     inline void send_message(channel* whom, any_tuple&& what) {
         whom->enqueue(this, std::move(what));
     }
 
     inline void send_message(actor* whom, any_tuple&& what) {
-        if (m_chaining && !m_chained_actor) {
+        if (chaining_enabled()) {
             if (whom->chained_enqueue(this, std::move(what))) {
                 m_chained_actor = whom;
             }
         }
-        else {
-            whom->enqueue(this, std::move(what));
-        }
+        else whom->enqueue(this, std::move(what));
     }
+
+    inline message_id_t send_sync_message(actor* whom, any_tuple&& what) {
+        auto id = ++m_last_request_id;
+        CPPA_REQUIRE(id.is_request());
+        if (chaining_enabled()) {
+            if (whom->chained_sync_enqueue(this, id, std::move(what))) {
+                m_chained_actor = whom;
+            }
+        }
+        else whom->sync_enqueue(this, id, std::move(what));
+        auto awaited_response = id.response_id();
+        m_pending_responses.push_back(awaited_response);
+        return awaited_response;
+    }
+
+    // returns 0 if last_dequeued() is an asynchronous or sync request message,
+    // a response id generated from the request id otherwise
+    inline message_id_t get_response_id() {
+        return m_current_node->mid.response_id();
+    }
+
+    void reply_message(any_tuple&& what);
 
     inline actor_ptr& chained_actor() {
         return m_chained_actor;
     }
 
+    inline bool awaits(message_id_t response_id) {
+        CPPA_REQUIRE(response_id.is_response());
+        return std::any_of(m_pending_responses.begin(),
+                           m_pending_responses.end(),
+                           [=](message_id_t other) {
+                               return response_id == other;
+                           });
+    }
+
+    inline void mark_arrived(message_id_t response_id) {
+        auto last = m_pending_responses.end();
+        auto i = std::find(m_pending_responses.begin(), last, response_id);
+        if (i != last) m_pending_responses.erase(i);
+    }
+
  protected:
 
+    // true if this actor uses the chained_send optimization
     bool m_chaining;
+    // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
+    // true if this actor takes part in cooperative scheduling
     bool m_is_scheduled;
-    actor_ptr m_last_sender;
+    // pointer to the actor that is marked as successor due to a chained send
     actor_ptr m_chained_actor;
-    any_tuple m_last_dequeued;
+    // identifies the ID of the last sent synchronous request
+    message_id_t m_last_request_id;
+    // identifies all IDs of sync messages waiting for a response
+    std::vector<message_id_t> m_pending_responses;
+    // "default value" for m_current_node
+    detail::recursive_queue_node m_dummy_node;
+    // points to m_dummy_node if no callback is currently invoked,
+    // points to the node under processing otherwise
+    detail::recursive_queue_node* m_current_node;
+    // {group => subscription} map of all joined groups
+    std::map<group_ptr, group::subscription> m_subscriptions;
 
 #   endif // CPPA_DOCUMENTATION
 
