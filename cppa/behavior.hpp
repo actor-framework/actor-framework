@@ -78,9 +78,13 @@ class behavior : public partial_function {
                                                            d, f)) {
     }
 
-    template<typename... Cases, typename... Args>
-    behavior(const match_expr<Cases...>& arg0, const Args&... args)
-    : super(match_expr_concat(arg0, args...)) { }
+    template<typename... Cases>
+    behavior(const match_expr<Cases...>& arg0)
+    : super(arg0) { }
+
+    template<typename... Cases, typename Arg1, typename... Args>
+    behavior(const match_expr<Cases...>& arg0, const Arg1& arg1, const Args&... args)
+    : super(match_expr_concat(arg0, arg1, args...)) { }
 
     inline void handle_timeout() {
         m_impl->handle_timeout();
