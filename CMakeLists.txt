@@ -221,22 +221,30 @@ add_dependencies(distributed libcppa)
 add_dependencies(matching libcppa)
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+set(CONTEXT_SWITCHING true)
+if (DISABLE_CONTEXT_SWITCHING)
+    set(CONTEXT_SWITCHING false)
+endif()
+
 message(
     "\n====================|  Build Summary  |===================="
     "\n"
-    "\nLibcppa version:  ${LIBRARY_VERSION}"
+    "\nLibcppa version:   ${LIBRARY_VERSION}"
     "\n"
-    "\nSource directory: ${CMAKE_SOURCE_DIR}"
-    "\nBuild directory:  ${CMAKE_BINARY_DIR}"
-    "\nExecutable path:  ${EXECUTABLE_OUTPUT_PATH}"
-    "\nLibrary path:     ${LIBRARY_OUTPUT_PATH}"
-    "\nInstall prefix:   ${CMAKE_INSTALL_PREFIX}"
-    "\nDebug mode:       ${ENABLE_DEBUG}"
+    "\nBuild type:        ${CMAKE_BUILD_TYPE}"
+    "\nDebug mode:        ${ENABLE_DEBUG}"
+    "\nContext switching: ${CONTEXT_SWITCHING}"
     "\n"
-    "\nCXX:              ${CMAKE_CXX_COMPILER}"
-    "\nCXXFLAGS:         ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+    "\nCXX:               ${CMAKE_CXX_COMPILER}"
+    "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
     "\n"
-    "\nBoost:            ${Boost_INCLUDE_DIR}"
+    "\nSource directory:  ${CMAKE_SOURCE_DIR}"
+    "\nBuild directory:   ${CMAKE_BINARY_DIR}"
+    "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
+    "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
+    "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+    "\n"
+    "\nBoost:             ${Boost_INCLUDE_DIR}"
     "\n"
     "\n===========================================================\n"
 )
