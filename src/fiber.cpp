@@ -28,16 +28,30 @@
 \******************************************************************************/
 
 
+#include <cstdint>
+#include <stdexcept>
+#include "cppa/util/fiber.hpp"
+
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
-namespace { int keep_compiler_happy() { return 42; } }
+namespace cppa { namespace util {
+
+fiber::fiber() throw() : m_impl(nullptr) { }
+
+fiber::fiber(void (*)(void*), void*) : m_impl(nullptr) { }
+
+fiber::~fiber() { }
+
+void fiber::swap(fiber&, fiber&) {
+    throw std::logic_error("libcppa was compiled using "
+                           "CPPA_DISABLE_CONTEXT_SWITCHING");
+}
+
+} } // namespace cppa::util
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
-#include <cstdint>
 #include <boost/context/all.hpp>
-
-#include "cppa/util/fiber.hpp"
 
 namespace cppa { namespace util {
 

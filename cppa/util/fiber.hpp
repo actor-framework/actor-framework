@@ -31,20 +31,6 @@
 #ifndef CPPA_FIBER_HPP
 #define CPPA_FIBER_HPP
 
-#include <memory>
-#include "cppa/config.hpp"
-
-#ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-
-namespace cppa { namespace util {
-class fiber {
- public:
-    inline static void swap(fiber&, fiber&) { }
-};
-} } // namespace cppa::util
-
-#else // CPPA_DISABLE_CONTEXT_SWITCHING
-
 namespace cppa { namespace util {
 
 struct fiber_impl;
@@ -68,7 +54,5 @@ class fiber {
 };
 
 } } // namespace cppa::util
-
-#endif // CPPA_DISABLE_CONTEXT_SWITCHING
 
 #endif // CPPA_FIBER_HPP

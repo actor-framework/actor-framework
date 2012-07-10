@@ -604,6 +604,63 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    auto inflater = factory::event_based(
+        [](std::string*, actor_ptr* receiver) {
+            self->become(
+                on_arg_match >> [=](int n, const std::string& s) {
+                    send(*receiver, n * 2, s);
+                },
+                on(atom("done")) >> []() {
+                    self->quit();
+                }
+            );
+        }
+    );
+    auto joe = inflater.spawn("Joe", self);
+    auto bob = inflater.spawn("Bob", joe);
+    send(bob, 1, "hello actor");
+    receive (
+        on(4, "hello actor") >> []() {
+            // done
+        },
+        others() >> [] {
+            cerr << "unexpected: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
+    // kill joe and bob
+    auto poison_pill = make_any_tuple(atom("done"));
+    joe << poison_pill;
+    bob << poison_pill;
+    await_all_others_done();
+
+    std::function<actor_ptr (const std::string&, const actor_ptr&)> spawn_next;
+    auto kr34t0r = factory::event_based(
+        // it's safe to pass spawn_next as reference here, because
+        // - it is guaranteeed to outlive kr34t0r by general scoping rules
+        // - the lambda is always executed in the current actor's thread
+        // but using spawn_next in a message handler could
+        // still cause undefined behavior!
+        [&spawn_next](std::string* name, actor_ptr* pal) {
+            if (*name == "Joe" && !*pal) {
+                *pal = spawn_next("Bob", self);
+            }
+            self->become (
+                others() >> [pal,name]() {
+                    cout << "hello & bye from " << *name << endl;
+                    // forward message and die
+                    *pal << self->last_dequeued();
+                    self->quit();
+                }
+            );
+        }
+    );
+    spawn_next = [&kr34t0r](const std::string& name, const actor_ptr& pal) {
+        return kr34t0r.spawn(name, pal);
+    };
+    auto joe_the_second = kr34t0r.spawn("Joe");
+    send(joe_the_second, atom("done"));
+    await_all_others_done();
+
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
     factory::event_based([&]() {
