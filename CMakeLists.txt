@@ -89,48 +89,33 @@ set(LIBCPPA_SRC
     src/context_switching_actor.cpp
 )
 
-set(boost_context third_party/boost_context/)
+set(boost_context third_party/boost_context)
 
-# add third_party boost_context sources
-if(APPLE)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S
-                 PROPERTY LANGUAGE CXX)
+# add third party Boost.Context sources
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(APPLE)
     set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
   else()
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S
-                 PROPERTY LANGUAGE CXX)
-    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
-  endif()
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
-      ${boost_context}/src/stack_utils_posix.cpp
-      ${boost_context}/src/stack_allocator_posix.cpp
-      ${boost_context}/src/fcontext.cpp
-      ${fcontext_asm}
-  )
-elseif(UNIX)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S
-                 PROPERTY LANGUAGE CXX)
     set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
+  endif()
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  if(APPLE)
+    set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
   else()
-    set_property(SOURCE
-                 ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S
-                 PROPERTY LANGUAGE CXX)
     set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
   endif()
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
-      ${fcontext_asm}
-      ${boost_context}/src/stack_utils_posix.cpp
-      ${boost_context}/src/stack_allocator_posix.cpp
-      ${boost_context}/src/fcontext.cpp
-  )
+else()
+  message(FATAL_ERROR "Unsupported platform (neither 32 nor 64 bit)")
 endif()
+
+set_property(SOURCE ${fcontext_asm} PROPERTY LANGUAGE CXX)
+set(LIBCPPA_SRC
+    ${LIBCPPA_SRC}
+    ${fcontext_asm}
+    ${boost_context}/src/stack_utils_posix.cpp
+    ${boost_context}/src/stack_allocator_posix.cpp
+    ${boost_context}/src/fcontext.cpp
+)
 
 find_package(Boost COMPONENTS thread REQUIRED)
 
