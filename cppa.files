@@ -263,3 +263,4 @@ cppa/detail/event_based_actor_factory.hpp
 cppa/factory.hpp
 src/factory.cpp
 cppa/message_id.hpp
+cppa/cppa_fwd.hpp

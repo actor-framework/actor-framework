@@ -42,7 +42,7 @@ namespace cppa {
  * and strings (std::string, std::u16string and std::u32string).
  * @relates primitive_variant
  */
-enum primitive_type {
+enum primitive_type : unsigned char {
     pt_int8,         /**< equivalent of @p std::int8_t */
     pt_int16,        /**< equivalent of @p std::int16_t */
     pt_int32,        /**< equivalent of @p std::int32_t */

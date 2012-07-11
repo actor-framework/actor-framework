@@ -48,8 +48,6 @@ namespace cppa {
 class serializer;
 class deserializer;
 
-class actor;
-
 /**
  * @brief A unique actor ID.
  * @relates actor

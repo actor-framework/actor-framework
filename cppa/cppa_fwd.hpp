@@ -28,60 +28,32 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_GET_HPP
-#define CPPA_GET_HPP
-
-// functions are documented in the implementation headers
-#ifndef CPPA_DOCUMENTATION
-
-#include <cstddef>
-
-#include "cppa/util/at.hpp"
+#ifndef CPPA_FWD_HPP
+#define CPPA_FWD_HPP
 
 namespace cppa {
 
-// forward declaration of details
-namespace detail {
-template<typename...> struct tdata;
-template<typename...> struct pseudo_tuple;
-} // namespace detail
+class actor;
+class group;
+class channel;
+class behavior;
+class any_tuple;
+class partial_function;
+class uniform_type_info;
+class primitive_variant;
 
-namespace util {
-template<typename...> struct type_list;
-} // namespace util
+enum primitive_type : unsigned char;
 
-// forward declaration of cow_tuple
-template<typename...> class cow_tuple;
+template<typename>
+class option;
 
-// forward declaration of get(const detail::tdata<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>&);
+template<typename>
+class intrusive_ptr;
 
-// forward declarations of get(const tuple<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const cow_tuple<Tn...>&);
-
-// forward declarations of get(detail::pseudo_tuple<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv);
-
-// forward declarations of get(util::type_list<...>&)
-template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&);
-
-// forward declarations of get_ref(detail::tdata<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
-
-// forward declarations of get_ref(tuple<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(cow_tuple<Tn...>&);
-
-// forward declarations of get_ref(detail::pseudo_tuple<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
+typedef intrusive_ptr<actor>   actor_ptr;
+typedef intrusive_ptr<group>   group_ptr;
+typedef intrusive_ptr<channel> channel_ptr;
 
 } // namespace cppa
 
-#endif // CPPA_DOCUMENTATION
-#endif // CPPA_GET_HPP
+#endif // CPPA_FWD_HPP

@@ -34,6 +34,7 @@
 #include <typeinfo>
 #include <type_traits>
 
+#include "cppa/util/at.hpp"
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/if_else.hpp"
 #include "cppa/util/type_pair.hpp"
@@ -932,5 +933,12 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
  * @}
  */
 } } // namespace cppa::util
+
+namespace cppa {
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&) {
+    return {};
+}
+} // namespace cppa
 
 #endif // CPPA_UTIL_TYPE_LIST_HPP

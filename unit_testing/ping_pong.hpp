@@ -1,7 +1,10 @@
 #ifndef PING_PONG_HPP
 #define PING_PONG_HPP
 
-#include "cppa/actor.hpp"
+//#include "cppa/actor.hpp"
+
+#include <cstddef>
+#include "cppa/cppa_fwd.hpp"
 
 void ping(size_t num_pings);
 
