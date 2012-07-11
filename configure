@@ -17,12 +17,17 @@ usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Build Options:
-    --builddir=DIR              place build files in directory [build]
     --generator=GENERATOR       CMake generator to use (see cmake --help)
-    --with-clang=FILE           path to clang++ executable
-    --with-gcc=FILE             path to g++ executable
+    --build-type=DIR            CMake build type: [RelWithDebInfo]
+                                  - Debug: debugging flags enabled
+                                  - MinSizeRel: minimal output size
+                                  - Release: optimizations on, debugging off
+                                  - RelWithDebInfo: release flags plus debugging
+    --build-dir=DIR             place build files in directory [build]
     --bin-dir=DIR               executable directory [build/bin]
     --lib-dir=DIR               library directory [build/lib]
+    --with-clang=FILE           path to clang++ executable
+    --with-gcc=FILE             path to g++ executable
     --dual-build                build both with gcc and clang
 
   Installation Directories:
@@ -30,6 +35,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Optional Features:
     --enable-debug              compile in debugging mode
+                                (always sets --build-type=Debug)
     --enable-perftools          use Google perftools
 
   Platform-Dependent Adjustments:
@@ -115,6 +121,7 @@ configure ()
 # Set defaults.
 builddir="$sourcedir/build"
 CMakeCacheEntries=""
+append_cache_entry CMAKE_BUILD_TYPE            STRING RelWithDebInfo
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry ENABLE_DEBUG                BOOL   false
 append_cache_entry DISABLE_CONTEXT_SWITCHING   BOOL   false
@@ -130,9 +137,6 @@ while [ $# -ne 0 ]; do
         --help|-h)
             echo "${usage}" 1>&2
             exit 1
-            ;;
-        --builddir=*)
-            builddir=$optarg
             ;;
         --generator=*)
             CMakeGenerator="$optarg"
@@ -154,6 +158,12 @@ while [ $# -ne 0 ]; do
             ;;
         --with-gcc=*)
             gcc=$optarg
+            ;;
+        --build-type=*)
+            append_cache_entry CMAKE_BUILD_TYPE STRING $optarg
+            ;;
+        --build-dir=*)
+            builddir=$optarg
             ;;
         --bin-dir=*)
             bindir=$optarg
