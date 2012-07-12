@@ -1,8 +1,8 @@
-benchmarks/ActorCreation.scala
-benchmarks/Distributed.scala
-benchmarks/MailboxPerformance.scala
-benchmarks/Matching.scala
-benchmarks/MixedCase.scala
+benchmarks/scala/ActorCreation.scala
+benchmarks/scala/Distributed.scala
+benchmarks/scala/MailboxPerformance.scala
+benchmarks/scala/Matching.scala
+benchmarks/scala/MixedCase.scala
 benchmarks/actor_creation.cpp
 benchmarks/actor_creation.erl
 benchmarks/distributed.cpp
