@@ -58,7 +58,7 @@ struct recursive_queue_node {
         if (reset_msg) msg.reset();
     }
 
-    inline void reset(actor* sptr, message_id_t id, any_tuple&& data) {
+    inline void reset(actor* sptr, any_tuple&& data, message_id_t id) {
         reset(sptr, id, false);
         msg = std::move(data);
     }

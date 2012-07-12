@@ -46,6 +46,10 @@
 
 namespace cppa {
 
+#ifndef CPPA_DOCUMENTATION
+typedef message_id_t message_future;
+#endif // CPPA_DOCUMENTATION
+
 // forward declarations
 class scheduler;
 class local_scheduler;
@@ -79,12 +83,36 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t();
 } // namespace <anonymous>
 #endif // CPPA_DOCUMENTATION
 
+struct sync_recv_helper {
+    typedef void (*callback_type)(behavior&, message_future);
+    message_future m_handle;
+    callback_type m_fun;
+    inline sync_recv_helper(message_future handle, callback_type fun)
+    : m_handle(handle), m_fun(fun) { }
+    template<typename... Expression>
+    inline void operator()(Expression&&... mexpr) const {
+        auto bhvr = match_expr_convert(std::forward<Expression>(mexpr)...);
+        static_assert(std::is_same<decltype(bhvr), behavior>::value,
+                      "no timeout specified");
+        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
+            throw std::invalid_argument("specified timeout is invalid or zero");
+        }
+        else if (!m_handle.valid() || !m_handle.is_response()) {
+            throw std::logic_error("handle does not point to a response");
+        }
+        m_fun(bhvr, m_handle);
+    }
+};
+
+inline sync_recv_helper receive_response(message_future);
+
 /**
  * @brief Base class for local running Actors.
  */
 class local_actor : public actor {
 
     friend class scheduler;
+    friend inline sync_recv_helper receive_response(message_future);
 
  public:
 
@@ -140,18 +168,6 @@ class local_actor : public actor {
      *          the @p become member function in case of event-based actors.
      */
     virtual void dequeue(behavior& bhvr) = 0;
-
-    /**
-     * @brief Waits for a response to @p request_id.
-     *        Blocks until either a response message arrives or until a
-     *        timeout occurs.
-     * @param bhvr A behavior with timeout denoting the
-     *             actor's response to the response message.
-     * @warning You should not call this member function by hand.
-     *          Use always the {@link cppa::receive_response receive_response}
-     *          function.
-     */
-    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) = 0;
 
     /**
      * @brief Checks whether this actor traps exit messages.
@@ -280,6 +296,23 @@ class local_actor : public actor {
     }
 
     /**
+     * @brief Receives a synchronous response message.
+     * @param handle A future for a synchronous response.
+     * @throws std::invalid_argument if given behavior does not has a valid
+     *                               timeout definition
+     * @throws std::logic_error if @p handle is not valid or if the actor
+     *                          already received the response for @p handle
+     */
+    inline sync_recv_helper handle_response(message_future handle) {
+        return {handle, [](behavior& bhvr, message_future mf) {
+            if (!self->awaits(mf)) {
+                throw std::logic_error("response already received");
+            }
+            self->become_waiting_for(std::move(bhvr), mf);
+        }};
+    }
+
+    /**
      * @brief Returns to a previous behavior if available.
      */
     virtual void unbecome() = 0;
@@ -349,7 +382,8 @@ class local_actor : public actor {
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise
     inline message_id_t get_response_id() {
-        return m_current_node->mid.response_id();
+        auto id = m_current_node->mid;
+        return (id.is_request()) ? id.response_id() : message_id_t();
     }
 
     void reply_message(any_tuple&& what);
@@ -405,6 +439,20 @@ class local_actor : public actor {
         behavior copy{bhvr};
         do_become(std::move(copy), discard_old);
     }
+
+    /*
+     * @brief Waits for a response to @p request_id.
+     *        Blocks until either a response message arrives or until a
+     *        timeout occurs.
+     * @param bhvr A behavior with timeout denoting the
+     *             actor's response to the response message.
+     * @warning You should not call this member function by hand.
+     *          Use always the {@link cppa::receive_response receive_response}
+     *          function.
+     */
+    virtual void dequeue_response(behavior&, message_future) = 0;
+
+    virtual void become_waiting_for(behavior&&, message_future) = 0;
 
 };
 

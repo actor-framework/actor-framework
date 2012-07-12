@@ -35,6 +35,7 @@
 #include <functional>
 
 #include "cppa/behavior.hpp"
+#include "cppa/local_actor.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
@@ -82,18 +83,11 @@ class stacked_actor_mixin : public Base {
     stacked_actor_mixin(std::function<void()> f) : m_behavior(std::move(f)) { }
 
     virtual void do_become(behavior&& bhvr, bool discard_old) {
-        if (m_bhvr_stack_ptr) {
-            if (discard_old) m_bhvr_stack_ptr->pop_async_back();
-            m_bhvr_stack_ptr->push_back(std::move(bhvr));
-        }
-        else {
-            m_bhvr_stack_ptr.reset(new behavior_stack);
-            m_bhvr_stack_ptr->push_back(std::move(bhvr));
-            if (this->initialized()) {
-                m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
-                m_bhvr_stack_ptr.reset();
-            }
-        }
+        become_impl(std::move(bhvr), discard_old, message_id_t());
+    }
+
+    virtual void become_waiting_for(behavior&& bhvr, message_future mid) {
+        become_impl(std::move(bhvr), false, mid);
     }
 
     virtual bool has_behavior() {
@@ -110,6 +104,21 @@ class stacked_actor_mixin : public Base {
 
     inline Derived* dthis() {
         return static_cast<Derived*>(this);
+    }
+
+    void become_impl(behavior&& bhvr, bool discard_old, message_id_t mid) {
+        if (m_bhvr_stack_ptr) {
+            if (discard_old) m_bhvr_stack_ptr->pop_async_back();
+            m_bhvr_stack_ptr->push_back(std::move(bhvr), mid);
+        }
+        else {
+            m_bhvr_stack_ptr.reset(new behavior_stack);
+            m_bhvr_stack_ptr->push_back(std::move(bhvr), mid);
+            if (this->initialized()) {
+                m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
+                m_bhvr_stack_ptr.reset();
+            }
+        }
     }
 
 };

@@ -102,6 +102,12 @@ void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
     m_bhvr_stack.push_back(std::move(bhvr));
 }
 
+void event_based_actor::become_waiting_for(behavior&& bhvr, message_future mf) {
+    reset_timeout();
+    request_timeout(bhvr.timeout());
+    m_bhvr_stack.push_back(std::move(bhvr), mf);
+}
+
 void event_based_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::normal) {
         cleanup(exit_reason::normal);

@@ -478,38 +478,21 @@ inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
     else throw std::invalid_argument("whom == nullptr");
 }
 
-struct receive_response_helper {
-    message_future m_handle;
-    inline receive_response_helper(message_future handle)
-    : m_handle(handle) { }
-    template<typename... Expression>
-    inline void operator()(Expression&&... mexpr) const {
-        auto bhvr = match_expr_convert(std::forward<Expression>(mexpr)...);
-        static_assert(std::is_same<decltype(bhvr), behavior>::value,
-                      "no timeout specified");
-        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
-            throw std::invalid_argument("specified timeout is invalid or zero");
-        }
-        else if (!m_handle.valid() || !m_handle.is_response()) {
-            throw std::logic_error("handle does not point to a response");
-        }
-        else if (!self->awaits(m_handle)) {
-            throw std::logic_error("response already received");
-        }
-        self->dequeue_response(bhvr, m_handle);
-    }
-};
-
 /**
- * @brief Receives a synchronous response message.
+ * @brief Handles a synchronous response message in an event-based way.
  * @param handle A future for a synchronous response.
  * @throws std::invalid_argument if given behavior does not has a valid
  *                               timeout definition
  * @throws std::logic_error if @p handle is not valid or if the actor
  *                          already received the response for @p handle
  */
-inline receive_response_helper receive_response(message_future handle) {
-    return {handle};
+inline sync_recv_helper receive_response(message_future handle) {
+    return {handle, [](behavior& bhvr, message_future mf) {
+        if (!self->awaits(mf)) {
+            throw std::logic_error("response already received");
+        }
+        self->dequeue_response(bhvr, mf);
+    }};
 }
 
 /**

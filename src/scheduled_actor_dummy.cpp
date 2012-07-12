@@ -42,6 +42,7 @@ void scheduled_actor_dummy::detach(const attachable::token&) { }
 bool scheduled_actor_dummy::attach(attachable*) { return false; }
 void scheduled_actor_dummy::unbecome() { }
 void scheduled_actor_dummy::do_become(behavior&&, bool) { }
+void scheduled_actor_dummy::become_waiting_for(behavior&&, message_future) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
 
 resume_result scheduled_actor_dummy::resume(util::fiber*) {

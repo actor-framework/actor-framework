@@ -200,7 +200,7 @@ class abstract_actor : public abstract_actor_base<Base> {
                 m_nodes.pop_back();
             }
         }
-        if (result) result->reset(sender, id, std::move(msg));
+        if (result) result->reset(sender, std::move(msg), id);
         else result = new mailbox_element(sender, std::move(msg), id);
         return result;
     }

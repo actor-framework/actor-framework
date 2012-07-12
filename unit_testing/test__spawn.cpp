@@ -422,23 +422,6 @@ size_t test__spawn() {
     self << any_tuple{};
     receive(on() >> []() { });
 
-
-    /*
-    // (2) sync_send returning a 'future'
-    auto future = sync_send(foo, atom("get_state"));
-
-    //  *  blocking
-    receive_response(future) (
-        // ...
-    );
-
-    //  *  event-based
-    become_waiting_for(future) (
-        // ...
-    );
-    */
-
-
     CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << std::flush);
     receive (
         others() >> []() {
@@ -604,6 +587,47 @@ size_t test__spawn() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    auto sync_testee_factory = factory::event_based(
+        [&]() {
+            self->become (
+                on("hi") >> [&]() {
+                    auto handle = sync_send(self->last_sender(), "whassup?");
+                    self->handle_response(handle) (
+                        on_arg_match >> [&](const std::string& str) {
+                            CPPA_CHECK(self->last_sender() != nullptr);
+                            CPPA_CHECK_EQUAL("nothing", str);
+                            reply("goodbye!");
+                            self->quit();
+                        },
+                        after(std::chrono::minutes(1)) >> []() {
+                            cerr << "PANIC!!!!" << endl;
+                            abort();
+                        }
+                    );
+                },
+                others() >> []() {
+                    cerr << "UNEXPECTED: " << to_string(self->last_dequeued())
+                         << endl;
+                }
+
+            );
+        }
+    );
+    auto sync_testee = sync_testee_factory.spawn();
+    send(sync_testee, "hi");
+    receive (
+        on("whassup?") >> []() {
+            // this is NOT a reply, it's just an asynchronous message
+            send(self->last_sender(), "a lot!");
+            reply("nothing");
+        }
+    );
+    receive (
+        on("goodbye!") >> []() { }
+    );
+    await_all_others_done();
+
+
     auto inflater = factory::event_based(
         [](std::string*, actor_ptr* receiver) {
             self->become(
@@ -645,8 +669,7 @@ size_t test__spawn() {
                 *pal = spawn_next("Bob", self);
             }
             self->become (
-                others() >> [pal,name]() {
-                    cout << "hello & bye from " << *name << endl;
+                others() >> [pal]() {
                     // forward message and die
                     *pal << self->last_dequeued();
                     self->quit();
