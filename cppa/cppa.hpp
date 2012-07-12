@@ -688,7 +688,7 @@ void publish(actor_ptr whom, std::uint16_t port);
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
  */
-actor_ptr remote_actor(const char* host, std::uint16_t port);
+actor_ptr remote_actor(const std::string& host, std::uint16_t port);
 
 } // namespace cppa
 
