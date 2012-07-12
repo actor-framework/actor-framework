@@ -116,8 +116,14 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         , m_active_timeout_id(0) {
     }
 
-    bool pending_enqueue(actor* sender, any_tuple msg) {
+    bool chained_enqueue(actor* sender, any_tuple msg) {
         return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
+    }
+
+    bool chained_sync_enqueue(actor* sender,
+                              message_id_t id,
+                              any_tuple msg) {
+        return enqueue_node(super::fetch_node(sender, std::move(msg), id), pending);
     }
 
     void quit(std::uint32_t reason = exit_reason::normal) {
