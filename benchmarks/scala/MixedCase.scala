@@ -1,6 +1,6 @@
 import scala.actors.Actor
 import scala.actors.Actor._
-import akka.actor.Actor.actorOf
+import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
 import scala.annotation.tailrec
 
 case class Token(value: Int)
@@ -146,16 +146,16 @@ class ThreadlessSupervisor(numMessages: Int) extends Actor {
     override def act() = rcv(numMessages)
 }
 
-class AkkaWorker(supervisor: akka.actor.ActorRef) extends akka.actor.Actor {
+class AkkaWorker(supervisor: AkkaActorRef) extends AkkaActor {
     def receive = {
         case Calc(value) => supervisor ! Factors(global.factorize(value))
-        case Done => self.exit
+        case Done => context.stop(self)
     }
 }
 
-class AkkaChainLink(next: akka.actor.ActorRef) extends akka.actor.Actor {
+class AkkaChainLink(next: AkkaActorRef) extends AkkaActor {
     def receive = {
-        case Token(value) => next ! Token(value); if (value == 0) self.exit
+        case Token(value) => next ! Token(value); if (value == 0) context.stop(self)
     }
 }
 
@@ -165,10 +165,10 @@ class AkkaChainMaster(supervisor: akka.actor.ActorRef) extends akka.actor.Actor 
     var iteration = 0
     var rsize = 0
     var next: akka.actor.ActorRef = null
-    val worker = actorOf(new AkkaWorker(supervisor)).start
+    val worker = context.actorOf(Props(new AkkaWorker(supervisor)))
     @tailrec final def newRing(next: akka.actor.ActorRef, rsize: Int): akka.actor.ActorRef = {
         if (rsize == 0) next
-        else newRing(actorOf(new AkkaChainLink(next)).start, rsize-1)
+        else newRing(context.actorOf(Props(new AkkaChainLink(next))), rsize-1)
     }
     def initialized: Receive = {
         case Token(0) =>
@@ -182,7 +182,7 @@ class AkkaChainMaster(supervisor: akka.actor.ActorRef) extends akka.actor.Actor 
             {
                 worker ! Done
                 supervisor ! MasterExited
-                self.exit
+                context.stop(self)
             }
         case Token(value) => next ! Token(value-1)
     }
@@ -192,7 +192,7 @@ class AkkaChainMaster(supervisor: akka.actor.ActorRef) extends akka.actor.Actor 
             worker ! Calc(global.taskN)
             next = newRing(self, rsize-1)
             next ! Token(initialTokenValue)
-            become(initialized)
+            context.become(initialized)
     }
 }
 
@@ -202,7 +202,7 @@ class AkkaSupervisor(numMessages: Int) extends akka.actor.Actor {
         i += 1;
         if (i == numMessages) {
             global.latch.countDown
-            self.exit
+            context.stop(self)
         }
     }
     def receive = {
@@ -238,9 +238,10 @@ object MixedCase {
                 (new ThreadlessChainMaster(s)).start ! initMsg
         }
         else if (impl == "akka") {
-            val s = actorOf(new AkkaSupervisor(numMessages)).start
+            val system = ActorSystem();
+            val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
             for (_ <- 0 until numRings)
-                actorOf(new AkkaChainMaster(s)).start ! initMsg
+                system.actorOf(Props(new AkkaChainMaster(s))) ! initMsg
             global.latch.await
         }
         else usage

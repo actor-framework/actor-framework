@@ -1,6 +1,6 @@
 import scala.actors.Actor
 import scala.actors.Actor._
-import akka.actor.Actor.actorOf
+import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
 import scala.annotation.tailrec
 
 case object Msg
@@ -37,7 +37,7 @@ class AkkaReceiver(n: Long) extends akka.actor.Actor {
             received += 1
             if (received == n) {
                 global.latch.countDown
-                self.exit
+                context.stop(self)
             }
     }
 }
@@ -66,7 +66,8 @@ object MailboxPerformance {
                 }).start
         }
         else {
-            val rcvRef = actorOf(new AkkaReceiver(threads*msgs)).start
+            val system = ActorSystem()
+            val rcvRef = system.actorOf(Props(new AkkaReceiver(threads*msgs)))
             for (i <- 0 until threads)
                 (new java.lang.Thread {
                     override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
