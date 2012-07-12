@@ -51,6 +51,7 @@
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
+#include "cppa/tuple_cast.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scheduled_actor.hpp"
