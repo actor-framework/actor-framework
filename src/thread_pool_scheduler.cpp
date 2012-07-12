@@ -129,8 +129,12 @@ struct thread_pool_scheduler::worker {
         job_ptr job = nullptr;
         auto fetch_pending = [&job]() -> job_ptr {
             CPPA_REQUIRE(job != nullptr);
-            auto ptr = job->chained_actor().release();
-            return ptr ? static_cast<scheduled_actor*>(ptr) : nullptr;
+            auto ptr = job->chained_actor().get();
+            if (ptr) {
+                job->chained_actor().reset();
+                return static_cast<scheduled_actor*>(ptr);
+            }
+            return nullptr;
         };
         for (;;) {
             job = aggressive_polling();
