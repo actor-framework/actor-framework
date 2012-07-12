@@ -243,6 +243,8 @@ object MixedCase {
             for (_ <- 0 until numRings)
                 system.actorOf(Props(new AkkaChainMaster(s))) ! initMsg
             global.latch.await
+            system.shutdown
+            System.exit(0)
         }
         else usage
     }

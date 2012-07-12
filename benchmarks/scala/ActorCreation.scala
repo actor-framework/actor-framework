@@ -125,6 +125,8 @@ object ActorCreation {
             val system = ActorSystem()
             system.actorOf(Props(new AkkaRootTestee(n))) ! GoAhead
             global.latch.await
+            system.shutdown
+            System.exit(0)
         }
         else usage
     }

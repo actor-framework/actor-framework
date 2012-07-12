@@ -73,6 +73,8 @@ object MailboxPerformance {
                     override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
                 }).start
             global.latch.await
+            system.shutdown
+            System.exit(0)
         }
     }
 }
