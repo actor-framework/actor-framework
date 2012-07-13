@@ -40,6 +40,13 @@ __thread detail::yield_state* t_ystate = nullptr;
 __thread util::fiber* t_caller = nullptr;
 __thread util::fiber* t_callee = nullptr;
 
+constexpr const char* names_table[] = {
+    "yield_state::invalid",
+    "yield_state::ready",
+    "yield_state::blocked",
+    "yield_state::done"
+};
+
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
@@ -59,3 +66,12 @@ yield_state call(util::fiber* what, util::fiber* from) {
 }
 
 } } // namespace cppa::detail
+
+namespace cppa {
+
+std::string to_string(detail::yield_state ys) {
+    auto i = static_cast<size_t>(ys);
+    return (i < sizeof(names_table)) ? names_table[i] : "{illegal yield_state}";
+}
+
+} // namespace cppa

@@ -8,28 +8,6 @@
 #include "cppa/util/fiber.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
-#include <boost/context/all.hpp>
-
-
-namespace cppa { namespace detail {
-
-std::ostream& operator<<(std::ostream& o, yield_state ys) {
-    switch (ys) {
-        case yield_state::invalid:
-            return (o << "yield_state::invalid");
-        case yield_state::ready:
-            return (o << "yield_state::ready");
-        case yield_state::blocked:
-            return (o << "yield_state::blocked");
-        case yield_state::done:
-            return (o << "yield_state::done");
-        default:
-            return (o << "{{{invalid yield_state}}}");
-    }
-}
-
-} } // namespace cppa::detail
-
 using namespace cppa;
 using namespace cppa::util;
 using namespace cppa::detail;
@@ -55,8 +33,7 @@ struct pseudo_worker {
 
 };
 
-void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))();
-}
+void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))(); }
 
 size_t test__yield_interface() {
     CPPA_TEST(test__yield_interface);
@@ -76,7 +53,7 @@ size_t test__yield_interface() {
         ++i;
     }
     while (ys != yield_state::done && i < 12);
-    CPPA_CHECK_EQUAL(yield_state::done, ys);
+    CPPA_CHECK_EQUAL("yield_state::done", to_string(ys));
     CPPA_CHECK_EQUAL(10, worker.m_count);
     CPPA_CHECK_EQUAL(12, i);
 #   endif

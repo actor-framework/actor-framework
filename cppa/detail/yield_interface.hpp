@@ -31,6 +31,8 @@
 #ifndef CPPA_YIELD_INTERFACE_HPP
 #define CPPA_YIELD_INTERFACE_HPP
 
+#include <string>
+
 #include "cppa/util/fiber.hpp"
 
 namespace cppa { namespace detail {
@@ -53,5 +55,11 @@ void yield(yield_state);
 yield_state call(util::fiber* what, util::fiber* from);
 
 } } // namespace cppa::detail
+
+namespace cppa {
+
+std::string to_string(detail::yield_state ys);
+
+} // namespace cppa
 
 #endif // CPPA_YIELD_INTERFACE_HPP
