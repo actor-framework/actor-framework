@@ -140,7 +140,7 @@ void publish(actor_ptr whom, std::uint16_t port) {
     detail::post_office_publish(sockfd, whom);
 }
 
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
+actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
     detail::native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     struct hostent* server;
@@ -148,10 +148,10 @@ actor_ptr remote_actor(const char* host, std::uint16_t port) {
     if (sockfd == detail::invalid_socket) {
         throw network_error("socket creation failed");
     }
-    server = gethostbyname(host);
+    server = gethostbyname(host.data());
     if (!server) {
         std::string errstr = "no such host: ";
-        errstr += host;
+        errstr += host.data();
         throw network_error(std::move(errstr));
     }
     memset(&serv_addr, 0, sizeof(serv_addr));
