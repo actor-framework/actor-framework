@@ -691,6 +691,13 @@ void publish(actor_ptr whom, std::uint16_t port);
  */
 actor_ptr remote_actor(const char* host, std::uint16_t port);
 
+/**
+ * @copydoc remote_actor(const char*,std::uint16_t)
+ */
+inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
+    return remote_actor(host.c_str(), port);
+}
+
 } // namespace cppa
 
 #endif // CPPA_HPP
