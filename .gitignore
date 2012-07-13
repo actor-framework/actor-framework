@@ -4,12 +4,10 @@
 *.dump
 *.png
 *.tmp
-.DS_Store
-callgrind.out*
+*.DS_Store
 cppa.creator.user
 html/
-libcppa.pc
-bin/*
 build/*
-lib/*
+build-clang/*
+build-gcc/*
 Makefile
