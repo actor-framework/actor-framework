@@ -46,6 +46,8 @@ namespace cppa { namespace detail {
 template<class Derived, class Base>
 class stacked_actor_mixin : public Base {
 
+    friend class receive_policy;
+
  public:
 
     virtual void unbecome() {
@@ -118,6 +120,12 @@ class stacked_actor_mixin : public Base {
                 m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
                 m_bhvr_stack_ptr.reset();
             }
+        }
+    }
+
+    inline void remove_handler(message_id_t id) {
+        if (m_bhvr_stack_ptr) {
+            m_bhvr_stack_ptr->erase(id);
         }
     }
 

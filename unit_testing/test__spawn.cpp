@@ -627,6 +627,12 @@ size_t test__spawn() {
     );
     await_all_others_done();
 
+    receive_response(sync_send(sync_testee, "!?")) (
+        others() >> [&]() {
+            CPPA_ERROR("'sync_testee' still alive?");
+        },
+        after(std::chrono::milliseconds(5)) >> []() { }
+    );
 
     auto inflater = factory::event_based(
         [](std::string*, actor_ptr* receiver) {

@@ -68,6 +68,9 @@ class behavior_stack
     // erases the last asynchronous message handler
     void pop_async_back();
 
+    // erases the synchronous response handler associated with @p response_id
+    void erase(message_id_t response_id);
+
     void push_back(behavior&& what,
                    message_id_t expected_response = message_id_t());
 

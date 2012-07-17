@@ -70,9 +70,10 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
             else {
                 get_scheduler()->delayed_send(this, d, atom("TIMEOUT"),
                                               ++m_active_timeout_id);
-                m_has_pending_timeout_request = true;
             }
+            m_has_pending_timeout_request = true;
         }
+        else m_has_pending_timeout_request = false;
     }
 
     void reset_timeout() {
@@ -96,7 +97,8 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
     }
 
     inline bool waits_for_timeout(std::uint32_t timeout_id) {
-        return m_active_timeout_id == timeout_id;
+        return    m_has_pending_timeout_request
+               && m_active_timeout_id == timeout_id;
     }
 
     bool m_has_pending_timeout_request;

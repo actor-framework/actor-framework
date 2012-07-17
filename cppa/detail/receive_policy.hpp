@@ -306,8 +306,10 @@ class receive_policy {
     template<class Client>
     static inline void hm_cleanup(Client* client, sequential) {
         client->m_current_node = &(client->m_dummy_node);
-        // we definitely don't have a pending timeout now
-        client->m_has_pending_timeout_request = false;
+        if (client->has_behavior()) {
+            client->request_timeout(client->get_behavior().timeout());
+        }
+        else client->m_has_pending_timeout_request = false;
     }
 
     template<class Client>
@@ -355,6 +357,7 @@ class receive_policy {
 #                   endif
                     hm_cleanup(client, policy);
                     client->mark_arrived(awaited_response);
+                    client->remove_handler(awaited_response);
                     return hm_msg_handled;
                 }
                 return hm_cache_msg;

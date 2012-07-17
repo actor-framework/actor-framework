@@ -111,6 +111,13 @@ match_expr_convert(const Arg0& arg0, const Args&... args) {
     return {match_expr_concat(arg0, args...)};
 }
 
+template<typename... Lhs, typename F>
+inline behavior operator,(const match_expr<Lhs...>& lhs,
+                          const timeout_definition<F>& rhs) {
+    return match_expr_convert(lhs, rhs);
+}
+
+
 } // namespace cppa
 
 #endif // CPPA_BEHAVIOR_HPP

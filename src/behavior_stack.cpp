@@ -81,10 +81,16 @@ void behavior_stack::pop_async_back() {
             m_elements.erase(i);
         }
     }
+}
 
-    if (m_elements.empty() == false) {
-        m_erased_elements.emplace_back(std::move(m_elements.back().first));
-        m_elements.pop_back();
+void behavior_stack::erase(message_id_t response_id) {
+    auto last = m_elements.end();
+    auto i = std::find_if(m_elements.begin(), last, [=](element_type& e) {
+        return e.second == response_id;
+    });
+    if (i != last) {
+        m_erased_elements.emplace_back(std::move(i->first));
+        m_elements.erase(i);
     }
 }
 

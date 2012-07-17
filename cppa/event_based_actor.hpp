@@ -138,12 +138,16 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
  private:
 
+    inline bool has_behavior() const {
+        return m_bhvr_stack.empty() == false;
+    }
+
     inline behavior& get_behavior() {
         CPPA_REQUIRE(m_bhvr_stack.empty() == false);
         return m_bhvr_stack.back();
     }
 
-        // required by detail::nestable_receive_policy
+    // required by detail::nestable_receive_policy
     static const detail::receive_policy_flag receive_flag = detail::rp_sequential;
     inline void handle_timeout(behavior& bhvr) {
         CPPA_REQUIRE(bhvr.timeout().valid());
@@ -152,6 +156,9 @@ class event_based_actor : public detail::abstract_scheduled_actor {
         if (m_bhvr_stack.empty() == false) {
             request_timeout(get_behavior().timeout());
         }
+    }
+    inline void remove_handler(message_id_t id) {
+        m_bhvr_stack.erase(id);
     }
 
     // stack elements are moved to m_erased_stack_elements and erased later
