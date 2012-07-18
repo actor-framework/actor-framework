@@ -10,8 +10,8 @@ On the Web
 ----------
 
 * __Blog__: http://libcppa.blogspot.com
-* __HTML Manual__: http://neverlord.github.com/libcppa/manual/
-* __PDF Manual__: http://neverlord.github.com/libcppa/manual/manual.pdf
+* __Manual (PDF)__: http://neverlord.github.com/libcppa/manual/manual.pdf
+* __Manual (HTML)__: http://neverlord.github.com/libcppa/manual/index.html
 * __Documentation__: http://neverlord.github.com/libcppa/
 * __Project Homepage__: http://www.realmv6.org/libcppa.html
 
@@ -27,6 +27,7 @@ First Steps
 
 * ./configure
 * make
+* make install [as root, optional]
 
 It is recommended to run the unit tests as well.
 
@@ -40,7 +41,7 @@ Dependencies
 ------------
 
 * CMake
-* The Boost Library
+* The Boost Thread Library
 
 
 Supported Compilers
