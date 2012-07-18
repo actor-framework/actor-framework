@@ -700,4 +700,13 @@ inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
 
 } // namespace cppa
 
+namespace std {
+template<>
+struct hash<cppa::actor_ptr> {
+    inline size_t operator()(const cppa::actor_ptr& ptr) const {
+        return (ptr) ? static_cast<size_t>(ptr->id()) : 0;
+    }
+};
+} // namespace std
+
 #endif // CPPA_HPP
