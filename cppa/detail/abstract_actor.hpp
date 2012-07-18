@@ -206,6 +206,8 @@ class abstract_actor : public abstract_actor_base<Base> {
     }
 
     inline void release_node(mailbox_element* node) {
+        // prevent
+        node->msg.reset();
         { // lifetime scope of guard
             lock_type guard{m_nodes_lock};
             if (m_nodes.full() == false) {
