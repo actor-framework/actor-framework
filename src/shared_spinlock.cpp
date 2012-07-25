@@ -36,7 +36,7 @@
 
 namespace {
 
-constexpr long min_long = std::numeric_limits<long>::min();
+inline long min_long() { return std::numeric_limits<long>::min(); }
 
 } // namespace <anonymous>
 
@@ -53,7 +53,7 @@ void shared_spinlock::lock() {
             //std::this_thread::yield();
             v = m_flag.load();
         }
-        else if (m_flag.compare_exchange_weak(v, min_long)) {
+        else if (m_flag.compare_exchange_weak(v, min_long())) {
             return;
         }
         // else: next iteration
@@ -71,7 +71,7 @@ void shared_spinlock::unlock() {
 
 bool shared_spinlock::try_lock() {
     long v = m_flag.load();
-    return (v == 0) ? m_flag.compare_exchange_weak(v, min_long) : false;
+    return (v == 0) ? m_flag.compare_exchange_weak(v, min_long()) : false;
 }
 
 void shared_spinlock::lock_shared() {
