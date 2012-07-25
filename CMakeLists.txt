@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.4)
 project(cppa CXX)
 
-# Prohibit in-source builds.
+set(LIBCPPA_VERSION_MAJOR 0)
+set(LIBCPPA_VERSION_MINOR 3)
+set(LIBCPPA_VERSION_PATCH 0)
+
+# prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message(FATAL_ERROR "In-source builds are not allowed. Please use "
                         "./configure to choose a build directory and "
@@ -10,11 +14,10 @@ endif ()
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Check if the user provided CXXFLAGS on the command line.
+# check if the user provided CXXFLAGS on the command line
 if (CMAKE_CXX_FLAGS)
     set(CXXFLAGS_PROVIDED true)
 endif ()
-
 if (CXXFLAGS_PROVIDED)
   set(CMAKE_CXX_FLAGS_DEBUG          "")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
@@ -28,13 +31,25 @@ else ()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif ()
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
-                  OUTPUT_VARIABLE GCC_VERSION)
-  if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
-    message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+# check for g++ >= 4.7 or clang++ > = 3.2
+try_run(ProgramResult
+        CompilationSucceeded
+        ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src/get_compiler_version.cpp
+        RUN_OUTPUT_VARIABLE CompilerVersion)
+if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
+  message(FATAL_ERROR "Cannot determine compiler version")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  if (CompilerVersion VERSION_GREATER 4.6)
+    message(STATUS "Found g++ version ${CompilerVersion}")
+  else ()
+    message(FATAL_ERROR "g++ >= 4.7 required (found: ${CompilerVersion}.")
   endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  if (CompilerVersion VERSION_GREATER 3.1)
+    message(STATUS "Found clang++ version ${CompilerVersion}")
+  else ()
+    message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion}.")
+  endif ()
   if (NOT CXXFLAGS_PROVIDED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
@@ -42,6 +57,7 @@ else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11.")
 endif ()
 
+# set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
@@ -51,7 +67,7 @@ endif ()
 
 if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
-endif()
+endif ()
 
 set(LIBCPPA_SRC
     src/abstract_tuple.cpp
@@ -111,22 +127,22 @@ set(LIBCPPA_SRC
 set(boost_context third_party/boost_context)
 
 # add third party Boost.Context sources if context-switching is enabled
-if(NOT DISABLE_CONTEXT_SWITCHING)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    if(APPLE)
+if (NOT DISABLE_CONTEXT_SWITCHING)
+  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    if (APPLE)
       set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
-    else()
+    else ()
       set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
-    endif()
-  elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if(APPLE)
+    endif ()
+  elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if (APPLE)
       set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
-    else()
+    else ()
       set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
-    endif()
-  else()
+    endif ()
+  else ()
     message(FATAL_ERROR "Unsupported platform (neither 32 nor 64 bit)")
-  endif()
+  endif ()
   set_property(SOURCE ${fcontext_asm} PROPERTY LANGUAGE CXX)
   set(LIBCPPA_SRC
       ${LIBCPPA_SRC}
@@ -135,7 +151,7 @@ if(NOT DISABLE_CONTEXT_SWITCHING)
       ${boost_context}/src/stack_allocator_posix.cpp
       ${boost_context}/src/fcontext.cpp
   )
-endif()
+endif ()
 
 find_package(Boost COMPONENTS thread REQUIRED)
 
@@ -145,10 +161,6 @@ include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include)
 add_library(libcppa SHARED ${LIBCPPA_SRC})
 
 target_link_libraries(libcppa ${CMAKE_LD_LIBS} ${Boost_THREAD_LIBRARY})
-
-set(LIBCPPA_VERSION_MAJOR 0)
-set(LIBCPPA_VERSION_MINOR 3)
-set(LIBCPPA_VERSION_PATCH 0)
 
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
@@ -178,11 +190,11 @@ add_custom_target(uninstall
 if (LIBRARY_OUTPUT_PATH)
   set (CPPA_LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH})
   set (CPPA_LIBRARY_PATH ${LIBRARY_OUTPUT_PATH})
-else()
+else ()
   set (CPPA_LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
   set (CPPA_LIBRARY_PATH ${CPPA_LIBRARY_OUTPUT_PATH})
   set (LIBRARY_OUTPUT_PATH ${CPPA_LIBRARY_OUTPUT_PATH} CACHE PATH "Single directory for all libraries")
-endif()
+endif ()
 
 # setting path to cppa headers and libcppa
 set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
@@ -244,35 +256,37 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
 set(CONTEXT_SWITCHING true)
 if (DISABLE_CONTEXT_SWITCHING)
     set(CONTEXT_SWITCHING false)
-endif()
+endif ()
 
 # check for doxygen and add custom "doc" target to Makefile
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
-  configure_file(${CMAKE_SOURCE_DIR}/Doxyfile.in ${CMAKE_SOURCE_DIR}/Doxyfile @ONLY)
-  #add_custom_command(TARGET doc COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY} COMMENT "Generating API documentation with Doxygen" VERBATIM)
-endif (DOXYGEN_FOUND)
+  configure_file(${CMAKE_SOURCE_DIR}/Doxyfile.in ${CMAKE_SOURCE_DIR}/Doxyfile
+                 @ONLY)
+  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile
+                    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+                    COMMENT "Generating API documentation with Doxygen"
+                    VERBATIM)
+endif ()
 
 # done (print summary)
 message("\n====================|  Build Summary  |===================="
-    "\n"
-    "\nLibcppa version:   ${LIBRARY_VERSION}"
-    "\n"
-    "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-    "\nDebug mode:        ${ENABLE_DEBUG}"
-    "\nContext switching: ${CONTEXT_SWITCHING}"
-    "\n"
-    "\nCXX:               ${CMAKE_CXX_COMPILER}"
-    "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
-    "\n"
-    "\nSource directory:  ${CMAKE_SOURCE_DIR}"
-    "\nBuild directory:   ${CMAKE_BINARY_DIR}"
-    "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
-    "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
-    "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
-    "\n"
-    "\nBoost:             ${Boost_INCLUDE_DIR}"
-    "\n"
-    "\n===========================================================\n"
-)
+        "\n"
+        "\nLibcppa version:   ${LIBRARY_VERSION}"
+        "\n"
+        "\nBuild type:        ${CMAKE_BUILD_TYPE}"
+        "\nDebug mode:        ${ENABLE_DEBUG}"
+        "\nContext switching: ${CONTEXT_SWITCHING}"
+        "\n"
+        "\nCXX:               ${CMAKE_CXX_COMPILER}"
+        "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+        "\n"
+        "\nSource directory:  ${CMAKE_SOURCE_DIR}"
+        "\nBuild directory:   ${CMAKE_BINARY_DIR}"
+        "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
+        "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
+        "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+        "\n"
+        "\nBoost:             ${Boost_INCLUDE_DIR}"
+        "\n"
+        "\n===========================================================\n")
