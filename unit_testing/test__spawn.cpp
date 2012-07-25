@@ -25,8 +25,6 @@ using std::endl;
 
 using namespace cppa;
 
-#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
-
 struct simple_mirror : sb_actor<simple_mirror> {
 
     behavior init_state = (
@@ -36,60 +34,6 @@ struct simple_mirror : sb_actor<simple_mirror> {
     );
 
 };
-
-#else
-
-struct simple_mirror : event_based_actor {
-
-    void init() {
-        become (
-            others() >> []() {
-                self->last_sender() << self->last_dequeued();
-            }
-        );
-    }
-
-};
-
-#endif
-
-// GCC 4.7 supports non-static member initialization
-#if 0 //(__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
-
-struct event_testee : public fsm_actor<event_testee> {
-
-    behavior wait4string = (
-        on<std::string>() >> [=]() {
-            become(wait4int);
-        },
-        on<atom("get_state")>() >> [=]() {
-            reply("wait4string");
-        }
-    );
-
-    behavior wait4float = (
-        on<float>() >> [=]() {
-            become(wait4string);
-        },
-        on<atom("get_state")>() >> [=]() {
-            reply("wait4float");
-        }
-    );
-
-    behavior wait4int = (
-        on<int>() >> [=]() {
-            become(wait4float);
-        },
-        on<atom("get_state")>() >> [=]() {
-            reply("wait4int");
-        }
-    );
-
-    behavior& init_state = wait4int;
-
-};
-
-#else
 
 class event_testee : public sb_actor<event_testee> {
 
@@ -133,8 +77,6 @@ class event_testee : public sb_actor<event_testee> {
     }
 
 };
-
-#endif
 
 // quits after 5 timeouts
 actor_ptr spawn_event_testee2() {
@@ -302,56 +244,6 @@ std::string behavior_test(actor_ptr et) {
     return result;
 }
 
-#ifdef __clang__
-class fixed_stack : public sb_actor<fixed_stack> {
-
-    friend class sb_actor<fixed_stack>;
-
-    size_t max_size;
-
-    std::vector<int> data;
-
-    behavior full = (
-        on(atom("push"), arg_match) >> [=](int) { },
-        on(atom("pop")) >> [=]() {
-            reply(atom("ok"), data.back());
-            data.pop_back();
-            become(filled);
-        }
-    );
-
-    behavior filled = (
-        on(atom("push"), arg_match) >> [=](int what) {
-            data.push_back(what);
-            if (data.size() == max_size)
-                become(full);
-        },
-        on(atom("pop")) >> [=]() {
-            reply(atom("ok"), data.back());
-            data.pop_back();
-            if (data.empty())
-                become(empty);
-        }
-    );
-
-    behavior empty = (
-        on(atom("push"), arg_match) >> [=](int what) {
-            data.push_back(what);
-            become(filled);
-        },
-        on(atom("pop")) >> [=]() {
-            reply(atom("failure"));
-        }
-    );
-
-    behavior& init_state = empty;
-
- public:
-
-    fixed_stack(size_t max) : max_size(max) { }
-
-};
-#else
 class fixed_stack : public sb_actor<fixed_stack> {
 
     friend class sb_actor<fixed_stack>;
@@ -405,7 +297,6 @@ class fixed_stack : public sb_actor<fixed_stack> {
     }
 
 };
-#endif
 
 int main() {
     using std::string;
@@ -820,36 +711,4 @@ int main() {
     // verify pong messages
     CPPA_CHECK_EQUAL(10, pongs());
     return CPPA_TEST_RESULT;
-
-    /****** TODO
-
-    int add_fun(int, int);
-    int sub_fun(int, int);
-
-    ...
-
-    class math {
-     public:
-        int add_fun(int, int);
-        int sub_fun(int, int);
-    };
-
-    ...
-
-    auto factory1 = actor_prototype (
-        on<atom("add"), int, int>().reply_with(atom("result"), add_fun),
-        on<atom("sub"), int, int>().reply_with(atom("result"), add_fun)
-    );
-    auto a1 = factory1.spawn();
-
-    ...
-
-    auto factory2 = actor_facade<math> (
-        on<atom("add"), int, int>().reply_with(atom("result"), &math::add_fun), <-- possible?
-        on<atom("sub"), int, int>().reply_with(atom("result"), &math::sub_fun)
-    );
-    auto a2 = factory2.spawn();
-
-    */
-
 }
