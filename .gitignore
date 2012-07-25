@@ -5,6 +5,7 @@
 *.png
 *.tmp
 *.DS_Store
+Doxyfile
 cppa.creator.user
 html/
 build/*
