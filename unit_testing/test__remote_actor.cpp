@@ -16,6 +16,24 @@ using namespace cppa;
 
 namespace {
 
+std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
+    std::vector<string_pair> result;
+    for (int i = begin; i < argc; ++i) {
+        auto vec = split(argv[i], '=');
+        if (vec.size() != 2) {
+            cerr << "\"" << argv[i] << "\" is not a key-value pair" << endl;
+        }
+        else if (std::any_of(result.begin(), result.end(),
+                             [&](const string_pair& p) { return p.first == vec[0]; })) {
+            cerr << "key \"" << vec[0] << "\" is already defined" << endl;
+        }
+        else {
+            result.emplace_back(vec[0], vec[1]);
+        }
+    }
+    return result;
+}
+
 void client_part(const std::vector<string_pair>& args) {
     auto i = std::find_if(args.begin(), args.end(),
                           [](const string_pair& p) { return p.first == "port"; });
@@ -31,9 +49,10 @@ void client_part(const std::vector<string_pair>& args) {
 
 } // namespace <anonymous>
 
-size_t test__remote_actor(const char* app_path, bool is_client,
-                          const std::vector<string_pair>& args) {
-    if (is_client) {
+int main(int argc, char** argv) {
+    const char* app_path = argv[0];
+    if (argc > 1) {
+        auto args = get_kv_pairs(argc, argv);
         client_part(args);
         return 0;
     }

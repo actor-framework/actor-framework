@@ -63,7 +63,7 @@ void invoke_test(std::vector<any_tuple>& test_tuples, Testee& x) {
     }
 }
 
-size_t test__pattern() {
+int main() {
     CPPA_TEST(test__pattern);
 
     pattern<int, anything, int> i3;

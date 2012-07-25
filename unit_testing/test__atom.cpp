@@ -30,7 +30,7 @@ void foo() {
          << endl;
 }
 
-size_t test__atom() {
+int main() {
     bool matched_pattern[3] = { false, false, false };
     CPPA_TEST(test__atom);
     // check if there are leading bits that distinguish "zzz" and "000 "

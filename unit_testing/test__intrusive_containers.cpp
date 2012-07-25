@@ -61,7 +61,7 @@ inline bool operator==(int lhs, const iint& rhs) {
 typedef cppa::intrusive::singly_linked_list<iint> iint_list;
 typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
-size_t test__intrusive_containers() {
+int main() {
     CPPA_TEST(test__intrusive_containers);
     iint_list ilist1;
     ilist1.push_back(new iint(1));

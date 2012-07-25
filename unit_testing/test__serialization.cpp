@@ -104,7 +104,7 @@ bool operator!=(const struct_c& lhs, const struct_c& rhs) {
 
 static const char* msg1str = u8R"__(@<> ( { @i32 ( 42 ), @str ( "Hello \"World\"!" ) } ))__";
 
-size_t test__serialization() {
+int main() {
     CPPA_TEST(test__serialization);
 
     auto oarr = new detail::object_array;

@@ -407,7 +407,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 };
 #endif
 
-size_t test__spawn() {
+int main() {
     using std::string;
     CPPA_TEST(test__spawn);
 

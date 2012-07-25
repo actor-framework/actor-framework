@@ -235,7 +235,6 @@ src/unicast_network.cpp
 src/uniform_type_info.cpp
 src/yield_interface.cpp
 src/context_switching_actor.cpp
-unit_testing/main.cpp
 unit_testing/ping_pong.cpp
 unit_testing/ping_pong.hpp
 unit_testing/test.hpp

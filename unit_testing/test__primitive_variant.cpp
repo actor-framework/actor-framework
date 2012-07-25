@@ -30,7 +30,7 @@ inline std::ostream& operator<<(std::ostream& o, const primitive_variant& pv) {
 
 using namespace cppa;
 
-size_t test__primitive_variant() {
+int main() {
     CPPA_TEST(test__primitive_variant);
 
     std::uint32_t forty_two = 42;

@@ -30,7 +30,7 @@ template<typename T1, typename T2>
 inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
                                  const char* file_name,
                                  int line_number,
-                                 size_t& error_count) {
+                                 int& error_count) {
     if (cppa_check_value_fun_eq(value1, value2) == false) {
         std::cerr << "ERROR in file " << file_name << " on line " << line_number
                   << " => expected value: " << value1
@@ -46,7 +46,7 @@ template<typename T1, typename T2>
 inline void cppa_check_value_verbose_fun(const T1& value1, const T2& value2,
                                          const char* file_name,
                                          int line_number,
-                                         size_t& error_count) {
+                                         int& error_count) {
     if (cppa_check_value_fun(value1, value2, file_name,
                              line_number, error_count)) {
          std::cout << "line " << line_number << " passed" << std::endl;
@@ -55,7 +55,7 @@ inline void cppa_check_value_verbose_fun(const T1& value1, const T2& value2,
 
 #define CPPA_TEST(name)                                                        \
 struct cppa_test_scope {                                                       \
-    size_t error_count;                                                        \
+    int error_count;                                                           \
     cppa_test_scope() : error_count(0) { }                                     \
     ~cppa_test_scope() {                                                       \
         std::cout << error_count << " error(s) detected" << std::endl;         \
@@ -102,25 +102,13 @@ if (!(line_of_code)) {                                                         \
 
 typedef std::pair<std::string, std::string> string_pair;
 
-size_t test__yield_interface();
-size_t test__remote_actor(const char* app_path, bool is_client,
-                          const std::vector<string_pair>& args);
-size_t test__ripemd_160();
-size_t test__uniform_type();
-size_t test__type_list();
-size_t test__atom();
-size_t test__tuple();
-size_t test__match();
-size_t test__spawn();
-size_t test__pattern();
-size_t test__intrusive_ptr();
-size_t test__serialization();
-size_t test__local_group();
-size_t test__primitive_variant();
-size_t test__fixed_vector();
-size_t test__intrusive_containers();
-
-std::vector<std::string> split(const std::string& str, char delim);
+inline std::vector<std::string> split(const std::string& str, char delim) {
+    std::vector<std::string> result;
+    std::stringstream strs{str};
+    std::string tmp;
+    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+    return result;
+}
 
 using std::cout;
 using std::endl;

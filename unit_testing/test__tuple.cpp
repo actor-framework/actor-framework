@@ -98,7 +98,7 @@ struct is_same_ : std::is_same<typename First::second, typename Second::second> 
         CPPA_ERROR(#FunName " erroneously invoked");                           \
     } invoked = ""
 
-size_t test__tuple() {
+int main() {
     CPPA_TEST(test__tuple);
 
     using namespace cppa::placeholders;
@@ -407,77 +407,7 @@ size_t test__tuple() {
         }
     }
 
-    exit(0);
-
-    /*
-    VERBOSE(f00(42, 42));
-    VERBOSE(f01(42, 42));
-    VERBOSE(f02(42, 42));
-    VERBOSE(f02(42, 21));
-    VERBOSE(f03(42, 42));
-
-    cout << detail::demangle(typeid(f04).name()) << endl;
-
-    VERBOSE(f04(42, 42));
-    VERBOSE(f04(42, std::string("42")));
-
-    VERBOSE(f05(42, 42));
-    VERBOSE(f05(42, std::string("41")));
-    VERBOSE(f05(42, std::string("42")));
-    VERBOSE(f05(42, std::string("hello world!")));
-
-    auto f06 = f04.or_else(on<int, int>().when(_x2 > _x1) >> []() { });
-    VERBOSE(f06(42, 42));
-    VERBOSE(f06(1, 2));
-    */
-
-    /*
-    auto f06 = on<anything, int>() >> []() { };
-
-    VERBOSE(f06(1));
-    VERBOSE(f06(1.f, 2));
-*/
-
-    /*
-
-    auto f0 = cfun<token1>([](int, int) { cout << "f0[0]!" << endl; }, _x1 < _x2)
-             //.or_else(f00)
-             .or_else(cfun<token1>([](int, int) { cout << "f0[1]!" << endl; }, _x1 > _x2))
-             .or_else(cfun<token1>([](int, int) { cout << "f0[2]!" << endl; }, _x1 == 2 && _x2 == 2))
-             .or_else(cfun<token2>([](float) { cout << "f0[3]!" << endl; }, value_guard< util::type_list<> >{}))
-             .or_else(cfun<token1>([](int, int) { cout << "f0[4]" << endl; }, value_guard< util::type_list<> >{}));
-
-    //VERBOSE(f0(make_cow_tuple(1, 2)));
-
-    VERBOSE(f0(3, 3));
-    VERBOSE(f0.invoke(make_cow_tuple(3, 3)));
-
-    VERBOSE(f0.invoke(make_cow_tuple(2, 2)));
-    VERBOSE(f0.invoke(make_cow_tuple(3, 2)));
-    VERBOSE(f0.invoke(make_cow_tuple(1.f)));
-
-    auto f1 = cfun<token1>([](float, int) { cout << "f1!" << endl; }, _x1 < 6, tofloat);
-
-    VERBOSE(f1.invoke(make_cow_tuple(5, 6)));
-    VERBOSE(f1.invoke(make_cow_tuple(6, 7)));
-
-    auto i2 = make_cow_tuple(1, 2);
-
-    VERBOSE(f0.invoke(*i2.vals()->type_token(), i2.vals()->impl_type(), i2.vals()->native_data(), *(i2.vals())));
-    VERBOSE(f1.invoke(*i2.vals()->type_token(), i2.vals()->impl_type(), i2.vals()->native_data(), *(i2.vals())));
-
-    any_tuple dt1; {
-        auto oarr = new detail::object_array;
-        oarr->push_back(object::from(1));
-        oarr->push_back(object::from(2));
-        dt1 = any_tuple{static_cast<detail::abstract_tuple*>(oarr)};
-    }
-
-
-    VERBOSE(f0.invoke(*dt1.cvals()->type_token(), dt1.cvals()->impl_type(), dt1.cvals()->native_data(), *dt1.cvals()));
-    VERBOSE(f1.invoke(*dt1.cvals()->type_token(), dt1.cvals()->impl_type(), dt1.cvals()->native_data(), *dt1.cvals()));
-
-    */
+    //exit(0);
 
     // check type correctness of make_cow_tuple()
     auto t0 = make_cow_tuple("1", 2);

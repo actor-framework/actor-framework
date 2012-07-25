@@ -104,7 +104,7 @@ struct fobaz : sb_actor<fobaz> {
 
 };
 
-size_t test__match() {
+int main() {
     CPPA_TEST(test__match);
 
     using namespace std::placeholders;

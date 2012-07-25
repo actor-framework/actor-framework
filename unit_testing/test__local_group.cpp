@@ -22,7 +22,7 @@ using std::endl;
 using std::string;
 using namespace cppa;
 
-size_t test__local_group() {
+int main() {
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
     actor_ptr master = self;
