@@ -13,44 +13,44 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 # Check if the user provided CXXFLAGS on the command line.
 if (CMAKE_CXX_FLAGS)
     set(CXXFLAGS_PROVIDED true)
-ENDIF ()
+endif ()
 
 if (CXXFLAGS_PROVIDED)
-    set(CMAKE_CXX_FLAGS_DEBUG          "")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
-    set(CMAKE_CXX_FLAGS_RELEASE        "")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
+  set(CMAKE_CXX_FLAGS_DEBUG          "")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
+  set(CMAKE_CXX_FLAGS_RELEASE        "")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else ()
-    set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
-    set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
-    set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+  set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+  set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
+  set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
-                    OUTPUT_VARIABLE GCC_VERSION)
-    if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
-        message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
-    endif ()
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
+                  OUTPUT_VARIABLE GCC_VERSION)
+  if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
+    message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+  endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    if (NOT CXXFLAGS_PROVIDED)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    endif ()
+  if (NOT CXXFLAGS_PROVIDED)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+  endif ()
 else ()
-    message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+  message(FATAL_ERROR "Your C++ compiler does not support C++11.")
 endif ()
 
 if (ENABLE_DEBUG)
-    set(CMAKE_BUILD_TYPE Debug)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
+  set(CMAKE_BUILD_TYPE Debug)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
 else ()
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ()
 
 if (DISABLE_CONTEXT_SWITCHING)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif()
 
 set(LIBCPPA_SRC
@@ -153,23 +153,27 @@ set(LIBCPPA_VERSION_PATCH 0)
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
 
-set_target_properties(libcppa PROPERTIES SOVERSION ${LIBRARY_SOVERSION} VERSION ${LIBRARY_VERSION} OUTPUT_NAME cppa)
+set_target_properties(libcppa 
+                      PROPERTIES
+                      SOVERSION ${LIBRARY_SOVERSION}
+                      VERSION ${LIBRARY_VERSION}
+                      OUTPUT_NAME cppa)
+
+# install shared library
 install(TARGETS libcppa LIBRARY DESTINATION lib)
 
 # install includes
-install(DIRECTORY cppa/ DESTINATION include/cppa
-    FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 
-# uninstall target
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
+# process cmake_uninstall.cmake.in
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+               IMMEDIATE @ONLY)
+
+# add uninstall target
 add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-
+                  COMMAND ${CMAKE_COMMAND} -P
+                  ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 if (LIBRARY_OUTPUT_PATH)
   set (CPPA_LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH})
@@ -198,9 +202,13 @@ else ()
 endif ()
 
 enable_testing()
+
+# set up subdirectories
 add_subdirectory(unit_testing)
 add_subdirectory(examples)
 add_subdirectory(benchmarks)
+
+# add libcppa as a dependency to all binaries
 add_dependencies(announce_example_1 libcppa)
 add_dependencies(announce_example_2 libcppa)
 add_dependencies(announce_example_3 libcppa)
@@ -231,14 +239,23 @@ add_dependencies(test__spawn libcppa)
 add_dependencies(test__type_list libcppa)
 add_dependencies(test__yield_interface libcppa)
 
+# set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
 set(CONTEXT_SWITCHING true)
 if (DISABLE_CONTEXT_SWITCHING)
     set(CONTEXT_SWITCHING false)
 endif()
 
-message(
-    "\n====================|  Build Summary  |===================="
+# check for doxygen and add custom "doc" target to Makefile
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  configure_file(${CMAKE_SOURCE_DIR}/Doxyfile.in ${CMAKE_SOURCE_DIR}/Doxyfile @ONLY)
+  #add_custom_command(TARGET doc COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY} COMMENT "Generating API documentation with Doxygen" VERBATIM)
+endif (DOXYGEN_FOUND)
+
+# done (print summary)
+message("\n====================|  Build Summary  |===================="
     "\n"
     "\nLibcppa version:   ${LIBRARY_VERSION}"
     "\n"

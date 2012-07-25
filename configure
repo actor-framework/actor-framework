@@ -230,6 +230,9 @@ clean:
 distclean:
 	rm -rf $(DIRS) Makefile
 
+doc:
+	$(MAKE) -C $(firstword $(DIRS)) $@
+
 .PHONY: all test install uninstall clean distclean
 EOT
 )
