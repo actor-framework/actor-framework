@@ -1,3 +1,16 @@
+Version 0.3
+
+2012-07-25
+
+- Implemented synchronous messages
+- The function become() no longer accepts pointers
+- Provide --disable-context-switching option to bypass Boost.Context if needed
+- Configure script to hide CMake details behind a nice interface
+- Include "tuple_cast.hpp" in "cppa.hpp"
+- Added forwarding header "cppa_fwd.hpp"
+- Allow raw read & write operations in synchronization interface
+- Group subscriptions are no longer attachables
+
 Version 0.2.1
 
 2012-07-02
