@@ -1,3 +1,10 @@
+Version 0.3.1
+
+2012-07-27
+
+- Bugfix: always return from a synchronous handler if a timeout occurs
+- Bugfix: request next timeout after timeout handler invocation if needed
+
 Version 0.3
 
 2012-07-25
