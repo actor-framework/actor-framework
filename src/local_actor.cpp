@@ -119,4 +119,20 @@ void local_actor::reply_message(any_tuple&& what) {
     else whom->sync_enqueue(this, id.response_id(), std::move(what));
 }
 
+void local_actor::forward_message(const actor_ptr& new_receiver) {
+    if (new_receiver == nullptr) {
+        return;
+    }
+    auto& from = last_sender();
+    auto id = m_current_node->mid;
+    if (id.valid() == false || id.is_response()) {
+        new_receiver->enqueue(from.get(), m_current_node->msg);
+    }
+    else {
+        new_receiver->sync_enqueue(from.get(), id, m_current_node->msg);
+        // treat this message as asynchronous message from now on
+        m_current_node->mid = message_id_t();
+    }
+}
+
 } // namespace cppa

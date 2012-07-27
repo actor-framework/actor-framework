@@ -388,6 +388,8 @@ class local_actor : public actor {
 
     void reply_message(any_tuple&& what);
 
+    void forward_message(const actor_ptr& new_receiver);
+
     inline actor_ptr& chained_actor() {
         return m_chained_actor;
     }

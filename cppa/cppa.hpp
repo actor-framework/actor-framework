@@ -506,6 +506,10 @@ inline void reply(Args&&... what) {
     self->reply_message(make_any_tuple(std::forward<Args>(what)...));
 }
 
+inline void forward_to(const actor_ptr& whom) {
+    self->forward_message(whom);
+}
+
 /**
  * @brief Sends a message to @p whom that is delayed by @p rel_time.
  * @param whom Receiver of the message.
