@@ -19,10 +19,6 @@
 #include "cppa/event_based_actor.hpp"
 #include "cppa/util/callable_trait.hpp"
 
-using std::cerr;
-using std::cout;
-using std::endl;
-
 using namespace cppa;
 
 struct simple_mirror : sb_actor<simple_mirror> {
