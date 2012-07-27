@@ -345,7 +345,9 @@ class receive_policy {
                 handle_timeout(client, fun);
                 if (awaited_response.valid()) {
                     client->mark_arrived(awaited_response);
+                    client->remove_handler(awaited_response);
                 }
+                hm_cleanup(client, policy);
                 return hm_msg_handled;
             }
             case sync_response: {
@@ -359,9 +361,9 @@ class receive_policy {
 #                   else
                     fun(node->msg);
 #                   endif
-                    hm_cleanup(client, policy);
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
+                    hm_cleanup(client, policy);
                     return hm_msg_handled;
                 }
                 return hm_cache_msg;
