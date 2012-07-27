@@ -39,83 +39,15 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/timeout_definition.hpp"
+
 #include "cppa/util/duration.hpp"
+
+#include "cppa/detail/behavior_impl.hpp"
 
 namespace cppa {
 
-class behavior_impl : public ref_counted {
-
- public:
-
-    behavior_impl() = default;
-    behavior_impl(util::duration tout);
-
-    virtual bool invoke(any_tuple&) = 0;
-    virtual bool invoke(const any_tuple&) = 0;
-    virtual bool defined_at(const any_tuple&) = 0;
-    virtual void handle_timeout();
-    inline const util::duration& timeout() const {
-        return m_timeout;
-    }
-
- private:
-
-    util::duration m_timeout;
-
-};
-
-template<typename F>
-struct timeout_definition {
-    util::duration timeout;
-    F handler;
-};
-
-template<typename T>
-struct is_timeout_definition : std::false_type { };
-
-template<typename F>
-struct is_timeout_definition<timeout_definition<F> > : std::true_type { };
-
-struct dummy_match_expr {
-    inline bool invoke(const any_tuple&) { return false; }
-    inline bool can_invoke(const any_tuple&) { return false; }
-};
-
-template<class MatchExpr, typename F>
-class default_behavior_impl : public behavior_impl {
-
-    typedef behavior_impl super;
-
- public:
-
-    template<typename Expr>
-    default_behavior_impl(Expr&& expr, const timeout_definition<F>& d)
-    : super(d.timeout), m_expr(std::forward<Expr>(expr)), m_fun(d.handler) { }
-
-    template<typename Expr>
-    default_behavior_impl(Expr&& expr, util::duration tout, F f)
-    : super(tout), m_expr(std::forward<Expr>(expr)), m_fun(f) { }
-
-    bool invoke(any_tuple& tup) {
-        return m_expr.invoke(tup);
-    }
-
-    bool invoke(const any_tuple& tup) {
-        return m_expr.invoke(tup);
-    }
-
-    bool defined_at(const any_tuple& tup) {
-        return m_expr.can_invoke(tup);
-    }
-
-    void handle_timeout() { m_fun(); }
-
- private:
-
-   MatchExpr m_expr;
-   F m_fun;
-
-};
+class behavior;
 
 /**
  * @brief A partial function implementation
@@ -123,9 +55,11 @@ class default_behavior_impl : public behavior_impl {
  */
 class partial_function {
 
+    friend class behavior;
+
  public:
 
-    typedef intrusive_ptr<behavior_impl> impl_ptr;
+    typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
 
     partial_function() = default;
     partial_function(partial_function&&) = default;
@@ -143,22 +77,14 @@ class partial_function {
         return (m_impl) && m_impl->defined_at(value);
     }
 
-    inline bool operator()(any_tuple& value) {
-        return (m_impl) && m_impl->invoke(value);
+    template<typename T>
+    inline bool operator()(T&& arg) {
+        return (m_impl) && m_impl->invoke(std::forward<T>(arg));
     }
 
-    inline bool operator()(const any_tuple& value) {
-        return (m_impl) && m_impl->invoke(value);
-    }
+ private:
 
-    inline bool operator()(any_tuple&& value) {
-        any_tuple cpy{std::move(value)};
-        return (*this)(cpy);
-    }
-
- protected:
-
-    intrusive_ptr<behavior_impl> m_impl;
+    impl_ptr m_impl;
 
 };
 

@@ -36,6 +36,7 @@
 
 #include "cppa/match_expr.hpp"
 #include "cppa/partial_function.hpp"
+#include "cppa/timeout_definition.hpp"
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/rm_ref.hpp"
@@ -49,11 +50,13 @@ namespace cppa {
 /**
  * @brief Describes the behavior of an actor.
  */
-class behavior : public partial_function {
+class behavior {
 
     typedef partial_function super;
 
  public:
+
+    typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
 
     behavior() = default;
     behavior(behavior&&) = default;
@@ -61,30 +64,27 @@ class behavior : public partial_function {
     behavior& operator=(behavior&&) = default;
     behavior& operator=(const behavior&) = default;
 
-    inline behavior(partial_function fun) : super(std::move(fun)) { }
+    inline behavior(partial_function fun) : m_impl(std::move(fun.m_impl)) { }
 
-    inline behavior(partial_function::impl_ptr ptr) : super(std::move(ptr)) { }
+    inline behavior(partial_function::impl_ptr ptr) : m_impl(std::move(ptr)) { }
 
     template<typename F>
     behavior(const timeout_definition<F>& arg)
-    : super(new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{},
-                                                           arg.timeout,
-                                                           arg.handler)) {
-    }
+    : m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{},
+                                               arg.timeout,
+                                               arg.handler)               ) { }
 
     template<typename F>
     behavior(util::duration d, F f)
-    : super(new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{},
-                                                           d, f)) {
-    }
+    : m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{}, d, f)) { }
 
     template<typename... Cases>
     behavior(const match_expr<Cases...>& arg0)
-    : super(arg0) { }
+    : m_impl(detail::new_default_behavior_impl(arg0, util::duration(), []() { })) { }
 
     template<typename... Cases, typename Arg1, typename... Args>
     behavior(const match_expr<Cases...>& arg0, const Arg1& arg1, const Args&... args)
-    : super(match_expr_concat(arg0, arg1, args...)) { }
+    : m_impl(match_expr_concat(arg0, arg1, args...)) { }
 
     inline void handle_timeout() {
         m_impl->handle_timeout();
@@ -95,8 +95,17 @@ class behavior : public partial_function {
     }
 
     inline bool undefined() const {
-        return m_impl == nullptr && m_impl->timeout().valid();
+        return m_impl == nullptr || m_impl->timeout().valid() == false;
     }
+
+    template<typename T>
+    inline bool operator()(T&& arg) {
+        return (m_impl) && m_impl->invoke(std::forward<T>(arg));
+    }
+
+ private:
+
+    impl_ptr m_impl;
 
 };
 

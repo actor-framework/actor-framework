@@ -28,16 +28,86 @@
 \******************************************************************************/
 
 
-#include "cppa/to_string.hpp"
+#ifndef BEHAVIOR_IMPL_HPP
+#define BEHAVIOR_IMPL_HPP
 
-#include "cppa/config.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/util/duration.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+class behavior_impl : public ref_counted {
 
-void detail::behavior_impl::handle_timeout() { }
+ public:
 
-} // namespace cppa
+    behavior_impl() = default;
+
+    inline behavior_impl(util::duration tout) : m_timeout(tout) { }
+
+    virtual bool invoke(any_tuple&) = 0;
+    virtual bool invoke(const any_tuple&) = 0;
+    inline bool invoke(any_tuple&& arg) {
+        any_tuple tmp(std::move(arg));
+        return invoke(tmp);
+    }
+    virtual bool defined_at(const any_tuple&) = 0;
+    virtual void handle_timeout();
+    inline const util::duration& timeout() const {
+        return m_timeout;
+    }
+
+ private:
+
+    util::duration m_timeout;
+
+};
+
+struct dummy_match_expr {
+    inline bool invoke(const any_tuple&) { return false; }
+    inline bool can_invoke(const any_tuple&) { return false; }
+};
+
+template<class MatchExpr, typename F>
+class default_behavior_impl : public behavior_impl {
+
+    typedef behavior_impl super;
+
+ public:
+
+    template<typename Expr>
+    default_behavior_impl(Expr&& expr, const timeout_definition<F>& d)
+    : super(d.timeout), m_expr(std::forward<Expr>(expr)), m_fun(d.handler) { }
+
+    template<typename Expr>
+    default_behavior_impl(Expr&& expr, util::duration tout, F f)
+    : super(tout), m_expr(std::forward<Expr>(expr)), m_fun(f) { }
+
+    bool invoke(any_tuple& tup) {
+        return m_expr.invoke(tup);
+    }
+
+    bool invoke(const any_tuple& tup) {
+        return m_expr.invoke(tup);
+    }
+
+    bool defined_at(const any_tuple& tup) {
+        return m_expr.can_invoke(tup);
+    }
+
+    void handle_timeout() { m_fun(); }
+
+ private:
+
+   MatchExpr m_expr;
+   F m_fun;
+
+};
+
+template<class MatchExpr, typename F>
+default_behavior_impl<MatchExpr, F>* new_default_behavior_impl(const MatchExpr& mexpr, util::duration d, F f) {
+    return new default_behavior_impl<MatchExpr, F>(mexpr, d, f);
+}
+
+} } // namespace cppa::detail
+
+#endif // BEHAVIOR_IMPL_HPP

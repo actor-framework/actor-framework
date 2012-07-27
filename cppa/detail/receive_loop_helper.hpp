@@ -118,6 +118,11 @@ class do_receive_helper {
         static_assert(std::is_same<bool, decltype(stmt())>::value,
                       "functor or function does not return a boolean");
         local_actor* sptr = self;
+        do {
+            sptr->dequeue(m_bhvr);
+        }
+        while (stmt() == false);
+        /*
         if (m_bhvr.timeout().valid()) {
             do {
                 sptr->dequeue(m_bhvr);
@@ -131,6 +136,7 @@ class do_receive_helper {
             }
             while (stmt() == false);
         }
+        */
     }
 
 };

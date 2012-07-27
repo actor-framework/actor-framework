@@ -715,7 +715,7 @@ class match_expr {
         return m_cases;
     }
 
-    struct pfun_impl : behavior_impl {
+    struct pfun_impl : detail::behavior_impl {
         match_expr pfun;
         template<typename Arg>
         pfun_impl(const Arg& from) : pfun(from) { }
@@ -879,7 +879,7 @@ inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
 template<bool HasTimeout>
 struct match_expr_concat_impl {
     template<typename Arg0, typename... Args>
-    static behavior_impl* _(const Arg0& arg0, const Args&... args) {
+    static detail::behavior_impl* _(const Arg0& arg0, const Args&... args) {
         typename detail::tdata_from_type_list<
             typename util::tl_map<
                 typename util::tl_concat<
@@ -898,7 +898,8 @@ struct match_expr_concat_impl {
                 >::type
                 combined_type;
         auto lvoid = []() { };
-        typedef default_behavior_impl<combined_type, decltype(lvoid)> impl_type;
+        typedef detail::default_behavior_impl<combined_type, decltype(lvoid)>
+                impl_type;
         detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
         return new impl_type(all_cases, util::duration{}, lvoid);
     }
@@ -908,14 +909,14 @@ template<>
 struct match_expr_concat_impl<true> {
 
     template<class TData, class Token, typename F>
-    static behavior_impl* __(const TData& data, Token, const timeout_definition<F>& arg0) {
+    static detail::behavior_impl* __(const TData& data, Token, const timeout_definition<F>& arg0) {
         typedef typename match_expr_from_type_list<Token>::type combined_type;
-        typedef default_behavior_impl<combined_type, F> impl_type;
+        typedef detail::default_behavior_impl<combined_type, F> impl_type;
         return new impl_type(data, arg0);
     }
 
     template<class TData, class Token, typename... Cases, typename... Args>
-    static behavior_impl* __(const TData& data, Token, const match_expr<Cases...>& arg0, const Args&... args) {
+    static detail::behavior_impl* __(const TData& data, Token, const match_expr<Cases...>& arg0, const Args&... args) {
         typedef typename util::tl_concat<
                 Token,
                 util::type_list<Cases...>
@@ -934,13 +935,13 @@ struct match_expr_concat_impl<true> {
     }
 
     template<typename F>
-    static behavior_impl* _(const timeout_definition<F>& arg0) {
-        typedef default_behavior_impl<dummy_match_expr, F> impl_type;
-        return new impl_type(dummy_match_expr{}, arg0);
+    static detail::behavior_impl* _(const timeout_definition<F>& arg0) {
+        typedef detail::default_behavior_impl<detail::dummy_match_expr, F> impl_type;
+        return new impl_type(detail::dummy_match_expr{}, arg0);
     }
 
     template<typename... Cases, typename... Args>
-    static behavior_impl* _(const match_expr<Cases...>& arg0, const Args&... args) {
+    static detail::behavior_impl* _(const match_expr<Cases...>& arg0, const Args&... args) {
         util::type_list<Cases...> token;
         typename detail::tdata_from_type_list<
                 typename util::tl_map<
@@ -956,8 +957,8 @@ struct match_expr_concat_impl<true> {
 };
 
 template<typename Arg0, typename... Args>
-intrusive_ptr<behavior_impl> match_expr_concat(const Arg0& arg0,
-                                               const Args&... args) {
+intrusive_ptr<detail::behavior_impl> match_expr_concat(const Arg0& arg0,
+                                                       const Args&... args) {
     constexpr bool has_timeout = util::disjunction<
                                      is_timeout_definition<Arg0>,
                                      is_timeout_definition<Args>...>::value;

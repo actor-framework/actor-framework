@@ -131,20 +131,24 @@ class receive_policy {
         return false;
     }
 
-    template<class Client>
-    void receive(Client* client, partial_function& fun) {
+    template<class Client, class FunOrBehavior>
+    inline void receive_wo_timeout(Client *client, FunOrBehavior& fun) {
         if (invoke_from_cache(client, fun) == false) {
             while (invoke(client, client->receive_node(), fun) == false) { }
         }
     }
 
     template<class Client>
+    void receive(Client* client, partial_function& fun) {
+        receive_wo_timeout(client, fun);
+    }
+
+    template<class Client>
     void receive(Client* client, behavior& bhvr) {
-        partial_function& fun = bhvr;
         if (bhvr.timeout().valid() == false) {
-            receive(client, fun);
+            receive_wo_timeout(client, bhvr);
         }
-        else if (invoke_from_cache(client, fun) == false) {
+        else if (invoke_from_cache(client, bhvr) == false) {
             if (bhvr.timeout().is_zero()) {
                 pointer e = nullptr;
                 while ((e = client->try_receive_node()) != nullptr) {

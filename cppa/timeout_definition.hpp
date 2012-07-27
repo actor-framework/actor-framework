@@ -28,16 +28,25 @@
 \******************************************************************************/
 
 
-#include "cppa/to_string.hpp"
+#ifndef TIMEOUT_DEFINITION_HPP
+#define TIMEOUT_DEFINITION_HPP
 
-#include "cppa/config.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/util/duration.hpp"
 
 namespace cppa {
 
-partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+template<typename F>
+struct timeout_definition {
+    util::duration timeout;
+    F handler;
+};
 
-void detail::behavior_impl::handle_timeout() { }
+template<typename T>
+struct is_timeout_definition : std::false_type { };
+
+template<typename F>
+struct is_timeout_definition<timeout_definition<F> > : std::true_type { };
 
 } // namespace cppa
+
+#endif // TIMEOUT_DEFINITION_HPP

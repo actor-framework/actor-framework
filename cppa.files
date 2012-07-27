@@ -263,3 +263,5 @@ cppa/factory.hpp
 src/factory.cpp
 cppa/message_id.hpp
 cppa/cppa_fwd.hpp
+cppa/timeout_definition.hpp
+cppa/detail/behavior_impl.hpp
