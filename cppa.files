@@ -250,6 +250,7 @@ unit_testing/test__remote_actor.cpp
 unit_testing/test__ripemd_160.cpp
 unit_testing/test__serialization.cpp
 unit_testing/test__spawn.cpp
+unit_testing/test__sync_send.cpp
 unit_testing/test__tuple.cpp
 unit_testing/test__type_list.cpp
 unit_testing/test__uniform_type.cpp
