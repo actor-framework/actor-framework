@@ -147,13 +147,13 @@ class testee_actor {
         do_receive (
             on<float>() >> [&]() {
                 float_received = true;
-                wait4string();
             },
             on<atom("get_state")>() >> [&]() {
                 reply("wait4float");
             }
         )
         .until(gref(float_received));
+        wait4string();
     }
 
  public:
