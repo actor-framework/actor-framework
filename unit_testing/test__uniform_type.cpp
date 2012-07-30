@@ -68,6 +68,7 @@ int main() {
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
+        "bool",
         "@_::foo",                      // <anonymous namespace>::foo
         "@i8", "@i16", "@i32", "@i64",  // signed integer names
         "@u8", "@u16", "@u32", "@u64",  // unsigned integer names

@@ -619,6 +619,28 @@ class int_tinfo : public detail::default_uniform_type_info_impl<T> {
 
 };
 
+class bool_tinfo : public util::abstract_uniform_type_info<bool> {
+
+ public:
+
+    virtual void serialize(const void* instance, serializer* sink) const {
+        auto val = *reinterpret_cast<const bool*>(instance);
+        sink->begin_object(name());
+        sink->write_value(static_cast<std::uint8_t>(val ? 1 : 0));
+        sink->end_object();
+    }
+
+    virtual void deserialize(void* instance, deserializer* source) const {
+        auto tname = source->seek_object();
+        if (tname != name()) throw 42;
+        source->begin_object(tname);
+        auto ptval = source->read_value(pt_uint8);
+        source->end_object();
+        *reinterpret_cast<bool*>(instance) = (get<pt_uint8>(ptval) != 0);
+    }
+
+};
+
 class uniform_type_info_map_helper {
 
  public:
@@ -682,6 +704,8 @@ uniform_type_info_map::uniform_type_info_map() {
     helper.insert_builtin<std::string>();
     helper.insert_builtin<std::u16string>();
     helper.insert_builtin<std::u32string>();
+    // bool needs some special handling, because it hasn't a guaranteed size
+    insert({raw_name<bool>()}, new bool_tinfo);
     // insert cppa types
     insert({raw_name<util::duration>()}, new duration_tinfo);
     insert({raw_name<any_tuple>()}, new any_tuple_tinfo);

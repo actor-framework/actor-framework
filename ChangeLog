@@ -1,3 +1,9 @@
+Version 0.3.2
+
+2012-07-30
+
+- Bugfix: added 'bool' to the list of announced types
+
 Version 0.3.1
 
 2012-07-27
