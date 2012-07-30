@@ -303,8 +303,8 @@ int main() {
     CPPA_TEST(test__spawn);
 
     CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
-    send(self, 1, 2, 3);
-    receive(on(1, 2, 3) >> []() { });
+    send(self, 1, 2, 3, true);
+    receive(on(1, 2, 3, true) >> []() { });
     CPPA_IF_VERBOSE(cout << "... with empty message... " << std::flush);
     self << any_tuple{};
     receive(on() >> []() { });
