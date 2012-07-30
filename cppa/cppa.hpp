@@ -423,22 +423,14 @@ inline void send_tpl_impl(T* whom, Args&&... what) {
  */
 
 /**
- * @brief Sends a message to @p whom.
- *
- * <b>Usage example:</b>
- * @code
- * self << make_any_tuple(1, 2, 3);
- * @endcode
+ * @brief Sends @p what as a message to @p whom.
  * @param whom Receiver of the message.
- * @param what Message as instance of {@link any_tuple}.
- * @returns @p whom.
+ * @param what Message content as tuple.
  */
-template<class C>
-inline typename std::enable_if<std::is_base_of<channel, C>::value,
-                               const intrusive_ptr<C>&            >::type
-operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
+template<class C, typename... Args>
+inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
     detail::send_impl(whom.get(), std::move(what));
-    return whom;
 }
 
 /**
@@ -454,9 +446,42 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
     detail::send_tpl_impl(whom.get(), std::forward<Args>(what)...);
 }
 
+/**
+ * @brief Sends a message to @p whom.
+ *
+ * <b>Usage example:</b>
+ * @code
+ * self << make_any_tuple(1, 2, 3);
+ * @endcode
+ * @param whom Receiver of the message.
+ * @param what Message as instance of {@link any_tuple}.
+ * @returns @p whom.
+ */
+template<class C>
+inline typename std::enable_if<std::is_base_of<channel, C>::value,
+                               const intrusive_ptr<C>&            >::type
+operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
+    send_tuple(whom, std::move(what));
+    return whom;
+}
+
 #ifndef CPPA_DOCUMENTATION
 typedef message_id_t message_future;
 #endif // CPPA_DOCUMENTATION
+
+/**
+ * @brief Sends @p what as a synchronous message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message content as tuple.
+ * @returns A handle identifying a future to the response of @p whom.
+ * @warning The returned handle is actor specific and the response to the sent
+ *          message cannot be received by another actor.
+ * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+ */
+inline message_future sync_send_tuple(const actor_ptr& whom, any_tuple what) {
+    if (whom) return self->send_sync_message(whom.get(), std::move(what));
+    else throw std::invalid_argument("whom == nullptr");
+}
 
 /**
  * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -471,12 +496,7 @@ typedef message_id_t message_future;
 template<typename... Args>
 inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
     static_assert(sizeof...(Args) > 0, "no message to send");
-    if (whom) {
-        return self->send_sync_message(
-                    whom.get(),
-                    make_any_tuple(std::forward<Args>(what)...));
-    }
-    else throw std::invalid_argument("whom == nullptr");
+    return sync_send_tuple(whom, make_any_tuple(std::forward<Args>(what)...));
 }
 
 /**
@@ -498,8 +518,15 @@ inline sync_recv_helper receive_response(message_future handle) {
 
 /**
  * @brief Sends a message to the sender of the last received message.
+ * @param what Message content as a tuple.
+ */
+inline void reply_tuple(any_tuple what) {
+    self->reply_message(std::move(what));
+}
+
+/**
+ * @brief Sends a message to the sender of the last received message.
  * @param what Message elements.
- * @note Equal to <tt>send(self->last_received(), what...)</tt>.
  */
 template<typename... Args>
 inline void reply(Args&&... what) {
