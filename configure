@@ -213,16 +213,16 @@ fi
 printf "DIRS := %s\n\n" "$workdirs" > $sourcedir/Makefile
 makefile=$(cat <<'EOT'
 all:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
+	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
 
 test:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
+	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
 
 install:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
+	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
 
 uninstall:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
+	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
 
 clean:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
