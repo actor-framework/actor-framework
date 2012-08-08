@@ -250,6 +250,7 @@ add_dependencies(test__ripemd_160 libcppa)
 add_dependencies(test__spawn libcppa)
 add_dependencies(test__type_list libcppa)
 add_dependencies(test__yield_interface libcppa)
+add_dependencies(test__sync_send libcppa)
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
