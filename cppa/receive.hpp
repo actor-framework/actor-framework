@@ -129,8 +129,10 @@ void receive(Arg0&& arg0, Args&&... args) {
 }
 
 void receive_loop(behavior& rules);
+void receive_loop(behavior&& rules);
 
 void receive_loop(partial_function& rules);
+void receive_loop(partial_function&& rules);
 
 template<typename Arg0, typename... Args>
 void receive_loop(Arg0&& arg0, Args&&... args) {

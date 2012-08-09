@@ -39,11 +39,22 @@ void receive_loop(behavior& rules) {
     }
 }
 
+void receive_loop(behavior&& rules) {
+    behavior tmp(std::move(rules));
+    receive_loop(tmp);
+}
+
 void receive_loop(partial_function& rules) {
     local_actor* sptr = self;
     for (;;) {
         sptr->dequeue(rules);
     }
 }
+
+void receive_loop(partial_function&& rules) {
+    partial_function tmp(std::move(rules));
+    receive_loop(tmp);
+}
+
 
 } // namespace cppa
