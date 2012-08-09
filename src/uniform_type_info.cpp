@@ -461,6 +461,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
                                        actor_ptr_name,
                                        group_ptr_name);
         any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
+        sink->write_value(msg.id().integer_value());
         sink->end_object();
     }
 
@@ -469,9 +470,6 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
         if (tname != name()) throw 42;
         source->begin_object(tname);
         auto& msg = *reinterpret_cast<addressed_message*>(instance);
-        //actor_ptr sender;
-        //channel_ptr receiver;
-        //any_tuple content;
         actor_ptr_tinfo::s_deserialize(msg.sender(), source, actor_ptr_name);
         channel_ptr_tinfo::s_deserialize(msg.receiver(),
                                          source,
@@ -479,10 +477,9 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
                                          actor_ptr_name,
                                          group_ptr_name);
         any_tuple_tinfo::s_deserialize(msg.content(), source, any_tuple_name);
+        auto msg_id = source->read_value(pt_uint64);
+        msg.id(message_id_t::from_integer_value(get<pt_uint64>(msg_id)));
         source->end_object();
-        //*reinterpret_cast<any_tuple*>(instance) = any_tuple(sender,
-        //                                                    receiver,
-        //                                                    content);
     }
 
     addr_msg_tinfo() : any_tuple_name(to_uniform_name<any_tuple>())

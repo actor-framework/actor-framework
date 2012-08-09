@@ -293,9 +293,25 @@ class po_peer : public po_socket_handler {
                             if ((whom) && (ptr)) whom->local_unlink_from(ptr);
                         },
                         others() >> [&]() {
-                            if (msg.receiver()) {
-                                msg.receiver()->enqueue(msg.sender().get(),
-                                                        std::move(msg.content()));
+                            auto receiver = msg.receiver().get();
+                            if (receiver) {
+                                if (msg.id().valid()) {
+                                    auto ra = dynamic_cast<actor*>(receiver);
+                                    if (ra) {
+                                        ra->sync_enqueue(
+                                            msg.sender().get(),
+                                            msg.id(),
+                                            std::move(msg.content()));
+                                    }
+                                    else{
+                                        DEBUG("sync message to a non-actor");
+                                    }
+                                }
+                                else {
+                                    receiver->enqueue(
+                                        msg.sender().get(),
+                                        std::move(msg.content()));
+                                }
                             }
                             else {
                                 DEBUG("empty receiver");
