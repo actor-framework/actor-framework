@@ -89,6 +89,16 @@ class message_id_t {
         m_value |= answered_flag_mask;
     }
 
+    inline std::uint64_t integer_value() const {
+        return m_value;
+    }
+
+    static inline message_id_t from_integer_value(std::uint64_t value) {
+        message_id_t result;
+        result.m_value = value;
+        return result;
+    }
+
  private:
 
     explicit message_id_t(std::uint64_t value) : m_value(value) { }
