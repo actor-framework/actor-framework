@@ -41,10 +41,40 @@ void client_part(const std::vector<string_pair>& args) {
         throw std::runtime_error("no port specified");
     }
     auto port = static_cast<std::uint16_t>(std::stoi(i->second));
-    auto ping_actor = remote_actor("localhost", port);
-    //spawn_event_based_pong(ping_actor);
-    spawn<detached>(pong, ping_actor);
+    auto server = remote_actor("localhost", port);
+    send(server, atom("SpawnPing"));
+    receive (
+        on(atom("PingPtr"), arg_match) >> [](actor_ptr ping_actor) {
+            spawn<detached>(pong, ping_actor);
+        }
+    );
     await_all_others_done();
+    receive_response (sync_send(server, atom("SyncMsg"))) (
+        others() >> [&] {
+            if (self->last_dequeued() != make_cow_tuple(atom("SyncReply"))) {
+                std::ostringstream oss;
+                oss << "unexpected message; "
+                    << __FILE__ << " line " << __LINE__ << ": "
+                    << to_string(self->last_dequeued()) << endl;
+                send(server, atom("Failure"), oss.str());
+            }
+            else {
+                send(server, atom("Done"));
+            }
+        },
+        after(std::chrono::seconds(5)) >> [&] {
+            cerr << "sync_send timed out!" << endl;
+            send(server, atom("Timeout"));
+        }
+    );
+    receive (
+        others() >> [&] {
+            cerr << "unexpected message; "
+                 << __FILE__ << " line " << __LINE__ << ": "
+                 << to_string(self->last_dequeued()) << endl;
+        },
+        after(std::chrono::seconds(0)) >> [&] { }
+    );
 }
 
 } // namespace <anonymous>
@@ -57,13 +87,12 @@ int main(int argc, char** argv) {
         return 0;
     }
     CPPA_TEST(test__remote_actor);
-    auto ping_actor = spawn_event_based_ping(10);
     //auto ping_actor = spawn(ping, 10);
     std::uint16_t port = 4242;
     bool success = false;
     do {
         try {
-            publish(ping_actor, port);
+            publish(self, port);
             success = true;
         }
         catch (bind_failure&) {
@@ -83,10 +112,31 @@ int main(int argc, char** argv) {
             abort();
         }
     });
+    cout << "await SpawnPing message" << endl;
+    receive (
+        on(atom("SpawnPing")) >> []() {
+            reply(atom("PingPtr"), spawn_event_based_ping(10));
+        }
+    );
     await_all_others_done();
     CPPA_CHECK_EQUAL(10, pongs());
-    // kill pong actor
-
+    cout << "test remote sync_send" << endl;
+    receive (
+        on(atom("SyncMsg")) >> [] {
+            reply(atom("SyncReply"));
+        }
+    );
+    receive (
+        on(atom("Done")) >> [] {
+            // everything's fine
+        },
+        on(atom("Failure"), arg_match) >> [&](const std::string& str) {
+            CPPA_ERROR(str);
+        },
+        on(atom("Timeout")) >> [&] {
+            CPPA_ERROR("sync_send timed out");
+        }
+    );
     // wait until separate process (in sep. thread) finished execution
     child.join();
     return CPPA_TEST_RESULT;
