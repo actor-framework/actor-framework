@@ -39,11 +39,11 @@ class event_testee : public sb_actor<event_testee> {
     behavior wait4float;
     behavior wait4int;
 
-    behavior& init_state;
+    behavior& init_state = wait4int;
 
  public:
 
-    event_testee() : init_state(wait4int) {
+    event_testee() {
         wait4string = (
             on<std::string>() >> [=]() {
                 become(wait4int);
@@ -95,13 +95,13 @@ actor_ptr spawn_event_testee2() {
 
 struct chopstick : public sb_actor<chopstick> {
 
-    behavior taken_by(actor_ptr hakker) {
+    behavior taken_by(actor_ptr whom) {
         return (
             on<atom("take")>() >> [=]() {
                 reply(atom("busy"));
             },
-            on(atom("put"), hakker) >> [=]() {
-                become(init_state);
+            on(atom("put"), whom) >> [=]() {
+                become(available);
             },
             on(atom("break")) >> [=]() {
                 quit();
@@ -109,18 +109,18 @@ struct chopstick : public sb_actor<chopstick> {
         );
     }
 
-    behavior init_state;
+    behavior available;
+
+    behavior& init_state = available;
 
     chopstick() {
-        init_state = (
-            on(atom("take"), arg_match) >> [=](actor_ptr hakker) {
-                become(taken_by(hakker));
+        available = (
+            on(atom("take"), arg_match) >> [=](actor_ptr whom) {
+                become(taken_by(whom));
                 reply(atom("taken"));
             },
             on(atom("break")) >> [=]() {
                 quit();
-            },
-            others() >> [=]() {
             }
         );
     }
@@ -251,11 +251,12 @@ class fixed_stack : public sb_actor<fixed_stack> {
     behavior full;
     behavior filled;
     behavior empty;
-    behavior& init_state;
+
+    behavior& init_state = empty;
 
  public:
 
-    fixed_stack(size_t max) : max_size(max), init_state(empty) {
+    fixed_stack(size_t max) : max_size(max)  {
 
         full = (
             on(atom("push"), arg_match) >> [=](int) { },
