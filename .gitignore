@@ -11,4 +11,5 @@ html/
 build/*
 build-clang/*
 build-gcc/*
+manual/*
 Makefile
