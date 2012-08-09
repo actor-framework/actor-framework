@@ -68,8 +68,10 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
                                                 ++m_active_timeout_id));
             }
             else {
-                get_scheduler()->delayed_send(this, d, atom("TIMEOUT"),
-                                              ++m_active_timeout_id);
+                get_scheduler()->delayed_send(
+                            this, d,
+                            make_any_tuple(
+                                atom("TIMEOUT"), ++m_active_timeout_id));
             }
             m_has_pending_timeout_request = true;
         }
