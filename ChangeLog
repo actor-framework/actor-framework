@@ -1,3 +1,17 @@
+Version 0.3.3
+
+2012-08-09
+
+- Bugfix: serialize message id for synchronous messaging
+- Added macro to unit_testing/CMakeLists.txt for less verbose CMake setup
+- Added function "forward_to" to enable transparent forwarding of sync requests
+- Removed obsolete files (gen_server/* and queue_performances/*)
+- Bugfix: avoid possible stack overflow in debug mode for test__spawn
+- Added functions "send_tuple", "sync_send_tuple" and "reply_tuple"
+- Let "make" fail on first error in dual-build mode
+- Added rvalue overload for receive_loop
+- Added "delayed_send_tuple" and "delayed_reply_tupledelayed_reply_tuple"
+
 Version 0.3.2
 
 2012-07-30
