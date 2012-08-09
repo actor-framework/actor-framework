@@ -82,6 +82,10 @@ class addressed_message {
         return m_msg_id;
     }
 
+    inline void id(message_id_t value) {
+        m_msg_id = value;
+    }
+
     inline bool empty() const {
         return m_content.empty();
     }
