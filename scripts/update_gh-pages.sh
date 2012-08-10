@@ -17,7 +17,7 @@ make html &>/dev/null
 
 echo "copy documentation into gh-pages ..."
 cd ../../gh-pages
-rm -rf *.tex *.html *.css *.png *.js manual
+rm -f *.tex *.html *.css *.png *.js manual/manual.pdf manual/index.html
 cp -R ../libcppa/html/* .
 mkdir manual
 cp ../libcppa/manual.pdf manual/
