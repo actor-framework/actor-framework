@@ -115,16 +115,6 @@ inline void send2po(const po_message& msg, Args&&... args) {
     send2po_(nm, std::forward<Args>(args)...);
 }
 
-template<class Fun>
-struct scope_guard {
-    Fun m_fun;
-    scope_guard(Fun&& fun) : m_fun(fun) { }
-    ~scope_guard() { m_fun(); }
-};
-
-template<class Fun>
-scope_guard<Fun> make_scope_guard(Fun fun) { return {std::move(fun)}; }
-
 class po_socket_handler {
 
  public:
