@@ -10,7 +10,7 @@ Version 0.3.3
 - Added functions "send_tuple", "sync_send_tuple" and "reply_tuple"
 - Let "make" fail on first error in dual-build mode
 - Added rvalue overload for receive_loop
-- Added "delayed_send_tuple" and "delayed_reply_tupledelayed_reply_tuple"
+- Added "delayed_send_tuple" and "delayed_reply_tuple"
 
 Version 0.3.2
 
