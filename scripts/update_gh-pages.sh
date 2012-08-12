@@ -1,5 +1,16 @@
 #!/bin/bash
 
+echo "check for folders ..."
+if [ ! -d manual ]; then
+    echo "no manual folder found"
+    exit
+fi
+
+if [ ! -d ../gh-pages ]; then
+    echo "no gh-pages folder found"
+    exit
+fi
+
 echo "build documentation ..."
 make doc &>/dev/null
 
