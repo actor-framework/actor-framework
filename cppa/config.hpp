@@ -81,4 +81,26 @@
 
 #define CPPA_CRITICAL(error) CPPA_CRITICAL__(error, __FILE__, __LINE__)
 
+#ifdef CPPA_WINDOWS
+#else
+#   include <unistd.h>
+#endif
+
+namespace cppa {
+
+#ifdef CPPA_WINDOWS
+    typedef SOCKET native_socket_type;
+    typedef const char* socket_send_ptr;
+    typedef char* socket_recv_ptr;
+    constexpr SOCKET invalid_socket = INVALID_SOCKET;
+#else
+    typedef int native_socket_type;
+    typedef const void* socket_send_ptr;
+    typedef void* socket_recv_ptr;
+    constexpr int invalid_socket = -1;
+    inline void closesocket(native_socket_type fd) { close(fd); }
+#endif
+
+} // namespace cppa
+
 #endif // CPPA_CONFIG_HPP

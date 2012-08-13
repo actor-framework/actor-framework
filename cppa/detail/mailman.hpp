@@ -34,11 +34,34 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
-#include "cppa/detail/native_socket.hpp"
 #include "cppa/detail/addressed_message.hpp"
+#include "cppa/util/acceptor.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
+
+enum class mm_message_type {
+    outgoing_message,
+    add_peer,
+    shutdown
+};
+
+struct mm_message {
+    mm_message* next;
+    mm_message_type type;
+    union {
+        std::pair<process_information_ptr, addressed_message> out_msg;
+        std::pair<util::io_stream_ptr_pair, process_information_ptr> peer;
+    };
+    mm_message();
+    mm_message(process_information_ptr, addressed_message);
+    mm_message(util::io_stream_ptr_pair, process_information_ptr);
+    ~mm_message();
+    template<typename... Args>
+    static inline std::unique_ptr<mm_message> create(Args&&... args) {
+        return std::unique_ptr<mm_message>(new mm_message(std::forward<Args>(args)...));
+    }
+};
 
 void mailman_loop();
 

@@ -32,30 +32,75 @@
 #define CPPA_POST_OFFICE_HPP
 
 #include <memory>
+#include <utility>
 
 #include "cppa/atom.hpp"
 #include "cppa/actor_proxy.hpp"
-#include "cppa/detail/native_socket.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
+
+#include "cppa/util/acceptor.hpp"
+#include "cppa/util/io_stream.hpp"
+
+#include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa { namespace detail {
 
-struct po_message {
-    atom_value flag;
-    native_socket_type fd;
-    actor_id aid;
+enum class po_message_type {
+    add_peer,
+    rm_peer,
+    publish,
+    unpublish,
+    shutdown
 };
 
-void post_office_loop(int input_fd);
+struct po_message {
+    po_message* next;
+    const po_message_type type;
+    union {
+        std::pair<util::io_stream_ptr_pair, process_information_ptr> new_peer;
+        util::io_stream_ptr_pair peer_streams;
+        std::pair<std::unique_ptr<util::acceptor>, actor_ptr> new_published_actor;
+        actor_ptr published_actor;
+    };
+    po_message();
+    po_message(util::io_stream_ptr_pair, process_information_ptr);
+    po_message(util::io_stream_ptr_pair);
+    po_message(std::unique_ptr<util::acceptor>, actor_ptr);
+    po_message(actor_ptr);
+    ~po_message();
+    template<typename... Args>
+    static inline std::unique_ptr<po_message> create(Args&&... args) {
+        return std::unique_ptr<po_message>(new po_message(std::forward<Args>(args)...));
+    }
+};
 
-void post_office_add_peer(native_socket_type peer_socket,
-                          const process_information_ptr& peer_ptr);
+void post_office_loop(int input_fd, intrusive::single_reader_queue<po_message>&);
 
-void post_office_publish(native_socket_type server_socket,
-                         const actor_ptr& published_actor);
+template<typename... Args>
+inline void send2po(Args&&... args) {
+    auto nm = singleton_manager::get_network_manager();
+    nm->send_to_post_office(std::unique_ptr<po_message>(new po_message(std::forward<Args>(args)...)));
+}
 
-void post_office_unpublish(actor_id whom);
+inline void post_office_add_peer(util::io_stream_ptr_pair peer_streams,
+                                 process_information_ptr peer_ptr      ) {
+    send2po(std::move(peer_streams), std::move(peer_ptr));
+}
 
-void post_office_close_socket(native_socket_type sfd);
+inline void post_office_close_peer_connection(util::io_stream_ptr_pair peer_streams) {
+    send2po(std::move(peer_streams));
+}
+
+inline void post_office_publish(std::unique_ptr<util::acceptor> server,
+                                actor_ptr published_actor              ) {
+    send2po(std::move(server), std::move(published_actor));
+}
+
+inline void post_office_unpublish(actor_ptr whom) {
+    send2po(std::move(whom));
+}
 
 } } // namespace cppa::detail
 

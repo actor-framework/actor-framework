@@ -50,7 +50,7 @@ void actor_proxy::forward_message(const process_information_ptr& piptr,
                                   message_id_t id                        ) {
     detail::addressed_message amsg{sender, this, std::move(msg), id};
     detail::singleton_manager::get_network_manager()
-    ->send_to_mailman(make_any_tuple(piptr, std::move(amsg)));
+    ->send_to_mailman(detail::mm_message::create(piptr, std::move(amsg)));
 }
 
 void actor_proxy::enqueue(actor* sender, any_tuple msg) {

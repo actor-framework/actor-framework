@@ -28,36 +28,32 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_NETWORK_MANAGER_HPP
-#define CPPA_NETWORK_MANAGER_HPP
+#ifndef CPPA_INPUT_STREAM_HPP
+#define CPPA_INPUT_STREAM_HPP
 
-#include <memory>
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
-//#include "cppa/detail/post_office.hpp"
+namespace cppa { namespace util {
 
-namespace cppa { namespace detail {
-
-struct po_message;
-struct mm_message;
-
-class network_manager {
+class input_stream : public virtual ref_counted {
 
  public:
 
-    virtual ~network_manager();
+    virtual native_socket_type read_file_handle() const = 0;
 
-    virtual void start() = 0;
+    /**
+     * @throws std::ios_base::failure
+     */
+    virtual void read(void* buf, size_t num_bytes) = 0;
 
-    virtual void stop() = 0;
-
-    virtual void send_to_post_office(std::unique_ptr<po_message> msg) = 0;
-
-    virtual void send_to_mailman(std::unique_ptr<mm_message> msg) = 0;
-
-    static network_manager* create_singleton();
+    virtual size_t read_some(void* buf, size_t num_bytes) = 0;
 
 };
 
-} } // namespace cppa::detail
+typedef intrusive_ptr<input_stream> input_stream_ptr;
 
-#endif // CPPA_NETWORK_MANAGER_HPP
+} } // namespace cppa::util
+
+#endif // CPPA_INPUT_STREAM_HPP

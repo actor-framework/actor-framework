@@ -1,4 +1,4 @@
-//#define CPPA_VERBOSE_CHECK
+#define CPPA_VERBOSE_CHECK
 
 #include <stack>
 #include <chrono>
@@ -207,7 +207,7 @@ void testee3(actor_ptr parent) {
 void echo_actor() {
     receive (
         others() >> []() {
-            self->last_sender() << self->last_dequeued();
+            reply_tuple(self->last_dequeued());
         }
     );
 }
@@ -325,7 +325,12 @@ int main() {
     CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
     auto mecho = spawn(echo_actor);
     send(mecho, "hello echo");
-    receive(on("hello echo") >> []() { });
+    receive (
+        on("hello echo") >> []() { },
+        others() >> [] {
+            cout << "UNEXPECTED: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 

@@ -28,35 +28,27 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_NATIVE_SOCKET_HPP
-#define CPPA_NATIVE_SOCKET_HPP
+#ifndef CPPA_OUTPUT_STREAM_HPP
+#define CPPA_OUTPUT_STREAM_HPP
 
 #include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
-#ifdef CPPA_WINDOWS
-#else
-#   include <netdb.h>
-#   include <unistd.h>
-#   include <sys/types.h>
-#   include <sys/socket.h>
-#   include <netinet/in.h>
-#endif
+namespace cppa { namespace util {
 
-namespace cppa { namespace detail {
+class output_stream : public virtual ref_counted {
 
-#ifdef CPPA_WINDOWS
-    typedef SOCKET native_socket_type;
-    typedef const char* socket_send_ptr;
-    typedef char* socket_recv_ptr;
-    constexpr SOCKET invalid_socket = INVALID_SOCKET;
-#else
-    typedef int native_socket_type;
-    typedef const void* socket_send_ptr;
-    typedef void* socket_recv_ptr;
-    constexpr int invalid_socket = -1;
-    void closesocket(native_socket_type s);
-#endif
+ public:
 
-} } // namespace cppa::detail
+    virtual native_socket_type write_file_handle() const = 0;
+    virtual void write(const void* buf, size_t num_bytes) = 0;
+    virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
 
-#endif // CPPA_NATIVE_SOCKET_HPP
+};
+
+typedef intrusive_ptr<output_stream> output_stream_ptr;
+
+} } // namespace cppa::util
+
+#endif // CPPA_OUTPUT_STREAM_HPP

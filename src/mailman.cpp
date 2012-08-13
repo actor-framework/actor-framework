@@ -31,6 +31,17 @@
 #include <atomic>
 #include <iostream>
 
+#ifdef CPPA_WINDOWS
+#else
+#   include <netdb.h>
+#   include <unistd.h>
+#   include <sys/types.h>
+#   include <sys/socket.h>
+#   include <netinet/in.h>
+#   include <netinet/tcp.h>
+#   include <fcntl.h>
+#endif
+
 #include "cppa/cppa.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/detail/mailman.hpp"
@@ -51,6 +62,46 @@ using std::endl;
 
 // implementation of mailman.hpp
 namespace cppa { namespace detail {
+
+namespace {
+
+template<typename T, typename... Args>
+void call_ctor(T& var, Args&&... args) {
+    new (&var) T (std::forward<Args>(args)...);
+}
+
+template<typename T>
+void call_dtor(T& var) {
+    var.~T();
+}
+
+} // namespace <anonymous>
+
+mm_message::mm_message() : next(0), type(mm_message_type::shutdown) { }
+
+mm_message::mm_message(process_information_ptr a0, addressed_message a1)
+: next(0), type(mm_message_type::outgoing_message) {
+    call_ctor(out_msg, std::move(a0), std::move(a1));
+}
+
+mm_message::mm_message(util::io_stream_ptr_pair a0, process_information_ptr a1)
+: next(0), type(mm_message_type::add_peer) {
+    call_ctor(peer, std::move(a0), std::move(a1));
+}
+
+mm_message::~mm_message() {
+    switch (type) {
+        case mm_message_type::outgoing_message: {
+            call_dtor(out_msg);
+            break;
+        }
+        case mm_message_type::add_peer: {
+            call_dtor(peer);
+            break;
+        }
+        default: break;
+    }
+}
 
 void mailman_loop() {
     bool done = false;
@@ -81,7 +132,7 @@ void mailman_loop() {
                 if (disconnect_peer) {
                     DEBUG("peer disconnected (error during send)");
                     //closesocket(peer);
-                    post_office_close_socket(peer_fd);
+                    //post_office_close_socket(peer_fd);
                     peers.erase(i);
                 }
                 bs.reset();

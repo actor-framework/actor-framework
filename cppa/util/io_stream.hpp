@@ -28,37 +28,18 @@
 \******************************************************************************/
 
 
-#include "cppa/config.hpp"
+#ifndef CPPA_IO_STREAM_HPP
+#define CPPA_IO_STREAM_HPP
 
-#include <ios> // ios_base::failure
-#include <errno.h>
-#include <sstream>
-#include "cppa/detail/native_socket.hpp"
+#include "cppa/util/input_stream.hpp"
+#include "cppa/util/output_stream.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa { namespace util {
 
-#ifndef CPPA_WINDOWS
+class io_stream : public input_stream, public output_stream { };
 
-void closesocket(native_socket_type s) {
-    if(::close(s) != 0) {
-        switch(errno) {
-            case EBADF: {
-                throw std::ios_base::failure("EBADF: invalid socket");
-            }
-            case EINTR: {
-                throw std::ios_base::failure("EINTR: interrupted");
-            }
-            case EIO: {
-                throw std::ios_base::failure("EIO: an I/O error occured");
-            }
-            default: {
-                std::ostringstream oss;
-                throw std::ios_base::failure("");
-            }
-        }
-    }
-}
+typedef intrusive_ptr<io_stream> io_stream_ptr;
 
-#endif
+} } // namespace cppa::util
 
-} } // namespace cppa::detail
+#endif // CPPA_IO_STREAM_HPP

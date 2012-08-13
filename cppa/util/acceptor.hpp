@@ -28,36 +28,30 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_NETWORK_MANAGER_HPP
-#define CPPA_NETWORK_MANAGER_HPP
+#ifndef CPPA_ACCEPTOR_HPP
+#define CPPA_ACCEPTOR_HPP
 
-#include <memory>
+#include "cppa/config.hpp"
+#include "cppa/option.hpp"
 
-//#include "cppa/detail/post_office.hpp"
+#include "cppa/util/input_stream.hpp"
+#include "cppa/util/output_stream.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa { namespace util {
 
-struct po_message;
-struct mm_message;
+typedef std::pair<input_stream_ptr, output_stream_ptr> io_stream_ptr_pair;
 
-class network_manager {
+class acceptor {
 
  public:
 
-    virtual ~network_manager();
-
-    virtual void start() = 0;
-
-    virtual void stop() = 0;
-
-    virtual void send_to_post_office(std::unique_ptr<po_message> msg) = 0;
-
-    virtual void send_to_mailman(std::unique_ptr<mm_message> msg) = 0;
-
-    static network_manager* create_singleton();
+    virtual ~acceptor() { }
+    virtual native_socket_type acceptor_file_handle() const = 0;
+    virtual io_stream_ptr_pair accept_connection() = 0;
+    virtual option<io_stream_ptr_pair> try_accept_connection() = 0;
 
 };
 
-} } // namespace cppa::detail
+} } // namespace cppa::util
 
-#endif // CPPA_NETWORK_MANAGER_HPP
+#endif // CPPA_ACCEPTOR_HPP

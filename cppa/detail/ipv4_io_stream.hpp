@@ -28,108 +28,40 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_BUFFER_HPP
-#define CPPA_BUFFER_HPP
+#ifndef CPPA_IPV4_IO_STREAM_HPP
+#define CPPA_IPV4_IO_STREAM_HPP
 
-#include <ios>      // std::ios_base::failure
-#include <cstring>
-#include <iostream>
-
-#include "cppa/util/input_stream.hpp"
+#include "cppa/config.hpp"
+#include "cppa/util/io_stream.hpp"
 
 namespace cppa { namespace detail {
 
-template<size_t ChunkSize, size_t MaxBufferSize, typename DataType = char>
-class buffer {
-
-    DataType* m_data;
-    size_t m_written;
-    size_t m_allocated;
-    size_t m_final_size;
+class ipv4_io_stream : public util::io_stream {
 
  public:
 
-    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0) {
-    }
+    static util::io_stream_ptr connect_to(const char* host, std::uint16_t port);
 
-    buffer(buffer&& other)
-        : m_data(other.m_data), m_written(other.m_written)
-        , m_allocated(other.m_allocated), m_final_size(other.m_final_size) {
-        other.m_data = nullptr;
-        other.m_written = other.m_allocated = other.m_final_size = 0;
-    }
+    ipv4_io_stream(native_socket_type fd);
 
-    ~buffer() {
-        delete[] m_data;
-    }
+    native_socket_type read_file_handle() const;
 
-    void clear() {
-        m_written = 0;
-    }
+    native_socket_type write_file_handle() const;
 
-    void reset(size_t new_final_size = 0) {
-        m_written = 0;
-        m_final_size = new_final_size;
-        if (new_final_size > m_allocated) {
-            if (new_final_size > MaxBufferSize) {
-                throw std::ios_base::failure("maximum buffer size exceeded");
-            }
-            auto remainder = (new_final_size % ChunkSize);
-            if (remainder == 0) {
-                m_allocated = new_final_size;
-            }
-            else {
-                m_allocated = (new_final_size - remainder) + ChunkSize;
-            }
-            delete[] m_data;
-            m_data = new DataType[m_allocated];
-        }
-    }
+    void read(void* buf, size_t len);
 
-    bool ready() {
-        return m_written == m_final_size;
-    }
+    size_t read_some(void* buf, size_t len);
 
-    // pointer to the current write position
-    DataType* wr_ptr() {
-        return m_data + m_written;
-    }
+    void write(const void* buf, size_t len);
 
-    size_t size() {
-        return m_written;
-    }
+    size_t write_some(const void* buf, size_t len);
 
-    size_t final_size() {
-        return m_final_size;
-    }
+ private:
 
-    size_t remaining() {
-        return m_final_size - m_written;
-    }
-
-    void inc_written(size_t value) {
-        m_written += value;
-    }
-
-    DataType* data() {
-        return m_data;
-    }
-
-    inline bool full() {
-        return remaining() == 0;
-    }
-
-    bool append_from(util::input_stream* istream) {
-        auto num_bytes = istream->read_some(wr_ptr(), remaining());
-        if (num_bytes > 0) {
-            inc_written(num_bytes);
-            return true;
-        }
-        return false;
-    }
+    native_socket_type m_fd;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_BUFFER_HPP
+#endif // CPPA_IPV4_IO_STREAM_HPP
