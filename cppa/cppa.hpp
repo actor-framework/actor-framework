@@ -59,6 +59,7 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/rm_ref.hpp"
+#include "cppa/util/acceptor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -746,6 +747,15 @@ inline void await_all_others_done() {
 void publish(actor_ptr whom, std::uint16_t port);
 
 /**
+ * @brief Publishes @p whom using @p acceptor to handle incoming connections.
+ *
+ * The connection is automatically closed if the lifetime of @p whom ends.
+ * @param whom Actor that should be published at @p port.
+ * @param acceptor Network technology-specific acceptor implementation.
+ */
+void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor);
+
+/**
  * @brief Establish a new connection to the actor at @p host on given @p port.
  * @param host Valid hostname or IP address.
  * @param port TCP port.
@@ -760,6 +770,15 @@ actor_ptr remote_actor(const char* host, std::uint16_t port);
 inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
     return remote_actor(host.c_str(), port);
 }
+
+/**
+ * @brief Establish a new connection to the actor via given @p connection.
+ * @param connection A connection to another libcppa process described by a pair
+ *                   of input and output stream.
+ * @returns An {@link actor_ptr} to the proxy instance
+ *          representing a remote actor.
+ */
+actor_ptr remote_actor(util::io_stream_ptr_pair connection);
 
 } // namespace cppa
 
