@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
     }
     while (!success);
     std::ostringstream oss;
-    oss << app_path << " run=remote_actor port=" << port << " &>client.txt";
+    oss << app_path << " run=remote_actor port=" << port;// << " &>client.txt";
     // execute client_part() in a separate process,
     // connected via localhost socket
     std::thread child([&oss]() {
