@@ -75,6 +75,22 @@ void client_part(const std::vector<string_pair>& args) {
         },
         after(std::chrono::seconds(0)) >> [&] { }
     );
+    // test 100 sync_messages
+    for (int i = 0; i < 100; ++i) {
+        receive_response (sync_send(server, atom("foo"), atom("bar"), i)) (
+            on(atom("foo"), atom("bar"), i) >> [] {
+
+            },
+            others() >> [] {
+                cerr << "unexpected message; "
+                     << __FILE__ << " line " << __LINE__ << ": "
+                     << to_string(self->last_dequeued()) << endl;
+            },
+            after(std::chrono::seconds(10)) >> [&] {
+                cerr << "unexpected timeout!" << endl;
+            }
+        );
+    }
 }
 
 } // namespace <anonymous>
@@ -102,7 +118,7 @@ int main(int argc, char** argv) {
     }
     while (!success);
     std::ostringstream oss;
-    oss << app_path << " run=remote_actor port=" << port;// << " &>/dev/null";
+    oss << app_path << " run=remote_actor port=" << port << " &>client.txt";
     // execute client_part() in a separate process,
     // connected via localhost socket
     std::thread child([&oss]() {
@@ -112,7 +128,7 @@ int main(int argc, char** argv) {
             abort();
         }
     });
-    cout << "await SpawnPing message" << endl;
+    //cout << "await SpawnPing message" << endl;
     receive (
         on(atom("SpawnPing")) >> []() {
             reply(atom("PingPtr"), spawn_event_based_ping(10));
@@ -135,6 +151,13 @@ int main(int argc, char** argv) {
         },
         on(atom("Timeout")) >> [&] {
             CPPA_ERROR("sync_send timed out");
+        }
+    );
+    // test 100 sync messages
+    int i = 0;
+    receive_for(i, 100) (
+        others() >> [] {
+            reply_tuple(self->last_dequeued());
         }
     );
     // wait until separate process (in sep. thread) finished execution
