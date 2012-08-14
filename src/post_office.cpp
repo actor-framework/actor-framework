@@ -72,9 +72,13 @@
 #include "cppa/detail/addressed_message.hpp"
 
 #define DEBUG(arg)                                                             \
-    std::cout << "[process id: "                                               \
-              << cppa::process_information::get()->process_id()                \
-              << "] " << arg << std::endl
+    {                                                                          \
+        std::ostringstream oss;                                                \
+        oss << "[process id: "                                                 \
+            << cppa::process_information::get()->process_id()                  \
+            << "] " << arg << std::endl;                                       \
+        std::cout << oss.str();                                                \
+    } (void) 0
 
 #undef DEBUG
 #define DEBUG(unused) ((void) 0)
@@ -163,9 +167,13 @@ po_message::~po_message() {
     }
 }
 
+class post_office;
+
 class post_office_worker {
 
  public:
+
+    post_office_worker(post_office* parent) : m_parent(parent) { }
 
     virtual ~post_office_worker() { }
 
@@ -176,10 +184,67 @@ class post_office_worker {
 
     virtual bool is_doorman_of(actor_id) const { return false; }
 
+ protected:
+
+    post_office* parent() { return m_parent; }
+
+ private:
+
+    post_office* m_parent;
+
 };
 
 typedef std::unique_ptr<post_office_worker> po_worker_ptr;
 typedef std::vector<po_worker_ptr> po_worker_vector;
+
+class post_office {
+
+    friend void post_office_loop(int, po_message_queue&);
+
+ public:
+
+    post_office() : m_done(false), m_pself(process_information::get()) {
+        DEBUG("started post office at "
+              << m_pself->process_id() << "@" << to_string(m_pself->node_id()));
+    }
+
+    template<class Worker, typename... Args>
+    inline void add_worker(Args&&... args) {
+        m_new_workers.emplace_back(new Worker(this, std::forward<Args>(args)...));
+    }
+
+    inline void close_socket(native_socket_type fd) {
+        m_closed_sockets.push_back(fd);
+    }
+
+    inline void quit() {
+        m_done = true;
+    }
+
+    post_office_worker* doorman_of(actor_id whom) {
+        auto last = m_workers.end();
+        auto i = std::find_if(m_workers.begin(), last,
+                              [whom](const po_worker_ptr& hp) {
+            return hp->is_doorman_of(whom);
+        });
+        return (i != last) ? i->get() : nullptr;
+    }
+
+    const process_information_ptr& pself() {
+        return m_pself;
+    }
+
+ private:
+
+    void operator()(int input_fd, po_message_queue& q);
+
+    bool m_done;
+    process_information_ptr m_pself;
+    po_worker_vector m_workers;
+    po_worker_vector m_new_workers;
+    std::vector<native_socket_type> m_closed_sockets;
+
+};
 
 // represents a TCP connection to another peer
 class po_peer : public post_office_worker {
@@ -197,8 +262,6 @@ class po_peer : public post_office_worker {
     util::output_stream_ptr m_ostream;
 
     state m_state;
-    // caches process_information::get()
-    process_information_ptr m_pself;
     // the process information of our remote peer
     process_information_ptr m_peer;
     // caches uniform_typeid<addressed_message>()
@@ -206,29 +269,20 @@ class po_peer : public post_office_worker {
     // manages socket input
     buffer<512, (16 * 1024 * 1024)> m_buf;
 
-    void init() {
-        m_state = (m_peer) ? wait_for_msg_size : wait_for_process_info;
-        m_pself = process_information::get();
-        m_meta_msg = uniform_typeid<addressed_message>();
+ public:
+
+    po_peer(post_office* parent,
+            util::io_stream_ptr_pair spair,
+            process_information_ptr peer = nullptr)
+    : post_office_worker(parent)
+    , m_istream(std::move(spair.first))
+    , m_ostream(std::move(spair.second))
+    , m_state((peer) ? wait_for_msg_size : wait_for_process_info)
+    , m_peer(peer)
+    , m_meta_msg(uniform_typeid<addressed_message>()) {
         m_buf.reset(m_state == wait_for_process_info
                     ? sizeof(std::uint32_t) + process_information::node_id_size
                     : sizeof(std::uint32_t));
-    }
-
- public:
-
-    po_peer(util::io_stream_ptr ios, process_information_ptr peer = nullptr)
-    : m_istream(ios)
-    , m_ostream(ios)
-    , m_peer(std::move(peer)) {
-        init();
-    }
-
-    po_peer(util::io_stream_ptr_pair spair, process_information_ptr peer = nullptr)
-    : m_istream(std::move(spair.first))
-    , m_ostream(std::move(spair.second))
-    , m_peer(std::move(peer)) {
-        init();
     }
 
     ~po_peer() {
@@ -257,15 +311,19 @@ class po_peer : public post_office_worker {
     // @returns false if an error occured; otherwise true
     bool read_and_continue() {
         for (;;) {
-            if (m_buf.append_from(m_istream.get()) == false) {
-                DEBUG("cannot read from socket");
+            try {
+                m_buf.append_from(m_istream.get());
+            }
+            catch (std::exception& e) {
+                DEBUG(e.what());
                 return false;
             }
-            if (m_buf.ready() == false) {
+            if (!m_buf.full()) {
                 return true; // try again later
             }
             switch (m_state) {
                 case wait_for_process_info: {
+                    DEBUG("po_peer: read_and_continue: wait_for_process_info");
                     std::uint32_t process_id;
                     process_information::node_id_type node_id;
                     memcpy(&process_id, m_buf.data(), sizeof(std::uint32_t));
@@ -273,11 +331,10 @@ class po_peer : public post_office_worker {
                            process_information::node_id_size);
                     m_peer.reset(new process_information(process_id, node_id));
                     util::io_stream_ptr_pair iop(m_istream, m_ostream);
+                    DEBUG("po_peer: send new peer to mailman");
                     // inform mailman about new peer
-                    singleton_manager::get_network_manager()
-                    ->send_to_mailman(mm_message::create(iop, m_peer));
-                    // forget the output stream (initialization done)
-                    m_ostream.reset();
+                    mailman_add_peer(iop, m_peer);
+                    // initialization done
                     m_state = wait_for_msg_size;
                     m_buf.reset(sizeof(std::uint32_t));
                     DEBUG("pinfo read: "
@@ -287,13 +344,22 @@ class po_peer : public post_office_worker {
                     break;
                 }
                 case wait_for_msg_size: {
+                    DEBUG("po_peer: read_and_continue: wait_for_msg_size");
                     std::uint32_t msg_size;
                     memcpy(&msg_size, m_buf.data(), sizeof(std::uint32_t));
-                    m_buf.reset(msg_size);
+                    DEBUG("msg_size: " << msg_size);
+                    try {
+                        m_buf.reset(msg_size);
+                    }
+                    catch (std::exception& e) {
+                        DEBUG(e.what());
+                        return false;
+                    }
                     m_state = read_message;
                     break;
                 }
                 case read_message: {
+                    DEBUG("po_peer: read_and_continue: read_message");
                     addressed_message msg;
                     binary_deserializer bd(m_buf.data(), m_buf.size());
                     try {
@@ -314,11 +380,12 @@ class po_peer : public post_office_worker {
                                 DEBUG("empty receiver");
                             }
                             else if (receiver->parent_process() == *process_information::get()) {
+                                auto mpeer = m_peer;
                                 // this message was send from a proxy
-                                receiver->attach_functor([=](std::uint32_t reason) {
+                                receiver->attach_functor([mpeer, receiver](std::uint32_t reason) {
                                     addressed_message kmsg{receiver, receiver, make_any_tuple(atom("KILL_PROXY"), reason)};
                                     singleton_manager::get_network_manager()
-                                    ->send_to_mailman(mm_message::create(m_peer, kmsg));
+                                    ->send_to_mailman(mm_message::create(mpeer, kmsg));
                                 });
                             }
                             else {
@@ -384,18 +451,14 @@ class po_peer : public post_office_worker {
 // accepts new connections to a published actor
 class po_doorman : public post_office_worker {
 
-    std::unique_ptr<util::acceptor> m_acceptor;
-    actor_id m_actor_id;
-    // caches process_information::get()
-    process_information_ptr m_pself;
-    po_worker_vector* new_handler;
-
  public:
 
-    po_doorman(actor_id aid, std::unique_ptr<util::acceptor>&& acceptor, po_worker_vector* v)
-        : m_acceptor(std::move(acceptor))
-        , m_actor_id(aid), m_pself(process_information::get())
-        , new_handler(v) {
+    po_doorman(post_office* parent,
+               actor_id aid,
+               std::unique_ptr<util::acceptor> acceptor)
+    : post_office_worker(parent)
+    , m_actor_id(aid)
+    , m_acceptor(std::move(acceptor)) {
     }
 
     bool is_doorman_of(actor_id aid) const {
@@ -407,20 +470,30 @@ class po_doorman : public post_office_worker {
     }
 
     bool read_and_continue() {
+        // accept as many connections as possible
         for (;;) {
             auto opt = m_acceptor->try_accept_connection();
             if (opt) {
                 auto& pair = *opt;
-                std::uint32_t process_id = m_pself->process_id();
+                auto& pself = parent()->pself();
+                std::uint32_t process_id = pself->process_id();
                 pair.second->write(&m_actor_id, sizeof(actor_id));
                 pair.second->write(&process_id, sizeof(std::uint32_t));
-                pair.second->write(m_pself->node_id().data(), m_pself->node_id().size());
-                new_handler->emplace_back(new po_peer(pair));
-                DEBUG("socket accepted; published actor: " << id);
+                pair.second->write(pself->node_id().data(),
+                                   pself->node_id().size());
+                parent()->add_worker<po_peer>(pair);
+                DEBUG("connection accepted; published actor: " << m_actor_id);
+            }
+            else {
+                return true;
             }
         }
-        return true;
     }
+
+ private:
+
+    actor_id m_actor_id;
+    std::unique_ptr<util::acceptor> m_acceptor;
 
 };
 
@@ -428,17 +501,11 @@ class po_overseer : public post_office_worker {
 
  public:
 
-    po_overseer(bool& done,
+    po_overseer(post_office* parent,
                 int pipe_fd,
-                po_worker_vector& handler,
-                po_worker_vector& new_handler,
-                std::vector<native_socket_type>& closed_sockets,
-                intrusive::single_reader_queue<po_message>& q   )
-    : m_done(done)
+                po_message_queue& q)
+    : post_office_worker(parent)
     , m_pipe_fd(pipe_fd)
-    , m_handler(handler)
-    , m_new_handler(new_handler)
-    , m_closed_sockets(closed_sockets)
     , m_queue(q) { }
 
     native_socket_type get_socket() const {
@@ -451,48 +518,44 @@ class po_overseer : public post_office_worker {
             CPPA_CRITICAL("cannot read from pipe");
         }
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        std::unique_ptr<po_message> msg;
-        msg.reset(m_queue.pop());
+        std::unique_ptr<po_message> msg(m_queue.pop());
         switch (msg->type) {
             case po_message_type::add_peer: {
                 DEBUG("post_office: add_peer");
                 auto& new_peer = msg->new_peer;
-                m_new_handler.emplace_back(new po_peer(new_peer.first, new_peer.second));
+                parent()->add_worker<po_peer>(new_peer.first, new_peer.second);
                 break;
             }
             case po_message_type::rm_peer: {
                 DEBUG("post_office: rm_peer");
                 auto istream = msg->peer_streams.first;
                 if (istream) {
-                    m_closed_sockets.emplace_back(istream->read_file_handle());
+                    parent()->close_socket(istream->read_file_handle());
                 }
                 break;
             }
             case po_message_type::publish: {
                 DEBUG("post_office: publish");
                 auto& ptrs = msg->new_published_actor;
-                m_new_handler.emplace_back(new po_doorman(ptrs.second->id(),
-                                                          std::move(ptrs.first),
-                                                          &m_new_handler));
+                parent()->add_worker<po_doorman>(ptrs.second->id(),
+                                                 std::move(ptrs.first));
                 break;
             }
             case po_message_type::unpublish: {
                 DEBUG("post_office: unpublish");
                 if (msg->published_actor) {
                     auto aid = msg->published_actor->id();
-                    auto i = std::find_if(m_handler.begin(), m_handler.end(),
-                                          [aid](const po_worker_ptr& hp) {
-                        return hp->is_doorman_of(aid);
-                    });
-                    if (i != m_handler.end()) {
-                        m_closed_sockets.emplace_back((*i)->get_socket());
+                    auto worker = parent()->doorman_of(aid);
+                    if (worker) {
+                        parent()->close_socket(worker->get_socket());
                     }
                 }
                 break;
             }
             case po_message_type::shutdown: {
                 DEBUG("post_office: shutdown");
-                m_done = true;
+                parent()->quit();
+                break;
             }
         }
         return true;
@@ -500,49 +563,38 @@ class po_overseer : public post_office_worker {
 
  private:
 
-    bool& m_done;
     int m_pipe_fd;
-    po_worker_vector& m_handler;
-    po_worker_vector& m_new_handler;
-    std::vector<native_socket_type>& m_closed_sockets;
-    intrusive::single_reader_queue<po_message>& m_queue;
+    po_message_queue& m_queue;
 
 };
 
-inline constexpr std::uint64_t valof(atom_value val) {
-    return static_cast<std::uint64_t>(val);
-}
-
-void post_office_loop(int input_fd, intrusive::single_reader_queue<po_message>& q) {
+void post_office::operator()(int input_fd, po_message_queue& q) {
     int maxfd = 0;
     fd_set readset;
-    bool done = false;
-    po_worker_vector handler;
-    po_worker_vector new_handler;
-    std::vector<native_socket_type> closed_sockets;
-    handler.emplace_back(new po_overseer(done, input_fd, handler,
-                                         new_handler, closed_sockets, q));
+    m_workers.emplace_back(new po_overseer(this, input_fd, q));
     do {
         FD_ZERO(&readset);
         maxfd = 0;
-        for (auto& hptr : handler) {
-            auto fd = hptr->get_socket();
+        CPPA_REQUIRE(m_workers.size() > 0);
+        for (auto& worker : m_workers) {
+            auto fd = worker->get_socket();
             maxfd = std::max(maxfd, fd);
             FD_SET(fd, &readset);
         }
+        CPPA_REQUIRE(maxfd > 0);
         if (select(maxfd + 1, &readset, nullptr, nullptr, nullptr) < 0) {
             // must not happen
             DEBUG("select failed!");
             perror("select()");
             exit(3);
         }
-        { // iterate over all handler and remove if needed
-            auto i = handler.begin();
-            while (i != handler.end()) {
+        { // iterate over all workers and remove workers as needed
+            auto i = m_workers.begin();
+            while (i != m_workers.end()) {
                 if (   FD_ISSET((*i)->get_socket(), &readset)
                     && (*i)->read_and_continue() == false) {
-                    DEBUG("handler erased");
-                    i = handler.erase(i);
+                    DEBUG("erase worker (read_and_continue() returned false)");
+                    i = m_workers.erase(i);
                 }
                 else {
                     ++i;
@@ -550,23 +602,29 @@ void post_office_loop(int input_fd, intrusive::single_reader_queue<po_message>& 
             }
         }
         // erase all handlers with closed sockets
-        for (auto fd : closed_sockets) {
-            auto i = std::find_if(handler.begin(), handler.end(),
+        for (auto fd : m_closed_sockets) {
+            auto i = std::find_if(m_workers.begin(), m_workers.end(),
                                   [fd](const po_worker_ptr& wptr) {
                                       return wptr->get_socket() == fd;
             });
-            if (i != handler.end()) {
-                handler.erase(i);
+            if (i != m_workers.end()) {
+                m_workers.erase(i);
             }
         }
         // insert new handlers
-        if (new_handler.empty() == false) {
-            std::move(new_handler.begin(), new_handler.end(),
-                      std::back_inserter(handler));
-            new_handler.clear();
+        if (m_new_workers.empty() == false) {
+            std::move(m_new_workers.begin(), m_new_workers.end(),
+                      std::back_inserter(m_workers));
+            m_new_workers.clear();
         }
     }
-    while (done == false);
+    while (m_done == false);
+    DEBUG("post_office_loop: done");
+}
+
+void post_office_loop(int input_fd, po_message_queue& q) {
+    post_office po;
+    po(input_fd, q);
 }
 
 } } // namespace cppa::detail

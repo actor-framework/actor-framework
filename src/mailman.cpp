@@ -103,66 +103,68 @@ mm_message::~mm_message() {
     }
 }
 
-void mailman_loop() {
+void mailman_loop(intrusive::single_reader_queue<mm_message>& q) {
     bool done = false;
     // serializes outgoing messages
     binary_serializer bs;
     // connected tcp peers
-    std::map<process_information, native_socket_type> peers;
-    do_receive (
-        on_arg_match >> [&](process_information_ptr target_peer, addressed_message msg) {
-            auto i = peers.find(*target_peer);
-            if (i != peers.end()) {
-                bool disconnect_peer = false;
-                auto peer_fd = i->second;
-                try {
-                    bs << msg;
-                    DEBUG("--> " << to_string(msg));
-                    auto sent = ::send(peer_fd, bs.sendable_data(), bs.sendable_size(), 0);
-                    if (sent < 0 || static_cast<size_t>(sent) != bs.sendable_size()) {
-                        disconnect_peer = true;
-                        DEBUG("too few bytes written");
+    std::map<process_information, util::io_stream_ptr_pair> peers;
+    std::unique_ptr<mm_message> msg;
+    auto fetch_next = [&] { msg.reset(q.pop()); };
+    for (fetch_next(); !done; fetch_next()) {
+        switch (msg->type) {
+            case mm_message_type::outgoing_message: {
+                auto& target_peer = msg->out_msg.first;
+                auto& out_msg = msg->out_msg.second;
+                CPPA_REQUIRE(target_peer != nullptr);
+                auto i = peers.find(*target_peer);
+                if (i != peers.end()) {
+                    bool disconnect_peer = false;
+                    try {
+                        bs << out_msg;
+                        DEBUG("--> " << to_string(out_msg));
+                        DEBUG("outgoing message size: " << bs.size());
+                        i->second.second->write(bs.sendable_data(),
+                                                bs.sendable_size());
                     }
+                    // something went wrong; close connection to this peer
+                    catch (std::exception& e) {
+                        DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
+                        disconnect_peer = true;
+                    }
+                    if (disconnect_peer) {
+                        DEBUG("peer disconnected (error during send)");
+                        //closesocket(peer);
+                        //post_office_close_socket(peer_fd);
+                        peers.erase(i);
+                    }
+                    bs.reset();
                 }
-                // something went wrong; close connection to this peer
-                catch (std::exception& e) {
-                    DEBUG(to_uniform_name(typeid(e)) << ": " << e.what());
-                    disconnect_peer = true;
+                else {
+                    DEBUG("message to an unknown peer: " << to_string(out_msg));
                 }
-                if (disconnect_peer) {
-                    DEBUG("peer disconnected (error during send)");
-                    //closesocket(peer);
-                    //post_office_close_socket(peer_fd);
-                    peers.erase(i);
+                break;
+            }
+            case mm_message_type::add_peer: {
+                DEBUG("mailman: add_peer");
+                auto& iopair = msg->peer.first;
+                auto& pinfo = msg->peer.second;
+                auto i = peers.find(*pinfo);
+                if (i == peers.end()) {
+                    //cout << "mailman added " << pjob.pinfo->process_id() << "@"
+                    //     << to_string(pjob.pinfo->node_id()) << endl;
+                    peers.insert(std::make_pair(*pinfo, iopair));
                 }
-                bs.reset();
+                else {
+                    DEBUG("add_peer failed: peer already known");
+                }
+                break;
             }
-            else {
-                DEBUG("message to an unknown peer: " << to_string(msg));
+            case mm_message_type::shutdown: {
+                done = true;
             }
-        },
-        on_arg_match >> [&](native_socket_type sockfd, process_information_ptr pinfo) {
-            DEBUG("mailman: add_peer");
-            auto i = peers.find(*pinfo);
-            if (i == peers.end()) {
-                //cout << "mailman added " << pjob.pinfo->process_id() << "@"
-                //     << to_string(pjob.pinfo->node_id()) << endl;
-                peers.insert(std::make_pair(*pinfo, sockfd));
-            }
-            else {
-                DEBUG("add_peer_job failed: peer already known");
-            }
-        },
-        on(atom("DONE")) >> [&]() {
-            done = true;
-        },
-        others() >> [&]() {
-            std::string str = "unexpected message in post_office: ";
-            str += to_string(self->last_dequeued());
-            CPPA_CRITICAL(str.c_str());
         }
-    )
-    .until(gref(done));
+    }
 }
 
 } } // namespace cppa::detail

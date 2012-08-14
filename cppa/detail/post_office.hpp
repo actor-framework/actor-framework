@@ -76,12 +76,14 @@ struct po_message {
     }
 };
 
-void post_office_loop(int input_fd, intrusive::single_reader_queue<po_message>&);
+typedef intrusive::single_reader_queue<po_message> po_message_queue;
+
+void post_office_loop(int input_fd, po_message_queue&);
 
 template<typename... Args>
 inline void send2po(Args&&... args) {
     auto nm = singleton_manager::get_network_manager();
-    nm->send_to_post_office(std::unique_ptr<po_message>(new po_message(std::forward<Args>(args)...)));
+    nm->send_to_post_office(po_message::create(std::forward<Args>(args)...));
 }
 
 inline void post_office_add_peer(util::io_stream_ptr_pair peer_streams,

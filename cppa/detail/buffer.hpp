@@ -39,22 +39,21 @@
 
 namespace cppa { namespace detail {
 
-template<size_t ChunkSize, size_t MaxBufferSize, typename DataType = char>
+template<size_t ChunkSize, size_t MaxBufferSize>
 class buffer {
 
-    DataType* m_data;
+    char* m_data;
     size_t m_written;
     size_t m_allocated;
     size_t m_final_size;
 
  public:
 
-    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0) {
-    }
+    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0) {}
 
     buffer(buffer&& other)
-        : m_data(other.m_data), m_written(other.m_written)
-        , m_allocated(other.m_allocated), m_final_size(other.m_final_size) {
+    : m_data(other.m_data), m_written(other.m_written)
+    , m_allocated(other.m_allocated), m_final_size(other.m_final_size) {
         other.m_data = nullptr;
         other.m_written = other.m_allocated = other.m_final_size = 0;
     }
@@ -68,12 +67,17 @@ class buffer {
     }
 
     void reset(size_t new_final_size = 0) {
+        if (new_final_size > MaxBufferSize) {
+            m_written = 0;
+            m_allocated = 0;
+            m_final_size = 0;
+            delete[] m_data;
+            m_data = nullptr;
+            throw std::ios_base::failure("maximum buffer size exceeded");
+        }
         m_written = 0;
         m_final_size = new_final_size;
         if (new_final_size > m_allocated) {
-            if (new_final_size > MaxBufferSize) {
-                throw std::ios_base::failure("maximum buffer size exceeded");
-            }
             auto remainder = (new_final_size % ChunkSize);
             if (remainder == 0) {
                 m_allocated = new_final_size;
@@ -82,16 +86,12 @@ class buffer {
                 m_allocated = (new_final_size - remainder) + ChunkSize;
             }
             delete[] m_data;
-            m_data = new DataType[m_allocated];
+            m_data = new char[m_allocated];
         }
     }
 
-    bool ready() {
-        return m_written == m_final_size;
-    }
-
     // pointer to the current write position
-    DataType* wr_ptr() {
+    char* wr_ptr() {
         return m_data + m_written;
     }
 
@@ -111,7 +111,7 @@ class buffer {
         m_written += value;
     }
 
-    DataType* data() {
+    char* data() {
         return m_data;
     }
 
@@ -119,13 +119,12 @@ class buffer {
         return remaining() == 0;
     }
 
-    bool append_from(util::input_stream* istream) {
+    void append_from(util::input_stream* istream) {
+        CPPA_REQUIRE(remaining() > 0);
         auto num_bytes = istream->read_some(wr_ptr(), remaining());
         if (num_bytes > 0) {
             inc_written(num_bytes);
-            return true;
         }
-        return false;
     }
 
 };

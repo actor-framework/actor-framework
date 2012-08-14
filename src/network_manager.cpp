@@ -67,19 +67,14 @@ struct network_manager_impl : network_manager {
         if (pipe(pipe_fd) != 0) {
             CPPA_CRITICAL("cannot create pipe");
         }
-        // create actors
-        //m_post_office.reset(new thread_mapped_actor);
-        //m_mailman.reset(new thread_mapped_actor);
-        // store some data in local variables for lambdas
+        // store pipe read handle in local variables for lambda expression
         int pipe_fd0 = pipe_fd[0];
         // start threads
         m_post_office_thread = std::thread([this, pipe_fd0] {
-            //scoped_self_setter sss{po_ptr.get()};
             post_office_loop(pipe_fd0, this->m_post_office_queue);
         });
-        m_mailman_thread = std::thread([] {
-            //scoped_self_setter sss{mm_ptr.get()};
-            mailman_loop();
+        m_mailman_thread = std::thread([this] {
+            mailman_loop(this->m_mailman_queue);
         });
     }
 

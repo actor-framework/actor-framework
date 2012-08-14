@@ -97,7 +97,7 @@ bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool n
     }
     int flags = 1;
     setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
-    util::io_stream_ptr ptr(new ipv4_io_stream(sfd));
+    util::io_stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
     return true;

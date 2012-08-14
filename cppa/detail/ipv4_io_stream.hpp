@@ -42,7 +42,7 @@ class ipv4_io_stream : public util::io_stream {
 
     static util::io_stream_ptr connect_to(const char* host, std::uint16_t port);
 
-    ipv4_io_stream(native_socket_type fd);
+    static util::io_stream_ptr from_native_socket(native_socket_type fd);
 
     native_socket_type read_file_handle() const;
 
@@ -57,6 +57,8 @@ class ipv4_io_stream : public util::io_stream {
     size_t write_some(const void* buf, size_t len);
 
  private:
+
+    ipv4_io_stream(native_socket_type fd);
 
     native_socket_type m_fd;
 

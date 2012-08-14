@@ -65,142 +65,42 @@ using std::endl;
 
 namespace cppa {
 
-/*
-namespace {
-
-void read_from_socket(native_socket_type sfd, void* buf, size_t buf_size) {
-    char* cbuf = reinterpret_cast<char*>(buf);
-    size_t read_bytes = 0;
-    size_t left = buf_size;
-    int rres = 0;
-    size_t urres = 0;
-    do {
-        rres = ::recv(sfd, cbuf + read_bytes, left, 0);
-        if (rres <= 0) {
-            throw std::ios_base::failure("cannot read from closed socket");
-        }
-        urres = static_cast<size_t>(rres);
-        read_bytes += urres;
-        left -= urres;
-    }
-    while (urres < left);
-}
-
-} // namespace <anonmyous>
-
-struct socket_guard {
-
-    bool m_released;
-    native_socket_type m_socket;
-
- public:
-
-    socket_guard(native_socket_type sfd) : m_released(false), m_socket(sfd) {
-    }
-
-    ~socket_guard() {
-        if (!m_released) detail::closesocket(m_socket);
-    }
-
-    void release() {
-        m_released = true;
-    }
-
-};
-*/
-
-void publish(actor_ptr whom, std::uint16_t port) {
-    if (!whom) return;
-    // throws on error
-    auto ptr = detail::ipv4_acceptor::create(port);
+void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor) {
+    if (!whom && !acceptor) return;
     detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
-    detail::post_office_publish(std::move(ptr), whom);
-    /*
-    native_socket_type sockfd;
-    struct sockaddr_in serv_addr;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == detail::invalid_socket) {
-        throw network_error("could not create server socket");
-    }
-    // sguard closes the socket if an exception occurs
-    socket_guard sguard(sockfd);
-    memset((char*) &serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
-    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
-        throw bind_failure(errno);
-    }
-    if (listen(sockfd, 10) != 0) {
-        throw network_error("listen() failed");
-    }
-    int flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags == -1) {
-        throw network_error("unable to get socket flags");
-    }
-    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0) {
-        throw network_error("unable to set socket to nonblock");
-    }
-    flags = 1;
-    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
-    // ok, no exceptions
-    sguard.release();
-    detail::post_office_publish(sockfd, whom);
-    */
+    detail::post_office_publish(std::move(acceptor), whom);
 }
 
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
-    /*
-    native_socket_type sockfd;
-    struct sockaddr_in serv_addr;
-    struct hostent* server;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == detail::invalid_socket) {
-        throw network_error("socket creation failed");
-    }
-    server = gethostbyname(host);
-    if (!server) {
-        std::string errstr = "no such host: ";
-        errstr += host;
-        throw network_error(std::move(errstr));
-    }
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
-    serv_addr.sin_port = htons(port);
-    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-        throw network_error("could not connect to host");
-    }
-    */
+actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
     auto pinf = process_information::get();
     std::uint32_t process_id = pinf->process_id();
-    /*int flags = 1;
-    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
-    */
-
     // throws on error
-    util::io_stream_ptr peer = detail::ipv4_io_stream::connect_to(host, port);
-    peer->write(&process_id, sizeof(std::uint32_t));
-    peer->write(pinf->node_id().data(), pinf->node_id().size());
+    peer.second->write(&process_id, sizeof(std::uint32_t));
+    peer.second->write(pinf->node_id().data(), pinf->node_id().size());
     std::uint32_t remote_actor_id;
     std::uint32_t peer_pid;
     process_information::node_id_type peer_node_id;
-    peer->read(&remote_actor_id, sizeof(remote_actor_id));
-    peer->read(&peer_pid, sizeof(std::uint32_t));
-    peer->read(peer_node_id.data(), peer_node_id.size());
-    auto peer_pinf = new process_information(peer_pid, peer_node_id);
-    process_information_ptr pinfptr(peer_pinf);
+    peer.first->read(&remote_actor_id, sizeof(remote_actor_id));
+    peer.first->read(&peer_pid, sizeof(std::uint32_t));
+    peer.first->read(peer_node_id.data(), peer_node_id.size());
+    process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));
     //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
-    util::io_stream_ptr_pair io_ptrs(peer, peer);
-    //detail::singleton_manager::get_network_manager()
-    //->send_to_mailman(make_any_tuple(util::io_stream_ptr_pair(peer, peer),
-    //                                 pinfptr));
-
-    detail::post_office_add_peer(io_ptrs, pinfptr);
+    detail::mailman_add_peer(peer, pinfptr);
+    detail::post_office_add_peer(peer, pinfptr);
     return detail::get_actor_proxy_cache().get(remote_actor_id,
                                                pinfptr->process_id(),
                                                pinfptr->node_id());
-    //auto ptr = get_scheduler()->register_hidden_context();
+}
+
+void publish(actor_ptr whom, std::uint16_t port) {
+    if (whom) publish(whom, detail::ipv4_acceptor::create(port));
+}
+
+actor_ptr remote_actor(const char* host, std::uint16_t port) {
+    // throws on error
+    util::io_stream_ptr peer = detail::ipv4_io_stream::connect_to(host, port);
+    util::io_stream_ptr_pair ptrpair(peer, peer);
+    return remote_actor(ptrpair);
 }
 
 } // namespace cppa

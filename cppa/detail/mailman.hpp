@@ -34,8 +34,13 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/process_information.hpp"
-#include "cppa/detail/addressed_message.hpp"
+
 #include "cppa/util/acceptor.hpp"
+
+#include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/addressed_message.hpp"
+
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
@@ -63,7 +68,23 @@ struct mm_message {
     }
 };
 
-void mailman_loop();
+void mailman_loop(intrusive::single_reader_queue<mm_message>& q);
+
+template<typename... Args>
+inline void send2mm(Args&&... args) {
+    auto nm = singleton_manager::get_network_manager();
+    nm->send_to_mailman(mm_message::create(std::forward<Args>(args)...));
+}
+
+inline void mailman_enqueue(process_information_ptr peer,
+                            addressed_message outgoing_message) {
+    send2mm(std::move(peer), std::move(outgoing_message));
+}
+
+inline void mailman_add_peer(util::io_stream_ptr_pair peer_streams,
+                             process_information_ptr peer_ptr      ) {
+    send2mm(std::move(peer_streams), std::move(peer_ptr));
+}
 
 }} // namespace cppa::detail
 
