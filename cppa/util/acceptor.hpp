@@ -39,15 +39,36 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief A pair of input and output stream pointers.
+ */
 typedef std::pair<input_stream_ptr, output_stream_ptr> io_stream_ptr_pair;
 
+/**
+ * @brief Accepts connections from client processes.
+ */
 class acceptor {
 
  public:
 
     virtual ~acceptor() { }
+
+    /**
+     * @brief Returns the internal file descriptor. This descriptor is needed
+     *        for socket multiplexing using select().
+     */
     virtual native_socket_type acceptor_file_handle() const = 0;
+
+    /**
+     * @brief Accepts a new connection and returns an input/output stream pair.
+     * @note This member function blocks until a new connection was established.
+     */
     virtual io_stream_ptr_pair accept_connection() = 0;
+
+    /**
+     * @brief Tries to accept a new connection but immediately returns if
+     *        there is no pending connection.
+     */
     virtual option<io_stream_ptr_pair> try_accept_connection() = 0;
 
 };

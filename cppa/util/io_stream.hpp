@@ -36,8 +36,14 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief A stream capable of both reading and writing.
+ */
 class io_stream : public input_stream, public output_stream { };
 
+/**
+ * @brief An IO stream pointer.
+ */
 typedef intrusive_ptr<io_stream> io_stream_ptr;
 
 } } // namespace cppa::util

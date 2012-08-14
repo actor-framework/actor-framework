@@ -37,16 +37,39 @@
 
 namespace cppa { namespace util {
 
+/**
+ * @brief An abstract output stream interface.
+ */
 class output_stream : public virtual ref_counted {
 
  public:
 
+    /**
+     * @brief Returns the internal file descriptor. This descriptor is needed
+     *        for socket multiplexing using select().
+     */
     virtual native_socket_type write_file_handle() const = 0;
+
+    /**
+     * @brief Writes @p num_bytes bytes from @p buf to the data sink.
+     * @note This member function blocks until @p num_bytes were successfully
+     *       written.
+     * @throws std::ios_base::failure
+     */
     virtual void write(const void* buf, size_t num_bytes) = 0;
+
+    /**
+     * @brief Tries to write up to @p num_bytes bytes from @p buf.
+     * @returns The number of written bytes.
+     * @throws std::ios_base::failure
+     */
     virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
 
 };
 
+/**
+ * @brief An output stream pointer.
+ */
 typedef intrusive_ptr<output_stream> output_stream_ptr;
 
 } } // namespace cppa::util
