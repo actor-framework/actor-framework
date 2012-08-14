@@ -32,7 +32,9 @@
 #define CPPA_BINARY_SERIALIZER_HPP
 
 #include <utility>
+
 #include "cppa/serializer.hpp"
+#include "cppa/util/buffer.hpp"
 
 namespace cppa {
 
@@ -44,20 +46,16 @@ namespace detail { class binary_writer; }
  */
 class binary_serializer : public serializer {
 
-    friend class detail::binary_writer;
-
-    char* m_begin;
-    char* m_end;
-    char* m_wr_pos;
-
     // make sure that it's safe to write num_bytes bytes to m_wr_pos
     void acquire(size_t num_bytes);
 
  public:
 
-    binary_serializer();
-
-    ~binary_serializer();
+    /**
+     * @brief Creates a binary serializer writing to @p write_buffer.
+     * @warning @p write_buffer must be guaranteed to outlive @p this
+     */
+    binary_serializer(util::buffer* write_buffer);
 
     void begin_object(const std::string& tname);
 
@@ -74,23 +72,15 @@ class binary_serializer : public serializer {
     void write_raw(size_t num_bytes, const void* data);
 
     /**
-     * @brief Returns the number of written bytes.
-     */
-    size_t size() const;
-
-    /**
-     * @brief Returns a pointer to the internal buffer.
-     */
-    const char* data() const;
-
-    size_t sendable_size() const;
-
-    const char* sendable_data();
-
-    /**
-     * @brief Resets the internal buffer.
+     * @note does <b>not</b> affect the underlying write buffer
      */
     void reset();
+
+ private:
+
+    size_t m_obj_count;
+    size_t m_begin_pos;
+    util::buffer* m_sink;
 
 };
 

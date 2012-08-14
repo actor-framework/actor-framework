@@ -60,6 +60,8 @@ using namespace cppa::util;
 using cppa::detail::type_to_ptype;
 using cppa::detail::ptype_to_type;
 
+namespace { const size_t ui32size = sizeof(std::uint32_t); }
+
 struct struct_a {
     int x;
     int y;
@@ -127,19 +129,24 @@ int main() {
     }
     {
         any_tuple ttup = make_cow_tuple(1, 2, actor_ptr(self));
-        binary_serializer bs;
+        util::buffer wr_buf;
+        binary_serializer bs(&wr_buf);
         bs << ttup;
-        binary_deserializer bd(bs.data(), bs.size());
+        std::uint32_t serialized_size;
+        memcpy(&serialized_size, wr_buf.data(), ui32size);
+        CPPA_CHECK_EQUAL(serialized_size, wr_buf.size() - ui32size);
+        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
         any_tuple ttup2;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
         CPPA_CHECK(ttup == ttup2);
     }
     {
         // serialize b1 to buf
-        binary_serializer bs;
+        util::buffer wr_buf;
+        binary_serializer bs(&wr_buf);
         bs << atuple1;
         // deserialize b2 from buf
-        binary_deserializer bd(bs.data(), bs.size());
+        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
         any_tuple atuple2;
         uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
         try {
@@ -163,9 +170,10 @@ int main() {
             CPPA_ERROR("msg1str != to_string(msg1)");
             cerr << "to_string(msg1) = " << msg1_tostring << endl;
         }
-        binary_serializer bs;
+        util::buffer wr_buf;
+        binary_serializer bs(&wr_buf);
         bs << msg1;
-        binary_deserializer bd(bs.data(), bs.size());
+        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
         object obj1;
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
@@ -224,10 +232,11 @@ int main() {
         // verify
         CPPA_CHECK_EQUAL((to_string(b1)), b1str); {
             // serialize b1 to buf
-            binary_serializer bs;
+            util::buffer wr_buf;
+            binary_serializer bs(&wr_buf);
             bs << b1;
             // deserialize b2 from buf
-            binary_deserializer bd(bs.data(), bs.size());
+            binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
@@ -250,10 +259,11 @@ int main() {
         struct_c c1{strmap{{"abc", u"cba" }, { "x", u"y" }}, std::set<int>{9, 4, 5}};
         struct_c c2; {
             // serialize c1 to buf
-            binary_serializer bs;
+            util::buffer wr_buf;
+            binary_serializer bs(&wr_buf);
             bs << c1;
             // serialize c2 from buf
-            binary_deserializer bd(bs.data(), bs.size());
+            binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_c");

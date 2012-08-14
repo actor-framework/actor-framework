@@ -105,8 +105,9 @@ mm_message::~mm_message() {
 
 void mailman_loop(intrusive::single_reader_queue<mm_message>& q) {
     bool done = false;
+    util::buffer wr_buf;
     // serializes outgoing messages
-    binary_serializer bs;
+    binary_serializer bs(&wr_buf);
     // connected tcp peers
     std::map<process_information, util::io_stream_ptr_pair> peers;
     std::unique_ptr<mm_message> msg;
@@ -120,12 +121,13 @@ void mailman_loop(intrusive::single_reader_queue<mm_message>& q) {
                 auto i = peers.find(*target_peer);
                 if (i != peers.end()) {
                     bool disconnect_peer = false;
+                    bs.reset();
+                    wr_buf.reset();
                     try {
                         bs << out_msg;
                         DEBUG("--> " << to_string(out_msg));
                         DEBUG("outgoing message size: " << bs.size());
-                        i->second.second->write(bs.sendable_data(),
-                                                bs.sendable_size());
+                        i->second.second->write(wr_buf.data(), wr_buf.size());
                     }
                     // something went wrong; close connection to this peer
                     catch (std::exception& e) {
@@ -138,7 +140,6 @@ void mailman_loop(intrusive::single_reader_queue<mm_message>& q) {
                         //post_office_close_socket(peer_fd);
                         peers.erase(i);
                     }
-                    bs.reset();
                 }
                 else {
                     DEBUG("message to an unknown peer: " << to_string(out_msg));

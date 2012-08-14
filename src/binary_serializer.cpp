@@ -38,43 +38,34 @@
 
 using std::enable_if;
 
+namespace cppa {
+
 namespace {
 
 constexpr size_t chunk_size = 512;
 constexpr size_t ui32_size = sizeof(std::uint32_t);
 
-} // namespace <anonymous>
-
-namespace cppa {
-
-namespace detail {
-
 class binary_writer {
-
-    binary_serializer* m_serializer;
 
  public:
 
-    binary_writer(binary_serializer* s) : m_serializer(s) { }
+    binary_writer(util::buffer* sink) : m_sink(sink) { }
 
     template<typename T>
-    inline static void write_int(binary_serializer* bs, const T& value) {
-        memcpy(bs->m_wr_pos, &value, sizeof(T));
-        bs->m_wr_pos += sizeof(T);
+    static inline void write_int(util::buffer* sink, const T& value) {
+        sink->write(sizeof(T), &value, util::grow_if_needed);
     }
 
-    inline static void write_string(binary_serializer* bs,
+    static inline void write_string(util::buffer* sink,
                                     const std::string& str) {
-        write_int(bs, static_cast<std::uint32_t>(str.size()));
-        memcpy(bs->m_wr_pos, str.c_str(), str.size());
-        bs->m_wr_pos += str.size();
+        write_int(sink, static_cast<std::uint32_t>(str.size()));
+        sink->write(str.size(), str.c_str(), util::grow_if_needed);
     }
 
     template<typename T>
     void operator()(const T& value,
                     typename enable_if<std::is_integral<T>::value>::type* = 0) {
-        m_serializer->acquire(sizeof(T));
-        write_int(m_serializer, value);
+        write_int(m_sink, value);
     }
 
     template<typename T>
@@ -85,96 +76,71 @@ class binary_writer {
     }
 
     void operator()(const std::string& str) {
-        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
-        write_string(m_serializer, str);
+        write_string(m_sink, str);
     }
 
     void operator()(const std::u16string& str) {
-        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
-        write_int(m_serializer, static_cast<std::uint32_t>(str.size()));
+        write_int(m_sink, static_cast<std::uint32_t>(str.size()));
         for (char16_t c : str) {
             // force writer to use exactly 16 bit
-            write_int(m_serializer, static_cast<std::uint16_t>(c));
+            write_int(m_sink, static_cast<std::uint16_t>(c));
         }
     }
 
     void operator()(const std::u32string& str) {
-        m_serializer->acquire(sizeof(std::uint32_t) + str.size());
-        write_int(m_serializer, static_cast<std::uint32_t>(str.size()));
+        write_int(m_sink, static_cast<std::uint32_t>(str.size()));
         for (char32_t c : str) {
             // force writer to use exactly 32 bit
-            write_int(m_serializer, static_cast<std::uint32_t>(c));
+            write_int(m_sink, static_cast<std::uint32_t>(c));
         }
     }
+
+ private:
+
+    util::buffer* m_sink;
 
 };
 
-} // namespace detail
+} // namespace <anonymous>
 
-binary_serializer::binary_serializer() : m_begin(0), m_end(0), m_wr_pos(0) {
-}
-
-binary_serializer::~binary_serializer() {
-    delete[] m_begin;
-}
-
-void binary_serializer::acquire(size_t num_bytes) {
-    if (!m_begin) {
-        num_bytes += ui32_size;
-        size_t new_size = chunk_size;
-        while (new_size <= num_bytes) {
-            new_size += chunk_size;
-        }
-        m_begin = new char[new_size];
-        m_end = m_begin + new_size;
-        m_wr_pos = m_begin + ui32_size;
-    }
-    else {
-        char* next_wr_pos = m_wr_pos + num_bytes;
-        if (next_wr_pos > m_end) {
-            size_t new_size =   static_cast<size_t>(m_end - m_begin)
-                              + chunk_size;
-            while ((m_begin + new_size) < next_wr_pos) {
-                new_size += chunk_size;
-            }
-            char* begin = new char[new_size];
-            auto used_bytes = static_cast<size_t>(m_wr_pos - m_begin);
-            if (used_bytes > 0) {
-                memcpy(m_begin, begin, used_bytes);
-            }
-            delete[] m_begin;
-            m_begin = begin;
-            m_end = m_begin + new_size;
-            m_wr_pos = m_begin + used_bytes;
-        }
-    }
+binary_serializer::binary_serializer(util::buffer* buf)
+: m_obj_count(0), m_begin_pos(0), m_sink(buf) {
 }
 
 void binary_serializer::begin_object(const std::string& tname) {
-    acquire(sizeof(std::uint32_t) + tname.size());
-    detail::binary_writer::write_string(this, tname);
+    if (++m_obj_count == 1) {
+        // store a dummy size in the buffer that is
+        // eventually updated on matching end_object()
+        m_begin_pos = m_sink->size();
+        std::uint32_t dummy_size = 0;
+        m_sink->write(sizeof(std::uint32_t), &dummy_size, util::grow_if_needed);
+    }
+    binary_writer::write_string(m_sink, tname);
 }
 
 void binary_serializer::end_object() {
+    if (--m_obj_count == 0) {
+        // update the size in the buffer
+        auto data = m_sink->data();
+        auto s = static_cast<std::uint32_t>(m_sink->size()
+                                            - (m_begin_pos + ui32_size));
+        auto wr_pos = data + m_begin_pos;
+        memcpy(wr_pos, &s, sizeof(std::uint32_t));
+    }
 }
 
 void binary_serializer::begin_sequence(size_t list_size) {
-    acquire(sizeof(std::uint32_t));
-    detail::binary_writer::write_int(this,
-                                     static_cast<std::uint32_t>(list_size));
+    binary_writer::write_int(m_sink, static_cast<std::uint32_t>(list_size));
 }
 
-void binary_serializer::end_sequence() {
-}
+void binary_serializer::end_sequence() { }
 
 void binary_serializer::write_value(const primitive_variant& value) {
-    value.apply(detail::binary_writer(this));
+    value.apply(binary_writer(m_sink));
 }
 
 void binary_serializer::write_raw(size_t num_bytes, const void* data) {
-    acquire(num_bytes);
-    memcpy(m_wr_pos, data, num_bytes);
-    m_wr_pos += num_bytes;
+    m_sink->write(num_bytes, data, util::grow_if_needed);
 }
 
 void binary_serializer::write_tuple(size_t size,
@@ -185,26 +151,8 @@ void binary_serializer::write_tuple(size_t size,
     }
 }
 
-size_t binary_serializer::sendable_size() const {
-    return static_cast<size_t>(m_wr_pos - m_begin);
-}
-
-size_t binary_serializer::size() const {
-    return sendable_size() - ui32_size;
-}
-
-const char* binary_serializer::data() const {
-    return m_begin + ui32_size;
-}
-
-const char* binary_serializer::sendable_data() {
-    auto s = static_cast<std::uint32_t>(size());
-    memcpy(m_begin, &s, ui32_size);
-    return m_begin;
-}
-
 void binary_serializer::reset() {
-    m_wr_pos = m_begin + ui32_size;
+    m_obj_count = 0;
 }
 
 } // namespace cppa
