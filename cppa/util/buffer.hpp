@@ -31,101 +31,117 @@
 #ifndef CPPA_BUFFER_HPP
 #define CPPA_BUFFER_HPP
 
-#include <ios>      // std::ios_base::failure
-#include <cstring>
-#include <iostream>
+#include <cstddef> // size_t
 
-#include "cppa/util/input_stream.hpp"
+namespace cppa { namespace util {
 
-namespace cppa { namespace detail {
+class input_stream;
 
-template<size_t ChunkSize, size_t MaxBufferSize>
+enum buffer_write_policy {
+    grow_if_needed,
+    do_not_grow
+};
+
+/**
+ *
+ */
 class buffer {
-
-    char* m_data;
-    size_t m_written;
-    size_t m_allocated;
-    size_t m_final_size;
 
  public:
 
-    buffer() : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0) {}
+    buffer();
 
-    buffer(buffer&& other)
-    : m_data(other.m_data), m_written(other.m_written)
-    , m_allocated(other.m_allocated), m_final_size(other.m_final_size) {
-        other.m_data = nullptr;
-        other.m_written = other.m_allocated = other.m_final_size = 0;
-    }
+    buffer(size_t chunk_size, size_t max_buffer_size);
 
-    ~buffer() {
-        delete[] m_data;
-    }
+    buffer(buffer&& other);
 
-    void clear() {
+    buffer& operator=(buffer&& other);
+
+    ~buffer();
+
+    /**
+     * @brief Clears the buffer's content.
+     */
+    inline void clear() {
         m_written = 0;
     }
 
-    void reset(size_t new_final_size = 0) {
-        if (new_final_size > MaxBufferSize) {
-            m_written = 0;
-            m_allocated = 0;
-            m_final_size = 0;
-            delete[] m_data;
-            m_data = nullptr;
-            throw std::ios_base::failure("maximum buffer size exceeded");
-        }
-        m_written = 0;
-        m_final_size = new_final_size;
-        if (new_final_size > m_allocated) {
-            auto remainder = (new_final_size % ChunkSize);
-            if (remainder == 0) {
-                m_allocated = new_final_size;
-            }
-            else {
-                m_allocated = (new_final_size - remainder) + ChunkSize;
-            }
-            delete[] m_data;
-            m_data = new char[m_allocated];
-        }
-    }
+    /**
+     * @brief Clears the buffer's content and sets the new final size to
+     *        @p new_final_size.
+     */
+    void reset(size_t new_final_size = 0);
 
-    // pointer to the current write position
-    char* wr_ptr() {
-        return m_data + m_written;
-    }
+    /**
+     * @brief Makes sure the buffer can at least write @p num_bytes additional
+     *        bytes and increases the final size if needed.
+     */
+    void acquire(size_t num_bytes);
 
-    size_t size() {
+    void erase_leading(size_t num_bytes);
+
+    void erase_trailing(size_t num_bytes);
+
+    inline size_t size() const {
         return m_written;
     }
 
-    size_t final_size() {
+    inline size_t final_size() const {
         return m_final_size;
     }
 
-    size_t remaining() {
+    inline size_t remaining() const {
         return m_final_size - m_written;
     }
 
-    void inc_written(size_t value) {
-        m_written += value;
-    }
-
-    char* data() {
+    inline const char* data() const {
         return m_data;
     }
 
-    inline bool full() {
+    inline char* data() {
+        return m_data;
+    }
+
+    inline bool full() const {
         return remaining() == 0;
     }
 
-    void append_from(util::input_stream* istream) {
-        CPPA_REQUIRE(remaining() > 0);
-        auto num_bytes = istream->read_some(wr_ptr(), remaining());
-        if (num_bytes > 0) {
-            inc_written(num_bytes);
-        }
+    inline bool empty() const {
+        return size() == 0;
     }
+
+    inline size_t maximum_size() const {
+        return m_max_buffer_size;
+    }
+
+    void write(size_t num_bytes, const void* data, buffer_write_policy wp);
+
+    /**
+     * @brief Appends up to @p remaining() bytes from @p istream to the buffer.
+     */
+    void append_from(input_stream* istream);
+
+ private:
+
+    // pointer to the current write position
+    inline char* wr_ptr() {
+        return m_data + m_written;
+    }
+
+    inline void inc_size(size_t value) {
+        m_written += value;
+    }
+
+    inline void dec_size(size_t value) {
+        m_written -= value;
+    }
+
+    char*  m_data;
+    size_t m_written;
+    size_t m_allocated;
+    size_t m_final_size;
+    size_t m_chunk_size;
+    size_t m_max_buffer_size;
 
 };
 

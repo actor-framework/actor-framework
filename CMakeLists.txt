@@ -83,6 +83,7 @@ set(LIBCPPA_SRC
     src/behavior_stack.cpp
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
+    src/buffer.cpp
     src/channel.cpp
     src/thread_mapped_actor.cpp
     src/demangle.cpp
@@ -99,6 +100,7 @@ set(LIBCPPA_SRC
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
     src/mailman.cpp
+    src/middleman.cpp
     src/network_manager.cpp
     src/object.cpp
     src/object_array.cpp

@@ -43,7 +43,6 @@ cppa/detail/actor_registry.hpp
 cppa/detail/addressed_message.hpp
 cppa/detail/atom_val.hpp
 cppa/detail/boxed.hpp
-cppa/detail/buffer.hpp
 cppa/detail/channel.hpp
 cppa/detail/container_tuple_view.hpp
 cppa/thread_mapped_actor.hpp
@@ -128,6 +127,7 @@ cppa/util/apply_args.hpp
 cppa/util/apply_tuple.hpp
 cppa/util/arg_match_t.hpp
 cppa/util/at.hpp
+cppa/util/buffer.hpp
 cppa/util/callable_trait.hpp
 cppa/util/comparable.hpp
 cppa/util/compare_tuples.hpp
@@ -263,3 +263,6 @@ cppa/detail/ipv4_io_stream.hpp
 src/ipv4_io_stream.cpp
 cppa/detail/ipv4_acceptor.hpp
 src/ipv4_acceptor.cpp
+cppa/detail/middleman.hpp
+src/middleman.cpp
+src/buffer.cpp

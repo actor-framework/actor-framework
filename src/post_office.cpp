@@ -56,12 +56,12 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/util/buffer.hpp"
 #include "cppa/util/acceptor.hpp"
 #include "cppa/util/io_stream.hpp"
 #include "cppa/util/input_stream.hpp"
 #include "cppa/util/output_stream.hpp"
 
-#include "cppa/detail/buffer.hpp"
 #include "cppa/detail/mailman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/post_office.hpp"
@@ -267,7 +267,7 @@ class po_peer : public post_office_worker {
     // caches uniform_typeid<addressed_message>()
     const uniform_type_info* m_meta_msg;
     // manages socket input
-    buffer<512, (16 * 1024 * 1024)> m_buf;
+    util::buffer m_buf;
 
  public:
 
