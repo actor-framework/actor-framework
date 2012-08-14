@@ -19,17 +19,8 @@
 #include "cppa/event_based_actor.hpp"
 #include "cppa/util/callable_trait.hpp"
 
+using namespace std;
 using namespace cppa;
-
-struct simple_mirror : sb_actor<simple_mirror> {
-
-    behavior init_state = (
-        others() >> []() {
-            self->last_sender() << self->last_dequeued();
-        }
-    );
-
-};
 
 class event_testee : public sb_actor<event_testee> {
 
@@ -45,7 +36,7 @@ class event_testee : public sb_actor<event_testee> {
 
     event_testee() {
         wait4string = (
-            on<std::string>() >> [=]() {
+            on<string>() >> [=]() {
                 become(wait4int);
             },
             on<atom("get_state")>() >> [=]() {
@@ -79,7 +70,7 @@ actor_ptr spawn_event_testee2() {
     struct impl : sb_actor<impl> {
         behavior wait4timeout(int remaining) {
             return (
-                after(std::chrono::milliseconds(50)) >> [=]() {
+                after(chrono::milliseconds(50)) >> [=]() {
                     if (remaining == 1) quit();
                     else become(wait4timeout(remaining - 1));
                 }
@@ -132,7 +123,7 @@ class testee_actor {
     void wait4string() {
         bool string_received = false;
         do_receive (
-            on<std::string>() >> [&]() {
+            on<string>() >> [&]() {
                 string_received = true;
             },
             on<atom("get_state")>() >> [&]() {
@@ -174,17 +165,17 @@ class testee_actor {
 // receives one timeout and quits
 void testee1() {
     receive (
-        after(std::chrono::milliseconds(10)) >> []() { }
+        after(chrono::milliseconds(10)) >> []() { }
     );
 }
 
 void testee2(actor_ptr other) {
     self->link_to(other);
-    send(other, std::uint32_t(1));
+    send(other, uint32_t(1));
     receive_loop (
-        on<std::uint32_t>() >> [](std::uint32_t sleep_time) {
+        on<uint32_t>() >> [](uint32_t sleep_time) {
             // "sleep" for sleep_time milliseconds
-            receive(after(std::chrono::milliseconds(sleep_time)) >> []() {});
+            receive(after(chrono::milliseconds(sleep_time)) >> []() {});
             //reply(sleep_time * 2);
         }
     );
@@ -192,30 +183,22 @@ void testee2(actor_ptr other) {
 
 void testee3(actor_ptr parent) {
     // test a delayed_send / delayed_reply based loop
-    delayed_send(self, std::chrono::milliseconds(50), atom("Poll"));
+    delayed_send(self, chrono::milliseconds(50), atom("Poll"));
     int polls = 0;
     receive_for(polls, 5) (
         on(atom("Poll")) >> [&]() {
             if (polls < 4) {
-                delayed_reply(std::chrono::milliseconds(50), atom("Poll"));
+                delayed_reply(chrono::milliseconds(50), atom("Poll"));
             }
             send(parent, atom("Push"), polls);
         }
     );
 }
 
-void echo_actor() {
-    receive (
-        others() >> []() {
-            reply_tuple(self->last_dequeued());
-        }
-    );
-}
-
 template<class Testee>
-std::string behavior_test(actor_ptr et) {
-    std::string result;
-    std::string testee_name = detail::to_uniform_name(typeid(Testee));
+string behavior_test(actor_ptr et) {
+    string result;
+    string testee_name = detail::to_uniform_name(typeid(Testee));
     send(et, 1);
     send(et, 2);
     send(et, 3);
@@ -227,12 +210,12 @@ std::string behavior_test(actor_ptr et) {
     send(et, "goodbye " + testee_name);
     send(et, atom("get_state"));
     receive (
-        on_arg_match >> [&](const std::string& str) {
+        on_arg_match >> [&](const string& str) {
             result = str;
         },
-        after(std::chrono::minutes(1)) >> [&]() {
-        //after(std::chrono::seconds(2)) >> [&]() {
-            throw std::runtime_error(testee_name + " does not reply");
+        after(chrono::minutes(1)) >> [&]() {
+        //after(chrono::seconds(2)) >> [&]() {
+            throw runtime_error(testee_name + " does not reply");
         }
     );
     send(et, atom("EXIT"), exit_reason::user_defined);
@@ -246,7 +229,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
     size_t max_size = 10;
 
-    std::vector<int> data;
+    vector<int> data;
 
     behavior full;
     behavior filled;
@@ -295,14 +278,32 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
 };
 
+void echo_actor() {
+    receive (
+        others() >> []() {
+            reply_tuple(self->last_dequeued());
+        }
+    );
+}
+
+
+struct simple_mirror : sb_actor<simple_mirror> {
+
+    behavior init_state = (
+        others() >> []() {
+            reply_tuple(self->last_dequeued());
+        }
+    );
+
+};
+
 int main() {
-    using std::string;
     CPPA_TEST(test__spawn);
 
-    CPPA_IF_VERBOSE(cout << "test send() ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "test send() ... " << flush);
     send(self, 1, 2, 3, true);
     receive(on(1, 2, 3, true) >> []() { });
-    CPPA_IF_VERBOSE(cout << "... with empty message... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "... with empty message... " << flush);
     self << any_tuple{};
     receive(on() >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
@@ -310,19 +311,29 @@ int main() {
     self << any_tuple{};
     receive(on() >> []() { });
 
-    CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << flush);
     receive (
         others() >> []() {
             cerr << "WTF?? received: " << to_string(self->last_dequeued())
                  << endl;
         },
-        after(std::chrono::seconds(0)) >> []() {
+        after(chrono::seconds(0)) >> []() {
             // mailbox empty
         }
     );
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test echo actor ... " << std::flush);
+    auto mirror = spawn<simple_mirror>();
+
+    CPPA_IF_VERBOSE(cout << "test mirror ... " << flush);
+    send(mirror, "hello mirror");
+    receive(on("hello mirror") >> []() { });
+    send(mirror, atom("EXIT"), exit_reason::user_defined);
+    CPPA_IF_VERBOSE(cout << "await ... " << endl);
+    await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
+
+    CPPA_IF_VERBOSE(cout << "test echo actor ... " << flush);
     auto mecho = spawn(echo_actor);
     send(mecho, "hello echo");
     receive (
@@ -331,37 +342,30 @@ int main() {
             cout << "UNEXPECTED: " << to_string(self->last_dequeued()) << endl;
         }
     );
+    CPPA_IF_VERBOSE(cout << "await ... " << endl);
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    auto mirror = spawn<simple_mirror>();
-
-    CPPA_IF_VERBOSE(cout << "test mirror ... " << std::flush);
-    send(mirror, "hello mirror");
-    receive(on("hello mirror") >> []() { });
-    send(mirror, atom("EXIT"), exit_reason::user_defined);
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
-
-    CPPA_IF_VERBOSE(cout << "test delayed_send() ... " << std::flush);
-    delayed_send(self, std::chrono::seconds(1), 1, 2, 3);
+    CPPA_IF_VERBOSE(cout << "test delayed_send() ... " << flush);
+    delayed_send(self, chrono::seconds(1), 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test timeout ... " << std::flush);
-    receive(after(std::chrono::seconds(1)) >> []() { });
+    CPPA_IF_VERBOSE(cout << "test timeout ... " << flush);
+    receive(after(chrono::seconds(1)) >> []() { });
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "testee1 ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "testee1 ... " << flush);
     spawn(testee1);
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "event_testee2 ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "event_testee2 ... " << flush);
     spawn_event_testee2();
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "chopstick ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "chopstick ... " << flush);
     auto cstk = spawn<chopstick>();
     send(cstk, atom("take"), self);
     receive (
@@ -373,8 +377,8 @@ int main() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test event-based factory ... " << std::flush);
-    auto factory = factory::event_based([&](int* i, float*, std::string*) {
+    CPPA_IF_VERBOSE(cout << "test event-based factory ... " << flush);
+    auto factory = factory::event_based([&](int* i, float*, string*) {
         self->become (
             on(atom("get_int")) >> [i]() {
                 reply(*i);
@@ -405,7 +409,7 @@ int main() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test fixed_stack ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "test fixed_stack ... " << flush);
     auto st = spawn<fixed_stack>(10);
     // push 20 values
     for (int i = 0; i < 20; ++i) send(st, atom("push"), i);
@@ -420,14 +424,14 @@ int main() {
     }
     // expect 10 {'ok', value} messages
     {
-        std::vector<int> values;
+        vector<int> values;
         int i = 0;
         receive_for(i, 10) (
             on(atom("ok"), arg_match) >> [&](int value) {
                 values.push_back(value);
             }
         );
-        std::vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+        vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
         CPPA_CHECK(values == expected);
     }
     // terminate st
@@ -435,7 +439,7 @@ int main() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    CPPA_IF_VERBOSE(cout << "test sync send/receive ... " << std::flush);
+    CPPA_IF_VERBOSE(cout << "test sync send/receive ... " << flush);
     auto sync_testee1 = spawn([]() {
         receive (
             on(atom("get")) >> []() {
@@ -446,7 +450,7 @@ int main() {
     send(self, 0, 0);
     auto handle = sync_send(sync_testee1, atom("get"));
     // wait for some time (until sync response arrived in mailbox)
-    receive (after(std::chrono::milliseconds(50)) >> []() { });
+    receive (after(chrono::milliseconds(50)) >> []() { });
     // enqueue async messages (must be skipped by receive_response)
     send(self, 42, 1);
     // must skip sync message
@@ -464,7 +468,7 @@ int main() {
         others() >> [&]() {
             CPPA_ERROR("unexpected message");
         },
-        after(std::chrono::seconds(10)) >> [&]() {
+        after(chrono::seconds(10)) >> [&]() {
             CPPA_ERROR("timeout during receive_response");
         }
     );
@@ -475,7 +479,7 @@ int main() {
         others() >> [&]() {
             CPPA_ERROR("unexpected message");
         },
-        after(std::chrono::seconds(0)) >> []() { }
+        after(chrono::seconds(0)) >> []() { }
     );
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
@@ -486,13 +490,13 @@ int main() {
                 on("hi") >> [&]() {
                     auto handle = sync_send(self->last_sender(), "whassup?");
                     self->handle_response(handle) (
-                        on_arg_match >> [&](const std::string& str) {
+                        on_arg_match >> [&](const string& str) {
                             CPPA_CHECK(self->last_sender() != nullptr);
                             CPPA_CHECK_EQUAL("nothing", str);
                             reply("goodbye!");
                             self->quit();
                         },
-                        after(std::chrono::minutes(1)) >> []() {
+                        after(chrono::minutes(1)) >> []() {
                             cerr << "PANIC!!!!" << endl;
                             abort();
                         }
@@ -524,13 +528,13 @@ int main() {
         others() >> [&]() {
             CPPA_ERROR("'sync_testee' still alive?");
         },
-        after(std::chrono::milliseconds(5)) >> []() { }
+        after(chrono::milliseconds(5)) >> []() { }
     );
 
     auto inflater = factory::event_based(
-        [](std::string*, actor_ptr* receiver) {
+        [](string*, actor_ptr* receiver) {
             self->become(
-                on_arg_match >> [=](int n, const std::string& s) {
+                on_arg_match >> [=](int n, const string& s) {
                     send(*receiver, n * 2, s);
                 },
                 on(atom("done")) >> []() {
@@ -556,14 +560,14 @@ int main() {
     bob << poison_pill;
     await_all_others_done();
 
-    std::function<actor_ptr (const std::string&, const actor_ptr&)> spawn_next;
+    function<actor_ptr (const string&, const actor_ptr&)> spawn_next;
     auto kr34t0r = factory::event_based(
         // it's safe to pass spawn_next as reference here, because
         // - it is guaranteeed to outlive kr34t0r by general scoping rules
         // - the lambda is always executed in the current actor's thread
         // but using spawn_next in a message handler could
         // still cause undefined behavior!
-        [&spawn_next](std::string* name, actor_ptr* pal) {
+        [&spawn_next](string* name, actor_ptr* pal) {
             if (*name == "Joe" && !*pal) {
                 *pal = spawn_next("Bob", self);
             }
@@ -576,7 +580,7 @@ int main() {
             );
         }
     );
-    spawn_next = [&kr34t0r](const std::string& name, const actor_ptr& pal) {
+    spawn_next = [&kr34t0r](const string& name, const actor_ptr& pal) {
         return kr34t0r.spawn(name, pal);
     };
     auto joe_the_second = kr34t0r.spawn("Joe");
@@ -616,7 +620,7 @@ int main() {
     CPPA_CHECK_EQUAL(3, zombie_init_called);
     CPPA_CHECK_EQUAL(3, zombie_on_exit_called);
 
-    auto f = factory::event_based([](std::string* name) {
+    auto f = factory::event_based([](string* name) {
         self->become (
             on(atom("get_name")) >> [name]() {
                 reply(atom("name"), *name);
@@ -627,13 +631,13 @@ int main() {
     auto a2 = f.spawn("bob");
     send(a1, atom("get_name"));
     receive (
-        on(atom("name"), arg_match) >> [&](const std::string& name) {
+        on(atom("name"), arg_match) >> [&](const string& name) {
             CPPA_CHECK_EQUAL("alice", name);
         }
     );
     send(a2, atom("get_name"));
     receive (
-        on(atom("name"), arg_match) >> [&](const std::string& name) {
+        on(atom("name"), arg_match) >> [&](const string& name) {
             CPPA_CHECK_EQUAL("bob", name);
         }
     );
@@ -644,7 +648,7 @@ int main() {
 
     factory::event_based([](int* i) {
         self->become(
-            after(std::chrono::milliseconds(50)) >> [=]() {
+            after(chrono::milliseconds(50)) >> [=]() {
                 if (++(*i) >= 5) self->quit();
             }
 
@@ -678,15 +682,15 @@ int main() {
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;
-    delayed_send(self, std::chrono::seconds(1), atom("FooBar"));
+    delayed_send(self, chrono::seconds(1), atom("FooBar"));
     // wait for DOWN and EXIT messages of pong
     receive_for(i, 4) (
-        on<atom("EXIT"), std::uint32_t>() >> [&](std::uint32_t reason) {
+        on<atom("EXIT"), uint32_t>() >> [&](uint32_t reason) {
             CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
-        on<atom("DOWN"), std::uint32_t>() >> [&](std::uint32_t reason) {
+        on<atom("DOWN"), uint32_t>() >> [&](uint32_t reason) {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
@@ -703,7 +707,7 @@ int main() {
         others() >> [&]() {
             CPPA_ERROR("unexpected message: " << to_string(self->last_dequeued()));
         },
-        after(std::chrono::seconds(5)) >> [&]() {
+        after(chrono::seconds(5)) >> [&]() {
             CPPA_ERROR("timeout in file " << __FILE__ << " in line " << __LINE__);
         }
     );
