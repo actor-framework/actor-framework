@@ -56,13 +56,12 @@ class tuple_vals : public abstract_tuple {
 
     typedef types_array<ElementTypes...> element_types;
 
-    tuple_vals() : super(tuple_impl_info::statically_typed), m_data() { }
-
     tuple_vals(const tuple_vals&) = default;
 
-    tuple_vals(const ElementTypes&... args)
-        : super(tuple_impl_info::statically_typed), m_data(args...) {
-    }
+    template<typename... Args>
+    tuple_vals(Args&&... args)
+    : super(tuple_impl_info::statically_typed)
+    , m_data(std::forward<Args>(args)...) { }
 
     const void* native_data() const {
         return &m_data;

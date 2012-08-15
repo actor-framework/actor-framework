@@ -90,24 +90,11 @@ class cow_tuple {
     static constexpr size_t num_elements = sizeof...(ElementTypes);
 
     /**
-     * @brief Initializes each element with its default constructor.
-     */
-    cow_tuple() : m_vals(new data_type) {
-    }
-
-    /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    cow_tuple(const ElementTypes&... args) : m_vals(new data_type(args...)) {
-    }
-
-    /**
-     * @brief Initializes the cow_tuple with @p args.
-     * @param args Initialization values.
-     */
-    cow_tuple(ElementTypes&&... args) : m_vals(new data_type(std::move(args)...)) {
-    }
+    template<typename... Args>
+    cow_tuple(Args&&... args) : m_vals(new data_type(std::forward<Args>(args)...)) { }
 
     cow_tuple(cow_tuple&&) = default;
     cow_tuple(const cow_tuple&) = default;

@@ -200,8 +200,7 @@ struct td_filter_<true, false, Head, T> {
 };
 
 template<typename Head, typename T>
-struct td_filter_<true, true, Head, T> : td_filter_<true, false, Head, T> {
-};
+struct td_filter_<true, true, Head, T> : td_filter_<true, false, Head, T> { };
 
 template<typename Head, typename T>
 auto td_filter(T&& arg)
@@ -248,7 +247,10 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
 
     inline tdata() : super(), head() { }
 
-    tdata(Head arg) : super(), head(std::move(arg)) { }
+    //tdata(Head arg) : super(), head(std::move(arg)) { }
+
+    tdata(const Head& arg) : super(), head(arg) { }
+    tdata(Head&& arg) : super(), head(std::move(arg)) { }
 
     template<typename Arg0, typename Arg1, typename... Args>
     tdata(Arg0&& arg0, Arg1&& arg1, Args&&... args)
