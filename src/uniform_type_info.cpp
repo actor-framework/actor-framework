@@ -460,8 +460,8 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
                                        channel_ptr_name,
                                        actor_ptr_name,
                                        group_ptr_name);
-        any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
         sink->write_value(msg.id().integer_value());
+        any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
         sink->end_object();
     }
 
@@ -476,9 +476,9 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
                                          channel_ptr_name,
                                          actor_ptr_name,
                                          group_ptr_name);
-        any_tuple_tinfo::s_deserialize(msg.content(), source, any_tuple_name);
         auto msg_id = source->read_value(pt_uint64);
         msg.id(message_id_t::from_integer_value(get<pt_uint64>(msg_id)));
+        any_tuple_tinfo::s_deserialize(msg.content(), source, any_tuple_name);
         source->end_object();
     }
 
