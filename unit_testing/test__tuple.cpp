@@ -101,6 +101,9 @@ struct is_same_ : std::is_same<typename First::second, typename Second::second> 
 int main() {
     CPPA_TEST(test__tuple);
 
+    cow_tuple<int> zero;
+    CPPA_CHECK_EQUAL(0, get<0>(zero));
+
     using namespace cppa::placeholders;
 
     typedef typename util::tl_group_by<zz0, std::is_same>::type zz1;
