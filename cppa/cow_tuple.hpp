@@ -90,6 +90,8 @@ class cow_tuple<Head, Tail...> {
 
     static constexpr size_t num_elements = sizeof...(Tail) + 1;
 
+    cow_tuple() : m_vals(new data_type) { }
+
     /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
