@@ -57,24 +57,25 @@ namespace cppa {
 class any_tuple;
 class local_actor;
 
+template<typename... ElementTypes>
+class cow_tuple;
+
 /**
  * @ingroup CopyOnWrite
  * @brief A fixed-length copy-on-write cow_tuple.
  */
-template<typename... ElementTypes>
-class cow_tuple {
+template<typename Head, typename... Tail>
+class cow_tuple<Head, Tail...> {
 
-    static_assert(sizeof...(ElementTypes) > 0, "tuple is empty");
-
-    static_assert(util::tl_forall<util::type_list<ElementTypes...>,
+    static_assert(util::tl_forall<util::type_list<Head, Tail...>,
                                   util::is_legal_tuple_type>::value,
                   "illegal types in cow_tuple definition: "
                   "pointers and references are prohibited");
 
     friend class any_tuple;
 
-    typedef detail::tuple_vals<ElementTypes...> data_type;
-    typedef detail::decorated_tuple<ElementTypes...> decorated_type;
+    typedef detail::tuple_vals<Head, Tail...> data_type;
+    typedef detail::decorated_tuple<Head, Tail...> decorated_type;
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
@@ -84,17 +85,26 @@ class cow_tuple {
 
  public:
 
-    typedef util::type_list<ElementTypes...> types;
+    typedef util::type_list<Head, Tail...> types;
     typedef cow_ptr<detail::abstract_tuple> cow_ptr_type;
 
-    static constexpr size_t num_elements = sizeof...(ElementTypes);
+    static constexpr size_t num_elements = sizeof...(Tail) + 1;
 
     /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
     template<typename... Args>
-    cow_tuple(Args&&... args) : m_vals(new data_type(std::forward<Args>(args)...)) { }
+    cow_tuple(const Head& arg0, Args&&... args)
+    : m_vals(new data_type(arg0, std::forward<Args>(args)...)) { }
+
+    /**
+     * @brief Initializes the cow_tuple with @p args.
+     * @param args Initialization values.
+     */
+    template<typename... Args>
+    cow_tuple(Head&& arg0, Args&&... args)
+    : m_vals(new data_type(std::move(arg0), std::forward<Args>(args)...)) { }
 
     cow_tuple(cow_tuple&&) = default;
     cow_tuple(const cow_tuple&) = default;
@@ -119,7 +129,7 @@ class cow_tuple {
      * @brief Gets the size of this cow_tuple.
      */
     inline size_t size() const {
-        return sizeof...(ElementTypes);
+        return sizeof...(Tail) + 1;
     }
 
     /**
