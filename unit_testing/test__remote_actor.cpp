@@ -1,5 +1,6 @@
 #include <thread>
 #include <string>
+#include <cstring>
 #include <sstream>
 #include <iostream>
 
@@ -34,7 +35,8 @@ std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     return result;
 }
 
-void client_part(const std::vector<string_pair>& args) {
+int client_part(const std::vector<string_pair>& args) {
+    CPPA_TEST(test__remote_actor_client_part);
     auto i = std::find_if(args.begin(), args.end(),
                           [](const string_pair& p) { return p.first == "port"; });
     if (i == args.end()) {
@@ -69,9 +71,9 @@ void client_part(const std::vector<string_pair>& args) {
     );
     receive (
         others() >> [&] {
-            cerr << "unexpected message; "
-                 << __FILE__ << " line " << __LINE__ << ": "
-                 << to_string(self->last_dequeued()) << endl;
+            CPPA_ERROR("unexpected message; "
+                       << __FILE__ << " line " << __LINE__ << ": "
+                       << to_string(self->last_dequeued()));
         },
         after(std::chrono::seconds(0)) >> [&] { }
     );
@@ -81,26 +83,33 @@ void client_part(const std::vector<string_pair>& args) {
             on(atom("foo"), atom("bar"), i) >> [] {
 
             },
-            others() >> [] {
-                cerr << "unexpected message; "
-                     << __FILE__ << " line " << __LINE__ << ": "
-                     << to_string(self->last_dequeued()) << endl;
+            others() >> [&] {
+                CPPA_ERROR("unexpected message; "
+                           << __FILE__ << " line " << __LINE__ << ": "
+                           << to_string(self->last_dequeued()));
             },
             after(std::chrono::seconds(10)) >> [&] {
-                cerr << "unexpected timeout!" << endl;
+                CPPA_ERROR("unexpected timeout!");
             }
         );
     }
+    return CPPA_TEST_RESULT;
 }
 
 } // namespace <anonymous>
 
 int main(int argc, char** argv) {
-    const char* app_path = argv[0];
+cout << "argv[0] = " << argv[0] << endl;
+    std::string app_path = argv[0];
+    bool run_remote_actor = true;
     if (argc > 1) {
-        auto args = get_kv_pairs(argc, argv);
-        client_part(args);
-        return 0;
+        if (strcmp(argv[1], "run_remote_actor=false") == 0) {
+            run_remote_actor = false;
+        }
+        else {
+            auto args = get_kv_pairs(argc, argv);
+            return client_part(args);
+        }
     }
     CPPA_TEST(test__remote_actor);
     //auto ping_actor = spawn(ping, 10);
@@ -117,17 +126,23 @@ int main(int argc, char** argv) {
         }
     }
     while (!success);
+    std::thread child;
     std::ostringstream oss;
-    oss << app_path << " run=remote_actor port=" << port;// << " &>client.txt";
-    // execute client_part() in a separate process,
-    // connected via localhost socket
-    std::thread child([&oss]() {
-        std::string cmdstr = oss.str();
-        if (system(cmdstr.c_str()) != 0) {
-            cerr << "FATAL: command \"" << cmdstr << "\" failed!" << endl;
-            abort();
-        }
-    });
+    if (run_remote_actor) {
+        oss << app_path << " run=remote_actor port=" << port;// << " &>client.txt";
+        // execute client_part() in a separate process,
+        // connected via localhost socket
+        child = std::thread([&oss]() {
+            std::string cmdstr = oss.str();
+            if (system(cmdstr.c_str()) != 0) {
+                cerr << "FATAL: command \"" << cmdstr << "\" failed!" << endl;
+                abort();
+            }
+        });
+    }
+    else {
+        cout << "actor published at port " << port << endl;
+    }
     //cout << "await SpawnPing message" << endl;
     receive (
         on(atom("SpawnPing")) >> []() {
@@ -161,6 +176,6 @@ int main(int argc, char** argv) {
         }
     );
     // wait until separate process (in sep. thread) finished execution
-    child.join();
+    if (run_remote_actor) child.join();
     return CPPA_TEST_RESULT;
 }
