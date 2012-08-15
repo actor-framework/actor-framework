@@ -14,6 +14,7 @@ On the Web
 * __Manual (HTML)__: http://neverlord.github.com/libcppa/manual/index.html
 * __Documentation__: http://neverlord.github.com/libcppa/
 * __Project Homepage__: http://www.realmv6.org/libcppa.html
+* __Mailing List__: https://groups.google.com/d/forum/libcppa
 
 Get the Sources
 ---------------
