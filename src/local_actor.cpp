@@ -107,16 +107,21 @@ void local_actor::reply_message(any_tuple&& what) {
     if (whom == nullptr) {
         return;
     }
-    auto id = m_current_node->mid;
+    auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
         send_message(whom.get(), std::move(what));
     }
-    else if (chaining_enabled()) {
-        if (whom->chained_sync_enqueue(this, id.response_id(), std::move(what))) {
-            m_chained_actor = whom;
+    else {
+        if (chaining_enabled()) {
+            if (whom->chained_sync_enqueue(this, id.response_id(), std::move(what))) {
+                m_chained_actor = whom;
+            }
         }
+        else {
+            whom->sync_enqueue(this, id.response_id(), std::move(what));
+        }
+        id.mark_as_answered();
     }
-    else whom->sync_enqueue(this, id.response_id(), std::move(what));
 }
 
 void local_actor::forward_message(const actor_ptr& new_receiver) {
