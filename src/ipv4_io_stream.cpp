@@ -60,7 +60,6 @@ void handle_syscall_result(T result, bool is_recv_result) {
             errmsg += " [errno = ";
             errmsg += std::to_string(errno);
             errmsg += "]";
-std::cerr << errmsg << std::endl;
             throw std::ios_base::failure(std::move(errmsg));
         }
     }
