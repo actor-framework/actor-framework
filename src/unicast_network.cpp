@@ -50,8 +50,7 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/detail/mailman.hpp"
-#include "cppa/detail/post_office.hpp"
+#include "cppa/detail/middleman.hpp"
 #include "cppa/detail/ipv4_acceptor.hpp"
 #include "cppa/detail/ipv4_io_stream.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -68,7 +67,7 @@ namespace cppa {
 void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor) {
     if (!whom && !acceptor) return;
     detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
-    detail::post_office_publish(std::move(acceptor), whom);
+    detail::middleman_publish(std::move(acceptor), whom);
 }
 
 actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
@@ -85,8 +84,7 @@ actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
     peer.first->read(peer_node_id.data(), peer_node_id.size());
     process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));
     //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
-    detail::mailman_add_peer(peer, pinfptr);
-    detail::post_office_add_peer(peer, pinfptr);
+    detail::middleman_add_peer(peer, pinfptr);
     return detail::get_actor_proxy_cache().get(remote_actor_id,
                                                pinfptr->process_id(),
                                                pinfptr->node_id());

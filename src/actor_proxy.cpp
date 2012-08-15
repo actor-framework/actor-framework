@@ -29,13 +29,16 @@
 
 
 #include "cppa/atom.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/detail/mailman.hpp"
+#include "cppa/detail/middleman.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/singleton_manager.hpp"
+
+#include <iostream>
 
 namespace cppa {
 
@@ -49,8 +52,7 @@ void actor_proxy::forward_message(const process_information_ptr& piptr,
                                   any_tuple&& msg,
                                   message_id_t id                        ) {
     detail::addressed_message amsg{sender, this, std::move(msg), id};
-    detail::singleton_manager::get_network_manager()
-    ->send_to_mailman(detail::mm_message::create(piptr, std::move(amsg)));
+    detail::middleman_enqueue(piptr, std::move(amsg));
 }
 
 void actor_proxy::enqueue(actor* sender, any_tuple msg) {

@@ -44,8 +44,7 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/detail/mailman.hpp"
-#include "cppa/detail/post_office.hpp"
+#include "cppa/detail/middleman.hpp"
 #include "cppa/detail/network_manager.hpp"
 
 namespace {
@@ -55,11 +54,8 @@ using namespace cppa::detail;
 
 struct network_manager_impl : network_manager {
 
-    intrusive::single_reader_queue<mm_message> m_mailman_queue;
-    std::thread m_mailman_thread;
-
-    intrusive::single_reader_queue<po_message> m_post_office_queue;
-    std::thread m_post_office_thread;
+    middleman_queue m_middleman_queue;
+    std::thread m_middleman_thread;
 
     int pipe_fd[2];
 
@@ -70,37 +66,26 @@ struct network_manager_impl : network_manager {
         // store pipe read handle in local variables for lambda expression
         int pipe_fd0 = pipe_fd[0];
         // start threads
-        m_post_office_thread = std::thread([this, pipe_fd0] {
-            post_office_loop(pipe_fd0, this->m_post_office_queue);
-        });
-        m_mailman_thread = std::thread([this] {
-            mailman_loop(this->m_mailman_queue);
+        m_middleman_thread = std::thread([this, pipe_fd0] {
+            middleman_loop(pipe_fd0, this->m_middleman_queue);
         });
     }
 
     void stop() { // override
         //m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
-        m_mailman_thread.join();
-        // wait until mailman is done; post_office closes all sockets
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        m_post_office_queue.push_back(new po_message);
-        //send_to_post_office(po_message{atom("DONE"), -1, 0});
-        m_post_office_thread.join();
+        send_to_middleman(middleman_message::create());
+        m_middleman_thread.join();
         close(pipe_fd[0]);
         close(pipe_fd[1]);
     }
 
-    void send_to_post_office(std::unique_ptr<po_message> msg) {
-        m_post_office_queue.push_back(msg.release());
+    void send_to_middleman(std::unique_ptr<middleman_message> msg) {
+        m_middleman_queue._push_back(msg.release());
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         std::uint32_t dummy = 0;
         if (write(pipe_fd[1], &dummy, sizeof(dummy)) != sizeof(dummy)) {
             CPPA_CRITICAL("cannot write to pipe");
         }
-    }
-
-    void send_to_mailman(std::unique_ptr<mm_message> msg) {
-        m_mailman_queue.push_back(msg.release());
-        //m_mailman->enqueue(nullptr, std::move(msg));
     }
 
 };
@@ -109,8 +94,7 @@ struct network_manager_impl : network_manager {
 
 namespace cppa { namespace detail {
 
-network_manager::~network_manager() {
-}
+network_manager::~network_manager() { }
 
 network_manager* network_manager::create_singleton() {
     return new network_manager_impl;

@@ -31,10 +31,79 @@
 #ifndef MIDDLEMAN_HPP
 #define MIDDLEMAN_HPP
 
-class middleman
-{
-public:
-    middleman();
+#include <memory>
+
+#include "cppa/actor.hpp"
+#include "cppa/process_information.hpp"
+
+#include "cppa/util/acceptor.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
+
+#include "cppa/detail/network_manager.hpp"
+#include "cppa/detail/addressed_message.hpp"
+#include "cppa/detail/singleton_manager.hpp"
+
+namespace cppa { namespace detail {
+
+enum class middleman_message_type {
+    add_peer,
+    publish,
+    unpublish,
+    outgoing_message,
+    shutdown
 };
+
+struct middleman_message {
+    middleman_message* next;
+    const middleman_message_type type;
+    union {
+        std::pair<util::io_stream_ptr_pair, process_information_ptr> new_peer;
+        std::pair<std::unique_ptr<util::acceptor>, actor_ptr> new_published_actor;
+        actor_ptr published_actor;
+        std::pair<process_information_ptr, addressed_message> out_msg;
+    };
+    middleman_message();
+    middleman_message(util::io_stream_ptr_pair, process_information_ptr);
+    middleman_message(std::unique_ptr<util::acceptor>, actor_ptr);
+    middleman_message(process_information_ptr, addressed_message);
+    middleman_message(actor_ptr);
+    ~middleman_message();
+    template<typename... Args>
+    static inline std::unique_ptr<middleman_message> create(Args&&... args) {
+        return std::unique_ptr<middleman_message>(new middleman_message(std::forward<Args>(args)...));
+    }
+};
+
+typedef intrusive::single_reader_queue<middleman_message> middleman_queue;
+
+void middleman_loop(int pipe_rd, middleman_queue& queue);
+
+template<typename... Args>
+inline void send2mm(Args&&... args) {
+    auto nm = singleton_manager::get_network_manager();
+    nm->send_to_middleman(middleman_message::create(std::forward<Args>(args)...));
+}
+
+inline void middleman_add_peer(util::io_stream_ptr_pair peer_streams,
+                                 process_information_ptr peer_ptr      ) {
+    send2mm(std::move(peer_streams), std::move(peer_ptr));
+}
+
+inline void middleman_publish(std::unique_ptr<util::acceptor> server,
+                                actor_ptr published_actor              ) {
+    send2mm(std::move(server), std::move(published_actor));
+}
+
+inline void middleman_unpublish(actor_ptr whom) {
+    send2mm(std::move(whom));
+}
+
+inline void middleman_enqueue(process_information_ptr peer,
+                              addressed_message outgoing_message) {
+    send2mm(std::move(peer), std::move(outgoing_message));
+}
+
+} } // namespace cppa::detail
 
 #endif // MIDDLEMAN_HPP

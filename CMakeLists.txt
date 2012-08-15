@@ -99,14 +99,12 @@ set(LIBCPPA_SRC
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
-    src/mailman.cpp
     src/middleman.cpp
     src/network_manager.cpp
     src/object.cpp
     src/object_array.cpp
     src/partial_function.cpp
     src/pattern.cpp
-    src/post_office.cpp
     src/primitive_variant.cpp
     src/process_information.cpp
     src/receive.cpp

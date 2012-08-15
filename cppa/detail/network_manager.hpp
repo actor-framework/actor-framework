@@ -37,8 +37,7 @@
 
 namespace cppa { namespace detail {
 
-struct po_message;
-struct mm_message;
+struct middleman_message;
 
 class network_manager {
 
@@ -50,9 +49,7 @@ class network_manager {
 
     virtual void stop() = 0;
 
-    virtual void send_to_post_office(std::unique_ptr<po_message> msg) = 0;
-
-    virtual void send_to_mailman(std::unique_ptr<mm_message> msg) = 0;
+    virtual void send_to_middleman(std::unique_ptr<middleman_message> msg) = 0;
 
     static network_manager* create_singleton();
 
