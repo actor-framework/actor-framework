@@ -104,6 +104,16 @@ inline void middleman_enqueue(process_information_ptr peer,
     send2mm(std::move(peer), std::move(outgoing_message));
 }
 
+inline void middleman_enqueue(process_information_ptr peer,
+                              actor_ptr sender,
+                              channel_ptr receiver,
+                              any_tuple&& msg,
+                              message_id_t id = message_id_t()) {
+    addressed_message amsg(std::move(sender), std::move(receiver),
+                           std::move(msg), id);
+    send2mm(std::move(peer), std::move(amsg));
+}
+
 } } // namespace cppa::detail
 
 #endif // MIDDLEMAN_HPP

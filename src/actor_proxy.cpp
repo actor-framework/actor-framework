@@ -42,17 +42,11 @@
 
 namespace cppa {
 
+using detail::middleman_enqueue;
+
 actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
     : super(mid, pptr) {
     //attach(get_scheduler()->register_hidden_context());
-}
-
-void actor_proxy::forward_message(const process_information_ptr& piptr,
-                                  actor* sender,
-                                  any_tuple&& msg,
-                                  message_id_t id                        ) {
-    detail::addressed_message amsg{sender, this, std::move(msg), id};
-    detail::middleman_enqueue(piptr, std::move(amsg));
 }
 
 void actor_proxy::enqueue(actor* sender, any_tuple msg) {
@@ -63,19 +57,20 @@ void actor_proxy::enqueue(actor* sender, any_tuple msg) {
         cleanup(msg.get_as<std::uint32_t>(1));
         return;
     }
-    forward_message(parent_process_ptr(), sender, std::move(msg));
+    middleman_enqueue(parent_process_ptr(), sender, this, std::move(msg));
 }
 
 void actor_proxy::sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
-    forward_message(parent_process_ptr(), sender, std::move(msg), id);
+    middleman_enqueue(parent_process_ptr(), sender, this, std::move(msg), id);
 }
 
 void actor_proxy::link_to(intrusive_ptr<actor>& other) {
     if (link_to_impl(other)) {
         // causes remote actor to link to (proxy of) other
-        forward_message(parent_process_ptr(),
-                        other.get(),
-                        make_any_tuple(atom("LINK"), other));
+        middleman_enqueue(parent_process_ptr(),
+                          other,
+                          this,
+                          make_any_tuple(atom("LINK"), other));
     }
 }
 
@@ -86,9 +81,10 @@ void actor_proxy::local_link_to(intrusive_ptr<actor>& other) {
 void actor_proxy::unlink_from(intrusive_ptr<actor>& other) {
     if (unlink_from_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_message(parent_process_ptr(),
-                        other.get(),
-                        make_any_tuple(atom("UNLINK"), other));
+        middleman_enqueue(parent_process_ptr(),
+                          other,
+                          this,
+                          make_any_tuple(atom("UNLINK"), other));
     }
 }
 
@@ -100,9 +96,10 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other) {
     bool result = super::establish_backlink(other);
     if (result) {
         // causes remote actor to unlink from (proxy of) other
-        forward_message(parent_process_ptr(),
-                        other.get(),
-                        make_any_tuple(atom("LINK"), other));
+        middleman_enqueue(parent_process_ptr(),
+                          other,
+                          this,
+                          make_any_tuple(atom("LINK"), other));
     }
     return result;
 }
@@ -110,9 +107,10 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other) {
 bool actor_proxy::remove_backlink(intrusive_ptr<actor>& other) {
     bool result = super::remove_backlink(other);
     if (result) {
-        forward_message(parent_process_ptr(),
-                        nullptr,
-                        make_any_tuple(atom("UNLINK"), actor_ptr(this)));
+        middleman_enqueue(parent_process_ptr(),
+                          nullptr,
+                          this,
+                          make_any_tuple(atom("UNLINK"), actor_ptr(this)));
     }
     return result;
 }

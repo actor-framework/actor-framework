@@ -73,11 +73,6 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     bool establish_backlink(intrusive_ptr<actor>& to);
 
-    void forward_message(const process_information_ptr&,
-                         actor*,
-                         any_tuple&&,
-                         message_id_t = message_id_t()      );
-
 };
 
 #endif // CPPA_DOCUMENTATION
