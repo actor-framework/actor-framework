@@ -34,7 +34,11 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
+
+#include "cppa/detail/middleman.hpp"
 #include "cppa/detail/group_manager.hpp"
+#include "cppa/detail/addressed_message.hpp"
+
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
@@ -53,14 +57,14 @@ class local_group : public group {
 
  public:
 
-    void enqueue(actor* sender, any_tuple msg) /*override*/ {
+    void enqueue(actor* sender, any_tuple msg) {
         shared_guard guard(m_shared_mtx);
         for (auto& s : m_subscribers) {
             s->enqueue(sender, msg);
         }
     }
 
-    group::subscription subscribe(const channel_ptr& who) /*override*/ {
+    group::subscription subscribe(const channel_ptr& who) {
         exclusive_guard guard(m_shared_mtx);
         if (m_subscribers.insert(who).second) {
             return {who, this};
@@ -68,21 +72,52 @@ class local_group : public group {
         return {};
     }
 
-    void unsubscribe(const channel_ptr& who) /*override*/ {
+    void unsubscribe(const channel_ptr& who) {
         exclusive_guard guard(m_shared_mtx);
         m_subscribers.erase(who);
     }
 
     void serialize(serializer* sink);
 
-    local_group(local_group_module* mod, std::string id);
+    inline const process_information& process() const {
+        return *m_process;
+    }
+
+    inline const process_information_ptr& process_ptr() const {
+        return m_process;
+    }
+
+    local_group(local_group_module* mod, std::string id,
+                process_information_ptr parent = process_information::get());
 
  private:
 
     util::shared_spinlock m_shared_mtx;
     std::set<channel_ptr> m_subscribers;
+    process_information_ptr m_process;
 
 };
+
+class local_group_proxy : public local_group {
+
+    typedef local_group super;
+
+ public:
+
+    template<typename... Args>
+    local_group_proxy(Args&&... args) : super(std::forward<Args>(args)...) { }
+
+    void enqueue(actor* sender, any_tuple msg) {
+        detail::middleman_enqueue(process_ptr(), sender, this, std::move(msg));
+    }
+
+    void remote_enqueue(actor* sender, any_tuple msg) {
+        super::enqueue(sender, std::move(msg));
+    }
+
+};
+
+typedef intrusive_ptr<local_group> local_group_ptr;
 
 class local_group_module : public group::module {
 
@@ -90,16 +125,17 @@ class local_group_module : public group::module {
 
  public:
 
-    local_group_module() : super("local") { }
+    local_group_module()
+    : super("local"), m_process(process_information::get()) { }
 
     group_ptr get(const std::string& identifier) {
-        shared_guard guard(m_mtx);
+        shared_guard guard(m_instances_mtx);
         auto i = m_instances.find(identifier);
         if (i != m_instances.end()) {
             return i->second;
         }
         else {
-            group_ptr tmp(new local_group(this, identifier));
+            local_group_ptr tmp(new local_group(this, identifier));
             { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(std::make_pair(identifier, tmp));
@@ -110,23 +146,69 @@ class local_group_module : public group::module {
     }
 
     intrusive_ptr<group> deserialize(deserializer* source) {
-        auto gname = source->read_value(pt_u8string);
-        return this->get(cppa::get<std::string>(gname));
+        primitive_variant ptup[3];
+        primitive_type ptypes[] = {pt_u8string, pt_uint32, pt_u8string};
+        source->read_tuple(3, ptypes, ptup);
+        auto& identifier = cppa::get<std::string>(ptup[0]);
+        auto  process_id = cppa::get<std::uint32_t>(ptup[1]);
+        auto& node_id    = cppa::get<std::string>(ptup[2]);
+        if (   process_id == process().process_id()
+            && equal(node_id, process().node_id())) {
+            return this->get(identifier);
+        }
+        else {
+            process_information pinf(process_id, node_id);
+            shared_guard guard(m_proxies_mtx);
+            auto& node_map = m_proxies[pinf];
+            auto i = node_map.find(identifier);
+            if (i != node_map.end()) {
+                return i->second;
+            }
+            else {
+                local_group_ptr tmp(new local_group_proxy(this, identifier));
+                process_information_ptr piptr;
+                // re-use process_information_ptr from another proxy if possible
+                if (node_map.empty()) {
+                    piptr.reset(new process_information(pinf));
+                } else {
+                    piptr = node_map.begin()->second->process_ptr();
+                }
+                upgrade_guard uguard(guard);
+                auto p = node_map.insert(std::make_pair(identifier, tmp));
+                // someone might preempt us
+                return p.first->second;
+            }
+        }
     }
 
     void serialize(local_group* ptr, serializer* sink) {
-        sink->write_value(ptr->identifier());
+        primitive_variant ptup[3];
+        ptup[0] = ptr->identifier();
+        ptup[1] = ptr->process().process_id();
+        ptup[2] = to_string(ptr->process().node_id());
+        sink->write_tuple(3, ptup);
+    }
+
+    inline const process_information& process() const {
+        return *m_process;
     }
 
  private:
 
-    util::shared_spinlock m_mtx;
-    std::map<std::string, group_ptr> m_instances;
+    typedef std::map<std::string, local_group_ptr> local_group_map;
+
+    process_information_ptr m_process;
+    util::shared_spinlock m_instances_mtx;
+    local_group_map m_instances;
+    util::shared_spinlock m_proxies_mtx;
+    std::map<process_information, local_group_map> m_proxies;
 
 };
 
-local_group::local_group(local_group_module* mod, std::string id)
-: group(mod, std::move(id)) { }
+local_group::local_group(local_group_module* mod,
+                         std::string id,
+                         process_information_ptr parent)
+: group(mod, std::move(id)), m_process(std::move(parent)) { }
 
 void local_group::serialize(serializer* sink) {
     // this cast is safe, because the only available constructor accepts
