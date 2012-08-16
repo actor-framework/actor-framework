@@ -155,11 +155,11 @@ class middleman;
 
 typedef intrusive::single_reader_queue<middleman_message> middleman_queue;
 
-class channel : public ref_counted {
+class network_channel : public ref_counted {
 
  public:
 
-    channel(middleman* ptr, native_socket_type read_fd)
+    network_channel(middleman* ptr, native_socket_type read_fd)
     : m_parent(ptr), m_read_handle(read_fd) { }
 
     virtual bool continue_reading() = 0;
@@ -184,12 +184,12 @@ class channel : public ref_counted {
 
 };
 
-typedef intrusive_ptr<channel> channel_ptr;
-typedef vector<channel_ptr> channel_ptr_vector;
+typedef intrusive_ptr<network_channel> network_channel_ptr;
+typedef vector<network_channel_ptr> network_channel_ptr_vector;
 
-class peer_connection : public channel {
+class peer_connection : public network_channel {
 
-    typedef channel super;
+    typedef network_channel super;
 
  public:
 
@@ -314,7 +314,7 @@ class middleman {
         m_new_channels.emplace_back(new Connection(this, forward<Args>(args)...));
     }
 
-    inline void add_channel_ptr(channel_ptr ptr) {
+    inline void add_channel_ptr(network_channel_ptr ptr) {
         m_new_channels.push_back(std::move(ptr));
     }
 
@@ -347,9 +347,9 @@ class middleman {
         return nullptr;
     }
 
-    channel_ptr acceptor_of(const actor_ptr& whom) {
+    network_channel_ptr acceptor_of(const actor_ptr& whom) {
         auto last = m_channels.end();
-        auto i = find_if(m_channels.begin(), last, [=](channel_ptr& ptr) {
+        auto i = find_if(m_channels.begin(), last, [=](network_channel_ptr& ptr) {
             return ptr->is_acceptor_of(whom);
         });
         return (i != last) ? *i : nullptr;
@@ -359,7 +359,7 @@ class middleman {
         m_peers_with_unwritten_data.insert(move(ptr));
     }
 
-    void erase(channel_ptr ptr) {
+    void erase(network_channel_ptr ptr) {
         m_erased_channels.insert(move(ptr));
     }
 
@@ -368,11 +368,11 @@ class middleman {
     bool m_done;
     process_information_ptr m_pself;
     peer_map m_peers;
-    channel_ptr_vector m_channels;
-    channel_ptr_vector m_new_channels;
+    network_channel_ptr_vector m_channels;
+    network_channel_ptr_vector m_new_channels;
     set<peer_connection_ptr> m_peers_with_unwritten_data;
 
-    set<channel_ptr> m_erased_channels;
+    set<network_channel_ptr> m_erased_channels;
 
 };
 
@@ -495,9 +495,9 @@ bool peer_connection::continue_reading() {
     }
 }
 
-class peer_acceptor : public channel {
+class peer_acceptor : public network_channel {
 
-    typedef channel super;
+    typedef network_channel super;
 
  public:
 
@@ -541,9 +541,9 @@ class peer_acceptor : public channel {
 
 };
 
-class middleman_overseer : public channel {
+class middleman_overseer : public network_channel {
 
-    typedef channel super;
+    typedef network_channel super;
 
  public:
 
@@ -659,7 +659,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             wrset_ptr = &wrset;
         }
         CPPA_REQUIRE(maxfd > 0);
-DEBUG("select()");
+        DEBUG("select()");
         int sresult;
         do {
             sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
@@ -668,7 +668,7 @@ DEBUG("select()");
             }
         }
         while (sresult == 0);
-DEBUG("continue reading ...");
+        DEBUG("continue reading ...");
         { // iterate over all channels and remove channels as needed
             for (auto& channel : m_channels) {
                 if (FD_ISSET(channel->read_handle(), &rdset)) {
@@ -686,7 +686,7 @@ DEBUG("continue reading ...");
             }
         }
         if (wrset_ptr) { // iterate over peers with unwritten data
-DEBUG("continue writing ...");
+            DEBUG("continue writing ...");
             for (auto& peer : m_peers_with_unwritten_data) {
                 if (FD_ISSET(peer->write_handle(), &wrset)) {
                     bool erase_channel = false;
@@ -712,7 +712,7 @@ DEBUG("continue writing ...");
         if (!m_erased_channels.empty()) {
             DEBUG("erase channel(s)");
             // erase all marked channels
-            for (channel_ptr channel : m_erased_channels) {
+            for (network_channel_ptr channel : m_erased_channels) {
                 erase_from(m_channels, channel);
                 erase_from(m_peers_with_unwritten_data, channel);
                 erase_from_if(m_peers, [=](const peer_map::value_type& kvp) {
