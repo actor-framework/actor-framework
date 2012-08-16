@@ -32,6 +32,8 @@
 #include <stdexcept>
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/serializer.hpp"
+#include "cppa/deserializer.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -47,24 +49,14 @@ typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 
 class local_group_module;
 
-class group_impl : public group {
-
-    util::shared_spinlock m_shared_mtx;
-    std::set<channel_ptr> m_subscribers;
-
- protected:
-
-    template<typename F, typename S>
-    group_impl(F&& f, S&& s) : group(std::forward<F>(f), std::forward<S>(s)) { }
+class local_group : public group {
 
  public:
 
     void enqueue(actor* sender, any_tuple msg) /*override*/ {
         shared_guard guard(m_shared_mtx);
-        for (auto i = m_subscribers.begin(); i != m_subscribers.end(); ++i) {
-            // this cast is safe because we don't affect the "value"
-            // of *i, thus, the set remains in a consistent state
-            const_cast<channel_ptr&>(*i)->enqueue(sender, msg);
+        for (auto& s : m_subscribers) {
+            s->enqueue(sender, msg);
         }
     }
 
@@ -80,17 +72,15 @@ class group_impl : public group {
         exclusive_guard guard(m_shared_mtx);
         m_subscribers.erase(who);
     }
-};
 
-struct anonymous_group : group_impl {
-    anonymous_group() : group_impl("anonymous", "anonymous") { }
-};
+    void serialize(serializer* sink);
 
-class local_group : public group_impl {
+    local_group(local_group_module* mod, std::string id);
 
-    friend class local_group_module;
+ private:
 
-    local_group(const std::string& gname) : group_impl(gname, "local") { }
+    util::shared_spinlock m_shared_mtx;
+    std::set<channel_ptr> m_subscribers;
 
 };
 
@@ -98,53 +88,74 @@ class local_group_module : public group::module {
 
     typedef group::module super;
 
-    util::shared_spinlock m_mtx;
-    std::map<std::string, group_ptr> m_instances;
-
  public:
 
     local_group_module() : super("local") { }
 
-    group_ptr get(const std::string& group_name) {
+    group_ptr get(const std::string& identifier) {
         shared_guard guard(m_mtx);
-        auto i = m_instances.find(group_name);
+        auto i = m_instances.find(identifier);
         if (i != m_instances.end()) {
             return i->second;
         }
         else {
-            group_ptr tmp(new local_group(group_name));
+            group_ptr tmp(new local_group(this, identifier));
             { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
-                auto p = m_instances.insert(std::make_pair(group_name, tmp));
+                auto p = m_instances.insert(std::make_pair(identifier, tmp));
                 // someone might preempt us
                 return p.first->second;
             }
         }
     }
 
+    intrusive_ptr<group> deserialize(deserializer* source) {
+        auto gname = source->read_value(pt_u8string);
+        return this->get(cppa::get<std::string>(gname));
+    }
+
+    void serialize(local_group* ptr, serializer* sink) {
+        sink->write_value(ptr->identifier());
+    }
+
+ private:
+
+    util::shared_spinlock m_mtx;
+    std::map<std::string, group_ptr> m_instances;
+
 };
+
+local_group::local_group(local_group_module* mod, std::string id)
+: group(mod, std::move(id)) { }
+
+void local_group::serialize(serializer* sink) {
+    // this cast is safe, because the only available constructor accepts
+    // local_group_module* as module pointer
+    static_cast<local_group_module*>(m_module)->serialize(this, sink);
+}
+
+std::atomic<size_t> m_ad_hoc_id;
 
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
 
 group_manager::group_manager() {
-    std::unique_ptr<group::module> ptr(new local_group_module);
+    group::unique_module_ptr ptr(new local_group_module);
     m_mmap.insert(std::make_pair(std::string("local"), std::move(ptr)));
 }
 
 intrusive_ptr<group> group_manager::anonymous() {
-    return new anonymous_group;
+    std::string id = "__#";
+    id += std::to_string(++m_ad_hoc_id);
+    return get_module("local")->get(id);
 }
 
 intrusive_ptr<group> group_manager::get(const std::string& module_name,
                                         const std::string& group_identifier) {
-    { // lifetime scope of guard
-        std::lock_guard<std::mutex> guard(m_mmap_mtx);
-        auto i = m_mmap.find(module_name);
-        if (i != m_mmap.end()) {
-            return (i->second)->get(group_identifier);
-        }
+    auto mod = get_module(module_name);
+    if (mod) {
+        return mod->get(group_identifier);
     }
     std::string error_msg = "no module named \"";
     error_msg += module_name;
@@ -152,9 +163,9 @@ intrusive_ptr<group> group_manager::get(const std::string& module_name,
     throw std::logic_error(error_msg);
 }
 
-void group_manager::add_module(group::module* mod) {
-    const std::string& mname = mod->name();
-    std::unique_ptr<group::module> mptr(mod);
+void group_manager::add_module(std::unique_ptr<group::module> mptr) {
+    if (!mptr) return;
+    const std::string& mname = mptr->name();
     { // lifetime scope of guard
         std::lock_guard<std::mutex> guard(m_mmap_mtx);
         if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second) {
@@ -165,6 +176,12 @@ void group_manager::add_module(group::module* mod) {
     error_msg += mname;
     error_msg += "\" already defined";
     throw std::logic_error(error_msg);
+}
+
+group::module* group_manager::get_module(const std::string& module_name) {
+    std::lock_guard<std::mutex> guard(m_mmap_mtx);
+    auto i = m_mmap.find(module_name);
+    return  (i != m_mmap.end()) ? i->second.get() : nullptr;
 }
 
 } } // namespace cppa::detail

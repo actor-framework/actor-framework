@@ -29,6 +29,7 @@
 
 
 #include "cppa/group.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
@@ -38,17 +39,29 @@
 
 namespace cppa {
 
+namespace {
+
+inline detail::group_manager* manager() {
+    return detail::singleton_manager::get_group_manager();
+}
+
+} // <anonymous>
+
 intrusive_ptr<group> group::get(const std::string& arg0,
                                 const std::string& arg1) {
-    return detail::singleton_manager::get_group_manager()->get(arg0, arg1);
+    return manager()->get(arg0, arg1);
 }
 
 intrusive_ptr<group> group::anonymous() {
-    return detail::singleton_manager::get_group_manager()->anonymous();
+    return manager()->anonymous();
 }
 
-void group::add_module(group::module* ptr) {
-    detail::singleton_manager::get_group_manager()->add_module(ptr);
+void group::add_module(group::unique_module_ptr ptr) {
+    manager()->add_module(std::move(ptr));
+}
+
+group::module_ptr group::get_module(const std::string& module_name) {
+    return manager()->get_module(module_name);
 }
 
 group::subscription::subscription(const channel_ptr& s,
@@ -65,20 +78,23 @@ const std::string& group::module::name() {
     return m_name;
 }
 
-group::group(std::string&& id, std::string&& mod_name)
-    : m_identifier(std::move(id)), m_module_name(std::move(mod_name)) {
-}
-
-group::group(const std::string& id, const std::string& mod_name)
-    : m_identifier(id), m_module_name(mod_name) {
-}
+group::group(group::module_ptr mod, std::string id)
+: m_module(mod), m_identifier(std::move(id)) { }
 
 const std::string& group::identifier() const {
     return m_identifier;
 }
 
+group::module_ptr group::get_module() const {
+    return m_module;
+}
+
 const std::string& group::module_name() const {
-    return m_module_name;
+    return get_module()->name();
+}
+
+void group::remote_enqueue(actor* sender, any_tuple msg) {
+    enqueue(sender, std::move(msg));
 }
 
 } // namespace cppa

@@ -38,9 +38,17 @@
 #include "cppa/attachable.hpp"
 #include "cppa/ref_counted.hpp"
 
-namespace cppa { namespace detail { class group_manager; } }
+namespace cppa { namespace detail {
+
+class group_manager;
+class peer_connection;
+
+} } // namespace cppa::detail
 
 namespace cppa {
+
+class serializer;
+class deserializer;
 
 /**
  * @brief A multicast group.
@@ -48,17 +56,7 @@ namespace cppa {
 class group : public channel {
 
     friend class detail::group_manager;
-
-    std::string m_identifier;
-    std::string m_module_name;
-
- protected:
-
-    group(std::string&& id, std::string&& mod_name);
-
-    group(const std::string& id, const std::string& mod_name);
-
-    virtual void unsubscribe(const channel_ptr& who) = 0;
+    friend class detail::peer_connection; // needs access to remote_enqueue
 
  public:
 
@@ -119,7 +117,14 @@ class group : public channel {
          */
         virtual intrusive_ptr<group> get(const std::string& group_name) = 0;
 
+        virtual intrusive_ptr<group> deserialize(deserializer* source) = 0;
+
     };
+
+    typedef module* module_ptr;
+    typedef std::unique_ptr<module> unique_module_ptr;
+
+    virtual void serialize(serializer* sink) = 0;
 
     /**
      * @brief A string representation of the group identifier.
@@ -127,6 +132,8 @@ class group : public channel {
      *         multicast or a user-defined string for local groups).
      */
     const std::string& identifier() const;
+
+    module_ptr get_module() const;
 
     /**
      * @brief The name of the module.
@@ -152,9 +159,9 @@ class group : public channel {
     /**
      * @brief Returns an anonymous group.
      *
-     * Each calls to this member function returns a new instances
+     * Each calls to this member function returns a new instance
      * of an anonymous group. Anonymous groups can be used whenever
-     * a set of actors wants to communicate over an exclusive channel.
+     * a set of actors wants to communicate using an exclusive channel.
      */
     static intrusive_ptr<group> anonymous();
 
@@ -162,7 +169,31 @@ class group : public channel {
      * @brief Add a new group module to the libcppa group management.
      * @threadsafe
      */
-    static void add_module(module*);
+    static void add_module(unique_module_ptr);
+
+    /**
+     * @brief Returns the module associated with @p module_name.
+     * @threadsafe
+     */
+    static module_ptr get_module(const std::string& module_name);
+
+ protected:
+
+    group(module_ptr module, std::string group_id);
+
+    virtual void unsubscribe(const channel_ptr& who) = 0;
+
+    /**
+     * @brief Called whenever a message was received via network. If @p this
+     *        is a proxy, it should not send the message
+     *        back to the original group but forward the message to its local
+     *        subscribers. This member function should call @p enqueue for
+     *        all non-proxy instances.
+     */
+    virtual void remote_enqueue(actor* sender, any_tuple msg);
+
+    module_ptr m_module;
+    std::string m_identifier;
 
 };
 

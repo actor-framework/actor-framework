@@ -51,11 +51,13 @@ class group_manager {
 
     intrusive_ptr<group> anonymous();
 
-    void add_module(group::module*);
+    void add_module(group::unique_module_ptr);
+
+    group::module_ptr get_module(const std::string& module_name);
 
  private:
 
-    typedef std::map< std::string, std::unique_ptr<group::module> > modules_map;
+    typedef std::map<std::string, group::unique_module_ptr> modules_map;
 
     modules_map m_mmap;
     std::mutex m_mmap_mtx;
