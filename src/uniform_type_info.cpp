@@ -264,7 +264,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
         else {
             sink->begin_object(name);
             sink->write_value(ptr->module_name());
-            sink->write_value(ptr->identifier());
+            ptr->serialize(sink);
             sink->end_object();
         }
     }
@@ -285,9 +285,8 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
         else {
             source->begin_object(name);
             auto modname = source->read_value(pt_u8string);
-            auto groupid = source->read_value(pt_u8string);
-            ptrref = group::get(get<std::string>(modname),
-                                get<std::string>(groupid));
+            ptrref = group::get_module(get<std::string>(modname))
+                    ->deserialize(source);
             source->end_object();
         }
     }
