@@ -420,9 +420,12 @@ bool peer_connection::continue_reading() {
                 match(content) (
                     on(atom("MONITOR")) >> [&]() {
                         auto receiver = msg.receiver().downcast<actor>();
-                        CPPA_REQUIRE(receiver.get() != nullptr);
+                        // an empty receiver usually means the actor
+                        // has finished execution and is therefore no longer
+                        // available in the actor registry
+                        //CPPA_REQUIRE(receiver.get() != nullptr);
                         if (!receiver) {
-                            DEBUG("empty receiver");
+                            DEBUG("MONITOR received for an empty receiver");
                         }
                         else if (receiver->parent_process() == *process_information::get()) {
                             auto mpeer = m_peer;
