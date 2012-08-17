@@ -55,6 +55,7 @@ resume_result event_based_actor::resume(util::fiber*) {
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
         m_bhvr_stack.clear();
+        m_bhvr_stack.cleanup();
         on_exit();
     };
     try {
@@ -113,7 +114,6 @@ void event_based_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::normal) {
         cleanup(exit_reason::normal);
         m_bhvr_stack.clear();
-        m_bhvr_stack.cleanup();
     }
     else {
         abstract_scheduled_actor::quit(reason);
