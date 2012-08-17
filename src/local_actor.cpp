@@ -140,4 +140,13 @@ void local_actor::forward_message(const actor_ptr& new_receiver) {
     }
 }
 
+sync_recv_helper local_actor::handle_response(const message_future& handle) {
+    return {handle.id(), [](behavior& bhvr, message_id_t mf) {
+        if (!self->awaits(mf)) {
+            throw std::logic_error("response already received");
+        }
+        self->become_waiting_for(std::move(bhvr), mf);
+    }};
+}
+
 } // namespace cppa

@@ -54,6 +54,7 @@
 #include "cppa/tuple_cast.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/message_future.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
 #include "cppa/event_based_actor.hpp"
@@ -466,10 +467,6 @@ operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
     return whom;
 }
 
-#ifndef CPPA_DOCUMENTATION
-typedef message_id_t message_future;
-#endif // CPPA_DOCUMENTATION
-
 /**
  * @brief Sends @p what as a synchronous message to @p whom.
  * @param whom Receiver of the message.
@@ -508,8 +505,8 @@ inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
  * @throws std::logic_error if @p handle is not valid or if the actor
  *                          already received the response for @p handle
  */
-inline sync_recv_helper receive_response(message_future handle) {
-    return {handle, [](behavior& bhvr, message_future mf) {
+inline sync_recv_helper receive_response(const message_future& handle) {
+    return {handle.id(), [](behavior& bhvr, message_id_t mf) {
         if (!self->awaits(mf)) {
             throw std::logic_error("response already received");
         }

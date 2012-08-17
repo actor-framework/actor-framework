@@ -134,7 +134,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
     void do_become(behavior&& bhvr, bool discard_old);
 
-    void become_waiting_for(behavior&& bhvr, message_future mf);
+    void become_waiting_for(behavior&& bhvr, message_id_t mf);
 
  private:
 

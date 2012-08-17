@@ -27,7 +27,7 @@ struct A : event_based_actor {
         };
         become (
             on(atom("go"), arg_match) >> [=](const actor_ptr& next) {
-                handle_response(sync_send(next, atom("gogo"))) (
+                sync_send(next, atom("gogo")).then (
                     on(atom("gogogo")) >> [=] {
                         send(m_parent, atom("success"));
                         quit();

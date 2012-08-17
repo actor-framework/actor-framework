@@ -46,12 +46,9 @@
 
 namespace cppa {
 
-#ifndef CPPA_DOCUMENTATION
-typedef message_id_t message_future;
-#endif // CPPA_DOCUMENTATION
-
 // forward declarations
 class scheduler;
+class message_future;
 class local_scheduler;
 
 template<bool DiscardOld>
@@ -84,10 +81,10 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t();
 #endif // CPPA_DOCUMENTATION
 
 struct sync_recv_helper {
-    typedef void (*callback_type)(behavior&, message_future);
-    message_future m_handle;
+    typedef void (*callback_type)(behavior&, message_id_t);
+    message_id_t m_handle;
     callback_type m_fun;
-    inline sync_recv_helper(message_future handle, callback_type fun)
+    inline sync_recv_helper(message_id_t handle, callback_type fun)
     : m_handle(handle), m_fun(fun) { }
     template<typename... Expression>
     inline void operator()(Expression&&... mexpr) const {
@@ -104,7 +101,9 @@ struct sync_recv_helper {
     }
 };
 
-inline sync_recv_helper receive_response(message_future);
+class message_future;
+
+//inline sync_recv_helper receive_response(message_future);
 
 /**
  * @brief Base class for local running Actors.
@@ -112,7 +111,7 @@ inline sync_recv_helper receive_response(message_future);
 class local_actor : public actor {
 
     friend class scheduler;
-    friend inline sync_recv_helper receive_response(message_future);
+    //friend inline sync_recv_helper receive_response(message_future);
 
  public:
 
@@ -303,14 +302,7 @@ class local_actor : public actor {
      * @throws std::logic_error if @p handle is not valid or if the actor
      *                          already received the response for @p handle
      */
-    inline sync_recv_helper handle_response(message_future handle) {
-        return {handle, [](behavior& bhvr, message_future mf) {
-            if (!self->awaits(mf)) {
-                throw std::logic_error("response already received");
-            }
-            self->become_waiting_for(std::move(bhvr), mf);
-        }};
-    }
+    sync_recv_helper handle_response(const message_future& handle);
 
     /**
      * @brief Returns to a previous behavior if available.
@@ -409,6 +401,10 @@ class local_actor : public actor {
         if (i != last) m_pending_responses.erase(i);
     }
 
+    virtual void dequeue_response(behavior&, message_id_t) = 0;
+
+    virtual void become_waiting_for(behavior&&, message_id_t) = 0;
+
  protected:
 
     // true if this actor uses the chained_send optimization
@@ -452,9 +448,6 @@ class local_actor : public actor {
      *          Use always the {@link cppa::receive_response receive_response}
      *          function.
      */
-    virtual void dequeue_response(behavior&, message_future) = 0;
-
-    virtual void become_waiting_for(behavior&&, message_future) = 0;
 
 };
 

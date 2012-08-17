@@ -28,37 +28,79 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#ifndef MESSAGE_FUTURE_HPP
+#define MESSAGE_FUTURE_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/behavior.hpp"
+#include "cppa/match_expr.hpp"
+#include "cppa/message_id.hpp"
+#include "cppa/local_actor.hpp"
 
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue(partial_function&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id_t) { }
-void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::detach(const attachable::token&) { }
-bool scheduled_actor_dummy::attach(attachable*) { return false; }
-void scheduled_actor_dummy::unbecome() { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior&&, message_id_t) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+namespace cppa {
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
-}
+/**
+ * @brief Represents the result of a synchronous send.
+ */
+class message_future {
 
-bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&) {
-    return false;
-}
+ public:
 
-bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
-    return false;
-}
+    /**
+     * @brief Sets @p mexpr as event-handler for the response message.
+     */
+    template<typename... Expression>
+    void then(Expression&&... mexpr) {
+        auto f = [](behavior& bhvr, message_id_t mid) {
+            self->become_waiting_for(std::move(bhvr), mid);
+        };
+        apply(f, std::forward<Expression>(mexpr)...);
+    }
 
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
-}
+    /**
+     * @brief Blocks until the response arrives and then executes @p mexpr.
+     */
+    template<typename... Expression>
+    void await(Expression&&... mexpr) {
+        auto f = [](behavior& bhvr, message_id_t mid) {
+            self->dequeue_response(bhvr, mid);
+        };
+        apply(f, std::forward<Expression>(mexpr)...);
+    }
 
-} } // namespace cppa::detail
+    message_future(const message_future&) = default;
+    message_future& operator=(const message_future&) = default;
+
+#   ifndef CPPA_DOCUMENTATION
+
+    inline message_future(const message_id_t& from) : m_id(from) { }
+
+    inline const message_id_t& id() const { return m_id; }
+
+#   endif
+
+ private:
+
+    message_id_t m_id;
+
+    template<typename Fun, typename... Args>
+    void apply(Fun& fun, Args&&... args) {
+        auto bhvr = match_expr_convert(std::forward<Args>(args)...);
+        static_assert(std::is_same<decltype(bhvr), behavior>::value,
+                      "no timeout specified");
+        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
+            throw std::invalid_argument("specified timeout is invalid or zero");
+        }
+        else if (!m_id.valid() || !m_id.is_response()) {
+            throw std::logic_error("handle does not point to a response");
+        }
+        else if (!self->awaits(m_id)) {
+            throw std::logic_error("response already received");
+        }
+        fun(bhvr, m_id);
+    }
+
+};
+
+} // namespace cppa
+
+#endif // MESSAGE_FUTURE_HPP

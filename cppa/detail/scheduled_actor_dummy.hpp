@@ -49,7 +49,7 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     bool attach(attachable*);
     void unbecome();
     void do_become(behavior&&, bool);
-    void become_waiting_for(behavior&&, message_future);
+    void become_waiting_for(behavior&&, message_id_t);
     bool has_behavior();
     scheduled_actor_type impl_type();
 };

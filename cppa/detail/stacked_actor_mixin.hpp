@@ -88,7 +88,7 @@ class stacked_actor_mixin : public Base {
         become_impl(std::move(bhvr), discard_old, message_id_t());
     }
 
-    virtual void become_waiting_for(behavior&& bhvr, message_future mid) {
+    virtual void become_waiting_for(behavior&& bhvr, message_id_t mid) {
         become_impl(std::move(bhvr), false, mid);
     }
 
