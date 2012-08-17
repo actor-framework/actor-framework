@@ -1,3 +1,18 @@
+Version 0.4
+
+XXXX-XX-XX
+
+- New network layer implementation
+- Added acceptor and input/output stream interfaces
+- Added overload for publish() and remote_actor() using the new interfaces
+- Changed group::add_module to take unique_ptr rather than a raw pointer
+- Refactored serialization process for group_ptr
+- Changed anyonymous groups to use the implementation of the "local" module
+- Added scheduled_and_hidden policy for system-internal, event-based actors
+- Enabled serialization of floating point values
+- Added shutdown() function
+- Implemented broker-based forwarding of local groups for 'pseudo multicast'
+
 Version 0.3.3
 
 2012-08-09
