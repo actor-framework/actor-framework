@@ -725,12 +725,20 @@ actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
 }
 
 #ifndef CPPA_DOCUMENTATION
+
 template<class ActorImpl, typename... Args>
 actor_ptr spawn_hidden_in_group(const group_ptr& grp, Args&&... args) {
     return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
                                   [&grp](local_actor* ptr) { ptr->join(grp); },
                                   scheduled_and_hidden);
 }
+
+template<class ActorImpl, typename... Args>
+actor_ptr spawn_hidden(Args&&... args) {
+    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
+                                  scheduled_and_hidden);
+}
+
 #endif
 
 /** @} */
