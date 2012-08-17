@@ -69,10 +69,11 @@ class binary_writer {
     }
 
     template<typename T>
-    void operator()(const T&,
+    void operator()(const T& value,
                     typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
-        throw std::logic_error("binary_serializer::write_floating_point "
-                               "not implemented yet");
+        // write floating points as strings
+        std::string str = std::to_string(value);
+        (*this)(str);
     }
 
     void operator()(const std::string& str) {

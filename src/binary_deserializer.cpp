@@ -28,8 +28,10 @@
 \******************************************************************************/
 
 
+#include <string>
 #include <cstdint>
 #include <cstring>
+#include <sstream>
 #include <iterator>
 #include <exception>
 #include <stdexcept>
@@ -49,13 +51,6 @@ inline void range_check(iterator begin, iterator end, size_t read_size) {
     if ((begin + read_size) > end) {
         throw std::out_of_range("binary_deserializer::read()");
     }
-}
-
-// @returns the next iterator position
-template<typename T>
-iterator read(iterator, iterator, T&,
-              typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
-    throw std::logic_error("read floating point not implemented yet");
 }
 
 template<typename T>
@@ -88,6 +83,18 @@ iterator read_unicode_string(iterator begin, iterator end, StringType& str) {
         str += static_cast<typename StringType::value_type>(c);
     }
     return begin;
+}
+
+// @returns the next iterator position
+template<typename T>
+iterator read(iterator begin, iterator end, T& value,
+              typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
+    // floating points are written as strings
+    std::string str;
+    auto result = read_unicode_string<char>(begin, end, str);
+    std::istringstream iss(str);
+    iss >> value;
+    return result;
 }
 
 iterator read(iterator begin, iterator end, std::u16string& storage) {
