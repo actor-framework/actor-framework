@@ -156,20 +156,23 @@ class scheduler {
      *        it starts execution.
      */
     virtual actor_ptr spawn(void_function fun,
-                            scheduling_hint hint,
-                            init_callback init_cb) = 0;
+                            init_callback init_cb,
+                            scheduling_hint hint) = 0;
 
     /**
      * @brief Spawns a new event-based actor.
      */
-    virtual actor_ptr spawn(scheduled_actor* what) = 0;
+    virtual actor_ptr spawn(scheduled_actor* what,
+                            scheduling_hint hint = scheduled) = 0;
 
     /**
      * @brief Spawns a new event-based actor and calls
      *        <code>init_cb</code> after the actor is initialized but before
      *        it starts execution.
      */
-    virtual actor_ptr spawn(scheduled_actor* what, init_callback init_cb) = 0;
+    virtual actor_ptr spawn(scheduled_actor* what,
+                            init_callback init_cb,
+                            scheduling_hint hint = scheduled) = 0;
 
     // hide implementation details for documentation
 #   ifndef CPPA_DOCUMENTATION
@@ -198,15 +201,15 @@ class scheduler {
                         std::forward<Fun>(fun),
                         detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
                         detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
-                    hint,
-                    std::forward<InitCallback>(init_cb));
+                    std::forward<InitCallback>(init_cb),
+                    hint);
     }
 
     template<typename InitCallback, typename Fun>
     actor_ptr spawn_cb_impl(scheduling_hint hint, InitCallback&& init_cb, Fun&& fun) {
         return this->spawn(std::forward<Fun>(fun),
-                           hint,
-                           std::forward<InitCallback>(init_cb));
+                           std::forward<InitCallback>(init_cb),
+                           hint);
     }
 
 #   endif // CPPA_DOCUMENTATION

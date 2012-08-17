@@ -51,24 +51,6 @@ namespace {
 typedef std::unique_lock<std::mutex> guard_type;
 typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
 
-/*
-template<typename F>
-actor_ptr spawn_void_fun_impl(thread_pool_scheduler* _this,
-                              void_function fun,
-                              scheduling_hint sh,
-                              F cb                         ) {
-    if (sh == scheduled) {
-        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
-        ptr->attach_to_scheduler(_this);
-        cb(ptr.get());
-        return _this->spawn_impl(std::move(ptr));
-    }
-    else {
-        return _this->spawn_as_thread(std::move(fun), std::move(cb));
-    }
-}
-*/
-
 } // namespace <anonmyous>
 
 struct thread_pool_scheduler::worker {
@@ -154,9 +136,10 @@ struct thread_pool_scheduler::worker {
                     switch (job->resume(&fself)) {
                         case resume_result::actor_done: {
                             auto pending = fetch_pending();
+                            bool hidden = job->is_hidden();
                             if (!job->deref()) delete job;
                             std::atomic_thread_fence(std::memory_order_seq_cst);
-                            dec_actor_count();
+                            if (!hidden) dec_actor_count();
                             job = pending;
                             break;
                         }
@@ -204,9 +187,10 @@ void thread_pool_scheduler::stop() {
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
+            bool hidden = ptr->is_hidden();
             if (!ptr->deref()) delete ptr;
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            dec_actor_count();
+            if (!hidden) dec_actor_count();
             ptr = m_queue.try_pop();
         }
     }
@@ -240,7 +224,7 @@ actor_ptr thread_pool_scheduler::spawn_as_thread(void_function fun,
 
 actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what) {
     if (what->has_behavior()) {
-        inc_actor_count();
+        if (!what->is_hidden()) { inc_actor_count(); }
         what->ref();
         // event-based actors are not pushed to the job queue on startup
         if (what->impl_type() == context_switching_impl) {
@@ -253,46 +237,49 @@ actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what) {
     return std::move(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw) {
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw,
+                                       scheduling_hint hint) {
     scheduled_actor_ptr ptr{raw};
-    ptr->attach_to_scheduler(this);
+    ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
     return spawn_impl(std::move(ptr));
 }
 
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw, init_callback cb) {
+actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw,
+                                       init_callback cb,
+                                       scheduling_hint hint) {
     scheduled_actor_ptr ptr{raw};
-    ptr->attach_to_scheduler(this);
+    ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
     cb(ptr.get());
     return spawn_impl(std::move(ptr));
 }
 
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 
-actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint sh) {
-    if (sh == scheduled) {
+actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint hint) {
+    if (hint == scheduled || hint == scheduled_and_hidden) {
         scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
-        ptr->attach_to_scheduler(this);
+        ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
         return spawn_impl(std::move(ptr));
     }
     else {
         return spawn_as_thread(std::move(fun),
                                [](local_actor*) { },
-                               sh == detached_and_hidden);
+                               hint == detached_and_hidden);
     }
 }
 actor_ptr thread_pool_scheduler::spawn(void_function fun,
-                                       scheduling_hint sh,
-                                       init_callback init_cb) {
-    if (sh == scheduled) {
+                                       init_callback init_cb,
+                                       scheduling_hint hint) {
+    if (hint == scheduled || hint == scheduled_and_hidden) {
         scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
-        ptr->attach_to_scheduler(this);
+        ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
         init_cb(ptr.get());
         return spawn_impl(std::move(ptr));
     }
     else {
         return spawn_as_thread(std::move(fun),
                                std::move(init_cb),
-                               sh == detached_and_hidden);
+                               hint == detached_and_hidden);
     }
 }
 

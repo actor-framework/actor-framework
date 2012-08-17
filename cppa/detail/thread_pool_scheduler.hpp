@@ -55,15 +55,19 @@ class thread_pool_scheduler : public scheduler {
 
     void enqueue(scheduled_actor* what) /*override*/;
 
-    actor_ptr spawn(scheduled_actor* what);
+    actor_ptr spawn(scheduled_actor* what,
+                    scheduling_hint hint);
 
-    actor_ptr spawn(scheduled_actor* what, init_callback init_cb);
+    actor_ptr spawn(scheduled_actor* what,
+                    init_callback init_cb,
+                    scheduling_hint hint);
 
-    actor_ptr spawn(void_function fun, scheduling_hint hint);
+    actor_ptr spawn(void_function fun,
+                    scheduling_hint hint);
 
     actor_ptr spawn(void_function what,
-                    scheduling_hint hint,
-                    init_callback init_cb);
+                    init_callback init_cb,
+                    scheduling_hint hint);
 
  private:
 

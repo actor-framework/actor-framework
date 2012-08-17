@@ -66,15 +66,18 @@ class scheduled_actor : public local_actor {
     // called from worker thread
     virtual resume_result resume(util::fiber* from) = 0;
 
-    void attach_to_scheduler(scheduler* sched);
+    void attach_to_scheduler(scheduler* sched, bool hidden);
 
     virtual bool has_behavior() = 0;
 
     virtual scheduled_actor_type impl_type() = 0;
 
+    inline bool is_hidden() const { return m_hidden; }
+
  protected:
 
     scheduler* m_scheduler;
+    bool m_hidden;
 
     bool initialized();
 
