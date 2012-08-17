@@ -56,7 +56,7 @@ namespace cppa { class self_type; }
 
 namespace cppa { namespace detail {
 
-template<class Base>
+template<class Base, bool IsLocalActor>
 class abstract_actor_base : public Base {
 
  protected:
@@ -68,15 +68,13 @@ class abstract_actor_base : public Base {
 
 };
 
-template<>
-class abstract_actor_base<local_actor> : public local_actor {
-
-    typedef local_actor super;
+template<class Base>
+class abstract_actor_base<Base, true> : public Base {
 
  protected:
 
     template<typename... Args>
-    abstract_actor_base(Args&&... args) : super(std::forward<Args>(args)...) { }
+    abstract_actor_base(Args&&... args) : Base(std::forward<Args>(args)...) { }
 
     inline void base_cleanup(std::uint32_t) {
         // leave groups
@@ -91,11 +89,11 @@ class abstract_actor_base<local_actor> : public local_actor {
  *              or {@link cppa::local_actor local_actor}.
  */
 template<class Base>
-class abstract_actor : public abstract_actor_base<Base> {
+class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> {
 
     friend class self_type;
 
-    typedef abstract_actor_base<Base> super;
+    typedef abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> super;
     typedef std::lock_guard<std::mutex> guard_type;
     typedef std::unique_ptr<attachable> attachable_ptr;
 
