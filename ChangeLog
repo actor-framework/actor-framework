@@ -12,6 +12,7 @@ XXXX-XX-XX
 - Enabled serialization of floating point values
 - Added shutdown() function
 - Implemented broker-based forwarding of local groups for 'pseudo multicast'
+- Added `then` and `await` member functions to message_future
 
 Version 0.3.3
 
