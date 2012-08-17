@@ -797,6 +797,14 @@ inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
  */
 actor_ptr remote_actor(util::io_stream_ptr_pair connection);
 
+/**
+ * @brief Destroys all singletons, disconnects all peers and stops the
+ *        scheduler. It is recommended to use this function as very last
+ *        function call before leaving main(). Especially in programs
+ *        using libcppa's networking infrastructure.
+ */
+void shutdown(); // note: implemented in singleton_manager.cpp
+
 } // namespace cppa
 
 namespace std {

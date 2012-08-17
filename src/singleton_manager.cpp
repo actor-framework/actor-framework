@@ -46,6 +46,9 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
+using std::cout;
+using std::endl;
+
 namespace {
 
 using namespace cppa;
@@ -67,6 +70,7 @@ void stop_and_kill(std::atomic<T*>& ptr) {
         if (ptr.compare_exchange_weak(p, nullptr)) {
             p->stop();
             delete p;
+            ptr = nullptr;
         }
         else {
             stop_and_kill(ptr);
@@ -75,25 +79,12 @@ void stop_and_kill(std::atomic<T*>& ptr) {
 }
 
 /*
-void delete_singletons() {
-    if (self.unchecked() != nullptr) {
-        try { self.unchecked()->quit(exit_reason::normal); }
-        catch (actor_exited&) { }
+struct static_cleanup_helper {
+    ~static_cleanup_helper() {
+        delete_singletons();
     }
-    auto rptr = s_actor_registry.load();
-    if (rptr) {
-        rptr->await_running_count_equal(0);
-    }
-    stop_and_kill(s_scheduler);
-    stop_and_kill(s_network_manager);
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    // it's safe now to delete all other singletons now
-    delete s_actor_registry.load();
-    delete s_group_manager.load();
-    auto et = s_empty_tuple.load();
-    if (et && !et->deref()) delete et;
-    delete s_uniform_type_info_map.load();
 }
+s_static_cleanup_helper;
 */
 
 template<typename T>
@@ -125,6 +116,34 @@ T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
 }
 
 } // namespace <anonymous>
+
+namespace cppa {
+
+void shutdown() {
+    if (self.unchecked() != nullptr) {
+        try { self.unchecked()->quit(exit_reason::normal); }
+        catch (actor_exited&) { }
+    }
+    auto rptr = s_actor_registry.load();
+    if (rptr) {
+        rptr->await_running_count_equal(0);
+    }
+    stop_and_kill(s_scheduler);
+    stop_and_kill(s_network_manager);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    // it's safe now to delete all other singletons now
+    delete s_actor_registry.load();
+    s_actor_registry = nullptr;
+    delete s_group_manager.load();
+    s_group_manager = nullptr;
+    auto et = s_empty_tuple.load();
+    if (et && !et->deref()) delete et;
+    s_empty_tuple = nullptr;
+    delete s_uniform_type_info_map.load();
+    s_uniform_type_info_map = nullptr;
+}
+
+} // namespace cppa
 
 namespace cppa { namespace detail {
 
