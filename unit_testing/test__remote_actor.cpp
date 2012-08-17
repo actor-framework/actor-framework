@@ -35,6 +35,17 @@ std::vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     return result;
 }
 
+struct reflector : public event_based_actor {
+    void init() {
+        become (
+            others() >> [=] {
+                reply_tuple(last_dequeued());
+                quit();
+            }
+        );
+    }
+};
+
 int client_part(const std::vector<string_pair>& args) {
     CPPA_TEST(test__remote_actor_client_part);
     auto i = std::find_if(args.begin(), args.end(),
@@ -93,13 +104,38 @@ int client_part(const std::vector<string_pair>& args) {
             }
         );
     }
+    // test group communication
+    auto grp = group::anonymous();
+    spawn_in_group<reflector>(grp);
+    spawn_in_group<reflector>(grp);
+    receive_response (sync_send(server, atom("Spawn5"), grp)) (
+        on(atom("ok")) >> [&] {
+            send(grp, "Hello reflectors!", 5.0);
+        },
+        after(std::chrono::seconds(10)) >> [&] {
+            CPPA_ERROR("unexpected timeout!");
+        }
+    );
+    // receive seven reply messages (2 local, 5 remote)
+    int x = 0;
+    receive_for(x, 7) (
+        on("Hello reflectors!", 5.0) >> [] { },
+        others() >> [&] {
+            CPPA_ERROR("unexpected message; "
+                       << __FILE__ << " line " << __LINE__ << ": "
+                       << to_string(self->last_dequeued()));
+        }
+    );
+    // wait for locally spawned reflectors
+    await_all_others_done();
+    send(server, atom("farewell"));
+    shutdown();
     return CPPA_TEST_RESULT;
 }
 
 } // namespace <anonymous>
 
 int main(int argc, char** argv) {
-cout << "argv[0] = " << argv[0] << endl;
     std::string app_path = argv[0];
     bool run_remote_actor = true;
     if (argc > 1) {
@@ -169,13 +205,30 @@ cout << "argv[0] = " << argv[0] << endl;
         }
     );
     // test 100 sync messages
+    cout << "test 100 synchronous messages" << endl;
     int i = 0;
     receive_for(i, 100) (
         others() >> [] {
             reply_tuple(self->last_dequeued());
         }
     );
+    cout << "test group communication via network" << endl;
+    // group test
+    receive (
+        on(atom("Spawn5"), arg_match) >> [](const group_ptr& grp) {
+            for (int i = 0; i < 5; ++i) {
+                spawn_in_group<reflector>(grp);
+            }
+            reply(atom("ok"));
+        }
+    );
+    await_all_others_done();
+    cout << "wait for a last goodbye" << endl;
+    receive (
+        on(atom("farewell")) >> [] { }
+    );
     // wait until separate process (in sep. thread) finished execution
     if (run_remote_actor) child.join();
+    shutdown();
     return CPPA_TEST_RESULT;
 }

@@ -183,15 +183,6 @@ class group : public channel {
 
     virtual void unsubscribe(const channel_ptr& who) = 0;
 
-    /**
-     * @brief Called whenever a message was received via network. If @p this
-     *        is a proxy, it should not send the message
-     *        back to the original group but forward the message to its local
-     *        subscribers. This member function should call @p enqueue for
-     *        all non-proxy instances.
-     */
-    virtual void remote_enqueue(actor* sender, any_tuple msg);
-
     module_ptr m_module;
     std::string m_identifier;
 

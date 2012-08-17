@@ -93,8 +93,4 @@ const std::string& group::module_name() const {
     return get_module()->name();
 }
 
-void group::remote_enqueue(actor* sender, any_tuple msg) {
-    enqueue(sender, std::move(msg));
-}
-
 } // namespace cppa

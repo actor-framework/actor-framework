@@ -31,11 +31,14 @@
 #include <set>
 #include <stdexcept>
 
+#include "cppa/cppa.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
+#include "cppa/event_based_actor.hpp"
 
 #include "cppa/detail/middleman.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/addressed_message.hpp"
 
@@ -51,30 +54,48 @@ typedef std::lock_guard<util::shared_spinlock> exclusive_guard;
 typedef util::shared_lock_guard<util::shared_spinlock> shared_guard;
 typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 
+class local_broker;
 class local_group_module;
 
 class local_group : public group {
 
  public:
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void send_all_subscribers(actor* sender, const any_tuple& msg) {
         shared_guard guard(m_shared_mtx);
         for (auto& s : m_subscribers) {
             s->enqueue(sender, msg);
         }
     }
 
-    group::subscription subscribe(const channel_ptr& who) {
+    void enqueue(actor* sender, any_tuple msg) {
+        send_all_subscribers(sender, msg);
+        m_broker->enqueue(sender, std::move(msg));
+    }
+
+    std::pair<bool, size_t> add_subscriber(const channel_ptr& who) {
         exclusive_guard guard(m_shared_mtx);
         if (m_subscribers.insert(who).second) {
+            return {true, m_subscribers.size()};
+        }
+        return {false, m_subscribers.size()};
+    }
+
+    std::pair<bool, size_t> erase_subscriber(const channel_ptr& who) {
+        exclusive_guard guard(m_shared_mtx);
+        auto erased_one = m_subscribers.erase(who) > 0;
+        return {erased_one, m_subscribers.size()};
+    }
+
+    group::subscription subscribe(const channel_ptr& who) {
+        if (add_subscriber(who).first) {
             return {who, this};
         }
         return {};
     }
 
     void unsubscribe(const channel_ptr& who) {
-        exclusive_guard guard(m_shared_mtx);
-        m_subscribers.erase(who);
+        erase_subscriber(who);
     }
 
     void serialize(serializer* sink);
@@ -87,16 +108,71 @@ class local_group : public group {
         return m_process;
     }
 
-    local_group(local_group_module* mod, std::string id,
+    const actor_ptr& broker() const {
+        return m_broker;
+    }
+
+    local_group(bool spawn_local_broker,
+                local_group_module* mod, std::string id,
                 process_information_ptr parent = process_information::get());
+
+ protected:
+
+    process_information_ptr m_process;
+    util::shared_spinlock m_shared_mtx;
+    std::set<channel_ptr> m_subscribers;
+    actor_ptr m_broker;
+
+};
+
+typedef intrusive_ptr<local_group> local_group_ptr;
+
+class local_broker : public event_based_actor {
+
+ public:
+
+    local_broker(local_group_ptr g) : m_group(std::move(g)) { }
+
+    void init() {
+        become (
+            on(atom("JOIN"), arg_match) >> [=](const actor_ptr& other) {
+                if (other && m_acquaintances.insert(other).second) {
+                    monitor(other);
+                }
+            },
+            on(atom("LEAVE"), arg_match) >> [=](const actor_ptr& other) {
+                if (other && m_acquaintances.erase(other) > 0) {
+                    demonitor(other);
+                }
+            },
+            on(atom("FORWARD"), arg_match) >> [=](const any_tuple& what) {
+                m_group->send_all_subscribers(last_sender().get(), what);
+            },
+            on<atom("DOWN"), std::uint32_t>() >> [=] {
+                actor_ptr other = last_sender();
+                if (other) m_acquaintances.erase(other);
+            },
+            others() >> [=] {
+                auto sender = last_sender().get();
+                for (auto& acquaintance : m_acquaintances) {
+                    acquaintance->enqueue(sender, last_dequeued());
+                }
+            }
+        );
+    }
 
  private:
 
-    util::shared_spinlock m_shared_mtx;
-    std::set<channel_ptr> m_subscribers;
-    process_information_ptr m_process;
+    local_group_ptr m_group;
+    std::set<actor_ptr> m_acquaintances;
 
 };
+
+// Send a "JOIN" message to the original group if a proxy
+// has local subscriptions and a "LEAVE" message to the original group
+// if there's no subscription left.
+
+class proxy_broker;
 
 class local_group_proxy : public local_group {
 
@@ -105,19 +181,72 @@ class local_group_proxy : public local_group {
  public:
 
     template<typename... Args>
-    local_group_proxy(Args&&... args) : super(std::forward<Args>(args)...) { }
+    local_group_proxy(actor_ptr remote_broker, Args&&... args)
+    : super(false, std::forward<Args>(args)...) {
+        CPPA_REQUIRE(m_broker == nullptr);
+        CPPA_REQUIRE(remote_broker != nullptr);
+        CPPA_REQUIRE(remote_broker->is_proxy());
+        m_broker = std::move(remote_broker);
+        m_proxy_broker = spawn_hidden<proxy_broker>(this);
+    }
+
+    group::subscription subscribe(const channel_ptr& who) {
+        auto res = add_subscriber(who);
+        if (res.first) {
+            if (res.second == 1) {
+                // join the remote source
+                m_broker->enqueue(nullptr,
+                                  make_any_tuple(atom("JOIN"), m_proxy_broker));
+            }
+            return {who, this};
+        }
+        return {};
+    }
+
+    void unsubscribe(const channel_ptr& who) {
+        auto res = erase_subscriber(who);
+        if (res.first && res.second == 0) {
+            // leave the remote source,
+            // because there's no more subscriber on this node
+            m_broker->enqueue(nullptr,
+                              make_any_tuple(atom("LEAVE"), m_proxy_broker));
+        }
+    }
 
     void enqueue(actor* sender, any_tuple msg) {
-        detail::middleman_enqueue(process_ptr(), sender, this, std::move(msg));
+        // forward message to the broker
+        m_broker->enqueue(sender,
+                          make_any_tuple(atom("FORWARD"), std::move(msg)));
     }
 
-    void remote_enqueue(actor* sender, any_tuple msg) {
-        super::enqueue(sender, std::move(msg));
-    }
+ private:
+
+    actor_ptr m_proxy_broker;
 
 };
 
-typedef intrusive_ptr<local_group> local_group_ptr;
+typedef intrusive_ptr<local_group_proxy> local_group_proxy_ptr;
+
+class proxy_broker : public event_based_actor {
+
+ public:
+
+    proxy_broker(local_group_proxy_ptr grp) : m_group(std::move(grp)) { }
+
+    void init() {
+        become (
+            others() >> [=] {
+                m_group->send_all_subscribers(last_sender().get(),
+                                              last_dequeued());
+            }
+        );
+    }
+
+ private:
+
+    local_group_proxy_ptr m_group;
+
+};
 
 class local_group_module : public group::module {
 
@@ -126,7 +255,8 @@ class local_group_module : public group::module {
  public:
 
     local_group_module()
-    : super("local"), m_process(process_information::get()) { }
+    : super("local"), m_process(process_information::get())
+    , m_actor_utype(uniform_typeid<actor_ptr>()){ }
 
     group_ptr get(const std::string& identifier) {
         shared_guard guard(m_instances_mtx);
@@ -135,7 +265,7 @@ class local_group_module : public group::module {
             return i->second;
         }
         else {
-            local_group_ptr tmp(new local_group(this, identifier));
+            local_group_ptr tmp(new local_group(true, this, identifier));
             { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(std::make_pair(identifier, tmp));
@@ -146,18 +276,19 @@ class local_group_module : public group::module {
     }
 
     intrusive_ptr<group> deserialize(deserializer* source) {
-        primitive_variant ptup[3];
-        primitive_type ptypes[] = {pt_u8string, pt_uint32, pt_u8string};
-        source->read_tuple(3, ptypes, ptup);
-        auto& identifier = cppa::get<std::string>(ptup[0]);
-        auto  process_id = cppa::get<std::uint32_t>(ptup[1]);
-        auto& node_id    = cppa::get<std::string>(ptup[2]);
-        if (   process_id == process().process_id()
-            && equal(node_id, process().node_id())) {
+        // deserialize {identifier, process_id, node_id}
+        auto pv_identifier = source->read_value(pt_u8string);
+        auto& identifier = cppa::get<std::string>(pv_identifier);
+        // deserialize broker
+        actor_ptr broker;
+        m_actor_utype->deserialize(&broker, source);
+        CPPA_REQUIRE(broker != nullptr);
+        if (!broker) return nullptr;
+        if (broker->parent_process() == process()) {
             return this->get(identifier);
         }
         else {
-            process_information pinf(process_id, node_id);
+            auto& pinf = broker->parent_process();
             shared_guard guard(m_proxies_mtx);
             auto& node_map = m_proxies[pinf];
             auto i = node_map.find(identifier);
@@ -165,14 +296,9 @@ class local_group_module : public group::module {
                 return i->second;
             }
             else {
-                local_group_ptr tmp(new local_group_proxy(this, identifier));
-                process_information_ptr piptr;
-                // re-use process_information_ptr from another proxy if possible
-                if (node_map.empty()) {
-                    piptr.reset(new process_information(pinf));
-                } else {
-                    piptr = node_map.begin()->second->process_ptr();
-                }
+                local_group_ptr tmp(new local_group_proxy(broker, this,
+                                                          identifier,
+                                                          broker->parent_process_ptr()));
                 upgrade_guard uguard(guard);
                 auto p = node_map.insert(std::make_pair(identifier, tmp));
                 // someone might preempt us
@@ -182,11 +308,10 @@ class local_group_module : public group::module {
     }
 
     void serialize(local_group* ptr, serializer* sink) {
-        primitive_variant ptup[3];
-        ptup[0] = ptr->identifier();
-        ptup[1] = ptr->process().process_id();
-        ptup[2] = to_string(ptr->process().node_id());
-        sink->write_tuple(3, ptup);
+        // serialize identifier & broker
+        sink->write_value(ptr->identifier());
+        CPPA_REQUIRE(ptr->broker() != nullptr);
+        m_actor_utype->serialize(&ptr->broker(), sink);
     }
 
     inline const process_information& process() const {
@@ -198,6 +323,7 @@ class local_group_module : public group::module {
     typedef std::map<std::string, local_group_ptr> local_group_map;
 
     process_information_ptr m_process;
+    const uniform_type_info* m_actor_utype;
     util::shared_spinlock m_instances_mtx;
     local_group_map m_instances;
     util::shared_spinlock m_proxies_mtx;
@@ -205,10 +331,15 @@ class local_group_module : public group::module {
 
 };
 
-local_group::local_group(local_group_module* mod,
+local_group::local_group(bool spawn_local_broker,
+                         local_group_module* mod,
                          std::string id,
                          process_information_ptr parent)
-: group(mod, std::move(id)), m_process(std::move(parent)) { }
+: group(mod, std::move(id)), m_process(std::move(parent)) {
+    if (spawn_local_broker) {
+        m_broker = spawn_hidden<local_broker>(this);
+    }
+}
 
 void local_group::serialize(serializer* sink) {
     // this cast is safe, because the only available constructor accepts
