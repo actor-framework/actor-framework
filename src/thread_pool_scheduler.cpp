@@ -191,8 +191,8 @@ void thread_pool_scheduler::stop() {
             if (!ptr->deref()) delete ptr;
             std::atomic_thread_fence(std::memory_order_seq_cst);
             if (!hidden) dec_actor_count();
-            ptr = m_queue.try_pop();
         }
+        ptr = m_queue.try_pop();
     }
     super::stop();
 }
