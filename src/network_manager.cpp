@@ -65,6 +65,14 @@ struct network_manager_impl : network_manager {
         }
         // store pipe read handle in local variables for lambda expression
         int pipe_fd0 = pipe_fd[0];
+        // set read handle to nonblocking
+        auto flags = fcntl(pipe_fd0, F_GETFL, 0);
+        if (flags == -1) {
+            throw network_error("unable to read socket flags");
+        }
+        if (fcntl(pipe_fd0, F_SETFL, flags | O_NONBLOCK) < 0) {
+            CPPA_CRITICAL("unable to set pipe read handle to nonblock");
+        }
         // start threads
         m_middleman_thread = std::thread([this, pipe_fd0] {
             middleman_loop(pipe_fd0, this->m_middleman_queue);
@@ -82,7 +90,7 @@ struct network_manager_impl : network_manager {
     void send_to_middleman(std::unique_ptr<middleman_message> msg) {
         m_middleman_queue._push_back(msg.release());
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        std::uint32_t dummy = 0;
+        std::uint8_t dummy = 0;
         if (write(pipe_fd[1], &dummy, sizeof(dummy)) != sizeof(dummy)) {
             CPPA_CRITICAL("cannot write to pipe");
         }
