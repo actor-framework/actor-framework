@@ -505,14 +505,7 @@ inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
  * @throws std::logic_error if @p handle is not valid or if the actor
  *                          already received the response for @p handle
  */
-inline sync_recv_helper receive_response(const message_future& handle) {
-    return {handle.id(), [](behavior& bhvr, message_id_t mf) {
-        if (!self->awaits(mf)) {
-            throw std::logic_error("response already received");
-        }
-        self->dequeue_response(bhvr, mf);
-    }};
-}
+sync_recv_helper receive_response(const message_future& handle);
 
 /**
  * @brief Sends a message to the sender of the last received message.
