@@ -1,6 +1,6 @@
 Version 0.4
 
-XXXX-XX-XX
+2012-08-20
 
 - New network layer implementation
 - Added acceptor and input/output stream interfaces
@@ -13,6 +13,7 @@ XXXX-XX-XX
 - Added shutdown() function
 - Implemented broker-based forwarding of local groups for 'pseudo multicast'
 - Added `then` and `await` member functions to message_future
+- Do not send more than one response message with `reply`
 
 Version 0.3.3
 
