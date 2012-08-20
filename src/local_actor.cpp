@@ -111,7 +111,7 @@ void local_actor::reply_message(any_tuple&& what) {
     if (id.valid() == false || id.is_response()) {
         send_message(whom.get(), std::move(what));
     }
-    else {
+    else if (!id.is_answered()) {
         if (chaining_enabled()) {
             if (whom->chained_sync_enqueue(this, id.response_id(), std::move(what))) {
                 m_chained_actor = whom;
