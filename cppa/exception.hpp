@@ -41,11 +41,11 @@ namespace cppa {
 /**
  * @brief Base class for libcppa exceptions.
  */
-class exception : public std::exception {
+class cppa_exception : public std::exception {
 
  public:
 
-    ~exception() throw();
+    ~cppa_exception() throw();
 
     /**
      * @brief Returns the error message.
@@ -59,13 +59,13 @@ class exception : public std::exception {
      * @brief Creates an exception with the error string @p what_str.
      * @param what_str Error message as rvalue string.
      */
-    exception(std::string&& what_str);
+    cppa_exception(std::string&& what_str);
 
     /**
      * @brief Creates an exception with the error string @p what_str.
      * @param what_str Error message as string.
      */
-    exception(const std::string& what_str);
+    cppa_exception(const std::string& what_str);
 
  private:
 
@@ -76,7 +76,7 @@ class exception : public std::exception {
 /**
  * @brief Thrown if an actor finished execution.
  */
-class actor_exited : public exception {
+class actor_exited : public cppa_exception {
 
  public:
 
@@ -99,7 +99,7 @@ class actor_exited : public exception {
  * @brief Thrown to indicate that either an actor publishing failed or
  *        @p libcppa was unable to connect to a remote host.
  */
-class network_error : public exception {
+class network_error : public cppa_exception {
 
  public:
 

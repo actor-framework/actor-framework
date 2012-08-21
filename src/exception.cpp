@@ -63,29 +63,27 @@ std::string be_what(int err_code) {
 
 namespace cppa {
 
-exception::exception(const std::string &what_str) : m_what(what_str) {
-}
+cppa_exception::cppa_exception(const std::string& what_str)
+: m_what(what_str) { }
 
-exception::exception(std::string&& what_str) : m_what(std::move(what_str)) {
-}
+cppa_exception::cppa_exception(std::string&& what_str)
+: m_what(std::move(what_str)) { }
 
-exception::~exception() throw() {
-}
+cppa_exception::~cppa_exception() throw() { }
 
-const char* exception::what() const throw() {
+const char* cppa_exception::what() const throw() {
     return m_what.c_str();
 }
 
-actor_exited::actor_exited(std::uint32_t reason) : exception(ae_what(reason)) {
+actor_exited::actor_exited(std::uint32_t reason)
+: cppa_exception(ae_what(reason)) {
     m_reason = reason;
 }
 
-network_error::network_error(const std::string& str) : exception(str) {
-}
+network_error::network_error(const std::string& str) : cppa_exception(str) { }
 
 network_error::network_error(std::string&& str)
-    : exception(std::move(str)) {
-}
+: cppa_exception(std::move(str)) { }
 
 bind_failure::bind_failure(int err_code) : network_error(be_what(err_code)) {
     m_errno = err_code;
