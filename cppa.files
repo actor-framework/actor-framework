@@ -263,3 +263,5 @@ cppa/detail/middleman.hpp
 src/middleman.cpp
 src/buffer.cpp
 cppa/message_future.hpp
+cppa/detail/fd_util.hpp
+src/fd_util.cpp
