@@ -377,14 +377,14 @@ class middleman {
 };
 
 bool peer_connection::continue_reading() {
-    DEBUG("peer_connection::continue_reading");
+    //DEBUG("peer_connection::continue_reading");
     for (;;) {
         m_rd_buf.append_from(m_istream.get());
         if (!m_rd_buf.full()) return true; // try again later
         switch (m_rd_state) {
             case wait_for_process_info: {
-                DEBUG("peer_connection::continue_reading: "
-                      "wait_for_process_info");
+                //DEBUG("peer_connection::continue_reading: "
+                //      "wait_for_process_info");
                 uint32_t process_id;
                 process_information::node_id_type node_id;
                 memcpy(&process_id, m_rd_buf.data(), sizeof(uint32_t));
@@ -402,16 +402,16 @@ bool peer_connection::continue_reading() {
                 break;
             }
             case wait_for_msg_size: {
-                DEBUG("peer_connection::continue_reading: wait_for_msg_size");
+                //DEBUG("peer_connection::continue_reading: wait_for_msg_size");
                 uint32_t msg_size;
                 memcpy(&msg_size, m_rd_buf.data(), sizeof(uint32_t));
-                DEBUG("msg_size: " << msg_size);
+                //DEBUG("msg_size: " << msg_size);
                 m_rd_buf.reset(msg_size);
                 m_rd_state = read_message;
                 break;
             }
             case read_message: {
-                DEBUG("peer_connection::continue_reading: read_message");
+                //DEBUG("peer_connection::continue_reading: read_message");
                 addressed_message msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size());
                 m_meta_msg->deserialize(&msg, &bd);
@@ -516,7 +516,7 @@ class peer_acceptor : public network_channel {
     }
 
     bool continue_reading() {
-        DEBUG("peer_acceptor::continue_reading");
+        //DEBUG("peer_acceptor::continue_reading");
         // accept as many connections as possible
         for (;;) {
             auto opt = m_acceptor->try_accept_connection();
@@ -554,7 +554,7 @@ class middleman_overseer : public network_channel {
     : super(parent, pipe_fd), m_queue(q) { }
 
     bool continue_reading() {
-        DEBUG("middleman_overseer::continue_reading");
+        //DEBUG("middleman_overseer::continue_reading");
         static constexpr size_t num_dummies = 256;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
@@ -595,8 +595,8 @@ class middleman_overseer : public network_channel {
                 }
                 case middleman_message_type::unpublish: {
                     if (msg->published_actor) {
-                        DEBUG("middleman_overseer: unpublish actor id "
-                              << msg->published_actor->id());
+                        //DEBUG("middleman_overseer: unpublish actor id "
+                        //      << msg->published_actor->id());
                         auto channel = parent()->acceptor_of(msg->published_actor);
                         if (channel) {
                             parent()->erase(channel);
@@ -605,7 +605,7 @@ class middleman_overseer : public network_channel {
                     break;
                 }
                 case middleman_message_type::outgoing_message: {
-                    DEBUG("middleman_overseer: outgoing_message");
+                    //DEBUG("middleman_overseer: outgoing_message");
                     auto& target_peer = msg->out_msg.first;
                     auto& out_msg = msg->out_msg.second;
                     CPPA_REQUIRE(target_peer != nullptr);
@@ -672,7 +672,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             wrset_ptr = &wrset;
         }
         CPPA_REQUIRE(maxfd > 0);
-        DEBUG("select()");
+        //DEBUG("select()");
         int sresult;
         do {
             sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
@@ -681,7 +681,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             }
         }
         while (sresult == 0);
-        DEBUG("continue reading ...");
+        //DEBUG("continue reading ...");
         { // iterate over all channels and remove channels as needed
             for (auto& channel : m_channels) {
                 if (FD_ISSET(channel->read_handle(), &rdset)) {
