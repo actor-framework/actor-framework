@@ -44,8 +44,9 @@ class down_observer : public attachable {
  public:
 
     down_observer(actor_ptr observer, actor_ptr observed)
-        : m_observer(std::move(observer))
-        , m_observed(std::move(observed)) {
+    : m_observer(std::move(observer)), m_observed(std::move(observed)) {
+        CPPA_REQUIRE(m_observer != nullptr);
+        CPPA_REQUIRE(m_observed != nullptr);
     }
 
     void actor_exited(std::uint32_t reason) {
