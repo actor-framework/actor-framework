@@ -146,22 +146,30 @@ class local_broker : public event_based_actor {
                 }
             },
             on(atom("FORWARD"), arg_match) >> [=](const any_tuple& what) {
+                // local forwarding
                 m_group->send_all_subscribers(last_sender().get(), what);
+                // forward to all acquaintances
+                send_to_acquaintances(what);
             },
             on<atom("DOWN"), std::uint32_t>() >> [=] {
                 actor_ptr other = last_sender();
                 if (other) m_acquaintances.erase(other);
             },
             others() >> [=] {
-                auto sender = last_sender().get();
-                for (auto& acquaintance : m_acquaintances) {
-                    acquaintance->enqueue(sender, last_dequeued());
-                }
+                send_to_acquaintances(last_dequeued());
             }
         );
     }
 
  private:
+
+    void send_to_acquaintances(const any_tuple& what) {
+        // send to all remote subscribers
+        auto sender = last_sender().get();
+        for (auto& acquaintance : m_acquaintances) {
+            acquaintance->enqueue(sender, what);
+        }
+    }
 
     local_group_ptr m_group;
     std::set<actor_ptr> m_acquaintances;
