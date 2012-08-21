@@ -292,8 +292,8 @@ actor_ptr thread_pool_scheduler::spawn(void_function what, scheduling_hint sh) {
 }
 
 actor_ptr thread_pool_scheduler::spawn(void_function what,
-                                       scheduling_hint sh,
-                                       init_callback init_cb) {
+                                       init_callback init_cb,
+                                       scheduling_hint sh) {
     return spawn_as_thread(std::move(what),
                            std::move(init_cb),
                            sh == detached_and_hidden);
