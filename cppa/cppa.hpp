@@ -413,6 +413,7 @@ inline void send_impl(T* whom, any_tuple&& what) {
 
 template<typename T, typename... Args>
 inline void send_tpl_impl(T* whom, Args&&... what) {
+    static_assert(sizeof...(Args) > 0, "no message to send");
     if (whom) self->send_message(whom,
                                  make_any_tuple(std::forward<Args>(what)...));
 }
@@ -444,7 +445,6 @@ send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
 template<class C, typename... Args>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
 send(const intrusive_ptr<C>& whom, Args&&... what) {
-    static_assert(sizeof...(Args) > 0, "no message to send");
     detail::send_tpl_impl(whom.get(), std::forward<Args>(what)...);
 }
 
@@ -596,11 +596,12 @@ inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
 
 #ifndef CPPA_DOCUMENTATION
 // matches "send(this, ...)" and "send(self, ...)"
-template<typename Arg0, typename... Args>
-inline void send(local_actor* whom, Arg0&& arg0, Args&&... args) {
-    detail::send_tpl_impl(whom,
-                          std::forward<Arg0>(arg0),
-                          std::forward<Args>(args)...);
+inline void send_tuple(local_actor* whom, any_tuple what) {
+    detail::send_impl(whom, std::move(what));
+}
+template<typename... Args>
+inline void send(local_actor* whom, Args&&... args) {
+    detail::send_tpl_impl(whom, std::forward<Args>(args)...);
 }
 inline const self_type& operator<<(const self_type& s, any_tuple what) {
     detail::send_impl(s.get(), std::move(what));
