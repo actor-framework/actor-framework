@@ -46,6 +46,67 @@ struct reflector : public event_based_actor {
     }
 };
 
+// receive seven reply messages (2 local, 5 remote)
+void spawn5_server(actor_ptr client, bool inverted) {
+    group_ptr grp;
+    if (!inverted) {
+        grp = group::get("local", "foobar");
+    }
+    else {
+        send(client, atom("GetGroup"));
+        receive (
+            on_arg_match >> [&](const group_ptr& remote_group) {
+                grp = remote_group;
+            }
+        );
+    }
+    spawn_in_group<reflector>(grp);
+    spawn_in_group<reflector>(grp);
+    receive_response (sync_send(client, atom("Spawn5"), grp)) (
+        on(atom("ok")) >> [&] {
+            send(grp, "Hello reflectors!", 5.0);
+        },
+        after(std::chrono::seconds(10)) >> [&] {
+            throw std::runtime_error("timeout");
+        }
+    );
+    // receive seven reply messages (2 local, 5 remote)
+    int x = 0;
+    receive_for(x, 7) (
+        on("Hello reflectors!", 5.0) >> [] { },
+        others() >> [&] {
+            cout << "unexpected message; "
+                 << __FILE__ << " line " << __LINE__ << ": "
+                 << to_string(self->last_dequeued())
+                 << endl;
+        }
+    );
+    // wait for locally spawned reflectors
+    await_all_others_done();
+    send(client, atom("Spawn5Done"));
+}
+
+void spawn5_client() {
+    bool spawned_reflectors = false;
+    do_receive (
+        on(atom("Spawn5"), arg_match) >> [&](const group_ptr& grp) {
+            for (int i = 0; i < 5; ++i) {
+                spawn_in_group<reflector>(grp);
+            }
+            reply(atom("ok"));
+            spawned_reflectors = true;
+        },
+        on(atom("GetGroup")) >> [] {
+            reply(group::get("local", "foobar"));
+        }
+    ).until(gref(spawned_reflectors));
+    await_all_others_done();
+    // wait for server
+    receive (
+        on(atom("Spawn5Done")) >> [] { }
+    );
+}
+
 int client_part(const std::vector<string_pair>& args) {
     CPPA_TEST(test__remote_actor_client_part);
     auto i = std::find_if(args.begin(), args.end(),
@@ -104,28 +165,8 @@ int client_part(const std::vector<string_pair>& args) {
             }
         );
     }
-    // test group communication
-    auto grp = group::anonymous();
-    spawn_in_group<reflector>(grp);
-    spawn_in_group<reflector>(grp);
-    receive_response (sync_send(server, atom("Spawn5"), grp)) (
-        on(atom("ok")) >> [&] {
-            send(grp, "Hello reflectors!", 5.0);
-        },
-        after(std::chrono::seconds(10)) >> [&] {
-            CPPA_ERROR("unexpected timeout!");
-        }
-    );
-    // receive seven reply messages (2 local, 5 remote)
-    int x = 0;
-    receive_for(x, 7) (
-        on("Hello reflectors!", 5.0) >> [] { },
-        others() >> [&] {
-            CPPA_ERROR("unexpected message; "
-                       << __FILE__ << " line " << __LINE__ << ": "
-                       << to_string(self->last_dequeued()));
-        }
-    );
+    spawn5_server(server, false);
+    spawn5_client();
     // wait for locally spawned reflectors
     await_all_others_done();
     send(server, atom("farewell"));
@@ -136,6 +177,7 @@ int client_part(const std::vector<string_pair>& args) {
 } // namespace <anonymous>
 
 int main(int argc, char** argv) {
+    std::cout.unsetf(std::ios_base::unitbuf);
     std::string app_path = argv[0];
     bool run_remote_actor = true;
     if (argc > 1) {
@@ -180,8 +222,10 @@ int main(int argc, char** argv) {
         cout << "actor published at port " << port << endl;
     }
     //cout << "await SpawnPing message" << endl;
+    actor_ptr remote_client;
     receive (
-        on(atom("SpawnPing")) >> []() {
+        on(atom("SpawnPing")) >> [&]() {
+            remote_client = self->last_sender();
             reply(atom("PingPtr"), spawn_event_based_ping(10));
         }
     );
@@ -214,15 +258,9 @@ int main(int argc, char** argv) {
     );
     cout << "test group communication via network" << endl;
     // group test
-    receive (
-        on(atom("Spawn5"), arg_match) >> [](const group_ptr& grp) {
-            for (int i = 0; i < 5; ++i) {
-                spawn_in_group<reflector>(grp);
-            }
-            reply(atom("ok"));
-        }
-    );
-    await_all_others_done();
+    spawn5_client();
+    cout << "test group communication via network (inverted setup)" << endl;
+    spawn5_server(remote_client, true);
     cout << "wait for a last goodbye" << endl;
     receive (
         on(atom("farewell")) >> [] { }
