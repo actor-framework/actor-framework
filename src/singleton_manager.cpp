@@ -65,30 +65,19 @@ std::atomic<scheduler*> s_scheduler;
 
 template<typename T>
 void stop_and_kill(std::atomic<T*>& ptr) {
-    auto p = ptr.load();
-    if (p) {
+    for (;;) {
+        auto p = ptr.load();
         if (ptr.compare_exchange_weak(p, nullptr)) {
             p->stop();
             delete p;
             ptr = nullptr;
-        }
-        else {
-            stop_and_kill(ptr);
+            return;
         }
     }
 }
-
-/*
-struct static_cleanup_helper {
-    ~static_cleanup_helper() {
-        delete_singletons();
-    }
-}
-s_static_cleanup_helper;
-*/
 
 template<typename T>
-T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
+T* lazy_get(std::atomic<T*>& ptr) {
     T* result = ptr.load(std::memory_order_seq_cst);
     if (result == nullptr) {
         auto tmp = new T;
@@ -97,20 +86,8 @@ T* lazy_get(std::atomic<T*>& ptr, bool register_atexit_fun = false) {
         }
         else {
             delete tmp;
-            return lazy_get(ptr, register_atexit_fun);
+            return lazy_get(ptr);
         }
-        /*
-        else {
-            // ok, successfully created singleton, register exit fun?
-            if (register_atexit_fun) {
-//#               ifndef __APPLE__
-//                atexit(delete_singletons);
-//#               endif
-            }
-            return tmp;
-        }
-        */
-        static_cast<void>(register_atexit_fun); // keep compiler happy
     }
     return result;
 }
@@ -128,8 +105,8 @@ void shutdown() {
     if (rptr) {
         rptr->await_running_count_equal(0);
     }
-    stop_and_kill(s_scheduler);
     stop_and_kill(s_network_manager);
+    stop_and_kill(s_scheduler);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe now to delete all other singletons now
     delete s_actor_registry.load();
@@ -152,7 +129,7 @@ actor_registry* singleton_manager::get_actor_registry() {
 }
 
 uniform_type_info_map* singleton_manager::get_uniform_type_info_map() {
-    return lazy_get(s_uniform_type_info_map, true);
+    return lazy_get(s_uniform_type_info_map);
 }
 
 group_manager* singleton_manager::get_group_manager() {
