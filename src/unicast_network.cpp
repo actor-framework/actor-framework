@@ -37,7 +37,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <fcntl.h>
 #include <netinet/tcp.h>
 
 #include "cppa/cppa.hpp"

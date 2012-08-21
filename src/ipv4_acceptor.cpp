@@ -46,7 +46,6 @@
 #   include <sys/socket.h>
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
-#   include <fcntl.h>
 #endif
 
 namespace cppa { namespace detail {

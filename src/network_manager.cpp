@@ -30,7 +30,6 @@
 
 #include <cstdio>
 #include <thread>
-#include <fcntl.h>
 #include <cstdint>
 #include <cstring>      // strerror
 #include <unistd.h>
@@ -44,6 +43,7 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
+#include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/middleman.hpp"
 #include "cppa/detail/network_manager.hpp"
 
@@ -65,14 +65,7 @@ struct network_manager_impl : network_manager {
         }
         // store pipe read handle in local variables for lambda expression
         int pipe_fd0 = pipe_fd[0];
-        // set read handle to nonblocking
-        auto flags = fcntl(pipe_fd0, F_GETFL, 0);
-        if (flags == -1) {
-            throw network_error("unable to read socket flags");
-        }
-        if (fcntl(pipe_fd0, F_SETFL, flags | O_NONBLOCK) < 0) {
-            CPPA_CRITICAL("unable to set pipe read handle to nonblock");
-        }
+        fd_util::nonblocking(pipe_fd0, true);
         // start threads
         m_middleman_thread = std::thread([this, pipe_fd0] {
             middleman_loop(pipe_fd0, this->m_middleman_queue);
