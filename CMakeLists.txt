@@ -93,6 +93,7 @@ set(LIBCPPA_SRC
     src/event_based_actor.cpp
     src/exception.cpp
     src/factory.cpp
+    src/fd_util.cpp
     src/fiber.cpp
     src/group.cpp
     src/group_manager.cpp
