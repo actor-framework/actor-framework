@@ -315,7 +315,7 @@ class middleman {
     }
 
     inline void add_channel_ptr(network_channel_ptr ptr) {
-        m_new_channels.push_back(std::move(ptr));
+        m_new_channels.push_back(move(ptr));
     }
 
     inline void add_peer(const process_information& pinf, peer_connection_ptr cptr) {
@@ -687,7 +687,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                 if (FD_ISSET(channel->read_handle(), &rdset)) {
                     bool erase_channel = false;
                     try { erase_channel = !channel->continue_reading(); }
-                    catch (std::exception& e) {
+                    catch (exception& e) {
                         DEBUG(demangle(typeid(e).name()) << ": " << e.what());
                         erase_channel = true;
                     }
@@ -704,7 +704,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                 if (FD_ISSET(peer->write_handle(), &wrset)) {
                     bool erase_channel = false;
                     try { erase_channel = !peer->continue_writing(); }
-                    catch (std::exception& e) {
+                    catch (exception& e) {
                         DEBUG(demangle(typeid(e).name()) << ": " << e.what());
                         erase_channel = true;
                     }

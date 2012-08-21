@@ -34,6 +34,7 @@
 #include <iostream>
 
 #include "cppa/exception.hpp"
+#include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
@@ -49,41 +50,7 @@
 
 namespace cppa { namespace detail {
 
-namespace {
-
-template<typename T>
-void handle_syscall_result(T result, bool is_recv_result) {
-    if (result < 0) {
-        if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            char* cstr = strerror(errno);
-            std::string errmsg = cstr;
-            errmsg += " [errno = ";
-            errmsg += std::to_string(errno);
-            errmsg += "]";
-            throw std::ios_base::failure(std::move(errmsg));
-        }
-    }
-    else if (result == 0 && is_recv_result) {
-        throw std::ios_base::failure("cannot read from closed socket");
-    }
-}
-
-int rd_flags(native_socket_type fd) {
-    auto flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
-        throw network_error("unable to read socket flags");
-    }
-    return flags;
-}
-
-void set_nonblocking(native_socket_type fd) {
-    auto flags = rd_flags(fd);
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-        throw network_error("unable to set socket to nonblock");
-    }
-}
-
-} // namespace <anonymous>
+using namespace fd_util;
 
 ipv4_io_stream::ipv4_io_stream(native_socket_type fd) : m_fd(fd) { }
 
@@ -100,7 +67,7 @@ void ipv4_io_stream::read(void* vbuf, size_t len) {
     size_t rd = 0;
     while (rd < len) {
         auto recv_result = ::recv(m_fd, buf + rd, len - rd, 0);
-        handle_syscall_result(recv_result, true);
+        handle_read_result(recv_result, true);
         if (recv_result > 0) {
             rd += static_cast<size_t>(recv_result);
         }
@@ -117,7 +84,7 @@ void ipv4_io_stream::read(void* vbuf, size_t len) {
 
 size_t ipv4_io_stream::read_some(void* buf, size_t len) {
     auto recv_result = ::recv(m_fd, buf, len, 0);
-    handle_syscall_result(recv_result, true);
+    handle_read_result(recv_result, true);
     return (recv_result > 0) ? static_cast<size_t>(recv_result) : 0;
 }
 
@@ -126,7 +93,7 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
     size_t written = 0;
     while (written < len) {
         auto send_result = ::send(m_fd, buf + written, len - written, 0);
-        handle_syscall_result(send_result, false);
+        handle_write_result(send_result, true);
         if (send_result > 0) {
             written += static_cast<size_t>(send_result);
         }
@@ -144,22 +111,22 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
 
 size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
     auto send_result = ::send(m_fd, buf, len, 0);
-    handle_syscall_result(send_result, false);
+    handle_write_result(send_result, true);
     return static_cast<size_t>(send_result);
 }
 
 util::io_stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd) {
-    set_nonblocking(fd);
+    tcp_nodelay(fd, true);
+    nonblocking(fd, true);
     return new ipv4_io_stream(fd);
 }
 
 util::io_stream_ptr ipv4_io_stream::connect_to(const char* host,
                                                std::uint16_t port) {
-    native_socket_type sockfd;
     struct sockaddr_in serv_addr;
     struct hostent* server;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == invalid_socket) {
+    native_socket_type fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == invalid_socket) {
         throw network_error("socket creation failed");
     }
     server = gethostbyname(host);
@@ -172,13 +139,12 @@ util::io_stream_ptr ipv4_io_stream::connect_to(const char* host,
     serv_addr.sin_family = AF_INET;
     memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
     serv_addr.sin_port = htons(port);
-    if (connect(sockfd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
+    if (connect(fd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
         throw network_error("could not connect to host");
     }
-    int flags = 1;
-    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
-    set_nonblocking(sockfd);
-    return new ipv4_io_stream(sockfd);
+    tcp_nodelay(fd, true);
+    nonblocking(fd, true);
+    return new ipv4_io_stream(fd);
 }
 
 } } // namespace cppa::detail

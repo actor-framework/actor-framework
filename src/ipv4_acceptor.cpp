@@ -34,6 +34,7 @@
 #include <iostream>
 #include "cppa/exception.hpp"
 #include "cppa/util/io_stream.hpp"
+#include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/ipv4_acceptor.hpp"
 #include "cppa/detail/ipv4_io_stream.hpp"
 
@@ -49,6 +50,8 @@
 #endif
 
 namespace cppa { namespace detail {
+
+using namespace fd_util;
 
 namespace {
 
@@ -71,14 +74,6 @@ struct socket_guard {
 
 };
 
-int rd_flags(native_socket_type fd) {
-    auto flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
-        throw network_error("unable to read socket flags");
-    }
-    return flags;
-}
-
 bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool nonblocking) {
     sockaddr addr;
     socklen_t addrlen;
@@ -90,13 +85,8 @@ bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool n
             // ok, try again
             return false;
         }
-        char* cstr = strerror(errno);
-        std::string errmsg = cstr;
-        free(cstr);
-        throw std::ios_base::failure(std::move(errmsg));
+        throw_io_failure("accept failed");
     }
-    int flags = 1;
-    setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(int));
     util::io_stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
@@ -115,7 +105,7 @@ std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port) {
     if (sockfd == invalid_socket) {
         throw network_error("could not create server socket");
     }
-    // sguard closes the socket in case of an exception
+    // sguard closes the socket in case of exception
     socket_guard sguard(sockfd);
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -127,14 +117,11 @@ std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port) {
     if (listen(sockfd, 10) != 0) {
         throw network_error("listen() failed");
     }
-    int flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags == -1) {
-        throw network_error("unable to get socket flags");
-    }
-    bool nonblocking = (flags & O_NONBLOCK) != 0;
+    // default mode is nonblocking
+    nonblocking(sockfd, true);
     // ok, no exceptions
     sguard.release();
-    std::unique_ptr<ipv4_acceptor> result(new ipv4_acceptor(sockfd, nonblocking));
+    std::unique_ptr<ipv4_acceptor> result(new ipv4_acceptor(sockfd, true));
     return std::move(result);
 }
 
@@ -148,10 +135,7 @@ native_socket_type ipv4_acceptor::acceptor_file_handle() const {
 
 util::io_stream_ptr_pair ipv4_acceptor::accept_connection() {
     if (m_is_nonblocking) {
-        auto flags = rd_flags(m_fd);
-        if (fcntl(m_fd, F_SETFL, flags & (~(O_NONBLOCK))) < 0) {
-            throw network_error("unable to set socket to nonblock");
-        }
+        nonblocking(m_fd, false);
         m_is_nonblocking = false;
     }
     util::io_stream_ptr_pair result;
@@ -161,10 +145,7 @@ util::io_stream_ptr_pair ipv4_acceptor::accept_connection() {
 
 option<util::io_stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
     if (!m_is_nonblocking) {
-        auto flags = rd_flags(m_fd);
-        if (fcntl(m_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-            throw network_error("unable to set socket to nonblock");
-        }
+        nonblocking(m_fd, true);
         m_is_nonblocking = true;
     }
     util::io_stream_ptr_pair result;
