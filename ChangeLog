@@ -1,3 +1,9 @@
+Version 0.4.1
+
+2012-08-22
+
+- Bugfix: shutdown() caused segfault if no scheduler or middleman was started
+
 Version 0.4
 
 2012-08-20
