@@ -36,8 +36,8 @@ void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue(partial_function&) { }
 void scheduled_actor_dummy::dequeue_response(behavior&, message_id_t) { }
-void scheduled_actor_dummy::link_to(intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::unlink_from(intrusive_ptr<actor>&) { }
+void scheduled_actor_dummy::link_to(const intrusive_ptr<actor>&) { }
+void scheduled_actor_dummy::unlink_from(const intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::detach(const attachable::token&) { }
 bool scheduled_actor_dummy::attach(attachable*) { return false; }
 void scheduled_actor_dummy::unbecome() { }
@@ -49,11 +49,11 @@ resume_result scheduled_actor_dummy::resume(util::fiber*) {
     return resume_result::actor_blocked;
 }
 
-bool scheduled_actor_dummy::establish_backlink(intrusive_ptr<actor>&) {
+bool scheduled_actor_dummy::establish_backlink(const intrusive_ptr<actor>&) {
     return false;
 }
 
-bool scheduled_actor_dummy::remove_backlink(intrusive_ptr<actor>&) {
+bool scheduled_actor_dummy::remove_backlink(const intrusive_ptr<actor>&) {
     return false;
 }
 

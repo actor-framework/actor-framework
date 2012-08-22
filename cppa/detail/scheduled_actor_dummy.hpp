@@ -41,10 +41,10 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     void dequeue(behavior&);
     void dequeue(partial_function&);
     void dequeue_response(behavior&, message_id_t);
-    void link_to(intrusive_ptr<actor>&);
-    void unlink_from(intrusive_ptr<actor>&);
-    bool establish_backlink(intrusive_ptr<actor>&);
-    bool remove_backlink(intrusive_ptr<actor>&);
+    void link_to(const intrusive_ptr<actor>&);
+    void unlink_from(const intrusive_ptr<actor>&);
+    bool establish_backlink(const intrusive_ptr<actor>&);
+    bool remove_backlink(const intrusive_ptr<actor>&);
     void detach(const attachable::token&);
     bool attach(attachable*);
     void unbecome();
