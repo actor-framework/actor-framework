@@ -35,6 +35,7 @@
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/middleman.hpp"
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
@@ -45,15 +46,14 @@ namespace cppa {
 using detail::middleman_enqueue;
 
 actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
-    : super(mid, pptr) {
-    //attach(get_scheduler()->register_hidden_context());
-}
+: super(mid, pptr) { }
 
 void actor_proxy::enqueue(actor* sender, any_tuple msg) {
+    auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
     if (   msg.size() == 2
-        && *(msg.type_at(0)) == typeid(atom_value)
+        && msg.type_at(0) == arr[0]
         && msg.get_as<atom_value>(0) == atom("KILL_PROXY")
-        && *(msg.type_at(1)) == typeid(std::uint32_t)) {
+        && msg.type_at(1) == arr[1]) {
         cleanup(msg.get_as<std::uint32_t>(1));
         return;
     }
@@ -64,7 +64,7 @@ void actor_proxy::sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
     middleman_enqueue(parent_process_ptr(), sender, this, std::move(msg), id);
 }
 
-void actor_proxy::link_to(intrusive_ptr<actor>& other) {
+void actor_proxy::link_to(const intrusive_ptr<actor>& other) {
     if (link_to_impl(other)) {
         // causes remote actor to link to (proxy of) other
         middleman_enqueue(parent_process_ptr(),
@@ -74,11 +74,11 @@ void actor_proxy::link_to(intrusive_ptr<actor>& other) {
     }
 }
 
-void actor_proxy::local_link_to(intrusive_ptr<actor>& other) {
+void actor_proxy::local_link_to(const intrusive_ptr<actor>& other) {
     link_to_impl(other);
 }
 
-void actor_proxy::unlink_from(intrusive_ptr<actor>& other) {
+void actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
     if (unlink_from_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         middleman_enqueue(parent_process_ptr(),
@@ -88,11 +88,11 @@ void actor_proxy::unlink_from(intrusive_ptr<actor>& other) {
     }
 }
 
-void actor_proxy::local_unlink_from(intrusive_ptr<actor>& other) {
+void actor_proxy::local_unlink_from(const intrusive_ptr<actor>& other) {
     unlink_from_impl(other);
 }
 
-bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other) {
+bool actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) {
     bool result = super::establish_backlink(other);
     if (result) {
         // causes remote actor to unlink from (proxy of) other
@@ -104,7 +104,7 @@ bool actor_proxy::establish_backlink(intrusive_ptr<actor>& other) {
     return result;
 }
 
-bool actor_proxy::remove_backlink(intrusive_ptr<actor>& other) {
+bool actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
     bool result = super::remove_backlink(other);
     if (result) {
         middleman_enqueue(parent_process_ptr(),

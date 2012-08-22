@@ -139,15 +139,15 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         // uptr will be destroyed here, without locked mutex
     }
 
-    void link_to(intrusive_ptr<actor>& other) { // override
+    void link_to(const intrusive_ptr<actor>& other) {
         (void) link_to_impl(other);
     }
 
-    void unlink_from(intrusive_ptr<actor>& other) { // override
+    void unlink_from(const intrusive_ptr<actor>& other) {
         (void) unlink_from_impl(other);
     }
 
-    bool remove_backlink(intrusive_ptr<actor>& other) { // override
+    bool remove_backlink(const intrusive_ptr<actor>& other) {
         if (other && other != this) {
             guard_type guard(m_mtx);
             auto i = std::find(m_links.begin(), m_links.end(), other);
@@ -159,7 +159,7 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         return false;
     }
 
-    bool establish_backlink(intrusive_ptr<actor>& other) { // override
+    bool establish_backlink(const intrusive_ptr<actor>& other) {
         std::uint32_t reason = exit_reason::not_exited;
         if (other && other != this) {
             guard_type guard(m_mtx);
@@ -252,7 +252,7 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         }
     }
 
-    bool link_to_impl(intrusive_ptr<actor>& other) {
+    bool link_to_impl(const intrusive_ptr<actor>& other) {
         if (other && other != this) {
             guard_type guard(m_mtx);
             // send exit message if already exited
@@ -270,7 +270,7 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         return false;
     }
 
-    bool unlink_from_impl(intrusive_ptr<actor>& other) {
+    bool unlink_from_impl(const intrusive_ptr<actor>& other) {
         guard_type guard(m_mtx);
         // remove_backlink returns true if this actor is linked to other
         if (other && !exited() && other->remove_backlink(this)) {

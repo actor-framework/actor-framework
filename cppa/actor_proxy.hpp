@@ -57,21 +57,21 @@ class actor_proxy : public detail::abstract_actor<actor> {
 
     void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
-    void link_to(intrusive_ptr<actor>& other);
+    void link_to(const intrusive_ptr<actor>& other);
 
     // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
-    void local_link_to(intrusive_ptr<actor>& other);
+    void local_link_to(const intrusive_ptr<actor>& other);
 
-    void unlink_from(intrusive_ptr<actor>& other);
+    void unlink_from(const intrusive_ptr<actor>& other);
 
     // do not cause to send this actor an "UNLINK" message
     // to the "original" remote actor
-    void local_unlink_from(intrusive_ptr<actor>& other);
+    void local_unlink_from(const actor_ptr& other);
 
-    bool remove_backlink(intrusive_ptr<actor>& to);
+    bool remove_backlink(const intrusive_ptr<actor>& to);
 
-    bool establish_backlink(intrusive_ptr<actor>& to);
+    bool establish_backlink(const intrusive_ptr<actor>& to);
 
 };
 

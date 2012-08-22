@@ -78,24 +78,4 @@ actor::actor(const process_information_ptr& pptr)
     }
 }
 
-void actor::link_to(intrusive_ptr<actor>&& other) {
-    intrusive_ptr<actor> tmp(std::move(other));
-    link_to(tmp);
-}
-
-void actor::unlink_from(intrusive_ptr<actor>&& other) {
-    intrusive_ptr<actor> tmp(std::move(other));
-    unlink_from(tmp);
-}
-
-bool actor::remove_backlink(intrusive_ptr<actor>&& to) {
-    intrusive_ptr<actor> tmp(std::move(to));
-    return remove_backlink(tmp);
-}
-
-bool actor::establish_backlink(intrusive_ptr<actor>&& to) {
-    intrusive_ptr<actor> tmp(std::move(to));
-    return establish_backlink(tmp);
-}
-
 } // namespace cppa
