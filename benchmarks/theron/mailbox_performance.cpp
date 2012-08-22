@@ -7,6 +7,7 @@
 #include <iostream>
 #include <functional>
 
+#define THERON_BENCHMARK
 #include "utility.hpp"
 
 using std::cerr;
