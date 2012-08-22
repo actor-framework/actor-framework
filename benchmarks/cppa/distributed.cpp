@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
     auto first = argv + 1;
     auto last = argv + argc;
     match(*first) (
-        on<string>().when(_x1.in({"-h", "--help"})) >> []() {
+        (on("-h") || on("--help")) >> []() {
             usage();
         },
         on("mode=server") >> [=]() {
