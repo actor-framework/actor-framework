@@ -49,7 +49,13 @@ class actor_proxy_cache {
 
  public:
 
-    actor_proxy_ptr get(actor_id aid, std::uint32_t process_id,
+    // returns existing instance if available or crates a new one
+    actor_proxy_ptr get_or_put(actor_id aid,
+                               std::uint32_t process_id,
+                               const process_information::node_id_type& node_id);
+
+    actor_proxy_ptr get(actor_id aid,
+                        std::uint32_t process_id,
                         const process_information::node_id_type& node_id);
 
     // @returns true if pptr was successfully removed, false otherwise
@@ -89,7 +95,7 @@ class actor_proxy_cache {
     util::shared_spinlock m_lock;
     std::map<key_tuple, actor_proxy_ptr, key_tuple_less> m_entries;
 
-    actor_proxy_ptr get_impl(const key_tuple& key);
+    actor_proxy_ptr get_impl(const key_tuple& key, bool do_put);
 
 
 };

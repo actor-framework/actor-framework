@@ -232,9 +232,10 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
                 */
                 process_information::node_id_type nid;
                 node_id_from_string(nstr, nid);
-                ptrref = detail::get_actor_proxy_cache().get(get<std::uint32_t>(ptup[0]),
-                                                             get<std::uint32_t>(ptup[1]),
-                                                             nid);
+                auto& cache = detail::get_actor_proxy_cache();
+                ptrref = cache.get_or_put(get<std::uint32_t>(ptup[0]),
+                                          get<std::uint32_t>(ptup[1]),
+                                          nid);
             }
         }
     }

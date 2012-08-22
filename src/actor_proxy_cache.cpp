@@ -37,6 +37,7 @@
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
 
+#include "cppa/detail/middleman.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -44,34 +45,27 @@
 // thread_specific_ptr
 //#include <boost/thread/tss.hpp>
 
-namespace {
-
-//boost::thread_specific_ptr<cppa::detail::actor_proxy_cache> s_proxy_cache;
-
-cppa::detail::actor_proxy_cache s_proxy_cache;
-
-} // namespace <anonmyous>
-
 namespace cppa { namespace detail {
 
-actor_proxy_cache& get_actor_proxy_cache() {
-    /*
-    if (s_proxy_cache.get() == nullptr) {
-        s_proxy_cache.reset(new actor_proxy_cache);
-    }
-    return *s_proxy_cache;
-    */
-    return s_proxy_cache;
+namespace { actor_proxy_cache s_proxy_cache; }
+
+actor_proxy_cache& get_actor_proxy_cache() { return s_proxy_cache; }
+
+actor_proxy_ptr actor_proxy_cache::get_or_put(actor_id aid,
+                                              std::uint32_t process_id,
+                                              const process_information::node_id_type& node_id) {
+    key_tuple k{node_id, process_id, aid};
+    return get_impl(k, true);
 }
 
 actor_proxy_ptr actor_proxy_cache::get(actor_id aid,
                                        std::uint32_t process_id,
                                        const process_information::node_id_type& node_id) {
     key_tuple k{node_id, process_id, aid};
-    return get_impl(k);
+    return get_impl(k, false);
 }
 
-actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
+actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key, bool do_put) {
     { // lifetime scope of shared guard
         util::shared_lock_guard<util::shared_spinlock> guard{m_lock};
         auto i = m_entries.find(key);
@@ -79,7 +73,10 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
             return i->second;
         }
     }
-    actor_proxy_ptr result{new actor_proxy(std::get<2>(key), new process_information(std::get<1>(key), std::get<0>(key)))};
+    if (!do_put) { return nullptr; }
+    process_information_ptr pip(new process_information(std::get<1>(key),
+                                                        std::get<0>(key)));
+    actor_proxy_ptr result(new actor_proxy(std::get<2>(key), pip));
     { // lifetime scope of exclusive guard
         std::lock_guard<util::shared_spinlock> guard{m_lock};
         auto i = m_entries.find(key);
@@ -91,7 +88,12 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key) {
     result->attach_functor([result](std::uint32_t) {
         get_actor_proxy_cache().erase(result);
     });
-    result->enqueue(nullptr, make_any_tuple(atom("MONITOR")));
+    middleman_enqueue(pip,
+                      nullptr,
+                      nullptr,
+                      make_any_tuple(atom("MONITOR"),
+                                     pip,
+                                     std::get<2>(key)));
     return result;
 }
 
