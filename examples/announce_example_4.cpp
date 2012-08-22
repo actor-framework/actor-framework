@@ -122,6 +122,7 @@ int main(int, char**) {
             cout << to_string(val) << endl;
         }
     );
+    shutdown();
     return 0;
 }
 

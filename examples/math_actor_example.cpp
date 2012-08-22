@@ -79,6 +79,7 @@ int main() {
     // wait until all spawned actors are terminated
     await_all_others_done();
     // done
+    shutdown();
     return 0;
 }
 

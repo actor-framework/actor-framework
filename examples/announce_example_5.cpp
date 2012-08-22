@@ -205,6 +205,6 @@ int main() {
             cout << "to_string: " << to_string(self->last_dequeued()) << endl;
         }
     );
-
+    shutdown();
     return 0;
 }

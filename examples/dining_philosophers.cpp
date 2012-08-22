@@ -194,5 +194,6 @@ int main(int, char**) {
     send(dinner_club, atom("think"));
     // real philosophers are never done
     await_all_others_done();
+    shutdown();
     return 0;
 }

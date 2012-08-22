@@ -76,6 +76,7 @@ int main(int, char**) {
                  << endl;
         }
     );
+    shutdown();
     return 0;
 }
 

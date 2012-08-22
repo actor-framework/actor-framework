@@ -77,6 +77,7 @@ int main(int, char**) {
             cout << "}," << val.b << ")" << endl;
         }
     );
+    shutdown();
     return 0;
 }
 

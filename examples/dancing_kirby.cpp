@@ -52,4 +52,6 @@ int main() {
     cout << endl;
     dancing_kirby();
     cout << endl;
+    shutdown();
+    return 0;
 }
