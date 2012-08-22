@@ -61,7 +61,7 @@ void usage() {
          << endl
          << "Running the benchmark:"                                     << endl
          << "  mode=benchmark run the benchmark, connect to any number"  << endl
-         << "                   of given servers, use HOST:PORT syntax"  << endl
+         << "                 of given servers, use HOST:PORT syntax"    << endl
          << "  num_pings=NUM  run benchmark with NUM messages per node"  << endl
          << endl
          << "  example: mode=benchmark 192.168.9.1:1234 "

@@ -41,22 +41,21 @@ using namespace std;
 using namespace cppa;
 
 struct testee : sb_actor<testee> {
-    actor_ptr parent;
     behavior init_state;
-    testee(const actor_ptr& pptr) : parent(pptr) {
+    testee(const actor_ptr& parent) {
         init_state = (
-            on(atom("spread"), unsigned(0)) >> [=]() {
+            on(atom("spread"), (uint32_t) 0) >> [=]() {
                 send(parent, atom("result"), (uint32_t) 1);
                 quit();
             },
-            on(atom("spread"), arg_match) >> [=](unsigned x) {
+            on(atom("spread"), arg_match) >> [=](uint32_t x) {
                 any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
                 spawn<testee>(this) << msg;
                 spawn<testee>(this) << msg;
                 become (
-                    on<atom("result"), uint32_t>() >> [=](uint32_t r1) {
+                    on(atom("result"), arg_match) >> [=](uint32_t r1) {
                         become (
-                            on<atom("result"), uint32_t>() >> [=](uint32_t r2) {
+                            on(atom("result"), arg_match) >> [=](uint32_t r2) {
                                 send(parent, atom("result"), r1 + r2);
                                 quit();
                             }
@@ -70,17 +69,17 @@ struct testee : sb_actor<testee> {
 
 void stacked_testee(actor_ptr parent) {
     receive (
-        on(atom("spread"), unsigned(0)) >> [&]() {
+        on(atom("spread"), (uint32_t) 0) >> [&]() {
             send(parent, atom("result"), (uint32_t) 1);
         },
-        on<atom("spread"), unsigned>() >> [&](unsigned x) {
-            any_tuple msg = make_cow_tuple(atom("spread"), x-1);
+        on(atom("spread"), arg_match) >> [&](uint32_t x) {
+            any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
             spawn(stacked_testee, self) << msg;
             spawn(stacked_testee, self) << msg;
             receive (
-                on<atom("result"), uint32_t>() >> [&](uint32_t v1) {
+                on(atom("result"), arg_match) >> [&](uint32_t v1) {
                     receive (
-                        on<atom("result"),uint32_t>() >> [&](uint32_t v2) {
+                        on(atom("result"), arg_match) >> [&](uint32_t v2) {
                             send(parent, atom("result"), v1 + v2);
                         }
                     );
@@ -99,10 +98,10 @@ void usage() {
 int main(int argc, char** argv) {
     vector<string> args(argv + 1, argv + argc);
     match (args) (
-        on("stacked", spro<unsigned>) >> [](unsigned num) {
+        on("stacked", spro<uint32_t>) >> [](uint32_t num) {
             send(spawn(stacked_testee, self), atom("spread"), num);
         },
-        on("event-based", spro<unsigned>) >> [](unsigned num) {
+        on("event-based", spro<uint32_t>) >> [](uint32_t num) {
             send(spawn<testee>(self), atom("spread"), num);
         },
         others() >> usage
