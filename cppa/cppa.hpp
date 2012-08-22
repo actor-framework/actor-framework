@@ -41,6 +41,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/match.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/receive.hpp"
 #include "cppa/factory.hpp"
