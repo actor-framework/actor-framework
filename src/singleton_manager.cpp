@@ -67,7 +67,10 @@ template<typename T>
 void stop_and_kill(std::atomic<T*>& ptr) {
     for (;;) {
         auto p = ptr.load();
-        if (ptr.compare_exchange_weak(p, nullptr)) {
+        if (p == nullptr) {
+            return;
+        }
+        else if (ptr.compare_exchange_weak(p, nullptr)) {
             p->stop();
             delete p;
             ptr = nullptr;
