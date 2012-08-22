@@ -48,14 +48,28 @@ class actor_registry {
 
  public:
 
+    /**
+     * @brief A registry entry consists of a pointer to the actor and an
+     *        exit reason. An entry with a nullptr means the actor has finished
+     *        execution for given reason.
+     */
+    typedef std::pair<actor_ptr, std::uint32_t> value_type;
+
     actor_registry();
 
+    /**
+     * @brief Returns the {nullptr, invalid_exit_reason}.
+     */
+    value_type get_entry(actor_id key) const;
+
     // return nullptr if the actor wasn't put *or* finished execution
-    actor_ptr get(actor_id key) const;
+    inline actor_ptr get(actor_id key) const {
+        return get_entry(key).first;
+    }
 
     void put(actor_id key, const actor_ptr& value);
 
-    void erase(actor_id key);
+    void erase(actor_id key, std::uint32_t reason);
 
     // gets the next free actor id
     actor_id next_id();
@@ -73,14 +87,16 @@ class actor_registry {
 
  private:
 
+    typedef std::map<actor_id, value_type> entries;
+
     std::atomic<size_t> m_running;
-    std::atomic<std::uint32_t> m_ids;
+    std::atomic<actor_id> m_ids;
 
     std::mutex m_running_mtx;
     std::condition_variable m_running_cv;
 
     mutable util::shared_spinlock m_instances_mtx;
-    std::map<std::uint32_t, actor_ptr> m_instances;
+    entries m_entries;
 
 };
 
