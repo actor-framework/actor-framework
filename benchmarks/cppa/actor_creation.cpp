@@ -37,11 +37,7 @@
 #include "cppa/cppa.hpp"
 #include "cppa/sb_actor.hpp"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::uint32_t;
-
+using namespace std;
 using namespace cppa;
 
 struct testee : sb_actor<testee> {
@@ -49,11 +45,11 @@ struct testee : sb_actor<testee> {
     behavior init_state;
     testee(const actor_ptr& pptr) : parent(pptr) {
         init_state = (
-            on(atom("spread"), 0) >> [=]() {
+            on(atom("spread"), unsigned(0)) >> [=]() {
                 send(parent, atom("result"), (uint32_t) 1);
                 quit();
             },
-            on<atom("spread"), int>() >> [=](int x) {
+            on(atom("spread"), arg_match) >> [=](unsigned x) {
                 any_tuple msg = make_cow_tuple(atom("spread"), x - 1);
                 spawn<testee>(this) << msg;
                 spawn<testee>(this) << msg;
@@ -74,10 +70,10 @@ struct testee : sb_actor<testee> {
 
 void stacked_testee(actor_ptr parent) {
     receive (
-        on(atom("spread"), 0) >> [&]() {
+        on(atom("spread"), unsigned(0)) >> [&]() {
             send(parent, atom("result"), (uint32_t) 1);
         },
-        on<atom("spread"), int>() >> [&](int x) {
+        on<atom("spread"), unsigned>() >> [&](unsigned x) {
             any_tuple msg = make_cow_tuple(atom("spread"), x-1);
             spawn(stacked_testee, self) << msg;
             spawn(stacked_testee, self) << msg;
@@ -101,33 +97,17 @@ void usage() {
 }
 
 int main(int argc, char** argv) {
-    if (argc == 3) {
-        int num = rd<int>(argv[2]);
-        if (strcmp(argv[1], "stacked") == 0) {
+    vector<string> args(argv + 1, argv + argc);
+    match (args) (
+        on("stacked", spro<unsigned>) >> [](unsigned num) {
             send(spawn(stacked_testee, self), atom("spread"), num);
-        }
-        else if (strcmp(argv[1], "event-based") == 0) {
+        },
+        on("event-based", spro<unsigned>) >> [](unsigned num) {
             send(spawn<testee>(self), atom("spread"), num);
-        }
-        else {
-            usage();
-            return 1;
-        }
-        receive (
-            on<atom("result"),uint32_t>() >> [=](uint32_t value) {
-                //cout << "value = " << value << endl
-                //     << "expected => 2^" << num << " = "
-                //     << (1 << num) << endl;
-                if (value != (((uint32_t) 1) << num)) {
-                    cerr << "ERROR: received wrong result!\n";
-                }
-            }
-        );
-        await_all_others_done();
-    }
-    else {
-        usage();
-        return 1;
-    }
+        },
+        others() >> usage
+    );
+    await_all_others_done();
+    shutdown();
     return 0;
 }
