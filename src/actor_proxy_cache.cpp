@@ -74,9 +74,9 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key, bool do_put) {
         }
     }
     if (!do_put) { return nullptr; }
-    process_information_ptr pip(new process_information(std::get<1>(key),
-                                                        std::get<0>(key)));
-    actor_proxy_ptr result(new actor_proxy(std::get<2>(key), pip));
+    process_information_ptr peer(new process_information(std::get<1>(key),
+                                                         std::get<0>(key)));
+    actor_proxy_ptr result(new actor_proxy(std::get<2>(key), peer));
     { // lifetime scope of exclusive guard
         std::lock_guard<util::shared_spinlock> guard{m_lock};
         auto i = m_entries.find(key);
@@ -88,11 +88,12 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key, bool do_put) {
     result->attach_functor([result](std::uint32_t) {
         get_actor_proxy_cache().erase(result);
     });
-    middleman_enqueue(pip,
+    auto pself = process_information::get();
+    middleman_enqueue(peer,
                       nullptr,
                       nullptr,
                       make_any_tuple(atom("MONITOR"),
-                                     pip,
+                                     pself,
                                      std::get<2>(key)));
     return result;
 }
