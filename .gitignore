@@ -13,3 +13,4 @@ build-clang/*
 build-gcc/*
 manual/*
 Makefile
+benchmarks/*.txt
