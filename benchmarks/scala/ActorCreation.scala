@@ -95,7 +95,7 @@ object ActorCreation {
     def usage() {
         Console println "usage: (threaded|threadless|akka) POW\n       creates 2^POW actors of given impl"
     }
-    def main(args: Array[String]) = {
+    def main(args: Array[String]): Unit = {
         if (args.size != 2) {
             usage
             throw new IllegalArgumentException("")
