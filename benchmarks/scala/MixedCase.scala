@@ -217,7 +217,7 @@ object MixedCase {
         System.exit(1) // why doesn't exit return Nothing?
         throw new RuntimeException("")
     }
-    def main(args: Array[String]) = {
+    def main(args: Array[String]): Unit = {
         if (args.size != 5) usage
         val numRings = args(1).toInt
         val ringSize = args(2).toInt
