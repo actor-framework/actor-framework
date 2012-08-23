@@ -36,21 +36,11 @@
 #include <boost/progress.hpp>
 
 #include "utility.hpp"
+
 #include "cppa/cppa.hpp"
-#include "cppa/match.hpp"
-#include "cppa/actor_proxy.hpp"
 
 using namespace std;
 using namespace cppa;
-using namespace cppa::placeholders;
-
-#define PRINT_MESSAGE() { \
-ostringstream oss; \
-oss << to_string(self->parent_process()) << ": " << __PRETTY_FUNCTION__ << " ->" \
-    << to_string(self->last_dequeued()) \
-    << "\n"; \
-cout << oss.str(); \
-} ((void) 0)
 
 void usage() {
     cout << "Running in server mode:"                                    << endl

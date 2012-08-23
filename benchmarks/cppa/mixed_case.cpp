@@ -36,19 +36,11 @@
 #include "utility.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/match.hpp"
-#include "cppa/sb_actor.hpp"
-#include "cppa/context_switching_actor.hpp"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::int64_t;
-using std::uint64_t;
-
-typedef std::vector<uint64_t> factors;
-
+using namespace std;
 using namespace cppa;
+
+typedef vector<uint64_t> factors;
 
 constexpr uint64_t s_task_n = uint64_t(86028157)*329545133;
 constexpr uint64_t s_factor1 = 86028157;
@@ -247,44 +239,35 @@ void usage() {
     exit(1);
 }
 
-enum mode_type { event_based, fiber_based };
+enum impl_type { stacked, event_based };
 
-option<int> _2i(const std::string& str) {
-    char* endptr = nullptr;
-    int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
-    if (endptr == nullptr || *endptr != '\0') {
-       return {};
-    }
-    return result;
+option<impl_type> stoimpl(const std::string& str) {
+    if (str == "stacked") return stacked;
+    else if (str == "event-based") return event_based;
+    return {};
 }
 
 int main(int argc, char** argv) {
     announce<factors>();
-    if (argc != 6) usage();
-    // skip argv[0] (app name)
+    int result = 1;
     std::vector<std::string> args{argv + 1, argv + argc};
     match(args) (
-        on(val<std::string>, _2i, _2i, _2i, _2i) >> [](const std::string& mode,
-                                                       int num_rings,
-                                                       int ring_size,
-                                                       int initial_token_value,
-                                                       int repetitions) {
+        on(stoimpl, spro<int>, spro<int>, spro<int>, spro<int>)
+        >> [&](impl_type impl, int num_rings, int ring_size, int initial_token_value, int repetitions) {
             int num_msgs = num_rings + (num_rings * repetitions);
-            if (mode == "event-based") {
-                auto mc = spawn<fsm_supervisor>(num_msgs);
-                run_test([&]() { return spawn<fsm_chain_master>(mc); },
-                         num_rings, ring_size, initial_token_value, repetitions);
-            }
-            else if (mode == "stacked") {
-                auto mc = spawn(supervisor, num_msgs);
-                run_test([&]() { return spawn(chain_master, mc); },
+            auto sv = (impl == event_based) ? spawn<fsm_supervisor>(num_msgs)
+                                            : spawn(supervisor, num_msgs);
+            if (impl == event_based) {
+                run_test([sv] { return spawn<fsm_chain_master>(sv); },
                          num_rings, ring_size, initial_token_value, repetitions);
             }
             else {
-                usage();
+                run_test([sv] { return spawn(chain_master, sv); },
+                         num_rings, ring_size, initial_token_value, repetitions);
             }
+            result = 0; // no error occurred
         },
         others() >> usage
     );
-    return 0;
+    return result;
 }

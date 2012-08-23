@@ -35,24 +35,19 @@
 #include <iostream>
 
 #include "utility.hpp"
+
 #include "cppa/cppa.hpp"
-#include "cppa/sb_actor.hpp"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::int64_t;
-
+using namespace std;
 using namespace cppa;
 
 struct fsm_receiver : sb_actor<fsm_receiver> {
-    int64_t m_value;
+    uint64_t m_value;
     behavior init_state;
-    fsm_receiver(int64_t max) : m_value(0) {
+    fsm_receiver(uint64_t max) : m_value(0) {
         init_state = (
-            on(atom("msg")) >> [=]() {
-                ++m_value;
-                if (m_value == max) {
+            on(atom("msg")) >> [=] {
+                if (++m_value == max) {
                     quit();
                 }
             }
@@ -60,51 +55,57 @@ struct fsm_receiver : sb_actor<fsm_receiver> {
     }
 };
 
-void receiver(int64_t max) {
-    int64_t value;
-    receive_while(gref(value) < max) (
-        on(atom("msg")) >> [&]() {
+void receiver(uint64_t max) {
+    uint64_t value;
+    receive_while (gref(value) < max) (
+        on(atom("msg")) >> [&] {
             ++value;
         }
     );
 }
 
-void sender(actor_ptr whom, int64_t count) {
+void sender(actor_ptr whom, uint64_t count) {
     any_tuple msg = make_cow_tuple(atom("msg"));
-    for (int64_t i = 0; i < count; ++i) {
+    for (uint64_t i = 0; i < count; ++i) {
         whom->enqueue(nullptr, msg);
     }
 }
 
 void usage() {
     cout << "usage: mailbox_performance "
-            "(stacked|event-based) (sending threads) (msg per thread)" << endl
+            "(stacked|event-based) NUM_THREADS MSGS_PER_THREAD" << endl
          << endl;
 }
 
+enum impl_type { stacked, event_based };
+
+option<impl_type> stoimpl(const std::string& str) {
+    if (str == "stacked") return stacked;
+    else if (str == "event-based") return event_based;
+    return {};
+}
+
 int main(int argc, char** argv) {
-    if (argc == 4) {
-        int64_t num_sender = rd<int64_t>(argv[2]);
-        int64_t num_msgs = rd<int64_t>(argv[3]);
-        actor_ptr testee;
-        if (strcmp(argv[1], "stacked") == 0) {
-            testee = spawn(receiver, num_sender * num_msgs);
-        }
-        else if (strcmp(argv[1], "event-based") == 0) {
-            testee = spawn<fsm_receiver>(num_sender * num_msgs);
-        }
-        else {
-            usage();
-            return 1;
-        }
-        for (int64_t i = 0; i < num_sender; ++i) {
-            std::thread(sender, testee, num_msgs).detach();
-        }
-        await_all_others_done();
-    }
-    else {
-        usage();
-        return 1;
-    }
-    return 0;
+    int result = 1;
+    vector<string> args(argv + 1, argv + argc);
+    match (args) (
+        on(stoimpl, spro<uint64_t>, spro<uint64_t>) >> [&](impl_type impl, uint64_t num_sender, uint64_t num_msgs) {
+            auto total = num_sender * num_msgs;
+            auto testee = (impl == stacked) ? spawn(receiver, total)
+                                            : spawn<fsm_receiver>(total);
+            vector<thread> senders;
+            for (uint64_t i = 0; i < num_sender; ++i) {
+                senders.emplace_back(sender, testee, num_msgs);
+            }
+            for (auto& s : senders) {
+                s.join();
+            }
+            result = 0; // no error occurred
+        },
+        others() >> usage
+
+    );
+    await_all_others_done();
+    shutdown();
+    return result;
 }

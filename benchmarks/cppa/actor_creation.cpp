@@ -34,8 +34,8 @@
 #include <iostream>
 
 #include "utility.hpp"
+
 #include "cppa/cppa.hpp"
-#include "cppa/sb_actor.hpp"
 
 using namespace std;
 using namespace cppa;
