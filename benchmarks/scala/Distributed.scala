@@ -313,10 +313,7 @@ class AkkaClientActor(system: ActorSystem) extends AkkaActor {
     }
 }
 
-object DistributedClientApp {
-
-    val NumPings = "num_pings=([0-9]+)".r
-    val SimpleUri = "([0-9a-zA-Z\\.]+):([0-9]+)".r
+object Distributed {
 
     @tailrec def run(args: List[String], paths: List[String], numPings: Option[Int], finalizer: (List[String], Int) => Unit): Unit = args match {
         case NumPings(num) :: tail => numPings match {
@@ -333,42 +330,43 @@ object DistributedClientApp {
         }
     }
 
-    def main(args: Array[String]): Unit = {
-        try {
-            args(0) match {
-                case "remote_actors" => run(args.toList.drop(1), Nil, None, ((paths, x) => {
-                    (new ClientActor(paths map (path => path match { case SimpleUri(host, port) => RemoteActorPath(path, host, port.toInt) }), x)).start
-                }))
-                case "akka" => run(args.toList.drop(1), Nil, None, ((paths, x) => {
-                    val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
-                    system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths, x)
-                    global.latch.await
-                    system.shutdown
-                    System.exit(0)
-                }))
-            }
-        }
-        catch {
-            case e => {
-                println("usage: DistributedClientApp (remote_actors|akka) {nodes...} num_pings={num}\nexample: DistributedClientApp remote_actors localhost:1234 localhost:2468 num_pings=1000\n")
-                throw e
-            }
-        }
-    }
-}
-
-object DistributedServerApp {
-
     val IntStr = "([0-9]+)".r
+    val NumPings = "num_pings=([0-9]+)".r
+    val SimpleUri = "([0-9a-zA-Z\\.]+):([0-9]+)".r
 
     def main(args: Array[String]): Unit = args match {
-        case Array("remote_actors", IntStr(istr)) => (new ServerActor(istr.toInt)).start
-        case Array("akka") => {
+        // server mode
+        case Array("mode=server", "remote_actors", IntStr(istr)) => (new ServerActor(istr.toInt)).start
+        case Array("mode=server", "akka") => {
             val system = ActorSystem("pongServer", ConfigFactory.load.getConfig("pongServer"))
             val pong = system.actorOf(Props(new AkkaServerActor(system)), "pong")
             Unit
         }
-        case _ => println("usage: DistributedServerApp remote_actors PORT\n" +
-                     "   or: DistributedServerApp akka")
+        // client mode
+        case Array("mode=benchmark", "remote_actors", _*) => {
+            run(args.toList.drop(2), Nil, None, ((paths, x) => {
+                (new ClientActor(paths map (path => path match { case SimpleUri(host, port) => RemoteActorPath(path, host, port.toInt) }), x)).start
+            }))
+        }
+        case Array("mode=benchmark", "akka", _*) => {
+            run(args.toList.drop(2), Nil, None, ((paths, x) => {
+                val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
+                system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths, x)
+                global.latch.await
+                system.shutdown
+                System.exit(0)
+            }))
+        }
+        // error
+        case _ => {
+            println("Running in server mode:\n"                              +
+                    "  mode=server\n"                                        +
+                    "  remote_actors PORT *or* akka\n"                       +
+                    "\n"                                                     +
+                    "Running the benchmark:\n"                               +
+                    "  mode=benchmark\n"                                     +
+                    "  remote_actors ... *or* akka\n"                         );
+        }
     }
+
 }
