@@ -1,3 +1,4 @@
+#include <iostream>
 #include <functional>
 
 #include "test.hpp"
@@ -8,10 +9,8 @@
 #include "cppa/to_string.hpp"
 #include "cppa/guard_expr.hpp"
 
+using namespace std;
 using namespace cppa;
-
-using std::vector;
-using std::string;
 
 bool is_even(int i) { return i % 2 == 0; }
 
@@ -103,6 +102,121 @@ struct fobaz : sb_actor<fobaz> {
     }
 
 };
+
+// Case is a projection_partial_function_pair
+template<typename T, class Stream, class Case>
+size_t run_case(vector<T>& vec, Stream& stream, Case& target);
+
+template<size_t N, size_t Size>
+struct unwind_and_call {
+
+    typedef unwind_and_call<N+1,Size> next;
+
+    template<class Target, typename T, typename... Unwinded>
+    static inline bool _(Target& target, vector<T>& vec, Unwinded&&... args) {
+        return next::_(target, vec, std::forward<Unwinded>(args)..., vec[N]);
+    }
+
+    template<typename T, class Stream, class MatchExpr>
+    static inline bool _(vector<T>& vec, Stream& st, MatchExpr& ex) {
+        return run_case(vec, st, get<N>(ex.cases())) || next::_(vec, st, ex);
+    }
+
+};
+
+template<size_t Size>
+struct unwind_and_call<Size, Size> {
+
+    template<class Target, typename T, typename... Unwinded>
+    static inline bool _(Target& target, vector<T>&, Unwinded&&... args) {
+        return target.first(target.second, std::forward<Unwinded>(args)...);
+    }
+
+    template<typename T, class Stream, class MatchExpr>
+    static inline bool _(vector<T>&, Stream&, MatchExpr&) { return false; }
+
+};
+
+// Case is a projection_partial_function_pair
+template<typename T, class Stream, class Case>
+size_t run_case(vector<T>& vec, Stream& stream, Case& target) {
+    static constexpr size_t num_args = Case::pattern_type::size;
+    static_assert(num_args > 0,
+                  "empty match expression is not allowed in stream matching");
+    while (vec.size() < num_args) {
+        if (stream.eof()) {
+            cout << "STREAM @ EOF" << endl;
+            return 0;
+        }
+        T value;
+        if (stream >> value) {
+            vec.push_back(std::move(value));
+        }
+        else {
+            cerr << "ERROR" << endl;
+            return 0;
+        }
+    }
+    if (unwind_and_call<0, num_args>::_(target, vec)) {
+        if (vec.size() == num_args) {
+            vec.clear();
+        }
+        else {
+            auto i = vec.begin();
+            vec.erase(i, i + num_args);
+        }
+        return num_args;
+    }
+    return 0;
+}
+
+template<typename T, class Stream>
+class stream_matcher {
+
+ public:
+
+    stream_matcher(Stream& stream) : m_stream(stream) { }
+
+    template<typename... Cases>
+    bool operator()(match_expr<Cases...>& expr) {
+        //return run_case(m_cache, m_stream, get<0>(expr.cases()));
+        while (!m_stream.eof()) {
+            if (!unwind_and_call<0, match_expr<Cases...>::cases_list::size>::_(m_cache, m_stream, expr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename... Cases>
+    bool operator()(match_expr<Cases...>&& expr) {
+        auto tmp = std::move(expr);
+        return (*this)(tmp);
+    }
+
+    template<typename... Cases>
+    bool operator()(const match_expr<Cases...>& expr) {
+        auto tmp = expr;
+        return (*this)(tmp);
+    }
+
+    template<typename Arg0, typename... Args>
+    bool operator()(Arg0&& arg0, Args&&... args) {
+        return (*this)(match_expr_collect(std::forward<Arg0>(arg0),
+                                          std::forward<Args>(args)...));
+    }
+
+ private:
+
+    Stream& m_stream;
+    vector<T> m_cache;
+
+};
+
+template<typename T, class Stream>
+stream_matcher<T, Stream> match_stream(Stream& stream) {
+    return {stream};
+}
 
 int main() {
     CPPA_TEST(test__match);
@@ -417,6 +531,25 @@ int main() {
     );
     CPPA_CHECK_EQUAL(3, pmatches);
     */
+
+    // let's get the awesomeness started
+
+    istringstream iss("hello world");
+    match_stream<string>(iss) (
+        on("hello", "world") >> [] {
+            cout << "yeeeeeehaaaaaaa!!!!!" << endl;
+        },
+        on_arg_match >> [](const string& s1, const string& s2, const std::string& s3) {
+            cout << "you said: " << s1 << " " << s2 << " " << s3 << endl;
+            cout << "mind sayin 'hello world'?" << endl;
+        }
+    );
+
+    match_stream<int>(cin) (
+        on(1, 2, 3) >> [] {
+            cout << "one, two threeeeeeeeeeeyaaaaaahh!" << endl;
+        }
+    );
 
     return CPPA_TEST_RESULT;
 }
