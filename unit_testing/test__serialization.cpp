@@ -132,10 +132,7 @@ int main() {
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf);
         bs << ttup;
-        std::uint32_t serialized_size;
-        memcpy(&serialized_size, wr_buf.data(), ui32size);
-        CPPA_CHECK_EQUAL(serialized_size, wr_buf.size() - ui32size);
-        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size());
         any_tuple ttup2;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
         CPPA_CHECK(ttup == ttup2);
@@ -146,7 +143,7 @@ int main() {
         binary_serializer bs(&wr_buf);
         bs << atuple1;
         // deserialize b2 from buf
-        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size());
         any_tuple atuple2;
         uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
         try {
@@ -173,7 +170,7 @@ int main() {
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf);
         bs << msg1;
-        binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size());
         object obj1;
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
@@ -236,7 +233,7 @@ int main() {
             binary_serializer bs(&wr_buf);
             bs << b1;
             // deserialize b2 from buf
-            binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
+            binary_deserializer bd(wr_buf.data(), wr_buf.size());
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
@@ -263,7 +260,7 @@ int main() {
             binary_serializer bs(&wr_buf);
             bs << c1;
             // serialize c2 from buf
-            binary_deserializer bd(wr_buf.data() + ui32size, wr_buf.size());
+            binary_deserializer bd(wr_buf.data(), wr_buf.size());
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_c");
