@@ -253,7 +253,13 @@ class peer_connection : public network_channel {
 
     void write(const addressed_message& msg) {
         binary_serializer bs(&m_wr_buf);
+        std::uint32_t size = 0;
+        auto before = m_wr_buf.size();
+        m_wr_buf.write(sizeof(std::uint32_t), &size, util::grow_if_needed);
         bs << msg;
+        size = m_wr_buf.size() - sizeof(std::uint32_t);
+        // update size in buffer
+        memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
         if (!has_unwritten_data()) {
             size_t written = m_ostream->write_some(m_wr_buf.data(),
                                                    m_wr_buf.size());
