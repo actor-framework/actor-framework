@@ -876,6 +876,35 @@ inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
     return lhs.or_else(rhs);
 }
 
+template<typename Arg0, typename... Args>
+typename match_expr_from_type_list<
+                typename util::tl_concat<
+                    typename Arg0::cases_list,
+                    typename Args::cases_list...
+                >::type
+            >::type
+match_expr_collect(const Arg0& arg0, const Args&... args) {
+    typedef typename match_expr_from_type_list<
+                typename util::tl_concat<
+                    typename Arg0::cases_list,
+                    typename Args::cases_list...
+                >::type
+            >::type
+            combined_type;
+    typename detail::tdata_from_type_list<
+        typename util::tl_map<
+            typename util::tl_concat<
+                typename Arg0::cases_list,
+                typename Args::cases_list...
+            >::type,
+            gref_wrapped
+        >::type
+    >::type
+    all_cases;
+    detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
+    return {all_cases};
+}
+
 template<bool HasTimeout>
 struct match_expr_concat_impl {
     template<typename Arg0, typename... Args>
