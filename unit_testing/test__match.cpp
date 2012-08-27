@@ -545,11 +545,13 @@ int main() {
         }
     );
 
+/*
     match_stream<int>(cin) (
         on(1, 2, 3) >> [] {
             cout << "one, two threeeeeeeeeeeyaaaaaahh!" << endl;
         }
     );
+*/
 
     return CPPA_TEST_RESULT;
 }
