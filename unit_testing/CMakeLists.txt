@@ -9,12 +9,14 @@ if(NOT cppa_LIBRARY)
     find_package(Libcppa REQUIRED)
 endif (NOT cppa_LIBRARY)
 
-find_package(Boost COMPONENTS thread REQUIRED)
+#find_package(Boost COMPONENTS thread REQUIRED)
+find_package(Boost REQUIRED)
+
 
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS})
 
-set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY})
+set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY})
 
 macro(add_unit_test name)
     add_executable(test__${name} test__${name}.cpp ${ARGN})

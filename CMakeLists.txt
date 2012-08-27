@@ -155,7 +155,7 @@ if (NOT DISABLE_CONTEXT_SWITCHING)
   )
 endif ()
 
-find_package(Boost COMPONENTS thread REQUIRED)
+find_package(Boost REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include)
