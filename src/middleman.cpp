@@ -784,7 +784,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                         // there's not much we can do other than try again
                         // sleep some time in hope someone releases memory
                         // while we are sleeping
-                        this_thread::sleep_for(chrono::milliseconds(10));
+                        //this_thread::yield();
                         break;
                     }
                     case EBADF: {
