@@ -22,207 +22,15 @@ bool is_even(int i) { return i % 2 == 0; }
  *
  */
 
-bool ascending(int a, int b, int c) {
-    return a < b && b < c;
-}
-
-vector<const uniform_type_info*>
-to_vec(util::empty_type_list,
-       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
-    return vec;
-}
-
-template<typename Head, typename... Tail>
-vector<const uniform_type_info*>
-to_vec(util::type_list<Head, Tail...>,
-       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
-    vec.push_back(uniform_typeid<Head>());
-    return to_vec(util::type_list<Tail...>{}, std::move(vec));
-}
-
-template<typename Fun>
-class __ {
-
-    typedef typename util::get_callable_trait<Fun>::type trait;
-
- public:
-
-    __(Fun f, string annotation = "") : m_fun(f), m_annotation(annotation) { }
-
-    __ operator[](const string& str) const {
-        return {m_fun, str};
-    }
-
-    template<typename... Args>
-    void operator()(Args&&... args) const {
-        m_fun(std::forward<Args>(args)...);
-    }
-
-    void plot_signature() {
-        auto vec = to_vec(typename trait::arg_types{});
-        for (auto i : vec) {
-            cout << i->name() << " ";
-        }
-        cout << endl;
-    }
-
-    const string& annotation() const {
-        return m_annotation;
-    }
-
- private:
-
-    Fun m_fun;
-    string m_annotation;
-
-};
-
-template<typename Fun>
-__<Fun> get__(Fun f) {
-    return {f};
-}
-
-struct fobaz : sb_actor<fobaz> {
-
-    behavior init_state;
-
-    void vfun() {
-        cout << "fobaz::mfun" << endl;
-    }
-
-    void ifun(int i) {
-        cout << "fobaz::ifun(" << i << ")" << endl;
-    }
-
-    fobaz() {
-        init_state = (
-            on<int>() >> [=](int i) { ifun(i); },
-            others() >> std::function<void()>{std::bind(&fobaz::vfun, this)}
-        );
-    }
-
-};
-
-// Case is a projection_partial_function_pair
-template<typename T, class Stream, class Case>
-size_t run_case(vector<T>& vec, Stream& stream, Case& target);
-
-template<size_t N, size_t Size>
-struct unwind_and_call {
-
-    typedef unwind_and_call<N+1,Size> next;
-
-    template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, vector<T>& vec, Unwinded&&... args) {
-        return next::_(target, vec, std::forward<Unwinded>(args)..., vec[N]);
-    }
-
-    template<typename T, class Stream, class MatchExpr>
-    static inline bool _(vector<T>& vec, Stream& st, MatchExpr& ex) {
-        return run_case(vec, st, get<N>(ex.cases())) || next::_(vec, st, ex);
-    }
-
-};
-
-template<size_t Size>
-struct unwind_and_call<Size, Size> {
-
-    template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, vector<T>&, Unwinded&&... args) {
-        return target.first(target.second, std::forward<Unwinded>(args)...);
-    }
-
-    template<typename T, class Stream, class MatchExpr>
-    static inline bool _(vector<T>&, Stream&, MatchExpr&) { return false; }
-
-};
-
-// Case is a projection_partial_function_pair
-template<typename T, class Stream, class Case>
-size_t run_case(vector<T>& vec, Stream& stream, Case& target) {
-    static constexpr size_t num_args = Case::pattern_type::size;
-    static_assert(num_args > 0,
-                  "empty match expression is not allowed in stream matching");
-    while (vec.size() < num_args) {
-        if (stream.eof()) {
-            cout << "STREAM @ EOF" << endl;
-            return 0;
-        }
-        T value;
-        if (stream >> value) {
-            vec.push_back(std::move(value));
-        }
-        else {
-            cerr << "ERROR" << endl;
-            return 0;
-        }
-    }
-    if (unwind_and_call<0, num_args>::_(target, vec)) {
-        if (vec.size() == num_args) {
-            vec.clear();
-        }
-        else {
-            auto i = vec.begin();
-            vec.erase(i, i + num_args);
-        }
-        return num_args;
-    }
-    return 0;
-}
-
-template<typename T, class Stream>
-class stream_matcher {
-
- public:
-
-    stream_matcher(Stream& stream) : m_stream(stream) { }
-
-    template<typename... Cases>
-    bool operator()(match_expr<Cases...>& expr) {
-        //return run_case(m_cache, m_stream, get<0>(expr.cases()));
-        while (!m_stream.eof()) {
-            if (!unwind_and_call<0, match_expr<Cases...>::cases_list::size>::_(m_cache, m_stream, expr)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename... Cases>
-    bool operator()(match_expr<Cases...>&& expr) {
-        auto tmp = std::move(expr);
-        return (*this)(tmp);
-    }
-
-    template<typename... Cases>
-    bool operator()(const match_expr<Cases...>& expr) {
-        auto tmp = expr;
-        return (*this)(tmp);
-    }
-
-    template<typename Arg0, typename... Args>
-    bool operator()(Arg0&& arg0, Args&&... args) {
-        return (*this)(match_expr_collect(std::forward<Arg0>(arg0),
-                                          std::forward<Args>(args)...));
-    }
-
- private:
-
-    Stream& m_stream;
-    vector<T> m_cache;
-
-};
-
-template<typename T, class Stream>
-stream_matcher<T, Stream> match_stream(Stream& stream) {
-    return {stream};
-}
-
 int main() {
     CPPA_TEST(test__match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
+
+    auto ascending = [](int a, int b, int c) -> bool {
+        return a < b && b < c;
+    };
 
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));
@@ -545,13 +353,39 @@ int main() {
         }
     );
 
-/*
-    match_stream<int>(cin) (
-        on(1, 2, 3) >> [] {
-            cout << "one, two threeeeeeeeeeeyaaaaaahh!" << endl;
+    auto extract_name = [](const string& kvp) -> option<string> {
+        auto vec = split(kvp, '=');
+        if (vec.size() == 2) {
+            if (vec.front() == "--name") {
+                return vec.back();
+            }
+        }
+        return {};
+    };
+
+    const char* svec[] = {"-n", "foo", "--name=bar", "-p", "2"};
+
+    bool success = match_stream<string>(begin(svec), end(svec)) (
+        (on("-n", arg_match) || on(extract_name)) >> [](const string& name) {
+            cout << "your name is " << name << endl;
+        },
+        on("-p", arg_match) >> [&](const string& port) -> bool {
+            auto i = toint(port);
+            if (i) {
+                cout << "port = " << *i << endl;
+                return true;
+            }
+            else {
+                cout << "'" << port << "' is not a valid port" << endl;
+                return false;
+            }
+        },
+        on_arg_match >> [](const string& arg) {
+            cout << "dunno whatya wanna say me: " << arg << endl;
         }
     );
-*/
+
+    cout << "success: " << success << endl;
 
     return CPPA_TEST_RESULT;
 }
