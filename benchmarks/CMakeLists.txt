@@ -15,12 +15,13 @@ if(NOT cppa_LIBRARY)
     find_package(Libcppa REQUIRED)
 endif (NOT cppa_LIBRARY)
 
-find_package(Boost COMPONENTS thread REQUIRED)
+find_package(Boost REQUIRED)
+find_package(PTHREAD REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS})
+include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS} ${PTHREAD_INCLUDE_DIR})
 
-set(benchmark_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY})
+set(benchmark_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY} ${PTHREAD_LIBRARIES})
 
 target_link_libraries(actor_creation ${benchmark_LIBS})
 target_link_libraries(mailbox_performance ${benchmark_LIBS})

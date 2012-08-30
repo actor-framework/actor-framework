@@ -156,13 +156,14 @@ if (NOT DISABLE_CONTEXT_SWITCHING)
 endif ()
 
 find_package(Boost REQUIRED)
+find_package(PTHREAD REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include)
+include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include ${PTHREAD_INCLUDE_DIR})
 
 add_library(libcppa SHARED ${LIBCPPA_SRC})
 
-target_link_libraries(libcppa ${CMAKE_LD_LIBS} ${Boost_THREAD_LIBRARY})
+target_link_libraries(libcppa ${CMAKE_LD_LIBS} ${Boost_THREAD_LIBRARY} ${PTHREAD_LIBRARIES})
 
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
