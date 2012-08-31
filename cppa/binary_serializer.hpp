@@ -46,9 +46,6 @@ namespace detail { class binary_writer; }
  */
 class binary_serializer : public serializer {
 
-    // make sure that it's safe to write num_bytes bytes to m_wr_pos
-    void acquire(size_t num_bytes);
-
  public:
 
     /**
@@ -71,15 +68,8 @@ class binary_serializer : public serializer {
 
     void write_raw(size_t num_bytes, const void* data);
 
-    /**
-     * @note does <b>not</b> affect the underlying write buffer
-     */
-    void reset();
-
  private:
 
-    size_t m_obj_count;
-    size_t m_begin_pos;
     util::buffer* m_sink;
 
 };

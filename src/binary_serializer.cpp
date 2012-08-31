@@ -45,6 +45,8 @@ namespace {
 constexpr size_t chunk_size = 512;
 constexpr size_t ui32_size = sizeof(std::uint32_t);
 
+using util::grow_if_needed;
+
 class binary_writer {
 
  public:
@@ -53,13 +55,13 @@ class binary_writer {
 
     template<typename T>
     static inline void write_int(util::buffer* sink, const T& value) {
-        sink->write(sizeof(T), &value, util::grow_if_needed);
+        sink->write(sizeof(T), &value, grow_if_needed);
     }
 
     static inline void write_string(util::buffer* sink,
                                     const std::string& str) {
         write_int(sink, static_cast<std::uint32_t>(str.size()));
-        sink->write(str.size(), str.c_str(), util::grow_if_needed);
+        sink->write(str.size(), str.c_str(), grow_if_needed);
     }
 
     template<typename T>
@@ -104,35 +106,13 @@ class binary_writer {
 
 } // namespace <anonymous>
 
-binary_serializer::binary_serializer(util::buffer* buf)
-: m_obj_count(0), m_begin_pos(0), m_sink(buf) {
-}
+binary_serializer::binary_serializer(util::buffer* buf) : m_sink(buf) { }
 
 void binary_serializer::begin_object(const std::string& tname) {
-    /*
-    if (++m_obj_count == 1) {
-        // store a dummy size in the buffer that is
-        // eventually updated on matching end_object()
-        m_begin_pos = m_sink->size();
-        std::uint32_t dummy_size = 0;
-        m_sink->write(sizeof(std::uint32_t), &dummy_size, util::grow_if_needed);
-    }
-    */
     binary_writer::write_string(m_sink, tname);
 }
 
-void binary_serializer::end_object() {
-    /*
-    if (--m_obj_count == 0) {
-        // update the size in the buffer
-        auto data = m_sink->data();
-        auto s = static_cast<std::uint32_t>(m_sink->size()
-                                            - (m_begin_pos + ui32_size));
-        auto wr_pos = data + m_begin_pos;
-        memcpy(wr_pos, &s, sizeof(std::uint32_t));
-    }
-    */
-}
+void binary_serializer::end_object() { }
 
 void binary_serializer::begin_sequence(size_t list_size) {
     binary_writer::write_int(m_sink, static_cast<std::uint32_t>(list_size));
@@ -145,7 +125,7 @@ void binary_serializer::write_value(const primitive_variant& value) {
 }
 
 void binary_serializer::write_raw(size_t num_bytes, const void* data) {
-    m_sink->write(num_bytes, data, util::grow_if_needed);
+    m_sink->write(num_bytes, data, grow_if_needed);
 }
 
 void binary_serializer::write_tuple(size_t size,
@@ -154,10 +134,6 @@ void binary_serializer::write_tuple(size_t size,
     for ( ; values != end; ++values) {
         write_value(*values);
     }
-}
-
-void binary_serializer::reset() {
-    m_obj_count = 0;
 }
 
 } // namespace cppa
