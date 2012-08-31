@@ -6,7 +6,6 @@ import scala.actors.Actor
 import scala.actors.Actor._
 import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
 import scala.annotation.tailrec
-import System.out.println
 
 case class Token(value: Int)
 case class Init(ringSize: Int, initialTokenValue: Int, repetitions: Int)
@@ -213,7 +212,7 @@ class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     }
     def receive = {
         case Factors(f) => global.checkFactors(f); inc
-        case MasterExited => println("master exited"); inc
+        case MasterExited => inc
     }
 }
 
@@ -235,12 +234,8 @@ class MixedCase(numRings: Int, ringSize: Int, initToken: Int, reps: Int) {
         val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
         for (_ <- 0 until numRings)
             system.actorOf(Props(new AkkaChainMaster(s, system))) ! initMsg
-import System.out.println
-println("awaiting latch")
         global.latch.await
-println("shutdown akka system")
         system.shutdown
-println("exit");
         System.exit(0)
     }
 }
