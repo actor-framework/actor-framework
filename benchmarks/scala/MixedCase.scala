@@ -168,11 +168,11 @@ class AkkaChainLink(next: AkkaActorRef) extends AkkaActor {
 
 class AkkaChainMaster(supervisor: AkkaActorRef, system: ActorSystem) extends AkkaActor {
 
-    val worker = context.actorOf(Props(new AkkaWorker(supervisor)))
+    val worker = system.actorOf(Props(new AkkaWorker(supervisor)))
 
     @tailrec final def newRing(next: AkkaActorRef, rsize: Int): AkkaActorRef = {
         if (rsize == 0) next
-        else newRing(system.actorOf(Props(new AkkaChainLink(next))), rsize-1)
+        else newRing(context.actorOf(Props(new AkkaChainLink(next))), rsize-1)
     }
 
     def initialized(ringSize: Int, initialTokenValue: Int, repetitions: Int, next: AkkaActorRef, iteration: Int): Receive = {
