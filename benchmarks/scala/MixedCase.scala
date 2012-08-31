@@ -6,6 +6,7 @@ import scala.actors.Actor
 import scala.actors.Actor._
 import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
 import scala.annotation.tailrec
+import System.out.println
 
 case class Token(value: Int)
 case class Init(ringSize: Int, initialTokenValue: Int, repetitions: Int)
@@ -166,13 +167,13 @@ class AkkaChainLink(next: AkkaActorRef) extends AkkaActor {
     }
 }
 
-class AkkaChainMaster(supervisor: AkkaActorRef) extends AkkaActor {
+class AkkaChainMaster(supervisor: AkkaActorRef, system: ActorSystem) extends AkkaActor {
 
     val worker = context.actorOf(Props(new AkkaWorker(supervisor)))
 
     @tailrec final def newRing(next: AkkaActorRef, rsize: Int): AkkaActorRef = {
         if (rsize == 0) next
-        else newRing(context.actorOf(Props(new AkkaChainLink(next))), rsize-1)
+        else newRing(system.actorOf(Props(new AkkaChainLink(next))), rsize-1)
     }
 
     def initialized(ringSize: Int, initialTokenValue: Int, repetitions: Int, next: AkkaActorRef, iteration: Int): Receive = {
@@ -204,7 +205,7 @@ class AkkaChainMaster(supervisor: AkkaActorRef) extends AkkaActor {
 class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     var i = 0
     def inc() {
-        i += 1;
+        i = i + 1
         if (i == numMessages) {
             global.latch.countDown
             context.stop(self)
@@ -212,7 +213,7 @@ class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     }
     def receive = {
         case Factors(f) => global.checkFactors(f); inc
-        case MasterExited => inc
+        case MasterExited => println("master exited"); inc
     }
 }
 
@@ -233,7 +234,7 @@ class MixedCase(numRings: Int, ringSize: Int, initToken: Int, reps: Int) {
         val system = ActorSystem();
         val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
         for (_ <- 0 until numRings)
-            system.actorOf(Props(new AkkaChainMaster(s))) ! initMsg
+            system.actorOf(Props(new AkkaChainMaster(s, system))) ! initMsg
 import System.out.println
 println("awaiting latch")
         global.latch.await
