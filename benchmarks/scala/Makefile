@@ -1,5 +1,5 @@
 SCALAC=scalac
-LIBPATH=/home/neverlord/akka-2.0.3/lib/akka
+LIBPATH=/$(HOME)/akka-2.0.3/lib/akka
 
 CLASSPATH=$(shell for i in $(LIBPATH)/*.jar ; do printf %s $$i: ; done)
 #CLASSPATH=$(LIBPATH)/akka-kernel-2.0.3.jar:$(LIBPATH)/akka-actor-2.0.3.jar
