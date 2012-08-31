@@ -188,8 +188,9 @@ struct rvalue_builder {
                                                  std::move(m_guard)}};
     }
 
-    template<class Other>
-    disjunct_rvalue_builders<rvalue_builder, Other> operator||(Other other) const {
+    template<class G, class T, class P>
+    disjunct_rvalue_builders<rvalue_builder, rvalue_builder<G, T, P> >
+    operator||(rvalue_builder<G, T, P> other) const {
         return {*this, std::move(other)};
     }
 
