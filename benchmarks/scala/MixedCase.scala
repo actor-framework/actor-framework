@@ -155,28 +155,29 @@ class AkkaWorker(supervisor: AkkaActorRef) extends AkkaActor {
 
 class AkkaChainLink(next: AkkaActorRef) extends AkkaActor {
     def receive = {
-        case Token(value) => next ! Token(value); if (value == 0) context.stop(self)
+        case Token(value) => {
+            next ! Token(value)
+            if (value == 0) context.stop(self)
+        }
     }
 }
 
-class AkkaChainMaster(supervisor: akka.actor.ActorRef) extends akka.actor.Actor {
-    var initialTokenValue = 0
-    var repetitions = 0
-    var iteration = 0
-    var rsize = 0
-    var next: akka.actor.ActorRef = null
+class AkkaChainMaster(supervisor: AkkaActorRef) extends AkkaActor {
+
     val worker = context.actorOf(Props(new AkkaWorker(supervisor)))
-    @tailrec final def newRing(next: akka.actor.ActorRef, rsize: Int): akka.actor.ActorRef = {
+
+    @tailrec final def newRing(next: AkkaActorRef, rsize: Int): AkkaActorRef = {
         if (rsize == 0) next
         else newRing(context.actorOf(Props(new AkkaChainLink(next))), rsize-1)
     }
-    def initialized: Receive = {
+
+    def initialized(ringSize: Int, initialTokenValue: Int, repetitions: Int, next: AkkaActorRef, iteration: Int): Receive = {
         case Token(0) =>
-            iteration += 1
-            if (iteration < repetitions) {
+            if (iteration + 1 < repetitions) {
                 worker ! Calc(global.taskN)
-                next = newRing(self, rsize-1)
+                val next = newRing(self, ringSize - 1)
                 next ! Token(initialTokenValue)
+                context.become(initialized(ringSize, initialTokenValue, repetitions, next, iteration + 1))
             }
             else
             {
@@ -186,17 +187,17 @@ class AkkaChainMaster(supervisor: akka.actor.ActorRef) extends akka.actor.Actor 
             }
         case Token(value) => next ! Token(value-1)
     }
+
     def receive = {
         case Init(rs, itv, rep) =>
-            rsize = rs ; initialTokenValue = itv ; repetitions = rep
             worker ! Calc(global.taskN)
-            next = newRing(self, rsize-1)
-            next ! Token(initialTokenValue)
-            context.become(initialized)
+            val next = newRing(self, rs-1)
+            next ! Token(itv)
+            context.become(initialized(rs, itv, rep, next, 0))
     }
 }
 
-class AkkaSupervisor(numMessages: Int) extends akka.actor.Actor {
+class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     var i = 0
     def inc() {
         i += 1;
