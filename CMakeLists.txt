@@ -155,6 +155,10 @@ if (NOT DISABLE_CONTEXT_SWITCHING)
   )
 endif ()
 
+if (BOOST_ROOT)
+  # Prevent falling back to system paths when using a custom Boost prefix.
+  set(Boost_NO_SYSTEM_PATHS true)
+endif ()
 find_package(Boost REQUIRED)
 find_package(PTHREAD REQUIRED)
 
