@@ -1,3 +1,7 @@
+package org.libcppa.mixed_case
+
+import org.libcppa.utility.IntStr
+
 import scala.actors.Actor
 import scala.actors.Actor._
 import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
@@ -212,41 +216,52 @@ class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     }
 }
 
-object MixedCase {
-    def usage(): Nothing = {
+class MixedCase(numRings: Int, ringSize: Int, initToken: Int, reps: Int) {
+    final val numMessages = numRings + (numRings * reps)
+    final val initMsg = Init(ringSize, initToken, reps)
+    def runThreaded() {
+        val s = (new ThreadedSupervisor(numMessages)).start
+        for (_ <- 0 until numRings)
+            (new ThreadedChainMaster(s)).start ! initMsg
+    }
+    def runThreadless() {
+        val s = (new ThreadlessSupervisor(numMessages)).start
+        for (_ <- 0 until numRings)
+            (new ThreadlessChainMaster(s)).start ! initMsg
+    }
+    def runAkka() {
+        val system = ActorSystem();
+        val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
+        for (_ <- 0 until numRings)
+            system.actorOf(Props(new AkkaChainMaster(s))) ! initMsg
+import System.out.println
+println("awaiting latch")
+        global.latch.await
+println("shutdown akka system")
+        system.shutdown
+println("exit");
+        System.exit(0)
+    }
+}
+
+object Main {
+
+    def usage() = {
         Console println "usage: ('threaded'|'threadless'|'akka') (num rings) (ring size) (initial token value) (repetitions)"
         System.exit(1) // why doesn't exit return Nothing?
-        throw new RuntimeException("")
     }
-    def main(args: Array[String]): Unit = {
-        if (args.size != 5) usage
-        val numRings = args(1).toInt
-        val ringSize = args(2).toInt
-        val initialTokenValue = args(3).toInt
-        val repetitions = args(4).toInt
-        val initMsg = Init(ringSize, initialTokenValue, repetitions)
-        val numMessages = (numRings + (numRings * repetitions))
-        val impl = args(0)
-        if (impl == "threaded") {
-            //System.setProperty("actors.maxPoolSize", (numRings + (numRings * ringSize) + 10).toString)
-            val s = (new ThreadedSupervisor(numMessages)).start
-            for (_ <- 0 until numRings)
-                (new ThreadedChainMaster(s)).start ! initMsg
+
+    def main(args: Array[String]): Unit = args match {
+        case Array(impl, IntStr(numRings), IntStr(ringSize), IntStr(initToken), IntStr(reps)) => {
+            val mc = new MixedCase(numRings, ringSize, initToken, reps);
+            impl match {
+                case "threaded" => mc.runThreaded
+                case "threadless" => mc.runThreadless
+                case "akka" => mc.runAkka
+                case _ => usage
+            }
         }
-        else if (impl == "threadless") {
-            val s = (new ThreadlessSupervisor(numMessages)).start
-            for (_ <- 0 until numRings)
-                (new ThreadlessChainMaster(s)).start ! initMsg
-        }
-        else if (impl == "akka") {
-            val system = ActorSystem();
-            val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
-            for (_ <- 0 until numRings)
-                system.actorOf(Props(new AkkaChainMaster(s))) ! initMsg
-            global.latch.await
-            system.shutdown
-            System.exit(0)
-        }
-        else usage
+        case _ => usage
     }
+
 }

@@ -61,7 +61,12 @@ endif ()
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
-else ()
+#else ()
+#  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif ()
+
+# set build default build type if not set
+if (not CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ()
 
@@ -155,6 +160,10 @@ if (NOT DISABLE_CONTEXT_SWITCHING)
   )
 endif ()
 
+if (BOOST_ROOT)
+  # Prevent falling back to system paths when using a custom Boost prefix.
+  set(Boost_NO_SYSTEM_PATHS true)
+endif ()
 find_package(Boost REQUIRED)
 find_package(PTHREAD REQUIRED)
 

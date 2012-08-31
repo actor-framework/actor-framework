@@ -1,2 +1,2 @@
 #!/bin/bash
-echo "./$@" | ./exec.sh
+echo "../build/bin/$@" | ./exec.sh

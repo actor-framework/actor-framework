@@ -1,3 +1,7 @@
+package org.libcppa.mailbox_performance
+
+import org.libcppa.utility._
+
 import scala.actors.Actor
 import scala.actors.Actor._
 import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
@@ -42,39 +46,44 @@ class AkkaReceiver(n: Long) extends akka.actor.Actor {
     }
 }
 
-object MailboxPerformance {
+class MailboxPerformance(threads: Int, msgs: Int) {
+    val total = threads * msgs;
+    def run[T](testee: T, fun: T => Unit) {
+        for (_ <- 0 until threads) {
+            (new Thread {
+                override def run() { for (_ <- 0 until msgs) fun(testee) }
+            }).start
+        }
+    }
+    def runThreaded() {
+        run((new ThreadedReceiver(total)).start, {(a: Actor) => a ! Msg})
+    }
+    def runThreadless() {
+        run((new ThreadlessReceiver(total)).start, {(a: Actor) => a ! Msg})
+    }
+    def runAkka() {
+        val system = ActorSystem()
+        run(system.actorOf(Props(new AkkaReceiver(total))), {(a: AkkaActorRef) => a ! Msg})
+        global.latch.await
+        system.shutdown
+        System.exit(0)
+    }
+}
+
+object Main {
     def usage() {
         Console println "usage: (threaded|threadless|akka) (num_threads) (msgs_per_thread)"
     }
-    def main(args: Array[String]) = {
-        if (args.size != 3) {
-            usage
-            throw new IllegalArgumentException("")
+    def main(args: Array[String]): Unit = args match {
+        case Array(impl, IntStr(threads), IntStr(msgs)) => {
+            val prog = new MailboxPerformance(threads, msgs)
+            impl match {
+                case "threaded" => prog.runThreaded
+                case "threadless" => prog.runThreadless
+                case "akka" => prog.runAkka
+                case _ => usage
+            }
         }
-        val threads = args(1).toInt
-        val msgs = args(2).toInt
-        val impl = List("threaded", "threadless", "akka").indexOf(args(0))
-        if (impl == -1) {
-            usage
-        }
-        else if (impl < 2) {
-            val rcvRef = if (impl == 0) (new ThreadedReceiver(threads*msgs)).start
-                         else (new ThreadlessReceiver(threads*msgs)).start
-            for (i <- 0 until threads)
-                (new java.lang.Thread {
-                    override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
-                }).start
-        }
-        else {
-            val system = ActorSystem()
-            val rcvRef = system.actorOf(Props(new AkkaReceiver(threads*msgs)))
-            for (i <- 0 until threads)
-                (new java.lang.Thread {
-                    override def run() { for (_ <- 0 until msgs) rcvRef ! Msg }
-                }).start
-            global.latch.await
-            system.shutdown
-            System.exit(0)
-        }
+        case _ => usage
     }
 }
