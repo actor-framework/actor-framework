@@ -1,3 +1,7 @@
+package org.libcppa.distributed
+
+import org.libcppa.utility._
+
 import scala.actors._
 import scala.actors.Actor.self
 import scala.actors.remote.RemoteActor
@@ -313,12 +317,24 @@ class AkkaClientActor(system: ActorSystem) extends AkkaActor {
     }
 }
 
-object Distributed {
+class Distributed {
 
-    @tailrec def run(args: List[String], paths: List[String], numPings: Option[Int], finalizer: (List[String], Int) => Unit): Unit = args match {
-        case NumPings(num) :: tail => numPings match {
+    def runServer(port: Int) {
+        (new ServerActor(port)).start
+    }
+
+    def runAkkaServer() {
+        val system = ActorSystem("pongServer", ConfigFactory.load.getConfig("pongServer"))
+        system.actorOf(Props(new AkkaServerActor(system)), "pong")
+    }
+
+    //private val NumPings = "num_pings=([0-9]+)".r
+    private val SimpleUri = "([0-9a-zA-Z\\.]+):([0-9]+)".r
+
+    @tailrec private def run(args: List[String], paths: List[String], numPings: Option[Int], finalizer: (List[String], Int) => Unit): Unit = args match {
+        case KeyValuePair("num_pings", IntStr(num)) :: tail => numPings match {
             case Some(x) => throw new IllegalArgumentException("\"num_pings\" already defined, first value = " + x + ", second value = " + num)
-            case None => run(tail, paths, Some(num.toInt), finalizer)
+            case None => run(tail, paths, Some(num), finalizer)
         }
         case arg :: tail => run(tail, arg :: paths, numPings, finalizer)
         case Nil => numPings match {
@@ -330,33 +346,35 @@ object Distributed {
         }
     }
 
-    val IntStr = "([0-9]+)".r
-    val NumPings = "num_pings=([0-9]+)".r
-    val SimpleUri = "([0-9a-zA-Z\\.]+):([0-9]+)".r
+    def runBenchmark(args: List[String]) {
+        run(args, Nil, None, ((paths, x) => {
+            (new ClientActor(paths map (path => path match { case SimpleUri(host, port) => RemoteActorPath(path, host, port.toInt) }), x)).start
+        }))
+    }
+
+    def runAkkaBenchmark(args: List[String]) {
+        run(args, Nil, None, ((paths, x) => {
+            val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
+            system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths, x)
+            global.latch.await
+            system.shutdown
+            System.exit(0)
+        }))
+    }
+
+}
+
+object Main {
+
+    val prog = new Distributed
 
     def main(args: Array[String]): Unit = args match {
         // server mode
-        case Array("mode=server", "remote_actors", IntStr(istr)) => (new ServerActor(istr.toInt)).start
-        case Array("mode=server", "akka") => {
-            val system = ActorSystem("pongServer", ConfigFactory.load.getConfig("pongServer"))
-            val pong = system.actorOf(Props(new AkkaServerActor(system)), "pong")
-            Unit
-        }
+        case Array("mode=server", "remote_actors", IntStr(port)) => prog.runServer(port)
+        case Array("mode=server", "akka") => prog.runAkkaServer
         // client mode
-        case Array("mode=benchmark", "remote_actors", _*) => {
-            run(args.toList.drop(2), Nil, None, ((paths, x) => {
-                (new ClientActor(paths map (path => path match { case SimpleUri(host, port) => RemoteActorPath(path, host, port.toInt) }), x)).start
-            }))
-        }
-        case Array("mode=benchmark", "akka", _*) => {
-            run(args.toList.drop(2), Nil, None, ((paths, x) => {
-                val system = ActorSystem("benchmark", ConfigFactory.load.getConfig("benchmark"))
-                system.actorOf(Props(new AkkaClientActor(system))) ! RunAkkaClient(paths, x)
-                global.latch.await
-                system.shutdown
-                System.exit(0)
-            }))
-        }
+        case Array("mode=benchmark", "remote_actors", _*) => prog.runBenchmark(args.toList.drop(2))
+        case Array("mode=benchmark", "akka", _*) => prog.runAkkaBenchmark(args.toList.drop(2))
         // error
         case _ => {
             println("Running in server mode:\n"                              +

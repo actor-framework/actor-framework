@@ -1,3 +1,7 @@
+package org.libcppa.actor_creation
+
+import org.libcppa.utility.IntStr
+
 import scala.actors.Actor
 import scala.actors.Actor._
 import akka.actor.{ Props, Actor => AkkaActor, ActorRef => AkkaActorRef, ActorSystem }
@@ -91,44 +95,55 @@ class AkkaRootTestee(n: Int) extends AkkaActor {
     }
 }
 
-object ActorCreation {
-    def usage() {
-        Console println "usage: (threaded|threadless|akka) POW\n       creates 2^POW actors of given impl"
-    }
-    def main(args: Array[String]): Unit = {
-        if (args.size != 2) {
-            usage
-            throw new IllegalArgumentException("")
+class ActorCreation(n: Int) {
+
+    def runThreaded() {
+        val newMax = (1 << n) + 100
+        System.setProperty("actors.maxPoolSize", newMax.toString)
+        (new ThreadedTestee(self)).start ! Spread(n)
+        receive {
+            case Result(v) =>
+                if (v != (1 << n))
+                    Console.println("ERROR: expected " + (1 << n) + ", received " + v)
         }
-        val n = args(1).toInt
-        if (args(0) == "threaded") {
-            val newMax = (1 << n) + 100
-            System.setProperty("actors.maxPoolSize", newMax.toString)
-            (new ThreadedTestee(self)).start ! Spread(n)
-            receive {
+    }
+
+    def runThreadless() {
+        actor {
+            (new ThreadlessTestee(self)).start ! Spread(n)
+            react {
                 case Result(v) =>
                     if (v != (1 << n))
                         Console.println("ERROR: expected " + (1 << n) + ", received " + v)
             }
         }
-        else if (args(0) == "threadless") {
-            actor {
-                (new ThreadlessTestee(self)).start ! Spread(n)
-                react {
-                    case Result(v) =>
-                        if (v != (1 << n))
-                            Console.println("ERROR: expected " + (1 << n) + ", received " + v)
-                }
+    }
+
+    def runAkka() {
+        val system = ActorSystem()
+        system.actorOf(Props(new AkkaRootTestee(n))) ! GoAhead
+        global.latch.await
+        system.shutdown
+        System.exit(0)
+    }
+
+}
+
+object Main {
+    def usage() {
+        Console println "usage: (threaded|threadless|akka) POW\n       creates 2^POW actors of given impl"
+    }
+    def main(args: Array[String]): Unit = args match {
+        case Array(impl, IntStr(n)) => {
+            val prog = new ActorCreation(n)
+            impl match {
+                case "threaded" => prog.runThreaded
+                case "threadless" => prog.runThreadless
+                case "akka" => prog.runAkka
+                case _ => usage
             }
         }
-        else if (args(0) == "akka") {
-            val system = ActorSystem()
-            system.actorOf(Props(new AkkaRootTestee(n))) ! GoAhead
-            global.latch.await
-            system.shutdown
-            System.exit(0)
-        }
-        else usage
+        case _ => usage
     }
 }
 
