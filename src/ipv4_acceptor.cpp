@@ -99,13 +99,17 @@ ipv4_acceptor::ipv4_acceptor(native_socket_type fd, bool nonblocking)
 
 std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port) {
     native_socket_type sockfd;
-    struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
         throw network_error("could not create server socket");
     }
     // sguard closes the socket in case of exception
     socket_guard sguard(sockfd);
+    int on = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+        detail::throw_io_failure("unable to set SO_REUSEADDR");
+    }
+    struct sockaddr_in serv_addr;
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;

@@ -62,6 +62,8 @@ class tpartial_function {
     static constexpr bool manipulates_args =
             util::tl_exists<arg_types, util::is_mutable_ref>::value;
 
+    typedef Result result_type;
+
     template<typename Fun, typename... G>
     tpartial_function(Fun&& fun, G&&... guard_args)
         : m_guard(std::forward<G>(guard_args)...)
@@ -80,7 +82,7 @@ class tpartial_function {
         return m_guard(args...);
     }
 
-    Result operator()(Args... args) const {
+    result_type operator()(Args... args) const {
         return util::apply_args<Result, ctrait_args::size, sizeof...(Args)>
                ::_(m_expr, args...);
     }

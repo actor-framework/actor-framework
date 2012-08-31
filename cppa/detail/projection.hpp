@@ -58,6 +58,23 @@ struct projection_helper {
     }
 };
 
+template<class PartialFun>
+struct result_fetching_projection_helper {
+    typedef typename PartialFun::result_type result_type;
+    const PartialFun& fun;
+    result_type& result;
+    result_fetching_projection_helper(const PartialFun& pfun, result_type& res)
+    : fun(pfun), result(res) { }
+    template<typename... Args>
+    bool operator()(Args&&... args) const {
+        if (fun.defined_at(std::forward<Args>(args)...)) {
+            result = fun(std::forward<Args>(args)...);
+            return true;
+        }
+        return false;
+    }
+};
+
 /**
  * @brief Projection implemented by a set of functors.
  */
@@ -98,6 +115,31 @@ class projection {
         typename tdata_from_type_list<collected_args>::type pargs;
         if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
             projection_helper<PartialFun> helper{fun};
+            return util::unchecked_apply_tuple<bool>(helper, pargs);
+        }
+        return false;
+    }
+
+    template<class PartialFun>
+    bool invoke(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
+        typedef typename PartialFun::result_type result_type;
+        typedef typename util::tl_zip<
+                    typename util::tl_map<
+                        ProjectionFuns,
+                        util::get_result_type,
+                        util::rm_option
+                    >::type,
+                    typename util::tl_map<
+                        util::type_list<Args...>,
+                        mutable_gref_wrapped
+                    >::type,
+                    util::left_or_right
+                >::type
+                collected_args;
+
+        typename tdata_from_type_list<collected_args>::type pargs;
+        if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
+            result_fetching_projection_helper<PartialFun> helper{fun, result};
             return util::unchecked_apply_tuple<bool>(helper, pargs);
         }
         return false;

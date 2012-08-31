@@ -30,7 +30,9 @@
 
 // for thread_specific_ptr
 // needed unless the new keyword "thread_local" works in GCC
-#include <boost/thread/tss.hpp>
+//#include <boost/thread/tss.hpp>
+
+#include <pthread.h>
 
 #include "cppa/self.hpp"
 #include "cppa/any_tuple.hpp"
@@ -42,7 +44,59 @@ namespace cppa {
 
 namespace {
 
-boost::thread_specific_ptr<local_actor> t_this_actor(&self_type::cleanup_fun);
+pthread_key_t s_key;
+pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
+
+local_actor* tss_constructor() {
+    local_actor* result = new thread_mapped_actor;
+    result->ref();
+    get_scheduler()->register_converted_context(result);
+    return result;
+}
+
+void tss_destructor(void* vptr) {
+    if (vptr) self_type::cleanup_fun(reinterpret_cast<local_actor*>(vptr));
+}
+
+void tss_make_key() {
+    pthread_key_create(&s_key, tss_destructor);
+}
+
+local_actor* tss_get() {
+    pthread_once(&s_key_once, tss_make_key);
+    return reinterpret_cast<local_actor*>(pthread_getspecific(s_key));
+}
+
+local_actor* tss_release() {
+    pthread_once(&s_key_once, tss_make_key);
+    auto result = reinterpret_cast<local_actor*>(pthread_getspecific(s_key));
+    if (result) {
+        pthread_setspecific(s_key, nullptr);
+    }
+    return result;
+}
+
+local_actor* tss_get_or_create() {
+    pthread_once(&s_key_once, tss_make_key);
+    auto result = reinterpret_cast<local_actor*>(pthread_getspecific(s_key));
+    if (!result) {
+        result = tss_constructor();
+        pthread_setspecific(s_key, reinterpret_cast<void*>(result));
+    }
+    return result;
+}
+
+void tss_reset(local_actor* ptr, bool inc_ref_count = true) {
+    pthread_once(&s_key_once, tss_make_key);
+    auto old_ptr = reinterpret_cast<local_actor*>(pthread_getspecific(s_key));
+    if (old_ptr) {
+        tss_destructor(old_ptr);
+    }
+    if (ptr != nullptr && inc_ref_count) {
+        ptr->ref();
+    }
+    pthread_setspecific(s_key, reinterpret_cast<void*>(ptr));
+}
 
 } // namespace <anonymous>
 
@@ -58,19 +112,11 @@ void self_type::cleanup_fun(cppa::local_actor* what) {
 }
 
 void self_type::set_impl(self_type::pointer ptr) {
-    if (ptr) ptr->ref();
-    t_this_actor.reset(ptr);
+    tss_reset(ptr);
 }
 
 self_type::pointer self_type::get_impl() {
-    auto result = t_this_actor.get();
-    if (result == nullptr) {
-        result = new thread_mapped_actor;
-        result->ref();
-        get_scheduler()->register_converted_context(result);
-        t_this_actor.reset(result);
-    }
-    return result;
+    return tss_get_or_create();
 }
 
 actor* self_type::convert_impl() {
@@ -78,15 +124,15 @@ actor* self_type::convert_impl() {
 }
 
 self_type::pointer self_type::get_unchecked_impl() {
-    return t_this_actor.get();
+    return tss_get();
 }
 
 void self_type::adopt_impl(self_type::pointer ptr) {
-    t_this_actor.reset(ptr);
+    tss_reset(ptr, false);
 }
 
 self_type::pointer self_type::release_impl() {
-    return t_this_actor.release();
+    return tss_release();
 }
 
 } // namespace cppa

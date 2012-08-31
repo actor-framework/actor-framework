@@ -109,6 +109,7 @@ binary_serializer::binary_serializer(util::buffer* buf)
 }
 
 void binary_serializer::begin_object(const std::string& tname) {
+    /*
     if (++m_obj_count == 1) {
         // store a dummy size in the buffer that is
         // eventually updated on matching end_object()
@@ -116,10 +117,12 @@ void binary_serializer::begin_object(const std::string& tname) {
         std::uint32_t dummy_size = 0;
         m_sink->write(sizeof(std::uint32_t), &dummy_size, util::grow_if_needed);
     }
+    */
     binary_writer::write_string(m_sink, tname);
 }
 
 void binary_serializer::end_object() {
+    /*
     if (--m_obj_count == 0) {
         // update the size in the buffer
         auto data = m_sink->data();
@@ -128,6 +131,7 @@ void binary_serializer::end_object() {
         auto wr_pos = data + m_begin_pos;
         memcpy(wr_pos, &s, sizeof(std::uint32_t));
     }
+    */
 }
 
 void binary_serializer::begin_sequence(size_t list_size) {

@@ -253,7 +253,13 @@ class peer_connection : public network_channel {
 
     void write(const addressed_message& msg) {
         binary_serializer bs(&m_wr_buf);
+        std::uint32_t size = 0;
+        auto before = m_wr_buf.size();
+        m_wr_buf.write(sizeof(std::uint32_t), &size, util::grow_if_needed);
         bs << msg;
+        size = m_wr_buf.size() - sizeof(std::uint32_t);
+        // update size in buffer
+        memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
         if (!has_unwritten_data()) {
             size_t written = m_ostream->write_some(m_wr_buf.data(),
                                                    m_wr_buf.size());
@@ -683,7 +689,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     fd_set wrset;
     fd_set* wrset_ptr = nullptr;
     m_channels.emplace_back(new middleman_overseer(this, pipe_fd, queue));
-    do {
+    auto update_fd_sets = [&] {
         FD_ZERO(&rdset);
         maxfd = 0;
         CPPA_REQUIRE(m_channels.size() > 0);
@@ -704,56 +710,40 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             wrset_ptr = &wrset;
         }
         CPPA_REQUIRE(maxfd > 0);
-        //DEBUG("select()");
-        int sresult;
-        do {
-            sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
-            if (sresult < 0) {
-                CPPA_CRITICAL("select() failed");
-            }
+    };
+    auto continue_reading = [&](const network_channel_ptr& ch) {
+        bool erase_channel = false;
+        try { erase_channel = !ch->continue_reading(); }
+        catch (exception& e) {
+            DEBUG(demangle(typeid(e).name()) << ": " << e.what());
+            erase_channel = true;
         }
-        while (sresult == 0);
-        //DEBUG("continue reading ...");
-        { // iterate over all channels and remove channels as needed
-            for (auto& channel : m_channels) {
-                if (FD_ISSET(channel->read_handle(), &rdset)) {
-                    bool erase_channel = false;
-                    try { erase_channel = !channel->continue_reading(); }
-                    catch (exception& e) {
-                        DEBUG(demangle(typeid(e).name()) << ": " << e.what());
-                        erase_channel = true;
-                    }
-                    if (erase_channel) {
-                        DEBUG("erase worker");
-                        m_erased_channels.insert(channel);
-                    }
-                }
-            }
+        if (erase_channel) {
+            DEBUG("erase worker");
+            m_erased_channels.insert(ch);
         }
-        if (wrset_ptr) { // iterate over peers with unwritten data
-            DEBUG("continue writing ...");
-            for (auto& peer : m_peers_with_unwritten_data) {
-                if (FD_ISSET(peer->write_handle(), &wrset)) {
-                    bool erase_channel = false;
-                    try { erase_channel = !peer->continue_writing(); }
-                    catch (exception& e) {
-                        DEBUG(demangle(typeid(e).name()) << ": " << e.what());
-                        erase_channel = true;
-                    }
-                    if (erase_channel) {
-                        DEBUG("erase worker");
-                        m_erased_channels.insert(peer);
-                    }
-                }
-            }
+    };
+    auto continue_writing = [&](const peer_connection_ptr& peer) {
+        bool erase_channel = false;
+        try { erase_channel = !peer->continue_writing(); }
+        catch (exception& e) {
+            DEBUG(demangle(typeid(e).name()) << ": " << e.what());
+            erase_channel = true;
         }
-        // insert new handlers
+        if (erase_channel) {
+            DEBUG("erase worker");
+            m_erased_channels.insert(peer);
+        }
+    };
+    auto insert_new_handlers = [&] {
         if (m_new_channels.empty() == false) {
             DEBUG("insert new channel(s)");
             move(m_new_channels.begin(), m_new_channels.end(),
                  back_inserter(m_channels));
             m_new_channels.clear();
         }
+    };
+    auto erase_erroneous_channels = [&] {
         if (!m_erased_channels.empty()) {
             DEBUG("erase channel(s)");
             // erase all marked channels
@@ -766,6 +756,76 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             }
             m_erased_channels.clear();
         }
+    };
+    do {
+        update_fd_sets();
+        //DEBUG("select()");
+        int sresult;
+        do {
+            sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
+            if (sresult < 0) {
+                // try again or die hard
+                sresult = 0;
+                switch (errno) {
+                    // a signal was caught
+                    case EINTR: {
+                        // just try again
+                        break;
+                    }
+                    // nfds is negative or the value
+                    // contained within timeout is invalid
+                    case EINVAL: {
+                        if ((maxfd + 1) < 0) {
+                            CPPA_CRITICAL("overflow: maxfd + 1 > 0");
+                        }
+                        break;
+                    }
+                    case ENOMEM: {
+                        // there's not much we can do other than try again
+                        // sleep some time in hope someone releases memory
+                        // while we are sleeping
+                        //this_thread::yield();
+                        break;
+                    }
+                    case EBADF: {
+                        // this really shouldn't happen
+                        // try IO on each single socket and rebuild rd_set
+                        for (auto& ch: m_channels) {
+                            continue_reading(ch);
+                        }
+                        for (auto& peer : m_peers_with_unwritten_data) {
+                            continue_writing(peer);
+                        }
+                        insert_new_handlers();
+                        erase_erroneous_channels();
+                        update_fd_sets();
+                        break;
+                    }
+                    default: {
+                        CPPA_CRITICAL("select() failed for an unknown reason");
+                    }
+                }
+            }
+        }
+        while (sresult == 0);
+        //DEBUG("continue reading ...");
+        { // iterate over all channels and remove channels as needed
+            for (auto& ch : m_channels) {
+                if (FD_ISSET(ch->read_handle(), &rdset)) {
+                    continue_reading(ch);
+                }
+            }
+        }
+        if (wrset_ptr) { // iterate over peers with unwritten data
+            DEBUG("continue writing ...");
+            for (auto& peer : m_peers_with_unwritten_data) {
+                if (FD_ISSET(peer->write_handle(), &wrset)) {
+                    continue_writing(peer);
+                }
+            }
+        }
+        insert_new_handlers();
+        erase_erroneous_channels();
     }
     while (m_done == false);
     DEBUG("middleman done");

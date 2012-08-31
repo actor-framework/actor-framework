@@ -21,12 +21,13 @@ if(NOT cppa_LIBRARY)
     find_package(Libcppa REQUIRED)
 endif (NOT cppa_LIBRARY)
 
-find_package(Boost COMPONENTS thread REQUIRED)
+find_package(Boost REQUIRED)
+find_package(PTHREAD REQUIRED)
 
 link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${CPPA_INCLUDE} ${Boost_INCLUDE_DIRS})
+include_directories(. ${CPPA_INCLUDE} ${Boost_INCLUDE_DIRS} ${PTHREAD_INCLUDE_DIR})
 
-set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY})
+set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
 
 target_link_libraries(announce_example_1 ${EXAMPLE_LIBS})
 target_link_libraries(announce_example_2 ${EXAMPLE_LIBS})

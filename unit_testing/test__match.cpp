@@ -1,3 +1,4 @@
+#include <iostream>
 #include <functional>
 
 #include "test.hpp"
@@ -8,10 +9,8 @@
 #include "cppa/to_string.hpp"
 #include "cppa/guard_expr.hpp"
 
+using namespace std;
 using namespace cppa;
-
-using std::vector;
-using std::string;
 
 bool is_even(int i) { return i % 2 == 0; }
 
@@ -23,92 +22,15 @@ bool is_even(int i) { return i % 2 == 0; }
  *
  */
 
-bool ascending(int a, int b, int c) {
-    return a < b && b < c;
-}
-
-vector<const uniform_type_info*>
-to_vec(util::empty_type_list,
-       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
-    return vec;
-}
-
-template<typename Head, typename... Tail>
-vector<const uniform_type_info*>
-to_vec(util::type_list<Head, Tail...>,
-       vector<const uniform_type_info*> vec=vector<const uniform_type_info*>{}){
-    vec.push_back(uniform_typeid<Head>());
-    return to_vec(util::type_list<Tail...>{}, std::move(vec));
-}
-
-template<typename Fun>
-class __ {
-
-    typedef typename util::get_callable_trait<Fun>::type trait;
-
- public:
-
-    __(Fun f, string annotation = "") : m_fun(f), m_annotation(annotation) { }
-
-    __ operator[](const string& str) const {
-        return {m_fun, str};
-    }
-
-    template<typename... Args>
-    void operator()(Args&&... args) const {
-        m_fun(std::forward<Args>(args)...);
-    }
-
-    void plot_signature() {
-        auto vec = to_vec(typename trait::arg_types{});
-        for (auto i : vec) {
-            cout << i->name() << " ";
-        }
-        cout << endl;
-    }
-
-    const string& annotation() const {
-        return m_annotation;
-    }
-
- private:
-
-    Fun m_fun;
-    string m_annotation;
-
-};
-
-template<typename Fun>
-__<Fun> get__(Fun f) {
-    return {f};
-}
-
-struct fobaz : sb_actor<fobaz> {
-
-    behavior init_state;
-
-    void vfun() {
-        cout << "fobaz::mfun" << endl;
-    }
-
-    void ifun(int i) {
-        cout << "fobaz::ifun(" << i << ")" << endl;
-    }
-
-    fobaz() {
-        init_state = (
-            on<int>() >> [=](int i) { ifun(i); },
-            others() >> std::function<void()>{std::bind(&fobaz::vfun, this)}
-        );
-    }
-
-};
-
 int main() {
     CPPA_TEST(test__match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
+
+    auto ascending = [](int a, int b, int c) -> bool {
+        return a < b && b < c;
+    };
 
     auto expr0_a = gcall(ascending, _x1, _x2, _x3);
     CPPA_CHECK(ge_invoke(expr0_a, 1, 2, 3));
@@ -417,6 +339,53 @@ int main() {
     );
     CPPA_CHECK_EQUAL(3, pmatches);
     */
+
+    // let's get the awesomeness started
+
+    istringstream iss("hello world");
+    match_stream<string>(iss) (
+        on("hello", "world") >> [] {
+            cout << "yeeeeeehaaaaaaa!!!!!" << endl;
+        },
+        on_arg_match >> [](const string& s1, const string& s2, const std::string& s3) {
+            cout << "you said: " << s1 << " " << s2 << " " << s3 << endl;
+            cout << "mind sayin 'hello world'?" << endl;
+        }
+    );
+
+    auto extract_name = [](const string& kvp) -> option<string> {
+        auto vec = split(kvp, '=');
+        if (vec.size() == 2) {
+            if (vec.front() == "--name") {
+                return vec.back();
+            }
+        }
+        return {};
+    };
+
+    const char* svec[] = {"-n", "foo", "--name=bar", "-p", "2"};
+
+    bool success = match_stream<string>(begin(svec), end(svec)) (
+        (on("-n", arg_match) || on(extract_name)) >> [](const string& name) {
+            cout << "your name is " << name << endl;
+        },
+        on("-p", arg_match) >> [&](const string& port) -> bool {
+            auto i = toint(port);
+            if (i) {
+                cout << "port = " << *i << endl;
+                return true;
+            }
+            else {
+                cout << "'" << port << "' is not a valid port" << endl;
+                return false;
+            }
+        },
+        on_arg_match >> [](const string& arg) {
+            cout << "dunno whatya wanna say me: " << arg << endl;
+        }
+    );
+
+    cout << "success: " << success << endl;
 
     return CPPA_TEST_RESULT;
 }
