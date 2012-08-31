@@ -45,6 +45,17 @@ struct reflector : public event_based_actor {
     }
 };
 
+struct replier : public event_based_actor {
+    void init() {
+        become (
+            others() >> [=] {
+                reply(42);
+                quit();
+            }
+        );
+    }
+};
+
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(actor_ptr client, bool inverted) {
     auto default_case = others() >> [] {
@@ -191,6 +202,13 @@ int client_part(const vector<string_pair>& args) {
     spawn5_client();
     // wait for locally spawned reflectors
     await_all_others_done();
+
+    receive (
+        on(atom("fwd"), arg_match) >> [&](const actor_ptr& fwd, const string&) {
+            forward_to(fwd);
+        }
+    );
+
     send(server, atom("farewell"));
     shutdown();
     return CPPA_TEST_RESULT;
@@ -284,6 +302,31 @@ int main(int argc, char** argv) {
     spawn5_client();
     cout << "test group communication via network (inverted setup)" << endl;
     spawn5_server(remote_client, true);
+
+    // test forward_to "over network and back"
+    cout << "test forwarding over network 'and back'" << endl;
+    auto ra = spawn<replier>();
+    sync_send(remote_client, atom("fwd"), ra, "hello replier!").await(
+        on(42) >> [&] {
+            auto from = self->last_sender();
+            if (!from) {
+                CPPA_ERROR("from == nullptr");
+            }
+            else if (from != ra) {
+                CPPA_ERROR("response came from wrong actor");
+                if (from->is_proxy()) {
+                    CPPA_ERROR("received response from a remote actor");
+                }
+            }
+        },
+        others() >> [&] {
+            CPPA_ERROR("unexpected: " << to_string(self->last_dequeued()));
+        },
+        after(chrono::seconds(5)) >> [&] {
+            CPPA_ERROR("fowarding failed; no message received within 5s");
+        }
+    );
+
     cout << "wait for a last goodbye" << endl;
     receive (
         on(atom("farewell")) >> [] { }
