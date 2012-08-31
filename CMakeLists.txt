@@ -66,9 +66,10 @@ if (ENABLE_DEBUG)
 endif ()
 
 # set build default build type if not set
-if (not CMAKE_BUILD_TYPE)
+if (CMAKE_BUILD_TYPE)
+else (CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif ()
+endif (CMAKE_BUILD_TYPE)
 
 if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
