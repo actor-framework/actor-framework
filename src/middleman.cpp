@@ -737,7 +737,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     };
     auto insert_new_handlers = [&] {
         if (m_new_channels.empty() == false) {
-            DEBUG("insert new channel(s)");
+            DEBUG("insert " << m_new_channels.size() << " new channel(s)");
             move(m_new_channels.begin(), m_new_channels.end(),
                  back_inserter(m_channels));
             m_new_channels.clear();
@@ -745,7 +745,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     };
     auto erase_erroneous_channels = [&] {
         if (!m_erased_channels.empty()) {
-            DEBUG("erase channel(s)");
+            DEBUG("erase " << m_erased_channels.size() << " channel(s)");
             // erase all marked channels
             for (network_channel_ptr channel : m_erased_channels) {
                 erase_from(m_channels, channel);
@@ -762,7 +762,11 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
         //DEBUG("select()");
         int sresult;
         do {
+            DEBUG("select() on "
+                  << (m_peers_with_unwritten_data.size() + m_channels.size())
+                  << " sockets");
             sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
+            DEBUG("select() returned " << sresult);
             if (sresult < 0) {
                 // try again or die hard
                 sresult = 0;
