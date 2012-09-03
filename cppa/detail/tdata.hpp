@@ -110,7 +110,7 @@ struct unbox_ref {
 
 template<typename T>
 struct unbox_ref<std::reference_wrapper<T> > {
-    typedef T type;
+    typedef typename std::remove_const<T>::type type;
 };
 
 /*
