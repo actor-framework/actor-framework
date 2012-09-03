@@ -236,7 +236,7 @@ channel* scheduler::delayed_send_helper() {
     return m_helper->m_worker.get();
 }
 
-void scheduler::register_converted_context(local_actor* what) {
+void scheduler::register_converted_context(actor* what) {
     if (what) {
         detail::inc_actor_count();
         what->attach(new exit_observer);

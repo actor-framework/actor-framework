@@ -103,7 +103,7 @@ class scheduler {
      *        (a thread that acts as actor).
      * @note Calls <tt>what->attach(...)</tt>.
      */
-    virtual void register_converted_context(local_actor* what);
+    virtual void register_converted_context(actor* what);
 
     /**
      * @brief Informs the scheduler about a hidden (non-actor)
