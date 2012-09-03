@@ -197,7 +197,7 @@ class any_tuple {
     template<class StaticTypeArray>
     bool types_match(StaticTypeArray& arr) {
         if (size() == StaticTypeArray::size) {
-            for (size_t i = 0; i < StaticTypeArray; ++i) {
+            for (size_t i = 0; i < StaticTypeArray::size; ++i) {
                 if (type_at(i) != arr[i]) {
                     return false;
                 }
