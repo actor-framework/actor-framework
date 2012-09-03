@@ -643,7 +643,7 @@ class match_expr {
         return _invoke(tmp);
     }
 
-    bool can_invoke(any_tuple const tup) {
+    bool can_invoke(const any_tuple& tup) {
         auto& type_token = *(tup.type_token());
         eval_order token;
         std::uint64_t tmp = 0;
@@ -673,7 +673,6 @@ class match_expr {
                 tuple_type;
         // applies implicit conversions etc
         tuple_type tup{std::forward<Args>(args)...};
-
         auto& type_token = typeid(typename tuple_type::types);
         auto enabled_begin = get_cache_entry(&type_token, tup);
 
@@ -729,8 +728,6 @@ class match_expr {
             return pfun.can_invoke(tup);
         }
     };
-
-
 
     inline partial_function as_partial_function() const {
         return {partial_function::impl_ptr{new pfun_impl(*this)}};
