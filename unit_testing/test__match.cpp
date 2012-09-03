@@ -236,7 +236,8 @@ int main() {
     invoked = false;
 
     string sum;
-    match_each({"-h", "--version", "-wtf"}) (
+    vector<string> sum_args = { "-h", "--version", "-wtf" };
+    match_each(begin(sum_args), end(sum_args)) (
         on<string>().when(_x1.in({"-h", "--help"})) >> [&](string s) {
             sum += s;
         },
@@ -247,6 +248,9 @@ int main() {
             match_each(str.begin() + 1, str.end()) (
                 on<char>().when(_x1.in({'w', 't', 'f'})) >> [&](char c) {
                     sum += c;
+                },
+                on<char>() >> [&](char c) {
+                    CPPA_ERROR("whaaaaat? guard didn't match: " << c);
                 },
                 others() >> [&]() {
                     CPPA_ERROR("unexpected match");
@@ -279,7 +283,7 @@ int main() {
     CPPA_CHECK_EQUAL("C", vec.back());
     invoked = false;
 
-    match_each(vec) (
+    match_each(begin(vec), end(vec)) (
         on("a") >> [&](string& str) {
             invoked = true;
             str = "A";

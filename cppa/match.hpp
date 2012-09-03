@@ -66,70 +66,86 @@ struct match_helper {
     }
 };
 
-template<typename Iterator>
-struct match_each_helper {
+struct identity_fun {
+    template<typename T>
+    inline auto operator()(T&& arg) -> decltype(std::forward<T>(arg)) {
+        return std::forward<T>(arg);
+    }
+};
+
+template<typename Iterator, typename Projection = identity_fun>
+class match_each_helper {
+
+ public:
+
+    match_each_helper(match_each_helper&&) = default;
     match_each_helper(const match_each_helper&) = delete;
     match_each_helper& operator=(const match_each_helper&) = delete;
-    Iterator i;
-    Iterator e;
     match_each_helper(Iterator first, Iterator last) : i(first), e(last) { }
-    match_each_helper(match_each_helper&&) = default;
-    void operator()(partial_function&& arg) {
-        partial_function tmp{std::move(arg)};
+    match_each_helper(Iterator first, Iterator last, Projection proj)
+    : i(first), e(last), p(proj) { }
+
+    template<typename... Cases>
+    void operator()(match_expr<Cases...> expr) {
         for (; i != e; ++i) {
-            tmp(any_tuple::view(*i));
+            expr(p(*i));
         }
     }
-    template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
-        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
+
+    template<class Arg0, class Arg1, class... Args>
+    void operator()(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+        (*this)(match_expr_collect(std::forward<Arg0>(arg0),
+                                   std::forward<Arg1>(arg1),
                                    std::forward<Args>(args)...));
     }
-};
 
-template<class Container>
-struct copying_match_each_helper {
-    copying_match_each_helper(const copying_match_each_helper&) = delete;
-    copying_match_each_helper& operator=(const copying_match_each_helper&) = delete;
-    Container vec;
-    copying_match_each_helper(Container tmp) : vec(std::move(tmp)) { }
-    copying_match_each_helper(copying_match_each_helper&&) = default;
-    void operator()(partial_function&& arg) {
-        partial_function tmp{std::move(arg)};
-        for (auto& i : vec) {
-            tmp(any_tuple::view(i));
-        }
-    }
-    template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
-        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
-                                   std::forward<Args>(args)...));
-    }
-};
+ private:
 
-template<typename Iterator, typename Projection>
-struct pmatch_each_helper {
-    pmatch_each_helper(const pmatch_each_helper&) = delete;
-    pmatch_each_helper& operator=(const pmatch_each_helper&) = delete;
     Iterator i;
     Iterator e;
     Projection p;
-    pmatch_each_helper(pmatch_each_helper&&) = default;
-    template<typename PJ>
-    pmatch_each_helper(Iterator first, Iterator last, PJ&& proj)
-        : i(first), e(last), p(std::forward<PJ>(proj)) {
-    }
-    void operator()(partial_function&& arg) {
-        partial_function tmp{std::move(arg)};
-        for (; i != e; ++i) {
-            tmp(any_tuple::view(p(*i)));
+
+};
+
+struct advance_once {
+    template<typename T>
+    inline void operator()(T& what) { ++what; }
+};
+
+template<class Iterator, class Predicate,
+         class Advance = advance_once,
+         class Projection = identity_fun>
+class match_for_helper {
+
+ public:
+
+    match_for_helper(match_for_helper&&) = default;
+    match_for_helper(const match_for_helper&) = delete;
+    match_for_helper& operator=(const match_for_helper&) = delete;
+    match_for_helper(Iterator first, Predicate p, Advance a = Advance(), Projection pj = Projection())
+    : i(first), adv(a), pred(p), proj(pj) { }
+
+    template<typename... Cases>
+    void operator()(match_expr<Cases...> expr) {
+        for (; pred(i); adv(i)) {
+            expr(proj(*i));
         }
     }
-    template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
-        (*this)(match_expr_convert(std::forward<Arg0>(arg0),
+
+    template<class Arg0, class Arg1, class... Args>
+    void operator()(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+        (*this)(match_expr_collect(std::forward<Arg0>(arg0),
+                                   std::forward<Arg1>(arg1),
                                    std::forward<Args>(args)...));
     }
+
+ private:
+
+    Iterator i;
+    Advance adv;
+    Predicate pred;
+    Projection proj;
+
 };
 
 // Case is a projection_partial_function_pair
@@ -313,31 +329,6 @@ detail::match_helper match(T&& what) {
 }
 
 /**
- * @brief Starts a match expression that matches each element of @p what.
- * @param what An STL-compliant container.
- * @returns A helper object providing <tt>operator(...)</tt>.
- */
-template<class Container>
-auto match_each(Container& what)
-     -> detail::match_each_helper<decltype(std::begin(what))> {
-    return {std::begin(what), std::end(what)};
-}
-
-/**
- * @brief Starts a match expression that matches each element of @p what.
- * @param what An STL-compliant container.
- * @returns A helper object providing <tt>operator(...)</tt>.
- */
-template<typename T>
-auto match_each(std::initializer_list<T> what)
-    -> detail::copying_match_each_helper<std::vector<typename detail::strip_and_convert<T>::type>> {
-    std::vector<typename detail::strip_and_convert<T>::type> vec;
-    vec.reserve(what.size());
-    for (auto& i : what) vec.emplace_back(std::move(i));
-    return vec;
-}
-
-/**
  * @brief Starts a match expression that matches each element in
  *        range [first, last).
  * @param first Iterator to the first element.
@@ -360,8 +351,26 @@ auto match_each(InputIterator first, InputIterator last)
  */
 template<typename InputIterator, typename Projection>
 auto match_each(InputIterator first, InputIterator last, Projection proj)
-     -> detail::pmatch_each_helper<InputIterator, Projection> {
+     -> detail::match_each_helper<InputIterator, Projection> {
     return {first, last, std::move(proj)};
+}
+
+template<typename InputIterator, typename Predicate>
+auto match_for(InputIterator first, Predicate pred)
+     -> detail::match_for_helper<InputIterator, Predicate> {
+    return {first, std::move(pred)};
+}
+
+template<typename InputIterator, typename Predicate, typename Advance>
+auto match_for(InputIterator first, Predicate pred, Advance adv)
+     -> detail::match_for_helper<InputIterator, Predicate, Advance> {
+    return {first, std::move(pred), std::move(adv)};
+}
+
+template<class InputIterator, class Predicate, class Advance, class Projection>
+auto match_for(InputIterator first, Predicate pred, Advance adv, Projection pj)
+     -> detail::match_for_helper<InputIterator, Predicate, Advance, Projection>{
+    return {first, std::move(pred), std::move(adv), std::move(pj)};
 }
 
 template<typename T>
