@@ -24,6 +24,7 @@ macro(add_unit_test name)
     add_executable(test__${name} test__${name}.cpp ${ARGN})
     target_link_libraries(test__${name} ${EXAMPLE_LIBS} ${CMAKE_THREAD_LIBS_INIT})
     add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/test__${name})
+    add_dependencies(${name} libcppa)
 endmacro()
 
 add_unit_test(ripemd_160)
