@@ -194,6 +194,19 @@ class any_tuple {
 
     explicit any_tuple(detail::abstract_tuple*);
 
+    template<class StaticTypeArray>
+    bool types_match(StaticTypeArray& arr) {
+        if (size() == StaticTypeArray::size) {
+            for (size_t i = 0; i < StaticTypeArray; ++i) {
+                if (type_at(i) != arr[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
  private:
 
     value_ptr m_vals;
