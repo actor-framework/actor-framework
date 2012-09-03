@@ -10,23 +10,26 @@ using namespace std;
 using namespace cppa;
 using namespace cppa::placeholders;
 
-static const char* s_usage =
-"Usage: distributed_math_actor_example [OPTIONS]                            \n"
-"                                                                           \n"
-" General options:                                                          \n"
-"  -h | --help              Print this text and quit                        \n"
-"  -v | --version           Print the program version and quit              \n"
-"  -s | --server            Run in server mode                              \n"
-"  -c | --client            Run in client mode                              \n"
-"  -p <arg> | --port=<arg>  Publish actor at port <arg> (server)            \n"
-"                           Connect to remote actor at port <arg> (client)  \n"
-" Client options:                                                           \n"
-"  -t <arg> | --host=<arg>  Connect to host <arg>, default: localhost       \n";
+static const char* s_usage = R"___(
+Usage: distributed_math_actor_example [OPTIONS]
 
-static const char* s_interactive_usage =
-"quit           Quit the program                                            \n"
-"<x> + <y>      Calculate <x>+<y> and print result                          \n"
-"<x> - <y>      Calculate <x>-<y> and print result                          \n";
+ General options:
+  -h | --help              Print this text and quit
+  -v | --version           Print the program version and quit
+  -s | --server            Run in server mode
+  -c | --client            Run in client mode
+  -p <arg> | --port=<arg>  Publish actor at port <arg> (server)
+                           Connect to remote actor at port <arg> (client)
+ Client options:
+  -t <arg> | --host=<arg>  Connect to host <arg>, default: localhost
+)___";
+
+static const char* s_interactive_usage = R"___(
+quit           Quit the program
+<x> + <y>      Calculate <x>+<y> and print result
+<x> - <y>      Calculate <x>-<y> and print result
+)___";
+
 
 static const char* s_version =
 "libcppa distributed math actor example version 1.0";
