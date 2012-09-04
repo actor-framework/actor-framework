@@ -110,6 +110,7 @@ set(LIBCPPA_SRC
     src/network_manager.cpp
     src/object.cpp
     src/object_array.cpp
+    src/opt.cpp
     src/partial_function.cpp
     src/pattern.cpp
     src/primitive_variant.cpp
