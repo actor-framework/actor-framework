@@ -269,3 +269,5 @@ src/fd_util.cpp
 benchmarks/scala/Utility.scala
 examples/group_server.cpp
 examples/group_chat.cpp
+cppa/opt.hpp
+src/opt.cpp
