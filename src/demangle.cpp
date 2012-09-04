@@ -90,4 +90,8 @@ std::string demangle(const char* decorated) {
     return result;
 }
 
+std::string demangle(const std::type_info& tinf) {
+    return demangle(tinf.name());
+}
+
 } } // namespace cppa::detail

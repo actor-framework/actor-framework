@@ -32,10 +32,12 @@
 #define CPPA_DEMANGLE_HPP
 
 #include <string>
+#include <typeinfo>
 
 namespace cppa { namespace detail {
 
 std::string demangle(const char* typeid_name);
+std::string demangle(const std::type_info& tinf);
 
 } } // namespace cppa::detail
 
