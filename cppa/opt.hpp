@@ -33,6 +33,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 #include <iostream>
 #include <functional>
 
@@ -50,6 +51,11 @@ typename detail::conv_arg_impl<T>::result_type conv_arg(const std::string& arg) 
 
 template<typename T>
 detail::rd_arg_functor<T> rd_arg(T& storage) {
+    return {storage};
+}
+
+template<typename T>
+detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
     return {storage};
 }
 

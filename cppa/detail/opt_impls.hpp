@@ -112,10 +112,46 @@ class rd_arg_functor {
 };
 
 template<typename T>
+class add_arg_functor {
+
+    template<bool> friend class opt_rvalue_builder;
+
+ public:
+
+    typedef std::vector<T> value_type;
+    typedef rd_arg_storage<value_type> storage_type;
+
+    add_arg_functor(const add_arg_functor&) = default;
+
+    add_arg_functor(value_type& storage) : m_storage(new storage_type(storage)) { }
+
+    bool operator()(const std::string& arg) const {
+        auto opt = conv_arg_impl<T>::_(arg);
+        if (opt) {
+            m_storage->storage.push_back(*opt);
+            return true;
+        }
+        std::cerr << "*** error: cannot convert \"" << arg << "\" to "
+                  << detail::demangle(typeid(T))
+                  << " [option: \"" << m_storage->arg_name << "\"]"
+                  << std::endl;
+        return false;
+    }
+
+ private:
+
+    intrusive_ptr<storage_type> m_storage;
+
+};
+
+template<typename T>
 struct is_rd_arg : std::false_type { };
 
 template<typename T>
 struct is_rd_arg<rd_arg_functor<T> > : std::true_type { };
+
+template<typename T>
+struct is_rd_arg<add_arg_functor<T> > : std::true_type { };
 
 template<bool HasShortOpt = true>
 class opt_rvalue_builder {
