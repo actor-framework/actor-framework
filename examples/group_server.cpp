@@ -44,11 +44,11 @@ int main(int argc, char** argv) {
             return true;
         }
     );
-    if (!args_valid) return 1;
     if (port <= 1024) {
         cout << "no port > 1024 given" << endl;
         return 2;
     }
+    if (!args_valid) return 1;
     publish_local_groups_at(port);
     cout << "type 'quit' to shutdown the server" << endl;
     string line;
