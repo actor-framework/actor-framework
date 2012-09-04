@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include "cppa/cppa.hpp"
 #include "cppa/group.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/util/shared_spinlock.hpp"
@@ -91,6 +92,30 @@ group::module_ptr group::get_module() const {
 
 const std::string& group::module_name() const {
     return get_module()->name();
+}
+
+struct group_nameserver : event_based_actor {
+    void init() {
+        become (
+            on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
+                reply(atom("GROUP"), group::get("local", name));
+            },
+            on(atom("SHUTDOWN")) >> [=] {
+                quit();
+            }
+        );
+    }
+};
+
+void publish_local_groups_at(std::uint16_t port) {
+    auto gn = spawn_hidden<group_nameserver>();
+    try {
+        publish(gn, port);
+    }
+    catch (std::exception&) {
+        gn->enqueue(nullptr, make_any_tuple(atom("SHUTDOWN")));
+        throw;
+    }
 }
 
 } // namespace cppa
