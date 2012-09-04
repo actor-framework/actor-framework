@@ -227,13 +227,13 @@ void replace_all(string& str, const char (&before)[RawSize], const char* after) 
     // end(before) - 1 points to the null-terminator
     auto i = search(begin(str), end(str), begin(before), end(before) - 1);
     while (i != end(str)) {
-        str.replace(i, i + RawSize, after);
+        str.replace(i, i + RawSize - 1, after);
         i = search(begin(str), end(str), begin(before), end(before) - 1);
     }
 }
 
 const char s_rawstr[] =
-"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>";
+"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>";
 const char s_str[] = "@str";
 
 const char s_rawan[] = "(anonymous namespace)";
