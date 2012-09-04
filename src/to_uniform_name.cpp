@@ -224,11 +224,10 @@ string to_uniform_name_impl(Iterator begin, Iterator end,
 
 template<size_t RawSize>
 void replace_all(string& str, const char (&before)[RawSize], const char* after) {
-    // always skip the last element in `before`, because the last element
-    // is the null-terminator
+    // end(before) - 1 points to the null-terminator
     auto i = search(begin(str), end(str), begin(before), end(before) - 1);
     while (i != end(str)) {
-        str.replace(i, i + RawSize - 1, after);
+        str.replace(i, i + RawSize, after);
         i = search(begin(str), end(str), begin(before), end(before) - 1);
     }
 }
