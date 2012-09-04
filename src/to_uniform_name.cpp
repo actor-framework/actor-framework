@@ -51,6 +51,10 @@
 
 namespace {
 
+using namespace std;
+using namespace cppa;
+using namespace detail;
+
 constexpr const char* mapped_int_names[][2] = {
     { nullptr, nullptr }, // sizeof 0-> invalid
     { "@i8",   "@u8"   }, // sizeof 1 -> signed / unsigned int8
@@ -65,13 +69,13 @@ constexpr const char* mapped_int_names[][2] = {
 
 template<typename T>
 constexpr size_t sign_index() {
-    static_assert(std::numeric_limits<T>::is_integer, "T is not an integer");
-    return std::numeric_limits<T>::is_signed ? 0 : 1;
+    static_assert(numeric_limits<T>::is_integer, "T is not an integer");
+    return numeric_limits<T>::is_signed ? 0 : 1;
 }
 
 template<typename T>
-inline std::string demangled() {
-    return cppa::detail::demangle(typeid(T).name());
+inline string demangled() {
+    return demangle(typeid(T));
 }
 
 template<typename T>
@@ -80,10 +84,10 @@ constexpr const char* mapped_int_name() {
 }
 
 template<typename Iterator>
-std::string to_uniform_name_impl(Iterator begin, Iterator end,
+string to_uniform_name_impl(Iterator begin, Iterator end,
                                  bool first_run = false) {
     // all integer type names as uniform representation
-    static std::map<std::string, std::string> mapped_demangled_names = {
+    static map<string, string> mapped_demangled_names = {
       // integer types
       { demangled<char>(), mapped_int_name<char>() },
       { demangled<signed char>(), mapped_int_name<signed char>() },
@@ -109,23 +113,23 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
       { demangled<char16_t>(), mapped_int_name<char16_t>() },
       { demangled<char32_t>(), mapped_int_name<char32_t>() },
       // string types
-      { demangled<std::string>(), "@str" },
-      { demangled<std::u16string>(), "@u16str" },
-      { demangled<std::u32string>(), "@u32str" },
+      { demangled<string>(), "@str" },
+      { demangled<u16string>(), "@u16str" },
+      { demangled<u32string>(), "@u32str" },
       // cppa types
-      { demangled<cppa::atom_value>(), "@atom" },
-      { demangled<cppa::util::void_type>(), "@0" },
-      { demangled<cppa::any_tuple>(), "@<>" },
-      { demangled<cppa::actor_ptr>(), "@actor" },
-      { demangled<cppa::group_ptr>(), "@group" },
-      { demangled<cppa::channel_ptr>(), "@channel" },
-      { demangled<cppa::detail::addressed_message>(), "@msg" },
-      { demangled< cppa::intrusive_ptr<cppa::process_information> >(), "@process_info" }
+      { demangled<atom_value>(), "@atom" },
+      { demangled<util::void_type>(), "@0" },
+      { demangled<any_tuple>(), "@<>" },
+      { demangled<actor_ptr>(), "@actor" },
+      { demangled<group_ptr>(), "@group" },
+      { demangled<channel_ptr>(), "@channel" },
+      { demangled<addressed_message>(), "@msg" },
+      { demangled< intrusive_ptr<process_information> >(), "@process_info" }
     };
 
     // check if we could find the whole string in our lookup map
     if (first_run) {
-        std::string tmp(begin, end);
+        string tmp(begin, end);
         auto i = mapped_demangled_names.find(tmp);
         if (i != mapped_demangled_names.end()) {
             return i->second;
@@ -135,10 +139,10 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     // does [begin, end) represents an empty string?
     if (begin == end) return "";
     // derived reverse_iterator type
-    typedef std::reverse_iterator<Iterator> reverse_iterator;
+    typedef reverse_iterator<Iterator> reverse_iterator;
     // a subsequence [begin', end') within [begin, end)
-    typedef std::pair<Iterator, Iterator> subseq;
-    std::vector<subseq> substrings;
+    typedef pair<Iterator, Iterator> subseq;
+    vector<subseq> substrings;
     // explode string if we got a list of types
     int open_brackets = 0; // counts "open" '<'
     // denotes the begin of a possible subsequence
@@ -153,14 +157,14 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
 
          case '>':
             if (--open_brackets < 0) {
-                throw std::runtime_error("malformed string");
+                throw runtime_error("malformed string");
             }
             ++i;
             break;
 
          case ',':
             if (open_brackets == 0) {
-                substrings.push_back(std::make_pair(anchor, i));
+                substrings.push_back(make_pair(anchor, i));
                 ++i;
                 anchor = i;
             }
@@ -177,8 +181,8 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     }
     // call recursively for each list argument
     if (!substrings.empty()) {
-        std::string result;
-        substrings.push_back(std::make_pair(anchor, end));
+        string result;
+        substrings.push_back(make_pair(anchor, end));
         for (const subseq& sstr : substrings) {
             if (!result.empty()) result += ",";
             result += to_uniform_name_impl(sstr.first, sstr.second);
@@ -188,17 +192,17 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     // we didn't got a list, compute unify name
     else {
         // is [begin, end) a template?
-        Iterator substr_begin = std::find(begin, end, '<');
+        Iterator substr_begin = find(begin, end, '<');
         if (substr_begin == end) {
             // not a template, return mapping
-            std::string arg(begin, end);
+            string arg(begin, end);
             auto mapped = mapped_demangled_names.find(arg);
             return (mapped == mapped_demangled_names.end()) ? arg : mapped->second;
         }
         // skip leading '<'
         ++substr_begin;
         // find trailing '>'
-        Iterator substr_end = std::find(reverse_iterator(end),
+        Iterator substr_end = find(reverse_iterator(end),
                                         reverse_iterator(substr_begin),
                                         '>')
                               // get as an Iterator
@@ -206,9 +210,9 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
         // skip trailing '>'
         --substr_end;
         if (substr_end == substr_begin) {
-            throw std::runtime_error("substr_end == substr_begin");
+            throw runtime_error("substr_end == substr_begin");
         }
-        std::string result;
+        string result;
         // template name (part before leading '<')
         result.append(begin, substr_begin);
         // get mappings of all template parameter(s)
@@ -218,24 +222,32 @@ std::string to_uniform_name_impl(Iterator begin, Iterator end,
     }
 }
 
+template<size_t RawSize>
+void replace_all(string& str, const char (&before)[RawSize], const char* after) {
+    // always skip the last element in `before`, because the last element
+    // is the null-terminator
+    auto i = search(begin(str), end(str), begin(before), end(before) - 1);
+    while (i != end(str)) {
+        str.replace(i, i + RawSize - 1, after);
+        i = search(begin(str), end(str), begin(before), end(before) - 1);
+    }
+}
+
+const char s_rawstr[] =
+"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>";
+const char s_str[] = "@str";
+
+const char s_rawan[] = "(anonymous namespace)";
+const char s_an[] = "@_";
+
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
 
 std::string to_uniform_name(const std::string& dname) {
-    static std::string an = "(anonymous namespace)";
-    static std::string an_replacement = "@_";
     auto r = to_uniform_name_impl(dname.begin(), dname.end(), true);
-    // replace all occurrences of an with "@_"
-    if (r.size() > an.size()) {
-        auto i = std::search(r.begin(), r.end(), an.begin(), an.end());
-        while (i != r.end()) {
-            auto substr_end = i + an.size();
-            r.replace(i, substr_end, an_replacement);
-            // next iteration
-            i = std::search(r.begin(), r.end(), an.begin(), an.end());
-        }
-    }
+    replace_all(r, s_rawstr, s_str);
+    replace_all(r, s_rawan, s_an);
     return r;
 }
 
@@ -243,4 +255,4 @@ std::string to_uniform_name(const std::type_info& tinfo) {
     return to_uniform_name(demangle(tinfo.name()));
 }
 
-} } // namespace cppa::detail
+} } // namespace detail
