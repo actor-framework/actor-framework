@@ -350,7 +350,7 @@ class remote_group : public group {
 
  public:
 
-    remote_group(group::module_ptr parent, string id, group_ptr decorated)
+    remote_group(group::module_ptr parent, string id, local_group_ptr decorated)
     : super(parent, move(id)), m_decorated(decorated) { }
 
     group::subscription subscribe(const channel_ptr& who) {
@@ -365,11 +365,20 @@ class remote_group : public group {
 
     void serialize(serializer* sink);
 
+    void group_down() {
+        group_ptr _this(this);
+        m_decorated->send_all_subscribers(nullptr,
+                                          make_any_tuple(atom("GROUP_DOWN"),
+                                                         _this));
+    }
+
  private:
 
-    group_ptr m_decorated;
+    local_group_ptr m_decorated;
 
 };
+
+typedef intrusive_ptr<remote_group> remote_group_ptr;
 
 class shared_map : public ref_counted {
 
@@ -377,8 +386,8 @@ class shared_map : public ref_counted {
 
  public:
 
-    group_ptr get(const string& key) {
-        group_ptr result;
+    remote_group_ptr get(const string& key) {
+        remote_group_ptr result;
         { // lifetime scope of guard
             lock_type guard(m_mtx);
             auto i = m_instances.find(key);
@@ -397,7 +406,16 @@ class shared_map : public ref_counted {
         return result;
     }
 
-    void put(const string& key, const group_ptr& ptr) {
+    group_ptr peek(const string& key) {
+        lock_type guard(m_mtx);
+        auto i = m_instances.find(key);
+        if (i != m_instances.end()) {
+            return i->second;
+        }
+        return nullptr;
+    }
+
+    void put(const string& key, const remote_group_ptr& ptr) {
         lock_type guard(m_mtx);
         m_instances[key] = ptr;
         m_cond.notify_all();
@@ -409,7 +427,7 @@ class shared_map : public ref_counted {
 
     mutex m_mtx;
     condition_variable m_cond;
-    map<string, group_ptr> m_instances;
+    map<string, remote_group_ptr> m_instances;
 
 };
 
@@ -426,21 +444,23 @@ class remote_group_module : public group::module {
         group::module_ptr _this = this;
         m_map = sm;
         auto worker = spawn<detached_and_hidden>([_this, sm] {
-            map<string, actor_ptr> peers;
+            typedef map<string, pair<actor_ptr, vector<pair<string, remote_group_ptr>>>>
+                    peer_map;
+            peer_map peers;
             receive_loop (
                 on(atom("FETCH"), arg_match) >> [_this, sm, &peers](const string& key) {
                     // format is group@host:port
                     auto pos1 = key.find('@');
                     auto pos2 = key.find(':');
                     auto last = string::npos;
+                    string authority;
                     if (pos1 != last && pos2 != last && pos1 < pos2) {
                         auto name = key.substr(0, pos1);
-                        auto authority = key.substr(pos1 + 1);
+                        authority = key.substr(pos1 + 1);
                         auto i = peers.find(authority);
                         actor_ptr nameserver;
                         if (i != peers.end()) {
-                            nameserver = i->second;
-
+                            nameserver = i->second.first;
                         }
                         else {
                             auto host = key.substr(pos1 + 1, pos2 - pos1 - 1);
@@ -449,28 +469,54 @@ class remote_group_module : public group::module {
                             uint16_t port;
                             if (iss >> port) {
                                 try {
-                                    nameserver  = remote_actor(host, port);
+                                    nameserver = remote_actor(host, port);
+                                    self->monitor(nameserver);
+                                    peers[authority].first = nameserver;
                                 }
-                                catch (exception& e) {
+                                catch (exception&) {
                                     sm->put(key, nullptr);
-#                                   ifdef CPPA_DEBUG
-                                    cerr << "exception: " << e.what() << endl;
-#                                   else
-                                    // keep compiler happy
-                                    static_cast<void>(e);
-#                                   endif
                                     return;
                                 }
                             }
                         }
                         sync_send(nameserver, atom("GET_GROUP"), name).await (
-                            on(atom("GROUP"), arg_match) >> [_this, sm, &key](const group_ptr& g) {
-                                sm->put(key, new remote_group(_this, key, g));
+                            on(atom("GROUP"), arg_match) >> [&](const group_ptr& g) {
+                                auto gg = dynamic_cast<local_group*>(g.get());
+                                if (gg) {
+                                    remote_group_ptr rg;
+                                    rg.reset(new remote_group(_this, key, gg));
+                                    sm->put(key, rg);
+                                    peers[authority].second.push_back(make_pair(key, rg));
+                                }
+                                else {
+                                    cerr << "*** WARNING: received a non-local "
+                                            "group form nameserver for key "
+                                         << key << " in file "
+                                         << __FILE__
+                                         << ", line " << __LINE__
+                                         << endl;
+                                    sm->put(key, nullptr);
+                                }
                             },
                             after(chrono::seconds(10)) >> [sm, &key] {
                                 sm->put(key, nullptr);
                             }
                         );
+                    }
+                },
+                on<atom("DOWN"), std::uint32_t>() >> [&] {
+                    auto who = self->last_sender();
+                    auto find_peer = [&] {
+                        return find_if(begin(peers), end(peers), [&](const peer_map::value_type& kvp) {
+                            return kvp.second.first == who;
+                        });
+                    };
+                    for (auto i = find_peer(); i != peers.end(); i = find_peer()) {
+                        for (auto& kvp: i->second.second) {
+                            sm->put(kvp.first, nullptr);
+                            kvp.second->group_down();
+                        }
+                        peers.erase(i);
                     }
                 },
                 others() >> [] { }
