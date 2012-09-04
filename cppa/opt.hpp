@@ -31,17 +31,51 @@
 #ifndef CPPA_OPT_HPP
 #define CPPA_OPT_HPP
 
+#include <map>
+#include <string>
+#include <iostream>
+#include <functional>
+
 #include "cppa/on.hpp"
 #include "cppa/option.hpp"
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/opt_impls.hpp"
 
 namespace cppa {
 
-namespace detail {
+template<typename T>
+typename detail::conv_arg_impl<T>::result_type conv_arg(const std::string& arg) {
+    return detail::conv_arg_impl<T>::_(arg);
+}
 
+template<typename T>
+detail::rd_arg_functor<T> rd_arg(T& storage) {
+    return {storage};
+}
 
+typedef std::map<std::string, std::map<std::pair<char, std::string>, std::string> >
+        options_description;
 
-} // namespace detail
+detail::opt_rvalue_builder<true> on_opt(char short_opt,
+                                        std::string long_opt,
+                                        options_description* desc = nullptr,
+                                        std::string help_text = "",
+                                        std::string help_group = "general options");
+
+decltype(on<std::string>()
+        .when(cppa::placeholders::_x1.in(std::vector<std::string>())))
+on_vopt(char short_opt,
+        std::string long_opt,
+        options_description* desc = nullptr,
+        std::string help_text = "",
+        std::string help_group = "general options");
+
+std::function<void()> print_desc(options_description* desc,
+                                 std::ostream& out = std::cout);
+
+std::function<void()> print_desc_and_exit(options_description* desc,
+                                          std::ostream& out = std::cout,
+                                          int exit_reason = 0);
 
 } // namespace cppa
 

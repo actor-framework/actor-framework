@@ -28,5 +28,89 @@
 \******************************************************************************/
 
 
+#include <iomanip>
+#include <algorithm>
 #include "cppa/opt.hpp"
 
+using namespace std;
+using cppa::placeholders::_x1;
+
+namespace cppa {
+
+detail::opt_rvalue_builder<true> on_opt(char short_opt,
+                                        string long_opt,
+                                        options_description* desc,
+                                        string help_text,
+                                        string help_group) {
+    if (desc) {
+        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), help_text));
+    }
+    const char short_flag_arr[] = {'-', short_opt, '\0' };
+    const char* lhs_str = short_flag_arr;
+    string prefix = "--";
+    prefix += long_opt;
+    prefix += "=";
+    function<option<string> (const string&)> kvp = [prefix](const string& input) -> option<string> {
+        if (equal(begin(prefix), end(prefix), begin(input))) {
+            return input.substr(prefix.size());
+        }
+        else if (equal(begin(prefix) + 1, end(prefix), begin(input))) {
+            return input.substr(prefix.size() - 1);
+        }
+        return {};
+    };
+    vector<string> opts;
+    opts.push_back(lhs_str);
+    opts.push_back("--" + long_opt);
+    opts.push_back("-" + long_opt);
+    return {short_opt, long_opt, on<string, string>().when(_x1.in(opts)), on(kvp)};
+}
+
+decltype(on<string>().when(_x1.in(vector<string>())))
+on_vopt(char short_opt,
+        string long_opt,
+        options_description* desc,
+        string help_text,
+        string help_group) {
+    if (desc) {
+        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), help_text));
+    }
+    const char short_flag_arr[] = {'-', short_opt, '\0' };
+    vector<string> opt_strs = { short_flag_arr };
+    opt_strs.push_back("-" + long_opt);
+    opt_strs.push_back("--" + move(long_opt));
+    return on<string>().when(_x1.in(move(opt_strs)));
+}
+
+function<void()> print_desc(options_description* desc, ostream& out) {
+    return [&out, desc] {
+        if (!desc) return;
+        for (auto& opt_group : *desc) {
+            out << opt_group.first << ":\n";
+            for (auto& opt : opt_group.second) {
+                out << "  ";
+                out << std::setw(40) << left;
+                ostringstream tmp;
+                auto& names = opt.first;
+                if (names.first != '\0') {
+                    tmp << "-" << names.first << " <arg> | ";
+                }
+                tmp << "--" << names.second << " <arg>";
+                out << tmp.str() << opt.second << "\n";
+            }
+            out << "\n";
+        }
+    };
+}
+
+function<void()> print_desc_and_exit(options_description* desc,
+                                          ostream& out,
+                                          int exit_reason) {
+    auto fun = print_desc(desc, out);
+    return [=] {
+        fun();
+        exit(exit_reason);
+    };
+}
+
+} // namespace cppa

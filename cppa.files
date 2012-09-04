@@ -271,3 +271,4 @@ examples/group_server.cpp
 examples/group_chat.cpp
 cppa/opt.hpp
 src/opt.cpp
+cppa/detail/opt_impls.hpp
