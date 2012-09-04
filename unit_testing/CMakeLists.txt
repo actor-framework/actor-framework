@@ -1,30 +1,13 @@
 cmake_minimum_required(VERSION 2.6)
 project(cppa_unit_tests CXX)
 
-
-# set up environment paths to cmake modules and libcppa
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-
-# search for libs
-if(NOT cppa_LIBRARY)
-    find_package(Libcppa REQUIRED)
-endif (NOT cppa_LIBRARY)
-
-#find_package(Boost COMPONENTS thread REQUIRED)
-find_package(Boost REQUIRED)
-
-find_package(PTHREAD REQUIRED)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS} ${PTHREAD_INCLUDE_DIR})
-
-set(EXAMPLE_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
+add_custom_target(all_unit_tests)
 
 macro(add_unit_test name)
-    add_executable(test__${name} test__${name}.cpp ${ARGN})
-    target_link_libraries(test__${name} ${EXAMPLE_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-    add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/test__${name})
-    add_dependencies(test__${name} libcppa)
+  add_executable(test__${name} test__${name}.cpp ${ARGN})
+  target_link_libraries(test__${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
+  add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/test__${name})
+  add_dependencies(test__${name} all_unit_tests)
 endmacro()
 
 add_unit_test(ripemd_160)

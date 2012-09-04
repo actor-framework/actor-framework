@@ -1,30 +1,17 @@
 cmake_minimum_required(VERSION 2.6)
 project(cppa_benchmarks CXX)
 
-# Set up environment paths to cmake modules and libcppa
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_target(all_benchmarks)
+include_directories(.)
 
-add_executable(actor_creation cppa/actor_creation.cpp)
-add_executable(mailbox_performance cppa/mailbox_performance.cpp)
-add_executable(mixed_case cppa/mixed_case.cpp)
-add_executable(distributed cppa/distributed.cpp)
-add_executable(matching cppa/matching.cpp)
+macro(add_benchmark name)
+  add_executable(${name} cppa/${name}.cpp)
+  target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
+  add_dependencies(${name} all_benchmarks)
+endmacro()
 
-# search for libs
-if(NOT cppa_LIBRARY)
-    find_package(Libcppa REQUIRED)
-endif (NOT cppa_LIBRARY)
-
-find_package(Boost REQUIRED)
-find_package(PTHREAD REQUIRED)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${cppa_INCLUDE} ${Boost_INCLUDE_DIRS} ${PTHREAD_INCLUDE_DIR})
-
-set(benchmark_LIBS ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${Boost_THREAD_LIBRARY} ${PTHREAD_LIBRARIES})
-
-target_link_libraries(actor_creation ${benchmark_LIBS})
-target_link_libraries(mailbox_performance ${benchmark_LIBS})
-target_link_libraries(mixed_case ${benchmark_LIBS})
-target_link_libraries(distributed ${benchmark_LIBS})
-target_link_libraries(matching ${benchmark_LIBS})
+add_benchmark(actor_creation)
+add_benchmark(mailbox_performance)
+add_benchmark(mixed_case)
+add_benchmark(distributed)
+add_benchmark(matching)

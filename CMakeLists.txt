@@ -233,6 +233,10 @@ add_subdirectory(unit_testing)
 add_subdirectory(examples)
 add_subdirectory(benchmarks)
 
+add_dependencies(all_examples libcppa)
+add_dependencies(all_unit_tests libcppa)
+add_dependencies(all_benchmarks libcppa)
+
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
 set(CONTEXT_SWITCHING true)
