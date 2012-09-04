@@ -267,3 +267,5 @@ cppa/message_future.hpp
 cppa/detail/fd_util.hpp
 src/fd_util.cpp
 benchmarks/scala/Utility.scala
+examples/group_server.cpp
+examples/group_chat.cpp
