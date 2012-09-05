@@ -42,7 +42,8 @@ class ipv4_acceptor : public util::acceptor {
 
  public:
 
-    static std::unique_ptr<util::acceptor> create(std::uint16_t port);
+    static std::unique_ptr<util::acceptor> create(std::uint16_t port,
+                                                  const char* addr);
 
     ~ipv4_acceptor();
 

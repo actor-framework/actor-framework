@@ -195,11 +195,12 @@ class group : public channel {
 typedef intrusive_ptr<group> group_ptr;
 
 /**
- * @brief Makes *all* local groups accessible via network on @p port.
+ * @brief Makes *all* local groups accessible via network on address @p addr
+ *        and @p port.
  * @throws bind_failure
  * @throws network_error
  */
-void publish_local_groups_at(std::uint16_t port);
+void publish_local_groups_at(std::uint16_t port, const char* addr = nullptr);
 
 } // namespace cppa
 
