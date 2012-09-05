@@ -34,7 +34,7 @@ auto on_void_opt(char short_opt, const char* long_opt) -> decltype(on<string>().
     opt_strs.push_back(string("-") + long_opt);
     string str = "-";
     str += opt_strs.back();
-    opt_strs.push_back(std::move(str));
+    opt_strs.push_back(move(str));
     return on<string>().when(cppa::placeholders::_x1.in(opt_strs));
 }
 
@@ -99,17 +99,17 @@ class print_actor : public event_based_actor {
     }
 };
 
-inline vector<std::string> split(const string& str, char delim) {
-    vector<std::string> result;
+inline vector<string> split(const string& str, char delim) {
+    vector<string> result;
     stringstream strs{str};
     string tmp;
-    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+    while (getline(strs, tmp, delim)) result.push_back(tmp);
     return result;
 }
 
 template<typename Iterator>
-inline std::string join(Iterator first, Iterator last, char delim) {
-    std::string result;
+inline string join(Iterator first, Iterator last, char delim) {
+    string result;
     if (first != last) {
         result += *first++;
         for (; first != last; ++first) {
@@ -120,7 +120,7 @@ inline std::string join(Iterator first, Iterator last, char delim) {
     return result;
 }
 
-inline std::string join(const vector<string>& vec, char delim) {
+inline string join(const vector<string>& vec, char delim) {
     return join(begin(vec), end(vec), delim);
 }
 
@@ -135,7 +135,7 @@ void print_usage(actor_ptr printer) {
     send(printer, "Usage: group_chat --type=<server|client>\n --type, -t\t\tcan be: server, s, client, c\n --name, -n\t\tusername (only needed for client)\n --host, -h\t\thostname (only needed for client)\n --port, -p\t\tport for server/client");
 }
 
-std::function<option<string> (const string&)> get_extractor(const string& identifier) {
+function<option<string> (const string&)> get_extractor(const string& identifier) {
     auto tmp = [&](const string& kvp) -> option<string> {
         auto vec = split(kvp, '=');
         if (vec.size() == 2) {
@@ -151,7 +151,7 @@ std::function<option<string> (const string&)> get_extractor(const string& identi
 
 auto main(int argc, char* argv[]) -> int {
 
-    cout.unsetf(std::ios_base::unitbuf);
+    cout.unsetf(ios_base::unitbuf);
 
     auto printer = spawn<print_actor>();
 
