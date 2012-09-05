@@ -43,7 +43,7 @@
 
 namespace cppa {
 
-thread_mapped_actor::thread_mapped_actor() : m_initialized(false) { }
+thread_mapped_actor::thread_mapped_actor() : m_initialized(true) { }
 
 thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
 : super(std::move(fun)), m_initialized(false) { }
