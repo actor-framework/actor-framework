@@ -34,7 +34,7 @@ auto on_void_opt(char short_opt, const char* long_opt) -> decltype(on<string>().
 }
 
 int main(int argc, char** argv) {
-    uint16_t port;
+    uint16_t port = 0;
     bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
         on_opt('p', "port") >> [&](const string& arg) -> bool {
             if (!(istringstream(arg) >> port)) {
