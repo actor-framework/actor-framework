@@ -29,11 +29,17 @@ auto on_void_opt(char short_opt, const char* long_opt) -> decltype(on<string>().
     opt_strs.push_back(string("-") + long_opt);
     string str = "-";
     str += opt_strs.back();
-    opt_strs.push_back(std::move(str));
+    opt_strs.push_back(move(str));
     return on<string>().when(cppa::placeholders::_x1.in(opt_strs));
 }
 
 int main(int argc, char** argv) {
+
+    typedef pair<string,uint16_t> str_uint16_pair;
+
+    announce<vector<string>>();
+    announce<str_uint16_pair>(&str_uint16_pair::first, &str_uint16_pair::second);
+
     uint16_t port;
     bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
         on_opt('p', "port") >> [&](const string& arg) -> bool {
