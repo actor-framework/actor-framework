@@ -89,8 +89,8 @@ actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
                                                       pinfptr->node_id());
 }
 
-void publish(actor_ptr whom, std::uint16_t port) {
-    if (whom) publish(whom, detail::ipv4_acceptor::create(port));
+void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
+    if (whom) publish(whom, detail::ipv4_acceptor::create(port, addr));
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {

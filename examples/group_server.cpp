@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     if (!args_valid) return 1;
-    publish_local_groups_at(port);
+    publish_local_groups_at(port, "127.0.0.1");
     cout << "type 'quit' to shutdown the server" << endl;
     string line;
     while (getline(cin, line)) {

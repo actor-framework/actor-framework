@@ -107,10 +107,10 @@ struct group_nameserver : event_based_actor {
     }
 };
 
-void publish_local_groups_at(std::uint16_t port) {
+void publish_local_groups_at(std::uint16_t port, const char* addr) {
     auto gn = spawn_hidden<group_nameserver>();
     try {
-        publish(gn, port);
+        publish(gn, port, addr);
     }
     catch (std::exception&) {
         gn->enqueue(nullptr, make_any_tuple(atom("SHUTDOWN")));

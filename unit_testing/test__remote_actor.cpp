@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
     bool success = false;
     do {
         try {
-            publish(self, port);
+            publish(self, port, "127.0.0.1");
             success = true;
         }
         catch (bind_failure&) {
