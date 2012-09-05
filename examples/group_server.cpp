@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     announce<vector<string>>();
     announce<str_uint16_pair>(&str_uint16_pair::first, &str_uint16_pair::second);
 
-    uint16_t port;
+    uint16_t port = 0;
     bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
         on_opt('p', "port") >> [&](const string& arg) -> bool {
             if (!(istringstream(arg) >> port)) {
