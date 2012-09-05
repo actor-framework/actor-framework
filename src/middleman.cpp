@@ -58,6 +58,9 @@
 
 using namespace std;
 
+//#define VERBOSE_MIDDLEMAN
+
+#ifdef VERBOSE_MIDDLEMAN
 #define DEBUG(arg) {                                                           \
     ostringstream oss;                                                         \
     oss << "[process id: "                                                     \
@@ -65,9 +68,9 @@ using namespace std;
         << "] " << arg << endl;                                                \
     cout << oss.str();                                                         \
 } (void) 0
-
-#undef DEBUG
+#else
 #define DEBUG(unused) ((void) 0)
+#endif
 
 namespace cppa { namespace detail {
 
@@ -398,6 +401,16 @@ bool peer_connection::continue_reading() {
                 memcpy(node_id.data(), m_rd_buf.data() + sizeof(uint32_t),
                        process_information::node_id_size);
                 m_peer.reset(new process_information(process_id, node_id));
+                if (*(parent()->pself()) == *m_peer) {
+#                   ifdef VERBOSE_MIDDLEMAN
+                    DEBUG("incoming connection from self");
+#                   elif defined(CPPA_DEBUG)
+                    std::cerr << "*** middleman warning: "
+                                 "incoming connection from self"
+                              << std::endl;
+#                   endif
+                    throw std::ios_base::failure("refused connection from self");
+                }
                 parent()->add_peer(*m_peer, this);
                 // initialization done
                 m_rd_state = wait_for_msg_size;
