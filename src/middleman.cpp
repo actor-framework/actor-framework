@@ -714,8 +714,17 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     auto continue_reading = [&](const network_channel_ptr& ch) {
         bool erase_channel = false;
         try { erase_channel = !ch->continue_reading(); }
+        catch (ios_base::failure& e) {
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
+            erase_channel = true;
+        }
+        catch (runtime_error& e) {
+            // thrown whenever serialize/deserialize fails
+            cerr << "*** runtime_error in middleman: " << e.what() << endl;
+            erase_channel = true;
+        }
         catch (exception& e) {
-            DEBUG(demangle(typeid(e).name()) << ": " << e.what());
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
             erase_channel = true;
         }
         if (erase_channel) {
