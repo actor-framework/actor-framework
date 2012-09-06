@@ -50,17 +50,14 @@
 #include "cppa/detail/ptype_to_type.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-
+using namespace std;
 using namespace cppa;
 using namespace cppa::util;
 
 using cppa::detail::type_to_ptype;
 using cppa::detail::ptype_to_type;
 
-namespace { const size_t ui32size = sizeof(std::uint32_t); }
+namespace { const size_t ui32size = sizeof(uint32_t); }
 
 struct struct_a {
     int x;
@@ -78,7 +75,7 @@ bool operator!=(const struct_a& lhs, const struct_a& rhs) {
 struct struct_b {
     struct_a a;
     int z;
-    std::list<int> ints;
+    list<int> ints;
 };
 
 bool operator==(const struct_b& lhs, const struct_b& rhs) {
@@ -89,11 +86,11 @@ bool operator!=(const struct_b& lhs, const struct_b& rhs) {
     return !(lhs == rhs);
 }
 
-typedef std::map<std::string, std::u16string> strmap;
+typedef map<string, u16string> strmap;
 
 struct struct_c {
     strmap strings;
-    std::set<int> ints;
+    set<int> ints;
 };
 
 bool operator==(const struct_c& lhs, const struct_c& rhs) {
@@ -106,27 +103,85 @@ bool operator!=(const struct_c& lhs, const struct_c& rhs) {
 
 static const char* msg1str = u8R"__(@<> ( { @i32 ( 42 ), @str ( "Hello \"World\"!" ) } ))__";
 
+struct raw_struct {
+    string str;
+};
+
+bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
+    return lhs.str == rhs.str;
+}
+
+bool operator!=(const raw_struct& lhs, const raw_struct& rhs) {
+    return lhs.str != rhs.str;
+}
+
+struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
+    void serialize(const void* ptr, serializer* sink) const {
+        auto rs = reinterpret_cast<const raw_struct*>(ptr);
+        sink->begin_object(name());
+        sink->write_value(static_cast<uint32_t>(rs->str.size()));
+        sink->write_raw(rs->str.size(), rs->str.data());
+        sink->end_object();
+    }
+    void deserialize(void* ptr, deserializer* source) const {
+        if (source->seek_object() != name()) {
+            throw std::logic_error("wrong type name found");
+        }
+        source->begin_object(name());
+        auto rs = reinterpret_cast<raw_struct*>(ptr);
+        rs->str.clear();
+        auto size = get<std::uint32_t>(source->read_value(pt_uint32));
+        rs->str.resize(size);
+        source->read_raw(size, &(rs->str[0]));
+        source->end_object();
+    }
+};
+
 int main() {
     CPPA_TEST(test__serialization);
 
+    announce(typeid(raw_struct), new raw_struct_type_info);
+
     auto oarr = new detail::object_array;
-    oarr->push_back(object::from(static_cast<std::uint32_t>(42)));
+    oarr->push_back(object::from(static_cast<uint32_t>(42)));
     oarr->push_back(object::from("foo"  ));
 
     any_tuple atuple1(oarr);
     try {
-        auto opt = tuple_cast<std::uint32_t, std::string>(atuple1);
+        auto opt = tuple_cast<uint32_t, string>(atuple1);
         CPPA_CHECK(opt.valid());
         if (opt) {
             auto& tup = *opt;
             CPPA_CHECK_EQUAL(tup.size(), static_cast<size_t>(2));
-            CPPA_CHECK_EQUAL(get<0>(tup), static_cast<std::uint32_t>(42));
+            CPPA_CHECK_EQUAL(get<0>(tup), static_cast<uint32_t>(42));
             CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
     }
-    catch (std::exception& e) {
+    catch (exception& e) {
         CPPA_ERROR("exception: " << e.what());
     }
+
+    try {
+        // test raw_type in both binary and string serialization
+        raw_struct rs;
+        rs.str = "Lorem ipsum dolor sit amet.";
+        util::buffer wr_buf;
+        binary_serializer bs(&wr_buf);
+        bs << rs;
+        binary_deserializer bd(wr_buf.data(), wr_buf.size());
+        raw_struct rs2;
+        uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
+        CPPA_CHECK_EQUAL(rs.str, rs2.str);
+        auto rsstr = cppa::to_string(rs);
+        rs2.str = "foobar";
+        cout << "rs as string: " << rsstr << endl;
+        rs2 = from_string<raw_struct>(rsstr);
+        CPPA_CHECK_EQUAL(rs.str, rs2.str);
+    }
+    catch (exception& e) {
+        CPPA_ERROR("exception: " << e.what());
+    }
+
     {
         any_tuple ttup = make_cow_tuple(1, 2, actor_ptr(self));
         util::buffer wr_buf;
@@ -152,7 +207,7 @@ int main() {
         any_tuple atuple2;
         uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
         try {
-            auto opt = tuple_cast<std::uint32_t, std::string>(atuple2);
+            auto opt = tuple_cast<uint32_t, string>(atuple2);
             CPPA_CHECK(opt.valid());
             if (opt.valid()) {
                 auto& tup = *opt;
@@ -161,12 +216,12 @@ int main() {
                 CPPA_CHECK_EQUAL(get<1>(tup), "foo");
             }
         }
-        catch (std::exception& e) {
+        catch (exception& e) {
             CPPA_ERROR("exception: " << e.what());
         }
     }
     {
-        any_tuple msg1 = cppa::make_cow_tuple(42, std::string("Hello \"World\"!"));
+        any_tuple msg1 = cppa::make_cow_tuple(42, string("Hello \"World\"!"));
         auto msg1_tostring = to_string(msg1);
         if (msg1str != msg1_tostring) {
             CPPA_ERROR("msg1str != to_string(msg1)");
@@ -183,8 +238,8 @@ int main() {
         if (typeid(any_tuple) == *(obj1.type()) && obj2.type() == obj1.type()) {
             auto& content1 = get<any_tuple>(obj1);
             auto& content2 = get<any_tuple>(obj2);
-            auto opt1 = tuple_cast<decltype(42), std::string>(content1);
-            auto opt2 = tuple_cast<decltype(42), std::string>(content2);
+            auto opt1 = tuple_cast<decltype(42), string>(content1);
+            auto opt2 = tuple_cast<decltype(42), string>(content2);
             CPPA_CHECK(opt1.valid() && opt2.valid());
             if (opt1.valid() && opt2.valid()) {
                 auto& tup1 = *opt1;
@@ -203,18 +258,18 @@ int main() {
     }
 
     CPPA_CHECK((is_iterable<int>::value) == false);
-    // std::string is primitive and thus not identified by is_iterable
-    CPPA_CHECK((is_iterable<std::string>::value) == false);
-    CPPA_CHECK((is_iterable<std::list<int>>::value) == true);
-    CPPA_CHECK((is_iterable<std::map<int,int>>::value) == true);
+    // string is primitive and thus not identified by is_iterable
+    CPPA_CHECK((is_iterable<string>::value) == false);
+    CPPA_CHECK((is_iterable<list<int>>::value) == true);
+    CPPA_CHECK((is_iterable<map<int,int>>::value) == true);
     { // test meta_object implementation for primitive types
-        auto meta_int = uniform_typeid<std::uint32_t>();
+        auto meta_int = uniform_typeid<uint32_t>();
         CPPA_CHECK(meta_int != nullptr);
         if (meta_int) {
             auto o = meta_int->create();
-            get_ref<std::uint32_t>(o) = 42;
-            auto str = to_string(get<std::uint32_t>(o));
-            CPPA_CHECK_EQUAL(str, "@u32 ( 42 )");
+            get_ref<uint32_t>(o) = 42;
+            auto str = cppa::to_string(get<uint32_t>(o));
+            CPPA_CHECK_EQUAL( "@u32 ( 42 )", str);
         }
     }
     { // test serializers / deserializers with struct_b
@@ -225,7 +280,7 @@ int main() {
                            &struct_b::z,
                            &struct_b::ints);
         // testees
-        struct_b b1 = { { 1, 2 }, 3, std::list<int>{ 4, 5, 6, 7, 8, 9, 10 } };
+        struct_b b1 = { { 1, 2 }, 3, list<int>{ 4, 5, 6, 7, 8, 9, 10 } };
         struct_b b2;
         struct_b b3;
         // expected result of to_string(&b1, meta_b)
@@ -258,7 +313,7 @@ int main() {
         // get meta type of struct_c and "announce"
         announce<struct_c>(&struct_c::strings, &struct_c::ints);
         // testees
-        struct_c c1{strmap{{"abc", u"cba" }, { "x", u"y" }}, std::set<int>{9, 4, 5}};
+        struct_c c1{strmap{{"abc", u"cba" }, { "x", u"y" }}, set<int>{9, 4, 5}};
         struct_c c2; {
             // serialize c1 to buf
             util::buffer wr_buf;
