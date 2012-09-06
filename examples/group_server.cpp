@@ -1,44 +1,33 @@
 #include <string>
+#include <dlfcn.h>
 #include <sstream>
 #include <iostream>
+
+#include "cppa/opt.hpp"
 #include "cppa/cppa.hpp"
 
 using namespace std;
 using namespace cppa;
 
-auto on_opt(char short_opt, const char* long_opt) -> decltype(on("", val<string>) || on(function<option<string> (const string&)>())) {
-    const char short_flag_arr[] = {'-', short_opt, '\0' };
-    const char* lhs_str = short_flag_arr;
-    string prefix = "--";
-    prefix += long_opt;
-    prefix += "=";
-    function<option<string> (const string&)> kvp = [prefix](const string& input) -> option<string> {
-        if (   input.compare(0, prefix.size(), prefix) == 0
-               // accept '-key=' as well
-            || input.compare(1, prefix.size(), prefix) == 0) {
-            return input.substr(prefix.size());
-        }
-        return {};
-    };
-    return on(lhs_str, val<string>) || on(kvp);
-}
-
-auto on_void_opt(char short_opt, const char* long_opt) -> decltype(on<string>().when(cppa::placeholders::_x1.in(vector<string>()))) {
-    const char short_flag_arr[] = {'-', short_opt, '\0' };
-    vector<string> opt_strs = { short_flag_arr };
-    opt_strs.push_back(string("-") + long_opt);
-    string str = "-";
-    str += opt_strs.back();
-    opt_strs.push_back(move(str));
-    return on<string>().when(cppa::placeholders::_x1.in(opt_strs));
-}
-
 int main(int argc, char** argv) {
 
-    typedef pair<string,uint16_t> str_uint16_pair;
-
-    announce<vector<string>>();
-    announce<str_uint16_pair>(&str_uint16_pair::first, &str_uint16_pair::second);
+    // user-defined types can be announced by a plugin
+    void* handle = dlopen("plugin.dylib", RTLD_NOW);     // macos
+    if (!handle) handle = dlopen("plugin.so", RTLD_NOW); // linux
+    if (handle) {
+        auto before = uniform_type_info::instances();
+        cout << "found a plugin, call exec_plugin()" << endl;
+        auto fun = (void (*)()) dlsym(handle, "exec_plugin");
+        if (fun) {
+            fun();
+            cout << "the plugin announced the following types:" << endl;
+            for (auto inf : uniform_type_info::instances()) {
+                if (count(begin(before), end(before), inf) == 0) {
+                    cout << inf->name() << endl;
+                }
+            }
+        }
+    }
 
     uint16_t port = 0;
     bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
@@ -55,7 +44,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     if (!args_valid) return 1;
-    publish_local_groups_at(port, "127.0.0.1");
+    publish_local_groups_at(port);
     cout << "type 'quit' to shutdown the server" << endl;
     string line;
     while (getline(cin, line)) {
