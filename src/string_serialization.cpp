@@ -165,7 +165,9 @@ class string_serializer : public serializer {
         auto last = first + num_bytes;
         out << hex;
         out << setfill('0');
-        copy(first, last, ostream_iterator<size_t>(out));
+        for (; first != last; ++first) {
+            out << setw(2) << static_cast<size_t>(*first);
+        }
         out << dec;
         m_after_value = true;
     }
