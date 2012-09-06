@@ -132,10 +132,15 @@ int main() {
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf);
         bs << ttup;
+        bs << ttup;
         binary_deserializer bd(wr_buf.data(), wr_buf.size());
         any_tuple ttup2;
+        any_tuple ttup3;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
-        CPPA_CHECK(ttup == ttup2);
+        uniform_typeid<any_tuple>()->deserialize(&ttup3, &bd);
+        CPPA_CHECK(ttup  == ttup2);
+        CPPA_CHECK(ttup  == ttup3);
+        CPPA_CHECK(ttup2 == ttup3);
     }
     {
         // serialize b1 to buf
