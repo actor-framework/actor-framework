@@ -203,9 +203,7 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
-            else {
-                throw std::logic_error("wrong type name found");
-            }
+            else assert_type_name(source, name); // throws
         }
         else {
             primitive_variant ptup[3];
@@ -279,9 +277,7 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
-            else {
-                throw std::logic_error("wrong type name found");
-            }
+            else assert_type_name(source, name); // throws
         }
         else {
             source->begin_object(name);
@@ -344,11 +340,8 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
                               const std::string& name,
                               const std::string& actor_ptr_type_name,
                               const std::string& group_ptr_type_name) {
-        std::string cname = source->seek_object();
-        if (cname != name) {
-            throw std::logic_error("wrong type name found");
-        }
-        source->begin_object(cname);
+        assert_type_name(source, name);
+        source->begin_object(name);
         std::string subobj = source->peek_object();
         if (subobj == actor_ptr_type_name) {
             actor_ptr tmp;
@@ -466,9 +459,8 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
-        auto tname = source->seek_object();
-        if (tname != name()) throw 42;
-        source->begin_object(tname);
+        assert_type_name(source);
+        source->begin_object(name());
         auto& msg = *reinterpret_cast<addressed_message*>(instance);
         actor_ptr_tinfo::s_deserialize(msg.sender(), source, actor_ptr_name);
         channel_ptr_tinfo::s_deserialize(msg.receiver(),
@@ -518,9 +510,7 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
-            else {
-                throw std::logic_error("wrong type name found");
-            }
+            else assert_type_name(source); // throws
         }
         else {
             primitive_variant ptup[2];
@@ -548,10 +538,9 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value> {
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
+        assert_type_name(source);
         auto val = reinterpret_cast<atom_value*>(instance);
-        auto tname = source->seek_object();
-        if (tname != name()) throw 42;
-        source->begin_object(tname);
+        source->begin_object(name());
         auto ptval = source->read_value(pt_uint64);
         source->end_object();
         *val = static_cast<atom_value>(get<std::uint64_t>(ptval));
@@ -570,10 +559,9 @@ class duration_tinfo : public util::abstract_uniform_type_info<util::duration> {
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
+        assert_type_name(source);
+        source->begin_object(name());
         auto val = reinterpret_cast<util::duration*>(instance);
-        auto tname = source->seek_object();
-        if (tname != name()) throw 42;
-        source->begin_object(tname);
         auto unit_val = source->read_value(pt_uint32);
         auto count_val = source->read_value(pt_uint32);
         source->end_object();
@@ -628,9 +616,8 @@ class bool_tinfo : public util::abstract_uniform_type_info<bool> {
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
-        auto tname = source->seek_object();
-        if (tname != name()) throw 42;
-        source->begin_object(tname);
+        assert_type_name(source);
+        source->begin_object(name());
         auto ptval = source->read_value(pt_uint8);
         source->end_object();
         *reinterpret_cast<bool*>(instance) = (get<pt_uint8>(ptval) != 0);
@@ -776,7 +763,23 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype) {
 
 uniform_type_info::uniform_type_info(const std::string& str) : m_name(str) { }
 
-uniform_type_info::~uniform_type_info() {
+uniform_type_info::~uniform_type_info() { }
+
+void uniform_type_info::assert_type_name(deserializer* source,
+                                         const std::string& expected_name) {
+    std::string tname = source->seek_object();
+    if (tname != expected_name) {
+        std::string error_msg = "wrong type name found; expected \"";
+        error_msg += expected_name;
+        error_msg += "\", found \"";
+        error_msg += tname;
+        error_msg += "\"";
+        throw std::logic_error(std::move(error_msg));
+    }
+}
+
+void uniform_type_info::assert_type_name(deserializer* source) const {
+    assert_type_name(source, name());
 }
 
 object uniform_type_info::create() const {

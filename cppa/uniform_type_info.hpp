@@ -234,7 +234,21 @@ class uniform_type_info {
      */
     virtual void deserialize(void* instance, deserializer* source) const = 0;
 
+    /**
+     * @brief Checks wheter <tt>src->seek_object()</tt>
+     *        returns @p tname and throws an exception if not.
+     * @throws std::logic_error
+     */
+    static void assert_type_name(deserializer* src, const std::string& tname);
+
  protected:
+
+    /**
+     * @brief Checks wheter <tt>src->seek_object()</tt>
+     *        returns {@link name()} and throws an exception if not.
+     * @throws std::logic_error
+     */
+    void assert_type_name(deserializer* src) const;
 
     uniform_type_info(const std::string& uniform_name);
 

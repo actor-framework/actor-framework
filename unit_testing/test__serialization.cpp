@@ -124,9 +124,7 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
         sink->end_object();
     }
     void deserialize(void* ptr, deserializer* source) const {
-        if (source->seek_object() != name()) {
-            throw std::logic_error("wrong type name found");
-        }
+        assert_type_name(source);
         source->begin_object(name());
         auto rs = reinterpret_cast<raw_struct*>(ptr);
         rs->str.clear();
