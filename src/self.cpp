@@ -100,6 +100,14 @@ void tss_reset(local_actor* ptr, bool inc_ref_count = true) {
 
 } // namespace <anonymous>
 
+bool operator==(const actor_ptr& lhs, const self_type& rhs) {
+    return lhs.get() == rhs.get();
+}
+
+bool operator!=(const self_type& lhs, const actor_ptr& rhs) {
+    return lhs.get() != rhs.get();
+}
+
 void self_type::cleanup_fun(cppa::local_actor* what) {
     if (what) {
         auto ptr = dynamic_cast<thread_mapped_actor*>(what);

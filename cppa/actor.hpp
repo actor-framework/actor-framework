@@ -202,6 +202,11 @@ class actor : public channel {
  */
 typedef intrusive_ptr<actor> actor_ptr;
 
+class self_type;
+
+bool operator==(const actor_ptr& lhs, const self_type& rhs);
+bool operator!=(const self_type& lhs, const actor_ptr& rhs);
+
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/
