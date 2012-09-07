@@ -272,3 +272,4 @@ examples/group_chat.cpp
 cppa/opt.hpp
 src/opt.cpp
 cppa/detail/opt_impls.hpp
+examples/type_plugins.hpp
