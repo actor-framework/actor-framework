@@ -100,18 +100,13 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
     }
 
     void deserialize(void* ptr, deserializer* source) const {
-        // seek_object() gets the uniform name of the next object in the
-        // stream without modifying the deserializer
-        std::string cname = source->seek_object();
-        // this name has to be our type name
-        if (cname != name()) {
-            throw std::logic_error("wrong type name found");
-        }
+        // throws an exception if the next object in source is not a tree
+        assert_type_name(source);
         // ptr is guaranteed to be a pointer of type tree
         auto tree_ptr = reinterpret_cast<tree*>(ptr);
         tree_ptr->root.children.clear();
         // workflow is analogous to serialize: begin_object() ... end_object()
-        source->begin_object(cname);
+        source->begin_object(name());
         // recursively deserialize nodes, beginning with root
         deserialize_node(tree_ptr->root, source);
         source->end_object();

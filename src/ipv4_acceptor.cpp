@@ -42,6 +42,7 @@
 #else
 #   include <netdb.h>
 #   include <unistd.h>
+#   include <arpa/inet.h>
 #   include <sys/types.h>
 #   include <sys/socket.h>
 #   include <netinet/in.h>
@@ -97,7 +98,8 @@ bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool n
 ipv4_acceptor::ipv4_acceptor(native_socket_type fd, bool nonblocking)
 : m_fd(fd), m_is_nonblocking(nonblocking) { }
 
-std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port) {
+std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port,
+                                                      const char* addr) {
     native_socket_type sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
@@ -112,7 +114,13 @@ std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port) {
     struct sockaddr_in serv_addr;
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    if (! addr) {
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+    }
+    else if (inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
+        throw network_error("invalid IPv4 address");
+    }
+
     serv_addr.sin_port = htons(port);
     if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
         throw bind_failure(errno);

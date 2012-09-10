@@ -28,40 +28,30 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_ACCEPTOR_HPP
-#define CPPA_IPV4_ACCEPTOR_HPP
+#ifndef CPPA_DECORATED_NAMES_MAP_HPP
+#define CPPA_DECORATED_NAMES_MAP_HPP
 
-#include <memory>
-#include <cstdint>
-#include "cppa/config.hpp"
-#include "cppa/util/acceptor.hpp"
+#include <map>
+#include <string>
 
 namespace cppa { namespace detail {
 
-class ipv4_acceptor : public util::acceptor {
+class decorated_names_map {
 
  public:
 
-    static std::unique_ptr<util::acceptor> create(std::uint16_t port,
-                                                  const char* addr);
+    decorated_names_map();
 
-    ~ipv4_acceptor();
-
-    native_socket_type acceptor_file_handle() const;
-
-    util::io_stream_ptr_pair accept_connection();
-
-    option<util::io_stream_ptr_pair> try_accept_connection();
+    // returns either a decorated version of @p demangled_name or
+    // @p demangled_name itself
+    const std::string& decorate(const std::string& demangled_name) const;
 
  private:
 
-    ipv4_acceptor(native_socket_type fd, bool nonblocking);
-
-    native_socket_type m_fd;
-    bool m_is_nonblocking;
+    std::map<std::string, std::string> m_map;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_IPV4_ACCEPTOR_HPP
+#endif // DECORATED_NAMES_MAP_HPP

@@ -58,6 +58,9 @@
 
 using namespace std;
 
+//#define VERBOSE_MIDDLEMAN
+
+#ifdef VERBOSE_MIDDLEMAN
 #define DEBUG(arg) {                                                           \
     ostringstream oss;                                                         \
     oss << "[process id: "                                                     \
@@ -65,9 +68,9 @@ using namespace std;
         << "] " << arg << endl;                                                \
     cout << oss.str();                                                         \
 } (void) 0
-
-#undef DEBUG
+#else
 #define DEBUG(unused) ((void) 0)
+#endif
 
 namespace cppa { namespace detail {
 
@@ -235,13 +238,15 @@ class peer_connection : public network_channel {
     bool continue_reading();
 
     bool continue_writing() {
-        DEBUG("peer_connection::continue_writing");
+        DEBUG("peer_connection::continue_writing, try to write "
+              << m_wr_buf.size() << " bytes");
         if (has_unwritten_data()) {
             size_t written;
             written = m_ostream->write_some(m_wr_buf.data(),
                                             m_wr_buf.size());
             if (written != m_wr_buf.size()) {
                 m_wr_buf.erase_leading(written);
+                DEBUG("only " << written  << " bytes written");
             }
             else {
                 m_wr_buf.reset();
@@ -257,17 +262,20 @@ class peer_connection : public network_channel {
         auto before = m_wr_buf.size();
         m_wr_buf.write(sizeof(std::uint32_t), &size, util::grow_if_needed);
         bs << msg;
-        size = m_wr_buf.size() - sizeof(std::uint32_t);
+        size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
         // update size in buffer
         memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
         if (!has_unwritten_data()) {
             size_t written = m_ostream->write_some(m_wr_buf.data(),
                                                    m_wr_buf.size());
             if (written != m_wr_buf.size()) {
+                DEBUG("tried to write " << m_wr_buf.size()
+                      << " bytes, only " << written << " bytes written");
                 m_wr_buf.erase_leading(written);
                 has_unwritten_data(true);
             }
             else {
+                DEBUG(written << " bytes written");
                 m_wr_buf.reset();
             }
         }
@@ -398,6 +406,16 @@ bool peer_connection::continue_reading() {
                 memcpy(node_id.data(), m_rd_buf.data() + sizeof(uint32_t),
                        process_information::node_id_size);
                 m_peer.reset(new process_information(process_id, node_id));
+                if (*(parent()->pself()) == *m_peer) {
+#                   ifdef VERBOSE_MIDDLEMAN
+                    DEBUG("incoming connection from self");
+#                   elif defined(CPPA_DEBUG)
+                    std::cerr << "*** middleman warning: "
+                                 "incoming connection from self"
+                              << std::endl;
+#                   endif
+                    throw std::ios_base::failure("refused connection from self");
+                }
                 parent()->add_peer(*m_peer, this);
                 // initialization done
                 m_rd_state = wait_for_msg_size;
@@ -698,6 +716,17 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             maxfd = max(maxfd, fd);
             FD_SET(fd, &rdset);
         }
+        // check consistency of m_peers_with_unwritten_data
+        if (!m_peers_with_unwritten_data.empty()) {
+            auto i = m_peers_with_unwritten_data.begin();
+            auto e = m_peers_with_unwritten_data.end();
+            while (i != e) {
+                if ((*i)->has_unwritten_data() == false) {
+                    i = m_peers_with_unwritten_data.erase(i);
+                }
+                else ++i;
+            }
+        }
         if (m_peers_with_unwritten_data.empty()) {
             if (wrset_ptr) wrset_ptr = nullptr;
         }
@@ -714,8 +743,17 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     auto continue_reading = [&](const network_channel_ptr& ch) {
         bool erase_channel = false;
         try { erase_channel = !ch->continue_reading(); }
+        catch (ios_base::failure& e) {
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
+            erase_channel = true;
+        }
+        catch (runtime_error& e) {
+            // thrown whenever serialize/deserialize fails
+            cerr << "*** runtime_error in middleman: " << e.what() << endl;
+            erase_channel = true;
+        }
         catch (exception& e) {
-            DEBUG(demangle(typeid(e).name()) << ": " << e.what());
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
             erase_channel = true;
         }
         if (erase_channel) {
@@ -725,7 +763,9 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     };
     auto continue_writing = [&](const peer_connection_ptr& peer) {
         bool erase_channel = false;
-        try { erase_channel = !peer->continue_writing(); }
+        try {
+            erase_channel = !peer->continue_writing();
+        }
         catch (exception& e) {
             DEBUG(demangle(typeid(e).name()) << ": " << e.what());
             erase_channel = true;

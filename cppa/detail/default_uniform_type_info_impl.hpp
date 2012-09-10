@@ -319,10 +319,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
     void deserialize(void* obj, deserializer* d) const {
-        std::string cname = d->seek_object();
-        if (cname != this->name()) {
-            throw std::logic_error("wrong type name found");
-        }
+        this->assert_type_name(d);
         d->begin_object(this->name());
         for (auto& m : m_members) {
             m.deserialize(obj, d);

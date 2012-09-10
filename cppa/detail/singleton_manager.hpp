@@ -45,6 +45,7 @@ class group_manager;
 class abstract_tuple;
 class actor_registry;
 class network_manager;
+class decorated_names_map;
 class uniform_type_info_map;
 
 class singleton_manager {
@@ -69,6 +70,8 @@ class singleton_manager {
     static abstract_tuple* get_tuple_dummy();
 
     static empty_tuple* get_empty_tuple();
+
+    static decorated_names_map* get_decorated_names_map();
 
 };
 

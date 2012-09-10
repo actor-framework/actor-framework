@@ -57,10 +57,6 @@
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-
-using std::cout;
-using std::endl;
-
 namespace cppa {
 
 void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor) {
@@ -82,6 +78,14 @@ actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
     peer.first->read(&peer_pid, sizeof(std::uint32_t));
     peer.first->read(peer_node_id.data(), peer_node_id.size());
     process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));
+    if (*pinf == *pinfptr) {
+        // dude, this is not a remote actor, it's a local actor!
+#       ifdef CPPA_DEBUG
+        std::cerr << "*** warning: remote_actor() called to access a local actor\n"
+                  << std::flush;
+#       endif
+        return detail::singleton_manager::get_actor_registry()->get(remote_actor_id);
+    }
     //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
     detail::middleman_add_peer(peer, pinfptr);
     return detail::get_actor_proxy_cache().get_or_put(remote_actor_id,
@@ -89,8 +93,8 @@ actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
                                                       pinfptr->node_id());
 }
 
-void publish(actor_ptr whom, std::uint16_t port) {
-    if (whom) publish(whom, detail::ipv4_acceptor::create(port));
+void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
+    if (whom) publish(whom, detail::ipv4_acceptor::create(port, addr));
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {

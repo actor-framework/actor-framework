@@ -751,9 +751,11 @@ inline void await_all_others_done() {
  * The connection is automatically closed if the lifetime of @p whom ends.
  * @param whom Actor that should be published at @p port.
  * @param port Unused TCP port.
+ * @param addr The IP address to listen to, or @p INADDR_ANY if @p addr is
+ *             @p nullptr.
  * @throws bind_failure
  */
-void publish(actor_ptr whom, std::uint16_t port);
+void publish(actor_ptr whom, std::uint16_t port, const char* addr = nullptr);
 
 /**
  * @brief Publishes @p whom using @p acceptor to handle incoming connections.
