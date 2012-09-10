@@ -32,6 +32,7 @@
 #include <cctype>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 #include <algorithm>
 
 #include "cppa/atom.hpp"
@@ -49,6 +50,13 @@ namespace cppa {
 
 namespace {
 
+bool isbuiltin(const string& type_name) {
+    return type_name == "@str" || type_name == "@atom" || type_name == "@<>";
+}
+
+// serializes types as type_name(...) except:
+// - strings are serialized "..."
+// - atoms are serialized '...'
 class string_serializer : public serializer {
 
     ostream& out;
@@ -56,8 +64,9 @@ class string_serializer : public serializer {
     struct pt_writer {
 
         ostream& out;
+        bool suppress_quotes;
 
-        pt_writer(ostream& mout) : out(mout) { }
+        pt_writer(ostream& mout, bool suppress_quotes = false) : out(mout), suppress_quotes(suppress_quotes) { }
 
         template<typename T>
         void operator()(const T& value) {
@@ -65,12 +74,12 @@ class string_serializer : public serializer {
         }
 
         void operator()(const string& str) {
-            out << "\"";// << str << "\"";
+            if (!suppress_quotes) out << "\"";
             for (char c : str) {
                 if (c == '"') out << "\\\"";
                 else out << c;
             }
-            out << '"';
+            if (!suppress_quotes) out << "\"";
         }
 
         void operator()(const u16string&) { }
@@ -89,7 +98,9 @@ class string_serializer : public serializer {
             m_after_value = false;
         }
         else if (m_obj_just_opened) {
-            out << " ( ";
+            if (!m_open_objects.empty() && !isbuiltin(m_open_objects.top())) {
+                out << " ( ";
+            }
             m_obj_just_opened = false;
         }
     }
@@ -103,19 +114,21 @@ class string_serializer : public serializer {
     void begin_object(const string& type_name) {
         clear();
         m_open_objects.push(type_name);
-        out << type_name;// << " ( ";
+        // do not print type names for strings and atoms
+        if (!isbuiltin(type_name)) out << type_name;
         m_obj_just_opened = true;
     }
+
     void end_object() {
         if (m_obj_just_opened) {
             // no open brackets to close
             m_obj_just_opened = false;
         }
-        else {
-            out << (m_after_value ? " )" : ")");
-        }
         m_after_value = true;
         if (!m_open_objects.empty()) {
+            if (!isbuiltin(m_open_objects.top())) {
+                out << (m_after_value ? " )" : ")");
+            }
             m_open_objects.pop();
         }
     }
@@ -141,7 +154,9 @@ class string_serializer : public serializer {
             }
             // write atoms as strings instead of integer values
             auto av = static_cast<atom_value>(get<uint64_t>(value));
-            (pt_writer(out))(to_string(av));
+            out << "'";
+            (pt_writer(out, true))(to_string(av));
+            out << "'";
         }
         else {
             value.apply(pt_writer(out));
@@ -239,7 +254,8 @@ class string_deserializer : public deserializer {
         if (m_open_objects.empty() || m_obj_had_left_parenthesis.empty()) {
             throw_malformed("missing begin_object()");
         }
-        if (m_obj_had_left_parenthesis.top() == false) {
+        if (   m_obj_had_left_parenthesis.top() == false
+            && !isbuiltin(m_open_objects.top())) {
             throw_malformed("expected left parenthesis after "
                             "begin_object call or void value");
         }
@@ -257,6 +273,17 @@ class string_deserializer : public deserializer {
 
     string seek_object() {
         skip_space_and_comma();
+        // shortcuts for builtin types
+        if (*m_pos == '"') {
+            return "@str";
+        }
+        else if (*m_pos == '\'') {
+            return "@atom";
+        }
+        else if (*m_pos == '{') {
+            return "@<>";
+        }
+        // default case
         auto substr_end = next_delimiter();
         if (m_pos == substr_end) {
             throw_malformed("could not seek object type name");
@@ -267,9 +294,10 @@ class string_deserializer : public deserializer {
     }
 
     string peek_object() {
+        auto pos = m_pos;
         string result = seek_object();
         // restore position in stream
-        m_pos -= result.size();
+        m_pos = pos;
         return result;
     }
 
@@ -277,28 +305,24 @@ class string_deserializer : public deserializer {
         m_open_objects.push(type_name);
         //++m_obj_count;
         skip_space_and_comma();
+        // suppress leading parenthesis for builtin types
         m_obj_had_left_parenthesis.push(try_consume('('));
         //consume('(');
     }
 
     void end_object() {
-        if (m_obj_had_left_parenthesis.empty()) {
-            throw_malformed("missing begin_object()");
-        }
-        else {
-            if (m_obj_had_left_parenthesis.top() == true) {
-                consume(')');
-            }
-            m_obj_had_left_parenthesis.pop();
-        }
         if (m_open_objects.empty()) {
             throw runtime_error("no object to end");
         }
+        if (m_obj_had_left_parenthesis.top() == true) {
+            consume(')');
+        }
         m_open_objects.pop();
+        m_obj_had_left_parenthesis.pop();
         if (m_open_objects.empty()) {
             skip_space_and_comma();
             if (m_pos != m_str.end()) {
-                throw_malformed("expected end of of string");
+                throw_malformed(string("expected end of of string, found: ") + *m_pos);
             }
         }
     }
@@ -335,11 +359,18 @@ class string_deserializer : public deserializer {
             if (ptype != pt_uint64) {
                 throw_malformed("expected read of pt_uint64 after @atom");
             }
-            auto str_val = get<string>(read_value(pt_u8string));
-            if (str_val.size() > 10) {
+            consume('\'');
+            auto substr_end = find(m_pos, m_str.end(), '\'');
+            if (substr_end == m_str.end()) {
+                throw_malformed("couldn't find trailing ' for atom");
+            }
+            else if ((substr_end - m_pos) > 10) {
                 throw_malformed("atom string size > 10");
             }
-            return detail::atom_val(str_val.c_str());
+            string substr(m_pos, substr_end);
+std::cout << "atom string: " << substr << std::endl;
+            m_pos += substr.size() + 1;
+            return detail::atom_val(substr.c_str(), 0xF);
         }
         skip_space_and_comma();
         string::iterator substr_end;
