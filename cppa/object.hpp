@@ -152,7 +152,7 @@ class object {
      * @throws std::runtime_error if @p T is not announced.
      */
     template<typename T>
-    static object from(T&& what);
+    static object from(T what);
 
  private:
 
@@ -164,11 +164,11 @@ class object {
 };
 
 template<typename T>
-object object::from(T&& what) {
+object object::from(T what) {
     typedef typename util::rm_ref<T>::type plain_type;
     typedef typename detail::implicit_conversions<plain_type>::type value_type;
     auto rtti = uniform_typeid(typeid(value_type)); // throws on error
-    return { new value_type(std::forward<T>(what)), rtti };
+    return { new value_type(std::move(what)), rtti };
 }
 
 inline bool operator!=(const object& lhs, const object& rhs) {
