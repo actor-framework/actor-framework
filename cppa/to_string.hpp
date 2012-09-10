@@ -31,6 +31,9 @@
 #ifndef CPPA_TO_STRING_HPP
 #define CPPA_TO_STRING_HPP
 
+#include "cppa/atom.hpp" // included for to_string(atom_value)
+#include "cppa/object.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 
@@ -43,18 +46,17 @@ std::string to_string_impl(const void* what, const uniform_type_info* utype);
 } // namespace detail
 
 /**
- * @brief Serializes a value to a string representation.
- * @param what A value of an announced type.
- * @returns A string representation of @p what.
+ * @brief Converts a tuple to a string.
  */
-template<typename T>
-std::string to_string(const T& what) {
-    auto utype = uniform_typeid<T>();
-    if (utype == nullptr) {
-        throw std::logic_error(  detail::to_uniform_name(typeid(T))
-                               + " is not announced");
-    }
-    return detail::to_string_impl(&what, utype);
+inline std::string to_string(const any_tuple& what) {
+    return detail::to_string_impl(&what, uniform_typeid<any_tuple>());
+}
+
+/**
+ * @brief Converts an object to a string.
+ */
+inline std::string to_string(const object& what) {
+    return detail::to_string_impl(what.value(), what.type());
 }
 
 } // namespace cppa
