@@ -131,6 +131,7 @@ set(LIBCPPA_SRC
     src/uniform_type_info.cpp
     src/yield_interface.cpp
     src/context_switching_actor.cpp
+    src/decorated_names_map.cpp
 )
 
 set(boost_context third_party/boost_context)

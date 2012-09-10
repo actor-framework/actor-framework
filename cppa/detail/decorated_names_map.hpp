@@ -28,53 +28,30 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef CPPA_DECORATED_NAMES_MAP_HPP
+#define CPPA_DECORATED_NAMES_MAP_HPP
 
-namespace cppa {
-
-class scheduler;
-class msg_content;
-
-} // namespace cppa
+#include <map>
+#include <string>
 
 namespace cppa { namespace detail {
 
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class network_manager;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+class decorated_names_map {
 
  public:
 
-    static scheduler* get_scheduler();
+    decorated_names_map();
 
-    static bool set_scheduler(scheduler*);
+    // returns either a decorated version of @p demangled_name or
+    // @p demangled_name itself
+    const std::string& decorate(const std::string& demangled_name) const;
 
-    static group_manager* get_group_manager();
+ private:
 
-    static actor_registry* get_actor_registry();
-
-    // created on-the-fly on a successfull cast to set_scheduler()
-    static network_manager* get_network_manager();
-
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
+    std::map<std::string, std::string> m_map;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+#endif // DECORATED_NAMES_MAP_HPP

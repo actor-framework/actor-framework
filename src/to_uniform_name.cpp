@@ -48,6 +48,8 @@
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/addressed_message.hpp"
+#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/decorated_names_map.hpp"
 
 namespace {
 
@@ -55,60 +57,6 @@ using namespace std;
 using namespace cppa;
 using namespace detail;
 
-constexpr const char* mapped_int_names[][2] = {
-    { nullptr, nullptr }, // sizeof 0-> invalid
-    { "@i8",   "@u8"   }, // sizeof 1 -> signed / unsigned int8
-    { "@i16",  "@u16"  }, // sizeof 2 -> signed / unsigned int16
-    { nullptr, nullptr }, // sizeof 3-> invalid
-    { "@i32",  "@u32"  }, // sizeof 4 -> signed / unsigned int32
-    { nullptr, nullptr }, // sizeof 5-> invalid
-    { nullptr, nullptr }, // sizeof 6-> invalid
-    { nullptr, nullptr }, // sizeof 7-> invalid
-    { "@i64",  "@u64"  }  // sizeof 8 -> signed / unsigned int64
-};
-
-template<typename T>
-constexpr size_t sign_index() {
-    static_assert(numeric_limits<T>::is_integer, "T is not an integer");
-    return numeric_limits<T>::is_signed ? 0 : 1;
-}
-
-template<typename T>
-inline string demangled() {
-    return demangle(typeid(T));
-}
-
-template<typename T>
-constexpr const char* mapped_int_name() {
-    return mapped_int_names[sizeof(T)][sign_index<T>()];
-}
-
-map<string, string> s_demangled_names = {
-    // integer types
-    { demangled<char>(), mapped_int_name<char>() },
-    { demangled<signed char>(), mapped_int_name<signed char>() },
-    { demangled<unsigned char>(), mapped_int_name<unsigned char>() },
-    { demangled<short>(), mapped_int_name<short>() },
-    { demangled<signed short>(), mapped_int_name<signed short>() },
-    { demangled<unsigned short>(), mapped_int_name<unsigned short>() },
-    { demangled<short int>(), mapped_int_name<short int>() },
-    { demangled<signed short int>(), mapped_int_name<signed short int>() },
-    { demangled<unsigned short int>(), mapped_int_name<unsigned short int>()},
-    { demangled<int>(), mapped_int_name<int>() },
-    { demangled<signed int>(), mapped_int_name<signed int>() },
-    { demangled<unsigned int>(), mapped_int_name<unsigned int>() },
-    { demangled<long int>(), mapped_int_name<long int>() },
-    { demangled<signed long int>(), mapped_int_name<signed long int>() },
-    { demangled<unsigned long int>(), mapped_int_name<unsigned long int>() },
-    { demangled<long>(), mapped_int_name<long>() },
-    { demangled<signed long>(), mapped_int_name<signed long>() },
-    { demangled<unsigned long>(), mapped_int_name<unsigned long>() },
-    { demangled<long long>(), mapped_int_name<long long>() },
-    { demangled<signed long long>(), mapped_int_name<signed long long>() },
-    { demangled<unsigned long long>(), mapped_int_name<unsigned long long>()},
-    { demangled<char16_t>(), mapped_int_name<char16_t>() },
-    { demangled<char32_t>(), mapped_int_name<char32_t>() },
-};
 
 class parse_tree {
 
@@ -119,17 +67,19 @@ class parse_tree {
         if (m_volatile) result += "volatile ";
         if (m_const) result += "const ";
         if (!m_template) {
-            auto i = s_demangled_names.find(m_name);
-            result += (i != s_demangled_names.end()) ? i->second : m_name;
+            result += dmm->decorate(m_name);
         }
         else {
-            result += m_name;
-            result += "<";
+            string full_name = m_name;
+            full_name += "<";
             for (auto& tparam : m_template_parameters) {
-                if (result.back() != '<') result += ",";
-                result += tparam.compile();
+                // decorate each single template parameter
+                if (full_name.back() != '<') full_name += ",";
+                full_name += tparam.compile();
             }
-            result += ">";
+            full_name += ">";
+            // decorate full name
+            result += dmm->decorate(full_name);
         }
         if (m_pointer) result += "*";
         if (m_lvalue_ref) result += "&";
@@ -217,7 +167,9 @@ class parse_tree {
 
     parse_tree()
     : m_const(false), m_pointer(false), m_volatile(false), m_template(false)
-    , m_lvalue_ref(false), m_rvalue_ref(false) { }
+    , m_lvalue_ref(false), m_rvalue_ref(false) {
+        dmm = singleton_manager::get_decorated_names_map();
+    }
 
     bool m_const;
     bool m_pointer;
@@ -225,6 +177,7 @@ class parse_tree {
     bool m_template;
     bool m_lvalue_ref;
     bool m_rvalue_ref;
+    const decorated_names_map* dmm;
 
     string m_name;
     vector<parse_tree> m_template_parameters;
@@ -267,20 +220,16 @@ void replace_all(string& str, const char (&before)[RawSize], const char* after) 
     }
 }
 
-const char s_rawstr[] =
-"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>";
-const char s_str[] = "@str";
-
-const char s_rawan[] = "(anonymous namespace)";
+const char s_rawan[] = "anonymous namespace";
 const char s_an[] = "@_";
 
 } // namespace <anonymous>
 
 namespace cppa { namespace detail {
 
-std::string to_uniform_name(const std::string& tname) {
-    auto r = parse_tree::parse(begin(tname), end(tname)).compile();
-    replace_all(r, s_rawstr, s_str);
+std::string to_uniform_name(const std::string& dname) {
+    auto r = parse_tree::parse(begin(dname), end(dname)).compile();
+    // replace compiler-dependent "anonmyous namespace" with "@_"
     replace_all(r, s_rawan, s_an);
     return r;
 }

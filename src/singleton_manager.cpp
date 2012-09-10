@@ -43,6 +43,7 @@
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/decorated_names_map.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
@@ -57,6 +58,7 @@ using namespace cppa::detail;
 //volatile uniform_type_info_map* s_uniform_type_info_map = 0;
 
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
+std::atomic<decorated_names_map*> s_decorated_names_map;
 std::atomic<network_manager*> s_network_manager;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
@@ -121,6 +123,8 @@ void shutdown() {
     s_empty_tuple = nullptr;
     delete s_uniform_type_info_map.load();
     s_uniform_type_info_map = nullptr;
+    delete s_decorated_names_map.load();
+    s_decorated_names_map = nullptr;
 }
 
 } // namespace cppa
@@ -141,6 +145,10 @@ group_manager* singleton_manager::get_group_manager() {
 
 scheduler* singleton_manager::get_scheduler() {
     return s_scheduler.load();
+}
+
+decorated_names_map* singleton_manager::get_decorated_names_map() {
+    return lazy_get(s_decorated_names_map);
 }
 
 bool singleton_manager::set_scheduler(scheduler* ptr) {

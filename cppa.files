@@ -273,3 +273,5 @@ cppa/opt.hpp
 src/opt.cpp
 cppa/detail/opt_impls.hpp
 examples/type_plugins.hpp
+cppa/detail/decorated_names_map.hpp
+src/decorated_names_map.cpp
