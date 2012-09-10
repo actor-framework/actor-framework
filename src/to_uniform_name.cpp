@@ -83,143 +83,178 @@ constexpr const char* mapped_int_name() {
     return mapped_int_names[sizeof(T)][sign_index<T>()];
 }
 
-template<typename Iterator>
-string to_uniform_name_impl(Iterator begin, Iterator end,
-                                 bool first_run = false) {
-    // all integer type names as uniform representation
-    static map<string, string> mapped_demangled_names = {
-      // integer types
-      { demangled<char>(), mapped_int_name<char>() },
-      { demangled<signed char>(), mapped_int_name<signed char>() },
-      { demangled<unsigned char>(), mapped_int_name<unsigned char>() },
-      { demangled<short>(), mapped_int_name<short>() },
-      { demangled<signed short>(), mapped_int_name<signed short>() },
-      { demangled<unsigned short>(), mapped_int_name<unsigned short>() },
-      { demangled<short int>(), mapped_int_name<short int>() },
-      { demangled<signed short int>(), mapped_int_name<signed short int>() },
-      { demangled<unsigned short int>(), mapped_int_name<unsigned short int>()},
-      { demangled<int>(), mapped_int_name<int>() },
-      { demangled<signed int>(), mapped_int_name<signed int>() },
-      { demangled<unsigned int>(), mapped_int_name<unsigned int>() },
-      { demangled<long int>(), mapped_int_name<long int>() },
-      { demangled<signed long int>(), mapped_int_name<signed long int>() },
-      { demangled<unsigned long int>(), mapped_int_name<unsigned long int>() },
-      { demangled<long>(), mapped_int_name<long>() },
-      { demangled<signed long>(), mapped_int_name<signed long>() },
-      { demangled<unsigned long>(), mapped_int_name<unsigned long>() },
-      { demangled<long long>(), mapped_int_name<long long>() },
-      { demangled<signed long long>(), mapped_int_name<signed long long>() },
-      { demangled<unsigned long long>(), mapped_int_name<unsigned long long>()},
-      { demangled<char16_t>(), mapped_int_name<char16_t>() },
-      { demangled<char32_t>(), mapped_int_name<char32_t>() },
-      // string types
-      { demangled<string>(), "@str" },
-      { demangled<u16string>(), "@u16str" },
-      { demangled<u32string>(), "@u32str" },
-      // cppa types
-      { demangled<atom_value>(), "@atom" },
-      { demangled<util::void_type>(), "@0" },
-      { demangled<any_tuple>(), "@<>" },
-      { demangled<actor_ptr>(), "@actor" },
-      { demangled<group_ptr>(), "@group" },
-      { demangled<channel_ptr>(), "@channel" },
-      { demangled<addressed_message>(), "@msg" },
-      { demangled< intrusive_ptr<process_information> >(), "@process_info" }
-    };
+map<string, string> s_demangled_names = {
+    // integer types
+    { demangled<char>(), mapped_int_name<char>() },
+    { demangled<signed char>(), mapped_int_name<signed char>() },
+    { demangled<unsigned char>(), mapped_int_name<unsigned char>() },
+    { demangled<short>(), mapped_int_name<short>() },
+    { demangled<signed short>(), mapped_int_name<signed short>() },
+    { demangled<unsigned short>(), mapped_int_name<unsigned short>() },
+    { demangled<short int>(), mapped_int_name<short int>() },
+    { demangled<signed short int>(), mapped_int_name<signed short int>() },
+    { demangled<unsigned short int>(), mapped_int_name<unsigned short int>()},
+    { demangled<int>(), mapped_int_name<int>() },
+    { demangled<signed int>(), mapped_int_name<signed int>() },
+    { demangled<unsigned int>(), mapped_int_name<unsigned int>() },
+    { demangled<long int>(), mapped_int_name<long int>() },
+    { demangled<signed long int>(), mapped_int_name<signed long int>() },
+    { demangled<unsigned long int>(), mapped_int_name<unsigned long int>() },
+    { demangled<long>(), mapped_int_name<long>() },
+    { demangled<signed long>(), mapped_int_name<signed long>() },
+    { demangled<unsigned long>(), mapped_int_name<unsigned long>() },
+    { demangled<long long>(), mapped_int_name<long long>() },
+    { demangled<signed long long>(), mapped_int_name<signed long long>() },
+    { demangled<unsigned long long>(), mapped_int_name<unsigned long long>()},
+    { demangled<char16_t>(), mapped_int_name<char16_t>() },
+    { demangled<char32_t>(), mapped_int_name<char32_t>() },
+};
 
-    // check if we could find the whole string in our lookup map
-    if (first_run) {
-        string tmp(begin, end);
-        auto i = mapped_demangled_names.find(tmp);
-        if (i != mapped_demangled_names.end()) {
-            return i->second;
+class parse_tree {
+
+ public:
+
+    string compile() const {
+        string result;
+        if (m_volatile) result += "volatile ";
+        if (m_const) result += "const ";
+        if (!m_template) {
+            auto i = s_demangled_names.find(m_name);
+            result += (i != s_demangled_names.end()) ? i->second : m_name;
         }
+        else {
+            result += m_name;
+            result += "<";
+            for (auto& tparam : m_template_parameters) {
+                if (result.back() != '<') result += ",";
+                result += tparam.compile();
+            }
+            result += ">";
+        }
+        if (m_pointer) result += "*";
+        if (m_lvalue_ref) result += "&";
+        if (m_rvalue_ref) result += "&&";
+        return result;
     }
 
-    // does [begin, end) represents an empty string?
-    if (begin == end) return "";
-    // derived reverse_iterator type
-    typedef reverse_iterator<Iterator> reverse_iterator;
-    // a subsequence [begin', end') within [begin, end)
-    typedef pair<Iterator, Iterator> subseq;
-    vector<subseq> substrings;
-    // explode string if we got a list of types
-    int open_brackets = 0; // counts "open" '<'
-    // denotes the begin of a possible subsequence
-    Iterator anchor = begin;
-    for (Iterator i = begin; i != end; /* i is incemented in the loop */) {
-        switch (*i) {
+    template<typename Iterator>
+    static vector<parse_tree> parse_tpl_args(Iterator first, Iterator last);
 
-         case '<':
-            ++open_brackets;
-            ++i;
-            break;
-
-         case '>':
-            if (--open_brackets < 0) {
-                throw runtime_error("malformed string");
-            }
-            ++i;
-            break;
-
-         case ',':
-            if (open_brackets == 0) {
-                substrings.push_back(make_pair(anchor, i));
-                ++i;
-                anchor = i;
+    template<typename Iterator>
+    static parse_tree parse(Iterator first, Iterator last) {
+        typedef reverse_iterator<Iterator> rev_iter;
+        auto sub_first = find(first, last, '<');
+        auto sub_last = find(rev_iter(last), rev_iter(first), '>').base() - 1;
+        if (sub_last < sub_first) {
+            sub_first = sub_last = last;
+        }
+        auto islegal = [](char c) { return isalnum(c) || c == ':' || c == '_'; };
+        vector<string> tokens;
+        tokens.push_back("");
+        for (auto i = first; i != last;) {
+            if (i == sub_first) {
+                tokens.push_back("");
+                i = sub_last;
             }
             else {
+                char c = *i;
+                if (islegal(c)) {
+                    if (!tokens.back().empty() && !islegal(tokens.back().back())) {
+                        tokens.push_back("");
+                    }
+                    tokens.back() += c;
+                }
+                else if (c == ' ') {
+                    tokens.push_back("");
+                }
+                else if (c == '&') {
+                    if (tokens.back().empty() || tokens.back().back() == '&') {
+                        tokens.back() += c;
+                    }
+                    else {
+                        tokens.push_back("&");
+                    }
+                }
+                else if (c == '*') {
+                    tokens.push_back("*");
+                }
                 ++i;
             }
-            break;
-
-         default:
-            ++i;
-            break;
-
         }
-    }
-    // call recursively for each list argument
-    if (!substrings.empty()) {
-        string result;
-        substrings.push_back(make_pair(anchor, end));
-        for (const subseq& sstr : substrings) {
-            if (!result.empty()) result += ",";
-            result += to_uniform_name_impl(sstr.first, sstr.second);
+        parse_tree result;
+        if (sub_first != sub_last) {
+            result.m_template = true;
+            result.m_template_parameters = parse_tpl_args(sub_first + 1, sub_last);
+        }
+        for (auto& token: tokens) {
+            if (token == "const") {
+                result.m_const = true;
+            }
+            else if (token == "volatile") {
+                result.m_volatile = true;
+            }
+            else if (token == "&") {
+                result.m_lvalue_ref = true;
+            }
+            else if (token == "&&") {
+                result.m_rvalue_ref = true;
+            }
+            else if (token == "*") {
+                result.m_pointer = true;
+            }
+            else if (token == "class" || token == "struct") {
+                // ignored (created by visual c++ compilers)
+            }
+            else if (!token.empty()) {
+                if (!result.m_name.empty()) result.m_name += " ";
+                result.m_name += token;
+            }
         }
         return result;
     }
-    // we didn't got a list, compute unify name
-    else {
-        // is [begin, end) a template?
-        Iterator substr_begin = find(begin, end, '<');
-        if (substr_begin == end) {
-            // not a template, return mapping
-            string arg(begin, end);
-            auto mapped = mapped_demangled_names.find(arg);
-            return (mapped == mapped_demangled_names.end()) ? arg : mapped->second;
+
+ private:
+
+    parse_tree()
+    : m_const(false), m_pointer(false), m_volatile(false), m_template(false)
+    , m_lvalue_ref(false), m_rvalue_ref(false) { }
+
+    bool m_const;
+    bool m_pointer;
+    bool m_volatile;
+    bool m_template;
+    bool m_lvalue_ref;
+    bool m_rvalue_ref;
+
+    string m_name;
+    vector<parse_tree> m_template_parameters;
+
+};
+
+template<typename Iterator>
+vector<parse_tree> parse_tree::parse_tpl_args(Iterator first, Iterator last) {
+    vector<parse_tree> result;
+    long open_brackets = 0;
+    auto i0 = first;
+    for (; first != last; ++first) {
+        switch (*first) {
+            case '<':
+                ++open_brackets;
+                break;
+            case '>':
+                --open_brackets;
+                break;
+            case ',':
+                if (open_brackets == 0) {
+                    result.push_back(parse(i0, first));
+                    i0 = first + 1;
+                }
+                break;
+            default: break;
         }
-        // skip leading '<'
-        ++substr_begin;
-        // find trailing '>'
-        Iterator substr_end = find(reverse_iterator(end),
-                                        reverse_iterator(substr_begin),
-                                        '>')
-                              // get as an Iterator
-                              .base();
-        // skip trailing '>'
-        --substr_end;
-        if (substr_end == substr_begin) {
-            throw runtime_error("substr_end == substr_begin");
-        }
-        string result;
-        // template name (part before leading '<')
-        result.append(begin, substr_begin);
-        // get mappings of all template parameter(s)
-        result += to_uniform_name_impl(substr_begin, substr_end);
-        result.append(substr_end, end);
-        return result;
     }
+    result.push_back(parse(i0, first));
+    return result;
 }
 
 template<size_t RawSize>
@@ -243,8 +278,8 @@ const char s_an[] = "@_";
 
 namespace cppa { namespace detail {
 
-std::string to_uniform_name(const std::string& dname) {
-    auto r = to_uniform_name_impl(dname.begin(), dname.end(), true);
+std::string to_uniform_name(const std::string& tname) {
+    auto r = parse_tree::parse(begin(tname), end(tname)).compile();
     replace_all(r, s_rawstr, s_str);
     replace_all(r, s_rawan, s_an);
     return r;
