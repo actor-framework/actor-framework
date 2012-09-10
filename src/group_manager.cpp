@@ -579,7 +579,7 @@ group_manager::group_manager() {
 
 intrusive_ptr<group> group_manager::anonymous() {
     string id = "__#";
-    id += to_string(++m_ad_hoc_id);
+    id += std::to_string(++m_ad_hoc_id);
     return get_module("local")->get(id);
 }
 

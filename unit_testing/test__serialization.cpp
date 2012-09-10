@@ -170,7 +170,7 @@ int main() {
         raw_struct rs2;
         uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
         CPPA_CHECK_EQUAL(rs.str, rs2.str);
-        auto rsstr = cppa::to_string(rs);
+        auto rsstr = to_string(object::from(rs));
         rs2.str = "foobar";
         cout << "rs as string: " << rsstr << endl;
         rs2 = from_string<raw_struct>(rsstr);
@@ -266,7 +266,7 @@ int main() {
         if (meta_int) {
             auto o = meta_int->create();
             get_ref<uint32_t>(o) = 42;
-            auto str = cppa::to_string(get<uint32_t>(o));
+            auto str = cppa::to_string(object::from(get<uint32_t>(o)));
             CPPA_CHECK_EQUAL( "@u32 ( 42 )", str);
         }
     }
@@ -285,7 +285,7 @@ int main() {
         auto b1str = "struct_b ( struct_a ( 1, 2 ), 3, "
                      "{ 4, 5, 6, 7, 8, 9, 10 } )";
         // verify
-        CPPA_CHECK_EQUAL((to_string(b1)), b1str); {
+        CPPA_CHECK_EQUAL((to_string(object::from(b1))), b1str); {
             // serialize b1 to buf
             util::buffer wr_buf;
             binary_serializer bs(&wr_buf);
@@ -299,7 +299,7 @@ int main() {
         }
         // verify result of serialization / deserialization
         CPPA_CHECK(b1 == b2);
-        CPPA_CHECK_EQUAL(to_string(b2), b1str);
+        CPPA_CHECK_EQUAL(to_string(object::from(b2)), b1str);
         { // deserialize b3 from string
             object res = from_string(b1str);
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
