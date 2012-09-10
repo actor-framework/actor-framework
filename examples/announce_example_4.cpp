@@ -119,7 +119,7 @@ int main(int, char**) {
         },
         on<baz>() >> [](const baz& val) {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
-            cout << to_string(val) << endl;
+            cout << to_string(object::from(val)) << endl;
         }
     );
     shutdown();
