@@ -76,8 +76,7 @@ class client : public event_based_actor {
                 if (last_sender() != this) forward_to(m_printer);
             },
             others() >> [=]() {
-                send(m_printer,
-                     "*** unexpected message: '" + to_string(last_dequeued()));
+                send(m_printer, to_string(last_dequeued()));
             }
         );
     }
