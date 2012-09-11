@@ -31,11 +31,18 @@
 #ifndef CPPA_TO_STRING_HPP
 #define CPPA_TO_STRING_HPP
 
+#include <type_traits>
+
 #include "cppa/atom.hpp" // included for to_string(atom_value)
+#include "cppa/actor.hpp"
+#include "cppa/group.hpp"
 #include "cppa/object.hpp"
+#include "cppa/channel.hpp"
+#include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
-#include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/process_information.hpp"
 
 namespace cppa {
 
@@ -43,13 +50,36 @@ namespace detail {
 
 std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
+template<typename T>
+struct has_cppa_to_string : std::false_type { };
+
+template<>
+struct has_cppa_to_string<any_tuple> : std::true_type { };
+
+template<>
+struct has_cppa_to_string<addressed_message> : std::true_type { };
+
+template<>
+struct has_cppa_to_string<actor_ptr> : std::true_type { };
+
+template<>
+struct has_cppa_to_string<group_ptr> : std::true_type { };
+
+template<>
+struct has_cppa_to_string<channel_ptr> : std::true_type { };
+
+template<>
+struct has_cppa_to_string<process_information_ptr> : std::true_type { };
+
 } // namespace detail
 
 /**
- * @brief Converts a tuple to a string.
+ * @brief Converts any of libcppa's core types to a string.
  */
-inline std::string to_string(const any_tuple& what) {
-    return detail::to_string_impl(&what, uniform_typeid<any_tuple>());
+template<typename T>
+inline std::string to_string(const T& what,
+                             typename std::enable_if<detail::has_cppa_to_string<T>::value>::type* = 0) {
+    return detail::to_string_impl(&what, uniform_typeid<T>());
 }
 
 /**
