@@ -28,9 +28,11 @@
 \******************************************************************************/
 
 
+#include <limits>
 #include <string>
-#include <cstring>
 #include <cstdint>
+#include <sstream>
+#include <cstring>
 #include <type_traits>
 
 #include "cppa/primitive_variant.hpp"
@@ -74,8 +76,10 @@ class binary_writer {
     void operator()(const T& value,
                     typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
         // write floating points as strings
-        std::string str = std::to_string(value);
-        (*this)(str);
+        std::ostringstream iss;
+        iss.precision(std::numeric_limits<T>::max_digits10);
+        iss << value;
+        (*this)(iss.str());
     }
 
     void operator()(const std::string& str) {
