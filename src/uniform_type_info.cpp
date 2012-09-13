@@ -697,6 +697,7 @@ uniform_type_info_map::uniform_type_info_map() {
     insert({raw_name<detail::addressed_message>()}, new addr_msg_tinfo);
     insert({raw_name<util::void_type>()}, new void_type_tinfo);
     insert({raw_name<process_information_ptr>()}, new process_info_ptr_tinfo);
+    insert({raw_name<map<string,string>>()}, new default_uniform_type_info_impl<map<string,string>>);
 }
 
 uniform_type_info_map::~uniform_type_info_map() {

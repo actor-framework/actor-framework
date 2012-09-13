@@ -110,6 +110,7 @@ decorated_names_map::decorated_names_map() {
         { "std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>", "@str" },
         { "std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>", "@u16str" },
         { "std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>", "@u32str"},
+        { "std::map<@str,@str,std::less<@str>,std::allocator<std::pair<const @str,@str>>>", "@strmap" },
         { "std::string", "@str" }, // GCC
         { "cppa::util::void_type", "@0" }
     };
