@@ -35,6 +35,7 @@
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
+#include "cppa/util/is_builtin.hpp"
 #include "cppa/util/is_iterable.hpp"
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/is_forward_iterator.hpp"
@@ -97,13 +98,34 @@ class is_stl_compliant_map {
 };
 
 template<typename T>
+class builtin_member : public util::abstract_uniform_type_info<T> {
+
+ public:
+
+    builtin_member() : m_decorated(uniform_typeid<T>()) { }
+
+    void serialize(const void* obj, serializer* s) const {
+        m_decorated->serialize(obj, s);
+    }
+
+    void deserialize(void* obj, deserializer* d) const {
+        m_decorated->deserialize(obj, d);
+    }
+
+ private:
+
+    const uniform_type_info* m_decorated;
+
+};
+
+template<typename T>
 class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T> {
 
     template<typename X>
     struct is_invalid {
         static constexpr bool value =    !util::is_primitive<X>::value
-                                  && !is_stl_compliant_map<X>::value
-                                  && !is_stl_compliant_list<X>::value;
+                                      && !is_stl_compliant_map<X>::value
+                                      && !is_stl_compliant_list<X>::value;
     };
 
     class member {
@@ -265,7 +287,14 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
     template<typename R, class C, typename... Args>
-    typename std::enable_if<is_invalid<R>::value>::type
+    typename std::enable_if<is_invalid<R>::value && util::is_builtin<R>::value>::type
+    push_back(R C::* mem_ptr, Args&&... args) {
+        m_members.push_back({new builtin_member<R>(), mem_ptr});
+        push_back(std::forward<Args>(args)...);
+    }
+
+    template<typename R, class C, typename... Args>
+    typename std::enable_if<is_invalid<R>::value && !util::is_builtin<R>::value>::type
     push_back(R C::*, Args&&...) {
         static_assert(util::is_primitive<R>::value,
                       "T is neither a primitive type nor a "
