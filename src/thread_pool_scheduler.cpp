@@ -73,7 +73,7 @@ struct thread_pool_scheduler::worker {
 
     job_ptr aggressive_polling() {
         job_ptr result = nullptr;
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 100; ++i) {
             result = m_job_queue->try_pop();
             if (result) {
                 return result;
@@ -85,12 +85,13 @@ struct thread_pool_scheduler::worker {
 
     job_ptr less_aggressive_polling() {
         job_ptr result = nullptr;
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 550; ++i) {
             result =  m_job_queue->try_pop();
             if (result) {
                 return result;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
         return result;
     }
