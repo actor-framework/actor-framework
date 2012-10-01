@@ -83,7 +83,7 @@ class container_tuple_view : public abstract_tuple {
 
  private:
 
-    std::unique_ptr<Container, disablable_delete<Container> > m_ptr;
+    std::unique_ptr<Container, disablable_delete> m_ptr;
 
 };
 

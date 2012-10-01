@@ -24,6 +24,9 @@ inline void exec_plugin() {
                 }
             }
         }
+        else {
+            cerr << "*** plugin did not define symbol exec_plugin!" << endl;
+        }
     }
 }
 

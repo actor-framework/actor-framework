@@ -54,14 +54,11 @@ cppa/detail/empty_tuple.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/implicit_conversions.hpp
-cppa/detail/list_member.hpp
-cppa/detail/map_member.hpp
 cppa/detail/matches.hpp
 cppa/detail/network_manager.hpp
 cppa/detail/object_array.hpp
 cppa/detail/object_impl.hpp
 cppa/detail/pair_member.hpp
-cppa/detail/primitive_member.hpp
 cppa/detail/projection.hpp
 cppa/detail/pseudo_tuple.hpp
 cppa/detail/ptype_to_type.hpp

@@ -73,6 +73,7 @@ int main() {
         "@i8", "@i16", "@i32", "@i64",  // signed integer names
         "@u8", "@u16", "@u32", "@u64",  // unsigned integer names
         "@str", "@u16str", "@u32str",   // strings
+        "@strmap",                      // string containers
         "float", "double",              // floating points
         "@0",                           // cppa::util::void_type
         // default announced cppa types

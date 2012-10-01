@@ -1,8 +1,12 @@
 Version 0.4.2
 
-2012-XX-XX
+2012-10-1
 
 - Bugfix: evaluate `errno` whenever select() fails and handle errors properly
+- Refactored announce
+  * accept recursive containers, e.g.,  vector<vector<double>>
+  * allow user-defined types as members of announced types
+  * all-new, policy-based implementation
 
 Version 0.4.1
 

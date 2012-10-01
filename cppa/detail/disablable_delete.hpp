@@ -33,20 +33,24 @@
 
 namespace cppa { namespace detail {
 
-template<typename T>
 class disablable_delete {
-
-    bool m_enabled;
 
  public:
 
-    disablable_delete() : m_enabled(true) { }
+    constexpr disablable_delete() : m_enabled(true) { }
 
-    inline void disable() { m_enabled = false; }
+    inline void disable() {
+        m_enabled = false;
+    }
 
+    template<typename T>
     inline void operator()(T* ptr) {
         if (m_enabled) delete ptr;
     }
+
+ private:
+
+    bool m_enabled;
 
 };
 

@@ -4,10 +4,13 @@
 #include <iostream>
 
 #include "cppa/cppa.hpp"
+#include "cppa/binary_serializer.hpp"
+#include "cppa/binary_deserializer.hpp"
 
 using std::cout;
 using std::endl;
 
+using namespace std;
 using namespace cppa;
 
 // POD struct
@@ -28,10 +31,40 @@ typedef std::pair<int,int> foo_pair;
 // another pair of two ints
 typedef std::pair<int,int> foo_pair2;
 
+// a struct with member vector<vector<...>>
+struct foo2 {
+    int a;
+    vector<vector<double> > b;
+};
+
+bool operator==( const foo2& lhs, const foo2& rhs ) {
+    return lhs.a == rhs.a && lhs.b == rhs.b;
+}
+
 int main(int, char**) {
+
     // announces foo to the libcppa type system;
     // the function expects member pointers to all elements of foo
     assert(announce<foo>(&foo::a, &foo::b) == true);
+
+    // announce foo2 to the libcppa type system,
+    // note that recursive containers are managed automatically by libcppa
+    assert(announce<foo2>(&foo2::a, &foo2::b) == true);
+
+    foo2 vd;
+    vd.a = 5;
+    vd.b.resize(1);
+    vd.b.back().push_back(42);
+
+    util::buffer buf;
+    binary_serializer bs(&buf);
+    bs << vd;
+
+    binary_deserializer bd(buf.data(), buf.size());
+    foo2 vd2;
+    uniform_typeid<foo2>()->deserialize(&vd2, &bd);
+
+    assert(vd == vd2);
 
     // announce std::pair<int,int> to the type system;
     // NOTE: foo_pair is NOT distinguishable from foo_pair2!

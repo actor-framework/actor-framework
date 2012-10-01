@@ -31,6 +31,8 @@
 #ifndef CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 #define CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP
 
+#include <memory>
+
 #include "cppa/anything.hpp"
 
 #include "cppa/util/rm_ref.hpp"
@@ -41,12 +43,11 @@
 #include "cppa/util/is_forward_iterator.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
-#include "cppa/detail/map_member.hpp"
-#include "cppa/detail/list_member.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
-#include "cppa/detail/primitive_member.hpp"
 
 namespace cppa { namespace detail {
+
+typedef std::unique_ptr<uniform_type_info> unique_uti;
 
 template<typename T>
 class is_stl_compliant_list {
@@ -93,9 +94,15 @@ class is_stl_compliant_map {
  public:
 
     static constexpr bool value =    util::is_iterable<T>::value
-                              && std::is_same<bool, result_type>::value;
+                                  && std::is_same<bool, result_type>::value;
 
 };
+
+template<typename T>
+struct is_stl_pair : std::false_type { };
+
+template<typename F, typename S>
+struct is_stl_pair<std::pair<F,S> > : std::true_type { };
 
 template<typename T>
 class builtin_member : public util::abstract_uniform_type_info<T> {
@@ -118,130 +125,334 @@ class builtin_member : public util::abstract_uniform_type_info<T> {
 
 };
 
+typedef std::integral_constant<int,0> primitive_impl;
+typedef std::integral_constant<int,1> list_impl;
+typedef std::integral_constant<int,2> map_impl;
+typedef std::integral_constant<int,3> pair_impl;
+typedef std::integral_constant<int,9> recursive_impl;
+
+template<typename T>
+constexpr int impl_id() {
+    return util::is_primitive<T>::value
+           ? 0
+           : (is_stl_compliant_list<T>::value
+              ? 1
+              : (is_stl_compliant_map<T>::value
+                 ? 2
+                 : (is_stl_pair<T>::value
+                    ? 3
+                    : 9)));
+}
+
+template<typename T>
+struct deconst_pair {
+    typedef T type;
+};
+
+template<typename K, typename V>
+struct deconst_pair<std::pair<K,V> > {
+    typedef typename std::remove_const<K>::type first_type;
+    typedef typename std::remove_const<V>::type second_type;
+    typedef std::pair<first_type,second_type> type;
+};
+
+class default_serialize_policy {
+
+ public:
+
+    template<typename T>
+    void operator()(const T& val, serializer* s) const {
+        std::integral_constant<int,impl_id<T>()> token;
+        simpl(val, s, token);
+    }
+
+    template<typename T>
+    void operator()(T& val, deserializer* d) const {
+        std::integral_constant<int,impl_id<T>()> token;
+        dimpl(val, d, token);
+        //static_types_array<T>::arr[0]->deserialize(&val, d);
+    }
+
+ private:
+
+    template<typename T>
+    void simpl(const T& val, serializer* s, primitive_impl) const {
+        s->write_value(val);
+    }
+
+    template<typename T>
+    void simpl(const T& val, serializer* s, list_impl) const {
+        s->begin_sequence(val.size());
+        for (auto i = val.begin(); i != val.end(); ++i) {
+            (*this)(*i, s);
+        }
+        s->end_sequence();
+    }
+
+    template<typename T>
+    void simpl(const T& val, serializer* s, map_impl) const {
+        // lists and maps share code for serialization
+        list_impl token;
+        simpl(val, s, token);
+    }
+
+    template<typename T>
+    void simpl(const T& val, serializer* s, pair_impl) const {
+        (*this)(val.first, s);
+        (*this)(val.second, s);
+    }
+
+    template<typename T>
+    void simpl(const T& val, serializer* s, recursive_impl) const {
+        static_types_array<T>::arr[0]->serialize(&val, s);
+    }
+
+    template<typename T>
+    void dimpl(T& storage, deserializer* d, primitive_impl) const {
+        primitive_variant val = d->read_value(type_to_ptype<T>::ptype);
+        storage = std::move(get<T>(val));
+    }
+
+    template<typename T>
+    void dimpl(T& storage, deserializer* d, list_impl) const {
+        typedef typename T::value_type value_type;
+        storage.clear();
+        size_t size = d->begin_sequence();
+        for (size_t i = 0; i < size; ++i) {
+            value_type tmp;
+            (*this)(tmp, d);
+            storage.push_back(std::move(tmp));
+        }
+        d->end_sequence();
+    }
+
+    template<typename T>
+    void dimpl(T& storage, deserializer* d, map_impl) const {
+        storage.clear();
+        size_t size = d->begin_sequence();
+        for (size_t i = 0; i < size; ++i) {
+            typename deconst_pair<typename T::value_type>::type tmp;
+            (*this)(tmp, d);
+            storage.insert(tmp);
+        }
+        d->end_sequence();
+    }
+
+    template<typename T>
+    void dimpl(T& storage, deserializer* d, pair_impl) const {
+        (*this)(storage.first, d);
+        (*this)(storage.second, d);
+    }
+
+    template<typename T>
+    void dimpl(T& storage, deserializer* d, recursive_impl) const {
+        static_types_array<T>::arr[0]->deserialize(&storage, d);
+    }
+
+};
+
+class forwarding_serialize_policy {
+
+ public:
+
+    forwarding_serialize_policy(const forwarding_serialize_policy&) = delete;
+    forwarding_serialize_policy& operator=(const forwarding_serialize_policy&) = delete;
+
+    forwarding_serialize_policy(forwarding_serialize_policy&&) = default;
+    forwarding_serialize_policy& operator=(forwarding_serialize_policy&&) = default;
+
+    inline forwarding_serialize_policy(unique_uti uti)
+    : m_uti(std::move(uti)) { }
+
+    template<typename T>
+    inline void operator()(const T& val, serializer* s) const {
+        m_uti->serialize(&val, s);
+    }
+
+    template<typename T>
+    inline void operator()(T& val, deserializer* d) const {
+        m_uti->deserialize(&val, d);
+    }
+
+ private:
+
+    unique_uti m_uti;
+
+};
+
+template<typename T, class AccessPolicy, class SerializePolicy = default_serialize_policy>
+class member_tinfo : public util::abstract_uniform_type_info<T> {
+
+ public:
+
+    member_tinfo(AccessPolicy apol, SerializePolicy spol)
+    : m_apol(std::move(apol)), m_spol(std::move(spol)) { }
+
+    member_tinfo(AccessPolicy apol) : m_apol(std::move(apol)) { }
+
+    member_tinfo() { }
+
+    void serialize(const void* vptr, serializer* s) const {
+        m_spol(m_apol(vptr), s);
+    }
+
+    void deserialize(void* vptr, deserializer* d) const {
+        std::integral_constant<bool, AccessPolicy::grants_mutable_access> token;
+        ds(vptr, d, token);
+    }
+
+ private:
+
+    void ds(void* p, deserializer* d, std::true_type) const {
+        m_spol(m_apol(p), d);
+    }
+
+    void ds(void* p, deserializer* d, std::false_type) const {
+        T tmp;
+        m_spol(tmp, d);
+        m_apol(p, std::move(tmp));
+    }
+
+    AccessPolicy m_apol;
+    SerializePolicy m_spol;
+
+};
+
+template<typename T, class C>
+class memptr_access_policy {
+
+ public:
+
+    memptr_access_policy(const memptr_access_policy&) = default;
+    memptr_access_policy& operator=(const memptr_access_policy&) = default;
+
+    inline memptr_access_policy(T C::* memptr) : m_memptr(memptr) { }
+
+    inline T& operator()(void* vptr) const {
+        auto ptr = reinterpret_cast<C*>(vptr);
+        return *ptr.*m_memptr;
+    }
+
+    inline const T& operator()(const void* vptr) const {
+        auto ptr = reinterpret_cast<const C*>(vptr);
+        return *ptr.*m_memptr;
+    }
+
+    static constexpr bool grants_mutable_access = true;
+
+ private:
+
+    T C::* m_memptr;
+
+};
+
+template<class C, typename GRes, typename SRes, typename SArg>
+class getter_setter_access_policy {
+
+ public:
+
+    typedef GRes (C::*getter)() const;
+    typedef SRes (C::*setter)(SArg);
+
+    getter_setter_access_policy(const getter_setter_access_policy&) = default;
+    getter_setter_access_policy& operator=(const getter_setter_access_policy&) = default;
+
+    getter_setter_access_policy(getter g, setter s) : m_get(g), m_set(s) { }
+
+    inline GRes operator()(const void* vptr) const {
+        auto ptr = reinterpret_cast<const C*>(vptr);
+        return (*ptr.*m_get)();
+    }
+
+    template<typename Arg>
+    inline void operator()(void* vptr, Arg&& value) const {
+        auto ptr = reinterpret_cast<C*>(vptr);
+        return (*ptr.*m_set)(std::forward<Arg>(value));
+    }
+
+    static constexpr bool grants_mutable_access = false;
+
+ private:
+
+    getter m_get;
+    setter m_set;
+
+};
+
+template<typename T>
+struct fake_access_policy {
+
+    inline T& operator()(void* vptr) const {
+        return *reinterpret_cast<T*>(vptr);
+    }
+
+    inline const T& operator()(const void* vptr) const {
+        return *reinterpret_cast<const T*>(vptr);
+    }
+
+    static constexpr bool grants_mutable_access = true;
+
+};
+
+template<typename T, class C>
+unique_uti new_member_tinfo(T C::* memptr) {
+    typedef memptr_access_policy<T,C> access_policy;
+    typedef member_tinfo<T,access_policy> result_type;
+    return unique_uti(new result_type(memptr));
+}
+
+template<typename T, class C>
+unique_uti new_member_tinfo(T C::* memptr, std::unique_ptr<uniform_type_info> meminf) {
+    typedef memptr_access_policy<T,C> access_policy;
+    typedef member_tinfo<T,access_policy,forwarding_serialize_policy> result_type;
+    return unique_uti(new result_type(memptr, std::move(meminf)));
+}
+
+template<class C, typename GRes, typename SRes, typename SArg>
+unique_uti new_member_tinfo(GRes (C::*getter)() const, SRes (C::*setter)(SArg)) {
+    typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
+    typedef typename util::rm_ref<GRes>::type value_type;
+    typedef member_tinfo<value_type,access_policy> result_type;
+    return unique_uti(new result_type(access_policy(getter, setter)));
+}
+
+template<class C, typename GRes, typename SRes, typename SArg>
+unique_uti new_member_tinfo(GRes (C::*getter)() const, SRes (C::*setter)(SArg), std::unique_ptr<uniform_type_info> meminf) {
+    typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
+    typedef typename util::rm_ref<GRes>::type value_type;
+    typedef member_tinfo<value_type,access_policy,forwarding_serialize_policy> result_type;
+    return unique_uti(new result_type(access_policy(getter, setter), std::move(meminf)));
+}
+
 template<typename T>
 class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T> {
 
-    template<typename X>
-    struct is_invalid {
-        static constexpr bool value =    !util::is_primitive<X>::value
-                                      && !is_stl_compliant_map<X>::value
-                                      && !is_stl_compliant_list<X>::value;
-    };
-
-    class member {
-
-        uniform_type_info* m_meta;
-
-        std::function<void (const uniform_type_info*,
-                            const void*,
-                            serializer*              )> m_serialize;
-
-        std::function<void (const uniform_type_info*,
-                            void*,
-                            deserializer*            )> m_deserialize;
-
-        member(const member&) = delete;
-        member& operator=(const member&) = delete;
-
-        void swap(member& other) {
-            std::swap(m_meta, other.m_meta);
-            std::swap(m_serialize, other.m_serialize);
-            std::swap(m_deserialize, other.m_deserialize);
-        }
-
-        template<typename S, class D>
-        member(uniform_type_info* mtptr, S&& s, D&& d)
-            : m_meta(mtptr)
-            , m_serialize(std::forward<S>(s))
-            , m_deserialize(std::forward<D>(d)) {
-        }
-
-     public:
-
-        template<typename R, class C>
-        member(uniform_type_info* mtptr, R C::*mem_ptr) : m_meta(mtptr) {
-            m_serialize = [mem_ptr] (const uniform_type_info* mt,
-                                     const void* obj,
-                                     serializer* s) {
-                mt->serialize(&(*reinterpret_cast<const C*>(obj).*mem_ptr), s);
-            };
-            m_deserialize = [mem_ptr] (const uniform_type_info* mt,
-                                       void* obj,
-                                       deserializer* d) {
-                mt->deserialize(&(*reinterpret_cast<C*>(obj).*mem_ptr), d);
-            };
-        }
-
-        template<typename GRes, typename SRes, typename SArg, class C>
-        member(uniform_type_info* mtptr,
-               GRes (C::*getter)() const,
-               SRes (C::*setter)(SArg)) : m_meta(mtptr) {
-            typedef typename util::rm_ref<GRes>::type getter_result;
-            typedef typename util::rm_ref<SArg>::type setter_arg;
-            static_assert(std::is_same<getter_result, setter_arg>::value,
-                          "getter result doesn't match setter argument");
-            m_serialize = [getter] (const uniform_type_info* mt,
-                                    const void* obj,
-                                    serializer* s) {
-                GRes v = (*reinterpret_cast<const C*>(obj).*getter)();
-                mt->serialize(&v, s);
-            };
-            m_deserialize = [setter] (const uniform_type_info* mt,
-                                      void* obj,
-                                      deserializer* d) {
-                setter_arg value;
-                mt->deserialize(&value, d); (*reinterpret_cast<C*>(obj).*setter)(value);
-            };
-        }
-
-        member(member&& other) : m_meta(nullptr) {
-            swap(other);
-        }
-
-        // a member that's not a member at all, but "forwards"
-        // the 'self' pointer to make use of *_member implementations
-        static member fake_member(uniform_type_info* mtptr) {
-            return {
-                mtptr,
-                [] (const uniform_type_info* mt, const void* obj, serializer* s) {
-                    mt->serialize(obj, s);
-                },
-                [] (const uniform_type_info* mt, void* obj, deserializer* d) {
-                    mt->deserialize(obj, d);
-                }
-            };
-        }
-
-        ~member() {
-            delete m_meta;
-        }
-
-        member& operator=(member&& other) {
-            swap(other);
-            return *this;
-        }
-
-        inline void serialize(const void* parent, serializer* s) const {
-            m_serialize(m_meta, parent, s);
-        }
-
-        inline void deserialize(void* parent, deserializer* d) const {
-            m_deserialize(m_meta, parent, d);
-        }
-
-    };
-
-    std::vector<member> m_members;
+    std::vector<unique_uti> m_members;
 
     // terminates recursion
     inline void push_back() { }
 
+    template<typename R, class C, typename... Args>
+    void push_back(R C::* memptr, Args&&... args) {
+        m_members.push_back(new_member_tinfo(memptr));
+        push_back(std::forward<Args>(args)...);
+    }
+
     // pr.first = member pointer
     // pr.second = meta object to handle pr.first
     template<typename R, class C, typename... Args>
-    void push_back(std::pair<R C::*, util::abstract_uniform_type_info<R>*> pr,
+    void push_back(const std::pair<R C::*, util::abstract_uniform_type_info<R>*>& pr,
                    Args&&... args) {
-        m_members.push_back({ pr.second, pr.first });
+        m_members.push_back(new_member_tinfo(pr.first, unique_uti(pr.second)));
+        push_back(std::forward<Args>(args)...);
+    }
+
+    // pr.first = getter / setter pair
+    // pr.second = meta object to handle pr.first
+    template<typename GRes, typename SRes, typename SArg, typename C, typename... Args>
+    void push_back(const std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>& pr,
+                   Args&&... args) {
+        m_members.push_back(new_member_tinfo(pr.first, pr.second));
         push_back(std::forward<Args>(args)...);
     }
 
@@ -250,79 +461,8 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     template<typename GRes, typename SRes, typename SArg, typename C, typename... Args>
     void push_back(const std::pair<std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>, util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>& pr,
                    Args&&... args) {
-        m_members.push_back({ pr.second, pr.first.first, pr.first.second });
+        m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second, unique_uti(pr.second)));
         push_back(std::forward<Args>(args)...);
-    }
-
-    // pr.first = getter member const function pointer
-    // pr.second = setter member function pointer
-    template<typename GRes, typename SRes, typename SArg, class C, typename... Args>
-    typename std::enable_if<util::is_primitive<typename util::rm_ref<GRes>::type>::value>::type
-    push_back(const std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>& pr,
-              Args&&... args) {
-        typedef typename util::rm_ref<GRes>::type memtype;
-        m_members.push_back({ new primitive_member<memtype>(), pr.first, pr.second });
-        push_back(std::forward<Args>(args)...);
-    }
-
-    template<typename R, class C, typename... Args>
-    typename std::enable_if<util::is_primitive<R>::value>::type
-    push_back(R C::*mem_ptr, Args&&... args) {
-        m_members.push_back({ new primitive_member<R>(), mem_ptr });
-        push_back(std::forward<Args>(args)...);
-    }
-
-    template< typename R, class C,typename... Args>
-    typename std::enable_if<is_stl_compliant_list<R>::value>::type
-    push_back(R C::*mem_ptr, Args&&... args) {
-        m_members.push_back({ new list_member<R>(), mem_ptr });
-        push_back(std::forward<Args>(args)...);
-    }
-
-    template<typename R, class C, typename... Args>
-    typename std::enable_if<is_stl_compliant_map<R>::value>::type
-    push_back(R C::*mem_ptr, Args&&... args) {
-        m_members.push_back({ new map_member<R>(), mem_ptr });
-        push_back(std::forward<Args>(args)...);
-    }
-
-    template<typename R, class C, typename... Args>
-    typename std::enable_if<is_invalid<R>::value && util::is_builtin<R>::value>::type
-    push_back(R C::* mem_ptr, Args&&... args) {
-        m_members.push_back({new builtin_member<R>(), mem_ptr});
-        push_back(std::forward<Args>(args)...);
-    }
-
-    template<typename R, class C, typename... Args>
-    typename std::enable_if<is_invalid<R>::value && !util::is_builtin<R>::value>::type
-    push_back(R C::*, Args&&...) {
-        static_assert(util::is_primitive<R>::value,
-                      "T is neither a primitive type nor a "
-                      "stl-compliant list/map");
-    }
-
-    template<typename P>
-    void init_(typename std::enable_if<util::is_primitive<P>::value>::type* = 0) {
-        m_members.push_back(member::fake_member(new primitive_member<P>()));
-    }
-
-    template<typename Map>
-    void init_(typename std::enable_if<is_stl_compliant_map<Map>::value>::type* = 0) {
-        m_members.push_back(member::fake_member(new map_member<Map>));
-    }
-
-    template<typename List>
-    void init_(typename std::enable_if<is_stl_compliant_list<List>::value>::type* = 0) {
-        m_members.push_back(member::fake_member(new list_member<List>));
-    }
-
-    template<typename X>
-    void init_(typename std::enable_if<is_invalid<X>::value>::type* = 0) {
-        // T is neither primitive nor a STL compliant list/map,
-        // so it has to be an announced type
-        static_assert(util::is_primitive<X>::value,
-                      "T is neither a primitive type nor a "
-                      "stl-compliant list/map");
     }
 
  public:
@@ -333,16 +473,14 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
     default_uniform_type_info_impl() {
-        init_<T>();
-        if (m_members.size() != 1) {
-            throw std::logic_error("no fake member added");
-        }
+        typedef member_tinfo<T,fake_access_policy<T> > result_type;
+        m_members.push_back(unique_uti(new result_type));
     }
 
     void serialize(const void* obj, serializer* s) const {
         s->begin_object(this->name());
         for (auto& m : m_members) {
-            m.serialize(obj, s);
+            m->serialize(obj, s);
         }
         s->end_object();
     }
@@ -351,7 +489,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         this->assert_type_name(d);
         d->begin_object(this->name());
         for (auto& m : m_members) {
-            m.deserialize(obj, d);
+            m->deserialize(obj, d);
         }
         d->end_object();
     }

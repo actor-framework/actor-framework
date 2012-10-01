@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include "cppa/config.hpp"
 
 #include <new>
@@ -185,7 +187,7 @@ int main() {
     }
 
     {
-        any_tuple ttup = make_cow_tuple(1, 2, actor_ptr(self));
+        auto ttup = make_any_tuple(1, 2, actor_ptr(self));
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf);
         bs << ttup;
