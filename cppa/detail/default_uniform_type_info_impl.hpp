@@ -34,6 +34,8 @@
 #include <memory>
 
 #include "cppa/anything.hpp"
+#include "cppa/serializer.hpp"
+#include "cppa/deserializer.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
@@ -43,6 +45,7 @@
 #include "cppa/util/is_forward_iterator.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
+#include "cppa/detail/types_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 
 namespace cppa { namespace detail {
