@@ -35,6 +35,11 @@
 #include <sstream>
 #include <iostream>
 
+#ifdef CPPA_WINDOWS
+#else
+#   include <poll.h>
+#endif
+
 #include "cppa/on.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
@@ -441,7 +446,7 @@ bool peer_connection::continue_reading() {
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size());
                 m_meta_msg->deserialize(&msg, &bd);
                 auto& content = msg.content();
-                DEBUG("<-- " << to_string(msg));
+                //DEBUG("<-- " << to_string(msg));
                 match(content) (
                     // monitor messages are sent automatically whenever
                     // actor_proxy_cache creates a new proxy
@@ -670,7 +675,7 @@ class middleman_overseer : public network_channel {
                         DEBUG("message to an unknown peer: " << to_string(out_msg));
                         break;
                     }
-                    DEBUG("--> " << to_string(out_msg));
+                    //DEBUG("--> " << to_string(out_msg));
                     auto had_unwritten_data = peer->has_unwritten_data();
                     try {
                         peer->write(out_msg);
@@ -702,19 +707,18 @@ class middleman_overseer : public network_channel {
 
 void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     DEBUG("pself: " << to_string(*m_pself));
-    int maxfd = 0;
-    fd_set rdset;
-    fd_set wrset;
-    fd_set* wrset_ptr = nullptr;
+    std::vector<pollfd> pollset;
     m_channels.emplace_back(new middleman_overseer(this, pipe_fd, queue));
     auto update_fd_sets = [&] {
-        FD_ZERO(&rdset);
-        maxfd = 0;
+        pollset.clear();
         CPPA_REQUIRE(m_channels.size() > 0);
+        // add all read handles of all channels (POLLIN)
         for (auto& channel : m_channels) {
-            auto fd = channel->read_handle();
-            maxfd = max(maxfd, fd);
-            FD_SET(fd, &rdset);
+            pollfd pfd;
+            pfd.fd = channel->read_handle();
+            pfd.events = POLLIN;
+            pfd.revents = 0;
+            pollset.push_back(pfd);
         }
         // check consistency of m_peers_with_unwritten_data
         if (!m_peers_with_unwritten_data.empty()) {
@@ -727,18 +731,14 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                 else ++i;
             }
         }
-        if (m_peers_with_unwritten_data.empty()) {
-            if (wrset_ptr) wrset_ptr = nullptr;
+        // add all write handles of all peers with unwritten data (POLLOUT)
+        for (auto& peer : m_peers_with_unwritten_data) {
+            struct pollfd pfd;
+            pfd.fd = peer->write_handle();
+            pfd.events = POLLOUT;
+            pfd.revents = 0;
+            pollset.push_back(pfd);
         }
-        else {
-            for (auto& peer : m_peers_with_unwritten_data) {
-                auto fd = peer->write_handle();
-                maxfd = max(maxfd, fd);
-                FD_SET(fd, &wrset);
-            }
-            wrset_ptr = &wrset;
-        }
-        CPPA_REQUIRE(maxfd > 0);
     };
     auto continue_reading = [&](const network_channel_ptr& ch) {
         bool erase_channel = false;
@@ -757,21 +757,19 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             erase_channel = true;
         }
         if (erase_channel) {
-            DEBUG("erase worker");
+            DEBUG("erase worker (read failed)");
             m_erased_channels.insert(ch);
         }
     };
     auto continue_writing = [&](const peer_connection_ptr& peer) {
         bool erase_channel = false;
-        try {
-            erase_channel = !peer->continue_writing();
-        }
+        try { erase_channel = !peer->continue_writing(); }
         catch (exception& e) {
             DEBUG(demangle(typeid(e).name()) << ": " << e.what());
             erase_channel = true;
         }
         if (erase_channel) {
-            DEBUG("erase worker");
+            DEBUG("erase worker (write failed)");
             m_erased_channels.insert(peer);
         }
     };
@@ -799,17 +797,16 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     };
     do {
         update_fd_sets();
-        //DEBUG("select()");
-        int sresult;
+        int presult;
         do {
-            DEBUG("select() on "
+            DEBUG("poll() on "
                   << (m_peers_with_unwritten_data.size() + m_channels.size())
                   << " sockets");
-            sresult = select(maxfd + 1, &rdset, wrset_ptr, nullptr, nullptr);
-            DEBUG("select() returned " << sresult);
-            if (sresult < 0) {
+            presult = poll (pollset.data(), pollset.size(), -1);
+            DEBUG("poll() returned " << presult);
+            if (presult < 0) {
                 // try again or die hard
-                sresult = 0;
+                presult = 0;
                 switch (errno) {
                     // a signal was caught
                     case EINTR: {
@@ -819,9 +816,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                     // nfds is negative or the value
                     // contained within timeout is invalid
                     case EINVAL: {
-                        if ((maxfd + 1) < 0) {
-                            CPPA_CRITICAL("overflow: maxfd + 1 > 0");
-                        }
+                        CPPA_CRITICAL("poll EINVAL");
                         break;
                     }
                     case ENOMEM: {
@@ -829,6 +824,13 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                         // sleep some time in hope someone releases memory
                         // while we are sleeping
                         //this_thread::yield();
+                        break;
+                    }
+                    // array given as argument was not contained
+                    // in the calling program's address space
+                    case EFAULT: {
+                        // must not happen
+                        CPPA_CRITICAL("poll EFAULT");
                         break;
                     }
                     case EBADF: {
@@ -851,20 +853,49 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                 }
             }
         }
-        while (sresult == 0);
+        while (presult == 0);
+#       ifdef CPPA_LINUX
+#       define POLL_ERR_MASK (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)
+#       else
+#       define POLL_ERR_MASK (POLLERR | POLLHUP | POLLNVAL)
+#       endif
         //DEBUG("continue reading ...");
-        { // iterate over all channels and remove channels as needed
-            for (auto& ch : m_channels) {
-                if (FD_ISSET(ch->read_handle(), &rdset)) {
-                    continue_reading(ch);
+        // iterate over all channels and remove channels as needed
+        for (auto& pfd : pollset) {
+            if (pfd.revents != 0) {
+                DEBUG("fd " << pfd.fd << "; read revents: " << pfd.revents);
+                auto ch_end = end(m_channels);
+                // check wheter pfd belongs to a read handle
+                auto ch  = find_if(begin(m_channels), ch_end,
+                                   [&](const network_channel_ptr& ptr) {
+                    return pfd.fd == ptr->read_handle();
+                });
+                if (ch != ch_end) {
+                    if (pfd.revents & POLL_ERR_MASK) {
+                        // remove socket on error
+                        m_erased_channels.insert(*ch);
+                    }
+                    else if (pfd.revents & (POLLIN | POLLPRI)) {
+                        // read some if possible
+                        continue_reading(*ch);
+                    }
                 }
-            }
-        }
-        if (wrset_ptr) { // iterate over peers with unwritten data
-            DEBUG("continue writing ...");
-            for (auto& peer : m_peers_with_unwritten_data) {
-                if (FD_ISSET(peer->write_handle(), &wrset)) {
-                    continue_writing(peer);
+                // check wheter pfd belongs to a write handle (can be both!)
+                auto pc_end = end(m_peers_with_unwritten_data);
+                auto pc = find_if(begin(m_peers_with_unwritten_data), pc_end,
+                                  [&](const peer_connection_ptr& ptr) {
+                    return pfd.fd == ptr->write_handle();
+                });
+                if (pc != pc_end) {
+                    if (pfd.revents & POLL_ERR_MASK) {
+                        // remove socket on error
+                        m_erased_channels.insert(*pc);
+                        m_peers_with_unwritten_data.erase(*pc);
+                    }
+                    else if (pfd.revents & POLLOUT) {
+                        // write some if possible
+                        continue_writing(*pc);
+                    }
                 }
             }
         }

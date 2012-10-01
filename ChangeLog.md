@@ -1,22 +1,26 @@
 Version 0.4.2
+-------------
 
-2012-10-1
+__2012-10-1__
 
 - Bugfix: evaluate `errno` whenever select() fails and handle errors properly
 - Refactored announce
   * accept recursive containers, e.g.,  vector<vector<double>>
   * allow user-defined types as members of announced types
   * all-new, policy-based implementation
+- Use `poll` rather than `select` in middleman (based on the patch by ArtemGr)
 
 Version 0.4.1
+-------------
 
-2012-08-22
+__2012-08-22__
 
 - Bugfix: shutdown() caused segfault if no scheduler or middleman was started
 
 Version 0.4
+-----------
 
-2012-08-20
+__2012-08-20__
 
 - New network layer implementation
 - Added acceptor and input/output stream interfaces
@@ -32,8 +36,9 @@ Version 0.4
 - Do not send more than one response message with `reply`
 
 Version 0.3.3
+-------------
 
-2012-08-09
+__2012-08-09__
 
 - Bugfix: serialize message id for synchronous messaging
 - Added macro to unit_testing/CMakeLists.txt for less verbose CMake setup
@@ -46,21 +51,24 @@ Version 0.3.3
 - Added "delayed_send_tuple" and "delayed_reply_tuple"
 
 Version 0.3.2
+-------------
 
-2012-07-30
+__2012-07-30__
 
 - Bugfix: added 'bool' to the list of announced types
 
 Version 0.3.1
+-------------
 
-2012-07-27
+__2012-07-27__
 
 - Bugfix: always return from a synchronous handler if a timeout occurs
 - Bugfix: request next timeout after timeout handler invocation if needed
 
 Version 0.3
+-----------
 
-2012-07-25
+__2012-07-25__
 
 - Implemented synchronous messages
 - The function become() no longer accepts pointers
@@ -72,15 +80,17 @@ Version 0.3
 - Group subscriptions are no longer attachables
 
 Version 0.2.1
+-------------
 
-2012-07-02
+__2012-07-02__
 
 - More efficient behavior implementation
 - Relaxed definition of become() to accept const lvalue references as well
 
 Version 0.2
+-----------
 
-2012-06-29
+__2012-06-29__
 
 - Removed become_void() [use quit() instead]
 - Renamed "future_send()" to "delayed_send()"
