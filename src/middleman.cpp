@@ -40,6 +40,18 @@
 #   include <poll.h>
 #endif
 
+// NB, ArtemGr, 2012-10-02: CPPA_LINUX doesn't work for me on Debain Wheezy (__linux__ does).
+#if defined (CPPA_LINUX) || defined (__linux__)
+# define USE_EPOLL
+#endif
+#ifdef USE_EPOLL
+# include <sys/epoll.h>
+# include <errno.h>
+# include <string.h>
+# include <memory>
+# include <functional>
+#endif
+
 #include "cppa/on.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
@@ -71,7 +83,7 @@ using namespace std;
     oss << "[process id: "                                                     \
         << cppa::process_information::get()->process_id()                      \
         << "] " << arg << endl;                                                \
-    cout << oss.str();                                                         \
+    cout << oss.str() << flush;                                                \
 } (void) 0
 #else
 #define DEBUG(unused) ((void) 0)
@@ -327,7 +339,18 @@ class middleman {
 
  public:
 
-    middleman() : m_done(false), m_pself(process_information::get()) { }
+    middleman() : m_done(false), m_pself(process_information::get()) {
+#ifdef USE_EPOLL
+      epollFD = epoll_create1 (EPOLL_CLOEXEC);
+      if (epollFD == -1) throw std::ios_base::failure (std::string ("epoll_create1: ") + strerror (errno));
+#endif
+    }
+
+    ~middleman() {
+#ifdef USE_EPOLL
+      close (epollFD);
+#endif
+    }
 
     template<class Connection, typename... Args>
     inline void add_channel(Args&&... args) {
@@ -393,7 +416,21 @@ class middleman {
     set<peer_connection_ptr> m_peers_with_unwritten_data;
 
     set<network_channel_ptr> m_erased_channels;
+#ifdef USE_EPOLL
+    int epollFD;
+    struct epoll_entry_t {
+      list<function<void(struct epoll_event)> > handlers;
+      /** Epoll events expected by the current `handlers`. */
+      uint32_t handlerEvents = 0;
+      /** The events used in the last `epoll_ctl` invocation. */
+      uint32_t registeredEvents = 0;
+      void clear() {handlers.clear(); handlerEvents = 0;}
+    };
+    /** Track file descriptors registered with epoll. */
+    map<int, epoll_entry_t> m_fds_in_epoll;
 
+    void add_epoll_handler (int fd, uint32_t event, function<void(struct epoll_event)> handler);
+#endif
 };
 
 bool peer_connection::continue_reading() {
@@ -705,41 +742,29 @@ class middleman_overseer : public network_channel {
 
 };
 
+#ifdef USE_EPOLL
+void middleman::add_epoll_handler (int fd, uint32_t event, function<void(struct epoll_event)> handler) {
+    uint32_t events = event | EPOLLRDHUP;
+    auto have = m_fds_in_epoll.find (fd);
+    if (have == m_fds_in_epoll.end()) {
+        struct epoll_event event;
+        event.data.fd = fd;
+        event.events = events;
+        int rc = epoll_ctl (epollFD, EPOLL_CTL_ADD, fd, &event);
+        if (rc) throw std::ios_base::failure (std::string ("EPOLL_CTL_ADD: ") + strerror (errno));
+        m_fds_in_epoll[fd].registeredEvents = events;
+    }
+    m_fds_in_epoll[fd].handlers.push_back (handler);
+    m_fds_in_epoll[fd].handlerEvents |= events;
+}
+#endif
+
 void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     DEBUG("pself: " << to_string(*m_pself));
+#ifndef USE_EPOLL
     std::vector<pollfd> pollset;
+#endif
     m_channels.emplace_back(new middleman_overseer(this, pipe_fd, queue));
-    auto update_fd_sets = [&] {
-        pollset.clear();
-        CPPA_REQUIRE(m_channels.size() > 0);
-        // add all read handles of all channels (POLLIN)
-        for (auto& channel : m_channels) {
-            pollfd pfd;
-            pfd.fd = channel->read_handle();
-            pfd.events = POLLIN;
-            pfd.revents = 0;
-            pollset.push_back(pfd);
-        }
-        // check consistency of m_peers_with_unwritten_data
-        if (!m_peers_with_unwritten_data.empty()) {
-            auto i = m_peers_with_unwritten_data.begin();
-            auto e = m_peers_with_unwritten_data.end();
-            while (i != e) {
-                if ((*i)->has_unwritten_data() == false) {
-                    i = m_peers_with_unwritten_data.erase(i);
-                }
-                else ++i;
-            }
-        }
-        // add all write handles of all peers with unwritten data (POLLOUT)
-        for (auto& peer : m_peers_with_unwritten_data) {
-            struct pollfd pfd;
-            pfd.fd = peer->write_handle();
-            pfd.events = POLLOUT;
-            pfd.revents = 0;
-            pollset.push_back(pfd);
-        }
-    };
     auto continue_reading = [&](const network_channel_ptr& ch) {
         bool erase_channel = false;
         try { erase_channel = !ch->continue_reading(); }
@@ -773,6 +798,75 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
             m_erased_channels.insert(peer);
         }
     };
+    auto update_fd_sets = [&] {
+#ifdef USE_EPOLL
+        // Remove the old handlers; this will also help us later to find the file descriptors no longer used.
+        for (auto& entry: m_fds_in_epoll) entry.second.clear();
+#else
+        pollset.clear();
+#endif
+        CPPA_REQUIRE(m_channels.size() > 0);
+        // add all read handles of all channels (POLLIN)
+        for (auto& channel : m_channels) {
+#ifdef USE_EPOLL
+            add_epoll_handler (channel->read_handle(), EPOLLIN, [this,channel,continue_reading](struct epoll_event ev) {
+                if (ev.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) m_erased_channels.insert (channel);
+                else if (ev.events && EPOLLIN) continue_reading (channel);
+            });
+#else
+            pollfd pfd;
+            pfd.fd = channel->read_handle();
+            pfd.events = POLLIN;
+            pfd.revents = 0;
+            pollset.push_back(pfd);
+#endif
+        }
+        // check consistency of m_peers_with_unwritten_data
+        if (!m_peers_with_unwritten_data.empty()) {
+            auto i = m_peers_with_unwritten_data.begin();
+            auto e = m_peers_with_unwritten_data.end();
+            while (i != e) {
+                if ((*i)->has_unwritten_data() == false) {
+                    i = m_peers_with_unwritten_data.erase(i);
+                }
+                else ++i;
+            }
+        }
+        // add all write handles of all peers with unwritten data (POLLOUT)
+        for (auto& peer : m_peers_with_unwritten_data) {
+#ifdef USE_EPOLL
+            add_epoll_handler (peer->write_handle(), EPOLLOUT, [this,peer,continue_writing](struct epoll_event ev) {
+                if (ev.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
+                    m_erased_channels.insert (peer);
+                    m_peers_with_unwritten_data.erase (peer);
+                } else if (ev.events && EPOLLOUT) continue_writing (peer);
+            });
+#else
+            struct pollfd pfd;
+            pfd.fd = peer->write_handle();
+            pfd.events = POLLOUT;
+            pfd.revents = 0;
+            pollset.push_back(pfd);
+#endif
+        }
+#ifdef USE_EPOLL
+        // Remove file destructors no longer used. Notify epoll of any changes in the events we expect from the fd.
+        for (auto it = m_fds_in_epoll.begin(), end = m_fds_in_epoll.end(); it != end;) {
+            auto cur = it++; // This allows us to remove `cur` without damaging the loop.
+            if (cur->second.handlers.empty()) { // No handlers means the file descriptor is not in m_channels nor in m_peers_with_unwritten_data.
+                epoll_ctl (epollFD, EPOLL_CTL_DEL, cur->first, NULL);
+                m_fds_in_epoll.erase (cur);
+            } else if (cur->second.handlerEvents != cur->second.registeredEvents) {
+                struct epoll_event event;
+                event.data.fd = cur->first;
+                event.events = cur->second.handlerEvents;
+                int rc = epoll_ctl (epollFD, EPOLL_CTL_MOD, cur->first, &event);
+                if (rc) throw std::ios_base::failure (std::string ("EPOLL_CTL_MOD: ") + strerror (errno));
+                cur->second.registeredEvents = cur->second.handlerEvents;
+            }
+        }
+#endif
+    };
     auto insert_new_handlers = [&] {
         if (m_new_channels.empty() == false) {
             DEBUG("insert " << m_new_channels.size() << " new channel(s)");
@@ -798,11 +892,19 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
     do {
         update_fd_sets();
         int presult;
+#ifdef USE_EPOLL
+        const int eventsSize = 64;
+        epoll_event events[eventsSize];
+#endif
         do {
             DEBUG("poll() on "
                   << (m_peers_with_unwritten_data.size() + m_channels.size())
                   << " sockets");
+#ifdef USE_EPOLL
+            presult = epoll_wait (epollFD, (epoll_event*) &events, eventsSize, -1);
+#else
             presult = poll (pollset.data(), pollset.size(), -1);
+#endif
             DEBUG("poll() returned " << presult);
             if (presult < 0) {
                 // try again or die hard
@@ -861,6 +963,18 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
 #       endif
         //DEBUG("continue reading ...");
         // iterate over all channels and remove channels as needed
+#ifdef USE_EPOLL
+        CPPA_REQUIRE (presult <= eventsSize);
+        for (int ri = 0; ri < presult; ++ri) {
+            DEBUG ("epoll indicates events " << events[ri].events << " for fd " << events[ri].data.fd);
+            int fd = events[ri].data.fd; auto hit = m_fds_in_epoll.find (fd);
+            if (hit != m_fds_in_epoll.end()) for (auto& handler: hit->second.handlers) handler (events[ri]);
+            if (hit == m_fds_in_epoll.end()) { // Be on the defensive.
+                cerr << "middleman: internal error: fd " << fd << " is not in m_fds_in_epoll" << endl;
+                epoll_ctl (epollFD, EPOLL_CTL_DEL, fd, NULL); // Don't let it waste CPU.
+            }
+        }
+#else
         for (auto& pfd : pollset) {
             if (pfd.revents != 0) {
                 DEBUG("fd " << pfd.fd << "; read revents: " << pfd.revents);
@@ -899,6 +1013,7 @@ void middleman::operator()(int pipe_fd, middleman_queue& queue) {
                 }
             }
         }
+#endif
         insert_new_handlers();
         erase_erroneous_channels();
     }
