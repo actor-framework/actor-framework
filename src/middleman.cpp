@@ -30,32 +30,18 @@
 
 #include <set>
 #include <map>
+#include <cerrno>
 #include <vector>
+#include <memory>
 #include <cstring>
 #include <sstream>
 #include <iostream>
-
-#ifdef CPPA_WINDOWS
-#else
-#   include <poll.h>
-#endif
-
-// NB, ArtemGr, 2012-10-02: CPPA_LINUX doesn't work for me on Debain Wheezy (__linux__ does).
-#if defined (CPPA_LINUX) || defined (__linux__)
-# define USE_EPOLL
-#endif
-#ifdef USE_EPOLL
-# include <sys/epoll.h>
-# include <errno.h>
-# include <string.h>
-# include <memory>
-# include <functional>
-#endif
 
 #include "cppa/on.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
+#include "cppa/either.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
@@ -73,8 +59,6 @@
 #include "cppa/detail/addressed_message.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 
-using namespace std;
-
 //#define VERBOSE_MIDDLEMAN
 
 #ifdef VERBOSE_MIDDLEMAN
@@ -88,6 +72,18 @@ using namespace std;
 #else
 #define DEBUG(unused) ((void) 0)
 #endif
+
+#ifdef CPPA_LINUX
+//  use epoll event-loop implementation on Linux
+#   define CPPA_EPOLL_IMPL
+#   include <sys/epoll.h>
+#else // #ifdef CPPA_LINUX
+// use poll otherwise
+#   define CPPA_POLL_IMPL
+#   include <poll.h>
+#endif
+
+using namespace std;
 
 namespace cppa { namespace detail {
 
@@ -130,7 +126,7 @@ middleman_message::middleman_message()
 middleman_message::middleman_message(util::io_stream_ptr_pair a0,
                                      process_information_ptr a1)
 : next(0), type(middleman_message_type::add_peer) {
-    call_ctor(new_peer, move(a0), move(a1));
+   call_ctor(new_peer, move(a0), move(a1));
 }
 
 middleman_message::middleman_message(unique_ptr<util::acceptor> a0,
@@ -335,40 +331,42 @@ class peer_connection : public network_channel {
 typedef intrusive_ptr<peer_connection> peer_connection_ptr;
 typedef map<process_information, peer_connection_ptr> peer_map;
 
-class middleman {
+class middleman_listener {
 
  public:
 
-    middleman() : m_done(false), m_pself(process_information::get()) {
-#ifdef USE_EPOLL
-      epollFD = epoll_create1 (EPOLL_CLOEXEC);
-      if (epollFD == -1) throw std::ios_base::failure (std::string ("epoll_create1: ") + strerror (errno));
-#endif
-    }
+    virtual void channel_added(const network_channel_ptr& ptr) = 0;
+    virtual void channel_erased(const network_channel_ptr& ptr) = 0;
+    virtual void continue_writing_later(const peer_connection_ptr& ptr) = 0;
 
-    ~middleman() {
-#ifdef USE_EPOLL
-      close (epollFD);
-#endif
+    virtual ~middleman_listener() { }
+
+};
+
+class middleman {
+
+    friend class event_loop_impl;
+
+ public:
+
+    middleman()
+    : m_done(false), m_pself(process_information::get()), m_listener(nullptr) {}
+
+    inline void add_channel_ptr(const network_channel_ptr& ptr) {
+        m_channels.push_back(ptr);
+        CPPA_REQUIRE(m_listener != nullptr);
+        m_listener->channel_added(ptr);
     }
 
     template<class Connection, typename... Args>
     inline void add_channel(Args&&... args) {
-        m_new_channels.emplace_back(new Connection(this, forward<Args>(args)...));
-    }
-
-    inline void add_channel_ptr(network_channel_ptr ptr) {
-        m_new_channels.push_back(move(ptr));
+        add_channel_ptr(new Connection(this, forward<Args>(args)...));
     }
 
     inline void add_peer(const process_information& pinf, peer_connection_ptr cptr) {
         auto& ptrref = m_peers[pinf];
-        if (ptrref) {
-            DEBUG("peer already defined!");
-        }
-        else {
-            ptrref = cptr;
-        }
+        if (ptrref) DEBUG("peer already defined!");
+        else ptrref = cptr;
     }
 
     void operator()(int pipe_fd, middleman_queue& queue);
@@ -398,39 +396,36 @@ class middleman {
         return (i != last) ? *i : nullptr;
     }
 
-    void continue_writing(peer_connection_ptr ptr) {
-        m_peers_with_unwritten_data.insert(move(ptr));
+    void continue_writing(const peer_connection_ptr& ptr) {
+        CPPA_REQUIRE(m_listener != nullptr);
+        m_listener->continue_writing_later(ptr);
     }
 
-    void erase(network_channel_ptr ptr) {
-        m_erased_channels.insert(move(ptr));
+    void erase(network_channel_ptr ptr, bool invoked_from_listener = false) {
+        CPPA_REQUIRE(m_listener != nullptr);
+        if (!invoked_from_listener) m_listener->channel_erased(ptr);
+        erase_from(m_channels, ptr);
+    }
+
+    inline bool done() const { return m_done; }
+
+    middleman_listener* listener() {
+        return m_listener;
+    }
+
+    void listener(middleman_listener* listener) {
+        m_listener = listener;
     }
 
  private:
 
     bool m_done;
     process_information_ptr m_pself;
+    middleman_listener* m_listener;
+
     peer_map m_peers;
     network_channel_ptr_vector m_channels;
-    network_channel_ptr_vector m_new_channels;
-    set<peer_connection_ptr> m_peers_with_unwritten_data;
 
-    set<network_channel_ptr> m_erased_channels;
-#ifdef USE_EPOLL
-    int epollFD;
-    struct epoll_entry_t {
-      list<function<void(struct epoll_event)> > handlers;
-      /** Epoll events expected by the current `handlers`. */
-      uint32_t handlerEvents = 0;
-      /** The events used in the last `epoll_ctl` invocation. */
-      uint32_t registeredEvents = 0;
-      void clear() {handlers.clear(); handlerEvents = 0;}
-    };
-    /** Track file descriptors registered with epoll. */
-    map<int, epoll_entry_t> m_fds_in_epoll;
-
-    void add_epoll_handler (int fd, uint32_t event, function<void(struct epoll_event)> handler);
-#endif
 };
 
 bool peer_connection::continue_reading() {
@@ -742,282 +737,416 @@ class middleman_overseer : public network_channel {
 
 };
 
-#ifdef USE_EPOLL
-void middleman::add_epoll_handler (int fd, uint32_t event, function<void(struct epoll_event)> handler) {
-    uint32_t events = event | EPOLLRDHUP;
-    auto have = m_fds_in_epoll.find (fd);
-    if (have == m_fds_in_epoll.end()) {
-        struct epoll_event event;
-        event.data.fd = fd;
-        event.events = events;
-        int rc = epoll_ctl (epollFD, EPOLL_CTL_ADD, fd, &event);
-        if (rc) throw std::ios_base::failure (std::string ("EPOLL_CTL_ADD: ") + strerror (errno));
-        m_fds_in_epoll[fd].registeredEvents = events;
-    }
-    m_fds_in_epoll[fd].handlers.push_back (handler);
-    m_fds_in_epoll[fd].handlerEvents |= events;
-}
-#endif
+#ifdef CPPA_POLL_IMPL
 
-void middleman::operator()(int pipe_fd, middleman_queue& queue) {
-    DEBUG("pself: " << to_string(*m_pself));
-#ifndef USE_EPOLL
-    std::vector<pollfd> pollset;
-#endif
-    m_channels.emplace_back(new middleman_overseer(this, pipe_fd, queue));
-    auto continue_reading = [&](const network_channel_ptr& ch) {
-        bool erase_channel = false;
-        try { erase_channel = !ch->continue_reading(); }
+class event_loop_impl : public middleman_listener {
+
+ public:
+
+    void operator()() {
+        while (!m_parent->done()) {
+            CPPA_REQUIRE(!m_pollset.empty() && m_pollset.size() == m_ioset.size());
+            int presult;
+            do {
+                DEBUG("poll() on " << pollset.size() << " sockets");
+                presult = poll(m_pollset.data(), m_pollset.size(), -1);
+                DEBUG("poll() returned " << presult);
+                if (presult < 0) {
+                    presult = 0; // die hard
+                    switch (errno) {
+                        // a signal was caught
+                        case EINTR: {
+                            // just try again
+                            break;
+                        }
+                        // nfds is negative or the value
+                        // contained within timeout is invalid
+                        case EINVAL: {
+                            CPPA_CRITICAL("poll EINVAL: too much sockets");
+                            break;
+                        }
+                        case ENOMEM: {
+                            // there's not much we can do other than try again
+                            // sleep some time in hope someone releases memory
+                            // while we are sleeping
+                            //this_thread::yield();
+                            break;
+                        }
+                        // array given as argument was not contained
+                        // in the calling program's address space
+                        case EFAULT: {
+                            // must not happen
+                            CPPA_CRITICAL("poll EFAULT");
+                            break;
+                        }
+                        case EBADF: {
+                            // this really shouldn't happen
+                            // try IO on each single socket and try again
+                            size_t i = 0;
+                            while (i < m_pollset.size()) {
+                                if (!proceed(m_ioset[i])) erase_at(i);
+                                else ++i;
+                            }
+                            break;
+                        }
+                        default: {
+                            CPPA_CRITICAL("select() failed for an unknown reason");
+                        }
+                    }
+                }
+            }
+            while (presult == 0);
+            //DEBUG("continue reading ...");
+            // presult is the number of structures which have nonzero revents fields
+            // iterate over m_pollset until we've handled all events
+            size_t i = 0;    // position in both m_pollset and m_ioset
+            int handled = 0; // number of handled events
+            while (handled < presult) {
+                auto revents = m_pollset[i].revents;
+                m_pollset[i].revents = 0;
+                if (revents == 0) {
+                    // there's nothing to see here
+                    ++i; // move along
+                }
+                else {
+                    ++handled; // got 'em!
+                    if (revents & (POLLIN | POLLOUT)) {
+                        // continue and erase on error or done
+                        if (!proceed(m_ioset[i])) erase_at(i);
+                        else ++i;
+                    }
+                    else {
+                        // treat everything else as error
+                        erase_at(i);
+                    }
+                }
+            }
+            // sweep deleted channels
+            while (!m_marked_as_deleted.empty()) {
+                auto ptr = m_marked_as_deleted.back();
+                m_marked_as_deleted.pop_back();
+                auto first = begin(m_ioset);
+                auto last = end(m_ioset);
+                auto iter = find_if(first, last, [=](const io_element& e) {
+                    return e.inspect<bool>([=](const network_channel_ptr& rhs) {
+                        return ptr == rhs;
+                    });
+                });
+                if (iter != last) {
+                    erase_at(distance(first, iter));
+                }
+            }
+        }
+    }
+
+    void channel_added(const network_channel_ptr& ptr) {
+        pollfd pfd;
+        pfd.fd = ptr->read_handle();
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        m_pollset.push_back(pfd);
+        m_ioset.emplace_back(ptr);
+    }
+
+    void channel_erased(const network_channel_ptr& ptr) {
+        m_marked_as_deleted.push_back(ptr);
+    }
+
+    void continue_writing_later(const peer_connection_ptr& ptr) {
+        pollfd pfd;
+        pfd.fd = ptr->write_handle();
+        pfd.events = POLLOUT;
+        pfd.revents = 0;
+        m_pollset.push_back(pfd);
+        m_ioset.emplace_back(ptr);
+    }
+
+    void init(middleman* parent) {
+        CPPA_REQUIRE(parent->m_channels.empty());
+        m_parent = parent;
+        parent->listener(this);
+    }
+
+ private:
+
+    typedef either<network_channel_ptr, peer_connection_ptr> io_element;
+
+    inline bool proceed(const io_element& ioe) {
+        try {
+            return ioe.is_left() ? ioe.left()->continue_reading()
+                                 : (    ioe.right()->continue_writing()
+                                    && !ioe.right()->has_unwritten_data());
+        }
         catch (ios_base::failure& e) {
             DEBUG(demangle(typeid(e)) << ": " << e.what());
-            erase_channel = true;
         }
         catch (runtime_error& e) {
             // thrown whenever serialize/deserialize fails
             cerr << "*** runtime_error in middleman: " << e.what() << endl;
-            erase_channel = true;
         }
         catch (exception& e) {
             DEBUG(demangle(typeid(e)) << ": " << e.what());
-            erase_channel = true;
         }
-        if (erase_channel) {
-            DEBUG("erase worker (read failed)");
-            m_erased_channels.insert(ch);
-        }
-    };
-    auto continue_writing = [&](const peer_connection_ptr& peer) {
-        bool erase_channel = false;
-        try { erase_channel = !peer->continue_writing(); }
-        catch (exception& e) {
-            DEBUG(demangle(typeid(e).name()) << ": " << e.what());
-            erase_channel = true;
-        }
-        if (erase_channel) {
-            DEBUG("erase worker (write failed)");
-            m_erased_channels.insert(peer);
-        }
-    };
-    auto update_fd_sets = [&] {
-#ifdef USE_EPOLL
-        // Remove the old handlers; this will also help us later to find the file descriptors no longer used.
-        for (auto& entry: m_fds_in_epoll) entry.second.clear();
-#else
-        pollset.clear();
-#endif
-        CPPA_REQUIRE(m_channels.size() > 0);
-        // add all read handles of all channels (POLLIN)
-        for (auto& channel : m_channels) {
-#ifdef USE_EPOLL
-            add_epoll_handler (channel->read_handle(), EPOLLIN, [this,channel,continue_reading](struct epoll_event ev) {
-                if (ev.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) m_erased_channels.insert (channel);
-                else if (ev.events && EPOLLIN) continue_reading (channel);
-            });
-#else
-            pollfd pfd;
-            pfd.fd = channel->read_handle();
-            pfd.events = POLLIN;
-            pfd.revents = 0;
-            pollset.push_back(pfd);
-#endif
-        }
-        // check consistency of m_peers_with_unwritten_data
-        if (!m_peers_with_unwritten_data.empty()) {
-            auto i = m_peers_with_unwritten_data.begin();
-            auto e = m_peers_with_unwritten_data.end();
-            while (i != e) {
-                if ((*i)->has_unwritten_data() == false) {
-                    i = m_peers_with_unwritten_data.erase(i);
-                }
-                else ++i;
-            }
-        }
-        // add all write handles of all peers with unwritten data (POLLOUT)
-        for (auto& peer : m_peers_with_unwritten_data) {
-#ifdef USE_EPOLL
-            add_epoll_handler (peer->write_handle(), EPOLLOUT, [this,peer,continue_writing](struct epoll_event ev) {
-                if (ev.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
-                    m_erased_channels.insert (peer);
-                    m_peers_with_unwritten_data.erase (peer);
-                } else if (ev.events && EPOLLOUT) continue_writing (peer);
-            });
-#else
-            struct pollfd pfd;
-            pfd.fd = peer->write_handle();
-            pfd.events = POLLOUT;
-            pfd.revents = 0;
-            pollset.push_back(pfd);
-#endif
-        }
-#ifdef USE_EPOLL
-        // Remove file destructors no longer used. Notify epoll of any changes in the events we expect from the fd.
-        for (auto it = m_fds_in_epoll.begin(), end = m_fds_in_epoll.end(); it != end;) {
-            auto cur = it++; // This allows us to remove `cur` without damaging the loop.
-            if (cur->second.handlers.empty()) { // No handlers means the file descriptor is not in m_channels nor in m_peers_with_unwritten_data.
-                epoll_ctl (epollFD, EPOLL_CTL_DEL, cur->first, NULL);
-                m_fds_in_epoll.erase (cur);
-            } else if (cur->second.handlerEvents != cur->second.registeredEvents) {
-                struct epoll_event event;
-                event.data.fd = cur->first;
-                event.events = cur->second.handlerEvents;
-                int rc = epoll_ctl (epollFD, EPOLL_CTL_MOD, cur->first, &event);
-                if (rc) throw std::ios_base::failure (std::string ("EPOLL_CTL_MOD: ") + strerror (errno));
-                cur->second.registeredEvents = cur->second.handlerEvents;
-            }
-        }
-#endif
-    };
-    auto insert_new_handlers = [&] {
-        if (m_new_channels.empty() == false) {
-            DEBUG("insert " << m_new_channels.size() << " new channel(s)");
-            move(m_new_channels.begin(), m_new_channels.end(),
-                 back_inserter(m_channels));
-            m_new_channels.clear();
-        }
-    };
-    auto erase_erroneous_channels = [&] {
-        if (!m_erased_channels.empty()) {
-            DEBUG("erase " << m_erased_channels.size() << " channel(s)");
-            // erase all marked channels
-            for (network_channel_ptr channel : m_erased_channels) {
-                erase_from(m_channels, channel);
-                erase_from(m_peers_with_unwritten_data, channel);
-                erase_from_if(m_peers, [=](const peer_map::value_type& kvp) {
-                    return kvp.second == channel;
-                });
-            }
-            m_erased_channels.clear();
-        }
-    };
-    do {
-        update_fd_sets();
-        int presult;
-#ifdef USE_EPOLL
-        const int eventsSize = 64;
-        epoll_event events[eventsSize];
-#endif
-        do {
-            DEBUG("poll() on "
-                  << (m_peers_with_unwritten_data.size() + m_channels.size())
-                  << " sockets");
-#ifdef USE_EPOLL
-            presult = epoll_wait (epollFD, (epoll_event*) &events, eventsSize, -1);
-#else
-            presult = poll (pollset.data(), pollset.size(), -1);
-#endif
-            DEBUG("poll() returned " << presult);
-            if (presult < 0) {
-                // try again or die hard
-                presult = 0;
-                switch (errno) {
-                    // a signal was caught
-                    case EINTR: {
-                        // just try again
-                        break;
-                    }
-                    // nfds is negative or the value
-                    // contained within timeout is invalid
-                    case EINVAL: {
-                        CPPA_CRITICAL("poll EINVAL");
-                        break;
-                    }
-                    case ENOMEM: {
-                        // there's not much we can do other than try again
-                        // sleep some time in hope someone releases memory
-                        // while we are sleeping
-                        //this_thread::yield();
-                        break;
-                    }
-                    // array given as argument was not contained
-                    // in the calling program's address space
-                    case EFAULT: {
-                        // must not happen
-                        CPPA_CRITICAL("poll EFAULT");
-                        break;
-                    }
-                    case EBADF: {
-                        // this really shouldn't happen
-                        // try IO on each single socket and rebuild rd_set
-                        for (auto& ch: m_channels) {
-                            continue_reading(ch);
-                        }
-                        for (auto& peer : m_peers_with_unwritten_data) {
-                            continue_writing(peer);
-                        }
-                        insert_new_handlers();
-                        erase_erroneous_channels();
-                        update_fd_sets();
-                        break;
-                    }
-                    default: {
-                        CPPA_CRITICAL("select() failed for an unknown reason");
-                    }
-                }
-            }
-        }
-        while (presult == 0);
-#       ifdef CPPA_LINUX
-#       define POLL_ERR_MASK (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)
-#       else
-#       define POLL_ERR_MASK (POLLERR | POLLHUP | POLLNVAL)
-#       endif
-        //DEBUG("continue reading ...");
-        // iterate over all channels and remove channels as needed
-#ifdef USE_EPOLL
-        CPPA_REQUIRE (presult <= eventsSize);
-        for (int ri = 0; ri < presult; ++ri) {
-            DEBUG ("epoll indicates events " << events[ri].events << " for fd " << events[ri].data.fd);
-            int fd = events[ri].data.fd; auto hit = m_fds_in_epoll.find (fd);
-            if (hit != m_fds_in_epoll.end()) for (auto& handler: hit->second.handlers) handler (events[ri]);
-            if (hit == m_fds_in_epoll.end()) { // Be on the defensive.
-                cerr << "middleman: internal error: fd " << fd << " is not in m_fds_in_epoll" << endl;
-                epoll_ctl (epollFD, EPOLL_CTL_DEL, fd, NULL); // Don't let it waste CPU.
-            }
-        }
-#else
-        for (auto& pfd : pollset) {
-            if (pfd.revents != 0) {
-                DEBUG("fd " << pfd.fd << "; read revents: " << pfd.revents);
-                auto ch_end = end(m_channels);
-                // check wheter pfd belongs to a read handle
-                auto ch  = find_if(begin(m_channels), ch_end,
-                                   [&](const network_channel_ptr& ptr) {
-                    return pfd.fd == ptr->read_handle();
-                });
-                if (ch != ch_end) {
-                    if (pfd.revents & POLL_ERR_MASK) {
-                        // remove socket on error
-                        m_erased_channels.insert(*ch);
-                    }
-                    else if (pfd.revents & (POLLIN | POLLPRI)) {
-                        // read some if possible
-                        continue_reading(*ch);
-                    }
-                }
-                // check wheter pfd belongs to a write handle (can be both!)
-                auto pc_end = end(m_peers_with_unwritten_data);
-                auto pc = find_if(begin(m_peers_with_unwritten_data), pc_end,
-                                  [&](const peer_connection_ptr& ptr) {
-                    return pfd.fd == ptr->write_handle();
-                });
-                if (pc != pc_end) {
-                    if (pfd.revents & POLL_ERR_MASK) {
-                        // remove socket on error
-                        m_erased_channels.insert(*pc);
-                        m_peers_with_unwritten_data.erase(*pc);
-                    }
-                    else if (pfd.revents & POLLOUT) {
-                        // write some if possible
-                        continue_writing(*pc);
-                    }
-                }
-            }
-        }
-#endif
-        insert_new_handlers();
-        erase_erroneous_channels();
+        return false;
     }
-    while (m_done == false);
+
+    inline void erase_at(size_t pos) {
+        if (m_ioset[pos].is_left()) {
+            m_parent->erase(m_ioset[pos].left(), true);
+        }
+        // else: output channels are removed as they don't have any more data
+        //       to write, therefore it's not treated as error here
+        m_ioset.erase(m_ioset.begin() + pos);
+        m_pollset.erase(m_pollset.begin() + pos);
+    }
+
+    middleman* m_parent;
+    vector<network_channel_ptr> m_marked_as_deleted;
+                                  // _
+    vector<pollfd>     m_pollset; //  \                                        |
+                                  //   > these two vectors are always in sync  |
+    vector<io_element> m_ioset;   // _/                                        |
+                                  //
+
+};
+
+#elif defined(CPPA_EPOLL_IMPL)
+
+class event_loop_impl : public middleman_listener {
+
+ public:
+
+    event_loop_impl() : m_epollfd(-1), m_num_events(0) { }
+
+    void init(middleman* parent) {
+        CPPA_REQUIRE(parent != nullptr);
+        parent->listener(this);
+        m_parent = parent;
+        m_epollfd = epoll_create1(EPOLL_CLOEXEC);
+        if (m_epollfd == -1) throw ios_base::failure(  string("epoll_create1: ")
+                                                     + strerror(errno));
+    }
+
+    ~event_loop_impl() {
+        if (m_epollfd != -1) close(m_epollfd);
+    }
+
+    // operation: EPOLL_CTL_ADD or EPOLL_CTL_DEL
+    // fd_op: optional if operation is EPOLL_CTL_DEL, otherwise EPOLLIN or EPOLLOUT
+    template<typename T = void>
+    bool epoll_op(int operation, int fd, T* ptr = nullptr, int fd_op = 0) {
+        CPPA_REQUIRE(operation == EPOLL_CTL_ADD || operation == EPOLL_CTL_DEL);
+        CPPA_REQUIRE(operation == EPOLL_CTL_DEL || ptr != nullptr);
+        CPPA_REQUIRE(operation == EPOLL_CTL_DEL || (fd_op == EPOLLIN || fd_op == EPOLLOUT));
+        // make sure T has correct type
+        CPPA_REQUIRE(   (fd_op == 0 )
+                     || (fd_op == EPOLLIN && is_same<T,network_channel>::value)
+                     || (fd_op == EPOLLOUT && is_same<T,peer_connection>::value));
+        epoll_event ee;
+        // also fire event on peer shutdown on input operations
+        ee.events = (fd_op == EPOLLIN) ? (fd_op | EPOLLRDHUP) : fd_op;
+        // always store peer_connection_ptr, because we don't have full type information
+        // in case of epoll_wait error otherwise
+        ee.data.ptr = static_cast<peer_connection*>(ptr);
+        if (epoll_ctl(m_epollfd, operation, fd, &ee) < 0) {
+            switch (errno) {
+                // m_epollfd or read_handle() is not a valid file descriptor
+                case EBADF: {
+                    // this is a critical bug, there's no plan B here
+                    CPPA_CRITICAL("epoll_ctl returned EBADF");
+                    break;
+                }
+                // supplied file descriptor is already registered
+                case EEXIST: {
+                    // shouldn't happen, but no big deal
+                    cerr << "*** warning: file descriptor registered twice\n"
+                         << flush;
+                    break;
+                }
+                // m_pollfd not an epoll file descriptor, or read_handle()
+                // is the same as m_pollfd, or read_handle() isn't supported
+                // by epoll
+                case EINVAL: {
+                    // point of no return
+                    CPPA_CRITICAL("epoll_ctl returned EINVAL");
+                    break;
+                }
+                // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
+                // and fd is not registered with this epoll instance.
+                case ENOENT: {
+                    // nothing to worry about
+                    //cerr << "*** warning: cannot delete file descriptor "
+                    //        "because it isn't registered\n"
+                    //     << flush;
+                    break;
+                }
+                // insufficient memory to handle requested
+                case ENOMEM: {
+                    // what the ... ?
+                    CPPA_CRITICAL("not enough memory for epoll operation");
+                    break;
+                }
+                // The limit imposed by /proc/sys/fs/epoll/max_user_watches
+                // was encountered while trying to register a new file descriptor
+                case ENOSPC: {
+                    CPPA_CRITICAL("reached max_user_watches limit");
+                    break;
+                }
+                // The target file fd does not support epoll.
+                case EPERM: {
+                    CPPA_CRITICAL("tried to add illegal file descriptor");
+                    break;
+                }
+            }
+            return false; // tell client operation had no effect
+        }
+        return true;
+    }
+
+    void channel_added(const network_channel_ptr& ptr) {
+        if (epoll_op(EPOLL_CTL_ADD, ptr->read_handle(), ptr.get(), EPOLLIN)) {
+            ++m_num_events;
+        }
+    }
+
+    void channel_erased(const network_channel_ptr& ptr) {
+        m_marked_inputs.push_back(ptr);
+    }
+
+    void continue_writing_later(const peer_connection_ptr& ptr) {
+        if (epoll_op(EPOLL_CTL_ADD, ptr->write_handle(), ptr.get(), EPOLLOUT)) {
+            ++m_num_events;
+        }
+    }
+
+    template<typename F>
+    inline bool proceed(const F& fun) {
+        try { return fun(); }
+        catch (ios_base::failure& e) {
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
+        }
+        catch (runtime_error& e) {
+            // thrown whenever serialize/deserialize fails
+            cerr << "*** runtime_error in middleman: " << e.what() << endl;
+        }
+        catch (exception& e) {
+            DEBUG(demangle(typeid(e)) << ": " << e.what());
+        }
+        return false;
+    }
+
+    void operator()() {
+        while (!m_parent->done()) {
+            // make sure m_events grows with the number of observed sockets
+            m_events.resize(m_num_events);
+            int presult;
+            do {
+                DEBUG("epoll_wait on " << m_num_events << " sockets");
+                presult = epoll_wait(m_epollfd, m_events.data(), (int) m_events.size(), -1);
+                DEBUG("epoll_wait returned " << presult);
+                if (presult < 0) {
+                    // try again unless critical error occured
+                    presult = 0;
+                    switch (errno) {
+                        // a signal was caught
+                        case EINTR: {
+                            // just try again
+                            break;
+                        }
+                        // m_epollfd is not an epoll file descriptor,
+                        // or maxevents is less than or equal to zero.
+                        case EINVAL: {
+                            CPPA_CRITICAL("epoll_wait returned EINVAL");
+                            break;
+                        }
+                        // array given as argument was not contained
+                        // in the calling program's address space
+                        case EFAULT: {
+                            // must not happen
+                            CPPA_CRITICAL("epoll_wait returned EFAULT");
+                            break;
+                        }
+                        // m_epollfd is not a file descriptor
+                        case EBADF: {
+                            CPPA_CRITICAL("epoll_wait returned EBADF");
+                            break;
+                        }
+                        default: {
+                            CPPA_CRITICAL("epoll_wait failed with unknown error code");
+                        }
+                    }
+                }
+            }
+            while (presult == 0);
+            for (int i = 0; i < presult; ++i) {
+                auto& e = m_events[i];
+                // skip invalid entries
+                if (e.events == 0) continue;
+                if (e.data.ptr == nullptr) {
+                    // this *really* shouldn't happen
+                    CPPA_CRITICAL("epoll_wait returned nullptr instead of registered ptr");
+                }
+                if (e.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
+                    auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
+                    // see you later!
+                    if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                    // remove write handle as well if possible, since we don't
+                    // support read-only connections anyways
+                    auto wptr = dynamic_cast<peer_connection*>(ptr);
+                    if (wptr && epoll_op(EPOLL_CTL_DEL, wptr->write_handle())) {
+                        --m_num_events;
+                    }
+                }
+                else if (e.events & EPOLLIN) {
+                    auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
+                    if (!proceed([ptr] { return ptr->continue_reading(); })) {
+                        if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                    }
+                }
+                else if (e.events & EPOLLOUT) {
+                    auto bptr = reinterpret_cast<network_channel*>(e.data.ptr);
+                    // this cast is safe, because we *always* make sure
+                    // to register network_channel pointers with EPOLLOUT
+                    auto ptr = static_cast<peer_connection*>(bptr);
+                    if (!proceed([ptr] { return ptr->continue_writing(); })) {
+                        if (epoll_op(EPOLL_CTL_DEL, ptr->write_handle())) --m_num_events;
+                    }
+                }
+            }
+            // sweep marked pointers
+            for (auto& ptr : m_marked_inputs) {
+                if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                // remove write handle as well if needed
+                auto wptr = dynamic_cast<peer_connection*>(ptr.get());
+                if (wptr && epoll_op(EPOLL_CTL_DEL, wptr->write_handle())) {
+                    --m_num_events;
+                }
+            }
+            // cleanup
+            m_marked_inputs.clear();
+            // next iteration
+        }
+    }
+
+ private:
+
+    int m_epollfd;
+    middleman* m_parent;
+    size_t m_num_events;
+    vector<network_channel_ptr> m_marked_inputs;
+
+    vector<epoll_event> m_events;
+
+};
+
+#endif
+
+void middleman::operator()(int pipe_fd, middleman_queue& queue) {
+    DEBUG("pself: " << to_string(*m_pself));
+    event_loop_impl loop;
+    loop.init(this);
+    add_channel_ptr(new middleman_overseer(this, pipe_fd, queue));
+    loop();
     DEBUG("middleman done");
 }
 
