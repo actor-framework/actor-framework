@@ -73,12 +73,12 @@
 #define DEBUG(unused) ((void) 0)
 #endif
 
-#ifdef CPPA_LINUX
-//  use epoll event-loop implementation on Linux
+//  use epoll event-loop implementation on Linux if not explicitly overriden
+//  by using CPPA_POLL_IMPL, use (default) poll implementation otherwise
+#if defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
 #   define CPPA_EPOLL_IMPL
 #   include <sys/epoll.h>
-#else // #ifdef CPPA_LINUX
-// use poll otherwise
+#else
 #   define CPPA_POLL_IMPL
 #   include <poll.h>
 #endif
