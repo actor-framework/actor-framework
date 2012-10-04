@@ -44,7 +44,7 @@
 #  ifndef _GLIBCXX_HAS_GTHREADS
 #    define _GLIBCXX_HAS_GTHREADS
 #  endif
-#elif defined(__GNUC__) && defined(__linux__)
+#elif defined(__linux__)
 #  define CPPA_LINUX
 #elif defined(WIN32)
 #  define CPPA_WINDOWS
