@@ -216,7 +216,22 @@ int client_part(const vector<string_pair>& args) {
 
 } // namespace <anonymous>
 
+void verbose_terminate() {
+    try { throw; }
+    catch (std::exception& e) {
+        cerr << "terminate called after throwing "
+             << detail::demangle(typeid(e))
+             << ", reason: " << e.what() << endl;
+    }
+    catch (...) {
+        cerr << "terminate called after throwing an unknown exception" << endl;
+    }
+
+    abort();
+}
+
 int main(int argc, char** argv) {
+    set_terminate(verbose_terminate);
     announce<actor_vector>();
     cout.unsetf(ios_base::unitbuf);
     string app_path = argv[0];
