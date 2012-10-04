@@ -44,9 +44,9 @@ namespace cppa {
 template<class Left, class Right>
 class either {
 
-    static_assert(   std::is_convertible<Left, Right>::value == false
-                  && std::is_convertible<Right, Left>::value == false,
-                  "Left is not allowed to be convertible to Right");
+    //static_assert(   std::is_convertible<Left, Right>::value == false
+    //              && std::is_convertible<Right, Left>::value == false,
+    //              "Left is not allowed to be convertible to Right");
 
  public:
 
@@ -158,6 +158,30 @@ class either {
     inline const right_type& right() const {
         CPPA_REQUIRE(!m_is_left);
         return m_right;
+    }
+
+    template<typename F>
+    void apply(const F& fun) {
+        if (is_left()) fun(left());
+        else fun(right());
+    }
+
+    template<typename F>
+    void apply(const F& fun) const {
+        if (is_left()) fun(left());
+        else fun(right());
+    }
+
+    template<typename Result, typename F>
+    Result inspect(const F& fun) {
+        if (is_left()) return fun(left());
+        else return fun(right());
+    }
+
+    template<typename Result, typename F>
+    Result inspect(const F& fun) const {
+        if (is_left()) return fun(left());
+        else return fun(right());
     }
 
  private:
