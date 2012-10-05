@@ -490,11 +490,9 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
             serialize_nullptr(sink);
         }
         else {
-            primitive_variant ptup[2];
-            ptup[0] = ptr->process_id();
-            ptup[1] = to_string(ptr->node_id());
             sink->begin_object(name());
-            sink->write_tuple(2, ptup);
+            sink->write_value(ptr->process_id());
+            sink->write_raw(ptr->node_id().size(), ptr->node_id().data());
             sink->end_object();
         }
     }
@@ -510,14 +508,12 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
             else assert_type_name(source); // throws
         }
         else {
-            primitive_variant ptup[2];
-            primitive_type ptypes[] = { pt_uint32, pt_u8string };
             source->begin_object(cname);
-            source->read_tuple(2, ptypes, ptup);
-            source->end_object();
+            auto id = get<uint32_t>(source->read_value(pt_uint32));
             process_information::node_id_type nid;
-            node_id_from_string(get<string>(ptup[1]), nid);
-            ptrref.reset(new process_information{get<uint32_t>(ptup[0]), nid});
+            source->read_raw(nid.size(), nid.data());
+            source->end_object();
+            ptrref.reset(new process_information{id, nid});
         }
     }
 
