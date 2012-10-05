@@ -934,19 +934,19 @@ class event_loop_impl : public middleman_listener {
     }
 
     // operation: EPOLL_CTL_ADD or EPOLL_CTL_DEL
-    // fd_op: optional if operation is EPOLL_CTL_DEL, otherwise EPOLLIN or EPOLLOUT
+    // fd_op: EPOLLIN, EPOLLOUT or (EPOLLIN | EPOLLOUT)
     template<typename T = void>
-    bool epoll_op(int operation, int fd, T* ptr = nullptr, int fd_op = 0) {
+    void epoll_op(int operation, int fd, int fd_op, T* ptr = nullptr) {
         CPPA_REQUIRE(operation == EPOLL_CTL_ADD || operation == EPOLL_CTL_DEL);
         CPPA_REQUIRE(operation == EPOLL_CTL_DEL || ptr != nullptr);
-        CPPA_REQUIRE(operation == EPOLL_CTL_DEL || (fd_op == EPOLLIN || fd_op == EPOLLOUT));
+        CPPA_REQUIRE(fd_op == EPOLLIN || fd_op == EPOLLOUT || fd_op == (EPOLLIN | EPOLLOUT));
         // make sure T has correct type
-        CPPA_REQUIRE(   (fd_op == 0 )
-                     || (fd_op == EPOLLIN && is_same<T,network_channel>::value)
+        CPPA_REQUIRE(   (operation == EPOLL_CTL_DEL && is_same<T,void>::value)
+                     || ((fd_op & EPOLLIN) && is_same<T,network_channel>::value)
                      || (fd_op == EPOLLOUT && is_same<T,peer_connection>::value));
         epoll_event ee;
         // also fire event on peer shutdown on input operations
-        ee.events = (fd_op == EPOLLIN) ? (fd_op | EPOLLRDHUP) : fd_op;
+        ee.events = (fd_op & EPOLLIN) ? (fd_op | EPOLLRDHUP) : fd_op;
         // always store peer_connection_ptr, because we don't have full type information
         // in case of epoll_wait error otherwise
         ee.data.ptr = static_cast<peer_connection*>(ptr);
@@ -977,7 +977,7 @@ class event_loop_impl : public middleman_listener {
         }
         else if (operation == EPOLL_CTL_DEL) {
             // nothing to delete here
-            cerr << "*** warning: tried to delete unknown file descriptor" << endl;
+            return;
         }
         else { // operation == EPOLL_CTL_ADD
             CPPA_REQUIRE(operation == EPOLL_CTL_ADD);
@@ -1032,13 +1032,11 @@ class event_loop_impl : public middleman_listener {
                     break;
                 }
             }
-            return false; // tell client operation had no effect
         }
-        return true;
     }
 
     void channel_added(const network_channel_ptr& ptr) {
-        epoll_op(EPOLL_CTL_ADD, ptr->read_handle(), ptr.get(), EPOLLIN);
+        epoll_op(EPOLL_CTL_ADD, ptr->read_handle(), EPOLLIN, ptr.get());
     }
 
     void channel_erased(const network_channel_ptr& ptr) {
@@ -1046,7 +1044,7 @@ class event_loop_impl : public middleman_listener {
     }
 
     void continue_writing_later(const peer_connection_ptr& ptr) {
-        epoll_op(EPOLL_CTL_ADD, ptr->write_handle(), ptr.get(), EPOLLOUT);
+        epoll_op(EPOLL_CTL_ADD, ptr->write_handle(), EPOLLOUT, ptr.get());
     }
 
     template<typename F>
@@ -1118,18 +1116,14 @@ class event_loop_impl : public middleman_listener {
                 if (e.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
                     auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
                     // see you later!
-                    epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
-                    // remove write handle as well if possible, since we don't
-                    // support read-only connections anyways
-                    auto wptr = dynamic_cast<peer_connection*>(ptr);
-                    if (wptr) epoll_op(EPOLL_CTL_DEL, wptr->write_handle());
+                    m_marked_inputs.push_back(ptr);
                 }
                 else {
                     // can be both!
                     if (e.events & EPOLLIN) {
                         auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
                         if (!proceed([ptr] { return ptr->continue_reading(); })) {
-                            epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
+                            epoll_op(EPOLL_CTL_DEL, ptr->read_handle(), EPOLLIN);
                         }
                     }
                     if (e.events & EPOLLOUT) {
@@ -1138,17 +1132,23 @@ class event_loop_impl : public middleman_listener {
                         // to register network_channel pointers with EPOLLOUT
                         auto ptr = static_cast<peer_connection*>(bptr);
                         if (!proceed([ptr] { return ptr->continue_writing(); })) {
-                            epoll_op(EPOLL_CTL_DEL, ptr->write_handle());
+                            epoll_op(EPOLL_CTL_DEL, ptr->write_handle(), EPOLLOUT);
                         }
                     }
                 }
             }
             // sweep marked pointers
             for (auto& ptr : m_marked_inputs) {
-                epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
-                // remove write handle as well if needed
+                auto fd = ptr->read_handle();
+                epoll_op(EPOLL_CTL_DEL, fd, EPOLLIN | EPOLLOUT);
+                // remove write handle as well if possible, since we don't
+                // support read-only connections anyways
                 auto wptr = dynamic_cast<peer_connection*>(ptr.get());
-                if (wptr) epoll_op(EPOLL_CTL_DEL, wptr->write_handle());
+                if (wptr) {
+                    auto wfd = wptr->write_handle();
+                    if (fd != wfd) epoll_op(EPOLL_CTL_DEL, wfd, EPOLLOUT);
+                    // else: already deleted
+                }
             }
             // cleanup
             m_marked_inputs.clear();
