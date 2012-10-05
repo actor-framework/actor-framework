@@ -365,7 +365,7 @@ class middleman {
 
     inline void add_peer(const process_information& pinf, peer_connection_ptr cptr) {
         auto& ptrref = m_peers[pinf];
-        if (ptrref) DEBUG("peer already defined!");
+        if (ptrref) { DEBUG("peer already defined!"); }
         else ptrref = cptr;
     }
 
@@ -916,7 +916,7 @@ class event_loop_impl : public middleman_listener {
 
  public:
 
-    event_loop_impl() : m_epollfd(-1), m_num_events(0) { }
+    event_loop_impl() : m_epollfd(-1) { }
 
     void init(middleman* parent) {
         CPPA_REQUIRE(parent != nullptr);
@@ -925,6 +925,8 @@ class event_loop_impl : public middleman_listener {
         m_epollfd = epoll_create1(EPOLL_CLOEXEC);
         if (m_epollfd == -1) throw ios_base::failure(  string("epoll_create1: ")
                                                      + strerror(errno));
+        // handle at most 64 events at a time
+        m_events.resize(64);
     }
 
     ~event_loop_impl() {
@@ -948,6 +950,39 @@ class event_loop_impl : public middleman_listener {
         // always store peer_connection_ptr, because we don't have full type information
         // in case of epoll_wait error otherwise
         ee.data.ptr = static_cast<peer_connection*>(ptr);
+        // check wheter fd is already registered to epoll
+        auto iter = m_epoll_data.find(fd);
+        if (iter != end(m_epoll_data)) {
+            if (operation == EPOLL_CTL_ADD) {
+                // modify instead
+                operation = EPOLL_CTL_MOD;
+                ee.events |= iter->second.events;
+                iter->second.events = ee.events;
+                CPPA_REQUIRE(ee.data.ptr == iter->second.data.ptr);
+            }
+            else if (operation == EPOLL_CTL_DEL) {
+                // check wheter we have this fd registered for other fd_ops
+                ee.events = iter->second.events & ~(ee.events);
+                if (ee.events != 0) {
+                    // modify instead
+                    ee.data.ptr = iter->second.data.ptr;
+                    iter->second.events = ee.events;
+                    operation = EPOLL_CTL_MOD;
+                }
+                else {
+                    // erase from map as well
+                    m_epoll_data.erase(iter);
+                }
+            }
+        }
+        else if (operation == EPOLL_CTL_DEL) {
+            // nothing to delete here
+            cerr << "*** warning: tried to delete unknown file descriptor" << endl;
+        }
+        else { // operation == EPOLL_CTL_ADD
+            CPPA_REQUIRE(operation == EPOLL_CTL_ADD);
+            m_epoll_data.insert(make_pair(fd, ee));
+        }
         if (epoll_ctl(m_epollfd, operation, fd, &ee) < 0) {
             switch (errno) {
                 // m_epollfd or read_handle() is not a valid file descriptor
@@ -974,10 +1009,9 @@ class event_loop_impl : public middleman_listener {
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    // nothing to worry about
-                    //cerr << "*** warning: cannot delete file descriptor "
-                    //        "because it isn't registered\n"
-                    //     << flush;
+                    cerr << "*** warning: cannot delete file descriptor "
+                            "because it isn't registered\n"
+                         << flush;
                     break;
                 }
                 // insufficient memory to handle requested
@@ -1004,9 +1038,7 @@ class event_loop_impl : public middleman_listener {
     }
 
     void channel_added(const network_channel_ptr& ptr) {
-        if (epoll_op(EPOLL_CTL_ADD, ptr->read_handle(), ptr.get(), EPOLLIN)) {
-            ++m_num_events;
-        }
+        epoll_op(EPOLL_CTL_ADD, ptr->read_handle(), ptr.get(), EPOLLIN);
     }
 
     void channel_erased(const network_channel_ptr& ptr) {
@@ -1014,9 +1046,7 @@ class event_loop_impl : public middleman_listener {
     }
 
     void continue_writing_later(const peer_connection_ptr& ptr) {
-        if (epoll_op(EPOLL_CTL_ADD, ptr->write_handle(), ptr.get(), EPOLLOUT)) {
-            ++m_num_events;
-        }
+        epoll_op(EPOLL_CTL_ADD, ptr->write_handle(), ptr.get(), EPOLLOUT);
     }
 
     template<typename F>
@@ -1038,10 +1068,9 @@ class event_loop_impl : public middleman_listener {
     void operator()() {
         while (!m_parent->done()) {
             // make sure m_events grows with the number of observed sockets
-            m_events.resize(m_num_events);
             int presult;
             do {
-                DEBUG("epoll_wait on " << m_num_events << " sockets");
+                DEBUG("epoll_wait on " << m_epoll_data.size() << " sockets");
                 presult = epoll_wait(m_epollfd, m_events.data(), (int) m_events.size(), -1);
                 DEBUG("epoll_wait returned " << presult);
                 if (presult < 0) {
@@ -1089,38 +1118,37 @@ class event_loop_impl : public middleman_listener {
                 if (e.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
                     auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
                     // see you later!
-                    if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                    epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
                     // remove write handle as well if possible, since we don't
                     // support read-only connections anyways
                     auto wptr = dynamic_cast<peer_connection*>(ptr);
-                    if (wptr && epoll_op(EPOLL_CTL_DEL, wptr->write_handle())) {
-                        --m_num_events;
-                    }
+                    if (wptr) epoll_op(EPOLL_CTL_DEL, wptr->write_handle());
                 }
-                else if (e.events & EPOLLIN) {
-                    auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
-                    if (!proceed([ptr] { return ptr->continue_reading(); })) {
-                        if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                else {
+                    // can be both!
+                    if (e.events & EPOLLIN) {
+                        auto ptr = reinterpret_cast<network_channel*>(e.data.ptr);
+                        if (!proceed([ptr] { return ptr->continue_reading(); })) {
+                            epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
+                        }
                     }
-                }
-                else if (e.events & EPOLLOUT) {
-                    auto bptr = reinterpret_cast<network_channel*>(e.data.ptr);
-                    // this cast is safe, because we *always* make sure
-                    // to register network_channel pointers with EPOLLOUT
-                    auto ptr = static_cast<peer_connection*>(bptr);
-                    if (!proceed([ptr] { return ptr->continue_writing(); })) {
-                        if (epoll_op(EPOLL_CTL_DEL, ptr->write_handle())) --m_num_events;
+                    if (e.events & EPOLLOUT) {
+                        auto bptr = reinterpret_cast<network_channel*>(e.data.ptr);
+                        // this cast is safe, because we *always* make sure
+                        // to register network_channel pointers with EPOLLOUT
+                        auto ptr = static_cast<peer_connection*>(bptr);
+                        if (!proceed([ptr] { return ptr->continue_writing(); })) {
+                            epoll_op(EPOLL_CTL_DEL, ptr->write_handle());
+                        }
                     }
                 }
             }
             // sweep marked pointers
             for (auto& ptr : m_marked_inputs) {
-                if (epoll_op(EPOLL_CTL_DEL, ptr->read_handle())) --m_num_events;
+                epoll_op(EPOLL_CTL_DEL, ptr->read_handle());
                 // remove write handle as well if needed
                 auto wptr = dynamic_cast<peer_connection*>(ptr.get());
-                if (wptr && epoll_op(EPOLL_CTL_DEL, wptr->write_handle())) {
-                    --m_num_events;
-                }
+                if (wptr) epoll_op(EPOLL_CTL_DEL, wptr->write_handle());
             }
             // cleanup
             m_marked_inputs.clear();
@@ -1132,10 +1160,10 @@ class event_loop_impl : public middleman_listener {
 
     int m_epollfd;
     middleman* m_parent;
-    size_t m_num_events;
     vector<network_channel_ptr> m_marked_inputs;
 
     vector<epoll_event> m_events;
+    map<int,epoll_event> m_epoll_data;
 
 };
 
