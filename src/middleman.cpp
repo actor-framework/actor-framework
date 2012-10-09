@@ -748,7 +748,7 @@ class event_loop_impl : public middleman_listener {
             CPPA_REQUIRE(!m_pollset.empty() && m_pollset.size() == m_ioset.size());
             int presult;
             do {
-                DEBUG("poll() on " << pollset.size() << " sockets");
+                DEBUG("poll() on " << m_pollset.size() << " sockets");
                 presult = poll(m_pollset.data(), m_pollset.size(), -1);
                 DEBUG("poll() returned " << presult);
                 if (presult < 0) {
