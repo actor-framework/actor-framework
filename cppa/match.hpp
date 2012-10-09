@@ -57,12 +57,12 @@ struct match_helper {
     }
     */
     template<class Arg0, class... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
+    bool operator()(Arg0&& arg0, Args&&... args) {
         auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
                                       std::forward<Args>(args)...);
         static_assert(std::is_same<partial_function, decltype(tmp)>::value,
                       "match statement contains timeout");
-        tmp(tup);
+        return tmp(tup);
     }
 };
 
