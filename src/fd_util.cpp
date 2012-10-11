@@ -102,7 +102,7 @@ void handle_write_result(ssize_t result, bool is_nonblocking_io) {
                 return; // don't throw, just try again
             }
         }
-        throw_io_failure(strerror(errno));
+        throw_io_failure("cannot write to file descriptor");
     }
 }
 
