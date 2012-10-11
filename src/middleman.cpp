@@ -419,6 +419,17 @@ class middleman {
     void erase(network_channel_ptr ptr, bool invoked_from_listener = false) {
         if (!invoked_from_listener) m_listener.channel_erased(ptr);
         erase_from(m_channels, ptr);
+        erase_from_if(m_peers, [ptr](const peer_map::value_type& kvp) -> bool {
+#           ifdef VERBOSE_MIDDLEMAN
+            if (kvp.second == ptr) {
+                DEBUG("peer " << to_string(kvp.first) << " disconnected");
+                return true;
+            }
+            return false;
+#           else
+            return kvp.second == ptr;
+#           endif
+        });
     }
 
     inline bool done() const { return m_done; }
@@ -726,7 +737,6 @@ class middleman_overseer : public network_channel {
                         }
                     }
                     catch (exception& e) {
-                        DEBUG("peer disconnected: " << e.what());
                         parent()->erase(peer);
                     }
                     break;
@@ -876,6 +886,10 @@ typedef vector<fd_meta_info> fd_meta_vector;
 
 typedef pair<pollfd_vector::iterator,fd_meta_vector::iterator> pfd_iterator;
 
+#ifndef POLLRDHUP
+#define POLLRDHUP POLLHUP
+#endif
+
 struct pfd_access {
 
     inline void advance(pfd_iterator& i) const {
@@ -886,13 +900,14 @@ struct pfd_access {
     inline event_bitmask type(const pfd_iterator& i) const {
         auto revents = i.first->revents;
         if (revents == 0) return event::none;
-        else if (revents & (POLLIN | POLLOUT)) {
-            int result = 0;
-            if (revents & POLLIN)  result |= event::read;
-            if (revents & POLLOUT) result |= event::write;
-            return result;
+        if (revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)) {
+            return event::error;
         }
-        else return event::error; // treat everything else as error
+        event_bitmask result = 0;
+        if (revents & (POLLIN | POLLPRI)) result |= event::read;
+        if (revents & POLLOUT) result |= event::write;
+        CPPA_REQUIRE(result != 0);
+        return result;
     }
 
     inline network_channel* ptr(pfd_iterator& i) const {
@@ -1238,16 +1253,32 @@ class io_observer : public io_observer_base {
 #endif
 
 template<typename Iter, class Fun>
-void perform_io(middleman* parent, io_observer* observer, Iter& iter, const Fun& fun, int etype) {
+void perform_io(middleman* parent, io_observer* observer, Iter& iter,
+                const Fun& fun, event_bitmask etype) {
     bool keep = true;
+    bool exception_occured = false;
     try { keep = fun(); }
-    catch (exception&) { keep = false; }
-    if (!keep) {
+    catch (ios_base::failure&) { exception_occured = true; }
+    catch (runtime_error& err) {
+        cerr << "*** runtime_error in middleman: " << err.what() << endl;
+        exception_occured = true;
+    }
+    catch (exception&) { exception_occured = true; }
+    if (exception_occured) {
+        DEBUG("exception occured during "
+              << ((etype == event::write) ? "continue_writing"
+                                          : "continue_reading"));
+        parent->erase(iter->ptr(), true);
+        observer->erase_later(iter->ptr(), etype);
+    }
+    else if (!keep) {
         if (etype == event::read) {
-            // report parent on read failures, write "failures" are treated as
-            // "there's just nothing more to write"
+            DEBUG("continue_reading returned false");
+            // continue_reading() returns false in case of connection errors,
+            // continue_writing() returns false if it's done
             parent->erase(iter->ptr(), true);
         }
+        else DEBUG("continue_writing returned false");
         observer->erase_later(iter->ptr(), etype);
     }
 }
@@ -1275,15 +1306,19 @@ void event_loop_impl::operator()() {
                 case event::none: break;
                 case event::both:
                 case event::write: {
+                    DEBUG("handle event::write");
                     perform_io(m_parent, m_observer, i, [&]{ return i->continue_writing() && i->has_unwritten_data(); }, event::write);
                     if (mask == event::write) break;
                     // else: fall through
+                    DEBUG("handle event::both; fall through");
                 }
                 case event::read: {
+                    DEBUG("handle event::read");
                     perform_io(m_parent, m_observer, i, [&]{ return i->continue_reading(); }, event::read);
                     break;
                 }
                 case event::error: {
+                    m_parent->erase(i->ptr(), true);
                     m_observer->erase_later(i->ptr(), event::both);
                 }
             }
