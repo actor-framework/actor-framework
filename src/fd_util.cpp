@@ -59,7 +59,7 @@ void throw_io_failure(std::string&& what, bool add_errno_failure) {
     throw std::ios_base::failure(std::move(what));
 }
 
-int rd_flags(file_descriptor fd) {
+int rd_flags(native_socket_type fd) {
     auto flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
         throw_io_failure("unable to read socket flags");
@@ -67,11 +67,11 @@ int rd_flags(file_descriptor fd) {
     return flags;
 }
 
-bool nonblocking(file_descriptor fd) {
+bool nonblocking(native_socket_type fd) {
     return (rd_flags(fd) & O_NONBLOCK) != 0;
 }
 
-void nonblocking(file_descriptor fd, bool new_value) {
+void nonblocking(native_socket_type fd, bool new_value) {
     auto rf = rd_flags(fd);
     auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
     if (fcntl(fd, F_SETFL, wf) < 0) {

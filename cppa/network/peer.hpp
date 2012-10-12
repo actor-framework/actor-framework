@@ -28,76 +28,78 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef PEER_HPP
+#define PEER_HPP
 
-#include <atomic>
+#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/continuable_reader.hpp"
 
-namespace cppa {
+enum continue_writing_result {
+    write_failure,
+    write_closed,
+    write_continue_later,
+    write_done
+};
 
-class scheduler;
-class msg_content;
 
-} // namespace cppa
+namespace cppa { namespace network {
 
-namespace cppa { namespace network { class middleman; } }
+class middleman;
 
-namespace cppa { namespace detail {
+/**
+ * @brief Represents a bidirectional connection to a peer.
+ */
+class peer : public continuable_reader {
 
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+    typedef continuable_reader super;
 
  public:
 
-    static void shutdown();
+    /**
+     * @brief Returns the file descriptor for outgoing data.
+     */
+    native_socket_type write_handle() const {
+        return m_write_handle;
+    }
 
-    static scheduler* get_scheduler();
+    /**
+     * @brief Writes to {@link write_handle()}.
+     */
+    virtual continue_writing_result continue_writing() = 0;
 
-    static bool set_scheduler(scheduler*);
+    /**
+     * @brief Enqueues @p msg to the list of outgoing messages.
+     * @returns @p true on success, @p false otherwise.
+     * @note Implementation should call {@link begin_writing()} and perform IO
+     *       only in its implementation of {@link continue_writing()}.
+     * @note Returning @p false from this function is interpreted as error
+     *       and causes the middleman to remove this peer.
+     */
+    virtual bool enqueue(const addressed_message& msg) = 0;
 
-    static group_manager* get_group_manager();
+ protected:
 
-    static actor_registry* get_actor_registry();
+    /**
+     * @brief Tells the middleman to add write_handle() to the list of
+     *        observed sockets and to call continue_writing() if
+     *        write_handle() is ready to write.
+     * @note Does nothing if write_handle() is already registered for the
+     *       event loop.
+     */
+    void begin_writing();
 
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
+    void register_peer(const process_information& pinfo);
 
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
+    peer(middleman* parent, native_socket_type rd, native_socket_type wr);
 
  private:
 
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
+    native_socket_type m_write_handle;
 
 };
 
-} } // namespace cppa::detail
+typedef intrusive_ptr<peer> peer_ptr;
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+} } // namespace cppa::network
+
+#endif // PEER_HPP

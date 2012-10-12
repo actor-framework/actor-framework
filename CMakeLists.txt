@@ -34,7 +34,7 @@ endif ()
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-        ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src/get_compiler_version.cpp
+        ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -75,64 +75,7 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-set(LIBCPPA_SRC
-    src/abstract_tuple.cpp
-    src/actor.cpp
-    src/actor_count.cpp
-    src/actor_proxy.cpp
-    src/actor_proxy_cache.cpp
-    src/actor_registry.cpp
-    src/addressed_message.cpp
-    src/any_tuple.cpp
-    src/atom.cpp
-    src/attachable.cpp
-    src/behavior_stack.cpp
-    src/binary_deserializer.cpp
-    src/binary_serializer.cpp
-    src/buffer.cpp
-    src/channel.cpp
-    src/thread_mapped_actor.cpp
-    src/demangle.cpp
-    src/deserializer.cpp
-    src/duration.cpp
-    src/empty_tuple.cpp
-    src/event_based_actor.cpp
-    src/exception.cpp
-    src/factory.cpp
-    src/fd_util.cpp
-    src/fiber.cpp
-    src/group.cpp
-    src/group_manager.cpp
-    src/ipv4_acceptor.cpp
-    src/ipv4_io_stream.cpp
-    src/local_actor.cpp
-    src/middleman.cpp
-    src/network_manager.cpp
-    src/object.cpp
-    src/object_array.cpp
-    src/opt.cpp
-    src/partial_function.cpp
-    src/pattern.cpp
-    src/primitive_variant.cpp
-    src/process_information.cpp
-    src/receive.cpp
-    src/ripemd_160.cpp
-    src/scheduled_actor.cpp
-    src/scheduled_actor_dummy.cpp
-    src/scheduler.cpp
-    src/self.cpp
-    src/serializer.cpp
-    src/shared_spinlock.cpp
-    src/singleton_manager.cpp
-    src/string_serialization.cpp
-    src/thread_pool_scheduler.cpp
-    src/to_uniform_name.cpp
-    src/unicast_network.cpp
-    src/uniform_type_info.cpp
-    src/yield_interface.cpp
-    src/context_switching_actor.cpp
-    src/decorated_names_map.cpp
-)
+file(GLOB LIBCPPA_SRC "src/*.cpp")
 
 set(boost_context third_party/boost_context)
 

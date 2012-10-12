@@ -28,76 +28,17 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#include "cppa/network/continuable_reader.hpp"
 
-#include <atomic>
+namespace cppa { namespace network {
 
-namespace cppa {
+continuable_reader::continuable_reader(middleman* parent,
+                                       native_socket_type rd,
+                                       bool is_peer)
+: m_is_peer(is_peer), m_parent(parent), m_read_handle(rd) { }
 
-class scheduler;
-class msg_content;
+bool continuable_reader::is_acceptor_of(const actor_ptr&) const {
+    return false;
+}
 
-} // namespace cppa
-
-namespace cppa { namespace network { class middleman; } }
-
-namespace cppa { namespace detail {
-
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
-
- public:
-
-    static void shutdown();
-
-    static scheduler* get_scheduler();
-
-    static bool set_scheduler(scheduler*);
-
-    static group_manager* get_group_manager();
-
-    static actor_registry* get_actor_registry();
-
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
-
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
-
- private:
-
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
-
-};
-
-} } // namespace cppa::detail
-
-#endif // CPPA_SINGLETON_MANAGER_HPP
+} } // namespace cppa::network

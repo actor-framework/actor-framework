@@ -28,51 +28,24 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACCEPTOR_HPP
-#define CPPA_ACCEPTOR_HPP
+#ifndef CPPA_IO_STREAM_HPP
+#define CPPA_IO_STREAM_HPP
 
-#include "cppa/config.hpp"
-#include "cppa/option.hpp"
+#include "cppa/network/input_stream.hpp"
+#include "cppa/network/output_stream.hpp"
 
-#include "cppa/util/input_stream.hpp"
-#include "cppa/util/output_stream.hpp"
-
-namespace cppa { namespace util {
+namespace cppa { namespace network {
 
 /**
- * @brief A pair of input and output stream pointers.
+ * @brief A stream capable of both reading and writing.
  */
-typedef std::pair<input_stream_ptr, output_stream_ptr> io_stream_ptr_pair;
+class io_stream : public input_stream, public output_stream { };
 
 /**
- * @brief Accepts connections from client processes.
+ * @brief An IO stream pointer.
  */
-class acceptor {
-
- public:
-
-    virtual ~acceptor() { }
-
-    /**
-     * @brief Returns the internal file descriptor. This descriptor is needed
-     *        for socket multiplexing using select().
-     */
-    virtual native_socket_type acceptor_file_handle() const = 0;
-
-    /**
-     * @brief Accepts a new connection and returns an input/output stream pair.
-     * @note This member function blocks until a new connection was established.
-     */
-    virtual io_stream_ptr_pair accept_connection() = 0;
-
-    /**
-     * @brief Tries to accept a new connection but immediately returns if
-     *        there is no pending connection.
-     */
-    virtual option<io_stream_ptr_pair> try_accept_connection() = 0;
-
-};
+typedef intrusive_ptr<io_stream> io_stream_ptr;
 
 } } // namespace cppa::util
 
-#endif // CPPA_ACCEPTOR_HPP
+#endif // CPPA_IO_STREAM_HPP

@@ -28,84 +28,63 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ADDRESSED_MESSAGE_HPP
-#define CPPA_ADDRESSED_MESSAGE_HPP
+#ifndef IPV4_PEER_HPP
+#define IPV4_PEER_HPP
 
-#include "cppa/actor.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/cow_tuple.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/process_information.hpp"
 
-namespace cppa { namespace detail {
+#include "cppa/util/buffer.hpp"
 
-class addressed_message {
+#include "cppa/network/peer.hpp"
+#include "cppa/network/input_stream.hpp"
+#include "cppa/network/output_stream.hpp"
+
+namespace cppa { namespace network {
+
+class default_peer_impl : public peer {
+
+    typedef peer super;
 
  public:
 
-    addressed_message(actor_ptr from, channel_ptr to,
-                      any_tuple ut, message_id_t id = message_id_t());
+    default_peer_impl(middleman* parent,
+                      const input_stream_ptr& in,
+                      const output_stream_ptr& out,
+                      process_information_ptr peer_ptr = nullptr);
 
-    addressed_message() = default;
-    addressed_message(addressed_message&&) = default;
-    addressed_message(const addressed_message&) = default;
-    addressed_message& operator=(addressed_message&&) = default;
-    addressed_message& operator=(const addressed_message&) = default;
+    continue_reading_result continue_reading();
 
-    inline actor_ptr& sender() {
-        return m_sender;
-    }
+    continue_writing_result continue_writing();
 
-    inline const actor_ptr& sender() const {
-        return m_sender;
-    }
+    bool enqueue(const addressed_message& msg);
 
-    inline channel_ptr& receiver() {
-        return m_receiver;
-    }
+ protected:
 
-    inline const channel_ptr& receiver() const {
-        return m_receiver;
-    }
-
-    inline any_tuple& content() {
-        return m_content;
-    }
-
-    inline const any_tuple& content() const {
-        return m_content;
-    }
-
-    inline message_id_t id() const {
-        return m_msg_id;
-    }
-
-    inline void id(message_id_t value) {
-        m_msg_id = value;
-    }
-
-    inline bool empty() const {
-        return m_content.empty();
-    }
+    ~default_peer_impl();
 
  private:
 
-    actor_ptr m_sender;
-    channel_ptr m_receiver;
-    message_id_t m_msg_id;
-    any_tuple m_content;
+    enum read_state {
+        // connection just established; waiting for process information
+        wait_for_process_info,
+        // wait for the size of the next message
+        wait_for_msg_size,
+        // currently reading a message
+        read_message
+    };
+
+    input_stream_ptr m_in;
+    output_stream_ptr m_out;
+    read_state m_state;
+    process_information_ptr m_peer;
+    const uniform_type_info* m_meta_msg;
+    bool m_has_unwritten_data;
+
+    util::buffer m_rd_buf;
+    util::buffer m_wr_buf;
 
 };
 
-bool operator==(const addressed_message& lhs, const addressed_message& rhs);
+} } // namespace cppa::network
 
-inline bool operator!=(const addressed_message& lhs,
-                       const addressed_message& rhs) {
-    return !(lhs == rhs);
-}
-
-} } // namespace cppa::detail
-
-#endif // CPPA_ADDRESSED_MESSAGE_HPP
+#endif // IPV4_PEER_HPP

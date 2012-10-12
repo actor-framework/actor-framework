@@ -28,33 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_NETWORK_MANAGER_HPP
-#define CPPA_NETWORK_MANAGER_HPP
+#ifndef PEER_ACCEPTOR_HPP
+#define PEER_ACCEPTOR_HPP
 
-#include <memory>
+#include "cppa/network/peer.hpp"
+#include "cppa/network/continuable_reader.hpp"
 
-//#include "cppa/detail/post_office.hpp"
+namespace cppa { namespace network {
 
-namespace cppa { namespace detail {
+class peer_acceptor : public continuable_reader {
 
-struct middleman_message;
-
-class network_manager {
+    typedef continuable_reader super;
 
  public:
 
-    virtual ~network_manager();
+    bool is_acceptor_of(const actor_ptr& whom) const;
 
-    virtual void start() = 0;
+ protected:
 
-    virtual void stop() = 0;
+    peer_acceptor(middleman* parent,
+                  native_socket_type fd,
+                  const actor_ptr& published_actor);
 
-    virtual void send_to_middleman(std::unique_ptr<middleman_message> msg) = 0;
+    void add_peer(const peer_ptr& ptr);
 
-    static network_manager* create_singleton();
+    inline const actor_ptr& published_actor() const {
+        return m_published_actor;
+    }
+
+ private:
+
+    actor_ptr m_published_actor;
 
 };
 
-} } // namespace cppa::detail
+typedef intrusive_ptr<peer_acceptor> peer_acceptor_ptr;
 
-#endif // CPPA_NETWORK_MANAGER_HPP
+} } // namespace cppa::network
+
+#endif // PEER_ACCEPTOR_HPP

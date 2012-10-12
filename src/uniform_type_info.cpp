@@ -56,11 +56,12 @@
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/addressed_message.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
+
+#include "cppa/network/addressed_message.hpp"
 
 namespace cppa { namespace detail {
 
@@ -431,7 +432,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
 
 };
 
-class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message> {
+class addr_msg_tinfo : public util::abstract_uniform_type_info<network::addressed_message> {
 
     string any_tuple_name;
     string actor_ptr_name;
@@ -441,7 +442,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
-        auto& msg = *reinterpret_cast<const addressed_message*>(instance);
+        auto& msg = *reinterpret_cast<const network::addressed_message*>(instance);
         auto& data = msg.content();
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(msg.sender(), sink, actor_ptr_name);
@@ -458,7 +459,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<addressed_message
     virtual void deserialize(void* instance, deserializer* source) const {
         assert_type_name(source);
         source->begin_object(name());
-        auto& msg = *reinterpret_cast<addressed_message*>(instance);
+        auto& msg = *reinterpret_cast<network::addressed_message*>(instance);
         actor_ptr_tinfo::s_deserialize(msg.sender(), source, actor_ptr_name);
         channel_ptr_tinfo::s_deserialize(msg.receiver(),
                                          source,
@@ -690,7 +691,7 @@ uniform_type_info_map::uniform_type_info_map() {
     insert({raw_name<group_ptr>()}, new group_ptr_tinfo);
     insert({raw_name<channel_ptr>()}, new channel_ptr_tinfo);
     insert({raw_name<atom_value>()}, new atom_value_tinfo);
-    insert({raw_name<detail::addressed_message>()}, new addr_msg_tinfo);
+    insert({raw_name<network::addressed_message>()}, new addr_msg_tinfo);
     insert({raw_name<util::void_type>()}, new void_type_tinfo);
     insert({raw_name<process_information_ptr>()}, new process_info_ptr_tinfo);
     insert({raw_name<map<string,string>>()}, new default_uniform_type_info_impl<map<string,string>>);

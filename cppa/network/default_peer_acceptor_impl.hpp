@@ -28,76 +28,34 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef IPV4_PEER_ACCEPTOR_HPP
+#define IPV4_PEER_ACCEPTOR_HPP
 
-#include <atomic>
+#include "cppa/actor.hpp"
 
-namespace cppa {
+#include "cppa/network/ipv4_acceptor.hpp"
+#include "cppa/network/peer_acceptor.hpp"
 
-class scheduler;
-class msg_content;
+namespace cppa { namespace network {
 
-} // namespace cppa
+class default_peer_acceptor_impl : public peer_acceptor {
 
-namespace cppa { namespace network { class middleman; } }
-
-namespace cppa { namespace detail {
-
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+    typedef peer_acceptor super;
 
  public:
 
-    static void shutdown();
+    continue_reading_result continue_reading();
 
-    static scheduler* get_scheduler();
-
-    static bool set_scheduler(scheduler*);
-
-    static group_manager* get_group_manager();
-
-    static actor_registry* get_actor_registry();
-
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
-
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
+    default_peer_acceptor_impl(middleman* parent,
+                               acceptor_uptr ptr,
+                               const actor_ptr& published_actor);
 
  private:
 
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
+    acceptor_uptr m_ptr;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+#endif // IPV4_PEER_ACCEPTOR_HPP

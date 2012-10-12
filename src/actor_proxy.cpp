@@ -28,22 +28,32 @@
 \******************************************************************************/
 
 
+#include <utility>
+#include <iostream>
+
 #include "cppa/atom.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/detail/middleman.hpp"
+#include "cppa/network/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-#include <iostream>
+using namespace std;
 
 namespace cppa {
 
-using detail::middleman_enqueue;
+namespace {
+
+template<typename... Args>
+void middleman_enqueue(Args&&... args) {
+    detail::singleton_manager::get_middleman()->enqueue(forward<Args>(args)...);
+}
+
+} // namespace <anonymous>
+
 
 actor_proxy::actor_proxy(std::uint32_t mid, const process_information_ptr& pptr)
 : super(mid, pptr) { }

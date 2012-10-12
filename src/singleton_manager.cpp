@@ -37,11 +37,12 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 
+#include "cppa/network/middleman.hpp"
+
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/decorated_names_map.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -57,29 +58,14 @@ using namespace cppa::detail;
 
 //volatile uniform_type_info_map* s_uniform_type_info_map = 0;
 
+
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<decorated_names_map*> s_decorated_names_map;
-std::atomic<network_manager*> s_network_manager;
+std::atomic<network::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
 std::atomic<empty_tuple*> s_empty_tuple;
 std::atomic<scheduler*> s_scheduler;
-
-template<typename T>
-void stop_and_kill(std::atomic<T*>& ptr) {
-    for (;;) {
-        auto p = ptr.load();
-        if (p == nullptr) {
-            return;
-        }
-        else if (ptr.compare_exchange_weak(p, nullptr)) {
-            p->stop();
-            delete p;
-            ptr = nullptr;
-            return;
-        }
-    }
-}
 
 template<typename T>
 T* lazy_get(std::atomic<T*>& ptr) {
@@ -99,9 +85,11 @@ T* lazy_get(std::atomic<T*>& ptr) {
 
 } // namespace <anonymous>
 
-namespace cppa {
+namespace cppa { void shutdown() { singleton_manager::shutdown(); } }
 
-void shutdown() {
+namespace cppa { namespace detail {
+
+void singleton_manager::shutdown() {
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
@@ -110,7 +98,7 @@ void shutdown() {
     if (rptr) {
         rptr->await_running_count_equal(0);
     }
-    stop_and_kill(s_network_manager);
+    stop_and_kill(s_middleman);
     stop_and_kill(s_scheduler);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe now to delete all other singletons now
@@ -126,10 +114,6 @@ void shutdown() {
     delete s_decorated_names_map.load();
     s_decorated_names_map = nullptr;
 }
-
-} // namespace cppa
-
-namespace cppa { namespace detail {
 
 actor_registry* singleton_manager::get_actor_registry() {
     return lazy_get(s_actor_registry);
@@ -155,14 +139,12 @@ bool singleton_manager::set_scheduler(scheduler* ptr) {
     scheduler* expected = nullptr;
     if (s_scheduler.compare_exchange_weak(expected, ptr)) {
         ptr->start();
-        auto nm = network_manager::create_singleton();
-        network_manager* nm_expected = nullptr;
-        if (s_network_manager.compare_exchange_weak(nm_expected, nm)) {
-            nm->start();
+        network::middleman* mm = network::middleman::create_singleton();
+        network::middleman* mm_expected = nullptr;
+        if (s_middleman.compare_exchange_weak(mm_expected, mm)) {
+            mm->start();
         }
-        else {
-            delete nm;
-        }
+        else delete mm;
         return true;
     }
     else {
@@ -171,13 +153,13 @@ bool singleton_manager::set_scheduler(scheduler* ptr) {
     }
 }
 
-network_manager* singleton_manager::get_network_manager() {
-    network_manager* result = s_network_manager.load();
+network::middleman* singleton_manager::get_middleman() {
+    auto result = s_middleman.load();
     if (result == nullptr) {
         scheduler* s = new thread_pool_scheduler;
         // set_scheduler sets s_network_manager
         set_scheduler(s);
-        return get_network_manager();
+        return get_middleman();
     }
     return result;
 }

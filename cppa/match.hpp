@@ -37,6 +37,7 @@
 #include <type_traits>
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/match_expr.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/tbind.hpp"

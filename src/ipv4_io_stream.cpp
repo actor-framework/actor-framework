@@ -35,7 +35,7 @@
 
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
-#include "cppa/detail/ipv4_io_stream.hpp"
+#include "cppa/network/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
 #else
@@ -47,17 +47,17 @@
 #   include <netinet/tcp.h>
 #endif
 
-namespace cppa { namespace detail {
+namespace cppa { namespace network {
 
-using namespace fd_util;
+using namespace ::cppa::detail::fd_util;
 
 ipv4_io_stream::ipv4_io_stream(native_socket_type fd) : m_fd(fd) { }
 
-native_socket_type ipv4_io_stream::read_file_handle() const {
+native_socket_type ipv4_io_stream::read_handle() const {
     return m_fd;
 }
 
-native_socket_type ipv4_io_stream::write_file_handle() const {
+native_socket_type ipv4_io_stream::write_handle() const {
     return m_fd;
 }
 
@@ -114,13 +114,13 @@ size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
     return static_cast<size_t>(send_result);
 }
 
-util::io_stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd) {
+network::io_stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd) {
     tcp_nodelay(fd, true);
     nonblocking(fd, true);
     return new ipv4_io_stream(fd);
 }
 
-util::io_stream_ptr ipv4_io_stream::connect_to(const char* host,
+network::io_stream_ptr ipv4_io_stream::connect_to(const char* host,
                                                std::uint16_t port) {
     struct sockaddr_in serv_addr;
     struct hostent* server;

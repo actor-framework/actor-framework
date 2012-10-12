@@ -43,7 +43,7 @@
 #include "cppa/process_information.hpp"
 
 namespace cppa { class any_tuple; }
-namespace cppa { namespace detail { class addressed_message; } }
+namespace cppa { namespace network { class addressed_message; } }
 
 namespace cppa { namespace util {
 
@@ -71,7 +71,7 @@ template<>
 struct is_builtin<any_tuple> : std::true_type { };
 
 template<>
-struct is_builtin<detail::addressed_message> : std::true_type { };
+struct is_builtin<network::addressed_message> : std::true_type { };
 
 template<>
 struct is_builtin<actor_ptr> : std::true_type { };

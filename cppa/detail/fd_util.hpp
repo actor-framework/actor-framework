@@ -38,19 +38,17 @@ namespace cppa { namespace detail { namespace fd_util {
 
 #if defined(CPPA_MACOS) || defined(CPPA_LINUX)
 
-typedef int file_descriptor;
-
 // throws ios_base::failure and adds errno failure if @p add_errno_failure
 void throw_io_failure(std::string&& what, bool add_errno_failure = true);
 
 // returns true if fd is nonblocking
 // throws @p ios_base::failure on error
-bool nonblocking(file_descriptor fd);
+bool nonblocking(native_socket_type fd);
 
 // sets fd to nonblocking if <tt>set_nonblocking == true</tt>
 // or to blocking if <tt>set_nonblocking == false</tt>
 // throws @p ios_base::failure on error
-void nonblocking(file_descriptor fd, bool new_value);
+void nonblocking(native_socket_type fd, bool new_value);
 
 // returns true if fd is nodelay socket
 // throws @p ios_base::failure on error

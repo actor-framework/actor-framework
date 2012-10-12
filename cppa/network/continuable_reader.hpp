@@ -28,24 +28,75 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IO_STREAM_HPP
-#define CPPA_IO_STREAM_HPP
+#ifndef CONTINUABLE_READER_HPP
+#define CONTINUABLE_READER_HPP
 
-#include "cppa/util/input_stream.hpp"
-#include "cppa/util/output_stream.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
 
-namespace cppa { namespace util {
+namespace cppa { namespace network {
 
-/**
- * @brief A stream capable of both reading and writing.
- */
-class io_stream : public input_stream, public output_stream { };
+class middleman;
 
-/**
- * @brief An IO stream pointer.
- */
-typedef intrusive_ptr<io_stream> io_stream_ptr;
+enum continue_reading_result {
+    read_failure,
+    read_closed,
+    read_continue_later
+};
 
-} } // namespace cppa::util
+class continuable_reader : public ref_counted {
 
-#endif // CPPA_IO_STREAM_HPP
+ public:
+
+    /**
+     * @brief Returns the file descriptor for incoming data.
+     */
+    inline native_socket_type read_handle() const {
+        return m_read_handle;
+    }
+
+    /**
+     * @brief Reads from {@link read_handle()}.
+     */
+    virtual continue_reading_result continue_reading() = 0;
+
+    /**
+     * @brief Returns @p true if @p this is a {@link peer_acceptor} that
+     *        is assigned to the published actor @p whom.
+     */
+    virtual bool is_acceptor_of(const actor_ptr& whom) const;
+
+    /**
+     * @brief Returns true if this is a subtype of {@link peer}, i.e.,
+     *        if @p static_cast<peer*>(this) is well-defined.
+     */
+    inline bool is_peer() const {
+        return m_is_peer;
+    }
+
+ protected:
+
+    continuable_reader(middleman* parent, native_socket_type rd, bool is_peer);
+
+    inline middleman* parent() {
+        return m_parent;
+    }
+
+    inline const middleman* parent() const {
+        return m_parent;
+    }
+
+ private:
+
+    bool m_is_peer;
+    middleman* m_parent;
+    native_socket_type m_read_handle;
+
+};
+
+typedef intrusive_ptr<continuable_reader> continuable_reader_ptr;
+
+} } // namespace cppa::network
+
+#endif // CONTINUABLE_READER_HPP

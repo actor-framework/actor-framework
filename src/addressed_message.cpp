@@ -28,10 +28,10 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/addressed_message.hpp"
+#include "cppa/network/addressed_message.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa { namespace network {
 
 addressed_message::addressed_message(actor_ptr from,
                                      channel_ptr to,

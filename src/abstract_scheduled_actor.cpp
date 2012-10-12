@@ -37,6 +37,7 @@
 #include "cppa/detail/yield_interface.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
+/*
 namespace cppa { namespace detail {
 
 namespace {
@@ -226,3 +227,4 @@ bool scheduled_actor_dummy::attach(attachable*) {
 }
 
 } } // namespace cppa::detail
+*/

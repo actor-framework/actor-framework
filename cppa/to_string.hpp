@@ -57,7 +57,7 @@ template<>
 struct has_cppa_to_string<any_tuple> : std::true_type { };
 
 template<>
-struct has_cppa_to_string<addressed_message> : std::true_type { };
+struct has_cppa_to_string<network::addressed_message> : std::true_type { };
 
 template<>
 struct has_cppa_to_string<actor_ptr> : std::true_type { };

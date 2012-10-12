@@ -28,76 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef CPPA_IPV4_IO_STREAM_HPP
+#define CPPA_IPV4_IO_STREAM_HPP
 
-#include <atomic>
+#include "cppa/config.hpp"
+#include "cppa/network/io_stream.hpp"
 
-namespace cppa {
+namespace cppa { namespace network {
 
-class scheduler;
-class msg_content;
-
-} // namespace cppa
-
-namespace cppa { namespace network { class middleman; } }
-
-namespace cppa { namespace detail {
-
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+class ipv4_io_stream : public io_stream {
 
  public:
 
-    static void shutdown();
+    static io_stream_ptr connect_to(const char* host, std::uint16_t port);
 
-    static scheduler* get_scheduler();
+    static io_stream_ptr from_native_socket(native_socket_type fd);
 
-    static bool set_scheduler(scheduler*);
+    native_socket_type read_handle() const;
 
-    static group_manager* get_group_manager();
+    native_socket_type write_handle() const;
 
-    static actor_registry* get_actor_registry();
+    void read(void* buf, size_t len);
 
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
+    size_t read_some(void* buf, size_t len);
 
-    static uniform_type_info_map* get_uniform_type_info_map();
+    void write(const void* buf, size_t len);
 
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
+    size_t write_some(const void* buf, size_t len);
 
  private:
 
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
+    ipv4_io_stream(native_socket_type fd);
+
+    native_socket_type m_fd;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+#endif // CPPA_IPV4_IO_STREAM_HPP

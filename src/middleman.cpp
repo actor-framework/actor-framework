@@ -28,11 +28,8 @@
 \******************************************************************************/
 
 
-#include <set>
-#include <map>
 #include <tuple>
 #include <cerrno>
-#include <vector>
 #include <memory>
 #include <cstring>
 #include <sstream>
@@ -51,13 +48,17 @@
 #include "cppa/process_information.hpp"
 
 #include "cppa/util/buffer.hpp"
-#include "cppa/util/acceptor.hpp"
-#include "cppa/util/input_stream.hpp"
-#include "cppa/util/output_stream.hpp"
 
-#include "cppa/detail/middleman.hpp"
+#include "cppa/network/acceptor.hpp"
+#include "cppa/network/middleman.hpp"
+#include "cppa/network/input_stream.hpp"
+#include "cppa/network/output_stream.hpp"
+#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/default_peer_impl.hpp"
+#include "cppa/network/default_peer_acceptor_impl.hpp"
+
+#include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/addressed_message.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 
 //#define VERBOSE_MIDDLEMAN
@@ -80,13 +81,15 @@
 #   define CPPA_EPOLL_IMPL
 #   include <sys/epoll.h>
 #else
-#   define CPPA_POLL_IMPL
+#   ifndef CPPA_POLL_IMPL
+#       define CPPA_POLL_IMPL
+#   endif
 #   include <poll.h>
 #endif
 
 using namespace std;
 
-namespace cppa { namespace detail {
+namespace cppa { namespace network {
 
 namespace {
 
@@ -121,553 +124,149 @@ void erase_from_if(Container& container, const UnaryPredicate& predicate) {
 
 } // namespace <anonmyous>
 
-middleman_message::middleman_message()
-: next(0), type(middleman_message_type::shutdown) { }
+enum class middleman_message_type {
+    add_peer,
+    publish,
+    unpublish,
+    outgoing_message,
+    shutdown
+};
 
-middleman_message::middleman_message(util::io_stream_ptr_pair a0,
-                                     process_information_ptr a1)
-: next(0), type(middleman_message_type::add_peer) {
-   call_ctor(new_peer, move(a0), move(a1));
-}
+struct middleman_message {
+    middleman_message* next;
+    const middleman_message_type type;
+    union {
+        std::pair<io_stream_ptr_pair,process_information_ptr> new_peer;
+        std::pair<std::unique_ptr<acceptor>, actor_ptr> new_published_actor;
+        actor_ptr published_actor;
+        std::pair<process_information_ptr,addressed_message> out_msg;
+    };
 
-middleman_message::middleman_message(unique_ptr<util::acceptor> a0,
-                                     actor_ptr a1)
-: next(0), type(middleman_message_type::publish) {
-    call_ctor(new_published_actor, move(a0), move(a1));
-}
+    middleman_message() : next(0), type(middleman_message_type::shutdown) { }
 
-middleman_message::middleman_message(actor_ptr a0)
-: next(0), type(middleman_message_type::unpublish) {
-    call_ctor(published_actor, move(a0));
-}
-
-middleman_message::middleman_message(process_information_ptr a0,
-                                     addressed_message a1)
-: next(0), type(middleman_message_type::outgoing_message) {
-    call_ctor(out_msg, move(a0), move(a1));
-}
-
-middleman_message::~middleman_message() {
-    switch (type) {
-        case middleman_message_type::add_peer: {
-            call_dtor(new_peer);
-            break;
-        }
-        case middleman_message_type::publish: {
-            call_dtor(new_published_actor);
-            break;
-        }
-        case middleman_message_type::unpublish: {
-            call_dtor(published_actor);
-            break;
-        }
-        case middleman_message_type::outgoing_message: {
-            call_dtor(out_msg);
-            break;
-        }
-        default: break;
+    middleman_message(io_stream_ptr_pair a0, process_information_ptr a1)
+    : next(0), type(middleman_message_type::add_peer) {
+        call_ctor(new_peer, move(a0), move(a1));
     }
-}
 
-class middleman;
+    middleman_message(unique_ptr<acceptor> a0, actor_ptr a1)
+    : next(0), type(middleman_message_type::publish) {
+        call_ctor(new_published_actor, move(a0), move(a1));
+    }
+
+    middleman_message(actor_ptr a0)
+    : next(0), type(middleman_message_type::unpublish) {
+        call_ctor(published_actor, move(a0));
+    }
+
+    middleman_message(process_information_ptr a0, addressed_message a1)
+    : next(0), type(middleman_message_type::outgoing_message) {
+        call_ctor(out_msg, move(a0), move(a1));
+    }
+
+    ~middleman_message() {
+        switch (type) {
+            case middleman_message_type::add_peer:
+                call_dtor(new_peer);
+                break;
+            case middleman_message_type::publish:
+                call_dtor(new_published_actor);
+                break;
+            case middleman_message_type::unpublish:
+                call_dtor(published_actor);
+                break;
+            case middleman_message_type::outgoing_message:
+                call_dtor(out_msg);
+                break;
+            default: break;
+        }
+    }
+
+    template<typename... Args>
+    static inline std::unique_ptr<middleman_message> create(Args&&... args) {
+        return std::unique_ptr<middleman_message>(new middleman_message(std::forward<Args>(args)...));
+    }
+};
 
 typedef intrusive::single_reader_queue<middleman_message> middleman_queue;
 
-class network_channel : public ref_counted {
+class middleman_impl : public middleman {
+
+    friend void middleman_loop(middleman_impl*);
 
  public:
 
-    network_channel(middleman* ptr, native_socket_type read_fd)
-    : m_parent(ptr), m_read_handle(read_fd) { }
+    middleman_impl() { }
 
-    virtual bool continue_reading() = 0;
-
-    inline native_socket_type read_handle() const {
-        return m_read_handle;
+    void publish(std::unique_ptr<acceptor> server, const actor_ptr& aptr) {
+        enqueue_message(middleman_message::create(move(server), aptr));
     }
 
-    virtual bool is_acceptor_of(const actor_ptr&) const {
-        return false;
+    void add_peer(const io_stream_ptr_pair& io,
+                  const process_information_ptr& node_info) {
+        enqueue_message(middleman_message::create(io, node_info));
     }
 
-    virtual bool is_peer_connection() const { return false; }
+    void unpublish(const actor_ptr& whom) {
+        enqueue_message(middleman_message::create(whom));
+    }
+
+    void enqueue(const process_information_ptr& node,
+                 const addressed_message& msg) {
+        enqueue_message(middleman_message::create(node, msg));
+    }
 
  protected:
 
-    inline middleman* parent() { return m_parent; }
-    inline const middleman* parent() const { return m_parent; }
-
- private:
-
-    middleman* m_parent;
-    native_socket_type m_read_handle;
-
-};
-
-typedef intrusive_ptr<network_channel> network_channel_ptr;
-typedef vector<network_channel_ptr> network_channel_ptr_vector;
-
-class peer_connection : public network_channel {
-
-    typedef network_channel super;
-
- public:
-
-    peer_connection(middleman* parent,
-                    util::input_stream_ptr istream,
-                    util::output_stream_ptr ostream,
-                    process_information_ptr peer_ptr = nullptr)
-    : super(parent, istream->read_file_handle())
-    , m_istream(istream), m_ostream(ostream), m_peer(peer_ptr)
-    , m_rd_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
-    , m_meta_msg(uniform_typeid<addressed_message>())
-    , m_has_unwritten_data(false)
-    , m_write_handle(ostream->write_file_handle()) {
-        m_rd_buf.reset(m_rd_state == wait_for_process_info
-                       ? ui32_size + process_information::node_id_size
-                       : ui32_size);
+    void start() {
+        int pipefds[2];
+        if (pipe(pipefds) != 0) { CPPA_CRITICAL("cannot create pipe"); }
+        m_pipe_read = pipefds[0];
+        m_pipe_write = pipefds[1];
+        detail::fd_util::nonblocking(m_pipe_read, true);
+        // start threads
+        m_thread = std::thread([this] { middleman_loop(this); });
     }
 
-    ~peer_connection() {
-        if (m_peer) {
-            // collect all children (proxies to actors of m_peer)
-            vector<actor_proxy_ptr> children;
-            children.reserve(20);
-            get_actor_proxy_cache().erase_all(m_peer->node_id(),
-                                              m_peer->process_id(),
-                                              [&](actor_proxy_ptr& pptr) {
-                children.push_back(move(pptr));
-            });
-            // kill all proxies
-            for (actor_proxy_ptr& pptr: children) {
-                pptr->enqueue(nullptr,
-                              make_any_tuple(atom("KILL_PROXY"),
-                                             exit_reason::remote_link_unreachable));
-            }
-        }
-    }
-
-    inline native_socket_type write_handle() const {
-        return m_write_handle;
-    }
-
-    bool continue_reading();
-
-    bool continue_writing() {
-        DEBUG("peer_connection::continue_writing, try to write "
-              << m_wr_buf.size() << " bytes");
-        if (has_unwritten_data()) {
-            size_t written;
-            written = m_ostream->write_some(m_wr_buf.data(),
-                                            m_wr_buf.size());
-            if (written != m_wr_buf.size()) {
-                m_wr_buf.erase_leading(written);
-                DEBUG("only " << written  << " bytes written");
-            }
-            else {
-                m_wr_buf.reset();
-                has_unwritten_data(false);
-            }
-        }
-        return true;
-    }
-
-    void write(const addressed_message& msg) {
-        binary_serializer bs(&m_wr_buf);
-        std::uint32_t size = 0;
-        auto before = m_wr_buf.size();
-        m_wr_buf.write(sizeof(std::uint32_t), &size, util::grow_if_needed);
-        bs << msg;
-        size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
-        // update size in buffer
-        memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
-        if (!has_unwritten_data()) {
-            size_t written = m_ostream->write_some(m_wr_buf.data(),
-                                                   m_wr_buf.size());
-            if (written != m_wr_buf.size()) {
-                DEBUG("tried to write " << m_wr_buf.size()
-                      << " bytes, only " << written << " bytes written");
-                m_wr_buf.erase_leading(written);
-                has_unwritten_data(true);
-            }
-            else {
-                DEBUG(written << " bytes written");
-                m_wr_buf.reset();
-            }
-        }
-    }
-
-    inline bool has_unwritten_data() const {
-        return m_has_unwritten_data;
-    }
-
-    virtual bool is_peer_connection() const { return true; }
-
- protected:
-
-    inline void has_unwritten_data(bool value) {
-        m_has_unwritten_data = value;
+    void stop() {
+        enqueue_message(middleman_message::create());
+        m_thread.join();
+        close(m_pipe_read);
+        close(m_pipe_write);
     }
 
  private:
 
-    enum read_state {
-        // connection just established; waiting for process information
-        wait_for_process_info,
-        // wait for the size of the next message
-        wait_for_msg_size,
-        // currently reading a message
-        read_message
-    };
+    std::thread m_thread;
+    native_socket_type m_pipe_read;
+    native_socket_type m_pipe_write;
+    middleman_queue m_queue;
 
-    util::input_stream_ptr m_istream;
-    util::output_stream_ptr m_ostream;
-    process_information_ptr m_peer;
-    read_state m_rd_state;
-    const uniform_type_info* m_meta_msg;
-    bool m_has_unwritten_data;
-    native_socket_type m_write_handle;
-
-    util::buffer m_rd_buf;
-    util::buffer m_wr_buf;
-
-};
-
-typedef intrusive_ptr<peer_connection> peer_connection_ptr;
-typedef map<process_information, peer_connection_ptr> peer_map;
-
-class middleman;
-class io_observer;
-
-class event_loop_impl {
-
- public:
-
-    event_loop_impl(middleman*);
-    ~event_loop_impl();
-
-    void init();
-    void update();
-    void operator()();
-    void channel_added(const network_channel_ptr& ptr);
-    void channel_erased(const network_channel_ptr& ptr);
-    void continue_writing_later(const peer_connection_ptr& ptr);
-
- private:
-
-    middleman* m_parent;
-    io_observer* m_observer;
-
-};
-
-class middleman {
-
-    friend class event_loop_impl;
-
- public:
-
-    middleman()
-    : m_done(false), m_listener(this), m_pself(process_information::get()) { }
-
-    inline void add_channel_ptr(const network_channel_ptr& ptr) {
-        m_channels.push_back(ptr);
-        m_listener.channel_added(ptr);
-    }
-
-    template<class Connection, typename... Args>
-    inline void add_channel(Args&&... args) {
-        add_channel_ptr(new Connection(this, forward<Args>(args)...));
-    }
-
-    inline void add_peer(const process_information& pinf, peer_connection_ptr cptr) {
-        auto& ptrref = m_peers[pinf];
-        if (ptrref) { DEBUG("peer already defined!"); }
-        else ptrref = cptr;
-    }
-
-    void operator()(int pipe_fd, middleman_queue& queue);
-
-    inline const process_information_ptr& pself() {
-        return m_pself;
-    }
-
-    inline void quit() {
-        m_done = true;
-    }
-
-    peer_connection_ptr peer(const process_information& pinf) {
-        auto i = m_peers.find(pinf);
-        if (i != m_peers.end()) {
-            CPPA_REQUIRE(i->second != nullptr);
-            return i->second;
+    void enqueue_message(std::unique_ptr<middleman_message> msg) {
+        m_queue._push_back(msg.release());
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        std::uint8_t dummy = 0;
+        if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {
+            CPPA_CRITICAL("cannot write to pipe");
         }
-        return nullptr;
     }
-
-    network_channel_ptr acceptor_of(const actor_ptr& whom) {
-        auto last = m_channels.end();
-        auto i = find_if(m_channels.begin(), last, [=](network_channel_ptr& ptr) {
-            return ptr->is_acceptor_of(whom);
-        });
-        return (i != last) ? *i : nullptr;
-    }
-
-    void continue_writing(const peer_connection_ptr& ptr) {
-        m_listener.continue_writing_later(ptr);
-    }
-
-    void erase(network_channel_ptr ptr, bool invoked_from_listener = false) {
-        if (!invoked_from_listener) m_listener.channel_erased(ptr);
-        erase_from(m_channels, ptr);
-        erase_from_if(m_peers, [ptr](const peer_map::value_type& kvp) -> bool {
-#           ifdef VERBOSE_MIDDLEMAN
-            if (kvp.second == ptr) {
-                DEBUG("peer " << to_string(kvp.first) << " disconnected");
-                return true;
-            }
-            return false;
-#           else
-            return kvp.second == ptr;
-#           endif
-        });
-    }
-
-    inline bool done() const { return m_done; }
-
-    event_loop_impl* listener() {
-        return &m_listener;
-    }
-
- private:
-
-    bool m_done;
-    event_loop_impl m_listener;
-    process_information_ptr m_pself;
-
-    peer_map m_peers;
-    network_channel_ptr_vector m_channels;
 
 };
 
-bool peer_connection::continue_reading() {
-    //DEBUG("peer_connection::continue_reading");
-    for (;;) {
-        m_rd_buf.append_from(m_istream.get());
-        if (!m_rd_buf.full()) return true; // try again later
-        switch (m_rd_state) {
-            case wait_for_process_info: {
-                //DEBUG("peer_connection::continue_reading: "
-                //      "wait_for_process_info");
-                uint32_t process_id;
-                process_information::node_id_type node_id;
-                memcpy(&process_id, m_rd_buf.data(), sizeof(uint32_t));
-                memcpy(node_id.data(), m_rd_buf.data() + sizeof(uint32_t),
-                       process_information::node_id_size);
-                m_peer.reset(new process_information(process_id, node_id));
-                if (*(parent()->pself()) == *m_peer) {
-#                   ifdef VERBOSE_MIDDLEMAN
-                    DEBUG("incoming connection from self");
-#                   elif defined(CPPA_DEBUG)
-                    std::cerr << "*** middleman warning: "
-                                 "incoming connection from self"
-                              << std::endl;
-#                   endif
-                    throw std::ios_base::failure("refused connection from self");
-                }
-                parent()->add_peer(*m_peer, this);
-                // initialization done
-                m_rd_state = wait_for_msg_size;
-                m_rd_buf.reset(sizeof(uint32_t));
-                DEBUG("pinfo read: "
-                      << m_peer->process_id()
-                      << "@"
-                      << to_string(m_peer->node_id()));
-                break;
-            }
-            case wait_for_msg_size: {
-                //DEBUG("peer_connection::continue_reading: wait_for_msg_size");
-                uint32_t msg_size;
-                memcpy(&msg_size, m_rd_buf.data(), sizeof(uint32_t));
-                //DEBUG("msg_size: " << msg_size);
-                m_rd_buf.reset(msg_size);
-                m_rd_state = read_message;
-                break;
-            }
-            case read_message: {
-                //DEBUG("peer_connection::continue_reading: read_message");
-                addressed_message msg;
-                binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size());
-                m_meta_msg->deserialize(&msg, &bd);
-                auto& content = msg.content();
-                //DEBUG("<-- " << to_string(msg));
-                match(content) (
-                    // monitor messages are sent automatically whenever
-                    // actor_proxy_cache creates a new proxy
-                    // note: aid is the *original* actor id
-                    on(atom("MONITOR"), arg_match) >> [&](const process_information_ptr& peer, actor_id aid) {
-                        if (!peer) {
-                            DEBUG("MONITOR received from invalid peer");
-                            return;
-                        }
-                        auto ar = singleton_manager::get_actor_registry();
-                        auto reg_entry = ar->get_entry(aid);
-                        auto pself = parent()->pself();
-                        auto send_kp = [=](uint32_t reason) {
-                            middleman_enqueue(peer,
-                                              nullptr,
-                                              nullptr,
-                                              make_any_tuple(
-                                                  atom("KILL_PROXY"),
-                                                  pself,
-                                                  aid,
-                                                  reason
-                                              ));
-                        };
-                        if (reg_entry.first == nullptr) {
-                            if (reg_entry.second == exit_reason::not_exited) {
-                                // invalid entry
-                                DEBUG("MONITOR for an unknown actor received");
-                            }
-                            else {
-                                // this actor already finished execution;
-                                // reply with KILL_PROXY message
-                                send_kp(reg_entry.second);
-                            }
-                        }
-                        else {
-                            reg_entry.first->attach_functor(send_kp);
-                        }
-                    },
-                    on(atom("KILL_PROXY"), arg_match) >> [&](const process_information_ptr& peer, actor_id aid, std::uint32_t reason) {
-                        auto& cache = get_actor_proxy_cache();
-                        auto proxy = cache.get(aid,
-                                               peer->process_id(),
-                                               peer->node_id());
-                        if (proxy) {
-                            proxy->enqueue(nullptr,
-                                           make_any_tuple(
-                                               atom("KILL_PROXY"), reason));
-                        }
-                        else {
-                            DEBUG("received KILL_PROXY message but didn't "
-                                  "found matching instance in cache");
-                        }
-                    },
-                    on(atom("LINK"), arg_match) >> [&](const actor_ptr& ptr) {
-                        if (msg.sender()->is_proxy() == false) {
-                            DEBUG("msg.sender() is not a proxy");
-                            return;
-                        }
-                        auto whom = msg.sender().downcast<actor_proxy>();
-                        if ((whom) && (ptr)) whom->local_link_to(ptr);
-                    },
-                    on(atom("UNLINK"), arg_match) >> [](const actor_ptr& ptr) {
-                        if (ptr->is_proxy() == false) {
-                            DEBUG("msg.sender() is not a proxy");
-                            return;
-                        }
-                        auto whom = ptr.downcast<actor_proxy>();
-                        if ((whom) && (ptr)) whom->local_unlink_from(ptr);
-                    },
-                    others() >> [&] {
-                        auto receiver = msg.receiver().get();
-                        if (receiver) {
-                            if (msg.id().valid()) {
-                                auto ra = dynamic_cast<actor*>(receiver);
-                                DEBUG("sync message for actor "
-                                      << ra->id());
-                                if (ra) {
-                                    ra->sync_enqueue(
-                                        msg.sender().get(),
-                                        msg.id(),
-                                        move(msg.content()));
-                                }
-                                else{
-                                    DEBUG("ERROR: sync message to a non-actor");
-                                }
-                            }
-                            else {
-                                DEBUG("async message (sender is "
-                                      << (msg.sender() ? "valid" : "NULL")
-                                      << ")");
-                                receiver->enqueue(
-                                    msg.sender().get(),
-                                    move(msg.content()));
-                            }
-                        }
-                        else {
-                            DEBUG("empty receiver");
-                        }
-                    }
-                );
-                m_rd_buf.reset(sizeof(uint32_t));
-                m_rd_state = wait_for_msg_size;
-                break;
-            }
-            default: {
-                CPPA_CRITICAL("illegal state");
-            }
-        }
-        // try to read more (next iteration)
-    }
+middleman* middleman::create_singleton() {
+    return new middleman_impl;
 }
 
-class peer_acceptor : public network_channel {
+class middleman_overseer : public continuable_reader {
 
-    typedef network_channel super;
-
- public:
-
-    peer_acceptor(middleman* parent,
-                  actor_id aid,
-                  unique_ptr<util::acceptor> acceptor)
-    : super(parent, acceptor->acceptor_file_handle())
-    , m_actor_id(aid)
-    , m_acceptor(move(acceptor)) { }
-
-    bool is_doorman_of(actor_id aid) const {
-        return m_actor_id == aid;
-    }
-
-    bool continue_reading() {
-        //DEBUG("peer_acceptor::continue_reading");
-        // accept as many connections as possible
-        for (;;) {
-            auto opt = m_acceptor->try_accept_connection();
-            if (opt) {
-                auto& pair = *opt;
-                auto& pself = parent()->pself();
-                uint32_t process_id = pself->process_id();
-                pair.second->write(&m_actor_id, sizeof(actor_id));
-                pair.second->write(&process_id, sizeof(uint32_t));
-                pair.second->write(pself->node_id().data(),
-                                   pself->node_id().size());
-                parent()->add_channel<peer_connection>(pair.first,
-                                                       pair.second);
-            }
-            else {
-                return true;
-            }
-       }
-    }
-
- private:
-
-    actor_id m_actor_id;
-    unique_ptr<util::acceptor> m_acceptor;
-
-};
-
-class middleman_overseer : public network_channel {
-
-    typedef network_channel super;
+    typedef continuable_reader super;
 
  public:
 
     middleman_overseer(middleman* parent, int pipe_fd, middleman_queue& q)
-    : super(parent, pipe_fd), m_queue(q) { }
+    : super(parent, pipe_fd, false), m_queue(q) { }
 
-    bool continue_reading() {
+    continue_reading_result continue_reading() {
         //DEBUG("middleman_overseer::continue_reading");
         static constexpr size_t num_dummies = 256;
         uint8_t dummies[num_dummies];
@@ -675,7 +274,7 @@ class middleman_overseer : public network_channel {
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
-                return true;
+                return read_continue_later;
             }
             else {
                 CPPA_CRITICAL("cannot read from pipe");
@@ -691,20 +290,20 @@ class middleman_overseer : public network_channel {
                           << to_string(*(msg->new_peer.second)));
                     auto& new_peer = msg->new_peer;
                     auto& io_ptrs = new_peer.first;
-                    peer_connection_ptr peer;
-                    peer.reset(new peer_connection(parent(),
-                                                   io_ptrs.first,
-                                                   io_ptrs.second,
-                                                   new_peer.second));
-                    parent()->add_channel_ptr(peer);
-                    parent()->add_peer(*(new_peer.second), peer);
+                    peer_ptr p(new default_peer_impl(parent(),
+                                                     io_ptrs.first,
+                                                     io_ptrs.second,
+                                                     new_peer.second));
+                    parent()->add(p);
+                    parent()->register_peer(*new_peer.second, p);
                     break;
                 }
                 case middleman_message_type::publish: {
                     DEBUG("middleman_overseer: publish");
                     auto& ptrs = msg->new_published_actor;
-                    parent()->add_channel<peer_acceptor>(ptrs.second->id(),
-                                                         move(ptrs.first));
+                    parent()->add(new default_peer_acceptor_impl(parent(),
+                                                                 move(ptrs.first),
+                                                                 ptrs.second));
                     break;
                 }
                 case middleman_message_type::unpublish: {
@@ -712,9 +311,7 @@ class middleman_overseer : public network_channel {
                         //DEBUG("middleman_overseer: unpublish actor id "
                         //      << msg->published_actor->id());
                         auto channel = parent()->acceptor_of(msg->published_actor);
-                        if (channel) {
-                            parent()->erase(channel);
-                        }
+                        if (channel) parent()->erase(channel);
                     }
                     break;
                 }
@@ -723,22 +320,10 @@ class middleman_overseer : public network_channel {
                     auto& target_peer = msg->out_msg.first;
                     auto& out_msg = msg->out_msg.second;
                     CPPA_REQUIRE(target_peer != nullptr);
-                    auto peer = parent()->peer(*target_peer);
-                    if (!peer) {
-                        DEBUG("message to an unknown peer: " << to_string(out_msg));
-                        break;
-                    }
-                    //DEBUG("--> " << to_string(out_msg));
-                    auto had_unwritten_data = peer->has_unwritten_data();
-                    try {
-                        peer->write(out_msg);
-                        if (!had_unwritten_data && peer->has_unwritten_data()) {
-                            parent()->continue_writing(peer);
-                        }
-                    }
-                    catch (exception& e) {
-                        parent()->erase(peer);
-                    }
+                    auto p = parent()->get_peer(*target_peer);
+                    if (!p) { DEBUG("message to an unknown peer: "
+                                    << to_string(out_msg)); }
+                    else p->enqueue(out_msg);
                     break;
                 }
                 case middleman_message_type::shutdown: {
@@ -748,7 +333,7 @@ class middleman_overseer : public network_channel {
                 }
             }
         }
-        return true;
+        return read_continue_later;
     }
 
  private:
@@ -769,19 +354,20 @@ static constexpr event_bitmask error = 0x04;
 
 } // namespace event
 
-typedef std::tuple<native_socket_type,network_channel_ptr,event_bitmask> fd_meta_info;
+typedef std::tuple<native_socket_type,continuable_reader_ptr,event_bitmask>
+        fd_meta_info;
 
-class io_observer_base {
+class middleman_event_handler_base {
 
  public:
 
-    virtual ~io_observer_base() { }
+    virtual ~middleman_event_handler_base() { }
 
-    void add_later(const network_channel_ptr& ptr, event_bitmask e) {
+    void add_later(const continuable_reader_ptr& ptr, event_bitmask e) {
         append(m_additions, ptr, e);
     }
 
-    void erase_later(const network_channel_ptr& ptr, event_bitmask e) {
+    void erase_later(const continuable_reader_ptr& ptr, event_bitmask e) {
         append(m_subtractions, ptr, e);
     }
 
@@ -792,22 +378,22 @@ class io_observer_base {
 
  private:
 
-    void append(vector<fd_meta_info>& vec, const network_channel_ptr& ptr, event_bitmask e) {
+    void append(vector<fd_meta_info>& vec, const continuable_reader_ptr& ptr, event_bitmask e) {
         CPPA_REQUIRE(ptr != nullptr);
         CPPA_REQUIRE(e == event::read || e == event::write || e == event::both);
-        if (e == event::read || (e == event::both && !ptr->is_peer_connection())) {
-            // ignore event::write unless ptr->is_peer_connection
+        if (e == event::read || (e == event::both && !ptr->is_peer())) {
+            // ignore event::write unless ptr->is_peer
             vec.emplace_back(ptr->read_handle(), ptr, event::read);
         }
         else if (e == event::write) {
-            CPPA_REQUIRE(ptr->is_peer_connection());
-            auto dptr = static_cast<peer_connection*>(ptr.get());
+            CPPA_REQUIRE(ptr->is_peer());
+            auto dptr = static_cast<peer*>(ptr.get());
             vec.emplace_back(dptr->write_handle(), ptr, event::write);
         }
-        else { // e == event::both && ptr->is_peer_connection()
-            CPPA_REQUIRE(ptr->is_peer_connection());
+        else { // e == event::both && ptr->is_peer()
+            CPPA_REQUIRE(ptr->is_peer());
             CPPA_REQUIRE(e == event::both);
-            auto dptr = static_cast<peer_connection*>(ptr.get());
+            auto dptr = static_cast<peer*>(ptr.get());
             auto rd = dptr->read_handle();
             auto wr = dptr->write_handle();
             if (rd == wr) vec.emplace_back(wr, ptr, event::both);
@@ -821,44 +407,40 @@ class io_observer_base {
 };
 
 template<class BaseIter, class BasIterAccess>
-class io_observer_iterator_impl {
+class event_iterator_impl {
 
  public:
 
-    io_observer_iterator_impl(const BaseIter& iter) : m_i(iter) { }
+    event_iterator_impl(const BaseIter& iter) : m_i(iter) { }
 
-    inline io_observer_iterator_impl& operator++() {
+    inline event_iterator_impl& operator++() {
         m_access.advance(m_i);
         return *this;
     }
 
-    inline io_observer_iterator_impl* operator->() { return this; }
+    inline event_iterator_impl* operator->() { return this; }
 
-    inline const io_observer_iterator_impl* operator->() const { return this; }
+    inline const event_iterator_impl* operator->() const { return this; }
 
     inline event_bitmask type() const {
         return m_access.type(m_i);
     }
 
-    inline bool continue_reading() {
+    inline continue_reading_result continue_reading() {
         return ptr()->continue_reading();
     }
 
-    inline bool continue_writing() {
-        return static_cast<peer_connection*>(ptr())->continue_writing();
+    inline continue_writing_result continue_writing() {
+        return static_cast<peer*>(ptr())->continue_writing();
     }
 
-    inline bool has_unwritten_data() {
-        return static_cast<peer_connection*>(ptr())->has_unwritten_data();
-    }
-
-    inline bool equal_to(const io_observer_iterator_impl& other) const {
+    inline bool equal_to(const event_iterator_impl& other) const {
         return m_access.equal(m_i, other.m_i);
     }
 
     inline void handled() { m_access.handled(m_i); }
 
-    inline network_channel* ptr() { return m_access.ptr(m_i); }
+    inline continuable_reader* ptr() { return m_access.ptr(m_i); }
 
  private:
 
@@ -868,14 +450,14 @@ class io_observer_iterator_impl {
 };
 
 template<class Iter, class Access>
-inline bool operator==(const io_observer_iterator_impl<Iter,Access>& lhs,
-                       const io_observer_iterator_impl<Iter,Access>& rhs) {
+inline bool operator==(const event_iterator_impl<Iter,Access>& lhs,
+                       const event_iterator_impl<Iter,Access>& rhs) {
     return lhs.equal_to(rhs);
 }
 
 template<class Iter, class Access>
-inline bool operator!=(const io_observer_iterator_impl<Iter,Access>& lhs,
-                       const io_observer_iterator_impl<Iter,Access>& rhs) {
+inline bool operator!=(const event_iterator_impl<Iter,Access>& lhs,
+                       const event_iterator_impl<Iter,Access>& rhs) {
     return !lhs.equal_to(rhs);
 }
 
@@ -910,7 +492,7 @@ struct pfd_access {
         return result;
     }
 
-    inline network_channel* ptr(pfd_iterator& i) const {
+    inline continuable_reader* ptr(pfd_iterator& i) const {
         return std::get<1>(*(i.second)).get();
     }
 
@@ -922,15 +504,15 @@ struct pfd_access {
 
 };
 
-typedef io_observer_iterator_impl<pfd_iterator,pfd_access> io_observer_iterator;
+typedef event_iterator_impl<pfd_iterator,pfd_access> event_iterator;
 
-class io_observer : public io_observer_base {
+class middleman_event_handler : public middleman_event_handler_base {
 
  public:
 
     inline void init() { }
 
-    pair<io_observer_iterator,io_observer_iterator> poll() {
+    pair<event_iterator,event_iterator> poll() {
         CPPA_REQUIRE(m_pollset.empty() == false);
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         for (;;) {
@@ -955,8 +537,8 @@ class io_observer : public io_observer_base {
                     }
                 }
             }
-            else return {io_observer_iterator({begin(m_pollset), begin(m_meta)}),
-                         io_observer_iterator({end(m_pollset), end(m_meta)})};
+            else return {event_iterator({begin(m_pollset), begin(m_meta)}),
+                         event_iterator({end(m_pollset), end(m_meta)})};
         }
     }
 
@@ -1043,8 +625,8 @@ struct epoll_iterator_access {
         return result;
     }
 
-    inline network_channel* ptr(iterator& i) const {
-        return reinterpret_cast<network_channel*>(i->data.ptr);
+    inline continuable_reader* ptr(iterator& i) const {
+        return reinterpret_cast<continuable_reader*>(i->data.ptr);
     }
 
     inline bool equal(const iterator& lhs, const iterator& rhs) const {
@@ -1055,16 +637,16 @@ struct epoll_iterator_access {
 
 };
 
-typedef io_observer_iterator_impl<vector<epoll_event>::iterator,epoll_iterator_access>
-        io_observer_iterator;
+typedef event_iterator_impl<vector<epoll_event>::iterator,epoll_iterator_access>
+        event_iterator;
 
-class io_observer : public io_observer_base {
+class middleman_event_handler : public middleman_event_handler_base {
 
  public:
 
-    io_observer() : m_epollfd(-1) { }
+    middleman_event_handler() : m_epollfd(-1) { }
 
-    ~io_observer() { if (m_epollfd != -1) close(m_epollfd); }
+    ~middleman_event_handler() { if (m_epollfd != -1) close(m_epollfd); }
 
     void init() {
         m_epollfd = epoll_create1(EPOLL_CLOEXEC);
@@ -1074,7 +656,7 @@ class io_observer : public io_observer_base {
         m_events.resize(64);
     }
 
-    pair<io_observer_iterator,io_observer_iterator> poll() {
+    pair<event_iterator,event_iterator> poll() {
         for (;;) {
             DEBUG("epoll_wait on " << m_epoll_data.size() << " sockets");
             auto presult = epoll_wait(m_epollfd, m_events.data(), (int) m_events.size(), -1);
@@ -1119,13 +701,13 @@ class io_observer : public io_observer_base {
                     epoll_op(eop, ptr->read_handle(), EPOLLIN, ptr);
                     break;
                 case event::write: {
-                    CPPA_REQUIRE(ptr->is_peer_connection());
+                    CPPA_REQUIRE(ptr->is_peer());
                     auto dptr = static_cast<peer_connection*>(ptr);
                     epoll_op(eop, dptr->write_handle(), EPOLLOUT, dptr);
                     break;
                 }
                 case event::both: {
-                    CPPA_REQUIRE(ptr->is_peer_connection());
+                    CPPA_REQUIRE(ptr->is_peer());
                     auto dptr = static_cast<peer_connection*>(ptr);
                     auto rd = dptr->read_handle();
                     auto wr = dptr->write_handle();
@@ -1151,7 +733,7 @@ class io_observer : public io_observer_base {
         CPPA_REQUIRE(fd_op == EPOLLIN || fd_op == EPOLLOUT || fd_op == (EPOLLIN | EPOLLOUT));
         // make sure T has correct type
         CPPA_REQUIRE(   (operation == EPOLL_CTL_DEL && is_same<T,void>::value)
-                     || ((fd_op & EPOLLIN) && is_same<T,network_channel>::value)
+                     || ((fd_op & EPOLLIN) && is_same<T,continuable_reader>::value)
                      || (fd_op == EPOLLOUT && is_same<T,peer_connection>::value));
         epoll_event ee;
         // also fire event on peer shutdown on input operations
@@ -1252,53 +834,56 @@ class io_observer : public io_observer_base {
 
 #endif
 
-template<typename Iter, class Fun>
-void perform_io(middleman* parent, io_observer* observer, Iter& iter,
-                const Fun& fun, event_bitmask etype) {
-    bool keep = true;
-    bool exception_occured = false;
-    try { keep = fun(); }
-    catch (ios_base::failure&) { exception_occured = true; }
-    catch (runtime_error& err) {
-        cerr << "*** runtime_error in middleman: " << err.what() << endl;
-        exception_occured = true;
-    }
-    catch (exception&) { exception_occured = true; }
-    if (exception_occured) {
-        DEBUG("exception occured during "
-              << ((etype == event::write) ? "continue_writing"
-                                          : "continue_reading"));
-        parent->erase(iter->ptr(), true);
-        observer->erase_later(iter->ptr(), etype);
-    }
-    else if (!keep) {
-        if (etype == event::read) {
-            DEBUG("continue_reading returned false");
-            // continue_reading() returns false in case of connection errors,
-            // continue_writing() returns false if it's done
-            parent->erase(iter->ptr(), true);
-        }
-        else DEBUG("continue_writing returned false");
-        observer->erase_later(iter->ptr(), etype);
-    }
+middleman::middleman() : m_done(false), m_handler(new middleman_event_handler){}
+
+middleman::~middleman() { }
+
+void middleman::register_peer(const process_information& node,
+                              const peer_ptr& ptr) {
+    auto& ptrref = m_peers[node];
+    if (ptrref) { DEBUG("peer already defined!"); }
+    else ptrref = ptr;
 }
 
-event_loop_impl::event_loop_impl(middleman* parent)
-: m_parent(parent), m_observer(new io_observer) { }
-
-event_loop_impl::~event_loop_impl() { delete m_observer; }
-
-void event_loop_impl::init() {
-    m_observer->init();
+void middleman::continue_writing_later(const peer_ptr& ptr) {
+    m_handler->add_later(ptr, event::write);
 }
 
-void event_loop_impl::update() {
-    m_observer->update();
+void middleman::add(const continuable_reader_ptr& what) {
+    m_readers.push_back(what);
+    m_handler->add_later(what, event::read);
 }
 
-void event_loop_impl::operator()() {
-    while (!m_parent->done()) {
-        auto iters = m_observer->poll();
+void middleman::erase(const continuable_reader_ptr& what) {
+    m_handler->erase_later(what, event::both);
+    erase_from(m_readers, what);
+    erase_from_if(m_peers, [=](const map<process_information,peer_ptr>::value_type& kvp) {
+        return kvp.second == what;
+    });
+}
+
+continuable_reader_ptr middleman::acceptor_of(const actor_ptr& whom) {
+    auto e = end(m_readers);
+    auto i = find_if(begin(m_readers), e, [=](const continuable_reader_ptr& crp) {
+        return crp->is_acceptor_of(whom);
+    });
+    return (i != e) ? *i : nullptr;
+}
+
+peer_ptr middleman::get_peer(const process_information& node) {
+    auto e = end(m_peers);
+    auto i = m_peers.find(node);
+    return (i != e) ? i->second : nullptr;
+}
+
+void middleman_loop(middleman_impl* impl) {
+    middleman_event_handler* handler = impl->m_handler.get();
+    DEBUG("run middleman loop");
+    handler->init();
+    impl->add(new middleman_overseer(impl, impl->m_pipe_read, impl->m_queue));
+    handler->update();
+    while (!impl->done()) {
+        auto iters = handler->poll();
         for (auto i = iters.first; i != iters.second; ++i) {
             auto mask = i->type();
             switch (mask) {
@@ -1307,51 +892,39 @@ void event_loop_impl::operator()() {
                 case event::both:
                 case event::write: {
                     DEBUG("handle event::write");
-                    perform_io(m_parent, m_observer, i, [&]{ return i->continue_writing() && i->has_unwritten_data(); }, event::write);
+                    switch (i->continue_writing()) {
+                        case write_closed:
+                        case write_failure:
+                            impl->erase(i->ptr());
+                            break;
+                        case write_done:
+                            handler->erase_later(i->ptr(), event::write);
+                        default: break;
+                    }
                     if (mask == event::write) break;
                     // else: fall through
                     DEBUG("handle event::both; fall through");
                 }
                 case event::read: {
                     DEBUG("handle event::read");
-                    perform_io(m_parent, m_observer, i, [&]{ return i->continue_reading(); }, event::read);
+                    switch (i->continue_reading()) {
+                        case read_closed:
+                        case read_failure:
+                            impl->erase(i->ptr());
+                            break;
+                        default: break;
+                    }
                     break;
                 }
                 case event::error: {
-                    m_parent->erase(i->ptr(), true);
-                    m_observer->erase_later(i->ptr(), event::both);
+                    impl->erase(i->ptr());
+                    // calls handler->erase_later(i->ptr(), event::both);
                 }
             }
             i->handled();
         }
-        m_observer->update();
+        handler->update();
     }
-}
-
-void event_loop_impl::channel_added(const network_channel_ptr& ptr) {
-    m_observer->add_later(ptr, event::read);
-}
-
-void event_loop_impl::channel_erased(const network_channel_ptr& ptr) {
-    m_observer->erase_later(ptr, event::both);
-}
-
-void event_loop_impl::continue_writing_later(const peer_connection_ptr& ptr) {
-    m_observer->add_later(ptr, event::write);
-}
-
-void middleman::operator()(int pipe_fd, middleman_queue& queue) {
-    m_listener.init();
-    add_channel_ptr(new middleman_overseer(this, pipe_fd, queue));
-    m_listener.update();
-    m_listener();
-    DEBUG("middleman done");
-}
-
-void middleman_loop(int pipe_fd, middleman_queue& queue) {
-    DEBUG("run middleman loop");
-    middleman mm;
-    mm(pipe_fd, queue);
     DEBUG("middleman loop done");
 }
 

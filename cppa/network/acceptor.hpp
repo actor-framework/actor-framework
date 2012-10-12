@@ -28,76 +28,56 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef CPPA_ACCEPTOR_HPP
+#define CPPA_ACCEPTOR_HPP
 
-#include <atomic>
+#include <memory>
 
-namespace cppa {
+#include "cppa/config.hpp"
+#include "cppa/option.hpp"
 
-class scheduler;
-class msg_content;
+#include "cppa/network/input_stream.hpp"
+#include "cppa/network/output_stream.hpp"
 
-} // namespace cppa
+namespace cppa { namespace network {
 
-namespace cppa { namespace network { class middleman; } }
+/**
+ * @brief A pair of input and output stream pointers.
+ */
+typedef std::pair<input_stream_ptr,output_stream_ptr> io_stream_ptr_pair;
 
-namespace cppa { namespace detail {
-
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+/**
+ * @brief Accepts connections from client processes.
+ */
+class acceptor {
 
  public:
 
-    static void shutdown();
+    virtual ~acceptor() { }
 
-    static scheduler* get_scheduler();
+    /**
+     * @brief Returns the internal file descriptor. This descriptor is needed
+     *        for socket multiplexing using select().
+     */
+    virtual native_socket_type file_handle() const = 0;
 
-    static bool set_scheduler(scheduler*);
+    /**
+     * @brief Accepts a new connection and returns an input/output stream pair.
+     * @note This member function blocks until a new connection was established.
+     */
+    virtual io_stream_ptr_pair accept_connection() = 0;
 
-    static group_manager* get_group_manager();
-
-    static actor_registry* get_actor_registry();
-
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
-
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
-
- private:
-
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
+    /**
+     * @brief Tries to accept a new connection but immediately returns if
+     *        there is no pending connection.
+     */
+    virtual option<io_stream_ptr_pair> try_accept_connection() = 0;
 
 };
 
-} } // namespace cppa::detail
+typedef std::unique_ptr<acceptor> acceptor_uptr;
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+
+} } // namespace cppa::util
+
+#endif // CPPA_ACCEPTOR_HPP

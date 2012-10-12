@@ -37,8 +37,7 @@
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
 
-#include "cppa/detail/middleman.hpp"
-#include "cppa/detail/network_manager.hpp"
+#include "cppa/network/middleman.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
@@ -89,12 +88,11 @@ actor_proxy_ptr actor_proxy_cache::get_impl(const key_tuple& key, bool do_put) {
         get_actor_proxy_cache().erase(result);
     });
     auto pself = process_information::get();
-    middleman_enqueue(peer,
-                      nullptr,
-                      nullptr,
-                      make_any_tuple(atom("MONITOR"),
-                                     pself,
-                                     std::get<2>(key)));
+    singleton_manager::get_middleman()->enqueue(
+        peer,
+        nullptr,
+        nullptr,
+        make_any_tuple(atom("MONITOR"), pself, std::get<2>(key)));
     return result;
 }
 

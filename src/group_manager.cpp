@@ -41,10 +41,10 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/event_based_actor.hpp"
 
-#include "cppa/detail/middleman.hpp"
+#include "cppa/network/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/addressed_message.hpp"
+#include "cppa/network/addressed_message.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"

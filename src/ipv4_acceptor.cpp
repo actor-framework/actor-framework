@@ -33,10 +33,12 @@
 #include <errno.h>
 #include <iostream>
 #include "cppa/exception.hpp"
-#include "cppa/util/io_stream.hpp"
+
+#include "cppa/network/io_stream.hpp"
+#include "cppa/network/ipv4_acceptor.hpp"
+#include "cppa/network/ipv4_io_stream.hpp"
+
 #include "cppa/detail/fd_util.hpp"
-#include "cppa/detail/ipv4_acceptor.hpp"
-#include "cppa/detail/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
 #else
@@ -49,9 +51,9 @@
 #   include <netinet/tcp.h>
 #endif
 
-namespace cppa { namespace detail {
+namespace cppa { namespace network {
 
-using namespace fd_util;
+using namespace ::cppa::detail::fd_util;
 
 namespace {
 
@@ -74,7 +76,9 @@ struct socket_guard {
 
 };
 
-bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool nonblocking) {
+bool accept_impl(io_stream_ptr_pair& result,
+                 native_socket_type fd,
+                 bool nonblocking) {
     sockaddr addr;
     socklen_t addrlen;
     memset(&addr, 0, sizeof(addr));
@@ -87,7 +91,7 @@ bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool n
         }
         throw_io_failure("accept failed");
     }
-    util::io_stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
+    io_stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
     return true;
@@ -98,8 +102,8 @@ bool accept_impl(util::io_stream_ptr_pair& result, native_socket_type fd, bool n
 ipv4_acceptor::ipv4_acceptor(native_socket_type fd, bool nonblocking)
 : m_fd(fd), m_is_nonblocking(nonblocking) { }
 
-std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port,
-                                                      const char* addr) {
+std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
+                                                         const char* addr) {
     native_socket_type sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
@@ -109,7 +113,7 @@ std::unique_ptr<util::acceptor> ipv4_acceptor::create(std::uint16_t port,
     socket_guard sguard(sockfd);
     int on = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-        detail::throw_io_failure("unable to set SO_REUSEADDR");
+        throw_io_failure("unable to set SO_REUSEADDR");
     }
     struct sockaddr_in serv_addr;
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
@@ -140,26 +144,26 @@ ipv4_acceptor::~ipv4_acceptor() {
     closesocket(m_fd);
 }
 
-native_socket_type ipv4_acceptor::acceptor_file_handle() const {
+native_socket_type ipv4_acceptor::file_handle() const {
     return m_fd;
 }
 
-util::io_stream_ptr_pair ipv4_acceptor::accept_connection() {
+io_stream_ptr_pair ipv4_acceptor::accept_connection() {
     if (m_is_nonblocking) {
         nonblocking(m_fd, false);
         m_is_nonblocking = false;
     }
-    util::io_stream_ptr_pair result;
+    io_stream_ptr_pair result;
     accept_impl(result, m_fd, m_is_nonblocking);
     return result;
 }
 
-option<util::io_stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
+option<io_stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
     if (!m_is_nonblocking) {
         nonblocking(m_fd, true);
         m_is_nonblocking = true;
     }
-    util::io_stream_ptr_pair result;
+    io_stream_ptr_pair result;
     if (accept_impl(result, m_fd, m_is_nonblocking)) {
         return result;
     }

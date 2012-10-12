@@ -28,76 +28,41 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MANAGER_HPP
-#define CPPA_SINGLETON_MANAGER_HPP
+#ifndef CPPA_IPV4_ACCEPTOR_HPP
+#define CPPA_IPV4_ACCEPTOR_HPP
 
-#include <atomic>
+#include <memory>
+#include <cstdint>
 
-namespace cppa {
+#include "cppa/config.hpp"
+#include "cppa/network/acceptor.hpp"
 
-class scheduler;
-class msg_content;
+namespace cppa { namespace network {
 
-} // namespace cppa
-
-namespace cppa { namespace network { class middleman; } }
-
-namespace cppa { namespace detail {
-
-class empty_tuple;
-class group_manager;
-class abstract_tuple;
-class actor_registry;
-class decorated_names_map;
-class uniform_type_info_map;
-
-class singleton_manager {
-
-    singleton_manager() = delete;
+class ipv4_acceptor : public acceptor {
 
  public:
 
-    static void shutdown();
+    static std::unique_ptr<acceptor> create(std::uint16_t port,
+                                                     const char* addr);
 
-    static scheduler* get_scheduler();
+    ~ipv4_acceptor();
 
-    static bool set_scheduler(scheduler*);
+    native_socket_type file_handle() const;
 
-    static group_manager* get_group_manager();
+    io_stream_ptr_pair accept_connection();
 
-    static actor_registry* get_actor_registry();
-
-    // created on-the-fly on a successfull call to set_scheduler()
-    static network::middleman* get_middleman();
-
-    static uniform_type_info_map* get_uniform_type_info_map();
-
-    static abstract_tuple* get_tuple_dummy();
-
-    static empty_tuple* get_empty_tuple();
-
-    static decorated_names_map* get_decorated_names_map();
+    option<io_stream_ptr_pair> try_accept_connection();
 
  private:
 
-    template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
-        for (;;) {
-            auto p = ptr.load();
-            if (p == nullptr) {
-                return;
-            }
-            else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
-                ptr = nullptr;
-                return;
-            }
-        }
-    }
+    ipv4_acceptor(native_socket_type fd, bool nonblocking);
+
+    native_socket_type m_fd;
+    bool m_is_nonblocking;
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_SINGLETON_MANAGER_HPP
+#endif // CPPA_IPV4_ACCEPTOR_HPP

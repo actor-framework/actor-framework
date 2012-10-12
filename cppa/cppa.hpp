@@ -61,7 +61,7 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/acceptor.hpp"
+#include "cppa/network/acceptor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -764,7 +764,7 @@ void publish(actor_ptr whom, std::uint16_t port, const char* addr = nullptr);
  * @param whom Actor that should be published at @p port.
  * @param acceptor Network technology-specific acceptor implementation.
  */
-void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor);
+void publish(actor_ptr whom, std::unique_ptr<network::acceptor> acceptor);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.
@@ -789,7 +789,7 @@ inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
  */
-actor_ptr remote_actor(util::io_stream_ptr_pair connection);
+actor_ptr remote_actor(network::io_stream_ptr_pair connection);
 
 /**
  * @brief Destroys all singletons, disconnects all peers and stops the

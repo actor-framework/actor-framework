@@ -35,7 +35,7 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-namespace cppa { namespace util {
+namespace cppa { namespace network {
 
 /**
  * @brief An abstract input stream interface.
@@ -48,7 +48,7 @@ class input_stream : public virtual ref_counted {
      * @brief Returns the internal file descriptor. This descriptor is needed
      *        for socket multiplexing using select().
      */
-    virtual native_socket_type read_file_handle() const = 0;
+    virtual native_socket_type read_handle() const = 0;
 
     /**
      * @brief Reads exactly @p num_bytes from the data source and blocks the

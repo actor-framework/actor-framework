@@ -28,40 +28,20 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_ACCEPTOR_HPP
-#define CPPA_IPV4_ACCEPTOR_HPP
+#include "cppa/network/peer.hpp"
+#include "cppa/network/middleman.hpp"
 
-#include <memory>
-#include <cstdint>
-#include "cppa/config.hpp"
-#include "cppa/util/acceptor.hpp"
+namespace cppa { namespace network {
 
-namespace cppa { namespace detail {
+peer::peer(middleman* parent, native_socket_type rd, native_socket_type wr)
+: super(parent, rd, true), m_write_handle(wr) { }
 
-class ipv4_acceptor : public util::acceptor {
+void peer::begin_writing() {
+    parent()->continue_writing_later(this);
+}
 
- public:
+void peer::register_peer(const process_information& pinfo) {
+    parent()->register_peer(pinfo, this);
+}
 
-    static std::unique_ptr<util::acceptor> create(std::uint16_t port,
-                                                  const char* addr);
-
-    ~ipv4_acceptor();
-
-    native_socket_type acceptor_file_handle() const;
-
-    util::io_stream_ptr_pair accept_connection();
-
-    option<util::io_stream_ptr_pair> try_accept_connection();
-
- private:
-
-    ipv4_acceptor(native_socket_type fd, bool nonblocking);
-
-    native_socket_type m_fd;
-    bool m_is_nonblocking;
-
-};
-
-} } // namespace cppa::detail
-
-#endif // CPPA_IPV4_ACCEPTOR_HPP
+} } // namespace cppa::network

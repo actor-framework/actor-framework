@@ -49,23 +49,26 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/detail/middleman.hpp"
-#include "cppa/detail/ipv4_acceptor.hpp"
-#include "cppa/detail/ipv4_io_stream.hpp"
+#include "cppa/network/middleman.hpp"
+#include "cppa/network/ipv4_acceptor.hpp"
+#include "cppa/network/ipv4_io_stream.hpp"
+
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/network_manager.hpp"
 #include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
-void publish(actor_ptr whom, std::unique_ptr<util::acceptor> acceptor) {
+using namespace detail;
+using namespace network;
+
+void publish(actor_ptr whom, std::unique_ptr<acceptor> acceptor) {
     if (!whom && !acceptor) return;
-    detail::singleton_manager::get_actor_registry()->put(whom->id(), whom);
-    detail::middleman_publish(std::move(acceptor), whom);
+    singleton_manager::get_actor_registry()->put(whom->id(), whom);
+    singleton_manager::get_middleman()->publish(std::move(acceptor), whom);
 }
 
-actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
+actor_ptr remote_actor(io_stream_ptr_pair peer) {
     auto pinf = process_information::get();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
@@ -84,23 +87,23 @@ actor_ptr remote_actor(util::io_stream_ptr_pair peer) {
         std::cerr << "*** warning: remote_actor() called to access a local actor\n"
                   << std::flush;
 #       endif
-        return detail::singleton_manager::get_actor_registry()->get(remote_actor_id);
+        return singleton_manager::get_actor_registry()->get(remote_actor_id);
     }
     //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
-    detail::middleman_add_peer(peer, pinfptr);
-    return detail::get_actor_proxy_cache().get_or_put(remote_actor_id,
-                                                      pinfptr->process_id(),
-                                                      pinfptr->node_id());
+    singleton_manager::get_middleman()->add_peer(peer, pinfptr);
+    return get_actor_proxy_cache().get_or_put(remote_actor_id,
+                                              pinfptr->process_id(),
+                                              pinfptr->node_id());
 }
 
 void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
-    if (whom) publish(whom, detail::ipv4_acceptor::create(port, addr));
+    if (whom) publish(whom, ipv4_acceptor::create(port, addr));
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {
     // throws on error
-    util::io_stream_ptr peer = detail::ipv4_io_stream::connect_to(host, port);
-    util::io_stream_ptr_pair ptrpair(peer, peer);
+    io_stream_ptr peer = ipv4_io_stream::connect_to(host, port);
+    io_stream_ptr_pair ptrpair(peer, peer);
     return remote_actor(ptrpair);
 }
 

@@ -28,50 +28,51 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OUTPUT_STREAM_HPP
-#define CPPA_OUTPUT_STREAM_HPP
+#include <iostream>
+#include <exception>
 
-#include "cppa/config.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/process_information.hpp"
 
-namespace cppa { namespace util {
+#include "cppa/network/default_peer_impl.hpp"
+#include "cppa/network/default_peer_acceptor_impl.hpp"
 
-/**
- * @brief An abstract output stream interface.
- */
-class output_stream : public virtual ref_counted {
+#include "cppa/detail/demangle.hpp"
 
- public:
+using namespace std;
 
-    /**
-     * @brief Returns the internal file descriptor. This descriptor is needed
-     *        for socket multiplexing using select().
-     */
-    virtual native_socket_type write_file_handle() const = 0;
+namespace cppa { namespace network {
 
-    /**
-     * @brief Writes @p num_bytes bytes from @p buf to the data sink.
-     * @note This member function blocks until @p num_bytes were successfully
-     *       written.
-     * @throws std::ios_base::failure
-     */
-    virtual void write(const void* buf, size_t num_bytes) = 0;
+default_peer_acceptor_impl::default_peer_acceptor_impl(middleman* mm,
+                                                       acceptor_uptr aur,
+                                                       const actor_ptr& pa)
+: super(mm, aur->file_handle(), pa), m_ptr(std::move(aur)) { }
 
-    /**
-     * @brief Tries to write up to @p num_bytes bytes from @p buf.
-     * @returns The number of written bytes.
-     * @throws std::ios_base::failure
-     */
-    virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
+continue_reading_result default_peer_acceptor_impl::continue_reading() {
+    for (;;) {
+        option<io_stream_ptr_pair> opt;
+        try { opt = m_ptr->try_accept_connection(); }
+        catch (...) { return read_failure; }
+        if (opt) {
+            auto& pair = *opt;
+            auto& pself = process_information::get();
+            uint32_t process_id = pself->process_id();
+            try {
+                actor_id aid = published_actor()->id();
+                pair.second->write(&aid, sizeof(actor_id));
+                pair.second->write(&process_id, sizeof(uint32_t));
+                pair.second->write(pself->node_id().data(),
+                                   pself->node_id().size());
+                add_peer(new default_peer_impl(parent(), pair.first, pair.second));
+            }
+            catch (exception& e) {
+                cerr << "*** exception while sending actor and process id; "
+                     << detail::demangle(typeid(e))
+                     << ", what(): " << e.what()
+                     << endl;
+            }
+        }
+        else return read_continue_later;
+   }
+}
 
-};
-
-/**
- * @brief An output stream pointer.
- */
-typedef intrusive_ptr<output_stream> output_stream_ptr;
-
-} } // namespace cppa::util
-
-#endif // CPPA_OUTPUT_STREAM_HPP
+} } // namespace cppa::network

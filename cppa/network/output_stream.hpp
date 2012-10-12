@@ -28,77 +28,50 @@
 \******************************************************************************/
 
 
-#include <cstdio>
-#include <thread>
-#include <cstdint>
-#include <cstring>      // strerror
-#include <unistd.h>
-#include <iostream>
-#include <sys/time.h>
-#include <sys/types.h>
+#ifndef CPPA_OUTPUT_STREAM_HPP
+#define CPPA_OUTPUT_STREAM_HPP
 
-#include "cppa/self.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/thread_mapped_actor.hpp"
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/intrusive/single_reader_queue.hpp"
+namespace cppa { namespace network {
 
-#include "cppa/detail/fd_util.hpp"
-#include "cppa/detail/middleman.hpp"
-#include "cppa/detail/network_manager.hpp"
+/**
+ * @brief An abstract output stream interface.
+ */
+class output_stream : public virtual ref_counted {
 
-namespace {
+ public:
 
-using namespace cppa;
-using namespace cppa::detail;
+    /**
+     * @brief Returns the internal file descriptor. This descriptor is needed
+     *        for socket multiplexing using select().
+     */
+    virtual native_socket_type write_handle() const = 0;
 
-struct network_manager_impl : network_manager {
+    /**
+     * @brief Writes @p num_bytes bytes from @p buf to the data sink.
+     * @note This member function blocks until @p num_bytes were successfully
+     *       written.
+     * @throws std::ios_base::failure
+     */
+    virtual void write(const void* buf, size_t num_bytes) = 0;
 
-    middleman_queue m_middleman_queue;
-    std::thread m_middleman_thread;
-
-    int pipe_fd[2];
-
-    void start() { // override
-        if (pipe(pipe_fd) != 0) {
-            CPPA_CRITICAL("cannot create pipe");
-        }
-        // store pipe read handle in local variables for lambda expression
-        int pipe_fd0 = pipe_fd[0];
-        fd_util::nonblocking(pipe_fd0, true);
-        // start threads
-        m_middleman_thread = std::thread([this, pipe_fd0] {
-            middleman_loop(pipe_fd0, this->m_middleman_queue);
-        });
-    }
-
-    void stop() { // override
-        //m_mailman->enqueue(nullptr, make_any_tuple(atom("DONE")));
-        send_to_middleman(middleman_message::create());
-        m_middleman_thread.join();
-        close(pipe_fd[0]);
-        close(pipe_fd[1]);
-    }
-
-    void send_to_middleman(std::unique_ptr<middleman_message> msg) {
-        m_middleman_queue._push_back(msg.release());
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        std::uint8_t dummy = 0;
-        if (write(pipe_fd[1], &dummy, sizeof(dummy)) != sizeof(dummy)) {
-            CPPA_CRITICAL("cannot write to pipe");
-        }
-    }
+    /**
+     * @brief Tries to write up to @p num_bytes bytes from @p buf.
+     * @returns The number of written bytes.
+     * @throws std::ios_base::failure
+     */
+    virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
 
 };
 
-} // namespace <anonymous>
+/**
+ * @brief An output stream pointer.
+ */
+typedef intrusive_ptr<output_stream> output_stream_ptr;
 
-namespace cppa { namespace detail {
+} } // namespace cppa::util
 
-network_manager::~network_manager() { }
-
-network_manager* network_manager::create_singleton() {
-    return new network_manager_impl;
-}
-
-} } // namespace cppa::detail
+#endif // CPPA_OUTPUT_STREAM_HPP
