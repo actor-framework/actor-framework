@@ -702,13 +702,13 @@ class middleman_event_handler : public middleman_event_handler_base {
                     break;
                 case event::write: {
                     CPPA_REQUIRE(ptr->is_peer());
-                    auto dptr = static_cast<peer_connection*>(ptr);
+                    auto dptr = static_cast<peer*>(ptr);
                     epoll_op(eop, dptr->write_handle(), EPOLLOUT, dptr);
                     break;
                 }
                 case event::both: {
                     CPPA_REQUIRE(ptr->is_peer());
-                    auto dptr = static_cast<peer_connection*>(ptr);
+                    auto dptr = static_cast<peer*>(ptr);
                     auto rd = dptr->read_handle();
                     auto wr = dptr->write_handle();
                     if (rd == wr) epoll_op(eop, wr, EPOLLIN | EPOLLOUT, dptr);
@@ -734,13 +734,13 @@ class middleman_event_handler : public middleman_event_handler_base {
         // make sure T has correct type
         CPPA_REQUIRE(   (operation == EPOLL_CTL_DEL && is_same<T,void>::value)
                      || ((fd_op & EPOLLIN) && is_same<T,continuable_reader>::value)
-                     || (fd_op == EPOLLOUT && is_same<T,peer_connection>::value));
+                     || (fd_op == EPOLLOUT && is_same<T,peer>::value));
         epoll_event ee;
         // also fire event on peer shutdown on input operations
         ee.events = (fd_op & EPOLLIN) ? (fd_op | EPOLLRDHUP) : fd_op;
-        // always store peer_connection_ptr, because we don't have full type information
+        // always store peer_ptr, because we don't have full type information
         // in case of epoll_wait error otherwise
-        ee.data.ptr = static_cast<peer_connection*>(ptr);
+        ee.data.ptr = static_cast<peer*>(ptr);
         // check wheter fd is already registered to epoll
         auto iter = m_epoll_data.find(fd);
         if (iter != end(m_epoll_data)) {
