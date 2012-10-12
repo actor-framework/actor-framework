@@ -512,6 +512,8 @@ class middleman_event_handler : public middleman_event_handler_base {
 
     inline void init() { }
 
+    size_t num_sockets() const { return m_pollset.size(); }
+
     pair<event_iterator,event_iterator> poll() {
         CPPA_REQUIRE(m_pollset.empty() == false);
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
@@ -622,6 +624,7 @@ struct epoll_iterator_access {
         auto result = event::none;
         if (events & EPOLLIN)  result |= event::read;
         if (events & EPOLLOUT) result |= event::write;
+        CPPA_REQUIRE(result != 0);
         return result;
     }
 
@@ -656,10 +659,14 @@ class middleman_event_handler : public middleman_event_handler_base {
         m_events.resize(64);
     }
 
+    size_t num_sockets() const { return m_epoll_data.size(); }
+
     pair<event_iterator,event_iterator> poll() {
+        CPPA_REQUIRE(m_epoll_data.empty() == false);
         for (;;) {
             DEBUG("epoll_wait on " << m_epoll_data.size() << " sockets");
-            auto presult = epoll_wait(m_epollfd, m_events.data(), (int) m_events.size(), -1);
+            auto presult = epoll_wait(m_epollfd, m_events.data(),
+                                      (int) m_events.size(), -1);
             DEBUG("epoll_wait returned " << presult);
             if (presult < 0) {
                 // try again unless critical error occured
@@ -694,9 +701,10 @@ class middleman_event_handler : public middleman_event_handler_base {
 
     void handle_vec(vector<fd_meta_info>& vec, int eop) {
         for (auto& element : vec) {
-            CPPA_REQUIRE((std::get<2>(element) & event::both) != event::none);
+            auto mask = std::get<2>(element);
+            CPPA_REQUIRE(mask == event::write || mask == event::read || mask == event::both);
             auto ptr = std::get<1>(element).get();
-            switch (std::get<2>(element)) {
+            switch (mask) {
                 case event::read:
                     epoll_op(eop, ptr->read_handle(), EPOLLIN, ptr);
                     break;
@@ -707,15 +715,17 @@ class middleman_event_handler : public middleman_event_handler_base {
                     break;
                 }
                 case event::both: {
-                    CPPA_REQUIRE(ptr->is_peer());
-                    auto dptr = static_cast<peer*>(ptr);
-                    auto rd = dptr->read_handle();
-                    auto wr = dptr->write_handle();
-                    if (rd == wr) epoll_op(eop, wr, EPOLLIN | EPOLLOUT, dptr);
-                    else {
-                        epoll_op(eop, rd, EPOLLIN, ptr);
-                        epoll_op(eop, wr, EPOLLOUT, dptr);
+                    if (ptr->is_peer()) {
+                        auto dptr = static_cast<peer*>(ptr);
+                        auto rd = dptr->read_handle();
+                        auto wr = dptr->write_handle();
+                        if (rd == wr) epoll_op(eop, wr, EPOLLIN|EPOLLOUT, dptr);
+                        else {
+                            epoll_op(eop, rd, EPOLLIN, ptr);
+                            epoll_op(eop, wr, EPOLLOUT, dptr);
+                        }
                     }
+                    else epoll_op(eop, ptr->read_handle(), EPOLLIN, ptr);
                     break;
                 }
                 default: CPPA_CRITICAL("invalid event mask found in handle_vec");
@@ -725,45 +735,38 @@ class middleman_event_handler : public middleman_event_handler_base {
     }
 
     // operation: EPOLL_CTL_ADD or EPOLL_CTL_DEL
-    // fd_op: EPOLLIN, EPOLLOUT or (EPOLLIN | EPOLLOUT)
-    template<typename T = void>
-    void epoll_op(int operation, int fd, int fd_op, T* ptr = nullptr) {
+    // mask: EPOLLIN, EPOLLOUT or (EPOLLIN | EPOLLOUT)
+    void epoll_op(int operation, int fd, uint32_t mask, continuable_reader* ptr) {
+        CPPA_REQUIRE(ptr != nullptr);
         CPPA_REQUIRE(operation == EPOLL_CTL_ADD || operation == EPOLL_CTL_DEL);
-        CPPA_REQUIRE(operation == EPOLL_CTL_DEL || ptr != nullptr);
-        CPPA_REQUIRE(fd_op == EPOLLIN || fd_op == EPOLLOUT || fd_op == (EPOLLIN | EPOLLOUT));
-        // make sure T has correct type
-        CPPA_REQUIRE(   (operation == EPOLL_CTL_DEL && is_same<T,void>::value)
-                     || ((fd_op & EPOLLIN) && is_same<T,continuable_reader>::value)
-                     || (fd_op == EPOLLOUT && is_same<T,peer>::value));
+        CPPA_REQUIRE(mask == EPOLLIN || mask == EPOLLOUT || mask == (EPOLLIN|EPOLLOUT));
         epoll_event ee;
-        // also fire event on peer shutdown on input operations
-        ee.events = (fd_op & EPOLLIN) ? (fd_op | EPOLLRDHUP) : fd_op;
-        // always store peer_ptr, because we don't have full type information
-        // in case of epoll_wait error otherwise
-        ee.data.ptr = static_cast<peer*>(ptr);
+        // also fire event on peer shutdown for input operations
+        ee.events = (mask & EPOLLIN) ? (mask | EPOLLRDHUP) : mask;
+        ee.data.ptr = ptr;
         // check wheter fd is already registered to epoll
         auto iter = m_epoll_data.find(fd);
         if (iter != end(m_epoll_data)) {
+            CPPA_REQUIRE(ee.data.ptr == iter->second.data.ptr);
             if (operation == EPOLL_CTL_ADD) {
+                if (mask == iter->second.events) {
+                    // nothing to do here, fd is already registered with
+                    // correct bitmask
+                    return;
+                }
                 // modify instead
                 operation = EPOLL_CTL_MOD;
-                ee.events |= iter->second.events;
-                iter->second.events = ee.events;
-                CPPA_REQUIRE(ee.data.ptr == iter->second.data.ptr);
+                ee.events |= iter->second.events; // new bitmask
+                iter->second.events = ee.events;  // update bitmask in map
             }
             else if (operation == EPOLL_CTL_DEL) {
-                // check wheter we have this fd registered for other fd_ops
+                // check wheter we have fd registered for other events
                 ee.events = iter->second.events & ~(ee.events);
                 if (ee.events != 0) {
-                    // modify instead
-                    ee.data.ptr = iter->second.data.ptr;
-                    iter->second.events = ee.events;
-                    operation = EPOLL_CTL_MOD;
+                    iter->second.events = ee.events; // update bitmask in map
+                    operation = EPOLL_CTL_MOD;       // modify instead
                 }
-                else {
-                    // erase from map as well
-                    m_epoll_data.erase(iter);
-                }
+                else m_epoll_data.erase(iter); // erase from map as well
             }
         }
         else if (operation == EPOLL_CTL_DEL) {
@@ -776,25 +779,11 @@ class middleman_event_handler : public middleman_event_handler_base {
         }
         if (epoll_ctl(m_epollfd, operation, fd, &ee) < 0) {
             switch (errno) {
-                // m_epollfd or read_handle() is not a valid file descriptor
-                case EBADF: {
-                    // this is a critical bug, there's no plan B here
-                    CPPA_CRITICAL("epoll_ctl returned EBADF");
-                    break;
-                }
                 // supplied file descriptor is already registered
                 case EEXIST: {
                     // shouldn't happen, but no big deal
                     cerr << "*** warning: file descriptor registered twice\n"
                          << flush;
-                    break;
-                }
-                // m_pollfd not an epoll file descriptor, or read_handle()
-                // is the same as m_pollfd, or read_handle() isn't supported
-                // by epoll
-                case EINVAL: {
-                    // point of no return
-                    CPPA_CRITICAL("epoll_ctl returned EINVAL");
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
@@ -805,22 +794,9 @@ class middleman_event_handler : public middleman_event_handler_base {
                          << flush;
                     break;
                 }
-                // insufficient memory to handle requested
-                case ENOMEM: {
-                    // what the ... ?
-                    CPPA_CRITICAL("not enough memory for epoll operation");
-                    break;
-                }
-                // The limit imposed by /proc/sys/fs/epoll/max_user_watches
-                // was encountered while trying to register a new file descriptor
-                case ENOSPC: {
-                    CPPA_CRITICAL("reached max_user_watches limit");
-                    break;
-                }
-                // The target file fd does not support epoll.
-                case EPERM: {
-                    CPPA_CRITICAL("tried to add illegal file descriptor");
-                    break;
+                default: {
+                    perror("epoll_ctl() failed");
+                    CPPA_CRITICAL("epoll_ctl() failed");
                 }
             }
         }
@@ -899,6 +875,7 @@ void middleman_loop(middleman_impl* impl) {
                             break;
                         case write_done:
                             handler->erase_later(i->ptr(), event::write);
+                            break;
                         default: break;
                     }
                     if (mask == event::write) break;
@@ -922,6 +899,30 @@ void middleman_loop(middleman_impl* impl) {
                 }
             }
             i->handled();
+        }
+        handler->update();
+    }
+    DEBUG("flush outgoing messages");
+    // make sure to write everything before shutting down
+    for (auto ptr : impl->m_readers) { handler->erase_later(ptr, event::read); }
+    handler->update();
+    while (handler->num_sockets() > 0) {
+        auto iters = handler->poll();
+        for (auto i = iters.first; i != iters.second; ++i) {
+            switch (i->type()) {
+                case event::write:
+                    switch (i->continue_writing()) {
+                        case write_closed:
+                        case write_failure:
+                        case write_done:
+                            handler->erase_later(i->ptr(), event::write);
+                            break;
+                        default: break;
+                    }
+                    break;
+                default: CPPA_CRITICAL("expected event::write only "
+                                       "during shutdown phase");
+            }
         }
         handler->update();
     }
