@@ -35,4 +35,6 @@ namespace cppa {
 
 ref_counted::~ref_counted() { }
 
+void ref_counted::request_deletion() { delete this; }
+
 } // namespace cppa

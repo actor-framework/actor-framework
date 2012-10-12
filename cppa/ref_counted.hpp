@@ -56,19 +56,26 @@ class ref_counted {
     inline void ref() { ++m_rc; }
 
     /**
-     * @brief Decreases reference cound by one.
-     * @returns @p true if there are still references to this object
-     *          (reference count > 0); otherwise @p false.
+     * @brief Decreases reference count by one and calls
+     *        @p request_deletion when it drops to zero.
      */
-    inline bool deref() { return --m_rc > 0; }
+    inline void deref() { if (--m_rc == 0) request_deletion(); }
 
     /**
-     * @brief Queries if there is exactly one reference.
-     * @returns @p true if reference count is one; otherwise @p false.
+     * @brief Queries whether there is exactly one reference.
      */
     inline bool unique() { return m_rc == 1; }
 
+ protected:
+
     virtual ~ref_counted();
+
+    /**
+     * @brief Default implementations calls <tt>delete this</tt>, but can
+     *        be overriden in case deletion depends on more than the
+     *        reference count alone.
+     */
+    virtual void request_deletion();
 
  private:
 

@@ -138,7 +138,7 @@ struct thread_pool_scheduler::worker {
                         case resume_result::actor_done: {
                             auto pending = fetch_pending();
                             bool hidden = job->is_hidden();
-                            if (!job->deref()) delete job;
+                            job->deref();
                             std::atomic_thread_fence(std::memory_order_seq_cst);
                             if (!hidden) dec_actor_count();
                             job = pending;
@@ -189,7 +189,7 @@ void thread_pool_scheduler::stop() {
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
             bool hidden = ptr->is_hidden();
-            if (!ptr->deref()) delete ptr;
+            ptr->deref();
             std::atomic_thread_fence(std::memory_order_seq_cst);
             if (!hidden) dec_actor_count();
         }

@@ -107,7 +107,7 @@ void singleton_manager::shutdown() {
     delete s_group_manager.load();
     s_group_manager = nullptr;
     auto et = s_empty_tuple.load();
-    if (et && !et->deref()) delete et;
+    if (et) et->deref();
     s_empty_tuple = nullptr;
     delete s_uniform_type_info_map.load();
     s_uniform_type_info_map = nullptr;

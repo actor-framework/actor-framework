@@ -84,9 +84,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         set_ptr(from.convert());
     }
 
-    ~intrusive_ptr() {
-        if (m_ptr && !m_ptr->deref()) delete m_ptr;
-    }
+    ~intrusive_ptr() { if (m_ptr) m_ptr->deref(); }
 
     inline void swap(intrusive_ptr& other) {
         std::swap(m_ptr, other.m_ptr);
@@ -110,7 +108,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     }
 
     void reset(pointer new_value = nullptr) {
-        if (m_ptr && !m_ptr->deref()) delete m_ptr;
+        if (m_ptr) m_ptr->deref();
         set_ptr(new_value);
     }
 

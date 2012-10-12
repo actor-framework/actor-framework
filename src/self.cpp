@@ -115,7 +115,7 @@ void self_type::cleanup_fun(cppa::local_actor* what) {
             // make sure "unspawned" actors quit properly
             ptr->cleanup(cppa::exit_reason::normal);
         }
-        if (what->deref() == false) delete what;
+        what->deref();
     }
 }
 

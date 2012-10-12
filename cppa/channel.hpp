@@ -54,12 +54,14 @@ class channel : public ref_counted {
 
  public:
 
-    virtual ~channel();
-
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
     virtual void enqueue(actor* sender, any_tuple msg) = 0;
+
+ protected:
+
+    virtual ~channel();
 
  private:
 
