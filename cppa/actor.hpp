@@ -185,7 +185,7 @@ class actor : public channel {
 
     actor(const process_information_ptr& parent = process_information::get());
 
-    actor(std::uint32_t aid,
+    actor(actor_id aid,
           const process_information_ptr& parent = process_information::get());
 
  private:
