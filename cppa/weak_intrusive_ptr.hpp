@@ -28,62 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_REF_COUNTED_HPP
-#define CPPA_REF_COUNTED_HPP
+#ifndef CPPA_WEAK_INTRUSIVE_PTR_HPP
+#define CPPA_WEAK_INTRUSIVE_PTR_HPP
 
-#include <atomic>
-#include <cstddef>
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
 namespace cppa {
 
-/**
- * @brief A (thread safe) base class for reference counted objects
- *        with an atomic reference count.
- *
- * Serves the requirements of {@link intrusive_ptr}.
- * @relates intrusive_ptr
- */
-class ref_counted {
+template<typename T>
+class weak_intrusive_ptr {
+
+    typedef T::anchor anchor_type;
 
  public:
 
-    inline ref_counted() : m_rc(0) { }
+    /**
+     * @brief Promotes this weak pointer to an intrusive_ptr.
+     * @warning Returns @p nullptr if expired.
+     */
+    intrusive_ptr<T> promote() {
+        return m_anchor->get();
+    }
 
     /**
-     * @brief Increases reference count by one.
+     * @brief Queries whether the object was already deleted.
      */
-    inline void ref() { ++m_rc; }
-
-    /**
-     * @brief Decreases reference count by one and calls
-     *        @p request_deletion when it drops to zero.
-     */
-    inline void deref() { if (--m_rc == 0) request_deletion(); }
-
-    /**
-     * @brief Queries whether there is exactly one reference.
-     */
-    inline bool unique() { return m_rc == 1; }
-
-    inline size_t get_reference_count() const { return m_rc; }
-
- protected:
-
-    virtual ~ref_counted();
-
-    /**
-     * @brief Default implementations calls <tt>delete this</tt>, but can
-     *        be overriden in case deletion depends on more than the
-     *        reference count alone.
-     */
-    virtual void request_deletion();
+    bool expired() const {
+        return m_anchor->expired();
+    }
 
  private:
 
-    std::atomic<size_t> m_rc;
+    intrusive_ptr<anchor_type> m_anchor;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_REF_COUNTED_HPP
+#endif // CPPA_WEAK_INTRUSIVE_PTR_HPP

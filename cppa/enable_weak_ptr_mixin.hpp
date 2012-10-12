@@ -28,62 +28,84 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_REF_COUNTED_HPP
-#define CPPA_REF_COUNTED_HPP
+#ifndef CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
+#define CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
 
-#include <atomic>
-#include <cstddef>
+#include <mutex>
+#include <utility>
+#include <type_traits>
+
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/util/shared_lock_guard.hpp"
 
 namespace cppa {
 
-/**
- * @brief A (thread safe) base class for reference counted objects
- *        with an atomic reference count.
- *
- * Serves the requirements of {@link intrusive_ptr}.
- * @relates intrusive_ptr
- */
-class ref_counted {
+template<class Derived, class Base>
+class enable_weak_ptr_mixin : public Base {
+
+    typedef Base super;
+    typedef Derived sub;
+
+    static_assert(std::is_base_of<ref_counted,Base>::value,
+                  "Base needs to be derived from ref_counted");
 
  public:
 
-    inline ref_counted() : m_rc(0) { }
+    class weak_ptr_anchor : public ref_counted {
 
-    /**
-     * @brief Increases reference count by one.
-     */
-    inline void ref() { ++m_rc; }
+     public:
 
-    /**
-     * @brief Decreases reference count by one and calls
-     *        @p request_deletion when it drops to zero.
-     */
-    inline void deref() { if (--m_rc == 0) request_deletion(); }
+        weak_ptr_anchor(sub* ptr) : m_ptr(ptr) { }
 
-    /**
-     * @brief Queries whether there is exactly one reference.
-     */
-    inline bool unique() { return m_rc == 1; }
+        intrusive_ptr<sub> get() {
+            intrusive_ptr<sub> result;
+            util::shared_lock_guard<util::shared_spinlock> guard(m_lock);
+            if (m_ptr) result.reset(m_ptr);
+            return result;
+        }
 
-    inline size_t get_reference_count() const { return m_rc; }
+        bool expired() const {
+            // no need for locking since pointer comparison is atomic
+            return m_ptr == nullptr;
+        }
+
+        bool try_expire() {
+            std::lock_guard<util::shared_spinlock> guard(m_lock);
+            // double-check reference count
+            if (m_ptr->get_reference_count() == 0) {
+                m_ptr = nullptr;
+                return true;
+            }
+            return false;
+        }
+
+     private:
+
+        sub* m_ptr;
+        util::shared_spinlock m_lock;
+
+    };
+
+    intrusive_ptr<weak_ptr_anchor> get_weak_ptr_anchor() const { return m_anchor; }
 
  protected:
 
-    virtual ~ref_counted();
+    template<typename... Args>
+    enable_weak_ptr_mixin(Args&&... args)
+    : super(std::forward<Args>(args)...)
+    , m_anchor(new anchor(static_cast<sub*>(this))) { }
 
-    /**
-     * @brief Default implementations calls <tt>delete this</tt>, but can
-     *        be overriden in case deletion depends on more than the
-     *        reference count alone.
-     */
-    virtual void request_deletion();
+    void request_deletion() { if (m_anchor->try_expire()) delete this; }
 
  private:
 
-    std::atomic<size_t> m_rc;
+    intrusive_ptr<anchor> m_anchor;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_REF_COUNTED_HPP
+#endif // CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
