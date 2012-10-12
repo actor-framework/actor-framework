@@ -43,19 +43,27 @@ class weak_intrusive_ptr {
 
  public:
 
+    weak_intrusive_ptr(const intrusive_ptr<T>& from) {
+        if (from) m_anchor = from->get_weak_ptr_anchor();
+    }
+
+    weak_intrusive_ptr() = default;
+    weak_intrusive_ptr(const weak_intrusive_ptr&) = default;
+    weak_intrusive_ptr& operator=(const weak_intrusive_ptr&) = default;
+
     /**
      * @brief Promotes this weak pointer to an intrusive_ptr.
      * @warning Returns @p nullptr if expired.
      */
     intrusive_ptr<T> promote() {
-        return m_anchor->get();
+        return (m_anchor) ? m_anchor->get() : nullptr;
     }
 
     /**
      * @brief Queries whether the object was already deleted.
      */
     bool expired() const {
-        return m_anchor->expired();
+        return (m_anchor) ? m_anchor->expired() : true;
     }
 
  private:
