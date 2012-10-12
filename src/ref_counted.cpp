@@ -28,34 +28,11 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_REF_COUNTED_IMPL_HPP
-#define CPPA_REF_COUNTED_IMPL_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/ref_counted.hpp"
 
-template<typename T>
-class ref_counted_impl {
+namespace cppa {
 
-    T m_rc;
+ref_counted::~ref_counted() { }
 
-    ref_counted_impl(const ref_counted_impl&) = delete;
-
-    ref_counted_impl& operator=(const ref_counted_impl&) = delete;
-
- public:
-
-    virtual ~ref_counted_impl() { }
-
-    inline ref_counted_impl() : m_rc(0) { }
-
-    inline void ref() { ++m_rc; }
-
-    inline bool deref() { return --m_rc > 0; }
-
-    inline bool unique() { return m_rc == 1; }
-
-};
-
-} } // namespace cppa::detail
-
-#endif // CPPA_REF_COUNTED_IMPL_HPP
+} // namespace cppa

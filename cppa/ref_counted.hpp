@@ -34,11 +34,8 @@
 #include <atomic>
 #include <cstddef>
 
-#include "cppa/detail/ref_counted_impl.hpp"
-
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
 
 /**
  * @brief A (thread safe) base class for reference counted objects
@@ -51,31 +48,33 @@ class ref_counted {
 
  public:
 
+    inline ref_counted() : m_rc(0) { }
+
     /**
      * @brief Increases reference count by one.
      */
-    void ref();
+    inline void ref() { ++m_rc; }
 
     /**
      * @brief Decreases reference cound by one.
      * @returns @p true if there are still references to this object
      *          (reference count > 0); otherwise @p false.
      */
-    bool deref();
+    inline bool deref() { return --m_rc > 0; }
 
     /**
      * @brief Queries if there is exactly one reference.
      * @returns @p true if reference count is one; otherwise @p false.
      */
-    bool unique();
+    inline bool unique() { return m_rc == 1; }
+
+    virtual ~ref_counted();
+
+ private:
+
+    std::atomic<size_t> m_rc;
 
 };
-
-#else
-
-typedef detail::ref_counted_impl< std::atomic<size_t> > ref_counted;
-
-#endif
 
 } // namespace cppa
 

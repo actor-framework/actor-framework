@@ -63,7 +63,6 @@ cppa/detail/pseudo_tuple.hpp
 cppa/detail/ptype_to_type.hpp
 cppa/detail/receive_loop_helper.hpp
 cppa/detail/recursive_queue_node.hpp
-cppa/detail/ref_counted_impl.hpp
 cppa/detail/scheduled_actor_dummy.hpp
 cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
@@ -280,3 +279,4 @@ cppa/network/default_peer_impl.hpp
 src/default_peer_impl.cpp
 cppa/network/default_peer_acceptor_impl.hpp
 src/default_peer_acceptor_impl.cpp
+src/ref_counted.cpp

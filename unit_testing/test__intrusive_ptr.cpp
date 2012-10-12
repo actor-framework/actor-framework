@@ -2,9 +2,8 @@
 #include <cstddef>
 
 #include "test.hpp"
+#include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
-
-#include "cppa/detail/ref_counted_impl.hpp"
 
 using namespace cppa;
 
@@ -15,7 +14,7 @@ int class1_instances = 0;
 
 }
 
-struct class0 : cppa::detail::ref_counted_impl<size_t> {
+struct class0 : ref_counted {
     class0() { ++class0_instances; }
 
     virtual ~class0() { --class0_instances; }

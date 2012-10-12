@@ -52,7 +52,6 @@
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
 #include "cppa/detail/value_guard.hpp"
-#include "cppa/detail/ref_counted_impl.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa { namespace detail {
