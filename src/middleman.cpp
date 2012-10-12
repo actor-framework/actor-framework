@@ -799,7 +799,7 @@ class io_observer_base {
             // ignore event::write unless ptr->is_peer_connection
             vec.emplace_back(ptr->read_handle(), ptr, event::read);
         }
-        else if (e == event::read) {
+        else if (e == event::write) {
             CPPA_REQUIRE(ptr->is_peer_connection());
             auto dptr = static_cast<peer_connection*>(ptr.get());
             vec.emplace_back(dptr->write_handle(), ptr, event::write);
