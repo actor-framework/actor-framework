@@ -96,13 +96,13 @@ class enable_weak_ptr_mixin : public Base {
     template<typename... Args>
     enable_weak_ptr_mixin(Args&&... args)
     : super(std::forward<Args>(args)...)
-    , m_anchor(new anchor(static_cast<sub*>(this))) { }
+    , m_anchor(new weak_ptr_anchor(static_cast<sub*>(this))) { }
 
     void request_deletion() { if (m_anchor->try_expire()) delete this; }
 
  private:
 
-    intrusive_ptr<anchor> m_anchor;
+    intrusive_ptr<weak_ptr_anchor> m_anchor;
 
 };
 
