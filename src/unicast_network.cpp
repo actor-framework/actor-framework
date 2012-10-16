@@ -54,7 +54,6 @@
 #include "cppa/network/ipv4_io_stream.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
@@ -62,49 +61,26 @@ namespace cppa {
 using namespace detail;
 using namespace network;
 
-void publish(actor_ptr whom, std::unique_ptr<acceptor> acceptor) {
-    if (!whom && !acceptor) return;
-    singleton_manager::get_actor_registry()->put(whom->id(), whom);
-    singleton_manager::get_middleman()->publish(std::move(acceptor), whom);
+namespace {
+protocol* proto() {
+    return singleton_manager::get_middleman()->protocol(atom("DEFAULT")).get();
+}
+} // namespace <anonymous>
+
+void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
+    proto()->publish(whom, move(aptr), {});
 }
 
-actor_ptr remote_actor(io_stream_ptr_pair peer) {
-    auto pinf = process_information::get();
-    std::uint32_t process_id = pinf->process_id();
-    // throws on error
-    peer.second->write(&process_id, sizeof(std::uint32_t));
-    peer.second->write(pinf->node_id().data(), pinf->node_id().size());
-    std::uint32_t remote_actor_id;
-    std::uint32_t peer_pid;
-    process_information::node_id_type peer_node_id;
-    peer.first->read(&remote_actor_id, sizeof(remote_actor_id));
-    peer.first->read(&peer_pid, sizeof(std::uint32_t));
-    peer.first->read(peer_node_id.data(), peer_node_id.size());
-    process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));
-    if (*pinf == *pinfptr) {
-        // dude, this is not a remote actor, it's a local actor!
-#       ifdef CPPA_DEBUG
-        std::cerr << "*** warning: remote_actor() called to access a local actor\n"
-                  << std::flush;
-#       endif
-        return singleton_manager::get_actor_registry()->get(remote_actor_id);
-    }
-    //auto key = std::make_tuple(remote_actor_id, pinfptr->process_id(), pinfptr->node_id());
-    singleton_manager::get_middleman()->add_peer(peer, pinfptr);
-    return get_actor_proxy_cache().get_or_put(remote_actor_id,
-                                              pinfptr->process_id(),
-                                              pinfptr->node_id());
+actor_ptr remote_actor(io_stream_ptr_pair io) {
+    return proto()->remote_actor(io, {});
 }
 
 void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
-    if (whom) publish(whom, ipv4_acceptor::create(port, addr));
+    proto()->publish(whom, {port, addr});
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {
-    // throws on error
-    io_stream_ptr peer = ipv4_io_stream::connect_to(host, port);
-    io_stream_ptr_pair ptrpair(peer, peer);
-    return remote_actor(ptrpair);
+    return proto()->remote_actor({port, host});
 }
 
 } // namespace cppa

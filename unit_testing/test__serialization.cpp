@@ -161,9 +161,7 @@ int main() {
             CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
     }
-    catch (exception& e) {
-        CPPA_ERROR("exception: " << e.what());
-    }
+    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
 
     try {
         // test raw_type in both binary and string serialization
@@ -182,9 +180,7 @@ int main() {
         rs2 = from_string<raw_struct>(rsstr);
         CPPA_CHECK_EQUAL(rs.str, rs2.str);
     }
-    catch (exception& e) {
-        CPPA_ERROR("exception: " << e.what());
-    }
+    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
 
     {
         auto ttup = make_any_tuple(1, 2, actor_ptr(self));
@@ -220,9 +216,7 @@ int main() {
                 CPPA_CHECK_EQUAL(get<1>(tup), "foo");
             }
         }
-        catch (exception& e) {
-            CPPA_ERROR("exception: " << e.what());
-        }
+        catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
     }
     {
         any_tuple msg1 = cppa::make_cow_tuple(42, string("Hello \"World\"!"));

@@ -28,20 +28,51 @@
 \******************************************************************************/
 
 
-#include "cppa/network/peer.hpp"
-#include "cppa/network/middleman.hpp"
+#ifndef CPPA_ACTOR_PROXY_CACHE_HPP
+#define CPPA_ACTOR_PROXY_CACHE_HPP
 
-namespace cppa { namespace network {
+#include "cppa/atom.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/ref_counted.hpp"
 
-peer::peer(middleman* parent, native_socket_type rd, native_socket_type wr)
-: super(parent, rd, true), m_write_handle(wr) { }
+namespace cppa {
 
-void peer::begin_writing() {
-    parent()->continue_writing_later(this);
-}
+class serializer;
+class deserializer;
 
-void peer::register_peer(const process_information& pinfo) {
-    parent()->register_peer(pinfo, this);
-}
+/**
+ * @brief Different serialization protocols have different representations
+ *        for actors. This class encapsulates a technology-specific
+ *        actor addressing.
+ */
+class actor_addressing : public ref_counted {
 
-} } // namespace cppa::network
+ public:
+
+    /**
+     * @brief Returns the technology identifier of the implementation.
+     * @note All-uppercase identifiers are reserved for libcppa's
+     *       builtin implementations.
+     */
+    virtual atom_value technology_id() const = 0;
+
+    /**
+     * @brief Serializes @p ptr to @p sink according
+     *        to the implemented addressing.
+     * @note Implementation should call {@link actor_registry::put()}
+     *       to be able to restore instances later on from registry.
+     * @note Thi
+     */
+    virtual void write(serializer* sink, const actor_ptr& ptr) = 0;
+
+    /**
+     * @brief Deserializes an actor from @p source according
+     *        to the implemented addressing.
+     */
+     virtual actor_ptr read(deserializer* source) = 0;
+
+};
+
+} // namespace cppa::detail
+
+#endif // CPPA_ACTOR_PROXY_CACHE_HPP

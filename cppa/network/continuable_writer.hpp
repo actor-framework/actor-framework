@@ -28,11 +28,14 @@
 \******************************************************************************/
 
 
-#ifndef PEER_HPP
-#define PEER_HPP
+#ifndef CONTINUABLE_WRITER_HPP
+#define CONTINUABLE_WRITER_HPP
 
-#include "cppa/network/addressed_message.hpp"
-#include "cppa/network/continuable_reader.hpp"
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
+
+namespace cppa { namespace network {
 
 enum continue_writing_result {
     write_failure,
@@ -41,17 +44,9 @@ enum continue_writing_result {
     write_done
 };
 
+class continuable_writer : virtual public ref_counted {
 
-namespace cppa { namespace network {
-
-class middleman;
-
-/**
- * @brief Represents a bidirectional connection to a peer.
- */
-class peer : public continuable_reader {
-
-    typedef continuable_reader super;
+    typedef ref_counted super;
 
  public:
 
@@ -59,7 +54,7 @@ class peer : public continuable_reader {
      * @brief Returns the file descriptor for outgoing data.
      */
     native_socket_type write_handle() const {
-        return m_write_handle;
+        return m_wr;
     }
 
     /**
@@ -67,39 +62,18 @@ class peer : public continuable_reader {
      */
     virtual continue_writing_result continue_writing() = 0;
 
-    /**
-     * @brief Enqueues @p msg to the list of outgoing messages.
-     * @returns @p true on success, @p false otherwise.
-     * @note Implementation should call {@link begin_writing()} and perform IO
-     *       only in its implementation of {@link continue_writing()}.
-     * @note Returning @p false from this function is interpreted as error
-     *       and causes the middleman to remove this peer.
-     */
-    virtual bool enqueue(const addressed_message& msg) = 0;
-
  protected:
 
-    /**
-     * @brief Tells the middleman to add write_handle() to the list of
-     *        observed sockets and to call continue_writing() if
-     *        write_handle() is ready to write.
-     * @note Does nothing if write_handle() is already registered for the
-     *       event loop.
-     */
-    void begin_writing();
-
-    void register_peer(const process_information& pinfo);
-
-    peer(middleman* parent, native_socket_type rd, native_socket_type wr);
+    continuable_writer(native_socket_type write_handle);
 
  private:
 
-    native_socket_type m_write_handle;
+    native_socket_type m_wr;
 
 };
 
-typedef intrusive_ptr<peer> peer_ptr;
+typedef intrusive_ptr<continuable_writer> continuable_writer_ptr;
 
 } } // namespace cppa::network
 
-#endif // PEER_HPP
+#endif // CONTINUABLE_WRITER_HPP

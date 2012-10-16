@@ -28,42 +28,79 @@
 \******************************************************************************/
 
 
-#ifndef PEER_ACCEPTOR_HPP
-#define PEER_ACCEPTOR_HPP
+#ifndef CPPA_PROTOCOL_HPP
+#define CPPA_PROTOCOL_HPP
 
-#include "cppa/network/peer.hpp"
-#include "cppa/network/continuable_reader.hpp"
+#include <memory>
+#include <functional>
+#include <initializer_list>
+
+#include "cppa/atom.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/primitive_variant.hpp"
+
+#include "cppa/network/acceptor.hpp"
 
 namespace cppa { namespace network {
 
-class peer_acceptor : public continuable_reader {
+class middleman;
+class continuable_reader;
+class continuable_writer;
 
-    typedef continuable_reader super;
+class protocol : public ref_counted {
+
+    typedef ref_counted super;
 
  public:
 
-    bool is_acceptor_of(const actor_ptr& whom) const;
+    typedef std::initializer_list<primitive_variant> variant_args;
+
+    protocol(middleman* parent);
+
+    virtual atom_value identifier() const = 0;
+
+    virtual void publish(const actor_ptr& whom, variant_args args) = 0;
+
+    virtual void publish(const actor_ptr& whom,
+                         std::unique_ptr<acceptor> acceptor,
+                         variant_args args                  ) = 0;
+
+    virtual void unpublish(const actor_ptr& whom) = 0;
+
+    virtual actor_ptr remote_actor(variant_args args) = 0;
+
+    virtual actor_ptr remote_actor(io_stream_ptr_pair ioptrs,
+                                   variant_args args         ) = 0;
+
+    void run_later(std::function<void()> fun);
 
  protected:
 
-    peer_acceptor(middleman* parent,
-                  native_socket_type fd,
-                  const actor_ptr& published_actor);
+    // note: not thread-safe; call only in run_later functor!
+    void continue_reader(continuable_reader* what);
 
-    void add_peer(const peer_ptr& ptr);
+    // note: not thread-safe; call only in run_later functor!
+    void continue_writer(continuable_reader* what);
 
-    inline const actor_ptr& published_actor() const {
-        return m_published_actor;
-    }
+    // note: not thread-safe; call only in run_later functor!
+    void stop_reader(continuable_reader* what);
+
+    // note: not thread-safe; call only in run_later functor!
+    void stop_writer(continuable_reader* what);
+
+    inline middleman* parent() { return m_parent; }
+
+    inline const middleman* parent() const { return m_parent; }
 
  private:
 
-    actor_ptr m_published_actor;
+    middleman* m_parent;
 
 };
 
-typedef intrusive_ptr<peer_acceptor> peer_acceptor_ptr;
+typedef intrusive_ptr<protocol> protocol_ptr;
 
 } } // namespace cppa::network
 
-#endif // PEER_ACCEPTOR_HPP
+#endif // CPPA_PROTOCOL_HPP

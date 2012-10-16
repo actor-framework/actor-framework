@@ -144,8 +144,8 @@ auto main(int argc, char* argv[]) -> int {
             catch (exception& e) {
                 ostringstream err;
                 err << "*** exception: group::get(\"" << gid.substr(0, p)
-                    << "\", \"" << gid.substr(p + 1) << "\") failed, what = "
-                    << e.what() << endl;
+                    << "\", \"" << gid.substr(p + 1) << "\") failed; "
+                    << to_verbose_string(e) << endl;
                 send(printer, err.str());
             }
         }

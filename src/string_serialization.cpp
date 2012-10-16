@@ -44,6 +44,8 @@
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/network/default_actor_addressing.hpp"
+
 using namespace std;
 
 namespace cppa {
@@ -59,7 +61,10 @@ bool isbuiltin(const string& type_name) {
 // - atoms are serialized '...'
 class string_serializer : public serializer {
 
+    typedef serializer super;
+
     ostream& out;
+    network::default_actor_addressing m_addressing;
 
     struct pt_writer {
 
@@ -108,8 +113,7 @@ class string_serializer : public serializer {
  public:
 
     string_serializer(ostream& mout)
-        : out(mout), m_after_value(false), m_obj_just_opened(false) {
-    }
+    : super(&m_addressing), out(mout), m_after_value(false), m_obj_just_opened(false) { }
 
     void begin_object(const string& type_name) {
         clear();
@@ -191,11 +195,14 @@ class string_serializer : public serializer {
 
 class string_deserializer : public deserializer {
 
+    typedef deserializer super;
+
     string m_str;
     string::iterator m_pos;
     //size_t m_obj_count;
     stack<bool> m_obj_had_left_parenthesis;
     stack<string> m_open_objects;
+    network::default_actor_addressing m_addressing;
 
     void skip_space_and_comma() {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
@@ -263,11 +270,7 @@ class string_deserializer : public deserializer {
 
  public:
 
-    string_deserializer(const string& str) : m_str(str) {
-        m_pos = m_str.begin();
-    }
-
-    string_deserializer(string&& str) : m_str(move(str)) {
+    string_deserializer(string str) : super(&m_addressing), m_str(move(str)) {
         m_pos = m_str.begin();
     }
 
@@ -509,5 +512,11 @@ string to_string_impl(const void *what, const uniform_type_info *utype) {
 }
 
 } // namespace detail
+
+string to_verbose_string(const exception& e) {
+    std::ostringstream oss;
+    oss << detail::demangle(typeid(e)) << ": " << e.what();
+    return oss.str();
+}
 
 } // namespace cppa

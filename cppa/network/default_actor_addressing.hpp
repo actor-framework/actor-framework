@@ -28,24 +28,58 @@
 \******************************************************************************/
 
 
-#include <utility>
-#include <iostream>
+#ifndef CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#define CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
 
-#include "cppa/atom.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/scheduler.hpp"
+#include <map>
+#include <cstdint>
+
 #include "cppa/actor_proxy.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/detail/types_array.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/actor_addressing.hpp"
+#include "cppa/process_information.hpp"
 
-using namespace std;
+namespace cppa { namespace network {
 
-namespace cppa {
+class default_protocol;
 
-actor_proxy::actor_proxy(actor_id mid, const process_information_ptr& pptr)
-: super(mid, pptr) { }
+class default_actor_addressing : public actor_addressing {
 
-} // namespace cppa
+ public:
+
+    default_actor_addressing(default_protocol* parent = nullptr);
+
+    typedef std::map<actor_id,weak_actor_proxy_ptr> proxy_map;
+
+    atom_value technology_id() const;
+
+    void write(serializer* sink, const actor_ptr& ptr);
+
+    actor_ptr read(deserializer* source);
+
+    // returns the number of proxy instances for given parent
+    size_t count_proxies(const process_information& parent);
+
+    actor_ptr get(const process_information& parent, actor_id aid);
+
+    actor_ptr get_or_put(const process_information& parent, actor_id aid);
+
+    void put(const process_information& parent,
+             actor_id aid,
+             const actor_proxy_ptr& proxy);
+
+    proxy_map& proxies(process_information& from);
+
+    void erase(process_information& info);
+
+    void erase(process_information& info, actor_id aid);
+
+ private:
+
+    default_protocol* m_parent;
+    std::map<process_information,proxy_map> m_proxies;
+
+};
+
+} } // namespace cppa::network
+
+#endif // CPPA_DEFAULT_ACTOR_ADDRESSING_HPP

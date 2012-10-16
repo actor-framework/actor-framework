@@ -39,6 +39,7 @@
 
 #include "cppa/network/middleman.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
@@ -66,6 +67,7 @@ std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
 std::atomic<empty_tuple*> s_empty_tuple;
 std::atomic<scheduler*> s_scheduler;
+std::atomic<logging*> s_logger;
 
 template<typename T>
 T* lazy_get(std::atomic<T*>& ptr) {
@@ -90,6 +92,7 @@ namespace cppa { void shutdown() { singleton_manager::shutdown(); } }
 namespace cppa { namespace detail {
 
 void singleton_manager::shutdown() {
+    CPPA_LOGF_DEBUG("prepare to shutdown");
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
@@ -98,8 +101,8 @@ void singleton_manager::shutdown() {
     if (rptr) {
         rptr->await_running_count_equal(0);
     }
-    stop_and_kill(s_middleman);
     stop_and_kill(s_scheduler);
+    stop_and_kill(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe now to delete all other singletons now
     delete s_actor_registry.load();
@@ -113,6 +116,8 @@ void singleton_manager::shutdown() {
     s_uniform_type_info_map = nullptr;
     delete s_decorated_names_map.load();
     s_decorated_names_map = nullptr;
+    // last but not least: kill logger
+    stop_and_kill(s_logger);
 }
 
 actor_registry* singleton_manager::get_actor_registry() {
@@ -133,6 +138,21 @@ scheduler* singleton_manager::get_scheduler() {
 
 decorated_names_map* singleton_manager::get_decorated_names_map() {
     return lazy_get(s_decorated_names_map);
+}
+
+logging* singleton_manager::get_logger() {
+    auto result = s_logger.load();
+    if (result == nullptr) {
+        auto tmp = logging::create_singleton();
+        if (s_logger.compare_exchange_weak(result, tmp) == false) {
+            delete tmp;
+        }
+        else {
+            result = tmp;
+            result->start();
+        }
+    }
+    return result;
 }
 
 bool singleton_manager::set_scheduler(scheduler* ptr) {

@@ -44,6 +44,7 @@ namespace cppa { namespace network { class middleman; } }
 
 namespace cppa { namespace detail {
 
+class logging;
 class empty_tuple;
 class group_manager;
 class abstract_tuple;
@@ -58,6 +59,8 @@ class singleton_manager {
  public:
 
     static void shutdown();
+
+    static logging* get_logger();
 
     static scheduler* get_scheduler();
 

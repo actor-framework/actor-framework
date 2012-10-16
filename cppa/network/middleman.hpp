@@ -34,11 +34,12 @@
 #include <map>
 #include <vector>
 #include <memory>
+#include <functional>
 
-#include "cppa/network/peer.hpp"
+#include "cppa/network/protocol.hpp"
 #include "cppa/network/acceptor.hpp"
-#include "cppa/network/peer_acceptor.hpp"
 #include "cppa/network/continuable_reader.hpp"
+#include "cppa/network/continuable_writer.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 
@@ -52,7 +53,10 @@ void middleman_loop(middleman_impl*);
 
 class middleman {
 
+    // the most popular class in libcppa
+
     friend class peer;
+    friend class protocol;
     friend class peer_acceptor;
     friend class singleton_manager;
     friend class middleman_overseer;
@@ -65,28 +69,9 @@ class middleman {
 
     virtual ~middleman();
 
-    virtual void publish(std::unique_ptr<acceptor> server,
-                         const actor_ptr& published_actor) = 0;
+    virtual void add_protocol(const protocol_ptr& impl) = 0;
 
-    virtual void add_peer(const io_stream_ptr_pair& io,
-                          const process_information_ptr& node_info) = 0;
-
-    virtual void unpublish(const actor_ptr& whom) = 0;
-
-    virtual void enqueue(const process_information_ptr& receiving_node,
-                         const addressed_message& message) = 0;
-
-    inline void enqueue(const process_information_ptr& receiving_node,
-                        actor_ptr sender,
-                        channel_ptr receiver,
-                        any_tuple msg,
-                        message_id_t id = message_id_t()) {
-        enqueue(receiving_node,
-                addressed_message(std::move(sender),
-                                  std::move(receiver),
-                                  std::move(msg),
-                                  id));
-    }
+    virtual protocol_ptr protocol(atom_value id) = 0;
 
  protected:
 
@@ -95,7 +80,11 @@ class middleman {
     virtual void stop() = 0;
     virtual void start() = 0;
 
- private:
+    // to be called from protocol
+
+    // runs @p fun in the middleman's event loop
+    virtual void run_later(std::function<void()> fun) = 0;
+
 
     // to be called from singleton_manager
 
@@ -104,29 +93,33 @@ class middleman {
 
     // to be called from peer
 
-    void continue_writing_later(const peer_ptr& ptr);
-    void register_peer(const process_information& node, const peer_ptr& ptr);
+    /**
+     * @pre ptr->as_writer() != nullptr
+     */
+    void continue_writer(const continuable_reader_ptr& ptr);
 
+    /**
+     * @pre ptr->as_writer() != nullptr
+     */
+    void stop_writer(const continuable_reader_ptr& ptr);
 
-    // to be called form peer_acceptor
+    // to be called form peer_acceptor or protocol
 
-    void add(const continuable_reader_ptr& what);
+    void continue_reader(const continuable_reader_ptr& what);
+
+    void stop_reader(const continuable_reader_ptr& what);
 
 
     // to be called from m_handler or middleman_overseer
 
     inline void quit() { m_done = true; }
     inline bool done() const { return m_done; }
-    void erase(const continuable_reader_ptr& what);
-    continuable_reader_ptr acceptor_of(const actor_ptr& whom);
-    peer_ptr get_peer(const process_information& node);
 
 
     // member variables
 
     bool m_done;
     std::vector<continuable_reader_ptr> m_readers;
-    std::map<process_information,peer_ptr> m_peers;
     std::unique_ptr<middleman_event_handler> m_handler;
 
 };

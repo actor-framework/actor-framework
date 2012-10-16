@@ -44,6 +44,10 @@
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
 
+#include "cppa/network/addressed_message.hpp"
+
+namespace std { class exception; }
+
 namespace cppa {
 
 namespace detail {
@@ -51,43 +55,41 @@ namespace detail {
 std::string to_string_impl(const void* what, const uniform_type_info* utype);
 
 template<typename T>
-struct has_cppa_to_string : std::false_type { };
-
-template<>
-struct has_cppa_to_string<any_tuple> : std::true_type { };
-
-template<>
-struct has_cppa_to_string<network::addressed_message> : std::true_type { };
-
-template<>
-struct has_cppa_to_string<actor_ptr> : std::true_type { };
-
-template<>
-struct has_cppa_to_string<group_ptr> : std::true_type { };
-
-template<>
-struct has_cppa_to_string<channel_ptr> : std::true_type { };
-
-template<>
-struct has_cppa_to_string<process_information_ptr> : std::true_type { };
+inline std::string to_string_impl(const T& what) {
+    return to_string_impl(&what, uniform_typeid<T>());
+}
 
 } // namespace detail
 
-/**
- * @brief Converts any of libcppa's core types to a string.
- */
-template<typename T>
-inline std::string to_string(const T& what,
-                             typename std::enable_if<detail::has_cppa_to_string<T>::value>::type* = 0) {
-    return detail::to_string_impl(&what, uniform_typeid<T>());
+inline std::string to_string(const any_tuple& what) {
+    return detail::to_string_impl(what);
 }
 
-/**
- * @brief Converts an object to a string.
- */
+inline std::string to_string(const network::addressed_message& what) {
+    return detail::to_string_impl(what);
+}
+
+inline std::string to_string(const actor_ptr& what) {
+    return detail::to_string_impl(what);
+}
+
+inline std::string to_string(const group_ptr& what) {
+    return detail::to_string_impl(what);
+}
+
+inline std::string to_string(const process_information& what) {
+    return detail::to_string_impl(what);
+}
+
 inline std::string to_string(const object& what) {
     return detail::to_string_impl(what.value(), what.type());
 }
+
+/**
+ * @brief Converts @p e to a string including the demangled type of e
+ *        and @p e.what().
+ */
+std::string to_verbose_string(const std::exception& e);
 
 } // namespace cppa
 

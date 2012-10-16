@@ -110,7 +110,8 @@ class binary_writer {
 
 } // namespace <anonymous>
 
-binary_serializer::binary_serializer(util::buffer* buf) : m_sink(buf) { }
+binary_serializer::binary_serializer(util::buffer* buf, actor_addressing* ptr)
+: super(ptr), m_sink(buf) { }
 
 void binary_serializer::begin_object(const std::string& tname) {
     binary_writer::write_string(m_sink, tname);

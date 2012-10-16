@@ -40,6 +40,7 @@
 namespace cppa {
 
 class object;
+class actor_addressing;
 
 /**
  * @ingroup TypeSystem
@@ -52,7 +53,7 @@ class deserializer {
 
  public:
 
-    deserializer() = default;
+    deserializer(actor_addressing* addressing = nullptr);
 
     virtual ~deserializer();
 
@@ -112,6 +113,12 @@ class deserializer {
      * @brief Reads a raw memory block.
      */
     virtual void read_raw(size_t num_bytes, void* storage) = 0;
+
+    inline actor_addressing* addressing() { return m_addressing; }
+
+ private:
+
+    actor_addressing* m_addressing;
 
 };
 

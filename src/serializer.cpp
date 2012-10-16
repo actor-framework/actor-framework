@@ -32,7 +32,8 @@
 
 namespace cppa {
 
-serializer::~serializer() {
-}
+serializer::serializer(actor_addressing* aa) : m_addressing(aa) { }
+
+serializer::~serializer() { }
 
 } // namespace cppa

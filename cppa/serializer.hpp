@@ -39,7 +39,7 @@
 
 namespace cppa {
 
-// forward declaration
+class actor_addressing;
 class primitive_variant;
 
 /**
@@ -53,7 +53,7 @@ class serializer {
 
  public:
 
-    serializer() = default;
+    serializer(actor_addressing* addressing = nullptr);
 
     virtual ~serializer();
 
@@ -98,6 +98,12 @@ class serializer {
      * @param values An array of size @p num of primitive data values.
      */
     virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
+
+    inline actor_addressing* addressing() { return m_addressing; }
+
+ private:
+
+    actor_addressing* m_addressing;
 
 };
 

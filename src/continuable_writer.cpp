@@ -28,51 +28,10 @@
 \******************************************************************************/
 
 
-#include <iostream>
-#include <exception>
-
-#include "cppa/process_information.hpp"
-
-#include "cppa/network/default_peer_impl.hpp"
-#include "cppa/network/default_peer_acceptor_impl.hpp"
-
-#include "cppa/detail/demangle.hpp"
-
-using namespace std;
+#include "cppa/network/continuable_writer.hpp"
 
 namespace cppa { namespace network {
 
-default_peer_acceptor_impl::default_peer_acceptor_impl(middleman* mm,
-                                                       acceptor_uptr aur,
-                                                       const actor_ptr& pa)
-: super(mm, aur->file_handle(), pa), m_ptr(std::move(aur)) { }
-
-continue_reading_result default_peer_acceptor_impl::continue_reading() {
-    for (;;) {
-        option<io_stream_ptr_pair> opt;
-        try { opt = m_ptr->try_accept_connection(); }
-        catch (...) { return read_failure; }
-        if (opt) {
-            auto& pair = *opt;
-            auto& pself = process_information::get();
-            uint32_t process_id = pself->process_id();
-            try {
-                actor_id aid = published_actor()->id();
-                pair.second->write(&aid, sizeof(actor_id));
-                pair.second->write(&process_id, sizeof(uint32_t));
-                pair.second->write(pself->node_id().data(),
-                                   pself->node_id().size());
-                add_peer(new default_peer_impl(parent(), pair.first, pair.second));
-            }
-            catch (exception& e) {
-                cerr << "*** exception while sending actor and process id; "
-                     << detail::demangle(typeid(e))
-                     << ", what(): " << e.what()
-                     << endl;
-            }
-        }
-        else return read_continue_later;
-   }
-}
+continuable_writer::continuable_writer(native_socket_type wr) : m_wr(wr) { }
 
 } } // namespace cppa::network

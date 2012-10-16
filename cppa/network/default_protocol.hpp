@@ -28,81 +28,69 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_PROXY_CACHE_HPP
-#define CPPA_ACTOR_PROXY_CACHE_HPP
+#ifndef DEFAULT_PROTOCOL_HPP
+#define DEFAULT_PROTOCOL_HPP
 
-#include <mutex>
-#include <thread>
-#include <string>
-#include <limits>
+#include <map>
 #include <vector>
-#include <functional>
 
-#include "cppa/actor_proxy.hpp"
+#include "cppa/actor_addressing.hpp"
 #include "cppa/process_information.hpp"
 
-#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/network/protocol.hpp"
+#include "cppa/network/default_peer.hpp"
+#include "cppa/network/default_actor_addressing.hpp"
+#include "cppa/network/default_peer_acceptor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa { namespace network {
 
-class actor_proxy_cache {
+class default_protocol : public protocol {
+
+    typedef protocol super;
 
  public:
 
-    // returns existing instance if available or crates a new one
-    actor_proxy_ptr get_or_put(actor_id aid,
-                               std::uint32_t process_id,
-                               const process_information::node_id_type& node_id);
+    default_protocol(middleman* parent);
 
-    actor_proxy_ptr get(actor_id aid,
-                        std::uint32_t process_id,
-                        const process_information::node_id_type& node_id);
+    atom_value identifier() const;
 
-    // @returns true if pptr was successfully removed, false otherwise
-    bool erase(const actor_proxy_ptr& pptr);
+    void publish(const actor_ptr& whom, variant_args args);
 
-    template<typename Fun>
-    void erase_all(const process_information::node_id_type& nid,
-                   std::uint32_t process_id,
-                   Fun fun) {
-        key_tuple lb{nid, process_id, std::numeric_limits<actor_id>::min()};
-        key_tuple ub{nid, process_id, std::numeric_limits<actor_id>::max()};
-        { // lifetime scope of guard
-            std::lock_guard<util::shared_spinlock> guard(m_lock);
-            auto e = m_entries.end();
-            auto first = m_entries.lower_bound(lb);
-            if (first != e) {
-                auto last = m_entries.upper_bound(ub);
-                for (auto i = first; i != last; ++i) {
-                    fun(i->second);
-                }
-                m_entries.erase(first, last);
-            }
-        }
-    }
+    void publish(const actor_ptr& whom,
+                 std::unique_ptr<acceptor> acceptor,
+                 variant_args args                  );
+
+    void unpublish(const actor_ptr& whom);
+
+    actor_ptr remote_actor(variant_args args);
+
+    actor_ptr remote_actor(io_stream_ptr_pair ioptrs, variant_args args);
+
+    inline default_actor_addressing* addressing() { return &m_addressing; }
+
+    void register_peer(const process_information& node, default_peer* ptr);
+
+    default_peer_ptr get_peer(const process_information& node);
+
+    void new_peer(const input_stream_ptr& in,
+                  const output_stream_ptr& out,
+                  const process_information_ptr& node = nullptr);
+
+    void erase_peer(const default_peer_ptr& pptr);
+
+    void continue_writer(const default_peer_ptr& pptr);
 
  private:
 
-    typedef std::tuple<process_information::node_id_type, // node id
-                       std::uint32_t,                     // process id
-                       actor_id>                          // (remote) actor id
-            key_tuple;
+    default_actor_addressing m_addressing;
 
-    struct key_tuple_less {
-        bool operator()(const key_tuple& lhs, const key_tuple& rhs) const;
-    };
-
-    util::shared_spinlock m_lock;
-    std::map<key_tuple, actor_proxy_ptr, key_tuple_less> m_entries;
-
-    actor_proxy_ptr get_impl(const key_tuple& key, bool do_put);
-
+    std::map<actor_ptr,std::vector<default_peer_acceptor_ptr> > m_acceptors;
+    std::map<process_information,default_peer_ptr> m_peers;
 
 };
 
-// get the thread-local cache object
-actor_proxy_cache& get_actor_proxy_cache();
+typedef intrusive_ptr<default_protocol> default_protocol_ptr;
 
-} } // namespace cppa::detail
+} } // namespace cppa::network
 
-#endif // CPPA_ACTOR_PROXY_CACHE_HPP
+#endif // DEFAULT_PROTOCOL_HPP

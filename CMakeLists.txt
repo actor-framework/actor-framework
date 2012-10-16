@@ -65,6 +65,12 @@ if (ENABLE_DEBUG)
 #  set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ()
 
+if (CPPA_LOG_LEVEL)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL}")
+else ()
+  set(CPPA_LOG_LEVEL "0")
+endif()
+
 # set build default build type if not set
 if (CMAKE_BUILD_TYPE)
 else (CMAKE_BUILD_TYPE)
@@ -207,6 +213,7 @@ message("\n====================|  Build Summary  |===================="
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
         "\nDebug mode:        ${ENABLE_DEBUG}"
+        "\nLog level:         ${CPPA_LOG_LEVEL}"
         "\nContext switching: ${CONTEXT_SWITCHING}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"

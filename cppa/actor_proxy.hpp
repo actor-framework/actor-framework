@@ -32,56 +32,51 @@
 #define CPPA_ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/detail/abstract_actor.hpp"
+#include "cppa/weak_intrusive_ptr.hpp"
+#include "cppa/enable_weak_ptr_mixin.hpp"
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
+class actor_proxy_cache;
 
 /**
  * @brief Represents a remote actor.
  */
-class actor_proxy : public actor { };
+class actor_proxy : public enable_weak_ptr_mixin<actor_proxy,actor> {
 
-#else // CPPA_DOCUMENTATION
-
-class actor_proxy : public detail::abstract_actor<actor> {
-
-    typedef abstract_actor<actor> super;
+    typedef enable_weak_ptr_mixin<actor_proxy,actor> super;
 
  public:
 
-    actor_proxy(std::uint32_t mid, const process_information_ptr& parent);
+    /**
+     * @brief Establishes a local link state that's not synchronized back
+     *        to the remote instance.
+     */
+    virtual void local_link_to(const intrusive_ptr<actor>& other) = 0;
 
-    void enqueue(actor* sender, any_tuple msg);
+    /**
+     * @brief Removes a local link state.
+     */
+    virtual void local_unlink_from(const actor_ptr& other) = 0;
 
-    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
+ protected:
 
-    void link_to(const intrusive_ptr<actor>& other);
-
-    // do not cause to send this actor an "UNLINK" message
-    // to the "original" remote actor
-    void local_link_to(const intrusive_ptr<actor>& other);
-
-    void unlink_from(const intrusive_ptr<actor>& other);
-
-    // do not cause to send this actor an "UNLINK" message
-    // to the "original" remote actor
-    void local_unlink_from(const actor_ptr& other);
-
-    bool remove_backlink(const intrusive_ptr<actor>& to);
-
-    bool establish_backlink(const intrusive_ptr<actor>& to);
+    actor_proxy(actor_id mid,
+                const process_information_ptr& pinfo);
 
 };
-
-#endif // CPPA_DOCUMENTATION
 
 /**
  * @brief A smart pointer to an {@link actor_proxy} instance.
  * @relates actor_proxy
  */
 typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
+
+/**
+ * @brief A weak smart pointer to an {@link actor_proxy} instance.
+ * @relates actor_proxy
+ */
+typedef weak_intrusive_ptr<actor_proxy> weak_actor_proxy_ptr;
 
 } // namespace cppa
 

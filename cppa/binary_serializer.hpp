@@ -46,13 +46,15 @@ namespace detail { class binary_writer; }
  */
 class binary_serializer : public serializer {
 
+    typedef serializer super;
+
  public:
 
     /**
      * @brief Creates a binary serializer writing to @p write_buffer.
      * @warning @p write_buffer must be guaranteed to outlive @p this
      */
-    binary_serializer(util::buffer* write_buffer);
+    binary_serializer(util::buffer* write_buffer, actor_addressing* ptr = 0);
 
     void begin_object(const std::string& tname);
 

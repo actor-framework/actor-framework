@@ -28,63 +28,38 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_HPP
-#define IPV4_PEER_HPP
+#include "cppa/network/protocol.hpp"
+#include "cppa/network/middleman.hpp"
 
-#include "cppa/process_information.hpp"
-
-#include "cppa/util/buffer.hpp"
-
-#include "cppa/network/peer.hpp"
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
+#include "cppa/detail/logging.hpp"
 
 namespace cppa { namespace network {
 
-class default_peer_impl : public peer {
+protocol::protocol(middleman* parent) : m_parent(parent) { }
 
-    typedef peer super;
+void protocol::run_later(std::function<void()> fun) {
+    m_parent->run_later([=] { fun(); });
+}
 
- public:
+void protocol::continue_reader(continuable_reader* ptr) {
+    CPPA_LOG_TRACE(CPPA_ARG(ptr));
+    m_parent->continue_reader(ptr);
+}
 
-    default_peer_impl(middleman* parent,
-                      const input_stream_ptr& in,
-                      const output_stream_ptr& out,
-                      process_information_ptr peer_ptr = nullptr);
+void protocol::continue_writer(continuable_reader* ptr) {
+    CPPA_LOG_TRACE(CPPA_ARG(ptr));
+    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    m_parent->continue_writer(ptr);
+}
 
-    continue_reading_result continue_reading();
+void protocol::stop_reader(continuable_reader* ptr) {
+    CPPA_LOG_TRACE(CPPA_ARG(ptr));
+    m_parent->stop_reader(ptr);
+}
 
-    continue_writing_result continue_writing();
-
-    bool enqueue(const addressed_message& msg);
-
- protected:
-
-    ~default_peer_impl();
-
- private:
-
-    enum read_state {
-        // connection just established; waiting for process information
-        wait_for_process_info,
-        // wait for the size of the next message
-        wait_for_msg_size,
-        // currently reading a message
-        read_message
-    };
-
-    input_stream_ptr m_in;
-    output_stream_ptr m_out;
-    read_state m_state;
-    process_information_ptr m_peer;
-    const uniform_type_info* m_meta_msg;
-    bool m_has_unwritten_data;
-
-    util::buffer m_rd_buf;
-    util::buffer m_wr_buf;
-
-};
+void protocol::stop_writer(continuable_reader* ptr) {
+    CPPA_LOG_TRACE(CPPA_ARG(ptr));
+    m_parent->stop_writer(ptr);
+}
 
 } } // namespace cppa::network
-
-#endif // IPV4_PEER_HPP

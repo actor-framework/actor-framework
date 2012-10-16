@@ -28,20 +28,59 @@
 \******************************************************************************/
 
 
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/peer_acceptor.hpp"
+#include <iostream>
+#include <exception>
+
+#include "cppa/to_string.hpp"
+#include "cppa/process_information.hpp"
+
+#include "cppa/network/default_protocol.hpp"
+#include "cppa/network/default_peer.hpp"
+#include "cppa/network/default_peer_acceptor.hpp"
+
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/demangle.hpp"
+
+using namespace std;
 
 namespace cppa { namespace network {
 
-peer_acceptor::peer_acceptor(middleman* mm, native_socket_type fd, const actor_ptr& pa)
-: super(mm, fd, false), m_published_actor(pa) { }
+default_peer_acceptor::default_peer_acceptor(default_protocol* parent,
+                                                       acceptor_uptr aur,
+                                                       const actor_ptr& pa)
+: super(aur->file_handle()), m_parent(parent), m_ptr(std::move(aur)), m_pa(pa) { }
 
-bool peer_acceptor::is_acceptor_of(const actor_ptr& whom) const {
-    return m_published_actor == whom;
-}
-
-void peer_acceptor::add_peer(const peer_ptr& ptr) {
-    parent()->add(ptr);
+continue_reading_result default_peer_acceptor::continue_reading() {
+    CPPA_LOG_TRACE("");
+    for (;;) {
+        option<io_stream_ptr_pair> opt;
+        try { opt = m_ptr->try_accept_connection(); }
+        catch (exception& e) {
+            CPPA_LOG_ERROR(to_verbose_string(e));
+            static_cast<void>(e); // keep compiler happy
+            return read_failure;
+        }
+        if (opt) {
+            auto& pair = *opt;
+            auto& pself = process_information::get();
+            uint32_t process_id = pself->process_id();
+            try {
+                actor_id aid = published_actor()->id();
+                pair.second->write(&aid, sizeof(actor_id));
+                pair.second->write(&process_id, sizeof(uint32_t));
+                pair.second->write(pself->node_id().data(),
+                                   pself->node_id().size());
+                m_parent->new_peer(pair.first, pair.second);
+            }
+            catch (exception& e) {
+                CPPA_LOG_ERROR(to_verbose_string(e));
+                cerr << "*** exception while sending actor and process id; "
+                     << to_verbose_string(e)
+                     << endl;
+            }
+        }
+        else return read_continue_later;
+   }
 }
 
 } } // namespace cppa::network

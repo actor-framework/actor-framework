@@ -28,34 +28,57 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_ACCEPTOR_HPP
-#define IPV4_PEER_ACCEPTOR_HPP
+#ifndef DEFAULT_ACTOR_PROXY_HPP
+#define DEFAULT_ACTOR_PROXY_HPP
 
-#include "cppa/actor.hpp"
+#include "cppa/actor_proxy.hpp"
 
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/peer_acceptor.hpp"
+#include "cppa/network/default_protocol.hpp"
+
+#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa { namespace network {
 
-class default_peer_acceptor_impl : public peer_acceptor {
+class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
 
-    typedef peer_acceptor super;
+    typedef detail::abstract_actor<actor_proxy> super;
 
  public:
 
-    continue_reading_result continue_reading();
+    default_actor_proxy(actor_id mid,
+                        const process_information_ptr& pinfo,
+                        const default_protocol_ptr& parent);
 
-    default_peer_acceptor_impl(middleman* parent,
-                               acceptor_uptr ptr,
-                               const actor_ptr& published_actor);
+    void enqueue(actor* sender, any_tuple msg);
+
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
+
+    void link_to(const intrusive_ptr<actor>& other);
+
+    void unlink_from(const intrusive_ptr<actor>& other);
+
+    bool remove_backlink(const intrusive_ptr<actor>& to);
+
+    bool establish_backlink(const intrusive_ptr<actor>& to);
+
+    void local_link_to(const intrusive_ptr<actor>& other);
+
+    void local_unlink_from(const actor_ptr& other);
+
+ protected:
+
+    ~default_actor_proxy();
 
  private:
 
-    acceptor_uptr m_ptr;
+    void forward_msg(const actor_ptr& sender,
+                     any_tuple msg,
+                     message_id_t mid = message_id_t());
+
+    default_protocol_ptr m_proto;
 
 };
 
-} } // namespace cppa::detail
+} } // namespace cppa::network
 
-#endif // IPV4_PEER_ACCEPTOR_HPP
+#endif // DEFAULT_ACTOR_PROXY_HPP

@@ -28,24 +28,42 @@
 \******************************************************************************/
 
 
-#include <utility>
-#include <iostream>
+#ifndef IPV4_PEER_ACCEPTOR_HPP
+#define IPV4_PEER_ACCEPTOR_HPP
 
-#include "cppa/atom.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/actor_proxy.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/detail/types_array.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/actor.hpp"
 
-using namespace std;
+#include "cppa/network/ipv4_acceptor.hpp"
+#include "cppa/network/continuable_reader.hpp"
 
-namespace cppa {
+namespace cppa { namespace network {
 
-actor_proxy::actor_proxy(actor_id mid, const process_information_ptr& pptr)
-: super(mid, pptr) { }
+class default_protocol;
 
-} // namespace cppa
+class default_peer_acceptor : public continuable_reader {
+
+    typedef continuable_reader super;
+
+ public:
+
+    continue_reading_result continue_reading();
+
+    default_peer_acceptor(default_protocol* parent,
+                          acceptor_uptr ptr,
+                          const actor_ptr& published_actor);
+
+    inline const actor_ptr& published_actor() const { return m_pa; }
+
+ private:
+
+    default_protocol* m_parent;
+    acceptor_uptr m_ptr;
+    actor_ptr m_pa;
+
+};
+
+typedef intrusive_ptr<default_peer_acceptor> default_peer_acceptor_ptr;
+
+} } // namespace cppa::detail
+
+#endif // IPV4_PEER_ACCEPTOR_HPP

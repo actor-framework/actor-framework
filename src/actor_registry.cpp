@@ -38,6 +38,8 @@
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
 
+#include "cppa/detail/logging.hpp"
+
 namespace {
 
 typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
@@ -52,15 +54,19 @@ actor_registry::actor_registry() : m_running(0), m_ids(1) {
 }
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {
+    CPPA_LOG_TRACE("key = " << key);
     shared_guard guard(m_instances_mtx);
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
+        CPPA_LOG_DEBUG("result = " << i->second.first.get());
         return i->second;
     }
+    CPPA_LOG_DEBUG("result = nullptr");
     return {nullptr, exit_reason::not_exited};
 }
 
 void actor_registry::put(actor_id key, const actor_ptr& value) {
+    CPPA_LOG_TRACE("key = " << key << ", ptr = " << value.get());
     bool add_attachable = false;
     if (value != nullptr) {
         shared_guard guard(m_instances_mtx);
@@ -90,6 +96,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
 }
 
 void actor_registry::erase(actor_id key, std::uint32_t reason) {
+    CPPA_LOG_TRACE("key = " << key << ", reason = " << std::hex << reason);
     exclusive_guard guard(m_instances_mtx);
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {

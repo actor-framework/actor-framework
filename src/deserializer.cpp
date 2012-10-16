@@ -37,8 +37,9 @@
 
 namespace cppa {
 
-deserializer::~deserializer() {
-}
+deserializer::deserializer(actor_addressing* aa) : m_addressing(aa) { }
+
+deserializer::~deserializer() { }
 
 deserializer& operator>>(deserializer& d, object& what) {
     std::string tname = d.peek_object();

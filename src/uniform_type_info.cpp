@@ -47,6 +47,7 @@
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/actor_addressing.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -57,7 +58,6 @@
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/detail/actor_proxy_cache.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
@@ -175,66 +175,20 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
 
     static void s_serialize(const actor_ptr& ptr,
                             serializer* sink,
-                            const string& name) {
-        if (ptr == nullptr) {
-            serialize_nullptr(sink);
-        }
-        else {
-            if (ptr->is_proxy() == false) {
-                singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
-            }
-            primitive_variant ptup[3];
-            ptup[0] = ptr->id();
-            ptup[1] = ptr->parent_process().process_id();
-            ptup[2] = to_string(ptr->parent_process().node_id());
-            sink->begin_object(name);
-            sink->write_tuple(3, ptup);
-            sink->end_object();
-        }
+                            const string&) {
+        auto impl = sink->addressing();
+        if (impl) impl->write(sink, ptr);
+        else throw std::runtime_error("unable to serialize actor_ptr: "
+                                      "no actor addressing defined");
     }
 
     static void s_deserialize(actor_ptr& ptrref,
                               deserializer* source,
-                              const string& name) {
-        auto cname = source->seek_object();
-        if (cname != name) {
-            if (cname == s_nullptr_type_name) {
-                deserialize_nullptr(source);
-                ptrref.reset();
-            }
-            else assert_type_name(source, name); // throws
-        }
-        else {
-            primitive_variant ptup[3];
-            primitive_type ptypes[] = { pt_uint32, pt_uint32, pt_u8string };
-            source->begin_object(cname);
-            source->read_tuple(3, ptypes, ptup);
-            source->end_object();
-            const string& nstr = get<string>(ptup[2]);
-            // local actor?
-            auto pinf = process_information::get();
-            if (   pinf->process_id() == get<uint32_t>(ptup[1])
-                && cppa::equal(nstr, pinf->node_id())) {
-                auto id = get<uint32_t>(ptup[0]);
-                ptrref = singleton_manager::get_actor_registry()->get(id);
-                //ptrref = actor::by_id(get<uint32_t>(ptup[0]));
-            }
-            else {
-                /*
-                actor_proxy_cache::key_tuple key;
-                get<0>(key) = get<uint32_t>(ptup[0]);
-                get<1>(key) = get<uint32_t>(ptup[1]);
-                node_id_from_string(nstr, get<2>(key));
-                ptrref = detail::get_actor_proxy_cache().get(key);
-                */
-                process_information::node_id_type nid;
-                node_id_from_string(nstr, nid);
-                auto& cache = detail::get_actor_proxy_cache();
-                ptrref = cache.get_or_put(get<uint32_t>(ptup[0]),
-                                          get<uint32_t>(ptup[1]),
-                                          nid);
-            }
-        }
+                              const string&) {
+        auto impl = source->addressing();
+        if (impl) ptrref = impl->read(source);
+        else throw std::runtime_error("unable to deserialize actor_ptr: "
+                                      "no actor addressing defined");
     }
 
  protected:

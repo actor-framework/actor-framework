@@ -8,6 +8,7 @@
 #include "ping_pong.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/detail/logging.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -110,7 +111,7 @@ void spawn5_server(actor_ptr client, bool inverted) {
         default_case,
         after(chrono::seconds(2)) >> [&] {
             i = 4;
-            cout << "received timeout while waiting for DOWN messages!\n";
+            cout << "timeout while waiting for DOWN messages!\n";
         }
     );}
     // wait for locally spawned reflectors
@@ -217,11 +218,10 @@ int client_part(const vector<string_pair>& args) {
 } // namespace <anonymous>
 
 void verbose_terminate() {
-    try { throw; }
+    try { if (std::uncaught_exception()); throw; }
     catch (std::exception& e) {
         cerr << "terminate called after throwing "
-             << detail::demangle(typeid(e))
-             << ", reason: " << e.what() << endl;
+             << to_verbose_string(e) << endl;
     }
     catch (...) {
         cerr << "terminate called after throwing an unknown exception" << endl;
@@ -246,6 +246,7 @@ int main(int argc, char** argv) {
         }
     }
     CPPA_TEST(test__remote_actor);
+    CPPA_LOGF_TRACE("");
     //auto ping_actor = spawn(ping, 10);
     uint16_t port = 4242;
     bool success = false;
@@ -253,6 +254,7 @@ int main(int argc, char** argv) {
         try {
             publish(self, port, "127.0.0.1");
             success = true;
+            CPPA_LOGF_DEBUG("running on port " << port);
         }
         catch (bind_failure&) {
             // try next port
@@ -267,6 +269,7 @@ int main(int argc, char** argv) {
         // execute client_part() in a separate process,
         // connected via localhost socket
         child = thread([&oss]() {
+            CPPA_LOGF_TRACE("lambda expression calling system()");
             string cmdstr = oss.str();
             if (system(cmdstr.c_str()) != 0) {
                 cerr << "FATAL: command \"" << cmdstr << "\" failed!" << endl;
@@ -279,12 +282,16 @@ int main(int argc, char** argv) {
     }
     //cout << "await SpawnPing message" << endl;
     actor_ptr remote_client;
+    CPPA_LOGF_DEBUG("send 'SpawnPing', expect 'PingPtr'");
     receive (
         on(atom("SpawnPing")) >> [&]() {
             remote_client = self->last_sender();
+            CPPA_LOGF_ERROR_IF(!remote_client, "last_sender() == nullptr");
+            CPPA_LOGF_DEBUG("spawn 10 event-based ping actors");
             reply(atom("PingPtr"), spawn_event_based_ping(10));
         }
     );
+    CPPA_LOGF_DEBUG("wait until spawned ping actors are done");
     await_all_others_done();
     CPPA_CHECK_EQUAL(10, pongs());
     cout << "test remote sync_send" << endl;

@@ -31,9 +31,12 @@
 #ifndef CONTINUABLE_READER_HPP
 #define CONTINUABLE_READER_HPP
 
+#include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
+
+#include "cppa/network/protocol.hpp"
 
 namespace cppa { namespace network {
 
@@ -45,16 +48,16 @@ enum continue_reading_result {
     read_continue_later
 };
 
-class continuable_reader : public ref_counted {
+class continuable_writer;
+
+class continuable_reader : virtual public ref_counted {
 
  public:
 
     /**
      * @brief Returns the file descriptor for incoming data.
      */
-    inline native_socket_type read_handle() const {
-        return m_read_handle;
-    }
+    inline native_socket_type read_handle() const { return m_rd; }
 
     /**
      * @brief Reads from {@link read_handle()}.
@@ -62,36 +65,17 @@ class continuable_reader : public ref_counted {
     virtual continue_reading_result continue_reading() = 0;
 
     /**
-     * @brief Returns @p true if @p this is a {@link peer_acceptor} that
-     *        is assigned to the published actor @p whom.
+     * @return Casts @p this to a continuable_writer or returns @p nullptr.
      */
-    virtual bool is_acceptor_of(const actor_ptr& whom) const;
-
-    /**
-     * @brief Returns true if this is a subtype of {@link peer}, i.e.,
-     *        if @p static_cast<peer*>(this) is well-defined.
-     */
-    inline bool is_peer() const {
-        return m_is_peer;
-    }
+    virtual continuable_writer* as_writer();
 
  protected:
 
-    continuable_reader(middleman* parent, native_socket_type rd, bool is_peer);
-
-    inline middleman* parent() {
-        return m_parent;
-    }
-
-    inline const middleman* parent() const {
-        return m_parent;
-    }
+    continuable_reader(native_socket_type rd);
 
  private:
 
-    bool m_is_peer;
-    middleman* m_parent;
-    native_socket_type m_read_handle;
+    native_socket_type m_rd;
 
 };
 

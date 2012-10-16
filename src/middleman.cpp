@@ -34,6 +34,7 @@
 #include <cstring>
 #include <sstream>
 #include <iostream>
+#include <stdexcept>
 
 #include "cppa/on.hpp"
 #include "cppa/actor.hpp"
@@ -53,27 +54,14 @@
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/input_stream.hpp"
 #include "cppa/network/output_stream.hpp"
+#include "cppa/network/default_protocol.hpp"
 #include "cppa/network/addressed_message.hpp"
-#include "cppa/network/default_peer_impl.hpp"
-#include "cppa/network/default_peer_acceptor_impl.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/actor_proxy_cache.hpp"
 
-//#define VERBOSE_MIDDLEMAN
-
-#ifdef VERBOSE_MIDDLEMAN
-#define DEBUG(arg) {                                                           \
-    ostringstream oss;                                                         \
-    oss << "[process id: "                                                     \
-        << cppa::process_information::get()->process_id()                      \
-        << "] " << arg << endl;                                                \
-    cout << oss.str() << flush;                                                \
-} (void) 0
-#else
-#define DEBUG(unused) ((void) 0)
-#endif
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 //  use epoll event-loop implementation on Linux if not explicitly overriden
 //  by using CPPA_POLL_IMPL, use (default) poll implementation otherwise
@@ -95,16 +83,6 @@ namespace {
 
 const size_t ui32_size = sizeof(uint32_t);
 
-template<typename T, typename... Args>
-void call_ctor(T& var, Args&&... args) {
-    new (&var) T (forward<Args>(args)...);
-}
-
-template<typename T>
-void call_dtor(T& var) {
-    var.~T();
-}
-
 template<class Container, class Element>
 void erase_from(Container& haystack, const Element& needle) {
     typedef typename Container::value_type value_type;
@@ -122,73 +100,27 @@ void erase_from_if(Container& container, const UnaryPredicate& predicate) {
     if (i != last) container.erase(i);
 }
 
-} // namespace <anonmyous>
+class middleman_event {
 
-enum class middleman_message_type {
-    add_peer,
-    publish,
-    unpublish,
-    outgoing_message,
-    shutdown
+    friend class intrusive::single_reader_queue<middleman_event>;
+
+ public:
+
+    template<typename Arg>
+    middleman_event(Arg&& arg) : next(0), fun(forward<Arg>(arg)) { }
+
+    inline void operator()() { fun(); }
+
+ private:
+
+    middleman_event* next;
+    function<void()> fun;
+
 };
 
-struct middleman_message {
-    middleman_message* next;
-    const middleman_message_type type;
-    union {
-        std::pair<io_stream_ptr_pair,process_information_ptr> new_peer;
-        std::pair<std::unique_ptr<acceptor>, actor_ptr> new_published_actor;
-        actor_ptr published_actor;
-        std::pair<process_information_ptr,addressed_message> out_msg;
-    };
+typedef intrusive::single_reader_queue<middleman_event> middleman_queue;
 
-    middleman_message() : next(0), type(middleman_message_type::shutdown) { }
-
-    middleman_message(io_stream_ptr_pair a0, process_information_ptr a1)
-    : next(0), type(middleman_message_type::add_peer) {
-        call_ctor(new_peer, move(a0), move(a1));
-    }
-
-    middleman_message(unique_ptr<acceptor> a0, actor_ptr a1)
-    : next(0), type(middleman_message_type::publish) {
-        call_ctor(new_published_actor, move(a0), move(a1));
-    }
-
-    middleman_message(actor_ptr a0)
-    : next(0), type(middleman_message_type::unpublish) {
-        call_ctor(published_actor, move(a0));
-    }
-
-    middleman_message(process_information_ptr a0, addressed_message a1)
-    : next(0), type(middleman_message_type::outgoing_message) {
-        call_ctor(out_msg, move(a0), move(a1));
-    }
-
-    ~middleman_message() {
-        switch (type) {
-            case middleman_message_type::add_peer:
-                call_dtor(new_peer);
-                break;
-            case middleman_message_type::publish:
-                call_dtor(new_published_actor);
-                break;
-            case middleman_message_type::unpublish:
-                call_dtor(published_actor);
-                break;
-            case middleman_message_type::outgoing_message:
-                call_dtor(out_msg);
-                break;
-            default: break;
-        }
-    }
-
-    template<typename... Args>
-    static inline std::unique_ptr<middleman_message> create(Args&&... args) {
-        return std::unique_ptr<middleman_message>(new middleman_message(std::forward<Args>(args)...));
-    }
-};
-
-typedef intrusive::single_reader_queue<middleman_message> middleman_queue;
+} // namespace <anonymous>
 
 class middleman_impl : public middleman {
 
@@ -196,24 +128,35 @@ class middleman_impl : public middleman {
 
  public:
 
-    middleman_impl() { }
-
-    void publish(std::unique_ptr<acceptor> server, const actor_ptr& aptr) {
-        enqueue_message(middleman_message::create(move(server), aptr));
+    middleman_impl() {
+        m_protocols.insert(make_pair(atom("DEFAULT"),
+                                     new network::default_protocol(this)));
     }
 
-    void add_peer(const io_stream_ptr_pair& io,
-                  const process_information_ptr& node_info) {
-        enqueue_message(middleman_message::create(io, node_info));
+    void add_protocol(const protocol_ptr& impl) {
+        if (!impl) {
+            CPPA_LOG_ERROR("impl == nullptr");
+            throw std::invalid_argument("impl == nullptr");
+        }
+        CPPA_LOG_TRACE("identifier = " << to_string(impl->identifier()));
+        std::lock_guard<util::shared_spinlock> guard(m_protocols_lock);
+        m_protocols.insert(make_pair(impl->identifier(), impl));
     }
 
-    void unpublish(const actor_ptr& whom) {
-        enqueue_message(middleman_message::create(whom));
+    protocol_ptr protocol(atom_value id) {
+        util::shared_lock_guard<util::shared_spinlock> guard(m_protocols_lock);
+        auto i = m_protocols.find(id);
+        return (i != m_protocols.end()) ? i->second : nullptr;
     }
 
-    void enqueue(const process_information_ptr& node,
-                 const addressed_message& msg) {
-        enqueue_message(middleman_message::create(node, msg));
+    void run_later(function<void()> fun) {
+        CPPA_LOG_TRACE("");
+        m_queue._push_back(new middleman_event(move(fun)));
+        atomic_thread_fence(memory_order_seq_cst);
+        uint8_t dummy = 0;
+        if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {
+            CPPA_CRITICAL("cannot write to pipe");
+        }
     }
 
  protected:
@@ -225,11 +168,12 @@ class middleman_impl : public middleman {
         m_pipe_write = pipefds[1];
         detail::fd_util::nonblocking(m_pipe_read, true);
         // start threads
-        m_thread = std::thread([this] { middleman_loop(this); });
+        m_thread = thread([this] { middleman_loop(this); });
     }
 
     void stop() {
-        enqueue_message(middleman_message::create());
+        run_later([this] { this->m_done = true; });
+        //enqueue_message(middleman_message::create());
         m_thread.join();
         close(m_pipe_read);
         close(m_pipe_write);
@@ -237,19 +181,13 @@ class middleman_impl : public middleman {
 
  private:
 
-    std::thread m_thread;
+    thread m_thread;
     native_socket_type m_pipe_read;
     native_socket_type m_pipe_write;
     middleman_queue m_queue;
 
-    void enqueue_message(std::unique_ptr<middleman_message> msg) {
-        m_queue._push_back(msg.release());
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        std::uint8_t dummy = 0;
-        if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {
-            CPPA_CRITICAL("cannot write to pipe");
-        }
-    }
+    util::shared_spinlock m_protocols_lock;
+    map<atom_value,protocol_ptr> m_protocols;
 
 };
 
@@ -263,12 +201,11 @@ class middleman_overseer : public continuable_reader {
 
  public:
 
-    middleman_overseer(middleman* parent, int pipe_fd, middleman_queue& q)
-    : super(parent, pipe_fd, false), m_queue(q) { }
+    middleman_overseer(int pipe_fd, middleman_queue& q)
+    : super(pipe_fd), m_queue(q) { }
 
     continue_reading_result continue_reading() {
-        //DEBUG("middleman_overseer::continue_reading");
-        static constexpr size_t num_dummies = 256;
+        static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
         if (read_result < 0) {
@@ -277,61 +214,18 @@ class middleman_overseer : public continuable_reader {
                 return read_continue_later;
             }
             else {
+                CPPA_LOG_ERROR("cannot read from pipe");
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
         atomic_thread_fence(memory_order_seq_cst);
         for (int i = 0; i < read_result; ++i) {
-            unique_ptr<middleman_message> msg(m_queue.try_pop());
-            if (!msg) { CPPA_CRITICAL("nullptr dequeued"); }
-            switch (msg->type) {
-                case middleman_message_type::add_peer: {
-                    DEBUG("middleman_overseer: add_peer: "
-                          << to_string(*(msg->new_peer.second)));
-                    auto& new_peer = msg->new_peer;
-                    auto& io_ptrs = new_peer.first;
-                    peer_ptr p(new default_peer_impl(parent(),
-                                                     io_ptrs.first,
-                                                     io_ptrs.second,
-                                                     new_peer.second));
-                    parent()->add(p);
-                    parent()->register_peer(*new_peer.second, p);
-                    break;
-                }
-                case middleman_message_type::publish: {
-                    DEBUG("middleman_overseer: publish");
-                    auto& ptrs = msg->new_published_actor;
-                    parent()->add(new default_peer_acceptor_impl(parent(),
-                                                                 move(ptrs.first),
-                                                                 ptrs.second));
-                    break;
-                }
-                case middleman_message_type::unpublish: {
-                    if (msg->published_actor) {
-                        //DEBUG("middleman_overseer: unpublish actor id "
-                        //      << msg->published_actor->id());
-                        auto channel = parent()->acceptor_of(msg->published_actor);
-                        if (channel) parent()->erase(channel);
-                    }
-                    break;
-                }
-                case middleman_message_type::outgoing_message: {
-                    //DEBUG("middleman_overseer: outgoing_message");
-                    auto& target_peer = msg->out_msg.first;
-                    auto& out_msg = msg->out_msg.second;
-                    CPPA_REQUIRE(target_peer != nullptr);
-                    auto p = parent()->get_peer(*target_peer);
-                    if (!p) { DEBUG("message to an unknown peer: "
-                                    << to_string(out_msg)); }
-                    else p->enqueue(out_msg);
-                    break;
-                }
-                case middleman_message_type::shutdown: {
-                    DEBUG("middleman: shutdown");
-                    parent()->quit();
-                    break;
-                }
+            unique_ptr<middleman_event> msg(m_queue.try_pop());
+            if (!msg) {
+                CPPA_LOG_ERROR("nullptr dequeued");
+                CPPA_CRITICAL("nullptr dequeued");
             }
+            (*msg)();
         }
         return read_continue_later;
     }
@@ -354,54 +248,166 @@ static constexpr event_bitmask error = 0x04;
 
 } // namespace event
 
-typedef std::tuple<native_socket_type,continuable_reader_ptr,event_bitmask>
-        fd_meta_info;
+inline const char* eb2str(event_bitmask e) {
+    switch (e) {
+        default: return "INVALID";
+        case event::none:  return "event::none";
+        case event::read:  return "event::read";
+        case event::write: return "event::write";
+        case event::both:  return "event::both";
+        case event::error: return "event::error";
+    }
+}
+
+struct fd_meta_info {
+    native_socket_type fd;
+    continuable_reader_ptr ptr;
+    event_bitmask mask;
+    fd_meta_info(native_socket_type a0,
+                 const continuable_reader_ptr& a1,
+                 event_bitmask a2)
+    : fd(a0), ptr(a1), mask(a2) { }
+};
+
+enum class fd_meta_event { add, erase, mod };
+
+struct fd_less {
+    inline bool operator()(const fd_meta_info& lhs, native_socket_type rhs) const {
+        return lhs.fd < rhs;
+    }
+};
 
 class middleman_event_handler_base {
 
  public:
 
+    typedef vector<fd_meta_info> vector_type;
+
     virtual ~middleman_event_handler_base() { }
 
-    void add_later(const continuable_reader_ptr& ptr, event_bitmask e) {
-        append(m_additions, ptr, e);
+    void alteration(const continuable_reader_ptr& ptr, event_bitmask e, fd_meta_event etype) {
+        native_socket_type fd;
+        switch (e) {
+            case event::read:
+                fd = ptr->read_handle();
+                break;
+            case event::write: {
+                auto wptr = ptr->as_writer();
+                if (wptr) fd = wptr->write_handle();
+                else {
+                    CPPA_LOG_ERROR("ptr->as_writer() returned nullptr");
+                    return;
+                }
+                break;
+            }
+            case event::both: {
+                fd = ptr->read_handle();
+                auto wptr = ptr->as_writer();
+                if (wptr) {
+                    auto wrfd = wptr->write_handle();
+                    if (fd != wrfd) {
+                        CPPA_LOG_DEBUG("read_handle != write_handle, split "
+                                       "into two function calls");
+                        // split into two function calls
+                        e = event::read;
+                        alteration(ptr, event::write, etype);
+                    }
+                }
+                else {
+                    CPPA_LOG_ERROR("ptr->as_writer() returned nullptr");
+                    return;
+                }
+                break;
+            }
+            default:
+                CPPA_LOG_ERROR("invalid bitmask");
+                return;
+        }
+        /*
+        auto last = end(m_meta);
+        auto iter = find_meta(fd);
+        CPPA_LOG_ERROR_IF(iter == last && e == event::none,
+                          "nothing to delete (no match)");
+        event_bitmask old = (iter != last) ? iter->mask : event::none;
+        auto next = cm(old, e);
+        if (next != old) {
+            m_alterations.emplace_back(fd, ptr, next);
+        }
+        */
+        m_alterations.emplace_back(fd_meta_info(fd, ptr, e), etype);
     }
 
-    void erase_later(const continuable_reader_ptr& ptr, event_bitmask e) {
-        append(m_subtractions, ptr, e);
+    void add(const continuable_reader_ptr& ptr, event_bitmask e) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
+        alteration(ptr, e, fd_meta_event::add);
+    }
+
+    void erase(const continuable_reader_ptr& ptr, event_bitmask e) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
+        alteration(ptr, e, fd_meta_event::erase);
+    }
+
+    inline event_bitmask next_bitmask(event_bitmask old, event_bitmask arg, fd_meta_event op) {
+        CPPA_REQUIRE(op == fd_meta_event::add || op == fd_meta_event::erase);
+        return (op == fd_meta_event::add) ? old | arg : old & ~arg;
+    }
+
+    void update() {
+        CPPA_LOG_TRACE("");
+        for (auto& elem_pair : m_alterations) {
+            auto& elem = elem_pair.first;
+            auto old = event::none;
+            auto last = end(m_meta);
+            auto iter = lower_bound(begin(m_meta), last, elem.fd, m_less);
+            if (iter != last) old = iter->mask;
+            auto mask = next_bitmask(old, elem.mask, elem_pair.second);
+            auto ptr = elem.ptr.get();
+            CPPA_LOG_DEBUG("new bitmask for "
+                           << elem.ptr.get() << ": " << eb2str(mask));
+            if (iter == last || iter->fd != elem.fd) {
+                CPPA_LOG_INFO_IF(mask == event::none,
+                                 "cannot erase " << ptr
+                                 << " (not found in m_meta)");
+                if (mask != event::none) {
+                    m_meta.insert(iter, elem);
+                    handle_event(fd_meta_event::add, elem.fd,
+                                 event::none, mask, ptr);
+                }
+            }
+            else if (iter->fd == elem.fd) {
+                CPPA_REQUIRE(iter->ptr == elem.ptr);
+                if (mask == event::none) {
+                    m_meta.erase(iter);
+                    handle_event(fd_meta_event::erase, elem.fd, old, mask, ptr);
+                }
+                else {
+                    iter->mask = mask;
+                    handle_event(fd_meta_event::mod, elem.fd, old, mask, ptr);
+                }
+            }
+        }
+        m_alterations.clear();
     }
 
  protected:
 
-    vector<fd_meta_info> m_additions;
-    vector<fd_meta_info> m_subtractions;
+    virtual void handle_event(fd_meta_event me,
+                              native_socket_type fd,
+                              event_bitmask old_bitmask,
+                              event_bitmask new_bitmask,
+                              continuable_reader* ptr) = 0;
+
+    fd_less m_less;
+    vector_type m_meta; // this vector is *always* sorted
+
+    vector<pair<fd_meta_info,fd_meta_event> > m_alterations;
 
  private:
 
-    void append(vector<fd_meta_info>& vec, const continuable_reader_ptr& ptr, event_bitmask e) {
-        CPPA_REQUIRE(ptr != nullptr);
-        CPPA_REQUIRE(e == event::read || e == event::write || e == event::both);
-        if (e == event::read || (e == event::both && !ptr->is_peer())) {
-            // ignore event::write unless ptr->is_peer
-            vec.emplace_back(ptr->read_handle(), ptr, event::read);
-        }
-        else if (e == event::write) {
-            CPPA_REQUIRE(ptr->is_peer());
-            auto dptr = static_cast<peer*>(ptr.get());
-            vec.emplace_back(dptr->write_handle(), ptr, event::write);
-        }
-        else { // e == event::both && ptr->is_peer()
-            CPPA_REQUIRE(ptr->is_peer());
-            CPPA_REQUIRE(e == event::both);
-            auto dptr = static_cast<peer*>(ptr.get());
-            auto rd = dptr->read_handle();
-            auto wr = dptr->write_handle();
-            if (rd == wr) vec.emplace_back(wr, ptr, event::both);
-            else {
-                vec.emplace_back(wr, ptr, event::write);
-                vec.emplace_back(rd, ptr, event::read);
-            }
-        }
+    vector_type::iterator find_meta(native_socket_type fd) {
+        auto last = end(m_meta);
+        auto iter = lower_bound(begin(m_meta), last, fd, m_less);
+        return (iter != last && iter->fd == fd) ? iter : last;
     }
 
 };
@@ -431,7 +437,7 @@ class event_iterator_impl {
     }
 
     inline continue_writing_result continue_writing() {
-        return static_cast<peer*>(ptr())->continue_writing();
+        return ptr()->as_writer()->continue_writing();
     }
 
     inline bool equal_to(const event_iterator_impl& other) const {
@@ -463,10 +469,8 @@ inline bool operator!=(const event_iterator_impl<Iter,Access>& lhs,
 
 #ifdef CPPA_POLL_IMPL
 
-typedef vector<pollfd>       pollfd_vector;
-typedef vector<fd_meta_info> fd_meta_vector;
-
-typedef pair<pollfd_vector::iterator,fd_meta_vector::iterator> pfd_iterator;
+typedef pair<vector<pollfd>::iterator,vector<fd_meta_info>::iterator>
+        pfd_iterator;
 
 #ifndef POLLRDHUP
 #define POLLRDHUP POLLHUP
@@ -474,10 +478,7 @@ typedef pair<pollfd_vector::iterator,fd_meta_vector::iterator> pfd_iterator;
 
 struct pfd_access {
 
-    inline void advance(pfd_iterator& i) const {
-        ++(i.first);
-        ++(i.second);
-    }
+    inline void advance(pfd_iterator& i) const { ++(i.first); ++(i.second); }
 
     inline event_bitmask type(const pfd_iterator& i) const {
         auto revents = i.first->revents;
@@ -493,7 +494,7 @@ struct pfd_access {
     }
 
     inline continuable_reader* ptr(pfd_iterator& i) const {
-        return std::get<1>(*(i.second)).get();
+        return i.second->ptr.get();
     }
 
     inline bool equal(const pfd_iterator& lhs, const pfd_iterator& rhs) const {
@@ -505,6 +506,21 @@ struct pfd_access {
 };
 
 typedef event_iterator_impl<pfd_iterator,pfd_access> event_iterator;
+
+struct pollfd_less {
+    inline bool operator()(const pollfd& lhs, native_socket_type rhs) const {
+        return lhs.fd < rhs;
+    }
+};
+
+short to_poll_bitmask(event_bitmask mask) {
+    switch (mask) {
+        case event::read:  return POLLIN;
+        case event::write: return POLLOUT;
+        case event::both:  return (POLLIN|POLLOUT);
+        default: CPPA_CRITICAL("invalid event bitmask");
+    }
+}
 
 class middleman_event_handler : public middleman_event_handler_base {
 
@@ -519,7 +535,8 @@ class middleman_event_handler : public middleman_event_handler_base {
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         for (;;) {
             auto presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
-            DEBUG("poll() on " << m_pollset.size() << " sockets returned " << presult);
+            CPPA_LOG_DEBUG("poll() on " << num_sockets()
+                           << " sockets returned " << presult);
             if (presult < 0) {
                 switch (errno) {
                     // a signal was caught
@@ -528,6 +545,7 @@ class middleman_event_handler : public middleman_event_handler_base {
                         break;
                     }
                     case ENOMEM: {
+                        CPPA_LOG_ERROR("poll() failed for reason ENOMEM");
                         // there's not much we can do other than try again
                         // in hope someone releases memory
                         //this_thread::yield();
@@ -544,69 +562,59 @@ class middleman_event_handler : public middleman_event_handler_base {
         }
     }
 
-    void update() {
-        auto set_pollfd_events = [](pollfd& pfd, event_bitmask mask) {
-            switch (mask) {
-                case event::read:  pfd.events = POLLIN;           break;
-                case event::write: pfd.events = POLLOUT;          break;
-                case event::both:  pfd.events = (POLLIN|POLLOUT); break;
-                default: CPPA_CRITICAL("invalid event bitmask");
-            }
-        };
-        // first add, then erase (erase has higher priority)
-        for (auto& add : m_additions) {
-            CPPA_REQUIRE((std::get<2>(add) & event::both) != event::none);
-            auto i = find_if(begin(m_meta), end(m_meta), [&](const fd_meta_info& other) {
-                return std::get<0>(add) == std::get<0>(other);
-            });
-            pollfd* pfd;
-            event_bitmask mask = std::get<2>(add);
-            if (i != end(m_meta)) {
-                CPPA_REQUIRE(std::get<1>(*i) == std::get<1>(add));
-                mask |= std::get<2>(*i);
-                pfd = &(m_pollset[distance(begin(m_meta), i)]);
-            }
-            else {
+ protected:
+
+    void handle_event(fd_meta_event me,
+                      native_socket_type fd,
+                      event_bitmask old_bitmask,
+                      event_bitmask new_bitmask,
+                      continuable_reader*) {
+        static_cast<void>(old_bitmask); // no need for it
+        switch (me) {
+            case fd_meta_event::add: {
                 pollfd tmp;
-                tmp.fd = std::get<0>(add);
+                tmp.fd = fd;
+                tmp.events = to_poll_bitmask(new_bitmask);
                 tmp.revents = 0;
-                tmp.events = 0;
-                m_pollset.push_back(tmp);
-                m_meta.push_back(add);
-                pfd = &(m_pollset.back());
+                m_pollset.insert(lb(fd), tmp);
+                CPPA_LOG_DEBUG("inserted new element");
+                break;
             }
-            set_pollfd_events(*pfd, mask);
-        }
-        m_additions.clear();
-        for (auto& sub : m_subtractions) {
-            CPPA_REQUIRE((std::get<2>(sub) & event::both) != event::none);
-            auto i = find_if(begin(m_meta), end(m_meta), [&](const fd_meta_info& other) {
-                return std::get<0>(sub) == std::get<0>(other);
-            });
-            if (i != end(m_meta)) {
-                auto pi = m_pollset.begin();
-                advance(pi, distance(begin(m_meta), i));
-                auto mask = std::get<2>(*i) & ~(std::get<2>(sub));
-                switch (mask) {
-                    case event::none: {
-                        m_meta.erase(i);
-                        m_pollset.erase(pi);
-                        break;
-                    }
-                    default: set_pollfd_events(*pi, mask);
+            case fd_meta_event::erase: {
+                auto last = end(m_pollset);
+                auto iter = lb(fd);
+                CPPA_LOG_ERROR_IF(iter == last || iter->fd != fd,
+                                  "m_meta and m_pollset out of sync; "
+                                  "no element found for fd (cannot erase)");
+                if (iter != last && iter->fd == fd) {
+                    CPPA_LOG_DEBUG("erased element");
+                    m_pollset.erase(iter);
                 }
+                break;
+            }
+            case fd_meta_event::mod: {
+                auto last = end(m_pollset);
+                auto iter = lb(fd);
+                CPPA_LOG_ERROR_IF(iter == last || iter->fd != fd,
+                                  "m_meta and m_pollset out of sync; "
+                                  "no element found for fd (cannot erase)");
+                if (iter != last && iter->fd == fd) {
+                    CPPA_LOG_DEBUG("updated bitmask");
+                    iter->events = to_poll_bitmask(new_bitmask);
+                }
+                break;
             }
         }
-        m_subtractions.clear();
     }
 
  private:
 
-                              // _                                           ***
-    pollfd_vector  m_pollset; //  \                                           **
-                              //   > these two vectors are always in sync      *
-    fd_meta_vector m_meta;    // _/                                           **
-                              //                                             ***
+    vector<pollfd>::iterator lb(native_socket_type fd) {
+        return lower_bound(begin(m_pollset), end(m_pollset), fd, m_pless);
+    }
+
+    vector<pollfd> m_pollset; // always in sync with m_meta
+    pollfd_less   m_pless;
 
 };
 
@@ -659,15 +667,15 @@ class middleman_event_handler : public middleman_event_handler_base {
         m_events.resize(64);
     }
 
-    size_t num_sockets() const { return m_epoll_data.size(); }
+    size_t num_sockets() const { return m_meta.size(); }
 
     pair<event_iterator,event_iterator> poll() {
-        CPPA_REQUIRE(m_epoll_data.empty() == false);
+        CPPA_REQUIRE(m_meta.empty() == false);
         for (;;) {
-            DEBUG("epoll_wait on " << m_epoll_data.size() << " sockets");
+            CPPA_LOG_DEBUG("epoll_wait on " << num_sockets() << " sockets");
             auto presult = epoll_wait(m_epollfd, m_events.data(),
                                       (int) m_events.size(), -1);
-            DEBUG("epoll_wait returned " << presult);
+            CPPA_LOG_DEBUG("epoll_wait returned " << presult);
             if (presult < 0) {
                 // try again unless critical error occured
                 presult = 0;
@@ -692,109 +700,61 @@ class middleman_event_handler : public middleman_event_handler_base {
         }
     }
 
-    void update() {
-        handle_vec(m_additions, EPOLL_CTL_ADD);
-        handle_vec(m_subtractions, EPOLL_CTL_DEL);
-    }
+ protected:
 
- private:
 
-    void handle_vec(vector<fd_meta_info>& vec, int eop) {
-        for (auto& element : vec) {
-            auto mask = std::get<2>(element);
-            CPPA_REQUIRE(mask == event::write || mask == event::read || mask == event::both);
-            auto ptr = std::get<1>(element).get();
-            switch (mask) {
-                case event::read:
-                    epoll_op(eop, ptr->read_handle(), EPOLLIN, ptr);
-                    break;
-                case event::write: {
-                    CPPA_REQUIRE(ptr->is_peer());
-                    auto dptr = static_cast<peer*>(ptr);
-                    epoll_op(eop, dptr->write_handle(), EPOLLOUT, dptr);
-                    break;
-                }
-                case event::both: {
-                    if (ptr->is_peer()) {
-                        auto dptr = static_cast<peer*>(ptr);
-                        auto rd = dptr->read_handle();
-                        auto wr = dptr->write_handle();
-                        if (rd == wr) epoll_op(eop, wr, EPOLLIN|EPOLLOUT, dptr);
-                        else {
-                            epoll_op(eop, rd, EPOLLIN, ptr);
-                            epoll_op(eop, wr, EPOLLOUT, dptr);
-                        }
-                    }
-                    else epoll_op(eop, ptr->read_handle(), EPOLLIN, ptr);
-                    break;
-                }
-                default: CPPA_CRITICAL("invalid event mask found in handle_vec");
-            }
-        }
-        vec.clear();
-    }
-
-    // operation: EPOLL_CTL_ADD or EPOLL_CTL_DEL
-    // mask: EPOLLIN, EPOLLOUT or (EPOLLIN | EPOLLOUT)
-    void epoll_op(int operation, int fd, uint32_t mask, continuable_reader* ptr) {
-        CPPA_REQUIRE(ptr != nullptr);
-        CPPA_REQUIRE(operation == EPOLL_CTL_ADD || operation == EPOLL_CTL_DEL);
-        CPPA_REQUIRE(mask == EPOLLIN || mask == EPOLLOUT || mask == (EPOLLIN|EPOLLOUT));
+    void handle_event(fd_meta_event me,
+                      native_socket_type fd,
+                      event_bitmask old_bitmask,
+                      event_bitmask new_bitmask,
+                      continuable_reader* ptr) {
+        static_cast<void>(old_bitmask); // no need for it
+        int operation;
         epoll_event ee;
-        // also fire event on peer shutdown for input operations
-        ee.events = (mask & EPOLLIN) ? (mask | EPOLLRDHUP) : mask;
         ee.data.ptr = ptr;
-        // check wheter fd is already registered to epoll
-        auto iter = m_epoll_data.find(fd);
-        if (iter != end(m_epoll_data)) {
-            CPPA_REQUIRE(ee.data.ptr == iter->second.data.ptr);
-            if (operation == EPOLL_CTL_ADD) {
-                if (mask == iter->second.events) {
-                    // nothing to do here, fd is already registered with
-                    // correct bitmask
-                    return;
-                }
-                // modify instead
+        switch (new_bitmask) {
+            case event::none:
+                CPPA_REQUIRE(me == fd_meta_event::erase);
+                ee.events = 0;
+                break;
+            case event::read:
+                ee.events = EPOLLIN | EPOLLRDHUP;
+                break;
+            case event::write:
+                ee.events = EPOLLOUT;
+            case event::both:
+                ee.events = EPOLLIN | EPOLLRDHUP | EPOLLOUT;
+                break;
+            default: CPPA_CRITICAL("invalid event bitmask");
+        }
+        switch (me) {
+            case fd_meta_event::add:
+                operation = EPOLL_CTL_ADD;
+                break;
+            case fd_meta_event::erase:
+                operation = EPOLL_CTL_DEL;
+                break;
+            case fd_meta_event::mod:
                 operation = EPOLL_CTL_MOD;
-                ee.events |= iter->second.events; // new bitmask
-                iter->second.events = ee.events;  // update bitmask in map
-            }
-            else if (operation == EPOLL_CTL_DEL) {
-                // check wheter we have fd registered for other events
-                ee.events = iter->second.events & ~(ee.events);
-                if (ee.events != 0) {
-                    iter->second.events = ee.events; // update bitmask in map
-                    operation = EPOLL_CTL_MOD;       // modify instead
-                }
-                else m_epoll_data.erase(iter); // erase from map as well
-            }
-        }
-        else if (operation == EPOLL_CTL_DEL) {
-            // nothing to delete here
-            return;
-        }
-        else { // operation == EPOLL_CTL_ADD
-            CPPA_REQUIRE(operation == EPOLL_CTL_ADD);
-            m_epoll_data.insert(make_pair(fd, ee));
+                break;
+            default: CPPA_CRITICAL("invalid fd_meta_event");
         }
         if (epoll_ctl(m_epollfd, operation, fd, &ee) < 0) {
             switch (errno) {
                 // supplied file descriptor is already registered
                 case EEXIST: {
-                    // shouldn't happen, but no big deal
-                    cerr << "*** warning: file descriptor registered twice\n"
-                         << flush;
+                    CPPA_LOG_ERROR("file descriptor registered twice");
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    cerr << "*** warning: cannot delete file descriptor "
-                            "because it isn't registered\n"
-                         << flush;
+                    CPPA_LOG_ERROR("cannot delete file descriptor "
+                                   "because it isn't registered");
                     break;
                 }
                 default: {
+                    CPPA_LOG_ERROR(strerror(errno));
                     perror("epoll_ctl() failed");
                     CPPA_CRITICAL("epoll_ctl() failed");
                 }
@@ -804,7 +764,6 @@ class middleman_event_handler : public middleman_event_handler_base {
 
     int m_epollfd;
     vector<epoll_event> m_events;
-    map<native_socket_type,epoll_event> m_epoll_data;
 
 };
 
@@ -814,49 +773,36 @@ middleman::middleman() : m_done(false), m_handler(new middleman_event_handler){}
 
 middleman::~middleman() { }
 
-void middleman::register_peer(const process_information& node,
-                              const peer_ptr& ptr) {
-    auto& ptrref = m_peers[node];
-    if (ptrref) { DEBUG("peer already defined!"); }
-    else ptrref = ptr;
+void middleman::continue_writer(const continuable_reader_ptr& ptr) {
+    CPPA_LOG_TRACE("ptr = " << ptr.get());
+    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    m_handler->add(ptr, event::write);
 }
 
-void middleman::continue_writing_later(const peer_ptr& ptr) {
-    m_handler->add_later(ptr, event::write);
+void middleman::stop_writer(const continuable_reader_ptr& ptr) {
+    CPPA_LOG_TRACE("ptr = " << ptr.get());
+    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    m_handler->erase(ptr, event::write);
 }
 
-void middleman::add(const continuable_reader_ptr& what) {
-    m_readers.push_back(what);
-    m_handler->add_later(what, event::read);
+void middleman::continue_reader(const continuable_reader_ptr& ptr) {
+    CPPA_LOG_TRACE("ptr = " << ptr.get());
+    m_readers.push_back(ptr);
+    m_handler->add(ptr, event::read);
 }
 
-void middleman::erase(const continuable_reader_ptr& what) {
-    m_handler->erase_later(what, event::both);
-    erase_from(m_readers, what);
-    erase_from_if(m_peers, [=](const map<process_information,peer_ptr>::value_type& kvp) {
-        return kvp.second == what;
-    });
-}
-
-continuable_reader_ptr middleman::acceptor_of(const actor_ptr& whom) {
-    auto e = end(m_readers);
-    auto i = find_if(begin(m_readers), e, [=](const continuable_reader_ptr& crp) {
-        return crp->is_acceptor_of(whom);
-    });
-    return (i != e) ? *i : nullptr;
-}
-
-peer_ptr middleman::get_peer(const process_information& node) {
-    auto e = end(m_peers);
-    auto i = m_peers.find(node);
-    return (i != e) ? i->second : nullptr;
+void middleman::stop_reader(const continuable_reader_ptr& ptr) {
+    CPPA_LOG_TRACE("ptr = " << ptr.get());
+    m_handler->erase(ptr, event::read);
+    erase_from(m_readers, ptr);
 }
 
 void middleman_loop(middleman_impl* impl) {
     middleman_event_handler* handler = impl->m_handler.get();
-    DEBUG("run middleman loop");
+    CPPA_LOGF_TRACE("run middleman loop, node: "
+                    << to_string(*process_information::get()));
     handler->init();
-    impl->add(new middleman_overseer(impl, impl->m_pipe_read, impl->m_queue));
+    impl->continue_reader(new middleman_overseer(impl->m_pipe_read, impl->m_queue));
     handler->update();
     while (!impl->done()) {
         auto iters = handler->poll();
@@ -867,45 +813,51 @@ void middleman_loop(middleman_impl* impl) {
                 case event::none: break;
                 case event::both:
                 case event::write: {
-                    DEBUG("handle event::write");
+                    CPPA_LOGF_DEBUG("handle event::write");
                     switch (i->continue_writing()) {
                         case write_closed:
                         case write_failure:
-                            impl->erase(i->ptr());
+                            impl->stop_writer(i->ptr());
+                            CPPA_LOGF_DEBUG("writer removed because of error");
                             break;
                         case write_done:
-                            handler->erase_later(i->ptr(), event::write);
+                            impl->stop_writer(i->ptr());
                             break;
                         default: break;
                     }
                     if (mask == event::write) break;
                     // else: fall through
-                    DEBUG("handle event::both; fall through");
+                    CPPA_LOGF_DEBUG("handle event::both; fall through");
                 }
                 case event::read: {
-                    DEBUG("handle event::read");
+                    CPPA_LOGF_DEBUG("handle event::read");
                     switch (i->continue_reading()) {
                         case read_closed:
                         case read_failure:
-                            impl->erase(i->ptr());
+                            impl->stop_reader(i->ptr());
+                            CPPA_LOGF_DEBUG("remove peer");
                             break;
                         default: break;
                     }
                     break;
                 }
                 case event::error: {
-                    impl->erase(i->ptr());
-                    // calls handler->erase_later(i->ptr(), event::both);
+                    impl->stop_reader(i->ptr());
+                    impl->stop_writer(i->ptr());
+                    CPPA_LOGF_DEBUG("event::error; remove peer");
                 }
             }
             i->handled();
         }
         handler->update();
     }
-    DEBUG("flush outgoing messages");
+    CPPA_LOGF_DEBUG("event loop done, erase all readers");
     // make sure to write everything before shutting down
-    for (auto ptr : impl->m_readers) { handler->erase_later(ptr, event::read); }
+    for (auto ptr : impl->m_readers) { handler->erase(ptr, event::read); }
     handler->update();
+    CPPA_LOGF_DEBUG("flush outgoing messages");
+    CPPA_LOGF_DEBUG_IF(handler->num_sockets() == 0,
+                       "nothing to flush, no writer left");
     while (handler->num_sockets() > 0) {
         auto iters = handler->poll();
         for (auto i = iters.first; i != iters.second; ++i) {
@@ -915,18 +867,27 @@ void middleman_loop(middleman_impl* impl) {
                         case write_closed:
                         case write_failure:
                         case write_done:
-                            handler->erase_later(i->ptr(), event::write);
+                            handler->erase(i->ptr(), event::write);
                             break;
                         default: break;
                     }
                     break;
-                default: CPPA_CRITICAL("expected event::write only "
-                                       "during shutdown phase");
+                case event::error:
+                    handler->erase(i->ptr(), event::both);
+                    break;
+                default:
+                    CPPA_LOGF_ERROR("expected event::write only "
+                                    "during shutdown phase");
+                    handler->erase(i->ptr(), event::read);
+                    break;
             }
         }
         handler->update();
     }
-    DEBUG("middleman loop done");
+    CPPA_LOGF_DEBUG("clear all containers");
+    //impl->m_peers.clear();
+    impl->m_readers.clear();
+    CPPA_LOGF_DEBUG("middleman loop done");
 }
 
 } } // namespace cppa::detail

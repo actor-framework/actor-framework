@@ -125,13 +125,13 @@ struct pt_reader {
 
 } // namespace <anonmyous>
 
-binary_deserializer::binary_deserializer(const char* buf, size_t buf_size)
-    : pos(buf), end(buf + buf_size) {
-}
+binary_deserializer::binary_deserializer(const char* buf, size_t buf_size,
+                                         actor_addressing* addressing)
+: super(addressing), pos(buf), end(buf + buf_size) { }
 
-binary_deserializer::binary_deserializer(const char* bbegin, const char* bend)
-    : pos(bbegin), end(bend) {
-}
+binary_deserializer::binary_deserializer(const char* bbegin, const char* bend,
+                                         actor_addressing* addressing)
+: super(addressing), pos(bbegin), end(bend) { }
 
 std::string binary_deserializer::seek_object() {
     std::string result;

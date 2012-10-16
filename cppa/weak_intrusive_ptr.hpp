@@ -31,15 +31,18 @@
 #ifndef CPPA_WEAK_INTRUSIVE_PTR_HPP
 #define CPPA_WEAK_INTRUSIVE_PTR_HPP
 
+#include <cstddef>
+
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
 template<typename T>
-class weak_intrusive_ptr {
+class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
 
-    typedef T::anchor anchor_type;
+    typedef typename T::weak_ptr_anchor anchor_type;
 
  public:
 
@@ -64,6 +67,18 @@ class weak_intrusive_ptr {
      */
     bool expired() const {
         return (m_anchor) ? m_anchor->expired() : true;
+    }
+
+    inline ptrdiff_t compare(const weak_intrusive_ptr& other) const {
+        return m_anchor.compare(other.m_anchor);
+    }
+
+    /**
+     * @brief Queries whether this weak pointer is invalid, i.e., does not
+     *        point to an instance.
+     */
+    inline bool invalid() const {
+        return m_anchor == nullptr;
     }
 
  private:

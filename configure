@@ -37,6 +37,12 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --enable-debug              compile in debugging mode
                                 (always sets --build-type=Debug)
     --enable-perftools          use Google perftools
+    --with-cppa-log-level=LVL   sets the debugging output, possible values:
+                                  - WARNING
+                                  - INFO
+                                  - DEBUG
+                                  - TRACE
+                                (implicitly sets --enable-debug)
 
   Platform-Dependent Adjustments:
     --disable-context-switching compile libcppa without context-switching actors
@@ -145,6 +151,28 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_INSTALL_PREFIX PATH $optarg
             ;;
         --enable-debug)
+            append_cache_entry ENABLE_DEBUG BOOL true
+            ;;
+        --with-cppa-log-level=*)
+            level=$(echo "$optarg" | tr '[:lower:]' '[:upper:]')
+            case $level in
+                WARNING)
+                    append_cache_entry CPPA_LOG_LEVEL STRING 1
+                    ;;
+                INFO)
+                    append_cache_entry CPPA_LOG_LEVEL STRING 2
+                    ;;
+                DEBUG)
+                    append_cache_entry CPPA_LOG_LEVEL STRING 3
+                    ;;
+                TRACE)
+                    append_cache_entry CPPA_LOG_LEVEL STRING 4
+                    ;;
+                *)
+                    echo "Invalid log level '$level'. Try '$0 --help' to see valid values."
+                    exit 1
+                    ;;
+            esac
             append_cache_entry ENABLE_DEBUG BOOL true
             ;;
         --disable-context-switching)

@@ -41,13 +41,15 @@ namespace cppa {
  */
 class binary_deserializer : public deserializer {
 
-    const char* pos;
-    const char* end;
+    typedef deserializer super;
 
  public:
 
-    binary_deserializer(const char* buf, size_t buf_size);
-    binary_deserializer(const char* begin, const char* end);
+    binary_deserializer(const char* buf, size_t buf_size,
+                        actor_addressing* addressing = nullptr);
+
+    binary_deserializer(const char* begin, const char* end,
+                        actor_addressing* addressing = nullptr);
 
     std::string seek_object();
     std::string peek_object();
@@ -60,6 +62,11 @@ class binary_deserializer : public deserializer {
                     const primitive_type* ptypes,
                     primitive_variant* storage);
     void read_raw(size_t num_bytes, void* storage);
+
+ private:
+
+    const char* pos;
+    const char* end;
 
 };
 
