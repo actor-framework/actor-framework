@@ -47,6 +47,8 @@
 #include "cppa/util/is_primitive.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
+#include "cppa/network/default_actor_addressing.hpp"
+
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
@@ -146,6 +148,8 @@ int main() {
 
     announce(typeid(raw_struct), new raw_struct_type_info);
 
+    network::default_actor_addressing addressing;
+
     auto oarr = new detail::object_array;
     oarr->push_back(object::from(static_cast<uint32_t>(42)));
     oarr->push_back(object::from("foo"  ));
@@ -168,9 +172,9 @@ int main() {
         raw_struct rs;
         rs.str = "Lorem ipsum dolor sit amet.";
         util::buffer wr_buf;
-        binary_serializer bs(&wr_buf);
+        binary_serializer bs(&wr_buf, &addressing);
         bs << rs;
-        binary_deserializer bd(wr_buf.data(), wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
         raw_struct rs2;
         uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
         CPPA_CHECK_EQUAL(rs.str, rs2.str);
@@ -182,13 +186,13 @@ int main() {
     }
     catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
 
-    {
+    try {
         auto ttup = make_any_tuple(1, 2, actor_ptr(self));
         util::buffer wr_buf;
-        binary_serializer bs(&wr_buf);
+        binary_serializer bs(&wr_buf, &addressing);
         bs << ttup;
         bs << ttup;
-        binary_deserializer bd(wr_buf.data(), wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
         any_tuple ttup2;
         any_tuple ttup3;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
@@ -197,28 +201,29 @@ int main() {
         CPPA_CHECK(ttup  == ttup3);
         CPPA_CHECK(ttup2 == ttup3);
     }
-    {
+    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+
+    try {
         // serialize b1 to buf
         util::buffer wr_buf;
-        binary_serializer bs(&wr_buf);
+        binary_serializer bs(&wr_buf, &addressing);
         bs << atuple1;
         // deserialize b2 from buf
-        binary_deserializer bd(wr_buf.data(), wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
         any_tuple atuple2;
         uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
-        try {
-            auto opt = tuple_cast<uint32_t, string>(atuple2);
-            CPPA_CHECK(opt.valid());
-            if (opt.valid()) {
-                auto& tup = *opt;
-                CPPA_CHECK_EQUAL(tup.size(), 2);
-                CPPA_CHECK_EQUAL(get<0>(tup), 42);
-                CPPA_CHECK_EQUAL(get<1>(tup), "foo");
-            }
+        auto opt = tuple_cast<uint32_t, string>(atuple2);
+        CPPA_CHECK(opt.valid());
+        if (opt.valid()) {
+            auto& tup = *opt;
+            CPPA_CHECK_EQUAL(tup.size(), 2);
+            CPPA_CHECK_EQUAL(get<0>(tup), 42);
+            CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
-        catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
     }
-    {
+    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+
+    try {
         any_tuple msg1 = cppa::make_cow_tuple(42, string("Hello \"World\"!"));
         auto msg1_tostring = to_string(msg1);
         if (msg1str != msg1_tostring) {
@@ -226,9 +231,9 @@ int main() {
             cerr << "to_string(msg1) = " << msg1_tostring << endl;
         }
         util::buffer wr_buf;
-        binary_serializer bs(&wr_buf);
+        binary_serializer bs(&wr_buf, &addressing);
         bs << msg1;
-        binary_deserializer bd(wr_buf.data(), wr_buf.size());
+        binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
         object obj1;
         bd >> obj1;
         object obj2 = from_string(to_string(msg1));
@@ -254,6 +259,7 @@ int main() {
             CPPA_ERROR("obj.type() != typeid(message)");
         }
     }
+    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
 
     CPPA_CHECK((is_iterable<int>::value) == false);
     // string is primitive and thus not identified by is_iterable
@@ -288,10 +294,10 @@ int main() {
         CPPA_CHECK_EQUAL((to_string(b1)), b1str); {
             // serialize b1 to buf
             util::buffer wr_buf;
-            binary_serializer bs(&wr_buf);
+            binary_serializer bs(&wr_buf, &addressing);
             bs << b1;
             // deserialize b2 from buf
-            binary_deserializer bd(wr_buf.data(), wr_buf.size());
+            binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_b");
@@ -315,10 +321,10 @@ int main() {
         struct_c c2; {
             // serialize c1 to buf
             util::buffer wr_buf;
-            binary_serializer bs(&wr_buf);
+            binary_serializer bs(&wr_buf, &addressing);
             bs << c1;
             // serialize c2 from buf
-            binary_deserializer bd(wr_buf.data(), wr_buf.size());
+            binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
             object res;
             bd >> res;
             CPPA_CHECK_EQUAL(res.type()->name(), "struct_c");
