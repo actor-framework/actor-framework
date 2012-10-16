@@ -76,7 +76,8 @@ actor_ptr remote_actor(io_stream_ptr_pair io) {
 }
 
 void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
-    proto()->publish(whom, {port, addr});
+    if (!addr) proto()->publish(whom, {port});
+    else proto()->publish(whom, {port, addr});
 }
 
 actor_ptr remote_actor(const char* host, std::uint16_t port) {
