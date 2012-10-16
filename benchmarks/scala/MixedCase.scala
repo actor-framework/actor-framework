@@ -166,9 +166,7 @@ class AkkaChainLink(next: AkkaActorRef) extends AkkaActor {
     }
 }
 
-class AkkaChainMaster(supervisor: AkkaActorRef, system: ActorSystem) extends AkkaActor {
-
-    val worker = system.actorOf(Props(new AkkaWorker(supervisor)))
+class AkkaChainMaster(supervisor: AkkaActorRef, worker: AkkaActorRef) extends AkkaActor {
 
     @tailrec final def newRing(next: AkkaActorRef, rsize: Int): AkkaActorRef = {
         if (rsize == 0) next
@@ -213,6 +211,12 @@ class AkkaSupervisor(numMessages: Int) extends AkkaActor {
     def receive = {
         case Factors(f) => global.checkFactors(f); inc
         case MasterExited => inc
+        case Init(numRings, iterations, repetitions) =>
+            val initMsg = Init(numRings, iterations, repetitions)
+            for (_ <- 0 until numRings) {
+                val worker = context.actorOf(Props(new AkkaWorker(self)))
+                context.actorOf(Props(new AkkaChainMaster(self, worker))) ! initMsg
+            }
     }
 }
 
@@ -232,8 +236,7 @@ class MixedCase(numRings: Int, ringSize: Int, initToken: Int, reps: Int) {
     def runAkka() {
         val system = ActorSystem();
         val s = system.actorOf(Props(new AkkaSupervisor(numMessages)))
-        for (_ <- 0 until numRings)
-            system.actorOf(Props(new AkkaChainMaster(s, system))) ! initMsg
+        s ! initMsg
         global.latch.await
         system.shutdown
         System.exit(0)
