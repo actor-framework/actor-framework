@@ -45,9 +45,11 @@ class deserializer;
  *        for actors. This class encapsulates a technology-specific
  *        actor addressing.
  */
-class actor_addressing : public ref_counted {
+class actor_addressing {
 
  public:
+
+    virtual ~actor_addressing();
 
     /**
      * @brief Returns the technology identifier of the implementation.

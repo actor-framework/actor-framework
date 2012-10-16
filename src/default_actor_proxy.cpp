@@ -55,16 +55,13 @@ default_actor_proxy::~default_actor_proxy() {
         CPPA_LOGF_TRACE("lambda from ~default_actor_proxy"
                         << "; node = " << to_string(*node) << ", aid " << aid
                         << ", proto = " << to_string(proto->identifier()));
-        if (detail::singleton_manager::get_middleman()) {
-            proto->addressing()->erase(*node, aid);
-            auto p = proto->get_peer(*node);
-            if (p && p->erase_on_last_proxy_exited()) {
-                if (proto->addressing()->count_proxies(*node) == 0) {
-                    proto->erase_peer(p);
-                }
+        proto->addressing()->erase(*node, aid);
+        auto p = proto->get_peer(*node);
+        if (p && p->erase_on_last_proxy_exited()) {
+            if (proto->addressing()->count_proxies(*node) == 0) {
+                proto->erase_peer(p);
             }
         }
-        // else: middleman already shut down!
     });
 }
 

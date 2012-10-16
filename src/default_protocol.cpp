@@ -52,7 +52,7 @@ using namespace cppa::detail;
 
 namespace cppa { namespace network {
 
-default_protocol::default_protocol(middleman* parent)
+default_protocol::default_protocol(abstract_middleman* parent)
 : super(parent), m_addressing(this) { }
 
 atom_value default_protocol::identifier() const {

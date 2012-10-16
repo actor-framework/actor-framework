@@ -371,7 +371,6 @@ class string_deserializer : public deserializer {
                 throw_malformed("atom string size > 10");
             }
             string substr(m_pos, substr_end);
-std::cout << "atom string: " << substr << std::endl;
             m_pos += substr.size() + 1;
             return detail::atom_val(substr.c_str(), 0xF);
         }

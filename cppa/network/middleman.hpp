@@ -45,25 +45,9 @@ namespace cppa { namespace detail { class singleton_manager; } }
 
 namespace cppa { namespace network {
 
-class middleman_impl;
-class middleman_overseer;
-class middleman_event_handler;
-
-void middleman_loop(middleman_impl*);
-
 class middleman {
 
-    // the most popular class in libcppa
-
-    friend class peer;
-    friend class protocol;
-    friend class peer_acceptor;
-    friend class singleton_manager;
-    friend class middleman_overseer;
-    friend class middleman_event_handler;
     friend class detail::singleton_manager;
-
-    friend void middleman_loop(middleman_impl*);
 
  public:
 
@@ -73,54 +57,43 @@ class middleman {
 
     virtual protocol_ptr protocol(atom_value id) = 0;
 
- protected:
+    // runs @p fun in the middleman's event loop
+    virtual void run_later(std::function<void()> fun) = 0;
 
-    middleman();
+ protected:
 
     virtual void stop() = 0;
     virtual void start() = 0;
 
-    // to be called from protocol
-
-    // runs @p fun in the middleman's event loop
-    virtual void run_later(std::function<void()> fun) = 0;
-
-
-    // to be called from singleton_manager
+ private:
 
     static middleman* create_singleton();
 
+};
 
-    // to be called from peer
+class middleman_event_handler;
 
-    /**
-     * @pre ptr->as_writer() != nullptr
-     */
+class abstract_middleman : public middleman {
+
+ public:
+
+    inline abstract_middleman() : m_done(false) { }
+
+    void stop_writer(const continuable_reader_ptr& ptr);
     void continue_writer(const continuable_reader_ptr& ptr);
 
-    /**
-     * @pre ptr->as_writer() != nullptr
-     */
-    void stop_writer(const continuable_reader_ptr& ptr);
-
-    // to be called form peer_acceptor or protocol
-
+    void stop_reader(const continuable_reader_ptr& what);
     void continue_reader(const continuable_reader_ptr& what);
 
-    void stop_reader(const continuable_reader_ptr& what);
-
-
-    // to be called from m_handler or middleman_overseer
+ protected:
 
     inline void quit() { m_done = true; }
     inline bool done() const { return m_done; }
 
-
-    // member variables
-
     bool m_done;
     std::vector<continuable_reader_ptr> m_readers;
-    std::unique_ptr<middleman_event_handler> m_handler;
+
+    middleman_event_handler& handler();
 
 };
 

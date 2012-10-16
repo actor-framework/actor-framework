@@ -28,79 +28,10 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PROTOCOL_HPP
-#define CPPA_PROTOCOL_HPP
+#include"cppa/actor_addressing.hpp"
 
-#include <memory>
-#include <functional>
-#include <initializer_list>
+namespace cppa {
 
-#include "cppa/atom.hpp"
-#include "cppa/actor.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/primitive_variant.hpp"
+actor_addressing::~actor_addressing() { }
 
-#include "cppa/network/acceptor.hpp"
-
-namespace cppa { namespace network {
-
-class abstract_middleman;
-class continuable_reader;
-class continuable_writer;
-
-class protocol : public ref_counted {
-
-    typedef ref_counted super;
-
- public:
-
-    typedef std::initializer_list<primitive_variant> variant_args;
-
-    protocol(abstract_middleman* parent);
-
-    virtual atom_value identifier() const = 0;
-
-    virtual void publish(const actor_ptr& whom, variant_args args) = 0;
-
-    virtual void publish(const actor_ptr& whom,
-                         std::unique_ptr<acceptor> acceptor,
-                         variant_args args                  ) = 0;
-
-    virtual void unpublish(const actor_ptr& whom) = 0;
-
-    virtual actor_ptr remote_actor(variant_args args) = 0;
-
-    virtual actor_ptr remote_actor(io_stream_ptr_pair ioptrs,
-                                   variant_args args         ) = 0;
-
-    void run_later(std::function<void()> fun);
-
- protected:
-
-    // note: not thread-safe; call only in run_later functor!
-    void continue_reader(continuable_reader* what);
-
-    // note: not thread-safe; call only in run_later functor!
-    void continue_writer(continuable_reader* what);
-
-    // note: not thread-safe; call only in run_later functor!
-    void stop_reader(continuable_reader* what);
-
-    // note: not thread-safe; call only in run_later functor!
-    void stop_writer(continuable_reader* what);
-
-    inline abstract_middleman* parent() { return m_parent; }
-
-    inline const abstract_middleman* parent() const { return m_parent; }
-
- private:
-
-    abstract_middleman* m_parent;
-
-};
-
-typedef intrusive_ptr<protocol> protocol_ptr;
-
-} } // namespace cppa::network
-
-#endif // CPPA_PROTOCOL_HPP
+} // namespace cppa

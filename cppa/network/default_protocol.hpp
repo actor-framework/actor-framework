@@ -50,7 +50,7 @@ class default_protocol : public protocol {
 
  public:
 
-    default_protocol(middleman* parent);
+    default_protocol(abstract_middleman* parent);
 
     atom_value identifier() const;
 

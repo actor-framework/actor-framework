@@ -35,7 +35,7 @@
 
 namespace cppa { namespace network {
 
-protocol::protocol(middleman* parent) : m_parent(parent) { }
+protocol::protocol(abstract_middleman* parent) : m_parent(parent) { }
 
 void protocol::run_later(std::function<void()> fun) {
     m_parent->run_later([=] { fun(); });

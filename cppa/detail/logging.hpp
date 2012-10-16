@@ -106,30 +106,32 @@ class logging {
 
 } } // namespace cppa::detail
 
+#define CPPA_VOID_STMT static_cast<void>(0)
+
 #ifndef CPPA_DEBUG
 
-#define CPPA_LOG_ERROR(unused) static_cast<void>(0)
-#define CPPA_LOG_ERROR_IF(unused1,unused2) static_cast<void>(0)
-#define CPPA_LOGF_ERROR(unused) static_cast<void>(0)
-#define CPPA_LOGF_ERROR_IF(unused1,unused2) static_cast<void>(0)
+#define CPPA_LOG_ERROR(unused) CPPA_VOID_STMT
+#define CPPA_LOG_ERROR_IF(unused1,unused2) CPPA_VOID_STMT
+#define CPPA_LOGF_ERROR(unused) CPPA_VOID_STMT
+#define CPPA_LOGF_ERROR_IF(unused1,unused2) CPPA_VOID_STMT
 
-#define CPPA_LOG_WARNING(unused) static_cast<void>(0)
-#define CPPA_LOG_WARNING_IF(unused1,unused2) static_cast<void>(0)
-#define CPPA_LOGF_WARNING(unused) static_cast<void>(0)
-#define CPPA_LOGF_WARNING_IF(unused1,unused2) static_cast<void>(0)
+#define CPPA_LOG_WARNING(unused) CPPA_VOID_STMT
+#define CPPA_LOG_WARNING_IF(unused1,unused2) CPPA_VOID_STMT
+#define CPPA_LOGF_WARNING(unused) CPPA_VOID_STMT
+#define CPPA_LOGF_WARNING_IF(unused1,unused2) CPPA_VOID_STMT
 
-#define CPPA_LOG_INFO(unused) static_cast<void>(0)
-#define CPPA_LOG_INFO_IF(unused1,unused2) static_cast<void>(0)
-#define CPPA_LOGF_INFO(unused) static_cast<void>(0)
-#define CPPA_LOGF_INFO_IF(unused1,unused2) static_cast<void>(0)
+#define CPPA_LOG_INFO(unused) CPPA_VOID_STMT
+#define CPPA_LOG_INFO_IF(unused1,unused2) CPPA_VOID_STMT
+#define CPPA_LOGF_INFO(unused) CPPA_VOID_STMT
+#define CPPA_LOGF_INFO_IF(unused1,unused2) CPPA_VOID_STMT
 
-#define CPPA_LOG_DEBUG(unused) static_cast<void>(0)
-#define CPPA_LOG_DEBUG_IF(unused1,unused2) static_cast<void>(0)
-#define CPPA_LOGF_DEBUG(unused) static_cast<void>(0)
-#define CPPA_LOGF_DEBUG_IF(unused1,unused2) static_cast<void>(0)
+#define CPPA_LOG_DEBUG(unused) CPPA_VOID_STMT
+#define CPPA_LOG_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
+#define CPPA_LOGF_DEBUG(unused) CPPA_VOID_STMT
+#define CPPA_LOGF_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
 
-#define CPPA_LOG_TRACE(unused) static_cast<void>(0)
-#define CPPA_LOGF_TRACE(unused) static_cast<void>(0)
+#define CPPA_LOG_TRACE(unused) CPPA_VOID_STMT
+#define CPPA_LOGF_TRACE(unused) CPPA_VOID_STMT
 
 #else
 
@@ -138,40 +140,44 @@ class logging {
     ::cppa::detail::logging::instance()->log(                                  \
         level, "NONE",                                                         \
         __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
-} static_cast<void>(0)
+} CPPA_VOID_STMT
 
 #define CPPA_DO_LOG_MEMBER_FUN(level, message) {                               \
     std::ostringstream scoped_oss; scoped_oss << message;                      \
     ::cppa::detail::logging::instance()->log(                                  \
         level, ::cppa::detail::demangle(typeid(*this)).c_str(),                \
         __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
-} static_cast<void>(0)
+} CPPA_VOID_STMT
 
 #define CPPA_LOG_ERROR(message) CPPA_DO_LOG_MEMBER_FUN("ERROR  ", message)
 #define CPPA_LOGF_ERROR(message) CPPA_DO_LOG_FUN("ERROR  ", message)
+
+#ifndef CPPA_LOG_LEVEL
+#define CPPA_LOG_LEVEL 0
+#endif
 
 #if CPPA_LOG_LEVEL > 0
 #  define CPPA_LOG_WARNING(message) CPPA_DO_LOG_MEMBER_FUN("WARNING", message)
 #  define CPPA_LOGF_WARNING(message) CPPA_DO_LOG_FUN("WARNING", message)
 #else
-#  define CPPA_LOG_WARNING(unused) static_cast<void>(0)
-#  define CPPA_LOGF_WARNING(unused) static_cast<void>(0)
+#  define CPPA_LOG_WARNING(unused) CPPA_VOID_STMT
+#  define CPPA_LOGF_WARNING(unused) CPPA_VOID_STMT
 #endif
 
 #if CPPA_LOG_LEVEL > 1
 #  define CPPA_LOG_INFO(message) CPPA_DO_LOG_MEMBER_FUN("INFO   ", message)
 #  define CPPA_LOGF_INFO(message) CPPA_DO_LOG_FUN("INFO   ", message)
 #else
-#  define CPPA_LOG_INFO(unused) static_cast<void>(0)
-#  define CPPA_LOGF_INFO(unused) static_cast<void>(0)
+#  define CPPA_LOG_INFO(unused) CPPA_VOID_STMT
+#  define CPPA_LOGF_INFO(unused) CPPA_VOID_STMT
 #endif
 
 #if CPPA_LOG_LEVEL > 2
 #  define CPPA_LOG_DEBUG(message) CPPA_DO_LOG_MEMBER_FUN("DEBUG  ", message)
 #  define CPPA_LOGF_DEBUG(message) CPPA_DO_LOG_FUN("DEBUG  ", message)
 #else
-#  define CPPA_LOG_DEBUG(unused) static_cast<void>(0)
-#  define CPPA_LOGF_DEBUG(unused) static_cast<void>(0)
+#  define CPPA_LOG_DEBUG(unused) CPPA_VOID_STMT
+#  define CPPA_LOGF_DEBUG(unused) CPPA_VOID_STMT
 #endif
 
 #if CPPA_LOG_LEVEL > 3
@@ -186,7 +192,8 @@ class logging {
     CPPA_CONCATL(cppa_trace_helper_) << message ;                              \
     ::cppa::detail::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_) \
         CPPA_LPAREN ::cppa::detail::demangle                                   \
-        CPPA_LPAREN typeid CPPA_LPAREN *this CPPA_RPAREN CPPA_RPAREN ,         \
+        CPPA_LPAREN typeid CPPA_LPAREN decltype CPPA_LPAREN *this              \
+        CPPA_RPAREN        CPPA_RPAREN          CPPA_RPAREN ,                  \
           __func__ , __FILE__ , __LINE__ ,                                     \
           CPPA_CONCATL(cppa_trace_helper_) .str() CPPA_RPAREN
 #  define CPPA_LOGF_TRACE(message)                                             \
@@ -203,28 +210,28 @@ class logging {
 #endif
 
 #define CPPA_LOG_ERROR_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOG_ERROR(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOG_ERROR(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOG_WARNING_IF(stmt,message)                                      \
-    if (stmt) { CPPA_LOG_WARNING(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOG_WARNING(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOG_INFO_IF(stmt,message)                                         \
-    if (stmt) { CPPA_LOG_INFO(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOG_INFO(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOG_DEBUG_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOG_DEBUG(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOG_DEBUG(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOGF_ERROR_IF(stmt,message)                                       \
-    if (stmt) { CPPA_LOGF_ERROR(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOGF_ERROR(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOGF_WARNING_IF(stmt,message)                                     \
-    if (stmt) { CPPA_LOGF_WARNING(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOGF_WARNING(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOGF_INFO_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOGF_INFO(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOGF_INFO(message); }; CPPA_VOID_STMT
 
 #define CPPA_LOGF_DEBUG_IF(stmt,message)                                       \
-    if (stmt) { CPPA_LOGF_DEBUG(message); }; static_cast<void>(0)
+    if (stmt) { CPPA_LOGF_DEBUG(message); }; CPPA_VOID_STMT
 
 
 #endif // CPPA_DEBUG

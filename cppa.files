@@ -289,3 +289,5 @@ cppa/detail/logging.hpp
 src/logging.cpp
 cppa/network/continuable_writer.hpp
 src/continuable_writer.cpp
+cppa/network/middleman_event_handler_base.hpp
+src/actor_addressing.cpp
