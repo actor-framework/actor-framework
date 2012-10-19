@@ -44,7 +44,7 @@ class ipv4_acceptor : public acceptor {
  public:
 
     static std::unique_ptr<acceptor> create(std::uint16_t port,
-                                                     const char* addr);
+                                            const char* addr = nullptr);
 
     ~ipv4_acceptor();
 

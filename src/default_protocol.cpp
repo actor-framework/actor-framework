@@ -60,21 +60,19 @@ atom_value default_protocol::identifier() const {
 }
 
 void default_protocol::publish(const actor_ptr& whom, variant_args args) {
-    CPPA_LOG_TRACE("whom: " << to_string(whom)
+    CPPA_LOG_TRACE(CPPA_TARG(whom, to_string)
                    << ", args.size() = " << args.size());
     if (!whom) return;
     CPPA_REQUIRE(args.size() == 2 || args.size() == 1);
     auto i = args.begin();
     if (args.size() == 1) {
         auto port = get<uint16_t>(*i++);
-        publish(whom,
-                unique_ptr<acceptor>(ipv4_acceptor::create(port, nullptr)),
-                {});
+        publish(whom, ipv4_acceptor::create(port), {});
     }
     else if (args.size() == 2) {
         auto port = get<uint16_t>(*i++);
         auto& addr = get<string>(*i);
-        publish(whom, unique_ptr<acceptor>(ipv4_acceptor::create(port, addr.c_str())), {});
+        publish(whom, ipv4_acceptor::create(port, addr.c_str()), {});
     }
     else throw logic_error("wrong number of arguments, expected one or two");
 }
@@ -82,8 +80,7 @@ void default_protocol::publish(const actor_ptr& whom, variant_args args) {
 void default_protocol::publish(const actor_ptr& whom,
                                std::unique_ptr<acceptor> ptr,
                                variant_args args                  ) {
-    CPPA_LOG_TRACE("whom: " << to_string(whom)
-                   << ", ptr = " << ptr.get()
+    CPPA_LOG_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(ptr, get)
                    << ", args.size() = " << args.size());
     if (!whom) return;
     CPPA_REQUIRE(args.size() == 0);

@@ -103,7 +103,7 @@ ipv4_acceptor::ipv4_acceptor(native_socket_type fd, bool nonblocking)
 : m_fd(fd), m_is_nonblocking(nonblocking) { }
 
 std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
-                                                         const char* addr) {
+                                                const char* addr) {
     native_socket_type sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
