@@ -61,15 +61,14 @@ class actor_addressing {
     /**
      * @brief Serializes @p ptr to @p sink according
      *        to the implemented addressing.
-     * @note Implementation should call {@link actor_registry::put()}
-     *       to be able to restore instances later on from registry.
-     * @note Thi
+     * @warning Not thread-safe
      */
     virtual void write(serializer* sink, const actor_ptr& ptr) = 0;
 
     /**
      * @brief Deserializes an actor from @p source according
      *        to the implemented addressing.
+     * @warning Not thread-safe
      */
      virtual actor_ptr read(deserializer* source) = 0;
 
