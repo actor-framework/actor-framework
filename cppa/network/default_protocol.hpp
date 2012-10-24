@@ -66,8 +66,6 @@ class default_protocol : public protocol {
 
     actor_ptr remote_actor(io_stream_ptr_pair ioptrs, variant_args args);
 
-    inline default_actor_addressing* addressing() { return &m_addressing; }
-
     void register_peer(const process_information& node, default_peer* ptr);
 
     default_peer_ptr get_peer(const process_information& node);
@@ -79,6 +77,9 @@ class default_protocol : public protocol {
     void erase_peer(const default_peer_ptr& pptr);
 
     void continue_writer(const default_peer_ptr& pptr);
+
+    // covariant return type
+    default_actor_addressing* addressing();
 
  private:
 

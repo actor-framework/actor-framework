@@ -215,4 +215,8 @@ void default_protocol::continue_writer(const default_peer_ptr& pptr) {
     super::continue_writer(pptr.get());
 }
 
+default_actor_addressing* default_protocol::addressing() {
+    return &m_addressing;
+}
+
 } } // namespace cppa::network

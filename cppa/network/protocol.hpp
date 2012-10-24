@@ -42,6 +42,8 @@
 
 #include "cppa/network/acceptor.hpp"
 
+namespace cppa { class actor_addressing; }
+
 namespace cppa { namespace network {
 
 class abstract_middleman;
@@ -72,6 +74,8 @@ class protocol : public ref_counted {
 
     virtual actor_ptr remote_actor(io_stream_ptr_pair ioptrs,
                                    variant_args args         ) = 0;
+
+    virtual actor_addressing* addressing() = 0;
 
     void run_later(std::function<void()> fun);
 
