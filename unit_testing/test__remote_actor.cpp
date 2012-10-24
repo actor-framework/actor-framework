@@ -218,7 +218,7 @@ int client_part(const vector<string_pair>& args) {
 } // namespace <anonymous>
 
 void verbose_terminate() {
-    try { if (std::uncaught_exception()); throw; }
+    try { if (std::uncaught_exception()) throw; }
     catch (std::exception& e) {
         cerr << "terminate called after throwing "
              << to_verbose_string(e) << endl;

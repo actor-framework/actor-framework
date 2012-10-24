@@ -155,10 +155,10 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     // throws on error
     io.second->write(&process_id, sizeof(std::uint32_t));
     io.second->write(pinf->node_id().data(), pinf->node_id().size());
-    std::uint32_t remote_aid;
+    actor_id remote_aid;
     std::uint32_t peer_pid;
     process_information::node_id_type peer_node_id;
-    io.first->read(&remote_aid, sizeof(remote_aid));
+    io.first->read(&remote_aid, sizeof(actor_id));
     io.first->read(&peer_pid, sizeof(std::uint32_t));
     io.first->read(peer_node_id.data(), peer_node_id.size());
     process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));

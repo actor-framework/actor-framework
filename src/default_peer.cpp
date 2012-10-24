@@ -135,7 +135,13 @@ continue_reading_result default_peer::continue_reading() {
                 addressed_message msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size(),
                                        m_parent->addressing());
-                m_meta_msg->deserialize(&msg, &bd);
+                try { m_meta_msg->deserialize(&msg, &bd); }
+                catch (exception& e) {
+                    CPPA_LOG_ERROR("exception during read_message: "
+                                   << detail::demangle(typeid(e))
+                                   << ", what(): " << e.what());
+                    return read_failure;
+                }
                 auto& content = msg.content();
                 CPPA_LOG_DEBUG("deserialized: " << to_string(msg));
                 //DEBUG("<-- " << to_string(msg));
