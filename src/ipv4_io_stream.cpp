@@ -123,7 +123,7 @@ network::io_stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd)
 
 network::io_stream_ptr ipv4_io_stream::connect_to(const char* host,
                                                   std::uint16_t port) {
-    CPPA_LOG_INFO("try to connect to " << host << " on port " << port);
+    CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
     struct sockaddr_in serv_addr;
     struct hostent* server;
     native_socket_type fd = socket(AF_INET, SOCK_STREAM, 0);
