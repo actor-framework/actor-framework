@@ -111,6 +111,7 @@ class behavior_stack
     void exec(Policy& policy, Client* client) {
         while (!empty()) {
             invoke(policy, client, client->receive_node());
+            cleanup();
         }
     }
 

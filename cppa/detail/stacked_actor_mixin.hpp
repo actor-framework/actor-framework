@@ -109,6 +109,8 @@ class stacked_actor_mixin : public Base {
     }
 
     void become_impl(behavior&& bhvr, bool discard_old, message_id_t mid) {
+        dthis()->reset_timeout();
+        dthis()->request_timeout(bhvr.timeout());
         if (m_bhvr_stack_ptr) {
             if (discard_old) m_bhvr_stack_ptr->pop_async_back();
             m_bhvr_stack_ptr->push_back(std::move(bhvr), mid);

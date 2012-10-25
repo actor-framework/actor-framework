@@ -111,6 +111,10 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
 
     inline void initialized(bool value) { m_initialized = value; }
 
+    // required by stacked_actor_mixin
+    inline void reset_timeout() { }
+    inline void request_timeout(const util::duration&) { }
+
  protected:
 
     bool initialized();

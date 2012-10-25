@@ -282,8 +282,9 @@ class receive_policy {
     }
 
     template<class Client>
-    static inline void hm_cleanup(Client* client, nestable) {
-        client->m_current_node = &(client->m_dummy_node);
+    static inline void hm_cleanup(Client* client, pointer previous, nestable) {
+        client->m_current_node->marked = false;
+        client->m_current_node = previous;
     }
 
     template<class Client>
@@ -308,7 +309,7 @@ class receive_policy {
     }
 
     template<class Client>
-    static inline void hm_cleanup(Client* client, sequential) {
+    static inline void hm_cleanup(Client* client, pointer /*previous*/, sequential) {
         client->m_current_node = &(client->m_dummy_node);
         if (client->has_behavior()) {
             client->request_timeout(client->get_behavior().timeout());
@@ -347,12 +348,11 @@ class receive_policy {
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
                 }
-                hm_cleanup(client, policy);
                 return hm_msg_handled;
             }
             case sync_response: {
                 if (awaited_response.valid() && node->mid == awaited_response) {
-                    hm_begin(client, node, policy);
+                    auto previous_node = hm_begin(client, node, policy);
 #                   ifdef CPPA_DEBUG
                     if (!fun(node->msg)) {
                         std::cerr << "WARNING: actor didn't handle a "
@@ -363,7 +363,7 @@ class receive_policy {
 #                   endif
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
-                    hm_cleanup(client, policy);
+                    hm_cleanup(client, previous_node, policy);
                     return hm_msg_handled;
                 }
                 return hm_cache_msg;
@@ -381,7 +381,7 @@ class receive_policy {
                                                  id.response_id(),
                                                  any_tuple());
                         }
-                        hm_cleanup(client, policy);
+                        hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;
                     }
                     // no match (restore client members)
