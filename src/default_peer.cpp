@@ -358,7 +358,7 @@ void default_peer::enqueue(const addressed_message& msg) {
              << endl;
         return;
     }
-    CPPA_LOG_DEBUG("serialized: " << to_string(msg));
+    CPPA_LOG_DEBUG("serialized: " << to_string(msg.content()));
     size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
     memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));

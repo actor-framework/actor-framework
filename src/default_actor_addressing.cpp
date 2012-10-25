@@ -54,7 +54,6 @@ atom_value default_actor_addressing::technology_id() const {
 }
 
 void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
-    CPPA_LOG_TRACE("sink = " << sink << ", ptr" << ptr.get());
     CPPA_REQUIRE(sink != nullptr);
     if (ptr == nullptr) {
         CPPA_LOG_DEBUG("serialized nullptr");
@@ -64,7 +63,7 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
     else {
         // local actor?
         if (*ptr->parent_process_ptr() == *process_information::get()) {
-                detail::singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
+            detail::singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
         }
         primitive_variant ptup[2];
         ptup[0] = ptr->id();
@@ -78,7 +77,6 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
 }
 
 actor_ptr default_actor_addressing::read(deserializer* source) {
-    CPPA_LOG_TRACE("source = " << source);
     CPPA_REQUIRE(source != nullptr);
     auto cname = source->seek_object();
     if (cname == "@0") {
@@ -112,19 +110,19 @@ actor_ptr default_actor_addressing::read(deserializer* source) {
 }
 
 size_t default_actor_addressing::count_proxies(const process_information& inf) {
-    CPPA_LOG_TRACE("inf = " << to_string(inf));
     auto i = m_proxies.find(inf);
     return (i != m_proxies.end()) ? i->second.size() : 0;
 }
 
 actor_ptr default_actor_addressing::get(const process_information& inf,
                                         actor_id aid) {
-    CPPA_LOG_TRACE("inf = " << to_string(inf) << ", aid = " << aid);
     auto& submap = m_proxies[inf];
     auto i = submap.find(aid);
     if (i != submap.end()) {
         auto result = i->second.promote();
-        CPPA_LOG_INFO_IF(!result, "proxy instance expired");
+        CPPA_LOG_INFO_IF(!result, "proxy instance expired; "
+                                  << CPPA_TARG(inf, to_string) << ", "
+                                  << CPPA_ARG(aid));
         return result;
     }
     return nullptr;
@@ -154,6 +152,8 @@ actor_ptr default_actor_addressing::get_or_put(const process_information& inf,
                                                actor_id aid) {
     auto result = get(inf, aid);
     if (result == nullptr) {
+        CPPA_LOG_INFO("created new proxy instance; "
+                      << CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
         auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
         put(inf, aid, ptr);
         result = ptr;

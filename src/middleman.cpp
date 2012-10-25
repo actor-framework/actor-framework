@@ -450,7 +450,10 @@ class middleman_impl : public abstract_middleman {
     }
 
     void stop() {
-        run_later([this] { this->m_done = true; });
+        run_later([this] {
+            CPPA_LOG_TRACE("lambda from middleman_impl::stop");
+            this->m_done = true;
+        });
         //enqueue_message(middleman_message::create());
         m_thread.join();
         close(m_pipe_read);
@@ -484,9 +487,11 @@ class middleman_overseer : public continuable_reader {
     : super(pipe_fd), m_queue(q) { }
 
     continue_reading_result continue_reading() {
+        CPPA_LOG_TRACE("");
         static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
+        CPPA_LOG_DEBUG("read " << read_result << " messages from queue");
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
@@ -504,6 +509,7 @@ class middleman_overseer : public continuable_reader {
                 CPPA_LOG_ERROR("nullptr dequeued");
                 CPPA_CRITICAL("nullptr dequeued");
             }
+            CPPA_LOG_DEBUG("execute run_later functor");
             (*msg)();
         }
         return read_continue_later;
@@ -566,7 +572,7 @@ void middleman_loop(middleman_impl* impl) {
                 case event::none: break;
                 case event::both:
                 case event::write: {
-                    CPPA_LOGF_DEBUG("handle event::write");
+                    CPPA_LOGF_DEBUG("handle event::write for " << i->ptr());
                     switch (i->continue_writing()) {
                         case write_closed:
                         case write_failure:
@@ -583,7 +589,7 @@ void middleman_loop(middleman_impl* impl) {
                     CPPA_LOGF_DEBUG("handle event::both; fall through");
                 }
                 case event::read: {
-                    CPPA_LOGF_DEBUG("handle event::read");
+                    CPPA_LOGF_DEBUG("handle event::read for " << i->ptr());
                     switch (i->continue_reading()) {
                         case read_closed:
                         case read_failure:
@@ -595,9 +601,9 @@ void middleman_loop(middleman_impl* impl) {
                     break;
                 }
                 case event::error: {
+                    CPPA_LOGF_DEBUG("event::error; remove peer " << i->ptr());
                     impl->stop_reader(i->ptr());
                     impl->stop_writer(i->ptr());
-                    CPPA_LOGF_DEBUG("event::error; remove peer");
                 }
             }
             i->handled();

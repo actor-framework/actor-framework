@@ -69,10 +69,11 @@ class logging_impl : public logging {
 
     void start() {
         m_thread = thread([this] { (*this)(); });
+        log("TRACE  ", "logging", "run", __FILE__, 31337, "ENTRY");
     }
 
     void stop() {
-        log("DEBUG", "logging", "stop", __FILE__, __LINE__, "shutting down");
+        log("TRACE  ", "logging", "run", __FILE__, 31337, "EXIT");
         // an empty string means: shut down
         m_queue.push_back(new log_event{0, ""});
         m_thread.join();

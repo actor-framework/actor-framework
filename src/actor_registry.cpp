@@ -54,19 +54,16 @@ actor_registry::actor_registry() : m_running(0), m_ids(1) {
 }
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {
-    CPPA_LOG_TRACE("key = " << key);
     shared_guard guard(m_instances_mtx);
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
-        CPPA_LOG_DEBUG("result = " << i->second.first.get());
         return i->second;
     }
-    CPPA_LOG_DEBUG("result = nullptr");
+    CPPA_LOG_DEBUG("no cache entry found for " << CPPA_ARG(key));
     return {nullptr, exit_reason::not_exited};
 }
 
 void actor_registry::put(actor_id key, const actor_ptr& value) {
-    CPPA_LOG_TRACE("key = " << key << ", ptr = " << value.get());
     bool add_attachable = false;
     if (value != nullptr) {
         shared_guard guard(m_instances_mtx);
@@ -80,6 +77,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
         }
     }
     if (add_attachable) {
+        CPPA_LOG_INFO("added " << key);
         struct eraser : attachable {
             actor_id m_id;
             actor_registry* m_registry;
@@ -96,11 +94,11 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
 }
 
 void actor_registry::erase(actor_id key, std::uint32_t reason) {
-    CPPA_LOG_TRACE("key = " << key << ", reason = " << std::hex << reason);
     exclusive_guard guard(m_instances_mtx);
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
         auto& entry = i->second;
+        CPPA_LOG_INFO("erased " << key << ", reason = " << std::hex << reason);
         entry.first = nullptr;
         entry.second = reason;
     }
@@ -131,6 +129,7 @@ void actor_registry::dec_running() {
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
+    CPPA_LOG_TRACE(CPPA_ARG(expected));
     std::unique_lock<std::mutex> guard(m_running_mtx);
     while (m_running.load() != expected) {
         m_running_cv.wait(guard);

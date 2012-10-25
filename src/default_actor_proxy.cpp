@@ -71,11 +71,13 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender, any_tuple msg, me
     actor_ptr receiver = this;
     auto proto = m_proto;
     m_proto->run_later([proto, node, sender, receiver, msg, mid] {
-        CPPA_LOGF_TRACE("lambda from default_actor_proxy::forward_msg; "
+        CPPA_LOGF_TRACE("lambda from default_actor_proxy::forward_msg");
+        /*
                         << "node = " << to_string(*node)
                         << ", sender =" << to_string(sender)
                         << ", receiver = " << to_string(receiver)
                         << ", proto = " << to_string(proto->identifier()));
+        */
         auto p = proto->get_peer(*node);
         if (p) p->enqueue(addressed_message(sender, receiver, msg, mid));
     });

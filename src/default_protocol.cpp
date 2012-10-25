@@ -67,11 +67,14 @@ void default_protocol::publish(const actor_ptr& whom, variant_args args) {
     auto i = args.begin();
     if (args.size() == 1) {
         auto port = get<uint16_t>(*i);
+        CPPA_LOG_INFO("publish " << to_string(whom) << " on port " << port);
         publish(whom, ipv4_acceptor::create(port), {});
     }
     else if (args.size() == 2) {
         auto port = get<uint16_t>(*i++);
         auto& addr = get<string>(*i);
+        CPPA_LOG_INFO("publish " << to_string(whom) << " on port " << port
+                      << " with addr = " << addr);
         publish(whom, ipv4_acceptor::create(port, addr.c_str()), {});
     }
     else throw logic_error("wrong number of arguments, expected one or two");

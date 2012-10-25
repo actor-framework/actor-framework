@@ -53,6 +53,7 @@
 #include "cppa/util/duration.hpp"
 #include "cppa/util/void_type.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -396,6 +397,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<network::addresse
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
+        CPPA_LOG_TRACE("");
         auto& msg = *reinterpret_cast<const network::addressed_message*>(instance);
         auto& data = msg.content();
         sink->begin_object(name());
@@ -411,6 +413,7 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<network::addresse
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
+        CPPA_LOG_TRACE("");
         assert_type_name(source);
         source->begin_object(name());
         auto& msg = *reinterpret_cast<network::addressed_message*>(instance);
