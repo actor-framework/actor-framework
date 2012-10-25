@@ -47,7 +47,7 @@ int main() {
 
     CPPA_TEST(test__intrusive_ptr);
     {
-        class0_ptr p(new class0);
+        auto p = make_counted<class0>();
         CPPA_CHECK_EQUAL(class0_instances, 1);
         CPPA_CHECK(p->unique());
     }
@@ -77,11 +77,11 @@ int main() {
     }
     CPPA_CHECK_EQUAL(class0_instances, 0);
     {
-        class0_ptr p1(new class0);
+        auto p1 = make_counted<class0>();
         p1 = new class1;
         CPPA_CHECK_EQUAL(class0_instances, 1);
         CPPA_CHECK_EQUAL(class1_instances, 1);
-        class1_ptr p2(new class1);
+        auto p2 = make_counted<class1>();
         p1 = p2;
         CPPA_CHECK_EQUAL(class0_instances, 1);
         CPPA_CHECK_EQUAL(class1_instances, 1);

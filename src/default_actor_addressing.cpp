@@ -154,31 +154,11 @@ actor_ptr default_actor_addressing::get_or_put(const process_information& inf,
                                                actor_id aid) {
     auto result = get(inf, aid);
     if (result == nullptr) {
-        actor_proxy_ptr ptr(new default_actor_proxy(aid, new process_information(inf), m_parent));
+        auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
         put(inf, aid, ptr);
         result = ptr;
     }
     return result;
-/*
-    CPPA_LOG_TRACE("inf = " << to_string(inf) << ", aid = " << aid);
-    if (m_parent == nullptr) return get(inf, aid);
-    auto& submap = m_proxies[inf];
-    auto i = submap.find(aid);
-    if (i == submap.end()) {
-        actor_proxy_ptr result(new default_actor_proxy(aid, new process_information(inf), m_parent));
-        CPPA_LOG_DEBUG("created a new proxy instance: " << to_string(result.get()));
-        submap.insert(make_pair(aid, result));
-        auto p = m_parent->get_peer(inf);
-        CPPA_LOG_ERROR_IF(!p, "created a proxy for an unknown peer");
-        if (p) {
-            p->enqueue(addressed_message(nullptr, nullptr, make_any_tuple(atom("MONITOR"), process_information::get(), aid)));
-        }
-        return result;
-    }
-    auto result = i->second.promote();
-    CPPA_LOG_INFO_IF(!result, "proxy instance expired");
-    return result;
-*/
 }
 
 auto default_actor_addressing::proxies(process_information& i) -> proxy_map& {

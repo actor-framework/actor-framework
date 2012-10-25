@@ -555,7 +555,7 @@ void middleman_loop(middleman_impl* impl) {
     CPPA_LOGF_TRACE("run middleman loop, node: "
                     << to_string(*process_information::get()));
     handler->init();
-    impl->continue_reader(new middleman_overseer(impl->m_pipe_read, impl->m_queue));
+    impl->continue_reader(make_counted<middleman_overseer>(impl->m_pipe_read, impl->m_queue));
     handler->update();
     while (!impl->done()) {
         auto iters = handler->poll();

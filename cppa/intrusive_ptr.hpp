@@ -197,6 +197,15 @@ inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
     return !(lhs == rhs);
 }
 
+/**
+ * @brief Constructs an object of type T which must be a derived type
+ *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
+ */
+template<typename T, typename... Args>
+intrusive_ptr<T> make_counted(Args&&... args) {
+    return {new T(std::forward<Args>(args)...)};
+}
+
 } // namespace cppa
 
 #endif // CPPA_INTRUSIVE_PTR_HPP

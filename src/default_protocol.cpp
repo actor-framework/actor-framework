@@ -66,7 +66,7 @@ void default_protocol::publish(const actor_ptr& whom, variant_args args) {
     CPPA_REQUIRE(args.size() == 2 || args.size() == 1);
     auto i = args.begin();
     if (args.size() == 1) {
-        auto port = get<uint16_t>(*i++);
+        auto port = get<uint16_t>(*i);
         publish(whom, ipv4_acceptor::create(port), {});
     }
     else if (args.size() == 2) {
@@ -79,7 +79,7 @@ void default_protocol::publish(const actor_ptr& whom, variant_args args) {
 
 void default_protocol::publish(const actor_ptr& whom,
                                std::unique_ptr<acceptor> ptr,
-                               variant_args args                  ) {
+                               variant_args args             ) {
     CPPA_LOG_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(ptr, get)
                    << ", args.size() = " << args.size());
     if (!whom) return;
@@ -87,13 +87,11 @@ void default_protocol::publish(const actor_ptr& whom,
     static_cast<void>(args); // keep compiler happy
     singleton_manager::get_actor_registry()->put(whom->id(), whom);
     default_protocol_ptr proto = this;
-    default_peer_acceptor_ptr impl(new default_peer_acceptor(this,
-                                                             move(ptr),
-                                                             whom));
+    auto impl = make_counted<default_peer_acceptor>(this, move(ptr), whom);
     run_later([=] {
         CPPA_LOGF_TRACE("lambda from default_protocol::publish");
-        proto->continue_reader(impl.get());
         proto->m_acceptors[whom].push_back(impl);
+        proto->continue_reader(impl.get());
     });
 }
 
@@ -161,7 +159,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     io.first->read(&remote_aid, sizeof(actor_id));
     io.first->read(&peer_pid, sizeof(std::uint32_t));
     io.first->read(peer_node_id.data(), peer_node_id.size());
-    process_information_ptr pinfptr(new process_information(peer_pid, peer_node_id));
+    auto pinfptr = make_counted<process_information>(peer_pid, peer_node_id);
     if (*pinf == *pinfptr) {
         // dude, this is not a remote actor, it's a local actor!
         CPPA_LOG_ERROR("remote_actor() called to access a local actor");
@@ -205,7 +203,7 @@ void default_protocol::new_peer(const input_stream_ptr& in,
                                 const output_stream_ptr& out,
                                 const process_information_ptr& node) {
     CPPA_LOG_TRACE("");
-    default_peer_ptr ptr(new default_peer(this, in, out, node));
+    auto ptr = make_counted<default_peer>(this, in, out, node);
     continue_reader(ptr.get());
     if (node) register_peer(*node, ptr.get());
 }

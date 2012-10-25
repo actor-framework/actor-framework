@@ -278,7 +278,7 @@ class local_group_module : public group::module {
             return i->second;
         }
         else {
-            local_group_ptr tmp(new local_group(true, this, identifier));
+            auto tmp = make_counted<local_group>(true, this, identifier);
             { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(make_pair(identifier, tmp));
@@ -440,7 +440,7 @@ class remote_group_module : public group::module {
  public:
 
     remote_group_module() : super("remote") {
-        shared_map_ptr sm(new shared_map);
+        auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
         auto worker = spawn<detached_and_hidden>([_this, sm] {
@@ -483,8 +483,7 @@ class remote_group_module : public group::module {
                             on(atom("GROUP"), arg_match) >> [&](const group_ptr& g) {
                                 auto gg = dynamic_cast<local_group*>(g.get());
                                 if (gg) {
-                                    remote_group_ptr rg;
-                                    rg.reset(new remote_group(_this, key, gg));
+                                    auto rg = make_counted<remote_group>(_this, key, gg);
                                     sm->put(key, rg);
                                     peers[authority].second.push_back(make_pair(key, rg));
                                 }

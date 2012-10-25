@@ -136,8 +136,7 @@ std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
     nonblocking(sockfd, true);
     // ok, no exceptions
     sguard.release();
-    std::unique_ptr<ipv4_acceptor> result(new ipv4_acceptor(sockfd, true));
-    return std::move(result);
+    return std::unique_ptr<ipv4_acceptor>(new ipv4_acceptor(sockfd, true));
 }
 
 ipv4_acceptor::~ipv4_acceptor() {
