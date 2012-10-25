@@ -81,7 +81,76 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-file(GLOB LIBCPPA_SRC "src/*.cpp")
+#file(GLOB LIBCPPA_SRC "src/*.cpp")
+
+set(LIBCPPA_SRC
+    src/abstract_scheduled_actor.cpp
+    src/abstract_tuple.cpp
+    src/actor.cpp
+    src/actor_addressing.cpp
+    src/actor_count.cpp
+    src/actor_proxy.cpp
+    src/actor_registry.cpp
+    src/addressed_message.cpp
+    src/any_tuple.cpp
+    src/atom.cpp
+    src/attachable.cpp
+    src/behavior_stack.cpp
+    src/binary_deserializer.cpp
+    src/binary_serializer.cpp
+    src/buffer.cpp
+    src/channel.cpp
+    src/context_switching_actor.cpp
+    src/continuable_reader.cpp
+    src/continuable_writer.cpp
+    src/decorated_names_map.cpp
+    src/default_actor_addressing.cpp
+    src/default_actor_proxy.cpp
+    src/default_peer.cpp
+    src/default_peer_acceptor.cpp
+    src/default_protocol.cpp
+    src/demangle.cpp
+    src/deserializer.cpp
+    src/duration.cpp
+    src/empty_tuple.cpp
+    src/event_based_actor.cpp
+    src/exception.cpp
+    src/factory.cpp
+    src/fd_util.cpp
+    src/fiber.cpp
+    src/group.cpp
+    src/group_manager.cpp
+    src/ipv4_acceptor.cpp
+    src/ipv4_io_stream.cpp
+    src/local_actor.cpp
+    src/logging.cpp
+    src/middleman.cpp
+    src/object.cpp
+    src/object_array.cpp
+    src/opt.cpp
+    src/partial_function.cpp
+    src/pattern.cpp
+    src/primitive_variant.cpp
+    src/process_information.cpp
+    src/protocol.cpp
+    src/receive.cpp
+    src/ref_counted.cpp
+    src/ripemd_160.cpp
+    src/scheduled_actor.cpp
+    src/scheduled_actor_dummy.cpp
+    src/scheduler.cpp
+    src/self.cpp
+    src/serializer.cpp
+    src/shared_spinlock.cpp
+    src/singleton_manager.cpp
+    src/string_serialization.cpp
+    src/thread_mapped_actor.cpp
+    src/thread_pool_scheduler.cpp
+    src/to_uniform_name.cpp
+    src/unicast_network.cpp
+    src/uniform_type_info.cpp
+    src/weak_ptr_anchor.cpp
+    src/yield_interface.cpp)
 
 set(boost_context third_party/boost_context)
 

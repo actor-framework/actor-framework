@@ -28,64 +28,22 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_WEAK_INTRUSIVE_PTR_HPP
-#define CPPA_WEAK_INTRUSIVE_PTR_HPP
+#include <mutex> // std::lock_guard
 
-#include <cstddef>
-
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
 #include "cppa/weak_ptr_anchor.hpp"
-#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-template<typename T>
-class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
+weak_ptr_anchor::weak_ptr_anchor(ref_counted* ptr) : m_ptr(ptr) { }
 
- public:
-
-    weak_intrusive_ptr(const intrusive_ptr<T>& from) {
-        if (from) m_anchor = from->get_weak_ptr_anchor();
+bool weak_ptr_anchor::try_expire() {
+    std::lock_guard<util::shared_spinlock> guard(m_lock);
+    // double-check reference count
+    if (m_ptr->get_reference_count() == 0) {
+        m_ptr = nullptr;
+        return true;
     }
-
-    weak_intrusive_ptr() = default;
-    weak_intrusive_ptr(const weak_intrusive_ptr&) = default;
-    weak_intrusive_ptr& operator=(const weak_intrusive_ptr&) = default;
-
-    /**
-     * @brief Promotes this weak pointer to an intrusive_ptr.
-     * @warning Returns @p nullptr if expired.
-     */
-    intrusive_ptr<T> promote() {
-        return (m_anchor) ? m_anchor->get<T>() : nullptr;
-    }
-
-    /**
-     * @brief Queries whether the object was already deleted.
-     */
-    bool expired() const {
-        return (m_anchor) ? m_anchor->expired() : true;
-    }
-
-    inline ptrdiff_t compare(const weak_intrusive_ptr& other) const {
-        return m_anchor.compare(other.m_anchor);
-    }
-
-    /**
-     * @brief Queries whether this weak pointer is invalid, i.e., does not
-     *        point to an instance.
-     */
-    inline bool invalid() const {
-        return m_anchor == nullptr;
-    }
-
- private:
-
-    intrusive_ptr<weak_ptr_anchor> m_anchor;
-
-};
+    return false;
+}
 
 } // namespace cppa
-
-#endif // CPPA_WEAK_INTRUSIVE_PTR_HPP

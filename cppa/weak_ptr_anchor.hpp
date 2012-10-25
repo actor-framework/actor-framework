@@ -28,64 +28,47 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_WEAK_INTRUSIVE_PTR_HPP
-#define CPPA_WEAK_INTRUSIVE_PTR_HPP
-
-#include <cstddef>
+#ifndef CPPA_WEAK_PTR_ANCHOR_HPP
+#define CPPA_WEAK_PTR_ANCHOR_HPP
 
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/weak_ptr_anchor.hpp"
-#include "cppa/util/comparable.hpp"
+
+#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/util/shared_lock_guard.hpp"
 
 namespace cppa {
 
-template<typename T>
-class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
+class weak_ptr_anchor : public ref_counted {
 
  public:
 
-    weak_intrusive_ptr(const intrusive_ptr<T>& from) {
-        if (from) m_anchor = from->get_weak_ptr_anchor();
+    weak_ptr_anchor(ref_counted* ptr);
+
+    template<typename T>
+    intrusive_ptr<T> get() {
+        intrusive_ptr<T> result;
+        { // lifetime scope of guard
+            util::shared_lock_guard<util::shared_spinlock> guard(m_lock);
+            if (m_ptr) result.reset(static_cast<T*>(m_ptr));
+        }
+        return result;
     }
 
-    weak_intrusive_ptr() = default;
-    weak_intrusive_ptr(const weak_intrusive_ptr&) = default;
-    weak_intrusive_ptr& operator=(const weak_intrusive_ptr&) = default;
-
-    /**
-     * @brief Promotes this weak pointer to an intrusive_ptr.
-     * @warning Returns @p nullptr if expired.
-     */
-    intrusive_ptr<T> promote() {
-        return (m_anchor) ? m_anchor->get<T>() : nullptr;
+    inline bool expired() const {
+        // no need for locking since pointer comparison is atomic
+        return m_ptr == nullptr;
     }
 
-    /**
-     * @brief Queries whether the object was already deleted.
-     */
-    bool expired() const {
-        return (m_anchor) ? m_anchor->expired() : true;
-    }
-
-    inline ptrdiff_t compare(const weak_intrusive_ptr& other) const {
-        return m_anchor.compare(other.m_anchor);
-    }
-
-    /**
-     * @brief Queries whether this weak pointer is invalid, i.e., does not
-     *        point to an instance.
-     */
-    inline bool invalid() const {
-        return m_anchor == nullptr;
-    }
+    bool try_expire();
 
  private:
 
-    intrusive_ptr<weak_ptr_anchor> m_anchor;
+    ref_counted* m_ptr;
+    util::shared_spinlock m_lock;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_WEAK_INTRUSIVE_PTR_HPP
+#endif // CPPA_WEAK_PTR_ANCHOR_HPP

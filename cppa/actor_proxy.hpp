@@ -42,9 +42,9 @@ class actor_proxy_cache;
 /**
  * @brief Represents a remote actor.
  */
-class actor_proxy : public enable_weak_ptr_mixin<actor_proxy,actor> {
+class actor_proxy : public enable_weak_ptr_mixin<actor> {
 
-    typedef enable_weak_ptr_mixin<actor_proxy,actor> super;
+    typedef enable_weak_ptr_mixin<actor> super;
 
  public:
 

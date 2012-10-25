@@ -291,3 +291,6 @@ cppa/network/continuable_writer.hpp
 src/continuable_writer.cpp
 cppa/network/middleman_event_handler_base.hpp
 src/actor_addressing.cpp
+cppa/weak_ptr_anchor.hpp
+src/weak_ptr_anchor.cpp
+cppa/actor_companion_mixin.hpp
