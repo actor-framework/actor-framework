@@ -150,6 +150,12 @@ int client_part(const vector<string_pair>& args) {
     }
     auto port = static_cast<uint16_t>(stoi(i->second));
     auto server = remote_actor("localhost", port);
+    // remote_actor is supposed to return the same server when connecting to
+    // the same host again
+    for (int i = 0; i < 5; ++i) {
+        auto server2 = remote_actor("localhost", port);
+        CPPA_CHECK(server == server2);
+    }
     send(server, atom("SpawnPing"));
     receive (
         on(atom("PingPtr"), arg_match) >> [](actor_ptr ping_actor) {

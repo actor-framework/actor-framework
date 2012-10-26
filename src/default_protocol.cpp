@@ -116,8 +116,7 @@ void default_protocol::register_peer(const process_information& node,
     CPPA_LOG_TRACE("node = " << to_string(node) << ", ptr = " << ptr);
     auto& ptrref = m_peers[node];
     if (ptrref) {
-        CPPA_LOG_ERROR("peer already defined");
-        cerr << "*** peer already defined!" << endl;
+        CPPA_LOG_INFO("peer " << to_string(node) << " already defined");
     }
     else ptrref = ptr;
 }
