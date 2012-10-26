@@ -38,6 +38,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                 (always sets --build-type=Debug)
     --enable-perftools          use Google perftools
     --with-cppa-log-level=LVL   sets the debugging output, possible values:
+                                  - ERROR
                                   - WARNING
                                   - INFO
                                   - DEBUG
@@ -156,6 +157,9 @@ while [ $# -ne 0 ]; do
         --with-cppa-log-level=*)
             level=$(echo "$optarg" | tr '[:lower:]' '[:upper:]')
             case $level in
+                ERROR)
+                    append_cache_entry CPPA_LOG_LEVEL STRING 0
+                    ;;
                 WARNING)
                     append_cache_entry CPPA_LOG_LEVEL STRING 1
                     ;;

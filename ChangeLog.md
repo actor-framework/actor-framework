@@ -1,3 +1,31 @@
+Version 0.5
+-----------
+
+__2012-10-26__
+
+- New logging facility
+  * must be enabled using --with-cppa-log-level=LEVEL (TRACE-ERROR)
+  * --enable-debug also enables ERROR log level implicitly
+  * output files are named libcppa_PID_TIMESTAMP.log
+  * log format is Log4j-like
+- New middleman (MM) architecture
+  * MM multiplexes sockets but no longer knows communication internas
+  * new protocol interface encapsulates any communication
+  * users can add new communication protocols to MM
+  * previously used binary protocol is not called 'DEFAULT'
+  * MM provides run_later function to hook code into MM event-loop
+- New class: `weak_intrusive_ptr`
+  * `ref_counted` has protected destructor to enforce use of `request_deletion`
+  * default `request_deletion` calls `delete`
+  * `enable_weak_ptr_mixin` overrides `request_deletion` to invalidate weak ptrs
+- Fixed issue #75: peers hold weak pointers to proxies (breaks cyclic refs)
+- `actor_companion_mixin` allows non-actor classes to communicate as/to actors
+- `actor_proxy` became an abstract class; must be implemented for each protocol
+- Removed global proxy cache singleton
+- `actor_addressing` manages proxies; must be implemented for each protocol
+- New factory function: `make_counted` (similar to std::make_shared)
+- Bugfix: `reply` matches correct message on nested receives
+
 Version 0.4.2
 -------------
 
