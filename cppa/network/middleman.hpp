@@ -45,6 +45,9 @@ namespace cppa { namespace detail { class singleton_manager; } }
 
 namespace cppa { namespace network {
 
+/**
+ * @brief Multiplexes asynchronous IO.
+ */
 class middleman {
 
     friend class detail::singleton_manager;
@@ -53,11 +56,19 @@ class middleman {
 
     virtual ~middleman();
 
+    /**
+     * @brief Add a new communication protocol to the middleman.
+     */
     virtual void add_protocol(const protocol_ptr& impl) = 0;
 
+    /**
+     * @brief Returns the protocol associated with @p id.
+     */
     virtual protocol_ptr protocol(atom_value id) = 0;
 
-    // runs @p fun in the middleman's event loop
+    /**
+     * @brief Runs @p fun in the middleman's event loop.
+     */
     virtual void run_later(std::function<void()> fun) = 0;
 
  protected:

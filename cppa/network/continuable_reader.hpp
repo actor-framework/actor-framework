@@ -42,6 +42,10 @@ namespace cppa { namespace network {
 
 class middleman;
 
+/**
+ * @brief Denotes the return value of
+ *        {@link continuable_reader::continue_reading()}.
+ */
 enum continue_reading_result {
     read_failure,
     read_closed,
@@ -50,6 +54,9 @@ enum continue_reading_result {
 
 class continuable_writer;
 
+/**
+ * @brief An object performing asynchronous input on a file handle.
+ */
 class continuable_reader : virtual public ref_counted {
 
  public:
@@ -65,7 +72,8 @@ class continuable_reader : virtual public ref_counted {
     virtual continue_reading_result continue_reading() = 0;
 
     /**
-     * @return Casts @p this to a continuable_writer or returns @p nullptr.
+     * @return Casts @p this to a continuable_writer, returns @p nullptr
+     *         if cast fails.
      */
     virtual continuable_writer* as_writer();
 

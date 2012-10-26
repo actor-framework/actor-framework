@@ -45,16 +45,19 @@ namespace cppa { namespace network {
 
 typedef int event_bitmask;
 
-namespace event {
+namespace event { namespace {
 
-static constexpr event_bitmask none  = 0x00;
-static constexpr event_bitmask read  = 0x01;
-static constexpr event_bitmask write = 0x02;
-static constexpr event_bitmask both  = 0x03;
-static constexpr event_bitmask error = 0x04;
+constexpr event_bitmask none  = 0x00;
+constexpr event_bitmask read  = 0x01;
+constexpr event_bitmask write = 0x02;
+constexpr event_bitmask both  = 0x03;
+constexpr event_bitmask error = 0x04;
 
-} // namespace event
+} } // namespace event
 
+/**
+ * @brief Converts an event bitmask to a human-readable string.
+ */
 inline const char* eb2str(event_bitmask e) {
     switch (e) {
         default: return "INVALID";

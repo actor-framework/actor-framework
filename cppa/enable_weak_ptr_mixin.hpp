@@ -44,19 +44,19 @@
 
 namespace cppa {
 
+/**
+ * @brief Enables derived classes to be used in {@link weak_intrusive_ptr}.
+ */
 template<class Base>
 class enable_weak_ptr_mixin : public Base {
 
     typedef Base super;
 
+    template<typename T>
+    friend class weak_intrusive_ptr;
+
     static_assert(std::is_base_of<ref_counted,Base>::value,
                   "Base needs to be derived from ref_counted");
-
- public:
-
-    inline intrusive_ptr<weak_ptr_anchor> get_weak_ptr_anchor() const {
-        return m_anchor;
-    }
 
  protected:
 
@@ -70,6 +70,10 @@ class enable_weak_ptr_mixin : public Base {
     }
 
  private:
+
+    inline intrusive_ptr<weak_ptr_anchor> get_weak_ptr_anchor() const {
+        return m_anchor;
+    }
 
     intrusive_ptr<weak_ptr_anchor> m_anchor;
 

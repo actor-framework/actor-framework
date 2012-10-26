@@ -50,6 +50,9 @@ class abstract_middleman;
 class continuable_reader;
 class continuable_writer;
 
+/**
+ * @brief Implements a communication protocol.
+ */
 class protocol : public ref_counted {
 
     typedef ref_counted super;

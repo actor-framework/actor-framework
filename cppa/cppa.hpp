@@ -137,6 +137,9 @@
  * @namespace cppa::intrusive
  * @brief Contains intrusive container implementations.
  *
+ * @namespace cppa::network
+ * @brief Contains all network related classes.
+ *
  * @namespace cppa::factory
  * @brief Contains factory functions to create actors from lambdas or
  *        other functors.

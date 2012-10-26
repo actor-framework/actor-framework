@@ -41,6 +41,10 @@
 
 namespace cppa { namespace network {
 
+/**
+ * @brief Encapsulates a message along with sender and receiver information
+ *        as well as its synchronous message id.
+ */
 class addressed_message {
 
  public:
@@ -99,8 +103,14 @@ class addressed_message {
 
 };
 
+/**
+ * @relates addressed_message
+ */
 bool operator==(const addressed_message& lhs, const addressed_message& rhs);
 
+/**
+ * @relates addressed_message
+ */
 inline bool operator!=(const addressed_message& lhs,
                        const addressed_message& rhs) {
     return !(lhs == rhs);

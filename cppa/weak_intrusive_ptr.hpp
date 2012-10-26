@@ -40,6 +40,9 @@
 
 namespace cppa {
 
+/**
+ * @brief A smart pointer that does not increase the reference count.
+ */
 template<typename T>
 class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
 
@@ -55,7 +58,7 @@ class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
 
     /**
      * @brief Promotes this weak pointer to an intrusive_ptr.
-     * @warning Returns @p nullptr if expired.
+     * @warning Returns @p nullptr if {@link expired()}.
      */
     intrusive_ptr<T> promote() {
         return (m_anchor) ? m_anchor->get<T>() : nullptr;
@@ -74,7 +77,7 @@ class weak_intrusive_ptr : util::comparable<weak_intrusive_ptr<T>> {
 
     /**
      * @brief Queries whether this weak pointer is invalid, i.e., does not
-     *        point to an instance.
+     *        point to an object.
      */
     inline bool invalid() const {
         return m_anchor == nullptr;

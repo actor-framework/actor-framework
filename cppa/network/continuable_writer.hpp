@@ -37,6 +37,10 @@
 
 namespace cppa { namespace network {
 
+/**
+ * @brief Denotes the return value of
+ *        {@link continuable_writer::continue_writing()}.
+ */
 enum continue_writing_result {
     write_failure,
     write_closed,
@@ -44,6 +48,9 @@ enum continue_writing_result {
     write_done
 };
 
+/**
+ * @brief An object performing asynchronous output on a file handle.
+ */
 class continuable_writer : virtual public ref_counted {
 
     typedef ref_counted super;

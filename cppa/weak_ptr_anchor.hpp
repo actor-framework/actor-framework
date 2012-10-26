@@ -39,12 +39,19 @@
 
 namespace cppa {
 
+/**
+ * @brief A storage holding a spinlock and a pointer to a
+ *        reference counted object.
+ */
 class weak_ptr_anchor : public ref_counted {
 
  public:
 
     weak_ptr_anchor(ref_counted* ptr);
 
+    /**
+     * @brief Gets a pointer to the object or nullptr if {@link expired()}.
+     */
     template<typename T>
     intrusive_ptr<T> get() {
         intrusive_ptr<T> result;
@@ -55,11 +62,18 @@ class weak_ptr_anchor : public ref_counted {
         return result;
     }
 
+    /**
+     * @brief Queries whether the object was already deleted.
+     */
     inline bool expired() const {
         // no need for locking since pointer comparison is atomic
         return m_ptr == nullptr;
     }
 
+    /**
+     * @brief Tries to expire this anchor. Fails if reference count of object
+     *        is not zero.
+     */
     bool try_expire();
 
  private:
