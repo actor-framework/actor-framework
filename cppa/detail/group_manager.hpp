@@ -38,13 +38,15 @@
 #include "cppa/group.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
+#include "cppa/detail/singleton_mixin.hpp"
+
 namespace cppa { namespace detail {
 
-class group_manager {
+class group_manager : public singleton_mixin<group_manager> {
+
+    friend class singleton_mixin<group_manager>;
 
  public:
-
-    group_manager();
 
     intrusive_ptr<group> get(const std::string& module_name,
                              const std::string& group_identifier);
@@ -61,6 +63,8 @@ class group_manager {
 
     modules_map m_mmap;
     std::mutex m_mmap_mtx;
+
+    group_manager();
 
 };
 

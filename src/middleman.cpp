@@ -439,7 +439,7 @@ class middleman_impl : public abstract_middleman {
 
  protected:
 
-    void start() {
+    void initialize() {
         int pipefds[2];
         if (pipe(pipefds) != 0) { CPPA_CRITICAL("cannot create pipe"); }
         m_pipe_read = pipefds[0];
@@ -449,7 +449,7 @@ class middleman_impl : public abstract_middleman {
         m_thread = thread([this] { middleman_loop(this); });
     }
 
-    void stop() {
+    void destroy() {
         run_later([this] {
             CPPA_LOG_TRACE("lambda from middleman_impl::stop");
             this->m_done = true;
@@ -458,6 +458,7 @@ class middleman_impl : public abstract_middleman {
         m_thread.join();
         close(m_pipe_read);
         close(m_pipe_write);
+        delete this;
     }
 
  private:

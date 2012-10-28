@@ -70,7 +70,6 @@ class singleton_manager {
 
     static actor_registry* get_actor_registry();
 
-    // created on-the-fly on a successfull call to set_scheduler()
     static network::middleman* get_middleman();
 
     static uniform_type_info_map* get_uniform_type_info_map();
@@ -83,16 +82,42 @@ class singleton_manager {
 
  private:
 
+    /**
+     * @brief Type @p T has to provide: <tt>static T* create_singleton()</tt>,
+     *        <tt>void initialize()</tt>, <tt>void destroy()</tt>,
+     *        and <tt>dispose()</tt>.
+     * The constructor of T shall be lightweigt, since more than one object
+     * might get constructed initially.
+     * <tt>dispose()</tt> is called on objects with failed CAS operation.
+     * <tt>initialize()</tt> is called on objects with succeeded CAS operation.
+     * <tt>destroy()</tt> is called during shutdown on initialized objects.
+     *
+     * Both <tt>dispose</tt> and <tt>destroy</tt> must delete the object
+     * eventually.
+     */
     template<typename T>
-    static void stop_and_kill(std::atomic<T*>& ptr) {
+    static T* lazy_get(std::atomic<T*>& ptr) {
+        T* result = ptr.load();
+        while (result == nullptr) {
+            auto tmp = T::create_singleton();
+            if (ptr.compare_exchange_weak(result, tmp)) {
+                tmp->initialize();
+                result = tmp;
+            }
+            else tmp->dispose();
+        }
+        return result;
+    }
+
+    template<typename T>
+    static void destroy(std::atomic<T*>& ptr) {
         for (;;) {
             auto p = ptr.load();
             if (p == nullptr) {
                 return;
             }
             else if (ptr.compare_exchange_weak(p, nullptr)) {
-                p->stop();
-                delete p;
+                p->destroy();
                 ptr = nullptr;
                 return;
             }

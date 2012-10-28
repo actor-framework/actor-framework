@@ -33,8 +33,7 @@
 
 namespace cppa { namespace detail {
 
-empty_tuple::empty_tuple() : abstract_tuple(tuple_impl_info::statically_typed) {
-}
+empty_tuple::empty_tuple() : super(tuple_impl_info::statically_typed) { }
 
 size_t empty_tuple::size() const {
     return 0;

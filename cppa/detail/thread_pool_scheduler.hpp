@@ -49,9 +49,13 @@ class thread_pool_scheduler : public scheduler {
 
     struct worker;
 
-    void start() /*override*/;
+    thread_pool_scheduler();
 
-    void stop() /*override*/;
+    thread_pool_scheduler(size_t num_worker_threads);
+
+    void initialize() /*override*/;
+
+    void destroy() /*override*/;
 
     void enqueue(scheduled_actor* what) /*override*/;
 
@@ -74,12 +78,13 @@ class thread_pool_scheduler : public scheduler {
     //typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
     typedef util::producer_consumer_list<scheduled_actor> job_queue;
 
+    size_t m_num_threads;
     job_queue m_queue;
     scheduled_actor_dummy m_dummy;
     std::thread m_supervisor;
 
     static void worker_loop(worker*);
-    static void supervisor_loop(job_queue*, scheduled_actor*);
+    static void supervisor_loop(job_queue*, scheduled_actor*, size_t);
 
     actor_ptr spawn_impl(scheduled_actor_ptr what);
 

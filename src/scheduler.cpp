@@ -220,12 +220,13 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
 scheduler::scheduler() : m_helper(new scheduler_helper) {
 }
 
-void scheduler::start() {
+void scheduler::initialize() {
     m_helper->start();
 }
 
-void scheduler::stop() {
+void scheduler::destroy() {
     m_helper->stop();
+    delete this;
 }
 
 scheduler::~scheduler() {
@@ -254,19 +255,16 @@ void set_scheduler(scheduler* sched) {
     }
 }
 
+void set_default_scheduler(size_t num_threads) {
+    set_scheduler(new detail::thread_pool_scheduler(num_threads));
+}
+
 scheduler* get_scheduler() {
-    scheduler* result = detail::singleton_manager::get_scheduler();
-    if (result == nullptr) {
-        result = new detail::thread_pool_scheduler;
-        try {
-            set_scheduler(result);
-        }
-        catch (std::runtime_error&) {
-            delete result;
-            return detail::singleton_manager::get_scheduler();
-        }
-    }
-    return result;
+    return detail::singleton_manager::get_scheduler();
+}
+
+scheduler* scheduler::create_singleton() {
+    return new detail::thread_pool_scheduler;
 }
 
 } // namespace cppa

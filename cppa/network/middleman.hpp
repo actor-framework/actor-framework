@@ -73,12 +73,13 @@ class middleman {
 
  protected:
 
-    virtual void stop() = 0;
-    virtual void start() = 0;
+    virtual void destroy() = 0;
+    virtual void initialize() = 0;
 
  private:
 
     static middleman* create_singleton();
+    inline void dispose() { delete this; }
 
 };
 

@@ -54,9 +54,9 @@ namespace cppa { namespace detail {
 
 class logging {
 
- public:
+    friend class singleton_manager;
 
-    virtual ~logging();
+ public:
 
     virtual void log(const char* level,
                      const char* class_name,
@@ -65,13 +65,7 @@ class logging {
                      int line_num,
                      const std::string& msg    ) = 0;
 
-    virtual void start() = 0;
-
-    virtual void stop() = 0;
-
     static logging* instance();
-
-    static logging* create_singleton();
 
     class trace_helper {
 
@@ -101,6 +95,18 @@ class logging {
         int m_line_num;
 
     };
+
+ protected:
+
+    virtual ~logging();
+
+    static logging* create_singleton();
+
+    virtual void initialize() = 0;
+
+    virtual void destroy() = 0;
+
+    inline void dispose() { delete this; }
 
 };
 

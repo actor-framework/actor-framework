@@ -32,16 +32,21 @@
 #define CPPA_EMPTY_TUPLE_HPP
 
 #include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/detail/singleton_mixin.hpp"
 
 namespace cppa { namespace detail {
 
-class empty_tuple : public abstract_tuple {
+class empty_tuple : public singleton_mixin<empty_tuple,abstract_tuple> {
+
+    friend class singleton_manager;
+    friend class singleton_mixin<empty_tuple,abstract_tuple>;
+
+    typedef singleton_mixin<empty_tuple,abstract_tuple> super;
 
  public:
 
     using abstract_tuple::const_iterator;
 
-    empty_tuple();
     size_t size() const;
     void* mutable_at(size_t);
     abstract_tuple* copy() const;
@@ -49,6 +54,13 @@ class empty_tuple : public abstract_tuple {
     bool equals(const abstract_tuple& other) const;
     const uniform_type_info* type_at(size_t) const;
     const std::type_info* type_token() const;
+
+ private:
+
+    empty_tuple();
+
+    inline void initialize() /*override*/ { ref(); }
+    inline void destroy() /*override*/ { deref(); }
 
 };
 

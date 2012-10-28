@@ -294,3 +294,4 @@ src/actor_addressing.cpp
 cppa/weak_ptr_anchor.hpp
 src/weak_ptr_anchor.cpp
 cppa/actor_companion_mixin.hpp
+cppa/detail/singleton_mixin.hpp

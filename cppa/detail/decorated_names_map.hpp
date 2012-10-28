@@ -34,19 +34,23 @@
 #include <map>
 #include <string>
 
+#include "cppa/detail/singleton_mixin.hpp"
+
 namespace cppa { namespace detail {
 
-class decorated_names_map {
+class decorated_names_map : public singleton_mixin<decorated_names_map> {
+
+    friend class singleton_mixin<decorated_names_map>;
 
  public:
-
-    decorated_names_map();
 
     // returns either a decorated version of @p demangled_name or
     // @p demangled_name itself
     const std::string& decorate(const std::string& demangled_name) const;
 
  private:
+
+    decorated_names_map();
 
     std::map<std::string, std::string> m_map;
 

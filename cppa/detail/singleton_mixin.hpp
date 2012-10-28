@@ -28,64 +28,51 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UNIFORM_TYPE_INFO_MAP_HPP
-#define CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#ifndef CPPA_SINGLETON_MIXIN_HPP
+#define CPPA_SINGLETON_MIXIN_HPP
 
-#include <set>
-#include <string>
-#include <utility> // std::pair
-
-#include "cppa/detail/singleton_mixin.hpp"
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
-
-namespace cppa { class uniform_type_info; }
+#include <utility>
 
 namespace cppa { namespace detail {
 
-class uniform_type_info_map_helper;
+class singleton_manager;
 
-// note: this class is implemented in uniform_type_info.cpp
-class uniform_type_info_map : public singleton_mixin<uniform_type_info_map> {
+// a mixin for simple singleton classes
+template<class Derived, class Base = void>
+class singleton_mixin : public Base {
 
-    friend class uniform_type_info_map_helper;
-    friend class singleton_mixin<uniform_type_info_map>;
+    friend class singleton_manager;
 
- public:
+    inline static Derived* create_singleton() { return new Derived; }
+    inline void dispose() { delete this; }
+    inline void destroy() { delete this; }
+    inline void initialize() { }
 
-    typedef std::set<std::string> set_type;
-    typedef std::map<std::string, uniform_type_info*> uti_map_type;
-    typedef std::map<int, std::pair<set_type, set_type> > int_map_type;
+ protected:
 
-    inline const int_map_type& int_names() const {
-        return m_ints;
-    }
+    template<typename... Args>
+    singleton_mixin(Args&&... args) : Base(std::forward<Args>(args)...) { }
 
-    const uniform_type_info* by_raw_name(const std::string& name) const;
+    virtual ~singleton_mixin() { }
 
-    const uniform_type_info* by_uniform_name(const std::string& name) const;
+};
 
-    std::vector<const uniform_type_info*> get_all() const;
+template<class Derived>
+class singleton_mixin<Derived, void> {
 
-    // NOT thread safe!
-    bool insert(const std::set<std::string>& raw_names, uniform_type_info* uti);
+    friend class singleton_manager;
 
- private:
+    inline static Derived* create_singleton() { return new Derived; }
+    inline void dispose() { delete this; }
+    inline void destroy() { delete this; }
+    inline void initialize() { }
 
-    // maps raw typeid names to uniform type informations
-    uti_map_type m_by_rname;
+ protected:
 
-    // maps uniform names to uniform type informations
-    uti_map_type m_by_uname;
-
-    // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
-    int_map_type m_ints;
-
-    uniform_type_info_map();
-
-    ~uniform_type_info_map();
+    virtual ~singleton_mixin() { }
 
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#endif // CPPA_SINGLETON_MIXIN_HPP

@@ -42,9 +42,15 @@
 #include "cppa/attachable.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
+#include "cppa/detail/singleton_mixin.hpp"
+
 namespace cppa { namespace detail {
 
-class actor_registry {
+class singleton_manager;
+
+class actor_registry : public singleton_mixin<actor_registry> {
+
+    friend class singleton_mixin<actor_registry>;
 
  public:
 
@@ -54,8 +60,6 @@ class actor_registry {
      *        execution for given reason.
      */
     typedef std::pair<actor_ptr, std::uint32_t> value_type;
-
-    actor_registry();
 
     /**
      * @brief Returns the {nullptr, invalid_exit_reason}.
@@ -97,6 +101,8 @@ class actor_registry {
 
     mutable util::shared_spinlock m_instances_mtx;
     entries m_entries;
+
+    actor_registry();
 
 };
 

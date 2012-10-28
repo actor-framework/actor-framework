@@ -49,16 +49,11 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
-using std::cout;
-using std::endl;
+namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
+
+namespace cppa { namespace detail {
 
 namespace {
-
-using namespace cppa;
-using namespace cppa::detail;
-
-//volatile uniform_type_info_map* s_uniform_type_info_map = 0;
-
 
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<decorated_names_map*> s_decorated_names_map;
@@ -69,55 +64,27 @@ std::atomic<empty_tuple*> s_empty_tuple;
 std::atomic<scheduler*> s_scheduler;
 std::atomic<logging*> s_logger;
 
-template<typename T>
-T* lazy_get(std::atomic<T*>& ptr) {
-    T* result = ptr.load(std::memory_order_seq_cst);
-    if (result == nullptr) {
-        auto tmp = new T;
-        if (ptr.compare_exchange_strong(result, tmp, std::memory_order_seq_cst)) {
-            return tmp;
-        }
-        else {
-            delete tmp;
-            return lazy_get(ptr);
-        }
-    }
-    return result;
-}
-
 } // namespace <anonymous>
 
-namespace cppa { void shutdown() { singleton_manager::shutdown(); } }
-
-namespace cppa { namespace detail {
-
 void singleton_manager::shutdown() {
+    CPPA_LOGF_TRACE("");
     CPPA_LOGF_DEBUG("prepare to shutdown");
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
     }
     auto rptr = s_actor_registry.load();
-    if (rptr) {
-        rptr->await_running_count_equal(0);
-    }
-    stop_and_kill(s_scheduler);
-    stop_and_kill(s_middleman);
+    if (rptr) rptr->await_running_count_equal(0);
+    destroy(s_scheduler);
+    destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe now to delete all other singletons now
-    delete s_actor_registry.load();
-    s_actor_registry = nullptr;
-    delete s_group_manager.load();
-    s_group_manager = nullptr;
-    auto et = s_empty_tuple.load();
-    if (et) et->deref();
-    s_empty_tuple = nullptr;
-    delete s_uniform_type_info_map.load();
-    s_uniform_type_info_map = nullptr;
-    delete s_decorated_names_map.load();
-    s_decorated_names_map = nullptr;
-    // last but not least: kill logger
-    stop_and_kill(s_logger);
+    destroy(s_actor_registry);
+    destroy(s_group_manager);
+    destroy(s_empty_tuple);
+    destroy(s_uniform_type_info_map);
+    destroy(s_decorated_names_map);
+    destroy(s_logger);
 }
 
 actor_registry* singleton_manager::get_actor_registry() {
@@ -133,7 +100,7 @@ group_manager* singleton_manager::get_group_manager() {
 }
 
 scheduler* singleton_manager::get_scheduler() {
-    return s_scheduler.load();
+    return lazy_get(s_scheduler);
 }
 
 decorated_names_map* singleton_manager::get_decorated_names_map() {
@@ -141,62 +108,27 @@ decorated_names_map* singleton_manager::get_decorated_names_map() {
 }
 
 logging* singleton_manager::get_logger() {
-    auto result = s_logger.load();
-    if (result == nullptr) {
-        auto tmp = logging::create_singleton();
-        if (s_logger.compare_exchange_weak(result, tmp) == false) {
-            delete tmp;
-        }
-        else {
-            result = tmp;
-            result->start();
-        }
-    }
-    return result;
+    return lazy_get(s_logger);
 }
 
 bool singleton_manager::set_scheduler(scheduler* ptr) {
     scheduler* expected = nullptr;
     if (s_scheduler.compare_exchange_weak(expected, ptr)) {
-        ptr->start();
-        network::middleman* mm = network::middleman::create_singleton();
-        network::middleman* mm_expected = nullptr;
-        if (s_middleman.compare_exchange_weak(mm_expected, mm)) {
-            mm->start();
-        }
-        else delete mm;
+        ptr->initialize();
         return true;
     }
     else {
-        delete ptr;
+        ptr->dispose();
         return false;
     }
 }
 
 network::middleman* singleton_manager::get_middleman() {
-    auto result = s_middleman.load();
-    if (result == nullptr) {
-        scheduler* s = new thread_pool_scheduler;
-        // set_scheduler sets s_network_manager
-        set_scheduler(s);
-        return get_middleman();
-    }
-    return result;
+    return lazy_get(s_middleman);
 }
 
 empty_tuple* singleton_manager::get_empty_tuple() {
-    empty_tuple* result = s_empty_tuple.load();
-    if (result == nullptr) {
-        auto tmp = new empty_tuple;
-        if (s_empty_tuple.compare_exchange_weak(result, tmp) == false) {
-            delete tmp;
-        }
-        else {
-            result = tmp;
-            result->ref();
-        }
-    }
-    return result;
+    return lazy_get(s_empty_tuple);
 }
 
 } } // namespace cppa::detail

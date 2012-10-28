@@ -59,14 +59,15 @@ namespace detail {
 // forwards self_type as actor_ptr, otherwise equal to std::forward
 template<typename T>
 struct spawn_fwd_ {
-static inline T&& _(T&& arg) { return std::move(arg); }
-static inline T& _(T& arg) { return arg; }
-static inline const T& _(const T& arg) { return arg; }
+    static inline T&& _(T&& arg) { return std::move(arg); }
+    static inline T& _(T& arg) { return arg; }
+    static inline const T& _(const T& arg) { return arg; }
 };
 template<>
 struct spawn_fwd_<self_type> {
-static inline actor_ptr _(const self_type& s) { return s.get(); }
+    static inline actor_ptr _(const self_type& s) { return s.get(); }
 };
+class singleton_manager;
 } // namespace detail
 
 /**
@@ -78,23 +79,32 @@ class scheduler {
 
     channel* delayed_send_helper();
 
+    friend class detail::singleton_manager;
+
  protected:
 
     scheduler();
 
- public:
-
     virtual ~scheduler();
 
-    /**
-     * @warning Always call scheduler::start on overriding.
-     */
-    virtual void start();
 
     /**
-     * @warning Always call scheduler::stop on overriding.
+     * @warning Always call scheduler::initialize on overriding.
      */
-    virtual void stop();
+    virtual void initialize();
+
+    /**
+     * @warning Always call scheduler::destroy on overriding.
+     */
+    virtual void destroy();
+
+ private:
+
+    static scheduler* create_singleton();
+
+    inline void dispose() { delete this; }
+
+ public:
 
     virtual void enqueue(scheduled_actor*) = 0;
 
@@ -225,8 +235,13 @@ class scheduler {
 void set_scheduler(scheduler* sched);
 
 /**
- * @brief Gets the actual used scheduler implementation.
- * @returns The active scheduler (usually default constructed).
+ * @brief Sets a thread pool scheduler with @p num_threads worker threads.
+ * @throws std::runtime_error if there's already a scheduler defined.
+ */
+void set_default_scheduler(size_t num_threads);
+
+/**
+ * @brief Returns the currently running scheduler.
  */
 scheduler* get_scheduler();
 

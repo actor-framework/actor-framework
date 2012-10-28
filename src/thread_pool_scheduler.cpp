@@ -160,11 +160,20 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) {
     (*w)();
 }
 
+thread_pool_scheduler::thread_pool_scheduler() {
+    m_num_threads = std::max<size_t>(std::thread::hardware_concurrency() * 2, 4);
+}
+
+thread_pool_scheduler::thread_pool_scheduler(size_t num_worker_threads) {
+    m_num_threads = num_worker_threads;
+}
+
+
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
-                                            scheduled_actor* dummy) {
+                                            scheduled_actor* dummy,
+                                            size_t num_threads) {
     std::vector<std::unique_ptr<thread_pool_scheduler::worker> > workers;
-    size_t num_workers = std::max<size_t>(std::thread::hardware_concurrency() * 2, 4);
-    for (size_t i = 0; i < num_workers; ++i) {
+    for (size_t i = 0; i < num_threads; ++i) {
         workers.emplace_back(new worker(jqueue, dummy));
         workers.back()->start();
     }
@@ -174,13 +183,13 @@ void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
     }
 }
 
-void thread_pool_scheduler::start() {
+void thread_pool_scheduler::initialize() {
     m_supervisor = std::thread(&thread_pool_scheduler::supervisor_loop,
-                               &m_queue, &m_dummy);
-    super::start();
+                               &m_queue, &m_dummy, m_num_threads);
+    super::initialize();
 }
 
-void thread_pool_scheduler::stop() {
+void thread_pool_scheduler::destroy() {
     m_queue.push_back(&m_dummy);
     m_supervisor.join();
     // make sure job queue is empty, because destructor of m_queue would
@@ -195,7 +204,7 @@ void thread_pool_scheduler::stop() {
         }
         ptr = m_queue.try_pop();
     }
-    super::stop();
+    super::destroy();
 }
 
 void thread_pool_scheduler::enqueue(scheduled_actor* what) {
