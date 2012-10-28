@@ -150,6 +150,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     CPPA_LOG_TRACE("io = {" << io.first.get() << ", " << io.second.get() << "}, "
                    << " << args.size() = " << args.size());
     CPPA_REQUIRE(args.size() == 0);
+    static_cast<void>(args); // keep compiler happy when compiling w/o debug
     auto pinf = process_information::get();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
