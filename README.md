@@ -58,3 +58,4 @@ Supported Operating Systems
 
 * Linux
 * Mac OS X
+* *Note for MS Windows*: libcppa relies on C++11 features such as variadic templates. We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
