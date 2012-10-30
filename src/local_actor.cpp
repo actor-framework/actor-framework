@@ -150,4 +150,11 @@ sync_recv_helper local_actor::handle_response(const message_future& handle) {
     }};
 }
 
+response_handle local_actor::make_response_handle() {
+    auto n = m_current_node;
+    response_handle result(this, n->sender, n->mid.response_id());
+    n->mid.mark_as_answered();
+    return std::move(result);
+}
+
 } // namespace cppa

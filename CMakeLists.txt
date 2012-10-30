@@ -135,6 +135,7 @@ set(LIBCPPA_SRC
     src/protocol.cpp
     src/receive.cpp
     src/ref_counted.cpp
+    src/response_handle.cpp
     src/ripemd_160.cpp
     src/scheduled_actor.cpp
     src/scheduled_actor_dummy.cpp

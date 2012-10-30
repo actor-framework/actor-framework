@@ -39,6 +39,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/message_id.hpp"
@@ -382,8 +383,12 @@ class local_actor : public actor {
 
     void forward_message(const actor_ptr& new_receiver);
 
-    inline actor_ptr& chained_actor() {
+    inline const actor_ptr& chained_actor() {
         return m_chained_actor;
+    }
+
+    inline void chained_actor(const actor_ptr& value) {
+        m_chained_actor = value;
     }
 
     inline bool awaits(message_id_t response_id) {
@@ -404,6 +409,12 @@ class local_actor : public actor {
     virtual void dequeue_response(behavior&, message_id_t) = 0;
 
     virtual void become_waiting_for(behavior&&, message_id_t) = 0;
+
+    /**
+     * @brief Creates a {@link response_handle} to allow actors to response
+     *        to a request later on.
+     */
+    response_handle make_response_handle();
 
  protected:
 

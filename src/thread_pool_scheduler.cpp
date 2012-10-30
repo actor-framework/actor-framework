@@ -114,7 +114,7 @@ struct thread_pool_scheduler::worker {
             CPPA_REQUIRE(job != nullptr);
             auto ptr = job->chained_actor().get();
             if (ptr) {
-                job->chained_actor().reset();
+                job->chained_actor(nullptr);
                 return static_cast<scheduled_actor*>(ptr);
             }
             return nullptr;

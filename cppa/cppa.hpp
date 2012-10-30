@@ -56,6 +56,7 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/message_future.hpp"
+#include "cppa/response_handle.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/scheduling_hint.hpp"
 #include "cppa/event_based_actor.hpp"
@@ -528,6 +529,27 @@ inline void reply(Args&&... what) {
     self->reply_message(make_any_tuple(std::forward<Args>(what)...));
 }
 
+/**
+ * @brief Sends a message as reply to @p handle.
+ */
+template<typename... Args>
+inline void reply_to(response_handle& handle, Args&&... what) {
+    if (handle.valid()) {
+        handle.apply(make_any_tuple(std::forward<Args>(what)...));
+    }
+}
+
+/**
+ * @brief Sends a message to the sender of the last received message.
+ * @param what Message content as a tuple.
+ */
+inline void reply_tuple_to(response_handle& handle, any_tuple what) {
+    handle.apply(std::move(what));
+}
+
+/**
+ * @brief Forwards the last received message to @p whom.
+ */
 inline void forward_to(const actor_ptr& whom) {
     self->forward_message(whom);
 }
@@ -543,9 +565,7 @@ template<class Rep, class Period, typename... Args>
 inline void delayed_send_tuple(const channel_ptr& whom,
                                const std::chrono::duration<Rep,Period>& rtime,
                                any_tuple what) {
-    if (whom) {
-        get_scheduler()->delayed_send(whom, rtime, what);
-    }
+    if (whom) get_scheduler()->delayed_send(whom, rtime, what);
 }
 
 /**
