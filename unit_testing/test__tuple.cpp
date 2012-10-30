@@ -12,6 +12,7 @@
 #include "test.hpp"
 
 #include "cppa/on.hpp"
+#include "cppa/cppa.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
@@ -31,18 +32,39 @@
 #include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/object_array.hpp"
 
-#include <boost/progress.hpp>
-
 using std::cout;
 using std::endl;
 
 using namespace cppa;
 using namespace cppa::detail;
 
-
-
 #define VERBOSE(LineOfCode) cout << #LineOfCode << " = " << (LineOfCode) << endl
 
+namespace { std::atomic<size_t> s_expensive_copies; }
+
+struct expensive_copy_struct {
+
+    expensive_copy_struct(const expensive_copy_struct& other) : value(other.value) {
+        ++s_expensive_copies;
+    }
+
+    expensive_copy_struct(expensive_copy_struct&& other) : value(other.value) { }
+
+    expensive_copy_struct() : value(0) { }
+
+    int value;
+
+};
+
+inline bool operator==(const expensive_copy_struct& lhs,
+                       const expensive_copy_struct& rhs) {
+    return lhs.value == rhs.value;
+}
+
+inline bool operator!=(const expensive_copy_struct& lhs,
+                       const expensive_copy_struct& rhs) {
+    return !(lhs == rhs);
+}
 
 std::string int2str(int i) {
     return std::to_string(i);
@@ -98,8 +120,22 @@ struct is_same_ : std::is_same<typename First::second, typename Second::second> 
         CPPA_ERROR(#FunName " erroneously invoked");                           \
     } invoked = ""
 
+struct dummy_receiver : event_based_actor {
+    void init() {
+        become(
+            on_arg_match >> [=](expensive_copy_struct& ecs) {
+                ecs.value = 42;
+                reply(std::move(ecs));
+                quit();
+            }
+        );
+    }
+};
+
 int main() {
     CPPA_TEST(test__tuple);
+
+    announce<expensive_copy_struct>(&expensive_copy_struct::value);
 
     cow_tuple<int> zero;
     CPPA_CHECK_EQUAL(0, get<0>(zero));
@@ -284,134 +320,6 @@ int main() {
     CPPA_CHECK_INVOKED(f13, (1.f, 1.5f, 2.f));
     CPPA_CHECK_EQUAL(3, f13_fun);
 
-    //exit(0);
-
-    return CPPA_TEST_RESULT;
-
-    auto old_pf = (
-        on(42) >> []() { },
-        on("abc") >> []() { },
-        on<int, int>() >> []() { },
-        on<anything>() >> []() { }
-    );
-
-    auto new_pf = (
-        on(42) >> []() { },
-        on(std::string("abc")) >> []() { },
-        on<int, int>() >> []() { },
-        on<anything>() >> []() { }
-    );
-
-    any_tuple testee[] = {
-        make_cow_tuple(42),
-        make_cow_tuple("abc"),
-        make_cow_tuple("42"),
-        make_cow_tuple(1, 2),
-        make_cow_tuple(1, 2, 3)
-    };
-
-    constexpr size_t numInvokes = 100000000;
-
-    /*
-    auto xvals = make_cow_tuple(1, 2, "3");
-
-    std::string three{"3"};
-
-    std::atomic<std::string*> p3{&three};
-
-    auto guard1 = _x1 == 1;
-    auto guard2 = _x1 + _x2 == 3;
-    auto guard3 = _x1 + _x2 == 3 && _x3 == "3";
-
-    int dummy_counter = 0;
-
-    cout << "time for for " << numInvokes << " guards(1)*" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < numInvokes; ++i)
-            if (guard1(1, 2, *p3))//const_cast<std::string&>(three)))
-                ++dummy_counter;
-    }
-
-    cout << "time for for " << numInvokes << " guards(1)*" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < numInvokes; ++i)
-            if (guard1(get_ref<0>(xvals), get_ref<1>(xvals), get_ref<2>(xvals)))
-                ++dummy_counter;
-    }
-
-    cout << "time for for " << numInvokes << " guards(1)" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < numInvokes; ++i)
-            if (util::unchecked_apply_tuple<bool>(guard1, xvals))
-                ++dummy_counter;
-    }
-
-    cout << "time for for " << numInvokes << " guards(2)" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < numInvokes; ++i)
-            if (util::unchecked_apply_tuple<bool>(guard2, xvals))
-                ++dummy_counter;
-    }
-
-    cout << "time for for " << numInvokes << " guards(3)" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < numInvokes; ++i)
-            if (util::unchecked_apply_tuple<bool>(guard3, xvals))
-                ++dummy_counter;
-    }
-
-    cout << "time for " << numInvokes << " equal if-statements" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
-            if (get<0>(xvals) + get<1>(xvals) == 3 && get<2>(xvals) == "3") {
-                ++dummy_counter;
-            }
-        }
-    }
-    */
-
-    cout << "old partial function implementation for " << numInvokes << " matches" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
-            for (auto& x : testee) { old_pf(x); }
-        }
-    }
-
-    cout << "new partial function implementation for " << numInvokes << " matches" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
-            for (auto& x : testee) { new_pf.invoke(x); }
-        }
-    }
-
-    cout << "old partial function with on() inside loop" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
-            auto tmp = (
-                on(42) >> []() { },
-                on("abc") >> []() { },
-                on<int, int>() >> []() { },
-                on<anything>() >> []() { }
-            );
-            for (auto& x : testee) { tmp(x); }
-        }
-    }
-
-    cout << "new partial function with on() inside loop" << endl; {
-        boost::progress_timer t0;
-        for (size_t i = 0; i < (numInvokes / sizeof(testee)); ++i) {
-            auto tmp = (
-                on(42) >> []() { },
-                on(std::string("abc")) >> []() { },
-                on<int, int>() >> []() { },
-                on<anything>() >> []() { }
-            );
-            for (auto& x : testee) { tmp(x); }
-        }
-    }
-
-    //exit(0);
-
     // check type correctness of make_cow_tuple()
     auto t0 = make_cow_tuple("1", 2);
     CPPA_CHECK((std::is_same<decltype(t0), cppa::cow_tuple<std::string, int>>::value));
@@ -485,5 +393,16 @@ int main() {
             CPPA_CHECK_EQUAL(&get<1>(*opt3), at1.at(3));
         }
     }
+
+    cout << "check correct tuple move operations" << endl;
+    send(spawn<dummy_receiver>(), expensive_copy_struct());
+    receive (
+        on_arg_match >> [&](expensive_copy_struct& ecs) {
+            CPPA_CHECK_EQUAL(ecs.value, 42);
+        }
+    );
+    CPPA_CHECK_EQUAL(s_expensive_copies, (size_t) 0);
+    await_all_others_done();
+    shutdown();
     return CPPA_TEST_RESULT;
 }
