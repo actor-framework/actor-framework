@@ -1,3 +1,10 @@
+Version 0.5.1
+------------
+
+__2012-XX-XX__
+
+- New class `response_handle`, allowing actors to reply to message later on
+
 Version 0.5
 -----------
 
