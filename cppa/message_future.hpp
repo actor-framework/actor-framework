@@ -45,6 +45,8 @@ class message_future {
 
  public:
 
+    message_future() = delete;
+
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
@@ -67,14 +69,17 @@ class message_future {
         apply(f, std::forward<Expression>(mexpr)...);
     }
 
+    /**
+     * @brief Returns the awaited response ID.
+     */
+    inline const message_id_t& id() const { return m_id; }
+
     message_future(const message_future&) = default;
     message_future& operator=(const message_future&) = default;
 
 #   ifndef CPPA_DOCUMENTATION
 
     inline message_future(const message_id_t& from) : m_id(from) { }
-
-    inline const message_id_t& id() const { return m_id; }
 
 #   endif
 

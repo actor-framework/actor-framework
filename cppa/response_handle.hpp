@@ -38,18 +38,17 @@
 namespace cppa {
 
 /**
- * @brief Identifies a
+ * @brief Denotes an outstanding response.
  */
 class response_handle {
-
-    response_handle(const response_handle&) = delete;
-    response_handle& operator=(const response_handle&) = delete;
 
  public:
 
     response_handle() = default;
     response_handle(response_handle&&) = default;
+    response_handle(const response_handle&) = default;
     response_handle& operator=(response_handle&&) = default;
+    response_handle& operator=(const response_handle&) = default;
 
     response_handle(const actor_ptr&    from,
                     const actor_ptr&    to,
@@ -70,6 +69,21 @@ class response_handle {
      * @brief Sends @p response_message and invalidates this handle afterwards.
      */
     void apply(any_tuple response_message);
+
+    /**
+     * @brief Returns the message id for the response message.
+     */
+    inline const message_id_t& response_id() const { return m_id; }
+
+    /**
+     * @brief Returns the actor that is going send the response message.
+     */
+    inline const actor_ptr& sender() const { return m_from; }
+
+    /**
+     * @brief Returns the actor that is waiting for the response message.
+     */
+    inline const actor_ptr& receiver() const { return m_to; }
 
  private:
 
