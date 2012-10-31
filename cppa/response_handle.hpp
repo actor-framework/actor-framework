@@ -68,7 +68,7 @@ class response_handle {
     /**
      * @brief Sends @p response_message and invalidates this handle afterwards.
      */
-    void apply(any_tuple response_message);
+    void apply(any_tuple response_message) const;
 
     /**
      * @brief Returns the message id for the response message.

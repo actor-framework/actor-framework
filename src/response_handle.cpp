@@ -53,7 +53,7 @@ bool response_handle::synchronous() const {
     return m_id.valid();
 }
 
-void response_handle::apply(any_tuple msg) {
+void response_handle::apply(any_tuple msg) const {
     if (valid()) {
         local_actor* sptr = self.unchecked();
         if (sptr && sptr == m_from) {
@@ -64,7 +64,6 @@ void response_handle::apply(any_tuple msg) {
             }
         }
         else m_to->enqueue(m_from.get(), move(msg));
-        m_to.reset();
     }
 }
 

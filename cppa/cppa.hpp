@@ -533,7 +533,7 @@ inline void reply(Args&&... what) {
  * @brief Sends a message as reply to @p handle.
  */
 template<typename... Args>
-inline void reply_to(response_handle& handle, Args&&... what) {
+inline void reply_to(const response_handle& handle, Args&&... what) {
     if (handle.valid()) {
         handle.apply(make_any_tuple(std::forward<Args>(what)...));
     }
@@ -543,7 +543,7 @@ inline void reply_to(response_handle& handle, Args&&... what) {
  * @brief Sends a message to the sender of the last received message.
  * @param what Message content as a tuple.
  */
-inline void reply_tuple_to(response_handle& handle, any_tuple what) {
+inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
     handle.apply(std::move(what));
 }
 
