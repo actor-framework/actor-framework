@@ -265,7 +265,7 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
         }
         else {
             CPPA_LOG_DEBUG("async message with "
-                           << (msg.sender() ? "" : "in")
+                           << (hdr.sender ? "" : "in")
                            << "valid sender");
             receiver->enqueue(hdr.sender.get(), move(msg));
         }
@@ -350,7 +350,7 @@ void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
              << endl;
         return;
     }
-    CPPA_LOG_DEBUG("serialized: " << to_string(msg.content()));
+    CPPA_LOG_DEBUG("serialized: " << to_string(msg));
     size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
     memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));

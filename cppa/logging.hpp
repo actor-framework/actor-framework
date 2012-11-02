@@ -143,14 +143,14 @@ class logging {
 
 #define CPPA_DO_LOG_FUN(level, message) {                                      \
     std::ostringstream scoped_oss; scoped_oss << message;                      \
-    ::cppa::detail::logging::instance()->log(                                  \
+    ::cppa::logging::instance()->log(                                          \
         level, "NONE",                                                         \
         __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
 } CPPA_VOID_STMT
 
 #define CPPA_DO_LOG_MEMBER_FUN(level, message) {                               \
     std::ostringstream scoped_oss; scoped_oss << message;                      \
-    ::cppa::detail::logging::instance()->log(                                  \
+    ::cppa::logging::instance()->log(                                          \
         level, ::cppa::detail::demangle(typeid(*this)).c_str(),                \
         __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
 } CPPA_VOID_STMT
@@ -192,7 +192,7 @@ class logging {
 #  define CPPA_LOG_TRACE(message)                                              \
     ::std::ostringstream CPPA_CONCATL(cppa_trace_helper_) ;                    \
     CPPA_CONCATL(cppa_trace_helper_) << message ;                              \
-    ::cppa::detail::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_) \
+    ::cppa::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_)         \
         CPPA_LPAREN ::cppa::detail::demangle                                   \
         CPPA_LPAREN typeid CPPA_LPAREN decltype CPPA_LPAREN *this              \
         CPPA_RPAREN        CPPA_RPAREN          CPPA_RPAREN ,                  \
@@ -201,7 +201,7 @@ class logging {
 #  define CPPA_LOGF_TRACE(message)                                             \
     ::std::ostringstream CPPA_CONCATL(cppa_trace_helper_) ;                    \
     CPPA_CONCATL(cppa_trace_helper_) << message ;                              \
-    ::cppa::detail::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_) \
+    ::cppa::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_)         \
         CPPA_LPAREN "NONE" ,                                                   \
           __func__ , __FILE__ , __LINE__ ,                                     \
           CPPA_CONCATL(cppa_trace_helper_) .str() CPPA_RPAREN
