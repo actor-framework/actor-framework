@@ -126,6 +126,6 @@ resume_result context_switching_actor::resume(util::fiber* from) {
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
-namespace { int keep_compiler_happy() { return 42; } }
+namespace cppa { int keep_compiler_happy_function() { return 42; } }
 
 #endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING

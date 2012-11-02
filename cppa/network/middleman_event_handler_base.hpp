@@ -35,11 +35,10 @@
 #include <utility>
 
 #include "cppa/config.hpp"
+#include "cppa/logging.hpp"
 
 #include "cppa/network/continuable_reader.hpp"
 #include "cppa/network/continuable_writer.hpp"
-
-#include "cppa/detail/logging.hpp"
 
 namespace cppa { namespace network {
 

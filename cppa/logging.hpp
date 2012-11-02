@@ -48,13 +48,13 @@
  *       using a log4j viewer, e.g., http://code.google.com/p/otroslogviewer/
  *
  */
+namespace cppa {
 
-
-namespace cppa { namespace detail {
+namespace detail { class singleton_manager; }
 
 class logging {
 
-    friend class singleton_manager;
+    friend class detail::singleton_manager;
 
  public:
 
@@ -110,11 +110,11 @@ class logging {
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
 #define CPPA_VOID_STMT static_cast<void>(0)
 
-#ifndef CPPA_DEBUG
+#ifndef CPPA_LOG_LEVEL
 
 #define CPPA_LOG_ERROR(unused) CPPA_VOID_STMT
 #define CPPA_LOG_ERROR_IF(unused1,unused2) CPPA_VOID_STMT
@@ -157,10 +157,6 @@ class logging {
 
 #define CPPA_LOG_ERROR(message) CPPA_DO_LOG_MEMBER_FUN("ERROR  ", message)
 #define CPPA_LOGF_ERROR(message) CPPA_DO_LOG_FUN("ERROR  ", message)
-
-#ifndef CPPA_LOG_LEVEL
-#define CPPA_LOG_LEVEL 0
-#endif
 
 #if CPPA_LOG_LEVEL > 0
 #  define CPPA_LOG_WARNING(message) CPPA_DO_LOG_MEMBER_FUN("WARNING", message)

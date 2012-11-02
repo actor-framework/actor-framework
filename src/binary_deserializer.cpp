@@ -38,7 +38,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/detail/logging.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/binary_deserializer.hpp"
 
 using namespace std;

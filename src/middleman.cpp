@@ -41,6 +41,7 @@
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
 #include "cppa/either.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
@@ -58,7 +59,6 @@
 #include "cppa/network/addressed_message.hpp"
 #include "cppa/network/middleman_event_handler_base.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/actor_registry.hpp"
 

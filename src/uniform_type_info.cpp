@@ -43,6 +43,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/object.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
@@ -53,7 +54,6 @@
 #include "cppa/util/duration.hpp"
 #include "cppa/util/void_type.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"

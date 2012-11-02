@@ -38,13 +38,13 @@
 #include <sys/types.h>
 #endif
 
-#include "cppa/detail/logging.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 using namespace std;
 
-namespace cppa { namespace detail {
+namespace cppa {
 
 namespace {
 
@@ -135,8 +135,8 @@ class logging_impl : public logging {
 
 logging::~logging() { }
 
-logging* logging::instance() { return singleton_manager::get_logger(); }
+logging* logging::instance() { return detail::singleton_manager::get_logger(); }
 
 logging* logging::create_singleton() { return new logging_impl; }
 
-} } // namespace cppa::detail
+} // namespace cppa

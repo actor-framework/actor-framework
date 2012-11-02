@@ -33,9 +33,9 @@
 #include <errno.h>
 #include <iostream>
 
+#include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
-#include "cppa/detail/logging.hpp"
 #include "cppa/network/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS

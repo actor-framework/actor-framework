@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <iostream>
 
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 
 #include "cppa/network/middleman.hpp"
@@ -41,7 +42,6 @@
 #include "cppa/network/default_protocol.hpp"
 #include "cppa/network/default_peer_acceptor.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 

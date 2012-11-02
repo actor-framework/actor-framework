@@ -67,8 +67,6 @@ endif ()
 
 if (CPPA_LOG_LEVEL)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL}")
-else ()
-  set(CPPA_LOG_LEVEL "0")
 endif()
 
 # set build default build type if not set
@@ -152,49 +150,29 @@ set(LIBCPPA_SRC
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 
-set(boost_context third_party/boost_context)
-
-# add third party Boost.Context sources if context-switching is enabled
-if (NOT DISABLE_CONTEXT_SWITCHING)
-  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    if (APPLE)
-      set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_macho_gas.S)
-    else ()
-      set(fcontext_asm ${boost_context}/src/asm/fcontext_i386_sysv_elf_gas.S)
-    endif ()
-  elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if (APPLE)
-      set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_macho_gas.S)
-    else ()
-      set(fcontext_asm ${boost_context}/src/asm/fcontext_x86_64_sysv_elf_gas.S)
-    endif ()
-  else ()
-    message(FATAL_ERROR "Unsupported platform (neither 32 nor 64 bit)")
-  endif ()
-  set_property(SOURCE ${fcontext_asm} PROPERTY LANGUAGE CXX)
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
-      ${fcontext_asm}
-      ${boost_context}/src/stack_utils_posix.cpp
-      ${boost_context}/src/stack_allocator_posix.cpp
-      ${boost_context}/src/fcontext.cpp
-  )
-endif ()
-
 if (BOOST_ROOT)
   # Prevent falling back to system paths when using a custom Boost prefix.
   set(Boost_NO_SYSTEM_PATHS true)
 endif ()
-find_package(Boost REQUIRED)
-find_package(PTHREAD REQUIRED)
 
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(. ${Boost_INCLUDE_DIRS} ${boost_context}/include ${PTHREAD_INCLUDE_DIR})
+find_package(PTHREAD REQUIRED)
+find_package(Boost COMPONENTS thread REQUIRED)
+
+set(INCLUDE_DIRS . ${PTHREAD_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+set(LD_DIRS ${Boost_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+set(LD_FLAGS ${CMAKE_LD_LIBS} ${PTHREAD_LIBRARIES} ${Boost_THREAD_LIBRARY})
+
+if (NOT DISABLE_CONTEXT_SWITCHING)
+  find_package(Boost COMPONENTS context)
+  # without REQUIRED, find_package(Boost...) returns with Boost_FOUND=FALSE
+  if (NOT Boost_FOUND)
+    set(DISABLE_CONTEXT_SWITCHING true)
+  else (NOT Boost_FOUND)
+    set(LD_FLAGS ${LD_FLAGS} ${Boost_CONTEXT_LIBRARY})
+  endif (NOT Boost_FOUND)
+endif (NOT DISABLE_CONTEXT_SWITCHING)
 
 add_library(libcppa SHARED ${LIBCPPA_SRC})
-
-target_link_libraries(libcppa ${CMAKE_LD_LIBS} ${Boost_THREAD_LIBRARY} ${PTHREAD_LIBRARIES})
-
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
 
@@ -203,6 +181,10 @@ set_target_properties(libcppa
                       SOVERSION ${LIBRARY_SOVERSION}
                       VERSION ${LIBRARY_VERSION}
                       OUTPUT_NAME cppa)
+
+link_directories(${LD_DIRS})
+include_directories(${INCLUDE_DIRS})
+target_link_libraries(libcppa ${LD_FLAGS})
 
 # install shared library
 install(TARGETS libcppa LIBRARY DESTINATION lib)
@@ -259,9 +241,9 @@ add_dependencies(all_benchmarks libcppa)
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-set(CONTEXT_SWITCHING true)
+set(CONTEXT_SWITCHING "yes")
 if (DISABLE_CONTEXT_SWITCHING)
-    set(CONTEXT_SWITCHING false)
+    set(CONTEXT_SWITCHING "no")
 endif ()
 
 # check for doxygen and add custom "doc" target to Makefile
@@ -273,7 +255,30 @@ if (DOXYGEN_FOUND)
                     WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
                     COMMENT "Generating API documentation with Doxygen"
                     VERBATIM)
-endif ()
+endif (DOXYGEN_FOUND)
+
+set(LOG_LEVEL_STR "none")
+if (CPPA_LOG_LEVEL)
+  if (${CPPA_LOG_LEVEL} EQUAL 0)
+    set(LOG_LEVEL_STR "ERROR")
+  elseif (${CPPA_LOG_LEVEL} EQUAL 1)
+    set(LOG_LEVEL_STR "WARNING")
+  elseif (${CPPA_LOG_LEVEL} EQUAL 2)
+    set(LOG_LEVEL_STR "INFO")
+  elseif (${CPPA_LOG_LEVEL} EQUAL 3)
+    set(LOG_LEVEL_STR "DEBUG")
+  elseif (${CPPA_LOG_LEVEL} EQUAL 4)
+    set(LOG_LEVEL_STR "TRACE")
+  else ()
+    set(LOG_LEVEL_STR "invalid")
+  endif ()
+endif (CPPA_LOG_LEVEL)
+
+if (ENABLE_DEBUG)
+  set(DEBUG_MODE_STR "yes")
+else (ENABLE_DEBUG)
+  set(DEBUG_MODE_STR "no")
+endif (ENABLE_DEBUG)
 
 # done (print summary)
 message("\n====================|  Build Summary  |===================="
@@ -281,12 +286,14 @@ message("\n====================|  Build Summary  |===================="
         "\nLibcppa version:   ${LIBRARY_VERSION}"
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-        "\nDebug mode:        ${ENABLE_DEBUG}"
-        "\nLog level:         ${CPPA_LOG_LEVEL}"
+        "\nDebug mode:        ${DEBUG_MODE_STR}"
+        "\nLog level:         ${LOG_LEVEL_STR}"
         "\nContext switching: ${CONTEXT_SWITCHING}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+        "\nLD_DIRS:           ${LD_DIRS}"
+        "\nLIBRARIES:         ${LD_FLAGS}"
         "\n"
         "\nSource directory:  ${CMAKE_SOURCE_DIR}"
         "\nBuild directory:   ${CMAKE_BINARY_DIR}"

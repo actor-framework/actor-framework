@@ -35,6 +35,7 @@
 
 namespace cppa {
 
+class logging;
 class scheduler;
 class msg_content;
 
@@ -44,7 +45,6 @@ namespace cppa { namespace network { class middleman; } }
 
 namespace cppa { namespace detail {
 
-class logging;
 class empty_tuple;
 class group_manager;
 class abstract_tuple;

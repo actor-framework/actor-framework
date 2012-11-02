@@ -32,13 +32,12 @@
 #include <limits>
 #include <stdexcept>
 
+#include "cppa/logging.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
-
-#include "cppa/detail/logging.hpp"
 
 namespace {
 

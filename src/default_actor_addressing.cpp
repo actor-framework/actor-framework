@@ -30,6 +30,7 @@
 
 #include <cstdint>
 
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
@@ -38,7 +39,6 @@
 #include "cppa/network/default_actor_proxy.hpp"
 #include "cppa/network/default_actor_addressing.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 

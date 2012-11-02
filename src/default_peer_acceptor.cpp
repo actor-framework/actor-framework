@@ -31,6 +31,7 @@
 #include <iostream>
 #include <exception>
 
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/process_information.hpp"
 
@@ -38,7 +39,6 @@
 #include "cppa/network/default_peer.hpp"
 #include "cppa/network/default_peer_acceptor.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/demangle.hpp"
 
 using namespace std;

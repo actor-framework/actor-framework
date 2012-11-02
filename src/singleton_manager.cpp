@@ -31,6 +31,7 @@
 #include <atomic>
 #include <iostream>
 
+#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/any_tuple.hpp"
@@ -39,7 +40,6 @@
 
 #include "cppa/network/middleman.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"

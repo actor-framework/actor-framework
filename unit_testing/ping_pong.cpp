@@ -3,10 +3,9 @@
 #include "ping_pong.hpp"
 
 #include "cppa/cppa.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/sb_actor.hpp"
 #include "cppa/to_string.hpp"
-
-#include "cppa/detail/logging.hpp"
 
 using std::cout;
 using std::endl;

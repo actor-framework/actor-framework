@@ -7,8 +7,8 @@
 #include "test.hpp"
 #include "ping_pong.hpp"
 #include "cppa/cppa.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
-#include "cppa/detail/logging.hpp"
 
 using namespace std;
 using namespace cppa;

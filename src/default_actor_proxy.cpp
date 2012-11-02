@@ -30,10 +30,10 @@
 
 #include "cppa/to_string.hpp"
 
+#include "cppa/logging.hpp"
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/default_actor_proxy.hpp"
 
-#include "cppa/detail/logging.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 using namespace std;

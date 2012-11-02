@@ -28,10 +28,9 @@
 \******************************************************************************/
 
 
+#include "cppa/logging.hpp"
 #include "cppa/network/protocol.hpp"
 #include "cppa/network/middleman.hpp"
-
-#include "cppa/detail/logging.hpp"
 
 namespace cppa { namespace network {
 
