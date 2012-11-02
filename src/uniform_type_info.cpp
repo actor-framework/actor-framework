@@ -636,6 +636,7 @@ uniform_type_info_map::uniform_type_info_map() {
     // insert type infos for "built-in" types
     helper.insert_builtin<float>();
     helper.insert_builtin<double>();
+    helper.insert_builtin<long double>();
     helper.insert_builtin<std::string>();
     helper.insert_builtin<std::u16string>();
     helper.insert_builtin<std::u32string>();
