@@ -32,7 +32,6 @@
 #define CPPA_MATCH_EXPR_HPP
 
 #include "cppa/option.hpp"
-#include "cppa/pattern.hpp"
 #include "cppa/guard_expr.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/tpartial_function.hpp"

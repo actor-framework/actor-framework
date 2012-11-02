@@ -129,7 +129,6 @@ set(LIBCPPA_SRC
     src/object_array.cpp
     src/opt.cpp
     src/partial_function.cpp
-    src/pattern.cpp
     src/primitive_variant.cpp
     src/process_information.cpp
     src/protocol.cpp

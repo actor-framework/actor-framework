@@ -31,7 +31,6 @@
 #ifndef CPPA_TUPLE_CAST_IMPL_HPP
 #define CPPA_TUPLE_CAST_IMPL_HPP
 
-#include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 
 #include "cppa/detail/matches.hpp"
@@ -65,49 +64,6 @@ struct tuple_cast_impl {
                                                          mv)};
         return {};
     }
-    static inline option<Result> safe(any_tuple& tup, const pattern<T...>& p) {
-        mapping_vector mv;
-        if (matches(tup, p, mv)) return {Result::from(std::move(tup.vals()),
-                                                      mv)};
-        return {};
-    }
-    static inline option<Result> unsafe(any_tuple& tup, const pattern<T...>& p) {
-        mapping_vector mv;
-        if (WP == wildcard_position::in_between) {
-            if (!p.has_values() || matcher<WP, any_tuple, T...>::vmatch(tup, p)) {
-                // first range
-                mv.resize(size);
-                auto begin = mv.begin();
-                std::iota(begin, begin + first_wc, 0);
-                // second range
-                begin = mv.begin() + first_wc;
-                std::iota(begin, mv.end(), tup.size() - (size - first_wc));
-                return {Result::from(std::move(tup.vals()), mv)};
-            }
-        }
-        else {
-            if (matches(tup, p, mv)) return {Result::from(std::move(tup.vals()),
-                                                          mv)};
-        }
-        return {};
-    }
-    static inline Result force(any_tuple& tup, const pattern<T...>& p) {
-        mapping_vector mv;
-        if (WP == wildcard_position::in_between) {
-            // first range
-            mv.resize(size);
-            auto begin = mv.begin();
-            std::iota(begin, begin + first_wc, 0);
-            // second range
-            begin = mv.begin() + first_wc;
-            std::iota(begin, mv.end(), tup.size() - (size - first_wc));
-            return {Result::from(std::move(tup.vals()), mv)};
-        }
-        else {
-            matches(tup, p, mv);
-            return {Result::from(std::move(tup.vals()), mv)};
-        }
-    }
 };
 
 template<class Result, typename... T>
@@ -116,38 +72,11 @@ struct tuple_cast_impl<wildcard_position::nil, Result, T...> {
         if (matches<T...>(tup)) return {Result::from(std::move(tup.vals()))};
         return {};
     }
-    static inline option<Result> safe(any_tuple& tup, const pattern<T...>& p) {
-        if (matches(tup, p)) {
-            return {Result::from(std::move(tup.vals()))};
-        }
-        return {};
-    }
-    static inline option<Result> unsafe(any_tuple& tup, const pattern<T...>& p) {
-        if (   p.has_values() == false
-            || matcher<wildcard_position::nil, any_tuple, T...>::vmatch(tup, p)) {
-            return {Result::from(std::move(tup.vals()))};
-        }
-        return {};
-    }
-    static inline Result force(any_tuple& tup, const pattern<T...>&) {
-        return {Result::from(std::move(tup.vals()))};
-    }
 };
 
 template<class Result, typename... T>
 struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
         : tuple_cast_impl<wildcard_position::nil, Result, T...> {
-    static inline option<Result> unsafe(any_tuple& tup, const pattern<T...>& p) {
-        if (   p.has_values() == false
-            || matcher<wildcard_position::trailing, any_tuple, T...>
-               ::vmatch(tup, p)) {
-            return {Result::from(std::move(tup.vals()))};
-        }
-        return {};
-    }
-    static inline Result force(any_tuple& tup, const pattern<T...>&) {
-        return {Result::from(std::move(tup.vals()))};
-    }
 };
 
 template<class Result, typename... T>
@@ -156,24 +85,6 @@ struct tuple_cast_impl<wildcard_position::leading, Result, T...> {
         size_t o = tup.size() - (sizeof...(T) - 1);
         if (matches<T...>(tup)) return {Result::offset_subtuple(tup.vals(), o)};
         return {};
-    }
-    static inline option<Result> safe(any_tuple& tup, const pattern<T...>& p) {
-        size_t o = tup.size() - (sizeof...(T) - 1);
-        if (matches(tup, p)) return {Result::offset_subtuple(tup.vals(), o)};
-        return {};
-    }
-    static inline option<Result> unsafe(any_tuple& tup, const pattern<T...>& p) {
-        if (   p.has_values() == false
-            || matcher<wildcard_position::leading, any_tuple, T...>
-               ::vmatch(tup, p)) {
-            size_t o = tup.size() - (sizeof...(T) - 1);
-            return Result::offset_subtuple(tup.vals(), o);
-        }
-        return {};
-    }
-    static inline Result force(any_tuple& tup, const pattern<T...>&) {
-        size_t o = tup.size() - (sizeof...(T) - 1);
-        return Result::offset_subtuple(tup.vals(), o);
     }
 };
 

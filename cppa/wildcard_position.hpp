@@ -28,14 +28,46 @@
 \******************************************************************************/
 
 
-#include "cppa/pattern.hpp"
+#ifndef CPPA_WILDCARD_POSITION_HPP
+#define CPPA_WILDCARD_POSITION_HPP
+
+#include <type_traits>
+
+#include "cppa/anything.hpp"
+#include "cppa/util/type_list.hpp"
 
 namespace cppa {
 
-value_matcher::~value_matcher() { }
+/**
+ * @brief Denotes the position of {@link cppa::anything anything} in a
+ *        template parameter pack.
+ */
+enum class wildcard_position {
+    nil,
+    trailing,
+    leading,
+    in_between,
+    multiple
+};
 
-bool dummy_matcher::operator()(const any_tuple&) const {
-    return true;
+/**
+ * @brief Gets the position of {@link cppa::anything anything} from the
+ *        type list @p Types.
+ * @tparam A template parameter pack as {@link cppa::util::type_list type_list}.
+ */
+template<typename Types>
+constexpr wildcard_position get_wildcard_position() {
+    return util::tl_exists<Types, is_anything>::value
+           ? ((util::tl_count<Types, is_anything>::value == 1)
+              ? (std::is_same<typename Types::head, anything>::value
+                 ? wildcard_position::leading
+                 : (std::is_same<typename Types::back, anything>::value
+                    ? wildcard_position::trailing
+                    : wildcard_position::in_between))
+              : wildcard_position::multiple)
+           : wildcard_position::nil;
 }
 
 } // namespace cppa
+
+#endif // CPPA_WILDCARD_POSITION_HPP

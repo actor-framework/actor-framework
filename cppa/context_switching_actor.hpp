@@ -35,7 +35,6 @@
 
 #include "cppa/config.hpp"
 #include "cppa/either.hpp"
-#include "cppa/pattern.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"

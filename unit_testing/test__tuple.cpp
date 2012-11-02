@@ -14,7 +14,6 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/cow_tuple.hpp"
-#include "cppa/pattern.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/tuple_cast.hpp"

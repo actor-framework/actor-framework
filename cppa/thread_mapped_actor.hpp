@@ -44,7 +44,6 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/either.hpp"
-#include "cppa/pattern.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"

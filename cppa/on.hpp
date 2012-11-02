@@ -36,7 +36,6 @@
 #include <type_traits>
 
 #include "cppa/atom.hpp"
-#include "cppa/pattern.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
