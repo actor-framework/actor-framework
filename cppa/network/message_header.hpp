@@ -28,94 +28,44 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ADDRESSED_MESSAGE_HPP
-#define CPPA_ADDRESSED_MESSAGE_HPP
+#ifndef CPPA_MESSAGE_HEADER_HPP
+#define CPPA_MESSAGE_HEADER_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/cow_tuple.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/message_id.hpp"
 
 namespace cppa { namespace network {
 
 /**
- * @brief Encapsulates a message along with sender and receiver information
- *        as well as its synchronous message id.
+ * @brief Encapsulates information about sender, receiver and (synchronous)
+ *        message ID of a message. The message itself is usually an any_tuple.
  */
-class addressed_message {
+class message_header {
 
  public:
 
-    addressed_message(actor_ptr from, channel_ptr to,
-                      any_tuple ut, message_id_t id = message_id_t());
+    actor_ptr    sender;
+    actor_ptr    receiver;
+    message_id_t id;
 
-    addressed_message() = default;
-    addressed_message(addressed_message&&) = default;
-    addressed_message(const addressed_message&) = default;
-    addressed_message& operator=(addressed_message&&) = default;
-    addressed_message& operator=(const addressed_message&) = default;
+    message_header();
 
-    inline actor_ptr& sender() {
-        return m_sender;
-    }
-
-    inline const actor_ptr& sender() const {
-        return m_sender;
-    }
-
-    inline channel_ptr& receiver() {
-        return m_receiver;
-    }
-
-    inline const channel_ptr& receiver() const {
-        return m_receiver;
-    }
-
-    inline any_tuple& content() {
-        return m_content;
-    }
-
-    inline const any_tuple& content() const {
-        return m_content;
-    }
-
-    inline message_id_t id() const {
-        return m_msg_id;
-    }
-
-    inline void id(message_id_t value) {
-        m_msg_id = value;
-    }
-
-    inline bool empty() const {
-        return m_content.empty();
-    }
-
- private:
-
-    actor_ptr m_sender;
-    channel_ptr m_receiver;
-    message_id_t m_msg_id;
-    any_tuple m_content;
+    message_header(const actor_ptr& sender,
+                   const actor_ptr& receiver,
+                   message_id_t id = message_id_t::invalid);
 
 };
 
-/**
- * @relates addressed_message
- */
-bool operator==(const addressed_message& lhs, const addressed_message& rhs);
+inline bool operator==(const message_header& lhs, const message_header& rhs) {
+    return    lhs.sender == rhs.sender
+           && lhs.receiver == rhs.receiver
+           && lhs.id == rhs.id;
+}
 
-/**
- * @relates addressed_message
- */
-inline bool operator!=(const addressed_message& lhs,
-                       const addressed_message& rhs) {
+inline bool operator!=(const message_header& lhs, const message_header& rhs) {
     return !(lhs == rhs);
 }
 
 } } // namespace cppa::network
 
-#endif // CPPA_ADDRESSED_MESSAGE_HPP
+#endif // CPPA_MESSAGE_HEADER_HPP

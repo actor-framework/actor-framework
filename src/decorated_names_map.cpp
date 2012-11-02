@@ -102,7 +102,7 @@ decorated_names_map::decorated_names_map() {
         { demangled<char32_t>(), mapped_int_name<char32_t>() },
         { "cppa::atom_value", "@atom" },
         { "cppa::any_tuple",  "@<>" },
-        { "cppa::network::addressed_message", "@msg" },
+        { "cppa::network::message_header", "@hdr" },
         { "cppa::intrusive_ptr<cppa::actor>", "@actor" },
         { "cppa::intrusive_ptr<cppa::group>" ,"@group" },
         { "cppa::intrusive_ptr<cppa::channel>", "@channel" },

@@ -78,7 +78,7 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender, any_tuple msg, me
                         << ", proto = " << to_string(proto->identifier()));
         */
         auto p = proto->get_peer(*node);
-        if (p) p->enqueue(addressed_message(sender, receiver, msg, mid));
+        if (p) p->enqueue({sender, receiver, mid}, msg);
     });
 }
 

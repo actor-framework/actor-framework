@@ -47,7 +47,7 @@
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/message_header.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/decorated_names_map.hpp"
 

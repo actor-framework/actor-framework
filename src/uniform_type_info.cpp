@@ -62,7 +62,7 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
-#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/message_header.hpp"
 
 namespace cppa { namespace detail {
 
@@ -387,28 +387,20 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
 
 };
 
-class addr_msg_tinfo : public util::abstract_uniform_type_info<network::addressed_message> {
+class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_header> {
 
     string any_tuple_name;
     string actor_ptr_name;
-    string group_ptr_name;
-    string channel_ptr_name;
 
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
         CPPA_LOG_TRACE("");
-        auto& msg = *reinterpret_cast<const network::addressed_message*>(instance);
-        auto& data = msg.content();
+        auto& hdr = *reinterpret_cast<const network::message_header*>(instance);
         sink->begin_object(name());
-        actor_ptr_tinfo::s_serialize(msg.sender(), sink, actor_ptr_name);
-        channel_ptr_tinfo::s_serialize(msg.receiver(),
-                                       sink,
-                                       channel_ptr_name,
-                                       actor_ptr_name,
-                                       group_ptr_name);
-        sink->write_value(msg.id().integer_value());
-        any_tuple_tinfo::s_serialize(data, sink, any_tuple_name);
+        actor_ptr_tinfo::s_serialize(hdr.sender, sink, actor_ptr_name);
+        actor_ptr_tinfo::s_serialize(hdr.receiver, sink, actor_ptr_name);
+        sink->write_value(hdr.id.integer_value());
         sink->end_object();
     }
 
@@ -416,23 +408,17 @@ class addr_msg_tinfo : public util::abstract_uniform_type_info<network::addresse
         CPPA_LOG_TRACE("");
         assert_type_name(source);
         source->begin_object(name());
-        auto& msg = *reinterpret_cast<network::addressed_message*>(instance);
-        actor_ptr_tinfo::s_deserialize(msg.sender(), source, actor_ptr_name);
-        channel_ptr_tinfo::s_deserialize(msg.receiver(),
-                                         source,
-                                         channel_ptr_name,
-                                         actor_ptr_name,
-                                         group_ptr_name);
+        auto& msg = *reinterpret_cast<network::message_header*>(instance);
+        actor_ptr_tinfo::s_deserialize(msg.sender, source, actor_ptr_name);
+        actor_ptr_tinfo::s_deserialize(msg.receiver, source, actor_ptr_name);
         auto msg_id = source->read_value(pt_uint64);
-        msg.id(message_id_t::from_integer_value(get<pt_uint64>(msg_id)));
-        any_tuple_tinfo::s_deserialize(msg.content(), source, any_tuple_name);
+        msg.id = message_id_t::from_integer_value(get<pt_uint64>(msg_id));
         source->end_object();
     }
 
-    addr_msg_tinfo() : any_tuple_name(to_uniform_name<any_tuple>())
-                     , actor_ptr_name(to_uniform_name<actor_ptr>())
-                     , group_ptr_name(to_uniform_name<group_ptr>())
-                     , channel_ptr_name(to_uniform_name<channel_ptr>()) { }
+    msg_hdr_tinfo() : any_tuple_name(to_uniform_name<any_tuple>())
+                    , actor_ptr_name(to_uniform_name<actor_ptr>()) { }
+
 
 };
 
@@ -649,7 +635,7 @@ uniform_type_info_map::uniform_type_info_map() {
     insert({raw_name<group_ptr>()}, new group_ptr_tinfo);
     insert({raw_name<channel_ptr>()}, new channel_ptr_tinfo);
     insert({raw_name<atom_value>()}, new atom_value_tinfo);
-    insert({raw_name<network::addressed_message>()}, new addr_msg_tinfo);
+    insert({raw_name<network::message_header>()}, new msg_hdr_tinfo);
     insert({raw_name<util::void_type>()}, new void_type_tinfo);
     insert({raw_name<process_information_ptr>()}, new process_info_ptr_tinfo);
     insert({raw_name<map<string,string>>()}, new default_uniform_type_info_impl<map<string,string>>);

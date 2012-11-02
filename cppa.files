@@ -40,7 +40,6 @@ cppa/detail/abstract_tuple.hpp
 cppa/detail/actor_count.hpp
 cppa/actor_addressing.hpp
 cppa/detail/actor_registry.hpp
-cppa/network/addressed_message.hpp
 cppa/detail/atom_val.hpp
 cppa/detail/boxed.hpp
 cppa/detail/channel.hpp
@@ -174,7 +173,6 @@ src/actor.cpp
 src/actor_count.cpp
 src/actor_proxy.cpp
 src/actor_registry.cpp
-src/addressed_message.cpp
 src/any_tuple.cpp
 src/atom.cpp
 src/attachable.cpp
@@ -295,3 +293,5 @@ cppa/detail/singleton_mixin.hpp
 cppa/response_handle.hpp
 src/response_handle.cpp
 cppa/wildcard_position.hpp
+cppa/network/message_header.hpp
+src/message_header.cpp

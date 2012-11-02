@@ -46,8 +46,9 @@
 #include "cppa/detail/singleton_manager.hpp"
 
 #include "cppa/network/middleman.hpp"
-#include "cppa/network/default_protocol.hpp"
 #include "cppa/network/default_peer.hpp"
+#include "cppa/network/message_header.hpp"
+#include "cppa/network/default_protocol.hpp"
 
 using namespace std;
 
@@ -61,7 +62,6 @@ default_peer::default_peer(default_protocol* parent,
 , m_parent(parent), m_in(in), m_out(out)
 , m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
 , m_node(peer_ptr)
-, m_meta_msg(uniform_typeid<addressed_message>())
 , m_has_unwritten_data(false) {
     m_rd_buf.reset(m_state == wait_for_process_info
                    ? sizeof(uint32_t) + process_information::node_id_size
@@ -69,6 +69,8 @@ default_peer::default_peer(default_protocol* parent,
     // state == wait_for_msg_size iff peer was created using remote_peer()
     // in this case, this peer must be erased if no proxy of it remains
     m_erase_on_last_proxy_exited = m_state == wait_for_msg_size;
+    m_meta_hdr = uniform_typeid<message_header>();
+    m_meta_msg = uniform_typeid<any_tuple>();
 }
 
 default_peer::~default_peer() {
@@ -132,37 +134,40 @@ continue_reading_result default_peer::continue_reading() {
             }
             case read_message: {
                 //DEBUG("peer_connection::continue_reading: read_message");
-                addressed_message msg;
+                message_header hdr;
+                any_tuple msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size(),
                                        m_parent->addressing());
-                try { m_meta_msg->deserialize(&msg, &bd); }
+                try {
+                    m_meta_hdr->deserialize(&hdr, &bd);
+                    m_meta_msg->deserialize(&msg, &bd);
+                }
                 catch (exception& e) {
                     CPPA_LOG_ERROR("exception during read_message: "
                                    << detail::demangle(typeid(e))
                                    << ", what(): " << e.what());
                     return read_failure;
                 }
-                auto& content = msg.content();
                 CPPA_LOG_DEBUG("deserialized: " << to_string(msg));
                 //DEBUG("<-- " << to_string(msg));
-                match(content) (
+                match(msg) (
                     // monitor messages are sent automatically whenever
                     // actor_proxy_cache creates a new proxy
                     // note: aid is the *original* actor id
                     on(atom("MONITOR"), arg_match) >> [&](const process_information_ptr& node, actor_id aid) {
-                        monitor(msg.sender(), node, aid);
+                        monitor(hdr.sender, node, aid);
                     },
                     on(atom("KILL_PROXY"), arg_match) >> [&](const process_information_ptr& node, actor_id aid, std::uint32_t reason) {
-                        kill_proxy(msg.sender(), node, aid, reason);
+                        kill_proxy(hdr.sender, node, aid, reason);
                     },
                     on(atom("LINK"), arg_match) >> [&](const actor_ptr& ptr) {
-                        link(msg.sender(), ptr);
+                        link(hdr.sender, ptr);
                     },
                     on(atom("UNLINK"), arg_match) >> [&](const actor_ptr& ptr) {
-                        unlink(msg.sender(), ptr);
+                        unlink(hdr.sender, ptr);
                     },
                     others() >> [&] {
-                        deliver(msg);
+                        deliver(hdr, move(msg));
                     }
                 );
                 m_rd_buf.reset(sizeof(uint32_t));
@@ -250,36 +255,23 @@ void default_peer::kill_proxy(const actor_ptr& sender,
     }
 }
 
-void default_peer::deliver(const addressed_message& msg) {
+void default_peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
-    auto receiver = msg.receiver().get();
+    auto receiver = hdr.receiver.get();
     if (receiver) {
-        if (msg.id().valid()) {
-            auto ra = dynamic_cast<actor*>(receiver);
-            if (ra) {
-                CPPA_LOG_DEBUG("sync message for actor "
-                               << ra->id());
-                ra->sync_enqueue(
-                    msg.sender().get(),
-                    msg.id(),
-                    move(msg.content()));
-            }
-            else{
-                CPPA_LOG_ERROR("sync mesage to non-actor");
-            }
+        if (hdr.id.valid()) {
+            CPPA_LOG_DEBUG("sync message for actor " << receiver->id());
+            receiver->sync_enqueue(hdr.sender.get(), hdr.id, move(msg));
         }
         else {
             CPPA_LOG_DEBUG("async message with "
                            << (msg.sender() ? "" : "in")
                            << "valid sender");
-            receiver->enqueue(
-                msg.sender().get(),
-                move(msg.content()));
+            receiver->enqueue(hdr.sender.get(), move(msg));
         }
     }
     else {
-        CPPA_LOG_ERROR("received message with "
-                       "invalid receiver");
+        CPPA_LOG_ERROR("received message with invalid receiver");
     }
 }
 
@@ -344,13 +336,13 @@ continuable_writer* default_peer::as_writer() {
     return this;
 }
 
-void default_peer::enqueue(const addressed_message& msg) {
+void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
     binary_serializer bs(&m_wr_buf, m_parent->addressing());
     uint32_t size = 0;
     auto before = m_wr_buf.size();
     m_wr_buf.write(sizeof(uint32_t), &size, util::grow_if_needed);
-    try { bs << msg; }
+    try { bs << hdr << msg; }
     catch (exception& e) {
         CPPA_LOG_ERROR(to_verbose_string(e));
         cerr << "*** exception in default_peer::enqueue; "

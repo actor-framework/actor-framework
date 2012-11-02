@@ -146,7 +146,7 @@ void default_actor_addressing::put(const process_information& node,
         auto p = m_parent->get_peer(node);
         CPPA_LOG_ERROR_IF(!p, "put a proxy for an unknown peer");
         if (p) {
-            p->enqueue(addressed_message(nullptr, nullptr, make_any_tuple(atom("MONITOR"), process_information::get(), aid)));
+            p->enqueue({nullptr, nullptr}, make_any_tuple(atom("MONITOR"), process_information::get(), aid));
         }
     }
     else {

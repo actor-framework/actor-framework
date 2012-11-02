@@ -44,7 +44,7 @@
 #include "cppa/network/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
-#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/message_header.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"

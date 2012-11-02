@@ -89,7 +89,6 @@ set(LIBCPPA_SRC
     src/actor_count.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
-    src/addressed_message.cpp
     src/any_tuple.cpp
     src/atom.cpp
     src/attachable.cpp
@@ -122,6 +121,7 @@ set(LIBCPPA_SRC
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
     src/logging.cpp
+    src/message_header.cpp
     src/middleman.cpp
     src/object.cpp
     src/object_array.cpp

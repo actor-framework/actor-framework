@@ -68,7 +68,7 @@ class default_peer : public continuable_reader, public continuable_writer {
 
     continuable_writer* as_writer();
 
-    void enqueue(const addressed_message& msg);
+    void enqueue(const message_header& hdr, const any_tuple& msg);
 
     inline bool erase_on_last_proxy_exited() const {
         return m_erase_on_last_proxy_exited;
@@ -100,8 +100,10 @@ class default_peer : public continuable_reader, public continuable_writer {
     output_stream_ptr m_out;
     read_state m_state;
     process_information_ptr m_node;
-    const uniform_type_info* m_meta_msg;
     bool m_has_unwritten_data;
+
+    const uniform_type_info* m_meta_hdr;
+    const uniform_type_info* m_meta_msg;
 
     util::buffer m_rd_buf;
     util::buffer m_wr_buf;
@@ -120,10 +122,10 @@ class default_peer : public continuable_reader, public continuable_writer {
 
     void unlink(const actor_ptr& sender, const actor_ptr& ptr);
 
-    void deliver(const addressed_message& msg);
+    void deliver(const message_header& hdr, any_tuple msg);
 
     inline void enqueue(const any_tuple& msg) {
-        enqueue(addressed_message(nullptr, nullptr, msg));
+        enqueue({nullptr, nullptr}, msg);
     }
 
     template<typename Arg0, typename Arg1, typename... Args>

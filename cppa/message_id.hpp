@@ -35,6 +35,8 @@
 
 namespace cppa {
 
+struct invalid_message_id_flag { constexpr invalid_message_id_flag() { } };
+
 /**
  * @brief
  * @note Asynchronous messages always have an invalid message id.
@@ -99,9 +101,13 @@ class message_id_t {
         return result;
     }
 
+    static constexpr invalid_message_id_flag invalid = invalid_message_id_flag();
+
+    inline message_id_t(invalid_message_id_flag) : m_value(0) { }
+
  private:
 
-    explicit message_id_t(std::uint64_t value) : m_value(value) { }
+    explicit constexpr message_id_t(std::uint64_t value) : m_value(value) { }
 
     std::uint64_t m_value;
 

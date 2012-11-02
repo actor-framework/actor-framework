@@ -17,11 +17,12 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/announce.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/network/addressed_message.hpp"
+#include "cppa/network/message_header.hpp"
 
 #include "cppa/util/callable_trait.hpp"
 
@@ -79,7 +80,7 @@ int main() {
         // default announced cppa types
         "@atom",               // cppa::atom_value
         "@<>",                 // cppa::any_tuple
-        "@msg",                // cppa::detail::addressed_message
+        "@hdr",                // cppa::detail::addressed_message
         "@actor",              // cppa::actor_ptr
         "@group",              // cppa::group_ptr
         "@channel",            // cppa::channel_ptr
@@ -119,7 +120,7 @@ int main() {
                     std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t,
                     std::string, std::u16string, std::u32string,
                     float, double,
-                    atom_value, any_tuple, network::addressed_message,
+                    atom_value, any_tuple, network::message_header,
                     actor_ptr, group_ptr,
                     channel_ptr, intrusive_ptr<process_information>
                  >::arr;
@@ -140,7 +141,7 @@ int main() {
         uniform_typeid<double>(),
         uniform_typeid<atom_value>(),
         uniform_typeid<any_tuple>(),
-        uniform_typeid<network::addressed_message>(),
+        uniform_typeid<network::message_header>(),
         uniform_typeid<actor_ptr>(),
         uniform_typeid<group_ptr>(),
         uniform_typeid<channel_ptr>(),

@@ -56,7 +56,6 @@
 #include "cppa/network/input_stream.hpp"
 #include "cppa/network/output_stream.hpp"
 #include "cppa/network/default_protocol.hpp"
-#include "cppa/network/addressed_message.hpp"
 #include "cppa/network/middleman_event_handler_base.hpp"
 
 #include "cppa/detail/fd_util.hpp"

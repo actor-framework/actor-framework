@@ -28,23 +28,15 @@
 \******************************************************************************/
 
 
-#include "cppa/network/addressed_message.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/network/message_header.hpp"
 
 namespace cppa { namespace network {
 
-addressed_message::addressed_message(actor_ptr from,
-                                     channel_ptr to,
-                                     any_tuple ut,
-                                     message_id_t id  )
-: m_sender(std::move(from)), m_receiver(std::move(to))
-, m_msg_id(id), m_content(std::move(ut))      { }
+message_header::message_header(const actor_ptr& s,
+                               const actor_ptr& r,
+                               message_id_t mid   )
+: sender(s), receiver(r), id(mid) { }
 
-bool operator==(const addressed_message& lhs, const addressed_message& rhs) {
-    return    lhs.sender() == rhs.sender()
-           && lhs.receiver() == rhs.receiver()
-           && lhs.id() == rhs.id()
-           && lhs.content() == rhs.content();
-}
+message_header::message_header() : sender(nullptr), receiver(nullptr), id() { }
 
-} } // namespace cppa
+} } // namespace cppa::network
