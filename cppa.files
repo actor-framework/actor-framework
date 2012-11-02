@@ -221,7 +221,6 @@ unit_testing/test__intrusive_containers.cpp
 unit_testing/test__intrusive_ptr.cpp
 unit_testing/test__local_group.cpp
 unit_testing/test__match.cpp
-unit_testing/test__pattern.cpp
 unit_testing/test__primitive_variant.cpp
 unit_testing/test__remote_actor.cpp
 unit_testing/test__ripemd_160.cpp
