@@ -44,22 +44,19 @@
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
+namespace cppa {
+
 namespace {
 
-inline cppa::detail::actor_registry& registry() {
-    return *(cppa::detail::singleton_manager::get_actor_registry());
+inline detail::actor_registry& registry() {
+    return *(detail::singleton_manager::get_actor_registry());
 }
 
 } // namespace <anonymous>
 
-namespace cppa {
+actor::actor(actor_id aid) : m_id(aid), m_is_proxy(true) { }
 
-actor::actor(actor_id aid, const process_information_ptr& pptr)
-: m_id(aid), m_is_proxy(true), m_parent_process(pptr) {
-    if (!pptr) {
-        throw std::logic_error("parent == nullptr");
-    }
-}
+actor::actor() : m_id(registry().next_id()), m_is_proxy(false) { }
 
 bool actor::chained_enqueue(actor* sender, any_tuple msg) {
     enqueue(sender, std::move(msg));
@@ -69,13 +66,6 @@ bool actor::chained_enqueue(actor* sender, any_tuple msg) {
 bool actor::chained_sync_enqueue(actor* ptr, message_id_t id, any_tuple msg) {
     sync_enqueue(ptr, id, std::move(msg));
     return false;
-}
-
-actor::actor(const process_information_ptr& pptr)
-: m_id(registry().next_id()), m_is_proxy(false), m_parent_process(pptr) {
-    if (!pptr) {
-        throw std::logic_error("parent == nullptr");
-    }
 }
 
 } // namespace cppa

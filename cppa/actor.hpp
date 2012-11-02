@@ -39,7 +39,6 @@
 #include "cppa/channel.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/message_id.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 
@@ -153,20 +152,6 @@ class actor : public channel {
     virtual bool remove_backlink(const intrusive_ptr<actor>& other) = 0;
 
     /**
-     * @brief Gets the {@link process_information} of the parent process.
-     * @returns The {@link process_information} of the parent process.
-     */
-    inline const process_information& parent_process() const;
-
-    /**
-     * @brief Gets the {@link process_information} pointer
-     *        of the parent process.
-     * @returns A pointer to the {@link process_information}
-     *          of the parent process.
-     */
-    inline process_information_ptr parent_process_ptr() const;
-
-    /**
      * @brief Gets an integer value that uniquely identifies this Actor in
      *        the process it's executed in.
      * @returns The unique identifier of this actor.
@@ -183,16 +168,14 @@ class actor : public channel {
 
  protected:
 
-    actor(const process_information_ptr& parent = process_information::get());
+    actor();
 
-    actor(actor_id aid,
-          const process_information_ptr& parent = process_information::get());
+    actor(actor_id aid);
 
  private:
 
     actor_id m_id;
     bool m_is_proxy;
-    process_information_ptr m_parent_process;
 
 };
 
@@ -210,14 +193,6 @@ bool operator!=(const self_type& lhs, const actor_ptr& rhs);
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/
-
-inline const process_information& actor::parent_process() const {
-    return *m_parent_process;
-}
-
-inline process_information_ptr actor::parent_process_ptr() const {
-    return m_parent_process;
-}
 
 inline std::uint32_t actor::id() const {
     return m_id;

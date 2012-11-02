@@ -43,13 +43,12 @@ namespace cppa { namespace network {
 default_actor_proxy::default_actor_proxy(actor_id mid,
                                          const process_information_ptr& pinfo,
                                          const default_protocol_ptr& parent)
-: super(mid, pinfo), m_proto(parent) { }
+: super(mid), m_proto(parent), m_pinf(pinfo) { }
 
 default_actor_proxy::~default_actor_proxy() {
-    CPPA_LOG_TRACE("node = " << to_string(*parent_process_ptr())
-                   << ", aid = " << id());
+    CPPA_LOG_TRACE("node = " << to_string(*m_pinf) << ", aid = " << id());
     auto aid = id();
-    auto node = parent_process_ptr();
+    auto node = m_pinf;
     auto proto = m_proto;
     proto->run_later([aid, node, proto] {
         CPPA_LOGF_TRACE("lambda from ~default_actor_proxy"
@@ -67,7 +66,7 @@ default_actor_proxy::~default_actor_proxy() {
 
 void default_actor_proxy::forward_msg(const actor_ptr& sender, any_tuple msg, message_id_t mid) {
     CPPA_LOG_TRACE("");
-    auto node = parent_process_ptr();
+    auto node = m_pinf;
     actor_ptr receiver = this;
     auto proto = m_proto;
     m_proto->run_later([proto, node, sender, receiver, msg, mid] {

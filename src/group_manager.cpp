@@ -67,7 +67,7 @@ class local_group : public group {
  public:
 
     void send_all_subscribers(actor* sender, const any_tuple& msg) {
-        shared_guard guard(m_shared_mtx);
+        shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
             s->enqueue(sender, msg);
         }
@@ -79,7 +79,7 @@ class local_group : public group {
     }
 
     pair<bool, size_t> add_subscriber(const channel_ptr& who) {
-        exclusive_guard guard(m_shared_mtx);
+        exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second) {
             return {true, m_subscribers.size()};
         }
@@ -87,7 +87,7 @@ class local_group : public group {
     }
 
     pair<bool, size_t> erase_subscriber(const channel_ptr& who) {
-        exclusive_guard guard(m_shared_mtx);
+        exclusive_guard guard(m_mtx);
         auto erased_one = m_subscribers.erase(who) > 0;
         return {erased_one, m_subscribers.size()};
     }
@@ -105,26 +105,15 @@ class local_group : public group {
 
     void serialize(serializer* sink);
 
-    inline const process_information& process() const {
-        return *m_process;
-    }
-
-    inline const process_information_ptr& process_ptr() const {
-        return m_process;
-    }
-
     const actor_ptr& broker() const {
         return m_broker;
     }
 
-    local_group(bool spawn_local_broker,
-                local_group_module* mod, string id,
-                process_information_ptr parent = process_information::get());
+    local_group(bool spawn_local_broker, local_group_module* mod, string id);
 
  protected:
 
-    process_information_ptr m_process;
-    util::shared_spinlock m_shared_mtx;
+    util::shared_spinlock m_mtx;
     set<channel_ptr> m_subscribers;
     actor_ptr m_broker;
 
@@ -297,23 +286,20 @@ class local_group_module : public group::module {
         m_actor_utype->deserialize(&broker, source);
         CPPA_REQUIRE(broker != nullptr);
         if (!broker) return nullptr;
-        if (broker->parent_process() == process()) {
+        if (!broker->is_proxy()) {
             return this->get(identifier);
         }
         else {
-            auto& pinf = broker->parent_process();
             shared_guard guard(m_proxies_mtx);
-            auto& node_map = m_proxies[pinf];
-            auto i = node_map.find(identifier);
-            if (i != node_map.end()) {
+            auto i = m_proxies.find(broker);
+            if (i != m_proxies.end()) {
                 return i->second;
             }
             else {
                 local_group_ptr tmp(new local_group_proxy(broker, this,
-                                                          identifier,
-                                                          broker->parent_process_ptr()));
+                                                          identifier));
                 upgrade_guard uguard(guard);
-                auto p = node_map.insert(make_pair(identifier, tmp));
+                auto p = m_proxies.insert(make_pair(broker, tmp));
                 // someone might preempt us
                 return p.first->second;
             }
@@ -333,14 +319,12 @@ class local_group_module : public group::module {
 
  private:
 
-    typedef map<string, local_group_ptr> local_group_map;
-
     process_information_ptr m_process;
     const uniform_type_info* m_actor_utype;
     util::shared_spinlock m_instances_mtx;
-    local_group_map m_instances;
+    map<string,local_group_ptr> m_instances;
     util::shared_spinlock m_proxies_mtx;
-    map<process_information, local_group_map> m_proxies;
+    map<actor_ptr,local_group_ptr> m_proxies;
 
 };
 
@@ -545,12 +529,9 @@ class remote_group_module : public group::module {
 
 local_group::local_group(bool spawn_local_broker,
                          local_group_module* mod,
-                         string id,
-                         process_information_ptr parent)
-: group(mod, move(id)), m_process(move(parent)) {
-    if (spawn_local_broker) {
-        m_broker = spawn_hidden<local_broker>(this);
-    }
+                         string id)
+: group(mod, move(id)) {
+    if (spawn_local_broker) m_broker = spawn_hidden<local_broker>(this);
 }
 
 void local_group::serialize(serializer* sink) {

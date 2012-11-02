@@ -65,6 +65,10 @@ class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
 
     void local_unlink_from(const actor_ptr& other);
 
+    inline const process_information_ptr& process_info() const {
+        return m_pinf;
+    }
+
  protected:
 
     ~default_actor_proxy();
@@ -75,7 +79,8 @@ class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
                      any_tuple msg,
                      message_id_t mid = message_id_t());
 
-    default_protocol_ptr m_proto;
+    default_protocol_ptr    m_proto;
+    process_information_ptr m_pinf;
 
 };
 

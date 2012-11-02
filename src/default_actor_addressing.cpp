@@ -47,7 +47,7 @@ using namespace std;
 namespace cppa { namespace network {
 
 default_actor_addressing::default_actor_addressing(default_protocol* parent)
-: m_parent(parent) { }
+: m_parent(parent), m_pinf(process_information::get()) { }
 
 atom_value default_actor_addressing::technology_id() const {
     return atom("DEFAULT");
@@ -62,16 +62,24 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
     }
     else {
         // local actor?
-        if (*ptr->parent_process_ptr() == *process_information::get()) {
+        if (!ptr->is_proxy()) {
             detail::singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
+        }
+        auto pinf = m_pinf;
+        if (ptr->is_proxy()) {
+            auto dptr = ptr.downcast<default_actor_proxy>();
+            if (dptr) pinf = dptr->process_info();
+            else {
+                CPPA_LOG_ERROR("ptr is not a default_actor_proxy instance");
+            }
         }
         primitive_variant ptup[2];
         ptup[0] = ptr->id();
-        ptup[1] = ptr->parent_process().process_id();
+        ptup[1] = pinf->process_id();
         sink->begin_object("@actor");
         sink->write_tuple(2, ptup);
         sink->write_raw(process_information::node_id_size,
-                        ptr->parent_process().node_id().data());
+                        pinf->node_id().data());
         sink->end_object();
     }
 }

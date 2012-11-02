@@ -45,7 +45,6 @@ using namespace std;
 
 namespace cppa {
 
-actor_proxy::actor_proxy(actor_id mid, const process_information_ptr& pptr)
-: super(mid, pptr) { }
+actor_proxy::actor_proxy(actor_id mid) : super(mid) { }
 
 } // namespace cppa

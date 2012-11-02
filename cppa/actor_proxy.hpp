@@ -61,8 +61,7 @@ class actor_proxy : public enable_weak_ptr_mixin<actor> {
 
  protected:
 
-    actor_proxy(actor_id mid,
-                const process_information_ptr& pinfo);
+    actor_proxy(actor_id mid);
 
 };
 

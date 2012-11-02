@@ -76,6 +76,7 @@ class default_actor_addressing : public actor_addressing {
  private:
 
     default_protocol* m_parent;
+    process_information_ptr m_pinf;
     std::map<process_information,proxy_map> m_proxies;
 
 };
