@@ -114,24 +114,46 @@ void default_protocol::unpublish(const actor_ptr& whom) {
 void default_protocol::register_peer(const process_information& node,
                                      default_peer* ptr) {
     CPPA_LOG_TRACE("node = " << to_string(node) << ", ptr = " << ptr);
-    auto& ptrref = m_peers[node];
-    if (ptrref) {
-        CPPA_LOG_INFO("peer " << to_string(node) << " already defined");
+    auto& entry = m_peers[node];
+    if (entry.impl == nullptr) {
+        if (entry.queue == nullptr) entry.queue.emplace();
+        ptr->set_queue(entry.queue);
+        entry.impl.reset(ptr);
+        if (!entry.queue->empty()) {
+            auto tmp = entry.queue->pop();
+            ptr->enqueue(tmp.first, tmp.second);
+        }
     }
-    else ptrref = ptr;
+    else { CPPA_LOG_ERROR("peer " << to_string(node) << " already defined"); }
 }
 
 default_peer_ptr default_protocol::get_peer(const process_information& n) {
     CPPA_LOG_TRACE("n = " << to_string(n));
-    auto e = end(m_peers);
     auto i = m_peers.find(n);
-    if (i != e) {
-        CPPA_LOG_DEBUG("result = " << i->second.get());
-        return i->second;
+    if (i != m_peers.end()) {
+        CPPA_LOG_DEBUG("result = " << i->second.impl.get());
+        return i->second.impl;
     }
     CPPA_LOG_DEBUG("result = nullptr");
     return nullptr;
 }
+
+void default_protocol::enqueue(const process_information& node,
+                               const message_header& hdr,
+                               any_tuple msg) {
+    auto& entry = m_peers[node];
+    if (entry.impl) {
+        CPPA_REQUIRE(entry.queue != nullptr);
+        if (!entry.impl->has_unwritten_data()) {
+            CPPA_REQUIRE(entry.queue->empty());
+            entry.impl->enqueue(hdr, msg);
+            return;
+        }
+    }
+    if (entry.queue == nullptr) entry.queue.emplace();
+    entry.queue->emplace(hdr, msg);
+}
+
 
 actor_ptr default_protocol::remote_actor(variant_args args) {
     CPPA_LOG_TRACE("args.size() = " << args.size());
@@ -187,17 +209,20 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     return result->value;
 }
 
-void default_protocol::erase_peer(const default_peer_ptr& pptr) {
+void default_protocol::last_proxy_exited(const default_peer_ptr& pptr) {
     CPPA_REQUIRE(pptr != nullptr);
     CPPA_LOG_TRACE("pptr = " << pptr.get()
                    << ", pptr->node() = " << to_string(pptr->node()));
-    stop_reader(pptr.get());
-    auto i = m_peers.find(pptr->node());
-    if (i != m_peers.end()) {
-        CPPA_LOG_DEBUG_IF(i->second != pptr, "node " << to_string(pptr->node())
-                                             << " does not exist in m_peers");
-        if (i->second == pptr) {
-            m_peers.erase(i);
+    if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
+        stop_reader(pptr.get());
+        auto i = m_peers.find(pptr->node());
+        if (i != m_peers.end()) {
+            CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
+                              "node " << to_string(pptr->node())
+                              << " does not exist in m_peers");
+            if (i->second.impl == pptr) {
+                m_peers.erase(i);
+            }
         }
     }
 }

@@ -28,79 +28,46 @@
 \******************************************************************************/
 
 
-#ifndef DEFAULT_PROTOCOL_HPP
-#define DEFAULT_PROTOCOL_HPP
+#ifndef CPPA_MESSAGE_QUEUE_HPP
+#define CPPA_MESSAGE_QUEUE_HPP
 
-#include <map>
-#include <vector>
-
-#include "cppa/actor_addressing.hpp"
-#include "cppa/process_information.hpp"
-
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/default_peer.hpp"
-#include "cppa/network/default_peer_acceptor.hpp"
-#include "cppa/network/default_message_queue.hpp"
-#include "cppa/network/default_actor_addressing.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/network/message_header.hpp"
 
 namespace cppa { namespace network {
 
-class default_protocol : public protocol {
-
-    typedef protocol super;
+class default_message_queue : public ref_counted {
 
  public:
 
-    default_protocol(abstract_middleman* parent);
+    typedef std::pair<message_header,any_tuple> value_type;
 
-    atom_value identifier() const;
+    typedef value_type& reference;
 
-    void publish(const actor_ptr& whom, variant_args args);
+    template<typename... Args>
+    void emplace(Args&&... args) {
+        m_impl.emplace_back(std::forward<Args>(args)...);
+    }
 
-    void publish(const actor_ptr& whom,
-                 std::unique_ptr<acceptor> acceptor,
-                 variant_args args                  );
+    inline bool empty() const { return m_impl.empty(); }
 
-    void unpublish(const actor_ptr& whom);
-
-    actor_ptr remote_actor(variant_args args);
-
-    actor_ptr remote_actor(io_stream_ptr_pair ioptrs, variant_args args);
-
-    void register_peer(const process_information& node, default_peer* ptr);
-
-    default_peer_ptr get_peer(const process_information& node);
-
-    void enqueue(const process_information& node,
-                 const message_header& hdr,
-                 any_tuple msg);
-
-    void new_peer(const input_stream_ptr& in,
-                  const output_stream_ptr& out,
-                  const process_information_ptr& node = nullptr);
-
-    void last_proxy_exited(const default_peer_ptr& pptr);
-
-    void continue_writer(const default_peer_ptr& pptr);
-
-    // covariant return type
-    default_actor_addressing* addressing();
+    inline value_type pop() {
+        value_type result(std::move(m_impl.front()));
+        m_impl.erase(m_impl.begin());
+        return std::move(result);
+    }
 
  private:
 
-    struct peer_entry {
-        default_peer_ptr impl;
-        default_message_queue_ptr queue;
-    };
-
-    default_actor_addressing m_addressing;
-    std::map<actor_ptr,std::vector<default_peer_acceptor_ptr> > m_acceptors;
-    std::map<process_information,peer_entry> m_peers;
+    std::vector<value_type> m_impl;
 
 };
 
-typedef intrusive_ptr<default_protocol> default_protocol_ptr;
+typedef intrusive_ptr<default_message_queue> default_message_queue_ptr;
 
 } } // namespace cppa::network
 
-#endif // DEFAULT_PROTOCOL_HPP
+
+
+#endif // CPPA_MESSAGE_QUEUE_HPP

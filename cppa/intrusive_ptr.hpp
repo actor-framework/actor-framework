@@ -112,6 +112,11 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         set_ptr(new_value);
     }
 
+    template<typename... Args>
+    void emplace(Args&&... args) {
+        reset(new T(std::forward<Args>(args)...));
+    }
+
     intrusive_ptr& operator=(pointer ptr) {
         reset(ptr);
         return *this;

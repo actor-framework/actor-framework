@@ -148,7 +148,7 @@ continue_reading_result default_peer::continue_reading() {
                                    << ", what(): " << e.what());
                     return read_failure;
                 }
-                CPPA_LOG_DEBUG("deserialized: " << to_string(msg));
+                CPPA_LOG_DEBUG("deserialized: " << to_string(hdr) << " " << to_string(msg));
                 //DEBUG("<-- " << to_string(msg));
                 match(msg) (
                     // monitor messages are sent automatically whenever
@@ -208,7 +208,7 @@ void default_peer::monitor(const actor_ptr&,
             // this actor already finished execution;
             // reply with KILL_PROXY message
             // get corresponding peer
-            enqueue(atom("KILL_PROXY"), pself, aid, entry.second);
+            enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, entry.second));
         }
     }
     else {
@@ -218,7 +218,7 @@ void default_peer::monitor(const actor_ptr&,
             proto->run_later([=] {
                 CPPA_LOGF_TRACE("lambda from default_peer::monitor");
                 auto p = proto->get_peer(*node);
-                if (p) p->enqueue(atom("KILL_PROXY"), pself, aid, reason);
+                if (p) p->enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, reason));
             });
         });
     }
@@ -306,7 +306,8 @@ void default_peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
 
 continue_writing_result default_peer::continue_writing() {
     CPPA_LOG_TRACE("");
-    if (m_has_unwritten_data) {
+    CPPA_LOG_DEBUG_IF(!m_has_unwritten_data, "nothing to write (done)");
+    while (m_has_unwritten_data) {
         size_t written;
         try { written = m_out->write_some(m_wr_buf.data(), m_wr_buf.size()); }
         catch (exception& e) {
@@ -325,10 +326,18 @@ continue_writing_result default_peer::continue_writing() {
             m_wr_buf.reset();
             m_has_unwritten_data = false;
             CPPA_LOG_DEBUG("write done, " << written << "bytes written");
-            return write_done;
+        }
+        // try to write next message in queue
+        while (!m_has_unwritten_data && !queue().empty()) {
+            auto tmp = queue().pop();
+            enqueue(tmp.first, tmp.second);
         }
     }
-    CPPA_LOG_DEBUG("nothing to write (done)");
+    if (erase_on_last_proxy_exited() && !has_unwritten_data()) {
+        if (m_parent->addressing()->count_proxies(*m_node) == 0) {
+            m_parent->last_proxy_exited(this);
+        }
+    }
     return write_done;
 }
 
@@ -350,7 +359,7 @@ void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
              << endl;
         return;
     }
-    CPPA_LOG_DEBUG("serialized: " << to_string(msg));
+    CPPA_LOG_DEBUG("serialized: " << to_string(hdr) << " " << to_string(msg));
     size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
     memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));

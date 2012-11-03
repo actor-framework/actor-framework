@@ -296,3 +296,4 @@ cppa/wildcard_position.hpp
 cppa/network/message_header.hpp
 src/message_header.cpp
 cppa/qtsupport/actor_widget_mixin.hpp
+cppa/network/default_message_queue.hpp

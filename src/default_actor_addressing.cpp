@@ -138,11 +138,11 @@ void default_actor_addressing::put(const process_information& node,
     auto i = submap.find(aid);
     if (i == submap.end()) {
         submap.insert(make_pair(aid, proxy));
-        auto p = m_parent->get_peer(node);
-        CPPA_LOG_WARNING_IF(!p, "put a proxy for an unknown peer");
-        if (p) {
-            p->enqueue({nullptr, nullptr}, make_any_tuple(atom("MONITOR"), process_information::get(), aid));
-        }
+        m_parent->enqueue(node,
+                          {nullptr, nullptr},
+                          make_any_tuple(atom("MONITOR"),
+                                         process_information::get(),
+                                         aid));
     }
     else {
         CPPA_LOG_ERROR("a proxy for " << aid << ":" << to_string(node)

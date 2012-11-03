@@ -45,6 +45,7 @@
 #include "cppa/network/output_stream.hpp"
 #include "cppa/network/continuable_reader.hpp"
 #include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/default_message_queue.hpp"
 
 namespace cppa { namespace network {
 
@@ -54,6 +55,8 @@ class default_peer : public continuable_reader, public continuable_writer {
 
     typedef continuable_reader lsuper;
     typedef continuable_writer rsuper;
+
+    friend class default_protocol;
 
  public:
 
@@ -76,6 +79,10 @@ class default_peer : public continuable_reader, public continuable_writer {
 
     inline const process_information& node() const {
         return *m_node;
+    }
+
+    inline bool has_unwritten_data() const {
+        return m_has_unwritten_data;
     }
 
  protected:
@@ -108,6 +115,16 @@ class default_peer : public continuable_reader, public continuable_writer {
     util::buffer m_rd_buf;
     util::buffer m_wr_buf;
 
+    default_message_queue_ptr m_queue;
+
+    inline default_message_queue& queue() {
+        return *m_queue;
+    }
+
+    inline void set_queue(const default_message_queue_ptr& queue) {
+        m_queue = queue;
+    }
+
     // if this peer was created using remote_actor(), then m_doorman will
     // point to the published actor of the remote node
     bool m_erase_on_last_proxy_exited;
@@ -128,12 +145,14 @@ class default_peer : public continuable_reader, public continuable_writer {
         enqueue({nullptr, nullptr}, msg);
     }
 
+    /*
     template<typename Arg0, typename Arg1, typename... Args>
     inline void enqueue(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
         enqueue(make_any_tuple(std::forward<Arg0>(arg0),
                                std::forward<Arg1>(arg1),
                                std::forward<Args>(args)...));
     }
+    */
 
 };
 

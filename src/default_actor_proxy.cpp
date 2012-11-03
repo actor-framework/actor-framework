@@ -58,7 +58,7 @@ default_actor_proxy::~default_actor_proxy() {
         auto p = proto->get_peer(*node);
         if (p && p->erase_on_last_proxy_exited()) {
             if (proto->addressing()->count_proxies(*node) == 0) {
-                proto->erase_peer(p);
+                proto->last_proxy_exited(p);
             }
         }
     });
@@ -66,19 +66,12 @@ default_actor_proxy::~default_actor_proxy() {
 
 void default_actor_proxy::forward_msg(const actor_ptr& sender, any_tuple msg, message_id_t mid) {
     CPPA_LOG_TRACE("");
+    message_header hdr{sender, this, mid};
     auto node = m_pinf;
-    actor_ptr receiver = this;
     auto proto = m_proto;
-    m_proto->run_later([proto, node, sender, receiver, msg, mid] {
+    m_proto->run_later([hdr, msg, node, proto] {
         CPPA_LOGF_TRACE("lambda from default_actor_proxy::forward_msg");
-        /*
-                        << "node = " << to_string(*node)
-                        << ", sender =" << to_string(sender)
-                        << ", receiver = " << to_string(receiver)
-                        << ", proto = " << to_string(proto->identifier()));
-        */
-        auto p = proto->get_peer(*node);
-        if (p) p->enqueue({sender, receiver, mid}, msg);
+        proto->enqueue(*node, hdr, msg);
     });
 }
 
