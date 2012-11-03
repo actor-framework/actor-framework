@@ -515,6 +515,8 @@ class middleman_overseer : public continuable_reader {
         return read_continue_later;
     }
 
+    void io_failed() { CPPA_CRITICAL("IO on pipe failed"); }
+
  private:
 
     middleman_queue& m_queue;
@@ -529,13 +531,13 @@ middleman_event_handler& abstract_middleman::handler() {
 
 void abstract_middleman::continue_writer(const continuable_reader_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
-    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    CPPA_REQUIRE(ptr->as_io() != nullptr);
     handler().add(ptr, event::write);
 }
 
 void abstract_middleman::stop_writer(const continuable_reader_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
-    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    CPPA_REQUIRE(ptr->as_io() != nullptr);
     handler().erase(ptr, event::write);
 }
 
@@ -603,6 +605,7 @@ void middleman_loop(middleman_impl* impl) {
                 }
                 case event::error: {
                     CPPA_LOGF_DEBUG("event::error; remove peer " << i->ptr());
+                    i->io_failed();
                     impl->stop_reader(i->ptr());
                     impl->stop_writer(i->ptr());
                 }
@@ -633,6 +636,7 @@ void middleman_loop(middleman_impl* impl) {
                     }
                     break;
                 case event::error:
+                    i->io_failed();
                     handler->erase(i->ptr(), event::both);
                     break;
                 default:

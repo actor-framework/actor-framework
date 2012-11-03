@@ -38,7 +38,7 @@
 #include "cppa/logging.hpp"
 
 #include "cppa/network/continuable_reader.hpp"
-#include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace network {
 
@@ -104,17 +104,17 @@ class middleman_event_handler_base {
                 fd = ptr->read_handle();
                 break;
             case event::write: {
-                auto wptr = ptr->as_writer();
+                auto wptr = ptr->as_io();
                 if (wptr) fd = wptr->write_handle();
                 else {
-                    CPPA_LOG_ERROR("ptr->as_writer() returned nullptr");
+                    CPPA_LOG_ERROR("ptr->downcast() returned nullptr");
                     return;
                 }
                 break;
             }
             case event::both: {
                 fd = ptr->read_handle();
-                auto wptr = ptr->as_writer();
+                auto wptr = ptr->as_io();
                 if (wptr) {
                     auto wrfd = wptr->write_handle();
                     if (fd != wrfd) {
@@ -126,7 +126,7 @@ class middleman_event_handler_base {
                     }
                 }
                 else {
-                    CPPA_LOG_ERROR("ptr->as_writer() returned nullptr");
+                    CPPA_LOG_ERROR("ptr->downcast() returned nullptr");
                     return;
                 }
                 break;
@@ -229,12 +229,16 @@ class event_iterator_impl {
         return m_access.type(m_i);
     }
 
+    inline void io_failed() {
+        ptr()->io_failed();
+    }
+
     inline continue_reading_result continue_reading() {
         return ptr()->continue_reading();
     }
 
     inline continue_writing_result continue_writing() {
-        return ptr()->as_writer()->continue_writing();
+        return ptr()->as_io()->continue_writing();
     }
 
     inline bool equal_to(const event_iterator_impl& other) const {

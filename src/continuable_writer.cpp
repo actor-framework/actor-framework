@@ -28,10 +28,13 @@
 \******************************************************************************/
 
 
-#include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace network {
 
-continuable_writer::continuable_writer(native_socket_type wr) : m_wr(wr) { }
+continuable_io::continuable_io(native_socket_type rd, native_socket_type wr)
+: super(rd), m_wr(wr) { }
+
+continuable_io* continuable_io::as_io() { return this; }
 
 } } // namespace cppa::network

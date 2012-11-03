@@ -282,7 +282,7 @@ cppa/network/default_protocol.hpp
 src/default_protocol.cpp
 cppa/logging.hpp
 src/logging.cpp
-cppa/network/continuable_writer.hpp
+cppa/network/continuable_io.hpp
 src/continuable_writer.cpp
 cppa/network/middleman_event_handler_base.hpp
 src/actor_addressing.cpp

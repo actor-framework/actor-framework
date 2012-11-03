@@ -44,17 +44,16 @@
 #include "cppa/network/input_stream.hpp"
 #include "cppa/network/output_stream.hpp"
 #include "cppa/network/continuable_reader.hpp"
-#include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/continuable_io.hpp"
 #include "cppa/network/default_message_queue.hpp"
 
 namespace cppa { namespace network {
 
 class default_protocol;
 
-class default_peer : public continuable_reader, public continuable_writer {
+class default_peer : public continuable_io {
 
-    typedef continuable_reader lsuper;
-    typedef continuable_writer rsuper;
+    typedef continuable_io super;
 
     friend class default_protocol;
 
@@ -69,7 +68,9 @@ class default_peer : public continuable_reader, public continuable_writer {
 
     continue_writing_result continue_writing();
 
-    continuable_writer* as_writer();
+    continuable_io* as_io();
+
+    void io_failed();
 
     void enqueue(const message_header& hdr, const any_tuple& msg);
 

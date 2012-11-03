@@ -29,13 +29,13 @@
 
 
 #include "cppa/network/continuable_reader.hpp"
-#include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace network {
 
 continuable_reader::continuable_reader(native_socket_type rd) : m_rd(rd) { }
 
-continuable_writer* continuable_reader::as_writer() { return nullptr; }
+continuable_io* continuable_reader::as_io() { return nullptr; }
 
 
 } } // namespace cppa::network

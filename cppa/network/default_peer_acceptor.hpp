@@ -54,6 +54,8 @@ class default_peer_acceptor : public continuable_reader {
 
     inline const actor_ptr& published_actor() const { return m_pa; }
 
+    void io_failed();
+
  private:
 
     default_protocol* m_parent;

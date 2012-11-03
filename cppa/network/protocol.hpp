@@ -48,7 +48,7 @@ namespace cppa { namespace network {
 
 class abstract_middleman;
 class continuable_reader;
-class continuable_writer;
+class continuable_io;
 
 /**
  * @brief Implements a communication protocol.

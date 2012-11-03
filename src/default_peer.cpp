@@ -58,7 +58,7 @@ default_peer::default_peer(default_protocol* parent,
                            const input_stream_ptr& in,
                            const output_stream_ptr& out,
                            process_information_ptr peer_ptr)
-: lsuper(in->read_handle()), rsuper(out->write_handle())
+: super(in->read_handle(), out->write_handle())
 , m_parent(parent), m_in(in), m_out(out)
 , m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
 , m_node(peer_ptr)
@@ -90,6 +90,11 @@ void default_peer::disconnected() {
         }
         m_parent->addressing()->erase(*m_node);
     }
+}
+
+void default_peer::io_failed() {
+    CPPA_LOG_TRACE("");
+    disconnected();
 }
 
 continue_reading_result default_peer::continue_reading() {
@@ -277,31 +282,39 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
 
 
 void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
+    // this message is sent from default_actor_proxy in link_to and
+    // establish_backling to cause the original actor (sender) to establish
+    // a link to ptr as well
     CPPA_LOG_TRACE(CPPA_MARG(sender, get)
                    << ", " << CPPA_MARG(ptr, get));
+    CPPA_LOG_ERROR_IF(!sender, "received 'LINK' from invalid sender");
+    CPPA_LOG_ERROR_IF(!ptr, "received 'LINK' with invalid target");
+    if (!sender || !ptr) return;
+    CPPA_LOG_ERROR_IF(sender->is_proxy(),
+                      "received 'LINK' for a non-local actor");
+    if (ptr->is_proxy()) {
+        // make sure to not send a needless 'LINK' message back
+        ptr.downcast<actor_proxy>()->local_link_to(sender);
+    }
+    else sender->link_to(ptr);
     if (ptr && sender && sender->is_proxy()) {
         sender.downcast<actor_proxy>()->local_link_to(ptr);
-    }
-    else {
-        CPPA_LOG_ERROR_IF(!sender,
-                          "received LINK from invalid sender");
-        CPPA_LOG_ERROR_IF(sender && !sender->is_proxy(),
-                          "sender is not a proxy");
-        CPPA_LOG_ERROR_IF(!ptr, "received LINK with invalid target");
     }
 }
 
 void default_peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
-    if (ptr && sender && sender->is_proxy()) {
-        sender.downcast<actor_proxy>()->local_unlink_from(ptr);
+    CPPA_LOG_TRACE(CPPA_MARG(sender, get)
+                   << ", " << CPPA_MARG(ptr, get));
+    CPPA_LOG_ERROR_IF(!sender, "received 'UNLINK' from invalid sender");
+    CPPA_LOG_ERROR_IF(!ptr, "received 'UNLINK' with invalid target");
+    if (!sender || !ptr) return;
+    CPPA_LOG_ERROR_IF(sender->is_proxy(),
+                      "received 'UNLINK' for a non-local actor");
+    if (ptr->is_proxy()) {
+        // make sure to not send a needles 'UNLINK' message back
+        ptr.downcast<actor_proxy>()->local_unlink_from(sender);
     }
-    else {
-        CPPA_LOG_ERROR_IF(!sender,
-                          "received UNLINK from invalid sender");
-        CPPA_LOG_ERROR_IF(sender && !sender->is_proxy(),
-                          "received UNLINK but sender is not a proxy");
-        CPPA_LOG_ERROR_IF(!ptr, "received UNLINK with invalid target");
-    }
+    else sender->unlink_from(ptr);
 }
 
 continue_writing_result default_peer::continue_writing() {
@@ -341,7 +354,7 @@ continue_writing_result default_peer::continue_writing() {
     return write_done;
 }
 
-continuable_writer* default_peer::as_writer() {
+continuable_io* default_peer::as_io() {
     return this;
 }
 

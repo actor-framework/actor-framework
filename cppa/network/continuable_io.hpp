@@ -34,12 +34,13 @@
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/network/continuable_reader.hpp"
 
 namespace cppa { namespace network {
 
 /**
  * @brief Denotes the return value of
- *        {@link continuable_writer::continue_writing()}.
+ *        {@link continuable_io::continue_writing()}.
  */
 enum continue_writing_result {
     write_failure,
@@ -49,11 +50,11 @@ enum continue_writing_result {
 };
 
 /**
- * @brief An object performing asynchronous output on a file handle.
+ * @brief An object performing asynchronous input and output.
  */
-class continuable_writer : virtual public ref_counted {
+class continuable_io : public continuable_reader {
 
-    typedef ref_counted super;
+    typedef continuable_reader super;
 
  public:
 
@@ -64,6 +65,8 @@ class continuable_writer : virtual public ref_counted {
         return m_wr;
     }
 
+    continuable_io* as_io();
+
     /**
      * @brief Writes to {@link write_handle()}.
      */
@@ -71,7 +74,7 @@ class continuable_writer : virtual public ref_counted {
 
  protected:
 
-    continuable_writer(native_socket_type write_handle);
+    continuable_io(native_socket_type read_fd, native_socket_type write_fd);
 
  private:
 
@@ -79,7 +82,7 @@ class continuable_writer : virtual public ref_counted {
 
 };
 
-typedef intrusive_ptr<continuable_writer> continuable_writer_ptr;
+typedef intrusive_ptr<continuable_io> continuable_io_ptr;
 
 } } // namespace cppa::network
 

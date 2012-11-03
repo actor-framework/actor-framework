@@ -46,8 +46,8 @@ using namespace std;
 namespace cppa { namespace network {
 
 default_peer_acceptor::default_peer_acceptor(default_protocol* parent,
-                                                       acceptor_uptr aur,
-                                                       const actor_ptr& pa)
+                                             acceptor_uptr aur,
+                                             const actor_ptr& pa)
 : super(aur->file_handle()), m_parent(parent), m_ptr(std::move(aur)), m_pa(pa) { }
 
 continue_reading_result default_peer_acceptor::continue_reading() {
@@ -81,6 +81,11 @@ continue_reading_result default_peer_acceptor::continue_reading() {
         }
         else return read_continue_later;
    }
+}
+
+void default_peer_acceptor::io_failed() {
+    CPPA_LOG_INFO("removed default_peer_acceptor "
+                  << this << " due to an IO failure");
 }
 
 } } // namespace cppa::network

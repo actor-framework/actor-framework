@@ -39,7 +39,7 @@
 #include "cppa/network/protocol.hpp"
 #include "cppa/network/acceptor.hpp"
 #include "cppa/network/continuable_reader.hpp"
-#include "cppa/network/continuable_writer.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 

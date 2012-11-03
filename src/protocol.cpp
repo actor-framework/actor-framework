@@ -47,7 +47,7 @@ void protocol::continue_reader(continuable_reader* ptr) {
 
 void protocol::continue_writer(continuable_reader* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    CPPA_REQUIRE(ptr->as_writer() != nullptr);
+    CPPA_REQUIRE(ptr->as_io() != nullptr);
     m_parent->continue_writer(ptr);
 }
 

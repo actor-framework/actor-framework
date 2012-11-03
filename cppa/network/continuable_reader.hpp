@@ -52,12 +52,12 @@ enum continue_reading_result {
     read_continue_later
 };
 
-class continuable_writer;
+class continuable_io;
 
 /**
- * @brief An object performing asynchronous input on a file handle.
+ * @brief An object performing asynchronous input.
  */
-class continuable_reader : virtual public ref_counted {
+class continuable_reader : public ref_counted {
 
  public:
 
@@ -72,14 +72,20 @@ class continuable_reader : virtual public ref_counted {
     virtual continue_reading_result continue_reading() = 0;
 
     /**
-     * @return Casts @p this to a continuable_writer, returns @p nullptr
-     *         if cast fails.
+     * @brief Casts @p this to a continuable_io or returns @p nullptr
+     *        if cast fails.
      */
-    virtual continuable_writer* as_writer();
+    virtual continuable_io* as_io();
+
+    /**
+     * @brief Called from middleman before it removes this object
+     *        due to an IO failure.
+     */
+     virtual void io_failed() = 0;
 
  protected:
 
-    continuable_reader(native_socket_type rd);
+    continuable_reader(native_socket_type read_fd);
 
  private:
 
