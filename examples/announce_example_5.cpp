@@ -126,7 +126,7 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
 
     void deserialize_node(tree_node& node, deserializer* source) const {
         // value, ... children ...
-        auto value = get<std::uint32_t>(source->read_value(pt_uint32));
+        auto value = source->read<std::uint32_t>();
         node.value = value;
         auto num_children = source->begin_sequence();
         for (size_t i = 0; i < num_children; ++i) {

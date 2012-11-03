@@ -558,8 +558,9 @@ void abstract_middleman::stop_reader(const continuable_reader_ptr& ptr) {
 
 void middleman_loop(middleman_impl* impl) {
     middleman_event_handler* handler = &impl->m_handler;
-    CPPA_LOGF_TRACE("run middleman loop, node: "
-                    << to_string(*process_information::get()));
+    CPPA_LOGF_TRACE("run middleman loop");
+    CPPA_LOGF_INFO("middleman runs at "
+                   << to_string(*process_information::get()));
     handler->init();
     impl->continue_reader(make_counted<middleman_overseer>(impl->m_pipe_read, impl->m_queue));
     handler->update();

@@ -212,8 +212,7 @@ class default_serialize_policy {
 
     template<typename T>
     void dimpl(T& storage, deserializer* d, primitive_impl) const {
-        primitive_variant val = d->read_value(type_to_ptype<T>::ptype);
-        storage = std::move(get<T>(val));
+        storage = d->read<T>();
     }
 
     template<typename T>

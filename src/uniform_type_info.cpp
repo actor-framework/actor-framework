@@ -235,8 +235,8 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
         }
         else {
             source->begin_object(name);
-            auto modname = source->read_value(pt_u8string);
-            ptrref = group::get_module(get<string>(modname))
+            auto modname = source->read<string>();
+            ptrref = group::get_module(modname)
                     ->deserialize(source);
             source->end_object();
         }
@@ -411,8 +411,8 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_h
         auto& msg = *reinterpret_cast<network::message_header*>(instance);
         actor_ptr_tinfo::s_deserialize(msg.sender, source, actor_ptr_name);
         actor_ptr_tinfo::s_deserialize(msg.receiver, source, actor_ptr_name);
-        auto msg_id = source->read_value(pt_uint64);
-        msg.id = message_id_t::from_integer_value(get<pt_uint64>(msg_id));
+        auto msg_id = source->read<std::uint64_t>();
+        msg.id = message_id_t::from_integer_value(msg_id);
         source->end_object();
     }
 
@@ -453,7 +453,7 @@ class process_info_ptr_tinfo : public util::abstract_uniform_type_info<process_i
         }
         else {
             source->begin_object(cname);
-            auto id = get<uint32_t>(source->read_value(pt_uint32));
+            auto id = source->read<uint32_t>();
             process_information::node_id_type nid;
             source->read_raw(nid.size(), nid.data());
             source->end_object();
@@ -478,9 +478,8 @@ class atom_value_tinfo : public util::abstract_uniform_type_info<atom_value> {
         assert_type_name(source);
         auto val = reinterpret_cast<atom_value*>(instance);
         source->begin_object(name());
-        auto ptval = source->read_value(pt_uint64);
+        *val = static_cast<atom_value>(source->read<uint64_t>());
         source->end_object();
-        *val = static_cast<atom_value>(get<uint64_t>(ptval));
     }
 
 };
@@ -499,10 +498,10 @@ class duration_tinfo : public util::abstract_uniform_type_info<util::duration> {
         assert_type_name(source);
         source->begin_object(name());
         auto val = reinterpret_cast<util::duration*>(instance);
-        auto unit_val = source->read_value(pt_uint32);
-        auto count_val = source->read_value(pt_uint32);
+        auto unit_val = source->read<uint32_t>();
+        auto count_val = source->read<uint32_t>();
         source->end_object();
-        switch (get<uint32_t>(unit_val)) {
+        switch (unit_val) {
             case 1:
                 val->unit = util::time_unit::seconds;
                 break;
@@ -519,7 +518,7 @@ class duration_tinfo : public util::abstract_uniform_type_info<util::duration> {
                 val->unit = util::time_unit::none;
                 break;
         }
-        val->count = get<uint32_t>(count_val);
+        val->count = count_val;
     }
 
 };
@@ -555,9 +554,8 @@ class bool_tinfo : public util::abstract_uniform_type_info<bool> {
     virtual void deserialize(void* instance, deserializer* source) const {
         assert_type_name(source);
         source->begin_object(name());
-        auto ptval = source->read_value(pt_uint8);
+        *reinterpret_cast<bool*>(instance) = source->read<uint8_t>() != 0;
         source->end_object();
-        *reinterpret_cast<bool*>(instance) = (get<pt_uint8>(ptval) != 0);
     }
 
 };

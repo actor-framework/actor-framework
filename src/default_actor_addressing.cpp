@@ -73,11 +73,9 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
                 CPPA_LOG_ERROR("ptr is not a default_actor_proxy instance");
             }
         }
-        primitive_variant ptup[2];
-        ptup[0] = ptr->id();
-        ptup[1] = pinf->process_id();
         sink->begin_object("@actor");
-        sink->write_tuple(2, ptup);
+        sink->write_value(ptr->id());
+        sink->write_value(pinf->process_id());
         sink->write_raw(process_information::node_id_size,
                         pinf->node_id().data());
         sink->end_object();
@@ -94,23 +92,20 @@ actor_ptr default_actor_addressing::read(deserializer* source) {
         return nullptr;
     }
     else if (cname == "@actor") {
-        primitive_variant ptup[2];
-        primitive_type ptypes[] = { pt_uint32, pt_uint32 };
         process_information::node_id_type nid;
         source->begin_object(cname);
-        source->read_tuple(2, ptypes, ptup);
+        auto aid = source->read<uint32_t>();
+        auto pid = source->read<uint32_t>();
         source->read_raw(process_information::node_id_size, nid.data());
         source->end_object();
         // local actor?
         auto pinf = process_information::get();
-        if (   pinf->process_id() == cppa::get<uint32_t>(ptup[1])
-            && std::equal(pinf->node_id().begin(), pinf->node_id().end(), nid.begin())) {
-            auto id = cppa::get<uint32_t>(ptup[0]);
-            return detail::singleton_manager::get_actor_registry()->get(id);
+        if (pid == pinf->process_id() && nid == pinf->node_id()) {
+            return detail::singleton_manager::get_actor_registry()->get(aid);
         }
         else {
-            process_information tmp(cppa::get<uint32_t>(ptup[1]), nid);
-            return get_or_put(tmp, cppa::get<uint32_t>(ptup[0]));
+            process_information tmp(pid, nid);
+            return get_or_put(tmp, aid);
         }
     }
     else throw runtime_error("expected type name \"@0\" or \"@actor\"; "
@@ -144,7 +139,7 @@ void default_actor_addressing::put(const process_information& node,
     if (i == submap.end()) {
         submap.insert(make_pair(aid, proxy));
         auto p = m_parent->get_peer(node);
-        CPPA_LOG_ERROR_IF(!p, "put a proxy for an unknown peer");
+        CPPA_LOG_WARNING_IF(!p, "put a proxy for an unknown peer");
         if (p) {
             p->enqueue({nullptr, nullptr}, make_any_tuple(atom("MONITOR"), process_information::get(), aid));
         }

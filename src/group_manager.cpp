@@ -279,8 +279,7 @@ class local_group_module : public group::module {
 
     intrusive_ptr<group> deserialize(deserializer* source) {
         // deserialize {identifier, process_id, node_id}
-        auto pv_identifier = source->read_value(pt_u8string);
-        auto& identifier = cppa::get<string>(pv_identifier);
+        auto identifier = source->read<string>();
         // deserialize broker
         actor_ptr broker;
         m_actor_utype->deserialize(&broker, source);
@@ -513,8 +512,7 @@ class remote_group_module : public group::module {
     }
 
     intrusive_ptr<group> deserialize(deserializer* source) {
-        auto pv_identifier = source->read_value(pt_u8string);
-        return get(cppa::get<string>(pv_identifier));
+        return get(source->read<string>());
     }
 
     void serialize(group* ptr, serializer* sink) {

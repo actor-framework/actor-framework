@@ -99,6 +99,17 @@ class deserializer {
     virtual primitive_variant read_value(primitive_type ptype) = 0;
 
     /**
+     * @brief Reads a value of type @p T from the data source of type @p ptype.
+     * @note @p T must be of a primitive type.
+     * @returns The read value of type @p T.
+     */
+    template<typename T>
+    inline T read() {
+        auto val = read_value(detail::type_to_ptype<T>::ptype);
+        return std::move(get_ref<T>(val));
+    }
+
+    /**
      * @brief Reads a tuple of primitive values from the data
      *        source of the types @p ptypes.
      * @param num The size of the tuple.

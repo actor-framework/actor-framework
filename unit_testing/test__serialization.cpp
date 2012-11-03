@@ -136,7 +136,7 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
         source->begin_object(name());
         auto rs = reinterpret_cast<raw_struct*>(ptr);
         rs->str.clear();
-        auto size = get<std::uint32_t>(source->read_value(pt_uint32));
+        auto size = source->read<std::uint32_t>();
         rs->str.resize(size);
         source->read_raw(size, &(rs->str[0]));
         source->end_object();
