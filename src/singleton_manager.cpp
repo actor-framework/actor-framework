@@ -67,8 +67,7 @@ std::atomic<logging*> s_logger;
 } // namespace <anonymous>
 
 void singleton_manager::shutdown() {
-    CPPA_LOGF_TRACE("");
-    CPPA_LOGF_DEBUG("prepare to shutdown");
+    CPPA_LOGF_INFO("prepare to shutdown");
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
@@ -78,7 +77,7 @@ void singleton_manager::shutdown() {
     destroy(s_scheduler);
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    // it's safe now to delete all other singletons now
+    // it's safe to delete all other singletons now
     destroy(s_actor_registry);
     destroy(s_group_manager);
     destroy(s_empty_tuple);
