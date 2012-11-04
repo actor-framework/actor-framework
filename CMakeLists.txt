@@ -228,16 +228,16 @@ else ()
   set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
 endif ()
 
-enable_testing()
-
 # set up subdirectories
-add_subdirectory(unit_testing)
-add_subdirectory(examples)
-add_subdirectory(benchmarks)
-
-add_dependencies(all_examples libcppa)
-add_dependencies(all_unit_tests libcppa)
-add_dependencies(all_benchmarks libcppa)
+if (NOT "${CPPA_NO_UNIT_TESTS}" STREQUAL "yes")
+  add_subdirectory(unit_testing)
+  add_dependencies(all_unit_tests libcppa)
+  enable_testing()
+endif ()
+if (NOT "${CPPA_NO_EXAMPLES}" STREQUAL "yes")
+  add_subdirectory(examples)
+  add_dependencies(all_examples libcppa)
+endif ()
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
@@ -274,11 +274,25 @@ if (CPPA_LOG_LEVEL)
   endif ()
 endif (CPPA_LOG_LEVEL)
 
-if (ENABLE_DEBUG)
-  set(DEBUG_MODE_STR "yes")
-else (ENABLE_DEBUG)
-  set(DEBUG_MODE_STR "no")
-endif (ENABLE_DEBUG)
+macro (toYesNo in out)
+  if (${in})
+    set(${out} "yes")
+  else ()
+    set(${out} "no")
+  endif ()
+endmacro ()
+
+macro (invertYesNo in out)
+  if ("${in}" STREQUAL "yes")
+    set(${out} "no")
+  else ()
+    set(${out} "yes")
+  endif ()
+endmacro ()
+
+toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
+invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
+invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 
 # done (print summary)
 message("\n====================|  Build Summary  |===================="
@@ -289,6 +303,8 @@ message("\n====================|  Build Summary  |===================="
         "\nDebug mode:        ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nContext switching: ${CONTEXT_SWITCHING}"
+        "\nBuild examples:    ${BUILD_EXAMPLES}"
+        "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
