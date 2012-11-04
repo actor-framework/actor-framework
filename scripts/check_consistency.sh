@@ -16,9 +16,11 @@ if [ $? -ne 0 ]; then
     exit
 fi
 echo "read manual.pdf"
-PDF1=$(pdf2txt.py manual.pdf)
+# compare PDFs without timestamp
+MONTH_RX="(January|February|March|April|May|June|July|August|September|October|November|December)"
+PDF1=$(pdf2txt.py manual.pdf | grep -vE "$MONTH_RX")
 echo "read manual/manual.pdf"
-PDF2=$(pdf2txt.py manual/manual.pdf)
+PDF2=$(pdf2txt.py manual/manual.pdf | grep -vE "$MONTH_RX")
 if [ "$PDF1" != "$PDF2" ] ; then
     echo "manual.pdf and manual/manual.pdf differ!"
     exit
