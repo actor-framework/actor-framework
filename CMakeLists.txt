@@ -16,20 +16,19 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 # check if the user provided CXXFLAGS on the command line
 if (CMAKE_CXX_FLAGS)
-    set(CXXFLAGS_PROVIDED true)
-endif ()
-if (CXXFLAGS_PROVIDED)
+  set(CXXFLAGS_PROVIDED true)
   set(CMAKE_CXX_FLAGS_DEBUG          "")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-else ()
+else (CMAKE_CXX_FLAGS)
+  set(CXXFLAGS_PROVIDED false)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
-endif ()
+endif (CMAKE_CXX_FLAGS)
 
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
@@ -51,35 +50,30 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion}.")
   endif ()
   if (NOT CXXFLAGS_PROVIDED)
+    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+                   "you can override this by defining CMAKE_CXX_FLAGS "
+                   "(see 'configure --help')")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
 else ()
-  message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+  message(FATAL_ERROR "Your C++ compiler does not support C++11 "
+                      "or is not supported")
 endif ()
 
 # set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
-#else ()
-#  set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif ()
+endif (ENABLE_DEBUG)
 
 if (CPPA_LOG_LEVEL)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL}")
-endif()
+endif(CPPA_LOG_LEVEL)
 
 # set build default build type if not set
-if (CMAKE_BUILD_TYPE)
-else (CMAKE_BUILD_TYPE)
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif (CMAKE_BUILD_TYPE)
-
-if (DISABLE_CONTEXT_SWITCHING)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
-endif ()
-
-#file(GLOB LIBCPPA_SRC "src/*.cpp")
+endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
 set(LIBCPPA_SRC
     src/abstract_scheduled_actor.cpp
@@ -162,17 +156,27 @@ set(INCLUDE_DIRS . ${PTHREAD_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 set(LD_DIRS ${Boost_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 set(LD_FLAGS ${CMAKE_LD_LIBS} ${PTHREAD_LIBRARIES} ${Boost_THREAD_LIBRARY})
 
-if (NOT DISABLE_CONTEXT_SWITCHING)
+if (DISABLE_CONTEXT_SWITCHING)
+  # explicitly disabled
+else (DISABLE_CONTEXT_SWITCHING)
   find_package(Boost COMPONENTS context)
   # without REQUIRED, find_package(Boost...) returns with Boost_FOUND=FALSE
   if (NOT Boost_FOUND)
     set(DISABLE_CONTEXT_SWITCHING true)
   else (NOT Boost_FOUND)
     set(LD_FLAGS ${LD_FLAGS} ${Boost_CONTEXT_LIBRARY})
+    set(DISABLE_CONTEXT_SWITCHING false)
   endif (NOT Boost_FOUND)
-endif (NOT DISABLE_CONTEXT_SWITCHING)
+endif (DISABLE_CONTEXT_SWITCHING)
+
+# set compiler flag when compiling w/o context-switching actors
+if (DISABLE_CONTEXT_SWITCHING)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
+endif ()
 
 add_library(libcppa SHARED ${LIBCPPA_SRC})
+add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
+
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
 
@@ -228,16 +232,16 @@ else ()
   set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
 endif ()
 
-enable_testing()
-
 # set up subdirectories
-add_subdirectory(unit_testing)
-add_subdirectory(examples)
-add_subdirectory(benchmarks)
-
-add_dependencies(all_examples libcppa)
-add_dependencies(all_unit_tests libcppa)
-add_dependencies(all_benchmarks libcppa)
+if (NOT "${CPPA_NO_UNIT_TESTS}" STREQUAL "yes")
+  add_subdirectory(unit_testing)
+  add_dependencies(all_unit_tests libcppa)
+  enable_testing()
+endif ()
+if (NOT "${CPPA_NO_EXAMPLES}" STREQUAL "yes")
+  add_subdirectory(examples)
+  add_dependencies(all_examples libcppa)
+endif ()
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
@@ -274,11 +278,25 @@ if (CPPA_LOG_LEVEL)
   endif ()
 endif (CPPA_LOG_LEVEL)
 
-if (ENABLE_DEBUG)
-  set(DEBUG_MODE_STR "yes")
-else (ENABLE_DEBUG)
-  set(DEBUG_MODE_STR "no")
-endif (ENABLE_DEBUG)
+macro (toYesNo in out)
+  if (${in})
+    set(${out} "yes")
+  else ()
+    set(${out} "no")
+  endif ()
+endmacro ()
+
+macro (invertYesNo in out)
+  if ("${in}" STREQUAL "yes")
+    set(${out} "no")
+  else ()
+    set(${out} "yes")
+  endif ()
+endmacro ()
+
+toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
+invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
+invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 
 # done (print summary)
 message("\n====================|  Build Summary  |===================="
@@ -289,6 +307,8 @@ message("\n====================|  Build Summary  |===================="
         "\nDebug mode:        ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nContext switching: ${CONTEXT_SWITCHING}"
+        "\nBuild examples:    ${BUILD_EXAMPLES}"
+        "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
