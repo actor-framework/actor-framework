@@ -1,9 +1,16 @@
 Version 0.5.1
-------------
+-------------
 
-__2012-XX-XX__
+__2012-03-11__
 
-- New class `response_handle`, allowing actors to reply to message later on
+- Added `make_response_handle` which allows an actor to reply to message later
+- Replace `continuable_writer` with `continuable_io : continuable_reader`
+- No more multiple inheritance in `default_peer` (derives `continuable_io`)
+- MM reports IO failures to corresponding objects
+- New behavior in default protocol regarding outgoing messages:
+  * `default_peer` uses FIFO queue for outgoing messages
+  * queue stores messages even if no active connection is available
+  * new connections then check for previously enqueued messages first
 
 Version 0.5
 -----------
