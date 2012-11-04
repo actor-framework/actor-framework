@@ -175,16 +175,17 @@ if (DISABLE_CONTEXT_SWITCHING)
 endif ()
 
 add_library(libcppa SHARED ${LIBCPPA_SRC})
-add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
 
 set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
 set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
-
 set_target_properties(libcppa 
                       PROPERTIES
                       SOVERSION ${LIBRARY_SOVERSION}
                       VERSION ${LIBRARY_VERSION}
                       OUTPUT_NAME cppa)
+
+add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
+set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa)
 
 link_directories(${LD_DIRS})
 include_directories(${INCLUDE_DIRS})
