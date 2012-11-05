@@ -44,46 +44,73 @@
 
 namespace cppa {
 
-template<typename T>
-typename detail::conv_arg_impl<T>::result_type conv_arg(const std::string& arg) {
-    return detail::conv_arg_impl<T>::_(arg);
-}
+//template<typename T>
+//option<T> conv_arg(const std::string& arg) {
+//    return detail::conv_arg_impl<T>::_(arg);
+//}
 
+/**
+ * @brief Right-hand side of a match expression for a program option
+ *        reading an argument of type @p T.
+ */
 template<typename T>
 detail::rd_arg_functor<T> rd_arg(T& storage) {
     return {storage};
 }
 
+/**
+ * @brief Right-hand side of a match expression for a program option
+ *        adding an argument of type @p T to @p storage.
+ */
 template<typename T>
 detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
     return {storage};
 }
 
+/**
+ * @brief Stores a help text along with the number of expected arguments.
+ */
 struct option_info {
     std::string help_text;
     size_t num_args;
 };
 
+/**
+ * @brief Stores a help text for program options with option groups.
+ */
 typedef std::map<std::string,std::map<std::pair<char,std::string>,option_info> >
         options_description;
 
-detail::opt_rvalue_builder<true> on_opt(char short_opt,
-                                        std::string long_opt,
-                                        options_description* desc = nullptr,
-                                        std::string help_text = "",
-                                        std::string help_group = "general options");
+/**
+ * @brief Left-hand side of a match expression for a program option with
+ *        one argument.
+ */
+detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
+                                          std::string long_opt,
+                                          options_description* desc = nullptr,
+                                          std::string help_text = "",
+                                          std::string help_group = "general options");
 
-decltype(on<std::string>()
-        .when(cppa::placeholders::_x1.in(std::vector<std::string>())))
-on_vopt(char short_opt,
-        std::string long_opt,
-        options_description* desc = nullptr,
-        std::string help_text = "",
-        std::string help_group = "general options");
+/**
+ * @brief Left-hand side of a match expression for a program option with
+ *        no argument.
+ */
+detail::opt0_rvalue_builder on_opt0(char short_opt,
+                                    std::string long_opt,
+                                    options_description* desc = nullptr,
+                                    std::string help_text = "",
+                                    std::string help_group = "general options");
 
+/**
+ * @brief Returns a function that prints the help text of @p desc to @p out.
+ */
 std::function<void()> print_desc(options_description* desc,
                                  std::ostream& out = std::cout);
 
+/**
+ * @brief Returns a function that prints the help text of @p desc to @p out
+ *        and then calls <tt>exit(exit_reason)</tt>.
+ */
 std::function<void()> print_desc_and_exit(options_description* desc,
                                           std::ostream& out = std::cout,
                                           int exit_reason = 0);

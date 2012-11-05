@@ -330,6 +330,11 @@ detail::match_helper match(T&& what) {
 }
 
 /**
+ * @brief Splits @p str using @p delim and match the resulting strings.
+ */
+detail::match_helper match_split(const std::string& str, char delim, bool keep_empties = false);
+
+/**
  * @brief Starts a match expression that matches each element in
  *        range [first, last).
  * @param first Iterator to the first element.

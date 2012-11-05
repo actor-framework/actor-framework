@@ -59,7 +59,7 @@ struct conv_arg_impl<std::string> {
     static inline result_type _(const std::string& arg) { return arg; }
 };
 
-template<bool> class opt_rvalue_builder;
+template<bool> class opt1_rvalue_builder;
 
 template<typename T>
 struct rd_arg_storage : ref_counted {
@@ -72,7 +72,7 @@ struct rd_arg_storage : ref_counted {
 template<typename T>
 class rd_arg_functor {
 
-    template<bool> friend class opt_rvalue_builder;
+    template<bool> friend class opt1_rvalue_builder;
 
     typedef rd_arg_storage<T> storage_type;
 
@@ -114,7 +114,7 @@ class rd_arg_functor {
 template<typename T>
 class add_arg_functor {
 
-    template<bool> friend class opt_rvalue_builder;
+    template<bool> friend class opt1_rvalue_builder;
 
  public:
 
@@ -153,8 +153,11 @@ struct is_rd_arg<rd_arg_functor<T> > : std::true_type { };
 template<typename T>
 struct is_rd_arg<add_arg_functor<T> > : std::true_type { };
 
+typedef decltype(on<std::string>().when(cppa::placeholders::_x1.in(std::vector<std::string>())))
+        opt0_rvalue_builder;
+
 template<bool HasShortOpt = true>
-class opt_rvalue_builder {
+class opt1_rvalue_builder {
 
  public:
 
@@ -166,7 +169,7 @@ class opt_rvalue_builder {
             right_type;
 
     template<typename Left, typename Right>
-    opt_rvalue_builder(char sopt, std::string lopt, Left&& lhs, Right&& rhs)
+    opt1_rvalue_builder(char sopt, std::string lopt, Left&& lhs, Right&& rhs)
     : m_short(sopt), m_long(std::move(lopt))
     , m_left(std::forward<Left>(lhs)), m_right(std::forward<Right>(rhs)) { }
 
@@ -196,7 +199,7 @@ class opt_rvalue_builder {
 };
 
 template<>
-class opt_rvalue_builder<false> {
+class opt1_rvalue_builder<false> {
 
  public:
 
@@ -204,7 +207,7 @@ class opt_rvalue_builder<false> {
             sub_type;
 
     template<typename SubType>
-    opt_rvalue_builder(char sopt, std::string lopt, SubType&& sub)
+    opt1_rvalue_builder(char sopt, std::string lopt, SubType&& sub)
     : m_short(sopt), m_long(std::move(lopt))
     , m_sub(std::forward<SubType>(sub)) { }
 

@@ -37,13 +37,13 @@ using cppa::placeholders::_x1;
 
 namespace cppa {
 
-detail::opt_rvalue_builder<true> on_opt(char short_opt,
-                                        string long_opt,
-                                        options_description* desc,
-                                        string help_text,
-                                        string help_group) {
+detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
+                                         string long_opt,
+                                         options_description* desc,
+                                         string help_text,
+                                         string help_group) {
     if (desc) {
-        option_info oinf{help_text, 1};
+        option_info oinf{move(help_text), 1};
         (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), move(oinf)));
     }
     const char short_flag_arr[] = {'-', short_opt, '\0' };
@@ -68,7 +68,7 @@ detail::opt_rvalue_builder<true> on_opt(char short_opt,
 }
 
 decltype(on<string>().when(_x1.in(vector<string>())))
-on_vopt(char short_opt,
+on_opt0(char short_opt,
         string long_opt,
         options_description* desc,
         string help_text,
@@ -95,7 +95,7 @@ function<void()> print_desc(options_description* desc, ostream& out) {
             out << opt_group.first << ":\n";
             for (auto& opt : opt_group.second) {
                 out << "  ";
-                out << std::setw(40) << left;
+                out << setw(40) << left;
                 ostringstream tmp;
                 auto& names = opt.first;
                 if (names.first != '\0') {

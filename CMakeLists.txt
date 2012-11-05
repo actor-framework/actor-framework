@@ -115,6 +115,7 @@ set(LIBCPPA_SRC
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
     src/logging.cpp
+    src/match.cpp
     src/message_header.cpp
     src/middleman.cpp
     src/object.cpp
