@@ -1,3 +1,7 @@
+/******************************************************************************\
+ * This example illustrates how to do time-triggered loops in libcppa.        *
+\******************************************************************************/
+
 #include <chrono>
 #include <iostream>
 #include <algorithm>
