@@ -116,6 +116,7 @@ set(LIBCPPA_SRC
     src/local_actor.cpp
     src/logging.cpp
     src/match.cpp
+    src/memory.cpp
     src/message_header.cpp
     src/middleman.cpp
     src/object.cpp

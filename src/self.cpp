@@ -28,10 +28,6 @@
 \******************************************************************************/
 
 
-// for thread_specific_ptr
-// needed unless the new keyword "thread_local" works in GCC
-//#include <boost/thread/tss.hpp>
-
 #include <pthread.h>
 
 #include "cppa/self.hpp"

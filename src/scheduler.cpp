@@ -161,7 +161,7 @@ void insert_dmsg(Map& storage,
 
 void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     typedef detail::abstract_actor<local_actor> impl_type;
-    typedef std::unique_ptr<detail::recursive_queue_node> queue_node_ptr;
+    typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
     auto& queue = m_self->mailbox();

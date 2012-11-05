@@ -40,6 +40,8 @@
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
+
+#include "cppa/detail/memory.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa { namespace detail {
@@ -79,12 +81,10 @@ class receive_policy {
             switch (this->handle_message(client, i->get(), fun,
                                          awaited_response, policy)) {
                 case hm_msg_handled: {
-                    client->release_node(i->release());
                     m_cache.erase(i);
                     return true;
                 }
                 case hm_drop_msg: {
-                    client->release_node(i->release());
                     i = m_cache.erase(i);
                     break;
                 }
@@ -110,11 +110,11 @@ class receive_policy {
         switch (this->handle_message(client, node, fun,
                                      awaited_response, policy)) {
             case hm_msg_handled: {
-                client->release_node(node);
+                memory::dispose(node);
                 return true;
             }
             case hm_drop_msg: {
-                client->release_node(node);
+                memory::dispose(node);
                 break;
             }
             case hm_cache_msg: {
@@ -195,7 +195,7 @@ class receive_policy {
     typedef typename rp_flag<rp_nestable>::type nestable;
     typedef typename rp_flag<rp_sequential>::type sequential;
 
-    std::list<std::unique_ptr<recursive_queue_node> > m_cache;
+    std::list<std::unique_ptr<recursive_queue_node,disposer> > m_cache;
 
     template<class Client>
     inline void handle_timeout(Client* client, behavior& bhvr) {

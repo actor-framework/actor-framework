@@ -42,6 +42,7 @@
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 
+#include "cppa/detail/memory.hpp"
 #include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa {
@@ -53,7 +54,7 @@ class actor_companion_mixin : public Base {
 
  public:
 
-    typedef std::unique_ptr<detail::recursive_queue_node> message_pointer;
+    typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> message_pointer;
 
     template<typename... Args>
     actor_companion_mixin(Args&&... args) : super(std::forward<Args>(args)...) {

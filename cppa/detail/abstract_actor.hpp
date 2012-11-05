@@ -47,6 +47,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/detail/memory.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
 #include "cppa/detail/recursive_queue_node.hpp"
@@ -182,48 +183,19 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
  protected:
 
     mailbox_type m_mailbox;
-    util::fixed_vector<mailbox_element*, 10> m_nodes;
-    util::shared_spinlock m_nodes_lock;
-
-    typedef std::lock_guard<util::shared_spinlock> lock_type;
 
     inline mailbox_element* fetch_node(actor* sender,
                                        any_tuple msg,
                                        message_id_t id = message_id_t()) {
-        mailbox_element* result = nullptr;
-        { // lifetime scope of guard
-            lock_type guard{m_nodes_lock};
-            if (!m_nodes.empty()) {
-                result = m_nodes.back();
-                m_nodes.pop_back();
-            }
-        }
-        if (result) result->reset(sender, std::move(msg), id);
-        else result = new mailbox_element(sender, std::move(msg), id);
+        auto result = memory::new_queue_node();
+        result->reset(sender, std::move(msg), id);
         return result;
-    }
-
-    inline void release_node(mailbox_element* node) {
-        // prevent
-        node->msg.reset();
-        { // lifetime scope of guard
-            lock_type guard{m_nodes_lock};
-            if (m_nodes.full() == false) {
-                m_nodes.push_back(node);
-                return;
-            }
-        }
-        delete node;
     }
 
     template<typename... Args>
     abstract_actor(Args&&... args)
-    : super(std::forward<Args>(args)...),m_exit_reason(exit_reason::not_exited){
-        // pre-allocate some nodes
-        for (size_t i = 0; i < m_nodes.max_size() / 2; ++i) {
-            m_nodes.push_back(new mailbox_element);
-        }
-    }
+    : super(std::forward<Args>(args)...)
+    , m_exit_reason(exit_reason::not_exited){ }
 
     void cleanup(std::uint32_t reason) {
         if (reason == exit_reason::not_exited) return;
@@ -291,7 +263,7 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
 
     // true if the associated thread has finished execution
     std::atomic<std::uint32_t> m_exit_reason;
-    // guards access to m_exited, m_subscriptions and m_links
+    // guards access to m_exited, m_subscriptions, and m_links
     std::mutex m_mtx;
     // links to other actors
     std::vector<actor_ptr> m_links;

@@ -28,67 +28,39 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
-#define CPPA_RECURSIVE_QUEUE_NODE_HPP
-
-#include <cstdint>
-
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-
-#include "cppa/message_id.hpp"
-
-// needs access to constructor + destructor to initialize m_dummy_node
-namespace cppa { class local_actor; }
+#ifndef CPPA_MEMORY_HPP
+#define CPPA_MEMORY_HPP
 
 namespace cppa { namespace detail {
 
-class memory;
-class recursive_queue_node_storage;
+class memory_cache;
+class recursive_queue_node;
 
-class recursive_queue_node {
+class memory {
 
-    friend class memory;
-    friend class local_actor;
-    friend class recursive_queue_node_storage;
+    memory() = delete;
+
+    friend class memory_cache;
 
  public:
 
-    typedef recursive_queue_node* pointer;
+    static recursive_queue_node* new_queue_node();
 
-    pointer    next;   // intrusive next pointer
-    bool       marked; // denotes if this node is currently processed
-    actor_ptr  sender; // points to the sender of msg
-    any_tuple  msg;    // 'content field'
-    message_id_t mid;
-
-    inline void reset(actor* sptr, message_id_t id, bool reset_msg = true) {
-        next = nullptr;
-        marked = false;
-        sender = sptr;
-        mid = id;
-        if (reset_msg) msg.reset();
-    }
-
-    inline void reset(actor* sptr, any_tuple&& data, message_id_t id) {
-        reset(sptr, id, false);
-        msg = std::move(data);
-    }
-
-    recursive_queue_node(recursive_queue_node&&) = delete;
-    recursive_queue_node(const recursive_queue_node&) = delete;
-    recursive_queue_node& operator=(recursive_queue_node&&) = delete;
-    recursive_queue_node& operator=(const recursive_queue_node&) = delete;
+    static void dispose(recursive_queue_node* ptr);
 
  private:
 
-    inline recursive_queue_node() { reset(nullptr, message_id_t(), false); }
-    inline ~recursive_queue_node() { }
+    static void destroy(recursive_queue_node* ptr);
 
-    recursive_queue_node_storage* parent;
+};
 
+struct disposer {
+    template<typename T>
+    void operator()(T* ptr) {
+        memory::dispose(ptr);
+    }
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP
+#endif // CPPA_MEMORY_HPP
