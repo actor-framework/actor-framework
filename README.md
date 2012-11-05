@@ -43,7 +43,8 @@ Dependencies
 ------------
 
 * CMake
-* The Boost Thread Library
+* Pthread (until C++11 compilers support the new `thread_local` keyword)
+* *Optional:* Boost.Context (enables context-switching actors)
 
 
 Supported Compilers
