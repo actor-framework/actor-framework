@@ -45,6 +45,8 @@
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
+using std::move;
+
 namespace cppa { namespace {
 
 typedef std::uint32_t ui32;
@@ -64,33 +66,34 @@ inline decltype(std::chrono::high_resolution_clock::now()) now() {
     return std::chrono::high_resolution_clock::now();
 }
 
-void async_send_impl(void* to, actor* from, message_id_t, const any_tuple& msg) {
-    reinterpret_cast<channel*>(to)->enqueue(from, msg);
+void async_send_impl(channel* to, actor* from, any_tuple&& msg) {
+    to->enqueue(from, move(msg));
 }
 
-void sync_reply_impl(void* to, actor* from, message_id_t id, const any_tuple& msg) {
-    reinterpret_cast<actor*>(to)->sync_enqueue(from, id, msg);
+void sync_reply_impl(actor* to, actor* from, message_id_t id, any_tuple&& msg) {
+    to->sync_enqueue(from, id, move(msg));
 }
 
-typedef void (*impl_fun_ptr)(void*, actor*, message_id_t, const any_tuple&);
+typedef void (*async_send_fun)(channel*, actor*, any_tuple&&);
+typedef void (*sync_reply_fun)(actor*, actor*, message_id_t, any_tuple&&);
 
 class delayed_msg {
 
  public:
 
-    delayed_msg(impl_fun_ptr       arg0,
+    delayed_msg(async_send_fun     arg0,
                 const channel_ptr& arg1,
                 const actor_ptr&   arg2,
-                message_id_t         arg3,
-                const any_tuple&   arg4)
-    : fun(arg0), ptr_a(arg1), ptr_b(), from(arg2), id(arg3), msg(arg4) { }
+                message_id_t,
+                any_tuple&&        arg4)
+    : fun(arg0), ptr_a(arg1), from(arg2), msg(move(arg4)) { }
 
-    delayed_msg(impl_fun_ptr       arg0,
+    delayed_msg(sync_reply_fun     arg0,
                 const actor_ptr&   arg1,
                 const actor_ptr&   arg2,
-                message_id_t         arg3,
-                const any_tuple&   arg4)
-    : fun(arg0), ptr_a(), ptr_b(arg1), from(arg2), id(arg3), msg(arg4) { }
+                message_id_t       arg3,
+                any_tuple&&        arg4)
+    : fun(arg0), ptr_b(arg1), from(arg2), id(arg3), msg(move(arg4)) { }
 
     delayed_msg(delayed_msg&&) = default;
     delayed_msg(const delayed_msg&) = default;
@@ -98,16 +101,18 @@ class delayed_msg {
     delayed_msg& operator=(const delayed_msg&) = default;
 
     inline void eval() {
-        fun((ptr_a) ? ptr_a.get() : ptr_b.get(), from.get(), id, msg);
+        if (fun.is_left()) (fun.left())(ptr_a.get(), from.get(), move(msg));
+        else (fun.right())(ptr_b.get(), from.get(), id, move(msg));
     }
 
  private:
 
-    impl_fun_ptr  fun;
+    either<async_send_fun, sync_reply_fun> fun;
+
     channel_ptr   ptr_a;
     actor_ptr     ptr_b;
     actor_ptr     from;
-    message_id_t    id;
+    message_id_t  id;
     any_tuple     msg;
 
 };
@@ -140,17 +145,17 @@ class scheduler_helper {
 
 };
 
-template<class Map, class T>
+template<class Map, typename Fun, class T>
 void insert_dmsg(Map& storage,
                  const util::duration& d,
-                 impl_fun_ptr fun_ptr,
+                 Fun fun_ptr,
                  const T& to,
                  const actor_ptr& sender,
                  message_id_t id,
-                 const any_tuple& tup    ) {
+                 any_tuple&& tup    ) {
     auto tout = now();
     tout += d;
-    delayed_msg dmsg{fun_ptr, to, sender, id, tup};
+    delayed_msg dmsg{fun_ptr, to, sender, id, move(tup)};
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
@@ -169,16 +174,16 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     auto mfun = (
         on(atom("SEND"), arg_match) >> [&](const util::duration& d,
                                            const channel_ptr& ptr,
-                                           const any_tuple& tup) {
+                                           any_tuple& tup) {
             insert_dmsg(messages, d, async_send_impl,
-                        ptr, msg_ptr->sender, message_id_t(), tup);
+                        ptr, msg_ptr->sender, message_id_t(), move(tup));
         },
         on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
                                             const actor_ptr& ptr,
                                             message_id_t id,
-                                            const any_tuple& tup) {
+                                            any_tuple& tup) {
             insert_dmsg(messages, d, sync_reply_impl,
-                        ptr, msg_ptr->sender, id, tup);
+                        ptr, msg_ptr->sender, id, move(tup));
         },
         on<atom("DIE")>() >> [&]() {
             done = true;
