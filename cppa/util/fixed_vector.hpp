@@ -127,10 +127,6 @@ class fixed_vector {
         return m_size == 0;
     }
 
-    inline bool not_empty() const {
-        return m_size > 0;
-    }
-
     inline bool full() const {
         return m_size == MaxSize;
     }
@@ -141,7 +137,7 @@ class fixed_vector {
     }
 
     inline void pop_back() {
-        CPPA_REQUIRE(not_empty());
+        CPPA_REQUIRE(!empty());
         --m_size;
     }
 

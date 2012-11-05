@@ -121,15 +121,7 @@ class single_reader_queue {
         return m_head == nullptr && m_stack.load() == nullptr;
     }
 
-    /**
-     * @warning call only from the reader (owner)
-     */
-    inline bool not_empty() const {
-        return !empty();
-    }
-
-    single_reader_queue() : m_stack(nullptr), m_head(nullptr) {
-    }
+    single_reader_queue() : m_stack(nullptr), m_head(nullptr) { }
 
     ~single_reader_queue() {
         // empty the stack (void) fetch_new_data();

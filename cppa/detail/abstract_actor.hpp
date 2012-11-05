@@ -193,7 +193,7 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         mailbox_element* result = nullptr;
         { // lifetime scope of guard
             lock_type guard{m_nodes_lock};
-            if (m_nodes.not_empty()) {
+            if (!m_nodes.empty()) {
                 result = m_nodes.back();
                 m_nodes.pop_back();
             }
