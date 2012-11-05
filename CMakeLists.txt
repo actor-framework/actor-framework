@@ -174,25 +174,29 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-add_library(libcppa SHARED ${LIBCPPA_SRC})
+# bulid shared library only if not comiling static only
+if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  add_library(libcppa SHARED ${LIBCPPA_SRC})
+  target_link_libraries(libcppa ${LD_FLAGS})
+  set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
+  set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
+  set_target_properties(libcppa 
+                        PROPERTIES
+                        SOVERSION ${LIBRARY_SOVERSION}
+                        VERSION ${LIBRARY_VERSION}
+                        OUTPUT_NAME cppa)
+  install(TARGETS libcppa LIBRARY DESTINATION lib)
+endif ()
 
-set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
-set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
-set_target_properties(libcppa 
-                      PROPERTIES
-                      SOVERSION ${LIBRARY_SOVERSION}
-                      VERSION ${LIBRARY_VERSION}
-                      OUTPUT_NAME cppa)
-
-add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
-set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa)
+# build static library if --build-static or --build-static-only was set
+if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
+  add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
+  set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
+  install(TARGETS libcppaStatic ARCHIVE DESTINATION lib)
+endif ()
 
 link_directories(${LD_DIRS})
 include_directories(${INCLUDE_DIRS})
-target_link_libraries(libcppa ${LD_FLAGS})
-
-# install shared library
-install(TARGETS libcppa LIBRARY DESTINATION lib)
 
 # install includes
 install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
@@ -220,12 +224,16 @@ endif ()
 set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
 set (CPPA_INCLUDE ${CPPA_INCLUDE_PATH})
 
-if (APPLE)
-  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
-elseif (UNIX)
-  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
+if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa_static.a ${LD_FLAGS})
 else ()
-  message (SEND_FATAL "Host platform not supported ...")
+  if (APPLE)
+    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
+  elseif (UNIX)
+    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
+  else ()
+    message (SEND_FATAL "Host platform not supported ...")
+  endif ()
 endif ()
 
 if (EXECUTABLE_OUTPUT_PATH)
@@ -235,13 +243,21 @@ endif ()
 
 # set up subdirectories
 if (NOT "${CPPA_NO_UNIT_TESTS}" STREQUAL "yes")
-  add_subdirectory(unit_testing)
-  add_dependencies(all_unit_tests libcppa)
   enable_testing()
+  add_subdirectory(unit_testing)
+  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
+    add_dependencies(all_unit_tests libcppaStatic)
+  else ()
+    add_dependencies(all_unit_tests libcppa)
+  endif ()
 endif ()
 if (NOT "${CPPA_NO_EXAMPLES}" STREQUAL "yes")
   add_subdirectory(examples)
-  add_dependencies(all_examples libcppa)
+  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
+    add_dependencies(all_examples libcppaStatic)
+  else ()
+    add_dependencies(all_examples libcppa)
+  endif ()
 endif ()
 
 # set optional flags
@@ -262,6 +278,7 @@ if (DOXYGEN_FOUND)
                     VERBATIM)
 endif (DOXYGEN_FOUND)
 
+# set variables for summary
 set(LOG_LEVEL_STR "none")
 if (CPPA_LOG_LEVEL)
   if (${CPPA_LOG_LEVEL} EQUAL 0)
@@ -299,6 +316,16 @@ toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
 invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
 invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 
+if (NOT "${CPPA_BUILD_STATIC}" STREQUAL "yes")
+  set(CPPA_BUILD_STATIC "no")
+endif ()
+
+if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  set(CPPA_BUILD_STATIC_ONLY "no")
+else ()
+  set(CPPA_BUILD_STATIC "yes")
+endif ()
+
 # done (print summary)
 message("\n====================|  Build Summary  |===================="
         "\n"
@@ -310,6 +337,8 @@ message("\n====================|  Build Summary  |===================="
         "\nContext switching: ${CONTEXT_SWITCHING}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
+        "\nBuild static:      ${CPPA_BUILD_STATIC}"
+        "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"

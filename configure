@@ -31,6 +31,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build both with gcc and clang
     --no-examples               build libcppa without examples
     --no-unit-tests             build libcppa without unit tests
+    --build-static              build libcppa as static and shared library
+    --build-static-only         build libcppa as static library only
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -213,6 +215,12 @@ while [ $# -ne 0 ]; do
             ;;
         --no-unit-tests)
             append_cache_entry CPPA_NO_UNIT_TESTS STRING yes
+            ;;
+        --build-static)
+            append_cache_entry CPPA_BUILD_STATIC STRING yes
+            ;;
+        --build-static-only)
+            append_cache_entry CPPA_BUILD_STATIC_ONLY STRING yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
