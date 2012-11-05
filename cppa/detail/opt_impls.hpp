@@ -174,6 +174,7 @@ class opt_rvalue_builder {
     auto operator>>(Expr expr)
     -> decltype((*(static_cast<left_type*>(nullptr)) >> expr).or_else(
                  *(static_cast<right_type*>(nullptr)) >> expr)) const {
+        inject_arg_name(expr);
         return (m_left >> expr).or_else(m_right >> expr);
     }
 
@@ -210,6 +211,7 @@ class opt_rvalue_builder<false> {
     template<typename Expr>
     auto operator>>(Expr expr)
     -> decltype(*static_cast<sub_type*>(nullptr) >> expr) const {
+        inject_arg_name(expr);
         return m_sub >> expr;
     }
 
