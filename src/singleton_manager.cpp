@@ -72,8 +72,8 @@ void singleton_manager::shutdown() {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
     }
-    auto rptr = s_actor_registry.load();
-    if (rptr) rptr->await_running_count_equal(0);
+    //auto rptr = s_actor_registry.load();
+    //if (rptr) rptr->await_running_count_equal(0);
     destroy(s_scheduler);
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
