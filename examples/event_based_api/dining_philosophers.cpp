@@ -1,3 +1,8 @@
+/******************************************************************************\
+ * This example is an implementation of the classical Dining Philosophers     *
+ * exercise using only libcppa's event-based actor implementation.            *
+\******************************************************************************/
+
 #include <vector>
 #include <chrono>
 #include <sstream>
