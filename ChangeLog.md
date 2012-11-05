@@ -1,7 +1,16 @@
+Version 0.5.2
+-------------
+
+__2012-11-05__
+
+- Fixed Bug in CMake when compiling w/o Boost.Context
+- Added `--bulid-static` and `--build-static-only` flags to configure script
+- Moved `benchmarks` folder to own repository
+
 Version 0.5.1
 -------------
 
-__2012-03-11__
+__2012-11-03__
 
 - Added `make_response_handle` which allows an actor to reply to message later
 - Replace `continuable_writer` with `continuable_io : continuable_reader`
