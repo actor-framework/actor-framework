@@ -20,9 +20,9 @@ using namespace cppa;
 int main(int argc, char** argv) {
     uint16_t port = 0;
     options_description desc;
-    bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
-        on_opt('p', "port", &desc, "set port") >> rd_arg(port),
-        on_vopt('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
+    bool args_valid = match_stream<string>(argv + 1, argv + argc) (
+        on_opt1('p', "port", &desc, "set port") >> rd_arg(port),
+        on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
     );
     if (port <= 1024) {
         cerr << "*** no port > 1024 given" << endl;

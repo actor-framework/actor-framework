@@ -104,9 +104,9 @@ int main(int argc, char** argv) {
     string group_id;
     options_description desc;
     bool args_valid = match_stream<string>(argv + 1, argv + argc) (
-        on_opt('n', "name", &desc, "set name") >> rd_arg(name),
-        on_opt('g', "group", &desc, "join group <arg1>") >> rd_arg(group_id),
-        on_vopt('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
+        on_opt1('n', "name", &desc, "set name") >> rd_arg(name),
+        on_opt1('g', "group", &desc, "join group <arg1>") >> rd_arg(group_id),
+        on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
     );
 
     if (!args_valid) print_desc_and_exit(&desc)();
