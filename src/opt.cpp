@@ -43,7 +43,8 @@ detail::opt_rvalue_builder<true> on_opt(char short_opt,
                                         string help_text,
                                         string help_group) {
     if (desc) {
-        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), help_text));
+        option_info oinf{help_text, 1};
+        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), move(oinf)));
     }
     const char short_flag_arr[] = {'-', short_opt, '\0' };
     const char* lhs_str = short_flag_arr;
@@ -73,7 +74,8 @@ on_vopt(char short_opt,
         string help_text,
         string help_group) {
     if (desc) {
-        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), help_text));
+        option_info oinf{help_text, 0};
+        (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), move(oinf)));
     }
     const char short_flag_arr[] = {'-', short_opt, '\0' };
     vector<string> opt_strs = { short_flag_arr };
@@ -85,6 +87,10 @@ on_vopt(char short_opt,
 function<void()> print_desc(options_description* desc, ostream& out) {
     return [&out, desc] {
         if (!desc) return;
+        if (desc->empty()) {
+            out << "please use '-h' or '--help' for a list "
+                   "of available program options\n";
+        }
         for (auto& opt_group : *desc) {
             out << opt_group.first << ":\n";
             for (auto& opt : opt_group.second) {
@@ -93,10 +99,20 @@ function<void()> print_desc(options_description* desc, ostream& out) {
                 ostringstream tmp;
                 auto& names = opt.first;
                 if (names.first != '\0') {
-                    tmp << "-" << names.first << " <arg> | ";
+                    tmp << "-" << names.first;
+                    for (size_t num = 1; num <= opt.second.num_args; ++num) {
+                        tmp << " <arg" << num << ">";
+                    }
+                    tmp << " | ";
                 }
-                tmp << "--" << names.second << " <arg>";
-                out << tmp.str() << opt.second << "\n";
+                tmp << "--" << names.second;
+                if (opt.second.num_args > 0) {
+                    tmp << "=<arg1>";
+                }
+                for (size_t num = 2; num <= opt.second.num_args; ++num) {
+                    tmp << ",<arg" << num << ">";
+                }
+                out << tmp.str() << opt.second.help_text << "\n";
             }
             out << "\n";
         }

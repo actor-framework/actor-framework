@@ -59,7 +59,12 @@ detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
     return {storage};
 }
 
-typedef std::map<std::string, std::map<std::pair<char, std::string>, std::string> >
+struct option_info {
+    std::string help_text;
+    size_t num_args;
+};
+
+typedef std::map<std::string,std::map<std::pair<char,std::string>,option_info> >
         options_description;
 
 detail::opt_rvalue_builder<true> on_opt(char short_opt,
