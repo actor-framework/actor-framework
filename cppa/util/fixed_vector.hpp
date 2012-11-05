@@ -42,10 +42,9 @@
 namespace cppa { namespace util {
 
 /**
- * @brief A vector with a fixed maximum size.
- *
- * This implementation is highly optimized for arithmetic types and does
- * <b>not</b> call constructors or destructors properly.
+ * @brief A vector with a fixed maximum size (uses an array internally).
+ * @warning This implementation is highly optimized for arithmetic types and
+ *          does <b>not</b> call constructors or destructors properly.
  */
 template<typename T, size_t MaxSize>
 class fixed_vector {
