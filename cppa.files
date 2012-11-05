@@ -184,7 +184,6 @@ examples/message_passing/math_actor.cpp
 examples/remote_actors/distributed_math_actor.cpp
 examples/remote_actors/group_chat.cpp
 examples/remote_actors/group_server.cpp
-examples/remote_actors/type_plugins.hpp
 examples/type_system/announce_1.cpp
 examples/type_system/announce_2.cpp
 examples/type_system/announce_3.cpp

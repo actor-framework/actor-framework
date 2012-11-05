@@ -1,3 +1,13 @@
+/******************************************************************************\
+ * This example program represents a minimal terminal chat program            *
+ * based on group communication.                                              *
+ *                                                                            *
+ * Setup for a minimal chat between "alice" and "bob":                        *
+ * - ./build/bin/group_server -p 4242                                         *
+ * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
+ * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
+\******************************************************************************/
+
 #include <set>
 #include <map>
 #include <vector>
@@ -9,7 +19,6 @@
 
 #include "cppa/opt.hpp"
 #include "cppa/cppa.hpp"
-#include "type_plugins.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -39,8 +48,7 @@ class client : public event_based_actor {
 
  public:
 
-    client(const string& name, actor_ptr printer)
-    : m_name(name), m_printer(printer) { }
+    client(string name) : m_name(move(name)) { }
 
  protected:
 
@@ -52,31 +60,34 @@ class client : public event_based_actor {
                 }
             },
             on(atom("join"), arg_match) >> [=](const group_ptr& what) {
-                // accept join commands from local actors only
-                auto s = self->last_sender();
-                if (s->is_proxy()) {
+                if (self->last_sender()->is_proxy()) {
+                    // accept join commands from local actors only
                     reply("nice try");
                 }
                 else {
+                    for (auto g : joined_groups()) {
+                        cout << "*** leave " << to_string(g) << endl;
+                        send(g, m_name + " has left the chatroom");
+                        leave(g);
+                    }
+                    cout << "*** join " << to_string(what) << endl;
                     join(what);
+                    send(what, m_name + " has entered the chatroom");
                 }
             },
             on(atom("quit")) >> [=] {
-                // ignore quit messages from remote actors
-                auto s = self->last_sender();
-                if (s->is_proxy()) {
+                if (self->last_sender()->is_proxy()) {
+                    // ignore quit messages from remote actors
                     reply("nice try");
                 }
-                else {
-                    quit();
-                }
+                else quit();
             },
-            on<string>() >> [=] {
+            on<string>() >> [=](const string& txt) {
                 // don't print own messages
-                if (last_sender() != this) forward_to(m_printer);
+                if (last_sender() != this) cout << txt << endl;
             },
             others() >> [=]() {
-                send(m_printer, to_string(last_dequeued()));
+                cout << "unexpected: " << to_string(last_dequeued()) << endl;
             }
         );
     }
@@ -84,91 +95,74 @@ class client : public event_based_actor {
  private:
 
     string    m_name;
-    actor_ptr m_printer;
 
 };
 
-class print_actor : public event_based_actor {
-    void init() {
-        become (
-            on(atom("quit")) >> [] {
-                self->quit();
-            },
-            on_arg_match >> [](const string& str) {
-                cout << str << endl;
-            }
-        );
-    }
-};
-
-auto main(int argc, char* argv[]) -> int {
-
-    // enables this client to print user-defined types
-    // without changing this source code
-    exec_plugin();
+int main(int argc, char** argv) {
 
     string name;
-    vector<string> group_ids;
+    string group_id;
     options_description desc;
-    bool args_valid = argc > 1 && match_stream<string>(argv + 1, argv + argc) (
+    bool args_valid = match_stream<string>(argv + 1, argv + argc) (
         on_opt('n', "name", &desc, "set name") >> rd_arg(name),
-        on_opt('g', "group", &desc, "join group <arg>") >> add_arg(group_ids),
+        on_opt('g', "group", &desc, "join group <arg1>") >> rd_arg(group_id),
         on_vopt('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
     );
 
-    if(!args_valid) print_desc_and_exit(&desc)();
-
-    auto printer = spawn<print_actor>();
+    if (!args_valid) print_desc_and_exit(&desc)();
 
     while (name.empty()) {
-        send(printer, "*** what is your name for chatting?");
-        if (!getline(cin, name)) return 1;
+        cout << "please enter your name: " << flush;
+        if (!getline(cin, name)) {
+            cerr << "*** no name given... terminating" << endl;
+            return 1;
+        }
     }
 
-    send(printer, "*** starting client.");
-    auto client_actor = spawn<client>(name, printer);
+    cout << "*** starting client, type '/help' for a list of commands" << endl;
+    auto client_actor = spawn<client>(name);
 
     // evaluate group parameters
-    for (auto& gid : group_ids) {
-        auto p = gid.find(':');
+    if (!group_id.empty()) {
+        auto p = group_id.find(':');
         if (p == std::string::npos) {
-            cerr << "*** error parsing argument " << gid
+            cerr << "*** error parsing argument " << group_id
                  << ", expected format: <module_name>:<group_id>";
         }
         else {
             try {
-                auto g = group::get(gid.substr(0, p),
-                                    gid.substr(p + 1));
+                auto g = group::get(group_id.substr(0, p),
+                                    group_id.substr(p + 1));
                 send(client_actor, atom("join"), g);
             }
             catch (exception& e) {
                 ostringstream err;
-                err << "*** exception: group::get(\"" << gid.substr(0, p)
-                    << "\", \"" << gid.substr(p + 1) << "\") failed; "
-                    << to_verbose_string(e) << endl;
-                send(printer, err.str());
+                cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
+                     << "\", \"" << group_id.substr(p + 1) << "\") failed; "
+                     << to_verbose_string(e) << endl;
             }
         }
     }
 
     istream_iterator<line> lines(cin);
     istream_iterator<line> eof;
-    match_each(lines, eof, split_line) (
+    match_each (lines, eof, split_line) (
         on("/join", arg_match) >> [&](const string& mod, const string& id) {
             try {
                 send(client_actor, atom("join"), group::get(mod, id));
             }
             catch (exception& e) {
-                send(printer, string("*** exception: ") + e.what());
+                cerr << "*** exception: " << to_verbose_string(e) << endl;
             }
         },
         on("/quit") >> [&] {
-            close(0); // close STDIN
+            close(STDIN_FILENO); // close STDIN; causes this match loop to quit
         },
         on<string, anything>().when(_x1.starts_with("/")) >> [&] {
-            send(printer, "*** available commands:\n "
-                          "/join MODULE GROUP\n "
-                          "/quit");
+            cout <<  "*** available commands:\n"
+                     "    /join <module> <group> join a new chat channel\n"
+                     "    /quit                  quit the program\n"
+                     "    /help                  print this text\n" << flush;
         },
         others() >> [&] {
             if (s_last_line.size() > 0) {
@@ -182,7 +176,6 @@ auto main(int argc, char* argv[]) -> int {
         }
     );
     send(client_actor, atom("quit"));
-    send(printer, atom("quit"));
     await_all_others_done();
     shutdown();
     return 0;
