@@ -49,8 +49,6 @@
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/detail/abstract_actor.hpp"
 
-#include "cppa/intrusive/singly_linked_list.hpp"
-
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/stacked_actor_mixin.hpp"
