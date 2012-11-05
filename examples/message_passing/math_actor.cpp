@@ -1,3 +1,8 @@
+/******************************************************************************\
+ * This example is a very basic, non-interactive math service implemented     *
+ * for both the blocking and the event-based API.                             *
+\******************************************************************************/
+
 #include <string>
 #include <cassert>
 #include <iostream>
@@ -7,6 +12,7 @@ using std::cout;
 using std::endl;
 using namespace cppa;
 
+// implementation using the blocking API
 void math_fun() {
     bool done = false;
     do_receive (
@@ -30,6 +36,7 @@ void math_fun() {
     .until(gref(done));
 }
 
+// implementation using the event-based API
 struct math_actor : event_based_actor {
     void init() {
         // execute this behavior until actor terminates
