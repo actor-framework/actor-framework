@@ -21,3 +21,22 @@ add(math_actor message_passing)
 add(distributed_math_actor remote_actors)
 add(group_server remote_actors)
 add(group_chat remote_actors)
+
+find_package(Qt4)
+
+if (QT4_FOUND)
+  include(${QT_USE_FILE})
+  QT4_WRAP_UI(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
+  QT4_WRAP_CPP(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
+  include_directories(. qtsupport ${CMAKE_BINARY_DIR}/examples ${CPPA_INCLUDE})
+  add_executable(qt_group_chat
+                 qtsupport/group_chat.cpp
+                 qtsupport/chatwidget.cpp
+                 ${GROUP_CHAT_MOC_SRC}
+                 ${GROUP_CHAT_UI_HDR})
+  target_link_libraries(qt_group_chat
+                        ${CMAKE_DL_LIBS}
+                        ${CPPA_LIBRARY}
+                        ${QT_LIBRARIES})
+  add_dependencies(qt_group_chat all_examples)
+endif (QT4_FOUND)
