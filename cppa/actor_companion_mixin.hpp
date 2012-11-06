@@ -93,7 +93,7 @@ class actor_companion_mixin : public Base {
 
         friend class actor_companion_mixin;
         typedef util::shared_spinlock lock_type;
-        typedef std::unique_ptr<detail::recursive_queue_node> node_ptr;
+        typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> node_ptr;
 
      public:
 
@@ -151,7 +151,7 @@ class actor_companion_mixin : public Base {
 
         template<typename... Args>
         node_ptr new_node_ptr(Args&&... args) {
-            return node_ptr(new detail::recursive_queue_node(std::forward<Args>(args)...));
+            return node_ptr(detail::memory::create<detail::recursive_queue_node>(std::forward<Args>(args)...));
         }
 
         void throw_no_become() {
