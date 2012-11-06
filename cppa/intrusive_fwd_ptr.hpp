@@ -28,34 +28,27 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_INTRUSIVE_PTR_HPP
-#define CPPA_INTRUSIVE_PTR_HPP
+#ifndef CPPA_INTRUSIVE_FWD_PTR_HPP
+#define CPPA_INTRUSIVE_FWD_PTR_HPP
 
-#include <cstddef>
-#include <algorithm>
-#include <stdexcept>
-#include <type_traits>
+#include <memory>
 
-#include "cppa/intrusive_fwd_ptr.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-template<class From, class To>
-struct convertible {
-    inline To convert() const {
-        return static_cast<const From*>(this)->do_convert();
-    }
-};
-
 /**
- * @brief An intrusive, reference counting smart pointer impelementation.
+ * @brief A reference counting smart pointer implementation that
+ *        can be used with forward declarated types.
+ * @warning libcppa assumes T is derived from ref_counted and
+ *          implicitly converts intrusive_fwd_ptr to intrusive_ptr
+ * @relates intrusive_ptr
  * @relates ref_counted
  */
-template<typename T>
-class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
-                      util::comparable<intrusive_ptr<T>, const T*>,
-                      util::comparable<intrusive_ptr<T>, std::nullptr_t> {
+template<typename T, typename Ref, typename Deref>
+class intrusive_fwd_ptr : util::comparable<intrusive_fwd_ptr<T,Ref,Deref> >,
+                          util::comparable<intrusive_fwd_ptr<T,Ref,Deref>, const T*>,
+                          util::comparable<intrusive_fwd_ptr<T,Ref,Deref>, std::nullptr_t> {
 
  public:
 
@@ -65,35 +58,20 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     typedef T&       reference;
     typedef const T& const_reference;
 
-    constexpr intrusive_ptr() : m_ptr(nullptr) { }
+    intrusive_fwd_ptr(pointer raw_ptr = nullptr, Ref ref = Ref(), Deref deref = Deref())
+    : m_ref(std::move(ref)), m_deref(std::move(deref)) { set_ptr(raw_ptr); }
 
-    intrusive_ptr(pointer raw_ptr) { set_ptr(raw_ptr); }
+    intrusive_fwd_ptr(intrusive_fwd_ptr&& other)
+    : m_ref(std::move(other.m_ref))
+    , m_deref(std::move(m_deref))
+    , m_ptr(other.release()) { }
 
-    intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) { }
+    intrusive_fwd_ptr(const intrusive_fwd_ptr& other)
+    : m_ref(other.m_ref), m_deref(other.m_deref) { set_ptr(other.get()); }
 
-    intrusive_ptr(const intrusive_ptr& other) { set_ptr(other.get()); }
+    ~intrusive_fwd_ptr() { if (m_ptr) m_deref(m_ptr); }
 
-    template<typename Y, typename Ref, typename Deref>
-    intrusive_ptr(intrusive_fwd_ptr<Y,Ref,Deref> other) : m_ptr(other.release()) {
-        static_assert(std::is_convertible<Y*, T*>::value,
-                      "Y* is not assignable to T*");
-    }
-
-    template<typename Y>
-    intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
-        static_assert(std::is_convertible<Y*, T*>::value,
-                      "Y* is not assignable to T*");
-    }
-
-    // enables "actor_ptr s = self"
-    template<typename From>
-    intrusive_ptr(const convertible<From, pointer>& from) {
-        set_ptr(from.convert());
-    }
-
-    ~intrusive_ptr() { if (m_ptr) m_ptr->deref(); }
-
-    inline void swap(intrusive_ptr& other) {
+    inline void swap(intrusive_fwd_ptr& other) {
         std::swap(m_ptr, other.m_ptr);
     }
 
@@ -115,7 +93,7 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     }
 
     void reset(pointer new_value = nullptr) {
-        if (m_ptr) m_ptr->deref();
+        if (m_ptr) m_deref(m_ptr);
         set_ptr(new_value);
     }
 
@@ -124,47 +102,37 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         reset(new T(std::forward<Args>(args)...));
     }
 
-    intrusive_ptr& operator=(pointer ptr) {
+    intrusive_fwd_ptr& operator=(pointer ptr) {
         reset(ptr);
         return *this;
     }
 
-    intrusive_ptr& operator=(intrusive_ptr&& other) {
+    intrusive_fwd_ptr& operator=(intrusive_fwd_ptr&& other) {
         swap(other);
         return *this;
     }
 
-    intrusive_ptr& operator=(const intrusive_ptr& other) {
-        intrusive_ptr tmp{other};
+    intrusive_fwd_ptr& operator=(const intrusive_fwd_ptr& other) {
+        intrusive_fwd_ptr tmp(other);
         swap(tmp);
-        return *this;
-    }
-
-    template<typename Y>
-    intrusive_ptr& operator=(intrusive_ptr<Y> other) {
-        intrusive_ptr tmp{std::move(other)};
-        swap(tmp);
-        return *this;
-    }
-
-    template<typename From>
-    intrusive_ptr& operator=(const convertible<From, T*>& from) {
-        reset(from.convert());
         return *this;
     }
 
     inline pointer get() const { return m_ptr; }
+
     inline pointer operator->() const { return m_ptr; }
+
     inline reference operator*() const { return *m_ptr; }
 
     inline bool operator!() const { return m_ptr == nullptr; }
+
     inline explicit operator bool() const { return m_ptr != nullptr; }
 
     inline ptrdiff_t compare(const_pointer ptr) const {
         return static_cast<ptrdiff_t>(get() - ptr);
     }
 
-    inline ptrdiff_t compare(const intrusive_ptr& other) const {
+    inline ptrdiff_t compare(const intrusive_fwd_ptr& other) const {
         return compare(other.get());
     }
 
@@ -172,23 +140,15 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         return reinterpret_cast<ptrdiff_t>(get());
     }
 
-    template<class C>
-    intrusive_ptr<C> downcast() const {
-        return (m_ptr) ? dynamic_cast<C*>(get()) : nullptr;
-    }
-
-    template<class C>
-    intrusive_ptr<C> upcast() const {
-        return (m_ptr) ? static_cast<C*>(get()) : nullptr;
-    }
-
  private:
 
+    Ref     m_ref;
+    Deref   m_deref;
     pointer m_ptr;
 
     inline void set_ptr(pointer raw_ptr) {
         m_ptr = raw_ptr;
-        if (raw_ptr) raw_ptr->ref();
+        if (raw_ptr) m_ref(raw_ptr);
     }
 
 };
@@ -196,28 +156,21 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
 /**
  * @relates intrusive_ptr
  */
-template<typename X, typename Y>
-inline bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+template<typename T, typename Ref, typename Deref>
+inline bool operator==(const intrusive_fwd_ptr<T,Ref,Deref>& lhs,
+                       const intrusive_fwd_ptr<T,Ref,Deref>& rhs) {
     return lhs.get() == rhs.get();
 }
 
 /**
  * @relates intrusive_ptr
  */
-template<typename X, typename Y>
-inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+template<typename T, typename Ref, typename Deref>
+inline bool operator!=(const intrusive_fwd_ptr<T,Ref,Deref>& lhs,
+                       const intrusive_fwd_ptr<T,Ref,Deref>& rhs) {
     return !(lhs == rhs);
-}
-
-/**
- * @brief Constructs an object of type T which must be a derived type
- *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
- */
-template<typename T, typename... Args>
-intrusive_ptr<T> make_counted(Args&&... args) {
-    return {new T(std::forward<Args>(args)...)};
 }
 
 } // namespace cppa
 
-#endif // CPPA_INTRUSIVE_PTR_HPP
+#endif // CPPA_INTRUSIVE_FWD_PTR_HPP
