@@ -73,7 +73,7 @@ class recursive_queue_node : public memory_managed {
 
     recursive_queue_node() = default;
 
-    recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id);
+    recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id = message_id_t());
 
     ~recursive_queue_node();
 
