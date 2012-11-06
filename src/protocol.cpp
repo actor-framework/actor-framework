@@ -34,9 +34,20 @@
 
 namespace cppa { namespace network {
 
-protocol::protocol(abstract_middleman* parent) : m_parent(parent) { }
+void protocol::ref_ftor::operator()(abstract_middleman* ptr) const {
+    if (ptr) ptr->ref();
+}
+
+void protocol::deref_ftor::operator()(abstract_middleman* ptr) const {
+    if (ptr) ptr->deref();
+}
+
+protocol::protocol(abstract_middleman* parent) : m_parent(parent) {
+    CPPA_REQUIRE(parent != nullptr);
+}
 
 void protocol::run_later(std::function<void()> fun) {
+    CPPA_REQUIRE(m_parent != nullptr);
     m_parent->run_later(std::move(fun));
 }
 

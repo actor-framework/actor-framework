@@ -432,7 +432,8 @@ class middleman_impl : public abstract_middleman {
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
         if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {
-            CPPA_CRITICAL("cannot write to pipe");
+            // already exited?
+            CPPA_LOG_WARNING("cannot write to pipe");
         }
     }
 
@@ -446,6 +447,8 @@ class middleman_impl : public abstract_middleman {
         detail::fd_util::nonblocking(m_pipe_read, true);
         // start threads
         m_thread = thread([this] { middleman_loop(this); });
+        // increase reference count for singleton manager
+        ref();
     }
 
     void destroy() {
@@ -457,7 +460,9 @@ class middleman_impl : public abstract_middleman {
         m_thread.join();
         close(m_pipe_read);
         close(m_pipe_write);
-        delete this;
+        // decrease reference count for singleton manager
+        deref();
+        //delete this;
     }
 
  private:

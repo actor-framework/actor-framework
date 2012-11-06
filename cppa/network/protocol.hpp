@@ -39,6 +39,7 @@
 #include "cppa/actor.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/primitive_variant.hpp"
+#include "cppa/intrusive_fwd_ptr.hpp"
 
 #include "cppa/network/acceptor.hpp"
 
@@ -82,6 +83,14 @@ class protocol : public ref_counted {
 
     void run_later(std::function<void()> fun);
 
+    struct ref_ftor {
+        void operator()(abstract_middleman*) const;
+    };
+
+    struct deref_ftor {
+        void operator()(abstract_middleman*) const;
+    };
+
  protected:
 
     // note: not thread-safe; call only in run_later functor!
@@ -96,13 +105,13 @@ class protocol : public ref_counted {
     // note: not thread-safe; call only in run_later functor!
     void stop_writer(continuable_reader* what);
 
-    inline abstract_middleman* parent() { return m_parent; }
+    inline abstract_middleman* parent() { return m_parent.get(); }
 
-    inline const abstract_middleman* parent() const { return m_parent; }
+    inline const abstract_middleman* parent() const { return m_parent.get(); }
 
  private:
 
-    abstract_middleman* m_parent;
+    intrusive_fwd_ptr<abstract_middleman,ref_ftor,deref_ftor> m_parent;
 
 };
 

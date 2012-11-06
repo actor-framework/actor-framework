@@ -48,7 +48,7 @@ namespace cppa { namespace network {
 /**
  * @brief Multiplexes asynchronous IO.
  */
-class middleman {
+class middleman : public ref_counted {
 
     friend class detail::singleton_manager;
 
