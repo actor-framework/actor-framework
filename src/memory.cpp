@@ -29,6 +29,7 @@
 
 
 #include <vector>
+#include <typeinfo>
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
@@ -42,90 +43,58 @@ namespace {
 pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
-constexpr size_t s_queue_node_storage_size = 20;
-constexpr size_t s_max_cached_queue_nodes = 100;
-
 } // namespace <anonymous>
 
-class recursive_queue_node_storage : public ref_counted {
+memory_cache::~memory_cache() { }
 
- public:
+typedef map<const type_info*,unique_ptr<memory_cache> > cache_map;
 
-    recursive_queue_node_storage() {
-        for (auto& instance : m_instances) {
-            // each instance has a reference to its parent
-            instance.parent = this;
-            ref(); // deref() is called in memory::destroy
-        }
-    }
-
-    typedef recursive_queue_node* iterator;
-
-    iterator begin() { return std::begin(m_instances); }
-
-    iterator end() { return std::end(m_instances); }
-
- private:
-
-    recursive_queue_node m_instances[s_queue_node_storage_size];
-
-};
-
-class memory_cache {
-
- public:
-
-    vector<recursive_queue_node*> qnodes;
-
-    memory_cache() {
-        qnodes.reserve(s_max_cached_queue_nodes);
-    }
-
-    ~memory_cache() {
-        for (auto node : qnodes) memory::destroy(node);
-    }
-
-    static void destructor(void* ptr) {
-        if (ptr) delete reinterpret_cast<memory_cache*>(ptr);
-    }
-
-    static void make() {
-        pthread_key_create(&s_key, destructor);
-    }
-
-    static memory_cache* get() {
-        pthread_once(&s_key_once, make);
-        auto result = static_cast<memory_cache*>(pthread_getspecific(s_key));
-        if (!result) {
-            result = new memory_cache;
-            pthread_setspecific(s_key, result);
-        }
-        return result;
-    }
-
-};
-
-recursive_queue_node* memory::new_queue_node() {
-    auto& vec = memory_cache::get()->qnodes;
-    if (!vec.empty()) {
-        recursive_queue_node* result = vec.back();
-        vec.pop_back();
-        return result;
-    }
-    auto storage = new recursive_queue_node_storage;
-    for (auto i = storage->begin(); i != storage->end(); ++i) vec.push_back(i);
-    return new_queue_node();
+void cache_map_destructor(void* ptr) {
+    if (ptr) delete reinterpret_cast<cache_map*>(ptr);
 }
 
-void memory::dispose(recursive_queue_node* ptr) {
-    auto& vec = memory_cache::get()->qnodes;
-    if (vec.size() < s_max_cached_queue_nodes) vec.push_back(ptr);
-    else destroy(ptr);
+void make_cache_map() {
+    pthread_key_create(&s_key, cache_map_destructor);
 }
 
-void memory::destroy(recursive_queue_node* ptr) {
-    auto parent = ptr->parent;
-    parent->deref();
+cache_map& get_cache_map() {
+    pthread_once(&s_key_once, make_cache_map);
+    auto cache = reinterpret_cast<cache_map*>(pthread_getspecific(s_key));
+    if (!cache) {
+        cache = new cache_map;
+        pthread_setspecific(s_key, cache);
+        // insert default types
+        unique_ptr<memory_cache> tmp(new basic_memory_cache<recursive_queue_node>);
+        cache->insert(make_pair(&typeid(recursive_queue_node), move(tmp)));
+    }
+    return *cache;
 }
+
+memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
+    auto& cache = get_cache_map();
+    auto i = cache.find(tinf);
+    if (i != cache.end()) return i->second.get();
+    return nullptr;
+}
+
+void memory::add_cache_map_entry(const type_info* tinf, memory_cache* instance) {
+    auto& cache = get_cache_map();
+    cache[tinf].reset(instance);
+}
+
+instance_wrapper::~instance_wrapper() { }
+
+//pair<instance_wrapper*,void*> memory::allocate(const type_info* type) {
+//    return get_cache_map_entry(type)->allocate();
+//}
+
+//recursive_queue_node* memory::new_queue_node() {
+//    typedef recursive_queue_node type;
+//    return get_cache_map_entry(&typeid(type))->typed_new<type>();
+//}
+
+//void memory::deallocate(const type_info* type, void* ptr) {
+//    return get_cache_map_entry(type)->deallocate(ptr);
+//}
 
 } } // namespace cppa::detail

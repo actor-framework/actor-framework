@@ -187,9 +187,9 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
     inline mailbox_element* fetch_node(actor* sender,
                                        any_tuple msg,
                                        message_id_t id = message_id_t()) {
-        auto result = memory::new_queue_node();
-        result->reset(sender, std::move(msg), id);
-        return result;
+        return memory::create<mailbox_element>(sender, std::move(msg), id);
+        //result->reset(sender, std::move(msg), id);
+        //return result;
     }
 
     template<typename... Args>

@@ -28,13 +28,12 @@
 \******************************************************************************/
 
 
-
-#include "cppa/ref_counted.hpp"
+#include "cppa/memory_managed.hpp"
 
 namespace cppa {
 
-ref_counted::ref_counted() : m_rc(0) { }
+memory_managed::~memory_managed() { }
 
-ref_counted::~ref_counted() { }
+void memory_managed::request_deletion() { delete this; }
 
 } // namespace cppa

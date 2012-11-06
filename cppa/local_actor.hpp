@@ -52,6 +52,12 @@ class scheduler;
 class message_future;
 class local_scheduler;
 
+namespace detail {
+class memory;
+class instance_wrapper;
+template<typename> class basic_memory_cache;
+} // namespace detail
+
 template<bool DiscardOld>
 struct behavior_policy { static const bool discard_old = DiscardOld; };
 
@@ -111,8 +117,11 @@ class message_future;
  */
 class local_actor : public actor {
 
+    typedef actor super;
+
     friend class scheduler;
-    //friend inline sync_recv_helper receive_response(message_future);
+    friend class detail::memory;
+    template<typename> friend class detail::basic_memory_cache;
 
  public:
 
@@ -449,16 +458,11 @@ class local_actor : public actor {
         do_become(std::move(copy), discard_old);
     }
 
-    /*
-     * @brief Waits for a response to @p request_id.
-     *        Blocks until either a response message arrives or until a
-     *        timeout occurs.
-     * @param bhvr A behavior with timeout denoting the
-     *             actor's response to the response message.
-     * @warning You should not call this member function by hand.
-     *          Use always the {@link cppa::receive_response receive_response}
-     *          function.
-     */
+    void request_deletion();
+
+ private:
+
+    detail::instance_wrapper* outer_memory;
 
 };
 

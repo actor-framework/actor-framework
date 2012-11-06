@@ -61,6 +61,7 @@ class receive_policy {
  public:
 
     typedef recursive_queue_node* pointer;
+    typedef std::unique_ptr<recursive_queue_node,disposer> smart_pointer;
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -103,22 +104,21 @@ class receive_policy {
 
     template<class Client, class Fun>
     bool invoke(Client* client,
-                pointer node,
+                pointer node_ptr,
                 Fun& fun,
                 message_id_t awaited_response = message_id_t()) {
+        smart_pointer node(node_ptr);
         std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
-        switch (this->handle_message(client, node, fun,
+        switch (this->handle_message(client, node.get(), fun,
                                      awaited_response, policy)) {
             case hm_msg_handled: {
-                memory::dispose(node);
                 return true;
             }
             case hm_drop_msg: {
-                memory::dispose(node);
                 break;
             }
             case hm_cache_msg: {
-                m_cache.emplace_back(node);
+                m_cache.emplace_back(std::move(node));
                 break;
             }
             case hm_skip_msg: {

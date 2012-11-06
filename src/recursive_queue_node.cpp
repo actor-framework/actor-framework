@@ -28,13 +28,18 @@
 \******************************************************************************/
 
 
+#include "cppa/detail/recursive_queue_node.hpp"
 
-#include "cppa/ref_counted.hpp"
+using std::move;
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-ref_counted::ref_counted() : m_rc(0) { }
+recursive_queue_node::recursive_queue_node(actor_ptr sptr,
+                                           any_tuple data,
+                                           message_id_t id)
+: next(nullptr), marked(false), sender(move(sptr))
+, msg(move(data)), mid(id), outer_memory(nullptr) { }
 
-ref_counted::~ref_counted() { }
+recursive_queue_node::~recursive_queue_node() { }
 
-} // namespace cppa
+} } // namespace cppa::detail

@@ -34,6 +34,8 @@
 #include <atomic>
 #include <cstddef>
 
+#include "cppa/memory_managed.hpp"
+
 namespace cppa {
 
 /**
@@ -43,11 +45,11 @@ namespace cppa {
  * Serves the requirements of {@link intrusive_ptr}.
  * @relates intrusive_ptr
  */
-class ref_counted {
+class ref_counted : public memory_managed {
 
  public:
 
-    inline ref_counted() : m_rc(0) { }
+    ref_counted();
 
     /**
      * @brief Increases reference count by one.
@@ -70,13 +72,6 @@ class ref_counted {
  protected:
 
     virtual ~ref_counted();
-
-    /**
-     * @brief Default implementations calls <tt>delete this</tt>, but can
-     *        be overriden in case deletion depends on more than the
-     *        reference count alone.
-     */
-    virtual void request_deletion();
 
  private:
 

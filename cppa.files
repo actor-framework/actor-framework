@@ -277,3 +277,7 @@ unit_testing/test__uniform_type.cpp
 unit_testing/test__yield_interface.cpp
 cppa/detail/memory.hpp
 src/memory.cpp
+src/recursive_queue_node.cpp
+cppa/intrusive_fwd_ptr.hpp
+cppa/memory_managed.hpp
+src/memory_managed.cpp

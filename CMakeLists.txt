@@ -117,6 +117,7 @@ set(LIBCPPA_SRC
     src/logging.cpp
     src/match.cpp
     src/memory.cpp
+    src/memory_managed.cpp
     src/message_header.cpp
     src/middleman.cpp
     src/object.cpp
@@ -127,6 +128,7 @@ set(LIBCPPA_SRC
     src/process_information.cpp
     src/protocol.cpp
     src/receive.cpp
+    src/recursive_queue_node.cpp
     src/ref_counted.cpp
     src/response_handle.cpp
     src/ripemd_160.cpp

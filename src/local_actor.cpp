@@ -70,7 +70,8 @@ class down_observer : public attachable {
 
 local_actor::local_actor(bool sflag)
 : m_chaining(sflag), m_trap_exit(false)
-, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
+, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node)
+, outer_memory(nullptr) { }
 
 void local_actor::monitor(actor_ptr whom) {
     if (whom) whom->attach(new down_observer(this, whom));
@@ -155,6 +156,11 @@ response_handle local_actor::make_response_handle() {
     response_handle result(this, n->sender, n->mid.response_id());
     n->mid.mark_as_answered();
     return std::move(result);
+}
+
+void local_actor::request_deletion() {
+    if (outer_memory) detail::memory::dispose_base(this);
+    else super::request_deletion();
 }
 
 } // namespace cppa

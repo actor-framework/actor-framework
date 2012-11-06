@@ -64,6 +64,7 @@
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/network/acceptor.hpp"
 
+#include "cppa/detail/memory.hpp"
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
 #include "cppa/detail/receive_loop_helper.hpp"
@@ -638,7 +639,6 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
  * @{
  */
 
-
 /**
  * @brief Spawns a new context-switching or thread-mapped {@link actor}
  *        that executes <tt>fun(args...)</tt>.
@@ -719,7 +719,8 @@ actor_ptr spawn_in_group(Fun&& fun, Args&&... args) {
  */
 template<class ActorImpl, typename... Args>
 actor_ptr spawn(Args&&... args) {
-    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...));
+    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
+    return get_scheduler()->spawn(ptr);
 }
 
 /**
@@ -735,23 +736,23 @@ actor_ptr spawn(Args&&... args) {
  */
 template<class ActorImpl, typename... Args>
 actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
-    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
-                                  [&grp](local_actor* ptr) { ptr->join(grp); });
+    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
+    return get_scheduler()->spawn(ptr, [&](local_actor* p) { p->join(grp); });
 }
 
 #ifndef CPPA_DOCUMENTATION
 
 template<class ActorImpl, typename... Args>
 actor_ptr spawn_hidden_in_group(const group_ptr& grp, Args&&... args) {
-    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
-                                  [&grp](local_actor* ptr) { ptr->join(grp); },
+    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
+    return get_scheduler()->spawn(ptr, [&](local_actor* p) { p->join(grp); },
                                   scheduled_and_hidden);
 }
 
 template<class ActorImpl, typename... Args>
 actor_ptr spawn_hidden(Args&&... args) {
-    return get_scheduler()->spawn(new ActorImpl(std::forward<Args>(args)...),
-                                  scheduled_and_hidden);
+    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
+    return get_scheduler()->spawn(ptr, scheduled_and_hidden);
 }
 
 #endif

@@ -35,8 +35,8 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
-
 #include "cppa/message_id.hpp"
+#include "cppa/ref_counted.hpp"
 
 // needs access to constructor + destructor to initialize m_dummy_node
 namespace cppa { class local_actor; }
@@ -44,36 +44,25 @@ namespace cppa { class local_actor; }
 namespace cppa { namespace detail {
 
 class memory;
-class recursive_queue_node_storage;
+class instance_wrapper;
 
-class recursive_queue_node {
+class recursive_queue_node : public memory_managed {
+
+    template<typename>
+    friend class basic_memory_cache;
 
     friend class memory;
     friend class local_actor;
-    friend class recursive_queue_node_storage;
 
  public:
 
     typedef recursive_queue_node* pointer;
 
-    pointer    next;   // intrusive next pointer
-    bool       marked; // denotes if this node is currently processed
-    actor_ptr  sender; // points to the sender of msg
-    any_tuple  msg;    // 'content field'
+    pointer      next;   // intrusive next pointer
+    bool         marked; // denotes if this node is currently processed
+    actor_ptr    sender; // points to the sender of msg
+    any_tuple    msg;    // 'content field'
     message_id_t mid;
-
-    inline void reset(actor* sptr, message_id_t id, bool reset_msg = true) {
-        next = nullptr;
-        marked = false;
-        sender = sptr;
-        mid = id;
-        if (reset_msg) msg.reset();
-    }
-
-    inline void reset(actor* sptr, any_tuple&& data, message_id_t id) {
-        reset(sptr, id, false);
-        msg = std::move(data);
-    }
 
     recursive_queue_node(recursive_queue_node&&) = delete;
     recursive_queue_node(const recursive_queue_node&) = delete;
@@ -82,10 +71,14 @@ class recursive_queue_node {
 
  private:
 
-    inline recursive_queue_node() { reset(nullptr, message_id_t(), false); }
-    inline ~recursive_queue_node() { }
+    recursive_queue_node() = default;
 
-    recursive_queue_node_storage* parent;
+    recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id);
+
+    ~recursive_queue_node();
+
+    // a pointer to the outer memory region this instance belongs to
+    instance_wrapper* outer_memory;
 
 };
 

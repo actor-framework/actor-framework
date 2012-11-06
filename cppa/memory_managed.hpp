@@ -28,13 +28,26 @@
 \******************************************************************************/
 
 
-
-#include "cppa/ref_counted.hpp"
+#ifndef CPPA_MEMORY_MANAGED_HPP
+#define CPPA_MEMORY_MANAGED_HPP
 
 namespace cppa {
 
-ref_counted::ref_counted() : m_rc(0) { }
+class memory_managed {
 
-ref_counted::~ref_counted() { }
+ protected:
+
+    virtual ~memory_managed();
+
+    /**
+     * @brief Default implementations calls <tt>delete this</tt>, but can
+     *        be overriden in case deletion depends on some condition or
+     *        the class doesn't use default new/delete.
+     */
+    virtual void request_deletion();
+
+};
 
 } // namespace cppa
+
+#endif // CPPA_MEMORY_MANAGED_HPP
