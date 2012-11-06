@@ -455,6 +455,34 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
 }
 
 /**
+ * @brief Sends @p what as a message to @p whom, but sets
+ *        the sender information to @p from.
+ * @param from Sender as seen by @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @pre <tt>sizeof...(Args) > 0</tt>
+ */
+template<class C, typename... Args>
+inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple what) {
+    if (whom) whom->enqueue(from.get(), std::move(what));
+}
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a message to @p whom, but sets
+ *        the sender information to @p from.
+ * @param from Sender as seen by @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @pre <tt>sizeof...(Args) > 0</tt>
+ */
+template<class C, typename... Args>
+inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Args&&... what) {
+    send_tuple_as(from, whom, make_any_tuple(std::forward<Args>(what)...));
+}
+
+/**
  * @brief Sends a message to @p whom.
  *
  * <b>Usage example:</b>
