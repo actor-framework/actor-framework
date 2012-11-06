@@ -60,27 +60,14 @@ class client : public event_based_actor {
                 }
             },
             on(atom("join"), arg_match) >> [=](const group_ptr& what) {
-                if (self->last_sender()->is_proxy()) {
-                    // accept join commands from local actors only
-                    reply("nice try");
+                for (auto g : joined_groups()) {
+                    cout << "*** leave " << to_string(g) << endl;
+                    send(g, m_name + " has left the chatroom");
+                    leave(g);
                 }
-                else {
-                    for (auto g : joined_groups()) {
-                        cout << "*** leave " << to_string(g) << endl;
-                        send(g, m_name + " has left the chatroom");
-                        leave(g);
-                    }
-                    cout << "*** join " << to_string(what) << endl;
-                    join(what);
-                    send(what, m_name + " has entered the chatroom");
-                }
-            },
-            on(atom("quit")) >> [=] {
-                if (self->last_sender()->is_proxy()) {
-                    // ignore quit messages from remote actors
-                    reply("nice try");
-                }
-                else quit();
+                cout << "*** join " << to_string(what) << endl;
+                join(what);
+                send(what, m_name + " has entered the chatroom");
             },
             on<string>() >> [=](const string& txt) {
                 // don't print own messages
@@ -175,7 +162,8 @@ int main(int argc, char** argv) {
             }
         }
     );
-    send(client_actor, atom("quit"));
+    // force actor to quit
+    send(client_actor, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
     shutdown();
     return 0;
