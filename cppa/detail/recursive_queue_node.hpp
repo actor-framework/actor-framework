@@ -52,7 +52,7 @@ class recursive_queue_node : public memory_managed {
     friend class basic_memory_cache;
 
     friend class memory;
-    friend class local_actor;
+    friend class ::cppa::local_actor;
 
  public:
 
