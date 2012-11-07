@@ -11,11 +11,9 @@
 #include <set>
 #include <map>
 #include <vector>
-#include <dlfcn.h>
-#include <iostream>
-#include <sstream>
-#include <time.h>
 #include <cstdlib>
+#include <sstream>
+#include <iostream>
 
 #include "cppa/opt.hpp"
 #include "cppa/cppa.hpp"
@@ -31,17 +29,17 @@ istream& operator>>(istream& is, line& l) {
     return is;
 }
 
-any_tuple s_last_line;
+string s_last_line;
 
 any_tuple split_line(const line& l) {
-    vector<string> result;
-    stringstream strs(l.str);
+    istringstream strs(l.str);
+    s_last_line = move(l.str);
     string tmp;
+    vector<string> result;
     while (getline(strs, tmp, ' ')) {
         if (!tmp.empty()) result.push_back(std::move(tmp));
     }
-    s_last_line = any_tuple::view(std::move(result));
-    return s_last_line;
+    return any_tuple::view(std::move(result));
 }
 
 class client : public event_based_actor {
@@ -152,13 +150,8 @@ int main(int argc, char** argv) {
                      "    /help                  print this text\n" << flush;
         },
         others() >> [&] {
-            if (s_last_line.size() > 0) {
-                string msg = s_last_line.get_as<string>(0);
-                for (size_t i = 1; i < s_last_line.size(); ++i) {
-                    msg += " ";
-                    msg += s_last_line.get_as<string>(i);
-                }
-                send(client_actor, atom("broadcast"), msg);
+            if (!s_last_line.empty()) {
+                send(client_actor, atom("broadcast"), s_last_line);
             }
         }
     );
