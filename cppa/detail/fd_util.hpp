@@ -39,7 +39,7 @@ namespace cppa { namespace detail { namespace fd_util {
 #if defined(CPPA_MACOS) || defined(CPPA_LINUX)
 
 // throws ios_base::failure and adds errno failure if @p add_errno_failure
-void throw_io_failure(std::string&& what, bool add_errno_failure = true);
+void throw_io_failure(const char* what, bool add_errno_failure = true);
 
 // returns true if fd is nonblocking
 // throws @p ios_base::failure on error

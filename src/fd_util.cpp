@@ -29,6 +29,8 @@
 
 
 #include <ios>
+#include <sstream>
+
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
 
@@ -36,27 +38,24 @@
 
 #include <errno.h>
 #include <netdb.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <fcntl.h>
 
 namespace cppa { namespace detail { namespace fd_util {
 
-void throw_io_failure(std::string&& what, bool add_errno_failure) {
+void throw_io_failure(const char* what, bool add_errno_failure) {
     if (add_errno_failure) {
-        std::string tmp(std::move(what));
-        tmp += ": ";
-        tmp += strerror(errno);
-        tmp += " [errno: ";
-        tmp += std::to_string(errno);
-        tmp += "]";
-        throw std::ios_base::failure(std::move(tmp));
+        std::ostringstream oss;
+        oss << what << ": " << strerror(errno)
+            << " [errno: " << std::to_string(errno) << "]";
+        throw std::ios_base::failure(oss.str());
     }
-    throw std::ios_base::failure(std::move(what));
+    throw std::ios_base::failure(what);
 }
 
 int rd_flags(native_socket_type fd) {
