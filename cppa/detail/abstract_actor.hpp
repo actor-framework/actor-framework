@@ -92,7 +92,7 @@ class abstract_actor_base<Base, true> : public Base {
 template<class Base>
 class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> {
 
-    friend class self_type;
+    friend class ::cppa::self_type;
 
     typedef abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> super;
     typedef std::lock_guard<std::mutex> guard_type;

@@ -36,7 +36,6 @@
 #include <cstdint>
 #include <functional>
 
-#include "cppa/self.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
@@ -49,6 +48,7 @@
 
 namespace cppa {
 
+class self_type;
 class scheduled_actor;
 class scheduler_helper;
 
