@@ -52,7 +52,7 @@ void throw_io_failure(const char* what, bool add_errno_failure) {
     if (add_errno_failure) {
         std::ostringstream oss;
         oss << what << ": " << strerror(errno)
-            << " [errno: " << std::to_string(errno) << "]";
+            << " [errno: " << errno << "]";
         throw std::ios_base::failure(oss.str());
     }
     throw std::ios_base::failure(what);
