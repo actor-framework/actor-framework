@@ -1,11 +1,12 @@
 /******************************************************************************\
- * This example program represents a minimal terminal chat program            *
- * based on group communication.                                              *
+ * This example program represents a minimal GUI chat program                 *
+ * based on group communication. This chat program is compatible to the       *
+ * terminal version in remote_actors/group_chat.cpp.                          *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
  * - ./build/bin/group_server -p 4242                                         *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
+ * - ./build/bin/qt_group_chat -g remote:chatroom@localhost:4242 -n alice     *
+ * - ./build/bin/qt_group_chat -g remote:chatroom@localhost:4242 -n bob       *
 \******************************************************************************/
 
 #include <set>

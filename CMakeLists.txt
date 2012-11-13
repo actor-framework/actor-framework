@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.4)
+cmake_minimum_required(VERSION 2.8)
 project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)

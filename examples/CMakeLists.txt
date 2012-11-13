@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.6)
-project(cppas CXX)
+cmake_minimum_required(VERSION 2.8)
+project(cppa_examples CXX)
 
 add_custom_target(all_examples)
 
@@ -26,12 +26,15 @@ find_package(Qt4)
 
 if (QT4_FOUND)
   include(${QT_USE_FILE})
+  QT4_ADD_RESOURCES(GROUP_CHAT_RCS )
   QT4_WRAP_UI(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
   QT4_WRAP_CPP(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
-  include_directories(. qtsupport ${CMAKE_BINARY_DIR}/examples ${CPPA_INCLUDE})
+  # generated headers will be in cmake build directory
+  #include_directories(. qtsupport ${CMAKE_CURRENT_BINARY_DIR} ${CPPA_INCLUDE})
+  include_directories(qtsupport ${CMAKE_CURRENT_BINARY_DIR})
+  set(GROUP_CHAT_SRCS qtsupport/qt_group_chat.cpp qtsupport/chatwidget.cpp)
   add_executable(qt_group_chat
-                 qtsupport/group_chat.cpp
-                 qtsupport/chatwidget.cpp
+                 ${GROUP_CHAT_SRCS}
                  ${GROUP_CHAT_MOC_SRC}
                  ${GROUP_CHAT_UI_HDR})
   target_link_libraries(qt_group_chat

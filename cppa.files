@@ -281,7 +281,7 @@ src/recursive_queue_node.cpp
 cppa/intrusive_fwd_ptr.hpp
 cppa/memory_managed.hpp
 src/memory_managed.cpp
-examples/qtsupport/group_chat.cpp
+examples/qtsupport/qt_group_chat.cpp
 examples/qtsupport/chatwindow.ui
 examples/qtsupport/chatwidget.hpp
 examples/qtsupport/chatwidget.cpp
