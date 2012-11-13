@@ -1,3 +1,15 @@
+Version 0.5.3
+-------------
+
+__2012-11-13__
+
+- Improved memory management
+  * Use a per-thread memory cache for `recursive_queue_node` and `actor` objects
+  * Allocate ~1kb worth ob objects rather than allocating each object with `new`
+  * Destroyed objects are returned to the cache and re-used later
+- Add `intrusive_fwd_ptr` to support counted pointers for forward declared types
+- Qt example for group chat, highlighting `actor_widget_mixin`
+
 Version 0.5.2
 -------------
 
