@@ -33,13 +33,13 @@
 
 namespace cppa { namespace util {
 
-struct fiber_impl;
+class fiber_impl;
 
 class fiber {
 
  public:
 
-    fiber() throw();
+    fiber();
 
     fiber(void (*func)(void*), void* arg1);
 

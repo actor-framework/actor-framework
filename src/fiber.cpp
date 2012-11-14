@@ -57,36 +57,68 @@ namespace cppa { namespace util {
 
 void fiber_trampoline(intptr_t iptr);
 
-struct fiber_impl {
+namespace ctx = boost::context;
 
-    void* m_arg;
-    bool m_converted;
-    void (*m_fun)(void*);
-    boost::ctx::fcontext_t m_ctx;
-    boost::ctx::stack_allocator m_alloc;
+class fiber_impl {
 
-    fiber_impl() : m_arg(nullptr), m_converted(true), m_fun(nullptr) { }
+ public:
 
-    fiber_impl(void (*fun)(void*), void* arg) : m_arg(arg), m_converted(false), m_fun(fun) {
-        auto st = m_alloc.allocate(boost::ctx::minimum_stacksize());
-        m_ctx.fc_stack.base = st;
-        m_ctx.fc_stack.limit = static_cast<char*>(st) - boost::ctx::minimum_stacksize();
-        boost::ctx::make_fcontext(&m_ctx, fiber_trampoline);
+    fiber_impl() : m_ctx(nullptr) { }
+
+    virtual ~fiber_impl() { }
+
+    virtual void run() { }
+
+    void swap(fiber_impl* to) {
+        ctx::jump_fcontext(m_ctx, to->m_ctx, (intptr_t) to);
     }
 
-    inline void run() {
+ protected:
+
+    ctx::fcontext_t* m_ctx;
+
+};
+
+// a fiber representing a thread ('converts' the thread to a fiber)
+class converted_fiber : public fiber_impl {
+
+ public:
+
+    converted_fiber() { m_ctx = &m_ctx_obj; }
+
+ private:
+
+    ctx::fcontext_t m_ctx_obj;
+
+};
+
+// a fiber executing a function
+class fun_fiber : public fiber_impl {
+
+    typedef ctx::guarded_stack_allocator allocator;
+
+ public:
+
+    fun_fiber(void (*fun)(void*), void* arg) : m_arg(arg), m_fun(fun) {
+        m_size = allocator::minimum_stacksize();
+        m_ctx = ctx::make_fcontext(m_alloc.allocate(m_size), m_size, fiber_trampoline);
+    }
+
+    ~fun_fiber() {
+        m_alloc.deallocate(m_ctx->fc_stack.sp, m_size);
+    }
+
+    virtual void run() {
         m_fun(m_arg);
     }
 
-    void swap(fiber_impl* to) {
-        boost::ctx::jump_fcontext(&m_ctx, &(to->m_ctx), (intptr_t) to);
-    }
 
-    ~fiber_impl() {
-        if (m_converted == false) {
-            m_alloc.deallocate(m_ctx.fc_stack.base, boost::ctx::minimum_stacksize());
-        }
-    }
+ private:
+
+    void* m_arg;
+    void (*m_fun)(void*);
+    size_t m_size;
+    allocator m_alloc;
 
 };
 
@@ -95,12 +127,9 @@ void fiber_trampoline(intptr_t iptr) {
     ptr->run();
 }
 
-fiber::fiber() throw() : m_impl(new fiber_impl) {
-}
+fiber::fiber() : m_impl(new converted_fiber) { }
 
-fiber::fiber(void (*func)(void*), void* arg)
-: m_impl(new fiber_impl(func, arg)) {
-}
+fiber::fiber(void (*f)(void*), void* arg) : m_impl(new fun_fiber(f, arg)) { }
 
 void fiber::swap(fiber& from, fiber& to) {
     from.m_impl->swap(to.m_impl);
