@@ -16,9 +16,9 @@ ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 : super(parent, f), m_input(nullptr), m_output(nullptr) {
     set_message_handler (
         on(atom("join"), arg_match) >> [=](const group_ptr& what) {
-            for (auto g : self->joined_groups()) {
-                send(g, m_name + " has left the chatroom");
-                self->leave(g);
+            if (m_chatroom) {
+                send(m_chatroom, m_name + " has left the chatroom");
+                self->leave(m_chatroom);
             }
             self->join(what);
             print(("*** joined " + to_string(what)).c_str());
