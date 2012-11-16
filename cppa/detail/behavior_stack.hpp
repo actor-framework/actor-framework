@@ -83,8 +83,10 @@ class behavior_stack
         CPPA_REQUIRE(!m_elements.empty());
         CPPA_REQUIRE(client != nullptr);
         CPPA_REQUIRE(node != nullptr);
+        // use a copy, because the invoked behavior might change m_elements
+        behavior what = m_elements.back().first;
         auto id = m_elements.back().second;
-        if (policy.invoke(client, node, back(), id)) {
+        if (policy.invoke(client, node, what, id)) {
             // try to match cached messages
             do {
                 // remove synchronous response handler if needed
