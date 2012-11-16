@@ -36,7 +36,7 @@
 
 namespace cppa { namespace util {
 
-fiber::fiber() throw() : m_impl(nullptr) { }
+fiber::fiber() : m_impl(nullptr) { }
 
 fiber::fiber(void (*)(void*), void*) : m_impl(nullptr) { }
 
