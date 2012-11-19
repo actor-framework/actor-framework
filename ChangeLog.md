@@ -1,3 +1,12 @@
+Version 0.5.4
+-------------
+
+__2012-11-19__
+
+- Update libcppa to work with Boost.Context 1.52
+- Fix possible memory corruption in `behavior_stack`
+- Fix `fiber` implementaiton if compiling without Boost.Context
+
 Version 0.5.3
 -------------
 
