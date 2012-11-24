@@ -162,7 +162,7 @@ set(LD_FLAGS ${CMAKE_LD_LIBS} ${PTHREAD_LIBRARIES})
 if (DISABLE_CONTEXT_SWITCHING)
   # explicitly disabled
 else (DISABLE_CONTEXT_SWITCHING)
-  find_package(Boost 1.52.0 COMPONENTS context)
+  find_package(Boost 1.51.0 COMPONENTS context)
   # without REQUIRED, find_package(Boost...) returns with Boost_FOUND=FALSE
   if (NOT Boost_FOUND)
     set(DISABLE_CONTEXT_SWITCHING true)
