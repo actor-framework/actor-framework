@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa CXX)
+project(cppa CXX C)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 5)
@@ -29,6 +29,15 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
+
+include(CheckIncludeFiles)
+check_include_files("valgrind/valgrind.h" HAVE_VALGRIND_H)
+set(VALGRIND "no")
+if (NOT HAVE_VALGRIND_H)
+  add_definitions(-DNVALGRIND)
+else (NOT HAVE_VALGRIND_H)
+  set(VALGRIND "yes")
+endif (NOT HAVE_VALGRIND_H)
 
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
@@ -340,6 +349,7 @@ message("\n====================|  Build Summary  |===================="
         "\nDebug mode:        ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nContext switching: ${CONTEXT_SWITCHING}"
+        "\nValgrind:          ${VALGRIND}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
         "\nBuild static:      ${CPPA_BUILD_STATIC}"
