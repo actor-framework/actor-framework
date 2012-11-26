@@ -31,11 +31,6 @@
 #include <cstdint>
 #include <stdexcept>
 #include "cppa/util/fiber.hpp"
-#include <boost/version.hpp>
-
-#ifndef NVALGRIND
-#include <valgrind/valgrind.h>
-#endif
 
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
@@ -56,6 +51,10 @@ void fiber::swap(fiber&, fiber&) {
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
+#ifndef NVALGRIND
+#include <valgrind/valgrind.h>
+#endif
+#include <boost/version.hpp>
 #include <boost/context/all.hpp>
 
 namespace cppa { namespace util {
