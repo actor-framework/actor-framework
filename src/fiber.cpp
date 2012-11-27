@@ -140,8 +140,8 @@ class fun_fiber : public fiber_impl {
         m_ctx = ctx::make_fcontext(m_alloc.allocate(stacksize), stacksize, fiber_trampoline);
 #ifndef NVALGRIND
         m_valgrind_stack_id =
-            VALGRIND_STACK_REGISTER(m_ctx.fc_stack.sp,
-                    reinterpret_cast<intptr_t>(m_ctx.fc_stack.sp)-stacksize);
+            VALGRIND_STACK_REGISTER(m_ctx->fc_stack.sp,
+                    reinterpret_cast<intptr_t>(m_ctx->fc_stack.sp)-stacksize);
 #endif
 #endif // BOOST_VERSION
     }
