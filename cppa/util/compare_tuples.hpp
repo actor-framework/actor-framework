@@ -38,10 +38,10 @@
 
 namespace cppa { namespace detail {
 
-template<size_t N, template<typename...> class Tuple, typename... Types>
-const typename util::at<N, Types...>::type&
-do_get(const Tuple<Types...>& t) {
-    return ::cppa::get<N, Types...>(t);
+template<size_t N, template<typename...> class Tuple, typename... Ts>
+const typename util::at<N, Ts...>::type&
+do_get(const Tuple<Ts...>& t) {
+    return ::cppa::get<N, Ts...>(t);
 }
 
 template<size_t N, typename LhsTuple, typename RhsTuple>
@@ -63,32 +63,32 @@ struct cmp_helper<0, LhsTuple, RhsTuple> {
 
 namespace cppa { namespace util {
 
-template<template<typename...> class LhsTuple, typename... LhsTypes,
-         template<typename...> class RhsTuple, typename... RhsTypes>
-bool compare_tuples(const LhsTuple<LhsTypes...>& lhs,
-                    const RhsTuple<RhsTypes...>& rhs) {
-    static_assert(sizeof...(LhsTypes) == sizeof...(RhsTypes),
+template<template<typename...> class LhsTuple, typename... LhsTs,
+         template<typename...> class RhsTuple, typename... RhsTs>
+bool compare_tuples(const LhsTuple<LhsTs...>& lhs,
+                    const RhsTuple<RhsTs...>& rhs) {
+    static_assert(sizeof...(LhsTs) == sizeof...(RhsTs),
                   "could not compare tuples of different size");
 
     static_assert(tl_binary_forall<
-                      type_list<LhsTypes...>,
-                      type_list<RhsTypes...>,
+                      type_list<LhsTs...>,
+                      type_list<RhsTs...>,
                       is_comparable
                   >::value,
                   "types of lhs are not comparable to the types of rhs");
 
-    return detail::cmp_helper<(sizeof...(LhsTypes) - 1),
-                              LhsTuple<LhsTypes...>,
-                              RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
+    return detail::cmp_helper<(sizeof...(LhsTs) - 1),
+                              LhsTuple<LhsTs...>,
+                              RhsTuple<RhsTs...>>::cmp(lhs, rhs);
 }
 
-template<template<typename...> class LhsTuple, typename... LhsTypes,
-         template<typename...> class RhsTuple, typename... RhsTypes>
-bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
-                            const RhsTuple<RhsTypes...>& rhs) {
+template<template<typename...> class LhsTuple, typename... LhsTs,
+         template<typename...> class RhsTuple, typename... RhsTs>
+bool compare_first_elements(const LhsTuple<LhsTs...>& lhs,
+                            const RhsTuple<RhsTs...>& rhs) {
     typedef typename tl_zip<
-                util::type_list<LhsTypes...>,
-                util::type_list<RhsTypes...>
+                util::type_list<LhsTs...>,
+                util::type_list<RhsTs...>
             >::type
             zipped_types;
 
@@ -96,8 +96,8 @@ bool compare_first_elements(const LhsTuple<LhsTypes...>& lhs,
                   "types of lhs are not comparable to the types of rhs");
 
     return detail::cmp_helper<(zipped_types::size - 1),
-                              LhsTuple<LhsTypes...>,
-                              RhsTuple<RhsTypes...>>::cmp(lhs, rhs);
+                              LhsTuple<LhsTs...>,
+                              RhsTuple<RhsTs...>>::cmp(lhs, rhs);
 }
 
 } } // namespace cppa::util

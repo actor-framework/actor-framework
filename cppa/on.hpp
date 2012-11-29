@@ -122,8 +122,10 @@ struct disjunct_rvalue_builders {
 template<class Guard, class Transformers, class Pattern>
 struct rvalue_builder {
 
+    typedef typename util::tl_back<Pattern>::type back_type;
+
     static constexpr bool is_complete =
-            !std::is_same<util::arg_match_t, typename Pattern::back>::value;
+            !std::is_same<util::arg_match_t,back_type>::value;
 
     typedef typename util::tl_apply<Transformers, tdata>::type fun_container;
 
@@ -198,8 +200,8 @@ template<bool IsCallable, typename T>
 struct pattern_type_ {
     typedef util::get_callable_trait<T> ctrait;
     typedef typename ctrait::arg_types args;
-    static_assert(args::size == 1, "only unary functions allowed");
-    typedef typename util::rm_ref<typename args::head>::type type;
+    static_assert(util::tl_size<args>::value == 1, "only unary functions allowed");
+    typedef typename util::rm_ref<typename util::tl_head<args>::type>::type type;
 };
 
 template<typename T>

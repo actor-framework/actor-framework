@@ -42,19 +42,19 @@
 
 namespace cppa { namespace detail {
 
-template<typename... ElementTypes>
+template<typename... Ts>
 class tuple_vals : public abstract_tuple {
 
-    static_assert(sizeof...(ElementTypes) > 0,
+    static_assert(sizeof...(Ts) > 0,
                   "tuple_vals is not allowed to be empty");
 
     typedef abstract_tuple super;
 
  public:
 
-    typedef tdata<ElementTypes...> data_type;
+    typedef tdata<Ts...> data_type;
 
-    typedef types_array<ElementTypes...> element_types;
+    typedef types_array<Ts...> element_types;
 
     tuple_vals(const tuple_vals&) = default;
 
@@ -80,7 +80,7 @@ class tuple_vals : public abstract_tuple {
     }
 
     size_t size() const {
-        return sizeof...(ElementTypes);
+        return sizeof...(Ts);
     }
 
     tuple_vals* copy() const {
@@ -112,26 +112,26 @@ class tuple_vals : public abstract_tuple {
     }
 
     const std::type_info* type_token() const {
-        return detail::static_type_list<ElementTypes...>::list;
+        return detail::static_type_list<Ts...>::list;
     }
 
  private:
 
     data_type m_data;
 
-    static types_array<ElementTypes...> m_types;
+    static types_array<Ts...> m_types;
 
 };
 
-template<typename... ElementTypes>
-types_array<ElementTypes...> tuple_vals<ElementTypes...>::m_types;
+template<typename... Ts>
+types_array<Ts...> tuple_vals<Ts...>::m_types;
 
 template<typename TypeList>
 struct tuple_vals_from_type_list;
 
-template<typename... Types>
-struct tuple_vals_from_type_list< util::type_list<Types...> > {
-    typedef tuple_vals<Types...> type;
+template<typename... Ts>
+struct tuple_vals_from_type_list< util::type_list<Ts...> > {
+    typedef tuple_vals<Ts...> type;
 };
 
 } } // namespace cppa::detail

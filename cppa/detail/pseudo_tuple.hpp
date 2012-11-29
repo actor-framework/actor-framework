@@ -31,26 +31,28 @@
 #ifndef CPPA_PSEUDO_TUPLE_HPP
 #define CPPA_PSEUDO_TUPLE_HPP
 
+#include <cstddef>
 #include "cppa/util/at.hpp"
 
 namespace cppa { namespace detail {
 
+// tuple-like access to an array of void pointers
 template<typename... T>
 struct pseudo_tuple {
-    typedef void* ptr_type;
-    typedef const void* const_ptr_type;
+    typedef void* pointer;
+    typedef const void* const_pointer;
 
-    ptr_type data[sizeof...(T) > 0 ? sizeof...(T) : 1];
+    pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 
-    inline const_ptr_type at(size_t p) const {
+    inline const_pointer at(size_t p) const {
         return data[p];
     }
 
-    inline ptr_type mutable_at(size_t p) {
-        return const_cast<ptr_type>(data[p]);
+    inline pointer mutable_at(size_t p) {
+        return const_cast<pointer>(data[p]);
     }
 
-    inline void*& operator[](size_t p) {
+    inline pointer& operator[](size_t p) {
         return data[p];
     }
 };
@@ -67,16 +69,16 @@ struct pseudo_tuple_from_type_list<util::type_list<Ts...> > {
 
 namespace cppa {
 
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv) {
-    static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return *reinterpret_cast<const typename util::at<N, Tn...>::type*>(tv.at(N));
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return *reinterpret_cast<const typename util::at<N, Ts...>::type*>(tv.at(N));
 }
 
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv) {
-    static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return *reinterpret_cast<typename util::at<N, Tn...>::type*>(tv.mutable_at(N));
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return *reinterpret_cast<typename util::at<N, Ts...>::type*>(tv.mutable_at(N));
 }
 
 } // namespace cppa

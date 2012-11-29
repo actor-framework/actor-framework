@@ -208,7 +208,7 @@ template<bool EvaluateSubResult> // default = false
 struct run_case_impl {
     template<class Case, typename T>
     static inline bool _(Case& target, std::vector<T>& vec, bool&) {
-        return unwind_and_call<0, Case::pattern_type::size>::_(target, vec);
+        return unwind_and_call<0, util::tl_size<typename Case::pattern_type>::value>::_(target, vec);
     }
 };
 
@@ -217,7 +217,7 @@ struct run_case_impl<true> {
     template<class Case, typename T>
     static inline bool _(Case& target, std::vector<T>& vec, bool& match_returned_false) {
         bool sub_result;
-        if (unwind_and_call<0, Case::pattern_type::size>::_(target, sub_result, vec)) {
+        if (unwind_and_call<0, util::tl_size<typename Case::pattern_type>::value>::_(target, sub_result, vec)) {
             if (sub_result == false) {
                 match_returned_false = true;
             }
@@ -234,7 +234,7 @@ size_t run_case(std::vector<T>& vec,
                 InputIterator& pos,
                 const InputIterator& end,
                 Case& target) {
-    static constexpr size_t num_args = Case::pattern_type::size;
+    static constexpr size_t num_args = util::tl_size<typename Case::pattern_type>::value;
     typedef typename Case::second_type partial_fun_type;
     typedef typename partial_fun_type::result_type result_type;
     typedef typename partial_fun_type::arg_types arg_types;
@@ -275,7 +275,7 @@ class stream_matcher {
     template<typename... Cases>
     bool operator()(match_expr<Cases...>& expr) {
         while (m_pos != m_end) {
-            if (!unwind_and_call<0, match_expr<Cases...>::cases_list::size>::_(m_cache, m_pos, m_end, expr)) {
+            if (!unwind_and_call<0, util::tl_size<typename match_expr<Cases...>::cases_list>::value>::_(m_cache, m_pos, m_end, expr)) {
                 return false;
             }
         }

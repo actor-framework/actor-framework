@@ -55,7 +55,7 @@ class event_based_actor_impl : public event_based_actor {
 
     void on_exit() {
         typedef typename util::get_arg_types<CleanupFun>::types arg_types;
-        std::integral_constant<size_t, arg_types::size> token;
+        std::integral_constant<size_t, util::tl_size<arg_types>::value> token;
         on_exit_impl(m_on_exit, token);
     }
 

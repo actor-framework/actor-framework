@@ -38,9 +38,9 @@ namespace cppa { namespace util {
 template<typename... BooleanConstants>
 struct conjunction;
 
-template<typename Head, typename... Tail>
-struct conjunction<Head, Tail...>
-    : std::integral_constant<bool, Head::value && conjunction<Tail...>::value> {
+template<typename T0, typename... Ts>
+struct conjunction<T0, Ts...>
+    : std::integral_constant<bool, T0::value && conjunction<Ts...>::value> {
 };
 
 template<>

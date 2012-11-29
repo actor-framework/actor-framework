@@ -48,19 +48,19 @@ struct tuple_view_copy_helper {
     }
 };
 
-template<typename... ElementTypes>
+template<typename... Ts>
 class tuple_view : public abstract_tuple {
 
-    static_assert(sizeof...(ElementTypes) > 0,
+    static_assert(sizeof...(Ts) > 0,
                   "tuple_vals is not allowed to be empty");
 
     typedef abstract_tuple super;
 
  public:
 
-    typedef tdata<ElementTypes*...> data_type;
+    typedef tdata<Ts*...> data_type;
 
-    typedef types_array<ElementTypes...> element_types;
+    typedef types_array<Ts...> element_types;
 
     tuple_view() = delete;
     tuple_view(const tuple_view&) = delete;
@@ -68,7 +68,7 @@ class tuple_view : public abstract_tuple {
     /**
      * @warning @p tuple_view does @b NOT takes ownership for given pointers
      */
-    tuple_view(ElementTypes*... args)
+    tuple_view(Ts*... args)
         : super(tuple_impl_info::statically_typed), m_data(args...) {
     }
 
@@ -81,13 +81,13 @@ class tuple_view : public abstract_tuple {
     }
 
     size_t size() const {
-        return sizeof...(ElementTypes);
+        return sizeof...(Ts);
     }
 
     abstract_tuple* copy() const {
-        auto result = new tuple_vals<ElementTypes...>;
+        auto result = new tuple_vals<Ts...>;
         tuple_view_copy_helper f{result};
-        util::static_foreach<0, sizeof...(ElementTypes)>::_(m_data, f);
+        util::static_foreach<0, sizeof...(Ts)>::_(m_data, f);
         return result;
     }
 
@@ -107,19 +107,19 @@ class tuple_view : public abstract_tuple {
     }
 
     const std::type_info* type_token() const {
-        return detail::static_type_list<ElementTypes...>::list;
+        return detail::static_type_list<Ts...>::list;
     }
 
  private:
 
     data_type m_data;
 
-    static types_array<ElementTypes...> m_types;
+    static types_array<Ts...> m_types;
 
 };
 
-template<typename... ElementTypes>
-types_array<ElementTypes...> tuple_view<ElementTypes...>::m_types;
+template<typename... Ts>
+types_array<Ts...> tuple_view<Ts...>::m_types;
 
 } } // namespace cppa::detail
 

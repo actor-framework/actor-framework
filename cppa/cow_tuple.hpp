@@ -165,9 +165,9 @@ class cow_tuple<Head, Tail...> {
 template<typename TypeList>
 struct cow_tuple_from_type_list;
 
-template<typename... Types>
-struct cow_tuple_from_type_list< util::type_list<Types...> > {
-    typedef cow_tuple<Types...> type;
+template<typename... Ts>
+struct cow_tuple_from_type_list< util::type_list<Ts...> > {
+    typedef cow_tuple<Ts...> type;
 };
 
 #ifdef CPPA_DOCUMENTATION
@@ -207,15 +207,15 @@ cow_tuple<Args...> make_cow_tuple(Args&&... args);
 
 #else
 
-template<size_t N, typename... Types>
-const typename util::at<N, Types...>::type& get(const cow_tuple<Types...>& tup) {
-    typedef typename util::at<N, Types...>::type result_type;
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
+    typedef typename util::at<N, Ts...>::type result_type;
     return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
-template<size_t N, typename... Types>
-typename util::at<N, Types...>::type& get_ref(cow_tuple<Types...>& tup) {
-    typedef typename util::at<N, Types...>::type result_type;
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
+    typedef typename util::at<N, Ts...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 
@@ -234,9 +234,9 @@ make_cow_tuple(Args&&... args) {
  * @returns @p true if @p lhs and @p rhs are equal; otherwise @p false.
  * @relates cow_tuple
  */
-template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator==(const cow_tuple<LhsTypes...>& lhs,
-                       const cow_tuple<RhsTypes...>& rhs) {
+template<typename... LhsTs, typename... RhsTs>
+inline bool operator==(const cow_tuple<LhsTs...>& lhs,
+                       const cow_tuple<RhsTs...>& rhs) {
     return util::compare_tuples(lhs, rhs);
 }
 
@@ -247,9 +247,9 @@ inline bool operator==(const cow_tuple<LhsTypes...>& lhs,
  * @returns @p true if @p lhs and @p rhs are not equal; otherwise @p false.
  * @relates cow_tuple
  */
-template<typename... LhsTypes, typename... RhsTypes>
-inline bool operator!=(const cow_tuple<LhsTypes...>& lhs,
-                       const cow_tuple<RhsTypes...>& rhs) {
+template<typename... LhsTs, typename... RhsTs>
+inline bool operator!=(const cow_tuple<LhsTs...>& lhs,
+                       const cow_tuple<RhsTs...>& rhs) {
     return !(lhs == rhs);
 }
 

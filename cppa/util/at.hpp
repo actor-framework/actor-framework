@@ -33,16 +33,16 @@
 
 namespace cppa { namespace util {
 
-template<size_t N, typename... Tn>
+template<size_t N, typename... Ts>
 struct at;
 
-template<size_t N, typename T0, typename... Tn>
-struct at<N, T0, Tn...> {
-    typedef typename at<N-1, Tn...>::type type;
+template<size_t N, typename T0, typename... Ts>
+struct at<N, T0, Ts...> {
+    typedef typename at<N-1, Ts...>::type type;
 };
 
-template<typename T0, typename... Tn>
-struct at<0, T0, Tn...> {
+template<typename T0, typename... Ts>
+struct at<0, T0, Ts...> {
     typedef T0 type;
 };
 

@@ -113,16 +113,15 @@ class value_guard {
         return true;
     }
 
-    template<typename Head, typename Arg0, typename... Args>
-    static inline bool _eval(const Head& head, const tdata<>&,
+    template<typename T0, typename Arg0, typename... Args>
+    static inline bool _eval(const T0& head, const tdata<>&,
                              const Arg0& arg0, const Args&...) {
         return cmp(head, arg0);
     }
 
-    template<typename Head,
-             typename Tail0, typename... Tail,
+    template<typename T0, typename T1, typename... Ts,
              typename Arg0, typename... Args>
-    static inline bool _eval(const Head& head, const tdata<Tail0,Tail...>& tail,
+    static inline bool _eval(const T0& head, const tdata<T1,Ts...>& tail,
                              const Arg0& arg0, const Args&... args) {
         return cmp(head, arg0) && _eval(tail.head, tail.tail(), args...);
     }

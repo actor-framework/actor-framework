@@ -83,7 +83,7 @@ class tpartial_function {
     }
 
     result_type operator()(Args... args) const {
-        return util::apply_args<Result, ctrait_args::size, sizeof...(Args)>
+        return util::apply_args<Result, util::tl_size<ctrait_args>::value, sizeof...(Args)>
                ::_(m_expr, args...);
     }
 
@@ -109,7 +109,7 @@ struct get_tpartial_function<Expr, Guard,
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types arg_types;
 
-    static_assert(arg_types::size <= sizeof...(Args),
+    static_assert(util::tl_size<arg_types>::value <= sizeof...(Args),
                   "Functor takes too much arguments");
 
     typedef typename get_tpartial_function<

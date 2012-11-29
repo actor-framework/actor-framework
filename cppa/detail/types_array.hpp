@@ -161,7 +161,7 @@ struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
     typedef util::type_list<T...> types;
     typedef typename util::tl_filter_not<types, is_anything>::type
             filtered_types;
-    static constexpr size_t filtered_size = filtered_types::size;
+    static constexpr size_t filtered_size = util::tl_size<filtered_types>::value;
     inline bool has_values() const { return false; }
 };
 

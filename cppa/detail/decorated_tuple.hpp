@@ -49,17 +49,17 @@
 
 namespace cppa { namespace detail {
 
-template<typename... ElementTypes>
+template<typename... Ts>
 class decorated_tuple : public abstract_tuple {
 
     typedef abstract_tuple super;
 
-    static_assert(sizeof...(ElementTypes) > 0,
+    static_assert(sizeof...(Ts) > 0,
                   "decorated_tuple is not allowed to be empty");
 
  public:
 
-    typedef util::fixed_vector<size_t, sizeof...(ElementTypes)> vector_type;
+    typedef util::fixed_vector<size_t, sizeof...(Ts)> vector_type;
 
     typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
@@ -79,7 +79,7 @@ class decorated_tuple : public abstract_tuple {
     }
 
     virtual size_t size() const {
-        return sizeof...(ElementTypes);
+        return sizeof...(Ts);
     }
 
     virtual decorated_tuple* copy() const {
@@ -97,7 +97,7 @@ class decorated_tuple : public abstract_tuple {
     }
 
     const std::type_info* type_token() const {
-        return static_type_list<ElementTypes...>::list;
+        return static_type_list<Ts...>::list;
     }
 
  private:
@@ -111,8 +111,8 @@ class decorated_tuple : public abstract_tuple {
 #       ifdef CPPA_DEBUG
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
-        CPPA_REQUIRE(ptr->size() >= sizeof...(ElementTypes));
-        CPPA_REQUIRE(v.size() == sizeof...(ElementTypes));
+        CPPA_REQUIRE(ptr->size() >= sizeof...(Ts));
+        CPPA_REQUIRE(v.size() == sizeof...(Ts));
         CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < ptr->size());
     }
 
@@ -121,10 +121,10 @@ class decorated_tuple : public abstract_tuple {
 #       ifdef CPPA_DEBUG
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
-        CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(ElementTypes));
+        CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(Ts));
         CPPA_REQUIRE(offset > 0);
         size_t i = offset;
-        m_mapping.resize(sizeof...(ElementTypes));
+        m_mapping.resize(sizeof...(Ts));
         std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
     }
 
@@ -137,9 +137,9 @@ class decorated_tuple : public abstract_tuple {
 template<typename TypeList>
 struct decorated_cow_tuple_from_type_list;
 
-template<typename... Types>
-struct decorated_cow_tuple_from_type_list< util::type_list<Types...> > {
-    typedef decorated_tuple<Types...> type;
+template<typename... Ts>
+struct decorated_cow_tuple_from_type_list< util::type_list<Ts...> > {
+    typedef decorated_tuple<Ts...> type;
 };
 
 } } // namespace cppa::detail

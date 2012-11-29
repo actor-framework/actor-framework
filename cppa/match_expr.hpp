@@ -74,13 +74,13 @@ struct invoke_policy_impl {
                 >::type
                 mimpl;
 
-        util::fixed_vector<size_t, filtered_pattern::size> mv;
+        util::fixed_vector<size_t, util::tl_size<filtered_pattern>::value> mv;
         if (type_token == typeid(filtered_pattern) ||  mimpl::_(tup, mv)) {
             typedef typename pseudo_tuple_from_type_list<filtered_pattern>::type
                     ttup_type;
             ttup_type ttup;
             // if we strip const here ...
-            for (size_t i = 0; i < filtered_pattern::size; ++i) {
+            for (size_t i = 0; i < util::tl_size<filtered_pattern>::value; ++i) {
                 ttup[i] = const_cast<void*>(tup.at(mv[i]));
             }
             // ... we restore it here again
@@ -192,10 +192,10 @@ struct invoke_policy_impl<wildcard_position::nil,
         }
         else if (timpl == detail::dynamically_typed) {
             auto& arr = arr_type::arr;
-            if (tup.size() != filtered_pattern::size) {
+            if (tup.size() != util::tl_size<filtered_pattern>::value) {
                 return false;
             }
-            for (size_t i = 0; i < filtered_pattern::size; ++i) {
+            for (size_t i = 0; i < util::tl_size<filtered_pattern>::value; ++i) {
                 if (arr[i] != tup.type_at(i)) {
                     return false;
                 }
@@ -262,10 +262,10 @@ struct invoke_policy_impl<wildcard_position::trailing,
         }
         typedef detail::static_types_array<Ts...> arr_type;
         auto& arr = arr_type::arr;
-        if (tup.size() < filtered_pattern::size) {
+        if (tup.size() < util::tl_size<filtered_pattern>::value) {
             return false;
         }
-        for (size_t i = 0; i < filtered_pattern::size; ++i) {
+        for (size_t i = 0; i < util::tl_size<filtered_pattern>::value; ++i) {
             if (arr[i] != tup.type_at(i)) {
                 return false;
             }
@@ -310,12 +310,12 @@ struct invoke_policy_impl<wildcard_position::leading,
         }
         typedef detail::static_types_array<Ts...> arr_type;
         auto& arr = arr_type::arr;
-        if (tup.size() < filtered_pattern::size) {
+        if (tup.size() < util::tl_size<filtered_pattern>::value) {
             return false;
         }
-        size_t i = tup.size() - filtered_pattern::size;
+        size_t i = tup.size() - util::tl_size<filtered_pattern>::value;
         size_t j = 0;
-        while (j < filtered_pattern::size) {
+        while (j < util::tl_size<filtered_pattern>::value) {
             if (arr[i++] != tup.type_at(j++)) {
                 return false;
             }
@@ -332,9 +332,9 @@ struct invoke_policy_impl<wildcard_position::leading,
         if (!can_invoke(arg_types, tup)) return false;
         typedef pseudo_tuple<Ts...> ttup_type;
         ttup_type ttup;
-        size_t i = tup.size() - filtered_pattern::size;
+        size_t i = tup.size() - util::tl_size<filtered_pattern>::value;
         size_t j = 0;
-        while (j < filtered_pattern::size) {
+        while (j < util::tl_size<filtered_pattern>::value) {
             ttup[j++] = const_cast<void*>(tup.at(i++));
         }
         // ensure const-correctness
@@ -381,7 +381,7 @@ struct get_case_ {
 
     typedef typename util::tl_pad_right<
                 Transformers,
-                filtered_pattern::size
+                util::tl_size<filtered_pattern>::value
             >::type
             padded_transformers;
 
@@ -395,7 +395,7 @@ struct get_case_ {
     typedef typename util::tl_map_conditional<
                 typename util::tl_pad_left<
                     typename ctrait::arg_types,
-                    filtered_pattern::size
+                    util::tl_size<filtered_pattern>::value
                 >::type,
                 std::is_lvalue_reference,
                 false,
@@ -512,7 +512,7 @@ struct invoke_helper2 {
         //static_assert(false, "foo");
         Token token;
         invoke_helper3<Data> fun{data};
-        return util::static_foreach<0, Token::size>
+        return util::static_foreach<0, util::tl_size<Token>::value>
                ::eval_or(token, fun, std::forward<Args>(args)...);
     }
 };
@@ -531,7 +531,7 @@ struct invoke_helper {
     // thus, can be invoked from same data
     template<class Token, typename... Args>
     bool operator()(Token, Args&&... args) {
-        typedef typename Token::head type_pair;
+        typedef typename util::tl_head<Token>::type type_pair;
         typedef typename type_pair::second leaf_pair;
         if (bitfield & 0x01) {
             // next invocation step
@@ -552,7 +552,7 @@ struct can_invoke_helper {
     can_invoke_helper(std::uint64_t& mbitfield) : bitfield(mbitfield), i(0) { }
     template<class Token, typename... Args>
     void operator()(Token, Args&&... args) {
-        typedef typename Token::head type_pair;
+        typedef typename util::tl_head<Token>::type type_pair;
         typedef typename type_pair::second leaf_pair;
         typedef invoke_policy<typename leaf_pair::pattern_type> impl;
         if (impl::can_invoke(std::forward<Args>(args)...)) {
@@ -647,7 +647,7 @@ class match_expr {
         eval_order token;
         std::uint64_t tmp = 0;
         detail::can_invoke_helper fun{tmp};
-        util::static_foreach<0, eval_order::size>
+        util::static_foreach<0, util::tl_size<eval_order>::value>
         ::_(token, fun, type_token, tup);
         return tmp != 0;
     }
@@ -691,7 +691,7 @@ class match_expr {
 
         eval_order token;
         detail::invoke_helper<decltype(m_cases)> fun{m_cases, enabled_begin};
-        return util::static_foreach<0, eval_order::size>
+        return util::static_foreach<0, util::tl_size<eval_order>::value>
                 ::eval_or(token,
                           fun,
                           type_token,
@@ -788,7 +788,7 @@ class match_expr {
             m_cache[i].second = 0;
             eval_order token;
             detail::can_invoke_helper fun{m_cache[i].second};
-            util::static_foreach<0, eval_order::size>
+            util::static_foreach<0, util::tl_size<eval_order>::value>
             ::_(token, fun, *type_token, value);
         }
         return m_cache[i].second;
@@ -807,7 +807,7 @@ class match_expr {
         auto bitfield = get_cache_entry(type_token, vals);
         eval_order token;
         detail::invoke_helper<decltype(m_cases)> fun{m_cases, bitfield};
-        return util::static_foreach<0, eval_order::size>
+        return util::static_foreach<0, util::tl_size<eval_order>::value>
                ::eval_or(token,
                          fun,
                          *type_token,

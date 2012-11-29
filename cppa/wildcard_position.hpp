@@ -59,9 +59,9 @@ template<typename Types>
 constexpr wildcard_position get_wildcard_position() {
     return util::tl_exists<Types, is_anything>::value
            ? ((util::tl_count<Types, is_anything>::value == 1)
-              ? (std::is_same<typename Types::head, anything>::value
+              ? (std::is_same<typename util::tl_head<Types>::type, anything>::value
                  ? wildcard_position::leading
-                 : (std::is_same<typename Types::back, anything>::value
+                 : (std::is_same<typename util::tl_back<Types>::type, anything>::value
                     ? wildcard_position::trailing
                     : wildcard_position::in_between))
               : wildcard_position::multiple)

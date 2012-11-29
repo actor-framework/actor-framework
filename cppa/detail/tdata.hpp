@@ -427,16 +427,16 @@ mk_tdata(Args&&... args) {
     return {std::forward<Args>(args)...};
 }
 
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>& tv) {
-    static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return static_cast<const typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const detail::tdata<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return static_cast<const typename detail::tdata_upcast_helper<N, Ts...>::type&>(tv).head;
 }
 
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>& tv) {
-    static_assert(N < sizeof...(Tn), "N >= tv.size()");
-    return static_cast<typename detail::tdata_upcast_helper<N, Tn...>::type&>(tv).head;
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(detail::tdata<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return static_cast<typename detail::tdata_upcast_helper<N, Ts...>::type&>(tv).head;
 }
 
 } // namespace cppa

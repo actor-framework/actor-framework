@@ -34,6 +34,7 @@
 // functions are documented in the implementation headers
 #ifndef CPPA_DOCUMENTATION
 
+#include <tuple>
 #include <cstddef>
 
 #include "cppa/util/at.hpp"
@@ -54,32 +55,56 @@ template<typename...> struct type_list;
 template<typename...> class cow_tuple;
 
 // forward declaration of get(const detail::tdata<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::tdata<Tn...>&);
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const detail::tdata<Ts...>&);
 
 // forward declarations of get(const tuple<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const cow_tuple<Tn...>&);
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>&);
 
 // forward declarations of get(detail::pseudo_tuple<...>&)
-template<size_t N, typename... Tn>
-const typename util::at<N, Tn...>::type& get(const detail::pseudo_tuple<Tn...>& tv);
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv);
 
 // forward declarations of get(util::type_list<...>&)
 template<size_t N, typename... Ts>
 typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&);
 
 // forward declarations of get_ref(detail::tdata<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::tdata<Tn...>&);
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(detail::tdata<Ts...>&);
 
 // forward declarations of get_ref(tuple<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(cow_tuple<Tn...>&);
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>&);
 
 // forward declarations of get_ref(detail::pseudo_tuple<...>&)
-template<size_t N, typename... Tn>
-typename util::at<N, Tn...>::type& get_ref(detail::pseudo_tuple<Tn...>& tv);
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv);
+
+// support get_ref access to std::tuple
+template<size_t Pos, typename... Ts>
+inline auto get_ref(std::tuple<Ts...>& tup) -> decltype(std::get<Pos>(tup)) {
+    return std::get<Pos>(tup);
+}
+
+/**
+ * @brief This function grants either const or non-const access to @p tup,
+ *        depending on the cv-qualifier of @p tup.
+ */
+template<size_t Pos, class Tuple>
+inline auto get_cv_aware(Tuple& tup) -> decltype(get_ref<Pos>(tup)) {
+    return get_ref<Pos>(tup);
+}
+
+/**
+ * @brief This function grants either const or non-const access to @p tup,
+ *        depending on the cv-qualifier of @p tup.
+ */
+template<size_t Pos, class Tuple>
+inline auto get_cv_aware(const Tuple& tup) -> decltype(get<Pos>(tup)) {
+    return get<Pos>(tup);
+}
 
 } // namespace cppa
 
