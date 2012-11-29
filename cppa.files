@@ -41,6 +41,7 @@ cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/implicit_conversions.hpp
 cppa/detail/matches.hpp
+cppa/detail/memory.hpp
 cppa/detail/object_array.hpp
 cppa/detail/object_impl.hpp
 cppa/detail/opt_impls.hpp
@@ -81,11 +82,13 @@ cppa/get.hpp
 cppa/group.hpp
 cppa/guard_expr.hpp
 cppa/intrusive/single_reader_queue.hpp
+cppa/intrusive_fwd_ptr.hpp
 cppa/intrusive_ptr.hpp
 cppa/local_actor.hpp
 cppa/logging.hpp
 cppa/match.hpp
 cppa/match_expr.hpp
+cppa/memory_managed.hpp
 cppa/message_future.hpp
 cppa/message_id.hpp
 cppa/network/acceptor.hpp
@@ -147,6 +150,7 @@ cppa/util/element_at.hpp
 cppa/util/fiber.hpp
 cppa/util/fixed_vector.hpp
 cppa/util/if_else.hpp
+cppa/util/int_list.hpp
 cppa/util/is_array_of.hpp
 cppa/util/is_builtin.hpp
 cppa/util/is_comparable.hpp
@@ -165,6 +169,7 @@ cppa/util/replace_type.hpp
 cppa/util/ripemd_160.hpp
 cppa/util/rm_option.hpp
 cppa/util/rm_ref.hpp
+cppa/util/scope_guard.hpp
 cppa/util/shared_lock_guard.hpp
 cppa/util/shared_spinlock.hpp
 cppa/util/static_foreach.hpp
@@ -181,6 +186,10 @@ examples/event_based_api/dining_philosophers.cpp
 examples/hello_world.cpp
 examples/message_passing/dancing_kirby.cpp
 examples/message_passing/math_actor.cpp
+examples/qtsupport/chatwidget.cpp
+examples/qtsupport/chatwidget.hpp
+examples/qtsupport/chatwindow.ui
+examples/qtsupport/qt_group_chat.cpp
 examples/remote_actors/distributed_math_actor.cpp
 examples/remote_actors/group_chat.cpp
 examples/remote_actors/group_server.cpp
@@ -228,6 +237,8 @@ src/ipv4_io_stream.cpp
 src/local_actor.cpp
 src/logging.cpp
 src/match.cpp
+src/memory.cpp
+src/memory_managed.cpp
 src/message_header.cpp
 src/middleman.cpp
 src/object.cpp
@@ -238,6 +249,7 @@ src/primitive_variant.cpp
 src/process_information.cpp
 src/protocol.cpp
 src/receive.cpp
+src/recursive_queue_node.cpp
 src/ref_counted.cpp
 src/response_handle.cpp
 src/ripemd_160.cpp
@@ -275,14 +287,3 @@ unit_testing/test__tuple.cpp
 unit_testing/test__type_list.cpp
 unit_testing/test__uniform_type.cpp
 unit_testing/test__yield_interface.cpp
-cppa/detail/memory.hpp
-src/memory.cpp
-src/recursive_queue_node.cpp
-cppa/intrusive_fwd_ptr.hpp
-cppa/memory_managed.hpp
-src/memory_managed.cpp
-examples/qtsupport/qt_group_chat.cpp
-examples/qtsupport/chatwindow.ui
-examples/qtsupport/chatwidget.hpp
-examples/qtsupport/chatwidget.cpp
-cppa/util/scope_guard.hpp
