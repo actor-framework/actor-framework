@@ -105,9 +105,9 @@ class basic_memory_cache : public memory_cache {
 
         typedef wrapper* iterator;
 
-        iterator begin() { return std::begin(data); }
+        iterator begin() { return data; }
 
-        iterator end() { return std::end(data); }
+        iterator end() { return begin() + (s_alloc_size / sizeof(T)); }
 
      private:
 
