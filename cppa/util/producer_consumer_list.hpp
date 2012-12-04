@@ -116,18 +116,6 @@ class producer_consumer_list {
     std::atomic<bool> m_consumer_lock;
     std::atomic<bool> m_producer_lock;
 
-    void push_impl(node* tmp) {
-        // acquire exclusivity
-        while (m_producer_lock.exchange(true)) {
-            std::this_thread::yield();
-        }
-        // publish & swing last forward
-        m_last->next = tmp;
-        m_last = tmp;
-        // release exclusivity
-        m_producer_lock = false;
-    }
-
  public:
 
     producer_consumer_list() {
@@ -146,7 +134,16 @@ class producer_consumer_list {
 
     inline void push_back(pointer value) {
         assert(value != nullptr);
-        push_impl(new node(value));
+        node* tmp = new node(value);
+        // acquire exclusivity
+        while (m_producer_lock.exchange(true)) {
+            std::this_thread::yield();
+        }
+        // publish & swing last forward
+        m_last->next = tmp;
+        m_last = tmp;
+        // release exclusivity
+        m_producer_lock = false;
     }
 
     // returns nullptr on failure
