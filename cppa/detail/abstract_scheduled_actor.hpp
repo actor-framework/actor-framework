@@ -95,6 +95,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
     }
 
     inline void pop_timeout() {
+        CPPA_REQUIRE(m_active_timeout_id > 0);
         --m_active_timeout_id;
     }
 
@@ -158,10 +159,11 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     bool enqueue_node(typename super::mailbox_element* node,
                       int next_state = ready) {
+        CPPA_REQUIRE(next_state == ready || next_state == pending);
         CPPA_REQUIRE(node->marked == false);
         if (this->m_mailbox._push_back(node)) {
+            int state = m_state.load();
             for (;;) {
-                int state = m_state.load();
                 switch (state) {
                     case blocked: {
                         if (m_state.compare_exchange_weak(state, next_state)) {
