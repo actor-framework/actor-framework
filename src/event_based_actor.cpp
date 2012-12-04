@@ -51,7 +51,21 @@ void event_based_actor::dequeue_response(behavior&, message_id_t) {
 }
 
 resume_result event_based_actor::resume(util::fiber*) {
-    CPPA_REQUIRE(m_state.load() == abstract_scheduled_actor::ready);
+#   ifdef CPPA_DEBUG
+    auto st = m_state.load();
+    switch (st) {
+        case abstract_scheduled_actor::ready:
+        case abstract_scheduled_actor::pending:
+            // state ok
+            break;
+        default: {
+            std::cerr << "UNEXPECTED STATE: " << st << std::endl;
+            // failed requirement calls abort() and prints stack trace
+            CPPA_REQUIRE(   st == abstract_scheduled_actor::ready
+                         || st == abstract_scheduled_actor::pending);
+        }
+    }
+#   endif // CPPA_DEBUG
     scoped_self_setter sss{this};
     auto done_cb = [&]() {
         m_state.store(abstract_scheduled_actor::done);
