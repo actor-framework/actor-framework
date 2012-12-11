@@ -18,6 +18,7 @@ add(dancing_kirby message_passing)
 add(dining_philosophers event_based_api)
 add(hello_world .)
 add(math_actor message_passing)
+add(handling_posix_signals message_passing)
 add(distributed_math_actor remote_actors)
 add(group_server remote_actors)
 add(group_chat remote_actors)
@@ -43,3 +44,23 @@ if (QT4_FOUND)
                         ${QT_LIBRARIES})
   add_dependencies(qt_group_chat all_examples)
 endif (QT4_FOUND)
+
+# install (TARGETS announce_1 RUNTIME DESTINATION bin/)
+# install (TARGETS announce_2 RUNTIME DESTINATION bin/)
+# install (TARGETS announce_3 RUNTIME DESTINATION bin/)
+# install (TARGETS announce_4 RUNTIME DESTINATION bin/)
+# install (TARGETS announce_5 RUNTIME DESTINATION bin/)
+# install (TARGETS dancing_kirby RUNTIME DESTINATION bin/)
+# install (TARGETS dining_philosophers RUNTIME DESTINATION bin/)
+# install (TARGETS hello_world RUNTIME DESTINATION bin/)
+# install (TARGETS math_actor RUNTIME DESTINATION bin/)
+# install (TARGETS distributed_math_actor RUNTIME DESTINATION bin/)
+# install (TARGETS group_server RUNTIME DESTINATION bin/)
+# install (TARGETS group_chat RUNTIME DESTINATION bin/)
+# install (TARGETS handling_posix_signals RUNTIME DESTINATION bin/)
+
+
+
+
+
+
