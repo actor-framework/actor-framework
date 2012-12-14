@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa CXX C)
+project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 5)
@@ -30,14 +30,14 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
 
-include(CheckIncludeFiles)
-check_include_files("valgrind/valgrind.h" HAVE_VALGRIND_H)
-set(VALGRIND "no")
-if (NOT HAVE_VALGRIND_H)
-  add_definitions(-DNVALGRIND)
-else (NOT HAVE_VALGRIND_H)
+include(CheckIncludeFileCXX)
+check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
+if (HAVE_VALGRIND_H)
   set(VALGRIND "yes")
-endif (NOT HAVE_VALGRIND_H)
+  add_definitions(-DCPPA_ANNOTATE_VALGRIND)
+else (HAVE_VALGRIND_H)
+  set(VALGRIND "no")
+endif (AVE_VALGRIND_H)
 
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult

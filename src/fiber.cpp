@@ -51,7 +51,7 @@ void fiber::swap(fiber&, fiber&) {
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 
-#ifndef NVALGRIND
+#ifdef CPPA_ANNOTATE_VALGRIND
 #include <valgrind/valgrind.h>
 #endif
 #include <boost/version.hpp>
@@ -59,39 +59,77 @@ void fiber::swap(fiber&, fiber&) {
 
 namespace cppa { namespace util {
 
+class fiber_impl;
 void fiber_trampoline(intptr_t iptr);
+
+namespace {
+
+#if CPPA_ANNOTATE_VALGRIND
+typedef int vg_member;
+inline void vg_register(vg_member& stack_id, void* ptr1, void* ptr2) {
+    stack_id = VALGRIND_STACK_REGISTER(ptr1, ptr2);
+}
+inline void vg_deregister(vg_member stack_id) {
+    VALGRIND_STACK_DEREGISTER(stack_id);
+}
+#else
+struct vg_member { };
+template<typename... Ts> inline void vg_register(const Ts&...) { }
+inline void vg_deregister(const vg_member&) { }
+#endif
 
 #if BOOST_VERSION == 105100
 namespace ctx = boost::ctx;
+typedef ctx::fcontext_t fc_member;
+typedef ctx::stack_allocator fc_allocator;
+inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
+    ctx::jump_fcontext(&from, &to, (intptr_t) ptr);
+}
+inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
+    size_t stacksize = ctx::minimum_stacksize();
+    storage.fc_stack.base = alloc.allocate(stacksize);
+    storage.fc_stack.limit = reinterpret_cast<void*>(
+                reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize);
+    ctx::make_fcontext(&storage, fiber_trampoline);
+    vg_register(vgm,
+                storage.fc_stack.base,
+                reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize);
+}
 #else
 namespace ctx = boost::context;
+typedef ctx::fcontext_t* fc_member;
+typedef ctx::guarded_stack_allocator fc_allocator;
+inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
+    ctx::jump_fcontext(from, to, (intptr_t) ptr);
+}
+inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
+    size_t mss = fc_allocator::minimum_stacksize();
+    storage = ctx::make_fcontext(alloc.allocate(mss), mss, fiber_trampoline);
+    vg_register(vgm,
+                storage->fc_stack.sp,
+                reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss);
+}
 #endif
+
+} // namespace <anonymous>
 
 class fiber_impl {
 
  public:
 
-    fiber_impl() : m_ctx{} { }
+    fiber_impl() : m_ctx() { }
 
     virtual ~fiber_impl() { }
 
     virtual void run() { }
 
     void swap(fiber_impl* to) {
-#if BOOST_VERSION == 105100
-        ctx::jump_fcontext(&m_ctx, &to->m_ctx, (intptr_t) to);
-#else
-        ctx::jump_fcontext(m_ctx, to->m_ctx, (intptr_t) to);
-#endif
+        fc_jump(m_ctx, to->m_ctx, to);
     }
 
  protected:
 
-#if BOOST_VERSION == 105100
-    ctx::fcontext_t m_ctx;
-#else
-    ctx::fcontext_t* m_ctx;
-#endif
+    fc_member m_ctx;
 
 };
 
@@ -100,65 +138,31 @@ class converted_fiber : public fiber_impl {
 
  public:
 
-#if BOOST_VERSION == 105100
-    converted_fiber() { m_ctx = m_ctx_obj; }
-#else
-    converted_fiber() { m_ctx = &m_ctx_obj; }
-#endif
+    converted_fiber() {
+#       if BOOST_VERSION > 105100
+        m_ctx = &m_ctx_obj;
+#       endif
+    }
 
  private:
 
+#   if BOOST_VERSION > 105100
     ctx::fcontext_t m_ctx_obj;
+#   endif
 
 };
 
 // a fiber executing a function
 class fun_fiber : public fiber_impl {
 
-#if BOOST_VERSION == 105100
-    typedef ctx::stack_allocator allocator;
-#else
-    typedef ctx::guarded_stack_allocator allocator;
-#endif
-
  public:
 
     fun_fiber(void (*fun)(void*), void* arg) : m_arg(arg), m_fun(fun) {
-#if BOOST_VERSION == 105100
-        size_t stacksize = ctx::minimum_stacksize();
-        m_ctx.fc_stack.base = m_alloc.allocate(stacksize);
-        m_ctx.fc_stack.limit = reinterpret_cast<void *>(
-                reinterpret_cast<intptr_t>(m_ctx.fc_stack.base)-stacksize);
-        ctx::make_fcontext(&m_ctx, fiber_trampoline);
-#ifndef NVALGRIND
-        m_valgrind_stack_id =
-            VALGRIND_STACK_REGISTER(m_ctx.fc_stack.base,
-                    reinterpret_cast<intptr_t>(m_ctx.fc_stack.base)-stacksize);
-#endif
-#else // BOOST_VERSION
-        size_t stacksize = allocator::minimum_stacksize();
-        m_ctx = ctx::make_fcontext(m_alloc.allocate(stacksize), stacksize, fiber_trampoline);
-#ifndef NVALGRIND
-        m_valgrind_stack_id =
-            VALGRIND_STACK_REGISTER(m_ctx->fc_stack.sp,
-                    reinterpret_cast<intptr_t>(m_ctx->fc_stack.sp)-stacksize);
-#endif
-#endif // BOOST_VERSION
+        fc_make(m_ctx, m_alloc, m_vgm);
     }
 
     ~fun_fiber() {
-#ifndef NVALGRIND
-            VALGRIND_STACK_DEREGISTER(m_valgrind_stack_id);
-#endif
-
-#if BOOST_VERSION == 105100
-        size_t stacksize =
-            reinterpret_cast<intptr_t>(m_ctx.fc_stack.base)
-            - reinterpret_cast<intptr_t>(m_ctx.fc_stack.base);
-        m_alloc.deallocate(m_ctx.fc_stack.base, stacksize);
-#else
-        m_alloc.deallocate(m_ctx->fc_stack.sp, m_ctx->fc_stack.size);
-#endif
+        vg_deregister(m_vgm);
     }
 
     virtual void run() {
@@ -170,12 +174,8 @@ class fun_fiber : public fiber_impl {
 
     void* m_arg;
     void (*m_fun)(void*);
-    allocator m_alloc;
-#ifndef NVALGRIND
-    //! stack id so valgrind doesn't freak when stack swapping happens
-    int m_valgrind_stack_id;
-#endif
-
+    fc_allocator m_alloc;
+    vg_member m_vgm;
 
 };
 
