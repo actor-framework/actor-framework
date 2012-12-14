@@ -167,6 +167,13 @@ else (DISABLE_CONTEXT_SWITCHING)
   if (NOT Boost_FOUND)
     set(DISABLE_CONTEXT_SWITCHING true)
   else (NOT Boost_FOUND)
+    # This hack fixes a problem when the linker search path is the same as
+    # the one provided by the compiler. In this case, CMake replaces the absolute
+    # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
+    # library. So when this replacement happens, we ensure that the right
+    # library gets picked by adding a -L directive for the affected libraries
+    # (which is just Boost Context here).
+    set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
     set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
     set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
     set(LD_FLAGS ${LD_FLAGS} ${Boost_CONTEXT_LIBRARY})
