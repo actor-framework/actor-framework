@@ -98,7 +98,8 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     }
 
     /**
-     * @brief Returns the raw pointer without modifying reference count.
+     * @brief Returns the raw pointer without modifying reference count
+     *        and sets this to @p nullptr.
      */
     pointer release() {
         auto result = m_ptr;
