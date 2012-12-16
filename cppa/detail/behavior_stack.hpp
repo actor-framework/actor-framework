@@ -101,7 +101,6 @@ class behavior_stack
                         m_elements.erase(i);
                     }
                 }
-                cleanup();
                 id = empty() ? message_id_t() : m_elements.back().second;
             } while (!empty() && policy.invoke_from_cache(client, back(), id));
             return true;

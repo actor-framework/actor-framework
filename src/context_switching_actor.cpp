@@ -88,7 +88,9 @@ scheduled_actor_type context_switching_actor::impl_type() {
     return context_switching_impl;
 }
 
-resume_result context_switching_actor::resume(util::fiber* from) {
+resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next_job) {
+    CPPA_REQUIRE(from != nullptr);
+    CPPA_REQUIRE(next_job == nullptr);
     using namespace detail;
     scoped_self_setter sss{this};
     for (;;) {
@@ -100,9 +102,13 @@ resume_result context_switching_actor::resume(util::fiber* from) {
                 break;
             }
             case yield_state::blocked: {
+                m_chained_actor.swap(next_job);
+                CPPA_REQUIRE(m_chained_actor == nullptr);
                 switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
                                                abstract_scheduled_actor::blocked)) {
                     case abstract_scheduled_actor::ready: {
+                        // restore variables
+                        m_chained_actor.swap(next_job);
                         break;
                     }
                     case abstract_scheduled_actor::blocked: {

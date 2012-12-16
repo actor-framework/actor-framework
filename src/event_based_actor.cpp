@@ -50,7 +50,7 @@ void event_based_actor::dequeue_response(behavior&, message_id_t) {
     quit(exit_reason::unallowed_function_call);
 }
 
-resume_result event_based_actor::resume(util::fiber*) {
+resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
 #   ifdef CPPA_DEBUG
     auto st = m_state.load();
     switch (st) {
@@ -72,25 +72,46 @@ resume_result event_based_actor::resume(util::fiber*) {
         m_bhvr_stack.clear();
         m_bhvr_stack.cleanup();
         on_exit();
+        CPPA_REQUIRE(next_job == nullptr);
+        next_job.swap(m_chained_actor);
     };
+    CPPA_REQUIRE(next_job == nullptr);
     try {
-        detail::recursive_queue_node* e;
+        detail::recursive_queue_node* e = nullptr;
         for (;;) {
             e = m_mailbox.try_pop();
-            if (!e) {
+            if (e == nullptr) {
+                CPPA_REQUIRE(next_job == nullptr);
+                next_job.swap(m_chained_actor);
                 m_state.store(abstract_scheduled_actor::about_to_block);
+                std::atomic_thread_fence(std::memory_order_seq_cst);
                 if (m_mailbox.can_fetch_more() == false) {
                     switch (compare_exchange_state(
                                 abstract_scheduled_actor::about_to_block,
                                 abstract_scheduled_actor::blocked)) {
-                        case abstract_scheduled_actor::ready: {
+                        case abstract_scheduled_actor::ready:
+                            // interrupted by arriving message
+                            // restore members
+                            CPPA_REQUIRE(m_chained_actor == nullptr);
+                            next_job.swap(m_chained_actor);
                             break;
-                        }
-                        case abstract_scheduled_actor::blocked: {
+                        case abstract_scheduled_actor::blocked:
+                            // done setting actor to blocked
                             return resume_result::actor_blocked;
-                        }
-                        default: CPPA_CRITICAL("illegal actor state");
+                        case abstract_scheduled_actor::pending:
+                            CPPA_CRITICAL("illegal state: pending");
+                        case abstract_scheduled_actor::done:
+                            CPPA_CRITICAL("illegal state: done");
+                        case abstract_scheduled_actor::about_to_block:
+                            CPPA_CRITICAL("illegal state: about_to_block");
+                        default:
+                            CPPA_CRITICAL("invalid state");
                     };
+                }
+                else {
+                    m_state.store(abstract_scheduled_actor::ready);
+                    CPPA_REQUIRE(m_chained_actor == nullptr);
+                    next_job.swap(m_chained_actor);
                 }
             }
             else if (m_bhvr_stack.invoke(m_policy, this, e)) {
@@ -98,6 +119,7 @@ resume_result event_based_actor::resume(util::fiber*) {
                     done_cb();
                     return resume_result::actor_done;
                 }
+                m_bhvr_stack.cleanup();
             }
         }
     }

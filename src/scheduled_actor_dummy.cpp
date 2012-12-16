@@ -45,7 +45,7 @@ void scheduled_actor_dummy::do_become(behavior&&, bool) { }
 void scheduled_actor_dummy::become_waiting_for(behavior&&, message_id_t) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
+resume_result scheduled_actor_dummy::resume(util::fiber*,actor_ptr&) {
     return resume_result::actor_blocked;
 }
 

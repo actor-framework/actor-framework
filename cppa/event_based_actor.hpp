@@ -75,7 +75,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
      */
     void dequeue_response(behavior&, message_id_t);
 
-    resume_result resume(util::fiber*); //override
+    resume_result resume(util::fiber*, actor_ptr&); //override
 
     /**
      * @brief Initializes the actor.

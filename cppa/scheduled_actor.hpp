@@ -63,8 +63,9 @@ class scheduled_actor : public local_actor {
      */
     scheduled_actor* next;
 
-    // called from worker thread
-    virtual resume_result resume(util::fiber* from) = 0;
+    // called from worker thread,
+    // actors sets next_job to its chained actor
+    virtual resume_result resume(util::fiber* from, actor_ptr& next_job) = 0;
 
     void attach_to_scheduler(scheduler* sched, bool hidden);
 

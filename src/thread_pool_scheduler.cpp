@@ -110,15 +110,7 @@ struct thread_pool_scheduler::worker {
     void operator()() {
         util::fiber fself;
         job_ptr job = nullptr;
-        auto fetch_pending = [&job]() -> job_ptr {
-            CPPA_REQUIRE(job != nullptr);
-            auto ptr = job->chained_actor().get();
-            if (ptr) {
-                job->chained_actor(nullptr);
-                return static_cast<scheduled_actor*>(ptr);
-            }
-            return nullptr;
-        };
+        actor_ptr next_job;
         for (;;) {
             job = aggressive_polling();
             if (job == nullptr) {
@@ -134,22 +126,20 @@ struct thread_pool_scheduler::worker {
             }
             else {
                 do {
-                    switch (job->resume(&fself)) {
-                        case resume_result::actor_done: {
-                            auto pending = fetch_pending();
-                            bool hidden = job->is_hidden();
-                            job->deref();
-                            std::atomic_thread_fence(std::memory_order_seq_cst);
-                            if (!hidden) dec_actor_count();
-                            job = pending;
-                            break;
-                        }
-                        case resume_result::actor_blocked: {
-                            job = fetch_pending();
-                        }
+                    next_job.reset();
+                    if (job->resume(&fself, next_job) == resume_result::actor_done) {
+                        bool hidden = job->is_hidden();
+                        job->deref();
+                        //std::atomic_thread_fence(std::memory_order_seq_cst);
+                        if (!hidden) dec_actor_count();
                     }
+                    if (next_job) {
+                        job = static_cast<job_ptr>(next_job.get());
+                        //get_scheduler()->printer()->enqueue(job, make_any_tuple("fast-forwarded execution (chained actor)\n"));
+                    }
+                    else job = nullptr;
                 }
-                while (job);
+                while (job); // loops until next_job was nullptr
             }
         }
     }

@@ -64,8 +64,10 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         if (d.valid()) {
             if (d.is_zero()) {
                 // immediately enqueue timeout
-                enqueue(nullptr, make_any_tuple(atom("TIMEOUT"),
-                                                ++m_active_timeout_id));
+                auto node = super::fetch_node(this,
+                                              make_any_tuple(atom("TIMEOUT"),
+                                              ++m_active_timeout_id));
+                this->m_mailbox._push_back(node);
             }
             else {
                 get_scheduler()->delayed_send(
@@ -125,9 +127,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
         return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
     }
 
-    bool chained_sync_enqueue(actor* sender,
-                              message_id_t id,
-                              any_tuple msg) {
+    bool chained_sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
         return enqueue_node(super::fetch_node(sender, std::move(msg), id), pending);
     }
 

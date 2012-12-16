@@ -80,7 +80,7 @@ class context_switching_actor : public detail::stacked_actor_mixin<
 
     context_switching_actor(std::function<void()> fun);
 
-    resume_result resume(util::fiber* from); //override
+    resume_result resume(util::fiber* from, actor_ptr& next_job); //override
 
     scheduled_actor_type impl_type();
 

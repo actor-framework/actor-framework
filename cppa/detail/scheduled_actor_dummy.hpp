@@ -36,7 +36,7 @@
 namespace cppa { namespace detail {
 
 struct scheduled_actor_dummy : abstract_scheduled_actor {
-    resume_result resume(util::fiber*);
+    resume_result resume(util::fiber*, actor_ptr&);
     void quit(std::uint32_t);
     void dequeue(behavior&);
     void dequeue(partial_function&);
