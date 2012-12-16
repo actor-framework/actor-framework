@@ -96,12 +96,15 @@ resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next
     for (;;) {
         switch (call(&m_fiber, from)) {
             case yield_state::done: {
+                CPPA_REQUIRE(next_job == nullptr);
+                m_chained_actor.swap(next_job);
                 return resume_result::actor_done;
             }
             case yield_state::ready: {
                 break;
             }
             case yield_state::blocked: {
+                CPPA_REQUIRE(next_job == nullptr);
                 m_chained_actor.swap(next_job);
                 CPPA_REQUIRE(m_chained_actor == nullptr);
                 switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
@@ -109,6 +112,7 @@ resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next
                     case abstract_scheduled_actor::ready: {
                         // restore variables
                         m_chained_actor.swap(next_job);
+                        CPPA_REQUIRE(next_job == nullptr);
                         break;
                     }
                     case abstract_scheduled_actor::blocked: {
