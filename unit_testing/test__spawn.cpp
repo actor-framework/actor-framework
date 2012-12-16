@@ -701,7 +701,8 @@ int main() {
                 CPPA_CHECK_EQUAL(reason, exit_reason::normal);
             }
         },
-        on<atom("FooBar")>() >> [&]() {
+        on_arg_match >> [&](const atom_value& val) {
+            CPPA_CHECK(val == atom("FooBar"));
             flags |= 0x08;
         },
         others() >> [&]() {
