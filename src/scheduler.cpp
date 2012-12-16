@@ -35,6 +35,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/self.hpp"
+#include "cppa/receive.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
@@ -125,23 +126,34 @@ class scheduler_helper {
 
     typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
-    scheduler_helper() : m_worker(new thread_mapped_actor) { }
-
     void start() {
-        m_thread = std::thread(&scheduler_helper::time_emitter, m_worker);
+        ptr_type mtimer{new thread_mapped_actor};
+        ptr_type mprinter{new thread_mapped_actor};
+        m_timer_thread = std::thread(&scheduler_helper::timer_loop, mtimer);
+        m_printer_thread = std::thread(&scheduler_helper::printer_loop, mprinter);
+        m_timer = mtimer;
+        m_printer = mprinter;
     }
 
     void stop() {
-        m_worker->enqueue(nullptr, make_cow_tuple(atom("DIE")));
-        m_thread.join();
+        auto msg = make_any_tuple(atom("DIE"));
+        m_timer->enqueue(nullptr, msg);
+        m_printer->enqueue(nullptr, msg);
+        m_timer_thread.join();
+        m_printer_thread.join();
     }
 
-    ptr_type m_worker;
-    std::thread m_thread;
+    actor_ptr m_timer;
+    std::thread m_timer_thread;
+
+    actor_ptr m_printer;
+    std::thread m_printer_thread;
 
  private:
 
-    static void time_emitter(ptr_type m_self);
+    static void timer_loop(ptr_type m_self);
+
+    static void printer_loop(ptr_type m_self);
 
 };
 
@@ -159,7 +171,7 @@ void insert_dmsg(Map& storage,
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
+void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     typedef detail::abstract_actor<local_actor> impl_type;
     typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> queue_node_ptr;
     // setup & local variables
@@ -190,7 +202,7 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
         },
         others() >> [&]() {
 #           ifdef CPPA_DEBUG
-                std::cerr << "scheduler_helper::time_emitter: UNKNOWN MESSAGE: "
+                std::cerr << "scheduler_helper::timer_loop: UNKNOWN MESSAGE: "
                           << to_string(msg_ptr->msg)
                           << std::endl;
 #           endif
@@ -222,8 +234,64 @@ void scheduler_helper::time_emitter(scheduler_helper::ptr_type m_self) {
     }
 }
 
-scheduler::scheduler() : m_helper(new scheduler_helper) {
+void scheduler_helper::printer_loop(ptr_type m_self) {
+    self.set(m_self.get());
+    std::map<actor_ptr,std::string> out;
+    auto flush_output = [&out](const actor_ptr& s) {
+        auto i = out.find(s);
+        if (i != out.end()) {
+            auto& line = i->second;
+            if (!line.empty()) {
+                std::cout << line << std::flush;
+                line.clear();
+            }
+        }
+    };
+    auto flush_if_needed = [](std::string& str) {
+        if (str.back() == '\n') {
+            std::cout << str << std::flush;
+            str.clear();
+        }
+    };
+    bool running = true;
+    receive_while (gref(running)) (
+        on(atom("add"), arg_match) >> [&](std::string& str) {
+            auto s = self->last_sender();
+            if (!str.empty() && s != nullptr) {
+                auto i = out.find(s);
+                if (i == out.end()) {
+                    i = out.insert(make_pair(s, move(str))).first;
+                    // monitor actor to flush its output on exit
+                    self->monitor(s);
+                    flush_if_needed(i->second);
+                }
+                else {
+                    auto& ref = i->second;
+                    ref += move(str);
+                    flush_if_needed(ref);
+                }
+            }
+        },
+        on(atom("flush")) >> [&] {
+            flush_output(self->last_sender());
+        },
+        on(atom("DOWN"), any_vals) >> [&] {
+            auto s = self->last_sender();
+            flush_output(s);
+            out.erase(s);
+        },
+        on(atom("DIE")) >> [&] {
+            running = false;
+        },
+        others() >> [] {
+            //cout << "*** unexpected: "
+            //     << to_string(self->last_dequeued())
+            //     << endl;
+        }
+    );
 }
+
+scheduler::scheduler() : m_helper(new scheduler_helper) { }
 
 void scheduler::initialize() {
     m_helper->start();
@@ -239,7 +307,7 @@ scheduler::~scheduler() {
 }
 
 channel* scheduler::delayed_send_helper() {
-    return m_helper->m_worker.get();
+    return m_helper->m_timer.get();
 }
 
 void scheduler::register_converted_context(actor* what) {
@@ -271,5 +339,10 @@ scheduler* get_scheduler() {
 scheduler* scheduler::create_singleton() {
     return new detail::thread_pool_scheduler;
 }
+
+const actor_ptr& scheduler::printer() const {
+    return m_helper->m_printer;
+}
+
 
 } // namespace cppa

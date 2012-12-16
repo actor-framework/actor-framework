@@ -851,15 +851,59 @@ actor_ptr remote_actor(network::io_stream_ptr_pair connection);
  */
 void shutdown(); // note: implemented in singleton_manager.cpp
 
+struct actor_ostream {
+
+    typedef const actor_ostream& (*fun_type)(const actor_ostream&);
+
+    constexpr actor_ostream() { }
+
+    inline const actor_ostream& write(std::string arg) const {
+        send(get_scheduler()->printer(), atom("add"), move(arg));
+        return *this;
+    }
+
+    inline const actor_ostream& flush() const {
+        send(get_scheduler()->printer(), atom("flush"));
+        return *this;
+    }
+
+};
+
+namespace { constexpr actor_ostream aout; }
+
+inline const actor_ostream& operator<<(const actor_ostream& o, std::string arg) {
+    return o.write(move(arg));
+}
+
+inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& arg) {
+    return o.write(cppa::to_string(arg));
+}
+
+template<typename T>
+inline typename std::enable_if<   !std::is_convertible<T,std::string>::value
+                               && !std::is_convertible<T,any_tuple>::value,
+                               const actor_ostream&>::type
+operator<<(const actor_ostream& o, T&& arg) {
+    return o.write(std::to_string(std::forward<T>(arg)));
+}
+
+inline const actor_ostream& operator<<(const actor_ostream& o, actor_ostream::fun_type f) {
+    return f(o);
+}
+
 } // namespace cppa
 
 namespace std {
+// allow actor_ptr to be used in hash maps
 template<>
 struct hash<cppa::actor_ptr> {
     inline size_t operator()(const cppa::actor_ptr& ptr) const {
         return (ptr) ? static_cast<size_t>(ptr->id()) : 0;
     }
 };
+// provide convenience overlaods for aout; implemented in logging.cpp
+const cppa::actor_ostream& endl(const cppa::actor_ostream& o);
+const cppa::actor_ostream& flush(const cppa::actor_ostream& o);
 } // namespace std
 
 #endif // CPPA_HPP

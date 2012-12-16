@@ -106,6 +106,8 @@ class scheduler {
 
  public:
 
+    const actor_ptr& printer() const;
+
     virtual void enqueue(scheduled_actor*) = 0;
 
     /**

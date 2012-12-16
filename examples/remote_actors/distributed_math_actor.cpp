@@ -43,97 +43,6 @@ struct math_actor : event_based_actor {
     }
 };
 
-namespace {
-
-// this actor manages the output of the program and has a per-actor cache
-actor_ptr s_printer = factory::event_based([](map<actor_ptr,string>* out) {
-    auto flush_output = [out](const actor_ptr& s) {
-        auto i = out->find(s);
-        if (i != out->end()) {
-            auto& ref = i->second;
-            if (!ref.empty()) {
-                cout << move(ref) << flush;
-                ref = string();
-            }
-        }
-    };
-    self->become (
-        on(atom("add"), arg_match) >> [=](string& str) {
-            if (!str.empty()) {
-                auto s = self->last_sender();
-                auto i = out->find(s);
-                if (i == out->end()) {
-                    i = out->insert(make_pair(s, move(str))).first;
-                    // monitor actor to flush its output on exit
-                    self->monitor(s);
-                }
-                auto& ref = i->second;
-                ref += move(str);
-                if (ref.back() == '\n') {
-                    cout << move(ref) << flush;
-                    ref = string();
-                }
-            }
-        },
-        on(atom("flush")) >> [=] {
-            flush_output(self->last_sender());
-        },
-        on(atom("DOWN"), any_vals) >> [=] {
-            auto s = self->last_sender();
-            flush_output(s);
-            out->erase(s);
-        },
-        on(atom("quit")) >> [] {
-            self->quit();
-        },
-        others() >> [] {
-            cout << "*** unexpected: "
-                 << to_string(self->last_dequeued())
-                 << endl;
-        }
-    );
-}).spawn();
-
-} // namespace <anonymous>
-
-// an output stream sending messages to s_printer
-struct actor_ostream {
-
-    typedef actor_ostream& (*fun_type)(actor_ostream&);
-
-    virtual ~actor_ostream() { }
-
-    virtual actor_ostream& write(string arg) {
-        send(s_printer, atom("add"), move(arg));
-        return *this;
-    }
-
-    virtual actor_ostream& flush() {
-        send(s_printer, atom("flush"));
-        return *this;
-    }
-
-};
-
-inline actor_ostream& operator<<(actor_ostream& o, string arg) {
-    return o.write(move(arg));
-}
-
-template<typename T>
-inline typename enable_if<is_convertible<T,string>::value == false, actor_ostream&>::type
-operator<<(actor_ostream& o, T&& arg) {
-    return o.write(to_string(std::forward<T>(arg)));
-}
-
-inline actor_ostream& operator<<(actor_ostream& o, actor_ostream::fun_type f) {
-    return f(o);
-}
-
-namespace { actor_ostream aout; }
-
-inline actor_ostream& endl(actor_ostream& o) { return o.write("\n"); }
-inline actor_ostream& flush(actor_ostream& o) { return o.flush(); }
-
 inline string& ltrim(string &s) {
     s.erase(s.begin(), find_if(s.begin(), s.end(), [](char c) { return !isspace(c); }));
     return s;
@@ -265,7 +174,6 @@ void client_repl(actor_ptr server, string host, uint16_t port) {
         trim(line);
         if (line == "quit") {
             send(client, atom("quit"));
-            send(s_printer, atom("quit"));
             return;
         }
         // the STL way of line.starts_with("connect")

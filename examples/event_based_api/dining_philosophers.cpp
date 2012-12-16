@@ -3,6 +3,7 @@
  * exercise using only libcppa's event-based actor implementation.            *
 \******************************************************************************/
 
+#include <map>
 #include <vector>
 #include <chrono>
 #include <sstream>
@@ -10,10 +11,9 @@
 
 #include "cppa/cppa.hpp"
 
-using std::cout;
-using std::endl;
 using std::chrono::seconds;
 
+using namespace std;
 using namespace cppa;
 
 // either taken by a philosopher or available
@@ -99,13 +99,12 @@ struct philosopher : sb_actor<philosopher> {
                 // create message in memory to avoid interleaved
                 // messages on the terminal
                 std::ostringstream oss;
-                oss << name
-                    << " has picked up chopsticks with IDs "
-                    << left->id()
-                    << " and "
-                    << right->id()
-                    << " and starts to eat\n";
-                cout << oss.str();
+                aout << name
+                     << " has picked up chopsticks with IDs "
+                     << left->id()
+                     << " and "
+                     << right->id()
+                     << " and starts to eat\n";
                 // eat some time
                 delayed_send(this, seconds(5), atom("think"));
                 become(eating);
@@ -158,7 +157,7 @@ struct philosopher : sb_actor<philosopher> {
                 send(left, atom("put"), this);
                 send(right, atom("put"), this);
                 delayed_send(this, seconds(5), atom("eat"));
-                cout << (  name
+                aout << (  name
                          + " puts down his chopsticks and starts to think\n");
                 become(thinking);
             }
@@ -166,7 +165,7 @@ struct philosopher : sb_actor<philosopher> {
         // philosophers start to think after receiving {think}
         init_state = (
             on(atom("think")) >> [=]() {
-                cout << (name + " starts to think\n");
+                aout << (name + " starts to think\n");
                 delayed_send(this, seconds(5), atom("eat"));
                 become(thinking);
             }
@@ -177,13 +176,13 @@ struct philosopher : sb_actor<philosopher> {
 
 int main(int, char**) {
     // create five chopsticks
-    cout << "chopstick ids:";
+    aout << "chopstick ids:";
     std::vector<actor_ptr> chopsticks;
     for (size_t i = 0; i < 5; ++i) {
         chopsticks.push_back(spawn<chopstick>());
-        cout << " " << chopsticks.back()->id();
+        aout << " " << chopsticks.back()->id();
     }
-    cout << endl;
+    aout << endl;
     // a group to address all philosophers
     auto dinner_club = group::anonymous();
     // spawn five philosopher, each joining the Dinner Club

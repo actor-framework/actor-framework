@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #endif
 
+#include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
@@ -140,3 +141,15 @@ logging* logging::instance() { return detail::singleton_manager::get_logger(); }
 logging* logging::create_singleton() { return new logging_impl; }
 
 } // namespace cppa
+
+namespace std {
+
+const cppa::actor_ostream& endl(const cppa::actor_ostream& o) {
+    return o.write("\n");
+}
+
+const cppa::actor_ostream& flush(const cppa::actor_ostream& o) {
+    return o.flush();
+}
+
+} // namespace std
