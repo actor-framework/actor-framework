@@ -37,7 +37,7 @@ if (HAVE_VALGRIND_H)
   add_definitions(-DCPPA_ANNOTATE_VALGRIND)
 else (HAVE_VALGRIND_H)
   set(VALGRIND "no")
-endif (AVE_VALGRIND_H)
+endif (HAVE_VALGRIND_H)
 
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
