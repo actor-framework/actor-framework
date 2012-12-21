@@ -93,7 +93,8 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
     ctx::make_fcontext(&storage, fiber_trampoline);
     vg_register(vgm,
                 storage.fc_stack.base,
-                reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize);
+                reinterpret_cast<void*>(
+                    reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize));
 }
 #else
 namespace ctx = boost::context;
@@ -107,7 +108,8 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
     storage = ctx::make_fcontext(alloc.allocate(mss), mss, fiber_trampoline);
     vg_register(vgm,
                 storage->fc_stack.sp,
-                reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss);
+                reinterpret_cast<void*>(
+                    reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
 }
 #endif
 
