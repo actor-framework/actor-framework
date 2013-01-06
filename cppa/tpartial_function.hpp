@@ -83,8 +83,7 @@ class tpartial_function {
     }
 
     result_type operator()(Args... args) const {
-        return util::apply_args<Result, util::tl_size<ctrait_args>::value, sizeof...(Args)>
-               ::_(m_expr, args...);
+        return util::partially_apply<result_type,util::tl_size<ctrait_args>::value>(m_expr, args...);
     }
 
  private:

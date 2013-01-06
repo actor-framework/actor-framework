@@ -37,9 +37,11 @@
 #include "cppa/tpartial_function.hpp"
 
 #include "cppa/util/rm_ref.hpp"
+#include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/purge_refs.hpp"
+#include "cppa/util/apply_args.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/deduce_ref_type.hpp"
 
@@ -91,7 +93,8 @@ struct invoke_policy_impl {
                     >::type
                     ttup_ref;
             ttup_ref ttup_fwd = ttup;
-            return util::unchecked_apply_tuple<bool>(target, ttup_fwd);
+            auto indices = util::get_indices(ttup_fwd);
+            return util::apply_args_prefixed(target.first, ttup_fwd, indices, target.second);
         }
         return false;
     }
@@ -108,8 +111,7 @@ struct invoke_policy_impl<wildcard_position::nil,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple&) {
-        target();
-        return true;
+        return target.first(target.second);
     }
 
     template<class Tuple>
@@ -138,7 +140,8 @@ struct invoke_policy_impl<wildcard_position::nil,
     template<class Target, class Tup>
     static bool invoke(std::integral_constant<bool, true>,
                        Target& target, Tup& tup) {
-        return util::unchecked_apply_tuple<bool>(target, tup);
+        auto indices = util::get_indices(tup);
+        return util::apply_args_prefixed(target.first, tup, indices, target.second);
     }
 
     template<class Target, typename PtrType, class Tuple>
@@ -186,7 +189,8 @@ struct invoke_policy_impl<wildcard_position::nil,
                         >::type
                         cast_type;
                 auto arg = reinterpret_cast<cast_type>(native_arg);
-                return util::unchecked_apply_tuple<bool>(target, *arg);
+                auto indices = util::get_indices(*arg);
+                return util::apply_args_prefixed(target.first, *arg, indices, target.second);
             }
             // 'fall through'
         }
@@ -218,7 +222,8 @@ struct invoke_policy_impl<wildcard_position::nil,
                 >::type
                 ttup_ref;
         ttup_ref ttup_fwd = ttup;
-        return util::unchecked_apply_tuple<bool>(target, ttup_fwd);
+        auto indices = util::get_indices(ttup_fwd);
+        return util::apply_args_prefixed(target.first, ttup_fwd, indices, target.second);
     }
 
     template<class Tuple>
@@ -244,7 +249,7 @@ struct invoke_policy_impl<wildcard_position::leading,
                        detail::tuple_impl_info,
                        PtrType*,
                        Tuple&) {
-        return target();
+        return target.first(target.second);
     }
 
 };
@@ -292,7 +297,8 @@ struct invoke_policy_impl<wildcard_position::trailing,
                 >::type
                 ttup_ref;
         ttup_ref ttup_fwd = ttup;
-        return util::unchecked_apply_tuple<bool>(target, ttup_fwd);
+        auto indices = util::get_indices(ttup_fwd);
+        return util::apply_args_prefixed(target.first, ttup_fwd, indices, target.second);
     }
 
 };
@@ -345,7 +351,8 @@ struct invoke_policy_impl<wildcard_position::leading,
                 >::type
                 ttup_ref;
         ttup_ref ttup_fwd = ttup;
-        return util::unchecked_apply_tuple<bool>(target, ttup_fwd);
+        auto indices = util::get_indices(ttup_fwd);
+        return util::apply_args_prefixed(target.first, ttup_fwd, indices, target.second);
     }
 
 };
@@ -365,7 +372,6 @@ struct projection_partial_function_pair : std::pair<Projection, PartialFunction>
     projection_partial_function_pair(Args&&... args)
         : std::pair<Projection, PartialFunction>(std::forward<Args>(args)...) {
     }
-
     typedef Pattern pattern_type;
 };
 
@@ -475,92 +481,70 @@ struct get_case<false, Expr, Guard, Transformers, Pattern> {
             type;
 };
 
-template<typename First, typename Second>
-struct pjf_same_pattern
-        : std::is_same<typename First::second::pattern_type,
-                       typename Second::second::pattern_type> {
-};
+// PPFP = projection_partial_function_pair
+template<class PPFPs, typename... Args>
+inline bool unroll_expr(PPFPs& fs, std::uint64_t bitmask, std::integral_constant<size_t,0>, const std::type_info& arg_types, Args&... as) {
+    if ((bitmask & 0x01) == 0) return false;
+    auto& f = get<0>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    return policy::invoke(f, arg_types, as...);
+}
 
-// last invocation step; evaluates a {projection, tpartial_function} pair
-template<typename Data>
-struct invoke_helper3 {
-    const Data& data;
-    invoke_helper3(const Data& mdata) : data(mdata) { }
-    template<size_t P, typename T, typename... Args>
-    inline bool operator()(util::type_pair<std::integral_constant<size_t,P>,T>,
-                           Args&&... args) const {
-        const auto& target = get<P>(data);
-        return target.first(target.second, std::forward<Args>(args)...);
-        //return (get<Pos>(data))(args...);
+template<class PPFPs, size_t N, typename... Args>
+inline bool unroll_expr(PPFPs& fs, std::uint64_t bitmask, std::integral_constant<size_t,N>, const std::type_info& arg_types, Args&... as) {
+    if (unroll_expr(fs, bitmask, std::integral_constant<size_t,N-1>(), arg_types, as...)) {
+        return true;
     }
-};
+    if ((bitmask & (0x01 << N)) == 0) return false;
+    auto& f = get<N>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    return policy::invoke(f, arg_types, as...);
+}
 
-template<class Data, class Token, class Pattern>
-struct invoke_helper2 {
-    typedef Pattern pattern_type;
-    typedef typename util::tl_filter_not_type<Pattern,anything>::type arg_types;
-    const Data& data;
-    invoke_helper2(const Data& mdata) : data(mdata) { }
-    template<typename... Args>
-    bool invoke(Args&&... args) const {
-        typedef invoke_policy<Pattern> impl;
-        return impl::invoke(*this, std::forward<Args>(args)...);
-    }
-    // resolved argument list (called from invoke_policy)
-    template<typename... Args>
-    bool operator()(Args&&... args) const {
-        //static_assert(false, "foo");
-        Token token;
-        invoke_helper3<Data> fun{data};
-        return util::static_foreach<0, util::tl_size<Token>::value>
-               ::eval_or(token, fun, std::forward<Args>(args)...);
-    }
-};
+// PPFP = projection_partial_function_pair
+template<class PPFPs, class Tuple>
+inline bool can_unroll_expr(PPFPs& fs, std::integral_constant<size_t,0>, const std::type_info& arg_types, const Tuple& tup) {
+    auto& f = get<0>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    return policy::can_invoke(arg_types, tup);
+}
 
-// invokes a group of {projection, tpartial_function} pairs
-template<typename Data>
-struct invoke_helper {
-    const Data& data;
-    std::uint64_t bitfield;
-    invoke_helper(const Data& mdata, std::uint64_t bits)
-    : data(mdata), bitfield(bits) { }
-    // token: type_list<type_pair<integral_constant<size_t, X>,
-    //                            std::pair<projection, tpartial_function>>,
-    //                  ...>
-    // all {projection, tpartial_function} pairs have the same pattern
-    // thus, can be invoked from same data
-    template<class Token, typename... Args>
-    bool operator()(Token, Args&&... args) {
-        typedef typename util::tl_head<Token>::type type_pair;
-        typedef typename type_pair::second leaf_pair;
-        if (bitfield & 0x01) {
-            // next invocation step
-            invoke_helper2<Data,
-                           Token,
-                           typename leaf_pair::pattern_type> fun{data};
-            return fun.invoke(std::forward<Args>(args)...);
-        }
-        bitfield >>= 1;
-        //++enabled;
-        return false;
+template<class PPFPs, size_t N, class Tuple>
+inline bool can_unroll_expr(PPFPs& fs, std::integral_constant<size_t,N>, const std::type_info& arg_types, const Tuple& tup) {
+    if (can_unroll_expr(fs, std::integral_constant<size_t,N-1>(), arg_types, tup)) {
+        return true;
     }
-};
+    auto& f = get<N>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    return policy::can_invoke(arg_types, tup);
+}
 
-struct can_invoke_helper {
-    std::uint64_t& bitfield;
-    size_t i;
-    can_invoke_helper(std::uint64_t& mbitfield) : bitfield(mbitfield), i(0) { }
-    template<class Token, typename... Args>
-    void operator()(Token, Args&&... args) {
-        typedef typename util::tl_head<Token>::type type_pair;
-        typedef typename type_pair::second leaf_pair;
-        typedef invoke_policy<typename leaf_pair::pattern_type> impl;
-        if (impl::can_invoke(std::forward<Args>(args)...)) {
-            bitfield |= (0x01 << i);
-        }
-        ++i;
-    }
-};
+template<class PPFPs, class Tuple>
+inline std::uint64_t calc_bitmask(PPFPs& fs, std::integral_constant<size_t,0>, const std::type_info& tinf, const Tuple& tup) {
+    auto& f = get<0>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    return policy::can_invoke(tinf, tup) ? 0x01 : 0x00;
+}
+
+template<class PPFPs, size_t N, class Tuple>
+inline std::uint64_t calc_bitmask(PPFPs& fs, std::integral_constant<size_t,N>, const std::type_info& tinf, const Tuple& tup) {
+    auto& f = get<N>(fs);
+    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename Fun::pattern_type pattern_type;
+    typedef detail::invoke_policy<pattern_type> policy;
+    std::uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
+    return result | calc_bitmask(fs, std::integral_constant<size_t,N-1>(), tinf, tup);
+}
 
 template<typename T>
 struct is_manipulator_case {
@@ -594,6 +578,30 @@ struct mexpr_fwd {
             type;
 };
 
+// detach_if_needed(any_tuple tup, bool do_detach)
+inline any_tuple& detach_if_needed(any_tuple& tup, std::true_type) {
+    tup.force_detach();
+    return tup;
+}
+
+inline any_tuple detach_if_needed(const any_tuple& tup, std::true_type) {
+    any_tuple cpy{tup};
+    cpy.force_detach();
+    return std::move(cpy);
+}
+
+inline const any_tuple& detach_if_needed(const any_tuple& tup, std::false_type) {
+    return tup;
+}
+
+inline void* fetch_data(cow_ptr<abstract_tuple>& vals, std::true_type) {
+    return vals->mutable_native_data();
+}
+
+inline const void* fetch_data(const cow_ptr<abstract_tuple>& vals, std::false_type) {
+    return vals->native_data();
+}
+
 } } // namespace cppa::detail
 
 namespace cppa {
@@ -607,11 +615,7 @@ class match_expr {
 
     typedef util::type_list<Cases...> cases_list;
 
-    typedef typename util::tl_group_by<
-                typename util::tl_zip_with_index<cases_list>::type,
-                detail::pjf_same_pattern
-            >::type
-            eval_order;
+    static constexpr size_t num_cases = sizeof...(Cases);
 
     static constexpr bool has_manipulator =
             util::tl_exists<cases_list, detail::is_manipulator_case>::value;
@@ -630,39 +634,41 @@ class match_expr {
     }
 
     bool invoke(const any_tuple& tup) {
-        return _invoke(tup);
+        return invoke_impl(tup);
     }
 
     bool invoke(any_tuple& tup) {
-        return _invoke(tup);
+        return invoke_impl(tup);
     }
 
     bool invoke(any_tuple&& tup) {
         any_tuple tmp{tup};
-        return _invoke(tmp);
+        return invoke_impl(tmp);
     }
 
     bool can_invoke(const any_tuple& tup) {
-        auto& type_token = *(tup.type_token());
-        eval_order token;
-        std::uint64_t tmp = 0;
-        detail::can_invoke_helper fun{tmp};
-        util::static_foreach<0, util::tl_size<eval_order>::value>
-        ::_(token, fun, type_token, tup);
-        return tmp != 0;
+        auto type_token = tup.type_token();
+        if (tup.impl_type() == detail::statically_typed) {
+            auto bitmask = get_cache_entry(type_token, tup);
+            return bitmask != 0;
+        }
+        return can_unroll_expr(m_cases,
+                               std::integral_constant<size_t,num_cases-1>(),
+                               *type_token,
+                               tup);
     }
 
     bool operator()(const any_tuple& tup) {
-        return _invoke(tup);
+        return invoke_impl(tup);
     }
 
     bool operator()(any_tuple& tup) {
-        return _invoke(tup);
+        return invoke_impl(tup);
     }
 
     bool operator()(any_tuple&& tup) {
         any_tuple tmp{tup};
-        return _invoke(tmp);
+        return invoke_impl(tmp);
     }
 
     template<typename... Args>
@@ -673,7 +679,7 @@ class match_expr {
         // applies implicit conversions etc
         tuple_type tup{std::forward<Args>(args)...};
         auto& type_token = typeid(typename tuple_type::types);
-        auto enabled_begin = get_cache_entry(&type_token, tup);
+        auto bitmask = get_cache_entry(&type_token, tup);
 
         typedef typename util::if_else_c<
                     has_manipulator,
@@ -689,15 +695,16 @@ class match_expr {
                 >::type
                 ptr_type;
 
-        eval_order token;
-        detail::invoke_helper<decltype(m_cases)> fun{m_cases, enabled_begin};
-        return util::static_foreach<0, util::tl_size<eval_order>::value>
-                ::eval_or(token,
-                          fun,
-                          type_token,
-                          detail::statically_typed,
-                          static_cast<ptr_type>(nullptr),
-                          static_cast<ref_type>(tup));
+        auto impl_type = detail::statically_typed;
+        ptr_type ptr_arg = nullptr;
+
+        return unroll_expr(m_cases,
+                           bitmask,
+                           std::integral_constant<size_t,num_cases-1>(),
+                           type_token,
+                           impl_type,
+                           ptr_arg,
+                           static_cast<ref_type>(tup));
     }
 
     template<class... OtherCases>
@@ -744,11 +751,6 @@ class match_expr {
     detail::tdata<Cases...> m_cases;
 
     static constexpr size_t cache_size = 10;
-    //typedef std::array<bool, eval_order::size> cache_entry;
-    //typedef typename cache_entry::iterator cache_entry_iterator;
-    //typedef std::pair<const std::type_info*, cache_entry> cache_element;
-
-    // std::uint64_t is used as a bitmask to enable/disable groups
 
     typedef std::pair<const std::type_info*, std::uint64_t> cache_element;
 
@@ -785,11 +787,10 @@ class match_expr {
             advance_(m_cache_end);
             if (m_cache_end == m_cache_begin) advance_(m_cache_begin);
             m_cache[i].first = type_token;
-            m_cache[i].second = 0;
-            eval_order token;
-            detail::can_invoke_helper fun{m_cache[i].second};
-            util::static_foreach<0, util::tl_size<eval_order>::value>
-            ::_(token, fun, *type_token, value);
+            m_cache[i].second = calc_bitmask(m_cases,
+                                             std::integral_constant<size_t,num_cases-1>(),
+                                             *type_token,
+                                             value);
         }
         return m_cache[i].second;
     }
@@ -801,59 +802,22 @@ class match_expr {
         m_cache_begin = m_cache_end = 0;
     }
 
-    template<typename AbstractTuple, typename NativeDataPtr>
-    bool _do_invoke(AbstractTuple& vals, NativeDataPtr ndp) {
-        const std::type_info* type_token = vals.type_token();
-        auto bitfield = get_cache_entry(type_token, vals);
-        eval_order token;
-        detail::invoke_helper<decltype(m_cases)> fun{m_cases, bitfield};
-        return util::static_foreach<0, util::tl_size<eval_order>::value>
-               ::eval_or(token,
-                         fun,
-                         *type_token,
-                         vals.impl_type(),
-                         ndp,
-                         vals);
-    }
-
-    template<typename AnyTuple>
-    bool _invoke(AnyTuple& tup,
-                 typename std::enable_if<
-                        std::is_const<AnyTuple>::value == false
-                     && has_manipulator == true
-                 >::type* = 0) {
-        tup.force_detach();
-        auto& vals = *(tup.vals());
-        return _do_invoke(vals, vals.mutable_native_data());
-    }
-
-    template<typename AnyTuple>
-    bool _invoke(AnyTuple& tup,
-                 typename std::enable_if<
-                        std::is_const<AnyTuple>::value == false
-                     && has_manipulator == false
-                 >::type* = 0) {
-        return _invoke(static_cast<const AnyTuple&>(tup));
-    }
-
-    template<typename AnyTuple>
-    bool _invoke(AnyTuple& tup,
-                 typename std::enable_if<
-                        std::is_const<AnyTuple>::value == true
-                     && has_manipulator == false
-                 >::type* = 0) {
-        const auto& cvals = *(tup.cvals());
-        return _do_invoke(cvals, cvals.native_data());
-    }
-
-    template<typename AnyTuple>
-    bool _invoke(AnyTuple& tup,
-                 typename std::enable_if<
-                        std::is_const<AnyTuple>::value == true
-                     && has_manipulator == true
-                 >::type* = 0) {
-        any_tuple tup_copy{tup};
-        return _invoke(tup_copy);
+    template<class Tuple>
+    bool invoke_impl(Tuple& tup) {
+        std::integral_constant<bool,has_manipulator> mutator_token;
+        decltype(detail::detach_if_needed(tup, mutator_token)) tref = detail::detach_if_needed(tup, mutator_token);
+        auto& vals = tref.vals();
+        auto ndp = fetch_data(vals, mutator_token);
+        auto token_ptr = vals->type_token();
+        auto bitmask = get_cache_entry(token_ptr, *vals);
+        auto impl_type = vals->impl_type();
+        return unroll_expr(m_cases,
+                           bitmask,
+                           std::integral_constant<size_t,num_cases-1>(),
+                           *token_ptr,
+                           impl_type,
+                           ndp,
+                           *vals);
     }
 
 };

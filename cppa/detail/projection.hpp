@@ -34,6 +34,7 @@
 #include "cppa/option.hpp"
 #include "cppa/guard_expr.hpp"
 
+#include "cppa/util/int_list.hpp"
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/apply_args.hpp"
@@ -115,7 +116,8 @@ class projection {
         typename tdata_from_type_list<collected_args>::type pargs;
         if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
             projection_helper<PartialFun> helper{fun};
-            return util::unchecked_apply_tuple<bool>(helper, pargs);
+            auto indices = util::get_indices(pargs);
+            return util::apply_args(helper, pargs, indices);
         }
         return false;
     }
@@ -140,7 +142,8 @@ class projection {
         typename tdata_from_type_list<collected_args>::type pargs;
         if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
             result_fetching_projection_helper<PartialFun> helper{fun, result};
-            return util::unchecked_apply_tuple<bool>(helper, pargs);
+            auto indices = util::get_indices(pargs);
+            return util::apply_args(helper, pargs, indices);
         }
         return false;
     }
