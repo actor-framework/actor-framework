@@ -47,6 +47,10 @@
 
 namespace cppa {
 
+/**
+ * @brief Adds co-existing objects (companions) to a class,
+ *        which serve as gateways, thereby enabling libcppa's message passing.
+ */
 template<typename Base>
 class actor_companion_mixin : public Base {
 
@@ -65,20 +69,35 @@ class actor_companion_mixin : public Base {
         m_self->disconnect();
     }
 
+    /**
+     * @brief Returns a smart pointer to the companion object.
+     */
     inline actor_ptr as_actor() const { return m_self; }
 
  protected:
 
     /**
+     * @brief This callback is invoked by the companion object whenever a
+     *        new messages arrives.
      * @warning Implementation has to be thread-safe.
      */
     virtual void new_message(message_pointer ptr) = 0;
 
+    /**
+     * @brief Defines the message handler.
+     * @note While the message handler is invoked, @p self will point
+     *       to the companion object to enable send() and reply().
+     */
     template<typename... Args>
     void set_message_handler(Args&&... matchExpressions) {
         m_message_handler = match_expr_concat(std::forward<Args>(matchExpressions)...);
     }
 
+    /**
+     * @brief Invokes the message handler with @p msg.
+     * @note While the message handler is invoked, @p self will point
+     *       to the companion object to enable send() and reply().
+     */
     void handle_message(const message_pointer& msg) {
         if (!msg) return;
         scoped_self_setter sss(m_self.get());
