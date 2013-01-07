@@ -484,6 +484,7 @@ int main() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
+    CPPA_IF_VERBOSE(cout << "test sync send with factory spawned actor ... " << flush);
     auto sync_testee_factory = factory::event_based(
         [&]() {
             self->become (
@@ -510,25 +511,39 @@ int main() {
             );
         }
     );
+    CPPA_CHECK(true);
     auto sync_testee = sync_testee_factory.spawn();
+    self->monitor(sync_testee);
     send(sync_testee, "hi");
     receive (
-        on("whassup?") >> []() {
+        on("whassup?") >> [&] {
+            CPPA_CHECK(true);
             // this is NOT a reply, it's just an asynchronous message
             send(self->last_sender(), "a lot!");
             reply("nothing");
         }
     );
     receive (
-        on("goodbye!") >> []() { }
+        on("goodbye!") >> [&] {
+            CPPA_CHECK(true);
+        }
+    );
+    CPPA_CHECK(true);
+    receive (
+        on(atom("DOWN"), exit_reason::normal) >> [&] {
+            CPPA_CHECK(self->last_sender() == sync_testee);
+        }
     );
     await_all_others_done();
+    CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     receive_response(sync_send(sync_testee, "!?")) (
         others() >> [&]() {
             CPPA_ERROR("'sync_testee' still alive?");
         },
-        after(chrono::milliseconds(5)) >> []() { }
+        after(chrono::milliseconds(5)) >> [&] {
+            CPPA_CHECK(true);
+        }
     );
 
     auto inflater = factory::event_based(
@@ -547,10 +562,12 @@ int main() {
     auto bob = inflater.spawn("Bob", joe);
     send(bob, 1, "hello actor");
     receive (
-        on(4, "hello actor") >> []() {
+        on(4, "hello actor") >> [&] {
+            CPPA_CHECK(true);
             // done
         },
-        others() >> [] {
+        others() >> [&] {
+            CPPA_ERROR("unexpected result");
             cerr << "unexpected: " << to_string(self->last_dequeued()) << endl;
         }
     );
