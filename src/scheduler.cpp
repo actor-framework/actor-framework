@@ -127,10 +127,12 @@ class scheduler_helper {
     typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
     void start() {
-        ptr_type mtimer{new thread_mapped_actor};
-        ptr_type mprinter{new thread_mapped_actor};
+        ptr_type mtimer{detail::memory::create<thread_mapped_actor>()};
+        ptr_type mprinter{detail::memory::create<thread_mapped_actor>()};
+        // launch threads
         m_timer_thread = std::thread(&scheduler_helper::timer_loop, mtimer);
         m_printer_thread = std::thread(&scheduler_helper::printer_loop, mprinter);
+        // set member variables
         m_timer = mtimer;
         m_printer = mprinter;
     }
@@ -291,9 +293,10 @@ void scheduler_helper::printer_loop(ptr_type m_self) {
     );
 }
 
-scheduler::scheduler() : m_helper(new scheduler_helper) { }
+scheduler::scheduler() : m_helper(nullptr) { }
 
 void scheduler::initialize() {
+    m_helper = new scheduler_helper;
     m_helper->start();
 }
 

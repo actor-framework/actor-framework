@@ -58,7 +58,7 @@ class actor_companion_mixin : public Base {
 
     template<typename... Args>
     actor_companion_mixin(Args&&... args) : super(std::forward<Args>(args)...) {
-        m_self.reset(new companion(this));
+        m_self.reset(detail::memory::create<companion>(this));
     }
 
     ~actor_companion_mixin() {

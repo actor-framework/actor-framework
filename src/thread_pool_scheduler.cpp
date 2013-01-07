@@ -205,7 +205,7 @@ actor_ptr thread_pool_scheduler::spawn_as_thread(void_function fun,
                                                  init_callback cb,
                                                  bool hidden) {
     if (!hidden) inc_actor_count();
-    thread_mapped_actor_ptr ptr{new thread_mapped_actor(std::move(fun))};
+    thread_mapped_actor_ptr ptr{detail::memory::create<thread_mapped_actor>(std::move(fun))};
     ptr->init();
     ptr->initialized(true);
     cb(ptr.get());
@@ -257,7 +257,7 @@ actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw,
 
 actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint hint) {
     if (hint == scheduled || hint == scheduled_and_hidden) {
-        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+        scheduled_actor_ptr ptr{detail::memory::create<context_switching_actor>(std::move(fun))};
         ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
         return spawn_impl(std::move(ptr));
     }
@@ -267,11 +267,12 @@ actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint hint) 
                                hint == detached_and_hidden);
     }
 }
+
 actor_ptr thread_pool_scheduler::spawn(void_function fun,
                                        init_callback init_cb,
                                        scheduling_hint hint) {
     if (hint == scheduled || hint == scheduled_and_hidden) {
-        scheduled_actor_ptr ptr{new context_switching_actor(std::move(fun))};
+        scheduled_actor_ptr ptr{detail::memory::create<context_switching_actor>(std::move(fun))};
         ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
         init_cb(ptr.get());
         return spawn_impl(std::move(ptr));
