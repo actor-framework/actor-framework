@@ -1,3 +1,14 @@
+Version 0.5.5
+-------------
+
+__2013_01_07__
+
+- Cover `aout` in manual
+- Solved bug in chaining implementation
+- Added support for Boost.Context 1.51
+- Use `memory::create` rather than `new` for all actors
+- Simplified invoke process of `match_expr`
+
 Version 0.5.4
 -------------
 

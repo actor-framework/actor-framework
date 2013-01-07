@@ -37,6 +37,7 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/detail/tdata.hpp"
+#include "cppa/detail/memory.hpp"
 #include "cppa/util/type_list.hpp"
 
 namespace cppa { namespace detail {
@@ -103,8 +104,8 @@ class event_based_actor_factory {
 
     template<typename... Args>
     actor_ptr spawn(Args&&... args) {
-        return get_scheduler()->spawn(new impl(m_init, m_on_exit,
-                                               std::forward<Args>(args)...));
+        return get_scheduler()->spawn(memory::create<impl>(m_init, m_on_exit,
+                                                           std::forward<Args>(args)...));
     }
 
  private:

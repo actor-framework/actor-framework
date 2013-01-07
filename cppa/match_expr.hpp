@@ -633,15 +633,15 @@ class match_expr {
         init();
     }
 
-    bool invoke(const any_tuple& tup) {
+    inline bool invoke(const any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    bool invoke(any_tuple& tup) {
+    inline bool invoke(any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    bool invoke(any_tuple&& tup) {
+    inline bool invoke(any_tuple&& tup) {
         any_tuple tmp{tup};
         return invoke_impl(tmp);
     }
@@ -658,15 +658,15 @@ class match_expr {
                                tup);
     }
 
-    bool operator()(const any_tuple& tup) {
+    inline bool operator()(const any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    bool operator()(any_tuple& tup) {
+    inline bool operator()(any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    bool operator()(any_tuple&& tup) {
+    inline bool operator()(any_tuple&& tup) {
         any_tuple tmp{tup};
         return invoke_impl(tmp);
     }

@@ -44,7 +44,7 @@ pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 local_actor* tss_constructor() {
-    local_actor* result = new thread_mapped_actor;
+    local_actor* result = detail::memory::create<thread_mapped_actor>();
     result->ref();
     get_scheduler()->register_converted_context(result);
     return result;

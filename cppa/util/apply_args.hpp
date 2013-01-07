@@ -39,19 +39,19 @@
 namespace cppa { namespace util {
 
 template<typename F, class Tuple, long... Is>
-auto apply_args(F& f, Tuple& tup, util::int_list<Is...>)
+inline auto apply_args(F& f, Tuple& tup, util::int_list<Is...>)
 -> decltype(f(get_cv_aware<Is>(tup)...)) {
     return f(get_cv_aware<Is>(tup)...);
 }
 
 template<typename F, class Tuple, long... Is, typename... Args>
-auto apply_args_prefixed(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
+inline auto apply_args_prefixed(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
 -> decltype(f(std::forward<Args>(args)..., get_cv_aware<Is>(tup)...)) {
     return f(std::forward<Args>(args)..., get_cv_aware<Is>(tup)...);
 }
 
 template<typename F, class Tuple, long... Is, typename... Args>
-auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
+inline auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
 -> decltype(f(get_cv_aware<Is>(tup)..., std::forward<Args>(args)...)) {
     return f(get_cv_aware<Is>(tup)..., std::forward<Args>(args)...);
 }
@@ -59,7 +59,7 @@ auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args
 template<typename Result, size_t NumFunctorArgs, size_t NumArgs>
 struct partially_apply_helper {
     template<class Fun, typename Arg0, typename... Args>
-    static Result _(const Fun& fun, Arg0&&, Args&&... args) {
+    static inline Result _(const Fun& fun, Arg0&&, Args&&... args) {
         return partially_apply_helper<Result, NumFunctorArgs, sizeof...(Args)>
                ::_(fun, std::forward<Args>(args)...);
     }
@@ -68,13 +68,13 @@ struct partially_apply_helper {
 template<typename Result, size_t X>
 struct partially_apply_helper<Result, X, X> {
     template<class Fun, typename... Args>
-    static Result _(const Fun& fun, Args&&... args) {
+    static inline Result _(const Fun& fun, Args&&... args) {
         return fun(std::forward<Args>(args)...);
     }
 };
 
 template<typename Result, size_t Num, typename F, typename... Args>
-Result partially_apply(F& f, Args&&... args) {
+inline Result partially_apply(F& f, Args&&... args) {
     return partially_apply_helper<Result,Num,sizeof...(Args)>
            ::_(f, std::forward<Args>(args)...);
 }
