@@ -26,7 +26,7 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
-  set(CMAKE_CXX_FLAGS_RELEASE        "-O4")
+  set(CMAKE_CXX_FLAGS_RELEASE        "-O3")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
 
