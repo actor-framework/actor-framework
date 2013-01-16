@@ -32,25 +32,22 @@
 #define CPPA_SINGLE_READER_QUEUE_HPP
 
 #include <list>
-#include <mutex>
 #include <atomic>
 #include <memory>
-#include <thread>
-#include <condition_variable>
 
 #include "cppa/config.hpp"
 
 namespace cppa { namespace intrusive {
+
+enum enqueue_result { enqueued, first_enqueued, queue_closed };
 
 /**
  * @brief An intrusive, thread safe queue implementation.
  * @note For implementation details see
  *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
-template<typename T>
+template<typename T, class Delete = std::default_delete<T> >
 class single_reader_queue {
-
-    typedef std::unique_lock<std::mutex> lock_type;
 
  public:
 
@@ -60,71 +57,63 @@ class single_reader_queue {
     /**
      * @warning call only from the reader (owner)
      */
-    pointer pop() {
-        wait_for_data();
-        return take_head();
-    }
-
-    /**
-     * @warning call only from the reader (owner)
-     */
     pointer try_pop() {
         return take_head();
     }
 
-    /**
-     * @warning call only from the reader (owner)
-     */
-    template<typename TimePoint>
-    pointer try_pop(const TimePoint& abs_time) {
-        return (timed_wait_for_data(abs_time)) ? take_head() : nullptr;
-    }
-
     // returns true if the queue was empty
-    bool _push_back(pointer new_element) {
+    enqueue_result enqueue(pointer new_element) {
         pointer e = m_stack.load();
         for (;;) {
+            if (e == nullptr) {
+                m_delete(new_element);
+                return queue_closed; // queue is closed
+            }
             new_element->next = e;
             if (m_stack.compare_exchange_weak(e, new_element)) {
-                return (e == nullptr);
-            }
-        }
-    }
-
-    void push_back(pointer new_element) {
-        pointer e = m_stack.load();
-        for (;;) {
-            new_element->next = e;
-            if (!e) {
-                lock_type guard(m_mtx);
-                if (m_stack.compare_exchange_weak(e, new_element)) {
-                    m_cv.notify_one();
-                    return;
-                }
-            }
-            else {
-                if (m_stack.compare_exchange_weak(e, new_element)) {
-                    return;
-                }
+                return (e == stack_end()) ? first_enqueued : enqueued;
             }
         }
     }
 
     inline bool can_fetch_more() const {
-        return m_stack.load() != nullptr;
+        return m_stack.load() != stack_end();
     }
 
     /**
      * @warning call only from the reader (owner)
      */
     inline bool empty() const {
-        return m_head == nullptr && m_stack.load() == nullptr;
+        return closed() || (m_head == nullptr && m_stack.load() == stack_end());
     }
 
-    single_reader_queue() : m_stack(nullptr), m_head(nullptr) { }
+    inline bool closed() const {
+        return m_stack.load() == nullptr;
+    }
 
-    ~single_reader_queue() {
-        // empty the stack (void) fetch_new_data();
+    /**
+     * @warning call only from the reader (owner)
+     */
+    // closes this queue deletes all remaining elements
+    inline void close() {
+        fetch_new_data(nullptr);
+        clear_cached_elements();
+    }
+
+    // closes this queue and applies f to all remaining elements before deleting
+    template<typename F>
+    inline void close(const F& f) {
+        fetch_new_data(nullptr);
+        clear_cached_elements(f);
+    }
+
+    inline single_reader_queue() : m_head(nullptr) {
+        m_stack = stack_end();
+    }
+
+    inline void clear() {
+        fetch_new_data();
+        clear_cached_elements();
     }
 
  private:
@@ -134,38 +123,15 @@ class single_reader_queue {
 
     // accessed only by the owner
     pointer m_head;
+    Delete  m_delete;
 
-    // locked on enqueue/dequeue operations to/from an empty list
-    std::mutex m_mtx;
-    std::condition_variable m_cv;
-
-    template<typename TimePoint>
-    bool timed_wait_for_data(const TimePoint& timeout) {
-        if (empty()) {
-            lock_type guard(m_mtx);
-            while (m_stack.load() == nullptr) {
-                if (m_cv.wait_until(guard, timeout) == std::cv_status::timeout) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    void wait_for_data() {
-        if (empty()) {
-            lock_type guard(m_mtx);
-            while (!(m_stack.load())) m_cv.wait(guard);
-        }
-    }
-
-    // atomically sets m_stack to nullptr and enqueues all elements to the cache
-    bool fetch_new_data() {
-        CPPA_REQUIRE(m_head == nullptr);
+    // atomically sets m_stack back and enqueues all elements to the cache
+    bool fetch_new_data(pointer end_ptr) {
+        CPPA_REQUIRE(end_ptr == nullptr || end_ptr == stack_end());
         pointer e = m_stack.load();
-        while (e) {
-            if (m_stack.compare_exchange_weak(e, 0)) {
-                while (e) {
+        while (e != end_ptr) {
+            if (m_stack.compare_exchange_weak(e, end_ptr)) {
+                while (e != stack_end()) {
                     auto next = e->next;
                     e->next = m_head;
                     m_head = e;
@@ -175,9 +141,10 @@ class single_reader_queue {
             }
             // next iteration
         }
-        // !public_tail
         return false;
     }
+
+    inline bool fetch_new_data() { return fetch_new_data(stack_end()); }
 
     pointer take_head() {
         if (m_head != nullptr || fetch_new_data()) {
@@ -186,6 +153,30 @@ class single_reader_queue {
             return result;
         }
         return nullptr;
+    }
+
+    void clear_cached_elements() {
+        while (m_head != nullptr) {
+            auto next = m_head->next;
+            m_delete(m_head);
+            m_head = next;
+        }
+    }
+
+    template<typename F>
+    void clear_cached_elements(const F& f) {
+        while (m_head != nullptr) {
+            auto next = m_head->next;
+            f(*m_head);
+            m_delete(m_head);
+            m_head = next;
+        }
+    }
+
+    pointer stack_end() const {
+        // we are *never* going to dereference the returned pointer;
+        // it is only used as indicator wheter this queue is closed or not
+        return reinterpret_cast<pointer>(const_cast<single_reader_queue*>(this));
     }
 
 };

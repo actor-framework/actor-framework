@@ -428,7 +428,7 @@ class middleman_impl : public abstract_middleman {
 
     void run_later(function<void()> fun) {
         CPPA_LOG_TRACE("");
-        m_queue._push_back(new middleman_event(move(fun)));
+        m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
         if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {

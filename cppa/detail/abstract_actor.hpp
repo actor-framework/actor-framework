@@ -84,12 +84,15 @@ class abstract_actor_base<Base, true> : public Base {
 
 };
 
+typedef intrusive::single_reader_queue<recursive_queue_node,disposer>
+        default_mailbox_impl;
+
 /*
  * @brief Implements linking and monitoring for actors.
  * @tparam Base Either {@link cppa::actor actor}
  *              or {@link cppa::local_actor local_actor}.
  */
-template<class Base>
+template<class Base, class Mailbox = default_mailbox_impl>
 class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> {
 
     friend class ::cppa::self_type;
@@ -100,8 +103,8 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
 
  public:
 
-    typedef detail::recursive_queue_node mailbox_element;
-    typedef intrusive::single_reader_queue<mailbox_element> mailbox_type;
+    typedef Mailbox mailbox_type;
+    typedef typename mailbox_type::value_type mailbox_element;
 
     bool attach(attachable* ptr) { // override
         if (ptr == nullptr) {
@@ -178,6 +181,10 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
             other->enqueue(this, make_cow_tuple(atom("EXIT"), reason));
         }
         return false;
+    }
+
+    ~abstract_actor() {
+        m_mailbox.clear();
     }
 
  protected:

@@ -45,7 +45,7 @@
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 using namespace std;
 using namespace cppa::detail;
@@ -195,7 +195,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
         return singleton_manager::get_actor_registry()->get(remote_aid);
     }
     default_protocol_ptr proto = this;
-    intrusive::single_reader_queue<remote_actor_result> q;
+    intrusive::blocking_single_reader_queue<remote_actor_result> q;
     run_later([proto, io, pinfptr, remote_aid, &q] {
         CPPA_LOGF_TRACE("lambda from default_protocol::remote_actor");
         auto pp = proto->get_peer(*pinfptr);

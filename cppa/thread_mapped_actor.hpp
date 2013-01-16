@@ -54,6 +54,8 @@
 #include "cppa/detail/stacked_actor_mixin.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
+#include "cppa/intrusive/blocking_single_reader_queue.hpp"
+
 namespace cppa {
 
 #ifdef CPPA_DOCUMENTATION
@@ -79,18 +81,27 @@ class thread_mapped_actor : public local_actor {
 
 class self_type;
 
-class thread_mapped_actor : public detail::stacked_actor_mixin<
-                                       thread_mapped_actor,
-                                       detail::abstract_actor<local_actor> > {
+class thread_mapped_actor;
+
+namespace detail {
+
+typedef intrusive::blocking_single_reader_queue<recursive_queue_node,disposer>
+        blocking_mailbox;
+
+typedef stacked_actor_mixin<thread_mapped_actor,
+                            abstract_actor<local_actor,blocking_mailbox> >
+        thread_mapped_actor_base;
+
+} // namespace detail
+
+class thread_mapped_actor : public detail::thread_mapped_actor_base {
 
     friend class self_type; // needs access to cleanup()
 
     friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
-    typedef detail::stacked_actor_mixin<
-                thread_mapped_actor,
-                detail::abstract_actor<local_actor> > super;
+    typedef detail::thread_mapped_actor_base super;
 
  public:
 
@@ -128,7 +139,8 @@ class thread_mapped_actor : public detail::stacked_actor_mixin<
     inline detail::recursive_queue_node* receive_node() {
         return m_mailbox.pop();
     }
-    inline auto init_timeout(const util::duration& tout) -> decltype(std::chrono::high_resolution_clock::now()) {
+    inline auto init_timeout(const util::duration& tout)
+    -> decltype(std::chrono::high_resolution_clock::now()) {
         auto result = std::chrono::high_resolution_clock::now();
         result += tout;
         return result;

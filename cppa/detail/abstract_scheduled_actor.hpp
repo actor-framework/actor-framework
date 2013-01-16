@@ -67,7 +67,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
                 auto node = super::fetch_node(this,
                                               make_any_tuple(atom("TIMEOUT"),
                                               ++m_active_timeout_id));
-                this->m_mailbox._push_back(node);
+                this->m_mailbox.enqueue(node);
             }
             else {
                 get_scheduler()->delayed_send(
@@ -161,7 +161,7 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
                       int next_state = ready) {
         CPPA_REQUIRE(next_state == ready || next_state == pending);
         CPPA_REQUIRE(node->marked == false);
-        if (this->m_mailbox._push_back(node)) {
+        if (this->m_mailbox.enqueue(node) == intrusive::first_enqueued) {
             int state = m_state.load();
             for (;;) {
                 switch (state) {

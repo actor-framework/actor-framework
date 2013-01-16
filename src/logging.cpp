@@ -41,7 +41,7 @@
 #include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 using namespace std;
 
@@ -128,7 +128,7 @@ class logging_impl : public logging {
  private:
 
     thread m_thread;
-    intrusive::single_reader_queue<log_event> m_queue;
+    intrusive::blocking_single_reader_queue<log_event> m_queue;
 
 };
 
