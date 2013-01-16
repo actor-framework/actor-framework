@@ -63,19 +63,19 @@ int main() {
     CPPA_TEST(test__intrusive_containers);
 
     cppa::intrusive::single_reader_queue<iint> q;
-    q.push_back(new iint(1));
-    q.push_back(new iint(2));
-    q.push_back(new iint(3));
+    q.enqueue(new iint(1));
+    q.enqueue(new iint(2));
+    q.enqueue(new iint(3));
 
     CPPA_CHECK_EQUAL(s_iint_instances, 3);
 
-    auto x = q.pop();
+    auto x = q.try_pop();
     CPPA_CHECK_EQUAL(1, x->value);
     delete x;
-    x = q.pop();
+    x = q.try_pop();
     CPPA_CHECK_EQUAL(2, x->value);
     delete x;
-    x = q.pop();
+    x = q.try_pop();
     CPPA_CHECK_EQUAL(3, x->value);
     delete x;
     x = q.try_pop();
