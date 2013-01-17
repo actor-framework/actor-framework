@@ -67,10 +67,15 @@ class blocking_single_reader_queue {
         return (timed_wait_for_data(abs_time)) ? try_pop() : nullptr;
     }
 
-    void push_back(pointer new_element) {
-        if (m_impl.enqueue(new_element) == first_enqueued) {
-            lock_type guard(m_mtx);
-            m_cv.notify_one();
+    bool push_back(pointer new_element) {
+        switch (m_impl.enqueue(new_element)) {
+            case first_enqueued: {
+                lock_type guard(m_mtx);
+                m_cv.notify_one();
+                return true;
+            }
+            default: return true;
+            case queue_closed: return false;
         }
     }
 
@@ -85,6 +90,10 @@ class blocking_single_reader_queue {
     template<typename F>
     inline void close(const F& f) {
         m_impl.close(f);
+    }
+
+    inline bool closed() const {
+        return m_impl.closed();
     }
 
  private:

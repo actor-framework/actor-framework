@@ -61,6 +61,45 @@ class single_reader_queue {
         return take_head();
     }
 
+    template<class UnaryPredicate>
+    void remove_if(UnaryPredicate f) {
+        pointer head = m_head;
+        pointer last = nullptr;
+        pointer p = m_head;
+        auto loop = [&]() -> bool {
+            while (p) {
+                if (f(*p)) {
+                    if (last == nullptr) m_head = p->next;
+                    else last = p->next;
+                    m_delete(p);
+                    return true;
+                }
+                else {
+                    last = p;
+                    p = p->next;
+                }
+            }
+            return false;
+        };
+        if (!loop()) {
+            // last points to the tail now
+            auto old_tail = last;
+            m_head = nullptr; // fetch_new_data assumes cached list to be empty
+            if (fetch_new_data()) {
+                last = nullptr;
+                p = m_head; // let p point to the first newly fetched element
+                loop();
+                // restore cached list
+                if (head) {
+                    old_tail->next = m_head;
+                    m_head = head;
+                }
+            }
+            else m_head = head;
+        }
+
+    }
+
     // returns true if the queue was empty
     enqueue_result enqueue(pointer new_element) {
         pointer e = m_stack.load();
@@ -96,15 +135,15 @@ class single_reader_queue {
      */
     // closes this queue deletes all remaining elements
     inline void close() {
-        fetch_new_data(nullptr);
         clear_cached_elements();
+        if (fetch_new_data(nullptr)) clear_cached_elements();
     }
 
     // closes this queue and applies f to all remaining elements before deleting
     template<typename F>
     inline void close(const F& f) {
-        fetch_new_data(nullptr);
         clear_cached_elements(f);
+        if (fetch_new_data(nullptr)) clear_cached_elements(f);
     }
 
     inline single_reader_queue() : m_head(nullptr) {
@@ -112,9 +151,13 @@ class single_reader_queue {
     }
 
     inline void clear() {
-        fetch_new_data();
-        clear_cached_elements();
+        if (!closed()) {
+            clear_cached_elements();
+            if (fetch_new_data()) clear_cached_elements();
+        }
     }
+
+    inline ~single_reader_queue() { clear(); }
 
  private:
 
@@ -127,8 +170,13 @@ class single_reader_queue {
 
     // atomically sets m_stack back and enqueues all elements to the cache
     bool fetch_new_data(pointer end_ptr) {
+        CPPA_REQUIRE(m_head == nullptr);
         CPPA_REQUIRE(end_ptr == nullptr || end_ptr == stack_end());
         pointer e = m_stack.load();
+        // it's enough to check this once, since only the owner is allowed
+        // to close the queue and only the owner is allowed to call this
+        // member function
+        if (e == nullptr) return false;
         while (e != end_ptr) {
             if (m_stack.compare_exchange_weak(e, end_ptr)) {
                 while (e != stack_end()) {
@@ -144,7 +192,9 @@ class single_reader_queue {
         return false;
     }
 
-    inline bool fetch_new_data() { return fetch_new_data(stack_end()); }
+    inline bool fetch_new_data() {
+        return fetch_new_data(stack_end());
+    }
 
     pointer take_head() {
         if (m_head != nullptr || fetch_new_data()) {

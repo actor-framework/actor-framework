@@ -537,12 +537,16 @@ int main() {
     await_all_others_done();
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
-    receive_response(sync_send(sync_testee, "!?")) (
-        others() >> [&]() {
-            CPPA_ERROR("'sync_testee' still alive?");
+    sync_send(sync_testee, "!?").await(
+        on(atom("EXITED"), any_vals) >> [&] {
+            CPPA_CHECK(true);
+        },
+        others() >> [&] {
+            CPPA_ERROR("'sync_testee' still alive?; received: "
+                       << to_string(self->last_dequeued()));
         },
         after(chrono::milliseconds(5)) >> [&] {
-            CPPA_CHECK(true);
+            CPPA_CHECK(false);
         }
     );
 

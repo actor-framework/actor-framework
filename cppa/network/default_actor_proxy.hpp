@@ -37,7 +37,42 @@
 
 #include "cppa/detail/abstract_actor.hpp"
 
+namespace cppa { namespace detail {
+
+class memory;
+class instance_wrapper;
+template<typename>
+class basic_memory_cache;
+
+} } // namespace cppa::detail
+
 namespace cppa { namespace network {
+
+class sync_request_info : public memory_managed {
+
+ public:
+
+    template<typename>
+    friend class detail::basic_memory_cache;
+
+    friend class detail::memory;
+
+    typedef sync_request_info* pointer;
+
+    pointer      next;     // intrusive next pointer
+    actor_ptr    sender; // points to the sender of the message
+    message_id_t mid;
+
+ private:
+
+    sync_request_info(actor_ptr sptr, message_id_t id);
+
+    ~sync_request_info();
+
+    // intrusive outer memory pointer
+    detail::instance_wrapper* outer_memory;
+
+};
 
 class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
 
@@ -65,6 +100,8 @@ class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
 
     void local_unlink_from(const actor_ptr& other);
 
+    void deliver(const network::message_header& hdr, any_tuple msg);
+
     inline const process_information_ptr& process_info() const {
         return m_pinf;
     }
@@ -81,6 +118,7 @@ class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
 
     default_protocol_ptr    m_proto;
     process_information_ptr m_pinf;
+    intrusive::single_reader_queue<sync_request_info,detail::disposer> m_pending_requests;
 
 };
 

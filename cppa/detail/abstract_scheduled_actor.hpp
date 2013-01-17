@@ -56,31 +56,13 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
 
     std::atomic<int> m_state;
 
-    bool has_pending_timeout() {
+    inline bool has_pending_timeout() const {
         return m_has_pending_timeout_request;
     }
 
-    void request_timeout(const util::duration& d) {
-        if (d.valid()) {
-            if (d.is_zero()) {
-                // immediately enqueue timeout
-                auto node = super::fetch_node(this,
-                                              make_any_tuple(atom("TIMEOUT"),
-                                              ++m_active_timeout_id));
-                this->m_mailbox.enqueue(node);
-            }
-            else {
-                get_scheduler()->delayed_send(
-                            this, d,
-                            make_any_tuple(
-                                atom("TIMEOUT"), ++m_active_timeout_id));
-            }
-            m_has_pending_timeout_request = true;
-        }
-        else m_has_pending_timeout_request = false;
-    }
+    void request_timeout(const util::duration& d);
 
-    void reset_timeout() {
+    inline void reset_timeout() {
         if (m_has_pending_timeout_request) {
             ++m_active_timeout_id;
             m_has_pending_timeout_request = false;
@@ -117,76 +99,25 @@ class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
     static constexpr int pending        = 0x03;
     static constexpr int about_to_block = 0x04;
 
-    abstract_scheduled_actor(int state = done)
-        : super(true), m_state(state)
-        , m_has_pending_timeout_request(false)
-        , m_active_timeout_id(0) {
-    }
+    abstract_scheduled_actor(int state = done);
 
-    bool chained_enqueue(actor* sender, any_tuple msg) {
-        return enqueue_node(super::fetch_node(sender, std::move(msg)), pending);
-    }
+    bool chained_enqueue(actor* sender, any_tuple msg);
 
-    bool chained_sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
-        return enqueue_node(super::fetch_node(sender, std::move(msg), id), pending);
-    }
+    bool chained_sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
-    void quit(std::uint32_t reason = exit_reason::normal) {
-        this->cleanup(reason);
-        throw actor_exited(reason);
-    }
+    void quit(std::uint32_t reason = exit_reason::normal);
 
-    void enqueue(actor* sender, any_tuple msg) {
-        enqueue_node(super::fetch_node(sender, std::move(msg)));
-    }
+    void enqueue(actor* sender, any_tuple msg);
 
-    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
-        enqueue_node(super::fetch_node(sender, std::move(msg), id));
-    }
+    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
 
-    int compare_exchange_state(int expected, int new_value) {
-        int e = expected;
-        do {
-            if (m_state.compare_exchange_weak(e, new_value)) {
-                return new_value;
-            }
-        }
-        while (e == expected);
-        return e;
-    }
+    int compare_exchange_state(int expected, int new_value);
 
  private:
 
-    bool enqueue_node(typename super::mailbox_element* node,
-                      int next_state = ready) {
-        CPPA_REQUIRE(next_state == ready || next_state == pending);
-        CPPA_REQUIRE(node->marked == false);
-        if (this->m_mailbox.enqueue(node) == intrusive::first_enqueued) {
-            int state = m_state.load();
-            for (;;) {
-                switch (state) {
-                    case blocked: {
-                        if (m_state.compare_exchange_weak(state, next_state)) {
-                            CPPA_REQUIRE(this->m_scheduler != nullptr);
-                            if (next_state == ready) {
-                                this->m_scheduler->enqueue(this);
-                            }
-                            return true;
-                        }
-                        break;
-                    }
-                    case about_to_block: {
-                        if (m_state.compare_exchange_weak(state, ready)) {
-                            return false;
-                        }
-                        break;
-                    }
-                    default: return false;
-                }
-            }
-        }
-        return false;
-    }
+    bool enqueue_node(recursive_queue_node* node,
+                      int next_state = ready,
+                      bool* failed = nullptr);
 
 };
 

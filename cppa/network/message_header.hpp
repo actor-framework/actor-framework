@@ -31,7 +31,10 @@
 #ifndef CPPA_MESSAGE_HEADER_HPP
 #define CPPA_MESSAGE_HEADER_HPP
 
+#include <utility>
+
 #include "cppa/actor.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 
 namespace cppa { namespace network {
@@ -53,6 +56,17 @@ class message_header {
     message_header(const actor_ptr& sender,
                    const actor_ptr& receiver,
                    message_id_t id = message_id_t::invalid);
+
+    inline void deliver(any_tuple msg) const {
+        if (receiver) {
+            if (id.valid()) {
+                receiver->sync_enqueue(sender.get(), id, std::move(msg));
+            }
+            else {
+                receiver->enqueue(sender.get(), std::move(msg));
+            }
+        }
+    }
 
 };
 

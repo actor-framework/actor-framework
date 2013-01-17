@@ -199,6 +199,7 @@ examples/type_system/announce_2.cpp
 examples/type_system/announce_3.cpp
 examples/type_system/announce_4.cpp
 examples/type_system/announce_5.cpp
+src/abstract_scheduled_actor.cpp
 src/abstract_tuple.cpp
 src/actor.cpp
 src/actor_addressing.cpp

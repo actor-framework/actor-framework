@@ -35,6 +35,8 @@
 #include "cppa/weak_intrusive_ptr.hpp"
 #include "cppa/enable_weak_ptr_mixin.hpp"
 
+#include "cppa/network/message_header.hpp"
+
 namespace cppa {
 
 class actor_proxy_cache;
@@ -58,6 +60,17 @@ class actor_proxy : public enable_weak_ptr_mixin<actor> {
      * @brief Removes a local link state.
      */
     virtual void local_unlink_from(const actor_ptr& other) = 0;
+
+    /**
+     * @brief Delivers given message via this proxy instance.
+     *
+     * This function is meant to give the proxy the opportunity to keep track
+     * of synchronous communication or perform other bookkeeping if needed.
+     * The member function is called by the protocol from inside the
+     * middleman's thread.
+     * @note This function is guaranteed to be called non-concurrently.
+     */
+    virtual void deliver(const network::message_header& hdr, any_tuple msg) = 0;
 
  protected:
 

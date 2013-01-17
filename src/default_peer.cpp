@@ -262,6 +262,11 @@ void default_peer::kill_proxy(const actor_ptr& sender,
 
 void default_peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
+    if (hdr.sender && hdr.sender->is_proxy()) {
+        hdr.sender.downcast<actor_proxy>()->deliver(hdr, std::move(msg));
+    }
+    else hdr.deliver(std::move(msg));
+    /*
     auto receiver = hdr.receiver.get();
     if (receiver) {
         if (hdr.id.valid()) {
@@ -278,8 +283,8 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
     else {
         CPPA_LOG_ERROR("received message with invalid receiver");
     }
+    */
 }
-
 
 void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
     // this message is sent from default_actor_proxy in link_to and

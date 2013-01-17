@@ -57,35 +57,24 @@ namespace cppa { class self_type; }
 
 namespace cppa { namespace detail {
 
-template<class Base, bool IsLocalActor>
-class abstract_actor_base : public Base {
-
- protected:
-
-    template<typename... Args>
-    abstract_actor_base(Args&&... args) : Base(std::forward<Args>(args)...) { }
-
-    inline void base_cleanup(std::uint32_t) { }
-
-};
-
-template<class Base>
-class abstract_actor_base<Base, true> : public Base {
-
- protected:
-
-    template<typename... Args>
-    abstract_actor_base(Args&&... args) : Base(std::forward<Args>(args)...) { }
-
-    inline void base_cleanup(std::uint32_t) {
-        // leave groups
-        this->m_subscriptions.clear();
-    }
-
-};
-
 typedef intrusive::single_reader_queue<recursive_queue_node,disposer>
         default_mailbox_impl;
+
+struct sync_request_bouncer {
+    actor* ptr;
+    std::uint32_t rsn;
+    inline sync_request_bouncer(actor* p, std::uint32_t r) : ptr(p), rsn(r) { }
+    inline void operator()(actor* sender, const message_id_t& mid) const {
+        CPPA_REQUIRE(rsn != exit_reason::not_exited);
+        if (mid.is_request() && sender != nullptr) {
+            sender->sync_enqueue(ptr, mid.response_id(),
+                                 make_cow_tuple(atom("EXITED"), rsn));
+        }
+    }
+    inline void operator()(const recursive_queue_node& e) const {
+        (*this)(e.sender.get(), e.mid);
+    }
+};
 
 /*
  * @brief Implements linking and monitoring for actors.
@@ -93,13 +82,15 @@ typedef intrusive::single_reader_queue<recursive_queue_node,disposer>
  *              or {@link cppa::local_actor local_actor}.
  */
 template<class Base, class Mailbox = default_mailbox_impl>
-class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> {
+class abstract_actor : public Base {
 
     friend class ::cppa::self_type;
 
-    typedef abstract_actor_base<Base, std::is_base_of<local_actor, Base>::value> super;
+    typedef Base super;
     typedef std::lock_guard<std::mutex> guard_type;
     typedef std::unique_ptr<attachable> attachable_ptr;
+
+    static constexpr bool is_local_actor = std::is_base_of<local_actor,Base>::value;
 
  public:
 
@@ -184,7 +175,12 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
     }
 
     ~abstract_actor() {
-        m_mailbox.clear();
+        if (!m_mailbox.closed()) {
+            auto rsn = m_exit_reason.load();
+            if (rsn == exit_reason::not_exited) rsn = exit_reason::normal;
+            sync_request_bouncer f{this, rsn};
+            m_mailbox.close(f);
+        }
     }
 
  protected:
@@ -204,9 +200,16 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
     : super(std::forward<Args>(args)...)
     , m_exit_reason(exit_reason::not_exited){ }
 
+    inline void base_cleanup(std::true_type) {
+        this->m_subscriptions.clear();
+    }
+
+    inline void base_cleanup(std::false_type) { }
+
     void cleanup(std::uint32_t reason) {
         if (reason == exit_reason::not_exited) return;
-        this->base_cleanup(reason);
+        std::integral_constant<bool,is_local_actor> token;
+        base_cleanup(token);
         decltype(m_links) mlinks;
         decltype(m_attachables) mattachables;
         { // lifetime scope of guard
@@ -229,6 +232,9 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         for (attachable_ptr& ptr : mattachables) {
             ptr->actor_exited(reason);
         }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        sync_request_bouncer f{this, reason};
+        m_mailbox.close(f);
     }
 
     bool link_to_impl(const intrusive_ptr<actor>& other) {
@@ -261,12 +267,14 @@ class abstract_actor : public abstract_actor_base<Base, std::is_base_of<local_ac
         return false;
     }
 
- private:
+    std::uint32_t exit_reason() const { return m_exit_reason.load(); }
 
     // @pre m_mtx.locked()
     bool exited() const {
         return m_exit_reason.load() != exit_reason::not_exited;
     }
+
+ private:
 
     // true if the associated thread has finished execution
     std::atomic<std::uint32_t> m_exit_reason;

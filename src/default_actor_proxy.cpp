@@ -34,11 +34,21 @@
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/default_actor_proxy.hpp"
 
+#include "cppa/detail/memory.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 using namespace std;
 
 namespace cppa { namespace network {
+
+inline sync_request_info* new_req_info(actor_ptr sptr, message_id_t id) {
+    return detail::memory::create<sync_request_info>(std::move(sptr), id);
+}
+
+sync_request_info::sync_request_info(actor_ptr sptr, message_id_t id)
+: next(nullptr), sender(std::move(sptr)), mid(id) { }
+
+sync_request_info::~sync_request_info() { }
 
 default_actor_proxy::default_actor_proxy(actor_id mid,
                                          const process_information_ptr& pinfo,
@@ -64,8 +74,36 @@ default_actor_proxy::~default_actor_proxy() {
     });
 }
 
-void default_actor_proxy::forward_msg(const actor_ptr& sender, any_tuple msg, message_id_t mid) {
+void default_actor_proxy::deliver(const network::message_header& hdr, any_tuple msg) {
+    // this member function is exclusively called from default_peer from inside
+    // the middleman's thread, therefore we can safely access
+    // m_pending_requests here
+    if (hdr.id.is_response()) {
+        // remove this request from list of pending requests
+        auto req = hdr.id.request_id();
+        m_pending_requests.remove_if([&](const sync_request_info& e) -> bool {
+            return e.mid == req;
+        });
+    }
+    hdr.deliver(std::move(msg));
+}
+
+void default_actor_proxy::forward_msg(const actor_ptr& sender,
+                                      any_tuple msg,
+                                      message_id_t mid) {
     CPPA_LOG_TRACE("");
+    if (sender && mid.is_request()) {
+        switch (m_pending_requests.enqueue(new_req_info(sender, mid))) {
+            case intrusive::queue_closed: {
+                if (sender) {
+                    detail::sync_request_bouncer f{this, exit_reason()};
+                    f(sender.get(), mid);
+                }
+                return; // no need to forward message
+            }
+            default: break;
+        }
+    }
     message_header hdr{sender, this, mid};
     auto node = m_pinf;
     auto proto = m_proto;
@@ -83,7 +121,17 @@ void default_actor_proxy::enqueue(actor* sender, any_tuple msg) {
         && msg.get_as<atom_value>(0) == atom("KILL_PROXY")
         && msg.type_at(1) == arr[1]) {
         CPPA_LOG_DEBUG("received KILL_PROXY message");
-        cleanup(msg.get_as<uint32_t>(1));
+        intrusive_ptr<default_actor_proxy> _this{this};
+        auto reason = msg.get_as<uint32_t>(1);
+        m_proto->run_later([_this, reason] {
+            _this->cleanup(reason);
+            // make sure cleanup is done before closing requests queue
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            detail::sync_request_bouncer f{_this.get(), reason};
+            _this->m_pending_requests.close([&](const sync_request_info& e) {
+                f(e.sender.get(), e.mid);
+            });
+        });
         return;
     }
     forward_msg(sender, move(msg));
