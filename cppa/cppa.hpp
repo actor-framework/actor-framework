@@ -92,7 +92,7 @@
  * @section GettingStarted Getting Started
  *
  * To build @p libcppa, you need <tt>GCC >= 4.7</tt> or <tt>Clang >= 3.2</tt>,
- * @p CMake and the <tt>Boost.Thread</tt> library.
+ * and @p CMake.
  *
  * The usual build steps on Linux and Mac OS X are:
  *
