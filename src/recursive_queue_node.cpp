@@ -38,8 +38,6 @@ recursive_queue_node::recursive_queue_node(actor_ptr sptr,
                                            any_tuple data,
                                            message_id_t id)
 : next(nullptr), marked(false), sender(move(sptr))
-, msg(move(data)), mid(id), outer_memory(nullptr) { }
-
-recursive_queue_node::~recursive_queue_node() { }
+, msg(move(data)), mid(id) { }
 
 } } // namespace cppa::detail

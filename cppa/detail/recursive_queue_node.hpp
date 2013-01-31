@@ -37,19 +37,14 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
+#include "cppa/detail/memory.hpp"
 
 // needs access to constructor + destructor to initialize m_dummy_node
 namespace cppa { class local_actor; }
 
 namespace cppa { namespace detail {
 
-class memory;
-class instance_wrapper;
-
-class recursive_queue_node : public memory_managed {
-
-    template<typename>
-    friend class basic_memory_cache;
+class recursive_queue_node : public memory_cached_mixin<memory_managed> {
 
     friend class memory;
     friend class ::cppa::local_actor;
@@ -74,11 +69,6 @@ class recursive_queue_node : public memory_managed {
     recursive_queue_node() = default;
 
     recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id = message_id_t());
-
-    ~recursive_queue_node();
-
-    // a pointer to the outer memory region this instance belongs to
-    instance_wrapper* outer_memory;
 
 };
 

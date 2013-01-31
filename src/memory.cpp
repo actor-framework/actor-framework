@@ -70,7 +70,7 @@ cache_map& get_cache_map() {
     return *cache;
 }
 
-memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
+memory_cache* get_cache_map_entry(const type_info* tinf) {
     auto& cache = get_cache_map();
     auto i = cache.find(tinf);
     if (i != cache.end()) return i->second.get();

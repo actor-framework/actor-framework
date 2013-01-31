@@ -48,8 +48,6 @@ inline sync_request_info* new_req_info(actor_ptr sptr, message_id_t id) {
 sync_request_info::sync_request_info(actor_ptr sptr, message_id_t id)
 : next(nullptr), sender(std::move(sptr)), mid(id) { }
 
-sync_request_info::~sync_request_info() { }
-
 default_actor_proxy::default_actor_proxy(actor_id mid,
                                          const process_information_ptr& pinfo,
                                          const default_protocol_ptr& parent)

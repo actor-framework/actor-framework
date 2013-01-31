@@ -48,29 +48,21 @@ class basic_memory_cache;
 
 namespace cppa { namespace network {
 
-class sync_request_info : public memory_managed {
-
- public:
-
-    template<typename>
-    friend class detail::basic_memory_cache;
+class sync_request_info : public detail::memory_cached_mixin<memory_managed> {
 
     friend class detail::memory;
 
+ public:
+
     typedef sync_request_info* pointer;
 
-    pointer      next;     // intrusive next pointer
+    pointer      next;   // intrusive next pointer
     actor_ptr    sender; // points to the sender of the message
-    message_id_t mid;
+    message_id_t mid;    // sync message ID
 
  private:
 
     sync_request_info(actor_ptr sptr, message_id_t id);
-
-    ~sync_request_info();
-
-    // intrusive outer memory pointer
-    detail::instance_wrapper* outer_memory;
 
 };
 

@@ -35,8 +35,10 @@
 #include <vector>
 #include <utility>
 #include <typeinfo>
+#include <iostream>
 
-#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
 
 namespace cppa { namespace detail {
 
@@ -76,6 +78,45 @@ class memory_cache {
 
     // casts @p ptr to the derived type and returns it
     virtual void* downcast(memory_managed* ptr) = 0;
+
+};
+
+class memory;
+memory_cache* get_cache_map_entry(const std::type_info* tinf);
+
+template<typename T>
+class basic_memory_cache;
+
+template<typename Base>
+class memory_cached_mixin : public Base {
+
+    friend class memory;
+
+    template<typename T>
+    friend class basic_memory_cache;
+
+ protected:
+
+    template<typename... Args>
+    memory_cached_mixin(Args&&... args)
+    : Base(std::forward<Args>(args)...), outer_memory(nullptr) { }
+
+    virtual void request_deletion() {
+        memory_cache* mc = get_cache_map_entry(&typeid(*this));
+        if (!mc) {
+            auto om = outer_memory;
+            if (om) {
+                om->destroy();
+                om->deallocate();
+            }
+            else delete this;
+        }
+        else mc->release_instance(mc->downcast(this));
+    }
+
+ private:
+
+    instance_wrapper* outer_memory;
 
 };
 
@@ -178,38 +219,7 @@ class memory {
         return result;
     }
 
-    /*
-     * @brief Calls the destructor of @p ptr and allows the memory manager
-     *        to reuse this address.
-     */
-    template<typename T>
-    static inline void dispose(T* ptr) {
-        auto mc = get_or_set_cache_map_entry<T>();
-        mc->release_instance(ptr);
-    }
-
-    /*
-     * @brief Calls the destructor of @p ptr and allows the memory manager
-     *        to reuse this address. This function must be used when disposing
-     *        through a base pointer.
-     */
-    template<typename T>
-    static inline void dispose_base(T* ptr) {
-        auto mc = get_cache_map_entry(&typeid(*ptr));
-        if (mc) mc->release_instance(mc->downcast(ptr));
-        else {
-            auto wptr = ptr->outer_memory;
-            if (wptr) {
-                wptr->destroy();
-                wptr->deallocate();
-            }
-            else delete ptr;
-        }
-    }
-
  private:
-
-    static memory_cache* get_cache_map_entry(const std::type_info* tinf);
 
     static void add_cache_map_entry(const std::type_info* tinf, memory_cache* instance);
 
@@ -226,9 +236,8 @@ class memory {
 };
 
 struct disposer {
-    template<typename T>
-    void operator()(T* ptr) {
-        memory::dispose(ptr);
+    inline void operator()(memory_managed* ptr) const {
+        ptr->request_deletion();
     }
 };
 

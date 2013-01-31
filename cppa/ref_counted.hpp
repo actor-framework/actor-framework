@@ -69,10 +69,6 @@ class ref_counted : public memory_managed {
 
     inline size_t get_reference_count() const { return m_rc; }
 
- protected:
-
-    virtual ~ref_counted();
-
  private:
 
     std::atomic<size_t> m_rc;

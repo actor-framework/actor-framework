@@ -33,7 +33,16 @@
 
 namespace cppa {
 
+namespace detail { struct disposer; }
+
+/**
+ * @brief This base enables derived classes to enforce a different
+ *        allocation strategy than new/delete by providing a virtual
+ *        protected @p request_deletion() function and non-public destructor.
+ */
 class memory_managed {
+
+    friend struct detail::disposer;
 
  protected:
 

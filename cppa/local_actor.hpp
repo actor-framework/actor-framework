@@ -37,12 +37,13 @@
 #include "cppa/actor.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
 
-#include "cppa/message_id.hpp"
+#include "cppa/detail/memory.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -51,12 +52,6 @@ namespace cppa {
 class scheduler;
 class message_future;
 class local_scheduler;
-
-namespace detail {
-class memory;
-class instance_wrapper;
-template<typename> class basic_memory_cache;
-} // namespace detail
 
 template<bool DiscardOld>
 struct behavior_policy { static const bool discard_old = DiscardOld; };
@@ -115,7 +110,7 @@ class message_future;
 /**
  * @brief Base class for local running Actors.
  */
-class local_actor : public actor {
+class local_actor : public detail::memory_cached_mixin<actor> {
 
     typedef actor super;
 
@@ -457,12 +452,6 @@ class local_actor : public actor {
         behavior copy{bhvr};
         do_become(std::move(copy), discard_old);
     }
-
-    void request_deletion();
-
- private:
-
-    detail::instance_wrapper* outer_memory;
 
 };
 

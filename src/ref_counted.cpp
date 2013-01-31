@@ -35,6 +35,4 @@ namespace cppa {
 
 ref_counted::ref_counted() : m_rc(0) { }
 
-ref_counted::~ref_counted() { }
-
 } // namespace cppa
