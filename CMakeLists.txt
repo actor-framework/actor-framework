@@ -95,6 +95,7 @@ set(LIBCPPA_SRC
     src/any_tuple.cpp
     src/atom.cpp
     src/attachable.cpp
+    src/behavior.cpp
     src/behavior_stack.cpp
     src/binary_deserializer.cpp
     src/binary_serializer.cpp

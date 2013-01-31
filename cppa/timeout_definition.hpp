@@ -31,6 +31,8 @@
 #ifndef TIMEOUT_DEFINITION_HPP
 #define TIMEOUT_DEFINITION_HPP
 
+#include <functional>
+
 #include "cppa/util/duration.hpp"
 
 namespace cppa {
@@ -46,6 +48,8 @@ struct is_timeout_definition : std::false_type { };
 
 template<typename F>
 struct is_timeout_definition<timeout_definition<F> > : std::true_type { };
+
+typedef timeout_definition<std::function<void()> > generic_timeout_definition;
 
 } // namespace cppa
 

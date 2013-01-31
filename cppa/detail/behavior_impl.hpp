@@ -32,6 +32,9 @@
 #define BEHAVIOR_IMPL_HPP
 
 #include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
+#include "cppa/timeout_definition.hpp"
+
 #include "cppa/util/duration.hpp"
 
 namespace cppa { namespace detail {
@@ -54,6 +57,38 @@ class behavior_impl : public ref_counted {
     virtual void handle_timeout();
     inline const util::duration& timeout() const {
         return m_timeout;
+    }
+
+    typedef intrusive_ptr<behavior_impl> pointer;
+
+    virtual pointer copy(const generic_timeout_definition& tdef) const = 0;
+
+    inline pointer or_else(const pointer& other) {
+        CPPA_REQUIRE(other != nullptr);
+        struct combinator : behavior_impl {
+            pointer first;
+            pointer second;
+            bool invoke(any_tuple& arg) {
+                return first->invoke(arg) || second->invoke(arg);
+            }
+            bool invoke(const any_tuple& arg) {
+                return first->invoke(arg) || second->invoke(arg);
+            }
+            bool defined_at(const any_tuple& arg) {
+                return first->defined_at(arg) || second->defined_at(arg);
+            }
+            void handle_timeout() {
+                // the second behavior overrides the timeout handling of
+                // first behavior
+                return second->handle_timeout();
+            }
+            pointer copy(const generic_timeout_definition& tdef) const {
+                return new combinator(first, second->copy(tdef));
+            }
+            combinator(const pointer& p0, const pointer& p1)
+            : behavior_impl(p1->timeout()), first(p0), second(p1) { }
+        };
+        return new combinator(this, other);
     }
 
  private:
@@ -93,6 +128,11 @@ class default_behavior_impl : public behavior_impl {
     bool defined_at(const any_tuple& tup) {
         return m_expr.can_invoke(tup);
     }
+
+    typename behavior_impl::pointer copy(const generic_timeout_definition& tdef) const {
+        return new default_behavior_impl<MatchExpr,std::function<void()> >(m_expr, tdef);
+    }
+
 
     void handle_timeout() { m_fun(); }
 

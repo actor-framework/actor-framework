@@ -28,15 +28,11 @@
 \******************************************************************************/
 
 
-#include "cppa/to_string.hpp"
-
-#include "cppa/config.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/partial_function.hpp"
 
 namespace cppa {
 
-partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
-
-void detail::behavior_impl::handle_timeout() { }
+behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
 
 } // namespace cppa

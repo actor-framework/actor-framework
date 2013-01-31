@@ -391,5 +391,30 @@ int main() {
 
     cout << "success: " << success << endl;
 
+    cout << "check combined partial function matching" << endl;
+
+    std::string last_invoked_fun;
+
+    auto check = [&](partial_function& pf, const any_tuple& tup, const string& str) {
+        last_invoked_fun = "";
+        pf(tup);
+        CPPA_CHECK_EQUAL(str, last_invoked_fun);
+    };
+
+    partial_function pf0 = (
+        on<int,int>() >> [&] { last_invoked_fun = "<int,int>@1"; },
+        on<float>() >> [&] { last_invoked_fun = "<float>@2"; }
+    );
+
+    auto pf1 = pf0.or_else(
+        on<int,int>() >> [&] { last_invoked_fun = "<int,int>@3"; },
+        on<string>() >> [&] { last_invoked_fun = "<string>@4"; }
+    );
+
+    check(pf0, make_any_tuple(1, 2), "<int,int>@1");
+    check(pf1, make_any_tuple(1, 2), "<int,int>@1");
+    check(pf0, make_any_tuple("hi"), "");
+    check(pf1, make_any_tuple("hi"), "<string>@4");
+
     return CPPA_TEST_RESULT;
 }

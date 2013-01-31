@@ -36,6 +36,7 @@
 #include <memory>
 #include <utility>
 
+#include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
@@ -67,6 +68,10 @@ class partial_function {
     partial_function& operator=(partial_function&&) = default;
     partial_function& operator=(const partial_function&) = default;
 
+    template<typename... Cases>
+    partial_function(const match_expr<Cases...>& mexpr)
+    : m_impl(mexpr.as_behavior_impl()) { }
+
     partial_function(impl_ptr ptr);
 
     inline bool undefined() const {
@@ -82,11 +87,53 @@ class partial_function {
         return (m_impl) && m_impl->invoke(std::forward<T>(arg));
     }
 
+    inline partial_function or_else(const partial_function& other) const {
+        return m_impl->or_else(other.m_impl);
+    }
+
+    inline behavior or_else(const behavior& other) const {
+        return behavior{m_impl->or_else(other.m_impl)};
+    }
+
+    template<typename F>
+    inline behavior or_else(const timeout_definition<F>& tdef) const {
+        generic_timeout_definition gtd{tdef.timeout, tdef.handler};
+        return behavior{m_impl->copy(gtd)};
+    }
+
+    template<typename... Cases>
+    inline partial_function or_else(const match_expr<Cases...>& mexpr) const {
+        return m_impl->or_else(mexpr.as_behavior_impl());
+    }
+
+    template<typename Arg0, typename Arg1, typename... Args>
+    typename util::if_else<
+            util::disjunction<
+                is_timeout_definition<Arg0>,
+                is_timeout_definition<Arg1>,
+                is_timeout_definition<Args>...>,
+            behavior,
+            util::wrapped<partial_function> >::type
+    or_else(const Arg0& arg0, const Arg1& arg1, const Args&... args) const {
+        return m_impl->or_else(match_expr_concat(arg0, arg1, args...));
+    }
+
  private:
 
     impl_ptr m_impl;
 
 };
+
+template<typename Arg0, typename... Args>
+typename util::if_else<
+            util::disjunction<
+                is_timeout_definition<Arg0>,
+                is_timeout_definition<Args>...>,
+            behavior,
+            util::wrapped<partial_function> >::type
+match_expr_convert(const Arg0& arg0, const Args&... args) {
+    return {match_expr_concat(arg0, args...)};
+}
 
 } // namespace cppa
 

@@ -35,7 +35,6 @@
 #include <type_traits>
 
 #include "cppa/match_expr.hpp"
-#include "cppa/partial_function.hpp"
 #include "cppa/timeout_definition.hpp"
 
 #include "cppa/util/tbind.hpp"
@@ -47,12 +46,14 @@
 
 namespace cppa {
 
+class partial_function;
+
 /**
  * @brief Describes the behavior of an actor.
  */
 class behavior {
 
-    typedef partial_function super;
+    friend class partial_function;
 
  public:
 
@@ -64,9 +65,9 @@ class behavior {
     behavior& operator=(behavior&&) = default;
     behavior& operator=(const behavior&) = default;
 
-    inline behavior(partial_function fun) : m_impl(std::move(fun.m_impl)) { }
+    behavior(const partial_function& fun);
 
-    inline behavior(partial_function::impl_ptr ptr) : m_impl(std::move(ptr)) { }
+    inline behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 
     template<typename F>
     behavior(const timeout_definition<F>& arg)
@@ -108,17 +109,6 @@ class behavior {
     impl_ptr m_impl;
 
 };
-
-template<typename Arg0, typename... Args>
-typename util::if_else<
-            util::disjunction<
-                is_timeout_definition<Arg0>,
-                is_timeout_definition<Args>...>,
-            behavior,
-            util::wrapped<partial_function> >::type
-match_expr_convert(const Arg0& arg0, const Args&... args) {
-    return {match_expr_concat(arg0, args...)};
-}
 
 template<typename... Lhs, typename F>
 inline behavior operator,(const match_expr<Lhs...>& lhs,

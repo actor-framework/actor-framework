@@ -33,7 +33,6 @@
 
 #include "cppa/option.hpp"
 #include "cppa/guard_expr.hpp"
-#include "cppa/partial_function.hpp"
 #include "cppa/tpartial_function.hpp"
 
 #include "cppa/util/rm_ref.hpp"
@@ -49,6 +48,7 @@
 #include "cppa/detail/projection.hpp"
 #include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/pseudo_tuple.hpp"
+#include "cppa/detail/behavior_impl.hpp"
 
 namespace cppa { namespace detail {
 
@@ -733,14 +733,14 @@ class match_expr {
         bool defined_at(const any_tuple& tup) {
             return pfun.can_invoke(tup);
         }
+        typedef typename detail::behavior_impl::pointer pointer;
+        pointer copy(const generic_timeout_definition& tdef) const {
+            return new_default_behavior_impl(pfun, tdef.timeout, tdef.handler);
+        }
     };
 
-    inline partial_function as_partial_function() const {
-        return {partial_function::impl_ptr{new pfun_impl(*this)}};
-    }
-
-    inline operator partial_function() const {
-        return as_partial_function();
+    intrusive_ptr<detail::behavior_impl> as_behavior_impl() const {
+        return new pfun_impl(*this);
     }
 
  private:
