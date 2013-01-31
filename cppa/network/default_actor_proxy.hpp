@@ -32,6 +32,7 @@
 #define DEFAULT_ACTOR_PROXY_HPP
 
 #include "cppa/actor_proxy.hpp"
+#include "cppa/memory_cached_mixin.hpp"
 
 #include "cppa/network/default_protocol.hpp"
 
@@ -48,7 +49,7 @@ class basic_memory_cache;
 
 namespace cppa { namespace network {
 
-class sync_request_info : public detail::memory_cached_mixin<memory_managed> {
+class sync_request_info : public memory_cached_mixin<memory_managed> {
 
     friend class detail::memory;
 

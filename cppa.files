@@ -289,3 +289,4 @@ unit_testing/test__tuple.cpp
 unit_testing/test__type_list.cpp
 unit_testing/test__uniform_type.cpp
 unit_testing/test__yield_interface.cpp
+cppa/memory_cached_mixin.hpp

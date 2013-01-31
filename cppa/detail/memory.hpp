@@ -81,45 +81,6 @@ class memory_cache {
 
 };
 
-class memory;
-memory_cache* get_cache_map_entry(const std::type_info* tinf);
-
-template<typename T>
-class basic_memory_cache;
-
-template<typename Base>
-class memory_cached_mixin : public Base {
-
-    friend class memory;
-
-    template<typename T>
-    friend class basic_memory_cache;
-
- protected:
-
-    template<typename... Args>
-    memory_cached_mixin(Args&&... args)
-    : Base(std::forward<Args>(args)...), outer_memory(nullptr) { }
-
-    virtual void request_deletion() {
-        memory_cache* mc = get_cache_map_entry(&typeid(*this));
-        if (!mc) {
-            auto om = outer_memory;
-            if (om) {
-                om->destroy();
-                om->deallocate();
-            }
-            else delete this;
-        }
-        else mc->release_instance(mc->downcast(this));
-    }
-
- private:
-
-    instance_wrapper* outer_memory;
-
-};
-
 template<typename T>
 class basic_memory_cache : public memory_cache {
 
@@ -218,6 +179,8 @@ class memory {
         result->outer_memory = p.first;
         return result;
     }
+
+    static memory_cache* get_cache_map_entry(const std::type_info* tinf);
 
  private:
 

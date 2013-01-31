@@ -28,50 +28,50 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
-#define CPPA_RECURSIVE_QUEUE_NODE_HPP
+#ifndef MEMORY_CACHED_MIXIN_HPP
+#define MEMORY_CACHED_MIXIN_HPP
 
-#include <cstdint>
+#include "cppa/detail/memory.hpp"
 
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/memory_cached_mixin.hpp"
+namespace cppa {
 
-// needs access to constructor + destructor to initialize m_dummy_node
-namespace cppa { class local_actor; }
+/**
+ * @brief This mixin adds all member functions and member variables needed
+ *        by the memory management subsystem.
+ */
+template<typename Base>
+class memory_cached_mixin : public Base {
 
-namespace cppa { namespace detail {
+    friend class detail::memory;
 
-class recursive_queue_node : public memory_cached_mixin<memory_managed> {
+    template<typename T>
+    friend class detail::basic_memory_cache;
 
-    friend class memory;
-    friend class ::cppa::local_actor;
+ protected:
 
- public:
+    template<typename... Args>
+    memory_cached_mixin(Args&&... args)
+    : Base(std::forward<Args>(args)...), outer_memory(nullptr) { }
 
-    typedef recursive_queue_node* pointer;
-
-    pointer      next;   // intrusive next pointer
-    bool         marked; // denotes if this node is currently processed
-    actor_ptr    sender; // points to the sender of msg
-    any_tuple    msg;    // 'content field'
-    message_id_t mid;
-
-    recursive_queue_node(recursive_queue_node&&) = delete;
-    recursive_queue_node(const recursive_queue_node&) = delete;
-    recursive_queue_node& operator=(recursive_queue_node&&) = delete;
-    recursive_queue_node& operator=(const recursive_queue_node&) = delete;
+    virtual void request_deletion() {
+        auto mc = detail::memory::get_cache_map_entry(&typeid(*this));
+        if (!mc) {
+            auto om = outer_memory;
+            if (om) {
+                om->destroy();
+                om->deallocate();
+            }
+            else delete this;
+        }
+        else mc->release_instance(mc->downcast(this));
+    }
 
  private:
 
-    recursive_queue_node() = default;
-
-    recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id = message_id_t());
+    detail::instance_wrapper* outer_memory;
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
-#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP
+#endif // MEMORY_CACHED_MIXIN_HPP

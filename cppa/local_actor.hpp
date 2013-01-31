@@ -42,8 +42,8 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
+#include "cppa/memory_cached_mixin.hpp"
 
-#include "cppa/detail/memory.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -110,7 +110,7 @@ class message_future;
 /**
  * @brief Base class for local running Actors.
  */
-class local_actor : public detail::memory_cached_mixin<actor> {
+class local_actor : public memory_cached_mixin<actor> {
 
     typedef actor super;
 
