@@ -31,6 +31,9 @@
 #ifndef MESSAGE_FUTURE_HPP
 #define MESSAGE_FUTURE_HPP
 
+#include <type_traits>
+
+#include "cppa/on.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/message_id.hpp"
@@ -50,23 +53,41 @@ class message_future {
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
-    template<typename... Expression>
-    void then(Expression&&... mexpr) {
-        auto f = [](behavior& bhvr, message_id_t mid) {
-            self->become_waiting_for(std::move(bhvr), mid);
-        };
-        apply(f, std::forward<Expression>(mexpr)...);
+    template<typename... Cases, typename... Args>
+    void then(const match_expr<Cases...>& arg0, const Args&... args) {
+        consistency_check();
+        self->become_waiting_for(match_expr_convert(arg0, args...), m_id);
     }
 
     /**
      * @brief Blocks until the response arrives and then executes @p mexpr.
      */
-    template<typename... Expression>
-    void await(Expression&&... mexpr) {
-        auto f = [](behavior& bhvr, message_id_t mid) {
-            self->dequeue_response(bhvr, mid);
-        };
-        apply(f, std::forward<Expression>(mexpr)...);
+    template<typename... Cases, typename... Args>
+    void await(const match_expr<Cases...>& arg0, const Args&... args) {
+        consistency_check();
+        self->dequeue_response(match_expr_convert(arg0, args...), m_id);
+    }
+
+    /**
+     * @brief Sets @p fun as event-handler for the response message, calls
+     *        <tt>self->handle_sync_failure()</tt> if the response message
+     *        is an 'EXITED', 'TIMEOUT', or 'VOID' message.
+     */
+    template<typename F>
+    typename std::enable_if<util::is_callable<F>::value>::type then(F fun) {
+        consistency_check();
+        self->become_waiting_for(bhvr_from_fun(fun), m_id);
+    }
+
+    /**
+     * @brief Blocks until the response arrives and then executes @p @p fun,
+     *        calls <tt>self->handle_sync_failure()</tt> if the response
+     *        message is an 'EXITED', 'TIMEOUT', or 'VOID' message.
+     */
+    template<typename F>
+    typename std::enable_if<util::is_callable<F>::value>::type await(F fun) {
+        consistency_check();
+        self->dequeue_response(bhvr_from_fun(fun), m_id);
     }
 
     /**
@@ -87,6 +108,28 @@ class message_future {
 
     message_id_t m_id;
 
+    template<typename F>
+    behavior bhvr_from_fun(F fun) {
+        auto handle_sync_failure = [] { self->handle_sync_failure(); };
+        return {
+            on(atom("EXITED"), any_vals) >> handle_sync_failure,
+            on(atom("TIMEOUT")) >> handle_sync_failure,
+            on(atom("VOID")) >> handle_sync_failure,
+            on(any_vals, arg_match) >> fun,
+            others() >> handle_sync_failure
+        };
+    }
+
+    void consistency_check() {
+        if (!m_id.valid() || !m_id.is_response()) {
+            throw std::logic_error("handle does not point to a response");
+        }
+        else if (!self->awaits(m_id)) {
+            throw std::logic_error("response already received");
+        }
+    }
+
+    /*
     template<typename Fun, typename... Args>
     void apply(Fun& fun, Args&&... args) {
         auto bhvr = match_expr_convert(std::forward<Args>(args)...);
@@ -103,6 +146,7 @@ class message_future {
         }
         fun(bhvr, m_id);
     }
+    */
 
 };
 

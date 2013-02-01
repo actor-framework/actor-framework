@@ -606,7 +606,7 @@ inline void delayed_send_tuple(const channel_ptr& whom,
  */
 template<class Rep, class Period, typename... Args>
 inline void delayed_send(const channel_ptr& whom,
-                         const std::chrono::duration<Rep, Period>& rtime,
+                         const std::chrono::duration<Rep,Period>& rtime,
                          Args&&... what) {
     static_assert(sizeof...(Args) > 0, "no message to send");
     if (whom) {

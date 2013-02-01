@@ -379,7 +379,7 @@ class receive_policy {
                         if (id.valid() && !id.is_answered() && sender) {
                             sender->sync_enqueue(client,
                                                  id.response_id(),
-                                                 any_tuple());
+                                                 make_any_tuple(atom("VOID")));
                         }
                         hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;

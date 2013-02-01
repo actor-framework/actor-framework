@@ -32,6 +32,7 @@
 #define CPPA_CONTEXT_HPP
 
 #include <cstdint>
+#include <functional>
 
 #include "cppa/group.hpp"
 #include "cppa/actor.hpp"
@@ -412,6 +413,11 @@ class local_actor : public memory_cached_mixin<actor> {
 
     virtual void dequeue_response(behavior&, message_id_t) = 0;
 
+    inline void dequeue_response(behavior&& bhvr, message_id_t mid) {
+        behavior tmp{std::move(bhvr)};
+        dequeue_response(tmp, mid);
+    }
+
     virtual void become_waiting_for(behavior&&, message_id_t) = 0;
 
     /**
@@ -419,6 +425,15 @@ class local_actor : public memory_cached_mixin<actor> {
      *        to a request later on.
      */
     response_handle make_response_handle();
+
+    inline void on_sync_failure(std::function<void()> fun) {
+        m_sync_failure_handler = std::move(fun);
+    }
+
+    inline void handle_sync_failure() {
+        if (m_sync_failure_handler) m_sync_failure_handler();
+        else quit(exit_reason::unhandled_sync_failure);
+    }
 
  protected:
 
@@ -441,6 +456,10 @@ class local_actor : public memory_cached_mixin<actor> {
     detail::recursive_queue_node* m_current_node;
     // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;
+
+ private:
+
+    std::function<void()> m_sync_failure_handler;
 
 #   endif // CPPA_DOCUMENTATION
 

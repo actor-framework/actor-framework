@@ -2,18 +2,18 @@
 #include "cppa/cppa.hpp"
 
 using namespace cppa;
+using namespace cppa::placeholders;
 
 struct popular_actor : event_based_actor { // popular actors have a buddy
     actor_ptr m_buddy;
     popular_actor(const actor_ptr& buddy) : m_buddy(buddy) { }
     inline const actor_ptr& buddy() const { return m_buddy; }
+    void report_failure() {
+        send(buddy(), atom("failure"));
+        self->quit();
+    }
 };
 
-void report_failure() {
-    local_actor* s = self;
-    send(static_cast<popular_actor*>(s)->buddy(), atom("failure"));
-    self->quit();
-}
 
 /******************************************************************************\
  *                                test case 1:                                *
@@ -34,16 +34,12 @@ struct A : popular_actor {
     void init() {
         become (
             on(atom("go"), arg_match) >> [=](const actor_ptr& next) {
-                sync_send(next, atom("gogo")).then (
-                    on(atom("gogogo")) >> [=] {
-                        send(buddy(), atom("success"));
-                        quit();
-                    },
-                    others() >> report_failure,
-                    after(std::chrono::seconds(1)) >> report_failure
-                );
+                sync_send(next, atom("gogo")).then([=] {
+                    send(buddy(), atom("success"));
+                    quit();
+                });
             },
-            others() >> report_failure
+            others() >> [=] { report_failure(); }
         );
     }
 };
@@ -94,13 +90,10 @@ struct D : popular_actor {
         become (
             others() >> [=] {
                 m_handle = make_response_handle();
-                sync_send_tuple(buddy(), last_dequeued()).then(
-                    others() >> [=] {
-                        m_handle.apply(last_dequeued());
-                        quit();
-                    },
-                    after(std::chrono::seconds(1)) >> report_failure
-                );
+                sync_send_tuple(buddy(), last_dequeued()).then([=] {
+                    m_handle.apply(last_dequeued());
+                    quit();
+                });
             }
         );
     }
@@ -108,21 +101,23 @@ struct D : popular_actor {
 
 int main() {
     CPPA_TEST(test__sync_send);
-    send(spawn<A>(self), atom("go"), spawn<B>(spawn<C>()));
-    receive (
-        on(atom("success")) >> [&] { },
-        on(atom("failure")) >> [&] {
-            CPPA_ERROR("A didn't receive a sync response");
-        }
-    );
+    auto await_success_message = [&] {
+        receive (
+            on(atom("success")) >> [&] { },
+            on(atom("failure")) >> [&] {
+                CPPA_ERROR("A didn't receive a sync response");
+            },
+            on(atom("DOWN"), arg_match).when(_x2 != exit_reason::normal)
+            >> [&](uint32_t err) {
+                CPPA_ERROR("A exited for reason " << err);
+            }
+        );
+    };
+    send(spawn_monitor<A>(self), atom("go"), spawn<B>(spawn<C>()));
+    await_success_message();
     await_all_others_done();
-    send(spawn<A>(self), atom("go"), spawn<D>(spawn<C>()));
-    receive (
-        on(atom("success")) >> [&] { },
-        on(atom("failure")) >> [&] {
-            CPPA_ERROR("A didn't receive a sync response");
-        }
-    );
+    send(spawn_monitor<A>(self), atom("go"), spawn<D>(spawn<C>()));
+    await_success_message();
     await_all_others_done();
     shutdown();
     return CPPA_TEST_RESULT;
