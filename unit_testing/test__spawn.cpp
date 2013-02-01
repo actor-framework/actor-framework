@@ -685,7 +685,7 @@ int main() {
     // and kill them all through killing the link
     auto twenty_thousand = spawn([]() {
         for (int i = 0; i < 20000; ++i) {
-            self->link_to(spawn<event_testee>());
+            spawn_link<event_testee>();
         }
         receive_loop (
             others() >> []() {
@@ -696,10 +696,8 @@ int main() {
     send(twenty_thousand, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
     self->trap_exit(true);
-    auto ping_actor = spawn(ping, 10);
-    auto pong_actor = spawn(pong, ping_actor);
-    self->monitor(pong_actor);
-    self->monitor(ping_actor);
+    auto ping_actor = spawn_monitor(ping, 10);
+    auto pong_actor = spawn_monitor(pong, ping_actor);
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;

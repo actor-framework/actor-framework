@@ -785,6 +785,98 @@ actor_ptr spawn_hidden(Args&&... args) {
 
 #endif
 
+/**
+ * @brief Spawns a new context-switching or thread-mapped {@link actor}
+ *        that executes <tt>fun(args...)</tt> and creates a link between the
+ *        calling actor and the new actor.
+ * @param fun A function implementing the actor's behavior.
+ * @param args Optional function parameters for @p fun.
+ * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<scheduling_hint Hint, typename Fun, typename... Args>
+actor_ptr spawn_link(Fun&& fun, Args&&... args) {
+    auto res = spawn<Hint>(std::forward<Fun>(fun), std::forward<Args>(args)...);
+    self->link_to(res);
+    return res;
+}
+
+/**
+ * @brief Spawns a new context-switching {@link actor}
+ *        that executes <tt>fun(args...)</tt> and creates a link between the
+ *        calling actor and the new actor.
+ * @param fun A function implementing the actor's behavior.
+ * @param args Optional function parameters for @p fun.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
+ */
+template<typename Fun, typename... Args>
+actor_ptr spawn_link(Fun&& fun, Args&&... args) {
+    auto res = spawn(std::forward<Fun>(fun), std::forward<Args>(args)...);
+    self->link_to(res);
+    return res;
+}
+
+/**
+ * @brief Spawns an actor of type @p ActorImpl and creates a link between the
+ *        calling actor and the new actor.
+ * @param args Optional constructor arguments.
+ * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<class ActorImpl, typename... Args>
+actor_ptr spawn_link(Args&&... args) {
+    auto res = spawn<ActorImpl>(std::forward<Args>(args)...);
+    self->link_to(res);
+    return res;
+}
+
+/**
+ * @brief Spawns a new context-switching or thread-mapped {@link actor}
+ *        that executes <tt>fun(args...)</tt> and adds a monitor to the
+ *        new actor.
+ * @param fun A function implementing the actor's behavior.
+ * @param args Optional function parameters for @p fun.
+ * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<scheduling_hint Hint, typename Fun, typename... Args>
+actor_ptr spawn_monitor(Fun&& fun, Args&&... args) {
+    auto res = spawn<Hint>(std::forward<Fun>(fun), std::forward<Args>(args)...);
+    self->monitor(res);
+    return res;
+}
+
+/**
+ * @brief Spawns a new context-switching {@link actor}
+ *        that executes <tt>fun(args...)</tt> and adds a monitor to the
+ *        new actor.
+ * @param fun A function implementing the actor's behavior.
+ * @param args Optional function parameters for @p fun.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
+ */
+template<typename Fun, typename... Args>
+actor_ptr spawn_monitor(Fun&& fun, Args&&... args) {
+    auto res = spawn(std::forward<Fun>(fun), std::forward<Args>(args)...);
+    self->monitor(res);
+    return res;
+}
+
+/**
+ * @brief Spawns an actor of type @p ActorImpl and adds a monitor to the
+ *        new actor.
+ * @param args Optional constructor arguments.
+ * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<class ActorImpl, typename... Args>
+actor_ptr spawn_monitor(Args&&... args) {
+    auto res = spawn<ActorImpl>(std::forward<Args>(args)...);
+    self->monitor(res);
+    return res;
+}
+
 /** @} */
 
 /**
