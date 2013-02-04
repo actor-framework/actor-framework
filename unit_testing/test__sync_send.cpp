@@ -44,6 +44,17 @@ struct A : popular_actor {
     }
 };
 
+#ifdef __clang__
+struct B : sb_actor<B,popular_actor> {
+    B(const actor_ptr& buddy) : sb_actor<B,popular_actor>(buddy) { }
+    behavior init_state = (
+        others() >> [=] {
+            forward_to(buddy());
+            quit();
+        }
+    );
+};
+#else
 struct B : popular_actor {
     B(const actor_ptr& buddy) : popular_actor(buddy) { }
     void init() {
@@ -55,16 +66,15 @@ struct B : popular_actor {
         );
     }
 };
+#endif
 
-struct C : event_based_actor {
-    void init() {
-        become (
-            on(atom("gogo")) >> [=] {
-                reply(atom("gogogo"));
-                quit();
-            }
-        );
-    }
+struct C : sb_actor<C> {
+    behavior init_state = (
+        on(atom("gogo")) >> [=] {
+            reply(atom("gogogo"));
+            self->quit();
+        }
+    );
 };
 
 

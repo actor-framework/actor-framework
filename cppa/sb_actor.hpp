@@ -31,6 +31,9 @@
 #ifndef CPPA_FSM_ACTOR_HPP
 #define CPPA_FSM_ACTOR_HPP
 
+#include <utility>
+#include <type_traits>
+
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
@@ -41,8 +44,11 @@ namespace cppa {
  *        to initialize the derived actor with its @p init_state member.
  * @tparam Derived Direct subclass of @p sb_actor.
  */
-template<class Derived>
-class sb_actor : public event_based_actor {
+template<class Derived, class Base = event_based_actor>
+class sb_actor : public Base {
+
+    static_assert(std::is_base_of<event_based_actor,Base>::value,
+                  "Base must be either event_based_actor or a derived type");
 
  public:
 
@@ -50,7 +56,14 @@ class sb_actor : public event_based_actor {
      * @brief Overrides {@link event_based_actor::init()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
-    void init() { become(static_cast<Derived*>(this)->init_state); }
+    virtual void init() {
+        this->become(static_cast<Derived*>(this)->init_state);
+    }
+
+ protected:
+
+    template<typename... Args>
+    sb_actor(Args&&... args) : Base(std::forward<Args>(args)...) { }
 
 };
 
