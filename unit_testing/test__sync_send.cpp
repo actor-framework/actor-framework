@@ -1,3 +1,5 @@
+#define CPPA_VERBOSE_CHECK
+
 #include "test.hpp"
 #include "cppa/cppa.hpp"
 
@@ -129,6 +131,21 @@ int main() {
     send(spawn_monitor<A>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     await_all_others_done();
+    cout << __LINE__ << endl;
+    //sync_send(self, atom("NoWay")).await(
+    timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
+        on(atom("TIMEOUT")) >> [&] {
+    cout << __LINE__ << endl;
+            // must timeout
+            cout << "received timeout (ok)" << endl;
+        },
+        others() >> [&] {
+    cout << __LINE__ << endl;
+            CPPA_ERROR("unexpected message: "
+                       << to_string(self->last_dequeued()));
+        }
+    );
+    cout << __LINE__ << endl;
     shutdown();
     return CPPA_TEST_RESULT;
 }

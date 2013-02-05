@@ -37,7 +37,7 @@ void abstract_scheduled_actor::request_timeout(const util::duration& d) {
         if (d.is_zero()) {
             // immediately enqueue timeout
             auto node = super::fetch_node(this,
-                                          make_any_tuple(atom("TIMEOUT"),
+                                          make_any_tuple(atom("SYNC_TOUT"),
                                           ++m_active_timeout_id));
             this->m_mailbox.enqueue(node);
         }
@@ -45,7 +45,7 @@ void abstract_scheduled_actor::request_timeout(const util::duration& d) {
             get_scheduler()->delayed_send(
                         this, d,
                         make_any_tuple(
-                            atom("TIMEOUT"), ++m_active_timeout_id));
+                            atom("SYNC_TOUT"), ++m_active_timeout_id));
         }
         m_has_pending_timeout_request = true;
     }

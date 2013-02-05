@@ -45,6 +45,8 @@
 #include "cppa/partial_function.hpp"
 #include "cppa/memory_cached_mixin.hpp"
 
+#include "cppa/util/duration.hpp"
+
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -376,6 +378,10 @@ class local_actor : public memory_cached_mixin<actor> {
         m_pending_responses.push_back(awaited_response);
         return awaited_response;
     }
+
+    message_id_t send_timed_sync_message(actor* whom,
+                                         const util::duration& rel_time,
+                                         any_tuple&& what);
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise

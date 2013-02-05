@@ -532,6 +532,52 @@ inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
 }
 
 /**
+ * @brief Sends @p what as a synchronous message to @p whom with a timeout.
+ *
+ * The calling actor receives a 'TIMEOUT' message as response after
+ * given timeout exceeded and no response messages was received.
+ * @param whom Receiver of the message.
+ * @param what Message content as tuple.
+ * @returns A handle identifying a future to the response of @p whom.
+ * @warning The returned handle is actor specific and the response to the sent
+ *          message cannot be received by another actor.
+ * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+ */
+template<class Rep, class Period, typename... Args>
+message_future timed_sync_send_tuple(const actor_ptr& whom,
+                                     const std::chrono::duration<Rep,Period>& rel_time,
+                                     any_tuple what) {
+    if (whom) return self->send_timed_sync_message(whom.get(),
+                                                   rel_time,
+                                                   std::move(what));
+    else throw std::invalid_argument("whom == nullptr");
+}
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom
+ *        with a timeout.
+ *
+ * The calling actor receives a 'TIMEOUT' message as response after
+ * given timeout exceeded and no response messages was received.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @returns A handle identifying a future to the response of @p whom.
+ * @warning The returned handle is actor specific and the response to the sent
+ *          message cannot be received by another actor.
+ * @pre <tt>sizeof...(Args) > 0</tt>
+ * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+ */
+template<class Rep, class Period, typename... Args>
+message_future timed_sync_send(const actor_ptr& whom,
+                               const std::chrono::duration<Rep,Period>& rel_time,
+                               Args&&... what) {
+    static_assert(sizeof...(Args) > 0, "no message to send");
+    return timed_sync_send_tuple(whom,
+                                 rel_time,
+                                 make_any_tuple(std::forward<Args>(what)...));
+}
+
+/**
  * @brief Handles a synchronous response message in an event-based way.
  * @param handle A future for a synchronous response.
  * @throws std::invalid_argument if given behavior does not has a valid

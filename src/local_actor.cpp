@@ -30,6 +30,7 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 
 namespace cppa {
@@ -155,6 +156,15 @@ response_handle local_actor::make_response_handle() {
     response_handle result(this, n->sender, n->mid.response_id());
     n->mid.mark_as_answered();
     return std::move(result);
+}
+
+message_id_t local_actor::send_timed_sync_message(actor* whom,
+                                                  const util::duration& rel_time,
+                                                  any_tuple&& what) {
+    auto mid = this->send_sync_message(whom, std::move(what));
+    auto tmp = make_any_tuple(atom("TIMEOUT"));
+    get_scheduler()->delayed_reply(this, rel_time, mid, std::move(tmp));
+    return mid;
 }
 
 } // namespace cppa

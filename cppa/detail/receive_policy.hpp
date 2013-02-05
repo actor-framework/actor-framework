@@ -243,7 +243,7 @@ class receive_policy {
                     return normal_exit_signal;
                 }
             }
-            else if (v0 == atom("TIMEOUT")) {
+            else if (v0 == atom("SYNC_TOUT")) {
                 CPPA_REQUIRE(!message_id.valid());
                 return client->waits_for_timeout(v1) ? timeout_message
                                                      : expired_timeout_message;

@@ -331,11 +331,18 @@ int main(int argc, char** argv) {
     cout << "test group communication via network (inverted setup)" << endl;
     spawn5_server(remote_client, true);
 
+    self->on_sync_failure([&] {
+        CPPA_ERROR("unexpected message: "
+                   << to_string(self->last_dequeued())
+                   << endl);
+    });
+
     // test forward_to "over network and back"
     cout << "test forwarding over network 'and back'" << endl;
     auto ra = spawn<replier>();
-    sync_send(remote_client, atom("fwd"), ra, "hello replier!").await(
-        on(42) >> [&] {
+    timed_sync_send(remote_client, chrono::seconds(5), atom("fwd"), ra, "hello replier!").await(
+        on_arg_match >> [&](int forty_two) {
+            CPPA_CHECK_EQUAL(42, forty_two);
             auto from = self->last_sender();
             if (!from) {
                 CPPA_ERROR("from == nullptr");
@@ -347,12 +354,7 @@ int main(int argc, char** argv) {
                 }
             }
         },
-        others() >> [&] {
-            CPPA_ERROR("unexpected: " << to_string(self->last_dequeued()));
-        },
-        after(chrono::seconds(5)) >> [&] {
-            CPPA_ERROR("fowarding failed; no message received within 5s");
-        }
+        others() >> [] { self->handle_sync_failure(); }
     );
 
     cout << "wait for a last goodbye" << endl;
