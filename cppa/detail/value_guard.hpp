@@ -55,7 +55,12 @@ struct vg_fwd_<true, T> {
     static inline util::void_type _(Arg&&) { return {}; }
 };
 
-// absorbs callables
+template<>
+struct vg_fwd_<false,anything> {
+    static inline util::void_type _(const anything&) { return {}; }
+};
+
+// absorbs callables and instances of `anything`
 template<typename T>
 struct vg_fwd
         : vg_fwd_<util::is_callable<typename util::rm_ref<T>::type>::value,
@@ -87,8 +92,7 @@ class value_guard {
     value_guard(const value_guard&) = default;
 
     template<typename... Args>
-    value_guard(const Args&... args) : m_args(vg_fwd<Args>::_(args)...) {
-    }
+    value_guard(const Args&... args) : m_args(vg_fwd<Args>::_(args)...) { }
 
     template<typename... Args>
     inline bool operator()(const Args&... args) const {

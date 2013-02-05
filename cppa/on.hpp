@@ -296,12 +296,15 @@ constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 template<typename Arg0, typename... Args>
 detail::rvalue_builder<
     detail::value_guard<
-        typename util::tl_trim<
-            typename util::tl_map<
-                util::type_list<Arg0, Args...>,
-                detail::boxed_and_callable_to_void,
-                detail::implicit_conversions
-            >::type
+        typename util::tl_filter_not<
+            typename util::tl_trim<
+                typename util::tl_map<
+                    util::type_list<Arg0, Args...>,
+                    detail::boxed_and_callable_to_void,
+                    detail::implicit_conversions
+                >::type
+            >::type,
+            is_anything
         >::type
     >,
     typename util::tl_map<
