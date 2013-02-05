@@ -37,6 +37,7 @@
 #include <type_traits>
 
 #include "cppa/behavior.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/partial_function.hpp"
@@ -133,8 +134,8 @@ class receive_policy {
 
     template<class Client, class FunOrBehavior>
     inline void receive_wo_timeout(Client *client, FunOrBehavior& fun) {
-        if (invoke_from_cache(client, fun) == false) {
-            while (invoke(client, client->receive_node(), fun) == false) { }
+        if (!invoke_from_cache(client, fun)) {
+            while (!invoke(client, client->receive_node(), fun)) { }
         }
     }
 
@@ -145,10 +146,10 @@ class receive_policy {
 
     template<class Client>
     void receive(Client* client, behavior& bhvr) {
-        if (bhvr.timeout().valid() == false) {
+        if (!bhvr.timeout().valid()) {
             receive_wo_timeout(client, bhvr);
         }
-        else if (invoke_from_cache(client, bhvr) == false) {
+        else if (!invoke_from_cache(client, bhvr)) {
             if (bhvr.timeout().is_zero()) {
                 pointer e = nullptr;
                 while ((e = client->try_receive_node()) != nullptr) {
@@ -174,19 +175,24 @@ class receive_policy {
     }
 
     template<class Client>
-    void receive(Client* client, behavior& bhvr, message_id_t awaited_response) {
-        CPPA_REQUIRE(bhvr.timeout().valid());
-        CPPA_REQUIRE(bhvr.timeout().is_zero() == false);
-        if (invoke_from_cache(client, bhvr, awaited_response) == false) {
-            auto timeout = client->init_timeout(bhvr.timeout());
-            pointer e = nullptr;
-            while ((e = client->try_receive_node(timeout)) != nullptr) {
-                CPPA_REQUIRE(e->marked == false);
-                if (invoke(client, e, bhvr, awaited_response)) {
-                    return; // done
+    void receive(Client* client, behavior& bhvr, message_id_t mid) {
+        CPPA_REQUIRE(mid.is_response());
+        if (!invoke_from_cache(client, bhvr, mid)) {
+            if (bhvr.timeout().valid()) {
+                CPPA_REQUIRE(bhvr.timeout().is_zero() == false);
+                auto timeout = client->init_timeout(bhvr.timeout());
+                pointer e = nullptr;
+                while ((e = client->try_receive_node(timeout)) != nullptr) {
+                    CPPA_REQUIRE(e->marked == false);
+                    if (invoke(client, e, bhvr, mid)) {
+                        return; // done
+                    }
                 }
+                handle_timeout(client, bhvr);
             }
-            handle_timeout(client, bhvr);
+            else {
+                while (!invoke(client, client->receive_node(), bhvr, mid)) { }
+            }
         }
     }
 

@@ -141,9 +141,10 @@ void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
 }
 
 void event_based_actor::become_waiting_for(behavior&& bhvr, message_id_t mf) {
-    CPPA_REQUIRE(bhvr.timeout().valid());
-    reset_timeout();
-    request_timeout(bhvr.timeout());
+    if (bhvr.timeout().valid()) {
+        reset_timeout();
+        request_timeout(bhvr.timeout());
+    }
     m_bhvr_stack.push_back(std::move(bhvr), mf);
 }
 
