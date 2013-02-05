@@ -416,7 +416,7 @@ int main() {
         receive_for(i, 10) (
             on(atom("failure")) >> [] { }
         );
-        CPPA_CHECKPOINT_CB();
+        CPPA_CHECKPOINT();
     }
     // expect 10 {'ok', value} messages
     {
@@ -514,7 +514,7 @@ int main() {
         }
     );
     receive (on("goodbye!") >> CPPA_CHECKPOINT_CB());
-    CPPA_CHECKPOINT_CB();
+    CPPA_CHECKPOINT();
     receive (
         on(atom("DOWN"), exit_reason::normal) >> [&] {
             CPPA_CHECK(self->last_sender() == sync_testee);

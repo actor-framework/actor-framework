@@ -341,20 +341,12 @@ int main(int argc, char** argv) {
     cout << "test forwarding over network 'and back'" << endl;
     auto ra = spawn<replier>();
     timed_sync_send(remote_client, chrono::seconds(5), atom("fwd"), ra, "hello replier!").await(
-        on_arg_match >> [&](int forty_two) {
+        [&](int forty_two) {
             CPPA_CHECK_EQUAL(42, forty_two);
             auto from = self->last_sender();
-            if (!from) {
-                CPPA_ERROR("from == nullptr");
-            }
-            else if (from != ra) {
-                CPPA_ERROR("response came from wrong actor");
-                if (from->is_proxy()) {
-                    CPPA_ERROR("received response from a remote actor");
-                }
-            }
-        },
-        others() >> [] { self->handle_sync_failure(); }
+            CPPA_CHECK_EQUAL(ra, from);
+            if (from) CPPA_CHECK_EQUAL(false, from->is_proxy());
+        }
     );
 
     cout << "wait for a last goodbye" << endl;

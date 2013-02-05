@@ -8,6 +8,8 @@
 #include <iostream>
 #include <type_traits>
 
+#include "cppa/actor.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/util/scope_guard.hpp"
 
 void cppa_inc_error_count();
@@ -34,14 +36,25 @@ inline bool cppa_check_value_fun_eq(T1 value1, T2 value2,
     return value1 == static_cast<T1>(value2);
 }
 
+template<typename T>
+const T& cppa_stream_arg(const T& value) {
+    return value;
+}
+
+inline std::string cppa_stream_arg(const cppa::actor_ptr& ptr) {
+    return cppa::to_string(ptr);
+}
+
 template<typename T1, typename T2>
 inline bool cppa_check_value_fun(const T1& value1, const T2& value2,
                                  const char* file_name,
                                  int line_number) {
     if (cppa_check_value_fun_eq(value1, value2) == false) {
         std::cerr << "ERROR in file " << file_name << " on line " << line_number
-                  << " => expected value: " << value1
-                  << ", found: " << value2
+                  << " => expected value: "
+                  << cppa_stream_arg(value1)
+                  << ", found: "
+                  << cppa_stream_arg(value2)
                   << std::endl;
         cppa_inc_error_count();
         return false;
