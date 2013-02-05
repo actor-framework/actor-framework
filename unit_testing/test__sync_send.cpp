@@ -132,11 +132,19 @@ int main() {
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     // we should have received two DOWN messages with normal exit reason
+    // plus 'NoWay'
     int i = 0;
-    receive_for(i, 2) (
+    receive_for(i, 3) (
         on(atom("DOWN"), exit_reason::normal) >> CPPA_CHECKPOINT_CB(),
+        on(atom("NoWay")) >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()
+    );
+    CPPA_CHECKPOINT();
+    // mailbox should be empty now
+    receive (
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        after(std::chrono::seconds(0)) >> CPPA_CHECKPOINT_CB()
     );
     shutdown();
     return CPPA_TEST_RESULT;
