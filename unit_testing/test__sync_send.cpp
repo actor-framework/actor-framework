@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include "test.hpp"
 #include "cppa/cppa.hpp"
 
@@ -115,10 +113,8 @@ int main() {
     CPPA_TEST(test__sync_send);
     auto await_success_message = [&] {
         receive (
-            on(atom("success")) >> [&] { },
-            on(atom("failure")) >> [&] {
-                CPPA_ERROR("A didn't receive a sync response");
-            },
+            on(atom("success")) >> CPPA_CHECKPOINT_CB(),
+            on(atom("failure")) >> CPPA_ERROR_CB("A didn't receive sync response"),
             on(atom("DOWN"), arg_match).when(_x2 != exit_reason::normal)
             >> [&](uint32_t err) {
                 CPPA_ERROR("A exited for reason " << err);
@@ -131,21 +127,17 @@ int main() {
     send(spawn_monitor<A>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     await_all_others_done();
-    cout << __LINE__ << endl;
-    //sync_send(self, atom("NoWay")).await(
     timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
-        on(atom("TIMEOUT")) >> [&] {
-    cout << __LINE__ << endl;
-            // must timeout
-            cout << "received timeout (ok)" << endl;
-        },
-        others() >> [&] {
-    cout << __LINE__ << endl;
-            CPPA_ERROR("unexpected message: "
-                       << to_string(self->last_dequeued()));
-        }
+        on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    cout << __LINE__ << endl;
+    // we should have received two DOWN messages with normal exit reason
+    int i = 0;
+    receive_for(i, 2) (
+        on(atom("DOWN"), exit_reason::normal) >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()
+    );
     shutdown();
     return CPPA_TEST_RESULT;
 }

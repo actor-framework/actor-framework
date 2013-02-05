@@ -313,10 +313,7 @@ int main() {
 
     CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << flush);
     receive (
-        others() >> []() {
-            cerr << "WTF?? received: " << to_string(self->last_dequeued())
-                 << endl;
-        },
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(0)) >> []() {
             // mailbox empty
         }
@@ -338,9 +335,7 @@ int main() {
     send(mecho, "hello echo");
     receive (
         on("hello echo") >> []() { },
-        others() >> [] {
-            cout << "UNEXPECTED: " << to_string(self->last_dequeued()) << endl;
-        }
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     CPPA_IF_VERBOSE(cout << "await ... " << endl);
     await_all_others_done();
@@ -419,8 +414,9 @@ int main() {
     {
         int i = 0;
         receive_for(i, 10) (
-            on(atom("failure")) >> []() { }
+            on(atom("failure")) >> [] { }
         );
+        CPPA_CHECKPOINT_CB();
     }
     // expect 10 {'ok', value} messages
     {
@@ -465,20 +461,14 @@ int main() {
             CPPA_CHECK_EQUAL(42, a);
             CPPA_CHECK_EQUAL(2, b);
         },
-        others() >> [&]() {
-            CPPA_ERROR("unexpected message");
-        },
-        after(chrono::seconds(10)) >> [&]() {
-            CPPA_ERROR("timeout during receive_response");
-        }
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        after(chrono::seconds(10)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     // dequeue remaining async. message
-    receive (on(0, 0) >> []() { });
+    receive (on(0, 0) >> CPPA_CHECKPOINT_CB());
     // make sure there's no other message in our mailbox
     receive (
-        others() >> [&]() {
-            CPPA_ERROR("unexpected message");
-        },
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(0)) >> []() { }
     );
     await_all_others_done();
@@ -523,12 +513,8 @@ int main() {
             reply("nothing");
         }
     );
-    receive (
-        on("goodbye!") >> [&] {
-            CPPA_CHECK(true);
-        }
-    );
-    CPPA_CHECK(true);
+    receive (on("goodbye!") >> CPPA_CHECKPOINT_CB());
+    CPPA_CHECKPOINT_CB();
     receive (
         on(atom("DOWN"), exit_reason::normal) >> [&] {
             CPPA_CHECK(self->last_sender() == sync_testee);
@@ -538,16 +524,9 @@ int main() {
     CPPA_IF_VERBOSE(cout << "ok" << endl);
 
     sync_send(sync_testee, "!?").await(
-        on(atom("EXITED"), any_vals) >> [&] {
-            CPPA_CHECK(true);
-        },
-        others() >> [&] {
-            CPPA_ERROR("'sync_testee' still alive?; received: "
-                       << to_string(self->last_dequeued()));
-        },
-        after(chrono::milliseconds(5)) >> [&] {
-            CPPA_CHECK(false);
-        }
+        on(atom("EXITED"), any_vals) >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        after(chrono::milliseconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
 
     auto inflater = factory::event_based(
@@ -566,14 +545,8 @@ int main() {
     auto bob = inflater.spawn("Bob", joe);
     send(bob, 1, "hello actor");
     receive (
-        on(4, "hello actor") >> [&] {
-            CPPA_CHECK(true);
-            // done
-        },
-        others() >> [&] {
-            CPPA_ERROR("unexpected result");
-            cerr << "unexpected: " << to_string(self->last_dequeued()) << endl;
-        }
+        on(4, "hello actor") >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     // kill joe and bob
     auto poison_pill = make_any_tuple(atom("done"));

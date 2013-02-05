@@ -4,7 +4,7 @@ project(cppa_unit_tests CXX)
 add_custom_target(all_unit_tests)
 
 macro(add_unit_test name)
-  add_executable(test__${name} test__${name}.cpp ${ARGN})
+  add_executable(test__${name} test__${name}.cpp test.cpp ${ARGN})
   target_link_libraries(test__${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
   add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/test__${name})
   add_dependencies(test__${name} all_unit_tests)
