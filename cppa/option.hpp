@@ -94,24 +94,15 @@ class option {
         return *this;
     }
 
-    option& operator=(const T& value) {
-        if (m_valid) m_value = value;
-        else cr(value);
-        return *this;
-    }
-
-    option& operator=(T& value) {
-        if (m_valid) m_value = std::move(value);
-        else cr(std::move(value));
-        return *this;
-    }
-
     /**
      * @brief Returns @p true if this @p option has a valid value;
      *        otherwise @p false.
      */
     inline bool valid() const { return m_valid; }
 
+    /**
+     * @brief Returns <tt>!valid()</tt>.
+     */
     inline bool empty() const { return !m_valid; }
 
     /**
@@ -120,7 +111,7 @@ class option {
     inline explicit operator bool() const { return valid(); }
 
     /**
-     * @brief Returns <tt>!valid()</tt>
+     * @brief Returns <tt>!valid()</tt>.
      */
     inline bool operator!() const { return empty(); }
 
@@ -186,6 +177,67 @@ class option {
     }
 
 };
+
+template<typename T>
+class option<T&> {
+
+ public:
+
+    typedef T type;
+
+    option() : m_value(nullptr) { }
+
+    option(T& value) : m_value(&value) { }
+
+    option(const option& other) = default;
+
+    option& operator=(const option& other) = default;
+
+    inline bool valid() const { return m_value != nullptr; }
+
+    inline bool empty() const { return !valid(); }
+
+    inline explicit operator bool() const { return valid(); }
+
+    inline bool operator!() const { return empty(); }
+
+    inline T& operator*() {
+        CPPA_REQUIRE(valid());
+        return *m_value;
+    }
+
+    inline const T& operator*() const {
+        CPPA_REQUIRE(valid());
+        return *m_value;
+    }
+
+    inline T& get() {
+        CPPA_REQUIRE(valid());
+        return *m_value;
+    }
+
+    inline const T& get() const {
+        CPPA_REQUIRE(valid());
+        return *m_value;
+    }
+
+    inline const T& get_or_else(const T& default_value) const {
+        if (valid()) return get();
+        return default_value;
+    }
+
+ private:
+
+    T* m_value;
+
+};
+
+/** @relates option */
+template<typename T>
+struct is_option { static constexpr bool value = false; };
+
+template<typename T>
+struct is_option<option<T>> { static constexpr bool value = true; };
 
 /** @relates option */
 template<typename T, typename U>
