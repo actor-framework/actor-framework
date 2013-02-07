@@ -39,6 +39,11 @@ namespace cppa { namespace detail {
 std::string demangle(const char* typeid_name);
 std::string demangle(const std::type_info& tinf);
 
+template<typename T>
+inline std::string demangle() {
+    return demangle(typeid(T));
+}
+
 } } // namespace cppa::detail
 
 #endif // CPPA_DEMANGLE_HPP
