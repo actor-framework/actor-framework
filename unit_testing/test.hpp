@@ -57,19 +57,21 @@ inline void cppa_failed(const V1& v1,
 template<typename V1, typename V2>
 inline void cppa_check_value(const V1& v1, const V2& v2,
                              const char* fname,
-                             int line_number,
+                             int line,
+                             bool expected = true,
                              typename enable_integral<false,V1,V2>::type* = 0) {
-    if (v1 == v2) cppa_passed(fname, line_number);
-    else cppa_failed(v1, v2, fname, line_number);
+    if ((v1 == v2) == expected) cppa_passed(fname, line);
+    else cppa_failed(v1, v2, fname, line);
 }
 
 template<typename V1, typename V2>
 inline void cppa_check_value(V1 v1, V2 v2,
                              const char* fname,
-                             int line_number,
+                             int line,
+                             bool expected = true,
                              typename enable_integral<true,V1,V2>::type* = 0) {
-    if (v1 == static_cast<V1>(v2)) cppa_passed(fname, line_number);
-    else cppa_failed(v1, v2, fname, line_number);
+    if ((v1 == static_cast<V1>(v2)) == expected) cppa_passed(fname, line);
+    else cppa_failed(v1, v2, fname, line);
 }
 
 #define CPPA_TEST(name)                                                        \
@@ -101,13 +103,13 @@ inline void cppa_check_value(V1 v1, V2 v2,
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__)
 
+#define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc)                                 \
+    cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__, false)
+
 #define CPPA_ERROR(err_msg)                                                    \
     std::cerr << "ERROR in file " << __FILE__ << " on line " << __LINE__       \
               << ": " << err_msg << std::endl;                                 \
     cppa_inc_error_count()
-
-#define CPPA_CHECK_NOT_EQUAL(lhs_loc, rhs_loc)                                 \
-    CPPA_CHECK(!((lhs_loc) == (rhs_loc)))
 
 #define CPPA_CHECKPOINT()                                                      \
     std::cout << "checkpoint at line " << __LINE__ << " passed" << std::endl

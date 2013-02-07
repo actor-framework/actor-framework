@@ -35,11 +35,12 @@ int main() {
     CPPA_TEST(test__atom);
     // check if there are leading bits that distinguish "zzz" and "000 "
     CPPA_CHECK_NOT_EQUAL(atom("zzz"), atom("000 "));
+    // check if there are leading bits that distinguish "abc" and " abc"
+    CPPA_CHECK_NOT_EQUAL(atom("abc"), atom(" abc"));
     // 'illegal' characters are mapped to whitespaces
     CPPA_CHECK_EQUAL(atom("   "), atom("@!?"));
-    CPPA_CHECK_NOT_EQUAL(atom("abc"), atom(" abc"));
     // check to_string impl.
-    CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
+    CPPA_CHECK_EQUAL("FooBar", to_string(s_foo));
     self << make_cow_tuple(atom("foo"), static_cast<std::uint32_t>(42))
          << make_cow_tuple(atom(":Attach"), atom(":Baz"), "cstring")
          << make_cow_tuple(atom("b"), atom("a"), atom("c"), 23.f)
@@ -48,22 +49,22 @@ int main() {
     receive_for(i, 3) (
         on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value) {
             matched_pattern[0] = true;
-            CPPA_CHECK_EQUAL(value, 42);
+            CPPA_CHECK_EQUAL(42, value);
         },
         on<atom(":Attach"), atom(":Baz"), string>() >> [&](const string& str) {
             matched_pattern[1] = true;
-            CPPA_CHECK_EQUAL(str, "cstring");
+            CPPA_CHECK_EQUAL("cstring", str);
         },
         on<atom("a"), atom("b"), atom("c"), float>() >> [&](float value) {
             matched_pattern[2] = true;
-            CPPA_CHECK_EQUAL(value, 23.f);
+            CPPA_CHECK_EQUAL(23.f, value);
         }
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
     receive (
-        others() >> []() {
-            // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
-        }
+        // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
+        others() >> CPPA_CHECKPOINT_CB(),
+        after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     return CPPA_TEST_RESULT();
 }
