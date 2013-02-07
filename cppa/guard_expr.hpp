@@ -43,7 +43,7 @@
 #include "cppa/util/at.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/apply_tuple.hpp"
+#include "cppa/util/apply_args.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -597,7 +597,7 @@ struct ge_eval_<logical_or_op, Tuple, First, Second> {
 template<class Tuple, typename Fun>
 struct ge_eval_<exec_xfun_op, Tuple, Fun, util::void_type> {
     static inline bool _(const Tuple& tup, const Fun& fun, const util::void_type&) {
-        return util::unchecked_apply_tuple<bool>(fun, tup);
+        return util::apply_args(fun, tup, util::get_indices(tup));
     }
 };
 
@@ -696,7 +696,7 @@ ge_invoke_any(const guard_expr<OP, First, Second>& ge,
     auto x = tuple_cast(tup, cast_token);
     CPPA_REQUIRE(static_cast<bool>(x) == true);
     ge_invoke_helper<guard_expr<OP, First, Second> > f{ge};
-    return util::unchecked_apply_tuple<result_type>(f, *x);
+    return util::apply_args(f, *x, util::get_indices(*x));
 }
 
 template<operator_id OP, typename First, typename Second>

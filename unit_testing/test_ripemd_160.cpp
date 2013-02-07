@@ -56,5 +56,5 @@ int main() {
                      str_hash("1234567890123456789012345678901234567890"
                               "1234567890123456789012345678901234567890"));
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

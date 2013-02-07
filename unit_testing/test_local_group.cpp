@@ -38,15 +38,15 @@ int main() {
     int result = 0;
     do_receive (
         on<int>() >> [&](int value) {
-            CPPA_CHECK(value == 2);
+            CPPA_CHECK_EQUAL(2, value);
             result += value;
         },
         after(std::chrono::seconds(2)) >> [&]() {
-            CPPA_CHECK(false);
+            CPPA_UNEXPECTED_TOUT();
             result = 10;
         }
     )
     .until(gref(result) == 10);
     await_all_others_done();
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

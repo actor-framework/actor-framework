@@ -40,7 +40,6 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/fixed_vector.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"

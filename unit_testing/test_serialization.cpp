@@ -333,5 +333,5 @@ int main() {
         // verify result of serialization / deserialization
         CPPA_CHECK(c1 == c2);
     }
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

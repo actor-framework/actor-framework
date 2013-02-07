@@ -48,48 +48,48 @@ int main() {
     CPPA_TEST(test__intrusive_ptr);
     {
         auto p = make_counted<class0>();
-        CPPA_CHECK_EQUAL(class0_instances, 1);
+        CPPA_CHECK_EQUAL(1, class0_instances);
         CPPA_CHECK(p->unique());
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CPPA_CHECK_EQUAL(0, class0_instances);
     {
         class0_ptr p;
         p = new class0;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
+        CPPA_CHECK_EQUAL(1, class0_instances);
         CPPA_CHECK(p->unique());
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CPPA_CHECK_EQUAL(0, class0_instances);
     {
         class0_ptr p1;
         p1 = get_test_rc();
         class0_ptr p2 = p1;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(p1->unique(), false);
+        CPPA_CHECK_EQUAL(1, class0_instances);
+        CPPA_CHECK_EQUAL(false, p1->unique());
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CPPA_CHECK_EQUAL(0, class0_instances);
     {
         std::list<class0_ptr> pl;
         pl.push_back(get_test_ptr());
         pl.push_back(get_test_rc());
         pl.push_back(pl.front()->create());
         CPPA_CHECK(pl.front()->unique());
-        CPPA_CHECK_EQUAL(class0_instances, 3);
+        CPPA_CHECK_EQUAL(3, class0_instances);
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CPPA_CHECK_EQUAL(0, class0_instances);
     {
         auto p1 = make_counted<class0>();
         p1 = new class1;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(class1_instances, 1);
+        CPPA_CHECK_EQUAL(1, class0_instances);
+        CPPA_CHECK_EQUAL(1, class1_instances);
         auto p2 = make_counted<class1>();
         p1 = p2;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(class1_instances, 1);
+        CPPA_CHECK_EQUAL(1, class0_instances);
+        CPPA_CHECK_EQUAL(1, class1_instances);
         CPPA_CHECK(p1 == p2);
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
-    CPPA_CHECK_EQUAL(class1_instances, 0);
+    CPPA_CHECK_EQUAL(0, class0_instances);
+    CPPA_CHECK_EQUAL(0, class1_instances);
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 
 }

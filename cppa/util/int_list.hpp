@@ -245,6 +245,21 @@ struct il_slice {
     typedef typename il_slice_<List,il_size<List>::value,First,Last>::type type;
 };
 
+/**
+ * @brief Creates a new list containing the last @p N elements.
+ */
+template<class List, size_t N>
+struct il_right {
+    static constexpr size_t list_size = il_size<List>::value;
+    static constexpr size_t first_idx = (list_size > N) ? (list_size - N) : 0;
+    typedef typename il_slice<List,first_idx,list_size>::type type;
+};
+
+template<size_t N>
+struct il_right<empty_int_list,N> {
+    typedef empty_int_list type;
+};
+
 // list reverse()
 
 template<class List, long... Vs>
@@ -463,7 +478,6 @@ struct il_range<X,X,Is...> {
     typedef int_list<X,Is...> type;
 };
 
-
 /**
  * @brief Creates indices for @p List beginning at @p Pos.
  */
@@ -482,7 +496,13 @@ struct il_indices<List<T0,Ts...>,Pos,int_list<Is...>> {
 };
 
 template<typename T>
-constexpr auto get_indices(const T&) -> typename util::il_indices<T>::type {
+constexpr auto get_indices(const T&) -> typename il_indices<T>::type {
+    return {};
+}
+
+template<size_t Num, typename T>
+constexpr auto get_right_indices(const T&)
+-> typename il_right<typename il_indices<T>::type,Num>::type {
     return {};
 }
 

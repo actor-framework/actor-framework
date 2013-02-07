@@ -34,7 +34,8 @@
 #include <type_traits>
 
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/apply_tuple.hpp"
+#include "cppa/util/int_list.hpp"
+#include "cppa/util/apply_args.hpp"
 
 #include "cppa/detail/tdata.hpp"
 #include "cppa/scheduled_actor.hpp"
@@ -73,7 +74,9 @@ class ftor_behavior<true, true, F, Args...>  : public scheduled_actor {
 
     ftor_behavior(F ptr, const Args&... args) : m_fun(ptr), m_args(args...) { }
 
-    virtual void act() { util::apply_tuple(m_fun, m_args); }
+    virtual void act() {
+        util::apply_args(m_fun, m_args, util::get_indices(m_args));
+    }
 
 };
 
@@ -115,7 +118,9 @@ class ftor_behavior<false, true, F, Args...>  : public scheduled_actor {
                                              , m_args(args...) {
     }
 
-    virtual void act() { util::apply_tuple(m_fun, m_args); }
+    virtual void act() {
+        util::apply_args(m_fun, m_args, util::get_indices(m_args));
+    }
 
 };
 

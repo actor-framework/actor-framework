@@ -15,6 +15,8 @@ using namespace cppa;
 
 namespace {
 
+typedef std::pair<std::string, std::string> string_pair;
+
 typedef vector<actor_ptr> actor_vector;
 
 vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
@@ -218,7 +220,7 @@ int client_part(const vector<string_pair>& args) {
 
     send(server, atom("farewell"));
     shutdown();
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }
 
 } // namespace <anonymous>
@@ -356,5 +358,5 @@ int main(int argc, char** argv) {
     // wait until separate process (in sep. thread) finished execution
     if (run_remote_actor) child.join();
     shutdown();
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

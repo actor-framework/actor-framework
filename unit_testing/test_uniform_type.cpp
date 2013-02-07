@@ -182,5 +182,5 @@ int main() {
     CPPA_CHECK(arr3[1] == uniform_type_info::from("@u16"));
     CPPA_CHECK(uniform_type_info::from("@u16") == uniform_typeid<std::uint16_t>());
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

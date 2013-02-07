@@ -81,5 +81,5 @@ int main() {
     x = q.try_pop();
     CPPA_CHECK(x == nullptr);
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

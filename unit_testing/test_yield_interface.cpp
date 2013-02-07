@@ -57,5 +57,5 @@ int main() {
     CPPA_CHECK_EQUAL(10, worker.m_count);
     CPPA_CHECK_EQUAL(12, i);
 #   endif
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

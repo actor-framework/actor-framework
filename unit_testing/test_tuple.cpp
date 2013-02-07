@@ -403,5 +403,5 @@ int main() {
     CPPA_CHECK_EQUAL(s_expensive_copies, (size_t) 0);
     await_all_others_done();
     shutdown();
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

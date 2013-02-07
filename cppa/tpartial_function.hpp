@@ -48,6 +48,7 @@ class tpartial_function {
 
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types ctrait_args;
+    static constexpr size_t num_expr_args = util::tl_size<ctrait_args>::value;
 
     static_assert(util::tl_exists<util::type_list<Args...>,
                                   std::is_rvalue_reference >::value == false,
@@ -77,13 +78,14 @@ class tpartial_function {
 
     tpartial_function(const tpartial_function&) = default;
 
-    //bool defined_at(const typename util::rm_ref<Args>::type&... args) const
     bool defined_at(Args... args) const {
         return m_guard(args...);
     }
 
     result_type operator()(Args... args) const {
-        return util::partially_apply<result_type,util::tl_size<ctrait_args>::value>(m_expr, args...);
+        auto targs = std::forward_as_tuple(args...);
+        auto indices = util::get_right_indices<num_expr_args>(targs);
+        return util::apply_args(m_expr, targs, indices);
     }
 
  private:

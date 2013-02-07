@@ -293,22 +293,6 @@ int main() {
     CPPA_CHECK_EQUAL("A", vec.front());
     invoked = false;
 
-    /*
-    match(vec) (
-        others() >> [&](any_tuple& tup) {
-            if (detail::matches<string, string, string>(tup)) {
-                tup.get_as_mutable<string>(1) = "B";
-            }
-            else {
-                CPPA_ERROR("matches<string, string, string>(tup) == false");
-            }
-            invoked = true;
-        }
-    );
-    if (!invoked) { CPPA_ERROR("match({\"a\", \"b\", \"c\"}) failed"); }
-    CPPA_CHECK_EQUAL(vec[1], "B");
-    */
-
     vector<string> vec2{"a=0", "b=1", "c=2"};
 
     auto c2 = split(vec2.back(), '=');
@@ -318,44 +302,14 @@ int main() {
     CPPA_CHECK_EQUAL(true, invoked);
     invoked = false;
 
-    /*,
-    int pmatches = 0;
-    using std::placeholders::_1;
-    match_each(vec2.begin(), vec2.end(), std::bind(split, _1, '=')) (
-        on("a", val<string>) >> [&](const string& value) {
-            CPPA_CHECK_EQUAL("0", value);
-            CPPA_CHECK_EQUAL(0, pmatches);
-            ++pmatches;
-        },
-        on("b", val<string>) >> [&](const string& value) {
-            CPPA_CHECK_EQUAL("1", value);
-            CPPA_CHECK_EQUAL(1, pmatches);
-            ++pmatches;
-        },
-        on("c", val<string>) >> [&](const string& value) {
-            CPPA_CHECK_EQUAL("2", value);
-            CPPA_CHECK_EQUAL(2, pmatches);
-            ++pmatches;
-        }
-        others() >> [](const any_tuple& value) {
-            cout << to_string(value) << endl;
-        }
-    );
-    CPPA_CHECK_EQUAL(3, pmatches);
-    */
-
     // let's get the awesomeness started
+    bool success = false;
 
     istringstream iss("hello world");
-    match_stream<string>(iss) (
-        on("hello", "world") >> [] {
-            cout << "yeeeeeehaaaaaaa!!!!!" << endl;
-        },
-        on_arg_match >> [](const string& s1, const string& s2, const std::string& s3) {
-            cout << "you said: " << s1 << " " << s2 << " " << s3 << endl;
-            cout << "mind sayin 'hello world'?" << endl;
-        }
+    success = match_stream<string>(iss) (
+        on("hello", "world") >> CPPA_CHECKPOINT_CB()
     );
+    CPPA_CHECK_EQUAL(true, success);
 
     auto extract_name = [](const string& kvp) -> option<string> {
         auto vec = split(kvp, '=');
@@ -369,27 +323,25 @@ int main() {
 
     const char* svec[] = {"-n", "foo", "--name=bar", "-p", "2"};
 
-    bool success = match_stream<string>(begin(svec), end(svec)) (
-        (on("-n", arg_match) || on(extract_name)) >> [](const string& name) {
-            cout << "your name is " << name << endl;
+    success = match_stream<string>(begin(svec), end(svec)) (
+        (on("-n", arg_match) || on(extract_name)) >> [](const string& name) -> bool {
+            CPPA_CHECK(name == "foo" || name == "bar");
+            return name == "foo" || name == "bar";
         },
         on("-p", arg_match) >> [&](const string& port) -> bool {
             auto i = toint(port);
             if (i) {
-                cout << "port = " << *i << endl;
+                CPPA_CHECK_EQUAL(2, *i);
                 return true;
             }
-            else {
-                cout << "'" << port << "' is not a valid port" << endl;
-                return false;
-            }
+            else return false;
         },
-        on_arg_match >> [](const string& arg) {
-            cout << "dunno whatya wanna say me: " << arg << endl;
+        on_arg_match >> [](const string& arg) -> bool{
+            CPPA_ERROR("unexpected string: " << arg);
+            return false;
         }
     );
-
-    cout << "success: " << success << endl;
+    CPPA_CHECK_EQUAL(true, success);
 
     cout << "check combined partial function matching" << endl;
 
@@ -416,5 +368,5 @@ int main() {
     check(pf0, make_any_tuple("hi"), "");
     check(pf1, make_any_tuple("hi"), "<string>@4");
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

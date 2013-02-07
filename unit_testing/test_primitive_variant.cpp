@@ -8,13 +8,9 @@ struct streamer {
     std::ostream& o;
     streamer(std::ostream& mo) : o(mo) { }
     template<typename T>
-    void operator()(const T& value) {
-        o << value;
-    }
-    void operator()(const std::u16string&) {
-    }
-    void operator()(const std::u32string&) {
-    }
+    void operator()(const T& value) { o << value; }
+    void operator()(const std::u16string&) { }
+    void operator()(const std::u32string&) { }
 };
 
 } // namespace <anonymous>
@@ -37,8 +33,8 @@ int main() {
     primitive_variant v1(forty_two);
     primitive_variant v2(pt_uint32);
     // type checking
-    CPPA_CHECK_EQUAL(v1.ptype(), pt_uint32);
-    CPPA_CHECK_EQUAL(v2.ptype(), pt_uint32);
+    CPPA_CHECK_EQUAL(pt_uint32, v1.ptype());
+    CPPA_CHECK_EQUAL(pt_uint32, v2.ptype());
     get_ref<std::uint32_t&>(v2) = forty_two;
     CPPA_CHECK(equal(v1, v2));
     CPPA_CHECK(equal(v1, forty_two));
@@ -46,13 +42,13 @@ int main() {
     // type mismatch => unequal
     CPPA_CHECK(!equal(v2, static_cast<std::int8_t>(forty_two)));
     v1 = "Hello world";
-    CPPA_CHECK_EQUAL(v1.ptype(), pt_u8string);
+    CPPA_CHECK_EQUAL(pt_u8string, v1.ptype());
     v2 = "Hello";
-    CPPA_CHECK_EQUAL(v2.ptype(), pt_u8string);
+    CPPA_CHECK_EQUAL(pt_u8string, v2.ptype());
     get_ref<std::string>(v2) += " world";
     CPPA_CHECK(equal(v1, v2));
     v2 = u"Hello World";
     CPPA_CHECK(!equal(v1, v2));
 
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

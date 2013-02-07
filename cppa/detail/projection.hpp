@@ -38,42 +38,34 @@
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/apply_args.hpp"
-#include "cppa/util/apply_tuple.hpp"
 #include "cppa/util/left_or_right.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
 namespace cppa { namespace detail {
 
-template<class PartialFun>
-struct projection_helper {
-    const PartialFun& fun;
-    projection_helper(const PartialFun& pfun) : fun(pfun) { }
-    template<typename... Args>
-    bool operator()(Args&&... args) const {
-        if (fun.defined_at(std::forward<Args>(args)...)) {
-            fun(std::forward<Args>(args)...);
-            return true;
-        }
-        return false;
-    }
-};
+template<typename Fun, typename Tuple, long... Is>
+inline bool is_defined_at(Fun& f, Tuple& tup, util::int_list<Is...>) {
+    return f.defined_at(get_cv_aware<Is>(tup)...);
+}
 
-template<class PartialFun>
-struct result_fetching_projection_helper {
-    typedef typename PartialFun::result_type result_type;
-    const PartialFun& fun;
-    result_type& result;
-    result_fetching_projection_helper(const PartialFun& pfun, result_type& res)
-    : fun(pfun), result(res) { }
-    template<typename... Args>
-    bool operator()(Args&&... args) const {
-        if (fun.defined_at(std::forward<Args>(args)...)) {
-            result = fun(std::forward<Args>(args)...);
-            return true;
-        }
-        return false;
-    }
+template<typename ProjectionFuns, typename... Args>
+struct collected_args_tuple {
+    typedef typename tdata_from_type_list<
+            typename util::tl_zip<
+                typename util::tl_map<
+                    ProjectionFuns,
+                    util::get_result_type,
+                    util::rm_option
+                >::type,
+                typename util::tl_map<
+                    util::type_list<Args...>,
+                    mutable_gref_wrapped
+                >::type,
+                util::left_or_right
+            >::type
+        >::type
+        type;
 };
 
 /**
@@ -95,55 +87,34 @@ class projection {
     projection(const projection&) = default;
 
     /**
-     * @brief Invokes @p fun with a projection of <tt>args...</tt>.
+     * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
+     *        the result of @p fun in @p result.
      */
     template<class PartialFun>
-    bool operator()(PartialFun& fun, Args... args) const {
-        typedef typename util::tl_zip<
-                    typename util::tl_map<
-                        ProjectionFuns,
-                        util::get_result_type,
-                        util::rm_option
-                    >::type,
-                    typename util::tl_map<
-                        util::type_list<Args...>,
-                        mutable_gref_wrapped
-                    >::type,
-                    util::left_or_right
-                >::type
-                collected_args;
-
-        typename tdata_from_type_list<collected_args>::type pargs;
+    bool invoke(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
+        typename collected_args_tuple<ProjectionFuns,Args...>::type pargs;
         if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
-            projection_helper<PartialFun> helper{fun};
             auto indices = util::get_indices(pargs);
-            return util::apply_args(helper, pargs, indices);
+            if (is_defined_at(fun, pargs, indices)) {
+                result = util::apply_args(fun, pargs, indices);
+                return true;
+            }
         }
         return false;
     }
 
+    /**
+     * @brief Invokes @p fun with a projection of <tt>args...</tt>.
+     */
     template<class PartialFun>
-    bool invoke(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
-        typedef typename PartialFun::result_type result_type;
-        typedef typename util::tl_zip<
-                    typename util::tl_map<
-                        ProjectionFuns,
-                        util::get_result_type,
-                        util::rm_option
-                    >::type,
-                    typename util::tl_map<
-                        util::type_list<Args...>,
-                        mutable_gref_wrapped
-                    >::type,
-                    util::left_or_right
-                >::type
-                collected_args;
-
-        typename tdata_from_type_list<collected_args>::type pargs;
+    bool operator()(PartialFun& fun, Args... args) const {
+        typename collected_args_tuple<ProjectionFuns,Args...>::type pargs;
+        auto indices = util::get_indices(pargs);
         if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
-            result_fetching_projection_helper<PartialFun> helper{fun, result};
-            auto indices = util::get_indices(pargs);
-            return util::apply_args(helper, pargs, indices);
+            if (is_defined_at(fun, pargs, indices)) {
+                util::apply_args(fun, pargs, indices);
+                return true;
+            }
         }
         return false;
     }
@@ -151,13 +122,13 @@ class projection {
  private:
 
     template<typename Storage, typename T>
-    static inline  bool fetch_(Storage& storage, T&& value) {
+    static inline  bool store(Storage& storage, T&& value) {
         storage = std::forward<T>(value);
         return true;
     }
 
     template<class Storage>
-    static inline bool fetch_(Storage& storage, option<Storage>&& value) {
+    static inline bool store(Storage& storage, option<Storage>&& value) {
         if (value) {
             storage = std::move(*value);
             return true;
@@ -165,14 +136,16 @@ class projection {
         return false;
     }
 
-    template<class Storage, typename Fun, typename T>
-    static inline  bool fetch(Storage& storage, const Fun& fun, T&& arg) {
-        return fetch_(storage, fun(std::forward<T>(arg)));
+    template<typename T>
+    static inline auto fetch(const util::void_type&, T&& arg)
+    -> decltype(std::forward<T>(arg)) {
+        return std::forward<T>(arg);
     }
 
-    template<typename Storage, typename T>
-    static inline bool fetch(Storage& storage, const util::void_type&, T&& arg) {
-        return fetch_(storage, std::forward<T>(arg));
+    template<typename Fun, typename T>
+    static inline auto fetch(const Fun& fun, T&& arg)
+    -> decltype(fun(std::forward<T>(arg))) {
+        return fun(std::forward<T>(arg));
     }
 
     static inline bool collect(tdata<>&, const tdata<>&) {
@@ -182,7 +155,7 @@ class projection {
     template<class TData, class Trans, typename T0, typename... Ts>
     static inline bool collect(TData& td, const Trans& tr,
                                T0&& arg0, Ts&&... args) {
-        return    fetch(td.head, tr.head, std::forward<T0>(arg0))
+        return    store(td.head, fetch(tr.head, std::forward<T0>(arg0)))
                && collect(td.tail(), tr.tail(), std::forward<Ts>(args)...);
     }
 

@@ -65,5 +65,5 @@ int main() {
             // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
         }
     );
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

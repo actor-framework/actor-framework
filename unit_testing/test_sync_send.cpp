@@ -147,5 +147,5 @@ int main() {
         after(std::chrono::seconds(0)) >> CPPA_CHECKPOINT_CB()
     );
     shutdown();
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }

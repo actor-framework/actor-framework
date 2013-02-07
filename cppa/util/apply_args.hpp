@@ -56,29 +56,6 @@ inline auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Args&&.
     return f(get_cv_aware<Is>(tup)..., std::forward<Args>(args)...);
 }
 
-template<typename Result, size_t NumFunctorArgs, size_t NumArgs>
-struct partially_apply_helper {
-    template<class Fun, typename Arg0, typename... Args>
-    static inline Result _(const Fun& fun, Arg0&&, Args&&... args) {
-        return partially_apply_helper<Result, NumFunctorArgs, sizeof...(Args)>
-               ::_(fun, std::forward<Args>(args)...);
-    }
-};
-
-template<typename Result, size_t X>
-struct partially_apply_helper<Result, X, X> {
-    template<class Fun, typename... Args>
-    static inline Result _(const Fun& fun, Args&&... args) {
-        return fun(std::forward<Args>(args)...);
-    }
-};
-
-template<typename Result, size_t Num, typename F, typename... Args>
-inline Result partially_apply(F& f, Args&&... args) {
-    return partially_apply_helper<Result,Num,sizeof...(Args)>
-           ::_(f, std::forward<Args>(args)...);
-}
-
 } } // namespace cppa::util
 
 #endif // CPPA_APPLY_ARGS_HPP

@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include <stack>
 #include <chrono>
 #include <iostream>
@@ -300,67 +298,67 @@ struct simple_mirror : sb_actor<simple_mirror> {
 int main() {
     CPPA_TEST(test__spawn);
 
-    CPPA_IF_VERBOSE(cout << "test send() ... " << flush);
+    cout << "test send() ... " << flush;
     send(self, 1, 2, 3, true);
     receive(on(1, 2, 3, true) >> []() { });
-    CPPA_IF_VERBOSE(cout << "... with empty message... " << flush);
+    cout << "... with empty message... " << flush;
     self << any_tuple{};
     receive(on() >> []() { });
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
     self << any_tuple{};
     receive(on() >> []() { });
 
-    CPPA_IF_VERBOSE(cout << "test receive with zero timeout ... " << flush);
+    cout << "test receive with zero timeout ... " << flush;
     receive (
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(0)) >> []() {
             // mailbox empty
         }
     );
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
     auto mirror = spawn<simple_mirror>();
 
-    CPPA_IF_VERBOSE(cout << "test mirror ... " << flush);
+    cout << "test mirror ... " << flush;
     send(mirror, "hello mirror");
     receive(on("hello mirror") >> []() { });
     send(mirror, atom("EXIT"), exit_reason::user_defined);
-    CPPA_IF_VERBOSE(cout << "await ... " << endl);
+    cout << "await ... " << endl;
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test echo actor ... " << flush);
+    cout << "test echo actor ... " << flush;
     auto mecho = spawn(echo_actor);
     send(mecho, "hello echo");
     receive (
         on("hello echo") >> []() { },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    CPPA_IF_VERBOSE(cout << "await ... " << endl);
+    cout << "await ... " << endl;
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test delayed_send() ... " << flush);
+    cout << "test delayed_send() ... " << flush;
     delayed_send(self, chrono::seconds(1), 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test timeout ... " << flush);
+    cout << "test timeout ... " << flush;
     receive(after(chrono::seconds(1)) >> []() { });
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "testee1 ... " << flush);
+    cout << "testee1 ... " << flush;
     spawn(testee1);
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "event_testee2 ... " << flush);
+    cout << "event_testee2 ... " << flush;
     spawn_event_testee2();
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "chopstick ... " << flush);
+    cout << "chopstick ... " << flush;
     auto cstk = spawn<chopstick>();
     send(cstk, atom("take"), self);
     receive (
@@ -370,9 +368,9 @@ int main() {
         }
     );
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test event-based factory ... " << flush);
+    cout << "test event-based factory ... " << flush;
     auto factory = factory::event_based([&](int* i, float*, string*) {
         self->become (
             on(atom("get_int")) >> [i]() {
@@ -402,9 +400,9 @@ int main() {
         }
     );
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test fixed_stack ... " << flush);
+    cout << "test fixed_stack ... " << flush;
     auto st = spawn<fixed_stack>(10);
     // push 20 values
     for (int i = 0; i < 20; ++i) send(st, atom("push"), i);
@@ -433,9 +431,9 @@ int main() {
     // terminate st
     send(st, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test sync send/receive ... " << flush);
+    cout << "test sync send/receive ... " << flush;
     auto sync_testee1 = spawn([]() {
         receive (
             on(atom("get")) >> []() {
@@ -472,9 +470,9 @@ int main() {
         after(chrono::seconds(0)) >> []() { }
     );
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
-    CPPA_IF_VERBOSE(cout << "test sync send with factory spawned actor ... " << flush);
+    cout << "test sync send with factory spawned actor ... " << flush;
     auto sync_testee_factory = factory::event_based(
         [&]() {
             self->become (
@@ -521,7 +519,7 @@ int main() {
         }
     );
     await_all_others_done();
-    CPPA_IF_VERBOSE(cout << "ok" << endl);
+    cout << "ok" << endl;
 
     sync_send(sync_testee, "!?").await(
         on(atom("EXITED"), any_vals) >> CPPA_CHECKPOINT_CB(),
@@ -583,13 +581,8 @@ int main() {
 
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
-    factory::event_based([&]() {
-        ++zombie_init_called;
-    },
-    [&]() {
-        ++zombie_on_exit_called;
-    })
-    .spawn();
+    factory::event_based([&]() { ++zombie_init_called; },
+                         [&]() { ++zombie_on_exit_called; }).spawn();
     CPPA_CHECK_EQUAL(1, zombie_init_called);
     CPPA_CHECK_EQUAL(1, zombie_on_exit_called);
     factory::event_based([&](int* i) {
@@ -709,5 +702,5 @@ int main() {
     CPPA_CHECK_EQUAL(0x0F, flags);
     // verify pong messages
     CPPA_CHECK_EQUAL(10, pongs());
-    return CPPA_TEST_RESULT;
+    return CPPA_TEST_RESULT();
 }
