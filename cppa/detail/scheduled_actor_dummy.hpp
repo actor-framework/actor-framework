@@ -47,7 +47,6 @@ struct scheduled_actor_dummy : abstract_scheduled_actor {
     bool remove_backlink(const intrusive_ptr<actor>&);
     void detach(const attachable::token&);
     bool attach(attachable*);
-    void unbecome();
     void do_become(behavior&&, bool);
     void become_waiting_for(behavior&&, message_id_t);
     bool has_behavior();

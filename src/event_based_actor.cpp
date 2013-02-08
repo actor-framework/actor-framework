@@ -158,10 +158,6 @@ void event_based_actor::quit(std::uint32_t reason) {
     }
 }
 
-void event_based_actor::unbecome() {
-    m_bhvr_stack.pop_async_back();
-}
-
 scheduled_actor_type event_based_actor::impl_type() {
     return event_based_impl;
 }

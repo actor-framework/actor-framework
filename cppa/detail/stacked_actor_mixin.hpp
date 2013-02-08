@@ -38,7 +38,6 @@
 #include "cppa/local_actor.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa { namespace detail {
@@ -49,12 +48,6 @@ class stacked_actor_mixin : public Base {
     friend class receive_policy;
 
  public:
-
-    virtual void unbecome() {
-        if (m_bhvr_stack_ptr) {
-            m_bhvr_stack_ptr->pop_async_back();
-        }
-    }
 
     virtual void dequeue(partial_function& fun) {
         m_recv_policy.receive(dthis(), fun);
@@ -69,9 +62,8 @@ class stacked_actor_mixin : public Base {
     }
 
     virtual void run() {
-        if (m_bhvr_stack_ptr) {
-            m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
-            m_bhvr_stack_ptr.reset();
+        if (!this->m_bhvr_stack.empty()) {
+            this->m_bhvr_stack.exec(m_recv_policy, dthis());
         }
         if (m_behavior) {
             m_behavior();
@@ -94,41 +86,31 @@ class stacked_actor_mixin : public Base {
 
     virtual bool has_behavior() {
         return     static_cast<bool>(m_behavior)
-                || (   static_cast<bool>(m_bhvr_stack_ptr)
-                    && m_bhvr_stack_ptr->empty() == false);
+                || !this->m_bhvr_stack.empty();
     }
 
  private:
 
     std::function<void()> m_behavior;
     receive_policy m_recv_policy;
-    std::unique_ptr<behavior_stack> m_bhvr_stack_ptr;
 
     inline Derived* dthis() {
         return static_cast<Derived*>(this);
     }
 
     void become_impl(behavior&& bhvr, bool discard_old, message_id_t mid) {
-        dthis()->reset_timeout();
-        dthis()->request_timeout(bhvr.timeout());
-        if (m_bhvr_stack_ptr) {
-            if (discard_old) m_bhvr_stack_ptr->pop_async_back();
-            m_bhvr_stack_ptr->push_back(std::move(bhvr), mid);
+        if (bhvr.timeout().valid()) {
+            dthis()->reset_timeout();
+            dthis()->request_timeout(bhvr.timeout());
         }
-        else {
-            m_bhvr_stack_ptr.reset(new behavior_stack);
-            m_bhvr_stack_ptr->push_back(std::move(bhvr), mid);
-            if (this->initialized()) {
-                m_bhvr_stack_ptr->exec(m_recv_policy, dthis());
-                m_bhvr_stack_ptr.reset();
-            }
+        if (!this->m_bhvr_stack.empty() && discard_old) {
+            this->m_bhvr_stack.pop_async_back();
         }
+        this->m_bhvr_stack.push_back(std::move(bhvr), mid);
     }
 
-    inline void remove_handler(message_id_t id) {
-        if (m_bhvr_stack_ptr) {
-            m_bhvr_stack_ptr->erase(id);
-        }
+    virtual void exec_behavior_stack() {
+        this->m_bhvr_stack.exec(m_recv_policy, dthis());
     }
 
 };

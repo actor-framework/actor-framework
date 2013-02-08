@@ -50,7 +50,6 @@
 #include "cppa/detail/abstract_actor.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/stacked_actor_mixin.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
@@ -98,7 +97,7 @@ class thread_mapped_actor : public detail::thread_mapped_actor_base {
 
     friend class self_type; // needs access to cleanup()
 
-    friend class detail::behavior_stack;
+    friend class detail::behavior_stack; // needs access to receive_node()
     friend class detail::receive_policy;
 
     typedef detail::thread_mapped_actor_base super;

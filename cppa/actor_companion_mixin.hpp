@@ -152,8 +152,6 @@ class actor_companion_mixin : public Base {
 
         void dequeue(cppa::partial_function&) { throw_no_recv(); }
 
-        void unbecome() { throw_no_become(); }
-
         void dequeue_response(cppa::behavior&, cppa::message_id_t) {
             throw_no_recv();
         }

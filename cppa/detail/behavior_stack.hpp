@@ -35,6 +35,7 @@
 #include <memory>
 #include <utility>
 
+#include "cppa/option.hpp"
 #include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/message_id.hpp"
@@ -64,6 +65,9 @@ class behavior_stack
         CPPA_REQUIRE(!empty());
         return m_elements.back().first;
     }
+
+    // @pre expected_response.valid()
+    option<behavior&> sync_handler(message_id_t expected_response);
 
     // erases the last asynchronous message handler
     void pop_async_back();

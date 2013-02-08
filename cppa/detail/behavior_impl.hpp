@@ -148,6 +148,53 @@ default_behavior_impl<MatchExpr, F>* new_default_behavior_impl(const MatchExpr& 
     return new default_behavior_impl<MatchExpr, F>(mexpr, d, f);
 }
 
+template<typename F>
+class continuation_decorator : public behavior_impl {
+
+ public:
+
+    typedef typename behavior_impl::pointer pointer;
+
+    template<typename Fun>
+    continuation_decorator(Fun&& fun, pointer decorated)
+    : m_fun(std::forward<Fun>(fun)), m_decorated(std::move(decorated)) {
+        CPPA_REQUIRE(m_decorated != nullptr);
+    }
+
+    template<typename T>
+    inline bool invoke_impl(T& tup) {
+        if (m_decorated->invoke(tup)) {
+            m_fun();
+            return true;
+        }
+        return false;
+    }
+
+    bool invoke(any_tuple& tup) {
+        return invoke_impl(tup);
+    }
+
+    bool invoke(const any_tuple& tup) {
+        return invoke_impl(tup);
+    }
+
+    bool defined_at(const any_tuple& tup) {
+        return m_decorated->defined_at(tup);
+    }
+
+    pointer copy(const generic_timeout_definition& tdef) const {
+        return new continuation_decorator<F>(m_fun, m_decorated->copy(tdef));
+    }
+
+    void handle_timeout() { m_decorated->handle_timeout(); }
+
+ private:
+
+    F m_fun;
+    pointer m_decorated;
+
+};
+
 } } // namespace cppa::detail
 
 #endif // BEHAVIOR_IMPL_HPP

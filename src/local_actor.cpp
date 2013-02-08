@@ -167,4 +167,8 @@ message_id_t local_actor::send_timed_sync_message(actor* whom,
     return mid;
 }
 
+void local_actor::exec_behavior_stack() {
+    // default implementation does nothing
+}
+
 } // namespace cppa

@@ -48,15 +48,39 @@ class message_future {
 
  public:
 
+    class continue_helper {
+
+     public:
+
+        inline continue_helper(message_id_t mid) : m_mid(mid) { }
+
+        template<typename F>
+        void continue_with(F fun) {
+            auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
+            if (ref_opt) {
+                auto& ref = *ref_opt;
+                // copy original behavior
+                behavior cpy = ref;
+                ref = cpy.add_continuation(std::move(fun));
+            }
+        }
+
+     private:
+
+        message_id_t m_mid;
+
+    };
+
     message_future() = delete;
 
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
     template<typename... Cases, typename... Args>
-    void then(const match_expr<Cases...>& arg0, const Args&... args) {
+    continue_helper then(const match_expr<Cases...>& arg0, const Args&... args) {
         consistency_check();
-        self->become_waiting_for(match_expr_convert(arg0, args...), m_id);
+        self->become_waiting_for(match_expr_convert(arg0, args...), m_mid);
+        return {m_mid};
     }
 
     /**
@@ -65,7 +89,7 @@ class message_future {
     template<typename... Cases, typename... Args>
     void await(const match_expr<Cases...>& arg0, const Args&... args) {
         consistency_check();
-        self->dequeue_response(match_expr_convert(arg0, args...), m_id);
+        self->dequeue_response(match_expr_convert(arg0, args...), m_mid);
     }
 
     /**
@@ -74,9 +98,11 @@ class message_future {
      *        is an 'EXITED', 'TIMEOUT', or 'VOID' message.
      */
     template<typename F>
-    typename std::enable_if<util::is_callable<F>::value>::type then(F fun) {
+    typename std::enable_if<util::is_callable<F>::value,continue_helper>::type
+    then(F fun) {
         consistency_check();
-        self->become_waiting_for(bhvr_from_fun(fun), m_id);
+        self->become_waiting_for(bhvr_from_fun(fun), m_mid);
+        return {m_mid};
     }
 
     /**
@@ -87,26 +113,26 @@ class message_future {
     template<typename F>
     typename std::enable_if<util::is_callable<F>::value>::type await(F fun) {
         consistency_check();
-        self->dequeue_response(bhvr_from_fun(fun), m_id);
+        self->dequeue_response(bhvr_from_fun(fun), m_mid);
     }
 
     /**
      * @brief Returns the awaited response ID.
      */
-    inline const message_id_t& id() const { return m_id; }
+    inline const message_id_t& id() const { return m_mid; }
 
     message_future(const message_future&) = default;
     message_future& operator=(const message_future&) = default;
 
 #   ifndef CPPA_DOCUMENTATION
 
-    inline message_future(const message_id_t& from) : m_id(from) { }
+    inline message_future(const message_id_t& from) : m_mid(from) { }
 
 #   endif
 
  private:
 
-    message_id_t m_id;
+    message_id_t m_mid;
 
     template<typename F>
     behavior bhvr_from_fun(F fun) {
@@ -121,32 +147,13 @@ class message_future {
     }
 
     void consistency_check() {
-        if (!m_id.valid() || !m_id.is_response()) {
+        if (!m_mid.valid() || !m_mid.is_response()) {
             throw std::logic_error("handle does not point to a response");
         }
-        else if (!self->awaits(m_id)) {
+        else if (!self->awaits(m_mid)) {
             throw std::logic_error("response already received");
         }
     }
-
-    /*
-    template<typename Fun, typename... Args>
-    void apply(Fun& fun, Args&&... args) {
-        auto bhvr = match_expr_convert(std::forward<Args>(args)...);
-        static_assert(std::is_same<decltype(bhvr), behavior>::value,
-                      "no timeout specified");
-        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
-            throw std::invalid_argument("specified timeout is invalid or zero");
-        }
-        else if (!m_id.valid() || !m_id.is_response()) {
-            throw std::logic_error("handle does not point to a response");
-        }
-        else if (!self->awaits(m_id)) {
-            throw std::logic_error("response already received");
-        }
-        fun(bhvr, m_id);
-    }
-    */
 
 };
 

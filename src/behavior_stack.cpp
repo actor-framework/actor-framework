@@ -60,6 +60,18 @@ class behavior_stack_help_iterator
 
 };
 
+option<behavior&> behavior_stack::sync_handler(message_id_t expected_response) {
+    if (expected_response.valid()) {
+        auto e = m_elements.rend();
+        auto i = std::find_if(m_elements.rbegin(), e, [=](element_type& val) {
+            return val.second == expected_response;
+        });
+        if (i != e) return i->first;
+    }
+    return {};
+}
+
+
 void behavior_stack::pop_async_back() {
     if (m_elements.empty()) {
         // nothing to do

@@ -4,6 +4,12 @@
 using namespace cppa;
 using namespace cppa::placeholders;
 
+struct sync_mirror : sb_actor<sync_mirror> {
+    behavior init_state = (
+        others() >> [] { reply_tuple(self->last_dequeued()); }
+    );
+};
+
 struct popular_actor : event_based_actor { // popular actors have a buddy
     actor_ptr m_buddy;
     popular_actor(const actor_ptr& buddy) : m_buddy(buddy) { }
@@ -111,6 +117,19 @@ struct D : popular_actor {
 
 int main() {
     CPPA_TEST(test__sync_send);
+    auto mirror = spawn<sync_mirror>();
+    bool continuation_called = false;
+    sync_send(mirror, 42).then(
+        [](int value) { CPPA_CHECK_EQUAL(42, value); }
+    )
+    .continue_with(
+        [&] { continuation_called = true; }
+    );
+    self->exec_behavior_stack();
+    CPPA_CHECK_EQUAL(true, continuation_called);
+    send(mirror, atom("EXIT"), exit_reason::user_defined);
+    await_all_others_done();
+    CPPA_CHECKPOINT();
     auto await_success_message = [&] {
         receive (
             on(atom("success")) >> CPPA_CHECKPOINT_CB(),

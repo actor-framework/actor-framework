@@ -104,6 +104,11 @@ class behavior {
         return (m_impl) && m_impl->invoke(std::forward<T>(arg));
     }
 
+    template<typename F>
+    inline behavior add_continuation(F fun) {
+        return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
+    }
+
  private:
 
     impl_ptr m_impl;

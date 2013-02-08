@@ -40,7 +40,6 @@
 #include "cppa/either.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
@@ -83,8 +82,6 @@ class event_based_actor : public detail::abstract_scheduled_actor {
     virtual void init() = 0;
 
     void quit(std::uint32_t reason = exit_reason::normal);
-
-    void unbecome();
 
     bool has_behavior();
 
@@ -156,14 +153,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
             request_timeout(get_behavior().timeout());
         }
     }
-    inline void remove_handler(message_id_t id) {
-        m_bhvr_stack.erase(id);
-    }
 
-    // stack elements are moved to m_erased_stack_elements and erased later
-    // to prevent possible segfaults that can occur if a currently executed
-    // lambda gets deleted
-    detail::behavior_stack m_bhvr_stack;
     detail::receive_policy m_policy;
 
 };

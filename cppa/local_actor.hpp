@@ -47,6 +47,7 @@
 
 #include "cppa/util/duration.hpp"
 
+#include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
@@ -55,6 +56,9 @@ namespace cppa {
 class scheduler;
 class message_future;
 class local_scheduler;
+
+namespace detail { class receive_policy; }
+
 
 template<bool DiscardOld>
 struct behavior_policy { static const bool discard_old = DiscardOld; };
@@ -119,6 +123,7 @@ class local_actor : public memory_cached_mixin<actor> {
 
     friend class scheduler;
     friend class detail::memory;
+    friend class detail::receive_policy;
     template<typename> friend class detail::basic_memory_cache;
 
  public:
@@ -315,7 +320,9 @@ class local_actor : public memory_cached_mixin<actor> {
     /**
      * @brief Returns to a previous behavior if available.
      */
-    virtual void unbecome() = 0;
+    inline void unbecome() {
+        m_bhvr_stack.pop_async_back();
+    }
 
     /**
      * @brief Can be overridden to initialize an actor before any
@@ -338,6 +345,15 @@ class local_actor : public memory_cached_mixin<actor> {
      * @brief Returns all joined groups of this actor.
      */
     std::vector<group_ptr> joined_groups();
+
+    /**
+     * @brief Executes an actor's behavior stack until it is empty.
+     *
+     * This member function allows thread-based and context-switching actors
+     * to make use of the nonblocking behavior API of libcppa.
+     * Calling this member function in an event-based actor does nothing.
+     */
+    virtual void exec_behavior_stack();
 
     // library-internal members and member functions that shall
     // not appear in the documentation
@@ -441,6 +457,10 @@ class local_actor : public memory_cached_mixin<actor> {
         else quit(exit_reason::unhandled_sync_failure);
     }
 
+    inline detail::behavior_stack& bhvr_stack() {
+        return m_bhvr_stack;
+    }
+
  protected:
 
     // true if this actor uses the chained_send optimization
@@ -462,6 +482,12 @@ class local_actor : public memory_cached_mixin<actor> {
     detail::recursive_queue_node* m_current_node;
     // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;
+    // allows actors to keep previous behaviors and enables unbecome()
+    detail::behavior_stack m_bhvr_stack;
+
+    inline void remove_handler(message_id_t id) {
+        m_bhvr_stack.erase(id);
+    }
 
  private:
 

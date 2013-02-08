@@ -40,7 +40,6 @@ void scheduled_actor_dummy::link_to(const intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::unlink_from(const intrusive_ptr<actor>&) { }
 void scheduled_actor_dummy::detach(const attachable::token&) { }
 bool scheduled_actor_dummy::attach(attachable*) { return false; }
-void scheduled_actor_dummy::unbecome() { }
 void scheduled_actor_dummy::do_become(behavior&&, bool) { }
 void scheduled_actor_dummy::become_waiting_for(behavior&&, message_id_t) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
