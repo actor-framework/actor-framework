@@ -49,10 +49,10 @@ int main() {
     auto expr1 = _x1 + _x2;
     auto expr2 = _x1 + _x2 < _x3;
     auto expr3 = _x1 % _x2 == 0;
-    CPPA_CHECK_EQUAL(5, (ge_invoke(expr1, 2, 3)));
+    CPPA_CHECK_EQUAL((ge_invoke(expr1, 2, 3)), 5);
     //CPPA_CHECK(ge_invoke(expr2, 1, 2, 4));
     CPPA_CHECK(expr2(1, 2, 4));
-    CPPA_CHECK_EQUAL("12", (ge_invoke(expr1, std::string{"1"}, std::string{"2"})));
+    CPPA_CHECK_EQUAL((ge_invoke(expr1, std::string{"1"}, std::string{"2"})), "12");
     CPPA_CHECK(expr3(100, 2));
 
     auto expr4 = _x1 == "-h" || _x1 == "--help";
@@ -101,39 +101,39 @@ int main() {
     auto expr14 = _x1 + _x2;
     static_assert(std::is_same<decltype(ge_invoke(expr14, 1, 2)), int>::value,
                   "wrong return type");
-    CPPA_CHECK_EQUAL(5, (ge_invoke(expr14, 2, 3)));
+    CPPA_CHECK_EQUAL((ge_invoke(expr14, 2, 3)), 5);
 
     auto expr15 = _x1 + _x2 + _x3;
     static_assert(std::is_same<decltype(ge_invoke(expr15,1,2,3)), int>::value,
                   "wrong return type");
-    CPPA_CHECK_EQUAL(42, (ge_invoke(expr15, 7, 10, 25)));
+    CPPA_CHECK_EQUAL((ge_invoke(expr15, 7, 10, 25)), 42);
 
     std::string expr16_str;// = "expr16";
     auto expr16_a = _x1.size();
     auto expr16_b = _x1.front() == 'e';
-    CPPA_CHECK_EQUAL(false, ge_invoke(expr16_b, expr16_str));
-    CPPA_CHECK_EQUAL(0, ge_invoke(expr16_a, expr16_str));
+    CPPA_CHECK_EQUAL((ge_invoke(expr16_b, expr16_str)), false);
+    CPPA_CHECK_EQUAL((ge_invoke(expr16_a, expr16_str)), 0);
     expr16_str = "expr16";
-    CPPA_CHECK_EQUAL(true, ge_invoke(expr16_b, expr16_str));
-    CPPA_CHECK_EQUAL(expr16_str.size(), ge_invoke(expr16_a, expr16_str));
+    CPPA_CHECK_EQUAL((ge_invoke(expr16_b, expr16_str)), true);
+    CPPA_CHECK_EQUAL((ge_invoke(expr16_a, expr16_str)), expr16_str.size());
     expr16_str.front() = '_';
-    CPPA_CHECK_EQUAL(false, ge_invoke(expr16_b, expr16_str));
+    CPPA_CHECK_EQUAL((ge_invoke(expr16_b, expr16_str)), false);
 
     int expr17_value = 42;
     auto expr17 = gref(expr17_value) == 42;
-    CPPA_CHECK_EQUAL(true, ge_invoke(expr17));
+    CPPA_CHECK_EQUAL(ge_invoke(expr17), true);
     expr17_value = 0;
-    CPPA_CHECK_EQUAL(false, ge_invoke(expr17));
+    CPPA_CHECK_EQUAL(ge_invoke(expr17), false);
 
     int expr18_value = 42;
     auto expr18_a = gref(expr18_value) == 42;
-    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_a));
+    CPPA_CHECK_EQUAL(ge_invoke(expr18_a), true);
     expr18_value = 0;
-    CPPA_CHECK_EQUAL(false, ge_invoke(expr18_a));
+    CPPA_CHECK_EQUAL(ge_invoke(expr18_a), false);
     auto expr18_b = gref(expr18_value) == _x1;
     auto expr18_c = std::ref(expr18_value) == _x1;
-    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_b, 0));
-    CPPA_CHECK_EQUAL(true, ge_invoke(expr18_c, 0));
+    CPPA_CHECK_EQUAL((ge_invoke(expr18_b, 0)), true);
+    CPPA_CHECK_EQUAL((ge_invoke(expr18_c, 0)), true);
 
 
     bool invoked = false;
@@ -144,20 +144,11 @@ int main() {
         }
         return {};
     };
-    /*
-    auto kvp_split2 = [](const string& str) -> option<vector<string> > {
-        auto pos = str.find('=');
-        if (pos != string::npos && pos == str.rfind('=')) {
-            return vector<string>{str.substr(0, pos-1), str.substr(pos+1)};
-        }
-        return {};
-    };
-    */
 
     match("value=42") (
         on(kvp_split1).when(_x1.not_empty()) >> [&](const vector<string>& vec) {
-            CPPA_CHECK_EQUAL(vec[0], "value");
-            CPPA_CHECK_EQUAL(vec[1], "42");
+            CPPA_CHECK_EQUAL("value", vec[0]);
+            CPPA_CHECK_EQUAL("42", vec[1]);
             invoked = true;
         }
     );
@@ -174,7 +165,7 @@ int main() {
     };
     match("42") (
         on(toint) >> [&](int i) {
-            CPPA_CHECK_EQUAL(i, 42);
+            CPPA_CHECK_EQUAL(42, i);
             invoked = true;
         }
     );
@@ -261,11 +252,11 @@ int main() {
             CPPA_ERROR("unexpected match");
         }
     );
-    CPPA_CHECK_EQUAL("-h--versionwtf", sum);
+    CPPA_CHECK_EQUAL(sum, "-h--versionwtf");
 
     match(5) (
         on<int>().when(_x1 < 6) >> [&](int i) {
-            CPPA_CHECK_EQUAL(5, i);
+            CPPA_CHECK_EQUAL(i, 5);
             invoked = true;
         }
     );
@@ -280,7 +271,7 @@ int main() {
         }
     );
     if (!invoked) { CPPA_ERROR("match({\"a\", \"b\", \"c\"}) failed"); }
-    CPPA_CHECK_EQUAL("C", vec.back());
+    CPPA_CHECK_EQUAL(vec.back(), "C");
     invoked = false;
 
     match_each(begin(vec), end(vec)) (
@@ -290,7 +281,7 @@ int main() {
         }
     );
     if (!invoked) { CPPA_ERROR("match_each({\"a\", \"b\", \"C\"}) failed"); }
-    CPPA_CHECK_EQUAL("A", vec.front());
+    CPPA_CHECK_EQUAL(vec.front(), "A");
     invoked = false;
 
     vector<string> vec2{"a=0", "b=1", "c=2"};
@@ -299,7 +290,7 @@ int main() {
     match(c2) (
         on("c", "2") >> [&]() { invoked = true; }
     );
-    CPPA_CHECK_EQUAL(true, invoked);
+    CPPA_CHECK_EQUAL(invoked, true);
     invoked = false;
 
     // let's get the awesomeness started
@@ -309,7 +300,7 @@ int main() {
     success = match_stream<string>(iss) (
         on("hello", "world") >> CPPA_CHECKPOINT_CB()
     );
-    CPPA_CHECK_EQUAL(true, success);
+    CPPA_CHECK_EQUAL(success, true);
 
     auto extract_name = [](const string& kvp) -> option<string> {
         auto vec = split(kvp, '=');
@@ -331,7 +322,7 @@ int main() {
         on("-p", arg_match) >> [&](const string& port) -> bool {
             auto i = toint(port);
             if (i) {
-                CPPA_CHECK_EQUAL(2, *i);
+                CPPA_CHECK_EQUAL(*i, 2);
                 return true;
             }
             else return false;
@@ -341,17 +332,17 @@ int main() {
             return false;
         }
     );
-    CPPA_CHECK_EQUAL(true, success);
+    CPPA_CHECK_EQUAL(success, true);
 
-    cout << "check combined partial function matching" << endl;
+    CPPA_PRINT("check combined partial function matching");
 
     std::string last_invoked_fun;
 
-    auto check = [&](partial_function& pf, const any_tuple& tup, const string& str) {
-        last_invoked_fun = "";
-        pf(tup);
-        CPPA_CHECK_EQUAL(str, last_invoked_fun);
-    };
+#   define check(pf, tup, str) {                                               \
+        last_invoked_fun = "";                                                 \
+        pf(tup);                                                               \
+        CPPA_CHECK_EQUAL(last_invoked_fun, str);                               \
+    }
 
     partial_function pf0 = (
         on<int,int>() >> [&] { last_invoked_fun = "<int,int>@1"; },
@@ -367,6 +358,35 @@ int main() {
     check(pf1, make_any_tuple(1, 2), "<int,int>@1");
     check(pf0, make_any_tuple("hi"), "");
     check(pf1, make_any_tuple("hi"), "<string>@4");
+
+    CPPA_PRINT("check match expressions with boolean return value");
+
+#   define bhvr_check(pf, tup, expected_result, str) {                         \
+        last_invoked_fun = "";                                                 \
+        CPPA_CHECK_EQUAL(pf(tup), expected_result);                            \
+        CPPA_CHECK_EQUAL(last_invoked_fun, str);                               \
+    }
+
+    behavior bhvr1 = (
+        on<int>() >> [&](int i) -> bool {
+            last_invoked_fun = "<int>@1";
+            return i != 42;
+        },
+        on<float>() >> [&] {
+            last_invoked_fun = "<float>@2";
+        },
+        on<int>() >> [&] {
+            last_invoked_fun = "<int>@3";
+        },
+        others() >> [&] {
+            last_invoked_fun = "<*>@4";
+        }
+    );
+
+    bhvr_check(bhvr1, make_any_tuple(42), false, "<int>@1");
+    bhvr_check(bhvr1, make_any_tuple(24), true, "<int>@1");
+    bhvr_check(bhvr1, make_any_tuple(2.f), true, "<float>@2");
+    bhvr_check(bhvr1, make_any_tuple(""), true, "<*>@4");
 
     return CPPA_TEST_RESULT();
 }

@@ -65,7 +65,7 @@ int main() {
                                + int_val(announce2)
                                + int_val(announce3)
                                + int_val(announce4);
-    CPPA_CHECK_EQUAL(successful_announces, 1);
+    CPPA_CHECK_EQUAL(1, successful_announces);
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
@@ -104,13 +104,13 @@ int main() {
         CPPA_CHECK(expected_equals_found);
     }
     if (!expected_equals_found) {
-        cout << "found:" << endl;
+        CPPA_PRINT("found:");
         for (const std::string& tname : found) {
-            cout << "    - " << tname << endl;
+            CPPA_PRINT("    - " << tname);
         }
-        cout << "expected: " << endl;
+        CPPA_PRINT("expected: ");
         for (const std::string& tname : expected) {
-            cout << "    - " << tname << endl;
+            CPPA_PRINT("    - " << tname);
         }
     }
 
@@ -148,7 +148,7 @@ int main() {
         uniform_typeid<intrusive_ptr<process_information> >()
     };
 
-    CPPA_CHECK_EQUAL(true, sarr.is_pure());
+    CPPA_CHECK_EQUAL(sarr.is_pure(), true);
 
     for (size_t i = 0; i < sarr.size; ++i) {
         CPPA_CHECK_EQUAL(sarr[i]->name(), rarr[i]->name());

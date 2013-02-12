@@ -3,6 +3,7 @@
 #include <cstring>
 #include <sstream>
 #include <iostream>
+#include <functional>
 
 #include "test.hpp"
 #include "ping_pong.hpp"
@@ -23,12 +24,12 @@ vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     vector<string_pair> result;
     for (int i = begin; i < argc; ++i) {
         auto vec = split(argv[i], '=');
+        auto eq_fun = [&](const string_pair& p) { return p.first == vec[0]; };
         if (vec.size() != 2) {
-            cerr << "\"" << argv[i] << "\" is not a key-value pair" << endl;
+            CPPA_PRINTERR("\"" << argv[i] << "\" is not a key-value pair");
         }
-        else if (any_of(result.begin(), result.end(),
-                             [&](const string_pair& p) { return p.first == vec[0]; })) {
-            cerr << "key \"" << vec[0] << "\" is already defined" << endl;
+        else if (any_of(result.begin(), result.end(), eq_fun)) {
+            CPPA_PRINTERR("key \"" << vec[0] << "\" is already defined");
         }
         else {
             result.emplace_back(vec[0], vec[1]);
@@ -61,12 +62,7 @@ struct replier : public event_based_actor {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(actor_ptr client, bool inverted) {
-    auto default_case = others() >> [] {
-        cout << "unexpected message; "
-             << __FILE__ << " line " << __LINE__ << ": "
-             << to_string(self->last_dequeued())
-             << endl;
-    };
+    auto default_case = others() >> CPPA_UNEXPECTED_MSG_CB();
     group_ptr grp;
     if (!inverted) {
         grp = group::get("local", "foobar");
@@ -85,7 +81,7 @@ void spawn5_server(actor_ptr client, bool inverted) {
         on(atom("ok"), arg_match) >> [&](const actor_vector& vec) {
             send(grp, "Hello reflectors!", 5.0);
             if (vec.size() != 5) {
-                cout << "remote client did not spawn five reflectors!\n";
+                CPPA_PRINT("remote client did not spawn five reflectors!");
             }
             for (auto& a : vec) {
                 self->monitor(a);
@@ -96,24 +92,24 @@ void spawn5_server(actor_ptr client, bool inverted) {
             throw runtime_error("timeout");
         }
     );
-    cout << "wait for reflected messages\n";
+    CPPA_PRINT("wait for reflected messages");
     // receive seven reply messages (2 local, 5 remote)
     int x = 0;
     receive_for(x, 7) (
         on("Hello reflectors!", 5.0) >> [] { }
     );
-    cout << "wait for DOWN messages\n";
+    CPPA_PRINT("wait for DOWN messages");
     // wait for DOWN messages
     {int i = 0; receive_for(i, 5) (
         on(atom("DOWN"), arg_match) >> [](std::uint32_t reason) {
             if (reason != exit_reason::normal) {
-                cout << "reflector exited for non-normal exit reason!" << endl;
+                CPPA_PRINT("reflector exited for non-normal exit reason!");
             }
         },
         default_case,
         after(chrono::seconds(2)) >> [&] {
             i = 4;
-            cout << "timeout while waiting for DOWN messages!\n";
+            CPPA_PRINTERR("timeout while waiting for DOWN messages!");
         }
     );}
     // wait for locally spawned reflectors
@@ -179,7 +175,7 @@ int client_part(const vector<string_pair>& args) {
             }
         },
         after(chrono::seconds(5)) >> [&] {
-            cerr << "sync_send timed out!" << endl;
+            CPPA_PRINTERR("sync_send timed out!");
             send(server, atom("Timeout"));
         }
     );
@@ -228,11 +224,11 @@ int client_part(const vector<string_pair>& args) {
 void verbose_terminate() {
     try { if (std::uncaught_exception()) throw; }
     catch (std::exception& e) {
-        cerr << "terminate called after throwing "
-             << to_verbose_string(e) << endl;
+        CPPA_PRINTERR("terminate called after throwing "
+                      << to_verbose_string(e));
     }
     catch (...) {
-        cerr << "terminate called after throwing an unknown exception" << endl;
+        CPPA_PRINTERR("terminate called after throwing an unknown exception");
     }
 
     abort();
@@ -280,15 +276,15 @@ int main(int argc, char** argv) {
             CPPA_LOGF_TRACE("lambda expression calling system()");
             string cmdstr = oss.str();
             if (system(cmdstr.c_str()) != 0) {
-                cerr << "FATAL: command \"" << cmdstr << "\" failed!" << endl;
+                CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
                 abort();
             }
         });
     }
     else {
-        cout << "actor published at port " << port << endl;
+        CPPA_PRINT("actor published at port " << port);
     }
-    //cout << "await SpawnPing message" << endl;
+    //CPPA_PRINT("await SpawnPing message");
     actor_ptr remote_client;
     CPPA_LOGF_DEBUG("send 'SpawnPing', expect 'PingPtr'");
     receive (
@@ -301,8 +297,8 @@ int main(int argc, char** argv) {
     );
     CPPA_LOGF_DEBUG("wait until spawned ping actors are done");
     await_all_others_done();
-    CPPA_CHECK_EQUAL(10, pongs());
-    cout << "test remote sync_send" << endl;
+    CPPA_CHECK_EQUAL(pongs(), 10);
+    CPPA_PRINT("test remote sync_send");
     receive (
         on(atom("SyncMsg")) >> [] {
             reply(atom("SyncReply"));
@@ -320,17 +316,17 @@ int main(int argc, char** argv) {
         }
     );
     // test 100 sync messages
-    cout << "test 100 synchronous messages" << endl;
+    CPPA_PRINT("test 100 synchronous messages");
     int i = 0;
     receive_for(i, 100) (
         others() >> [] {
             reply_tuple(self->last_dequeued());
         }
     );
-    cout << "test group communication via network" << endl;
+    CPPA_PRINT("test group communication via network");
     // group test
     spawn5_client();
-    cout << "test group communication via network (inverted setup)" << endl;
+    CPPA_PRINT("test group communication via network (inverted setup)");
     spawn5_server(remote_client, true);
 
     self->on_sync_failure([&] {
@@ -340,18 +336,18 @@ int main(int argc, char** argv) {
     });
 
     // test forward_to "over network and back"
-    cout << "test forwarding over network 'and back'" << endl;
+    CPPA_PRINT("test forwarding over network 'and back'");
     auto ra = spawn<replier>();
     timed_sync_send(remote_client, chrono::seconds(5), atom("fwd"), ra, "hello replier!").await(
         [&](int forty_two) {
-            CPPA_CHECK_EQUAL(42, forty_two);
+            CPPA_CHECK_EQUAL(forty_two, 42);
             auto from = self->last_sender();
-            CPPA_CHECK_EQUAL(ra, from);
-            if (from) CPPA_CHECK_EQUAL(false, from->is_proxy());
+            CPPA_CHECK_EQUAL(from, ra);
+            if (from) CPPA_CHECK_EQUAL(from->is_proxy(), false);
         }
     );
 
-    cout << "wait for a last goodbye" << endl;
+    CPPA_PRINT("wait for a last goodbye");
     receive (
         on(atom("farewell")) >> [] { }
     );

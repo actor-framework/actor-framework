@@ -120,13 +120,13 @@ int main() {
     auto mirror = spawn<sync_mirror>();
     bool continuation_called = false;
     sync_send(mirror, 42).then(
-        [](int value) { CPPA_CHECK_EQUAL(42, value); }
+        [](int value) { CPPA_CHECK_EQUAL(value, 42); }
     )
     .continue_with(
         [&] { continuation_called = true; }
     );
     self->exec_behavior_stack();
-    CPPA_CHECK_EQUAL(true, continuation_called);
+    CPPA_CHECK_EQUAL(continuation_called, true);
     send(mirror, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
@@ -142,10 +142,13 @@ int main() {
     };
     send(spawn_monitor<A>(self), atom("go"), spawn<B>(spawn<C>()));
     await_success_message();
+    CPPA_CHECKPOINT();
     await_all_others_done();
     send(spawn_monitor<A>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
+    CPPA_CHECKPOINT();
     await_all_others_done();
+    CPPA_CHECKPOINT();
     timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
         on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
@@ -165,6 +168,21 @@ int main() {
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(std::chrono::seconds(0)) >> CPPA_CHECKPOINT_CB()
     );
+    // check wheter continuations are invoked correctly
+    auto c = spawn<C>(); // replies only to 'gogo' messages
+    // first test: sync error must occur, continuation must not be called
+    self->on_sync_failure(CPPA_CHECKPOINT_CB());
+    timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
+    .then(CPPA_ERROR_CB("C replied to 'HiThere'!"))
+    .continue_with(CPPA_ERROR_CB("bad continuation"));
+    self->exec_behavior_stack();
+    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
+    sync_send(c, atom("gogo")).then(CPPA_CHECKPOINT_CB())
+                              .continue_with(CPPA_CHECKPOINT_CB());
+    self->exec_behavior_stack();
+    send(c, atom("EXIT"), exit_reason::user_defined);
+    await_all_others_done();
+    CPPA_CHECKPOINT();
     shutdown();
     return CPPA_TEST_RESULT();
 }

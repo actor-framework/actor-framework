@@ -38,7 +38,7 @@ int main() {
     int result = 0;
     do_receive (
         on<int>() >> [&](int value) {
-            CPPA_CHECK_EQUAL(2, value);
+            CPPA_CHECK_EQUAL(value, 2);
             result += value;
         },
         after(std::chrono::seconds(2)) >> [&]() {

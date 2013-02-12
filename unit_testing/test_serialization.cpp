@@ -177,12 +177,12 @@ int main() {
         binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
         raw_struct rs2;
         uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
-        CPPA_CHECK_EQUAL(rs.str, rs2.str);
+        CPPA_CHECK_EQUAL(rs2.str, rs.str);
         auto rsstr = cppa::to_string(object::from(rs));
         rs2.str = "foobar";
-        cout << "rs as string: " << rsstr << endl;
+        CPPA_PRINT("rs as string: " << rsstr);
         rs2 = from_string<raw_struct>(rsstr);
-        CPPA_CHECK_EQUAL(rs.str, rs2.str);
+        CPPA_CHECK_EQUAL(rs2.str, rs.str);
     }
     catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
 

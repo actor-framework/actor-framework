@@ -25,7 +25,7 @@ int main() {
 
     CPPA_TEST(test__metaprogramming);
 
-    cout << "test type_list" << endl;
+    CPPA_PRINT("test type_list");
 
     typedef type_list<int,float,std::string> l1;
     typedef typename tl_reverse<l1>::type r1;
@@ -35,7 +35,7 @@ int main() {
     CPPA_CHECK((is_same<std::string,element_at<2,l1>::type>::value));
 
     CPPA_CHECK_EQUAL(3 ,tl_size<l1>::value);
-    CPPA_CHECK_EQUAL(tl_size<l1>::value, tl_size<r1>::value);
+    CPPA_CHECK_EQUAL(tl_size<r1>::value, tl_size<l1>::value);
     CPPA_CHECK((is_same<element_at<0,l1>::type,element_at<2,r1>::type>::value));
     CPPA_CHECK((is_same<element_at<1,l1>::type,element_at<1,r1>::type>::value));
     CPPA_CHECK((is_same<element_at<2,l1>::type,element_at<0,r1>::type>::value));
@@ -46,7 +46,7 @@ int main() {
     CPPA_CHECK((is_same<l1,tl_tail<l2>::type>::value));
 
 
-    cout << "test int_list" << endl;
+    CPPA_PRINT("test int_list");
 
     typedef int_list<0,1,2,3,4,5> il0;
     typedef int_list<4,5> il1;

@@ -38,9 +38,8 @@ void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))(); }
 int main() {
     CPPA_TEST(test__yield_interface);
 #   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-    std::cout << "WARNING: context switching was explicitly disabled using "
-                 "CPPA_DISABLE_CONTEXT_SWITCHING"
-              << std::endl;
+    CPPA_PRINT("WARNING: context switching was explicitly disabled "
+                      "using CPPA_DISABLE_CONTEXT_SWITCHING");
 #   else
     fiber fself;
     pseudo_worker worker;
@@ -53,9 +52,9 @@ int main() {
         ++i;
     }
     while (ys != yield_state::done && i < 12);
-    CPPA_CHECK_EQUAL("yield_state::done", to_string(ys));
-    CPPA_CHECK_EQUAL(10, worker.m_count);
-    CPPA_CHECK_EQUAL(12, i);
+    CPPA_CHECK_EQUAL(to_string(ys), "yield_state::done");
+    CPPA_CHECK_EQUAL(worker.m_count, 10);
+    CPPA_CHECK_EQUAL(i, 12);
 #   endif
     return CPPA_TEST_RESULT();
 }

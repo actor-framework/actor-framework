@@ -37,8 +37,6 @@ using std::endl;
 using namespace cppa;
 using namespace cppa::detail;
 
-#define VERBOSE(LineOfCode) cout << #LineOfCode << " = " << (LineOfCode) << endl
-
 namespace { std::atomic<size_t> s_expensive_copies; }
 
 struct expensive_copy_struct {
@@ -137,7 +135,7 @@ int main() {
     announce<expensive_copy_struct>(&expensive_copy_struct::value);
 
     cow_tuple<int> zero;
-    CPPA_CHECK_EQUAL(0, get<0>(zero));
+    CPPA_CHECK_EQUAL(get<0>(zero), 0);
 
     using namespace cppa::placeholders;
 
@@ -170,15 +168,15 @@ int main() {
     CPPA_CHECK_INVOKED(f02, (42, 21));
 
     CPPA_CHECK(f02.invoke(make_cow_tuple(42, 21)));
-    CPPA_CHECK_EQUAL("f02", invoked);
+    CPPA_CHECK_EQUAL(invoked, "f02");
     invoked = "";
 
-    auto f03 = on(42, val<int>) >> [&](const int& a, int&) { invoked = "f03"; CPPA_CHECK_EQUAL(42, a); };
+    auto f03 = on(42, val<int>) >> [&](const int& a, int&) { invoked = "f03"; CPPA_CHECK_EQUAL(a, 42); };
     CPPA_CHECK_NOT_INVOKED(f03, (0, 0));
     CPPA_CHECK_INVOKED(f03, (42, 42));
 
     auto f04 = on(42, int2str).when(_x2 == "42") >> [&](std::string& str) {
-        CPPA_CHECK_EQUAL("42", str);
+        CPPA_CHECK_EQUAL(str, "42");
         invoked = "f04";
     };
 
@@ -210,26 +208,26 @@ int main() {
     int f08_val = 666;
     auto f08 = on<int>() >> [&](int& mref) { mref = 8; invoked = "f08"; };
     CPPA_CHECK_INVOKED(f08, (f08_val));
-    CPPA_CHECK_EQUAL(8, f08_val);
+    CPPA_CHECK_EQUAL(f08_val, 8);
     any_tuple f08_any_val = make_cow_tuple(666);
     CPPA_CHECK(f08.invoke(f08_any_val));
-    CPPA_CHECK_EQUAL(8, f08_any_val.get_as<int>(0));
+    CPPA_CHECK_EQUAL(f08_any_val.get_as<int>(0), 8);
 
     int f09_val = 666;
     auto f09 = on(str2int, val<int>) >> [&](int& mref) { mref = 9; invoked = "f09"; };
     CPPA_CHECK_NOT_INVOKED(f09, ("hello lambda", f09_val));
     CPPA_CHECK_INVOKED(f09, ("0", f09_val));
-    CPPA_CHECK_EQUAL(9, f09_val);
+    CPPA_CHECK_EQUAL(f09_val, 9);
     any_tuple f09_any_val = make_cow_tuple("0", 666);
     CPPA_CHECK(f09.invoke(f09_any_val));
-    CPPA_CHECK_EQUAL(9, f09_any_val.get_as<int>(1));
+    CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     f09_any_val.get_as_mutable<int>(1) = 666;
     any_tuple f09_any_val_copy{f09_any_val};
     CPPA_CHECK_EQUAL(f09_any_val.at(0), f09_any_val_copy.at(0));
     // detaches f09_any_val from f09_any_val_copy
     CPPA_CHECK(f09.invoke(f09_any_val));
-    CPPA_CHECK_EQUAL(9, f09_any_val.get_as<int>(1));
-    CPPA_CHECK_EQUAL(666, f09_any_val_copy.get_as<int>(1));
+    CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
+    CPPA_CHECK_EQUAL(f09_any_val_copy.get_as<int>(1), 666);
     // no longer the same data
     CPPA_CHECK_NOT_EQUAL(f09_any_val.at(0), f09_any_val_copy.at(0));
 
@@ -240,11 +238,11 @@ int main() {
     );
 
     CPPA_CHECK(f10(9));
-    CPPA_CHECK_EQUAL("f10.0", invoked);
+    CPPA_CHECK_EQUAL(invoked, "f10.0");
     CPPA_CHECK(f10(10));
-    CPPA_CHECK_EQUAL("f10.1", invoked);
+    CPPA_CHECK_EQUAL(invoked, "f10.1");
     CPPA_CHECK(f10("42"));
-    CPPA_CHECK_EQUAL("f10.2", invoked);
+    CPPA_CHECK_EQUAL(invoked, "f10.2");
     CPPA_CHECK(f10("42", 42));
     CPPA_CHECK(f10("a", "b", "c"));
     std::string foobar = "foobar";
@@ -268,22 +266,22 @@ int main() {
     );
 
     CPPA_CHECK(f11(1));
-    CPPA_CHECK_EQUAL(1, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 1);
     CPPA_CHECK(f11(3));
-    CPPA_CHECK_EQUAL(3, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 3);
     CPPA_CHECK(f11(8));
-    CPPA_CHECK_EQUAL(8, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 8);
     CPPA_CHECK(f11(10));
-    CPPA_CHECK_EQUAL(9, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 9);
     CPPA_CHECK(f11("hello lambda"));
-    CPPA_CHECK_EQUAL(11, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 11);
     CPPA_CHECK(f11("10"));
-    CPPA_CHECK_EQUAL(10, f11_fun);
+    CPPA_CHECK_EQUAL(f11_fun, 10);
 
     auto f12 = (
         on<int, anything, int>().when(_x1 < _x2) >> [&](int a, int b) {
-            CPPA_CHECK_EQUAL(1, a);
-            CPPA_CHECK_EQUAL(5, b);
+            CPPA_CHECK_EQUAL(a, 1);
+            CPPA_CHECK_EQUAL(b, 5);
             invoked = "f12";
         }
     );
@@ -292,32 +290,32 @@ int main() {
     int f13_fun = 0;
     auto f13 = (
         on<int, anything, std::string, anything, int>().when(_x1 < _x3 && _x2.starts_with("-")) >> [&](int a, const std::string& str, int b) {
-            CPPA_CHECK_EQUAL("-h", str);
-            CPPA_CHECK_EQUAL(1, a);
-            CPPA_CHECK_EQUAL(10, b);
+            CPPA_CHECK_EQUAL(str, "-h");
+            CPPA_CHECK_EQUAL(a, 1);
+            CPPA_CHECK_EQUAL(b, 10);
             f13_fun = 1;
             invoked = "f13";
         },
         on<anything, std::string, anything, int, anything, float, anything>() >> [&](const std::string& str, int a, float b) {
-            CPPA_CHECK_EQUAL("h", str);
-            CPPA_CHECK_EQUAL(12, a);
-            CPPA_CHECK_EQUAL(1.f, b);
+            CPPA_CHECK_EQUAL(str, "h");
+            CPPA_CHECK_EQUAL(a, 12);
+            CPPA_CHECK_EQUAL(b, 1.f);
             f13_fun = 2;
             invoked = "f13";
         },
         on<float, anything, float>().when(_x1 * 2 == _x2) >> [&](float a, float b) {
-            CPPA_CHECK_EQUAL(1.f, a);
-            CPPA_CHECK_EQUAL(2.f, b);
+            CPPA_CHECK_EQUAL(a, 1.f);
+            CPPA_CHECK_EQUAL(b, 2.f);
             f13_fun = 3;
             invoked = "f13";
         }
     );
     CPPA_CHECK_INVOKED(f13, (1, 2, "-h", 12, 32, 10, 1.f, "--foo", 10));
-    CPPA_CHECK_EQUAL(1, f13_fun);
+    CPPA_CHECK_EQUAL(f13_fun, 1);
     CPPA_CHECK_INVOKED(f13, (1, 2, "h", 12, 32, 10, 1.f, "--foo", 10));
-    CPPA_CHECK_EQUAL(2, f13_fun);
+    CPPA_CHECK_EQUAL(f13_fun, 2);
     CPPA_CHECK_INVOKED(f13, (1.f, 1.5f, 2.f));
-    CPPA_CHECK_EQUAL(3, f13_fun);
+    CPPA_CHECK_EQUAL(f13_fun, 3);
 
     // check type correctness of make_cow_tuple()
     auto t0 = make_cow_tuple("1", 2);
@@ -327,8 +325,8 @@ int main() {
     // check implicit type conversion
     CPPA_CHECK((std::is_same<decltype(t0_0), std::string>::value));
     CPPA_CHECK((std::is_same<decltype(t0_1), int>::value));
-    CPPA_CHECK_EQUAL(t0_0, "1");
-    CPPA_CHECK_EQUAL(t0_1, 2);
+    CPPA_CHECK_EQUAL("1", t0_0);
+    CPPA_CHECK_EQUAL(2, t0_1);
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
@@ -393,14 +391,14 @@ int main() {
         }
     }
 
-    cout << "check correct tuple move operations" << endl;
+    CPPA_PRINT("check correct tuple move operations");
     send(spawn<dummy_receiver>(), expensive_copy_struct());
     receive (
         on_arg_match >> [&](expensive_copy_struct& ecs) {
-            CPPA_CHECK_EQUAL(ecs.value, 42);
+            CPPA_CHECK_EQUAL(42, ecs.value);
         }
     );
-    CPPA_CHECK_EQUAL(s_expensive_copies, (size_t) 0);
+    CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
     await_all_others_done();
     shutdown();
     return CPPA_TEST_RESULT();

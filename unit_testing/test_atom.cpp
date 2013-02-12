@@ -23,11 +23,8 @@ namespace { constexpr auto s_foo = atom("FooBar"); }
 
 template<atom_value AtomValue, typename... Types>
 void foo() {
-    cout << "foo(" << static_cast<std::uint64_t>(AtomValue)
-                   << " = "
-                   << to_string(AtomValue)
-         << ")"
-         << endl;
+    CPPA_PRINT("foo(" << static_cast<std::uint64_t>(AtomValue)
+                      << " = " << to_string(AtomValue) << ")");
 }
 
 int main() {
@@ -40,7 +37,7 @@ int main() {
     // 'illegal' characters are mapped to whitespaces
     CPPA_CHECK_EQUAL(atom("   "), atom("@!?"));
     // check to_string impl.
-    CPPA_CHECK_EQUAL("FooBar", to_string(s_foo));
+    CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
     self << make_cow_tuple(atom("foo"), static_cast<std::uint32_t>(42))
          << make_cow_tuple(atom(":Attach"), atom(":Baz"), "cstring")
          << make_cow_tuple(atom("b"), atom("a"), atom("c"), 23.f)
@@ -49,15 +46,15 @@ int main() {
     receive_for(i, 3) (
         on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value) {
             matched_pattern[0] = true;
-            CPPA_CHECK_EQUAL(42, value);
+            CPPA_CHECK_EQUAL(value, 42);
         },
         on<atom(":Attach"), atom(":Baz"), string>() >> [&](const string& str) {
             matched_pattern[1] = true;
-            CPPA_CHECK_EQUAL("cstring", str);
+            CPPA_CHECK_EQUAL(str, "cstring");
         },
         on<atom("a"), atom("b"), atom("c"), float>() >> [&](float value) {
             matched_pattern[2] = true;
-            CPPA_CHECK_EQUAL(23.f, value);
+            CPPA_CHECK_EQUAL(value, 23.f);
         }
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);

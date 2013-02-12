@@ -298,67 +298,59 @@ struct simple_mirror : sb_actor<simple_mirror> {
 int main() {
     CPPA_TEST(test__spawn);
 
-    cout << "test send() ... " << flush;
+    CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);
     receive(on(1, 2, 3, true) >> []() { });
-    cout << "... with empty message... " << flush;
     self << any_tuple{};
     receive(on() >> []() { });
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
     self << any_tuple{};
     receive(on() >> []() { });
 
-    cout << "test receive with zero timeout ... " << flush;
+    CPPA_PRINT("test receive with zero timeout");
     receive (
         others() >> CPPA_UNEXPECTED_MSG_CB(),
-        after(chrono::seconds(0)) >> []() {
-            // mailbox empty
-        }
+        after(chrono::seconds(0)) >> []() { /* mailbox empty */ }
     );
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
     auto mirror = spawn<simple_mirror>();
 
-    cout << "test mirror ... " << flush;
+    CPPA_PRINT("test mirror");
     send(mirror, "hello mirror");
     receive(on("hello mirror") >> []() { });
     send(mirror, atom("EXIT"), exit_reason::user_defined);
-    cout << "await ... " << endl;
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test echo actor ... " << flush;
+    CPPA_PRINT("test echo actor");
     auto mecho = spawn(echo_actor);
     send(mecho, "hello echo");
     receive (
         on("hello echo") >> []() { },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    cout << "await ... " << endl;
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test delayed_send() ... " << flush;
+    CPPA_PRINT("test delayed_send()");
     delayed_send(self, chrono::seconds(1), 1, 2, 3);
     receive(on(1, 2, 3) >> []() { });
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test timeout ... " << flush;
+    CPPA_PRINT("test timeout");
     receive(after(chrono::seconds(1)) >> []() { });
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "testee1 ... " << flush;
     spawn(testee1);
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "event_testee2 ... " << flush;
     spawn_event_testee2();
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "chopstick ... " << flush;
     auto cstk = spawn<chopstick>();
     send(cstk, atom("take"), self);
     receive (
@@ -368,9 +360,8 @@ int main() {
         }
     );
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test event-based factory ... " << flush;
     auto factory = factory::event_based([&](int* i, float*, string*) {
         self->become (
             on(atom("get_int")) >> [i]() {
@@ -391,18 +382,17 @@ int main() {
     send(foobaz_actor, atom("done"));
     receive (
         on_arg_match >> [&](int value) {
-            CPPA_CHECK_EQUAL(23, value);
+            CPPA_CHECK_EQUAL(value, 23);
         }
     );
     receive (
         on_arg_match >> [&](int value) {
-            CPPA_CHECK_EQUAL(42, value);
+            CPPA_CHECK_EQUAL(value, 42);
         }
     );
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test fixed_stack ... " << flush;
     auto st = spawn<fixed_stack>(10);
     // push 20 values
     for (int i = 0; i < 20; ++i) send(st, atom("push"), i);
@@ -431,9 +421,8 @@ int main() {
     // terminate st
     send(st, atom("EXIT"), exit_reason::user_defined);
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test sync send/receive ... " << flush;
     auto sync_testee1 = spawn([]() {
         receive (
             on(atom("get")) >> []() {
@@ -450,14 +439,14 @@ int main() {
     // must skip sync message
     receive (
         on(42, arg_match) >> [&](int i) {
-            CPPA_CHECK_EQUAL(1, i);
+            CPPA_CHECK_EQUAL(i, 1);
         }
     );
     // must skip remaining async message
     receive_response (handle) (
         on_arg_match >> [&](int a, int b) {
-            CPPA_CHECK_EQUAL(42, a);
-            CPPA_CHECK_EQUAL(2, b);
+            CPPA_CHECK_EQUAL(a, 42);
+            CPPA_CHECK_EQUAL(b, 2);
         },
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(10)) >> CPPA_UNEXPECTED_TOUT_CB()
@@ -470,9 +459,9 @@ int main() {
         after(chrono::seconds(0)) >> []() { }
     );
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
-    cout << "test sync send with factory spawned actor ... " << flush;
+    CPPA_PRINT("test sync send with factory spawned actor");
     auto sync_testee_factory = factory::event_based(
         [&]() {
             self->become (
@@ -481,7 +470,7 @@ int main() {
                     self->handle_response(handle) (
                         on_arg_match >> [&](const string& str) {
                             CPPA_CHECK(self->last_sender() != nullptr);
-                            CPPA_CHECK_EQUAL("nothing", str);
+                            CPPA_CHECK_EQUAL(str, "nothing");
                             reply("goodbye!");
                             self->quit();
                         },
@@ -491,15 +480,11 @@ int main() {
                         }
                     );
                 },
-                others() >> []() {
-                    cerr << "UNEXPECTED: " << to_string(self->last_dequeued())
-                         << endl;
-                }
-
+                others() >> CPPA_UNEXPECTED_MSG_CB()
             );
         }
     );
-    CPPA_CHECK(true);
+    CPPA_CHECKPOINT();
     auto sync_testee = sync_testee_factory.spawn();
     self->monitor(sync_testee);
     send(sync_testee, "hi");
@@ -511,15 +496,17 @@ int main() {
             reply("nothing");
         }
     );
-    receive (on("goodbye!") >> CPPA_CHECKPOINT_CB());
-    CPPA_CHECKPOINT();
+    receive (
+        on("goodbye!") >> CPPA_CHECKPOINT_CB(),
+        after(std::chrono::seconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
+    );
     receive (
         on(atom("DOWN"), exit_reason::normal) >> [&] {
-            CPPA_CHECK(self->last_sender() == sync_testee);
+            CPPA_CHECK_EQUAL(self->last_sender(), sync_testee);
         }
     );
     await_all_others_done();
-    cout << "ok" << endl;
+    CPPA_CHECKPOINT();
 
     sync_send(sync_testee, "!?").await(
         on(atom("EXITED"), any_vals) >> CPPA_CHECKPOINT_CB(),
@@ -583,29 +570,29 @@ int main() {
     int zombie_on_exit_called = 0;
     factory::event_based([&]() { ++zombie_init_called; },
                          [&]() { ++zombie_on_exit_called; }).spawn();
-    CPPA_CHECK_EQUAL(1, zombie_init_called);
-    CPPA_CHECK_EQUAL(1, zombie_on_exit_called);
+    CPPA_CHECK_EQUAL(zombie_init_called, 1);
+    CPPA_CHECK_EQUAL(zombie_on_exit_called, 1);
     factory::event_based([&](int* i) {
-        CPPA_CHECK_EQUAL(42, *i);
+        CPPA_CHECK_EQUAL(*i, 42);
         ++zombie_init_called;
     },
     [&](int* i) {
-        CPPA_CHECK_EQUAL(42, *i);
+        CPPA_CHECK_EQUAL(*i, 42);
         ++zombie_on_exit_called;
     })
     .spawn(42);
-    CPPA_CHECK_EQUAL(2, zombie_init_called);
-    CPPA_CHECK_EQUAL(2, zombie_on_exit_called);
+    CPPA_CHECK_EQUAL(zombie_init_called, 2);
+    CPPA_CHECK_EQUAL(zombie_on_exit_called, 2);
     factory::event_based([&](int* i) {
-        CPPA_CHECK_EQUAL(23, *i);
+        CPPA_CHECK_EQUAL(*i, 23);
         ++zombie_init_called;
     },
     [&]() {
         ++zombie_on_exit_called;
     })
     .spawn(23);
-    CPPA_CHECK_EQUAL(3, zombie_init_called);
-    CPPA_CHECK_EQUAL(3, zombie_on_exit_called);
+    CPPA_CHECK_EQUAL(zombie_init_called, 3);
+    CPPA_CHECK_EQUAL(zombie_on_exit_called, 3);
 
     auto f = factory::event_based([](string* name) {
         self->become (
@@ -619,13 +606,13 @@ int main() {
     send(a1, atom("get_name"));
     receive (
         on(atom("name"), arg_match) >> [&](const string& name) {
-            CPPA_CHECK_EQUAL("alice", name);
+            CPPA_CHECK_EQUAL(name, "alice");
         }
     );
     send(a2, atom("get_name"));
     receive (
         on(atom("name"), arg_match) >> [&](const string& name) {
-            CPPA_CHECK_EQUAL("bob", name);
+            CPPA_CHECK_EQUAL(name, "bob");
         }
     );
     auto kill_msg = make_any_tuple(atom("EXIT"), exit_reason::user_defined);
@@ -644,7 +631,7 @@ int main() {
     await_all_others_done();
 
     auto res1 = behavior_test<testee_actor>(spawn(testee_actor{}));
-    CPPA_CHECK_EQUAL(res1, "wait4int");
+    CPPA_CHECK_EQUAL("wait4int", res1);
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");
 
     // create 20,000 actors linked to one single actor
@@ -671,7 +658,7 @@ int main() {
     // wait for DOWN and EXIT messages of pong
     receive_for(i, 4) (
         on<atom("EXIT"), uint32_t>() >> [&](uint32_t reason) {
-            CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
+            CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
             CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
@@ -679,11 +666,11 @@ int main() {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
-                CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
+                CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
             }
             else if (who == ping_actor) {
                 flags |= 0x04;
-                CPPA_CHECK_EQUAL(reason, exit_reason::normal);
+                CPPA_CHECK_EQUAL(exit_reason::normal, reason);
             }
         },
         on_arg_match >> [&](const atom_value& val) {
@@ -699,8 +686,8 @@ int main() {
     );
     // wait for termination of all spawned actors
     await_all_others_done();
-    CPPA_CHECK_EQUAL(0x0F, flags);
+    CPPA_CHECK_EQUAL(flags, 0x0F);
     // verify pong messages
-    CPPA_CHECK_EQUAL(10, pongs());
+    CPPA_CHECK_EQUAL(pongs(), 10);
     return CPPA_TEST_RESULT();
 }

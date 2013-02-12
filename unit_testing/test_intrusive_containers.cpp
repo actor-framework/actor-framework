@@ -67,16 +67,16 @@ int main() {
     q.enqueue(new iint(2));
     q.enqueue(new iint(3));
 
-    CPPA_CHECK_EQUAL(s_iint_instances, 3);
+    CPPA_CHECK_EQUAL(3, s_iint_instances);
 
     auto x = q.try_pop();
-    CPPA_CHECK_EQUAL(1, x->value);
+    CPPA_CHECK_EQUAL(x->value, 1);
     delete x;
     x = q.try_pop();
-    CPPA_CHECK_EQUAL(2, x->value);
+    CPPA_CHECK_EQUAL(x->value, 2);
     delete x;
     x = q.try_pop();
-    CPPA_CHECK_EQUAL(3, x->value);
+    CPPA_CHECK_EQUAL(x->value, 3);
     delete x;
     x = q.try_pop();
     CPPA_CHECK(x == nullptr);
