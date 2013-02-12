@@ -71,7 +71,8 @@ class singleton_manager;
 } // namespace detail
 
 /**
- * @brief
+ * @brief This abstract class allows to create (spawn) new actors
+ *        and offers delayed sends.
  */
 class scheduler {
 
@@ -247,6 +248,6 @@ void set_default_scheduler(size_t num_threads);
  */
 scheduler* get_scheduler();
 
-} // namespace cppa::detail
+} // namespace cppa
 
 #endif // CPPA_SCHEDULER_HPP
