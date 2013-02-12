@@ -94,8 +94,12 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender,
         switch (m_pending_requests.enqueue(new_req_info(sender, mid))) {
             case intrusive::queue_closed: {
                 if (sender) {
-                    detail::sync_request_bouncer f{this, exit_reason()};
-                    f(sender.get(), mid);
+                    intrusive_ptr<default_actor_proxy> _this{this};
+                    auto rsn = exit_reason();
+                    m_proto->run_later([_this,rsn,sender,mid] {
+                        detail::sync_request_bouncer f{_this.get(), rsn};
+                        f(sender.get(), mid);
+                    });
                 }
                 return; // no need to forward message
             }
