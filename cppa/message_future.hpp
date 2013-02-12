@@ -136,7 +136,12 @@ class message_future {
 
     template<typename F>
     behavior bhvr_from_fun(F fun) {
-        auto handle_sync_failure = [] { self->handle_sync_failure(); };
+        auto handle_sync_failure = []() -> bool {
+            self->handle_sync_failure();
+            return false; // do not treat this as a match to cause a
+                          // continuation to be invoked only in case
+                          // `fun` was invoked
+        };
         return {
             on(atom("EXITED"), any_vals) >> handle_sync_failure,
             on(atom("TIMEOUT")) >> handle_sync_failure,

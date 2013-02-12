@@ -49,7 +49,7 @@ struct pseudo_tuple {
     }
 
     inline pointer mutable_at(size_t p) {
-        return const_cast<pointer>(data[p]);
+        return data[p];
     }
 
     inline pointer& operator[](size_t p) {

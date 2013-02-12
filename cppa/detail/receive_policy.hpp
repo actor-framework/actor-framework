@@ -359,14 +359,7 @@ class receive_policy {
             case sync_response: {
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = hm_begin(client, node, policy);
-#                   ifdef CPPA_DEBUG
-                    if (!fun(node->msg)) {
-                        std::cerr << "WARNING: actor didn't handle a "
-                                     "synchronous message\n";
-                    }
-#                   else
                     fun(node->msg);
-#                   endif
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
                     hm_cleanup(client, previous_node, policy);

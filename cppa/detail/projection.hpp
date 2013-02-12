@@ -119,6 +119,20 @@ class projection {
         return false;
     }
 
+    /**
+     * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
+     *        the result of @p fun in @p result.
+     */
+    template<class PartialFun>
+    inline bool operator()(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
+        return invoke(fun, result, args...);
+    }
+
+    template<class PartialFun>
+    inline bool operator()(PartialFun& fun, const util::void_type&, Args... args) const {
+        return (*this)(fun, args...);
+    }
+
  private:
 
     template<typename Storage, typename T>
@@ -176,6 +190,24 @@ class projection<util::empty_type_list> {
     bool operator()(PartialFun& fun) const {
         if (fun.defined_at()) {
             fun();
+            return true;
+        }
+        return false;
+    }
+
+    template<class PartialFun>
+    bool operator()(PartialFun& fun, const util::void_type&) const {
+        if (fun.defined_at()) {
+            fun();
+            return true;
+        }
+        return false;
+    }
+
+    template<class PartialFun>
+    bool operator()(PartialFun& fun, typename PartialFun::result_type& res) const {
+        if (fun.defined_at()) {
+            res = fun();
             return true;
         }
         return false;
