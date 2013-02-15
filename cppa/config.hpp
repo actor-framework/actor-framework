@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011, 2012                                                   *
+ * Copyright (C) 2011-2013                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  *                                                                            *
  * This file is part of libcppa.                                              *
