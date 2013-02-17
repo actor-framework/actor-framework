@@ -56,6 +56,9 @@ void fiber::swap(fiber&, fiber&) {
 #endif
 #include <boost/version.hpp>
 #include <boost/context/all.hpp>
+#if BOOST_VERSION >= 105300
+#include <boost/coroutine/all.hpp>
+#endif
 
 namespace cppa { namespace util {
 
@@ -96,10 +99,10 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
                 reinterpret_cast<void*>(
                     reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize));
 }
-#else
+#elif BOOST_VERSION < 105300
 namespace ctx = boost::context;
 typedef ctx::fcontext_t* fc_member;
-typedef ctx::guarded_stack_allocator fc_allocator;
+typedef ctx::guarded_stack_allocator fc_allocator
 inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
     ctx::jump_fcontext(from, to, (intptr_t) ptr);
 }
@@ -111,6 +114,22 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
                 reinterpret_cast<void*>(
                     reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
 }
+#else
+namespace ctx = boost::context;
+typedef ctx::fcontext_t* fc_member;
+typedef boost::coroutines::stack_allocator fc_allocator;
+inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
+    ctx::jump_fcontext(from, to, (intptr_t) ptr);
+}
+inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
+    size_t mss = fc_allocator::minimum_stacksize();
+    storage = ctx::make_fcontext(alloc.allocate(mss), mss, fiber_trampoline);
+    vg_register(vgm,
+                storage->fc_stack.sp,
+                reinterpret_cast<void*>(
+                    reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
+}
+
 #endif
 
 } // namespace <anonymous>
