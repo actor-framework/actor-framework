@@ -21,7 +21,7 @@ behavior ping_behavior(size_t num_pings) {
             CPPA_LOGF_ERROR_IF(!self->last_sender(), "last_sender() == nullptr");
             //cout << to_string(self->last_dequeued()) << endl;
             if (++s_pongs >= num_pings) {
-                reply(atom("EXIT"), exit_reason::user_defined);
+                quit_actor(self->last_sender(), exit_reason::user_defined);
                 self->quit();
             }
             else reply(atom("ping"), value);

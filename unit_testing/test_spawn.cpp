@@ -216,7 +216,7 @@ string behavior_test(actor_ptr et) {
             throw runtime_error(testee_name + " does not reply");
         }
     );
-    send(et, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(et, exit_reason::user_defined);
     await_all_others_done();
     return result;
 }
@@ -320,7 +320,7 @@ int main() {
     CPPA_PRINT("test mirror");
     send(mirror, "hello mirror");
     receive(on("hello mirror") >> []() { });
-    send(mirror, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(mirror, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -419,7 +419,7 @@ int main() {
         CPPA_CHECK(values == expected);
     }
     // terminate st
-    send(st, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(st, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -615,9 +615,8 @@ int main() {
             CPPA_CHECK_EQUAL(name, "bob");
         }
     );
-    auto kill_msg = make_any_tuple(atom("EXIT"), exit_reason::user_defined);
-    a1 << kill_msg;
-    a2 << kill_msg;
+    quit_actor(a1, exit_reason::user_defined);
+    quit_actor(a2, exit_reason::user_defined);
     await_all_others_done();
 
     factory::event_based([](int* i) {
@@ -646,7 +645,7 @@ int main() {
             }
         );
     });
-    send(twenty_thousand, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(twenty_thousand, exit_reason::user_defined);
     await_all_others_done();
     self->trap_exit(true);
     auto ping_actor = spawn_monitor(ping, 10);
@@ -657,12 +656,12 @@ int main() {
     delayed_send(self, chrono::seconds(1), atom("FooBar"));
     // wait for DOWN and EXIT messages of pong
     receive_for(i, 4) (
-        on<atom("EXIT"), uint32_t>() >> [&](uint32_t reason) {
+        on(atom("EXIT"), arg_match) >> [&](uint32_t reason) {
             CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
             CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
-        on<atom("DOWN"), uint32_t>() >> [&](uint32_t reason) {
+        on(atom("DOWN"), arg_match) >> [&](uint32_t reason) {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;

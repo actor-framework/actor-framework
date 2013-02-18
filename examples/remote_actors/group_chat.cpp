@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
         }
     );
     // force actor to quit
-    send(client_actor, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(client_actor, exit_reason::user_defined);
     await_all_others_done();
     shutdown();
     return 0;

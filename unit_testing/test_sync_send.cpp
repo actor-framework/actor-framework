@@ -127,7 +127,7 @@ int main() {
     );
     self->exec_behavior_stack();
     CPPA_CHECK_EQUAL(continuation_called, true);
-    send(mirror, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(mirror, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
     auto await_success_message = [&] {
@@ -180,7 +180,10 @@ int main() {
     sync_send(c, atom("gogo")).then(CPPA_CHECKPOINT_CB())
                               .continue_with(CPPA_CHECKPOINT_CB());
     self->exec_behavior_stack();
-    send(c, atom("EXIT"), exit_reason::user_defined);
+    quit_actor(c, exit_reason::user_defined);
+    await_all_others_done();
+    CPPA_CHECKPOINT();
+
     await_all_others_done();
     CPPA_CHECKPOINT();
     shutdown();
