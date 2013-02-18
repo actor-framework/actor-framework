@@ -89,35 +89,24 @@ inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
     ctx::jump_fcontext(&from, &to, (intptr_t) ptr);
 }
 inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
-    size_t stacksize = ctx::minimum_stacksize();
-    storage.fc_stack.base = alloc.allocate(stacksize);
+    size_t mss = ctx::minimum_stacksize();
+    storage.fc_stack.base = alloc.allocate(mss);
     storage.fc_stack.limit = reinterpret_cast<void*>(
-                reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize);
+                reinterpret_cast<intptr_t>(storage.fc_stack.base) - mss);
     ctx::make_fcontext(&storage, fiber_trampoline);
     vg_register(vgm,
                 storage.fc_stack.base,
                 reinterpret_cast<void*>(
-                    reinterpret_cast<intptr_t>(storage.fc_stack.base) - stacksize));
-}
-#elif BOOST_VERSION < 105300
-namespace ctx = boost::context;
-typedef ctx::fcontext_t* fc_member;
-typedef ctx::guarded_stack_allocator fc_allocator
-inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
-    ctx::jump_fcontext(from, to, (intptr_t) ptr);
-}
-inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
-    size_t mss = fc_allocator::minimum_stacksize();
-    storage = ctx::make_fcontext(alloc.allocate(mss), mss, fiber_trampoline);
-    vg_register(vgm,
-                storage->fc_stack.sp,
-                reinterpret_cast<void*>(
-                    reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
+                    reinterpret_cast<intptr_t>(storage.fc_stack.base) - mss));
 }
 #else
 namespace ctx = boost::context;
 typedef ctx::fcontext_t* fc_member;
-typedef boost::coroutines::stack_allocator fc_allocator;
+#   if BOOST_VERSION < 105300
+    typedef ctx::guarded_stack_allocator fc_allocator;
+#   else
+    typedef boost::coroutines::stack_allocator fc_allocator;
+#   endif
 inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
     ctx::jump_fcontext(from, to, (intptr_t) ptr);
 }
@@ -129,7 +118,6 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
                 reinterpret_cast<void*>(
                     reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
 }
-
 #endif
 
 } // namespace <anonymous>
