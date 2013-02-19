@@ -1,6 +1,7 @@
 #include "test.hpp"
 #include "cppa/cppa.hpp"
 
+using namespace std;
 using namespace cppa;
 using namespace cppa::placeholders;
 
@@ -171,11 +172,13 @@ int main() {
     // check wheter continuations are invoked correctly
     auto c = spawn<C>(); // replies only to 'gogo' messages
     // first test: sync error must occur, continuation must not be called
-    self->on_sync_failure(CPPA_CHECKPOINT_CB());
+    bool timeout_occured = false;
+    self->on_sync_timeout([&] { timeout_occured = true; });
     timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
     .then(CPPA_ERROR_CB("C replied to 'HiThere'!"))
     .continue_with(CPPA_ERROR_CB("bad continuation"));
     self->exec_behavior_stack();
+    CPPA_CHECK_EQUAL(timeout_occured, true);
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
     sync_send(c, atom("gogo")).then(CPPA_CHECKPOINT_CB())
                               .continue_with(CPPA_CHECKPOINT_CB());
@@ -183,7 +186,6 @@ int main() {
     quit_actor(c, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
-
     await_all_others_done();
     CPPA_CHECKPOINT();
     shutdown();

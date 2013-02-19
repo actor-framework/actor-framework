@@ -58,11 +58,15 @@ static constexpr std::uint32_t unhandled_exception = 0x00002;
 static constexpr std::uint32_t unallowed_function_call = 0x00003;
 
 /**
- * @brief Indicates that a synchronous message timed out
- *        or the receiving actor didn't handle the message properly
- *        and the killed actor did not handle sync failures manually.
+ * @brief Indicates that the actor received an unexpected
+ *        synchronous reply message.
  */
 static constexpr std::uint32_t unhandled_sync_failure = 0x00004;
+
+/**
+ * @brief Indicates that a synchronous message timed out.
+ */
+static constexpr std::uint32_t unhandled_sync_timeout = 0x00005;
 
 /**
  * @brief Indicates that an actor finishied execution

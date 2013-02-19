@@ -355,6 +355,50 @@ class local_actor : public memory_cached_mixin<actor> {
      */
     virtual void exec_behavior_stack();
 
+    /**
+     * @brief Creates a {@link response_handle} to allow actors to response
+     *        to a request later on.
+     */
+    response_handle make_response_handle();
+
+    /**
+     * @brief Sets the handler for unexpected synchronous response messages.
+     */
+    inline void on_sync_timeout(std::function<void()> fun) {
+        m_sync_timeout_handler = std::move(fun);
+    }
+
+    /**
+     * @brief Sets the handler for @p timed_sync_send timeout messages.
+     */
+    inline void on_sync_failure(std::function<void()> fun) {
+        m_sync_failure_handler = std::move(fun);
+    }
+
+    /**
+     * @brief Calls <tt>on_sync_timeout(fun); on_sync_failure(fun);</tt>.
+     */
+    inline void on_sync_timeout_or_failure(std::function<void()> fun) {
+        on_sync_timeout(fun);
+        on_sync_failure(fun);
+    }
+
+    /**
+     * @brief Invokes the handler for synchronous timeouts.
+     */
+    inline void handle_sync_timeout() {
+        if (m_sync_timeout_handler) m_sync_timeout_handler();
+        else quit(exit_reason::unhandled_sync_timeout);
+    }
+
+    /**
+     * @brief Invokes the handler for unexpected synchronous response messages.
+     */
+    inline void handle_sync_failure() {
+        if (m_sync_failure_handler) m_sync_failure_handler();
+        else quit(exit_reason::unhandled_sync_failure);
+    }
+
     // library-internal members and member functions that shall
     // not appear in the documentation
 
@@ -442,21 +486,6 @@ class local_actor : public memory_cached_mixin<actor> {
 
     virtual void become_waiting_for(behavior&&, message_id_t) = 0;
 
-    /**
-     * @brief Creates a {@link response_handle} to allow actors to response
-     *        to a request later on.
-     */
-    response_handle make_response_handle();
-
-    inline void on_sync_failure(std::function<void()> fun) {
-        m_sync_failure_handler = std::move(fun);
-    }
-
-    inline void handle_sync_failure() {
-        if (m_sync_failure_handler) m_sync_failure_handler();
-        else quit(exit_reason::unhandled_sync_failure);
-    }
-
     inline detail::behavior_stack& bhvr_stack() {
         return m_bhvr_stack;
     }
@@ -492,6 +521,7 @@ class local_actor : public memory_cached_mixin<actor> {
  private:
 
     std::function<void()> m_sync_failure_handler;
+    std::function<void()> m_sync_timeout_handler;
 
 #   endif // CPPA_DOCUMENTATION
 

@@ -95,7 +95,7 @@ class message_future {
     /**
      * @brief Sets @p fun as event-handler for the response message, calls
      *        <tt>self->handle_sync_failure()</tt> if the response message
-     *        is an 'EXITED', 'TIMEOUT', or 'VOID' message.
+     *        is an 'EXITED' or 'VOID' message.
      */
     template<typename F>
     typename std::enable_if<util::is_callable<F>::value,continue_helper>::type
@@ -108,7 +108,7 @@ class message_future {
     /**
      * @brief Blocks until the response arrives and then executes @p @p fun,
      *        calls <tt>self->handle_sync_failure()</tt> if the response
-     *        message is an 'EXITED', 'TIMEOUT', or 'VOID' message.
+     *        message is an 'EXITED' or 'VOID' message.
      */
     template<typename F>
     typename std::enable_if<util::is_callable<F>::value>::type await(F fun) {
@@ -142,9 +142,13 @@ class message_future {
                           // continuation to be invoked only in case
                           // `fun` was invoked
         };
+        auto handle_sync_timeout = []() -> bool {
+            self->handle_sync_timeout();
+            return false;
+        };
         return {
-            on(atom("EXITED"), any_vals) >> handle_sync_failure,
-            on(atom("TIMEOUT")) >> handle_sync_failure,
+            on<atom("EXITED"), std::uint32_t>() >> handle_sync_failure,
+            on(atom("TIMEOUT")) >> handle_sync_timeout,
             on(atom("VOID")) >> handle_sync_failure,
             on(any_vals, arg_match) >> fun,
             others() >> handle_sync_failure
