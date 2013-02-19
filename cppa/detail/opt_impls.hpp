@@ -207,9 +207,8 @@ class opt1_rvalue_builder<false> {
             sub_type;
 
     template<typename SubType>
-    opt1_rvalue_builder(char sopt, std::string lopt, SubType&& sub)
-    : m_short(sopt), m_long(std::move(lopt))
-    , m_sub(std::forward<SubType>(sub)) { }
+    opt1_rvalue_builder(std::string lopt, SubType&& sub)
+    : m_long(std::move(lopt)), m_sub(std::forward<SubType>(sub)) { }
 
     template<typename Expr>
     auto operator>>(Expr expr)
@@ -228,7 +227,6 @@ class opt1_rvalue_builder<false> {
     template<typename T>
     inline void inject_arg_name(const T&) { }
 
-    char m_short;
     std::string m_long;
     sub_type m_sub;
 
