@@ -43,6 +43,8 @@ class msg_content;
 
 namespace cppa { namespace network { class middleman; } }
 
+namespace cppa { namespace opencl { class command_dispatcher; } }
+
 namespace cppa { namespace detail {
 
 class empty_tuple;
@@ -79,6 +81,8 @@ class singleton_manager {
     static empty_tuple* get_empty_tuple();
 
     static decorated_names_map* get_decorated_names_map();
+
+    static opencl::command_dispatcher* get_command_dispatcher();
 
  private:
 

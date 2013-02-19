@@ -49,12 +49,15 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
+#include "cppa/opencl/command_dispatcher.hpp"
+
 namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
 
 namespace cppa { namespace detail {
 
 namespace {
 
+std::atomic<opencl::command_dispatcher*> s_command_dispatcher;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<decorated_names_map*> s_decorated_names_map;
 std::atomic<network::middleman*> s_middleman;
@@ -78,12 +81,17 @@ void singleton_manager::shutdown() {
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe to delete all other singletons now
+    destroy(s_command_dispatcher);
     destroy(s_actor_registry);
     destroy(s_group_manager);
     destroy(s_empty_tuple);
     destroy(s_uniform_type_info_map);
     destroy(s_decorated_names_map);
     destroy(s_logger);
+}
+
+opencl::command_dispatcher* singleton_manager::get_command_dispatcher() {
+    return lazy_get(s_command_dispatcher);
 }
 
 actor_registry* singleton_manager::get_actor_registry() {
