@@ -32,14 +32,28 @@
 #ifndef CPPA_OPENCL_COMMAND_DISPATCHER_HPP
 #define CPPA_OPENCL_COMMAND_DISPATCHER_HPP
 
+#include "cppa/detail/singleton_mixin.hpp"
+
 namespace cppa { namespace opencl {
 
+#ifdef CPPA_OPENCL
 class command_dispatcher {
 
+ public:
 
+    static inline command_dispatcher* create_singleton() {
+        return new command_dispatcher;
+    }
+    inline void initialize() { }
+    inline void dispose() { delete this; }
+    inline void destroy() { delete this; }
 
 };
+#else // CPPA_OPENCL
+class command_dispatcher : public detail::singleton_mixin<command_dispatcher> {
 
-} // namespace cppa::opencl
+};
+#endif // CPPA_OPENCL
+} } // namespace cppa::opencl
 
 #endif // CPPA_OPENCL_COMMAND_DISPATCHER_HPP
