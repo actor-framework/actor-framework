@@ -158,12 +158,6 @@ set(LIBCPPA_SRC
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 
-if (ENABLE_OPENCL)
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
-      src/opencl/command_dispatcher.cpp)
-endif ()
-
 if (BOOST_ROOT)
   # Prevent falling back to system paths when using a custom Boost prefix.
   set(Boost_NO_SYSTEM_PATHS true)
@@ -174,6 +168,15 @@ find_package(PTHREAD REQUIRED)
 set(INCLUDE_DIRS . ${PTHREAD_INCLUDE_DIR})
 set(LD_DIRS)
 set(LD_FLAGS ${CMAKE_LD_LIBS} ${PTHREAD_LIBRARIES})
+
+if (ENABLE_OPENCL)
+  find_package(OPENCL REQUIRED)
+  set(LD_FLAGS ${LD_FLAGS} ${OPENCL_LIBRARIES})
+  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+  set(LIBCPPA_SRC
+      ${LIBCPPA_SRC}
+      src/opencl/command_dispatcher.cpp)
+endif (ENABLE_OPENCL)
 
 if (DISABLE_CONTEXT_SWITCHING)
   # explicitly disabled
@@ -341,6 +344,7 @@ macro (invertYesNo in out)
 endmacro ()
 
 toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
+toYesNo(ENABLE_OPENCL BUILD_OPENCL_STR)
 invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
 invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 
@@ -368,6 +372,7 @@ message("\n====================|  Build Summary  |===================="
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
         "\nBuild static:      ${CPPA_BUILD_STATIC}"
         "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
+        "\nBuild OpenCL:      ${BUILD_OPENCL_STR}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
