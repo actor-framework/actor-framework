@@ -158,6 +158,12 @@ set(LIBCPPA_SRC
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 
+if (ENABLE_OPENCL)
+  set(LIBCPPA_SRC
+      ${LIBCPPA_SRC}
+      src/opencl/command_dispatcher.cpp)
+endif ()
+
 if (BOOST_ROOT)
   # Prevent falling back to system paths when using a custom Boost prefix.
   set(Boost_NO_SYSTEM_PATHS true)

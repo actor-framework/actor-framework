@@ -291,3 +291,9 @@ unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
 cppa/memory_cached_mixin.hpp
 unit_testing/test.cpp
+cppa/opencl/program.hpp
+cppa/opencl/actor_facade.hpp
+cppa/opencl/command.hpp
+cppa/opencl/command_dispatcher.hpp
+src/opencl/command_dispatcher.cpp
+unit_testing/test_opencl.cpp
