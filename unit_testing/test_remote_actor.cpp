@@ -213,8 +213,9 @@ int client_part(const vector<string_pair>& args) {
             forward_to(fwd);
         }
     );
-
+    // shutdown handshake
     send(server, atom("farewell"));
+    receive(on(atom("cu")) >> [] { });
     shutdown();
     return CPPA_TEST_RESULT();
 }
@@ -329,11 +330,7 @@ int main(int argc, char** argv) {
     CPPA_PRINT("test group communication via network (inverted setup)");
     spawn5_server(remote_client, true);
 
-    self->on_sync_failure([&] {
-        CPPA_ERROR("unexpected message: "
-                   << to_string(self->last_dequeued())
-                   << endl);
-    });
+    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
 
     // test forward_to "over network and back"
     CPPA_PRINT("test forwarding over network 'and back'");
@@ -348,9 +345,10 @@ int main(int argc, char** argv) {
     );
 
     CPPA_PRINT("wait for a last goodbye");
-    receive (
-        on(atom("farewell")) >> [] { }
-    );
+    receive(on(atom("farewell")) >> [&] {
+        send(remote_client, atom("cu"));
+        CPPA_CHECKPOINT();
+    });
     // wait until separate process (in sep. thread) finished execution
     if (run_remote_actor) child.join();
     shutdown();
