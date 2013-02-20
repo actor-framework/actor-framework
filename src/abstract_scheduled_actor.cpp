@@ -62,7 +62,7 @@ bool abstract_scheduled_actor::chained_enqueue(actor* sender, any_tuple msg) {
 }
 
 bool abstract_scheduled_actor::chained_sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
-    bool failed;
+    bool failed = false;
     bool result = enqueue_node(super::fetch_node(sender, std::move(msg), id), pending, &failed);
     if (failed) {
         sync_request_bouncer f{this, exit_reason()};
@@ -81,7 +81,7 @@ void abstract_scheduled_actor::enqueue(actor* sender, any_tuple msg) {
 }
 
 void abstract_scheduled_actor::sync_enqueue(actor* sender, message_id_t id, any_tuple msg) {
-    bool failed;
+    bool failed = false;
     enqueue_node(super::fetch_node(sender, std::move(msg), id), ready, &failed);
     if (failed) {
         sync_request_bouncer f{this, exit_reason()};
