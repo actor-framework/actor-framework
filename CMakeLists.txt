@@ -116,6 +116,7 @@ set(LIBCPPA_SRC
     src/empty_tuple.cpp
     src/event_based_actor.cpp
     src/exception.cpp
+    src/exit_reason.cpp
     src/factory.cpp
     src/fd_util.cpp
     src/fiber.cpp
