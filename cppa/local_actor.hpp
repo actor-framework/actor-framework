@@ -56,9 +56,9 @@ namespace cppa {
 class scheduler;
 class message_future;
 class local_scheduler;
+class sync_handle_helper;
 
 namespace detail { class receive_policy; }
-
 
 template<bool DiscardOld>
 struct behavior_policy { static const bool discard_old = DiscardOld; };
@@ -88,27 +88,6 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t();
 #ifndef CPPA_DOCUMENTATION
 } // namespace <anonymous>
 #endif // CPPA_DOCUMENTATION
-
-struct sync_recv_helper {
-    typedef void (*callback_type)(behavior&, message_id_t);
-    message_id_t m_handle;
-    callback_type m_fun;
-    inline sync_recv_helper(message_id_t handle, callback_type fun)
-    : m_handle(handle), m_fun(fun) { }
-    template<typename... Expression>
-    inline void operator()(Expression&&... mexpr) const {
-        auto bhvr = match_expr_convert(std::forward<Expression>(mexpr)...);
-        static_assert(std::is_same<decltype(bhvr), behavior>::value,
-                      "no timeout specified");
-        if (bhvr.timeout().valid() == false || bhvr.timeout().is_zero()) {
-            throw std::invalid_argument("specified timeout is invalid or zero");
-        }
-        else if (!m_handle.valid() || !m_handle.is_response()) {
-            throw std::logic_error("handle does not point to a response");
-        }
-        m_fun(bhvr, m_handle);
-    }
-};
 
 class message_future;
 
@@ -308,16 +287,6 @@ class local_actor : public memory_cached_mixin<actor> {
     }
 
     /**
-     * @brief Receives a synchronous response message.
-     * @param handle A future for a synchronous response.
-     * @throws std::invalid_argument if given behavior does not has a valid
-     *                               timeout definition
-     * @throws std::logic_error if @p handle is not valid or if the actor
-     *                          already received the response for @p handle
-     */
-    sync_recv_helper handle_response(const message_future& handle);
-
-    /**
      * @brief Returns to a previous behavior if available.
      */
     inline void unbecome() {
@@ -403,6 +372,10 @@ class local_actor : public memory_cached_mixin<actor> {
     // not appear in the documentation
 
 #   ifndef CPPA_DOCUMENTATION
+
+    // backward compatiblity, handle_response was part of local_actor
+    // until version 0.6
+    sync_handle_helper handle_response(const message_future& mf);
 
     local_actor(bool is_scheduled = false);
 

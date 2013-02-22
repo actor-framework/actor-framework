@@ -36,6 +36,8 @@
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/type_list.hpp"
 
+#include "cppa/util/conjunction.hpp"
+
 namespace cppa { namespace util {
 
 template<typename Signature>
@@ -121,6 +123,11 @@ struct is_callable {
 
     static constexpr bool value = std::is_same<bool, result_type>::value;
 
+};
+
+template<typename... Ts>
+struct all_callable {
+    static constexpr bool value = conjunction<is_callable<Ts>...>::value;
 };
 
 template<bool IsCallable, typename C>

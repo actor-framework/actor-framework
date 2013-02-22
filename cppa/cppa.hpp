@@ -578,16 +578,6 @@ message_future timed_sync_send(const actor_ptr& whom,
 }
 
 /**
- * @brief Handles a synchronous response message in an event-based way.
- * @param handle A future for a synchronous response.
- * @throws std::invalid_argument if given behavior does not has a valid
- *                               timeout definition
- * @throws std::logic_error if @p handle is not valid or if the actor
- *                          already received the response for @p handle
- */
-sync_recv_helper receive_response(const message_future& handle);
-
-/**
  * @brief Sends a message to the sender of the last received message.
  * @param what Message content as a tuple.
  */
