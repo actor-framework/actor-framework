@@ -219,6 +219,7 @@ class receive_policy {
         expired_timeout_message,
         expired_sync_response,
         timeout_message,
+        timeout_response_message,
         ordinary_message,
         sync_response
     };
@@ -232,7 +233,7 @@ class receive_policy {
     filter_result filter_msg(Client* client, pointer node) {
         const any_tuple& msg = node->msg;
         auto message_id = node->mid;
-        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
+        auto& arr = detail::static_types_array<atom_value,std::uint32_t>::arr;
         if (   msg.size() == 2
             && msg.type_at(0) == arr[0]
             && msg.type_at(1) == arr[1]) {
@@ -254,6 +255,12 @@ class receive_policy {
                 return client->waits_for_timeout(v1) ? timeout_message
                                                      : expired_timeout_message;
             }
+        }
+        else if (   msg.size() == 1
+                 && msg.type_at(0) == arr[0]
+                 && msg.get_as<atom_value>(0) == atom("TIMEOUT")
+                 && message_id.is_response()) {
+            return timeout_response_message;
         }
         if (message_id.is_response()) {
             return (client->awaits(message_id)) ? sync_response
@@ -337,6 +344,7 @@ class receive_policy {
                                          Fun& fun,
                                          message_id_t awaited_response,
                                          Policy policy                 ) {
+        bool handle_sync_failure_on_mismatch = true;
         if (hm_should_skip(node, policy)) {
             return hm_skip_msg;
         }
@@ -356,10 +364,16 @@ class receive_policy {
                 }
                 return hm_msg_handled;
             }
+            case timeout_response_message: {
+                handle_sync_failure_on_mismatch = false;
+                // fall through
+            }
             case sync_response: {
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = hm_begin(client, node, policy);
-                    fun(node->msg);
+                    if (!fun(node->msg) && handle_sync_failure_on_mismatch) {
+                        client->handle_sync_failure();
+                    }
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
                     hm_cleanup(client, previous_node, policy);
