@@ -38,13 +38,18 @@ namespace cppa { namespace util {
 template<typename... BooleanConstants>
 struct conjunction;
 
-template<typename T0, typename... Ts>
-struct conjunction<T0, Ts...>
-    : std::integral_constant<bool, T0::value && conjunction<Ts...>::value> {
+template<>
+struct conjunction<> : std::false_type { };
+
+template<typename T0>
+struct conjunction<T0> {
+    static constexpr bool value = T0::value;
 };
 
-template<>
-struct conjunction<> : std::true_type { };
+template<typename T0, typename T1, typename... Ts>
+struct conjunction<T0,T1,Ts...> {
+    static constexpr bool value = T0::value && conjunction<T1,Ts...>::value;
+};
 
 } } // namespace cppa::util
 
