@@ -1,3 +1,21 @@
+Version 0.6
+-----------
+
+__2013_02_22__
+
+- Added `quit_actor` function to terminate actors
+- Added continuation feature to non-blocking API
+- Allow functor-only usage of `then` and `await`
+- Support for Boost 1.53
+- Fixed timing bug in synchronous response handling
+- Better diagnostics in unit tests
+- Use -O3 for release build, because -O4 is broken in Clang
+- Auto-reply `EXITED` to orphaned sync requests
+- Added `partial_function::or_else` to concatenate partial functions
+- New `timed_sync_send` API with different timeout handling
+- Added `on_sync_failure` and `on_sync_timeout` handlers for sync messaging
+- Added `skip_message` helper to allow users to skip messages manually
+
 Version 0.5.5
 -------------
 
