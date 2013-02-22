@@ -133,6 +133,7 @@ set(LIBCPPA_SRC
     src/middleman.cpp
     src/object.cpp
     src/object_array.cpp
+    src/on.cpp
     src/opt.cpp
     src/partial_function.cpp
     src/primitive_variant.cpp

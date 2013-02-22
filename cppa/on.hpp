@@ -227,24 +227,29 @@ namespace cppa {
 
 /**
  * @brief A wildcard that matches the argument types
-*         of a given callback. Must be the last argument to {@link on()}.
+ *        of a given callback. Must be the last argument to {@link on()}.
  * @see {@link math_actor_example.cpp Math Actor Example}
  */
-constexpr ___ arg_match;
+constexpr __unspecified__ arg_match;
 
 /**
  * @brief Left-hand side of a partial function expression.
  *
  * Equal to <tt>on(arg_match)</tt>.
  */
-constexpr ___ on_arg_match;
+constexpr __unspecified__ on_arg_match;
+
+/**
+ * @brief Right-hand side expression to *not* match a particular pattern.
+ */
+constexpr __unspecified__ skip_message;
 
 /**
  * @brief A wildcard that matches any value of type @p T.
  * @see {@link math_actor_example.cpp Math Actor Example}
  */
 template<typename T>
-___ val();
+__unspecified__ val();
 
 /**
  * @brief A wildcard that matches any number of any values.
@@ -259,7 +264,7 @@ constexpr anything any_vals;
  * {@link cppa::any_vals any_vals} and {@link cppa::arg_match arg_match}.
  */
 template<typename Arg0, typename... Args>
-___ on(const Arg0& arg0, const Args&... args);
+__unspecified__ on(const Arg0& arg0, const Args&... args);
 
 /**
  * @brief Left-hand side of a partial function expression that matches types.
@@ -268,7 +273,7 @@ ___ on(const Arg0& arg0, const Args&... args);
  * can be used as wildcard to match any number of elements of any types.
  */
 template<typename... Ts>
-___ on();
+__unspecified__ on();
 
 /**
  * @brief Left-hand side of a partial function expression that matches types.
@@ -278,9 +283,11 @@ ___ on();
  * can be used as wildcard to match any number of elements of any types.
  */
 template<atom_value... Atoms, typename... Ts>
-___ on();
+__unspecified__ on();
 
 #else
+
+bool skip_message();
 
 template<typename T>
 constexpr typename detail::boxed<T>::type val() {
