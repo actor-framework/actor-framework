@@ -32,22 +32,21 @@
 #define CPPA_MESSAGE_ID_HPP
 
 #include "cppa/config.hpp"
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-struct invalid_message_id_flag { constexpr invalid_message_id_flag() { } };
+struct invalid_message_id { constexpr invalid_message_id() { } };
 
 /**
  * @brief
  * @note Asynchronous messages always have an invalid message id.
  */
-class message_id_t {
+class message_id_t : util::comparable<message_id_t> {
 
     static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
     static constexpr std::uint64_t answered_flag_mask = 0x4000000000000000;
     static constexpr std::uint64_t request_id_mask    = 0x3FFFFFFFFFFFFFFF;
-
-    friend bool operator==(const message_id_t& lhs, const message_id_t& rhs);
 
  public:
 
@@ -101,9 +100,14 @@ class message_id_t {
         return result;
     }
 
-    static constexpr invalid_message_id_flag invalid = invalid_message_id_flag();
+    static constexpr invalid_message_id invalid = invalid_message_id{};
 
-    inline message_id_t(invalid_message_id_flag) : m_value(0) { }
+    constexpr message_id_t(invalid_message_id) : m_value(0) { }
+
+    long compare(const message_id_t& other) const {
+        return (m_value == other.m_value)
+               ? 0 : ((m_value < other.m_value) ? -1 : 1);
+    }
 
  private:
 
@@ -112,14 +116,6 @@ class message_id_t {
     std::uint64_t m_value;
 
 };
-
-inline bool operator==(const message_id_t& lhs, const message_id_t& rhs) {
-    return lhs.m_value == rhs.m_value;
-}
-
-inline bool operator!=(const message_id_t& lhs, const message_id_t& rhs) {
-    return !(lhs == rhs);
-}
 
 } // namespace cppa
 
