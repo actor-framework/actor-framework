@@ -34,6 +34,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <algorithm>
 
 #include "cppa/option.hpp"
 #include "cppa/config.hpp"
@@ -43,21 +44,34 @@
 
 namespace cppa { namespace detail {
 
-class behavior_stack_help_iterator;
+struct behavior_stack_mover;
 
 class behavior_stack
 {
 
-    friend class behavior_stack_help_iterator;
+    friend struct behavior_stack_mover;
 
     behavior_stack(const behavior_stack&) = delete;
     behavior_stack& operator=(const behavior_stack&) = delete;
 
-    typedef std::pair<behavior, message_id_t> element_type;
+    typedef std::pair<behavior,message_id_t> element_type;
 
  public:
 
     behavior_stack() = default;
+
+    // @pre expected_response.valid()
+    option<behavior&> sync_handler(message_id_t expected_response);
+
+    // erases the last asynchronous message handler
+    void pop_async_back();
+
+    void clear();
+
+    // erases the synchronous response handler associated with @p rid
+    void erase(message_id_t rid) {
+        erase_if([=](const element_type& e) { return e.second == rid; });
+    }
 
     inline bool empty() const { return m_elements.empty(); }
 
@@ -66,47 +80,40 @@ class behavior_stack
         return m_elements.back().first;
     }
 
-    // @pre expected_response.valid()
-    option<behavior&> sync_handler(message_id_t expected_response);
+    inline void push_back(behavior&& what,
+                          message_id_t response_id = message_id_t::invalid) {
+        m_elements.emplace_back(std::move(what), response_id);
+    }
 
-    // erases the last asynchronous message handler
-    void pop_async_back();
-
-    // erases the synchronous response handler associated with @p response_id
-    void erase(message_id_t response_id);
-
-    void push_back(behavior&& what,
-                   message_id_t expected_response = message_id_t());
-
-    void cleanup();
-
-    void clear();
+    inline void cleanup() {
+        m_erased_elements.clear();
+    }
 
     template<class Policy, class Client>
     bool invoke(Policy& policy, Client* client, recursive_queue_node* node) {
-        CPPA_REQUIRE(!m_elements.empty());
+        CPPA_REQUIRE(!empty());
         CPPA_REQUIRE(client != nullptr);
         CPPA_REQUIRE(node != nullptr);
-        // use a copy, because the invoked behavior might change m_elements
-        behavior what = m_elements.back().first;
+        // use a copy of bhvr, because invoked behavior might change m_elements
         auto id = m_elements.back().second;
-        if (policy.invoke(client, node, what, id)) {
+        auto bhvr = m_elements.back().first;
+        if (policy.invoke(client, node, bhvr, id)) {
+            bool repeat;
             // try to match cached messages
             do {
                 // remove synchronous response handler if needed
                 if (id.valid()) {
-                    auto last = m_elements.end();
-                    auto i = std::find_if(m_elements.begin(), last,
-                                          [id](element_type& e) {
-                                              return id == e.second;
-                                          });
-                    if (i != last) {
-                        m_erased_elements.emplace_back(std::move(i->first));
-                        m_elements.erase(i);
-                    }
+                    erase_if([id](const element_type& value) {
+                        return id == value.second;
+                    });
                 }
-                id = empty() ? message_id_t() : m_elements.back().second;
-            } while (!empty() && policy.invoke_from_cache(client, back(), id));
+                if (!empty()) {
+                    id = m_elements.back().second;
+                    bhvr = m_elements.back().first;
+                    repeat = policy.invoke_from_cache(client, bhvr, id);
+                }
+                else repeat = false;
+            } while (repeat);
             return true;
         }
         return false;
@@ -124,6 +131,29 @@ class behavior_stack
 
     std::vector<element_type> m_elements;
     std::vector<behavior> m_erased_elements;
+
+    // note: checks wheter i points to m_elements.end() before calling erase()
+    inline void erase_at(std::vector<element_type>::iterator i) {
+        if (i != m_elements.end()) {
+            m_erased_elements.emplace_back(std::move(i->first));
+            m_elements.erase(i);
+        }
+    }
+
+    inline void erase_at(std::vector<element_type>::reverse_iterator i) {
+        // base iterator points to the element *after* the correct element
+        if (i != m_elements.rend()) erase_at(i.base() - 1);
+    }
+
+    template<typename UnaryPredicate>
+    inline void erase_if(UnaryPredicate p) {
+        erase_at(std::find_if(m_elements.begin(), m_elements.end(), p));
+    }
+
+    template<typename UnaryPredicate>
+    inline void rerase_if(UnaryPredicate p) {
+        erase_at(std::find_if(m_elements.rbegin(), m_elements.rend(), p));
+    }
 
 };
 

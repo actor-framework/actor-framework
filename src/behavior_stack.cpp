@@ -29,30 +29,30 @@
 
 
 #include <iterator>
+
 #include "cppa/local_actor.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 
+using namespace std;
+
 namespace cppa { namespace detail {
 
-class behavior_stack_help_iterator
-: public std::iterator<std::output_iterator_tag, void, void, void, void> {
+struct behavior_stack_mover : iterator<output_iterator_tag,void,void,void,void>{
 
  public:
 
-    typedef behavior_stack::element_type element_type;
+    behavior_stack_mover(behavior_stack* st) : m_stack(st) { }
 
-    explicit behavior_stack_help_iterator(behavior_stack& st) : m_stack(&st) { }
-
-    behavior_stack_help_iterator& operator=(element_type&& rval) {
-        m_stack->m_erased_elements.emplace_back(std::move(rval.first));
+    behavior_stack_mover& operator=(behavior_stack::element_type&& rval) {
+        m_stack->m_erased_elements.emplace_back(move(rval.first));
         return *this;
     }
 
-    behavior_stack_help_iterator& operator*() { return *this; }
+    behavior_stack_mover& operator*() { return *this; }
 
-    behavior_stack_help_iterator& operator++() { return *this; }
+    behavior_stack_mover& operator++() { return *this; }
 
-    behavior_stack_help_iterator operator++(int) { return *this; }
+    behavior_stack_mover operator++(int) { return *this; }
 
  private:
 
@@ -60,10 +60,12 @@ class behavior_stack_help_iterator
 
 };
 
+inline behavior_stack_mover move_iter(behavior_stack* bs) { return {bs}; }
+
 option<behavior&> behavior_stack::sync_handler(message_id_t expected_response) {
     if (expected_response.valid()) {
         auto e = m_elements.rend();
-        auto i = std::find_if(m_elements.rbegin(), e, [=](element_type& val) {
+        auto i = find_if(m_elements.rbegin(), e, [=](element_type& val) {
             return val.second == expected_response;
         });
         if (i != e) return i->first;
@@ -71,55 +73,19 @@ option<behavior&> behavior_stack::sync_handler(message_id_t expected_response) {
     return {};
 }
 
-
 void behavior_stack::pop_async_back() {
-    if (m_elements.empty()) {
-        // nothing to do
-    }
-    else if (m_elements.back().second.valid() == false) {
-        m_erased_elements.emplace_back(std::move(m_elements.back().first));
-        m_elements.pop_back();
-    }
-    else {
-        auto rlast = m_elements.rend();
-        auto ri = std::find_if(m_elements.rbegin(), rlast,
-                              [](element_type& e) {
-                                  return e.second.valid() == false;
-                              });
-        if (ri != rlast) {
-            m_erased_elements.emplace_back(std::move(ri->first));
-            auto i = ri.base();
-            --i; // adjust 'normal' iterator to point to the correct element
-            m_elements.erase(i);
-        }
-    }
-}
-
-void behavior_stack::erase(message_id_t response_id) {
-    auto last = m_elements.end();
-    auto i = std::find_if(m_elements.begin(), last, [=](element_type& e) {
-        return e.second == response_id;
+    if (m_elements.empty()) { } // nothing to do
+    else if (!m_elements.back().second.valid()) erase_at(m_elements.end() - 1);
+    else rerase_if([](const element_type& e) {
+        return e.second.valid() == false;
     });
-    if (i != last) {
-        m_erased_elements.emplace_back(std::move(i->first));
-        m_elements.erase(i);
-    }
-}
-
-void behavior_stack::push_back(behavior&& what, message_id_t response_id) {
-    m_elements.emplace_back(std::move(what), response_id);
 }
 
 void behavior_stack::clear() {
     if (m_elements.empty() == false) {
-        std::move(m_elements.begin(), m_elements.end(),
-                  behavior_stack_help_iterator{*this});
+        move(m_elements.begin(), m_elements.end(), move_iter(this));
         m_elements.clear();
     }
-}
-
-void behavior_stack::cleanup() {
-    m_erased_elements.clear();
 }
 
 } } // namespace cppa::detail
