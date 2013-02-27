@@ -32,14 +32,32 @@
 #ifndef CPPA_OPENCL_PROGRAM_HPP
 #define CPPA_OPENCL_PROGRAM_HPP
 
+#include <memory>
+
+#include "cppa/opencl/global.hpp"
+#include "cppa/opencl/smart_ptr.hpp"
+
 namespace cppa { namespace opencl {
+
+template<typename Signature>
+class actor_facade;
 
 class program {
 
+    template<typename Signature>
+    friend class actor_facade;
 
+ public:
+
+    program(const std::string& kernel_source);
+
+ private:
+
+    context_ptr m_context;
+    program_ptr m_program;
 
 };
 
-} // namespace cppa::opencl
+} } // namespace cppa::opencl
 
 #endif // CPPA_OPENCL_PROGRAM_HPP

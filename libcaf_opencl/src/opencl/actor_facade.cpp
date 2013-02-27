@@ -29,41 +29,14 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OPENCL_COMMAND_HPP
-#define CPPA_OPENCL_COMMAND_HPP
-
-#include <vector>
-#include <functional>
-
-#include "cppa/actor.hpp"
-#include "cppa/opencl/global.hpp"
+#include "cppa/opencl/actor_facade.hpp"
+#include "cppa/opencl/command_dispatcher.hpp"
 
 namespace cppa { namespace opencl {
 
-class command {
-
- public:
-
-    command* next;
-
-    // bool is_new_job; // if false == call handle_cl_result
-    // struct callbacks {
-    //     std::function<cl_job_id(cl_command_queue)> enqueue_cl_task;
-    //     std::function<void()> handle_cl_result;
-    // };
-    // union { callbacks cbs; cl_job_id jid; };
-
-    std::function<void(cl_command_queue)> fun;
-
-    actor* sender;
-
-    template<typename T>
-    inline command(T f, actor* sender)
-        : next(nullptr), fun(f), sender(sender) { }
-
-    inline command() : next(nullptr), sender(nullptr) { }
-};
+void enqueue_to_dispatcher(command_dispatcher* dispatcher,
+                           command* cmd) {
+    dispatcher->m_job_queue.push_back(cmd);
+}
 
 } } // namespace cppa::opencl
-
-#endif // CPPA_OPENCL_COMMAND_HPP

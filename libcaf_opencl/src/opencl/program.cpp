@@ -28,42 +28,39 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-
-#ifndef CPPA_OPENCL_COMMAND_HPP
-#define CPPA_OPENCL_COMMAND_HPP
-
-#include <vector>
-#include <functional>
-
-#include "cppa/actor.hpp"
-#include "cppa/opencl/global.hpp"
+#include "cppa/opencl/program.hpp"
+#include "cppa/opencl/command_dispatcher.hpp"
 
 namespace cppa { namespace opencl {
 
-class command {
+program::program(const std::string& kernel_source) {
+    m_context =
+        cppa::detail::singleton_manager::get_command_dispatcher()->m_context;
 
- public:
+    cl_int err{0};
 
-    command* next;
+    /* create program object from kernel source */
+    size_t kernel_source_length = kernel_source.size();
+    const char *kernel_source_cstr = kernel_source.c_str();
+    m_program.adopt(clCreateProgramWithSource(m_context.get(),
+                                              1,
+                                              &kernel_source_cstr,
+                                              &kernel_source_length,
+                                              &err));
 
-    // bool is_new_job; // if false == call handle_cl_result
-    // struct callbacks {
-    //     std::function<cl_job_id(cl_command_queue)> enqueue_cl_task;
-    //     std::function<void()> handle_cl_result;
-    // };
-    // union { callbacks cbs; cl_job_id jid; };
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("[!!!] clCreateProgramWithSource: '"
+                            + get_opencl_error(err)
+                            + "'.");
+    }
 
-    std::function<void(cl_command_queue)> fun;
-
-    actor* sender;
-
-    template<typename T>
-    inline command(T f, actor* sender)
-        : next(nullptr), fun(f), sender(sender) { }
-
-    inline command() : next(nullptr), sender(nullptr) { }
-};
+    /* build programm from program object */
+    err = clBuildProgram(m_program.get(), 0, NULL, NULL, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("[!!!] clBuildProgram: '"
+                            + get_opencl_error(err)
+                            + "'.");
+    }
+}
 
 } } // namespace cppa::opencl
-
-#endif // CPPA_OPENCL_COMMAND_HPP
