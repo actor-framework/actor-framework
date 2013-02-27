@@ -48,6 +48,10 @@ inline std::string cppa_stream_arg(const cppa::actor_ptr& ptr) {
     return cppa::to_string(ptr);
 }
 
+inline std::string cppa_stream_arg(const bool& value) {
+    return value ? "true" : "false";
+}
+
 inline void cppa_passed(const char* fname, int line_number) {
     CPPA_FORMAT_STR(std::cout, fname, line_number, "passed");
 }
@@ -113,7 +117,7 @@ inline void cppa_check_value(V1 v1,
     }                                                                          \
     else CPPA_PRINT("passed")
 
-#define CPPA_CHECK_EQUAL(rhs_loc, lhs_loc)                                     \
+#define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__)
 
 #define CPPA_CHECK_NOT_EQUAL(rhs_loc, lhs_loc)                                 \

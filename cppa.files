@@ -302,3 +302,5 @@ src/opencl/global.cpp
 src/opencl/program.cpp
 src/opencl/actor_facade.cpp
 cppa/opencl/smart_ptr.hpp
+src/exit_reason.cpp
+src/on.cpp

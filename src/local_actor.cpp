@@ -142,15 +142,6 @@ void local_actor::forward_message(const actor_ptr& new_receiver) {
     }
 }
 
-sync_recv_helper local_actor::handle_response(const message_future& handle) {
-    return {handle.id(), [](behavior& bhvr, message_id_t mf) {
-        if (!self->awaits(mf)) {
-            throw std::logic_error("response already received");
-        }
-        self->become_waiting_for(std::move(bhvr), mf);
-    }};
-}
-
 response_handle local_actor::make_response_handle() {
     auto n = m_current_node;
     response_handle result(this, n->sender, n->mid.response_id());
@@ -169,6 +160,10 @@ message_id_t local_actor::send_timed_sync_message(actor* whom,
 
 void local_actor::exec_behavior_stack() {
     // default implementation does nothing
+}
+
+sync_handle_helper local_actor::handle_response(const message_future& mf) {
+    return ::cppa::handle_response(mf);
 }
 
 } // namespace cppa

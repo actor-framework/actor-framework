@@ -28,62 +28,24 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_EXIT_REASON_HPP
-#define CPPA_EXIT_REASON_HPP
-
-#include <cstdint>
+#include "cppa/exit_reason.hpp"
 
 namespace cppa { namespace exit_reason {
 
-/**
- * @brief Indicates that the actor is still alive.
- */
-static constexpr std::uint32_t not_exited = 0x00000;
+namespace { constexpr const char* s_names_table[] = {
+    "not_exited",
+    "normal",
+    "unhandled_exception",
+    "unallowed_function_call",
+    "unhandled_sync_failure",
+    "unhandled_sync_timeout"
+}; }
 
-/**
- * @brief Indicates that an actor finished execution.
- */
-static constexpr std::uint32_t normal = 0x00001;
-
-/**
- * @brief Indicates that an actor finished execution
- *        because of an unhandled exception.
- */
-static constexpr std::uint32_t unhandled_exception = 0x00002;
-
-/**
- * @brief Indicates that an event-based actor
- *        tried to use receive().
- */
-static constexpr std::uint32_t unallowed_function_call = 0x00003;
-
-/**
- * @brief Indicates that the actor received an unexpected
- *        synchronous reply message.
- */
-static constexpr std::uint32_t unhandled_sync_failure = 0x00004;
-
-/**
- * @brief Indicates that a synchronous message timed out.
- */
-static constexpr std::uint32_t unhandled_sync_timeout = 0x00005;
-
-/**
- * @brief Indicates that an actor finishied execution
- *        because a connection to a remote link was
- *        closed unexpectedly.
- */
-static constexpr std::uint32_t remote_link_unreachable = 0x00101;
-
-/**
- * @brief Any user defined exit reason should have a
- *        value greater or equal to prevent collisions
- *        with default defined exit reasons.
- */
-static constexpr std::uint32_t user_defined = 0x10000;
-
-const char* as_string(std::uint32_t value);
+const char* as_string(std::uint32_t value) {
+    if (value <= unhandled_sync_timeout) return s_names_table[value];
+    if (value == remote_link_unreachable) return "remote_link_unreachable";
+    if (value >= user_defined) return "user_defined";
+    return "illegal_exit_reason";
+}
 
 } } // namespace cppa::exit_reason
-
-#endif // CPPA_EXIT_REASON_HPP

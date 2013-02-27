@@ -57,13 +57,4 @@ void receive_loop(partial_function&& rules) {
     receive_loop(tmp);
 }
 
-sync_recv_helper receive_response(const message_future& handle) {
-    return {handle.id(), [](behavior& bhvr, message_id_t mf) {
-        if (!self->awaits(mf)) {
-            throw std::logic_error("response already received");
-        }
-        self->dequeue_response(bhvr, mf);
-    }};
-}
-
 } // namespace cppa

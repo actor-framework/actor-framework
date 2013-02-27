@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
-set(LIBCPPA_VERSION_MINOR 5)
-set(LIBCPPA_VERSION_PATCH 5)
+set(LIBCPPA_VERSION_MINOR 6)
+set(LIBCPPA_VERSION_PATCH 0)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -116,6 +116,7 @@ set(LIBCPPA_SRC
     src/empty_tuple.cpp
     src/event_based_actor.cpp
     src/exception.cpp
+    src/exit_reason.cpp
     src/factory.cpp
     src/fd_util.cpp
     src/fiber.cpp
@@ -132,6 +133,7 @@ set(LIBCPPA_SRC
     src/middleman.cpp
     src/object.cpp
     src/object_array.cpp
+    src/on.cpp
     src/opt.cpp
     src/partial_function.cpp
     src/primitive_variant.cpp

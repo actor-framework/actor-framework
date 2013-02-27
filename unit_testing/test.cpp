@@ -33,15 +33,13 @@ const char* cppa_strip_path(const char* fname) {
 }
 
 void cppa_unexpected_message(const char* fname, size_t line_num) {
-    std::cerr << "ERROR in file " << fname << " on line " << line_num
-              << ": unexpected message: "
-              << to_string(self->last_dequeued())
-              << std::endl;
+    CPPA_FORMAT_STR(std::cerr, fname, line_num,
+                    "ERROR: unexpected message: "
+                    << to_string(self->last_dequeued()));
 }
 
 void cppa_unexpected_timeout(const char* fname, size_t line_num) {
-    std::cerr << "ERROR in file " << fname << " on line " << line_num
-              << ": unexpected timeout" << std::endl;
+    CPPA_FORMAT_STR(std::cerr, fname, line_num, "ERROR: unexpected timeout");
 }
 
 std::vector<std::string> split(const std::string& str, char delim) {
