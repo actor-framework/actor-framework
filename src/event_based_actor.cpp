@@ -31,10 +31,42 @@
 #include <iostream>
 #include "cppa/to_string.hpp"
 
+#include "cppa/on.hpp"
 #include "cppa/self.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
+
+class default_scheduled_actor : public event_based_actor {
+
+ public:
+
+    typedef std::function<void()> fun_type;
+
+    default_scheduled_actor(fun_type&& fun) : m_fun(std::move(fun)) { }
+
+    void init() {
+        become (
+            on(atom("RUN")) >> [=] {
+                unbecome();
+                m_fun();
+            }
+        );
+    }
+
+    scheduled_actor_type impl_type() {
+        return default_event_based_impl;
+    }
+
+ private:
+
+    fun_type m_fun;
+
+};
+
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> fun) {
+    return detail::memory::create<default_scheduled_actor>(std::move(fun));
+}
 
 event_based_actor::event_based_actor() : super(super::blocked) { }
 

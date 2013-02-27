@@ -37,6 +37,7 @@
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/cppa_fwd.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/message_id.hpp"
 

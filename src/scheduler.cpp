@@ -41,6 +41,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
+#include "cppa/context_switching_actor.hpp"
 
 #include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -108,7 +109,7 @@ class delayed_msg {
 
  private:
 
-    either<async_send_fun, sync_reply_fun> fun;
+    either<async_send_fun,sync_reply_fun> fun;
 
     channel_ptr   ptr_a;
     actor_ptr     ptr_b;
@@ -346,6 +347,5 @@ scheduler* scheduler::create_singleton() {
 const actor_ptr& scheduler::printer() const {
     return m_helper->m_printer;
 }
-
 
 } // namespace cppa

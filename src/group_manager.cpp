@@ -189,7 +189,7 @@ class local_group_proxy : public local_group {
         CPPA_REQUIRE(remote_broker != nullptr);
         CPPA_REQUIRE(remote_broker->is_proxy());
         m_broker = move(remote_broker);
-        m_proxy_broker = spawn_hidden<proxy_broker>(this);
+        m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
 
     group::subscription subscribe(const channel_ptr& who) {
@@ -426,7 +426,7 @@ class remote_group_module : public group::module {
         auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
-        auto worker = spawn<detached_and_hidden>([_this, sm] {
+        auto worker = spawn<hidden>([_this, sm] {
             typedef map<string, pair<actor_ptr, vector<pair<string, remote_group_ptr>>>>
                     peer_map;
             peer_map peers;
@@ -529,7 +529,7 @@ local_group::local_group(bool spawn_local_broker,
                          local_group_module* mod,
                          string id)
 : group(mod, move(id)) {
-    if (spawn_local_broker) m_broker = spawn_hidden<local_broker>(this);
+    if (spawn_local_broker) m_broker = spawn<local_broker, hidden>(this);
 }
 
 void local_group::serialize(serializer* sink) {

@@ -13,7 +13,7 @@ using std::endl;
 using namespace cppa;
 
 // implementation using the blocking API
-void math_fun() {
+void blocking_math_fun() {
     bool done = false;
     do_receive (
         // "arg_match" matches the parameter types of given lambda expression
@@ -23,40 +23,35 @@ void math_fun() {
         on(atom("plus"), arg_match) >> [](int a, int b) {
             reply(atom("result"), a + b);
         },
-        on<atom("minus"), int, int>() >> [](int a, int b) {
+        on(atom("minus"), arg_match) >> [](int a, int b) {
             reply(atom("result"), a - b);
         },
         on(atom("quit")) >> [&]() {
-            // note: quit(exit_reason::normal) would terminate the actor
-            //       but is best avoided since it forces stack unwinding
-            //       by throwing an exception
+            // note: this actor uses the blocking API, hence self->quit()
+            //       would force stack unwinding by throwing an exception
             done = true;
         }
-    )
-    .until(gref(done));
+    ).until(gref(done));
 }
 
 // implementation using the event-based API
-struct math_actor : event_based_actor {
-    void init() {
-        // execute this behavior until actor terminates
-        become (
-            on(atom("plus"), arg_match) >> [](int a, int b) {
-                reply(atom("result"), a + b);
-            },
-            on(atom("minus"), arg_match) >> [](int a, int b) {
-                reply(atom("result"), a - b);
-            },
-            // the [=] capture copies the 'this' pointer into the lambda
-            // thus, it has access to all members and member functions
-            on(atom("quit")) >> [=]() {
-                // set an empty behavior
-                // (terminates actor with normal exit reason)
-                quit();
-            }
-        );
-    }
-};
+void math_fun() {
+    // execute this behavior until actor terminates
+    become (
+        on(atom("plus"), arg_match) >> [](int a, int b) {
+            reply(atom("result"), a + b);
+        },
+        on(atom("minus"), arg_match) >> [](int a, int b) {
+            reply(atom("result"), a - b);
+        },
+        // the [=] capture copies the 'this' pointer into the lambda
+        // thus, it has access to all members and member functions
+        on(atom("quit")) >> [=] {
+            // terminate actor with normal exit reason
+            self->quit();
+        }
+    );
+}
 
 // utility function
 int fetch_result(actor_ptr& calculator, atom_value operation, int a, int b) {
@@ -72,9 +67,9 @@ int fetch_result(actor_ptr& calculator, atom_value operation, int a, int b) {
 
 int main() {
     // spawn a context-switching actor that invokes math_fun
-    auto a1 = spawn(math_fun);
+    auto a1 = spawn<blocking_api>(blocking_math_fun);
     // spawn an event-based math actor
-    auto a2 = spawn<math_actor>();
+    auto a2 = spawn(math_fun);
     // do some testing on both implementations
     assert((fetch_result(a1, atom("plus"), 1, 2) == 3));
     assert((fetch_result(a2, atom("plus"), 1, 2) == 3));

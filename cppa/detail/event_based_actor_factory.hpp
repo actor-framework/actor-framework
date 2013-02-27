@@ -104,8 +104,10 @@ class event_based_actor_factory {
 
     template<typename... Args>
     actor_ptr spawn(Args&&... args) {
-        return get_scheduler()->spawn(memory::create<impl>(m_init, m_on_exit,
-                                                           std::forward<Args>(args)...));
+        auto ptr = memory::create<impl>(m_init,
+                                        m_on_exit,
+                                        std::forward<Args>(args)...);
+        return get_scheduler()->exec(no_spawn_options, ptr);
     }
 
  private:

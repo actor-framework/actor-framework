@@ -47,31 +47,24 @@ class thread_pool_scheduler : public scheduler {
 
  public:
 
+    using scheduler::init_callback;
+    using scheduler::void_function;
+
     struct worker;
 
     thread_pool_scheduler();
 
     thread_pool_scheduler(size_t num_worker_threads);
 
-    void initialize() /*override*/;
+    void initialize();
 
-    void destroy() /*override*/;
+    void destroy();
 
-    void enqueue(scheduled_actor* what) /*override*/;
+    void enqueue(scheduled_actor* what);
 
-    actor_ptr spawn(scheduled_actor* what,
-                    scheduling_hint hint);
+    actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr);
 
-    actor_ptr spawn(scheduled_actor* what,
-                    init_callback init_cb,
-                    scheduling_hint hint);
-
-    actor_ptr spawn(void_function fun,
-                    scheduling_hint hint);
-
-    actor_ptr spawn(void_function what,
-                    init_callback init_cb,
-                    scheduling_hint hint);
+    actor_ptr exec(spawn_options opts, init_callback init_cb, void_function f);
 
  private:
 
@@ -85,10 +78,6 @@ class thread_pool_scheduler : public scheduler {
 
     static void worker_loop(worker*);
     static void supervisor_loop(job_queue*, scheduled_actor*, size_t);
-
-    actor_ptr spawn_impl(scheduled_actor_ptr what);
-
-    actor_ptr spawn_as_thread(void_function fun, init_callback cb, bool hidden);
 
 };
 

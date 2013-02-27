@@ -157,7 +157,7 @@ int client_part(const vector<string_pair>& args) {
     send(server, atom("SpawnPing"));
     receive (
         on(atom("PingPtr"), arg_match) >> [](actor_ptr ping_actor) {
-            spawn<detached>(pong, ping_actor);
+            spawn<detached + blocking_api>(pong, ping_actor);
         }
     );
     await_all_others_done();

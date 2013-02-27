@@ -125,7 +125,6 @@ cppa/response_handle.hpp
 cppa/sb_actor.hpp
 cppa/scheduled_actor.hpp
 cppa/scheduler.hpp
-cppa/scheduling_hint.hpp
 cppa/self.hpp
 cppa/serializer.hpp
 cppa/thread_mapped_actor.hpp
@@ -293,3 +292,4 @@ cppa/memory_cached_mixin.hpp
 unit_testing/test.cpp
 src/exit_reason.cpp
 src/on.cpp
+cppa/spawn_options.hpp

@@ -28,8 +28,12 @@
 \******************************************************************************/
 
 
+#include "cppa/on.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/scheduled_actor.hpp"
+#include "cppa/event_based_actor.hpp"
+
+#include "cppa/detail/memory.hpp"
 
 namespace cppa {
 

@@ -87,6 +87,8 @@ class event_based_actor : public detail::abstract_scheduled_actor {
 
     scheduled_actor_type impl_type();
 
+    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
+
  protected:
 
     event_based_actor();

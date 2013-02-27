@@ -108,7 +108,7 @@ struct group_nameserver : event_based_actor {
 };
 
 void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn_hidden<group_nameserver>();
+    auto gn = spawn<group_nameserver, hidden>();
     try {
         publish(gn, port, addr);
     }

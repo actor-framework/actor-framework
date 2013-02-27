@@ -35,6 +35,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <type_traits>
 
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
@@ -42,32 +43,32 @@
 #include "cppa/cow_tuple.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/scheduling_hint.hpp"
+#include "cppa/spawn_options.hpp"
+#include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/duration.hpp"
 
 namespace cppa {
 
 class self_type;
-class scheduled_actor;
 class scheduler_helper;
-
-typedef std::function<void()> void_function;
-typedef std::function<void(local_actor*)> init_callback;
+namespace detail { class singleton_manager; } // namespace detail
 
 namespace detail {
-// forwards self_type as actor_ptr, otherwise equal to std::forward
 template<typename T>
-struct spawn_fwd_ {
-    static inline T&& _(T&& arg) { return std::move(arg); }
-    static inline T& _(T& arg) { return arg; }
-    static inline const T& _(const T& arg) { return arg; }
+struct is_self {
+    typedef typename util::rm_ref<T>::type plain_type;
+    static constexpr bool value = std::is_same<plain_type,self_type>::value;
 };
-template<>
-struct spawn_fwd_<self_type> {
-    static inline actor_ptr _(const self_type& s) { return s.get(); }
-};
-class singleton_manager;
+template<typename T, typename U>
+auto fwd(U& arg, typename std::enable_if<!is_self<T>::value>::type* = 0)
+-> decltype(std::forward<T>(arg)) {
+    return std::forward<T>(arg);
+}
+template<typename T, typename U>
+local_actor* fwd(U& arg, typename std::enable_if<is_self<T>::value>::type* = 0){
+    return arg;
+}
 } // namespace detail
 
 /**
@@ -106,6 +107,9 @@ class scheduler {
     inline void dispose() { delete this; }
 
  public:
+
+    typedef std::function<void(local_actor*)> init_callback;
+    typedef std::function<void()>             void_function;
 
     const actor_ptr& printer() const;
 
@@ -157,72 +161,26 @@ class scheduler {
     }
 
     /**
-     * @brief Spawns a new actor that executes <code>fun()</code>
-     *        with the scheduling policy @p hint if possible.
+     * @brief Executes @p ptr in this scheduler.
      */
-    virtual actor_ptr spawn(void_function fun, scheduling_hint hint) = 0;
+    virtual actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) = 0;
 
     /**
-     * @brief Spawns a new actor that executes <code>behavior()</code>
-     *        with the scheduling policy @p hint if possible and calls
-     *        <code>init_cb</code> after the actor is initialized but before
-     *        it starts execution.
+     * @brief Creates a new actor from @p actor_behavior and executes it
+     *        in this scheduler.
      */
-    virtual actor_ptr spawn(void_function fun,
-                            init_callback init_cb,
-                            scheduling_hint hint) = 0;
-
-    /**
-     * @brief Spawns a new event-based actor.
-     */
-    virtual actor_ptr spawn(scheduled_actor* what,
-                            scheduling_hint hint = scheduled) = 0;
-
-    /**
-     * @brief Spawns a new event-based actor and calls
-     *        <code>init_cb</code> after the actor is initialized but before
-     *        it starts execution.
-     */
-    virtual actor_ptr spawn(scheduled_actor* what,
-                            init_callback init_cb,
-                            scheduling_hint hint = scheduled) = 0;
+    virtual actor_ptr exec(spawn_options opts,
+                           init_callback init_cb,
+                           void_function actor_behavior) = 0;
 
     // hide implementation details for documentation
 #   ifndef CPPA_DOCUMENTATION
 
-    template<typename Fun, typename Arg0, typename... Args>
-    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun, Arg0&& arg0, Args&&... args) {
-        return this->spawn(
-                    std::bind(
-                        std::forward<Fun>(fun),
-                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
-                    hint);
-    }
-
-    template<typename Fun>
-    actor_ptr spawn_impl(scheduling_hint hint, Fun&& fun) {
-        return this->spawn(std::forward<Fun>(fun), hint);
-    }
-
-    template<typename InitCallback, typename Fun, typename Arg0, typename... Args>
-    actor_ptr spawn_cb_impl(scheduling_hint hint,
-                            InitCallback&& init_cb,
-                            Fun&& fun, Arg0&& arg0, Args&&... args) {
-        return this->spawn(
-                    std::bind(
-                        std::forward<Fun>(fun),
-                        detail::spawn_fwd_<typename util::rm_ref<Arg0>::type>::_(arg0),
-                        detail::spawn_fwd_<typename util::rm_ref<Args>::type>::_(args)...),
-                    std::forward<InitCallback>(init_cb),
-                    hint);
-    }
-
-    template<typename InitCallback, typename Fun>
-    actor_ptr spawn_cb_impl(scheduling_hint hint, InitCallback&& init_cb, Fun&& fun) {
-        return this->spawn(std::forward<Fun>(fun),
-                           std::forward<InitCallback>(init_cb),
-                           hint);
+    template<typename F, typename T0, typename... Ts>
+    actor_ptr exec(spawn_options opts, init_callback cb,
+                   F f, T0&& a0, Ts&&... as) {
+        return this->exec(opts, cb, std::bind(f, detail::fwd<T0>(a0),
+                                                 detail::fwd<Ts>(as)...));
     }
 
 #   endif // CPPA_DOCUMENTATION

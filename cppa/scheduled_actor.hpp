@@ -31,6 +31,8 @@
 #ifndef CPPA_ACTOR_BEHAVIOR_HPP
 #define CPPA_ACTOR_BEHAVIOR_HPP
 
+#include <functional>
+
 #include "cppa/config.hpp"
 #include "cppa/local_actor.hpp"
 
@@ -46,7 +48,8 @@ enum class resume_result {
 
 enum scheduled_actor_type {
     context_switching_impl,
-    event_based_impl
+    event_based_impl,
+    default_event_based_impl // scheduler enqueues a 'RUN' message on startup
 };
 
 /**

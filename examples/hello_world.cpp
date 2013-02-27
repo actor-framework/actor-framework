@@ -4,35 +4,43 @@
 
 using namespace cppa;
 
-void echo_actor() {
-    // wait for a message
-    receive (
+void mirror() {
+    // wait for messages
+    become (
         // invoke this lambda expression if we receive a string
-        on<std::string>() >> [](const std::string& what) {
+        on_arg_match >> [](const std::string& what) {
             // prints "Hello World!"
             std::cout << what << std::endl;
             // replies "!dlroW olleH"
             reply(std::string(what.rbegin(), what.rend()));
+            // terminates this actor
+            self->quit();
+        }
+    );
+}
+
+void hello_world(const actor_ptr& buddy) {
+    // send "Hello World!" to the mirror
+    send(buddy, "Hello World!");
+    // wait for messages
+    become (
+        on_arg_match >> [](const std::string& what) {
+            // prints "!dlroW olleH"
+            std::cout << what << std::endl;
+            // terminate this actor
+            self->quit();
         }
     );
 }
 
 int main() {
-    // create a new actor that invokes the function echo_actor
-    auto hello_actor = spawn(echo_actor);
-    // send "Hello World!" to our new actor
-    // note: libcppa converts string literals to std::string
-    send(hello_actor, "Hello World!");
-    // wait for a response and print it
-    receive (
-        on<std::string>() >> [](const std::string& what) {
-            // prints "!dlroW olleH"
-            std::cout << what << std::endl;
-        }
-    );
-    // wait until all other actors we've spawned are done
+    // create a new actor that calls 'mirror()'
+    auto mirror_actor = spawn(mirror);
+    // create another actor that calls 'hello_world(mirror_actor)'
+    spawn(hello_world, mirror_actor);
+    // wait until all other actors we have spawned are done
     await_all_others_done();
-    // done
+    // run cleanup code before exiting main
     shutdown();
     return 0;
 }
