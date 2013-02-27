@@ -297,3 +297,8 @@ cppa/opencl/command.hpp
 cppa/opencl/command_dispatcher.hpp
 src/opencl/command_dispatcher.cpp
 unit_testing/test_opencl.cpp
+cppa/opencl/global.hpp
+src/opencl/global.cpp
+src/opencl/program.cpp
+src/opencl/actor_facade.cpp
+cppa/opencl/smart_ptr.hpp

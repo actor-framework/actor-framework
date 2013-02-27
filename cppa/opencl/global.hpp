@@ -29,41 +29,21 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OPENCL_COMMAND_HPP
-#define CPPA_OPENCL_COMMAND_HPP
+#ifndef CPPA_OPENCL_GLOBAL_HPP
+#define CPPA_OPENCL_GLOBAL_HPP
 
-#include <vector>
-#include <functional>
+#include <string>
 
-#include "cppa/actor.hpp"
-#include "cppa/opencl/global.hpp"
+#if defined __APPLE__ || defined(MACOSX)
+    #include <OpenCL/opencl.h>
+#else
+    #include <CL/opencl.h>
+#endif
 
 namespace cppa { namespace opencl {
 
-class command {
-
- public:
-
-    command* next;
-
-    // bool is_new_job; // if false == call handle_cl_result
-    // struct callbacks {
-    //     std::function<cl_job_id(cl_command_queue)> enqueue_cl_task;
-    //     std::function<void()> handle_cl_result;
-    // };
-    // union { callbacks cbs; cl_job_id jid; };
-
-    std::function<void(cl_command_queue)> fun;
-
-    actor* sender;
-
-    template<typename T>
-    inline command(T f, actor* sender)
-        : next(nullptr), fun(f), sender(sender) { }
-
-    inline command() : next(nullptr), sender(nullptr) { }
-};
+std::string get_opencl_error(cl_int err);
 
 } } // namespace cppa::opencl
 
-#endif // CPPA_OPENCL_COMMAND_HPP
+#endif // CPPA_OPENCL_GLOBAL_HPP

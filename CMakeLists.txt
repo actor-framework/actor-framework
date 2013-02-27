@@ -174,7 +174,10 @@ if (ENABLE_OPENCL)
   set(LD_FLAGS ${LD_FLAGS} ${OPENCL_LIBRARIES})
   set(INCLUDE_DIRS ${INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
   set(LIBCPPA_SRC
-      ${LIBCPPA_SRC}
+      ${LIBCPPA_SRC} 
+      src/opencl/global.cpp
+      src/opencl/program.cpp
+      src/opencl/actor_facade.cpp
       src/opencl/command_dispatcher.cpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_OPENCL")
 endif (ENABLE_OPENCL)
