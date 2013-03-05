@@ -35,11 +35,12 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/event_based_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
-
-#include "cppa/detail/actor_count.hpp"
 #include "cppa/context_switching_actor.hpp"
+
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 using std::cout;
@@ -92,24 +93,33 @@ struct thread_pool_scheduler::worker {
     }
 
     void operator()() {
+        CPPA_LOG_TRACE("");
         util::fiber fself;
         job_ptr job = nullptr;
         actor_ptr next;
         for (;;) {
             aggressive(job) || moderate(job) || relaxed(job);
+            CPPA_LOG_DEBUG("dequeued new job");
             if (job == m_dummy) {
+                CPPA_LOG_DEBUG("received dummy (quit)");
                 // dummy of doom received ...
                 m_job_queue->push_back(job); // kill the next guy
                 return;                      // and say goodbye
             }
             do {
-                next.reset();
+                CPPA_LOG_DEBUG("resume actor with ID " << job->id());
+                CPPA_REQUIRE(next == nullptr);
                 if (job->resume(&fself, next) == resume_result::actor_done) {
+                    CPPA_LOG_DEBUG("actor is done");
                     bool hidden = job->is_hidden();
                     job->deref();
-                    if (!hidden) dec_actor_count();
+                    if (!hidden) get_actor_registry()->dec_running();
                 }
-                if (next) job = static_cast<job_ptr>(next.get());
+                if (next) {
+                    CPPA_LOG_DEBUG("got new job trough chaining");
+                    job = static_cast<job_ptr>(next.get());
+                    next.reset();
+                }
                 else job = nullptr;
             }
             while (job); // loops until next == nullptr
@@ -151,17 +161,20 @@ void thread_pool_scheduler::initialize() {
 }
 
 void thread_pool_scheduler::destroy() {
+    CPPA_LOG_TRACE("");
     m_queue.push_back(&m_dummy);
+    CPPA_LOG_DEBUG("join supervisor");
     m_supervisor.join();
     // make sure job queue is empty, because destructor of m_queue would
     // otherwise delete elements it shouldn't
+    CPPA_LOG_DEBUG("flush queue");
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
             bool hidden = ptr->is_hidden();
             ptr->deref();
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            if (!hidden) dec_actor_count();
+            if (!hidden) get_actor_registry()->dec_running();
         }
         ptr = m_queue.try_pop();
     }
@@ -174,14 +187,14 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
 
 template<typename F>
 void exec_as_thread(bool is_hidden, local_actor_ptr p, F f) {
-    if (!is_hidden) { inc_actor_count(); }
+    if (!is_hidden) get_actor_registry()->inc_running();
     std::thread([=] {
         scoped_self_setter sss(p.get());
         try { f(); }
         catch (...) { }
         if (!is_hidden) {
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            dec_actor_count();
+            get_actor_registry()->dec_running();
         }
     }).detach();
 }
@@ -198,7 +211,7 @@ actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
     }
     p->attach_to_scheduler(this, is_hidden);
     if (p->has_behavior()) {
-        if (!is_hidden) { inc_actor_count(); }
+        if (!is_hidden) get_actor_registry()->inc_running();
         p->ref(); // implicit reference that's released if actor dies
         switch (p->impl_type()) {
             case default_event_based_impl: {

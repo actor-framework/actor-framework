@@ -32,6 +32,8 @@
 
 namespace cppa { namespace detail {
 
+abstract_tuple::abstract_tuple(bool is_dynamic) : m_is_dynamic(is_dynamic) { }
+
 bool abstract_tuple::equals(const abstract_tuple &other) const {
     return    this == &other
            || (   size() == other.size()
@@ -39,9 +41,7 @@ bool abstract_tuple::equals(const abstract_tuple &other) const {
 }
 
 abstract_tuple::abstract_tuple(const abstract_tuple& other)
-    : ref_counted()
-    , m_impl_type(other.m_impl_type) {
-}
+: m_is_dynamic(other.m_is_dynamic) { }
 
 const std::type_info* abstract_tuple::type_token() const {
     return &typeid(void);

@@ -34,6 +34,7 @@
 
 #include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
+#include "cppa/singletons.hpp"
 
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/default_peer.hpp"
@@ -88,11 +89,12 @@ void default_protocol::publish(const actor_ptr& whom,
     if (!whom) return;
     CPPA_REQUIRE(args.size() == 0);
     static_cast<void>(args); // keep compiler happy
-    singleton_manager::get_actor_registry()->put(whom->id(), whom);
+    get_actor_registry()->put(whom->id(), whom);
     default_protocol_ptr proto = this;
     auto impl = make_counted<default_peer_acceptor>(this, move(ptr), whom);
     run_later([=] {
-        CPPA_LOGF_TRACE("lambda from default_protocol::publish");
+        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+                        "publish$add_acceptor", "");
         proto->m_acceptors[whom].push_back(impl);
         proto->continue_reader(impl.get());
     });
@@ -102,11 +104,10 @@ void default_protocol::unpublish(const actor_ptr& whom) {
     CPPA_LOG_TRACE("whom = " << to_string(whom));
     default_protocol_ptr proto = this;
     run_later([=] {
-        CPPA_LOGF_TRACE("lambda from default_protocol::unpublish");
+        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+                        "unpublish$remove_acceptors", "");
         auto& acceptors = m_acceptors[whom];
-        for (auto& ptr : acceptors) {
-            proto->stop_reader(ptr.get());
-        }
+        for (auto& ptr : acceptors) proto->stop_reader(ptr.get());
         m_acceptors.erase(whom);
     });
 }
@@ -123,8 +124,12 @@ void default_protocol::register_peer(const process_information& node,
             auto tmp = entry.queue->pop();
             ptr->enqueue(tmp.first, tmp.second);
         }
+        CPPA_LOG_INFO("peer " << to_string(node) << " added");
     }
-    else { CPPA_LOG_ERROR("peer " << to_string(node) << " already defined"); }
+    else {
+        CPPA_LOG_WARNING("peer " << to_string(node) << " already defined, "
+                         "multiple calls to remote_actor()?");
+    }
 }
 
 default_peer_ptr default_protocol::get_peer(const process_information& n) {
@@ -192,12 +197,13 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
         std::cerr << "*** warning: remote_actor() called to access a local actor\n"
                   << std::flush;
 #       endif
-        return singleton_manager::get_actor_registry()->get(remote_aid);
+        return get_actor_registry()->get(remote_aid);
     }
     default_protocol_ptr proto = this;
     intrusive::blocking_single_reader_queue<remote_actor_result> q;
     run_later([proto, io, pinfptr, remote_aid, &q] {
-        CPPA_LOGF_TRACE("lambda from default_protocol::remote_actor");
+        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+                        "remote_actor$create_connection", "");
         auto pp = proto->get_peer(*pinfptr);
         CPPA_LOGF_INFO_IF(pp, "connection already exists (re-use old one)");
         if (!pp) proto->new_peer(io.first, io.second, pinfptr);

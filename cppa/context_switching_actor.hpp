@@ -35,49 +35,33 @@
 
 #include "cppa/config.hpp"
 #include "cppa/either.hpp"
+#include "cppa/extend.hpp"
+#include "cppa/stacked.hpp"
+#include "cppa/scheduled_actor.hpp"
+
 
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/yield_interface.hpp"
-#include "cppa/detail/stacked_actor_mixin.hpp"
-#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
-
 /**
  * @brief Context-switching actor implementation.
+ * @extends scheduled_actor
  */
-class context_switching_actor : public scheduled_actor {
-
- protected:
-
-    /**
-     * @brief Implements the actor's behavior.
-     *        Reimplemented this function for a class-based actor.
-     *        Returning from this member function will end the
-     *        execution of the actor.
-     */
-    virtual void run();
-
-};
-
-#else // CPPA_DOCUMENTATION
-
-class context_switching_actor : public detail::stacked_actor_mixin<
-                                           context_switching_actor,
-                                           detail::abstract_scheduled_actor> {
+class context_switching_actor : public extend<scheduled_actor,context_switching_actor>::with<stacked> {
 
     friend class detail::behavior_stack;
     friend class detail::receive_policy;
 
-    typedef detail::stacked_actor_mixin<
-                context_switching_actor,
-                detail::abstract_scheduled_actor> super;
+    typedef combined_type super;
 
  public:
 
+    /**
+     * @brief Creates a context-switching actor running @p fun.
+     */
     context_switching_actor(std::function<void()> fun);
 
     resume_result resume(util::fiber* from, actor_ptr& next_job); //override
@@ -86,25 +70,15 @@ class context_switching_actor : public detail::stacked_actor_mixin<
 
  protected:
 
-    context_switching_actor();
+    timeout_type init_timeout(const util::duration& rel_time);
+
+    detail::recursive_queue_node* await_message();
+
+    detail::recursive_queue_node* await_message(const timeout_type& abs_time);
 
  private:
 
-    // required by detail::nestable_receive_policy
-    static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
     detail::recursive_queue_node* receive_node();
-    inline int init_timeout(const util::duration& timeout) {
-        // request timeout message
-        request_timeout(timeout);
-        return 0;
-    }
-    inline detail::recursive_queue_node* try_receive_node() {
-        return m_mailbox.try_pop();
-    }
-    inline detail::recursive_queue_node* try_receive_node(int) {
-        // timeout is triggered from an explicit timeout message
-        return receive_node();
-    }
 
     // required by util::fiber
     static void trampoline(void* _this);
@@ -113,8 +87,6 @@ class context_switching_actor : public detail::stacked_actor_mixin<
     util::fiber m_fiber;
 
 };
-
-#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

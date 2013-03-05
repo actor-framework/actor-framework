@@ -31,6 +31,8 @@
 #ifndef CPPA_CHANNEL_HPP
 #define CPPA_CHANNEL_HPP
 
+#include <type_traits>
+
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
@@ -40,6 +42,8 @@ namespace cppa {
 class actor;
 class group;
 class any_tuple;
+
+typedef intrusive_ptr<actor> actor_ptr;
 
 /**
  * @brief Interface for all message receivers.
@@ -57,7 +61,7 @@ class channel : public ref_counted {
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
-    virtual void enqueue(actor* sender, any_tuple msg) = 0;
+    virtual void enqueue(const actor_ptr& sender, any_tuple msg) = 0;
 
  protected:
 
@@ -76,6 +80,12 @@ class channel : public ref_counted {
  * @relates channel
  */
 typedef intrusive_ptr<channel> channel_ptr;
+
+/**
+ * @brief Convenience alias.
+ */
+template<typename T>
+using enable_if_channel = std::enable_if<std::is_base_of<channel,T>::value>;
 
 } // namespace cppa
 

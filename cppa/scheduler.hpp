@@ -79,7 +79,7 @@ class scheduler {
 
     scheduler_helper* m_helper;
 
-    channel* delayed_send_helper();
+    const actor_ptr& delayed_send_helper();
 
     friend class detail::singleton_manager;
 
@@ -173,17 +173,12 @@ class scheduler {
                            init_callback init_cb,
                            void_function actor_behavior) = 0;
 
-    // hide implementation details for documentation
-#   ifndef CPPA_DOCUMENTATION
-
-    template<typename F, typename T0, typename... Ts>
+    template<typename F, typename T, typename... Ts>
     actor_ptr exec(spawn_options opts, init_callback cb,
-                   F f, T0&& a0, Ts&&... as) {
-        return this->exec(opts, cb, std::bind(f, detail::fwd<T0>(a0),
+                   F f, T&& a0, Ts&&... as) {
+        return this->exec(opts, cb, std::bind(f, detail::fwd<T>(a0),
                                                  detail::fwd<Ts>(as)...));
     }
-
-#   endif // CPPA_DOCUMENTATION
 
 };
 
@@ -200,11 +195,6 @@ void set_scheduler(scheduler* sched);
  * @throws std::runtime_error if there's already a scheduler defined.
  */
 void set_default_scheduler(size_t num_threads);
-
-/**
- * @brief Returns the currently running scheduler.
- */
-scheduler* get_scheduler();
 
 } // namespace cppa
 

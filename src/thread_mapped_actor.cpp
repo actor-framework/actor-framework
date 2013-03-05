@@ -43,35 +43,49 @@
 
 namespace cppa {
 
-thread_mapped_actor::thread_mapped_actor() : m_initialized(true) { }
+thread_mapped_actor::thread_mapped_actor() : super(std::function<void()>{}), m_initialized(true) { }
 
 thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
 : super(std::move(fun)), m_initialized(false) { }
 
-void thread_mapped_actor::quit(std::uint32_t reason) {
-    cleanup(reason);
-    // actor_exited should not be catched, but if anyone does,
-    // self must point to a newly created instance
-    //self.set(nullptr);
-    throw actor_exited(reason);
+auto thread_mapped_actor::init_timeout(const util::duration& rel_time) -> timeout_type {
+    auto result = std::chrono::high_resolution_clock::now();
+    result += rel_time;
+    return result;
 }
 
-void thread_mapped_actor::enqueue(actor* sender, any_tuple msg) {
-    m_mailbox.push_back(fetch_node(sender, std::move(msg)));
+void thread_mapped_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
+    auto ptr = new_mailbox_element(sender, std::move(msg));
+    this->m_mailbox.push_back(ptr);
 }
 
-void thread_mapped_actor::sync_enqueue(actor* sender,
+void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
                                        message_id_t id,
-                                       any_tuple msg ) {
-
-    if (!m_mailbox.push_back(fetch_node(sender, std::move(msg), id))) {
-        detail::sync_request_bouncer f{this, exit_reason()};
+                                       any_tuple msg) {
+    auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
+    if (!this->m_mailbox.push_back(ptr)) {
+        detail::sync_request_bouncer f{this->exit_reason()};
         f(sender, id);
     }
 }
 
-bool thread_mapped_actor::initialized() {
+detail::recursive_queue_node* thread_mapped_actor::await_message() {
+    return m_mailbox.pop();
+}
+
+detail::recursive_queue_node* thread_mapped_actor::await_message(const timeout_type& abs_time) {
+    return m_mailbox.try_pop(abs_time);
+}
+
+bool thread_mapped_actor::initialized() const {
     return m_initialized;
 }
+
+void thread_mapped_actor::cleanup(std::uint32_t reason) {
+    detail::sync_request_bouncer f{reason};
+    m_mailbox.close(f);
+    super::cleanup(reason);
+}
+
 
 } // namespace cppa::detail

@@ -46,7 +46,7 @@ struct matcher;
 template<class Tuple, typename... T>
 struct matcher<wildcard_position::nil, Tuple, T...> {
     static inline bool tmatch(const Tuple& tup) {
-        if (tup.impl_type() == tuple_impl_info::statically_typed) {
+        if (not tup.dynamically_typed()) {
             // statically typed tuples return &typeid(type_list<T...>)
             // as type token
             return typeid(util::type_list<T...>) == *(tup.type_token());

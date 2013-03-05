@@ -32,28 +32,24 @@
 
 namespace cppa { namespace detail {
 
+scheduled_actor_dummy::scheduled_actor_dummy()
+: scheduled_actor(actor_state::blocked, false) { }
+
+void scheduled_actor_dummy::enqueue(const actor_ptr&, any_tuple) { }
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue(partial_function&) { }
 void scheduled_actor_dummy::dequeue_response(behavior&, message_id_t) { }
-void scheduled_actor_dummy::link_to(const intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::unlink_from(const intrusive_ptr<actor>&) { }
-void scheduled_actor_dummy::detach(const attachable::token&) { }
-bool scheduled_actor_dummy::attach(attachable*) { return false; }
 void scheduled_actor_dummy::do_become(behavior&&, bool) { }
 void scheduled_actor_dummy::become_waiting_for(behavior&&, message_id_t) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
 
+void scheduled_actor_dummy::sync_enqueue(const actor_ptr&,
+                                         message_id_t,
+                                         any_tuple) { }
+
 resume_result scheduled_actor_dummy::resume(util::fiber*,actor_ptr&) {
     return resume_result::actor_blocked;
-}
-
-bool scheduled_actor_dummy::establish_backlink(const intrusive_ptr<actor>&) {
-    return false;
-}
-
-bool scheduled_actor_dummy::remove_backlink(const intrusive_ptr<actor>&) {
-    return false;
 }
 
 scheduled_actor_type scheduled_actor_dummy::impl_type() {

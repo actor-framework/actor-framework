@@ -176,8 +176,8 @@ struct tdata<> {
 
     inline bool operator==(const tdata&) const { return true; }
 
-    inline tuple_impl_info impl_type() const {
-        return statically_typed;
+    inline bool dynamically_typed() const {
+        return false;
     }
 
 };

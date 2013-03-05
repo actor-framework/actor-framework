@@ -30,8 +30,10 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/message_future.hpp"
 
 namespace cppa {
 
@@ -74,7 +76,7 @@ local_actor::local_actor(bool sflag)
 , m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
 
 void local_actor::monitor(actor_ptr whom) {
-    if (whom) whom->attach(new down_observer(this, whom));
+    if (whom) whom->attach(attachable_ptr{new down_observer(this, whom)});
 }
 
 void local_actor::demonitor(actor_ptr whom) {
@@ -111,7 +113,7 @@ void local_actor::reply_message(any_tuple&& what) {
     }
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_message(whom.get(), std::move(what));
+        send_message(whom, std::move(what));
     }
     else if (!id.is_answered()) {
         if (chaining_enabled()) {
@@ -149,7 +151,7 @@ response_handle local_actor::make_response_handle() {
     return std::move(result);
 }
 
-message_id_t local_actor::send_timed_sync_message(actor* whom,
+message_id_t local_actor::send_timed_sync_message(const actor_ptr& whom,
                                                   const util::duration& rel_time,
                                                   any_tuple&& what) {
     auto mid = this->send_sync_message(whom, std::move(what));
@@ -164,6 +166,11 @@ void local_actor::exec_behavior_stack() {
 
 sync_handle_helper local_actor::handle_response(const message_future& mf) {
     return ::cppa::handle_response(mf);
+}
+
+void local_actor::cleanup(std::uint32_t reason) {
+    m_subscriptions.clear();
+    super::cleanup(reason);
 }
 
 } // namespace cppa

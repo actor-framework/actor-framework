@@ -28,21 +28,20 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_COUNT_HPP
-#define CPPA_ACTOR_COUNT_HPP
+#ifndef CPPA_ACTOR_STATE_HPP
+#define CPPA_ACTOR_STATE_HPP
 
-#include <cstddef>
+namespace cppa {
 
-namespace cppa { namespace detail {
+enum class actor_state : int {
+    ready,
+    done,
+    blocked,
+    pending,
+    about_to_block
+};
 
-void inc_actor_count();
-void dec_actor_count();
+} // namespace cppa
 
-/*
- * @pre @p expected <= 1
- */
-void actor_count_wait_until(size_t expected);
+#endif // CPPA_ACTOR_STATE_HPP
 
-} } // namespace cppa::detail
-
-#endif // CPPA_ACTOR_COUNT_HPP

@@ -85,11 +85,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
 set(LIBCPPA_SRC
-    src/abstract_scheduled_actor.cpp
     src/abstract_tuple.cpp
     src/actor.cpp
     src/actor_addressing.cpp
-    src/actor_count.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
     src/any_tuple.cpp

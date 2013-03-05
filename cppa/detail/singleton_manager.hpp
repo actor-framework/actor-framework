@@ -37,7 +37,6 @@ namespace cppa {
 
 class logging;
 class scheduler;
-class msg_content;
 
 } // namespace cppa
 
@@ -82,7 +81,7 @@ class singleton_manager {
 
  private:
 
-    /**
+    /*
      * @brief Type @p T has to provide: <tt>static T* create_singleton()</tt>,
      *        <tt>void initialize()</tt>, <tt>void destroy()</tt>,
      *        and <tt>dispose()</tt>.

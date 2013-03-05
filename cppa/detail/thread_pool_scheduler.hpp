@@ -37,7 +37,6 @@
 #include "cppa/context_switching_actor.hpp"
 #include "cppa/util/producer_consumer_list.hpp"
 #include "cppa/detail/scheduled_actor_dummy.hpp"
-#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 

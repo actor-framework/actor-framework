@@ -53,7 +53,7 @@ namespace cppa {
  * foo(1,2)<br>
  * foo_pair(3,4)
  * </tt>
- * @example announce_example_1.cpp
+ * @example announce_1.cpp
  */
 
 /**
@@ -62,7 +62,7 @@ namespace cppa {
  * The output of this example program is:
  *
  * <tt>foo(1,2)</tt>
- * @example announce_example_2.cpp
+ * @example announce_2.cpp
  */
 
 /**
@@ -72,7 +72,7 @@ namespace cppa {
  * The output of this example program is:
  *
  * <tt>foo(1,2)</tt>
- * @example announce_example_3.cpp
+ * @example announce_3.cpp
  */
 
 /**
@@ -81,13 +81,13 @@ namespace cppa {
  * The output of this example program is:
  *
  * <tt>bar(foo(1,2),3)</tt>
- * @example announce_example_4.cpp
+ * @example announce_4.cpp
  */
 
 /**
  * @brief An advanced example for @c announce implementing serialization
  *        for a user-defined tree data type.
- * @example announce_example_5.cpp
+ * @example announce_5.cpp
  */
 
 /**
@@ -105,7 +105,7 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype);
  * @brief Creates meta informations for a non-trivial member @p C.
  * @param c_ptr Pointer to the non-trivial member.
  * @param args "Sub-members" of @p c_ptr
- * @see {@link announce_example_4.cpp announce example 4}
+ * @see {@link announce_4.cpp announce example 4}
  * @returns A pair of @p c_ptr and the created meta informations.
  */
 template<class C, class Parent, typename... Args>
@@ -120,7 +120,7 @@ compound_member(C Parent::*c_ptr, const Args&... args) {
  *        via a getter returning a mutable reference.
  * @param getter Member function pointer to the getter.
  * @param args "Sub-members" of @p c_ptr
- * @see {@link announce_example_4.cpp announce example 4}
+ * @see {@link announce_4.cpp announce example 4}
  * @returns A pair of @p c_ptr and the created meta informations.
  */
 template<class C, class Parent, typename... Args>
@@ -136,7 +136,7 @@ compound_member(C& (Parent::*getter)(), const Args&... args) {
  * @param gspair A pair of two member function pointers representing
  *               getter and setter.
  * @param args "Sub-members" of @p c_ptr
- * @see {@link announce_example_4.cpp announce example 4}
+ * @see {@link announce_4.cpp announce example 4}
  * @returns A pair of @p c_ptr and the created meta informations.
  */
 template<class Parent, typename GRes,

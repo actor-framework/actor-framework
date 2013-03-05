@@ -108,7 +108,7 @@ class do_receive_helper {
 
     template<typename... Args>
     do_receive_helper(Args&&... args)
-        : m_bhvr(match_expr_concat(std::forward<Args>(args)...)) {
+        : m_bhvr(match_expr_convert(std::forward<Args>(args)...)) {
     }
 
     do_receive_helper(do_receive_helper&&) = default;
@@ -122,21 +122,6 @@ class do_receive_helper {
             sptr->dequeue(m_bhvr);
         }
         while (stmt() == false);
-        /*
-        if (m_bhvr.timeout().valid()) {
-            do {
-                sptr->dequeue(m_bhvr);
-            }
-            while (stmt() == false);
-        }
-        else {
-            partial_function& pfun = m_bhvr;
-            do {
-                sptr->dequeue(pfun);
-            }
-            while (stmt() == false);
-        }
-        */
     }
 
 };

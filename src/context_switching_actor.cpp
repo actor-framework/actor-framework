@@ -38,12 +38,37 @@
 
 namespace cppa {
 
-context_switching_actor::context_switching_actor()
-: m_fiber(&context_switching_actor::trampoline, this) {
+context_switching_actor::context_switching_actor(std::function<void()> fun)
+: super(std::move(fun), actor_state::ready, true)
+, m_fiber(&context_switching_actor::trampoline, this) { }
+
+auto context_switching_actor::init_timeout(const util::duration& tout) -> timeout_type {
+    // request explicit timeout message
+    request_timeout(tout);
+    return {};
 }
 
-context_switching_actor::context_switching_actor(std::function<void()> fun)
-: super(std::move(fun)), m_fiber(&context_switching_actor::trampoline, this) {
+detail::recursive_queue_node* context_switching_actor::await_message(const timeout_type&) {
+    // receives requested timeout message if timeout occured
+    return await_message();
+}
+
+detail::recursive_queue_node* context_switching_actor::await_message() {
+    auto e = m_mailbox.try_pop();
+    while (e == nullptr) {
+        if (m_mailbox.can_fetch_more() == false) {
+            set_state(actor_state::about_to_block);
+            // make sure mailbox is empty
+            if (m_mailbox.can_fetch_more()) {
+                // someone preempt us => continue
+                set_state(actor_state::ready);
+            }
+            // wait until actor becomes rescheduled
+            else detail::yield(detail::yield_state::blocked);
+        }
+        e = m_mailbox.try_pop();
+    }
+    return e;
 }
 
 void context_switching_actor::trampoline(void* this_ptr) {
@@ -64,31 +89,12 @@ void context_switching_actor::trampoline(void* this_ptr) {
     detail::yield(detail::yield_state::done);
 }
 
-detail::recursive_queue_node* context_switching_actor::receive_node() {
-    detail::recursive_queue_node* e = m_mailbox.try_pop();
-    while (e == nullptr) {
-        if (m_mailbox.can_fetch_more() == false) {
-            m_state.store(abstract_scheduled_actor::about_to_block);
-            // make sure mailbox is empty
-            if (m_mailbox.can_fetch_more()) {
-                // someone preempt us => continue
-                m_state.store(abstract_scheduled_actor::ready);
-            }
-            else {
-                // wait until actor becomes rescheduled
-                detail::yield(detail::yield_state::blocked);
-            }
-        }
-        e = m_mailbox.try_pop();
-    }
-    return e;
-}
-
 scheduled_actor_type context_switching_actor::impl_type() {
     return context_switching_impl;
 }
 
 resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next_job) {
+    CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
     CPPA_REQUIRE(from != nullptr);
     CPPA_REQUIRE(next_job == nullptr);
     using namespace detail;
@@ -107,15 +113,15 @@ resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next
                 CPPA_REQUIRE(next_job == nullptr);
                 m_chained_actor.swap(next_job);
                 CPPA_REQUIRE(m_chained_actor == nullptr);
-                switch (compare_exchange_state(abstract_scheduled_actor::about_to_block,
-                                               abstract_scheduled_actor::blocked)) {
-                    case abstract_scheduled_actor::ready: {
+                switch (compare_exchange_state(actor_state::about_to_block,
+                                               actor_state::blocked)) {
+                    case actor_state::ready: {
                         // restore variables
                         m_chained_actor.swap(next_job);
                         CPPA_REQUIRE(next_job == nullptr);
                         break;
                     }
-                    case abstract_scheduled_actor::blocked: {
+                    case actor_state::blocked: {
                         // wait until someone re-schedules that actor
                         return resume_result::actor_blocked;
                     }

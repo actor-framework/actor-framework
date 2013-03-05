@@ -36,6 +36,7 @@
 #include <iostream>
 #include <type_traits>
 
+#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/message_id.hpp"
@@ -135,7 +136,7 @@ class receive_policy {
     template<class Client, class FunOrBehavior>
     inline void receive_wo_timeout(Client *client, FunOrBehavior& fun) {
         if (!invoke_from_cache(client, fun)) {
-            while (!invoke(client, client->receive_node(), fun)) { }
+            while (!invoke(client, client->await_message(), fun)) { }
         }
     }
 
@@ -152,7 +153,7 @@ class receive_policy {
         else if (!invoke_from_cache(client, bhvr)) {
             if (bhvr.timeout().is_zero()) {
                 pointer e = nullptr;
-                while ((e = client->try_receive_node()) != nullptr) {
+                while ((e = client->m_mailbox.try_pop()) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr)) {
                         return; // done
@@ -163,7 +164,7 @@ class receive_policy {
             else {
                 auto timeout = client->init_timeout(bhvr.timeout());
                 pointer e = nullptr;
-                while ((e = client->try_receive_node(timeout)) != nullptr) {
+                while ((e = client->await_message(timeout)) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr)) {
                         return; // done
@@ -182,7 +183,7 @@ class receive_policy {
                 CPPA_REQUIRE(bhvr.timeout().is_zero() == false);
                 auto timeout = client->init_timeout(bhvr.timeout());
                 pointer e = nullptr;
-                while ((e = client->try_receive_node(timeout)) != nullptr) {
+                while ((e = client->await_message(timeout)) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr, mid)) {
                         return; // done
@@ -190,9 +191,7 @@ class receive_policy {
                 }
                 handle_timeout(client, bhvr);
             }
-            else {
-                while (!invoke(client, client->receive_node(), bhvr, mid)) { }
-            }
+            else while (!invoke(client, client->await_message(), bhvr, mid)) { }
         }
     }
 
@@ -243,9 +242,8 @@ class receive_policy {
                 CPPA_REQUIRE(!message_id.valid());
                 if (client->m_trap_exit == false) {
                     if (v1 != exit_reason::normal) {
-                        // TODO: check for possible memory leak here
-                        // ('node' might not get destroyed)
                         client->quit(v1);
+                        return non_normal_exit_signal;
                     }
                     return normal_exit_signal;
                 }
@@ -327,7 +325,7 @@ class receive_policy {
         if (client->has_behavior()) {
             client->request_timeout(client->get_behavior().timeout());
         }
-        else client->m_has_pending_timeout_request = false;
+        else client->reset_timeout();
     }
 
     template<class Client>
@@ -350,11 +348,24 @@ class receive_policy {
         }
         switch (this->filter_msg(client, node)) {
             default: {
-                // one of:
-                // - normal_exit_signal
-                // - expired_sync_response
-                // - expired_timeout_message
+                CPPA_CRITICAL("illegal filter result");
+            }
+            case normal_exit_signal: {
+                CPPA_LOG_DEBUG("dropped message: normal exit signal");
                 return hm_drop_msg;
+            }
+            case expired_sync_response: {
+                CPPA_LOG_DEBUG("dropped message: expired sync response");
+                return hm_drop_msg;
+            }
+            case expired_timeout_message: {
+                CPPA_LOG_DEBUG("dropped message: expired timeout message");
+                return hm_drop_msg;
+            }
+            case non_normal_exit_signal: {
+                // this message was handled
+                // by calling client->quit(...)
+                return hm_msg_handled;
             }
             case timeout_message: {
                 handle_timeout(client, fun);
@@ -372,6 +383,7 @@ class receive_policy {
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = hm_begin(client, node, policy);
                     if (!fun(node->msg) && handle_sync_failure_on_mismatch) {
+                        CPPA_LOG_WARNING("sync failure occured");
                         client->handle_sync_failure();
                     }
                     client->mark_arrived(awaited_response);
@@ -390,6 +402,8 @@ class receive_policy {
                         auto id = node->mid;
                         auto sender = node->sender;
                         if (id.valid() && !id.is_answered() && sender) {
+                            CPPA_LOG_WARNING("actor did not reply to a "
+                                             "synchronous request message");
                             sender->sync_enqueue(client,
                                                  id.response_id(),
                                                  make_any_tuple(atom("VOID")));

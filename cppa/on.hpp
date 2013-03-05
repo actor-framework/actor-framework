@@ -223,6 +223,11 @@ struct pattern_type : pattern_type_<util::is_callable<T>::value && !detail::is_b
 
 namespace cppa {
 
+/**
+ * @brief A wildcard that matches any number of any values.
+ */
+constexpr anything any_vals = anything{};
+
 #ifdef CPPA_DOCUMENTATION
 
 /**
@@ -250,12 +255,6 @@ constexpr __unspecified__ skip_message;
  */
 template<typename T>
 __unspecified__ val();
-
-/**
- * @brief A wildcard that matches any number of any values.
- */
-constexpr anything any_vals;
-
 
 /**
  * @brief Left-hand side of a partial function expression that matches values.
@@ -293,8 +292,6 @@ template<typename T>
 constexpr typename detail::boxed<T>::type val() {
     return typename detail::boxed<T>::type();
 }
-
-constexpr anything any_vals = anything();
 
 typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
 
@@ -414,7 +411,7 @@ class on_the_fly_rvalue_builder {
 
 constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
-#endif
+#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

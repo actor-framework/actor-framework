@@ -53,6 +53,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/spawn_options.hpp"
@@ -65,8 +66,8 @@
 #include "cppa/network/acceptor.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/receive_loop_helper.hpp"
 
 /**
@@ -119,11 +120,11 @@
  *
  * @section IntroHelloWorld Hello World Example
  *
- * @include hello_world_example.cpp
+ * @include hello_world.cpp
  *
  * @section IntroMoreExamples More Examples
  *
- * The {@link math_actor_example.cpp Math Actor Example} shows the usage
+ * The {@link math_actor.cpp Math Actor Example} shows the usage
  * of {@link receive_loop} and {@link cppa::arg_match arg_match}.
  * The {@link dining_philosophers.cpp Dining Philosophers Example}
  * introduces event-based actors and includes a lot of <tt>libcppa</tt>
@@ -389,13 +390,13 @@
 
 /**
  * @brief A trivial example program.
- * @example hello_world_example.cpp
+ * @example hello_world.cpp
  */
 
 /**
  * @brief Shows the usage of {@link cppa::atom atoms}
  *        and {@link cppa::arg_match arg_match}.
- * @example math_actor_example.cpp
+ * @example math_actor.cpp
  */
 
 /**
@@ -605,8 +606,9 @@ inline void reply_to(const response_handle& handle, Ts&&... what) {
 }
 
 /**
- * @brief Sends a message to the sender of the last received message.
- * @param what Message content as a tuple.
+ * @brief Replies with @p what to @p handle.
+ * @param handle Identifies a previously received request.
+ * @param what Response message.
  */
 inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
     handle.apply(std::move(what));
@@ -683,7 +685,6 @@ inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
 
 /** @} */
 
-#ifndef CPPA_DOCUMENTATION
 // matches "send(this, ...)" and "send(self, ...)"
 inline void send_tuple(local_actor* whom, any_tuple what) {
     detail::send_impl(whom, std::move(what));
@@ -701,7 +702,6 @@ inline actor_ptr eval_sopts(spawn_options opts, actor_ptr ptr) {
     if (has_link_flag(opts)) self->link_to(ptr);
     return std::move(ptr);
 }
-#endif // CPPA_DOCUMENTATION
 
 /**
  * @ingroup ActorCreation
@@ -780,7 +780,8 @@ actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @warning Do not call this function in cooperatively scheduled actors.
  */
 inline void await_all_others_done() {
-    detail::actor_count_wait_until((self.unchecked() == nullptr) ? 0 : 1);
+    auto value = (self.unchecked() == nullptr) ? 0 : 1;
+    get_actor_registry()->await_running_count_equal(value);
 }
 
 /**

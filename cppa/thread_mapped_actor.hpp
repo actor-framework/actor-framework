@@ -44,63 +44,39 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/either.hpp"
+#include "cppa/extend.hpp"
+#include "cppa/stacked.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/detail/abstract_actor.hpp"
+#include "cppa/mailbox_based.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/stacked_actor_mixin.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
 
 #include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
+class self_type;
+class scheduler_helper;
+class thread_mapped_actor;
+
+template<>
+struct has_blocking_receive<thread_mapped_actor> : std::true_type { };
 
 /**
  * @brief An actor running in its own thread.
+ * @extends local_actor
  */
-class thread_mapped_actor : public local_actor {
+class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with<stacked,mailbox_based> {
 
- protected:
+    friend class self_type;              // needs access to cleanup()
+    friend class scheduler_helper;       // needs access to mailbox
+    friend class detail::receive_policy; // needs access to await_message(), etc.
+    friend class detail::behavior_stack; // needs same access as receive_policy
 
-    /**
-     * @brief Implements the actor's behavior.
-     *        Reimplemented this function for a class-based actor.
-     *        Returning from this member function will end the
-     *        execution of the actor.
-     */
-    virtual void run();
-
-};
-
-#else // CPPA_DOCUMENTATION
-
-class self_type;
-
-class thread_mapped_actor;
-
-namespace detail {
-
-typedef intrusive::blocking_single_reader_queue<recursive_queue_node,disposer>
-        blocking_mailbox;
-
-typedef stacked_actor_mixin<thread_mapped_actor,
-                            abstract_actor<local_actor,blocking_mailbox> >
-        thread_mapped_actor_base;
-
-} // namespace detail
-
-class thread_mapped_actor : public detail::thread_mapped_actor_base {
-
-    friend class self_type; // needs access to cleanup()
-
-    friend class detail::behavior_stack; // needs access to receive_node()
-    friend class detail::receive_policy;
-
-    typedef detail::thread_mapped_actor_base super;
+    typedef combined_type super;
 
  public:
 
@@ -108,58 +84,47 @@ class thread_mapped_actor : public detail::thread_mapped_actor_base {
 
     thread_mapped_actor(std::function<void()> fun);
 
-    void quit(std::uint32_t reason = exit_reason::normal); //override
-
-    void enqueue(actor* sender, any_tuple msg); //override
-
-    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
-
-    inline decltype(m_mailbox)& mailbox() { return m_mailbox; }
-
     inline void initialized(bool value) { m_initialized = value; }
 
-    // required by stacked_actor_mixin
+    bool initialized() const;
+
+    void enqueue(const actor_ptr& sender, any_tuple msg);
+
+    void sync_enqueue(const actor_ptr& sender, message_id_t id, any_tuple msg);
+
     inline void reset_timeout() { }
     inline void request_timeout(const util::duration&) { }
+    inline void handle_timeout(behavior& bhvr) { bhvr.handle_timeout(); }
+    inline void pop_timeout() { }
+    inline void push_timeout() { }
+    inline bool waits_for_timeout(std::uint32_t) { return false; }
 
  protected:
 
-    bool initialized();
+    typedef detail::recursive_queue_node mailbox_element;
+
+    typedef intrusive::blocking_single_reader_queue<mailbox_element,detail::disposer>
+            mailbox_type;
+
+    void cleanup(std::uint32_t reason);
 
  private:
 
+    timeout_type init_timeout(const util::duration& rel_time);
+
+    detail::recursive_queue_node* await_message();
+
+    detail::recursive_queue_node* await_message(const timeout_type& abs_time);
+
     bool m_initialized;
 
-    // required by nestable_receive_policy
-    static const detail::receive_policy_flag receive_flag = detail::rp_nestable;
-    inline void push_timeout() { }
-    inline void pop_timeout() { }
-    inline bool waits_for_timeout(std::uint32_t) { return false; }
-    inline detail::recursive_queue_node* receive_node() {
-        return m_mailbox.pop();
-    }
-    inline auto init_timeout(const util::duration& tout)
-    -> decltype(std::chrono::high_resolution_clock::now()) {
-        auto result = std::chrono::high_resolution_clock::now();
-        result += tout;
-        return result;
-    }
-    inline detail::recursive_queue_node* try_receive_node() {
-        return m_mailbox.try_pop();
-    }
-    template<typename Timeout>
-    inline detail::recursive_queue_node* try_receive_node(const Timeout& tout) {
-        return m_mailbox.try_pop(tout);
-    }
-    inline void handle_timeout(behavior& bhvr) {
-        bhvr.handle_timeout();
-    }
+ protected:
+
+    mailbox_type m_mailbox;
 
 };
 
 typedef intrusive_ptr<thread_mapped_actor> thread_mapped_actor_ptr;
-
-#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

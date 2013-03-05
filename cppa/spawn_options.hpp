@@ -41,6 +41,9 @@ namespace cppa {
 /**
  * @brief Stores options passed to the @p spawn function family.
  */
+#ifdef CPPA_DOCUMENTATION
+class spawn_options { };
+#else
 enum class spawn_options : int {
     no_flags          = 0x00,
     link_flag         = 0x01,
@@ -49,6 +52,7 @@ enum class spawn_options : int {
     hide_flag         = 0x08,
     blocking_api_flag = 0x10
 };
+#endif
 
 #ifndef CPPA_DOCUMENTATION
 namespace {

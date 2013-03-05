@@ -28,93 +28,52 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_STACKED_ACTOR_MIXIN_HPP
-#define CPPA_STACKED_ACTOR_MIXIN_HPP
+#ifndef CPPA_MEMORY_CACHED_HPP
+#define CPPA_MEMORY_CACHED_HPP
 
-#include <memory>
-#include <functional>
+#include "cppa/detail/memory.hpp"
 
-#include "cppa/behavior.hpp"
-#include "cppa/local_actor.hpp"
+namespace cppa {
 
-#include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
+/**
+ * @brief This mixin adds all member functions and member variables needed
+ *        by the memory management subsystem.
+ */
+template<class Base, class Subtype>
+class memory_cached : public Base {
 
-namespace cppa { namespace detail {
+    friend class detail::memory;
 
-template<class Derived, class Base>
-class stacked_actor_mixin : public Base {
-
-    friend class receive_policy;
-
- public:
-
-    virtual void dequeue(partial_function& fun) {
-        m_recv_policy.receive(dthis(), fun);
-    }
-
-    virtual void dequeue(behavior& bhvr) {
-        m_recv_policy.receive(dthis(), bhvr);
-    }
-
-    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) {
-        m_recv_policy.receive(dthis(), bhvr, request_id);
-    }
-
-    virtual void run() {
-        if (!this->m_bhvr_stack.empty()) {
-            this->m_bhvr_stack.exec(m_recv_policy, dthis());
-        }
-        if (m_behavior) {
-            m_behavior();
-        }
-    }
+    template<typename>
+    friend class detail::basic_memory_cache;
 
  protected:
 
-    stacked_actor_mixin() = default;
+    typedef memory_cached combined_type;
 
-    stacked_actor_mixin(std::function<void()> f) : m_behavior(std::move(f)) { }
+    template<typename... Ts>
+    memory_cached(Ts&&... args) : Base(std::forward<Ts>(args)...)
+                                , outer_memory(nullptr) { }
 
-    virtual void do_become(behavior&& bhvr, bool discard_old) {
-        become_impl(std::move(bhvr), discard_old, message_id_t());
-    }
-
-    virtual void become_waiting_for(behavior&& bhvr, message_id_t mid) {
-        become_impl(std::move(bhvr), false, mid);
-    }
-
-    virtual bool has_behavior() {
-        return     static_cast<bool>(m_behavior)
-                || !this->m_bhvr_stack.empty();
+    virtual void request_deletion() {
+        auto mc = detail::memory::get_cache_map_entry(&typeid(*this));
+        if (!mc) {
+            auto om = outer_memory;
+            if (om) {
+                om->destroy();
+                om->deallocate();
+            }
+            else delete this;
+        }
+        else mc->release_instance(mc->downcast(this));
     }
 
  private:
 
-    std::function<void()> m_behavior;
-    receive_policy m_recv_policy;
-
-    inline Derived* dthis() {
-        return static_cast<Derived*>(this);
-    }
-
-    void become_impl(behavior&& bhvr, bool discard_old, message_id_t mid) {
-        if (bhvr.timeout().valid()) {
-            dthis()->reset_timeout();
-            dthis()->request_timeout(bhvr.timeout());
-        }
-        if (!this->m_bhvr_stack.empty() && discard_old) {
-            this->m_bhvr_stack.pop_async_back();
-        }
-        this->m_bhvr_stack.push_back(std::move(bhvr), mid);
-    }
-
-    virtual void exec_behavior_stack() {
-        this->m_bhvr_stack.exec(m_recv_policy, dthis());
-    }
+    detail::instance_wrapper* outer_memory;
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
-#endif // CPPA_STACKED_ACTOR_MIXIN_HPP
+#endif // CPPA_MEMORY_CACHED_HPP

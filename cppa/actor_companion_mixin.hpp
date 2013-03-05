@@ -36,14 +36,15 @@
 
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/extend.hpp"
 #include "cppa/match_expr.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/abstract_actor.hpp"
 
 namespace cppa {
 
@@ -90,7 +91,7 @@ class actor_companion_mixin : public Base {
      */
     template<typename... Args>
     void set_message_handler(Args&&... matchExpressions) {
-        m_message_handler = match_expr_concat(std::forward<Args>(matchExpressions)...);
+        m_message_handler = match_expr_convert(std::forward<Args>(matchExpressions)...);
     }
 
     /**
@@ -108,7 +109,7 @@ class actor_companion_mixin : public Base {
 
  private:
 
-    class companion : public detail::abstract_actor<local_actor> {
+    class companion : public local_actor {
 
         friend class actor_companion_mixin;
         typedef util::shared_spinlock lock_type;
@@ -123,24 +124,26 @@ class actor_companion_mixin : public Base {
                 std::lock_guard<lock_type> guard(m_lock);
                 m_parent = nullptr;
             }
-            cleanup(cppa::exit_reason::normal);
+            cleanup(exit_reason::normal);
         }
 
-        void enqueue(cppa::actor* sender, cppa::any_tuple msg) {
-            cppa::util::shared_lock_guard<lock_type> guard(m_lock);
+        void enqueue(const actor_ptr& sender, any_tuple msg) {
+            util::shared_lock_guard<lock_type> guard(m_lock);
             if (m_parent) {
                 m_parent->new_message(new_node_ptr(sender, std::move(msg)));
             }
         }
 
-        void sync_enqueue(cppa::actor* sender, cppa::message_id_t id, cppa::any_tuple msg) {
-            cppa::util::shared_lock_guard<lock_type> guard(m_lock);
+        void sync_enqueue(const actor_ptr& sender,
+                          message_id_t id,
+                          any_tuple msg) {
+            util::shared_lock_guard<lock_type> guard(m_lock);
             if (m_parent) {
                 m_parent->new_message(new_node_ptr(sender, std::move(msg), id));
             }
         }
 
-        bool initialized() { return true; }
+        bool initialized() const { return true; }
 
         void quit(std::uint32_t) {
             throw std::runtime_error("ActorWidgetMixin::Gateway::exit "
@@ -148,21 +151,21 @@ class actor_companion_mixin : public Base {
                                      "management instead!");
         }
 
-        void dequeue(cppa::behavior&) { throw_no_recv(); }
+        void dequeue(behavior&) { throw_no_recv(); }
 
-        void dequeue(cppa::partial_function&) { throw_no_recv(); }
+        void dequeue(partial_function&) { throw_no_recv(); }
 
-        void dequeue_response(cppa::behavior&, cppa::message_id_t) {
+        void dequeue_response(behavior&, message_id_t) {
             throw_no_recv();
         }
 
-        void become_waiting_for(cppa::behavior&&, cppa::message_id_t) {
+        void become_waiting_for(behavior&&, message_id_t) {
             throw_no_become();
         }
 
      protected:
 
-        void do_become(cppa::behavior&&, bool) { throw_no_become(); }
+        void do_become(behavior&&, bool) { throw_no_become(); }
 
      private:
 
@@ -172,13 +175,13 @@ class actor_companion_mixin : public Base {
         }
 
         void throw_no_become() {
-            throw std::runtime_error("actor_companion_mixin::companion "
+            throw std::runtime_error("actor_companion_companion "
                                      "does not support libcppa's "
                                      "become() API");
         }
 
         void throw_no_recv() {
-            throw std::runtime_error("actor_companion_mixin::companion "
+            throw std::runtime_error("actor_companion_companion "
                                      "does not support libcppa's "
                                      "receive() API");
         }

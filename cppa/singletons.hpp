@@ -28,49 +28,49 @@
 \******************************************************************************/
 
 
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/detail/empty_tuple.hpp"
+#ifndef CPPA_SINGLETONS_HPP
+#define CPPA_SINGLETONS_HPP
+
+#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
-any_tuple::any_tuple() : m_vals(get_empty_tuple()) { }
-
-any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
-
-any_tuple::any_tuple(any_tuple&& other) : m_vals(get_empty_tuple()) {
-    m_vals.swap(other.m_vals);
+inline logging* get_logger() {
+    return detail::singleton_manager::get_logger();
 }
 
-any_tuple::any_tuple(const data_ptr& vals) : m_vals(vals) { }
-
-any_tuple& any_tuple::operator=(any_tuple&& other) {
-    m_vals.swap(other.m_vals);
-    return *this;
+inline scheduler* get_scheduler() {
+    return detail::singleton_manager::get_scheduler();
 }
 
-void any_tuple::reset() {
-    m_vals.reset(get_empty_tuple());
+inline detail::group_manager* get_group_manager() {
+    return detail::singleton_manager::get_group_manager();
 }
 
-size_t any_tuple::size() const {
-    return m_vals->size();
+inline detail::actor_registry* get_actor_registry() {
+    return detail::singleton_manager::get_actor_registry();
 }
 
-void* any_tuple::mutable_at(size_t p) {
-    return m_vals->mutable_at(p);
+inline network::middleman* get_middleman() {
+    return detail::singleton_manager::get_middleman();
 }
 
-const void* any_tuple::at(size_t p) const {
-    return m_vals->at(p);
+inline detail::uniform_type_info_map* get_uniform_type_info_map() {
+    return detail::singleton_manager::get_uniform_type_info_map();
 }
 
-const uniform_type_info* any_tuple::type_at(size_t p) const {
-    return m_vals->type_at(p);
+inline detail::abstract_tuple* get_tuple_dummy() {
+    return detail::singleton_manager::get_tuple_dummy();
 }
 
-bool any_tuple::equals(const any_tuple& other) const {
-    return m_vals->equals(*other.vals());
+inline detail::empty_tuple* get_empty_tuple() {
+    return detail::singleton_manager::get_empty_tuple();
+}
+
+inline detail::decorated_names_map* get_decorated_names_map() {
+    return detail::singleton_manager::get_decorated_names_map();
 }
 
 } // namespace cppa
+
+#endif // CPPA_SINGLETONS_HPP

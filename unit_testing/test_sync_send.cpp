@@ -109,14 +109,13 @@ struct C : sb_actor<C> {
 \******************************************************************************/
 
 struct D : popular_actor {
-    response_handle m_handle;
     D(const actor_ptr& buddy) : popular_actor(buddy) { }
     void init() {
         become (
             others() >> [=] {
-                m_handle = make_response_handle();
+                response_handle handle = make_response_handle();
                 sync_send_tuple(buddy(), last_dequeued()).then([=] {
-                    m_handle.apply(last_dequeued());
+                    reply_to(handle, last_dequeued());
                     quit();
                 });
             }
@@ -171,7 +170,8 @@ int main() {
     self->on_sync_failure([] {
         CPPA_ERROR("received: " << to_string(self->last_dequeued()));
     });
-    spawn<monitored + blocking_api>([&] {
+    spawn<monitored + blocking_api>([] {
+        CPPA_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << self->id());
         int invocations = 0;
         auto foi = spawn<float_or_int, linked>();
         send(foi, atom("i"));
@@ -276,9 +276,9 @@ int main() {
     CPPA_CHECKPOINT();
 
     // test use case 3
-    spawn<monitored>([] {                    // client
-        auto s = spawn<server, linked>();    // server
-        auto w = spawn<linked>([] {  // worker
+    spawn<monitored + blocking_api>([] {  // client
+        auto s = spawn<server, linked>(); // server
+        auto w = spawn<linked>([] {       // worker
             become(on(atom("request")) >> []{ reply(atom("response")); });
         });
         // first 'idle', then 'request'

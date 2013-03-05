@@ -56,14 +56,23 @@ bool response_handle::synchronous() const {
 void response_handle::apply(any_tuple msg) const {
     if (valid()) {
         local_actor* sptr = self.unchecked();
-        if (sptr && sptr == m_from) {
-            if (sptr->chaining_enabled()) {
-                if (m_to->chained_sync_enqueue(sptr, m_id, move(msg))) {
+        bool use_chaining = sptr && sptr == m_from && sptr->chaining_enabled();
+        if (synchronous()) {
+            if (use_chaining) {
+                if (m_to->chained_sync_enqueue(m_from, m_id, move(msg))) {
                     sptr->chained_actor(m_to);
                 }
             }
+            else m_to->sync_enqueue(m_from, m_id, move(msg));
         }
-        else m_to->enqueue(m_from.get(), move(msg));
+        else {
+            if (use_chaining) {
+                if (m_to->chained_enqueue(m_from, move(msg))) {
+                    sptr->chained_actor(m_to);
+                }
+            }
+            else m_to->enqueue(m_from, move(msg));
+        }
     }
 }
 

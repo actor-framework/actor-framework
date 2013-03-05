@@ -62,7 +62,6 @@ struct replier : public event_based_actor {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(actor_ptr client, bool inverted) {
-    auto default_case = others() >> CPPA_UNEXPECTED_MSG_CB();
     group_ptr grp;
     if (!inverted) {
         grp = group::get("local", "foobar");
@@ -77,43 +76,42 @@ void spawn5_server(actor_ptr client, bool inverted) {
     }
     spawn_in_group<reflector>(grp);
     spawn_in_group<reflector>(grp);
-    receive_response (sync_send(client, atom("Spawn5"), grp)) (
+    sync_send(client, atom("Spawn5"), grp).await(
         on(atom("ok"), arg_match) >> [&](const actor_vector& vec) {
             send(grp, "Hello reflectors!", 5.0);
             if (vec.size() != 5) {
-                CPPA_PRINT("remote client did not spawn five reflectors!");
+                CPPA_PRINTERR("remote client did not spawn five reflectors!");
             }
-            for (auto& a : vec) {
-                self->monitor(a);
-            }
+            for (auto& a : vec) self->monitor(a);
         },
-        default_case,
-        after(chrono::seconds(10)) >> [&] {
-            throw runtime_error("timeout");
-        }
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        after(chrono::seconds(10)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     CPPA_PRINT("wait for reflected messages");
     // receive seven reply messages (2 local, 5 remote)
     int x = 0;
     receive_for(x, 7) (
-        on("Hello reflectors!", 5.0) >> [] { }
+        on("Hello reflectors!", 5.0) >> [] { },
+        after(std::chrono::seconds(2)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     CPPA_PRINT("wait for DOWN messages");
     // wait for DOWN messages
     {int i = 0; receive_for(i, 5) (
         on(atom("DOWN"), arg_match) >> [](std::uint32_t reason) {
             if (reason != exit_reason::normal) {
-                CPPA_PRINT("reflector exited for non-normal exit reason!");
+                CPPA_PRINTERR("reflector exited for non-normal exit reason!");
             }
         },
-        default_case,
+        others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(2)) >> [&] {
             i = 4;
-            CPPA_PRINTERR("timeout while waiting for DOWN messages!");
+            CPPA_UNEXPECTED_TOUT();
         }
     );}
+    CPPA_CHECKPOINT();
     // wait for locally spawned reflectors
     await_all_others_done();
+    CPPA_CHECKPOINT();
     send(client, atom("Spawn5Done"));
 }
 
@@ -161,7 +159,7 @@ int client_part(const vector<string_pair>& args) {
         }
     );
     await_all_others_done();
-    receive_response (sync_send(server, atom("SyncMsg"))) (
+    sync_send(server, atom("SyncMsg")).await(
         others() >> [&] {
             if (self->last_dequeued() != make_cow_tuple(atom("SyncReply"))) {
                 ostringstream oss;
@@ -189,10 +187,8 @@ int client_part(const vector<string_pair>& args) {
     );
     // test 100 sync_messages
     for (int i = 0; i < 100; ++i) {
-        receive_response (sync_send(server, atom("foo"), atom("bar"), i)) (
-            on(atom("foo"), atom("bar"), i) >> [] {
-
-            },
+        sync_send(server, atom("foo"), atom("bar"), i).await(
+            on(atom("foo"), atom("bar"), i) >> [] { },
             others() >> [&] {
                 CPPA_ERROR("unexpected message; "
                            << __FILE__ << " line " << __LINE__ << ": "
@@ -203,20 +199,28 @@ int client_part(const vector<string_pair>& args) {
             }
         );
     }
+    CPPA_CHECKPOINT();
     spawn5_server(server, false);
+    CPPA_CHECKPOINT();
     spawn5_client();
+    CPPA_CHECKPOINT();
     // wait for locally spawned reflectors
     await_all_others_done();
+    CPPA_CHECKPOINT();
 
     receive (
         on(atom("fwd"), arg_match) >> [&](const actor_ptr& fwd, const string&) {
             forward_to(fwd);
         }
     );
+    CPPA_CHECKPOINT();
     // shutdown handshake
     send(server, atom("farewell"));
+    CPPA_CHECKPOINT();
     receive(on(atom("cu")) >> [] { });
+    CPPA_CHECKPOINT();
     shutdown();
+    CPPA_CHECKPOINT();
     return CPPA_TEST_RESULT();
 }
 
@@ -251,7 +255,6 @@ int main(int argc, char** argv) {
         }
     }
     CPPA_TEST(test__remote_actor);
-    CPPA_LOGF_TRACE("");
     //auto ping_actor = spawn(ping, 10);
     uint16_t port = 4242;
     bool success = false;
@@ -270,11 +273,11 @@ int main(int argc, char** argv) {
     thread child;
     ostringstream oss;
     if (run_remote_actor) {
-        oss << app_path << " run=remote_actor port=" << port;// << " &>client.txt";
+        oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
         // execute client_part() in a separate process,
         // connected via localhost socket
         child = thread([&oss]() {
-            CPPA_LOGF_TRACE("lambda expression calling system()");
+            CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
             string cmdstr = oss.str();
             if (system(cmdstr.c_str()) != 0) {
                 CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
@@ -282,9 +285,7 @@ int main(int argc, char** argv) {
             }
         });
     }
-    else {
-        CPPA_PRINT("actor published at port " << port);
-    }
+    else { CPPA_PRINT("actor published at port " << port); }
     //CPPA_PRINT("await SpawnPing message");
     actor_ptr remote_client;
     CPPA_LOGF_DEBUG("send 'SpawnPing', expect 'PingPtr'");

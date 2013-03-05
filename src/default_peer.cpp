@@ -36,6 +36,7 @@
 #include "cppa/match.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
@@ -195,7 +196,7 @@ void default_peer::monitor(const actor_ptr&,
         CPPA_LOG_ERROR("received MONITOR from invalid peer");
         return;
     }
-    auto entry = detail::singleton_manager::get_actor_registry()->get_entry(aid);
+    auto entry = get_actor_registry()->get_entry(aid);
     auto pself = process_information::get();
 
     if (*node == *pself) {
@@ -221,7 +222,9 @@ void default_peer::monitor(const actor_ptr&,
         default_protocol_ptr proto = m_parent;
         entry.first->attach_functor([=](uint32_t reason) {
             proto->run_later([=] {
-                CPPA_LOGF_TRACE("lambda from default_peer::monitor");
+                CPPA_LOGC_TRACE("cppa::network::default_peer",
+                                "monitor$kill_proxy_helper",
+                                "reason = " << reason);
                 auto p = proto->get_peer(*node);
                 if (p) p->enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, reason));
             });

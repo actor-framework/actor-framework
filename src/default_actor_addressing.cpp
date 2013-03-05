@@ -63,7 +63,7 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
     else {
         // local actor?
         if (!ptr->is_proxy()) {
-            detail::singleton_manager::get_actor_registry()->put(ptr->id(), ptr);
+            get_actor_registry()->put(ptr->id(), ptr);
         }
         auto pinf = m_pinf;
         if (ptr->is_proxy()) {
@@ -101,7 +101,7 @@ actor_ptr default_actor_addressing::read(deserializer* source) {
         // local actor?
         auto pinf = process_information::get();
         if (pid == pinf->process_id() && nid == pinf->node_id()) {
-            return detail::singleton_manager::get_actor_registry()->get(aid);
+            return get_actor_registry()->get(aid);
         }
         else {
             process_information tmp(pid, nid);

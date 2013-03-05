@@ -40,7 +40,6 @@
 
 #include "cppa/network/middleman.hpp"
 
-#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -74,15 +73,23 @@ void singleton_manager::shutdown() {
     }
     //auto rptr = s_actor_registry.load();
     //if (rptr) rptr->await_running_count_equal(0);
+    CPPA_LOGF_DEBUG("shutdown scheduler");
     destroy(s_scheduler);
+    CPPA_LOGF_DEBUG("shutdown middleman");
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe to delete all other singletons now
+    CPPA_LOGF_DEBUG("close actor registry");
     destroy(s_actor_registry);
+    CPPA_LOGF_DEBUG("shutdown group manager");
     destroy(s_group_manager);
+    CPPA_LOGF_DEBUG("destroy empty tuple singleton");
     destroy(s_empty_tuple);
+    CPPA_LOGF_DEBUG("clear type info map");
     destroy(s_uniform_type_info_map);
+    CPPA_LOGF_DEBUG("clear decorated names log");
     destroy(s_decorated_names_map);
+    CPPA_LOGF_DEBUG("shutdown logger");
     destroy(s_logger);
 }
 

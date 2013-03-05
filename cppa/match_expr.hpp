@@ -41,6 +41,7 @@
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/purge_refs.hpp"
 #include "cppa/util/apply_args.hpp"
+#include "cppa/util/disjunction.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/deduce_ref_type.hpp"
 
@@ -86,7 +87,7 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type& result,
                                const std::type_info& type_token,
-                               detail::tuple_impl_info,
+                               bool,
                                PtrType*,
                                Tuple& tup) {
         typedef typename match_impl_from_type_list<
@@ -118,7 +119,7 @@ struct invoke_policy_impl<wildcard_position::nil,
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type&,
                                const std::type_info& type_token,
-                               detail::tuple_impl_info,
+                               bool,
                                PtrType*,
                                Tuple& tup) {
         return can_invoke(type_token, tup);
@@ -161,7 +162,7 @@ struct invoke_policy_impl<wildcard_position::nil,
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(tuple_type& result,
                                const std::type_info&,
-                               detail::tuple_impl_info,
+                               bool,
                                PtrType*,
                                Tuple& tup,
                                typename std::enable_if<
@@ -185,7 +186,7 @@ struct invoke_policy_impl<wildcard_position::nil,
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type& result,
                                const std::type_info& arg_types,
-                               detail::tuple_impl_info timpl,
+                               bool dynamically_typed,
                                PtrType* native_arg,
                                Tuple& tup,
                                typename std::enable_if<
@@ -210,7 +211,7 @@ struct invoke_policy_impl<wildcard_position::nil,
             }
             // 'fall through'
         }
-        else if (timpl == detail::dynamically_typed) {
+        else if (dynamically_typed) {
             auto& arr = arr_type::arr;
             if (tup.size() != sizeof...(Ts)) {
                 return false;
@@ -252,7 +253,7 @@ struct invoke_policy_impl<wildcard_position::leading,
     template<typename PtrType, typename Tuple>
     static inline bool prepare_invoke(typename super::tuple_type&,
                                       const std::type_info&,
-                                      detail::tuple_impl_info,
+                                      bool,
                                       PtrType*,
                                       Tuple&) {
         return true;
@@ -290,7 +291,7 @@ struct invoke_policy_impl<wildcard_position::trailing,
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type& result,
                                const std::type_info& arg_types,
-                               detail::tuple_impl_info,
+                               bool,
                                PtrType*,
                                Tuple& tup) {
         if (!can_invoke(arg_types, tup)) return false;
@@ -330,7 +331,7 @@ struct invoke_policy_impl<wildcard_position::leading,
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type& result,
                                const std::type_info& arg_types,
-                               detail::tuple_impl_info,
+                               bool,
                                PtrType*,
                                Tuple& tup) {
         if (!can_invoke(arg_types, tup)) return false;
@@ -486,7 +487,7 @@ inline bool unroll_expr(PPFPs&,
                         std::uint64_t,
                         minus1l,
                         const std::type_info&,
-                        detail::tuple_impl_info,
+                        bool,
                         PtrType*,
                         Tuple&) {
     return false;
@@ -498,11 +499,11 @@ bool unroll_expr(PPFPs& fs,
                  std::uint64_t bitmask,
                  long_constant<N>,
                  const std::type_info& type_token,
-                 detail::tuple_impl_info iinfo,
+                 bool is_dynamic,
                  PtrType* ptr,
                  Tuple& tup) {
     if (unroll_expr(fs, invoke_res, bitmask, long_constant<N-1>{},
-                    type_token, iinfo, ptr, tup)) {
+                    type_token, is_dynamic, ptr, tup)) {
         return true;
     }
     if ((bitmask & (0x01 << N)) == 0) return false;
@@ -511,7 +512,7 @@ bool unroll_expr(PPFPs& fs,
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_policy<pattern_type> policy;
     typename policy::tuple_type targs;
-    if (policy::prepare_invoke(targs, type_token, iinfo, ptr, tup)) {
+    if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
         auto is = util::get_indices(targs);
         util::void_type dummy;
         typename has_bool_result<typename Fun::second_type>::token_type stoken;
@@ -626,6 +627,8 @@ class match_expr {
 
  public:
 
+    static constexpr bool may_have_timeout = false;
+
     typedef util::type_list<Cases...> cases_list;
 
     static constexpr size_t num_cases = sizeof...(Cases);
@@ -666,7 +669,7 @@ class match_expr {
 
     bool can_invoke(const any_tuple& tup) {
         auto type_token = tup.type_token();
-        if (tup.impl_type() == detail::statically_typed) {
+        if (not tup.dynamically_typed()) {
             auto bitmask = get_cache_entry(type_token, tup);
             return bitmask != 0;
         }
@@ -713,7 +716,6 @@ class match_expr {
                 >::type
                 ptr_type;
 
-        auto impl_type = detail::statically_typed;
         ptr_type ptr_arg = nullptr;
         bool invoke_result = true;
         bool unroll_result = unroll_expr(m_cases,
@@ -721,7 +723,7 @@ class match_expr {
                                          bitmask,
                                          idx_token,
                                          type_token,
-                                         impl_type,
+                                         false, // not dynamically_typed
                                          ptr_arg,
                                          static_cast<ref_type>(tup));
         return unroll_result && invoke_result;
@@ -797,7 +799,7 @@ class match_expr {
     std::uint64_t get_cache_entry(const std::type_info* type_token,
                                   const Tuple& value) {
         CPPA_REQUIRE(type_token != nullptr);
-        if (value.impl_type() == detail::dynamically_typed) {
+        if (value.dynamically_typed()) {
             return m_dummy.second; // all groups enabled
         }
         size_t i = find_token_pos(type_token);
@@ -831,14 +833,14 @@ class match_expr {
         auto ndp = fetch_native_data(vals, mutator_token);
         auto token_ptr = vals->type_token();
         auto bitmask = get_cache_entry(token_ptr, *vals);
-        auto impl_type = vals->impl_type();
+        auto dynamically_typed = vals->dynamically_typed();
         bool invoke_result = true; // maybe set to false by an invoked functor
         bool unroll_result = unroll_expr(m_cases,
                                          invoke_result,
                                          bitmask,
                                          idx_token,
                                          *token_ptr,
-                                         impl_type,
+                                         dynamically_typed,
                                          ndp,
                                          *vals);
         return invoke_result && unroll_result;
@@ -889,94 +891,94 @@ match_expr_collect(const Arg0& arg0, const Args&... args) {
     return {all_cases};
 }
 
-template<bool HasTimeout>
-struct match_expr_concat_impl {
-    template<typename Arg0, typename... Args>
-    static detail::behavior_impl* _(const Arg0& arg0, const Args&... args) {
-        typename detail::tdata_from_type_list<
+namespace detail {
+
+typedef std::true_type  with_timeout;
+typedef std::false_type without_timeout;
+
+// with timeout
+
+// end of recursion
+template<class Data, class Token, typename F>
+behavior_impl* concat_rec(const Data& data, Token, const timeout_definition<F>& arg) {
+    typedef typename match_expr_from_type_list<Token>::type combined_type;
+    return new default_behavior_impl<combined_type,F>{data, arg};
+}
+
+// recursive concatenation function
+template<class Data, class Token, typename T, typename... Ts>
+behavior_impl* concat_rec(const Data& data, Token, const T& arg, const Ts&... args) {
+    typedef typename util::tl_concat<
+            Token,
+            typename T::cases_list
+        >::type
+        next_token_type;
+    typename tdata_from_type_list<
             typename util::tl_map<
-                typename util::tl_concat<
-                    typename Arg0::cases_list,
-                    typename Args::cases_list...
-                >::type,
+                next_token_type,
                 gref_wrapped
             >::type
         >::type
-        all_cases;
-        typedef typename match_expr_from_type_list<
-                    typename util::tl_concat<
-                        typename Arg0::cases_list,
-                        typename Args::cases_list...
-                    >::type
-                >::type
-                combined_type;
-        auto lvoid = []() { };
-        typedef detail::default_behavior_impl<combined_type,decltype(lvoid)>
-                impl_type;
-        detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
-        return new impl_type(all_cases, util::duration{}, lvoid);
-    }
-};
-
-template<>
-struct match_expr_concat_impl<true> {
-
-    template<class TData, class Token, typename F>
-    static detail::behavior_impl* __(const TData& data, Token, const timeout_definition<F>& arg0) {
-        typedef typename match_expr_from_type_list<Token>::type combined_type;
-        typedef detail::default_behavior_impl<combined_type,F> impl_type;
-        return new impl_type(data, arg0);
-    }
-
-    template<class TData, class Token, typename... Cases, typename... Args>
-    static detail::behavior_impl* __(const TData& data, Token, const match_expr<Cases...>& arg0, const Args&... args) {
-        typedef typename util::tl_concat<
-                Token,
-                util::type_list<Cases...>
-            >::type
-            next_token_type;
-        typename detail::tdata_from_type_list<
-                typename util::tl_map<
-                    next_token_type,
-                    gref_wrapped
-                >::type
-            >::type
-            next_data;
-        next_token_type next_token;
-        detail::collect_tdata(next_data, data, arg0.cases());
-        return __(next_data, next_token, args...);
-    }
-
-    template<typename F>
-    static detail::behavior_impl* _(const timeout_definition<F>& arg0) {
-        typedef detail::default_behavior_impl<detail::dummy_match_expr,F> impl_type;
-        return new impl_type(detail::dummy_match_expr{}, arg0);
-    }
-
-    template<typename... Cases, typename... Args>
-    static detail::behavior_impl* _(const match_expr<Cases...>& arg0, const Args&... args) {
-        util::type_list<Cases...> token;
-        typename detail::tdata_from_type_list<
-                typename util::tl_map<
-                    util::type_list<Cases...>,
-                    gref_wrapped
-                >::type
-            >::type
-            wrapper;
-        detail::collect_tdata(wrapper, arg0.cases());
-        return __(wrapper, token, args...);
-    }
-
-};
-
-template<typename Arg0, typename... Args>
-intrusive_ptr<detail::behavior_impl> match_expr_concat(const Arg0& arg0,
-                                                       const Args&... args) {
-    constexpr bool has_timeout = util::disjunction<
-                                     is_timeout_definition<Arg0>,
-                                     is_timeout_definition<Args>...>::value;
-    return {match_expr_concat_impl<has_timeout>::_(arg0, args...)};
+        next_data;
+    next_token_type next_token;
+    collect_tdata(next_data, data, arg.cases());
+    return concat_rec(next_data, next_token, args...);
 }
+
+template<typename F>
+behavior_impl* concat_expr(with_timeout, const timeout_definition<F>& arg) {
+    typedef default_behavior_impl<dummy_match_expr,F> impl_type;
+    return new impl_type(dummy_match_expr{}, arg);
+}
+
+template<typename T, typename... Ts>
+behavior_impl* concat_expr(with_timeout, const T& arg, const Ts&... args) {
+    typename tdata_from_type_list<
+            typename util::tl_map<
+                typename T::cases_list,
+                gref_wrapped
+            >::type
+        >::type
+        wrapper;
+    detail::collect_tdata(wrapper, arg.cases());
+    return concat_rec(wrapper, typename T::cases_list{}, args...);
+}
+
+// without timeout
+
+template<typename T, typename... Ts>
+behavior_impl* concat_expr(without_timeout, const T& arg, const Ts&... args) {
+    typename tdata_from_type_list<
+        typename util::tl_map<
+            typename util::tl_concat<
+                typename T::cases_list,
+                typename Ts::cases_list...
+            >::type,
+            gref_wrapped
+        >::type
+    >::type
+    all_cases;
+    typedef typename match_expr_from_type_list<
+                typename util::tl_concat<
+                    typename T::cases_list,
+                    typename Ts::cases_list...
+                >::type
+            >::type
+            combined_type;
+    auto lvoid = []() { };
+    typedef default_behavior_impl<combined_type,decltype(lvoid)> impl_type;
+    collect_tdata(all_cases, arg.cases(), args.cases()...);
+    return new impl_type(all_cases, util::duration{}, lvoid);
+}
+
+template<typename T, typename... Ts>
+behavior_impl_ptr match_expr_concat(const T& arg, const Ts&... args) {
+    std::integral_constant<bool,util::disjunction<T::may_have_timeout,Ts::may_have_timeout...>::value> token;
+    // use static call dispatch to select correct function
+    return concat_expr(token, arg, args...);
+}
+
+} // namespace detail
 
 } // namespace cppa
 

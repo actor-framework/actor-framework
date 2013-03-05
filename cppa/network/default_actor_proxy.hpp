@@ -31,12 +31,11 @@
 #ifndef DEFAULT_ACTOR_PROXY_HPP
 #define DEFAULT_ACTOR_PROXY_HPP
 
+#include "cppa/extend.hpp"
 #include "cppa/actor_proxy.hpp"
-#include "cppa/memory_cached_mixin.hpp"
-
+#include "cppa/memory_cached.hpp"
 #include "cppa/network/default_protocol.hpp"
-
-#include "cppa/detail/abstract_actor.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
 
@@ -49,7 +48,8 @@ class basic_memory_cache;
 
 namespace cppa { namespace network {
 
-class sync_request_info : public memory_cached_mixin<memory_managed> {
+class sync_request_info : public extend<memory_managed,sync_request_info>::
+                                 with<memory_cached> {
 
     friend class detail::memory;
 
@@ -67,9 +67,9 @@ class sync_request_info : public memory_cached_mixin<memory_managed> {
 
 };
 
-class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
+class default_actor_proxy : public actor_proxy {
 
-    typedef detail::abstract_actor<actor_proxy> super;
+    typedef actor_proxy super;
 
  public:
 
@@ -77,19 +77,19 @@ class default_actor_proxy : public detail::abstract_actor<actor_proxy> {
                         const process_information_ptr& pinfo,
                         const default_protocol_ptr& parent);
 
-    void enqueue(actor* sender, any_tuple msg);
+    void enqueue(const actor_ptr& sender, any_tuple msg);
 
-    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
+    void sync_enqueue(const actor_ptr& sender, message_id_t id, any_tuple msg);
 
-    void link_to(const intrusive_ptr<actor>& other);
+    void link_to(const actor_ptr& other);
 
-    void unlink_from(const intrusive_ptr<actor>& other);
+    void unlink_from(const actor_ptr& other);
 
-    bool remove_backlink(const intrusive_ptr<actor>& to);
+    bool remove_backlink(const actor_ptr& to);
 
-    bool establish_backlink(const intrusive_ptr<actor>& to);
+    bool establish_backlink(const actor_ptr& to);
 
-    void local_link_to(const intrusive_ptr<actor>& other);
+    void local_link_to(const actor_ptr& other);
 
     void local_unlink_from(const actor_ptr& other);
 

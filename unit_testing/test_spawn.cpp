@@ -302,12 +302,19 @@ int main() {
     );
     CPPA_CHECKPOINT();
 
-    auto mirror = spawn<simple_mirror>();
+    auto mirror = spawn<simple_mirror,monitored>();
 
     CPPA_PRINT("test mirror");
     send(mirror, "hello mirror");
-    receive(on("hello mirror") >> []() { });
+    receive (
+        on("hello mirror") >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
     quit_actor(mirror, exit_reason::user_defined);
+    receive (
+        on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -620,19 +627,21 @@ int main() {
     CPPA_CHECK_EQUAL("wait4int", res1);
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");
 
-    // create 20,000 actors linked to one single actor
+    // create some actors linked to one single actor
     // and kill them all through killing the link
-    auto twenty_thousand = spawn([] {
-        for (int i = 0; i < 20000; ++i) {
-            spawn<event_testee, linked>();
+    auto legion = spawn([] {
+        CPPA_LOGF_INFO("spawn 1,000 actors");
+        for (int i = 0; i < 1000; ++i) {
+            spawn<event_testee,linked>();
         }
         become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
-    quit_actor(twenty_thousand, exit_reason::user_defined);
+    quit_actor(legion, exit_reason::user_defined);
     await_all_others_done();
+    CPPA_CHECKPOINT();
     self->trap_exit(true);
-    auto ping_actor = spawn<monitored + blocking_api>(ping, 10);
-    auto pong_actor = spawn<monitored + blocking_api>(pong, ping_actor);
+    auto ping_actor = spawn<monitored+blocking_api>(ping, 10);
+    auto pong_actor = spawn<monitored+blocking_api>(pong, ping_actor);
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;
@@ -648,11 +657,11 @@ int main() {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
-                CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
+                CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             }
             else if (who == ping_actor) {
                 flags |= 0x04;
-                CPPA_CHECK_EQUAL(exit_reason::normal, reason);
+                CPPA_CHECK_EQUAL(reason, exit_reason::normal);
             }
         },
         on_arg_match >> [&](const atom_value& val) {

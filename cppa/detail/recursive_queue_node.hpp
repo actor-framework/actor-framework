@@ -37,14 +37,14 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
-#include "cppa/memory_cached_mixin.hpp"
+#include "cppa/memory_cached.hpp"
 
 // needs access to constructor + destructor to initialize m_dummy_node
 namespace cppa { class local_actor; }
 
 namespace cppa { namespace detail {
 
-class recursive_queue_node : public memory_cached_mixin<memory_managed> {
+class recursive_queue_node : public memory_cached<memory_managed,recursive_queue_node> {
 
     friend class memory;
     friend class ::cppa::local_actor;
@@ -64,11 +64,18 @@ class recursive_queue_node : public memory_cached_mixin<memory_managed> {
     recursive_queue_node& operator=(recursive_queue_node&&) = delete;
     recursive_queue_node& operator=(const recursive_queue_node&) = delete;
 
+    template<typename... Ts>
+    inline static recursive_queue_node* create(Ts&&... args) {
+        return memory::create<recursive_queue_node>(std::forward<Ts>(args)...);
+    }
+
  private:
 
     recursive_queue_node() = default;
 
-    recursive_queue_node(actor_ptr sptr, any_tuple data, message_id_t id = message_id_t());
+    recursive_queue_node(const actor_ptr& sptr,
+                         any_tuple data,
+                         message_id_t id = message_id_t{});
 
 };
 

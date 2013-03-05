@@ -28,50 +28,70 @@
 \******************************************************************************/
 
 
-#ifndef MEMORY_CACHED_MIXIN_HPP
-#define MEMORY_CACHED_MIXIN_HPP
+#ifndef CPPA_MAILBOX_BASED_HPP
+#define CPPA_MAILBOX_BASED_HPP
 
-#include "cppa/detail/memory.hpp"
+#include <type_traits>
+
+#include "cppa/detail/sync_request_bouncer.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa {
 
-/**
- * @brief This mixin adds all member functions and member variables needed
- *        by the memory management subsystem.
- */
-template<typename Base>
-class memory_cached_mixin : public Base {
+template<typename T>
+struct has_blocking_receive;
 
-    friend class detail::memory;
+template<class Base, class Subtype>
+class mailbox_based : public Base {
 
-    template<typename T>
-    friend class detail::basic_memory_cache;
+    typedef detail::disposer del;
+
+ public:
+
+    ~mailbox_based() {
+        if (!m_mailbox.closed()) {
+            detail::sync_request_bouncer f{this->exit_reason()};
+            m_mailbox.close(f);
+        }
+    }
 
  protected:
 
-    template<typename... Args>
-    memory_cached_mixin(Args&&... args)
-    : Base(std::forward<Args>(args)...), outer_memory(nullptr) { }
+    typedef mailbox_based combined_type;
 
-    virtual void request_deletion() {
-        auto mc = detail::memory::get_cache_map_entry(&typeid(*this));
-        if (!mc) {
-            auto om = outer_memory;
-            if (om) {
-                om->destroy();
-                om->deallocate();
-            }
-            else delete this;
-        }
-        else mc->release_instance(mc->downcast(this));
+    typedef detail::recursive_queue_node mailbox_element;
+
+    typedef typename std::conditional<
+                has_blocking_receive<Subtype>::value,
+                intrusive::blocking_single_reader_queue<mailbox_element,del>,
+                intrusive::single_reader_queue<mailbox_element,del>
+            >::type
+            mailbox_type;
+
+    template<typename... Ts>
+    mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+
+    void cleanup(std::uint32_t reason) {
+        detail::sync_request_bouncer f{reason};
+        m_mailbox.close(f);
+        Base::cleanup(reason);
     }
+
+    template<typename... Ts>
+    inline mailbox_element* new_mailbox_element(Ts&&... args) {
+        return mailbox_element::create(std::forward<Ts>(args)...);
+    }
+
+    mailbox_type m_mailbox;
 
  private:
 
-    detail::instance_wrapper* outer_memory;
+    inline Subtype* dthis() { return static_cast<Subtype*>(this); }
 
 };
 
 } // namespace cppa
 
-#endif // MEMORY_CACHED_MIXIN_HPP
+#endif //CPPA_MAILBOX_BASED_HPP

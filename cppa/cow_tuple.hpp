@@ -170,8 +170,6 @@ struct cow_tuple_from_type_list< util::type_list<Ts...> > {
     typedef cow_tuple<Ts...> type;
 };
 
-#ifdef CPPA_DOCUMENTATION
-
 /**
  * @ingroup CopyOnWrite
  * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.
@@ -180,8 +178,11 @@ struct cow_tuple_from_type_list< util::type_list<Ts...> > {
  *          <tt>N</tt>th element of @p tup.
  * @relates cow_tuple
  */
-template<size_t N, typename T>
-const T& get(const cow_tuple<...>& tup);
+template<size_t N, typename... Ts>
+const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
+    typedef typename util::at<N, Ts...>::type result_type;
+    return *reinterpret_cast<const result_type*>(tup.at(N));
+}
 
 /**
  * @ingroup CopyOnWrite
@@ -192,8 +193,11 @@ const T& get(const cow_tuple<...>& tup);
  * @note Detaches @p tup if there are two or more references to the cow_tuple data.
  * @relates cow_tuple
  */
-template<size_t N, typename T>
-T& get_ref(cow_tuple<...>& tup);
+template<size_t N, typename... Ts>
+typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
+    typedef typename util::at<N, Ts...>::type result_type;
+    return *reinterpret_cast<result_type*>(tup.mutable_at(N));
+}
 
 /**
  * @ingroup ImplicitConversion
@@ -203,29 +207,10 @@ T& get_ref(cow_tuple<...>& tup);
  * @relates cow_tuple
  */
 template<typename... Args>
-cow_tuple<Args...> make_cow_tuple(Args&&... args);
-
-#else
-
-template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
-    typedef typename util::at<N, Ts...>::type result_type;
-    return *reinterpret_cast<const result_type*>(tup.at(N));
-}
-
-template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
-    typedef typename util::at<N, Ts...>::type result_type;
-    return *reinterpret_cast<result_type*>(tup.mutable_at(N));
-}
-
-template<typename... Args>
 cow_tuple<typename detail::strip_and_convert<Args>::type...>
 make_cow_tuple(Args&&... args) {
     return {std::forward<Args>(args)...};
 }
-
-#endif
 
 /**
  * @brief Compares two cow_tuples.

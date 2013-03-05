@@ -32,7 +32,9 @@
 
 namespace cppa {
 
-attachable::~attachable() {
-}
+attachable::~attachable() { }
+
+attachable::token::token(const std::type_info& tinfo, const void* vptr)
+: subtype(tinfo), ptr(vptr) { }
 
 } // namespace cppa::detail

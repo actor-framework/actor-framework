@@ -44,18 +44,11 @@
 
 namespace cppa { namespace detail {
 
-enum tuple_impl_info {
-    statically_typed,
-    dynamically_typed
-};
-
 class abstract_tuple : public ref_counted {
-
-    tuple_impl_info m_impl_type;
 
  public:
 
-    inline abstract_tuple(tuple_impl_info tii) : m_impl_type(tii) { }
+    abstract_tuple(bool dynamically_typed);
     abstract_tuple(const abstract_tuple& other);
 
     // mutators
@@ -76,7 +69,7 @@ class abstract_tuple : public ref_counted {
     // A statically typed tuple implementation can use some optimizations,
     // e.g., "impl_type() == statically_typed" implies that type_token()
     // identifies all possible instances of a given tuple implementation
-    inline tuple_impl_info impl_type() const { return m_impl_type; }
+    inline bool dynamically_typed() const { return m_is_dynamic; }
 
     // uniquely identifies this category (element types) of messages
     // override this member function only if impl_type() == statically_typed
@@ -92,6 +85,10 @@ class abstract_tuple : public ref_counted {
 
     inline const_iterator  end() const { return {this, size()}; }
     inline const_iterator cend() const { return {this, size()}; }
+
+ private:
+
+    bool m_is_dynamic;
 
 };
 

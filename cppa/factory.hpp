@@ -35,7 +35,7 @@
 
 namespace cppa { namespace factory {
 
-#ifdef CPPA_DOCUMENTATION
+void default_cleanup();
 
 /**
  * @brief Returns a factory for event-based actors using @p fun as
@@ -57,7 +57,10 @@ namespace cppa { namespace factory {
  * unless an initial value is passed to @p spawn.
  */
 template<typename InitFun>
-auto event_based(InitFun fun);
+inline typename detail::ebaf_from_functor<InitFun, void (*)()>::type
+event_based(InitFun init) {
+    return {std::move(init), default_cleanup};
+}
 
 /**
  * @brief Returns a factory for event-based actors using @p fun0 as
@@ -65,26 +68,11 @@ auto event_based(InitFun fun);
  *        and @p fun1 as implementation for
  *        {@link cppa::event_based_actor::on_exit() on_exit()}.
  */
-template<typename InitFun, OnExitFun>
-auto event_based(InitFun fun0, OnExitFun fun1);
-
-#else // CPPA_DOCUMENTATION
-
-void default_cleanup();
-
-template<typename InitFun>
-inline typename detail::ebaf_from_functor<InitFun, void (*)()>::type
-event_based(InitFun init) {
-    return {std::move(init), default_cleanup};
-}
-
 template<typename InitFun, typename OnExitFun>
 inline typename detail::ebaf_from_functor<InitFun, OnExitFun>::type
 event_based(InitFun init, OnExitFun on_exit) {
     return {std::move(init), on_exit};
 }
-
-#endif // CPPA_DOCUMENTATION
 
 } } // namespace cppa::factory
 
