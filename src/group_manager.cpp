@@ -66,14 +66,14 @@ class local_group : public group {
 
  public:
 
-    void send_all_subscribers(actor* sender, const any_tuple& msg) {
+    void send_all_subscribers(const actor_ptr& sender, const any_tuple& msg) {
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
             s->enqueue(sender, msg);
         }
     }
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
         send_all_subscribers(sender, msg);
         m_broker->enqueue(sender, move(msg));
     }
@@ -189,7 +189,7 @@ class local_group_proxy : public local_group {
         CPPA_REQUIRE(remote_broker != nullptr);
         CPPA_REQUIRE(remote_broker->is_proxy());
         m_broker = move(remote_broker);
-        m_proxy_broker = spawn_hidden<proxy_broker>(this);
+        m_proxy_broker = spawn<proxy_broker,hidden>(this);
     }
 
     group::subscription subscribe(const channel_ptr& who) {
@@ -215,7 +215,7 @@ class local_group_proxy : public local_group {
         }
     }
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
         // forward message to the broker
         m_broker->enqueue(sender,
                           make_any_tuple(atom("FORWARD"), move(msg)));
@@ -342,7 +342,7 @@ class remote_group : public group {
 
     void unsubscribe(const channel_ptr&) { /* never called */ }
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
         m_decorated->enqueue(sender, msg);
     }
 
@@ -426,8 +426,11 @@ class remote_group_module : public group::module {
         auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
-        auto worker = spawn<detached_and_hidden>([_this, sm] {
-            typedef map<string, pair<actor_ptr, vector<pair<string, remote_group_ptr>>>>
+        auto worker = spawn<blocking_api+hidden>([_this, sm] {
+            CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
+                            "remote_group_module$worker",
+                            "");
+            typedef map<string,pair<actor_ptr,vector<pair<string,remote_group_ptr>>>>
                     peer_map;
             peer_map peers;
             receive_loop (
@@ -529,7 +532,7 @@ local_group::local_group(bool spawn_local_broker,
                          local_group_module* mod,
                          string id)
 : group(mod, move(id)) {
-    if (spawn_local_broker) m_broker = spawn_hidden<local_broker>(this);
+    if (spawn_local_broker) m_broker = spawn<local_broker, hidden>(this);
 }
 
 void local_group::serialize(serializer* sink) {

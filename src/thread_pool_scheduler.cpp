@@ -34,24 +34,19 @@
 #include <cstddef>
 #include <iostream>
 
+#include "cppa/on.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/event_based_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
-
-#include "cppa/detail/actor_count.hpp"
 #include "cppa/context_switching_actor.hpp"
+
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
 using std::cout;
 using std::endl;
 
 namespace cppa { namespace detail {
-
-namespace {
-
-typedef std::unique_lock<std::mutex> guard_type;
-typedef intrusive::single_reader_queue<thread_pool_scheduler::worker> worker_queue;
-
-} // namespace <anonmyous>
 
 struct thread_pool_scheduler::worker {
 
@@ -71,76 +66,63 @@ struct thread_pool_scheduler::worker {
 
     worker& operator=(const worker&) = delete;
 
-    job_ptr aggressive_polling() {
-        job_ptr result = nullptr;
+    bool aggressive(job_ptr& result) {
         for (int i = 0; i < 100; ++i) {
             result = m_job_queue->try_pop();
-            if (result) {
-                return result;
-            }
+            if (result) return true;
             std::this_thread::yield();
         }
-        return result;
+        return false;
     }
 
-    job_ptr less_aggressive_polling() {
-        job_ptr result = nullptr;
+    bool moderate(job_ptr& result) {
         for (int i = 0; i < 550; ++i) {
             result =  m_job_queue->try_pop();
-            if (result) {
-                return result;
-            }
-            //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (result) return true;
             std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
-        return result;
+        return false;
     }
 
-    job_ptr relaxed_polling() {
-        job_ptr result = nullptr;
+    bool relaxed(job_ptr& result) {
         for (;;) {
             result =  m_job_queue->try_pop();
-            if (result) {
-                return result;
-            }
+            if (result) return true;
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
 
     void operator()() {
+        CPPA_LOG_TRACE("");
         util::fiber fself;
         job_ptr job = nullptr;
-        actor_ptr next_job;
+        actor_ptr next;
         for (;;) {
-            job = aggressive_polling();
-            if (job == nullptr) {
-                job = less_aggressive_polling();
-                if (job == nullptr) {
-                    job = relaxed_polling();
-                }
-            }
+            aggressive(job) || moderate(job) || relaxed(job);
+            CPPA_LOG_DEBUG("dequeued new job");
             if (job == m_dummy) {
+                CPPA_LOG_DEBUG("received dummy (quit)");
                 // dummy of doom received ...
                 m_job_queue->push_back(job); // kill the next guy
                 return;                      // and say goodbye
             }
-            else {
-                do {
-                    next_job.reset();
-                    if (job->resume(&fself, next_job) == resume_result::actor_done) {
-                        bool hidden = job->is_hidden();
-                        job->deref();
-                        //std::atomic_thread_fence(std::memory_order_seq_cst);
-                        if (!hidden) dec_actor_count();
-                    }
-                    if (next_job) {
-                        job = static_cast<job_ptr>(next_job.get());
-                        //get_scheduler()->printer()->enqueue(job, make_any_tuple("fast-forwarded execution (chained actor)\n"));
-                    }
-                    else job = nullptr;
+            do {
+                CPPA_LOG_DEBUG("resume actor with ID " << job->id());
+                CPPA_REQUIRE(next == nullptr);
+                if (job->resume(&fself, next) == resume_result::actor_done) {
+                    CPPA_LOG_DEBUG("actor is done");
+                    bool hidden = job->is_hidden();
+                    job->deref();
+                    if (!hidden) get_actor_registry()->dec_running();
                 }
-                while (job); // loops until next_job was nullptr
+                if (next) {
+                    CPPA_LOG_DEBUG("got new job trough chaining");
+                    job = static_cast<job_ptr>(next.get());
+                    next.reset();
+                }
+                else job = nullptr;
             }
+            while (job); // loops until next == nullptr
         }
     }
 
@@ -151,13 +133,12 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) {
 }
 
 thread_pool_scheduler::thread_pool_scheduler() {
-    m_num_threads = std::max<size_t>(std::thread::hardware_concurrency() * 2, 4);
+    m_num_threads = std::max<size_t>(std::thread::hardware_concurrency()*2, 4);
 }
 
 thread_pool_scheduler::thread_pool_scheduler(size_t num_worker_threads) {
     m_num_threads = num_worker_threads;
 }
-
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
                                             scheduled_actor* dummy,
@@ -180,17 +161,20 @@ void thread_pool_scheduler::initialize() {
 }
 
 void thread_pool_scheduler::destroy() {
+    CPPA_LOG_TRACE("");
     m_queue.push_back(&m_dummy);
+    CPPA_LOG_DEBUG("join supervisor");
     m_supervisor.join();
     // make sure job queue is empty, because destructor of m_queue would
     // otherwise delete elements it shouldn't
+    CPPA_LOG_DEBUG("flush queue");
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
             bool hidden = ptr->is_hidden();
             ptr->deref();
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            if (!hidden) dec_actor_count();
+            if (!hidden) get_actor_registry()->dec_running();
         }
         ptr = m_queue.try_pop();
     }
@@ -201,104 +185,71 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
     m_queue.push_back(what);
 }
 
-actor_ptr thread_pool_scheduler::spawn_as_thread(void_function fun,
-                                                 init_callback cb,
-                                                 bool hidden) {
-    if (!hidden) inc_actor_count();
-    thread_mapped_actor_ptr ptr{detail::memory::create<thread_mapped_actor>(std::move(fun))};
-    ptr->init();
-    ptr->initialized(true);
-    cb(ptr.get());
-    std::thread([hidden, ptr]() {
-        scoped_self_setter sss{ptr.get()};
-        try {
-            ptr->run();
-            ptr->on_exit();
-        }
+template<typename F>
+void exec_as_thread(bool is_hidden, local_actor_ptr p, F f) {
+    if (!is_hidden) get_actor_registry()->inc_running();
+    std::thread([=] {
+        scoped_self_setter sss(p.get());
+        try { f(); }
         catch (...) { }
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        if (!hidden) dec_actor_count();
+        if (!is_hidden) {
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            get_actor_registry()->dec_running();
+        }
     }).detach();
-    return ptr;
 }
 
-actor_ptr thread_pool_scheduler::spawn_impl(scheduled_actor_ptr what) {
-    if (what->has_behavior()) {
-        if (!what->is_hidden()) { inc_actor_count(); }
-        what->ref();
-        // event-based actors are not pushed to the job queue on startup
-        if (what->impl_type() == context_switching_impl) {
-            m_queue.push_back(what.get());
+actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
+    CPPA_REQUIRE(p != nullptr);
+    bool is_hidden = has_hide_flag(os);
+    if (has_detach_flag(os)) {
+        exec_as_thread(is_hidden, p, [p] {
+            p->exec_behavior_stack();
+            p->on_exit();
+        });
+        return std::move(p);
+    }
+    p->attach_to_scheduler(this, is_hidden);
+    if (p->has_behavior()) {
+        if (!is_hidden) get_actor_registry()->inc_running();
+        p->ref(); // implicit reference that's released if actor dies
+        switch (p->impl_type()) {
+            case default_event_based_impl: {
+                p->enqueue(nullptr, make_any_tuple(atom("RUN")));
+                break;
+            }
+            case context_switching_impl: {
+                m_queue.push_back(p.get());
+                break;
+            }
+            default: break; // nothing to do
         }
     }
-    else {
-        what->on_exit();
+    else p->on_exit();
+    return std::move(p);
+}
+
+actor_ptr thread_pool_scheduler::exec(spawn_options os,
+                                      init_callback cb,
+                                      void_function f) {
+    if (has_blocking_api_flag(os)) {
+#       ifndef   CPPA_DISABLE_CONTEXT_SWITCHING
+        if (!has_detach_flag(os)) {
+            return exec(os,
+                        memory::create<context_switching_actor>(std::move(f)));
+        }
+#       endif
+        thread_mapped_actor_ptr p;
+        p.reset(memory::create<thread_mapped_actor>(std::move(f)));
+        exec_as_thread(has_hide_flag(os), p, [p] {
+            p->run();
+            p->on_exit();
+        });
+        return std::move(p);
     }
-    return std::move(what);
+    auto p = event_based_actor::from(std::move(f));
+    if (cb) cb(p.get());
+    return exec(os, p);
 }
-
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw,
-                                       scheduling_hint hint) {
-    scheduled_actor_ptr ptr{raw};
-    ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
-    return spawn_impl(std::move(ptr));
-}
-
-actor_ptr thread_pool_scheduler::spawn(scheduled_actor* raw,
-                                       init_callback cb,
-                                       scheduling_hint hint) {
-    scheduled_actor_ptr ptr{raw};
-    ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
-    cb(ptr.get());
-    return spawn_impl(std::move(ptr));
-}
-
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-
-actor_ptr thread_pool_scheduler::spawn(void_function fun, scheduling_hint hint) {
-    if (hint == scheduled || hint == scheduled_and_hidden) {
-        scheduled_actor_ptr ptr{detail::memory::create<context_switching_actor>(std::move(fun))};
-        ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
-        return spawn_impl(std::move(ptr));
-    }
-    else {
-        return spawn_as_thread(std::move(fun),
-                               [](local_actor*) { },
-                               hint == detached_and_hidden);
-    }
-}
-
-actor_ptr thread_pool_scheduler::spawn(void_function fun,
-                                       init_callback init_cb,
-                                       scheduling_hint hint) {
-    if (hint == scheduled || hint == scheduled_and_hidden) {
-        scheduled_actor_ptr ptr{detail::memory::create<context_switching_actor>(std::move(fun))};
-        ptr->attach_to_scheduler(this, hint == scheduled_and_hidden);
-        init_cb(ptr.get());
-        return spawn_impl(std::move(ptr));
-    }
-    else {
-        return spawn_as_thread(std::move(fun),
-                               std::move(init_cb),
-                               hint == detached_and_hidden);
-    }
-}
-
-#else // CPPA_DISABLE_CONTEXT_SWITCHING
-
-actor_ptr thread_pool_scheduler::spawn(void_function what, scheduling_hint sh) {
-    return spawn_as_thread(std::move(what),
-                           [](local_actor*) { },
-                           sh == detached_and_hidden);
-}
-
-actor_ptr thread_pool_scheduler::spawn(void_function what,
-                                       init_callback init_cb,
-                                       scheduling_hint sh) {
-    return spawn_as_thread(std::move(what),
-                           std::move(init_cb),
-                           sh == detached_and_hidden);
-}
-#endif
 
 } } // namespace cppa::detail

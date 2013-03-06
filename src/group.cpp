@@ -31,6 +31,7 @@
 #include "cppa/cppa.hpp"
 #include "cppa/group.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 #include "cppa/util/upgrade_lock_guard.hpp"
@@ -40,29 +41,21 @@
 
 namespace cppa {
 
-namespace {
-
-inline detail::group_manager* manager() {
-    return detail::singleton_manager::get_group_manager();
-}
-
-} // <anonymous>
-
 intrusive_ptr<group> group::get(const std::string& arg0,
                                 const std::string& arg1) {
-    return manager()->get(arg0, arg1);
+    return get_group_manager()->get(arg0, arg1);
 }
 
 intrusive_ptr<group> group::anonymous() {
-    return manager()->anonymous();
+    return get_group_manager()->anonymous();
 }
 
 void group::add_module(group::unique_module_ptr ptr) {
-    manager()->add_module(std::move(ptr));
+    get_group_manager()->add_module(std::move(ptr));
 }
 
 group::module_ptr group::get_module(const std::string& module_name) {
-    return manager()->get_module(module_name);
+    return get_group_manager()->get_module(module_name);
 }
 
 group::subscription::subscription(const channel_ptr& s,
@@ -108,7 +101,7 @@ struct group_nameserver : event_based_actor {
 };
 
 void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn_hidden<group_nameserver>();
+    auto gn = spawn<group_nameserver,hidden>();
     try {
         publish(gn, port, addr);
     }

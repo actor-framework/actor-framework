@@ -109,14 +109,13 @@ struct C : sb_actor<C> {
 \******************************************************************************/
 
 struct D : popular_actor {
-    response_handle m_handle;
     D(const actor_ptr& buddy) : popular_actor(buddy) { }
     void init() {
         become (
             others() >> [=] {
-                m_handle = make_response_handle();
+                response_handle handle = make_response_handle();
                 sync_send_tuple(buddy(), last_dequeued()).then([=] {
-                    m_handle.apply(last_dequeued());
+                    reply_to(handle, last_dequeued());
                     quit();
                 });
             }
@@ -171,9 +170,10 @@ int main() {
     self->on_sync_failure([] {
         CPPA_ERROR("received: " << to_string(self->last_dequeued()));
     });
-    spawn_monitor([&] {
+    spawn<monitored + blocking_api>([] {
+        CPPA_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << self->id());
         int invocations = 0;
-        auto foi = spawn_link<float_or_int>();
+        auto foi = spawn<float_or_int, linked>();
         send(foi, atom("i"));
         receive(on_arg_match >> [](int i) { CPPA_CHECK_EQUAL(i, 0); });
         self->on_sync_failure([] {
@@ -228,11 +228,11 @@ int main() {
             }
         );
     };
-    send(spawn_monitor<A>(self), atom("go"), spawn<B>(spawn<C>()));
+    send(spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
     await_all_others_done();
-    send(spawn_monitor<A>(self), atom("go"), spawn<D>(spawn<C>()));
+    send(spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
     await_all_others_done();
@@ -276,10 +276,10 @@ int main() {
     CPPA_CHECKPOINT();
 
     // test use case 3
-    spawn_monitor([] {                       // client
-        auto s = spawn_link<server>();       // server
-        auto w = spawn_link([] {             // worker
-            receive_loop(on(atom("request")) >> []{ reply(atom("response")); });
+    spawn<monitored + blocking_api>([] {  // client
+        auto s = spawn<server, linked>(); // server
+        auto w = spawn<linked>([] {       // worker
+            become(on(atom("request")) >> []{ reply(atom("response")); });
         });
         // first 'idle', then 'request'
         send_as(w, s, atom("idle"));

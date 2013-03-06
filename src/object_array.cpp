@@ -32,8 +32,7 @@
 
 namespace cppa { namespace detail {
 
-object_array::object_array() : super(tuple_impl_info::dynamically_typed) {
-}
+object_array::object_array() : super(true) { }
 
 void object_array::push_back(const object& what) {
     m_elements.push_back(what);

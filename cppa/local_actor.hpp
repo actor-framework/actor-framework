@@ -36,6 +36,7 @@
 
 #include "cppa/group.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
@@ -43,9 +44,9 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
-#include "cppa/memory_cached_mixin.hpp"
 
 #include "cppa/util/duration.hpp"
+#include "cppa/memory_cached.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
@@ -60,45 +61,33 @@ class sync_handle_helper;
 
 namespace detail { class receive_policy; }
 
-template<bool DiscardOld>
-struct behavior_policy { static const bool discard_old = DiscardOld; };
+template<bool DiscardBehavior>
+struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
 
 typedef behavior_policy<false> keep_behavior_t;
 typedef behavior_policy<true > discard_behavior_t;
-
-// doxygen doesn't parse anonymous namespaces correctly
-#ifndef CPPA_DOCUMENTATION
-namespace {
-#endif // CPPA_DOCUMENTATION
 
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to
  *        discard the current behavior.
  * @relates local_actor
  */
-constexpr discard_behavior_t discard_behavior = discard_behavior_t();
+constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
 
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to
  *        keep the current behavior available.
  * @relates local_actor
  */
-constexpr keep_behavior_t keep_behavior = keep_behavior_t();
-
-#ifndef CPPA_DOCUMENTATION
-} // namespace <anonymous>
-#endif // CPPA_DOCUMENTATION
-
-class message_future;
-
-//inline sync_recv_helper receive_response(message_future);
+constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 
 /**
  * @brief Base class for local running Actors.
+ * @extends actor
  */
-class local_actor : public memory_cached_mixin<actor> {
+class local_actor : public extend<actor,local_actor>::with<memory_cached> {
 
-    typedef actor super;
+    typedef combined_type super;
 
     friend class scheduler;
     friend class detail::memory;
@@ -163,39 +152,29 @@ class local_actor : public memory_cached_mixin<actor> {
     /**
      * @brief Checks whether this actor traps exit messages.
      */
-    inline bool trap_exit() const {
-        return m_trap_exit;
-    }
+    inline bool trap_exit() const;
 
     /**
      * @brief Enables or disables trapping of exit messages.
      */
-    inline void trap_exit(bool new_value) {
-        m_trap_exit = new_value;
-    }
+    inline void trap_exit(bool new_value);
 
     /**
      * @brief Checks whether this actor uses the "chained send" optimization.
      */
-    inline bool chaining() const {
-        return m_chaining;
-    }
+    inline bool chaining() const;
 
     /**
      * @brief Enables or disables chained send.
      */
-    inline void chaining(bool new_value) {
-        m_chaining = m_is_scheduled && new_value;
-    }
+    inline void chaining(bool new_value);
 
     /**
      * @brief Returns the last message that was dequeued
      *        from the actor's mailbox.
      * @warning Only set during callback invocation.
      */
-    inline any_tuple& last_dequeued() {
-        return m_current_node->msg;
-    }
+    inline any_tuple& last_dequeued();
 
     /**
      * @brief Returns the sender of the last dequeued message.
@@ -203,9 +182,7 @@ class local_actor : public memory_cached_mixin<actor> {
      * @note Implicitly used by the function {@link cppa::reply}.
      * @see cppa::reply()
      */
-    inline actor_ptr& last_sender() {
-        return m_current_node->sender;
-    }
+    inline actor_ptr& last_sender();
 
     /**
      * @brief Adds a unidirectional @p monitor to @p whom.
@@ -227,71 +204,34 @@ class local_actor : public memory_cached_mixin<actor> {
     /**
      * @brief Sets the actor's behavior to @p bhvr and discards the
      *        previous behavior if the policy is {@link discard_behavior}.
-     * @note The recommended way of using this member function is to pass
-     *       a pointer to a member variable.
-     * @warning @p bhvr is owned by the caller and must remain valid until
-     *          the actor terminates.
      */
-    template<bool DiscardOld>
-    inline void become(behavior_policy<DiscardOld>, behavior* bhvr) {
-        do_become(*bhvr, DiscardOld);
-    }
-
-    /**
-     * @brief Sets the actor's behavior to @p bhvr and discards the
-     *        previous behavior if the policy is {@link discard_behavior}.
-     */
-    template<bool DiscardOld>
-    inline void become(behavior_policy<DiscardOld>, behavior bhvr) {
-        do_become(std::move(bhvr), true);
-    }
+    template<bool Discard>
+    inline void become(behavior_policy<Discard>, behavior bhvr);
 
     /**
      * @brief Sets the actor's behavior and discards the
      *        previous behavior if the policy is {@link discard_behavior}.
      */
-    template<bool DiscardOld, typename Arg0, typename Arg1, typename... Args>
-    inline void become(behavior_policy<DiscardOld>,
-                       Arg0&& arg0, Arg1&& arg1, Args&&... args) {
-        do_become(match_expr_convert(std::forward<Arg0>(arg0),
-                                     std::forward<Arg1>(arg1),
-                                     std::forward<Args>(args)...),
-                  DiscardOld);
-    }
+    template<bool Discard, typename T0, typename T1, typename... Ts>
+    inline void become(behavior_policy<Discard>, T0&& a0, T1&& a1, Ts&&... as);
 
     /**
      * @brief Sets the actor's behavior;
      *        equal to <tt>become(discard_old, bhvr</tt>.
      */
-    inline void become(behavior bhvr) {
-        become(discard_behavior, std::move(bhvr));
-    }
+    inline void become(behavior bhvr);
 
     /**
      * @brief Sets the actor's behavior;
      *        equal to <tt>become(discard_old, bhvr</tt>.
      */
-    inline void become(behavior* bhvr) {
-        become(discard_behavior, bhvr);
-    }
-
-    /**
-     * @brief Sets the actor's behavior;
-     *        equal to <tt>become(discard_old, bhvr</tt>.
-     */
-    template<typename... Cases, typename... Args>
-    inline void become(match_expr<Cases...> arg0, Args&&... args) {
-        do_become(match_expr_convert(std::move(arg0),
-                                     std::forward<Args>(args)...),
-                  true);
-    }
+    template<typename... Cases, typename... Ts>
+    inline void become(match_expr<Cases...> a, Ts&&... as);
 
     /**
      * @brief Returns to a previous behavior if available.
      */
-    inline void unbecome() {
-        m_bhvr_stack.pop_async_back();
-    }
+    inline void unbecome();
 
     /**
      * @brief Can be overridden to initialize an actor before any
@@ -379,7 +319,7 @@ class local_actor : public memory_cached_mixin<actor> {
 
     local_actor(bool is_scheduled = false);
 
-    virtual bool initialized() = 0;
+    virtual bool initialized() const = 0;
 
     inline bool chaining_enabled() {
         return m_chaining && !m_chained_actor;
@@ -389,7 +329,7 @@ class local_actor : public memory_cached_mixin<actor> {
         whom->enqueue(this, std::move(what));
     }
 
-    inline void send_message(actor* whom, any_tuple&& what) {
+    inline void send_message(const actor_ptr& whom, any_tuple&& what) {
         if (chaining_enabled()) {
             if (whom->chained_enqueue(this, std::move(what))) {
                 m_chained_actor = whom;
@@ -398,7 +338,7 @@ class local_actor : public memory_cached_mixin<actor> {
         else whom->enqueue(this, std::move(what));
     }
 
-    inline message_id_t send_sync_message(actor* whom, any_tuple&& what) {
+    inline message_id_t send_sync_message(const actor_ptr& whom, any_tuple&& what) {
         auto id = ++m_last_request_id;
         CPPA_REQUIRE(id.is_request());
         if (chaining_enabled()) {
@@ -412,7 +352,7 @@ class local_actor : public memory_cached_mixin<actor> {
         return awaited_response;
     }
 
-    message_id_t send_timed_sync_message(actor* whom,
+    message_id_t send_timed_sync_message(const actor_ptr& whom,
                                          const util::duration& rel_time,
                                          any_tuple&& what);
 
@@ -491,6 +431,8 @@ class local_actor : public memory_cached_mixin<actor> {
         m_bhvr_stack.erase(id);
     }
 
+    void cleanup(std::uint32_t reason);
+
  private:
 
     std::function<void()> m_sync_failure_handler;
@@ -514,6 +456,58 @@ class local_actor : public memory_cached_mixin<actor> {
  * @relates local_actor
  */
 typedef intrusive_ptr<local_actor> local_actor_ptr;
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+inline bool local_actor::trap_exit() const {
+    return m_trap_exit;
+}
+
+inline void local_actor::trap_exit(bool new_value) {
+    m_trap_exit = new_value;
+}
+
+inline bool local_actor::chaining() const {
+    return m_chaining;
+}
+
+inline void local_actor::chaining(bool new_value) {
+    m_chaining = m_is_scheduled && new_value;
+}
+
+inline any_tuple& local_actor::last_dequeued() {
+    return m_current_node->msg;
+}
+
+inline actor_ptr& local_actor::last_sender() {
+    return m_current_node->sender;
+}
+
+template<bool Discard>
+inline void local_actor::become(behavior_policy<Discard>, behavior bhvr) {
+    do_become(std::move(bhvr), Discard);
+}
+
+template<bool Discard, typename T0, typename T1, typename... Ts>
+inline void local_actor::become(behavior_policy<Discard>, T0&& a0, T1&& a1, Ts&&... as) {
+    auto bhvr = match_expr_convert(std::forward<T0>(a0), std::forward<T1>(a1), std::forward<Ts>(as)...);
+    do_become(std::move(bhvr), Discard);
+}
+
+inline void local_actor::become(behavior bhvr) {
+    do_become(std::move(bhvr), true);
+}
+
+template<typename... Cases, typename... Ts>
+inline void local_actor::become(match_expr<Cases...> a, Ts&&... as) {
+    do_become(match_expr_convert(std::move(a), std::forward<Ts>(as)...), true);
+}
+
+inline void local_actor::unbecome() {
+    m_bhvr_stack.pop_async_back();
+}
 
 } // namespace cppa
 

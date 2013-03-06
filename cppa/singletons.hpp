@@ -28,50 +28,49 @@
 \******************************************************************************/
 
 
-#ifndef MEMORY_CACHED_MIXIN_HPP
-#define MEMORY_CACHED_MIXIN_HPP
+#ifndef CPPA_SINGLETONS_HPP
+#define CPPA_SINGLETONS_HPP
 
-#include "cppa/detail/memory.hpp"
+#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
-/**
- * @brief This mixin adds all member functions and member variables needed
- *        by the memory management subsystem.
- */
-template<typename Base>
-class memory_cached_mixin : public Base {
+inline logging* get_logger() {
+    return detail::singleton_manager::get_logger();
+}
 
-    friend class detail::memory;
+inline scheduler* get_scheduler() {
+    return detail::singleton_manager::get_scheduler();
+}
 
-    template<typename T>
-    friend class detail::basic_memory_cache;
+inline detail::group_manager* get_group_manager() {
+    return detail::singleton_manager::get_group_manager();
+}
 
- protected:
+inline detail::actor_registry* get_actor_registry() {
+    return detail::singleton_manager::get_actor_registry();
+}
 
-    template<typename... Args>
-    memory_cached_mixin(Args&&... args)
-    : Base(std::forward<Args>(args)...), outer_memory(nullptr) { }
+inline network::middleman* get_middleman() {
+    return detail::singleton_manager::get_middleman();
+}
 
-    virtual void request_deletion() {
-        auto mc = detail::memory::get_cache_map_entry(&typeid(*this));
-        if (!mc) {
-            auto om = outer_memory;
-            if (om) {
-                om->destroy();
-                om->deallocate();
-            }
-            else delete this;
-        }
-        else mc->release_instance(mc->downcast(this));
-    }
+inline detail::uniform_type_info_map* get_uniform_type_info_map() {
+    return detail::singleton_manager::get_uniform_type_info_map();
+}
 
- private:
+inline detail::abstract_tuple* get_tuple_dummy() {
+    return detail::singleton_manager::get_tuple_dummy();
+}
 
-    detail::instance_wrapper* outer_memory;
+inline detail::empty_tuple* get_empty_tuple() {
+    return detail::singleton_manager::get_empty_tuple();
+}
 
-};
+inline detail::decorated_names_map* get_decorated_names_map() {
+    return detail::singleton_manager::get_decorated_names_map();
+}
 
 } // namespace cppa
 
-#endif // MEMORY_CACHED_MIXIN_HPP
+#endif // CPPA_SINGLETONS_HPP

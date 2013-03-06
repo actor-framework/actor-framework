@@ -121,10 +121,10 @@ class testee_actor {
     void wait4string() {
         bool string_received = false;
         do_receive (
-            on<string>() >> [&]() {
+            on<string>() >> [&] {
                 string_received = true;
             },
-            on<atom("get_state")>() >> [&]() {
+            on<atom("get_state")>() >> [&] {
                 reply("wait4string");
             }
         )
@@ -134,10 +134,10 @@ class testee_actor {
     void wait4float() {
         bool float_received = false;
         do_receive (
-            on<float>() >> [&]() {
+            on<float>() >> [&] {
                 float_received = true;
             },
-            on<atom("get_state")>() >> [&]() {
+            on<atom("get_state")>() >> [&] {
                 reply("wait4float");
             }
         )
@@ -149,10 +149,10 @@ class testee_actor {
 
     void operator()() {
         receive_loop (
-            on<int>() >> [&]() {
+            on<int>() >> [&] {
                 wait4float();
             },
-            on<atom("get_state")>() >> [&]() {
+            on<atom("get_state")>() >> [&] {
                 reply("wait4int");
             }
         );
@@ -162,33 +162,19 @@ class testee_actor {
 
 // receives one timeout and quits
 void testee1() {
-    receive (
-        after(chrono::milliseconds(10)) >> []() { }
-    );
+    become(after(chrono::milliseconds(10)) >> [] { unbecome(); });
 }
 
 void testee2(actor_ptr other) {
     self->link_to(other);
     send(other, uint32_t(1));
-    receive_loop (
+    become (
         on<uint32_t>() >> [](uint32_t sleep_time) {
             // "sleep" for sleep_time milliseconds
-            receive(after(chrono::milliseconds(sleep_time)) >> []() {});
-            //reply(sleep_time * 2);
-        }
-    );
-}
-
-void testee3(actor_ptr parent) {
-    // test a delayed_send / delayed_reply based loop
-    delayed_send(self, chrono::milliseconds(50), atom("Poll"));
-    int polls = 0;
-    receive_for(polls, 5) (
-        on(atom("Poll")) >> [&]() {
-            if (polls < 4) {
-                delayed_reply(chrono::milliseconds(50), atom("Poll"));
-            }
-            send(parent, atom("Push"), polls);
+            become (
+                keep_behavior,
+                after(chrono::milliseconds(sleep_time)) >> [] { unbecome(); }
+            );
         }
     );
 }
@@ -277,9 +263,10 @@ class fixed_stack : public sb_actor<fixed_stack> {
 };
 
 void echo_actor() {
-    receive (
-        others() >> []() {
+    become (
+        others() >> [] {
             reply_tuple(self->last_dequeued());
+            self->quit(exit_reason::normal);
         }
     );
 }
@@ -315,12 +302,19 @@ int main() {
     );
     CPPA_CHECKPOINT();
 
-    auto mirror = spawn<simple_mirror>();
+    auto mirror = spawn<simple_mirror,monitored>();
 
     CPPA_PRINT("test mirror");
     send(mirror, "hello mirror");
-    receive(on("hello mirror") >> []() { });
+    receive (
+        on("hello mirror") >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
     quit_actor(mirror, exit_reason::user_defined);
+    receive (
+        on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -423,7 +417,7 @@ int main() {
     await_all_others_done();
     CPPA_CHECKPOINT();
 
-    auto sync_testee1 = spawn([]() {
+    auto sync_testee1 = spawn<blocking_api>([] {
         receive (
             on(atom("get")) >> []() {
                 reply(42, 2);
@@ -629,27 +623,25 @@ int main() {
     }).spawn();
     await_all_others_done();
 
-    auto res1 = behavior_test<testee_actor>(spawn(testee_actor{}));
+    auto res1 = behavior_test<testee_actor>(spawn<blocking_api>(testee_actor{}));
     CPPA_CHECK_EQUAL("wait4int", res1);
     CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");
 
-    // create 20,000 actors linked to one single actor
+    // create some actors linked to one single actor
     // and kill them all through killing the link
-    auto twenty_thousand = spawn([]() {
-        for (int i = 0; i < 20000; ++i) {
-            spawn_link<event_testee>();
+    auto legion = spawn([] {
+        CPPA_LOGF_INFO("spawn 1,000 actors");
+        for (int i = 0; i < 1000; ++i) {
+            spawn<event_testee,linked>();
         }
-        receive_loop (
-            others() >> []() {
-                cout << "wtf? => " << to_string(self->last_dequeued()) << endl;
-            }
-        );
+        become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
-    quit_actor(twenty_thousand, exit_reason::user_defined);
+    quit_actor(legion, exit_reason::user_defined);
     await_all_others_done();
+    CPPA_CHECKPOINT();
     self->trap_exit(true);
-    auto ping_actor = spawn_monitor(ping, 10);
-    auto pong_actor = spawn_monitor(pong, ping_actor);
+    auto ping_actor = spawn<monitored+blocking_api>(ping, 10);
+    auto pong_actor = spawn<monitored+blocking_api>(pong, ping_actor);
     self->link_to(pong_actor);
     int i = 0;
     int flags = 0;
@@ -665,11 +657,11 @@ int main() {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
-                CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
+                CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
             }
             else if (who == ping_actor) {
                 flags |= 0x04;
-                CPPA_CHECK_EQUAL(exit_reason::normal, reason);
+                CPPA_CHECK_EQUAL(reason, exit_reason::normal);
             }
         },
         on_arg_match >> [&](const atom_value& val) {

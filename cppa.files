@@ -18,10 +18,7 @@ cppa/cow_tuple.hpp
 cppa/cppa.hpp
 cppa/cppa_fwd.hpp
 cppa/deserializer.hpp
-cppa/detail/abstract_actor.hpp
-cppa/detail/abstract_scheduled_actor.hpp
 cppa/detail/abstract_tuple.hpp
-cppa/detail/actor_count.hpp
 cppa/detail/actor_registry.hpp
 cppa/detail/atom_val.hpp
 cppa/detail/behavior_impl.hpp
@@ -56,7 +53,7 @@ cppa/detail/scheduled_actor_dummy.hpp
 cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
 cppa/detail/singleton_mixin.hpp
-cppa/detail/stacked_actor_mixin.hpp
+cppa/stacked.hpp
 cppa/detail/swap_bytes.hpp
 cppa/detail/tdata.hpp
 cppa/detail/thread_pool_scheduler.hpp
@@ -72,7 +69,7 @@ cppa/detail/uniform_type_info_map.hpp
 cppa/detail/value_guard.hpp
 cppa/detail/yield_interface.hpp
 cppa/either.hpp
-cppa/enable_weak_ptr_mixin.hpp
+cppa/enable_weak_ptr.hpp
 cppa/event_based_actor.hpp
 cppa/exception.hpp
 cppa/exit_reason.hpp
@@ -125,7 +122,6 @@ cppa/response_handle.hpp
 cppa/sb_actor.hpp
 cppa/scheduled_actor.hpp
 cppa/scheduler.hpp
-cppa/scheduling_hint.hpp
 cppa/self.hpp
 cppa/serializer.hpp
 cppa/thread_mapped_actor.hpp
@@ -198,11 +194,9 @@ examples/type_system/announce_2.cpp
 examples/type_system/announce_3.cpp
 examples/type_system/announce_4.cpp
 examples/type_system/announce_5.cpp
-src/abstract_scheduled_actor.cpp
 src/abstract_tuple.cpp
 src/actor.cpp
 src/actor_addressing.cpp
-src/actor_count.cpp
 src/actor_proxy.cpp
 src/actor_registry.cpp
 src/any_tuple.cpp
@@ -289,7 +283,6 @@ unit_testing/test_tuple.cpp
 unit_testing/test_metaprogramming.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-cppa/memory_cached_mixin.hpp
 unit_testing/test.cpp
 cppa/opencl/program.hpp
 cppa/opencl/actor_facade.hpp
@@ -304,3 +297,8 @@ src/opencl/actor_facade.cpp
 cppa/opencl/smart_ptr.hpp
 src/exit_reason.cpp
 src/on.cpp
+cppa/spawn_options.hpp
+cppa/extend.hpp
+cppa/detail/sync_request_bouncer.hpp
+cppa/memory_cached.hpp
+cppa/singletons.hpp

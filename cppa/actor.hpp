@@ -31,19 +31,27 @@
 #ifndef CPPA_ACTOR_HPP
 #define CPPA_ACTOR_HPP
 
+#include <mutex>
+#include <atomic>
 #include <memory>
+#include <vector>
 #include <cstdint>
 #include <type_traits>
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/cppa_fwd.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/message_id.hpp"
+#include "cppa/exit_reason.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 
 namespace cppa {
 
+class actor;
+class self_type;
 class serializer;
 class deserializer;
 
@@ -52,6 +60,12 @@ class deserializer;
  * @relates actor
  */
 typedef std::uint32_t actor_id;
+
+/**
+ * @brief A smart pointer type that manages instances of {@link actor}.
+ * @relates actor
+ */
+typedef intrusive_ptr<actor> actor_ptr;
 
 /**
  * @brief Base class for all actor implementations.
@@ -65,13 +79,15 @@ class actor : public channel {
      *        this actor is an scheduled actor that successfully changed
      *        its state to @p pending in response to the enqueue operation.
      */
-    virtual bool chained_enqueue(actor* sender, any_tuple msg);
+    virtual bool chained_enqueue(const actor_ptr& sender, any_tuple msg);
 
     /**
      * @brief Enqueues @p msg as a synchronous message to this actor's mailbox.
      * @pre <tt>id.valid()</tt>
      */
-    virtual void sync_enqueue(actor* sender, message_id_t id, any_tuple msg) = 0;
+    virtual void sync_enqueue(const actor_ptr& sender,
+                              message_id_t id,
+                              any_tuple msg) = 0;
 
     /**
      * @brief Enqueues @p msg as a reply to @p request_id
@@ -79,7 +95,7 @@ class actor : public channel {
      *        this actor is an scheduled actor that successfully changed
      *        its state to @p pending in response to the enqueue operation.
      */
-    virtual bool chained_sync_enqueue(actor* sender,
+    virtual bool chained_sync_enqueue(const actor_ptr& sender,
                                       message_id_t id,
                                       any_tuple msg);
 
@@ -94,46 +110,40 @@ class actor : public channel {
      *          otherwise (actor already exited) @p false.
      * @warning The actor takes ownership of @p ptr.
      */
-    virtual bool attach(attachable* ptr) = 0;
+    virtual bool attach(attachable_ptr ptr);
 
     /**
      * @brief Convenience function that attaches the functor
-     *        or function @p ftor to this actor.
+     *        or function @p f to this actor.
      *
-     * The actor executes <tt>ftor()</tt> on exit, or immediatley
+     * The actor executes <tt>f()</tt> on exit, or immediatley
      * if it already finished execution.
-     * @param ftor A functor, function or lambda expression that's executed
+     * @param f A functor, function or lambda expression that's executed
      *             if the actor finishes execution.
-     * @returns @c true if @p ftor was successfully attached to the actor;
+     * @returns @c true if @p f was successfully attached to the actor;
      *          otherwise (actor already exited) @p false.
      */
     template<typename F>
-    bool attach_functor(F&& ftor);
+    bool attach_functor(F&& f);
 
     /**
      * @brief Detaches the first attached object that matches @p what.
      */
-    virtual void detach(const attachable::token& what) = 0;
-
-    template<typename T>
-    bool attach(std::unique_ptr<T>&& ptr,
-                typename std::enable_if<
-                    std::is_base_of<attachable,T>::value
-                >::type* = 0);
+    virtual void detach(const attachable::token& what);
 
     /**
      * @brief Links this actor to @p other.
      * @param other Actor instance that whose execution is coupled to the
      *              execution of this Actor.
      */
-    virtual void link_to(const intrusive_ptr<actor>& other) = 0;
+    virtual void link_to(const actor_ptr& other);
 
     /**
      * @brief Unlinks this actor from @p other.
      * @param other Linked Actor.
-     * @note Links are automatically removed if the Actor finishes execution.
+     * @note Links are automatically removed if the actor finishes execution.
      */
-    virtual void unlink_from(const intrusive_ptr<actor>& other) = 0;
+    virtual void unlink_from(const actor_ptr& other);
 
     /**
      * @brief Establishes a link relation between this actor and @p other.
@@ -141,7 +151,7 @@ class actor : public channel {
      * @returns @c true if this actor is running and added @p other to its
      *          list of linked actors; otherwise @c false.
      */
-    virtual bool establish_backlink(const intrusive_ptr<actor>& other) = 0;
+    virtual bool establish_backlink(const actor_ptr& other);
 
     /**
      * @brief Removes a link relation between this actor and @p other.
@@ -149,7 +159,7 @@ class actor : public channel {
      * @returns @c true if this actor is running and removed @p other
      *          from its list of linked actors; otherwise @c false.
      */
-    virtual bool remove_backlink(const intrusive_ptr<actor>& other) = 0;
+    virtual bool remove_backlink(const actor_ptr& other);
 
     /**
      * @brief Gets an integer value that uniquely identifies this Actor in
@@ -172,23 +182,59 @@ class actor : public channel {
 
     actor(actor_id aid);
 
+    /**
+     * @brief Should be overridden by subtypes and called upon termination.
+     * @note Default implementation sets 'exit_reason' accordingly.
+     * @note Overridden functions should always call super::cleanup().
+     */
+    virtual void cleanup(std::uint32_t reason);
+
+    /**
+     * @brief The default implementation for {@link link_to()}.
+     */
+    bool link_to_impl(const actor_ptr& other);
+
+    /**
+     * @brief The default implementation for {@link unlink_from()}.
+     */
+    bool unlink_from_impl(const actor_ptr& other);
+
+    /**
+     * @brief Returns the actor's exit reason of
+     *        <tt>exit_reason::not_exited</tt> if it's still alive.
+     */
+    inline std::uint32_t exit_reason() const;
+
+    /**
+     * @brief Returns <tt>exit_reason() != exit_reason::not_exited</tt>.
+     */
+    inline bool exited() const;
+
  private:
 
-    actor_id m_id;
-    bool m_is_proxy;
+    // cannot be changed after construction
+    const actor_id m_id;
+
+    // you're either a proxy or you're not
+    const bool m_is_proxy;
+
+    // initially exit_reason::not_exited
+    std::atomic<std::uint32_t> m_exit_reason;
+
+    // guards access to m_exit_reason, m_attachables, and m_links
+    std::mutex m_mtx;
+
+    // links to other actors
+    std::vector<actor_ptr> m_links;
+
+    // attached functors that are executed on cleanup
+    std::vector<attachable_ptr> m_attachables;
 
 };
 
-/**
- * @brief A smart pointer type that manages instances of {@link actor}.
- * @relates actor
- */
-typedef intrusive_ptr<actor> actor_ptr;
-
-class self_type;
-
-bool operator==(const actor_ptr& lhs, const self_type& rhs);
-bool operator!=(const self_type& lhs, const actor_ptr& rhs);
+// undocumented, because self_type is hidden in documentation
+bool operator==(const actor_ptr&, const self_type&);
+bool operator!=(const self_type&, const actor_ptr&);
 
 /******************************************************************************
  *             inline and template member function implementations            *
@@ -202,39 +248,33 @@ inline bool actor::is_proxy() const {
     return m_is_proxy;
 }
 
-template<typename T>
-bool actor::attach(std::unique_ptr<T>&& ptr,
-                   typename std::enable_if<
-                       std::is_base_of<attachable,T>::value
-                   >::type*) {
-    return attach(static_cast<attachable*>(ptr.release()));
+inline std::uint32_t actor::exit_reason() const {
+    return m_exit_reason;
+}
+
+inline bool actor::exited() const {
+    return exit_reason() != exit_reason::not_exited;
 }
 
 template<class F>
-class functor_attachable : public attachable {
+struct functor_attachable : attachable {
 
     F m_functor;
 
- public:
+    template<typename T>
+    inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
 
-    template<class FArg>
-    functor_attachable(FArg&& arg) : m_functor(std::forward<FArg>(arg)) {
-    }
+    void actor_exited(std::uint32_t reason) { m_functor(reason); }
 
-    void actor_exited(std::uint32_t reason) {
-        m_functor(reason);
-    }
-
-    bool matches(const attachable::token&) {
-        return false;
-    }
+    bool matches(const attachable::token&) { return false; }
 
 };
 
 template<typename F>
-bool actor::attach_functor(F&& ftor) {
+bool actor::attach_functor(F&& f) {
     typedef typename util::rm_ref<F>::type f_type;
-    return attach(new functor_attachable<f_type>(std::forward<F>(ftor)));
+    typedef functor_attachable<f_type> impl;
+    return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }
 
 } // namespace cppa

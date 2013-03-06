@@ -28,22 +28,57 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/actor_count.hpp"
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#ifndef CPPA_ENABLE_WEAK_PTR_HPP
+#define CPPA_ENABLE_WEAK_PTR_HPP
 
-namespace cppa { namespace detail {
+#include <mutex>
+#include <utility>
+#include <type_traits>
 
-void inc_actor_count() {
-    singleton_manager::get_actor_registry()->inc_running();
-}
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
+#include "cppa/weak_ptr_anchor.hpp"
 
-void dec_actor_count() {
-    singleton_manager::get_actor_registry()->dec_running();
-}
+#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/util/shared_lock_guard.hpp"
 
-void actor_count_wait_until(size_t value) {
-    singleton_manager::get_actor_registry()->await_running_count_equal(value);
-}
+namespace cppa {
 
-} } // namespace cppa::detail
+/**
+ * @brief Enables derived classes to be used in {@link weak_intrusive_ptr}.
+ */
+template<class Base, class Subtype>
+class enable_weak_ptr : public Base {
+
+    template<typename T>
+    friend class weak_intrusive_ptr;
+
+    static_assert(std::is_base_of<ref_counted,Base>::value,
+                  "Base needs to be derived from ref_counted");
+
+ protected:
+
+    typedef enable_weak_ptr combined_type;
+
+    template<typename... Args>
+    enable_weak_ptr(Args&&... args)
+    : Base(std::forward<Args>(args)...)
+    , m_anchor(new weak_ptr_anchor(this)) { }
+
+    void request_deletion() {
+        if (m_anchor->try_expire()) delete this;
+    }
+
+ private:
+
+    inline intrusive_ptr<weak_ptr_anchor> get_weak_ptr_anchor() const {
+        return m_anchor;
+    }
+
+    intrusive_ptr<weak_ptr_anchor> m_anchor;
+
+};
+
+} // namespace cppa
+
+#endif // CPPA_ENABLE_WEAK_PTR_HPP

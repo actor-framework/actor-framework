@@ -76,7 +76,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
         }
     }
     if (add_attachable) {
-        CPPA_LOG_INFO("added " << key);
+        CPPA_LOG_INFO("added actor with ID " << key);
         struct eraser : attachable {
             actor_id m_id;
             actor_registry* m_registry;
@@ -88,7 +88,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
                 return false;
             }
         };
-        value->attach(new eraser(key, this));
+        value->attach(attachable_ptr{new eraser(key, this)});
     }
 }
 
@@ -97,7 +97,8 @@ void actor_registry::erase(actor_id key, std::uint32_t reason) {
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
         auto& entry = i->second;
-        CPPA_LOG_INFO("erased " << key << ", reason = " << std::hex << reason);
+        CPPA_LOG_INFO("erased actor with ID " << key
+                      << ", reason " << reason);
         entry.first = nullptr;
         entry.second = reason;
     }

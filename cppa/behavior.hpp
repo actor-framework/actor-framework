@@ -42,7 +42,6 @@
 #include "cppa/util/if_else.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/disjunction.hpp"
 
 namespace cppa {
 
@@ -58,6 +57,8 @@ class behavior {
  public:
 
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
+
+    static constexpr bool may_have_timeout = true;
 
     behavior() = default;
     behavior(behavior&&) = default;
@@ -85,7 +86,7 @@ class behavior {
 
     template<typename... Cases, typename Arg1, typename... Args>
     behavior(const match_expr<Cases...>& arg0, const Arg1& arg1, const Args&... args)
-    : m_impl(match_expr_concat(arg0, arg1, args...)) { }
+    : m_impl(detail::match_expr_concat(arg0, arg1, args...)) { }
 
     inline void handle_timeout() {
         m_impl->handle_timeout();
@@ -109,6 +110,8 @@ class behavior {
         return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
     }
 
+    const impl_ptr& as_behavior_impl() const { return m_impl; }
+
  private:
 
     impl_ptr m_impl;
@@ -120,7 +123,6 @@ inline behavior operator,(const match_expr<Lhs...>& lhs,
                           const timeout_definition<F>& rhs) {
     return match_expr_convert(lhs, rhs);
 }
-
 
 } // namespace cppa
 

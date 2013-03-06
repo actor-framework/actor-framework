@@ -28,99 +28,37 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SCHEDULED_ACTOR_HPP
-#define CPPA_SCHEDULED_ACTOR_HPP
+#ifndef CPPA_SYNC_REQUEST_BOUNCER_HPP
+#define CPPA_SYNC_REQUEST_BOUNCER_HPP
 
-#include <iostream>
+#include <cstdint>
 
-#include <atomic>
-
+#include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/detail/abstract_actor.hpp"
-#include "cppa/scheduled_actor.hpp"
-
-#include "cppa/util/fiber.hpp"
+#include "cppa/message_id.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace detail {
 
-// A spawned, scheduled Actor.
-class abstract_scheduled_actor : public abstract_actor<scheduled_actor> {
-
-    typedef abstract_actor<scheduled_actor> super;
-
- protected:
-
-    std::atomic<int> m_state;
-
-    inline bool has_pending_timeout() const {
-        return m_has_pending_timeout_request;
-    }
-
-    void request_timeout(const util::duration& d);
-
-    inline void reset_timeout() {
-        if (m_has_pending_timeout_request) {
-            ++m_active_timeout_id;
-            m_has_pending_timeout_request = false;
+struct sync_request_bouncer {
+    std::uint32_t rsn;
+    constexpr sync_request_bouncer(std::uint32_t r)
+    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
+    inline void operator()(const actor_ptr& sender, const message_id_t& mid) const {
+        CPPA_REQUIRE(rsn != exit_reason::not_exited);
+        if (mid.is_request() && sender != nullptr) {
+            actor_ptr nobody;
+            sender->sync_enqueue(nobody,
+                                 mid.response_id(),
+                                 make_any_tuple(atom("EXITED"), rsn));
         }
     }
-
-    inline void handle_timeout(behavior& bhvr) {
-        bhvr.handle_timeout();
-        reset_timeout();
+    inline void operator()(const recursive_queue_node& e) const {
+        (*this)(e.sender.get(), e.mid);
     }
-
-    inline void push_timeout() {
-        ++m_active_timeout_id;
-    }
-
-    inline void pop_timeout() {
-        CPPA_REQUIRE(m_active_timeout_id > 0);
-        --m_active_timeout_id;
-    }
-
-    inline bool waits_for_timeout(std::uint32_t timeout_id) {
-        return    m_has_pending_timeout_request
-               && m_active_timeout_id == timeout_id;
-    }
-
-    bool m_has_pending_timeout_request;
-    std::uint32_t m_active_timeout_id;
-
- public:
-
-    static constexpr int ready          = 0x00;
-    static constexpr int done           = 0x01;
-    static constexpr int blocked        = 0x02;
-    static constexpr int pending        = 0x03;
-    static constexpr int about_to_block = 0x04;
-
-    abstract_scheduled_actor(int state = done);
-
-    bool chained_enqueue(actor* sender, any_tuple msg);
-
-    bool chained_sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
-
-    void quit(std::uint32_t reason = exit_reason::normal);
-
-    void enqueue(actor* sender, any_tuple msg);
-
-    void sync_enqueue(actor* sender, message_id_t id, any_tuple msg);
-
-    int compare_exchange_state(int expected, int new_value);
-
- private:
-
-    bool enqueue_node(recursive_queue_node* node,
-                      int next_state = ready,
-                      bool* failed = nullptr);
-
 };
 
 } } // namespace cppa::detail
 
-#endif // CPPA_SCHEDULED_ACTOR_HPP
+#endif // CPPA_SYNC_REQUEST_BOUNCER_HPP

@@ -28,57 +28,45 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
-#define CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
+#ifndef CPPA_MIXED_HPP
+#define CPPA_MIXED_HPP
 
-#include <mutex>
-#include <utility>
-#include <type_traits>
-
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/weak_ptr_anchor.hpp"
-
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
+// saves some typing
+#define CPPA_MIXIN template<class,class> class
 
 namespace cppa {
 
+namespace detail {
+
+template<class B, class D, CPPA_MIXIN... Ms>
+struct extend_helper;
+
+template<class B, class D>
+struct extend_helper<B,D> { typedef D type; };
+
+template<class B, class D, CPPA_MIXIN M, CPPA_MIXIN... Ms>
+struct extend_helper<B,D,M,Ms...> : extend_helper<B,M<D,B>,Ms...> { };
+
+} // namespace detail
+
 /**
- * @brief Enables derived classes to be used in {@link weak_intrusive_ptr}.
+ * @brief Allows convenient definition of types using mixins.
+ *        For example, @p extend<ar,T>::with<ob,fo> is an alias for
+ *        @p fo<ob<ar,T>,T>.
+ *
+ * Mixins in libcppa always have two template parameters: base type and
+ * derived type. This allows mixins to make use of the curiously recurring
+ * template pattern (CRTP).
  */
-template<class Base>
-class enable_weak_ptr_mixin : public Base {
-
-    typedef Base super;
-
-    template<typename T>
-    friend class weak_intrusive_ptr;
-
-    static_assert(std::is_base_of<ref_counted,Base>::value,
-                  "Base needs to be derived from ref_counted");
-
- protected:
-
-    template<typename... Args>
-    enable_weak_ptr_mixin(Args&&... args)
-    : super(std::forward<Args>(args)...)
-    , m_anchor(new weak_ptr_anchor(this)) { }
-
-    void request_deletion() {
-        if (m_anchor->try_expire()) delete this;
-    }
-
- private:
-
-    inline intrusive_ptr<weak_ptr_anchor> get_weak_ptr_anchor() const {
-        return m_anchor;
-    }
-
-    intrusive_ptr<weak_ptr_anchor> m_anchor;
-
+template<class Base, class Derived>
+struct extend {
+    /**
+     * @brief An alias for the result type.
+     */
+    template<template<class,class> class... Mixins>
+    using with = typename detail::extend_helper<Derived,Base,Mixins...>::type;
 };
 
 } // namespace cppa
 
-#endif // CPPA_ENABLE_WEAK_PTR_MIXIN_HPP
+#endif // CPPA_MIXED_HPP

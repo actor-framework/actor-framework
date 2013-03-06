@@ -53,7 +53,7 @@ namespace cppa { namespace util {
 
 template<typename What, typename With, typename... IfStmt>
 struct replace_type {
-    static constexpr bool do_replace = disjunction<IfStmt...>::value;
+    static constexpr bool do_replace = disjunction<IfStmt::value...>::value;
     typedef typename detail::replace_type<do_replace, What, With>::type
             type;
 };

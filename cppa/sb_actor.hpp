@@ -50,6 +50,10 @@ class sb_actor : public Base {
     static_assert(std::is_base_of<event_based_actor,Base>::value,
                   "Base must be either event_based_actor or a derived type");
 
+ protected:
+
+    typedef sb_actor combined_type;
+
  public:
 
     /**

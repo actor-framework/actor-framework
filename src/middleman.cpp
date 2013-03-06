@@ -427,14 +427,11 @@ class middleman_impl : public abstract_middleman {
     }
 
     void run_later(function<void()> fun) {
-        CPPA_LOG_TRACE("");
         m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
-        if (write(m_pipe_write, &dummy, sizeof(dummy)) != sizeof(dummy)) {
-            // already exited?
-            CPPA_LOG_WARNING("cannot write to pipe");
-        }
+        // ignore result; write error only means middleman already exited
+        static_cast<void>(write(m_pipe_write, &dummy, sizeof(dummy)));
     }
 
  protected:
@@ -453,10 +450,9 @@ class middleman_impl : public abstract_middleman {
 
     void destroy() {
         run_later([this] {
-            CPPA_LOG_TRACE("lambda from middleman_impl::stop");
+            CPPA_LOGM_TRACE("destroy$helper", "");
             this->m_done = true;
         });
-        //enqueue_message(middleman_message::create());
         m_thread.join();
         close(m_pipe_read);
         close(m_pipe_write);

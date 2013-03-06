@@ -33,6 +33,7 @@
 
 #include <sstream>
 
+#include "cppa/singletons.hpp"
 #include "cppa/detail/demangle.hpp"
 
 /*
@@ -65,27 +66,17 @@ class logging {
                      int line_num,
                      const std::string& msg    ) = 0;
 
-    static logging* instance();
-
     class trace_helper {
 
      public:
 
-        inline trace_helper(std::string class_name,
-                            const char* fun_name,
-                            const char* file_name,
-                            int line_num,
-                            const std::string& msg)
-        : m_class(std::move(class_name)), m_fun_name(fun_name)
-        , m_file_name(file_name), m_line_num(line_num) {
-            logging::instance()->log("TRACE  ", m_class.c_str(), fun_name,
-                                     file_name, line_num, "ENTRY " + msg);
-        }
+        trace_helper(std::string class_name,
+                     const char* fun_name,
+                     const char* file_name,
+                     int line_num,
+                     const std::string& msg);
 
-        inline ~trace_helper() {
-            logging::instance()->log("TRACE  ", m_class.c_str(), m_fun_name,
-                                     m_file_name, m_line_num, "EXIT");
-        }
+        ~trace_helper();
 
      private:
 
@@ -115,129 +106,119 @@ class logging {
 #define CPPA_VOID_STMT static_cast<void>(0)
 
 #ifndef CPPA_LOG_LEVEL
-
-#define CPPA_LOG_ERROR(unused) CPPA_VOID_STMT
-#define CPPA_LOG_ERROR_IF(unused1,unused2) CPPA_VOID_STMT
-#define CPPA_LOGF_ERROR(unused) CPPA_VOID_STMT
-#define CPPA_LOGF_ERROR_IF(unused1,unused2) CPPA_VOID_STMT
-
-#define CPPA_LOG_WARNING(unused) CPPA_VOID_STMT
-#define CPPA_LOG_WARNING_IF(unused1,unused2) CPPA_VOID_STMT
-#define CPPA_LOGF_WARNING(unused) CPPA_VOID_STMT
-#define CPPA_LOGF_WARNING_IF(unused1,unused2) CPPA_VOID_STMT
-
-#define CPPA_LOG_INFO(unused) CPPA_VOID_STMT
-#define CPPA_LOG_INFO_IF(unused1,unused2) CPPA_VOID_STMT
-#define CPPA_LOGF_INFO(unused) CPPA_VOID_STMT
-#define CPPA_LOGF_INFO_IF(unused1,unused2) CPPA_VOID_STMT
-
-#define CPPA_LOG_DEBUG(unused) CPPA_VOID_STMT
-#define CPPA_LOG_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
-#define CPPA_LOGF_DEBUG(unused) CPPA_VOID_STMT
-#define CPPA_LOGF_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
-
-#define CPPA_LOG_TRACE(unused) CPPA_VOID_STMT
-#define CPPA_LOGF_TRACE(unused) CPPA_VOID_STMT
-
+#   define CPPA_LOG(classname, funname, level, message) CPPA_VOID_STMT
+#   define CPPA_LIF(stmt, logstmt) CPPA_VOID_STMT
 #else
+#   define CPPA_LOG(classname, funname, level, message) {                      \
+        std::ostringstream scoped_oss; scoped_oss << message;                  \
+        ::cppa::get_logger()->log(                                             \
+            level, classname, funname, __FILE__, __LINE__, scoped_oss.str());  \
+    } CPPA_VOID_STMT
+#   define CPPA_LIF(stmt, logstmt) if (stmt) { logstmt ; } CPPA_VOID_STMT
+#endif
 
-#define CPPA_DO_LOG_FUN(level, message) {                                      \
-    std::ostringstream scoped_oss; scoped_oss << message;                      \
-    ::cppa::logging::instance()->log(                                          \
-        level, "NONE",                                                         \
-        __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
-} CPPA_VOID_STMT
+#define CPPA_CLASS_NAME ::cppa::detail::demangle(typeid(*this)).c_str()
 
-#define CPPA_DO_LOG_MEMBER_FUN(level, message) {                               \
-    std::ostringstream scoped_oss; scoped_oss << message;                      \
-    ::cppa::logging::instance()->log(                                          \
-        level, ::cppa::detail::demangle(typeid(*this)).c_str(),                \
-        __FUNCTION__, __FILE__, __LINE__, scoped_oss.str());                   \
-} CPPA_VOID_STMT
+/**
+ * @brief Logs a custom error message @p msg with class name @p cname
+ *        and function name @p fname.
+ */
+#define CPPA_LOGC_ERROR(cname, fname, msg) CPPA_LOG(cname, fname, "ERROR", msg)
+#define CPPA_LOGC_WARNING(cname, fname, msg) CPPA_VOID_STMT
+#define CPPA_LOGC_INFO(cname, fname, msg) CPPA_VOID_STMT
+#define CPPA_LOGC_DEBUG(cname, fname, msg) CPPA_VOID_STMT
+#define CPPA_LOGC_TRACE(cname, fname, msg) CPPA_VOID_STMT
 
-#define CPPA_LOG_ERROR(message) CPPA_DO_LOG_MEMBER_FUN("ERROR  ", message)
-#define CPPA_LOGF_ERROR(message) CPPA_DO_LOG_FUN("ERROR  ", message)
-
+// enable warnings
 #if CPPA_LOG_LEVEL > 0
-#  define CPPA_LOG_WARNING(message) CPPA_DO_LOG_MEMBER_FUN("WARNING", message)
-#  define CPPA_LOGF_WARNING(message) CPPA_DO_LOG_FUN("WARNING", message)
-#else
-#  define CPPA_LOG_WARNING(unused) CPPA_VOID_STMT
-#  define CPPA_LOGF_WARNING(unused) CPPA_VOID_STMT
+#   undef CPPA_LOGC_WARNING
+#   define CPPA_LOGC_WARNING(cname, fname, msg) CPPA_LOG(cname, fname, "WARN ", msg)
 #endif
 
+// enable info messages
 #if CPPA_LOG_LEVEL > 1
-#  define CPPA_LOG_INFO(message) CPPA_DO_LOG_MEMBER_FUN("INFO   ", message)
-#  define CPPA_LOGF_INFO(message) CPPA_DO_LOG_FUN("INFO   ", message)
-#else
-#  define CPPA_LOG_INFO(unused) CPPA_VOID_STMT
-#  define CPPA_LOGF_INFO(unused) CPPA_VOID_STMT
+#   undef CPPA_LOGC_INFO
+#   define CPPA_LOGC_INFO(cname, fname, msg) CPPA_LOG(cname, fname, "INFO ", msg)
 #endif
 
+// enable debug messages
 #if CPPA_LOG_LEVEL > 2
-#  define CPPA_LOG_DEBUG(message) CPPA_DO_LOG_MEMBER_FUN("DEBUG  ", message)
-#  define CPPA_LOGF_DEBUG(message) CPPA_DO_LOG_FUN("DEBUG  ", message)
-#else
-#  define CPPA_LOG_DEBUG(unused) CPPA_VOID_STMT
-#  define CPPA_LOGF_DEBUG(unused) CPPA_VOID_STMT
+#   undef CPPA_LOGC_DEBUG
+#   define CPPA_LOGC_DEBUG(cname, fname, msg) CPPA_LOG(cname, fname, "DEBUG", msg)
 #endif
 
+// enable trace messages
 #if CPPA_LOG_LEVEL > 3
-#  define CPPA_RPAREN )
-#  define CPPA_LPAREN (
-#  define CPPA_GET(what) what
-#  define CPPA_CONCAT_I(lhs,rhs) lhs ## rhs
-#  define CPPA_CONCAT(lhs,rhs) CPPA_CONCAT_I(lhs,rhs)
-#  define CPPA_CONCATL(lhs) CPPA_CONCAT(lhs, __LINE__)
-#  define CPPA_LOG_TRACE(message)                                              \
-    ::std::ostringstream CPPA_CONCATL(cppa_trace_helper_) ;                    \
-    CPPA_CONCATL(cppa_trace_helper_) << message ;                              \
-    ::cppa::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_)         \
-        CPPA_LPAREN ::cppa::detail::demangle                                   \
-        CPPA_LPAREN typeid CPPA_LPAREN decltype CPPA_LPAREN *this              \
-        CPPA_RPAREN        CPPA_RPAREN          CPPA_RPAREN ,                  \
-          __func__ , __FILE__ , __LINE__ ,                                     \
-          CPPA_CONCATL(cppa_trace_helper_) .str() CPPA_RPAREN
-#  define CPPA_LOGF_TRACE(message)                                             \
-    ::std::ostringstream CPPA_CONCATL(cppa_trace_helper_) ;                    \
-    CPPA_CONCATL(cppa_trace_helper_) << message ;                              \
-    ::cppa::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_)         \
-        CPPA_LPAREN "NONE" ,                                                   \
-          __func__ , __FILE__ , __LINE__ ,                                     \
-          CPPA_CONCATL(cppa_trace_helper_) .str() CPPA_RPAREN
-
-#else
-#  define CPPA_LOG_TRACE(unused)
-#  define CPPA_LOGF_TRACE(unused)
+#   undef CPPA_LOGC_TRACE
+#   define CPPA_CONCAT_I(lhs,rhs) lhs ## rhs
+#   define CPPA_CONCAT(lhs,rhs) CPPA_CONCAT_I(lhs,rhs)
+#   define CPPA_CONCATL(lhs) CPPA_CONCAT(lhs, __LINE__)
+#   define CPPA_LOGC_TRACE(cname, fname, msg)                                  \
+        ::std::ostringstream CPPA_CONCATL(cppa_trace_helper_) ;                \
+        CPPA_CONCATL(cppa_trace_helper_) << msg ;                              \
+        ::cppa::logging::trace_helper CPPA_CONCATL(cppa_fun_trace_helper_) {   \
+            cname, fname , __FILE__ , __LINE__ ,                               \
+            CPPA_CONCATL(cppa_trace_helper_) .str() }
 #endif
 
-#define CPPA_LOG_ERROR_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOG_ERROR(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg with custom member function @p fname.
+ */
+#define CPPA_LOGS_ERROR(fname, msg) CPPA_LOGC_ERROR(CPPA_CLASS_NAME, fname, msg)
 
-#define CPPA_LOG_WARNING_IF(stmt,message)                                      \
-    if (stmt) { CPPA_LOG_WARNING(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg with custom class name @p cname.
+ */
+#define CPPA_LOGM_ERROR(cname, msg) CPPA_LOGC_ERROR(cname, __FUNCTION__, msg)
 
-#define CPPA_LOG_INFO_IF(stmt,message)                                         \
-    if (stmt) { CPPA_LOG_INFO(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg in a free function if @p stmt evaluates to @p true.
+ */
+#define CPPA_LOGF_ERROR_IF(stmt, msg) CPPA_LIF((stmt), CPPA_LOGF_ERROR(msg))
 
-#define CPPA_LOG_DEBUG_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOG_DEBUG(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg in a free function.
+ */
+#define CPPA_LOGF_ERROR(msg) CPPA_LOGM_ERROR("NONE", msg)
 
-#define CPPA_LOGF_ERROR_IF(stmt,message)                                       \
-    if (stmt) { CPPA_LOGF_ERROR(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg in a member function if @p stmt evaluates to @p true.
+ */
+#define CPPA_LOG_ERROR_IF(stmt, msg) CPPA_LIF((stmt), CPPA_LOG_ERROR(msg))
 
-#define CPPA_LOGF_WARNING_IF(stmt,message)                                     \
-    if (stmt) { CPPA_LOGF_WARNING(message); }; CPPA_VOID_STMT
+/**
+ * @brief Logs @p msg in a member function.
+ */
+#define CPPA_LOG_ERROR(msg) CPPA_LOGM_ERROR(CPPA_CLASS_NAME, msg)
 
-#define CPPA_LOGF_INFO_IF(stmt,message)                                        \
-    if (stmt) { CPPA_LOGF_INFO(message); }; CPPA_VOID_STMT
+// convenience macros for warnings
+#define CPPA_LOG_WARNING(msg) CPPA_LOGM_WARNING(CPPA_CLASS_NAME, msg)
+#define CPPA_LOG_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_WARNING(msg))
+#define CPPA_LOGF_WARNING(msg) CPPA_LOGM_WARNING("NONE", msg)
+#define CPPA_LOGF_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_WARNING(msg))
+#define CPPA_LOGM_WARNING(cname, msg) CPPA_LOGC_WARNING(cname, __FUNCTION__, msg)
 
-#define CPPA_LOGF_DEBUG_IF(stmt,message)                                       \
-    if (stmt) { CPPA_LOGF_DEBUG(message); }; CPPA_VOID_STMT
+// convenience macros for info messages
+#define CPPA_LOG_INFO(msg) CPPA_LOGM_INFO(CPPA_CLASS_NAME, msg)
+#define CPPA_LOG_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_INFO(msg))
+#define CPPA_LOGF_INFO(msg) CPPA_LOGM_INFO("NONE", msg)
+#define CPPA_LOGF_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_INFO(msg))
+#define CPPA_LOGM_INFO(cname, msg) CPPA_LOGC_INFO(cname, __FUNCTION__, msg)
 
+// convenience macros for debug messages
+#define CPPA_LOG_DEBUG(msg) CPPA_LOGM_DEBUG(CPPA_CLASS_NAME, msg)
+#define CPPA_LOG_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_DEBUG(msg))
+#define CPPA_LOGF_DEBUG(msg) CPPA_LOGM_DEBUG("NONE", msg)
+#define CPPA_LOGF_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_DEBUG(msg))
+#define CPPA_LOGM_DEBUG(cname, msg) CPPA_LOGC_DEBUG(cname, __FUNCTION__, msg)
 
-#endif // CPPA_DEBUG
+// convenience macros for trace messages
+#define CPPA_LOGS_TRACE(fname, msg) CPPA_LOGC_TRACE(CPPA_CLASS_NAME, fname, msg)
+#define CPPA_LOGM_TRACE(cname, msg) CPPA_LOGC_TRACE(cname, __FUNCTION__, msg)
+#define CPPA_LOGF_TRACE(msg) CPPA_LOGM_TRACE("NONE", msg)
+#define CPPA_LOG_TRACE(msg) CPPA_LOGM_TRACE(CPPA_CLASS_NAME, msg)
 
+// convenience macros to safe some typing when printing arguments
 #define CPPA_ARG(arg) #arg << " = " << arg
 #define CPPA_TARG(arg, trans) #arg << " = " << trans ( arg )
 #define CPPA_MARG(arg, memfun) #arg << " = " << arg . memfun ()

@@ -36,13 +36,15 @@
 #include "cppa/on.hpp"
 #include "cppa/self.hpp"
 #include "cppa/receive.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
+#include "cppa/context_switching_actor.hpp"
 
-#include "cppa/detail/actor_count.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 
@@ -52,49 +54,29 @@ namespace cppa { namespace {
 
 typedef std::uint32_t ui32;
 
+typedef std::chrono::high_resolution_clock hrc;
+
 struct exit_observer : cppa::attachable {
-    ~exit_observer() {
-        cppa::detail::dec_actor_count();
-    }
-    void actor_exited(std::uint32_t) {
-    }
-    bool matches(const token&) {
-        return false;
-    }
+    ~exit_observer() { get_actor_registry()->dec_running(); }
+    void actor_exited(std::uint32_t) { }
+    bool matches(const token&) { return false; }
 };
-
-inline decltype(std::chrono::high_resolution_clock::now()) now() {
-    return std::chrono::high_resolution_clock::now();
-}
-
-void async_send_impl(channel* to, actor* from, any_tuple&& msg) {
-    to->enqueue(from, move(msg));
-}
-
-void sync_reply_impl(actor* to, actor* from, message_id_t id, any_tuple&& msg) {
-    to->sync_enqueue(from, id, move(msg));
-}
-
-typedef void (*async_send_fun)(channel*, actor*, any_tuple&&);
-typedef void (*sync_reply_fun)(actor*, actor*, message_id_t, any_tuple&&);
 
 class delayed_msg {
 
  public:
 
-    delayed_msg(async_send_fun     arg0,
-                const channel_ptr& arg1,
-                const actor_ptr&   arg2,
-                message_id_t,
-                any_tuple&&        arg4)
-    : fun(arg0), ptr_a(arg1), from(arg2), msg(move(arg4)) { }
-
-    delayed_msg(sync_reply_fun     arg0,
+    delayed_msg(const channel_ptr& arg0,
                 const actor_ptr&   arg1,
-                const actor_ptr&   arg2,
-                message_id_t       arg3,
-                any_tuple&&        arg4)
-    : fun(arg0), ptr_b(arg1), from(arg2), id(arg3), msg(move(arg4)) { }
+                message_id_t,
+                any_tuple&&        arg3)
+    : ptr_a(arg0), from(arg1), msg(move(arg3)) { }
+
+    delayed_msg(const actor_ptr&   arg0,
+                const actor_ptr&   arg1,
+                message_id_t       arg2,
+                any_tuple&&        arg3)
+    : ptr_b(arg0), from(arg1), id(arg2), msg(move(arg3)) { }
 
     delayed_msg(delayed_msg&&) = default;
     delayed_msg(const delayed_msg&) = default;
@@ -102,13 +84,12 @@ class delayed_msg {
     delayed_msg& operator=(const delayed_msg&) = default;
 
     inline void eval() {
-        if (fun.is_left()) (fun.left())(ptr_a.get(), from.get(), move(msg));
-        else (fun.right())(ptr_b.get(), from.get(), id, move(msg));
+        CPPA_REQUIRE(ptr_a || ptr_b);
+        if (ptr_a) ptr_a->enqueue(from, move(msg));
+        else ptr_b->sync_enqueue(from, id, move(msg));
     }
 
  private:
-
-    either<async_send_fun, sync_reply_fun> fun;
 
     channel_ptr   ptr_a;
     actor_ptr     ptr_b;
@@ -127,14 +108,14 @@ class scheduler_helper {
     typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
     void start() {
-        ptr_type mtimer{detail::memory::create<thread_mapped_actor>()};
-        ptr_type mprinter{detail::memory::create<thread_mapped_actor>()};
+        ptr_type mt{detail::memory::create<thread_mapped_actor>()};
+        ptr_type mp{detail::memory::create<thread_mapped_actor>()};
         // launch threads
-        m_timer_thread = std::thread(&scheduler_helper::timer_loop, mtimer);
-        m_printer_thread = std::thread(&scheduler_helper::printer_loop, mprinter);
+        m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt};
+        m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp};
         // set member variables
-        m_timer = mtimer;
-        m_printer = mprinter;
+        m_timer = std::move(mt);
+        m_printer = std::move(mp);
     }
 
     void stop() {
@@ -159,47 +140,41 @@ class scheduler_helper {
 
 };
 
-template<class Map, typename Fun, class T>
-void insert_dmsg(Map& storage,
+template<class Map, class T>
+inline void insert_dmsg(Map& storage,
                  const util::duration& d,
-                 Fun fun_ptr,
                  const T& to,
                  const actor_ptr& sender,
-                 message_id_t id,
-                 any_tuple&& tup    ) {
-    auto tout = now();
+                 any_tuple&& tup,
+                 message_id_t id = message_id_t{}) {
+    auto tout = hrc::now();
     tout += d;
-    delayed_msg dmsg{fun_ptr, to, sender, id, move(tup)};
+    delayed_msg dmsg{to, sender, id, move(tup)};
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
 void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
-    typedef detail::abstract_actor<local_actor> impl_type;
-    typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> queue_node_ptr;
     // setup & local variables
     self.set(m_self.get());
-    auto& queue = m_self->mailbox();
-    std::multimap<decltype(now()), delayed_msg> messages;
-    queue_node_ptr msg_ptr;
-    //decltype(queue.pop()) msg_ptr = nullptr;
-    decltype(now()) tout;
     bool done = false;
+    auto& queue = m_self->m_mailbox;
+    std::unique_ptr<detail::recursive_queue_node,detail::disposer> msg_ptr;
+    auto tout = hrc::now();
+    std::multimap<decltype(tout),delayed_msg> messages;
     // message handling rules
     auto mfun = (
         on(atom("SEND"), arg_match) >> [&](const util::duration& d,
                                            const channel_ptr& ptr,
                                            any_tuple& tup) {
-            insert_dmsg(messages, d, async_send_impl,
-                        ptr, msg_ptr->sender, message_id_t(), move(tup));
+            insert_dmsg(messages, d, ptr, msg_ptr->sender, move(tup));
         },
         on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
                                             const actor_ptr& ptr,
                                             message_id_t id,
                                             any_tuple& tup) {
-            insert_dmsg(messages, d, sync_reply_impl,
-                        ptr, msg_ptr->sender, id, move(tup));
+            insert_dmsg(messages, d, ptr, msg_ptr->sender, move(tup), id);
         },
-        on<atom("DIE")>() >> [&]() {
+        on(atom("DIE")) >> [&] {
             done = true;
         },
         others() >> [&]() {
@@ -213,11 +188,9 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // loop
     while (!done) {
         while (!msg_ptr) {
-            if (messages.empty()) {
-                msg_ptr.reset(queue.pop());
-            }
+            if (messages.empty()) msg_ptr.reset(queue.pop());
             else {
-                tout = now();
+                tout = hrc::now();
                 // handle timeouts (send messages)
                 auto it = messages.begin();
                 while (it != messages.end() && (it->first) <= tout) {
@@ -301,6 +274,7 @@ void scheduler::initialize() {
 }
 
 void scheduler::destroy() {
+    CPPA_LOG_TRACE("");
     m_helper->stop();
     delete this;
 }
@@ -309,19 +283,19 @@ scheduler::~scheduler() {
     delete m_helper;
 }
 
-channel* scheduler::delayed_send_helper() {
-    return m_helper->m_timer.get();
+const actor_ptr& scheduler::delayed_send_helper() {
+    return m_helper->m_timer;
 }
 
 void scheduler::register_converted_context(actor* what) {
     if (what) {
-        detail::inc_actor_count();
-        what->attach(new exit_observer);
+        get_actor_registry()->inc_running();
+        what->attach(attachable_ptr{new exit_observer});
     }
 }
 
 attachable* scheduler::register_hidden_context() {
-    detail::inc_actor_count();
+    get_actor_registry()->inc_running();
     return new exit_observer;
 }
 
@@ -335,10 +309,6 @@ void set_default_scheduler(size_t num_threads) {
     set_scheduler(new detail::thread_pool_scheduler(num_threads));
 }
 
-scheduler* get_scheduler() {
-    return detail::singleton_manager::get_scheduler();
-}
-
 scheduler* scheduler::create_singleton() {
     return new detail::thread_pool_scheduler;
 }
@@ -346,6 +316,5 @@ scheduler* scheduler::create_singleton() {
 const actor_ptr& scheduler::printer() const {
     return m_helper->m_printer;
 }
-
 
 } // namespace cppa

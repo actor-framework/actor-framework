@@ -293,8 +293,6 @@ T& get_ref(primitive_variant& pv) {
     return pv.get_as<ptype>();
 }
 
-#ifdef CPPA_DOCUMENTATION
-
 /**
  * @ingroup TypeSystem
  * @brief Casts a primitive variant to its C++ type.
@@ -304,7 +302,11 @@ T& get_ref(primitive_variant& pv) {
  * @returns A const reference to the value of @p pv of type @p T.
  */
 template<primitive_type PT>
-const T& get_ref(const primitive_variant& pv);
+inline const typename detail::ptype_to_type<PT>::type&
+get(const primitive_variant& pv) {
+    static_assert(PT != pt_null, "PT == pt_null");
+    return get<typename detail::ptype_to_type<PT>::type>(pv);
+}
 
 /**
  * @ingroup TypeSystem
@@ -315,25 +317,11 @@ const T& get_ref(const primitive_variant& pv);
  * @returns A reference to the value of @p pv of type @p T.
  */
 template<primitive_type PT>
-T& get_ref(primitive_variant& pv);
-
-#else
-
-template<primitive_type PT>
-inline const typename detail::ptype_to_type<PT>::type&
-get(const primitive_variant& pv) {
-    static_assert(PT != pt_null, "PT == pt_null");
-    return get<typename detail::ptype_to_type<PT>::type>(pv);
-}
-
-template<primitive_type PT>
 inline typename detail::ptype_to_type<PT>::type&
 get_ref(primitive_variant& pv) {
     static_assert(PT != pt_null, "PT == pt_null");
     return get_ref<typename detail::ptype_to_type<PT>::type>(pv);
 }
-
-#endif
 
 /**
  * @relates primitive_variant

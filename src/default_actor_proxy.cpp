@@ -36,6 +36,7 @@
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
 
 using namespace std;
 
@@ -54,13 +55,13 @@ default_actor_proxy::default_actor_proxy(actor_id mid,
 : super(mid), m_proto(parent), m_pinf(pinfo) { }
 
 default_actor_proxy::~default_actor_proxy() {
-    CPPA_LOG_TRACE("node = " << to_string(*m_pinf) << ", aid = " << id());
     auto aid = id();
     auto node = m_pinf;
     auto proto = m_proto;
     proto->run_later([aid, node, proto] {
-        CPPA_LOGF_TRACE("lambda from ~default_actor_proxy"
-                        << "; node = " << to_string(*node) << ", aid " << aid
+        CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
+                        "~default_actor_proxy$run_later",
+                        "node = " << to_string(*node) << ", aid " << aid
                         << ", proto = " << to_string(proto->identifier()));
         proto->addressing()->erase(*node, aid);
         auto p = proto->get_peer(*node);
@@ -94,10 +95,12 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender,
         switch (m_pending_requests.enqueue(new_req_info(sender, mid))) {
             case intrusive::queue_closed: {
                 if (sender) {
-                    intrusive_ptr<default_actor_proxy> _this{this};
                     auto rsn = exit_reason();
-                    m_proto->run_later([_this,rsn,sender,mid] {
-                        detail::sync_request_bouncer f{_this.get(), rsn};
+                    m_proto->run_later([rsn,sender,mid] {
+                        CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
+                                        "forward_msg$bouncer",
+                                        "bounce message for reason " << rsn);
+                        detail::sync_request_bouncer f{rsn};
                         f(sender.get(), mid);
                     });
                 }
@@ -110,13 +113,16 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender,
     auto node = m_pinf;
     auto proto = m_proto;
     m_proto->run_later([hdr, msg, node, proto] {
-        CPPA_LOGF_TRACE("lambda from default_actor_proxy::forward_msg");
+        CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
+                        "forward_msg$forwarder",
+                        "");
         proto->enqueue(*node, hdr, msg);
     });
 }
 
-void default_actor_proxy::enqueue(actor* sender, any_tuple msg) {
-    CPPA_LOG_TRACE(CPPA_ARG(sender) << ", " << CPPA_TARG(msg, to_string));
+void default_actor_proxy::enqueue(const actor_ptr& sender, any_tuple msg) {
+    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+                   << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2
         && msg.type_at(0) == arr[0]
@@ -126,10 +132,11 @@ void default_actor_proxy::enqueue(actor* sender, any_tuple msg) {
         intrusive_ptr<default_actor_proxy> _this{this};
         auto reason = msg.get_as<uint32_t>(1);
         m_proto->run_later([_this, reason] {
+            CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
+                            "enqueue$kill_proxy_helper",
+                            "KILL_PROXY with exit reason " << reason);
             _this->cleanup(reason);
-            // make sure cleanup is done before closing requests queue
-            std::atomic_thread_fence(std::memory_order_seq_cst);
-            detail::sync_request_bouncer f{_this.get(), reason};
+            detail::sync_request_bouncer f{reason};
             _this->m_pending_requests.close([&](const sync_request_info& e) {
                 f(e.sender.get(), e.mid);
             });
@@ -139,9 +146,12 @@ void default_actor_proxy::enqueue(actor* sender, any_tuple msg) {
     forward_msg(sender, move(msg));
 }
 
-void default_actor_proxy::sync_enqueue(actor* sender, message_id_t mid, any_tuple msg) {
-    CPPA_LOG_TRACE(CPPA_ARG(sender) << ", " << CPPA_MARG(mid, integer_value)
-                   << ", " << CPPA_TARG(msg, to_string));
+void default_actor_proxy::sync_enqueue(const actor_ptr& sender,
+                                       message_id_t mid,
+                                       any_tuple msg) {
+    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+                   << CPPA_MARG(mid, integer_value) << ", "
+                   << CPPA_TARG(msg, to_string));
     forward_msg(sender, move(msg), mid);
 }
 

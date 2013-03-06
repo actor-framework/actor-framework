@@ -195,6 +195,8 @@ class continuation_decorator : public behavior_impl {
 
 };
 
+typedef intrusive_ptr<behavior_impl> behavior_impl_ptr;
+
 } } // namespace cppa::detail
 
 #endif // BEHAVIOR_IMPL_HPP

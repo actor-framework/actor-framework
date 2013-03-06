@@ -53,20 +53,21 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/spawn_options.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/scheduled_actor.hpp"
-#include "cppa/scheduling_hint.hpp"
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/network/acceptor.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/actor_count.hpp"
 #include "cppa/detail/get_behavior.hpp"
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/receive_loop_helper.hpp"
 
 /**
@@ -119,11 +120,11 @@
  *
  * @section IntroHelloWorld Hello World Example
  *
- * @include hello_world_example.cpp
+ * @include hello_world.cpp
  *
  * @section IntroMoreExamples More Examples
  *
- * The {@link math_actor_example.cpp Math Actor Example} shows the usage
+ * The {@link math_actor.cpp Math Actor Example} shows the usage
  * of {@link receive_loop} and {@link cppa::arg_match arg_match}.
  * The {@link dining_philosophers.cpp Dining Philosophers Example}
  * introduces event-based actors and includes a lot of <tt>libcppa</tt>
@@ -389,13 +390,13 @@
 
 /**
  * @brief A trivial example program.
- * @example hello_world_example.cpp
+ * @example hello_world.cpp
  */
 
 /**
  * @brief Shows the usage of {@link cppa::atom atoms}
  *        and {@link cppa::arg_match arg_match}.
- * @example math_actor_example.cpp
+ * @example math_actor.cpp
  */
 
 /**
@@ -417,11 +418,11 @@ inline void send_impl(T* whom, any_tuple&& what) {
     if (whom) self->send_message(whom, std::move(what));
 }
 
-template<typename T, typename... Args>
-inline void send_tpl_impl(T* whom, Args&&... what) {
-    static_assert(sizeof...(Args) > 0, "no message to send");
+template<typename T, typename... Ts>
+inline void send_tpl_impl(T* whom, Ts&&... what) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     if (whom) self->send_message(whom,
-                                 make_any_tuple(std::forward<Args>(what)...));
+                                 make_any_tuple(std::forward<Ts>(what)...));
 }
 
 } // namespace detail
@@ -436,7 +437,7 @@ inline void send_tpl_impl(T* whom, Args&&... what) {
  * @param whom Receiver of the message.
  * @param what Message content as tuple.
  */
-template<class C, typename... Args>
+template<class C, typename... Ts>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
 send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
     detail::send_impl(whom.get(), std::move(what));
@@ -446,12 +447,12 @@ send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
  * @brief Sends <tt>{what...}</tt> as a message to @p whom.
  * @param whom Receiver of the message.
  * @param what Message elements.
- * @pre <tt>sizeof...(Args) > 0</tt>
+ * @pre <tt>sizeof...(Ts) > 0</tt>
  */
-template<class C, typename... Args>
+template<class C, typename... Ts>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
-send(const intrusive_ptr<C>& whom, Args&&... what) {
-    detail::send_tpl_impl(whom.get(), std::forward<Args>(what)...);
+send(const intrusive_ptr<C>& whom, Ts&&... what) {
+    detail::send_tpl_impl(whom.get(), std::forward<Ts>(what)...);
 }
 
 /**
@@ -460,9 +461,9 @@ send(const intrusive_ptr<C>& whom, Args&&... what) {
  * @param from Sender as seen by @p whom.
  * @param whom Receiver of the message.
  * @param what Message elements.
- * @pre <tt>sizeof...(Args) > 0</tt>
+ * @pre <tt>sizeof...(Ts) > 0</tt>
  */
-template<class C, typename... Args>
+template<class C, typename... Ts>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
 send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple what) {
     if (whom) whom->enqueue(from.get(), std::move(what));
@@ -474,12 +475,12 @@ send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple wha
  * @param from Sender as seen by @p whom.
  * @param whom Receiver of the message.
  * @param what Message elements.
- * @pre <tt>sizeof...(Args) > 0</tt>
+ * @pre <tt>sizeof...(Ts) > 0</tt>
  */
-template<class C, typename... Args>
+template<class C, typename... Ts>
 inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
-send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Args&&... what) {
-    send_tuple_as(from, whom, make_any_tuple(std::forward<Args>(what)...));
+send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Ts&&... what) {
+    send_tuple_as(from, whom, make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
@@ -522,13 +523,13 @@ inline message_future sync_send_tuple(const actor_ptr& whom, any_tuple what) {
  * @returns A handle identifying a future to the response of @p whom.
  * @warning The returned handle is actor specific and the response to the sent
  *          message cannot be received by another actor.
- * @pre <tt>sizeof...(Args) > 0</tt>
+ * @pre <tt>sizeof...(Ts) > 0</tt>
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-template<typename... Args>
-inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
-    static_assert(sizeof...(Args) > 0, "no message to send");
-    return sync_send_tuple(whom, make_any_tuple(std::forward<Args>(what)...));
+template<typename... Ts>
+inline message_future sync_send(const actor_ptr& whom, Ts&&... what) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    return sync_send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
@@ -543,7 +544,7 @@ inline message_future sync_send(const actor_ptr& whom, Args&&... what) {
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 message_future timed_sync_send_tuple(const actor_ptr& whom,
                                      const std::chrono::duration<Rep,Period>& rel_time,
                                      any_tuple what) {
@@ -564,17 +565,17 @@ message_future timed_sync_send_tuple(const actor_ptr& whom,
  * @returns A handle identifying a future to the response of @p whom.
  * @warning The returned handle is actor specific and the response to the sent
  *          message cannot be received by another actor.
- * @pre <tt>sizeof...(Args) > 0</tt>
+ * @pre <tt>sizeof...(Ts) > 0</tt>
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 message_future timed_sync_send(const actor_ptr& whom,
                                const std::chrono::duration<Rep,Period>& rel_time,
-                               Args&&... what) {
-    static_assert(sizeof...(Args) > 0, "no message to send");
+                               Ts&&... what) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     return timed_sync_send_tuple(whom,
                                  rel_time,
-                                 make_any_tuple(std::forward<Args>(what)...));
+                                 make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
@@ -589,24 +590,25 @@ inline void reply_tuple(any_tuple what) {
  * @brief Sends a message to the sender of the last received message.
  * @param what Message elements.
  */
-template<typename... Args>
-inline void reply(Args&&... what) {
-    self->reply_message(make_any_tuple(std::forward<Args>(what)...));
+template<typename... Ts>
+inline void reply(Ts&&... what) {
+    self->reply_message(make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
  * @brief Sends a message as reply to @p handle.
  */
-template<typename... Args>
-inline void reply_to(const response_handle& handle, Args&&... what) {
+template<typename... Ts>
+inline void reply_to(const response_handle& handle, Ts&&... what) {
     if (handle.valid()) {
-        handle.apply(make_any_tuple(std::forward<Args>(what)...));
+        handle.apply(make_any_tuple(std::forward<Ts>(what)...));
     }
 }
 
 /**
- * @brief Sends a message to the sender of the last received message.
- * @param what Message content as a tuple.
+ * @brief Replies with @p what to @p handle.
+ * @param handle Identifies a previously received request.
+ * @param what Response message.
  */
 inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
     handle.apply(std::move(what));
@@ -626,7 +628,7 @@ inline void forward_to(const actor_ptr& whom) {
  *              microseconds, milliseconds, seconds or minutes.
  * @param what Message content as a tuple.
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 inline void delayed_send_tuple(const channel_ptr& whom,
                                const std::chrono::duration<Rep,Period>& rtime,
                                any_tuple what) {
@@ -640,15 +642,15 @@ inline void delayed_send_tuple(const channel_ptr& whom,
  *              microseconds, milliseconds, seconds or minutes.
  * @param what Message elements.
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 inline void delayed_send(const channel_ptr& whom,
                          const std::chrono::duration<Rep,Period>& rtime,
-                         Args&&... what) {
-    static_assert(sizeof...(Args) > 0, "no message to send");
+                         Ts&&... what) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     if (whom) {
         delayed_send_tuple(whom,
                            rtime,
-                           make_any_tuple(std::forward<Args>(what)...));
+                           make_any_tuple(std::forward<Ts>(what)...));
     }
 }
 
@@ -659,7 +661,7 @@ inline void delayed_send(const channel_ptr& whom,
  * @param what Message content as a tuple.
  * @see delayed_send()
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
                                 any_tuple what) {
     get_scheduler()->delayed_reply(self->last_sender(),
@@ -675,28 +677,31 @@ inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
  * @param what Message elements.
  * @see delayed_send()
  */
-template<class Rep, class Period, typename... Args>
+template<class Rep, class Period, typename... Ts>
 inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
-                          Args&&... what) {
-    delayed_reply_tuple(rtime, make_any_tuple(std::forward<Args>(what)...));
+                          Ts&&... what) {
+    delayed_reply_tuple(rtime, make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /** @} */
 
-#ifndef CPPA_DOCUMENTATION
 // matches "send(this, ...)" and "send(self, ...)"
 inline void send_tuple(local_actor* whom, any_tuple what) {
     detail::send_impl(whom, std::move(what));
 }
-template<typename... Args>
-inline void send(local_actor* whom, Args&&... args) {
-    detail::send_tpl_impl(whom, std::forward<Args>(args)...);
+template<typename... Ts>
+inline void send(local_actor* whom, Ts&&... args) {
+    detail::send_tpl_impl(whom, std::forward<Ts>(args)...);
 }
 inline const self_type& operator<<(const self_type& s, any_tuple what) {
     detail::send_impl(s.get(), std::move(what));
     return s;
 }
-#endif // CPPA_DOCUMENTATION
+inline actor_ptr eval_sopts(spawn_options opts, actor_ptr ptr) {
+    if (has_monitor_flag(opts)) self->monitor(ptr);
+    if (has_link_flag(opts)) self->link_to(ptr);
+    return std::move(ptr);
+}
 
 /**
  * @ingroup ActorCreation
@@ -704,213 +709,66 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
  */
 
 /**
- * @brief Spawns a new context-switching or thread-mapped {@link actor}
- *        that executes <tt>fun(args...)</tt>.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @brief Spawns a new {@link actor} that evaluates given arguments.
+ * @param args A functor followed by its arguments.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn(Fun&& fun, Args&&... args) {
-    return get_scheduler()->spawn_impl(Hint,
-                                       std::forward<Fun>(fun),
-                                       std::forward<Args>(args)...);
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn(Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+    return eval_sopts(Options,
+                      get_scheduler()->exec(Options,
+                                            scheduler::init_callback{},
+                                            std::forward<Ts>(args)...));
 }
 
 /**
- * @brief Spawns a new context-switching {@link actor}
- *        that executes <tt>fun(args...)</tt>.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
+ * @brief Spawns an actor of type @p Impl.
+ * @param args Constructor arguments.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
  */
-template<typename Fun, typename... Args>
-actor_ptr spawn(Fun&& fun, Args&&... args) {
-    return spawn<scheduled>(std::forward<Fun>(fun),
-                            std::forward<Args>(args)...);
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn(Ts&&... args) {
+    auto rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
+    return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
 }
 
 /**
- * @brief Spawns a new context-switching or thread-mapped {@link actor}
- *        that executes <tt>fun(args...)</tt> and
- *        joins @p grp immediately.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @tparam Hint A hint to the scheduler for the best scheduling strategy.
+ * @brief Spawns a new actor that evaluates given arguments and
+ *        immediately joins @p grp.
+ * @param args A functor followed by its arguments.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note The spawned actor joins @p grp after its
- *       {@link local_actor::init() init} member function is called but
- *       before it is executed. Hence, the spawned actor already joined
- *       the group before this function returns.
+ * @note The spawned has joined the group before this function returns.
  */
-template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn_in_group(const group_ptr& grp, Fun&& fun, Args&&... args) {
-    return get_scheduler()->spawn_cb_impl(Hint,
-                                          [grp](local_actor* ptr) {
-                                              ptr->join(grp);
-                                          },
-                                          std::forward<Fun>(fun),
-                                          std::forward<Args>(args)...);
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+    auto init_cb = [=](local_actor* ptr) {
+        ptr->join(grp);
+    };
+    return eval_sopts(Options,
+                      get_scheduler()->exec(Options,
+                                            init_cb,
+                                            std::forward<Ts>(args)...));
 }
 
 /**
- * @brief Spawns a new context-switching {@link actor}
- *        that executes <tt>fun(args...)</tt> and
- *        joins @p grp immediately.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
+ * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
+ * @param args Constructor arguments.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note The spawned actor joins @p grp after its
- *       {@link local_actor::init() init} member function is called but
- *       before it is executed. Hence, the spawned actor already joined
- *       the group before this function returns.
- * @note This function is equal to
- *       <tt>spawn_in_group<scheduled>(fun, args...)</tt>.
+ * @note The spawned has joined the group before this function returns.
  */
-template<typename Fun, typename... Args>
-actor_ptr spawn_in_group(Fun&& fun, Args&&... args) {
-    return spawn_in_group<scheduled>(std::forward<Fun>(fun),
-                                     std::forward<Args>(args)...);
-}
-
-/**
- * @brief Spawns an actor of type @p ActorImpl.
- * @param args Optional constructor arguments.
- * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<class ActorImpl, typename... Args>
-actor_ptr spawn(Args&&... args) {
-    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
-    return get_scheduler()->spawn(ptr);
-}
-
-/**
- * @brief Spawns an actor of type @p ActorImpl that joins @p grp immediately.
- * @param grp The group that the newly created actor shall join.
- * @param args Optional constructor arguments.
- * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note The spawned actor joins @p grp after its
- *       {@link local_actor::init() init} member function is called but
- *       before it is executed. Hence, the spawned actor already joined
- *       the group before this function returns.
- */
-template<class ActorImpl, typename... Args>
-actor_ptr spawn_in_group(const group_ptr& grp, Args&&... args) {
-    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
-    return get_scheduler()->spawn(ptr, [&](local_actor* p) { p->join(grp); });
-}
-
-#ifndef CPPA_DOCUMENTATION
-
-template<class ActorImpl, typename... Args>
-actor_ptr spawn_hidden_in_group(const group_ptr& grp, Args&&... args) {
-    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
-    return get_scheduler()->spawn(ptr, [&](local_actor* p) { p->join(grp); },
-                                  scheduled_and_hidden);
-}
-
-template<class ActorImpl, typename... Args>
-actor_ptr spawn_hidden(Args&&... args) {
-    auto ptr = detail::memory::create<ActorImpl>(std::forward<Args>(args)...);
-    return get_scheduler()->spawn(ptr, scheduled_and_hidden);
-}
-
-#endif
-
-/**
- * @brief Spawns a new context-switching or thread-mapped {@link actor}
- *        that executes <tt>fun(args...)</tt> and creates a link between the
- *        calling actor and the new actor.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @tparam Hint A hint to the scheduler for the best scheduling strategy.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn_link(Fun&& fun, Args&&... args) {
-    auto res = spawn<Hint>(std::forward<Fun>(fun), std::forward<Args>(args)...);
-    self->link_to(res);
-    return res;
-}
-
-/**
- * @brief Spawns a new context-switching {@link actor}
- *        that executes <tt>fun(args...)</tt> and creates a link between the
- *        calling actor and the new actor.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
- */
-template<typename Fun, typename... Args>
-actor_ptr spawn_link(Fun&& fun, Args&&... args) {
-    auto res = spawn(std::forward<Fun>(fun), std::forward<Args>(args)...);
-    self->link_to(res);
-    return res;
-}
-
-/**
- * @brief Spawns an actor of type @p ActorImpl and creates a link between the
- *        calling actor and the new actor.
- * @param args Optional constructor arguments.
- * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<class ActorImpl, typename... Args>
-actor_ptr spawn_link(Args&&... args) {
-    auto res = spawn<ActorImpl>(std::forward<Args>(args)...);
-    self->link_to(res);
-    return res;
-}
-
-/**
- * @brief Spawns a new context-switching or thread-mapped {@link actor}
- *        that executes <tt>fun(args...)</tt> and adds a monitor to the
- *        new actor.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @tparam Hint A hint to the scheduler for the best scheduling strategy.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<scheduling_hint Hint, typename Fun, typename... Args>
-actor_ptr spawn_monitor(Fun&& fun, Args&&... args) {
-    auto res = spawn<Hint>(std::forward<Fun>(fun), std::forward<Args>(args)...);
-    self->monitor(res);
-    return res;
-}
-
-/**
- * @brief Spawns a new context-switching {@link actor}
- *        that executes <tt>fun(args...)</tt> and adds a monitor to the
- *        new actor.
- * @param fun A function implementing the actor's behavior.
- * @param args Optional function parameters for @p fun.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note This function is equal to <tt>spawn<scheduled>(fun, args...)</tt>.
- */
-template<typename Fun, typename... Args>
-actor_ptr spawn_monitor(Fun&& fun, Args&&... args) {
-    auto res = spawn(std::forward<Fun>(fun), std::forward<Args>(args)...);
-    self->monitor(res);
-    return res;
-}
-
-/**
- * @brief Spawns an actor of type @p ActorImpl and adds a monitor to the
- *        new actor.
- * @param args Optional constructor arguments.
- * @tparam ActorImpl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<class ActorImpl, typename... Args>
-actor_ptr spawn_monitor(Args&&... args) {
-    auto res = spawn<ActorImpl>(std::forward<Args>(args)...);
-    self->monitor(res);
-    return res;
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+    auto rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
+    rawptr->join(grp);
+    return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
 }
 
 /** @} */
@@ -922,7 +780,8 @@ actor_ptr spawn_monitor(Args&&... args) {
  * @warning Do not call this function in cooperatively scheduled actors.
  */
 inline void await_all_others_done() {
-    detail::actor_count_wait_until((self.unchecked() == nullptr) ? 0 : 1);
+    auto value = (self.unchecked() == nullptr) ? 0 : 1;
+    get_actor_registry()->await_running_count_equal(value);
 }
 
 /**
@@ -987,6 +846,13 @@ inline void quit_actor(const actor_ptr& whom, std::uint32_t reason) {
     CPPA_REQUIRE(reason != exit_reason::normal);
     send(whom, atom("EXIT"), reason);
 }
+
+template<typename... Ts>
+inline void become(Ts&&... args) {
+    self->become(std::forward<Ts>(args)...);
+}
+
+inline void unbecome() { self->unbecome(); }
 
 struct actor_ostream {
 

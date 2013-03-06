@@ -31,9 +31,6 @@
 #ifndef CPPA_GET_HPP
 #define CPPA_GET_HPP
 
-// functions are documented in the implementation headers
-#ifndef CPPA_DOCUMENTATION
-
 #include <tuple>
 #include <cstddef>
 
@@ -108,5 +105,4 @@ inline auto get_cv_aware(const Tuple& tup) -> decltype(get<Pos>(tup)) {
 
 } // namespace cppa
 
-#endif // CPPA_DOCUMENTATION
 #endif // CPPA_GET_HPP

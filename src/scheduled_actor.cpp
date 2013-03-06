@@ -28,13 +28,18 @@
 \******************************************************************************/
 
 
+#include "cppa/on.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/scheduled_actor.hpp"
+#include "cppa/event_based_actor.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
 
 namespace cppa {
 
-scheduled_actor::scheduled_actor(bool enable_chained_send)
-: local_actor(enable_chained_send), next(0), m_scheduler(0), m_hidden(false) { }
+scheduled_actor::scheduled_actor(actor_state init_state, bool chained_send)
+: super(chained_send), next(nullptr), m_has_pending_tout(false)
+, m_pending_tout(0), m_state(init_state), m_scheduler(nullptr)
+, m_hidden(false) { }
 
 void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     CPPA_REQUIRE(sched != nullptr);
@@ -50,8 +55,122 @@ void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     m_scheduler = sched;
 }
 
-bool scheduled_actor::initialized() {
+bool scheduled_actor::initialized() const {
     return m_scheduler != nullptr;
+}
+
+void scheduled_actor::request_timeout(const util::duration& d) {
+    if (!d.valid()) m_has_pending_tout = false;
+    else {
+        auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
+        if (d.is_zero()) {
+            // immediately enqueue timeout message if duration == 0s
+            auto e = this->new_mailbox_element(this, std::move(msg));
+            this->m_mailbox.enqueue(e);
+        }
+        else get_scheduler()->delayed_send(this, d, std::move(msg));
+        m_has_pending_tout = true;
+    }
+}
+
+scheduled_actor::~scheduled_actor() {
+    if (!m_mailbox.closed()) {
+        detail::sync_request_bouncer f{exit_reason()};
+        m_mailbox.close(f);
+    }
+}
+
+void scheduled_actor::cleanup(std::uint32_t reason) {
+    detail::sync_request_bouncer f{reason};
+    m_mailbox.close(f);
+    super::cleanup(reason);
+}
+
+bool scheduled_actor::enqueue(actor_state next_state,
+                              bool* failed,
+                              mailbox_element* e) {
+    CPPA_REQUIRE(   next_state == actor_state::ready
+                 || next_state == actor_state::pending);
+    CPPA_REQUIRE(e->marked == false);
+    switch (m_mailbox.enqueue(e)) {
+        case intrusive::first_enqueued: {
+            auto state = m_state.load();
+            for (;;) {
+                switch (state) {
+                    case actor_state::blocked: {
+                        if (m_state.compare_exchange_weak(state, next_state)) {
+                            CPPA_REQUIRE(m_scheduler != nullptr);
+                            if (next_state == actor_state::ready) {
+                                CPPA_LOG_DEBUG("enqueued actor with id " << id()
+                                               << " to job queue");
+                                m_scheduler->enqueue(this);
+                                return false;
+                            }
+                            return true;
+                        }
+                        break;
+                    }
+                    case actor_state::about_to_block: {
+                        if (m_state.compare_exchange_weak(state, actor_state::ready)) {
+                            return false;
+                        }
+                        break;
+                    }
+                    default: return false;
+                }
+            }
+            break;
+        }
+        case intrusive::queue_closed: {
+            if (failed) *failed = true;
+            break;
+        }
+        default: break;
+    }
+    return false;
+}
+
+bool scheduled_actor::sync_enqueue_impl(actor_state next,
+                                       const actor_ptr& sender,
+                                       any_tuple& msg,
+                                       message_id_t id) {
+    bool err = false;
+    auto ptr = new_mailbox_element(sender, std::move(msg), id);
+    bool res = enqueue(next, &err, ptr);
+    if (err) {
+        detail::sync_request_bouncer f{exit_reason()};
+        f(sender, id);
+        CPPA_REQUIRE(res == false);
+    }
+    return res;
+}
+
+actor_state scheduled_actor::compare_exchange_state(actor_state expected,
+                                                    actor_state desired) {
+    auto e = expected;
+    do { if (m_state.compare_exchange_weak(e, desired)) return desired; }
+    while (e == expected);
+    return e;
+}
+
+void scheduled_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
+    enqueue_impl(actor_state::ready, sender, std::move(msg));
+}
+
+bool scheduled_actor::chained_enqueue(const actor_ptr& sender, any_tuple msg) {
+    return enqueue_impl(actor_state::pending, sender, std::move(msg));
+}
+
+void scheduled_actor::sync_enqueue(const actor_ptr& sender,
+                                   message_id_t id,
+                                   any_tuple msg) {
+    sync_enqueue_impl(actor_state::ready, sender, msg, id);
+}
+
+bool scheduled_actor::chained_sync_enqueue(const actor_ptr& sender,
+                                           message_id_t id,
+                                           any_tuple msg) {
+    return sync_enqueue_impl(actor_state::pending, sender, msg, id);
 }
 
 } // namespace cppa

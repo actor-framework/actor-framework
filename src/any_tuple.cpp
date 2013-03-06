@@ -29,26 +29,20 @@
 
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/detail/empty_tuple.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
-namespace {
-inline detail::empty_tuple* s_empty_tuple() {
-    return detail::singleton_manager::get_empty_tuple();
-}
-} // namespace <anonymous>
-
-any_tuple::any_tuple() : m_vals(s_empty_tuple()) { }
+any_tuple::any_tuple() : m_vals(get_empty_tuple()) { }
 
 any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
 
-any_tuple::any_tuple(any_tuple&& other) : m_vals(s_empty_tuple()) {
+any_tuple::any_tuple(any_tuple&& other) : m_vals(get_empty_tuple()) {
     m_vals.swap(other.m_vals);
 }
 
-any_tuple::any_tuple(const value_ptr& vals) : m_vals(vals) { }
+any_tuple::any_tuple(const data_ptr& vals) : m_vals(vals) { }
 
 any_tuple& any_tuple::operator=(any_tuple&& other) {
     m_vals.swap(other.m_vals);
@@ -56,7 +50,7 @@ any_tuple& any_tuple::operator=(any_tuple&& other) {
 }
 
 void any_tuple::reset() {
-    m_vals.reset(s_empty_tuple());
+    m_vals.reset(get_empty_tuple());
 }
 
 size_t any_tuple::size() const {

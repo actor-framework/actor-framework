@@ -122,7 +122,7 @@ class behavior_stack
     template<class Policy, class Client>
     void exec(Policy& policy, Client* client) {
         while (!empty()) {
-            invoke(policy, client, client->receive_node());
+            invoke(policy, client, client->await_message());
             cleanup();
         }
     }
@@ -140,7 +140,7 @@ class behavior_stack
         }
     }
 
-    inline void erase_at(std::vector<element_type>::reverse_iterator i) {
+    inline void rerase_at(std::vector<element_type>::reverse_iterator i) {
         // base iterator points to the element *after* the correct element
         if (i != m_elements.rend()) erase_at(i.base() - 1);
     }
@@ -152,7 +152,7 @@ class behavior_stack
 
     template<typename UnaryPredicate>
     inline void rerase_if(UnaryPredicate p) {
-        erase_at(std::find_if(m_elements.rbegin(), m_elements.rend(), p));
+        rerase_at(std::find_if(m_elements.rbegin(), m_elements.rend(), p));
     }
 
 };

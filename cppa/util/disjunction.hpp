@@ -35,12 +35,12 @@
 
 namespace cppa { namespace util {
 
-template<typename... BooleanConstants>
+template<bool... Values>
 struct disjunction;
 
-template<typename Head, typename... Tail>
+template<bool Head, bool... Tail>
 struct disjunction<Head, Tail...>
-    : std::integral_constant<bool, Head::value || disjunction<Tail...>::value> {
+    : std::integral_constant<bool, Head || disjunction<Tail...>::value> {
 };
 
 template<>

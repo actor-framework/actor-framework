@@ -35,6 +35,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <type_traits>
 
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
@@ -61,6 +62,8 @@ class partial_function {
  public:
 
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
+
+    static constexpr bool may_have_timeout = false;
 
     partial_function() = default;
     partial_function(partial_function&&) = default;
@@ -95,28 +98,23 @@ class partial_function {
         return behavior{m_impl->or_else(other.m_impl)};
     }
 
-    template<typename F>
-    inline behavior or_else(const timeout_definition<F>& tdef) const {
-        generic_timeout_definition gtd{tdef.timeout, tdef.handler};
-        return behavior{m_impl->copy(gtd)};
-    }
+    template<typename T>
+    typename std::conditional<T::may_have_timeout,behavior,partial_function>::type
+    or_else(const T& arg) const;
 
-    template<typename... Cases>
-    inline partial_function or_else(const match_expr<Cases...>& mexpr) const {
-        return m_impl->or_else(mexpr.as_behavior_impl());
-    }
+    template<typename T0, typename T1, typename... Ts>
+    typename std::conditional<
+        util::disjunction<
+            T0::may_have_timeout,
+            T1::may_have_timeout,
+            Ts::may_have_timeout...
+        >::value,
+        behavior,
+        partial_function
+    >::type
+    or_else(const T0& arg0, const T1& arg1, const Ts&... args) const;
 
-    template<typename Arg0, typename Arg1, typename... Args>
-    typename util::if_else<
-            util::disjunction<
-                is_timeout_definition<Arg0>,
-                is_timeout_definition<Arg1>,
-                is_timeout_definition<Args>...>,
-            behavior,
-            util::wrapped<partial_function> >::type
-    or_else(const Arg0& arg0, const Arg1& arg1, const Args&... args) const {
-        return m_impl->or_else(match_expr_concat(arg0, arg1, args...));
-    }
+    inline const impl_ptr& as_behavior_impl() const;
 
  private:
 
@@ -124,15 +122,45 @@ class partial_function {
 
 };
 
-template<typename Arg0, typename... Args>
-typename util::if_else<
-            util::disjunction<
-                is_timeout_definition<Arg0>,
-                is_timeout_definition<Args>...>,
-            behavior,
-            util::wrapped<partial_function> >::type
-match_expr_convert(const Arg0& arg0, const Args&... args) {
-    return {match_expr_concat(arg0, args...)};
+template<typename T, typename... Ts>
+typename std::conditional<
+    util::disjunction<
+        T::may_have_timeout,
+        Ts::may_have_timeout...
+    >::value,
+    behavior,
+    partial_function
+>::type
+match_expr_convert(const T& arg0, const Ts&... args) {
+    return detail::match_expr_concat(arg0, args...);
+}
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+inline const partial_function::impl_ptr& partial_function::as_behavior_impl() const {
+    return m_impl;
+}
+
+template<typename T>
+typename std::conditional<T::may_have_timeout,behavior,partial_function>::type
+partial_function::or_else(const T& arg) const {
+    return m_impl->or_else(arg.as_behavior_impl());
+}
+
+template<typename T0, typename T1, typename... Ts>
+typename std::conditional<
+    util::disjunction<
+        T0::may_have_timeout,
+        T1::may_have_timeout,
+        Ts::may_have_timeout...
+    >::value,
+    behavior,
+    partial_function
+>::type
+partial_function::or_else(const T0& arg0, const T1& arg1, const Ts&... args) const {
+    return m_impl->or_else(match_expr_convert(arg0, arg1, args...).as_behavior_impl());
 }
 
 } // namespace cppa

@@ -68,9 +68,7 @@ class tuple_view : public abstract_tuple {
     /**
      * @warning @p tuple_view does @b NOT takes ownership for given pointers
      */
-    tuple_view(Ts*... args)
-        : super(tuple_impl_info::statically_typed), m_data(args...) {
-    }
+    tuple_view(Ts*... args) : super(false), m_data(args...) { }
 
     inline data_type& data() {
         return m_data;

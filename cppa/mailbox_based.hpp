@@ -28,41 +28,70 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SCHEDULING_HINT_HPP
-#define CPPA_SCHEDULING_HINT_HPP
+#ifndef CPPA_MAILBOX_BASED_HPP
+#define CPPA_MAILBOX_BASED_HPP
+
+#include <type_traits>
+
+#include "cppa/detail/sync_request_bouncer.hpp"
+#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa {
 
-/**
- * @brief Denotes whether a user wants an actor to take part in
- *        cooperative scheduling or not.
- */
-enum scheduling_hint {
+template<typename T>
+struct has_blocking_receive;
 
-    /**
-     * @brief Indicates that an actor takes part in cooperative scheduling.
-     */
-    scheduled,
+template<class Base, class Subtype>
+class mailbox_based : public Base {
 
-    /**
-     * @brief Indicates that an actor should run in its own thread.
-     */
-    detached,
+    typedef detail::disposer del;
 
-    /**
-     * @brief Indicates that an actor should run in its own thread,
-     *        but it is ignored by {@link await_others_done()}.
-     */
-    detached_and_hidden,
+ public:
 
-    /**
-     * @brief Indicates that an actor takes part in cooperative scheduling,
-     *        but it is ignored by {@link await_others_done()}.
-     */
-    scheduled_and_hidden
+    ~mailbox_based() {
+        if (!m_mailbox.closed()) {
+            detail::sync_request_bouncer f{this->exit_reason()};
+            m_mailbox.close(f);
+        }
+    }
+
+ protected:
+
+    typedef mailbox_based combined_type;
+
+    typedef detail::recursive_queue_node mailbox_element;
+
+    typedef typename std::conditional<
+                has_blocking_receive<Subtype>::value,
+                intrusive::blocking_single_reader_queue<mailbox_element,del>,
+                intrusive::single_reader_queue<mailbox_element,del>
+            >::type
+            mailbox_type;
+
+    template<typename... Ts>
+    mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+
+    void cleanup(std::uint32_t reason) {
+        detail::sync_request_bouncer f{reason};
+        m_mailbox.close(f);
+        Base::cleanup(reason);
+    }
+
+    template<typename... Ts>
+    inline mailbox_element* new_mailbox_element(Ts&&... args) {
+        return mailbox_element::create(std::forward<Ts>(args)...);
+    }
+
+    mailbox_type m_mailbox;
+
+ private:
+
+    inline Subtype* dthis() { return static_cast<Subtype*>(this); }
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_SCHEDULING_HINT_HPP
+#endif //CPPA_MAILBOX_BASED_HPP

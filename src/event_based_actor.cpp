@@ -31,12 +31,48 @@
 #include <iostream>
 #include "cppa/to_string.hpp"
 
+#include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
 
-event_based_actor::event_based_actor() : super(super::blocked) { }
+class default_scheduled_actor : public event_based_actor {
+
+    typedef event_based_actor super;
+
+ public:
+
+    typedef std::function<void()> fun_type;
+
+    default_scheduled_actor(fun_type&& fun) : m_fun(std::move(fun)) { }
+
+    void init() {
+        become (
+            on(atom("RUN")) >> [=] {
+                CPPA_LOGS_TRACE("init$lambda", "");
+                unbecome();
+                m_fun();
+            }
+        );
+    }
+
+    scheduled_actor_type impl_type() {
+        return default_event_based_impl;
+    }
+
+ private:
+
+    fun_type m_fun;
+
+};
+
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> fun) {
+    return detail::memory::create<default_scheduled_actor>(std::move(fun));
+}
+
+event_based_actor::event_based_actor() : super(actor_state::blocked, true) { }
 
 void event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
@@ -51,24 +87,14 @@ void event_based_actor::dequeue_response(behavior&, message_id_t) {
 }
 
 resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
-#   ifdef CPPA_DEBUG
-    auto st = m_state.load();
-    switch (st) {
-        case abstract_scheduled_actor::ready:
-        case abstract_scheduled_actor::pending:
-            // state ok
-            break;
-        default: {
-            std::cerr << "UNEXPECTED STATE: " << st << std::endl;
-            // failed requirement calls abort() and prints stack trace
-            CPPA_REQUIRE(   st == abstract_scheduled_actor::ready
-                         || st == abstract_scheduled_actor::pending);
-        }
-    }
-#   endif // CPPA_DEBUG
+    CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
+    CPPA_REQUIRE(   state() == actor_state::ready
+                 || state() == actor_state::pending);
     scoped_self_setter sss{this};
     auto done_cb = [&]() {
-        m_state.store(abstract_scheduled_actor::done);
+        CPPA_LOG_TRACE("");
+        if (exit_reason() == exit_reason::not_exited) quit(exit_reason::normal);
+        set_state(actor_state::done);
         m_bhvr_stack.clear();
         m_bhvr_stack.cleanup();
         on_exit();
@@ -77,54 +103,81 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
     };
     CPPA_REQUIRE(next_job == nullptr);
     try {
-        detail::recursive_queue_node* e = nullptr;
-        for (;;) {
-            e = m_mailbox.try_pop();
+        //auto e = m_mailbox.try_pop();
+        for (auto e = m_mailbox.try_pop(); ; e = m_mailbox.try_pop()) {
+            //e = m_mailbox.try_pop();
             if (e == nullptr) {
                 CPPA_REQUIRE(next_job == nullptr);
+                CPPA_LOG_DEBUG("no more element in mailbox; going to block");
                 next_job.swap(m_chained_actor);
-                m_state.store(abstract_scheduled_actor::about_to_block);
+                set_state(actor_state::about_to_block);
                 std::atomic_thread_fence(std::memory_order_seq_cst);
-                if (m_mailbox.can_fetch_more() == false) {
-                    switch (compare_exchange_state(
-                                abstract_scheduled_actor::about_to_block,
-                                abstract_scheduled_actor::blocked)) {
-                        case abstract_scheduled_actor::ready:
+                if (this->m_mailbox.can_fetch_more() == false) {
+                    switch (compare_exchange_state(actor_state::about_to_block,
+                                                   actor_state::blocked)) {
+                        case actor_state::ready:
                             // interrupted by arriving message
                             // restore members
                             CPPA_REQUIRE(m_chained_actor == nullptr);
                             next_job.swap(m_chained_actor);
+                            CPPA_LOG_DEBUG("switched back to ready: "
+                                           "interrupted by arriving message");
                             break;
-                        case abstract_scheduled_actor::blocked:
+                        case actor_state::blocked:
+                            CPPA_LOG_DEBUG("set state successfully to blocked");
                             // done setting actor to blocked
                             return resume_result::actor_blocked;
-                        case abstract_scheduled_actor::pending:
-                            CPPA_CRITICAL("illegal state: pending");
-                        case abstract_scheduled_actor::done:
-                            CPPA_CRITICAL("illegal state: done");
-                        case abstract_scheduled_actor::about_to_block:
-                            CPPA_CRITICAL("illegal state: about_to_block");
                         default:
+                            CPPA_LOG_ERROR("invalid state");
                             CPPA_CRITICAL("invalid state");
                     };
                 }
                 else {
-                    m_state.store(abstract_scheduled_actor::ready);
+                    CPPA_LOG_DEBUG("switched back to ready: "
+                                   "mailbox can fetch more");
+                    set_state(actor_state::ready);
                     CPPA_REQUIRE(m_chained_actor == nullptr);
                     next_job.swap(m_chained_actor);
                 }
             }
-            else if (m_bhvr_stack.invoke(m_policy, this, e)) {
-                if (m_bhvr_stack.empty()) {
-                    done_cb();
-                    return resume_result::actor_done;
+            else {
+                CPPA_LOG_DEBUG("try to invoke message: " << to_string(e->msg));
+                if (m_bhvr_stack.invoke(m_policy, this, e)) {
+                    CPPA_LOG_DEBUG_IF(m_chained_actor,
+                                      "set actor with ID "
+                                      << m_chained_actor->id()
+                                      << " as successor");
+                    if (m_bhvr_stack.empty()) {
+                        CPPA_LOG_DEBUG("behavior stack empty");
+                        done_cb();
+                        return resume_result::actor_done;
+                    }
+                    m_bhvr_stack.cleanup();
                 }
-                m_bhvr_stack.cleanup();
             }
         }
     }
-    catch (actor_exited& what) { cleanup(what.reason()); }
-    catch (...)                { cleanup(exit_reason::unhandled_exception); }
+    catch (actor_exited& what) {
+        CPPA_LOG_INFO("actor died because of exception: actor_exited, "
+                      "reason = " << what.reason());
+        if (exit_reason() == exit_reason::not_exited) {
+            quit(what.reason());
+        }
+    }
+    catch (std::exception& e) {
+        CPPA_LOG_WARNING("actor died because of exception: "
+                         << detail::demangle(typeid(e))
+                         << ", what() = " << e.what());
+        if (exit_reason() == exit_reason::not_exited) {
+            quit(exit_reason::unhandled_exception);
+        }
+    }
+    catch (...) {
+        CPPA_LOG_WARNING("actor died because of an unknown exception");
+        if (exit_reason() == exit_reason::not_exited) {
+            quit(exit_reason::unhandled_exception);
+        }
+    }
     done_cb();
     return resume_result::actor_done;
 }
@@ -149,12 +202,19 @@ void event_based_actor::become_waiting_for(behavior&& bhvr, message_id_t mf) {
 }
 
 void event_based_actor::quit(std::uint32_t reason) {
-    if (reason == exit_reason::normal) {
-        cleanup(exit_reason::normal);
-        m_bhvr_stack.clear();
-    }
-    else {
-        abstract_scheduled_actor::quit(reason);
+    CPPA_LOG_TRACE("reason = " << reason
+                   << ", class " << detail::demangle(typeid(*this)));
+    cleanup(reason);
+    m_bhvr_stack.clear();
+    if (reason == exit_reason::unallowed_function_call) {
+        CPPA_LOG_WARNING("actor tried to use a blocking function");
+        // when using receive(), the non-blocking nature of event-based
+        // actors breaks any assumption the user has about his code,
+        // in particular, receive_loop() is a deadlock when not throwing
+        // an exception here
+        aout << "*** warning: event-based actor killed because it tried to "
+                "use receive()\n";
+        throw actor_exited(reason);
     }
 }
 

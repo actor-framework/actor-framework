@@ -38,23 +38,21 @@
 
 #include "cppa/config.hpp"
 #include "cppa/either.hpp"
+#include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/scheduled_actor.hpp"
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/abstract_scheduled_actor.hpp"
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
 /**
  * @brief Base class for all event-based actor implementations.
  */
 class event_based_actor : public scheduled_actor {
-#else // CPPA_DOCUMENTATION
-class event_based_actor : public detail::abstract_scheduled_actor {
-#endif // CPPA_DOCUMENTATION
 
     friend class detail::receive_policy;
-    typedef detail::abstract_scheduled_actor super;
+
+    typedef scheduled_actor super;
 
  public:
 
@@ -81,11 +79,13 @@ class event_based_actor : public detail::abstract_scheduled_actor {
      */
     virtual void init() = 0;
 
-    void quit(std::uint32_t reason = exit_reason::normal);
+    virtual void quit(std::uint32_t reason = exit_reason::normal);
 
     bool has_behavior();
 
     scheduled_actor_type impl_type();
+
+    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
 
  protected:
 
@@ -147,7 +147,7 @@ class event_based_actor : public detail::abstract_scheduled_actor {
     static const detail::receive_policy_flag receive_flag = detail::rp_sequential;
     inline void handle_timeout(behavior& bhvr) {
         CPPA_REQUIRE(bhvr.timeout().valid());
-        m_has_pending_timeout_request = false;
+        reset_timeout();
         bhvr.handle_timeout();
         if (m_bhvr_stack.empty() == false) {
             request_timeout(get_behavior().timeout());

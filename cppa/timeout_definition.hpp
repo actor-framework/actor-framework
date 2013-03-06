@@ -37,17 +37,15 @@
 
 namespace cppa {
 
+namespace detail { class behavior_impl; }
+
 template<typename F>
 struct timeout_definition {
+    static constexpr bool may_have_timeout = true;
     util::duration timeout;
     F handler;
+    detail::behavior_impl* as_behavior_impl() const;
 };
-
-template<typename T>
-struct is_timeout_definition : std::false_type { };
-
-template<typename F>
-struct is_timeout_definition<timeout_definition<F> > : std::true_type { };
 
 typedef timeout_definition<std::function<void()> > generic_timeout_definition;
 

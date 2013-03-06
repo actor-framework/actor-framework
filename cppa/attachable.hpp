@@ -31,6 +31,7 @@
 #ifndef CPPA_ATTACHABLE_HPP
 #define CPPA_ATTACHABLE_HPP
 
+#include <memory>
 #include <cstdint>
 #include <typeinfo>
 
@@ -54,17 +55,19 @@ class attachable {
      * @brief Represents a pointer to a value with its RTTI.
      */
     struct token {
+
         /**
          * @brief Denotes the type of @c ptr.
          */
         const std::type_info& subtype;
+
         /**
          * @brief Any value, used to identify @c attachable instances.
          */
         const void* ptr;
-        inline token(const std::type_info& msubtype, const void* mptr)
-            : subtype(msubtype), ptr(mptr) {
-        }
+
+        token(const std::type_info& subtype, const void* ptr);
+
     };
 
     virtual ~attachable();
@@ -85,6 +88,12 @@ class attachable {
     virtual bool matches(const token& what) = 0;
 
 };
+
+/**
+ * @brief A managed {@link attachable} pointer.
+ * @relates attachable
+ */
+typedef std::unique_ptr<attachable> attachable_ptr;
 
 } // namespace cppa
 

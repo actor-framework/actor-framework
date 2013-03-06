@@ -32,8 +32,9 @@
 #define CPPA_ACTOR_PROXY_HPP
 
 #include "cppa/actor.hpp"
+#include "cppa/extend.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
-#include "cppa/enable_weak_ptr_mixin.hpp"
+#include "cppa/enable_weak_ptr.hpp"
 
 #include "cppa/network/message_header.hpp"
 
@@ -43,10 +44,11 @@ class actor_proxy_cache;
 
 /**
  * @brief Represents a remote actor.
+ * @extends actor
  */
-class actor_proxy : public enable_weak_ptr_mixin<actor> {
+class actor_proxy : public extend<actor,actor_proxy>::with<enable_weak_ptr> {
 
-    typedef enable_weak_ptr_mixin<actor> super;
+    typedef combined_type super;
 
  public:
 

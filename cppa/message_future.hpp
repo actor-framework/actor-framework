@@ -31,9 +31,11 @@
 #ifndef MESSAGE_FUTURE_HPP
 #define MESSAGE_FUTURE_HPP
 
+#include <cstdint>
 #include <type_traits>
 
 #include "cppa/on.hpp"
+#include "cppa/atom.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/message_id.hpp"
@@ -130,11 +132,7 @@ class message_future {
     message_future(const message_future&) = default;
     message_future& operator=(const message_future&) = default;
 
-#   ifndef CPPA_DOCUMENTATION
-
     inline message_future(const message_id_t& from) : m_mid(from) { }
-
-#   endif
 
  private:
 
@@ -147,7 +145,7 @@ class message_future {
             return false;
         };
         return {
-            on<atom("EXITED"),std::uint32_t>() >> skip_message,
+            on(atom("EXITED"), val<std::uint32_t>) >> skip_message,
             on(atom("VOID")) >> skip_message,
             on(atom("TIMEOUT")) >> handle_sync_timeout,
             (on(any_vals, arg_match) >> fs)...

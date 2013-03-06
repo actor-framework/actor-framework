@@ -31,22 +31,19 @@
 #ifndef CPPA_SCHEDULED_ACTOR_DUMMY_HPP
 #define CPPA_SCHEDULED_ACTOR_DUMMY_HPP
 
-#include "cppa/detail/abstract_scheduled_actor.hpp"
+#include "cppa/scheduled_actor.hpp"
 
 namespace cppa { namespace detail {
 
-struct scheduled_actor_dummy : abstract_scheduled_actor {
+struct scheduled_actor_dummy : scheduled_actor {
+    scheduled_actor_dummy();
+    void enqueue(const actor_ptr&, any_tuple);
+    void sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
     resume_result resume(util::fiber*, actor_ptr&);
     void quit(std::uint32_t);
     void dequeue(behavior&);
     void dequeue(partial_function&);
     void dequeue_response(behavior&, message_id_t);
-    void link_to(const intrusive_ptr<actor>&);
-    void unlink_from(const intrusive_ptr<actor>&);
-    bool establish_backlink(const intrusive_ptr<actor>&);
-    bool remove_backlink(const intrusive_ptr<actor>&);
-    void detach(const attachable::token&);
-    bool attach(attachable*);
     void do_become(behavior&&, bool);
     void become_waiting_for(behavior&&, message_id_t);
     bool has_behavior();

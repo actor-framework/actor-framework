@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include "cppa/actor.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/util/scope_guard.hpp"
 
@@ -19,16 +20,21 @@ const char* cppa_strip_path(const char* fname);
 void cppa_unexpected_message(const char* fname, size_t line_num);
 void cppa_unexpected_timeout(const char* fname, size_t line_num);
 
-#define CPPA_FORMAT_STR(stream, fname, line, message)                          \
-    stream << cppa_strip_path(fname) << ":"                                    \
-           << cppa_fill4(line) << " " << message                               \
-           << std::endl
+#define CPPA_STREAMIFY(fname, line, message)                                   \
+    cppa_strip_path(fname) << ":" << cppa_fill4(line) << " " << message
 
-#define CPPA_PRINT(message)                                                    \
-    CPPA_FORMAT_STR(std::cout, __FILE__, __LINE__, message)
+#define CPPA_PRINTC(filename, linenum, message)                                \
+    CPPA_LOGF_INFO(CPPA_STREAMIFY(filename, linenum, message));               \
+    std::cout << CPPA_STREAMIFY(filename, linenum, message) << std::endl
 
-#define CPPA_PRINTERR(message)                                                 \
-    CPPA_FORMAT_STR(std::cerr, __FILE__, __LINE__, message)
+#define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
+
+#define CPPA_PRINTERRC(filename, linenum, message)                             \
+    CPPA_LOGF_ERROR(CPPA_STREAMIFY(filename, linenum, message));               \
+    std::cerr << "ERROR: " << CPPA_STREAMIFY(filename, linenum, message)       \
+              << std::endl
+
+#define CPPA_PRINTERR(message) CPPA_PRINTERRC(__FILE__, __LINE__, message)
 
 template<typename T1, typename T2>
 struct both_integral {
@@ -53,7 +59,7 @@ inline std::string cppa_stream_arg(const bool& value) {
 }
 
 inline void cppa_passed(const char* fname, int line_number) {
-    CPPA_FORMAT_STR(std::cout, fname, line_number, "passed");
+    CPPA_PRINTC(fname, line_number, "passed");
 }
 
 template<typename V1, typename V2>
@@ -61,11 +67,9 @@ inline void cppa_failed(const V1& v1,
                         const V2& v2,
                         const char* fname,
                         int line_number) {
-    CPPA_FORMAT_STR(std::cout, fname, line_number,
-                    "ERROR: expected value: "
-                    << cppa_stream_arg(v2)
-                    << ", found: "
-                    << cppa_stream_arg(v1));
+    CPPA_PRINTERRC(fname, line_number,
+                   "expected value: " << cppa_stream_arg(v2)
+                   << ", found: " << cppa_stream_arg(v1));
     cppa_inc_error_count();
 }
 

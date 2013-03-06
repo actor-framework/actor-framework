@@ -16,6 +16,7 @@ namespace {
 size_t s_pongs = 0;
 
 behavior ping_behavior(size_t num_pings) {
+    CPPA_LOGF_TRACE("");
     return  (
         on(atom("pong"), arg_match) >> [num_pings](int value) {
             CPPA_LOGF_ERROR_IF(!self->last_sender(), "last_sender() == nullptr");
@@ -38,6 +39,7 @@ behavior ping_behavior(size_t num_pings) {
 }
 
 behavior pong_behavior() {
+    CPPA_LOGF_TRACE("");
     return  (
         on<atom("ping"), int>() >> [](int value) {
             //cout << to_string(self->last_dequeued()) << endl;
@@ -67,11 +69,9 @@ void ping(size_t num_pings) {
 actor_ptr spawn_event_based_ping(size_t num_pings) {
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
-    return factory::event_based(
-        [num_pings] {
-            self->become(ping_behavior(num_pings));
-        }
-    ).spawn();
+    return spawn([=] {
+        become(ping_behavior(num_pings));
+    });
 }
 
 void pong(actor_ptr ping_actor) {
