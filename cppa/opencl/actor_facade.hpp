@@ -82,7 +82,7 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
         }
     }
 
-    void enqueue(actor* sender, any_tuple msg) {
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, indices);
     }
@@ -90,7 +90,7 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
  private:
 
     template<long... Is>
-    void enqueue_impl(actor* sender, any_tuple msg, util::int_list<Is...>) {
+    void enqueue_impl(const actor_ptr& sender, any_tuple msg, util::int_list<Is...>) {
         auto opt = tuple_cast<Args...>(msg);
         if (opt) {
             response_handle handle{this, sender, message_id_t{}};
