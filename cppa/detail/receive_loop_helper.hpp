@@ -51,23 +51,14 @@ struct receive_while_helper {
     template<typename S>
     receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt)) { }
 
-    void operator()(behavior& bhvr) {
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        static_assert(sizeof...(Ts) > 0,
+                      "operator() requires at least one argument");
+        behavior tmp = match_expr_convert(std::forward<Ts>(args)...);
         local_actor* sptr = self;
-        while (m_stmt()) sptr->dequeue(bhvr);
+        while (m_stmt()) sptr->dequeue(tmp);
     }
-
-    void operator()(partial_function& fun) {
-        local_actor* sptr = self;
-        while (m_stmt()) sptr->dequeue(fun);
-    }
-
-    template<typename Arg0, typename... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
-                                      std::forward<Args>(args)...);
-        (*this)(tmp);
-    }
-
 
 };
 
@@ -81,21 +72,11 @@ class receive_for_helper {
 
     receive_for_helper(T& first, const T& last) : begin(first), end(last) { }
 
-    void operator()(behavior& bhvr) {
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        auto tmp = match_expr_convert(std::forward<Ts>(args)...);
         local_actor* sptr = self;
-        for ( ; begin != end; ++begin) sptr->dequeue(bhvr);
-    }
-
-    void operator()(partial_function& fun) {
-        local_actor* sptr = self;
-        for ( ; begin != end; ++begin) sptr->dequeue(fun);
-    }
-
-    template<typename Arg0, typename... Args>
-    void operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
-                                      std::forward<Args>(args)...);
-        (*this)(tmp);
+        for ( ; begin != end; ++begin) sptr->dequeue(tmp);
     }
 
 };
@@ -106,10 +87,7 @@ class do_receive_helper {
 
  public:
 
-    template<typename... Args>
-    do_receive_helper(Args&&... args)
-        : m_bhvr(match_expr_convert(std::forward<Args>(args)...)) {
-    }
+    inline do_receive_helper(behavior&& bhvr) : m_bhvr(std::move(bhvr)) { }
 
     do_receive_helper(do_receive_helper&&) = default;
 

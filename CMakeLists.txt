@@ -137,7 +137,6 @@ set(LIBCPPA_SRC
     src/primitive_variant.cpp
     src/process_information.cpp
     src/protocol.cpp
-    src/receive.cpp
     src/recursive_queue_node.cpp
     src/ref_counted.cpp
     src/response_handle.cpp

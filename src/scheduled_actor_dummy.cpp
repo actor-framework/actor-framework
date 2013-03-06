@@ -38,14 +38,13 @@ scheduled_actor_dummy::scheduled_actor_dummy()
 void scheduled_actor_dummy::enqueue(const actor_ptr&, any_tuple) { }
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue(partial_function&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id_t) { }
+void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
 void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior&&, message_id_t) { }
+void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
 
 void scheduled_actor_dummy::sync_enqueue(const actor_ptr&,
-                                         message_id_t,
+                                         message_id,
                                          any_tuple) { }
 
 resume_result scheduled_actor_dummy::resume(util::fiber*,actor_ptr&) {

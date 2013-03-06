@@ -42,11 +42,11 @@
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/memory_cached.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
-#include "cppa/memory_cached.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/recursive_queue_node.hpp"
@@ -89,11 +89,6 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
 
     typedef combined_type super;
 
-    friend class scheduler;
-    friend class detail::memory;
-    friend class detail::receive_policy;
-    template<typename> friend class detail::basic_memory_cache;
-
  public:
 
     /**
@@ -119,35 +114,10 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
      * linked actors, sets its state to @c exited and finishes execution.
      * @param reason Exit reason that will be send to
      *        linked actors and monitors.
+     * @note Throws {@link actor_exited} to unwind the stack
+     *       when called in context-switching or thread-based actors.
      */
     virtual void quit(std::uint32_t reason = exit_reason::normal) = 0;
-
-    /**
-     * @brief Removes the first element from the mailbox @p pfun is defined
-     *        for and invokes @p pfun with the removed element.
-     *        Blocks until a matching message arrives if @p pfun is not
-     *        defined for any message in the actor's mailbox.
-     * @param pfun A partial function denoting the actor's response to the
-     *             next incoming message.
-     * @warning You should not call this member function by hand.
-     *          Use the {@link cppa::receive receive} function or
-     *          the @p become member function in case of event-based actors.
-     */
-    virtual void dequeue(partial_function& pfun) = 0;
-
-    /**
-     * @brief Removes the first element from the mailbox @p bhvr is defined
-     *        for and invokes @p bhvr with the removed element.
-     *        Blocks until either a matching message arrives if @p bhvr is not
-     *        defined for any message in the actor's mailbox or until a
-     *        timeout occurs.
-     * @param bhvr A partial function with optional timeout denoting the
-     *             actor's response to the next incoming message.
-     * @warning You should not call this member function by hand.
-     *          Use the {@link cppa::receive receive} function or
-     *          the @p become member function in case of event-based actors.
-     */
-    virtual void dequeue(behavior& bhvr) = 0;
 
     /**
      * @brief Checks whether this actor traps exit messages.
@@ -191,47 +161,13 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
      * @param whom The actor that should be monitored by this actor.
      * @note Each call to @p monitor creates a new, independent monitor.
      */
-    void monitor(actor_ptr whom);
+    void monitor(const actor_ptr& whom);
 
     /**
      * @brief Removes a monitor from @p whom.
      * @param whom A monitored actor.
      */
-    void demonitor(actor_ptr whom);
-
-    // become/unbecome API
-
-    /**
-     * @brief Sets the actor's behavior to @p bhvr and discards the
-     *        previous behavior if the policy is {@link discard_behavior}.
-     */
-    template<bool Discard>
-    inline void become(behavior_policy<Discard>, behavior bhvr);
-
-    /**
-     * @brief Sets the actor's behavior and discards the
-     *        previous behavior if the policy is {@link discard_behavior}.
-     */
-    template<bool Discard, typename T0, typename T1, typename... Ts>
-    inline void become(behavior_policy<Discard>, T0&& a0, T1&& a1, Ts&&... as);
-
-    /**
-     * @brief Sets the actor's behavior;
-     *        equal to <tt>become(discard_old, bhvr</tt>.
-     */
-    inline void become(behavior bhvr);
-
-    /**
-     * @brief Sets the actor's behavior;
-     *        equal to <tt>become(discard_old, bhvr</tt>.
-     */
-    template<typename... Cases, typename... Ts>
-    inline void become(match_expr<Cases...> a, Ts&&... as);
-
-    /**
-     * @brief Returns to a previous behavior if available.
-     */
-    inline void unbecome();
+    void demonitor(const actor_ptr& whom);
 
     /**
      * @brief Can be overridden to initialize an actor before any
@@ -256,6 +192,7 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
     std::vector<group_ptr> joined_groups();
 
     /**
+     * @ingroup BlockingAPI
      * @brief Executes an actor's behavior stack until it is empty.
      *
      * This member function allows thread-based and context-switching actors
@@ -308,146 +245,108 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
         else quit(exit_reason::unhandled_sync_failure);
     }
 
-    // library-internal members and member functions that shall
-    // not appear in the documentation
+    /** @cond PRIVATE */
 
-#   ifndef CPPA_DOCUMENTATION
+    virtual void dequeue(behavior& bhvr) = 0;
 
-    // backward compatiblity, handle_response was part of local_actor
-    // until version 0.6
-    sync_handle_helper handle_response(const message_future& mf);
+    inline void dequeue(behavior&& bhvr);
+
+    virtual void dequeue_response(behavior&, message_id) = 0;
+
+    inline void dequeue_response(behavior&&, message_id);
+
+    template<bool Discard, typename... Ts>
+    void become(behavior_policy<Discard>, Ts&&... args);
+
+    template<typename T, typename... Ts>
+    void become(T arg, Ts&&... args);
+
+    inline void unbecome();
 
     local_actor(bool is_scheduled = false);
 
     virtual bool initialized() const = 0;
 
-    inline bool chaining_enabled() {
-        return m_chaining && !m_chained_actor;
-    }
+    inline bool chaining_enabled();
 
-    inline void send_message(channel* whom, any_tuple&& what) {
-        whom->enqueue(this, std::move(what));
-    }
+    inline void send_message(channel* whom, any_tuple&& what);
 
-    inline void send_message(const actor_ptr& whom, any_tuple&& what) {
-        if (chaining_enabled()) {
-            if (whom->chained_enqueue(this, std::move(what))) {
-                m_chained_actor = whom;
-            }
-        }
-        else whom->enqueue(this, std::move(what));
-    }
+    inline void send_message(actor* whom, any_tuple&& what);
 
-    inline message_id_t send_sync_message(const actor_ptr& whom, any_tuple&& what) {
-        auto id = ++m_last_request_id;
-        CPPA_REQUIRE(id.is_request());
-        if (chaining_enabled()) {
-            if (whom->chained_sync_enqueue(this, id, std::move(what))) {
-                m_chained_actor = whom;
-            }
-        }
-        else whom->sync_enqueue(this, id, std::move(what));
-        auto awaited_response = id.response_id();
-        m_pending_responses.push_back(awaited_response);
-        return awaited_response;
-    }
+    inline message_id send_sync_message(const actor_ptr& whom,
+                                        any_tuple&& what);
 
-    message_id_t send_timed_sync_message(const actor_ptr& whom,
-                                         const util::duration& rel_time,
-                                         any_tuple&& what);
+    message_id send_timed_sync_message(const actor_ptr& whom,
+                                       const util::duration& rel_time,
+                                       any_tuple&& what);
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise
-    inline message_id_t get_response_id() {
-        auto id = m_current_node->mid;
-        return (id.is_request()) ? id.response_id() : message_id_t();
-    }
+    inline message_id get_response_id();
 
     void reply_message(any_tuple&& what);
 
     void forward_message(const actor_ptr& new_receiver);
 
-    inline const actor_ptr& chained_actor() {
-        return m_chained_actor;
-    }
+    inline const actor_ptr& chained_actor();
 
-    inline void chained_actor(const actor_ptr& value) {
-        m_chained_actor = value;
-    }
+    inline void chained_actor(const actor_ptr& value);
 
-    inline bool awaits(message_id_t response_id) {
-        CPPA_REQUIRE(response_id.is_response());
-        return std::any_of(m_pending_responses.begin(),
-                           m_pending_responses.end(),
-                           [=](message_id_t other) {
-                               return response_id == other;
-                           });
-    }
+    inline bool awaits(message_id response_id);
 
-    inline void mark_arrived(message_id_t response_id) {
-        auto last = m_pending_responses.end();
-        auto i = std::find(m_pending_responses.begin(), last, response_id);
-        if (i != last) m_pending_responses.erase(i);
-    }
+    inline void mark_arrived(message_id response_id);
 
-    virtual void dequeue_response(behavior&, message_id_t) = 0;
+    virtual void become_waiting_for(behavior, message_id) = 0;
 
-    inline void dequeue_response(behavior&& bhvr, message_id_t mid) {
-        behavior tmp{std::move(bhvr)};
-        dequeue_response(tmp, mid);
-    }
-
-    virtual void become_waiting_for(behavior&&, message_id_t) = 0;
-
-    inline detail::behavior_stack& bhvr_stack() {
-        return m_bhvr_stack;
-    }
+    inline detail::behavior_stack& bhvr_stack();
 
  protected:
 
+    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
+
+    inline void do_become(const behavior& bhvr, bool discard_old);
+
+    inline void remove_handler(message_id id);
+
+    void cleanup(std::uint32_t reason);
+
     // true if this actor uses the chained_send optimization
     bool m_chaining;
+
     // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
+
     // true if this actor takes part in cooperative scheduling
     bool m_is_scheduled;
+
     // pointer to the actor that is marked as successor due to a chained send
     actor_ptr m_chained_actor;
+
     // identifies the ID of the last sent synchronous request
-    message_id_t m_last_request_id;
+    message_id m_last_request_id;
+
     // identifies all IDs of sync messages waiting for a response
-    std::vector<message_id_t> m_pending_responses;
+    std::vector<message_id> m_pending_responses;
+
     // "default value" for m_current_node
     detail::recursive_queue_node m_dummy_node;
+
     // points to m_dummy_node if no callback is currently invoked,
     // points to the node under processing otherwise
     detail::recursive_queue_node* m_current_node;
+
     // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;
+
     // allows actors to keep previous behaviors and enables unbecome()
     detail::behavior_stack m_bhvr_stack;
-
-    inline void remove_handler(message_id_t id) {
-        m_bhvr_stack.erase(id);
-    }
-
-    void cleanup(std::uint32_t reason);
 
  private:
 
     std::function<void()> m_sync_failure_handler;
     std::function<void()> m_sync_timeout_handler;
 
-#   endif // CPPA_DOCUMENTATION
-
- protected:
-
-    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
-
-    inline void do_become(const behavior& bhvr, bool discard_old) {
-        behavior copy{bhvr};
-        do_become(std::move(copy), discard_old);
-    }
+    /** @endcond */
 
 };
 
@@ -457,9 +356,20 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
  */
 typedef intrusive_ptr<local_actor> local_actor_ptr;
 
+
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/
+
+void local_actor::dequeue(behavior&& bhvr) {
+    behavior tmp{std::move(bhvr)};
+    dequeue(tmp);
+}
+
+inline void local_actor::dequeue_response(behavior&& bhvr, message_id id) {
+    behavior tmp{std::move(bhvr)};
+    dequeue_response(tmp, id);
+}
 
 inline bool local_actor::trap_exit() const {
     return m_trap_exit;
@@ -485,28 +395,90 @@ inline actor_ptr& local_actor::last_sender() {
     return m_current_node->sender;
 }
 
-template<bool Discard>
-inline void local_actor::become(behavior_policy<Discard>, behavior bhvr) {
-    do_become(std::move(bhvr), Discard);
+template<bool Discard, typename... Ts>
+inline void local_actor::become(behavior_policy<Discard>, Ts&&... args) {
+    do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
 }
 
-template<bool Discard, typename T0, typename T1, typename... Ts>
-inline void local_actor::become(behavior_policy<Discard>, T0&& a0, T1&& a1, Ts&&... as) {
-    auto bhvr = match_expr_convert(std::forward<T0>(a0), std::forward<T1>(a1), std::forward<Ts>(as)...);
-    do_become(std::move(bhvr), Discard);
-}
-
-inline void local_actor::become(behavior bhvr) {
-    do_become(std::move(bhvr), true);
-}
-
-template<typename... Cases, typename... Ts>
-inline void local_actor::become(match_expr<Cases...> a, Ts&&... as) {
-    do_become(match_expr_convert(std::move(a), std::forward<Ts>(as)...), true);
+template<typename T, typename... Ts>
+inline void local_actor::become(T arg, Ts&&... args) {
+    do_become(match_expr_convert(arg, std::forward<Ts>(args)...), true);
 }
 
 inline void local_actor::unbecome() {
     m_bhvr_stack.pop_async_back();
+}
+
+inline bool local_actor::chaining_enabled() {
+    return m_chaining && !m_chained_actor;
+}
+
+inline void local_actor::send_message(channel* whom, any_tuple&& what) {
+    whom->enqueue(this, std::move(what));
+}
+
+inline void local_actor::send_message(actor* whom, any_tuple&& what) {
+    if (chaining_enabled()) {
+        if (whom->chained_enqueue(this, std::move(what))) {
+            m_chained_actor.reset(whom);
+        }
+    }
+    else whom->enqueue(this, std::move(what));
+}
+
+inline message_id local_actor::send_sync_message(const actor_ptr& whom, any_tuple&& what) {
+    auto id = ++m_last_request_id;
+    CPPA_REQUIRE(id.is_request());
+    if (chaining_enabled()) {
+        if (whom->chained_sync_enqueue(this, id, std::move(what))) {
+            chained_actor(whom);
+        }
+    }
+    else whom->sync_enqueue(this, id, std::move(what));
+    auto awaited_response = id.response_id();
+    m_pending_responses.push_back(awaited_response);
+    return awaited_response;
+}
+
+inline message_id local_actor::get_response_id() {
+    auto id = m_current_node->mid;
+    return (id.is_request()) ? id.response_id() : message_id();
+}
+
+inline const actor_ptr& local_actor::chained_actor() {
+    return m_chained_actor;
+}
+
+inline void local_actor::chained_actor(const actor_ptr& value) {
+    m_chained_actor = value;
+}
+
+inline bool local_actor::awaits(message_id response_id) {
+    CPPA_REQUIRE(response_id.is_response());
+    return std::any_of(m_pending_responses.begin(),
+                       m_pending_responses.end(),
+                       [=](message_id other) {
+                           return response_id == other;
+                       });
+}
+
+inline void local_actor::mark_arrived(message_id response_id) {
+    auto last = m_pending_responses.end();
+    auto i = std::find(m_pending_responses.begin(), last, response_id);
+    if (i != last) m_pending_responses.erase(i);
+}
+
+inline detail::behavior_stack& local_actor::bhvr_stack() {
+    return m_bhvr_stack;
+}
+
+inline void local_actor::do_become(const behavior& bhvr, bool discard_old) {
+    behavior copy{bhvr};
+    do_become(std::move(copy), discard_old);
+}
+
+inline void local_actor::remove_handler(message_id id) {
+    m_bhvr_stack.erase(id);
 }
 
 } // namespace cppa

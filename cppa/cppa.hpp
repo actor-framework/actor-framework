@@ -191,11 +191,20 @@
  *
  * @defgroup MessageHandling Message handling.
  *
- * This is the beating heart of @p libcppa. Actor programming is all about
- * message handling.
+ * @brief This is the beating heart of @p libcppa. Actor programming is
+ *        all about message handling.
  *
  * A message in @p libcppa is a n-tuple of values (with size >= 1). You can use
- * almost every type in a messages.
+ * almost every type in a messages - as long as it is announced, i.e., known
+ * by libcppa's type system.
+ *
+ * @defgroup BlockingAPI Blocking API.
+ *
+ * @brief Blocking functions to receive messages.
+ *
+ * The blocking API of libcppa is intended to be used for migrating
+ * previously threaded applications. When writing new code, you should use
+ * ibcppas nonblocking become/unbecome API.
  *
  * @section Send Send messages
  *
@@ -414,15 +423,14 @@ namespace cppa {
 namespace detail {
 
 template<typename T>
-inline void send_impl(T* whom, any_tuple&& what) {
-    if (whom) self->send_message(whom, std::move(what));
+inline void send_impl(T* ptr, any_tuple&& arg) {
+    if (ptr) self->send_message(ptr, std::move(arg));
 }
 
 template<typename T, typename... Ts>
-inline void send_tpl_impl(T* whom, Ts&&... what) {
+inline void send_tpl_impl(T* ptr, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    if (whom) self->send_message(whom,
-                                 make_any_tuple(std::forward<Ts>(what)...));
+    if (ptr) self->send_message(ptr, make_any_tuple(std::forward<Ts>(args)...));
 }
 
 } // namespace detail
@@ -438,7 +446,7 @@ inline void send_tpl_impl(T* whom, Ts&&... what) {
  * @param what Message content as tuple.
  */
 template<class C, typename... Ts>
-inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+inline typename enable_if_channel<C>::type
 send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
     detail::send_impl(whom.get(), std::move(what));
 }
@@ -450,9 +458,9 @@ send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<class C, typename... Ts>
-inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
-send(const intrusive_ptr<C>& whom, Ts&&... what) {
-    detail::send_tpl_impl(whom.get(), std::forward<Ts>(what)...);
+inline typename enable_if_channel<C>::type
+send(const intrusive_ptr<C>& whom, Ts&&... args) {
+    detail::send_tpl_impl(whom.get(), std::forward<Ts>(args)...);
 }
 
 /**
@@ -464,7 +472,7 @@ send(const intrusive_ptr<C>& whom, Ts&&... what) {
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<class C, typename... Ts>
-inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+inline typename enable_if_channel<C>::type
 send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple what) {
     if (whom) whom->enqueue(from.get(), std::move(what));
 }
@@ -478,7 +486,7 @@ send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple wha
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<class C, typename... Ts>
-inline typename std::enable_if<std::is_base_of<channel, C>::value>::type
+inline typename enable_if_channel<C>::type
 send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Ts&&... what) {
     send_tuple_as(from, whom, make_any_tuple(std::forward<Ts>(what)...));
 }
@@ -495,8 +503,7 @@ send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Ts&&... what) {
  * @returns @p whom.
  */
 template<class C>
-inline typename std::enable_if<std::is_base_of<channel, C>::value,
-                               const intrusive_ptr<C>&            >::type
+inline typename enable_if_channel<C,const intrusive_ptr<C>&>::type
 operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
     send_tuple(whom, std::move(what));
     return whom;
@@ -683,18 +690,20 @@ inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
     delayed_reply_tuple(rtime, make_any_tuple(std::forward<Ts>(what)...));
 }
 
-/** @} */
+/**
+ * @}
+ */
 
 // matches "send(this, ...)" and "send(self, ...)"
-inline void send_tuple(local_actor* whom, any_tuple what) {
+inline void send_tuple(channel* whom, any_tuple what) {
     detail::send_impl(whom, std::move(what));
 }
 template<typename... Ts>
-inline void send(local_actor* whom, Ts&&... args) {
+inline void send(channel* whom, Ts&&... args) {
     detail::send_tpl_impl(whom, std::forward<Ts>(args)...);
 }
 inline const self_type& operator<<(const self_type& s, any_tuple what) {
-    detail::send_impl(s.get(), std::move(what));
+    detail::send_impl(static_cast<channel*>(s.get()), std::move(what));
     return s;
 }
 inline actor_ptr eval_sopts(spawn_options opts, actor_ptr ptr) {
@@ -844,15 +853,24 @@ void shutdown(); // note: implemented in singleton_manager.cpp
  */
 inline void quit_actor(const actor_ptr& whom, std::uint32_t reason) {
     CPPA_REQUIRE(reason != exit_reason::normal);
-    send(whom, atom("EXIT"), reason);
+    send(whom.get(), atom("EXIT"), reason);
 }
 
+/**
+ * @brief Sets the actor's behavior and discards the previous behavior
+ *        unless {@link keep_behavior} is given as first argument.
+ */
 template<typename... Ts>
 inline void become(Ts&&... args) {
     self->become(std::forward<Ts>(args)...);
 }
 
-inline void unbecome() { self->unbecome(); }
+/**
+ * @brief Returns to a previous behavior if available.
+ */
+inline void unbecome() {
+    self->unbecome();
+}
 
 struct actor_ostream {
 
@@ -883,9 +901,11 @@ inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& 
 }
 
 template<typename T>
-inline typename std::enable_if<   !std::is_convertible<T,std::string>::value
-                               && !std::is_convertible<T,any_tuple>::value,
-                               const actor_ostream&>::type
+inline typename std::enable_if<
+       !std::is_convertible<T,std::string>::value
+    && !std::is_convertible<T,any_tuple>::value,
+    const actor_ostream&
+>::type
 operator<<(const actor_ostream& o, T&& arg) {
     return o.write(std::to_string(std::forward<T>(arg)));
 }

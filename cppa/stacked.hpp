@@ -61,15 +61,11 @@ class stacked : public Base {
 
     static constexpr auto receive_flag = detail::rp_nestable;
 
-    virtual void dequeue(partial_function& fun) {
-        m_recv_policy.receive(dthis(), fun);
-    }
-
     virtual void dequeue(behavior& bhvr) {
         m_recv_policy.receive(dthis(), bhvr);
     }
 
-    virtual void dequeue_response(behavior& bhvr, message_id_t request_id) {
+    virtual void dequeue_response(behavior& bhvr, message_id request_id) {
         m_recv_policy.receive(dthis(), bhvr, request_id);
     }
 
@@ -98,10 +94,10 @@ class stacked : public Base {
     : Base(std::forward<Args>(args)...), m_behavior(std::move(fun)) { }
 
     virtual void do_become(behavior&& bhvr, bool discard_old) {
-        become_impl(std::move(bhvr), discard_old, message_id_t());
+        become_impl(std::move(bhvr), discard_old, message_id());
     }
 
-    virtual void become_waiting_for(behavior&& bhvr, message_id_t mid) {
+    virtual void become_waiting_for(behavior bhvr, message_id mid) {
         become_impl(std::move(bhvr), false, mid);
     }
 
@@ -123,7 +119,7 @@ class stacked : public Base {
     std::function<void()> m_behavior;
     detail::receive_policy m_recv_policy;
 
-    void become_impl(behavior&& bhvr, bool discard_old, message_id_t mid) {
+    void become_impl(behavior&& bhvr, bool discard_old, message_id mid) {
         if (bhvr.timeout().valid()) {
             dthis()->reset_timeout();
             dthis()->request_timeout(bhvr.timeout());

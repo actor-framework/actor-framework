@@ -75,11 +75,11 @@ local_actor::local_actor(bool sflag)
 : m_chaining(sflag), m_trap_exit(false)
 , m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
 
-void local_actor::monitor(actor_ptr whom) {
+void local_actor::monitor(const actor_ptr& whom) {
     if (whom) whom->attach(attachable_ptr{new down_observer(this, whom)});
 }
 
-void local_actor::demonitor(actor_ptr whom) {
+void local_actor::demonitor(const actor_ptr& whom) {
     attachable::token mtoken{typeid(down_observer), this};
     if (whom) whom->detach(mtoken);
 }
@@ -113,12 +113,12 @@ void local_actor::reply_message(any_tuple&& what) {
     }
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_message(whom, std::move(what));
+        send_message(whom.get(), std::move(what));
     }
     else if (!id.is_answered()) {
         if (chaining_enabled()) {
             if (whom->chained_sync_enqueue(this, id.response_id(), std::move(what))) {
-                m_chained_actor = whom;
+                chained_actor(whom);
             }
         }
         else {
@@ -140,7 +140,7 @@ void local_actor::forward_message(const actor_ptr& new_receiver) {
     else {
         new_receiver->sync_enqueue(from.get(), id, m_current_node->msg);
         // treat this message as asynchronous message from now on
-        m_current_node->mid = message_id_t();
+        m_current_node->mid = message_id();
     }
 }
 
@@ -151,7 +151,7 @@ response_handle local_actor::make_response_handle() {
     return std::move(result);
 }
 
-message_id_t local_actor::send_timed_sync_message(const actor_ptr& whom,
+message_id local_actor::send_timed_sync_message(const actor_ptr& whom,
                                                   const util::duration& rel_time,
                                                   any_tuple&& what) {
     auto mid = this->send_sync_message(whom, std::move(what));
@@ -162,10 +162,6 @@ message_id_t local_actor::send_timed_sync_message(const actor_ptr& whom,
 
 void local_actor::exec_behavior_stack() {
     // default implementation does nothing
-}
-
-sync_handle_helper local_actor::handle_response(const message_future& mf) {
-    return ::cppa::handle_response(mf);
 }
 
 void local_actor::cleanup(std::uint32_t reason) {

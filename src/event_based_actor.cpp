@@ -78,11 +78,7 @@ void event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
 }
 
-void event_based_actor::dequeue(partial_function&) {
-    quit(exit_reason::unallowed_function_call);
-}
-
-void event_based_actor::dequeue_response(behavior&, message_id_t) {
+void event_based_actor::dequeue_response(behavior&, message_id) {
     quit(exit_reason::unallowed_function_call);
 }
 
@@ -193,7 +189,7 @@ void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
     m_bhvr_stack.push_back(std::move(bhvr));
 }
 
-void event_based_actor::become_waiting_for(behavior&& bhvr, message_id_t mf) {
+void event_based_actor::become_waiting_for(behavior bhvr, message_id mf) {
     if (bhvr.timeout().valid()) {
         reset_timeout();
         request_timeout(bhvr.timeout());

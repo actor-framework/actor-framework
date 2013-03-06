@@ -86,7 +86,7 @@ class actor : public channel {
      * @pre <tt>id.valid()</tt>
      */
     virtual void sync_enqueue(const actor_ptr& sender,
-                              message_id_t id,
+                              message_id id,
                               any_tuple msg) = 0;
 
     /**
@@ -96,7 +96,7 @@ class actor : public channel {
      *        its state to @p pending in response to the enqueue operation.
      */
     virtual bool chained_sync_enqueue(const actor_ptr& sender,
-                                      message_id_t id,
+                                      message_id id,
                                       any_tuple msg);
 
     /**

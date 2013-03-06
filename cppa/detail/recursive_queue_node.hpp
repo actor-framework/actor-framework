@@ -57,7 +57,7 @@ class recursive_queue_node : public memory_cached<memory_managed,recursive_queue
     bool         marked; // denotes if this node is currently processed
     actor_ptr    sender; // points to the sender of msg
     any_tuple    msg;    // 'content field'
-    message_id_t mid;
+    message_id mid;
 
     recursive_queue_node(recursive_queue_node&&) = delete;
     recursive_queue_node(const recursive_queue_node&) = delete;
@@ -75,7 +75,7 @@ class recursive_queue_node : public memory_cached<memory_managed,recursive_queue
 
     recursive_queue_node(const actor_ptr& sptr,
                          any_tuple data,
-                         message_id_t id = message_id_t{});
+                         message_id id = message_id{});
 
 };
 

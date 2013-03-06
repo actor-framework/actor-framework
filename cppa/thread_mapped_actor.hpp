@@ -90,7 +90,7 @@ class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with
 
     void enqueue(const actor_ptr& sender, any_tuple msg);
 
-    void sync_enqueue(const actor_ptr& sender, message_id_t id, any_tuple msg);
+    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg);
 
     inline void reset_timeout() { }
     inline void request_timeout(const util::duration&) { }

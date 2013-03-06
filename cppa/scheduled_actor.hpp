@@ -119,9 +119,9 @@ class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox
 
     bool chained_enqueue(const actor_ptr&, any_tuple);
 
-    void sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
+    void sync_enqueue(const actor_ptr&, message_id, any_tuple);
 
-    bool chained_sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
+    bool chained_sync_enqueue(const actor_ptr&, message_id, any_tuple);
 
     void request_timeout(const util::duration& d);
 
@@ -195,7 +195,7 @@ class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox
     bool sync_enqueue_impl(actor_state next,
                            const actor_ptr& sender,
                            any_tuple& msg,
-                           message_id_t id);
+                           message_id id);
 
     bool m_has_pending_tout;
     std::uint32_t m_pending_tout;

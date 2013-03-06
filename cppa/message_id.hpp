@@ -42,7 +42,7 @@ struct invalid_message_id { constexpr invalid_message_id() { } };
  * @brief
  * @note Asynchronous messages always have an invalid message id.
  */
-class message_id_t : util::comparable<message_id_t> {
+class message_id : util::comparable<message_id> {
 
     static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
     static constexpr std::uint64_t answered_flag_mask = 0x4000000000000000;
@@ -50,14 +50,14 @@ class message_id_t : util::comparable<message_id_t> {
 
  public:
 
-    constexpr message_id_t() : m_value(0) { }
+    constexpr message_id() : m_value(0) { }
 
-    message_id_t(message_id_t&&) = default;
-    message_id_t(const message_id_t&) = default;
-    message_id_t& operator=(message_id_t&&) = default;
-    message_id_t& operator=(const message_id_t&) = default;
+    message_id(message_id&&) = default;
+    message_id(const message_id&) = default;
+    message_id& operator=(message_id&&) = default;
+    message_id& operator=(const message_id&) = default;
 
-    inline message_id_t& operator++() {
+    inline message_id& operator++() {
         ++m_value;
         return *this;
     }
@@ -78,12 +78,12 @@ class message_id_t : util::comparable<message_id_t> {
         return valid() && !is_response();
     }
 
-    inline message_id_t response_id() const {
-        return message_id_t(valid() ? m_value | response_flag_mask : 0);
+    inline message_id response_id() const {
+        return message_id(valid() ? m_value | response_flag_mask : 0);
     }
 
-    inline message_id_t request_id() const {
-        return message_id_t(m_value & request_id_mask);
+    inline message_id request_id() const {
+        return message_id(m_value & request_id_mask);
     }
 
     inline void mark_as_answered() {
@@ -94,24 +94,24 @@ class message_id_t : util::comparable<message_id_t> {
         return m_value;
     }
 
-    static inline message_id_t from_integer_value(std::uint64_t value) {
-        message_id_t result;
+    static inline message_id from_integer_value(std::uint64_t value) {
+        message_id result;
         result.m_value = value;
         return result;
     }
 
     static constexpr invalid_message_id invalid = invalid_message_id{};
 
-    constexpr message_id_t(invalid_message_id) : m_value(0) { }
+    constexpr message_id(invalid_message_id) : m_value(0) { }
 
-    long compare(const message_id_t& other) const {
+    long compare(const message_id& other) const {
         return (m_value == other.m_value)
                ? 0 : ((m_value < other.m_value) ? -1 : 1);
     }
 
  private:
 
-    explicit constexpr message_id_t(std::uint64_t value) : m_value(value) { }
+    explicit constexpr message_id(std::uint64_t value) : m_value(value) { }
 
     std::uint64_t m_value;
 

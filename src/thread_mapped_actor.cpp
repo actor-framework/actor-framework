@@ -60,7 +60,7 @@ void thread_mapped_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
 }
 
 void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
-                                       message_id_t id,
+                                       message_id id,
                                        any_tuple msg) {
     auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
     if (!this->m_mailbox.push_back(ptr)) {

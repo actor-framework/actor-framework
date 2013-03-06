@@ -36,7 +36,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/intrusive_fwd_ptr.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
@@ -72,12 +71,6 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) { }
 
     intrusive_ptr(const intrusive_ptr& other) { set_ptr(other.get()); }
-
-    template<typename Y, typename Ref, typename Deref>
-    intrusive_ptr(intrusive_fwd_ptr<Y,Ref,Deref> other) : m_ptr(other.release()) {
-        static_assert(std::is_convertible<Y*, T*>::value,
-                      "Y* is not assignable to T*");
-    }
 
     template<typename Y>
     intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {

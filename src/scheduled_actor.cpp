@@ -133,7 +133,7 @@ bool scheduled_actor::enqueue(actor_state next_state,
 bool scheduled_actor::sync_enqueue_impl(actor_state next,
                                        const actor_ptr& sender,
                                        any_tuple& msg,
-                                       message_id_t id) {
+                                       message_id id) {
     bool err = false;
     auto ptr = new_mailbox_element(sender, std::move(msg), id);
     bool res = enqueue(next, &err, ptr);
@@ -162,13 +162,13 @@ bool scheduled_actor::chained_enqueue(const actor_ptr& sender, any_tuple msg) {
 }
 
 void scheduled_actor::sync_enqueue(const actor_ptr& sender,
-                                   message_id_t id,
+                                   message_id id,
                                    any_tuple msg) {
     sync_enqueue_impl(actor_state::ready, sender, msg, id);
 }
 
 bool scheduled_actor::chained_sync_enqueue(const actor_ptr& sender,
-                                           message_id_t id,
+                                           message_id id,
                                            any_tuple msg) {
     return sync_enqueue_impl(actor_state::pending, sender, msg, id);
 }

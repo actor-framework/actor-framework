@@ -61,9 +61,17 @@ class partial_function {
 
  public:
 
+    /** @cond PRIVATE */
+
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
 
+    inline auto as_behavior_impl() const -> const impl_ptr&;
+
+    partial_function(impl_ptr ptr);
+
     static constexpr bool may_have_timeout = false;
+
+    /** @endcond */
 
     partial_function() = default;
     partial_function(partial_function&&) = default;
@@ -71,50 +79,36 @@ class partial_function {
     partial_function& operator=(partial_function&&) = default;
     partial_function& operator=(const partial_function&) = default;
 
-    template<typename... Cases>
-    partial_function(const match_expr<Cases...>& mexpr)
-    : m_impl(mexpr.as_behavior_impl()) { }
+    template<typename... Cs>
+    partial_function(const match_expr<Cs...>& mexpr);
 
-    partial_function(impl_ptr ptr);
+    /**
+     * @brief Returns @p true if this partial function is defined for the
+     *        types of @p value, false otherwise.
+     */
+    inline bool defined_at(const any_tuple& value);
 
-    inline bool undefined() const {
-        return m_impl == nullptr;
-    }
-
-    inline bool defined_at(const any_tuple& value) {
-        return (m_impl) && m_impl->defined_at(value);
-    }
-
+    /**
+     * @brief Returns @p true if this partial function was applied to
+     *        @p args, false otherwise.
+     * @note This member function can return @p false even if
+     *       {@link defined_at()} returns @p true, because {@link defined_at()}
+     *       does <b>not</b> evaluate guards.
+     */
     template<typename T>
-    inline bool operator()(T&& arg) {
-        return (m_impl) && m_impl->invoke(std::forward<T>(arg));
-    }
+    inline bool operator()(T&& arg);
 
-    inline partial_function or_else(const partial_function& other) const {
-        return m_impl->or_else(other.m_impl);
-    }
-
-    inline behavior or_else(const behavior& other) const {
-        return behavior{m_impl->or_else(other.m_impl)};
-    }
-
-    template<typename T>
-    typename std::conditional<T::may_have_timeout,behavior,partial_function>::type
-    or_else(const T& arg) const;
-
-    template<typename T0, typename T1, typename... Ts>
+    /**
+     * @brief Adds a fallback which is used where
+     *        this partial function is not defined.
+     */
+    template<typename... Ts>
     typename std::conditional<
-        util::disjunction<
-            T0::may_have_timeout,
-            T1::may_have_timeout,
-            Ts::may_have_timeout...
-        >::value,
+        util::disjunction<Ts::may_have_timeout...>::value,
         behavior,
         partial_function
     >::type
-    or_else(const T0& arg0, const T1& arg1, const Ts&... args) const;
-
-    inline const impl_ptr& as_behavior_impl() const;
+    or_else(Ts&&... args) const;
 
  private:
 
@@ -122,31 +116,10 @@ class partial_function {
 
 };
 
-template<typename T, typename... Ts>
-typename std::conditional<
-    util::disjunction<
-        T::may_have_timeout,
-        Ts::may_have_timeout...
-    >::value,
-    behavior,
-    partial_function
->::type
-match_expr_convert(const T& arg0, const Ts&... args) {
-    return detail::match_expr_concat(arg0, args...);
-}
-
-/******************************************************************************
- *             inline and template member function implementations            *
- ******************************************************************************/
-
-inline const partial_function::impl_ptr& partial_function::as_behavior_impl() const {
-    return m_impl;
-}
-
 template<typename T>
 typename std::conditional<T::may_have_timeout,behavior,partial_function>::type
-partial_function::or_else(const T& arg) const {
-    return m_impl->or_else(arg.as_behavior_impl());
+match_expr_convert(const T& arg) {
+    return {arg};
 }
 
 template<typename T0, typename T1, typename... Ts>
@@ -159,8 +132,41 @@ typename std::conditional<
     behavior,
     partial_function
 >::type
-partial_function::or_else(const T0& arg0, const T1& arg1, const Ts&... args) const {
-    return m_impl->or_else(match_expr_convert(arg0, arg1, args...).as_behavior_impl());
+match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
+    return detail::match_expr_concat(arg0, arg1, args...);
+}
+
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+template<typename... Cs>
+partial_function::partial_function(const match_expr<Cs...>& mexpr)
+: m_impl(mexpr.as_behavior_impl()) { }
+
+inline bool partial_function::defined_at(const any_tuple& value) {
+    return (m_impl) && m_impl->defined_at(value);
+}
+
+template<typename T>
+inline bool partial_function::operator()(T&& arg) {
+    return (m_impl) && m_impl->invoke(std::forward<T>(arg));
+}
+
+template<typename... Ts>
+typename std::conditional<
+    util::disjunction<Ts::may_have_timeout...>::value,
+    behavior,
+    partial_function
+>::type
+partial_function::or_else(Ts&&... args) const {
+    auto tmp = match_expr_convert(std::forward<Ts>(args)...);
+    return m_impl->or_else(tmp.as_behavior_impl());
+}
+
+inline auto partial_function::as_behavior_impl() const -> const impl_ptr& {
+    return m_impl;
 }
 
 } // namespace cppa

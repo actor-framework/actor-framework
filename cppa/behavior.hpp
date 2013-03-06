@@ -56,9 +56,17 @@ class behavior {
 
  public:
 
+    /** @cond PRIVATE */
+
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
 
+    inline auto as_behavior_impl() const -> const impl_ptr&;
+
+    inline behavior(impl_ptr ptr);
+
     static constexpr bool may_have_timeout = true;
+
+    /** @endcond */
 
     behavior() = default;
     behavior(behavior&&) = default;
@@ -68,49 +76,39 @@ class behavior {
 
     behavior(const partial_function& fun);
 
-    inline behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+    template<typename F>
+    behavior(const timeout_definition<F>& arg);
 
     template<typename F>
-    behavior(const timeout_definition<F>& arg)
-    : m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{},
-                                               arg.timeout,
-                                               arg.handler)               ) { }
+    behavior(util::duration d, F f);
 
-    template<typename F>
-    behavior(util::duration d, F f)
-    : m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{}, d, f)) { }
+    template<typename... Cases, typename... Ts>
+    behavior(const match_expr<Cases...>& arg, const Ts&... args);
 
-    template<typename... Cases>
-    behavior(const match_expr<Cases...>& arg0)
-    : m_impl(detail::new_default_behavior_impl(arg0, util::duration(), []() { })) { }
+    /**
+     * @brief Invokes the timeout callback.
+     */
+    inline void handle_timeout();
 
-    template<typename... Cases, typename Arg1, typename... Args>
-    behavior(const match_expr<Cases...>& arg0, const Arg1& arg1, const Args&... args)
-    : m_impl(detail::match_expr_concat(arg0, arg1, args...)) { }
+    /**
+     * @brief Returns the duration after which receives using
+     *        this behavior should time out.
+     */
+    inline const util::duration& timeout() const;
 
-    inline void handle_timeout() {
-        m_impl->handle_timeout();
-    }
-
-    inline const util::duration& timeout() const {
-        return m_impl->timeout();
-    }
-
-    inline bool undefined() const {
-        return m_impl == nullptr || m_impl->timeout().valid() == false;
-    }
-
+    /**
+     * @copydoc partial_function::operator()()
+     */
     template<typename T>
-    inline bool operator()(T&& arg) {
-        return (m_impl) && m_impl->invoke(std::forward<T>(arg));
-    }
+    inline bool operator()(T&& arg);
 
+    /**
+     * @brief Adds a continuation to this behavior that is executed
+     *        whenever this behavior was successfully applied to
+     *        a message.
+     */
     template<typename F>
-    inline behavior add_continuation(F fun) {
-        return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
-    }
-
-    const impl_ptr& as_behavior_impl() const { return m_impl; }
+    inline behavior add_continuation(F fun);
 
  private:
 
@@ -118,10 +116,58 @@ class behavior {
 
 };
 
-template<typename... Lhs, typename F>
-inline behavior operator,(const match_expr<Lhs...>& lhs,
+/**
+ * @brief Creates a behavior from a match expression and a timeout definition.
+ * @relates behavior
+ */
+template<typename... Cases, typename F>
+inline behavior operator,(const match_expr<Cases...>& lhs,
                           const timeout_definition<F>& rhs) {
     return match_expr_convert(lhs, rhs);
+}
+
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+template<typename F>
+behavior::behavior(const timeout_definition<F>& arg)
+: m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{},
+                                           arg.timeout,
+                                           arg.handler)               ) { }
+
+template<typename F>
+behavior::behavior(util::duration d, F f)
+: m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{}, d, f)) { }
+
+template<typename... Cases, typename... Ts>
+behavior::behavior(const match_expr<Cases...>& arg, const Ts&... args)
+: m_impl(detail::match_expr_concat(arg, args...)) { }
+
+inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+
+inline void behavior::handle_timeout() {
+    m_impl->handle_timeout();
+}
+
+inline const util::duration& behavior::timeout() const {
+    return m_impl->timeout();
+}
+
+template<typename T>
+inline bool behavior::operator()(T&& arg) {
+    return (m_impl) && m_impl->invoke(std::forward<T>(arg));
+}
+
+
+inline auto behavior::as_behavior_impl() const -> const impl_ptr& {
+    return m_impl;
+}
+
+template<typename F>
+inline behavior behavior::add_continuation(F fun) {
+    return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
 }
 
 } // namespace cppa

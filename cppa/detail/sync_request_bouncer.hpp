@@ -45,7 +45,7 @@ struct sync_request_bouncer {
     std::uint32_t rsn;
     constexpr sync_request_bouncer(std::uint32_t r)
     : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
-    inline void operator()(const actor_ptr& sender, const message_id_t& mid) const {
+    inline void operator()(const actor_ptr& sender, const message_id& mid) const {
         CPPA_REQUIRE(rsn != exit_reason::not_exited);
         if (mid.is_request() && sender != nullptr) {
             actor_ptr nobody;

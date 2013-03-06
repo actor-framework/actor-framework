@@ -34,7 +34,7 @@ namespace cppa { namespace detail {
 
 recursive_queue_node::recursive_queue_node(const actor_ptr& sptr,
                                            any_tuple data,
-                                           message_id_t id)
+                                           message_id id)
 : next(nullptr), marked(false), sender(sptr), msg(std::move(data)), mid(id) { }
 
 } } // namespace cppa::detail

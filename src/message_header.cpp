@@ -34,7 +34,7 @@ namespace cppa { namespace network {
 
 message_header::message_header(const actor_ptr& s,
                                const actor_ptr& r,
-                               message_id_t mid   )
+                               message_id mid   )
 : sender(s), receiver(r), id(mid) { }
 
 message_header::message_header() : sender(nullptr), receiver(nullptr), id() { }

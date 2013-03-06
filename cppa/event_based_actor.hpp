@@ -65,12 +65,7 @@ class event_based_actor : public scheduled_actor {
     /**
      * @copydoc dequeue(behavior&)
      */
-    void dequeue(partial_function&); //override
-
-    /**
-     * @copydoc dequeue(behavior&)
-     */
-    void dequeue_response(behavior&, message_id_t);
+    void dequeue_response(behavior&, message_id);
 
     resume_result resume(util::fiber*, actor_ptr&); //override
 
@@ -130,7 +125,7 @@ class event_based_actor : public scheduled_actor {
 
     void do_become(behavior&& bhvr, bool discard_old);
 
-    void become_waiting_for(behavior&& bhvr, message_id_t mf);
+    void become_waiting_for(behavior bhvr, message_id mf);
 
  private:
 

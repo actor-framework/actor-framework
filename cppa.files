@@ -80,7 +80,6 @@ cppa/group.hpp
 cppa/guard_expr.hpp
 cppa/intrusive/blocking_single_reader_queue.hpp
 cppa/intrusive/single_reader_queue.hpp
-cppa/intrusive_fwd_ptr.hpp
 cppa/intrusive_ptr.hpp
 cppa/local_actor.hpp
 cppa/logging.hpp
@@ -244,7 +243,6 @@ src/partial_function.cpp
 src/primitive_variant.cpp
 src/process_information.cpp
 src/protocol.cpp
-src/receive.cpp
 src/recursive_queue_node.cpp
 src/ref_counted.cpp
 src/response_handle.cpp

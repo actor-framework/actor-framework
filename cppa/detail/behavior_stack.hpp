@@ -54,14 +54,14 @@ class behavior_stack
     behavior_stack(const behavior_stack&) = delete;
     behavior_stack& operator=(const behavior_stack&) = delete;
 
-    typedef std::pair<behavior,message_id_t> element_type;
+    typedef std::pair<behavior,message_id> element_type;
 
  public:
 
     behavior_stack() = default;
 
     // @pre expected_response.valid()
-    option<behavior&> sync_handler(message_id_t expected_response);
+    option<behavior&> sync_handler(message_id expected_response);
 
     // erases the last asynchronous message handler
     void pop_async_back();
@@ -69,7 +69,7 @@ class behavior_stack
     void clear();
 
     // erases the synchronous response handler associated with @p rid
-    void erase(message_id_t rid) {
+    void erase(message_id rid) {
         erase_if([=](const element_type& e) { return e.second == rid; });
     }
 
@@ -81,7 +81,7 @@ class behavior_stack
     }
 
     inline void push_back(behavior&& what,
-                          message_id_t response_id = message_id_t::invalid) {
+                          message_id response_id = message_id::invalid) {
         m_elements.emplace_back(std::move(what), response_id);
     }
 

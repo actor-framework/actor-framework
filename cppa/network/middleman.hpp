@@ -36,14 +36,15 @@
 #include <memory>
 #include <functional>
 
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/acceptor.hpp"
 #include "cppa/network/continuable_reader.hpp"
-#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 
 namespace cppa { namespace network {
+
+class protocol;
+
+typedef intrusive_ptr<protocol> protocol_ptr;
 
 /**
  * @brief Multiplexes asynchronous IO.

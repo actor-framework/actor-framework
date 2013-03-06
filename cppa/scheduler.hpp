@@ -144,7 +144,7 @@ class scheduler {
     template<typename Duration, typename... Data>
     void delayed_reply(const actor_ptr& to,
                        const Duration& rel_time,
-                       message_id_t id,
+                       message_id id,
                        any_tuple data           ) {
         CPPA_REQUIRE(!id.valid() || id.is_response());
         if (id.valid()) {

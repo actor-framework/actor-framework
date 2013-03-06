@@ -461,7 +461,7 @@ int main() {
             self->become (
                 on("hi") >> [&]() {
                     auto handle = sync_send(self->last_sender(), "whassup?");
-                    self->handle_response(handle) (
+                    handle_response(handle) (
                         on_arg_match >> [&](const string& str) {
                             CPPA_CHECK(self->last_sender() != nullptr);
                             CPPA_CHECK_EQUAL(str, "nothing");

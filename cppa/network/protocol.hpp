@@ -39,9 +39,9 @@
 #include "cppa/actor.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/primitive_variant.hpp"
-#include "cppa/intrusive_fwd_ptr.hpp"
 
 #include "cppa/network/acceptor.hpp"
+#include "cppa/network/middleman.hpp"
 
 namespace cppa { class actor_addressing; }
 
@@ -83,14 +83,6 @@ class protocol : public ref_counted {
 
     void run_later(std::function<void()> fun);
 
-    struct ref_ftor {
-        void operator()(abstract_middleman*) const;
-    };
-
-    struct deref_ftor {
-        void operator()(abstract_middleman*) const;
-    };
-
  protected:
 
     // note: not thread-safe; call only in run_later functor!
@@ -111,7 +103,7 @@ class protocol : public ref_counted {
 
  private:
 
-    intrusive_fwd_ptr<abstract_middleman,ref_ftor,deref_ftor> m_parent;
+    intrusive_ptr<abstract_middleman> m_parent;
 
 };
 

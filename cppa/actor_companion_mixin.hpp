@@ -135,7 +135,7 @@ class actor_companion_mixin : public Base {
         }
 
         void sync_enqueue(const actor_ptr& sender,
-                          message_id_t id,
+                          message_id id,
                           any_tuple msg) {
             util::shared_lock_guard<lock_type> guard(m_lock);
             if (m_parent) {
@@ -151,15 +151,15 @@ class actor_companion_mixin : public Base {
                                      "management instead!");
         }
 
-        void dequeue(behavior&) { throw_no_recv(); }
-
-        void dequeue(partial_function&) { throw_no_recv(); }
-
-        void dequeue_response(behavior&, message_id_t) {
+        void dequeue(behavior&) {
             throw_no_recv();
         }
 
-        void become_waiting_for(behavior&&, message_id_t) {
+        void dequeue_response(behavior&, message_id) {
+            throw_no_recv();
+        }
+
+        void become_waiting_for(behavior, message_id) {
             throw_no_become();
         }
 
