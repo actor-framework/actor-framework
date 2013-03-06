@@ -37,32 +37,124 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/opencl/global.hpp"
+#include "cppa/response_handle.hpp"
+#include "cppa/opencl/smart_ptr.hpp"
 
 namespace cppa { namespace opencl {
 
-class command {
+class command : public ref_counted {
 
  public:
 
     command* next;
 
-    // bool is_new_job; // if false == call handle_cl_result
-    // struct callbacks {
-    //     std::function<cl_job_id(cl_command_queue)> enqueue_cl_task;
-    //     std::function<void()> handle_cl_result;
-    // };
-    // union { callbacks cbs; cl_job_id jid; };
+    virtual void enqueue (command_queue_ptr queue) = 0;
 
-    std::function<void(cl_command_queue)> fun;
-
-    actor* sender;
-
-    template<typename T>
-    inline command(T f, actor* sender)
-        : next(nullptr), fun(f), sender(sender) { }
-
-    inline command() : next(nullptr), sender(nullptr) { }
 };
+
+class command_dummy : public command {
+
+ public:
+
+    void enqueue(command_queue_ptr) { }
+};
+
+template<typename T>
+class command_impl : public command {
+
+ public:
+
+    command_impl(response_handle handle,
+                 kernel_ptr kernel,
+                 std::vector<mem_ptr> arguments,
+                 std::vector<size_t> global_dimensions,
+                 std::vector<size_t> local_dimensions)
+        : m_number_of_values(1)
+        , m_handle(handle)
+        , m_kernel(kernel)
+        , m_arguments(arguments)
+        , m_global_dimensions(global_dimensions)
+        , m_local_dimensions(local_dimensions)
+    {
+        m_kernel_event.adopt(cl_event());
+        for (size_t s : m_global_dimensions) {
+            m_number_of_values *= s;
+        }
+    }
+
+    void enqueue (command_queue_ptr queue) {
+        this->ref();
+        cl_int err{0};
+        m_queue = queue;
+
+        auto ptr = m_kernel_event.get();
+
+        /* enqueue kernel */
+        err = clEnqueueNDRangeKernel(m_queue.get(),
+                                     m_kernel.get(),
+                                     3,
+                                     NULL,
+                                     m_global_dimensions.data(),
+                                     m_local_dimensions.data(),
+                                     0,
+                                     nullptr,
+                                     &ptr);
+        if (err != CL_SUCCESS) {
+            throw std::runtime_error("[!!!] clEnqueueNDRangeKernel: '"
+                                     + get_opencl_error(err)
+                                     + "'.");
+        }
+        err = clSetEventCallback(ptr,
+                                 CL_COMPLETE,
+                                 [](cl_event, cl_int, void* data) {
+                                     auto cmd = reinterpret_cast<command_impl*>(data);
+                                     cmd->handle_results();
+                                     cmd->deref();
+                                 },
+                                 this);
+        if (err != CL_SUCCESS) {
+            throw std::runtime_error("[!!!] clSetEventCallback: '"
+                                     + get_opencl_error(err)
+                                     + "'.");
+        }
+    }
+
+ private:
+
+    int  m_number_of_values;
+    response_handle m_handle;
+    kernel_ptr      m_kernel;
+    event_ptr       m_kernel_event;
+    command_queue_ptr m_queue;
+    std::vector<mem_ptr> m_arguments;
+    std::vector<size_t>  m_global_dimensions;
+    std::vector<size_t>  m_local_dimensions;
+
+    void handle_results () {
+        /* get results from gpu */
+        cl_int err{0};
+        cl_event read_event;
+        T results(m_number_of_values);
+        err = clEnqueueReadBuffer(m_queue.get(),
+                                  m_arguments[0].get(),
+                                  CL_TRUE,
+                                  0,
+                                  sizeof(typename T::value_type) * m_number_of_values,
+                                  results.data(),
+                                  0,
+                                  NULL,
+                                  &read_event);
+        clReleaseEvent(read_event);
+        if (err != CL_SUCCESS) {
+           throw std::runtime_error("[!!!] clEnqueueReadBuffer: '"
+                                    + get_opencl_error(err)
+                                    + "'.");
+        }
+        reply_to(m_handle, results);
+    }
+};
+
+typedef intrusive_ptr<command> command_ptr;
 
 } } // namespace cppa::opencl
 

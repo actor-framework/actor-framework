@@ -43,13 +43,14 @@ struct command_dispatcher::worker {
 
     command_dispatcher* m_parent;
 
-    typedef unique_ptr<command> job_ptr;
+    typedef command_ptr job_ptr;
 
     job_queue* m_job_queue;
     thread m_thread;
+    job_ptr m_dummy;
 
-    worker(command_dispatcher* parent, job_queue* jq)
-    : m_parent(parent), m_job_queue(jq) { }
+    worker(command_dispatcher* parent, job_queue* jq, job_ptr dummy)
+        : m_parent(parent), m_job_queue(jq), m_dummy(dummy) { }
 
     void start() {
         m_thread = thread(&command_dispatcher::worker_loop, this);
@@ -65,12 +66,13 @@ struct command_dispatcher::worker {
             /* wait for device */
             /* get results */
             /* wait for job */
-            job.reset(m_job_queue->pop());
-            if(job->fun) {
+            // adopt reference count of job queue
+            job.adopt(m_job_queue->pop());
+            if(job != m_dummy) {
                 try {
                     cl_command_queue cmd_q =
                             m_parent->m_devices.front().cmd_queue.get();
-                    job->fun(cmd_q);
+                    job->enqueue(cmd_q);
                 }
                 catch (exception& e) {
                     cerr << e.what() << endl;
@@ -92,9 +94,9 @@ void command_dispatcher::worker_loop(command_dispatcher::worker* w) {
 }
 
 void command_dispatcher::supervisor_loop(command_dispatcher* scheduler,
-                                         job_queue* jq) {
+                                         job_queue* jq, command_ptr m_dummy) {
     unique_ptr<command_dispatcher::worker> worker;
-    worker.reset(new command_dispatcher::worker(scheduler, jq));
+    worker.reset(new command_dispatcher::worker(scheduler, jq, m_dummy));
     worker->start();
     worker->m_thread.join();
     worker.reset();
@@ -102,6 +104,9 @@ void command_dispatcher::supervisor_loop(command_dispatcher* scheduler,
 }
 
 void command_dispatcher::initialize() {
+
+    m_dummy = make_counted<command_dummy>();
+
     cl_int err{0};
 
     /* find up to two available platforms */
@@ -216,12 +221,14 @@ void command_dispatcher::initialize() {
         m_devices.push_back(move(dev_info));
     }
     m_supervisor = thread(&command_dispatcher::supervisor_loop,
-                               this,
-                               &m_job_queue);
+                          this,
+                          &m_job_queue,
+                          m_dummy);
 }
 
 void command_dispatcher::destroy() {
-    m_job_queue.push_back(new command);
+    m_dummy->ref(); // reference of m_job_queue
+    m_job_queue.push_back(m_dummy.get());
     m_supervisor.join();
     delete this;
 }
