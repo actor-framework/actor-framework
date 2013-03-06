@@ -32,6 +32,8 @@ std::string kernel_source = STRINGIFY(
 int main() {
     CPPA_TEST(test_opencl);
 
+    announce<vector<float>>();
+
     program prog{kernel_source};
 
     command_dispatcher* disp =
@@ -56,7 +58,6 @@ int main() {
                                     vector<float>,
                                     vector<float>>(prog, "add");
         send(a_facade, a, b);
-        vector<int> wrong_results;
         receive (
             on_arg_match >> [&](const vector<float>& result) {
                 copy(begin(result),

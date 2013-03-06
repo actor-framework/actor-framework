@@ -35,8 +35,10 @@
 namespace cppa { namespace opencl {
 
 void enqueue_to_dispatcher(command_dispatcher* dispatcher,
-                           command* cmd) {
-    dispatcher->m_job_queue.push_back(cmd);
+                           command_ptr cmd) {
+    cmd->ref(); // implicit ref count of m_job_queue
+    dispatcher->m_job_queue.push_back(cmd.get());
+
 }
 
 } } // namespace cppa::opencl

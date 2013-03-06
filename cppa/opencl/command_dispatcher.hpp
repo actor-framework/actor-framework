@@ -48,6 +48,10 @@
 
 namespace cppa { namespace opencl {
 
+struct dereferencer {
+    inline void operator()(ref_counted* ptr) { ptr->deref(); }
+};
+
 #ifdef CPPA_OPENCL
 class command_dispatcher {
 
@@ -59,7 +63,8 @@ class command_dispatcher {
 
     friend class program;
 
-    friend void enqueue_to_dispatcher(command_dispatcher*, command*);
+    friend void enqueue_to_dispatcher(command_dispatcher* dispatcher,
+                                           command_ptr cmd);
 
  public:
 
@@ -102,7 +107,7 @@ class command_dispatcher {
             , max_itms_per_dim(std::move(max_itms_per_dim)) { }
     };
 
-    typedef intrusive::blocking_single_reader_queue<command> job_queue;
+    typedef intrusive::blocking_single_reader_queue<command,dereferencer> job_queue;
 
     static inline command_dispatcher* create_singleton() {
         return new command_dispatcher;
@@ -114,6 +119,7 @@ class command_dispatcher {
     std::atomic<unsigned> dev_id_gen;
 
     job_queue m_job_queue;
+    command_ptr m_dummy;
 
     std::thread m_supervisor;
 
@@ -121,7 +127,9 @@ class command_dispatcher {
     context_ptr m_context;
 
     static void worker_loop(worker*);
-    static void supervisor_loop(command_dispatcher *scheduler, job_queue*);
+    static void supervisor_loop(command_dispatcher *scheduler,
+                                job_queue*,
+                                command_ptr);
 };
 
 #else // CPPA_OPENCL
