@@ -110,7 +110,8 @@ class smart_ptr {
 };
 
 typedef smart_ptr<cl_mem,clRetainMemObject,clReleaseMemObject> mem_ptr;
-typedef smart_ptr<cl_kernel,clRetainKernel,clReleaseKernel> kernel_ptr;
+typedef smart_ptr<cl_event,clRetainEvent,clReleaseEvent>       event_ptr;
+typedef smart_ptr<cl_kernel,clRetainKernel,clReleaseKernel>    kernel_ptr;
 typedef smart_ptr<cl_device_id,clRetainDevice,clReleaseDevice> device_ptr;
 typedef smart_ptr<cl_context,clRetainContext,clReleaseContext> context_ptr;
 typedef smart_ptr<cl_program,clRetainProgram,clReleaseProgram> program_ptr;
