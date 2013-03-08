@@ -33,10 +33,9 @@
 
 #include <type_traits>
 
+#include "cppa/mailbox_element.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
-#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa {
 
@@ -61,14 +60,7 @@ class mailbox_based : public Base {
 
     typedef mailbox_based combined_type;
 
-    typedef detail::recursive_queue_node mailbox_element;
-
-    typedef typename std::conditional<
-                has_blocking_receive<Subtype>::value,
-                intrusive::blocking_single_reader_queue<mailbox_element,del>,
-                intrusive::single_reader_queue<mailbox_element,del>
-            >::type
-            mailbox_type;
+    typedef intrusive::single_reader_queue<mailbox_element,del> mailbox_type;
 
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
@@ -85,10 +77,6 @@ class mailbox_based : public Base {
     }
 
     mailbox_type m_mailbox;
-
- private:
-
-    inline Subtype* dthis() { return static_cast<Subtype*>(this); }
 
 };
 

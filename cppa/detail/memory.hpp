@@ -33,12 +33,15 @@
 
 #include <new>
 #include <vector>
+#include <memory>
 #include <utility>
 #include <typeinfo>
 #include <iostream>
 
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
+
+namespace cppa { class mailbox_element; }
 
 namespace cppa { namespace detail {
 
@@ -48,8 +51,6 @@ constexpr size_t s_alloc_size = 1024;  // allocate ~1kb chunks
 constexpr size_t s_cache_size = 10240; // cache about 10kb per thread
 
 } // namespace <anonymous>
-
-class recursive_queue_node;
 
 class instance_wrapper {
 
@@ -158,6 +159,12 @@ class basic_memory_cache : public memory_cache {
 
 };
 
+struct disposer {
+    inline void operator()(memory_managed* ptr) const {
+        ptr->request_deletion();
+    }
+};
+
 class memory {
 
     memory() = delete;
@@ -171,11 +178,11 @@ class memory {
      * @brief Allocates storage, initializes a new object, and returns
      *        the new instance.
      */
-    template<typename T, typename... Args>
-    static inline T* create(Args&&... args) {
+    template<typename T, typename... Ts>
+    static T* create(Ts&&... args) {
         auto mc = get_or_set_cache_map_entry<T>();
         auto p = mc->new_instance();
-        auto result = new (p.second) T (std::forward<Args>(args)...);
+        auto result = new (p.second) T (std::forward<Ts>(args)...);
         result->outer_memory = p.first;
         return result;
     }
@@ -196,12 +203,6 @@ class memory {
         return mc;
     }
 
-};
-
-struct disposer {
-    inline void operator()(memory_managed* ptr) const {
-        ptr->request_deletion();
-    }
 };
 
 } } // namespace cppa::detail

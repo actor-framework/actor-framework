@@ -42,30 +42,20 @@
 
 namespace cppa { namespace detail {
 
-template<bool IsFun, typename T>
-struct vg_fwd_ {
-    static inline const T& _(const T& arg) { return arg; }
-    static inline T&& _(T&& arg) { return std::move(arg); }
-    static inline T& _(T& arg) { return arg; }
-};
+// 'absorbs' callables and instances of `anything`
+template<typename T>
+const T& vg_fwd(const T& arg, typename std::enable_if<not util::is_callable<T>::value>::type* = 0) {
+    return arg;
+}
+
+inline util::void_type vg_fwd(const anything&) {
+    return {};
+}
 
 template<typename T>
-struct vg_fwd_<true, T> {
-    template<typename Arg>
-    static inline util::void_type _(Arg&&) { return {}; }
-};
-
-template<>
-struct vg_fwd_<false,anything> {
-    static inline util::void_type _(const anything&) { return {}; }
-};
-
-// absorbs callables and instances of `anything`
-template<typename T>
-struct vg_fwd
-        : vg_fwd_<util::is_callable<typename util::rm_ref<T>::type>::value,
-                  typename util::rm_ref<T>::type> {
-};
+util::void_type vg_fwd(const T&, typename std::enable_if<util::is_callable<T>::value>::type* = 0) {
+    return {};
+}
 
 template<typename T>
 struct vg_cmp {
@@ -91,11 +81,11 @@ class value_guard {
     value_guard() = default;
     value_guard(const value_guard&) = default;
 
-    template<typename... Args>
-    value_guard(const Args&... args) : m_args(vg_fwd<Args>::_(args)...) { }
+    template<typename... Ts>
+    value_guard(const Ts&... args) : m_args(vg_fwd(args)...) { }
 
-    template<typename... Args>
-    inline bool operator()(const Args&... args) const {
+    template<typename... Ts>
+    inline bool operator()(const Ts&... args) const {
         return _eval(m_args.head, m_args.tail(), args...);
     }
 
@@ -117,17 +107,17 @@ class value_guard {
         return true;
     }
 
-    template<typename T0, typename Arg0, typename... Args>
-    static inline bool _eval(const T0& head, const tdata<>&,
-                             const Arg0& arg0, const Args&...) {
-        return cmp(head, arg0);
+    template<typename T, typename U, typename... Us>
+    static inline bool _eval(const T& head, const tdata<>&,
+                             const U& arg, const Us&...) {
+        return cmp(head, arg);
     }
 
     template<typename T0, typename T1, typename... Ts,
-             typename Arg0, typename... Args>
+             typename U, typename... Us>
     static inline bool _eval(const T0& head, const tdata<T1,Ts...>& tail,
-                             const Arg0& arg0, const Args&... args) {
-        return cmp(head, arg0) && _eval(tail.head, tail.tail(), args...);
+                             const U& arg, const Us&... args) {
+        return cmp(head, arg) && _eval(tail.head, tail.tail(), args...);
     }
 
 };

@@ -86,6 +86,7 @@ class cow_tuple<Head, Tail...> {
  public:
 
     typedef util::type_list<Head, Tail...> types;
+
     typedef cow_ptr<detail::abstract_tuple> cow_ptr_type;
 
     static constexpr size_t num_elements = sizeof...(Tail) + 1;
@@ -96,33 +97,24 @@ class cow_tuple<Head, Tail...> {
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    template<typename... Args>
-    cow_tuple(const Head& arg0, Args&&... args)
-    : m_vals(new data_type(arg0, std::forward<Args>(args)...)) { }
+    template<typename... Ts>
+    cow_tuple(const Head& arg, Ts&&... args)
+    : m_vals(new data_type(arg, std::forward<Ts>(args)...)) { }
 
     /**
      * @brief Initializes the cow_tuple with @p args.
      * @param args Initialization values.
      */
-    template<typename... Args>
-    cow_tuple(Head&& arg0, Args&&... args)
-    : m_vals(new data_type(std::move(arg0), std::forward<Args>(args)...)) { }
+    template<typename... Ts>
+    cow_tuple(Head&& arg, Ts&&... args)
+    : m_vals(new data_type(std::move(arg), std::forward<Ts>(args)...)) { }
 
     cow_tuple(cow_tuple&&) = default;
     cow_tuple(const cow_tuple&) = default;
     cow_tuple& operator=(cow_tuple&&) = default;
     cow_tuple& operator=(const cow_tuple&) = default;
 
-    inline static cow_tuple from(cow_ptr_type ptr) {
-        return {priv_ctor{}, std::move(ptr)};
-    }
-
-    inline static cow_tuple from(cow_ptr_type ptr,
-                             const util::fixed_vector<size_t, num_elements>& mv) {
-        return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
-    }
-
-    inline static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset) {
+    static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset) {
         CPPA_REQUIRE(offset > 0);
         return {priv_ctor{}, decorated_type::create(std::move(ptr), offset)};
     }
@@ -156,9 +148,22 @@ class cow_tuple<Head, Tail...> {
         return m_vals->type_at(p);
     }
 
+    /** @cond PRIVATE */
+
+    static cow_tuple from(cow_ptr_type ptr) {
+        return {priv_ctor{}, std::move(ptr)};
+    }
+
+    static cow_tuple from(cow_ptr_type ptr,
+                          const util::fixed_vector<size_t, num_elements>& mv) {
+        return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
+    }
+
     inline const cow_ptr<detail::abstract_tuple>& vals() const {
         return m_vals;
     }
+
+    /** @endcond */
 
 };
 
@@ -206,10 +211,10 @@ typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
  * @returns A cow_tuple object containing the values @p args.
  * @relates cow_tuple
  */
-template<typename... Args>
-cow_tuple<typename detail::strip_and_convert<Args>::type...>
-make_cow_tuple(Args&&... args) {
-    return {std::forward<Args>(args)...};
+template<typename... Ts>
+cow_tuple<typename detail::strip_and_convert<Ts>::type...>
+make_cow_tuple(Ts&&... args) {
+    return {std::forward<Ts>(args)...};
 }
 
 /**

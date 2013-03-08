@@ -37,7 +37,7 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/mailbox_element.hpp"
 
 namespace cppa { namespace detail {
 
@@ -54,7 +54,7 @@ struct sync_request_bouncer {
                                  make_any_tuple(atom("EXITED"), rsn));
         }
     }
-    inline void operator()(const recursive_queue_node& e) const {
+    inline void operator()(const mailbox_element& e) const {
         (*this)(e.sender.get(), e.mid);
     }
 };

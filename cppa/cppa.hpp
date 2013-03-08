@@ -48,6 +48,7 @@
 #include "cppa/behavior.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/sb_actor.hpp"
+#include "cppa/threaded.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
@@ -741,7 +742,14 @@ actor_ptr spawn(Ts&&... args) {
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn(Ts&&... args) {
-    auto rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
+    static_assert(std::is_base_of<event_based_actor,Impl>::value,
+                  "Impl is not a derived type of event_based_actor");
+    scheduled_actor* rawptr;
+    if (has_detach_flag(Options)) {
+        typedef typename extend<Impl>::template with<threaded> derived;
+        rawptr = detail::memory::create<derived>(std::forward<Ts>(args)...);
+    }
+    else rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
     return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
 }
 

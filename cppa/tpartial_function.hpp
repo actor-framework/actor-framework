@@ -43,22 +43,22 @@
 
 namespace cppa {
 
-template<class Expr, class Guard, typename Result, typename... Args>
+template<class Expr, class Guard, typename Result, typename... Ts>
 class tpartial_function {
 
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types ctrait_args;
     static constexpr size_t num_expr_args = util::tl_size<ctrait_args>::value;
 
-    static_assert(util::tl_exists<util::type_list<Args...>,
+    static_assert(util::tl_exists<util::type_list<Ts...>,
                                   std::is_rvalue_reference >::value == false,
                   "partial functions using rvalue arguments are not supported");
 
  public:
 
-    typedef util::type_list<Args...> arg_types;
+    typedef util::type_list<Ts...> arg_types;
 
-    static constexpr size_t num_arguments = sizeof...(Args);
+    static constexpr size_t num_arguments = sizeof...(Ts);
 
     static constexpr bool manipulates_args =
             util::tl_exists<arg_types, util::is_mutable_ref>::value;
@@ -78,11 +78,11 @@ class tpartial_function {
 
     tpartial_function(const tpartial_function&) = default;
 
-    bool defined_at(Args... args) const {
+    bool defined_at(Ts... args) const {
         return m_guard(args...);
     }
 
-    result_type operator()(Args... args) const {
+    result_type operator()(Ts... args) const {
         auto targs = std::forward_as_tuple(args...);
         auto indices = util::get_right_indices<num_expr_args>(targs);
         return util::apply_args(m_expr, targs, indices);
@@ -95,34 +95,34 @@ class tpartial_function {
 
 };
 
-template<class Expr, class Guard, typename Args,
+template<class Expr, class Guard, typename Ts,
          typename Result = util::void_type, size_t Step = 0>
 struct get_tpartial_function;
 
-template<class Expr, class Guard, typename... Args, typename Result>
-struct get_tpartial_function<Expr, Guard, util::type_list<Args...>, Result, 1> {
-    typedef tpartial_function<Expr, Guard, Result, Args...> type;
+template<class Expr, class Guard, typename... Ts, typename Result>
+struct get_tpartial_function<Expr, Guard, util::type_list<Ts...>, Result, 1> {
+    typedef tpartial_function<Expr, Guard, Result, Ts...> type;
 };
 
-template<class Expr, class Guard, typename... Args>
+template<class Expr, class Guard, typename... Ts>
 struct get_tpartial_function<Expr, Guard,
-                             util::type_list<Args...>, util::void_type, 0> {
+                             util::type_list<Ts...>, util::void_type, 0> {
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types arg_types;
 
-    static_assert(util::tl_size<arg_types>::value <= sizeof...(Args),
+    static_assert(util::tl_size<arg_types>::value <= sizeof...(Ts),
                   "Functor takes too much arguments");
 
     typedef typename get_tpartial_function<
                 Expr,
                 Guard,
-                // fill arg_types of Expr from left with const Args&
+                // fill arg_types of Expr from left with const Ts&
                 typename util::tl_zip<
                     typename util::tl_pad_left<
                         typename ctrait::arg_types,
-                        sizeof...(Args)
+                        sizeof...(Ts)
                     >::type,
-                    util::type_list<const Args&...>,
+                    util::type_list<const Ts&...>,
                     util::left_or_right
                 >::type,
                 typename ctrait::result_type,

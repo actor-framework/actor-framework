@@ -32,7 +32,7 @@
 #include <typeinfo>
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/mailbox_element.hpp"
 
 using namespace std;
 
@@ -64,8 +64,8 @@ cache_map& get_cache_map() {
         cache = new cache_map;
         pthread_setspecific(s_key, cache);
         // insert default types
-        unique_ptr<memory_cache> tmp(new basic_memory_cache<recursive_queue_node>);
-        cache->insert(make_pair(&typeid(recursive_queue_node), move(tmp)));
+        unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
+        cache->insert(make_pair(&typeid(mailbox_element), move(tmp)));
     }
     return *cache;
 }

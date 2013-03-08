@@ -204,8 +204,7 @@ actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
     bool is_hidden = has_hide_flag(os);
     if (has_detach_flag(os)) {
         exec_as_thread(is_hidden, p, [p] {
-            p->exec_behavior_stack();
-            p->on_exit();
+            p->run_detached();
         });
         return std::move(p);
     }

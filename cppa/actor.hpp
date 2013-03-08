@@ -110,7 +110,7 @@ class actor : public channel {
      *          otherwise (actor already exited) @p false.
      * @warning The actor takes ownership of @p ptr.
      */
-    virtual bool attach(attachable_ptr ptr);
+    bool attach(attachable_ptr ptr);
 
     /**
      * @brief Convenience function that attaches the functor
@@ -129,7 +129,7 @@ class actor : public channel {
     /**
      * @brief Detaches the first attached object that matches @p what.
      */
-    virtual void detach(const attachable::token& what);
+    void detach(const attachable::token& what);
 
     /**
      * @brief Links this actor to @p other.

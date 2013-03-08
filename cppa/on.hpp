@@ -136,8 +136,8 @@ struct rvalue_builder {
 
     rvalue_builder() = default;
 
-    template<typename... Args>
-    rvalue_builder(rvalue_builder_args_ctor, const Args&... args)
+    template<typename... Ts>
+    rvalue_builder(rvalue_builder_args_ctor, const Ts&... args)
         : m_guard(args...)
         , m_funs(args...) {
     }
@@ -262,8 +262,8 @@ __unspecified__ val();
  * This overload can be used with the wildcards {@link cppa::val val},
  * {@link cppa::any_vals any_vals} and {@link cppa::arg_match arg_match}.
  */
-template<typename Arg0, typename... Args>
-__unspecified__ on(const Arg0& arg0, const Args&... args);
+template<typename T, typename... Ts>
+__unspecified__ on(const T& arg, const Ts&... args);
 
 /**
  * @brief Left-hand side of a partial function expression that matches types.
@@ -297,13 +297,13 @@ typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
 
 constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
-template<typename Arg0, typename... Args>
+template<typename T, typename... Ts>
 detail::rvalue_builder<
     detail::value_guard<
         typename util::tl_filter_not<
             typename util::tl_trim<
                 typename util::tl_map<
-                    util::type_list<Arg0, Args...>,
+                    util::type_list<T,Ts...>,
                     detail::boxed_and_callable_to_void,
                     detail::implicit_conversions
                 >::type
@@ -312,13 +312,13 @@ detail::rvalue_builder<
         >::type
     >,
     typename util::tl_map<
-        util::type_list<Arg0, Args...>,
+        util::type_list<T,Ts...>,
         detail::boxed_and_not_callable_to_void
     >::type,
-    util::type_list<typename detail::pattern_type<Arg0>::type,
-                    typename detail::pattern_type<Args>::type...> >
-on(const Arg0& arg0, const Args&... args) {
-    return {detail::rvalue_builder_args_ctor{}, arg0, args...};
+    util::type_list<typename detail::pattern_type<T>::type,
+                    typename detail::pattern_type<Ts>::type...> >
+on(const T& arg, const Ts&... args) {
+    return {detail::rvalue_builder_args_ctor{}, arg, args...};
 }
 
 inline detail::rvalue_builder<detail::empty_value_guard,

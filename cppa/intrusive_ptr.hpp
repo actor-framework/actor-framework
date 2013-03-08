@@ -113,9 +113,9 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         set_ptr(new_value);
     }
 
-    template<typename... Args>
-    void emplace(Args&&... args) {
-        reset(new T(std::forward<Args>(args)...));
+    template<typename... Ts>
+    void emplace(Ts&&... args) {
+        reset(new T(std::forward<Ts>(args)...));
     }
 
     intrusive_ptr& operator=(pointer ptr) {
@@ -207,9 +207,9 @@ inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
  * @brief Constructs an object of type T which must be a derived type
  *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
  */
-template<typename T, typename... Args>
-intrusive_ptr<T> make_counted(Args&&... args) {
-    return {new T(std::forward<Args>(args)...)};
+template<typename T, typename... Ts>
+intrusive_ptr<T> make_counted(Ts&&... args) {
+    return {new T(std::forward<Ts>(args)...)};
 }
 
 } // namespace cppa

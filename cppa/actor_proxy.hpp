@@ -46,7 +46,7 @@ class actor_proxy_cache;
  * @brief Represents a remote actor.
  * @extends actor
  */
-class actor_proxy : public extend<actor,actor_proxy>::with<enable_weak_ptr> {
+class actor_proxy : public extend<actor>::with<enable_weak_ptr> {
 
     typedef combined_type super;
 

@@ -28,58 +28,33 @@
 \******************************************************************************/
 
 
-#include <chrono>
-#include <memory>
-#include <iostream>
-#include <algorithm>
+#ifndef CPPA_DTHIS_HPP
+#define CPPA_DTHIS_HPP
 
-#include "cppa/self.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/exception.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/thread_mapped_actor.hpp"
+#include <type_traits>
 
-#include "cppa/detail/matches.hpp"
+namespace cppa { namespace util {
 
-namespace cppa {
-
-thread_mapped_actor::thread_mapped_actor() : super(std::function<void()>{}), m_initialized(true) { }
-
-thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
-: super(std::move(fun)), m_initialized(false) { }
-
-/*
-auto thread_mapped_actor::init_timeout(const util::duration& rel_time) -> timeout_type {
-    auto result = std::chrono::high_resolution_clock::now();
-    result += rel_time;
-    return result;
+/**
+ * @brief Returns <tt>static_cast<Subtype*>(ptr)</tt> if @p Subtype is a
+ *        derived type of @p MixinType, returns @p ptr without cast otherwise.
+ */
+template<class Subtype, class MixinType>
+typename std::conditional<
+    std::is_base_of<MixinType,Subtype>::value,
+    Subtype,
+    MixinType
+>::type*
+dptr(MixinType* ptr) {
+    typedef typename std::conditional<
+            std::is_base_of<MixinType,Subtype>::value,
+            Subtype,
+            MixinType
+        >::type
+        result_type;
+    return static_cast<result_type*>(ptr);
 }
 
-void thread_mapped_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
-    auto ptr = new_mailbox_element(sender, std::move(msg));
-    this->m_mailbox.push_back(ptr);
-}
+} } // namespace cppa::util
 
-void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
-                                       message_id id,
-                                       any_tuple msg) {
-    auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
-    if (!this->m_mailbox.push_back(ptr)) {
-        detail::sync_request_bouncer f{this->exit_reason()};
-        f(sender, id);
-    }
-}
-*/
-
-bool thread_mapped_actor::initialized() const {
-    return m_initialized;
-}
-
-void thread_mapped_actor::cleanup(std::uint32_t reason) {
-    detail::sync_request_bouncer f{reason};
-    m_mailbox.close(f);
-    super::cleanup(reason);
-}
-
-
-} // namespace cppa::detail
+#endif // CPPA_DTHIS_HPP

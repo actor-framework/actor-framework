@@ -66,8 +66,8 @@ class sb_actor : public Base {
 
  protected:
 
-    template<typename... Args>
-    sb_actor(Args&&... args) : Base(std::forward<Args>(args)...) { }
+    template<typename... Ts>
+    sb_actor(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
 };
 

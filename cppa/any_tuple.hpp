@@ -74,14 +74,14 @@ class any_tuple {
     /**
      * @brief Creates a tuple from @p t.
      */
-    template<typename... Args>
-    any_tuple(const cow_tuple<Args...>& t) : m_vals(t.vals()) { }
+    template<typename... Ts>
+    any_tuple(const cow_tuple<Ts...>& arg) : m_vals(arg.vals()) { }
 
     /**
      * @brief Creates a tuple and moves the content from @p t.
      */
-    template<typename... Args>
-    any_tuple(cow_tuple<Args...>&& t) : m_vals(std::move(t.m_vals)) { }
+    template<typename... Ts>
+    any_tuple(cow_tuple<Ts...>&& arg) : m_vals(std::move(arg.m_vals)) { }
 
     /**
      * @brief Move constructor.
@@ -181,9 +181,12 @@ class any_tuple {
     inline const std::type_info* type_token() const;
 
     /**
-     * @brief Checks whether this
+     * @brief Checks whether this tuple is dynamically typed, i.e.,
+     *        its types were not known during compile time.
      */
     inline bool dynamically_typed() const;
+
+    /** @cond PRIVATE */
 
     template<typename T>
     static inline any_tuple view(T&& value);
@@ -193,6 +196,8 @@ class any_tuple {
     void reset();
 
     explicit any_tuple(detail::abstract_tuple*);
+
+    /** @endcond */
 
  private:
 
@@ -244,9 +249,9 @@ inline bool operator!=(const any_tuple& lhs, const any_tuple& rhs) {
  * @brief Creates an {@link any_tuple} containing the elements @p args.
  * @param args Values to initialize the tuple elements.
  */
-template<typename... Args>
-inline any_tuple make_any_tuple(Args&&... args) {
-    return make_cow_tuple(std::forward<Args>(args)...);
+template<typename... Ts>
+inline any_tuple make_any_tuple(Ts&&... args) {
+    return make_cow_tuple(std::forward<Ts>(args)...);
 }
 
 /******************************************************************************

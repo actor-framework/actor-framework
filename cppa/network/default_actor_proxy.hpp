@@ -48,8 +48,7 @@ class basic_memory_cache;
 
 namespace cppa { namespace network {
 
-class sync_request_info : public extend<memory_managed,sync_request_info>::
-                                 with<memory_cached> {
+class sync_request_info : public extend<memory_managed>::with<memory_cached> {
 
     friend class detail::memory;
 

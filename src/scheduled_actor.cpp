@@ -80,6 +80,10 @@ scheduled_actor::~scheduled_actor() {
     }
 }
 
+void scheduled_actor::run_detached() {
+    throw std::logic_error("scheduled_actor::run_detached called");
+}
+
 void scheduled_actor::cleanup(std::uint32_t reason) {
     detail::sync_request_bouncer f{reason};
     m_mailbox.close(f);

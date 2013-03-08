@@ -28,20 +28,13 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CHANNEL_HPP
-#define CPPA_CHANNEL_HPP
+#include "cppa/mailbox_element.hpp"
 
-#include "cppa/ref_counted.hpp"
+namespace cppa {
 
-namespace cppa { class message; }
+mailbox_element::mailbox_element(const actor_ptr& sptr,
+                                 any_tuple data,
+                                 message_id id)
+: next(nullptr), marked(false), sender(sptr), msg(std::move(data)), mid(id) { }
 
-namespace cppa { namespace detail {
-
-// public part of the actor interface
-struct channel : ref_counted {
-    virtual void enqueue_msg(const message& msg) = 0;
-};
-
-} } // namespace cppa::detail
-
-#endif // CPPA_CHANNEL_HPP
+} // namespace cppa

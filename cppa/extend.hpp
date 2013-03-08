@@ -56,12 +56,13 @@ struct extend_helper<B,D,M,Ms...> : extend_helper<B,M<D,B>,Ms...> { };
  *
  * Mixins in libcppa always have two template parameters: base type and
  * derived type. This allows mixins to make use of the curiously recurring
- * template pattern (CRTP).
+ * template pattern (CRTP). However, if none of the used mixins use CRTP,
+ * the second template argument can ignored (it is then set to Base).
  */
-template<class Base, class Derived>
+template<class Base, class Derived = Base>
 struct extend {
     /**
-     * @brief An alias for the result type.
+     * @brief Identifies the combined type.
      */
     template<template<class,class> class... Mixins>
     using with = typename detail::extend_helper<Derived,Base,Mixins...>::type;

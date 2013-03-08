@@ -41,10 +41,10 @@
 #include "cppa/to_string.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/mailbox_element.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa { namespace detail {
 
@@ -62,8 +62,8 @@ class receive_policy {
 
  public:
 
-    typedef recursive_queue_node* pointer;
-    typedef std::unique_ptr<recursive_queue_node,disposer> smart_pointer;
+    typedef mailbox_element* pointer;
+    typedef std::unique_ptr<mailbox_element,disposer> smart_pointer;
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -195,12 +195,17 @@ class receive_policy {
         }
     }
 
+    template<class Client>
+    mailbox_element* fetch_message(Client* client) {
+        return client->await_message();
+    }
+
  private:
 
     typedef typename rp_flag<rp_nestable>::type nestable;
     typedef typename rp_flag<rp_sequential>::type sequential;
 
-    std::list<std::unique_ptr<recursive_queue_node,disposer> > m_cache;
+    std::list<std::unique_ptr<mailbox_element,disposer> > m_cache;
 
     template<class Client>
     inline void handle_timeout(Client* client, behavior& bhvr) {

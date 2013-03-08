@@ -42,6 +42,7 @@
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
+#include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/types_array.hpp"
@@ -113,6 +114,11 @@ struct unbox_ref<std::reference_wrapper<T> > {
     typedef typename std::remove_const<T>::type type;
 };
 
+template<typename T>
+struct unbox_ref<util::rebindable_reference<T> > {
+    typedef typename std::remove_const<T>::type type;
+};
+
 /*
  * "enhanced" std::tuple
  */
@@ -136,9 +142,9 @@ struct tdata<> {
     constexpr tdata() { }
 
     // swallow any number of additional boxed or void_type arguments silently
-    template<typename... Args>
-    tdata(Args&&...) {
-        typedef util::type_list<typename util::rm_ref<Args>::type...> incoming;
+    template<typename... Ts>
+    tdata(Ts&&...) {
+        typedef util::type_list<typename util::rm_ref<Ts>::type...> incoming;
         typedef typename util::tl_filter_not_type<incoming, tdata>::type iargs;
         static_assert(util::tl_forall<iargs, boxed_or_void>::value,
                       "Additional unboxed arguments provided");
@@ -239,9 +245,10 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
     typedef Head head_type;
     typedef tdata<Tail...> tail_type;
 
-    typedef typename util::if_else_c< (sizeof...(Tail) > 0),
+    typedef typename std::conditional<
+                (sizeof...(Tail) > 0),
                 typename tdata<Tail...>::back_type,
-                util::wrapped<Head>
+                Head
             >::type
             back_type;
 
@@ -252,10 +259,10 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
     tdata(const Head& arg) : super(), head(arg) { }
     tdata(Head&& arg) : super(), head(std::move(arg)) { }
 
-    template<typename Arg0, typename Arg1, typename... Args>
-    tdata(Arg0&& arg0, Arg1&& arg1, Args&&... args)
-        : super(std::forward<Arg1>(arg1), std::forward<Args>(args)...)
-        , head(td_filter<Head>(std::forward<Arg0>(arg0))) {
+    template<typename T0, typename T1, typename... Ts>
+    tdata(T0&& arg0, T1&& arg1, Ts&&... args)
+        : super(std::forward<T1>(arg1), std::forward<Ts>(args)...)
+        , head(td_filter<Head>(std::forward<T0>(arg0))) {
     }
 
     tdata(const tdata&) = default;
@@ -285,10 +292,10 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
         return *this;
     }
 
-    template<typename Arg0, typename... Args>
-    inline void set(Arg0&& arg0, Args&&... args) {
-        head = std::forward<Arg0>(arg0);
-        super::set(std::forward<Args>(args)...);
+    template<typename T, typename... Ts>
+    inline void set(T&& arg, Ts&&... args) {
+        head = std::forward<T>(arg);
+        super::set(std::forward<Ts>(args)...);
     }
 
     inline size_t size() const { return num_elements; }
@@ -317,10 +324,8 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
             case  2: return ptr_to(super::super::head);
             case  3: return ptr_to(super::super::super::head);
             case  4: return ptr_to(super::super::super::super::head);
-            case  5: return ptr_to(super::super::super::super::super::head);
-            default: return super::at(p - 1);
+            default: return super::super::super::super::super::at(p - 5);
         }
-        //return (p == 0) ? ptr_to(head) : super::at(p - 1);
     }
 
     inline void* mutable_at(size_t p) {
@@ -335,40 +340,47 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
 #       else
         return const_cast<void*>(at(p));
 #       endif
-
     }
 
     inline const uniform_type_info* type_at(size_t p) const {
-        return (p == 0) ? utype_of(head) : super::type_at(p-1);
+        CPPA_REQUIRE(p < num_elements);
+        switch (p) {
+            case  0: return utype_of(head);
+            case  1: return utype_of(super::head);
+            case  2: return utype_of(super::super::head);
+            case  3: return utype_of(super::super::super::head);
+            case  4: return utype_of(super::super::super::super::head);
+            default: return super::super::super::super::super::type_at(p - 5);
+        }
     }
 
-    Head& _back(std::integral_constant<size_t, 0>) {
+    Head& _back(std::integral_constant<size_t,0>) {
         return head;
     }
 
     template<size_t Pos>
-    back_type& _back(std::integral_constant<size_t, Pos>) {
-        std::integral_constant<size_t, Pos - 1> token;
+    back_type& _back(std::integral_constant<size_t,Pos>) {
+        std::integral_constant<size_t,Pos-1> token;
         return super::_back(token);
     }
 
     back_type& back() {
-        std::integral_constant<size_t, sizeof...(Tail)> token;
+        std::integral_constant<size_t,sizeof...(Tail)> token;
         return _back(token);
     }
 
-    const Head& _back(std::integral_constant<size_t, 0>) const {
+    const Head& _back(std::integral_constant<size_t,0>) const {
         return head;
     }
 
     template<size_t Pos>
-    const back_type& _back(std::integral_constant<size_t, Pos>) const {
-        std::integral_constant<size_t, Pos - 1> token;
+    const back_type& _back(std::integral_constant<size_t,Pos>) const {
+        std::integral_constant<size_t,Pos-1> token;
         return super::_back(token);
     }
 
     const back_type& back() const {
-        std::integral_constant<size_t, sizeof...(Tail)> token;
+        std::integral_constant<size_t,sizeof...(Tail)> token;
         return _back(token);
     }
 };
@@ -398,34 +410,38 @@ struct tdata_upcast_helper<0, Head, Tail...> {
 template<typename T>
 struct tdata_from_type_list;
 
-template<typename... T>
-struct tdata_from_type_list<util::type_list<T...>> {
-    typedef tdata<T...> type;
+template<typename... Ts>
+struct tdata_from_type_list<util::type_list<Ts...>> {
+    typedef tdata<Ts...> type;
 };
 
-template<typename... T>
-inline void collect_tdata(tdata<T...>&) { }
-
-template<typename Storage, typename... Args>
-void collect_tdata(Storage& storage, const tdata<>&, const Args&... args) {
-    collect_tdata(storage, args...);
+template<typename T, typename U>
+inline void rebind_value(T& lhs, U& rhs) {
+    lhs = rhs;
 }
 
-template<typename Storage, typename Arg0, typename... Args>
-void collect_tdata(Storage& storage, const Arg0& arg0, const Args&... args) {
-    storage.head = arg0.head;
-    collect_tdata(storage.tail(), arg0.tail(), args...);
+template<typename T, typename U>
+inline void rebind_value(util::rebindable_reference<T>& lhs, U& rhs) {
+    lhs.rebind(rhs);
+}
+
+template<typename... Ts>
+inline void rebind_tdata(tdata<Ts...>&) { }
+
+template<typename... Ts, typename... Vs>
+void rebind_tdata(tdata<Ts...>& td, const tdata<>&, const Vs&... args) {
+    rebind_tdata(td, args...);
+}
+
+template<typename... Ts, typename... Us, typename... Vs>
+void rebind_tdata(tdata<Ts...>& td, const tdata<Us...>& arg, const Vs&... args) {
+    rebind_value(td.head, arg.head);
+    rebind_tdata(td.tail(), arg.tail(), args...);
 }
 
 } } // namespace cppa::detail
 
 namespace cppa {
-
-template<typename... Args>
-detail::tdata<typename detail::implicit_conversions<typename util::rm_ref<Args>::type>::type...>
-mk_tdata(Args&&... args) {
-    return {std::forward<Args>(args)...};
-}
 
 template<size_t N, typename... Ts>
 const typename util::at<N, Ts...>::type& get(const detail::tdata<Ts...>& tv) {

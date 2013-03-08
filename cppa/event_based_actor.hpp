@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "cppa/config.hpp"
-#include "cppa/either.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/scheduled_actor.hpp"
@@ -60,14 +59,14 @@ class event_based_actor : public scheduled_actor {
      * @brief Finishes execution with exit reason
      *        {@link exit_reason::unallowed_function_call unallowed_function_call}.
      */
-    void dequeue(behavior&); //override
+    void dequeue(behavior&);
 
     /**
      * @copydoc dequeue(behavior&)
      */
     void dequeue_response(behavior&, message_id);
 
-    resume_result resume(util::fiber*, actor_ptr&); //override
+    resume_result resume(util::fiber*, actor_ptr&);
 
     /**
      * @brief Initializes the actor.
@@ -92,9 +91,10 @@ class event_based_actor : public scheduled_actor {
      * @brief Provokes a compiler error to ensure that an event-based actor
      *        does not accidently uses receive() instead of become().
      */
-    template<typename... Args>
-    void receive(Args&&...) {
-        static_assert((sizeof...(Args) + 1) < 1,
+    template<typename... Ts>
+    void receive(Ts&&...) {
+        // this asssertion always fails
+        static_assert((sizeof...(Ts) + 1) < 1,
                       "You shall not use receive in an event-based actor. "
                       "Use become() instead.");
     }
@@ -102,30 +102,32 @@ class event_based_actor : public scheduled_actor {
     /**
      * @brief Provokes a compiler error.
      */
-    template<typename... Args>
-    void receive_loop(Args&&... args) {
-        receive(std::forward<Args>(args)...);
+    template<typename... Ts>
+    void receive_loop(Ts&&... args) {
+        receive(std::forward<Ts>(args)...);
     }
 
     /**
      * @brief Provokes a compiler error.
      */
-    template<typename... Args>
-    void receive_while(Args&&... args) {
-        receive(std::forward<Args>(args)...);
+    template<typename... Ts>
+    void receive_while(Ts&&... args) {
+        receive(std::forward<Ts>(args)...);
     }
 
     /**
      * @brief Provokes a compiler error.
      */
-    template<typename... Args>
-    void do_receive(Args&&... args) {
-        receive(std::forward<Args>(args)...);
+    template<typename... Ts>
+    void do_receive(Ts&&... args) {
+        receive(std::forward<Ts>(args)...);
     }
 
     void do_become(behavior&& bhvr, bool discard_old);
 
     void become_waiting_for(behavior bhvr, message_id mf);
+
+    detail::receive_policy m_recv_policy;
 
  private:
 
@@ -148,8 +150,6 @@ class event_based_actor : public scheduled_actor {
             request_timeout(get_behavior().timeout());
         }
     }
-
-    detail::receive_policy m_policy;
 
 };
 

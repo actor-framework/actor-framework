@@ -80,20 +80,20 @@ class message_future {
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
-    template<typename... Cases, typename... Args>
-    continue_helper then(const match_expr<Cases...>& a0, const Args&... as) {
+    template<typename... Cs, typename... Ts>
+    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
         check_consistency();
-        self->become_waiting_for(match_expr_convert(a0, as...), m_mid);
+        self->become_waiting_for(match_expr_convert(arg, args...), m_mid);
         return {m_mid};
     }
 
     /**
      * @brief Blocks until the response arrives and then executes @p mexpr.
      */
-    template<typename... Cases, typename... Args>
-    void await(const match_expr<Cases...>& arg0, const Args&... args) {
+    template<typename... Cs, typename... Ts>
+    void await(const match_expr<Cs...>& arg, const Ts&... args) {
         check_consistency();
-        self->dequeue_response(match_expr_convert(arg0, args...), m_mid);
+        self->dequeue_response(match_expr_convert(arg, args...), m_mid);
     }
 
     /**
@@ -186,9 +186,9 @@ class sync_receive_helper {
 
     inline sync_receive_helper(const message_future& mf) : m_mf(mf) { }
 
-    template<typename... Args>
-    inline void operator()(Args&&... args) {
-        m_mf.await(std::forward<Args>(args)...);
+    template<typename... Ts>
+    inline void operator()(Ts&&... args) {
+        m_mf.await(std::forward<Ts>(args)...);
     }
 
  private:

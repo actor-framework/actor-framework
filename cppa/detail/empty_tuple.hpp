@@ -59,8 +59,8 @@ class empty_tuple : public singleton_mixin<empty_tuple,abstract_tuple> {
 
     empty_tuple();
 
-    inline void initialize() /*override*/ { ref(); }
-    inline void destroy() /*override*/ { deref(); }
+    inline void initialize() { ref(); }
+    inline void destroy() { deref(); }
 
 };
 

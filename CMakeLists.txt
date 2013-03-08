@@ -124,6 +124,7 @@ set(LIBCPPA_SRC
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
     src/logging.cpp
+    src/mailbox_element.cpp
     src/match.cpp
     src/memory.cpp
     src/memory_managed.cpp
@@ -137,7 +138,6 @@ set(LIBCPPA_SRC
     src/primitive_variant.cpp
     src/process_information.cpp
     src/protocol.cpp
-    src/recursive_queue_node.cpp
     src/ref_counted.cpp
     src/response_handle.cpp
     src/ripemd_160.cpp

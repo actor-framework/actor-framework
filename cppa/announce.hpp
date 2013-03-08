@@ -108,9 +108,9 @@ bool announce(const std::type_info& tinfo, uniform_type_info* utype);
  * @see {@link announce_4.cpp announce example 4}
  * @returns A pair of @p c_ptr and the created meta informations.
  */
-template<class C, class Parent, typename... Args>
+template<class C, class Parent, typename... Ts>
 std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
-compound_member(C Parent::*c_ptr, const Args&... args) {
+compound_member(C Parent::*c_ptr, const Ts&... args) {
     return {c_ptr, new detail::default_uniform_type_info_impl<C>(args...)};
 }
 
@@ -123,9 +123,9 @@ compound_member(C Parent::*c_ptr, const Args&... args) {
  * @see {@link announce_4.cpp announce example 4}
  * @returns A pair of @p c_ptr and the created meta informations.
  */
-template<class C, class Parent, typename... Args>
+template<class C, class Parent, typename... Ts>
 std::pair<C& (Parent::*)(), util::abstract_uniform_type_info<C>*>
-compound_member(C& (Parent::*getter)(), const Args&... args) {
+compound_member(C& (Parent::*getter)(), const Ts&... args) {
     return {getter, new detail::default_uniform_type_info_impl<C>(args...)};
 }
 
@@ -140,12 +140,12 @@ compound_member(C& (Parent::*getter)(), const Args&... args) {
  * @returns A pair of @p c_ptr and the created meta informations.
  */
 template<class Parent, typename GRes,
-         typename SRes, typename SArg, typename... Args>
+         typename SRes, typename SArg, typename... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
                                 SRes (Parent::*)(SArg)  >& gspair,
-                const Args&... args) {
+                const Ts&... args) {
     typedef typename util::rm_ref<GRes>::type mtype;
     return {gspair, new detail::default_uniform_type_info_impl<mtype>(args...)};
 }
@@ -157,10 +157,9 @@ compound_member(const std::pair<GRes (Parent::*)() const,
  * @returns @c true if @p T was added to the libcppa type system,
  *          @c false otherwise.
  */
-template<typename T, typename... Args>
-inline bool announce(const Args&... args) {
-    return announce(typeid(T),
-                    new detail::default_uniform_type_info_impl<T>(args...));
+template<typename T, typename... Ts>
+inline bool announce(const Ts&... args) {
+    return announce(typeid(T), new detail::default_uniform_type_info_impl<T>(args...));
 }
 
 /**

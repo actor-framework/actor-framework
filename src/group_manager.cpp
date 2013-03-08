@@ -182,9 +182,9 @@ class local_group_proxy : public local_group {
 
  public:
 
-    template<typename... Args>
-    local_group_proxy(actor_ptr remote_broker, Args&&... args)
-    : super(false, forward<Args>(args)...) {
+    template<typename... Ts>
+    local_group_proxy(actor_ptr remote_broker, Ts&&... args)
+    : super(false, forward<Ts>(args)...) {
         CPPA_REQUIRE(m_broker == nullptr);
         CPPA_REQUIRE(remote_broker != nullptr);
         CPPA_REQUIRE(remote_broker->is_proxy());

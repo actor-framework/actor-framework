@@ -47,10 +47,10 @@ class event_based_actor_impl : public event_based_actor {
 
  public:
 
-    template<typename... Args>
-    event_based_actor_impl(InitFun fun, CleanupFun cfun, Args&&... args)
+    template<typename... Ts>
+    event_based_actor_impl(InitFun fun, CleanupFun cfun, Ts&&... args)
     : m_init(std::move(fun)), m_on_exit(std::move(cfun))
-    , m_members(std::forward<Args>(args)...) { }
+    , m_members(std::forward<Ts>(args)...) { }
 
     void init() { apply(m_init); }
 
@@ -71,9 +71,9 @@ class event_based_actor_impl : public event_based_actor {
         f(args...);
     }
 
-    template<typename F, typename... Args>
-    void apply(F& f, Args... args) {
-        apply(f, args..., &get_ref<sizeof...(Args)>(m_members));
+    template<typename F, typename... Ts>
+    void apply(F& f, Ts... args) {
+        apply(f, args..., &get_ref<sizeof...(Ts)>(m_members));
     }
 
     typedef std::integral_constant<size_t, 0> zero_t;
@@ -102,11 +102,9 @@ class event_based_actor_factory {
     event_based_actor_factory(InitFun fun, CleanupFun cfun)
     : m_init(std::move(fun)), m_on_exit(std::move(cfun)) { }
 
-    template<typename... Args>
-    actor_ptr spawn(Args&&... args) {
-        auto ptr = memory::create<impl>(m_init,
-                                        m_on_exit,
-                                        std::forward<Args>(args)...);
+    template<typename... Ts>
+    actor_ptr spawn(Ts&&... args) {
+        auto ptr = memory::create<impl>(m_init, m_on_exit, std::forward<Ts>(args)...);
         return get_scheduler()->exec(no_spawn_options, ptr);
     }
 

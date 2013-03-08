@@ -39,7 +39,6 @@
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/rm_ref.hpp"
-#include "cppa/util/if_else.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
 

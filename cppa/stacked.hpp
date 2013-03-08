@@ -37,15 +37,18 @@
 
 #include "cppa/behavior.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/mailbox_element.hpp"
+
+#include "cppa/util/dptr.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
 
 /**
- * @tparam Base Either @p scheduled or @p threaded.
+ * @brief An actor that uses the blocking API of @p libcppa and thus needs
+ *        its own stack.
  */
 template<class Base, class Subtype>
 class stacked : public Base {
@@ -62,20 +65,17 @@ class stacked : public Base {
     static constexpr auto receive_flag = detail::rp_nestable;
 
     virtual void dequeue(behavior& bhvr) {
-        m_recv_policy.receive(dthis(), bhvr);
+        m_recv_policy.receive(util::dptr<Subtype>(this), bhvr);
     }
 
     virtual void dequeue_response(behavior& bhvr, message_id request_id) {
-        m_recv_policy.receive(dthis(), bhvr, request_id);
+        m_recv_policy.receive(util::dptr<Subtype>(this), bhvr, request_id);
     }
 
     virtual void run() {
-        if (!dthis()->m_bhvr_stack.empty()) {
-            dthis()->exec_behavior_stack();
-        }
-        if (m_behavior) {
-            m_behavior();
-        }
+        auto dthis = util::dptr<Subtype>(this);
+        if (!dthis->m_bhvr_stack.empty()) dthis->exec_behavior_stack();
+        if (m_behavior) m_behavior();
     }
 
     inline void set_behavior(std::function<void()> fun) {
@@ -87,11 +87,15 @@ class stacked : public Base {
         throw actor_exited(reason);
     }
 
+    virtual void exec_behavior_stack() {
+        this->m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
+    }
+
  protected:
 
-    template<typename... Args>
-    stacked(std::function<void()> fun, Args&&... args)
-    : Base(std::forward<Args>(args)...), m_behavior(std::move(fun)) { }
+    template<typename... Ts>
+    stacked(std::function<void()> fun, Ts&&... args)
+    : Base(std::forward<Ts>(args)...), m_behavior(std::move(fun)) { }
 
     virtual void do_become(behavior&& bhvr, bool discard_old) {
         become_impl(std::move(bhvr), discard_old, message_id());
@@ -102,39 +106,26 @@ class stacked : public Base {
     }
 
     virtual bool has_behavior() {
-        return static_cast<bool>(m_behavior) || !dthis()->m_bhvr_stack.empty();
+        return    static_cast<bool>(m_behavior)
+               || !util::dptr<Subtype>(this)->m_bhvr_stack.empty();
     }
-
-    typedef std::chrono::time_point<std::chrono::high_resolution_clock>
-            timeout_type;
-
-    virtual timeout_type init_timeout(const util::duration& rel_time) = 0;
-
-    virtual detail::recursive_queue_node* await_message() = 0;
-
-    virtual detail::recursive_queue_node* await_message(const timeout_type& abs_time) = 0;
-
- private:
 
     std::function<void()> m_behavior;
     detail::receive_policy m_recv_policy;
 
+ private:
+
     void become_impl(behavior&& bhvr, bool discard_old, message_id mid) {
+        auto dthis = util::dptr<Subtype>(this);
         if (bhvr.timeout().valid()) {
-            dthis()->reset_timeout();
-            dthis()->request_timeout(bhvr.timeout());
+            dthis->reset_timeout();
+            dthis->request_timeout(bhvr.timeout());
         }
-        if (!dthis()->m_bhvr_stack.empty() && discard_old) {
-            dthis()->m_bhvr_stack.pop_async_back();
+        if (!dthis->m_bhvr_stack.empty() && discard_old) {
+            dthis->m_bhvr_stack.pop_async_back();
         }
-        dthis()->m_bhvr_stack.push_back(std::move(bhvr), mid);
+        dthis->m_bhvr_stack.push_back(std::move(bhvr), mid);
     }
-
-    virtual void exec_behavior_stack() {
-        this->m_bhvr_stack.exec(m_recv_policy, dthis());
-    }
-
-    inline Subtype* dthis() { return static_cast<Subtype*>(this); }
 
 };
 

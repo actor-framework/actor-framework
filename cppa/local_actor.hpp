@@ -43,13 +43,13 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/memory_cached.hpp"
+#include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa {
 
@@ -85,7 +85,7 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
  * @brief Base class for local running Actors.
  * @extends actor
  */
-class local_actor : public extend<actor,local_actor>::with<memory_cached> {
+class local_actor : public extend<actor>::with<memory_cached> {
 
     typedef combined_type super;
 
@@ -329,11 +329,11 @@ class local_actor : public extend<actor,local_actor>::with<memory_cached> {
     std::vector<message_id> m_pending_responses;
 
     // "default value" for m_current_node
-    detail::recursive_queue_node m_dummy_node;
+    mailbox_element m_dummy_node;
 
     // points to m_dummy_node if no callback is currently invoked,
     // points to the node under processing otherwise
-    detail::recursive_queue_node* m_current_node;
+    mailbox_element* m_current_node;
 
     // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;

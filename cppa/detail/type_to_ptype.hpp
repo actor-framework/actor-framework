@@ -37,59 +37,43 @@
 
 #include "cppa/primitive_type.hpp"
 
+#include "cppa/util/rm_ref.hpp"
+
 namespace cppa { namespace detail {
-
-// if (IfStmt == true) ptype = PT; else ptype = Else::ptype;
-template<bool IfStmt, primitive_type PT, class Else>
-struct if_else_ptype_c {
-    static const primitive_type ptype = PT;
-};
-
-template<primitive_type PT, class Else>
-struct if_else_ptype_c<false, PT, Else> {
-    static const primitive_type ptype = Else::ptype;
-};
-
-// if (Stmt::value == true) ptype = FT; else ptype = Else::ptype;
-template<class Stmt, primitive_type PT, class Else>
-struct if_else_ptype : if_else_ptype_c<Stmt::value, PT, Else> { };
 
 template<primitive_type PT>
 struct wrapped_ptype { static const primitive_type ptype = PT; };
 
 // maps type T the the corresponding fundamental_type
 template<typename T>
-struct type_to_ptype_impl :
-    // signed integers
-    if_else_ptype<std::is_same<T, std::int8_t>, pt_int8,
-    if_else_ptype<std::is_same<T, std::int16_t>, pt_int16,
-    if_else_ptype<std::is_same<T, std::int32_t>, pt_int32,
-    if_else_ptype<std::is_same<T, std::int64_t>, pt_int64,
-    // unsigned integers
-    if_else_ptype<std::is_same<T, std::uint8_t>, pt_uint8,
-    if_else_ptype<std::is_same<T, std::uint16_t>, pt_uint16,
-    if_else_ptype<std::is_same<T, std::uint32_t>, pt_uint32,
-    if_else_ptype<std::is_same<T, std::uint64_t>, pt_uint64,
-    // floating points
-    if_else_ptype<std::is_same<T, float>, pt_float,
-    if_else_ptype<std::is_same<T, double>, pt_double,
-    if_else_ptype<std::is_same<T, long double>, pt_long_double,
-    // strings
-    if_else_ptype<std::is_convertible<T, std::string>, pt_u8string,
-    if_else_ptype<std::is_convertible<T, std::u16string>, pt_u16string,
-    if_else_ptype<std::is_convertible<T, std::u32string>, pt_u32string,
-    // default case
-    wrapped_ptype<pt_null> > > > > > > > > > > > > > > {
+struct type_to_ptype_impl {
+    static constexpr primitive_type ptype =
+        std::is_convertible<T,std::string>::value
+        ? pt_u8string
+        : (std::is_convertible<T,std::u16string>::value
+           ? pt_u16string
+           : (std::is_convertible<T,std::u32string>::value
+              ? pt_u32string
+              : pt_null));
 };
+
+// integers
+template<> struct type_to_ptype_impl<std::int8_t  > : wrapped_ptype<pt_int8  > { };
+template<> struct type_to_ptype_impl<std::uint8_t > : wrapped_ptype<pt_uint8 > { };
+template<> struct type_to_ptype_impl<std::int16_t > : wrapped_ptype<pt_int16 > { };
+template<> struct type_to_ptype_impl<std::uint16_t> : wrapped_ptype<pt_uint16> { };
+template<> struct type_to_ptype_impl<std::int32_t > : wrapped_ptype<pt_int32 > { };
+template<> struct type_to_ptype_impl<std::uint32_t> : wrapped_ptype<pt_uint32> { };
+template<> struct type_to_ptype_impl<std::int64_t > : wrapped_ptype<pt_int64 > { };
+template<> struct type_to_ptype_impl<std::uint64_t> : wrapped_ptype<pt_uint64> { };
+
+// floating points
+template<> struct type_to_ptype_impl<float>       : wrapped_ptype<pt_float      > { };
+template<> struct type_to_ptype_impl<double>      : wrapped_ptype<pt_double     > { };
+template<> struct type_to_ptype_impl<long double> : wrapped_ptype<pt_long_double> { };
 
 template<typename T>
-struct type_to_ptype {
-
-    typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
-
-    static const primitive_type ptype = type_to_ptype_impl<type>::ptype;
-
-};
+struct type_to_ptype : type_to_ptype_impl<typename util::rm_ref<T>::type> { };
 
 } } // namespace cppa::detail
 

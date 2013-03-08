@@ -115,8 +115,8 @@ detail::receive_while_helper<Statement> receive_while(Statement&& stmt);
  * @param bhvr Denotes the actor's response the next incoming message.
  * @returns A functor providing the @c until member function.
  */
-template<typename... Args>
-detail::do_receive_helper do_receive(Args&&... args);
+template<typename... Ts>
+detail::do_receive_helper do_receive(Ts&&... args);
 
 /**
  * @}

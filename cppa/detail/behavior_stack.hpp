@@ -40,7 +40,7 @@
 #include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/message_id.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
+#include "cppa/mailbox_element.hpp"
 
 namespace cppa { namespace detail {
 
@@ -90,7 +90,7 @@ class behavior_stack
     }
 
     template<class Policy, class Client>
-    bool invoke(Policy& policy, Client* client, recursive_queue_node* node) {
+    bool invoke(Policy& policy, Client* client, mailbox_element* node) {
         CPPA_REQUIRE(!empty());
         CPPA_REQUIRE(client != nullptr);
         CPPA_REQUIRE(node != nullptr);
@@ -122,7 +122,7 @@ class behavior_stack
     template<class Policy, class Client>
     void exec(Policy& policy, Client* client) {
         while (!empty()) {
-            invoke(policy, client, client->await_message());
+            invoke(policy, client, policy.fetch_message(client));
             cleanup();
         }
     }

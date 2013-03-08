@@ -36,60 +36,63 @@
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/type_list.hpp"
 
-#include "cppa/util/conjunction.hpp"
-
 namespace cppa { namespace util {
 
 template<typename Signature>
 struct callable_trait;
 
-// member function pointer (const)
-template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...) const> {
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
+// member const function pointer
+template<class C, typename Result, typename... Ts>
+struct callable_trait<Result (C::*)(Ts...) const> {
+    typedef Result result_type;
+    typedef type_list<Ts...> arg_types;
 };
 
 // member function pointer
-template<class C, typename ResultType, typename... Args>
-struct callable_trait<ResultType (C::*)(Args...)> {
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
+template<class C, typename Result, typename... Ts>
+struct callable_trait<Result (C::*)(Ts...)> {
+    typedef Result result_type;
+    typedef type_list<Ts...> arg_types;
 };
 
 // good ol' function
-template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (Args...)> {
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
+template<typename Result, typename... Ts>
+struct callable_trait<Result (Ts...)> {
+    typedef Result result_type;
+    typedef type_list<Ts...> arg_types;
 };
 
 // good ol' function pointer
-template<typename ResultType, typename... Args>
-struct callable_trait<ResultType (*)(Args...)> {
-    typedef ResultType result_type;
-    typedef type_list<Args...> arg_types;
+template<typename Result, typename... Ts>
+struct callable_trait<Result (*)(Ts...)> {
+    typedef Result result_type;
+    typedef type_list<Ts...> arg_types;
 };
 
-template<bool IsFun, bool IsMemberFun, typename C>
+// matches (IsFun || IsMemberFun)
+template<bool IsFun, bool IsMemberFun, typename T>
 struct get_callable_trait_helper {
-    typedef callable_trait<C> type;
+    typedef callable_trait<T> type;
 };
 
+// assume functor providing operator()
 template<typename C>
 struct get_callable_trait_helper<false, false, C> {
-    // assuming functor
     typedef callable_trait<decltype(&C::operator())> type;
 };
 
-template<typename C>
+template<typename T>
 struct get_callable_trait {
-    typedef typename rm_ref<C>::type fun_type;
-    typedef typename
-            get_callable_trait_helper< (   std::is_function<fun_type>::value
-                 || std::is_function<typename std::remove_pointer<fun_type>::type>::value),
-                std::is_member_function_pointer<fun_type>::value,
-                fun_type>::type
+    // type without cv qualifiers
+    typedef typename rm_ref<T>::type bare_type;
+    // if type is a function pointer, this typedef identifies the function
+    typedef typename std::remove_pointer<bare_type>::type fun_type;
+    typedef typename get_callable_trait_helper<
+                   std::is_function<bare_type>::value
+                || std::is_function<fun_type>::value,
+                std::is_member_function_pointer<bare_type>::value,
+                bare_type
+            >::type
             type;
     typedef typename type::result_type result_type;
     typedef typename type::arg_types arg_types;
@@ -99,51 +102,6 @@ template<typename C>
 struct get_arg_types {
     typedef typename get_callable_trait<C>::type trait_type;
     typedef typename trait_type::arg_types types;
-};
-
-template<typename T>
-struct is_callable {
-
-    template<typename C>
-    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr) {
-        return true;
-    }
-
-    template<typename C>
-    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr) {
-        return true;
-    }
-
-    static void _fun(void*) { }
-
-    typedef decltype(_fun(static_cast<typename rm_ref<T>::type*>(nullptr)))
-            result_type;
-
- public:
-
-    static constexpr bool value = std::is_same<bool, result_type>::value;
-
-};
-
-template<typename... Ts>
-struct all_callable {
-    static constexpr bool value = conjunction<is_callable<Ts>...>::value;
-};
-
-template<bool IsCallable, typename C>
-struct get_result_type_impl {
-    typedef typename get_callable_trait<C>::type trait_type;
-    typedef typename trait_type::result_type type;
-};
-
-template<typename C>
-struct get_result_type_impl<false, C> {
-    typedef void_type type;
-};
-
-template<typename C>
-struct get_result_type {
-    typedef typename get_result_type_impl<is_callable<C>::value, C>::type type;
 };
 
 } } // namespace cppa::util

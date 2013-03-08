@@ -59,10 +59,10 @@ class actor_companion_mixin : public Base {
 
  public:
 
-    typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> message_pointer;
+    typedef std::unique_ptr<mailbox_element,detail::disposer> message_pointer;
 
-    template<typename... Args>
-    actor_companion_mixin(Args&&... args) : super(std::forward<Args>(args)...) {
+    template<typename... Ts>
+    actor_companion_mixin(Ts&&... args) : super(std::forward<Ts>(args)...) {
         m_self.reset(detail::memory::create<companion>(this));
     }
 
@@ -89,9 +89,9 @@ class actor_companion_mixin : public Base {
      * @note While the message handler is invoked, @p self will point
      *       to the companion object to enable send() and reply().
      */
-    template<typename... Args>
-    void set_message_handler(Args&&... matchExpressions) {
-        m_message_handler = match_expr_convert(std::forward<Args>(matchExpressions)...);
+    template<typename... Ts>
+    void set_message_handler(Ts&&... args) {
+        m_message_handler = match_expr_convert(std::forward<Ts>(args)...);
     }
 
     /**
@@ -112,8 +112,8 @@ class actor_companion_mixin : public Base {
     class companion : public local_actor {
 
         friend class actor_companion_mixin;
+
         typedef util::shared_spinlock lock_type;
-        typedef std::unique_ptr<detail::recursive_queue_node,detail::disposer> node_ptr;
 
      public:
 
@@ -129,26 +129,22 @@ class actor_companion_mixin : public Base {
 
         void enqueue(const actor_ptr& sender, any_tuple msg) {
             util::shared_lock_guard<lock_type> guard(m_lock);
-            if (m_parent) {
-                m_parent->new_message(new_node_ptr(sender, std::move(msg)));
-            }
+            if (m_parent) push_message(sender, std::move(msg));
         }
 
         void sync_enqueue(const actor_ptr& sender,
                           message_id id,
                           any_tuple msg) {
             util::shared_lock_guard<lock_type> guard(m_lock);
-            if (m_parent) {
-                m_parent->new_message(new_node_ptr(sender, std::move(msg), id));
-            }
+            if (m_parent) push_message(sender, std::move(msg), id);
         }
 
         bool initialized() const { return true; }
 
         void quit(std::uint32_t) {
-            throw std::runtime_error("ActorWidgetMixin::Gateway::exit "
-                                     "is forbidden, use Qt's widget "
-                                     "management instead!");
+            throw std::runtime_error("Using actor_companion_mixin::quit "
+                                     "is prohibited; use Qt's widget "
+                                     "management instead.");
         }
 
         void dequeue(behavior&) {
@@ -169,9 +165,11 @@ class actor_companion_mixin : public Base {
 
      private:
 
-        template<typename... Args>
-        node_ptr new_node_ptr(Args&&... args) {
-            return node_ptr(detail::memory::create<detail::recursive_queue_node>(std::forward<Args>(args)...));
+        template<typename... Ts>
+        void push_message(Ts&&... args) {
+            message_pointer ptr;
+            ptr.reset(detail::memory::create<mailbox_element>(std::forward<Ts>(args)...));
+            m_parent->new_message(std::move(ptr));
         }
 
         void throw_no_become() {
@@ -186,12 +184,18 @@ class actor_companion_mixin : public Base {
                                      "receive() API");
         }
 
+        // guards access to m_parent
         lock_type m_lock;
+
+        // set to nullptr if this companion became detached
         actor_companion_mixin* m_parent;
 
     };
 
+    // used as 'self' before calling message handler
     intrusive_ptr<companion> m_self;
+
+    // user-defined message handler for incoming messages
     partial_function m_message_handler;
 
 };

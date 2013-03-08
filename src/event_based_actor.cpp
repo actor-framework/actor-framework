@@ -138,7 +138,7 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
             }
             else {
                 CPPA_LOG_DEBUG("try to invoke message: " << to_string(e->msg));
-                if (m_bhvr_stack.invoke(m_policy, this, e)) {
+                if (m_bhvr_stack.invoke(m_recv_policy, this, e)) {
                     CPPA_LOG_DEBUG_IF(m_chained_actor,
                                       "set actor with ID "
                                       << m_chained_actor->id()

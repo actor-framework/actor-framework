@@ -28,34 +28,91 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IF_ELSE_HPP
-#define CPPA_IF_ELSE_HPP
+#ifndef CPPA_REBINDABLE_REFERENCE_HPP
+#define CPPA_REBINDABLE_REFERENCE_HPP
 
-#include "cppa/util/wrapped.hpp"
+#include "cppa/config.hpp"
+#include "cppa/util/get_result_type.hpp"
 
 namespace cppa { namespace util {
 
-// if (IfStmt == true) type = T; else type = Else::type;
-template<bool IfStmt, typename T, class Else>
-struct if_else_c {
-    typedef T type;
+template<typename T>
+struct call_helper {
+    typedef typename get_result_type<T>::type result_type;
+    template<typename... Ts>
+    result_type operator()(T& f, const Ts&... args) const {
+        return f(std::forward<Ts>(args)...);
+    }
 };
 
-template<typename T, class Else>
-struct if_else_c<false, T, Else> {
-    typedef typename Else::type type;
+template<>
+struct call_helper<bool> {
+    typedef bool result_type;
+    bool operator()(const bool& value) const {
+        return value;
+    }
 };
+
+template<>
+struct call_helper<const bool> : call_helper<bool> { };
 
 /**
- * @brief A conditinal expression for types that allows
- *        nested statements (unlike std::conditional).
- *
- * @c type is defined as @p T if <tt>IfStmt == true</tt>;
- * otherwise @c type is defined as @p Else::type.
+ * @brief A reference wrapper similar to std::reference_wrapper, but
+ *        allows rebinding the reference. Note that this wrapper can
+ *        be 'dangling', because it provides a default constructor.
  */
-template<class Stmt, typename T, class Else>
-struct if_else : if_else_c<Stmt::value, T, Else> { };
+template<typename T>
+class rebindable_reference {
+
+ public:
+
+    rebindable_reference() : m_ptr(nullptr) { }
+
+    rebindable_reference(T& value) : m_ptr(&value) { }
+
+    template<typename U>
+    rebindable_reference(const rebindable_reference<U>& other) : m_ptr(other.ptr()) { }
+
+    inline bool bound() const {
+        return m_ptr != nullptr;
+    }
+
+    inline void rebind(T& value) {
+        m_ptr  = &value;
+    }
+
+    template<typename U>
+    inline void rebind(const rebindable_reference<U>& other) {
+        m_ptr  = other.ptr();
+    }
+
+    inline T* ptr() const {
+        CPPA_REQUIRE(bound());
+        return m_ptr;
+    }
+
+    inline T& get() const {
+        CPPA_REQUIRE(bound());
+        return *m_ptr;
+    }
+
+    inline operator T&() const {
+        CPPA_REQUIRE(bound());
+        return *m_ptr;
+    }
+
+    template<typename... Ts>
+    typename call_helper<T>::result_type operator()(Ts&&... args) {
+        call_helper<T> f;
+        return f(get(), std::forward<Ts>(args)...);
+    }
+
+ private:
+
+    T* m_ptr;
+
+};
 
 } } // namespace cppa::util
 
-#endif // CPPA_IF_ELSE_HPP
+#endif // CPPA_REBINDABLE_REFERENCE_HPP

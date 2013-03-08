@@ -44,16 +44,16 @@ inline auto apply_args(F& f, Tuple& tup, util::int_list<Is...>)
     return f(get_cv_aware<Is>(tup)...);
 }
 
-template<typename F, class Tuple, long... Is, typename... Args>
-inline auto apply_args_prefixed(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
--> decltype(f(std::forward<Args>(args)..., get_cv_aware<Is>(tup)...)) {
-    return f(std::forward<Args>(args)..., get_cv_aware<Is>(tup)...);
+template<typename F, class Tuple, long... Is, typename... Ts>
+inline auto apply_args_prefixed(F& f, Tuple& tup, util::int_list<Is...>, Ts&&... args)
+-> decltype(f(std::forward<Ts>(args)..., get_cv_aware<Is>(tup)...)) {
+    return f(std::forward<Ts>(args)..., get_cv_aware<Is>(tup)...);
 }
 
-template<typename F, class Tuple, long... Is, typename... Args>
-inline auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Args&&... args)
--> decltype(f(get_cv_aware<Is>(tup)..., std::forward<Args>(args)...)) {
-    return f(get_cv_aware<Is>(tup)..., std::forward<Args>(args)...);
+template<typename F, class Tuple, long... Is, typename... Ts>
+inline auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Ts&&... args)
+-> decltype(f(get_cv_aware<Is>(tup)..., std::forward<Ts>(args)...)) {
+    return f(get_cv_aware<Is>(tup)..., std::forward<Ts>(args)...);
 }
 
 } } // namespace cppa::util

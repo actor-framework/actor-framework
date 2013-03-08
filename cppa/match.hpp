@@ -51,16 +51,10 @@ struct match_helper {
     any_tuple tup;
     match_helper(any_tuple t) : tup(std::move(t)) { }
     match_helper(match_helper&&) = default;
-    /*
-    void operator()(partial_function&& arg) {
-        partial_function tmp{std::move(arg)};
-        tmp(tup);
-    }
-    */
-    template<class Arg0, class... Args>
-    bool operator()(Arg0&& arg0, Args&&... args) {
-        auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
-                                      std::forward<Args>(args)...);
+    template<typename... Ts>
+    bool operator()(Ts&&... args) {
+        static_assert(sizeof...(Ts) > 0, "at least one argument required");
+        auto tmp = match_expr_convert(std::forward<Ts>(args)...);
         static_assert(std::is_same<partial_function, decltype(tmp)>::value,
                       "match statement contains timeout");
         return tmp(tup);
@@ -86,18 +80,13 @@ class match_each_helper {
     match_each_helper(Iterator first, Iterator last, Projection proj)
     : i(first), e(last), p(proj) { }
 
-    template<typename... Cases>
-    void operator()(match_expr<Cases...> expr) {
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        static_assert(sizeof...(Ts) > 0, "at least one argument required");
+        auto expr = match_expr_collect(std::forward<Ts>(args)...);
         for (; i != e; ++i) {
             expr(p(*i));
         }
-    }
-
-    template<class Arg0, class Arg1, class... Args>
-    void operator()(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
-        (*this)(match_expr_collect(std::forward<Arg0>(arg0),
-                                   std::forward<Arg1>(arg1),
-                                   std::forward<Args>(args)...));
     }
 
  private:
@@ -126,18 +115,13 @@ class match_for_helper {
     match_for_helper(Iterator first, Predicate p, Advance a = Advance(), Projection pj = Projection())
     : i(first), adv(a), pred(p), proj(pj) { }
 
-    template<typename... Cases>
-    void operator()(match_expr<Cases...> expr) {
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        static_assert(sizeof...(Ts) > 0, "at least one argument required");
+        auto expr = match_expr_collect(std::forward<Ts>(args)...);
         for (; pred(i); adv(i)) {
             expr(proj(*i));
         }
-    }
-
-    template<class Arg0, class Arg1, class... Args>
-    void operator()(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
-        (*this)(match_expr_collect(std::forward<Arg0>(arg0),
-                                   std::forward<Arg1>(arg1),
-                                   std::forward<Args>(args)...));
     }
 
  private:
@@ -199,8 +183,8 @@ struct unwind_and_call<Size, Size> {
         return target.first.invoke(target.second, sub_result, std::forward<Unwinded>(args)...);
     }
 
-    template<typename T, typename... Args>
-    static inline bool _(std::vector<T>&, Args&&...) { return false; }
+    template<typename T, typename... Ts>
+    static inline bool _(std::vector<T>&, Ts&&...) { return false; }
 
 };
 
@@ -272,32 +256,16 @@ class stream_matcher {
 
     stream_matcher(iter first, iter last) : m_pos(first), m_end(last) { }
 
-    template<typename... Cases>
-    bool operator()(match_expr<Cases...>& expr) {
+    template<typename... Ts>
+    bool operator()(Ts&&... args) {
+        auto expr = match_expr_collect(std::forward<Ts>(args)...);
+        typedef decltype(expr) expr_type;
         while (m_pos != m_end) {
-            if (!unwind_and_call<0, util::tl_size<typename match_expr<Cases...>::cases_list>::value>::_(m_cache, m_pos, m_end, expr)) {
+            if (!unwind_and_call<0, util::tl_size<typename expr_type::cases_list>::value>::_(m_cache, m_pos, m_end, expr)) {
                 return false;
             }
         }
         return true;
-    }
-
-    template<typename... Cases>
-    bool operator()(match_expr<Cases...>&& expr) {
-        auto tmp = std::move(expr);
-        return (*this)(tmp);
-    }
-
-    template<typename... Cases>
-    bool operator()(const match_expr<Cases...>& expr) {
-        auto tmp = expr;
-        return (*this)(tmp);
-    }
-
-    template<typename Arg0, typename... Args>
-    bool operator()(Arg0&& arg0, Args&&... args) {
-        return (*this)(match_expr_collect(std::forward<Arg0>(arg0),
-                                          std::forward<Args>(args)...));
     }
 
  private:

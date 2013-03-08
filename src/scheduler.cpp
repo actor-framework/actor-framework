@@ -157,8 +157,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // setup & local variables
     self.set(m_self.get());
     bool done = false;
-    auto& queue = m_self->m_mailbox;
-    std::unique_ptr<detail::recursive_queue_node,detail::disposer> msg_ptr;
+    std::unique_ptr<mailbox_element,detail::disposer> msg_ptr;
     auto tout = hrc::now();
     std::multimap<decltype(tout),delayed_msg> messages;
     // message handling rules
@@ -188,7 +187,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // loop
     while (!done) {
         while (!msg_ptr) {
-            if (messages.empty()) msg_ptr.reset(queue.pop());
+            if (messages.empty()) msg_ptr.reset(m_self->pop());
             else {
                 tout = hrc::now();
                 // handle timeouts (send messages)
@@ -200,7 +199,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
                 }
                 // wait for next message or next timeout
                 if (it != messages.end()) {
-                    msg_ptr.reset(queue.try_pop(it->first));
+                    msg_ptr.reset(m_self->try_pop(it->first));
                 }
             }
         }

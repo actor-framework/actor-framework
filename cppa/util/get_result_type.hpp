@@ -28,58 +28,30 @@
 \******************************************************************************/
 
 
-#include <chrono>
-#include <memory>
-#include <iostream>
-#include <algorithm>
+#ifndef CPPA_GET_RESULT_TYPE_HPP
+#define CPPA_GET_RESULT_TYPE_HPP
 
-#include "cppa/self.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/exception.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/thread_mapped_actor.hpp"
+#include "cppa/util/is_callable.hpp"
+#include "cppa/util/callable_trait.hpp"
 
-#include "cppa/detail/matches.hpp"
+namespace cppa { namespace util {
 
-namespace cppa {
+template<bool IsCallable, typename C>
+struct get_result_type_impl {
+    typedef typename get_callable_trait<C>::type trait_type;
+    typedef typename trait_type::result_type type;
+};
 
-thread_mapped_actor::thread_mapped_actor() : super(std::function<void()>{}), m_initialized(true) { }
+template<typename C>
+struct get_result_type_impl<false, C> {
+    typedef void_type type;
+};
 
-thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
-: super(std::move(fun)), m_initialized(false) { }
+template<typename C>
+struct get_result_type {
+    typedef typename get_result_type_impl<is_callable<C>::value, C>::type type;
+};
 
-/*
-auto thread_mapped_actor::init_timeout(const util::duration& rel_time) -> timeout_type {
-    auto result = std::chrono::high_resolution_clock::now();
-    result += rel_time;
-    return result;
-}
+} } // namespace cppa::util
 
-void thread_mapped_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
-    auto ptr = new_mailbox_element(sender, std::move(msg));
-    this->m_mailbox.push_back(ptr);
-}
-
-void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
-                                       message_id id,
-                                       any_tuple msg) {
-    auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
-    if (!this->m_mailbox.push_back(ptr)) {
-        detail::sync_request_bouncer f{this->exit_reason()};
-        f(sender, id);
-    }
-}
-*/
-
-bool thread_mapped_actor::initialized() const {
-    return m_initialized;
-}
-
-void thread_mapped_actor::cleanup(std::uint32_t reason) {
-    detail::sync_request_bouncer f{reason};
-    m_mailbox.close(f);
-    super::cleanup(reason);
-}
-
-
-} // namespace cppa::detail
+#endif // CPPA_GET_RESULT_TYPE_HPP

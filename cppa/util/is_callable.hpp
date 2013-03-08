@@ -28,57 +28,43 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
-#define CPPA_RECURSIVE_QUEUE_NODE_HPP
+#ifndef CPPA_IS_CALLABLE_HPP
+#define CPPA_IS_CALLABLE_HPP
 
-#include <cstdint>
+#include "cppa/util/conjunction.hpp"
+#include "cppa/util/callable_trait.hpp"
 
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/memory_cached.hpp"
+namespace cppa { namespace util {
 
-// needs access to constructor + destructor to initialize m_dummy_node
-namespace cppa { class local_actor; }
+template<typename T>
+struct is_callable {
 
-namespace cppa { namespace detail {
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr) {
+        return true;
+    }
 
-class recursive_queue_node : public memory_cached<memory_managed,recursive_queue_node> {
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr) {
+        return true;
+    }
 
-    friend class memory;
-    friend class ::cppa::local_actor;
+    static void _fun(void*) { }
+
+    typedef decltype(_fun(static_cast<typename rm_ref<T>::type*>(nullptr)))
+            result_type;
 
  public:
 
-    typedef recursive_queue_node* pointer;
-
-    pointer      next;   // intrusive next pointer
-    bool         marked; // denotes if this node is currently processed
-    actor_ptr    sender; // points to the sender of msg
-    any_tuple    msg;    // 'content field'
-    message_id mid;
-
-    recursive_queue_node(recursive_queue_node&&) = delete;
-    recursive_queue_node(const recursive_queue_node&) = delete;
-    recursive_queue_node& operator=(recursive_queue_node&&) = delete;
-    recursive_queue_node& operator=(const recursive_queue_node&) = delete;
-
-    template<typename... Ts>
-    inline static recursive_queue_node* create(Ts&&... args) {
-        return memory::create<recursive_queue_node>(std::forward<Ts>(args)...);
-    }
-
- private:
-
-    recursive_queue_node() = default;
-
-    recursive_queue_node(const actor_ptr& sptr,
-                         any_tuple data,
-                         message_id id = message_id{});
+    static constexpr bool value = std::is_same<bool, result_type>::value;
 
 };
 
-} } // namespace cppa::detail
+template<typename... Ts>
+struct all_callable {
+    static constexpr bool value = conjunction<is_callable<Ts>...>::value;
+};
 
-#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP
+} } // namespace cppa::util
+
+#endif // CPPA_IS_CALLABLE_HPP
