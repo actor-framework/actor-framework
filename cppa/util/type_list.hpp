@@ -36,7 +36,6 @@
 
 #include "cppa/util/at.hpp"
 #include "cppa/util/tbind.hpp"
-#include "cppa/util/if_else.hpp"
 #include "cppa/util/type_pair.hpp"
 #include "cppa/util/void_type.hpp"
 
@@ -911,10 +910,10 @@ struct tl_is_zipped {
  */
 template<class List, typename What = void_type>
 struct tl_trim {
-    typedef typename util::if_else<
-                std::is_same<typename tl_back<List>::type, What>,
+    typedef typename std::conditional<
+                std::is_same<typename tl_back<List>::type,What>::value,
                 typename tl_trim<typename tl_pop_back<List>::type, What>::type,
-                util::wrapped<List>
+                List
             >::type
             type;
 };

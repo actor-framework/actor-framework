@@ -48,6 +48,7 @@ thread_mapped_actor::thread_mapped_actor() : super(std::function<void()>{}), m_i
 thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
 : super(std::move(fun)), m_initialized(false) { }
 
+/*
 auto thread_mapped_actor::init_timeout(const util::duration& rel_time) -> timeout_type {
     auto result = std::chrono::high_resolution_clock::now();
     result += rel_time;
@@ -60,7 +61,7 @@ void thread_mapped_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
 }
 
 void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
-                                       message_id_t id,
+                                       message_id id,
                                        any_tuple msg) {
     auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
     if (!this->m_mailbox.push_back(ptr)) {
@@ -68,14 +69,7 @@ void thread_mapped_actor::sync_enqueue(const actor_ptr& sender,
         f(sender, id);
     }
 }
-
-detail::recursive_queue_node* thread_mapped_actor::await_message() {
-    return m_mailbox.pop();
-}
-
-detail::recursive_queue_node* thread_mapped_actor::await_message(const timeout_type& abs_time) {
-    return m_mailbox.try_pop(abs_time);
-}
+*/
 
 bool thread_mapped_actor::initialized() const {
     return m_initialized;

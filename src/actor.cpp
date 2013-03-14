@@ -69,7 +69,7 @@ bool actor::chained_enqueue(const actor_ptr& sender, any_tuple msg) {
     return false;
 }
 
-bool actor::chained_sync_enqueue(const actor_ptr& ptr, message_id_t id, any_tuple msg) {
+bool actor::chained_sync_enqueue(const actor_ptr& ptr, message_id id, any_tuple msg) {
     sync_enqueue(ptr, id, std::move(msg));
     return false;
 }

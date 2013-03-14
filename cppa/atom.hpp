@@ -40,7 +40,11 @@ namespace cppa {
 /**
  * @brief The value type of atoms.
  */
-enum class atom_value : std::uint64_t { dirty_little_hack = 37337 };
+enum class atom_value : std::uint64_t {
+    /** @cond PRIVATE */
+    dirty_little_hack = 37337
+    /** @endcond */
+};
 
 /**
  * @brief Returns @p what as a string representation.

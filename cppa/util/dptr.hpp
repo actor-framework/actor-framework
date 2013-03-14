@@ -28,15 +28,33 @@
 \******************************************************************************/
 
 
-#include "cppa/network/message_header.hpp"
+#ifndef CPPA_DTHIS_HPP
+#define CPPA_DTHIS_HPP
 
-namespace cppa { namespace network {
+#include <type_traits>
 
-message_header::message_header(const actor_ptr& s,
-                               const actor_ptr& r,
-                               message_id mid   )
-: sender(s), receiver(r), id(mid) { }
+namespace cppa { namespace util {
 
-message_header::message_header() : sender(nullptr), receiver(nullptr), id() { }
+/**
+ * @brief Returns <tt>static_cast<Subtype*>(ptr)</tt> if @p Subtype is a
+ *        derived type of @p MixinType, returns @p ptr without cast otherwise.
+ */
+template<class Subtype, class MixinType>
+typename std::conditional<
+    std::is_base_of<MixinType,Subtype>::value,
+    Subtype,
+    MixinType
+>::type*
+dptr(MixinType* ptr) {
+    typedef typename std::conditional<
+            std::is_base_of<MixinType,Subtype>::value,
+            Subtype,
+            MixinType
+        >::type
+        result_type;
+    return static_cast<result_type*>(ptr);
+}
 
-} } // namespace cppa::network
+} } // namespace cppa::util
+
+#endif // CPPA_DTHIS_HPP

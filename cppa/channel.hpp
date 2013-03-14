@@ -67,12 +67,6 @@ class channel : public ref_counted {
 
     virtual ~channel();
 
- private:
-
-    // channel is a sealed class and the only
-    // allowed subclasses are actor and group.
-    channel() = default;
-
 };
 
 /**
@@ -84,8 +78,8 @@ typedef intrusive_ptr<channel> channel_ptr;
 /**
  * @brief Convenience alias.
  */
-template<typename T>
-using enable_if_channel = std::enable_if<std::is_base_of<channel,T>::value>;
+template<typename T, typename R = void>
+using enable_if_channel = std::enable_if<std::is_base_of<channel,T>::value,R>;
 
 } // namespace cppa
 

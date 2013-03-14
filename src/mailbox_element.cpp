@@ -28,33 +28,13 @@
 \******************************************************************************/
 
 
-#include "cppa/cppa.hpp"
-#include "cppa/receive.hpp"
+#include "cppa/mailbox_element.hpp"
 
 namespace cppa {
 
-void receive_loop(behavior& rules) {
-    local_actor* sptr = self;
-    for (;;) {
-        sptr->dequeue(rules);
-    }
-}
-
-void receive_loop(behavior&& rules) {
-    behavior tmp(std::move(rules));
-    receive_loop(tmp);
-}
-
-void receive_loop(partial_function& rules) {
-    local_actor* sptr = self;
-    for (;;) {
-        sptr->dequeue(rules);
-    }
-}
-
-void receive_loop(partial_function&& rules) {
-    partial_function tmp(std::move(rules));
-    receive_loop(tmp);
-}
+mailbox_element::mailbox_element(const actor_ptr& sptr,
+                                 any_tuple data,
+                                 message_id id)
+: next(nullptr), marked(false), sender(sptr), msg(std::move(data)), mid(id) { }
 
 } // namespace cppa

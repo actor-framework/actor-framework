@@ -35,6 +35,7 @@
 
 #include "cppa/guard_expr.hpp"
 #include "cppa/util/rm_ref.hpp"
+#include "cppa/util/rebindable_reference.hpp"
 
 namespace cppa { namespace util {
 
@@ -44,17 +45,22 @@ struct purge_refs_impl {
 };
 
 template<typename T>
-struct purge_refs_impl<ge_reference_wrapper<T> > {
+struct purge_refs_impl<util::rebindable_reference<T> > {
     typedef T type;
 };
 
 template<typename T>
-struct purge_refs_impl<ge_mutable_reference_wrapper<T> > {
+struct purge_refs_impl<util::rebindable_reference<const T> > {
     typedef T type;
 };
 
 template<typename T>
 struct purge_refs_impl<std::reference_wrapper<T> > {
+    typedef T type;
+};
+
+template<typename T>
+struct purge_refs_impl<std::reference_wrapper<const T> > {
     typedef T type;
 };
 

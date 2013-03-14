@@ -412,7 +412,7 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_h
         actor_ptr_tinfo::s_deserialize(msg.sender, source, actor_ptr_name);
         actor_ptr_tinfo::s_deserialize(msg.receiver, source, actor_ptr_name);
         auto msg_id = source->read<std::uint64_t>();
-        msg.id = message_id_t::from_integer_value(msg_id);
+        msg.id = message_id::from_integer_value(msg_id);
         source->end_object();
     }
 

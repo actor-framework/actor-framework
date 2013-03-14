@@ -39,6 +39,7 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/apply_args.hpp"
 #include "cppa/util/left_or_right.hpp"
+#include "cppa/util/get_result_type.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -49,7 +50,7 @@ inline bool is_defined_at(Fun& f, Tuple& tup, util::int_list<Is...>) {
     return f.defined_at(get_cv_aware<Is>(tup)...);
 }
 
-template<typename ProjectionFuns, typename... Args>
+template<typename ProjectionFuns, typename... Ts>
 struct collected_args_tuple {
     typedef typename tdata_from_type_list<
             typename util::tl_zip<
@@ -59,7 +60,7 @@ struct collected_args_tuple {
                     util::rm_option
                 >::type,
                 typename util::tl_map<
-                    util::type_list<Args...>,
+                    util::type_list<Ts...>,
                     mutable_gref_wrapped
                 >::type,
                 util::left_or_right
@@ -71,7 +72,7 @@ struct collected_args_tuple {
 /**
  * @brief Projection implemented by a set of functors.
  */
-template<class ProjectionFuns, typename... Args>
+template<class ProjectionFuns, typename... Ts>
 class projection {
 
  public:
@@ -90,10 +91,10 @@ class projection {
      * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
      *        the result of @p fun in @p result.
      */
-    template<class PartialFun>
-    bool invoke(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
-        typename collected_args_tuple<ProjectionFuns,Args...>::type pargs;
-        if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
+    template<class PartFun>
+    bool invoke(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
+        typename collected_args_tuple<ProjectionFuns,Ts...>::type pargs;
+        if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
             auto indices = util::get_indices(pargs);
             if (is_defined_at(fun, pargs, indices)) {
                 result = util::apply_args(fun, pargs, indices);
@@ -106,11 +107,11 @@ class projection {
     /**
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
      */
-    template<class PartialFun>
-    bool operator()(PartialFun& fun, Args... args) const {
-        typename collected_args_tuple<ProjectionFuns,Args...>::type pargs;
+    template<class PartFun>
+    bool operator()(PartFun& fun, Ts... args) const {
+        typename collected_args_tuple<ProjectionFuns,Ts...>::type pargs;
         auto indices = util::get_indices(pargs);
-        if (collect(pargs, m_funs, std::forward<Args>(args)...)) {
+        if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
             if (is_defined_at(fun, pargs, indices)) {
                 util::apply_args(fun, pargs, indices);
                 return true;
@@ -123,13 +124,13 @@ class projection {
      * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
      *        the result of @p fun in @p result.
      */
-    template<class PartialFun>
-    inline bool operator()(PartialFun& fun, typename PartialFun::result_type& result, Args... args) const {
+    template<class PartFun>
+    inline bool operator()(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
         return invoke(fun, result, args...);
     }
 
-    template<class PartialFun>
-    inline bool operator()(PartialFun& fun, const util::void_type&, Args... args) const {
+    template<class PartFun>
+    inline bool operator()(PartFun& fun, const util::void_type&, Ts... args) const {
         return (*this)(fun, args...);
     }
 
@@ -166,11 +167,11 @@ class projection {
         return true;
     }
 
-    template<class TData, class Trans, typename T0, typename... Ts>
+    template<class TData, class Trans, typename U, typename... Us>
     static inline bool collect(TData& td, const Trans& tr,
-                               T0&& arg0, Ts&&... args) {
-        return    store(td.head, fetch(tr.head, std::forward<T0>(arg0)))
-               && collect(td.tail(), tr.tail(), std::forward<Ts>(args)...);
+                               U&& arg, Us&&... args) {
+        return    store(td.head, fetch(tr.head, std::forward<U>(arg)))
+               && collect(td.tail(), tr.tail(), std::forward<Us>(args)...);
     }
 
     fun_container m_funs;
@@ -186,8 +187,8 @@ class projection<util::empty_type_list> {
     projection(const tdata<>&) { }
     projection(const projection&) = default;
 
-    template<class PartialFun>
-    bool operator()(PartialFun& fun) const {
+    template<class PartFun>
+    bool operator()(PartFun& fun) const {
         if (fun.defined_at()) {
             fun();
             return true;
@@ -195,8 +196,8 @@ class projection<util::empty_type_list> {
         return false;
     }
 
-    template<class PartialFun>
-    bool operator()(PartialFun& fun, const util::void_type&) const {
+    template<class PartFun>
+    bool operator()(PartFun& fun, const util::void_type&) const {
         if (fun.defined_at()) {
             fun();
             return true;
@@ -204,8 +205,8 @@ class projection<util::empty_type_list> {
         return false;
     }
 
-    template<class PartialFun>
-    bool operator()(PartialFun& fun, typename PartialFun::result_type& res) const {
+    template<class PartFun>
+    bool operator()(PartFun& fun, typename PartFun::result_type& res) const {
         if (fun.defined_at()) {
             res = fun();
             return true;
@@ -218,9 +219,9 @@ class projection<util::empty_type_list> {
 template<class ProjectionFuns, class List>
 struct projection_from_type_list;
 
-template<class ProjectionFuns, typename... Args>
-struct projection_from_type_list<ProjectionFuns, util::type_list<Args...> > {
-    typedef projection<ProjectionFuns, Args...> type;
+template<class ProjectionFuns, typename... Ts>
+struct projection_from_type_list<ProjectionFuns, util::type_list<Ts...> > {
+    typedef projection<ProjectionFuns, Ts...> type;
 };
 
 } } // namespace cppa::detail

@@ -50,8 +50,8 @@ class singleton_mixin : public Base {
 
  protected:
 
-    template<typename... Args>
-    singleton_mixin(Args&&... args) : Base(std::forward<Args>(args)...) { }
+    template<typename... Ts>
+    singleton_mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
     virtual ~singleton_mixin() { }
 

@@ -44,6 +44,7 @@
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/apply_args.hpp"
+#include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -96,8 +97,8 @@ struct guard_expr {
     guard_expr(const guard_expr&) = default;
     guard_expr(guard_expr&& other) : m_args(std::move(other.m_args)) { }
 
-    template<typename... Args>
-    bool operator()(const Args&... args) const;
+    template<typename... Ts>
+    bool operator()(const Ts&... args) const;
 
 };
 
@@ -109,58 +110,16 @@ struct guard_expr {
     SubMacro (greater_eq_op, >=)      SubMacro (equal_op, ==)                  \
     SubMacro (not_equal_op, !=)
 
-
-template<typename T>
-struct ge_mutable_reference_wrapper {
-    T* value;
-    ge_mutable_reference_wrapper() : value(nullptr) { }
-    ge_mutable_reference_wrapper(T&&) = delete;
-    ge_mutable_reference_wrapper(T& vref) : value(&vref) { }
-    ge_mutable_reference_wrapper(const ge_mutable_reference_wrapper&) = default;
-    ge_mutable_reference_wrapper& operator=(T& vref) {
-        value = &vref;
-        return *this;
-    }
-    ge_mutable_reference_wrapper& operator=(const ge_mutable_reference_wrapper&) = default;
-    T& get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator T& () const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
-template<typename T>
-struct ge_reference_wrapper {
-    const T* value;
-    ge_reference_wrapper(T&&) = delete;
-    ge_reference_wrapper() : value(nullptr) { }
-    ge_reference_wrapper(const T& val_ref) : value(&val_ref) { }
-    ge_reference_wrapper(const ge_reference_wrapper&) = default;
-    ge_reference_wrapper& operator=(const T& vref) {
-        value = &vref;
-        return *this;
-    }
-    ge_reference_wrapper& operator=(const ge_reference_wrapper&) = default;
-    const T& get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator const T& () const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
-// support use of gref(BooleanVariable) as receive loop 'guard'
-template<>
-struct ge_reference_wrapper<bool> {
-    const bool* value;
-    ge_reference_wrapper(bool&&) = delete;
-    ge_reference_wrapper(const bool& val_ref) : value(&val_ref) { }
-    ge_reference_wrapper(const ge_reference_wrapper&) = default;
-    ge_reference_wrapper& operator=(const ge_reference_wrapper&) = default;
-    const bool& get() const { CPPA_REQUIRE(value != 0); return *value; }
-    operator const bool& () const { CPPA_REQUIRE(value != 0); return *value; }
-    bool operator()() const { CPPA_REQUIRE(value != 0); return *value; }
-};
-
 /**
  * @brief Creates a reference wrapper similar to std::reference_wrapper<const T>
  *        that could be used in guard expressions or to enforce lazy evaluation.
  */
 template<typename T>
-ge_reference_wrapper<T> gref(const T& value) { return {value}; }
+util::rebindable_reference<const T> gref(const T& value) {
+    return {value};
+}
+
+//ge_reference_wrapper<T> gref(const T& value) { return {value}; }
 
 // bind utility for placeholders
 
@@ -385,7 +344,7 @@ template<typename T, class Tuple>
 struct ge_unbound { typedef T type; };
 
 template<typename T, class Tuple>
-struct ge_unbound<ge_reference_wrapper<T>, Tuple> { typedef T type; };
+struct ge_unbound<util::rebindable_reference<const T>, Tuple> { typedef T type; };
 
 template<typename T, class Tuple>
 struct ge_unbound<std::reference_wrapper<T>, Tuple> { typedef T type; };
@@ -418,7 +377,7 @@ struct is_ge_type<guard_placeholder<X> > {
 };
 
 template<typename T>
-struct is_ge_type<ge_reference_wrapper<T> > {
+struct is_ge_type<util::rebindable_reference<T> > {
     static constexpr bool value = true;
 };
 
@@ -553,7 +512,7 @@ inline const T& ge_resolve(const Tuple&, const std::reference_wrapper<const T>& 
 }
 
 template<class Tuple, typename T>
-inline const T& ge_resolve(const Tuple&, const ge_reference_wrapper<T>& value) {
+inline const T& ge_resolve(const Tuple&, const util::rebindable_reference<const T>& value) {
     return value.get();
 }
 
@@ -644,19 +603,19 @@ auto ge_resolve(const Tuple& tup,
     return ge_eval<OP>(tup, ge.m_args.first, ge.m_args.second);
 }
 
-template<operator_id OP, typename First, typename Second, typename... Args>
+template<operator_id OP, typename First, typename Second, typename... Ts>
 auto ge_invoke_step2(const guard_expr<OP, First, Second>& ge,
-                     const detail::tdata<Args...>& tup)
-     -> typename ge_result<OP, First, Second, detail::tdata<Args...>>::type {
+                     const detail::tdata<Ts...>& tup)
+     -> typename ge_result<OP, First, Second, detail::tdata<Ts...>>::type {
     return ge_eval<OP>(tup, ge.m_args.first, ge.m_args.second);
 }
 
-template<operator_id OP, typename First, typename Second, typename... Args>
+template<operator_id OP, typename First, typename Second, typename... Ts>
 auto ge_invoke(const guard_expr<OP, First, Second>& ge,
-               const Args&... args)
+               const Ts&... args)
      -> typename ge_result<OP, First, Second,
-                           detail::tdata<std::reference_wrapper<const Args>...>>::type {
-    detail::tdata<std::reference_wrapper<const Args>...> tup{args...};
+                           detail::tdata<std::reference_wrapper<const Ts>...>>::type {
+    detail::tdata<std::reference_wrapper<const Ts>...> tup{args...};
     return ge_invoke_step2(ge, tup);
 }
 
@@ -664,9 +623,9 @@ template<class GuardExpr>
 struct ge_invoke_helper {
     const GuardExpr& ge;
     ge_invoke_helper(const GuardExpr& arg) : ge(arg) { }
-    template<typename... Args>
-    bool operator()(Args&&... args) const {
-        return ge_invoke(ge, std::forward<Args>(args)...);
+    template<typename... Ts>
+    bool operator()(Ts&&... args) const {
+        return ge_invoke(ge, std::forward<Ts>(args)...);
     }
 };
 
@@ -687,10 +646,10 @@ ge_invoke_any(const guard_expr<OP, First, Second>& ge,
             >::type
             result_type;
     using namespace util;
-    typename if_else<
-                std::is_same<typename TupleTypes::back, anything>,
+    typename std::conditional<
+                std::is_same<typename TupleTypes::back,anything>::value,
                 TupleTypes,
-                wrapped<typename tl_push_back<TupleTypes, anything>::type>
+                wrapped<typename tl_push_back<TupleTypes,anything>::type>
             >::type
             cast_token;
     auto x = tuple_cast(tup, cast_token);
@@ -700,8 +659,8 @@ ge_invoke_any(const guard_expr<OP, First, Second>& ge,
 }
 
 template<operator_id OP, typename First, typename Second>
-template<typename... Args>
-bool guard_expr<OP, First, Second>::operator()(const Args&... args) const {
+template<typename... Ts>
+bool guard_expr<OP, First, Second>::operator()(const Ts&... args) const {
     static_assert(std::is_same<decltype(ge_invoke(*this, args...)), bool>::value,
                   "guard expression does not return a boolean");
     return ge_invoke(*this, args...);
@@ -711,17 +670,17 @@ bool guard_expr<OP, First, Second>::operator()(const Args&... args) const {
 
 template<typename T>
 struct gref_wrapped {
-    typedef ge_reference_wrapper<typename util::rm_ref<T>::type> type;
+    typedef util::rebindable_reference<const typename util::rm_ref<T>::type> type;
 };
 
 template<typename T>
 struct mutable_gref_wrapped {
-    typedef ge_mutable_reference_wrapper<T> type;
+    typedef util::rebindable_reference<T> type;
 };
 
 template<typename T>
 struct mutable_gref_wrapped<T&> {
-    typedef ge_mutable_reference_wrapper<T> type;
+    typedef util::rebindable_reference<T> type;
 };
 
 // finally ...

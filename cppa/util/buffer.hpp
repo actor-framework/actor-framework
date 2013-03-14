@@ -45,7 +45,7 @@ enum buffer_write_policy {
 };
 
 /**
- *
+ * @brief
  */
 class buffer {
 

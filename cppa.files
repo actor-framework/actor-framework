@@ -24,7 +24,6 @@ cppa/detail/atom_val.hpp
 cppa/detail/behavior_impl.hpp
 cppa/detail/behavior_stack.hpp
 cppa/detail/boxed.hpp
-cppa/detail/channel.hpp
 cppa/detail/container_tuple_view.hpp
 cppa/detail/decorated_names_map.hpp
 cppa/detail/decorated_tuple.hpp
@@ -48,7 +47,8 @@ cppa/detail/pseudo_tuple.hpp
 cppa/detail/ptype_to_type.hpp
 cppa/detail/receive_loop_helper.hpp
 cppa/detail/receive_policy.hpp
-cppa/detail/recursive_queue_node.hpp
+cppa/mailbox_element.hpp
+cppa/mailbox_based.hpp
 cppa/detail/scheduled_actor_dummy.hpp
 cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
@@ -68,7 +68,6 @@ cppa/detail/unboxed.hpp
 cppa/detail/uniform_type_info_map.hpp
 cppa/detail/value_guard.hpp
 cppa/detail/yield_interface.hpp
-cppa/either.hpp
 cppa/enable_weak_ptr.hpp
 cppa/event_based_actor.hpp
 cppa/exception.hpp
@@ -80,7 +79,6 @@ cppa/group.hpp
 cppa/guard_expr.hpp
 cppa/intrusive/blocking_single_reader_queue.hpp
 cppa/intrusive/single_reader_queue.hpp
-cppa/intrusive_fwd_ptr.hpp
 cppa/intrusive_ptr.hpp
 cppa/local_actor.hpp
 cppa/logging.hpp
@@ -145,7 +143,6 @@ cppa/util/duration.hpp
 cppa/util/element_at.hpp
 cppa/util/fiber.hpp
 cppa/util/fixed_vector.hpp
-cppa/util/if_else.hpp
 cppa/util/int_list.hpp
 cppa/util/is_array_of.hpp
 cppa/util/is_builtin.hpp
@@ -168,7 +165,6 @@ cppa/util/rm_ref.hpp
 cppa/util/scope_guard.hpp
 cppa/util/shared_lock_guard.hpp
 cppa/util/shared_spinlock.hpp
-cppa/util/static_foreach.hpp
 cppa/util/tbind.hpp
 cppa/util/type_list.hpp
 cppa/util/type_pair.hpp
@@ -244,8 +240,7 @@ src/partial_function.cpp
 src/primitive_variant.cpp
 src/process_information.cpp
 src/protocol.cpp
-src/receive.cpp
-src/recursive_queue_node.cpp
+src/mailbox_element.cpp
 src/ref_counted.cpp
 src/response_handle.cpp
 src/ripemd_160.cpp
@@ -302,3 +297,8 @@ cppa/extend.hpp
 cppa/detail/sync_request_bouncer.hpp
 cppa/memory_cached.hpp
 cppa/singletons.hpp
+cppa/threaded.hpp
+cppa/util/dptr.hpp
+cppa/util/is_callable.hpp
+cppa/util/get_result_type.hpp
+cppa/util/rebindable_reference.hpp

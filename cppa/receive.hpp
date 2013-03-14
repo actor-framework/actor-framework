@@ -38,22 +38,44 @@
 
 namespace cppa {
 
-#ifdef CPPA_DOCUMENTATION
+/**
+ * @ingroup BlockingAPI
+ * @{
+ */
 
 /**
- * @brief Dequeues the next message from the mailbox that's matched
- *        by @p bhvr and executes the corresponding callback.
- * @param bhvr Denotes the actor's response the next incoming message.
+ * @brief Dequeues the next message from the mailbox that
+ *        is matched by given behavior.
  */
-void receive(behavior& bhvr);
+template<typename... Ts>
+void receive(Ts&&... args);
 
 /**
  * @brief Receives messages in an endless loop.
- *
- * Semantically equal to: <tt>for (;;) { receive(bhvr); }</tt>
- * @param bhvr Denotes the actor's response the next incoming message.
+ *        Semantically equal to: <tt>for (;;) { receive(...); }</tt>
  */
-void receive_loop(behavior& bhvr);
+template<typename... Ts>
+void receive_loop(Ts&&... args);
+
+/**
+ * @brief Receives messages as in a range-based loop.
+ *
+ * Semantically equal to:
+ * <tt>for ( ; begin != end; ++begin) { receive(...); }</tt>.
+ *
+ * <b>Usage example:</b>
+ * @code
+ * int i = 0;
+ * receive_for(i, 10) (
+ *     on(atom("get")) >> [&]() { reply("result", i); }
+ * );
+ * @endcode
+ * @param begin First value in range.
+ * @param end Last value in range (excluded).
+ * @returns A functor implementing the loop.
+ */
+template<typename T>
+detail::receive_for_helper<T> receive_for(T& begin, const T& end);
 
 /**
  * @brief Receives messages as long as @p stmt returns true.
@@ -73,27 +95,7 @@ void receive_loop(behavior& bhvr);
  * @returns A functor implementing the loop.
  */
 template<typename Statement>
-auto receive_while(Statement&& stmt);
-
-/**
- * @brief Receives messages as in a range-based loop.
- *
- * Semantically equal to: <tt>for ( ; begin != end; ++begin) { receive(...); }</tt>.
- *
- * <b>Usage example:</b>
- * @code
- * int i = 0;
- * receive_for(i, 10)
- * (
- *     on(atom("get")) >> [&]() { reply("result", i); }
- * );
- * @endcode
- * @param begin First value in range.
- * @param end Last value in range (excluded).
- * @returns A functor implementing the loop.
- */
-template<typename T>
-auto receive_for(T& begin, const T& end);
+detail::receive_while_helper<Statement> receive_while(Statement&& stmt);
 
 /**
  * @brief Receives messages until @p stmt returns true.
@@ -113,32 +115,34 @@ auto receive_for(T& begin, const T& end);
  * @param bhvr Denotes the actor's response the next incoming message.
  * @returns A functor providing the @c until member function.
  */
-auto do_receive(behavior& bhvr);
+template<typename... Ts>
+detail::do_receive_helper do_receive(Ts&&... args);
 
-#else // CPPA_DOCUMENTATION
+/**
+ * @}
+ */
 
-inline void receive(behavior& bhvr) { self->dequeue(bhvr); }
 
-inline void receive(partial_function& fun) { self->dequeue(fun); }
+/******************************************************************************
+ *                inline and template function implementations                *
+ ******************************************************************************/
 
-template<typename Arg0, typename... Args>
-void receive(Arg0&& arg0, Args&&... args) {
-    auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
-                                  std::forward<Args>(args)...);
-    receive(tmp);
+template<typename... Ts>
+void receive(Ts&&... args) {
+    static_assert(sizeof...(Ts), "receive() requires at least one argument");
+    self->dequeue(match_expr_convert(std::forward<Ts>(args)...));
 }
 
-void receive_loop(behavior& rules);
-void receive_loop(behavior&& rules);
+inline void receive_loop(behavior rules) {
+    local_actor* sptr = self;
+    for (;;) sptr->dequeue(rules);
+}
 
-void receive_loop(partial_function& rules);
-void receive_loop(partial_function&& rules);
-
-template<typename Arg0, typename... Args>
-void receive_loop(Arg0&& arg0, Args&&... args) {
-    auto tmp = match_expr_convert(std::forward<Arg0>(arg0),
-                                  std::forward<Args>(args)...);
-    receive_loop(tmp);
+template<typename... Ts>
+void receive_loop(Ts&&... args) {
+    behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+    local_actor* sptr = self;
+    for (;;) sptr->dequeue(bhvr);
 }
 
 template<typename T>
@@ -153,12 +157,11 @@ detail::receive_while_helper<Statement> receive_while(Statement&& stmt) {
     return std::move(stmt);
 }
 
-template<typename... Args>
-detail::do_receive_helper do_receive(Args&&... args) {
-    return detail::do_receive_helper(std::forward<Args>(args)...);
+template<typename... Ts>
+detail::do_receive_helper do_receive(Ts&&... args) {
+    behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+    return detail::do_receive_helper(std::move(bhvr));
 }
-
-#endif // CPPA_DOCUMENTATION
 
 } // namespace cppa
 

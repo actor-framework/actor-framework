@@ -40,7 +40,6 @@
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
-#include "cppa/either.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/actor_proxy.hpp"

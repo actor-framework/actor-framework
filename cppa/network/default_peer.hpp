@@ -146,15 +146,6 @@ class default_peer : public continuable_io {
         enqueue({nullptr, nullptr}, msg);
     }
 
-    /*
-    template<typename Arg0, typename Arg1, typename... Args>
-    inline void enqueue(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
-        enqueue(make_any_tuple(std::forward<Arg0>(arg0),
-                               std::forward<Arg1>(arg1),
-                               std::forward<Args>(args)...));
-    }
-    */
-
 };
 
 typedef intrusive_ptr<default_peer> default_peer_ptr;

@@ -35,35 +35,33 @@
 
 #include "cppa/primitive_type.hpp"
 
-#include "cppa/util/if_else.hpp"
 #include "cppa/util/wrapped.hpp"
 
 namespace cppa { namespace detail {
 
 // maps the primitive_type PT to the corresponding type
 template<primitive_type PT>
-struct ptype_to_type :
-    // signed integers
-    util::if_else_c<PT == pt_int8, std::int8_t,
-    util::if_else_c<PT == pt_int16, std::int16_t,
-    util::if_else_c<PT == pt_int32, std::int32_t,
-    util::if_else_c<PT == pt_int64, std::int64_t,
-    util::if_else_c<PT == pt_uint8, std::uint8_t,
-    // unsigned integers
-    util::if_else_c<PT == pt_uint16, std::uint16_t,
-    util::if_else_c<PT == pt_uint32, std::uint32_t,
-    util::if_else_c<PT == pt_uint64, std::uint64_t,
-    // floating points
-    util::if_else_c<PT == pt_float, float,
-    util::if_else_c<PT == pt_double, double,
-    util::if_else_c<PT == pt_long_double, long double,
-    // strings
-    util::if_else_c<PT == pt_u8string, std::string,
-    util::if_else_c<PT == pt_u16string, std::u16string,
-    util::if_else_c<PT == pt_u32string, std::u32string,
-    // default case
-    void > > > > > > > > > > > > > > {
-};
+struct ptype_to_type : util::wrapped<void> { };
+
+// integer types
+template<> struct ptype_to_type<pt_int8  > : util::wrapped<std::int8_t  > { };
+template<> struct ptype_to_type<pt_uint8 > : util::wrapped<std::uint8_t > { };
+template<> struct ptype_to_type<pt_int16 > : util::wrapped<std::int16_t > { };
+template<> struct ptype_to_type<pt_uint16> : util::wrapped<std::uint16_t> { };
+template<> struct ptype_to_type<pt_int32 > : util::wrapped<std::int32_t > { };
+template<> struct ptype_to_type<pt_uint32> : util::wrapped<std::uint32_t> { };
+template<> struct ptype_to_type<pt_int64 > : util::wrapped<std::int64_t > { };
+template<> struct ptype_to_type<pt_uint64> : util::wrapped<std::uint64_t> { };
+
+// floating points
+template<> struct ptype_to_type<pt_float>       : util::wrapped<float> { };
+template<> struct ptype_to_type<pt_double>      : util::wrapped<double> { };
+template<> struct ptype_to_type<pt_long_double> : util::wrapped<long double> { };
+
+// strings
+template<> struct ptype_to_type<pt_u8string > : util::wrapped<std::string   > { };
+template<> struct ptype_to_type<pt_u16string> : util::wrapped<std::u16string> { };
+template<> struct ptype_to_type<pt_u32string> : util::wrapped<std::u32string> { };
 
 } } // namespace cppa::detail
 

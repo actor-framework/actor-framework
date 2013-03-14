@@ -60,9 +60,9 @@ class enable_weak_ptr : public Base {
 
     typedef enable_weak_ptr combined_type;
 
-    template<typename... Args>
-    enable_weak_ptr(Args&&... args)
-    : Base(std::forward<Args>(args)...)
+    template<typename... Ts>
+    enable_weak_ptr(Ts&&... args)
+    : Base(std::forward<Ts>(args)...)
     , m_anchor(new weak_ptr_anchor(this)) { }
 
     void request_deletion() {

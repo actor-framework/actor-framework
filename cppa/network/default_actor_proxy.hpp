@@ -48,8 +48,7 @@ class basic_memory_cache;
 
 namespace cppa { namespace network {
 
-class sync_request_info : public extend<memory_managed,sync_request_info>::
-                                 with<memory_cached> {
+class sync_request_info : public extend<memory_managed>::with<memory_cached> {
 
     friend class detail::memory;
 
@@ -59,11 +58,11 @@ class sync_request_info : public extend<memory_managed,sync_request_info>::
 
     pointer      next;   // intrusive next pointer
     actor_ptr    sender; // points to the sender of the message
-    message_id_t mid;    // sync message ID
+    message_id mid;    // sync message ID
 
  private:
 
-    sync_request_info(actor_ptr sptr, message_id_t id);
+    sync_request_info(actor_ptr sptr, message_id id);
 
 };
 
@@ -79,7 +78,7 @@ class default_actor_proxy : public actor_proxy {
 
     void enqueue(const actor_ptr& sender, any_tuple msg);
 
-    void sync_enqueue(const actor_ptr& sender, message_id_t id, any_tuple msg);
+    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg);
 
     void link_to(const actor_ptr& other);
 
@@ -107,7 +106,7 @@ class default_actor_proxy : public actor_proxy {
 
     void forward_msg(const actor_ptr& sender,
                      any_tuple msg,
-                     message_id_t mid = message_id_t());
+                     message_id mid = message_id());
 
     default_protocol_ptr    m_proto;
     process_information_ptr m_pinf;

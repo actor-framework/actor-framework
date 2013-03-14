@@ -38,9 +38,11 @@
 #include "cppa/actor_state.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
+#include "cppa/mailbox_element.hpp"
+
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
+
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa {
@@ -68,7 +70,7 @@ struct has_blocking_receive<scheduled_actor> : std::true_type { };
  * @brief A base class for cooperatively scheduled actors.
  * @extends local_actor
  */
-class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox_based>{
+class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     typedef combined_type super;
 
@@ -115,13 +117,15 @@ class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox
      */
     inline bool is_hidden() const;
 
+    virtual void run_detached();
+
     void enqueue(const actor_ptr&, any_tuple);
 
     bool chained_enqueue(const actor_ptr&, any_tuple);
 
-    void sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
+    void sync_enqueue(const actor_ptr&, message_id, any_tuple);
 
-    bool chained_sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
+    bool chained_sync_enqueue(const actor_ptr&, message_id, any_tuple);
 
     void request_timeout(const util::duration& d);
 
@@ -160,8 +164,6 @@ class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox
 
     void cleanup(std::uint32_t reason);
 
-    typedef detail::recursive_queue_node mailbox_element;
-
     typedef intrusive::single_reader_queue<mailbox_element,detail::disposer>
             mailbox_type;
 
@@ -195,7 +197,7 @@ class scheduled_actor : public extend<local_actor,scheduled_actor>::with<mailbox
     bool sync_enqueue_impl(actor_state next,
                            const actor_ptr& sender,
                            any_tuple& msg,
-                           message_id_t id);
+                           message_id id);
 
     bool m_has_pending_tout;
     std::uint32_t m_pending_tout;

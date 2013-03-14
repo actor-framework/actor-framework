@@ -36,8 +36,6 @@
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
 
-#include "cppa/network/protocol.hpp"
-
 namespace cppa { namespace network {
 
 class middleman;

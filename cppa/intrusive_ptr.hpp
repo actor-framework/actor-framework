@@ -36,7 +36,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/intrusive_fwd_ptr.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
@@ -72,12 +71,6 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) { }
 
     intrusive_ptr(const intrusive_ptr& other) { set_ptr(other.get()); }
-
-    template<typename Y, typename Ref, typename Deref>
-    intrusive_ptr(intrusive_fwd_ptr<Y,Ref,Deref> other) : m_ptr(other.release()) {
-        static_assert(std::is_convertible<Y*, T*>::value,
-                      "Y* is not assignable to T*");
-    }
 
     template<typename Y>
     intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
@@ -120,9 +113,9 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         set_ptr(new_value);
     }
 
-    template<typename... Args>
-    void emplace(Args&&... args) {
-        reset(new T(std::forward<Args>(args)...));
+    template<typename... Ts>
+    void emplace(Ts&&... args) {
+        reset(new T(std::forward<Ts>(args)...));
     }
 
     intrusive_ptr& operator=(pointer ptr) {
@@ -214,9 +207,9 @@ inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
  * @brief Constructs an object of type T which must be a derived type
  *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
  */
-template<typename T, typename... Args>
-intrusive_ptr<T> make_counted(Args&&... args) {
-    return {new T(std::forward<Args>(args)...)};
+template<typename T, typename... Ts>
+intrusive_ptr<T> make_counted(Ts&&... args) {
+    return {new T(std::forward<Ts>(args)...)};
 }
 
 } // namespace cppa

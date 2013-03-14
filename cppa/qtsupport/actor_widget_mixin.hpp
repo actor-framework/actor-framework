@@ -47,8 +47,8 @@ class actor_widget_mixin : public actor_companion_mixin<Base> {
 
  public:
 
-    template<typename... Args>
-    actor_widget_mixin(Args&&... args) : super(std::forward<Args>(args)...) { }
+    template<typename... Ts>
+    actor_widget_mixin(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
     struct event_type : public QEvent {
 

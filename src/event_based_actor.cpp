@@ -78,11 +78,7 @@ void event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
 }
 
-void event_based_actor::dequeue(partial_function&) {
-    quit(exit_reason::unallowed_function_call);
-}
-
-void event_based_actor::dequeue_response(behavior&, message_id_t) {
+void event_based_actor::dequeue_response(behavior&, message_id) {
     quit(exit_reason::unallowed_function_call);
 }
 
@@ -142,7 +138,7 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
             }
             else {
                 CPPA_LOG_DEBUG("try to invoke message: " << to_string(e->msg));
-                if (m_bhvr_stack.invoke(m_policy, this, e)) {
+                if (m_bhvr_stack.invoke(m_recv_policy, this, e)) {
                     CPPA_LOG_DEBUG_IF(m_chained_actor,
                                       "set actor with ID "
                                       << m_chained_actor->id()
@@ -193,7 +189,7 @@ void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
     m_bhvr_stack.push_back(std::move(bhvr));
 }
 
-void event_based_actor::become_waiting_for(behavior&& bhvr, message_id_t mf) {
+void event_based_actor::become_waiting_for(behavior bhvr, message_id mf) {
     if (bhvr.timeout().valid()) {
         reset_timeout();
         request_timeout(bhvr.timeout());

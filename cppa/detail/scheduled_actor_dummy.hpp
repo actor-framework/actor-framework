@@ -38,14 +38,13 @@ namespace cppa { namespace detail {
 struct scheduled_actor_dummy : scheduled_actor {
     scheduled_actor_dummy();
     void enqueue(const actor_ptr&, any_tuple);
-    void sync_enqueue(const actor_ptr&, message_id_t, any_tuple);
+    void sync_enqueue(const actor_ptr&, message_id, any_tuple);
     resume_result resume(util::fiber*, actor_ptr&);
     void quit(std::uint32_t);
     void dequeue(behavior&);
-    void dequeue(partial_function&);
-    void dequeue_response(behavior&, message_id_t);
+    void dequeue_response(behavior&, message_id);
     void do_become(behavior&&, bool);
-    void become_waiting_for(behavior&&, message_id_t);
+    void become_waiting_for(behavior, message_id);
     bool has_behavior();
     scheduled_actor_type impl_type();
 };

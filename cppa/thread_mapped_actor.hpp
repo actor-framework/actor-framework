@@ -43,18 +43,16 @@
 #include <cstdint>
 
 #include "cppa/atom.hpp"
-#include "cppa/either.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/stacked.hpp"
+#include "cppa/threaded.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/mailbox_based.hpp"
+#include "cppa/mailbox_element.hpp"
 
 #include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
-
-#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa {
 
@@ -66,10 +64,10 @@ template<>
 struct has_blocking_receive<thread_mapped_actor> : std::true_type { };
 
 /**
- * @brief An actor running in its own thread.
+ * @brief An actor using the blocking API running in its own thread.
  * @extends local_actor
  */
-class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with<stacked,mailbox_based> {
+class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with<mailbox_based,stacked,threaded> {
 
     friend class self_type;              // needs access to cleanup()
     friend class scheduler_helper;       // needs access to mailbox
@@ -88,39 +86,13 @@ class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with
 
     bool initialized() const;
 
-    void enqueue(const actor_ptr& sender, any_tuple msg);
-
-    void sync_enqueue(const actor_ptr& sender, message_id_t id, any_tuple msg);
-
-    inline void reset_timeout() { }
-    inline void request_timeout(const util::duration&) { }
-    inline void handle_timeout(behavior& bhvr) { bhvr.handle_timeout(); }
-    inline void pop_timeout() { }
-    inline void push_timeout() { }
-    inline bool waits_for_timeout(std::uint32_t) { return false; }
-
  protected:
-
-    typedef detail::recursive_queue_node mailbox_element;
-
-    typedef intrusive::blocking_single_reader_queue<mailbox_element,detail::disposer>
-            mailbox_type;
 
     void cleanup(std::uint32_t reason);
 
  private:
 
-    timeout_type init_timeout(const util::duration& rel_time);
-
-    detail::recursive_queue_node* await_message();
-
-    detail::recursive_queue_node* await_message(const timeout_type& abs_time);
-
     bool m_initialized;
-
- protected:
-
-    mailbox_type m_mailbox;
 
 };
 

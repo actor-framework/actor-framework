@@ -434,44 +434,44 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     // terminates recursion
     inline void push_back() { }
 
-    template<typename R, class C, typename... Args>
-    void push_back(R C::* memptr, Args&&... args) {
+    template<typename R, class C, typename... Ts>
+    void push_back(R C::* memptr, Ts&&... args) {
         m_members.push_back(new_member_tinfo(memptr));
-        push_back(std::forward<Args>(args)...);
+        push_back(std::forward<Ts>(args)...);
     }
 
     // pr.first = member pointer
     // pr.second = meta object to handle pr.first
-    template<typename R, class C, typename... Args>
+    template<typename R, class C, typename... Ts>
     void push_back(const std::pair<R C::*, util::abstract_uniform_type_info<R>*>& pr,
-                   Args&&... args) {
+                   Ts&&... args) {
         m_members.push_back(new_member_tinfo(pr.first, unique_uti(pr.second)));
-        push_back(std::forward<Args>(args)...);
+        push_back(std::forward<Ts>(args)...);
     }
 
     // pr.first = getter / setter pair
     // pr.second = meta object to handle pr.first
-    template<typename GRes, typename SRes, typename SArg, typename C, typename... Args>
+    template<typename GRes, typename SRes, typename SArg, typename C, typename... Ts>
     void push_back(const std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>& pr,
-                   Args&&... args) {
+                   Ts&&... args) {
         m_members.push_back(new_member_tinfo(pr.first, pr.second));
-        push_back(std::forward<Args>(args)...);
+        push_back(std::forward<Ts>(args)...);
     }
 
     // pr.first = getter / setter pair
     // pr.second = meta object to handle pr.first
-    template<typename GRes, typename SRes, typename SArg, typename C, typename... Args>
+    template<typename GRes, typename SRes, typename SArg, typename C, typename... Ts>
     void push_back(const std::pair<std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>, util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>& pr,
-                   Args&&... args) {
+                   Ts&&... args) {
         m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second, unique_uti(pr.second)));
-        push_back(std::forward<Args>(args)...);
+        push_back(std::forward<Ts>(args)...);
     }
 
  public:
 
-    template<typename... Args>
-    default_uniform_type_info_impl(Args&&... args) {
-        push_back(std::forward<Args>(args)...);
+    template<typename... Ts>
+    default_uniform_type_info_impl(Ts&&... args) {
+        push_back(std::forward<Ts>(args)...);
     }
 
     default_uniform_type_info_impl() {

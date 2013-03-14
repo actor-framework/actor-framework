@@ -302,21 +302,37 @@ int main() {
     );
     CPPA_CHECKPOINT();
 
-    auto mirror = spawn<simple_mirror,monitored>();
+    CPPA_PRINT("test mirror"); {
+        auto mirror = spawn<simple_mirror,monitored>();
+        send(mirror, "hello mirror");
+        receive (
+            on("hello mirror") >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        quit_actor(mirror, exit_reason::user_defined);
+        receive (
+            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        await_all_others_done();
+        CPPA_CHECKPOINT();
+    }
 
-    CPPA_PRINT("test mirror");
-    send(mirror, "hello mirror");
-    receive (
-        on("hello mirror") >> CPPA_CHECKPOINT_CB(),
-        others() >> CPPA_UNEXPECTED_MSG_CB()
-    );
-    quit_actor(mirror, exit_reason::user_defined);
-    receive (
-        on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
-        others() >> CPPA_UNEXPECTED_MSG_CB()
-    );
-    await_all_others_done();
-    CPPA_CHECKPOINT();
+    CPPA_PRINT("test detached mirror"); {
+        auto mirror = spawn<simple_mirror,monitored+detached>();
+        send(mirror, "hello mirror");
+        receive (
+            on("hello mirror") >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        quit_actor(mirror, exit_reason::user_defined);
+        receive (
+            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        await_all_others_done();
+        CPPA_CHECKPOINT();
+    }
 
     CPPA_PRINT("test echo actor");
     auto mecho = spawn(echo_actor);
@@ -461,7 +477,7 @@ int main() {
             self->become (
                 on("hi") >> [&]() {
                     auto handle = sync_send(self->last_sender(), "whassup?");
-                    self->handle_response(handle) (
+                    handle_response(handle) (
                         on_arg_match >> [&](const string& str) {
                             CPPA_CHECK(self->last_sender() != nullptr);
                             CPPA_CHECK_EQUAL(str, "nothing");

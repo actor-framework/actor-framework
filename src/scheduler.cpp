@@ -68,13 +68,13 @@ class delayed_msg {
 
     delayed_msg(const channel_ptr& arg0,
                 const actor_ptr&   arg1,
-                message_id_t,
+                message_id,
                 any_tuple&&        arg3)
     : ptr_a(arg0), from(arg1), msg(move(arg3)) { }
 
     delayed_msg(const actor_ptr&   arg0,
                 const actor_ptr&   arg1,
-                message_id_t       arg2,
+                message_id       arg2,
                 any_tuple&&        arg3)
     : ptr_b(arg0), from(arg1), id(arg2), msg(move(arg3)) { }
 
@@ -94,7 +94,7 @@ class delayed_msg {
     channel_ptr   ptr_a;
     actor_ptr     ptr_b;
     actor_ptr     from;
-    message_id_t  id;
+    message_id  id;
     any_tuple     msg;
 
 };
@@ -146,7 +146,7 @@ inline void insert_dmsg(Map& storage,
                  const T& to,
                  const actor_ptr& sender,
                  any_tuple&& tup,
-                 message_id_t id = message_id_t{}) {
+                 message_id id = message_id{}) {
     auto tout = hrc::now();
     tout += d;
     delayed_msg dmsg{to, sender, id, move(tup)};
@@ -157,8 +157,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // setup & local variables
     self.set(m_self.get());
     bool done = false;
-    auto& queue = m_self->m_mailbox;
-    std::unique_ptr<detail::recursive_queue_node,detail::disposer> msg_ptr;
+    std::unique_ptr<mailbox_element,detail::disposer> msg_ptr;
     auto tout = hrc::now();
     std::multimap<decltype(tout),delayed_msg> messages;
     // message handling rules
@@ -170,7 +169,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
         },
         on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
                                             const actor_ptr& ptr,
-                                            message_id_t id,
+                                            message_id id,
                                             any_tuple& tup) {
             insert_dmsg(messages, d, ptr, msg_ptr->sender, move(tup), id);
         },
@@ -188,7 +187,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // loop
     while (!done) {
         while (!msg_ptr) {
-            if (messages.empty()) msg_ptr.reset(queue.pop());
+            if (messages.empty()) msg_ptr.reset(m_self->pop());
             else {
                 tout = hrc::now();
                 // handle timeouts (send messages)
@@ -200,7 +199,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
                 }
                 // wait for next message or next timeout
                 if (it != messages.end()) {
-                    msg_ptr.reset(queue.try_pop(it->first));
+                    msg_ptr.reset(m_self->try_pop(it->first));
                 }
             }
         }

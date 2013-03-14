@@ -119,7 +119,7 @@ class object {
 
     /**
      * @brief Creates a (deep) copy of @p other and assigns it to @p this.
-     * @return @p *this
+     * @returns @p *this
      */
     object& operator=(const object& other);
 

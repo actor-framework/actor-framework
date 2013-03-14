@@ -45,9 +45,9 @@ class default_message_queue : public ref_counted {
 
     typedef value_type& reference;
 
-    template<typename... Args>
-    void emplace(Args&&... args) {
-        m_impl.emplace_back(std::forward<Args>(args)...);
+    template<typename... Ts>
+    void emplace(Ts&&... args) {
+        m_impl.emplace_back(std::forward<Ts>(args)...);
     }
 
     inline bool empty() const { return m_impl.empty(); }

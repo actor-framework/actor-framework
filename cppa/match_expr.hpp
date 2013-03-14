@@ -44,6 +44,8 @@
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/deduce_ref_type.hpp"
+#include "cppa/util/get_result_type.hpp"
+#include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/projection.hpp"
@@ -197,10 +199,10 @@ struct invoke_policy_impl<wildcard_position::nil,
                                >::type* = 0) {
         if (arg_types == typeid(util::type_list<Ts...>)) {
             if (native_arg) {
-                typedef typename util::if_else_c<
+                typedef typename std::conditional<
                             std::is_const<PtrType>::value,
                             const native_data_type*,
-                            util::wrapped<native_data_type*>
+                            native_data_type*
                         >::type
                         cast_type;
                 auto arg = reinterpret_cast<cast_type>(native_arg);
@@ -356,9 +358,9 @@ struct invoke_policy
 
 template<class Pattern, class Projection, class PartialFun>
 struct projection_partial_function_pair : std::pair<Projection,PartialFun> {
-    template<typename... Args>
-    projection_partial_function_pair(Args&&... args)
-    : std::pair<Projection,PartialFun>(std::forward<Args>(args)...) { }
+    template<typename... Ts>
+    projection_partial_function_pair(Ts&&... args)
+    : std::pair<Projection,PartialFun>(std::forward<Ts>(args)...) { }
     typedef Pattern pattern_type;
 };
 
@@ -558,11 +560,6 @@ inline std::uint64_t calc_bitmask(PPFPs& fs, long_constant<N>, const std::type_i
     return result | calc_bitmask(fs, long_constant<N-1l>(), tinf, tup);
 }
 
-template<typename T>
-struct is_manipulator_case {
-    static constexpr bool value = T::second_type::manipulates_args;
-};
-
 template<bool IsManipulator, typename T0, typename T1>
 struct mexpr_fwd_ {
     typedef T1 type;
@@ -620,29 +617,35 @@ inline const void* fetch_native_data(const Ptr& ptr, std::false_type) {
 
 namespace cppa {
 
-template<class... Cases>
+/** @cond PRIVATE */
+template<typename T>
+struct is_manipulator_case {
+    static constexpr bool value = T::second_type::manipulates_args;
+};
+/** @endcond */
+
+/**
+ * @brief A match expression encapsulating cases <tt>Cs...</tt>.
+ */
+template<class... Cs>
 class match_expr {
 
-    static_assert(sizeof...(Cases) < 64, "too many functions");
+    static_assert(sizeof...(Cs) < 64, "too many functions");
 
  public:
 
     static constexpr bool may_have_timeout = false;
 
-    typedef util::type_list<Cases...> cases_list;
+    typedef util::type_list<Cs...> cases_list;
 
-    static constexpr size_t num_cases = sizeof...(Cases);
+    static constexpr bool has_manipulator = util::tl_exists<cases_list,is_manipulator_case>::value;
 
-    static constexpr bool has_manipulator =
-            util::tl_exists<cases_list,detail::is_manipulator_case>::value;
-
-    typedef detail::long_constant<static_cast<long>(num_cases)-1l>
-            idx_token_type;
+    typedef detail::long_constant<sizeof...(Cs)-1l> idx_token_type;
 
     static constexpr idx_token_type idx_token = idx_token_type{};
 
-    template<typename... Args>
-    match_expr(Args&&... args) : m_cases(std::forward<Args>(args)...) {
+    template<typename... Ts>
+    match_expr(Ts&&... args) : m_cases(std::forward<Ts>(args)...) {
         init();
     }
 
@@ -692,31 +695,34 @@ class match_expr {
         return invoke_impl(tmp);
     }
 
-    template<typename... Args>
-    bool operator()(Args&&... args) {
+    template<typename... Ts>
+    bool operator()(Ts&&... args) {
+        // wraps and applies implicit conversions to args
         typedef detail::tdata<
-                    typename detail::mexpr_fwd<has_manipulator,Args>::type...>
+                    typename detail::mexpr_fwd<
+                        has_manipulator,
+                        Ts
+                    >::type...
+                >
                 tuple_type;
-        // applies implicit conversions etc
-        tuple_type tup{std::forward<Args>(args)...};
+        tuple_type tup{std::forward<Ts>(args)...};
         auto& type_token = typeid(typename tuple_type::types);
         auto bitmask = get_cache_entry(&type_token, tup);
-
-        typedef typename util::if_else_c<
+        // ref_type keeps track of whether this match_expr is a mutator
+        typedef typename std::conditional<
                     has_manipulator,
                     tuple_type&,
-                    const util::wrapped<tuple_type&>
+                    const tuple_type&
                 >::type
                 ref_type;
-
-        typedef typename util::if_else_c<
+        // same here
+        typedef typename std::conditional<
                     has_manipulator,
                     void*,
-                    util::wrapped<const void*>
+                    const void*
                 >::type
                 ptr_type;
-
-        ptr_type ptr_arg = nullptr;
+        // iterate over cases and return if any case was invoked
         bool invoke_result = true;
         bool unroll_result = unroll_expr(m_cases,
                                          invoke_result,
@@ -724,21 +730,20 @@ class match_expr {
                                          idx_token,
                                          type_token,
                                          false, // not dynamically_typed
-                                         ptr_arg,
+                                         static_cast<ptr_type>(nullptr),
                                          static_cast<ref_type>(tup));
         return unroll_result && invoke_result;
     }
 
-    template<class... OtherCases>
-    match_expr<Cases...,OtherCases...>
-    or_else(const match_expr<OtherCases...>& other) const {
-        detail::tdata<ge_reference_wrapper<Cases>...,
-                      ge_reference_wrapper<OtherCases>...    > all_cases;
-        collect_tdata(all_cases, m_cases, other.cases());
+    template<class... Ds>
+    match_expr<Cs...,Ds...> or_else(const match_expr<Ds...>& other) const {
+        detail::tdata<util::rebindable_reference<const Cs>...,
+                      util::rebindable_reference<const Ds>...    > all_cases;
+        rebind_tdata(all_cases, m_cases, other.cases());
         return {all_cases};
     }
 
-    inline const detail::tdata<Cases...>& cases() const {
+    inline const detail::tdata<Cs...>& cases() const {
         return m_cases;
     }
 
@@ -770,7 +775,7 @@ class match_expr {
     // structure: tdata< tdata<type_list<...>, ...>,
     //                   tdata<type_list<...>, ...>,
     //                   ...>
-    detail::tdata<Cases...> m_cases;
+    detail::tdata<Cs...> m_cases;
 
     static constexpr size_t cache_size = 10;
 
@@ -828,13 +833,14 @@ class match_expr {
     bool invoke_impl(Tuple& tup) {
         std::integral_constant<bool,has_manipulator> mutator_token;
         // returns either a reference or a new object
-        decltype(detail::detach_if_needed(tup, mutator_token)) tref = detail::detach_if_needed(tup, mutator_token);
+        typedef decltype(detail::detach_if_needed(tup, mutator_token)) detached;
+        detached tref = detail::detach_if_needed(tup, mutator_token);
         auto& vals = tref.vals();
         auto ndp = fetch_native_data(vals, mutator_token);
         auto token_ptr = vals->type_token();
         auto bitmask = get_cache_entry(token_ptr, *vals);
         auto dynamically_typed = vals->dynamically_typed();
-        bool invoke_result = true; // maybe set to false by an invoked functor
+        bool invoke_result = true; // may be set to false by an invoked functor
         bool unroll_result = unroll_expr(m_cases,
                                          invoke_result,
                                          bitmask,
@@ -851,9 +857,9 @@ class match_expr {
 template<class List>
 struct match_expr_from_type_list;
 
-template<typename... Args>
-struct match_expr_from_type_list<util::type_list<Args...> > {
-    typedef match_expr<Args...> type;
+template<typename... Ts>
+struct match_expr_from_type_list<util::type_list<Ts...> > {
+    typedef match_expr<Ts...> type;
 };
 
 template<typename... Lhs, typename... Rhs>
@@ -862,32 +868,41 @@ inline match_expr<Lhs...,Rhs...> operator,(const match_expr<Lhs...>& lhs,
     return lhs.or_else(rhs);
 }
 
-template<typename Arg0, typename... Args>
+
+template<typename... Cs>
+match_expr<Cs...>& match_expr_collect(match_expr<Cs...>& arg) {
+    return arg;
+}
+
+template<typename... Cs>
+match_expr<Cs...>&& match_expr_collect(match_expr<Cs...>&& arg) {
+    return std::move(arg);
+}
+
+template<typename... Cs>
+const match_expr<Cs...>& match_expr_collect(const match_expr<Cs...>& arg) {
+    return arg;
+}
+
+template<typename T, typename... Ts>
 typename match_expr_from_type_list<
                 typename util::tl_concat<
-                    typename Arg0::cases_list,
-                    typename Args::cases_list...
+                    typename T::cases_list,
+                    typename Ts::cases_list...
                 >::type
             >::type
-match_expr_collect(const Arg0& arg0, const Args&... args) {
-    typedef typename match_expr_from_type_list<
-                typename util::tl_concat<
-                    typename Arg0::cases_list,
-                    typename Args::cases_list...
-                >::type
-            >::type
-            combined_type;
+match_expr_collect(const T& arg, const Ts&... args) {
     typename detail::tdata_from_type_list<
         typename util::tl_map<
             typename util::tl_concat<
-                typename Arg0::cases_list,
-                typename Args::cases_list...
+                typename T::cases_list,
+                typename Ts::cases_list...
             >::type,
             gref_wrapped
         >::type
     >::type
     all_cases;
-    detail::collect_tdata(all_cases, arg0.cases(), args.cases()...);
+    detail::rebind_tdata(all_cases, arg.cases(), args.cases()...);
     return {all_cases};
 }
 
@@ -921,7 +936,7 @@ behavior_impl* concat_rec(const Data& data, Token, const T& arg, const Ts&... ar
         >::type
         next_data;
     next_token_type next_token;
-    collect_tdata(next_data, data, arg.cases());
+    rebind_tdata(next_data, data, arg.cases());
     return concat_rec(next_data, next_token, args...);
 }
 
@@ -940,7 +955,7 @@ behavior_impl* concat_expr(with_timeout, const T& arg, const Ts&... args) {
             >::type
         >::type
         wrapper;
-    detail::collect_tdata(wrapper, arg.cases());
+    detail::rebind_tdata(wrapper, arg.cases());
     return concat_rec(wrapper, typename T::cases_list{}, args...);
 }
 
@@ -967,7 +982,7 @@ behavior_impl* concat_expr(without_timeout, const T& arg, const Ts&... args) {
             combined_type;
     auto lvoid = []() { };
     typedef default_behavior_impl<combined_type,decltype(lvoid)> impl_type;
-    collect_tdata(all_cases, arg.cases(), args.cases()...);
+    rebind_tdata(all_cases, arg.cases(), args.cases()...);
     return new impl_type(all_cases, util::duration{}, lvoid);
 }
 

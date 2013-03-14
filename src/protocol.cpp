@@ -34,14 +34,6 @@
 
 namespace cppa { namespace network {
 
-void protocol::ref_ftor::operator()(abstract_middleman* ptr) const {
-    if (ptr) ptr->ref();
-}
-
-void protocol::deref_ftor::operator()(abstract_middleman* ptr) const {
-    if (ptr) ptr->deref();
-}
-
 protocol::protocol(abstract_middleman* parent) : m_parent(parent) {
     CPPA_REQUIRE(parent != nullptr);
 }

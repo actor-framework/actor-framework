@@ -28,20 +28,58 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CHANNEL_HPP
-#define CPPA_CHANNEL_HPP
+#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
+#define CPPA_RECURSIVE_QUEUE_NODE_HPP
 
+#include <cstdint>
+
+#include "cppa/actor.hpp"
+#include "cppa/extend.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
+#include "cppa/memory_cached.hpp"
 
-namespace cppa { class message; }
+// needs access to constructor + destructor to initialize m_dummy_node
+namespace cppa {
 
-namespace cppa { namespace detail {
+class local_actor;
 
-// public part of the actor interface
-struct channel : ref_counted {
-    virtual void enqueue_msg(const message& msg) = 0;
+class mailbox_element : public extend<memory_managed>::with<memory_cached> {
+
+    friend class local_actor;
+    friend class detail::memory;
+
+ public:
+
+    typedef mailbox_element* pointer;
+
+    pointer    next;   // intrusive next pointer
+    bool       marked; // denotes if this node is currently processed
+    actor_ptr  sender; // points to the sender of msg
+    any_tuple  msg;    // 'content field'
+    message_id mid;
+
+    mailbox_element(mailbox_element&&) = delete;
+    mailbox_element(const mailbox_element&) = delete;
+    mailbox_element& operator=(mailbox_element&&) = delete;
+    mailbox_element& operator=(const mailbox_element&) = delete;
+
+    template<typename... Ts>
+    inline static mailbox_element* create(Ts&&... args) {
+        return detail::memory::create<mailbox_element>(std::forward<Ts>(args)...);
+    }
+
+ private:
+
+    mailbox_element() = default;
+
+    mailbox_element(const actor_ptr& sptr,
+                    any_tuple data,
+                    message_id id = message_id{});
+
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
-#endif // CPPA_CHANNEL_HPP
+#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP

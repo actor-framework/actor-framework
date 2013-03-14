@@ -52,7 +52,7 @@ class response_handle {
 
     response_handle(const actor_ptr&    from,
                     const actor_ptr&    to,
-                    const message_id_t& response_id);
+                    const message_id& response_id);
 
     /**
      * @brief Queries whether response message is still outstanding.
@@ -73,7 +73,7 @@ class response_handle {
     /**
      * @brief Returns the message id for the response message.
      */
-    inline const message_id_t& response_id() const { return m_id; }
+    inline const message_id& response_id() const { return m_id; }
 
     /**
      * @brief Returns the actor that is going send the response message.
@@ -89,7 +89,7 @@ class response_handle {
 
     actor_ptr    m_from;
     actor_ptr    m_to;
-    message_id_t m_id;
+    message_id m_id;
 
 };
 

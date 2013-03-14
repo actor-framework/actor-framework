@@ -33,8 +33,6 @@
 #include <fstream>
 #include <algorithm>
 
-#include <execinfo.h> //DEL_ME
-
 #ifndef CPPA_WINDOWS
 #include <unistd.h>
 #include <sys/types.h>

@@ -56,7 +56,7 @@ class message_future {
 
      public:
 
-        inline continue_helper(message_id_t mid) : m_mid(mid) { }
+        inline continue_helper(message_id mid) : m_mid(mid) { }
 
         template<typename F>
         void continue_with(F fun) {
@@ -71,7 +71,7 @@ class message_future {
 
      private:
 
-        message_id_t m_mid;
+        message_id m_mid;
 
     };
 
@@ -80,20 +80,20 @@ class message_future {
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
-    template<typename... Cases, typename... Args>
-    continue_helper then(const match_expr<Cases...>& a0, const Args&... as) {
+    template<typename... Cs, typename... Ts>
+    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
         check_consistency();
-        self->become_waiting_for(match_expr_convert(a0, as...), m_mid);
+        self->become_waiting_for(match_expr_convert(arg, args...), m_mid);
         return {m_mid};
     }
 
     /**
      * @brief Blocks until the response arrives and then executes @p mexpr.
      */
-    template<typename... Cases, typename... Args>
-    void await(const match_expr<Cases...>& arg0, const Args&... args) {
+    template<typename... Cs, typename... Ts>
+    void await(const match_expr<Cs...>& arg, const Ts&... args) {
         check_consistency();
-        self->dequeue_response(match_expr_convert(arg0, args...), m_mid);
+        self->dequeue_response(match_expr_convert(arg, args...), m_mid);
     }
 
     /**
@@ -127,16 +127,16 @@ class message_future {
     /**
      * @brief Returns the awaited response ID.
      */
-    inline const message_id_t& id() const { return m_mid; }
+    inline const message_id& id() const { return m_mid; }
 
     message_future(const message_future&) = default;
     message_future& operator=(const message_future&) = default;
 
-    inline message_future(const message_id_t& from) : m_mid(from) { }
+    inline message_future(const message_id& from) : m_mid(from) { }
 
  private:
 
-    message_id_t m_mid;
+    message_id m_mid;
 
     template<typename... Fs>
     behavior fs2bhvr(Fs... fs) {
@@ -169,9 +169,9 @@ class sync_handle_helper {
 
     inline sync_handle_helper(const message_future& mf) : m_mf(mf) { }
 
-    template<typename... Args>
-    inline message_future::continue_helper operator()(Args&&... args) {
-        return m_mf.then(std::forward<Args>(args)...);
+    template<typename... Ts>
+    inline message_future::continue_helper operator()(Ts&&... args) {
+        return m_mf.then(std::forward<Ts>(args)...);
     }
 
  private:
@@ -186,9 +186,9 @@ class sync_receive_helper {
 
     inline sync_receive_helper(const message_future& mf) : m_mf(mf) { }
 
-    template<typename... Args>
-    inline void operator()(Args&&... args) {
-        m_mf.await(std::forward<Args>(args)...);
+    template<typename... Ts>
+    inline void operator()(Ts&&... args) {
+        m_mf.await(std::forward<Ts>(args)...);
     }
 
  private:

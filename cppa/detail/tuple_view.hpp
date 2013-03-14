@@ -31,7 +31,9 @@
 #ifndef CPPA_TUPLE_VIEW_HPP
 #define CPPA_TUPLE_VIEW_HPP
 
-#include "cppa/util/static_foreach.hpp"
+#include "cppa/guard_expr.hpp"
+
+#include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
@@ -58,7 +60,7 @@ class tuple_view : public abstract_tuple {
 
  public:
 
-    typedef tdata<Ts*...> data_type;
+    typedef tdata<util::rebindable_reference<Ts>...> data_type;
 
     typedef types_array<Ts...> element_types;
 
@@ -83,20 +85,17 @@ class tuple_view : public abstract_tuple {
     }
 
     abstract_tuple* copy() const {
-        auto result = new tuple_vals<Ts...>;
-        tuple_view_copy_helper f{result};
-        util::static_foreach<0, sizeof...(Ts)>::_(m_data, f);
-        return result;
+        return new tuple_vals<Ts...>{m_data};
     }
 
     const void* at(size_t pos) const {
         CPPA_REQUIRE(pos < size());
-        return m_data.at(pos);
+        return m_data.at(pos).get_ptr();
     }
 
     void* mutable_at(size_t pos) {
         CPPA_REQUIRE(pos < size());
-        return m_data.mutable_at(pos);
+        return m_data.mutable_at(pos).get_ptr();
     }
 
     const uniform_type_info* type_at(size_t pos) const {
@@ -113,6 +112,8 @@ class tuple_view : public abstract_tuple {
     data_type m_data;
 
     static types_array<Ts...> m_types;
+
+    tuple_view(const data_type& data) : m_data(data) { }
 
 };
 

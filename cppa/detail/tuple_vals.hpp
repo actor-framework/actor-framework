@@ -58,9 +58,8 @@ class tuple_vals : public abstract_tuple {
 
     tuple_vals(const tuple_vals&) = default;
 
-    template<typename... Args>
-    tuple_vals(Args&&... args) : super(false)
-                               , m_data(std::forward<Args>(args)...) { }
+    template<typename... Us>
+    tuple_vals(Us&&... args) : super(false), m_data(std::forward<Us>(args)...) { }
 
     const void* native_data() const {
         return &m_data;

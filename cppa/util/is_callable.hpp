@@ -28,13 +28,43 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/recursive_queue_node.hpp"
+#ifndef CPPA_IS_CALLABLE_HPP
+#define CPPA_IS_CALLABLE_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/util/conjunction.hpp"
+#include "cppa/util/callable_trait.hpp"
 
-recursive_queue_node::recursive_queue_node(const actor_ptr& sptr,
-                                           any_tuple data,
-                                           message_id_t id)
-: next(nullptr), marked(false), sender(sptr), msg(std::move(data)), mid(id) { }
+namespace cppa { namespace util {
 
-} } // namespace cppa::detail
+template<typename T>
+struct is_callable {
+
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr) {
+        return true;
+    }
+
+    template<typename C>
+    static bool _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* = nullptr) {
+        return true;
+    }
+
+    static void _fun(void*) { }
+
+    typedef decltype(_fun(static_cast<typename rm_ref<T>::type*>(nullptr)))
+            result_type;
+
+ public:
+
+    static constexpr bool value = std::is_same<bool, result_type>::value;
+
+};
+
+template<typename... Ts>
+struct all_callable {
+    static constexpr bool value = conjunction<is_callable<Ts>...>::value;
+};
+
+} } // namespace cppa::util
+
+#endif // CPPA_IS_CALLABLE_HPP

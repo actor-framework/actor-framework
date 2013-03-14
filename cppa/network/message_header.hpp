@@ -49,13 +49,13 @@ class message_header {
 
     actor_ptr    sender;
     actor_ptr    receiver;
-    message_id_t id;
+    message_id id;
 
     message_header();
 
     message_header(const actor_ptr& sender,
                    const actor_ptr& receiver,
-                   message_id_t id = message_id_t::invalid);
+                   message_id id = message_id::invalid);
 
     inline void deliver(any_tuple msg) const {
         if (receiver) {

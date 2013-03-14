@@ -42,11 +42,11 @@ using namespace std;
 
 namespace cppa { namespace network {
 
-inline sync_request_info* new_req_info(actor_ptr sptr, message_id_t id) {
+inline sync_request_info* new_req_info(actor_ptr sptr, message_id id) {
     return detail::memory::create<sync_request_info>(std::move(sptr), id);
 }
 
-sync_request_info::sync_request_info(actor_ptr sptr, message_id_t id)
+sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
 : next(nullptr), sender(std::move(sptr)), mid(id) { }
 
 default_actor_proxy::default_actor_proxy(actor_id mid,
@@ -89,7 +89,7 @@ void default_actor_proxy::deliver(const network::message_header& hdr, any_tuple 
 
 void default_actor_proxy::forward_msg(const actor_ptr& sender,
                                       any_tuple msg,
-                                      message_id_t mid) {
+                                      message_id mid) {
     CPPA_LOG_TRACE("");
     if (sender && mid.is_request()) {
         switch (m_pending_requests.enqueue(new_req_info(sender, mid))) {
@@ -147,7 +147,7 @@ void default_actor_proxy::enqueue(const actor_ptr& sender, any_tuple msg) {
 }
 
 void default_actor_proxy::sync_enqueue(const actor_ptr& sender,
-                                       message_id_t mid,
+                                       message_id mid,
                                        any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
                    << CPPA_MARG(mid, integer_value) << ", "

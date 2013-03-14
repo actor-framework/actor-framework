@@ -41,10 +41,10 @@
 #include "cppa/to_string.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/mailbox_element.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/recursive_queue_node.hpp"
 
 namespace cppa { namespace detail {
 
@@ -62,8 +62,8 @@ class receive_policy {
 
  public:
 
-    typedef recursive_queue_node* pointer;
-    typedef std::unique_ptr<recursive_queue_node,disposer> smart_pointer;
+    typedef mailbox_element* pointer;
+    typedef std::unique_ptr<mailbox_element,disposer> smart_pointer;
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -76,7 +76,7 @@ class receive_policy {
     template<class Client, class Fun>
     bool invoke_from_cache(Client* client,
                            Fun& fun,
-                           message_id_t awaited_response = message_id_t()) {
+                           message_id awaited_response = message_id{}) {
         std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
         auto i = m_cache.begin();
         auto e = m_cache.end();
@@ -108,7 +108,7 @@ class receive_policy {
     bool invoke(Client* client,
                 pointer node_ptr,
                 Fun& fun,
-                message_id_t awaited_response = message_id_t()) {
+                message_id awaited_response = message_id()) {
         smart_pointer node(node_ptr);
         std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
         switch (this->handle_message(client, node.get(), fun,
@@ -176,7 +176,7 @@ class receive_policy {
     }
 
     template<class Client>
-    void receive(Client* client, behavior& bhvr, message_id_t mid) {
+    void receive(Client* client, behavior& bhvr, message_id mid) {
         CPPA_REQUIRE(mid.is_response());
         if (!invoke_from_cache(client, bhvr, mid)) {
             if (bhvr.timeout().valid()) {
@@ -195,12 +195,17 @@ class receive_policy {
         }
     }
 
+    template<class Client>
+    mailbox_element* fetch_message(Client* client) {
+        return client->await_message();
+    }
+
  private:
 
     typedef typename rp_flag<rp_nestable>::type nestable;
     typedef typename rp_flag<rp_sequential>::type sequential;
 
-    std::list<std::unique_ptr<recursive_queue_node,disposer> > m_cache;
+    std::list<std::unique_ptr<mailbox_element,disposer> > m_cache;
 
     template<class Client>
     inline void handle_timeout(Client* client, behavior& bhvr) {
@@ -231,7 +236,7 @@ class receive_policy {
     template<class Client>
     filter_result filter_msg(Client* client, pointer node) {
         const any_tuple& msg = node->msg;
-        auto message_id = node->mid;
+        auto mid = node->mid;
         auto& arr = detail::static_types_array<atom_value,std::uint32_t>::arr;
         if (   msg.size() == 2
             && msg.type_at(0) == arr[0]
@@ -239,7 +244,7 @@ class receive_policy {
             auto v0 = msg.get_as<atom_value>(0);
             auto v1 = msg.get_as<std::uint32_t>(1);
             if (v0 == atom("EXIT")) {
-                CPPA_REQUIRE(!message_id.valid());
+                CPPA_REQUIRE(!mid.valid());
                 if (client->m_trap_exit == false) {
                     if (v1 != exit_reason::normal) {
                         client->quit(v1);
@@ -249,7 +254,7 @@ class receive_policy {
                 }
             }
             else if (v0 == atom("SYNC_TOUT")) {
-                CPPA_REQUIRE(!message_id.valid());
+                CPPA_REQUIRE(!mid.valid());
                 return client->waits_for_timeout(v1) ? timeout_message
                                                      : expired_timeout_message;
             }
@@ -257,11 +262,11 @@ class receive_policy {
         else if (   msg.size() == 1
                  && msg.type_at(0) == arr[0]
                  && msg.get_as<atom_value>(0) == atom("TIMEOUT")
-                 && message_id.is_response()) {
+                 && mid.is_response()) {
             return timeout_response_message;
         }
-        if (message_id.is_response()) {
-            return (client->awaits(message_id)) ? sync_response
+        if (mid.is_response()) {
+            return (client->awaits(mid)) ? sync_response
                                                 : expired_sync_response;
         }
         return ordinary_message;
@@ -340,7 +345,7 @@ class receive_policy {
     handle_message_result handle_message(Client* client,
                                          pointer node,
                                          Fun& fun,
-                                         message_id_t awaited_response,
+                                         message_id awaited_response,
                                          Policy policy                 ) {
         bool handle_sync_failure_on_mismatch = true;
         if (hm_should_skip(node, policy)) {

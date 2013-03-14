@@ -48,12 +48,12 @@ auto context_switching_actor::init_timeout(const util::duration& tout) -> timeou
     return {};
 }
 
-detail::recursive_queue_node* context_switching_actor::await_message(const timeout_type&) {
+mailbox_element* context_switching_actor::await_message(const timeout_type&) {
     // receives requested timeout message if timeout occured
     return await_message();
 }
 
-detail::recursive_queue_node* context_switching_actor::await_message() {
+mailbox_element* context_switching_actor::await_message() {
     auto e = m_mailbox.try_pop();
     while (e == nullptr) {
         if (m_mailbox.can_fetch_more() == false) {

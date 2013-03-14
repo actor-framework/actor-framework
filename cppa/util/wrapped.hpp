@@ -35,7 +35,7 @@ namespace cppa { namespace util {
 
 /**
  * @ingroup MetaProgramming
- * @brief A type wrapper as used in {@link cppa::util::if_else if_else}.
+ * @brief A simple type wrapper.
  */
 template<typename T>
 struct wrapped {

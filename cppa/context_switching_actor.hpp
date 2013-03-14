@@ -34,7 +34,6 @@
 #include <stack>
 
 #include "cppa/config.hpp"
-#include "cppa/either.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/stacked.hpp"
 #include "cppa/scheduled_actor.hpp"
@@ -64,21 +63,21 @@ class context_switching_actor : public extend<scheduled_actor,context_switching_
      */
     context_switching_actor(std::function<void()> fun);
 
-    resume_result resume(util::fiber* from, actor_ptr& next_job); //override
+    resume_result resume(util::fiber* from, actor_ptr& next_job);
 
     scheduled_actor_type impl_type();
 
  protected:
 
+    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+
     timeout_type init_timeout(const util::duration& rel_time);
 
-    detail::recursive_queue_node* await_message();
+    mailbox_element* await_message();
 
-    detail::recursive_queue_node* await_message(const timeout_type& abs_time);
+    mailbox_element* await_message(const timeout_type& abs_time);
 
  private:
-
-    detail::recursive_queue_node* receive_node();
 
     // required by util::fiber
     static void trampoline(void* _this);

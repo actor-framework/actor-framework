@@ -43,29 +43,27 @@
 #include "cppa/atom.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
+#include "cppa/network/acceptor.hpp"
+#include "cppa/network/protocol.hpp"
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/ipv4_acceptor.hpp"
 #include "cppa/network/ipv4_io_stream.hpp"
-
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
 using namespace detail;
 using namespace network;
 
-namespace {
-protocol* proto() {
-    return singleton_manager::get_middleman()->protocol(atom("DEFAULT")).get();
-}
-} // namespace <anonymous>
+namespace { protocol_ptr proto() {
+    return get_middleman()->protocol(atom("DEFAULT")).get();
+} }
 
 void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
     proto()->publish(whom, move(aptr), {});
