@@ -84,7 +84,7 @@ class logging_impl : public logging {
     void operator()() {
         ostringstream fname;
         fname << "libcppa_" << getpid() << "_" << time(0) << ".log";
-        fstream out(fname.str().c_str(), ios::app);
+        fstream out(fname.str().c_str(), ios::out);
         unique_ptr<log_event> event;
         for (;;) {
             event.reset(m_queue.pop());
