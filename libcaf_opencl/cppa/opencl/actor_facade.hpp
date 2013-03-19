@@ -33,6 +33,9 @@
 #define CPPA_OPENCL_ACTOR_FACADE_HPP
 
 #include <iostream>
+#include <stdexcept>
+
+#include "cppa/cppa.hpp"
 
 #include "cppa/channel.hpp"
 #include "cppa/to_string.hpp"
@@ -41,6 +44,7 @@
 
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/scope_guard.hpp"
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
@@ -59,7 +63,7 @@ template<typename Signature>
 class actor_facade;
 
 template<typename Ret, typename... Args>
-class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
+class actor_facade<Ret(Args...)> : public actor {
 
  public:
 
@@ -71,9 +75,49 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
         , m_kernel_name(kernel_name)
         , m_dispatcher(dispatcher)
     {
+        CPPA_LOG_TRACE("new actor facde with ID " << this->id());
+        init_kernel(m_program.get(), m_kernel_name);
+    }
+
+    actor_facade(command_dispatcher* dispatcher,
+                 const program& prog,
+                 const std::string& kernel_name,
+                 std::vector<size_t>& global_dimensions,
+                 std::vector<size_t>& local_dimensions)
+        : m_program(prog.m_program)
+        , m_context(prog.m_context)
+        , m_kernel_name(kernel_name)
+        , m_dispatcher(dispatcher)
+        , m_global_dimensions(global_dimensions)
+        , m_local_dimensions(local_dimensions)
+    {
+        CPPA_LOG_TRACE("new actor facde with ID " << this->id());
+        if(m_local_dimensions .size() > 3 ||
+           m_global_dimensions.size() > 3) {
+            throw std::runtime_error("[!!!] Creating actor facade:"
+                                     " a maximum of 3 dimensions allowed");
+        }
+        init_kernel(m_program.get(), m_kernel_name);
+    }
+
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
+        CPPA_LOG_TRACE("actor_facade::enqueue()");
+        typename util::il_indices<util::type_list<Args...>>::type indices;
+        enqueue_impl(sender, msg, message_id{}, indices);
+    }
+
+    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) {
+        CPPA_LOG_TRACE("actor_facade::sync_enqueue()");
+        typename util::il_indices<util::type_list<Args...>>::type indices;
+        enqueue_impl(sender, msg, id, indices);
+    }
+
+ private:
+
+    void init_kernel(cl_program program, std::string& kernel_name) {
         cl_int err{0};
-        m_kernel.adopt(clCreateKernel(m_program.get(),
-                                      m_kernel_name.c_str(),
+        m_kernel.adopt(clCreateKernel(program,
+                                      kernel_name.c_str(),
                                       &err));
         if (err != CL_SUCCESS) {
             throw std::runtime_error("[!!!] clCreateKernel: '"
@@ -82,24 +126,34 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
         }
     }
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
-        typename util::il_indices<util::type_list<Args...>>::type indices;
-        enqueue_impl(sender, msg, indices);
-    }
-
- private:
-
     template<long... Is>
-    void enqueue_impl(const actor_ptr& sender, any_tuple msg, util::int_list<Is...>) {
+    void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
         auto opt = tuple_cast<Args...>(msg);
         if (opt) {
-            response_handle handle{this, sender, message_id_t{}};
-            std::vector<size_t> global_dimensions {1024, 1, 1};
-            std::vector<size_t> local_dimensions;
-            int number_of_values = 1;
-            for (size_t s : global_dimensions) {
-                number_of_values *= s;
+            response_handle handle{this, sender, id};
+            size_t number_of_values = 1;
+            if (!m_global_dimensions.empty()) {
+                for (auto s : m_global_dimensions) {
+                    number_of_values *= s;
+                }
+                for (auto s : m_local_dimensions) {
+                    if (s > 0) {
+                        number_of_values *= s;
+                    }
+                }
             }
+            else {
+                number_of_values = get<0>(*opt).size();
+                m_global_dimensions.push_back(number_of_values);
+                m_global_dimensions.push_back(1);
+                m_global_dimensions.push_back(1);
+            }
+            if (m_global_dimensions.empty() || number_of_values <= 0) {
+                throw std::runtime_error("[!!!] enqueue: can't handle dimension sizes!");
+            }
+//            for (auto s : m_global_dimensions) std::cout << "[global] " << s << std::endl;
+//            for (auto s : m_local_dimensions ) std::cout << "[local ] " << s << std::endl;
+//            std::cout << "number stuff " << number_of_values << std::endl;
             Ret result_buf(number_of_values);
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel(arguments,
@@ -107,14 +161,16 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
                                     m_kernel.get(),
                                     result_buf,
                                     get_ref<Is>(*opt)...);
+            CPPA_LOG_TRACE("enqueue to dispatcher");
             enqueue_to_dispatcher(m_dispatcher,
                                   make_counted<command_impl<Ret>>(handle,
                                                                   m_kernel,
                                                                   arguments,
-                                                                  global_dimensions,
-                                                                 local_dimensions));
+                                                                  m_global_dimensions,
+                                                                  m_local_dimensions));
         }
         else {
+            aout << "*** warning: tuple_cast failed!\n";
             // slap caller around with a large fish
         }
     }
@@ -126,6 +182,8 @@ class actor_facade<Ret(Args...)> : public cppa::detail::scheduled_actor_dummy {
     context_ptr m_context;
     std::string m_kernel_name;
     command_dispatcher* m_dispatcher;
+    std::vector<size_t> m_global_dimensions;
+    std::vector<size_t> m_local_dimensions;
 
     void add_arguments_to_kernel_rec(args_vec& arguments,
                                             cl_context,

@@ -49,6 +49,7 @@ class program {
 
  public:
 
+    program();
     program(const std::string& kernel_source);
 
  private:
