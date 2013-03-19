@@ -36,9 +36,11 @@
 #include <functional>
 
 #include "cppa/actor.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/opencl/global.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
+#include "cppa/util/scope_guard.hpp"
 
 namespace cppa { namespace opencl {
 
@@ -48,7 +50,7 @@ class command : public ref_counted {
 
     command* next;
 
-    virtual void enqueue (command_queue_ptr queue) = 0;
+    virtual void enqueue(command_queue_ptr queue) = 0;
 
 };
 
@@ -83,6 +85,7 @@ class command_impl : public command {
     }
 
     void enqueue (command_queue_ptr queue) {
+        CPPA_LOG_TRACE("command::enqueue()");
         this->ref();
         cl_int err{0};
         m_queue = queue;
@@ -107,6 +110,9 @@ class command_impl : public command {
         err = clSetEventCallback(ptr,
                                  CL_COMPLETE,
                                  [](cl_event, cl_int, void* data) {
+                                     CPPA_LOGC_TRACE("command_impl",
+                                                    "enqueue",
+                                                    "command::enqueue()::callback()");
                                      auto cmd = reinterpret_cast<command_impl*>(data);
                                      cmd->handle_results();
                                      cmd->deref();
@@ -131,6 +137,7 @@ class command_impl : public command {
     std::vector<size_t>  m_local_dimensions;
 
     void handle_results () {
+        CPPA_LOG_TRACE("command::handle_results()");
         /* get results from gpu */
         cl_int err{0};
         cl_event read_event;

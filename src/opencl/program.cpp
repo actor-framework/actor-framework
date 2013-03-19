@@ -28,10 +28,14 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
+#include <vector>
+
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
 
 namespace cppa { namespace opencl {
+
+program::program() : m_context(nullptr), m_program(nullptr) { }
 
 program::program(const std::string& kernel_source) {
     m_context =
@@ -57,9 +61,67 @@ program::program(const std::string& kernel_source) {
     /* build programm from program object */
     err = clBuildProgram(m_program.get(), 0, NULL, NULL, NULL, NULL);
     if (err != CL_SUCCESS) {
+        device_ptr device_used(cppa::detail::singleton_manager::
+                               get_command_dispatcher()->
+                               m_devices.front().dev_id);
+        cl_build_status build_status;
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_STATUS,
+                                    sizeof(cl_build_status),
+                                    &build_status,
+                                    NULL);
+        size_t ret_val_size;
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_LOG,
+                                    0,
+                                    NULL,
+                                    &ret_val_size);
+        std::vector<char> build_log(ret_val_size+1);
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_LOG,
+                                    ret_val_size,
+                                    build_log.data(),
+                                    NULL);
+        build_log[ret_val_size] = '\0';
         throw std::runtime_error("[!!!] clBuildProgram: '"
                             + get_opencl_error(err)
-                            + "'.");
+                            + "'. Build log: "
+                            + build_log.data());
+    }
+    else {
+#ifdef CPPA_DEBUG
+        device_ptr device_used(cppa::detail::singleton_manager::
+                               get_command_dispatcher()->
+                               m_devices.front().dev_id);
+        cl_build_status build_status;
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_STATUS,
+                                    sizeof(cl_build_status),
+                                    &build_status,
+                                    NULL);
+        size_t ret_val_size;
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_LOG,
+                                    0,
+                                    NULL,
+                                    &ret_val_size);
+        std::vector<char> build_log(ret_val_size+1);
+        err = clGetProgramBuildInfo(m_program.get(),
+                                    device_used.get(),
+                                    CL_PROGRAM_BUILD_LOG,
+                                    ret_val_size,
+                                    build_log.data(),
+                                    NULL);
+        build_log[ret_val_size] = '\0';
+        std::cout << "clBuildProgram log: '"
+                  << build_log.data()
+                  << std::endl;
+#endif
     }
 }
 

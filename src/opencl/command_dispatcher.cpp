@@ -63,9 +63,11 @@ struct command_dispatcher::worker {
     void operator()() {
         job_ptr job;
         for (;;) {
-            /* wait for device */
-            /* get results */
-            /* wait for job */
+            /*
+             * todo:
+             *  manage device usage
+             *  wait for device
+             */
             // adopt reference count of job queue
             job.adopt(m_job_queue->pop());
             if(job != m_dummy) {
@@ -82,7 +84,6 @@ struct command_dispatcher::worker {
                 cout << "worker done" << endl;
                 return;
             }
-            // ...?
         }
     }
 
@@ -125,8 +126,8 @@ void command_dispatcher::initialize() {
     /* find gpu devices on our platform */
     int pid{0};
     cl_uint num_devices{0};
-    cout << "Currently only looking for cpu devices!" << endl;
-    cl_device_type dev_type{CL_DEVICE_TYPE_CPU /*CL_DEVICE_TYPE_GPU*/};
+//    cout << "Currently only looking for cpu devices!" << endl;
+    cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
     err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
     if (err == CL_DEVICE_NOT_FOUND) {
         cout << "NO GPU DEVICES FOUND! LOOKING FOR CPU DEVICES NOW ..." << endl;

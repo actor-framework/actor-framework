@@ -34,16 +34,20 @@
 
 #include <atomic>
 #include <vector>
+#include <algorithm>
 #include <functional>
 
 #include "cppa/channel.hpp"
+
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/opencl/actor_facade.hpp"
+
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
+
 #include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 namespace cppa { namespace opencl {
@@ -70,6 +74,55 @@ class command_dispatcher {
 
     void enqueue();
 
+    template<typename Ret, typename... Args>
+    actor_ptr spawn(const program& prog,
+                    const std::string& kernel_name,
+                    size_t global_dim_1,
+                    size_t global_dim_2 = 1,
+                    size_t global_dim_3 = 1,
+                    size_t local_dim_1 = 0,
+                    size_t local_dim_2 = 0,
+                    size_t local_dim_3 = 0) {
+        std::vector<size_t> global_dims {global_dim_1,
+                                         global_dim_2,
+                                         global_dim_3};
+        std::vector<size_t> local_dims  {local_dim_1,
+                                         local_dim_2,
+                                         local_dim_3};
+        auto f_remove_invalid = [] (size_t s) { return s <= 0; };
+//        auto global_invalid = std::remove_if(global_dims.begin(),
+//                                             global_dims.end(),
+//                                             f_remove_invalid);
+//        global_dims.erase(global_invalid, global_dims.end());
+        auto local_invalid = std::remove_if(local_dims.begin(),
+                                            local_dims.end(),
+                                            f_remove_invalid);
+        local_dims.erase(local_invalid, local_dims.end());
+        return new actor_facade<Ret (Args...)>(this,
+                                               prog,
+                                               kernel_name,
+                                               global_dims,
+                                               local_dims);
+    }
+
+    template<typename Ret, typename... Args>
+    actor_ptr spawn(const std::string& kernel_source,
+                    const std::string& kernel_name,
+                    size_t global_dim_1,
+                    size_t global_dim_2 = 1,
+                    size_t global_dim_3 = 1,
+                    size_t local_dim_1 = 0,
+                    size_t local_dim_2 = 0,
+                    size_t local_dim_3 = 0) {
+        return spawn<Ret, Args...>(program{kernel_source},
+                                   kernel_name,
+                                   global_dim_1,
+                                   global_dim_2,
+                                   global_dim_3,
+                                   local_dim_1,
+                                   local_dim_2,
+                                   local_dim_3);
+    }
 
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
@@ -107,7 +160,8 @@ class command_dispatcher {
             , max_itms_per_dim(std::move(max_itms_per_dim)) { }
     };
 
-    typedef intrusive::blocking_single_reader_queue<command,dereferencer> job_queue;
+    typedef intrusive::blocking_single_reader_queue<command,dereferencer>
+            job_queue;
 
     static inline command_dispatcher* create_singleton() {
         return new command_dispatcher;

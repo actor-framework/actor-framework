@@ -54,28 +54,80 @@ int main() {
             b.push_back(i*1.0);
         }
 
-        auto a_facade = disp->spawn<vector<float>,
-                                    vector<float>,
-                                    vector<float>>(prog, "add");
-        send(a_facade, a, b);
+        cout << "add with 1 dimension size argument:" << endl;
+        auto a_add_arguments = disp->spawn<vector<float>,
+                                           vector<float>,
+                                           vector<float>>(prog, "add", size);
+        send(a_add_arguments, a, b);
         receive (
             on_arg_match >> [&](const vector<float>& result) {
-                copy(begin(result),
-                     end(result),
-                     std::ostream_iterator<float>(cout, "\n"));
+//                copy(begin(result),
+//                     end(result),
+//                     std::ostream_iterator<float>(cout, "\n"));
+                cout << "first ("
+                     << a.front() << "/" << b.front()
+                     << ") :" << result.front() << endl
+                     << "last  ("
+                     << a.back() << "/" << b.back()
+                     << ") :" << result.back()  << endl;
             },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
 
-        auto b_facade = disp->spawn<vector<float>,
-                                    vector<float>>(prog, "square");
-        cout << "square" << endl;
-        send(b_facade, a);
+        cout << "add without arguments:" << endl;
+        auto a_add = disp->spawn<vector<float>,
+                                 vector<float>,
+                                 vector<float>>(prog, "add");
+        send(a_add, a, b);
         receive (
             on_arg_match >> [&](const vector<float>& result) {
-                copy(begin(result),
-                     end(result),
-                     std::ostream_iterator<float>(cout, "\n"));
+//                copy(begin(result),
+//                     end(result),
+//                     std::ostream_iterator<float>(cout, "\n"));
+                cout << "first ("
+                     << a.front() << "/" << b.front()
+                     << ") :" << result.front() << endl
+                     << "last  ("
+                     << a.back() << "/" << b.back()
+                     << ") :" << result.back()  << endl;
+            },
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+
+        cout << "square with 1 dimension size argument:" << endl;
+        auto a_square = disp->spawn<vector<float>,
+                                    vector<float>>(prog, "square", size);
+        send(a_square, a);
+        receive (
+            on_arg_match >> [&](const vector<float>& result) {
+//                copy(begin(result),
+//                     end(result),
+//                     std::ostream_iterator<float>(cout, "\n"));
+                cout << "first ("
+                     << a.front() << "/" << b.front()
+                     << ") :" << result.front() << endl
+                     << "last  ("
+                     << a.back() << "/" << b.back()
+                     << ") :" << result.back()  << endl;
+            },
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+
+        cout << "square without arguments:" << endl;
+        auto a_square_arguments = disp->spawn<vector<float>,
+                                    vector<float>>(prog, "square");
+        send(a_square_arguments, a);
+        receive (
+            on_arg_match >> [&](const vector<float>& result) {
+//                copy(begin(result),
+//                     end(result),
+//                     std::ostream_iterator<float>(cout, "\n"));
+                cout << "first ("
+                     << a.front() << "/" << b.front()
+                     << ") :" << result.front() << endl
+                     << "last  ("
+                     << a.back() << "/" << b.back()
+                     << ") :" << result.back()  << endl;
             },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
