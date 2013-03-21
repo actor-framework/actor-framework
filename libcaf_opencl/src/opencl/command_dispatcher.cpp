@@ -75,6 +75,12 @@ struct command_dispatcher::worker {
                     cl_command_queue cmd_q =
                             m_parent->m_devices.front().cmd_queue.get();
                     job->enqueue(cmd_q);
+                    cl_int err{clFlush(cmd_q)};
+                    if (err != CL_SUCCESS) {
+                        throw runtime_error("[!!!] clFlush: '"
+                                                 + get_opencl_error(err)
+                                                 + "'.");
+                    }
                 }
                 catch (exception& e) {
                     cerr << e.what() << endl;
