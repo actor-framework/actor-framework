@@ -133,7 +133,7 @@ void thread_pool_scheduler::worker_loop(thread_pool_scheduler::worker* w) {
 }
 
 thread_pool_scheduler::thread_pool_scheduler() {
-    m_num_threads = std::max<size_t>(std::thread::hardware_concurrency()*2, 4);
+    m_num_threads = std::max<size_t>(std::thread::hardware_concurrency(), 4);
 }
 
 thread_pool_scheduler::thread_pool_scheduler(size_t num_worker_threads) {
