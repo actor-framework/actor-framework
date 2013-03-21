@@ -187,10 +187,11 @@ class command_dispatcher {
 };
 
 #else // CPPA_OPENCL
-class command_dispatcher : public detail::singleton_mixin<command_dispatcher> {
-
-};
+class command_dispatcher : public detail::singleton_mixin<command_dispatcher> { };
 #endif // CPPA_OPENCL
+
+command_dispatcher* get_command_dispatcher();
+
 } } // namespace cppa::opencl
 
 #endif // CPPA_OPENCL_COMMAND_DISPATCHER_HPP
