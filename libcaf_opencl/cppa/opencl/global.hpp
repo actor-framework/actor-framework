@@ -44,6 +44,9 @@ namespace cppa { namespace opencl {
 
 std::string get_opencl_error(cl_int err);
 
+cl_int clReleaseDeviceDummy (cl_device_id);
+cl_int clRetainDeviceDummy  (cl_device_id);
+
 } } // namespace cppa::opencl
 
 #endif // CPPA_OPENCL_GLOBAL_HPP
