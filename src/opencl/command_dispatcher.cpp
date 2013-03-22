@@ -132,7 +132,6 @@ void command_dispatcher::initialize() {
     /* find gpu devices on our platform */
     int pid{0};
     cl_uint num_devices{0};
-//    cout << "Currently only looking for cpu devices!" << endl;
     cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
     err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
     if (err == CL_DEVICE_NOT_FOUND) {
@@ -170,67 +169,88 @@ void command_dispatcher::initialize() {
                                              device.get(),
                                              CL_QUEUE_PROFILING_ENABLE,
                                              &err));
-        if (err != CL_SUCCESS) {
-            ostringstream oss;
-            oss << "[!!!] clCreateCommandQueue (" << id << "): '"
-                << get_opencl_error(err) << "'.";
-            throw runtime_error(oss.str());
-        }
         size_t return_size{0};
-        size_t max_work_group_size{0};
-        err = clGetDeviceInfo(device.get(),
-                              CL_DEVICE_MAX_WORK_GROUP_SIZE,
-                              sizeof(size_t),
-                              &max_work_group_size,
-                              &return_size);
         if (err != CL_SUCCESS) {
-            ostringstream oss;
-            oss << "[!!!] clGetDeviceInfo ("
-                << id
-                << ":CL_DEVICE_MAX_WORK_GROUP_SIZE): '"
-                << get_opencl_error(err) << "'.";
-            throw runtime_error(oss.str());
+            static constexpr size_t buf_size = 128;
+            char buf[buf_size];
+            err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
+            if (err == CL_SUCCESS) {
+                cout << "**** warning: Could not create command queue for device: "
+                     << buf << "." << endl;
+            }
+            else {
+                cout << "Could not create command queue unknown for device."
+                     << endl;
+            }
+//            ostringstream oss;
+//            oss << "[!!!] clCreateCommandQueue (" << id << "): '"
+//                << get_opencl_error(err) << "'.";
+//            throw runtime_error(oss.str());
         }
-        cl_uint max_work_item_dimensions = 0;
-        err = clGetDeviceInfo(device.get(),
-                              CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
-                              sizeof(cl_uint),
-                              &max_work_item_dimensions,
-                              &return_size);
-        if (err != CL_SUCCESS) {
-            ostringstream oss;
-            oss << "[!!!] clGetDeviceInfo ("
-                << id
-                << ":CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): '"
-                << get_opencl_error(err) << "'.";
-            throw runtime_error(oss.str());
+        else {
+            size_t max_work_group_size{0};
+            err = clGetDeviceInfo(device.get(),
+                                  CL_DEVICE_MAX_WORK_GROUP_SIZE,
+                                  sizeof(size_t),
+                                  &max_work_group_size,
+                                  &return_size);
+            if (err != CL_SUCCESS) {
+                ostringstream oss;
+                oss << "[!!!] clGetDeviceInfo ("
+                    << id
+                    << ":CL_DEVICE_MAX_WORK_GROUP_SIZE): '"
+                    << get_opencl_error(err) << "'.";
+                throw runtime_error(oss.str());
+            }
+            cl_uint max_work_item_dimensions = 0;
+            err = clGetDeviceInfo(device.get(),
+                                  CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
+                                  sizeof(cl_uint),
+                                  &max_work_item_dimensions,
+                                  &return_size);
+            if (err != CL_SUCCESS) {
+                ostringstream oss;
+                oss << "[!!!] clGetDeviceInfo ("
+                    << id
+                    << ":CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): '"
+                    << get_opencl_error(err) << "'.";
+                throw runtime_error(oss.str());
+            }
+            vector<size_t> max_work_items_per_dim(max_work_item_dimensions);
+            err = clGetDeviceInfo(device.get(),
+                                  CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                                  sizeof(size_t)*max_work_item_dimensions,
+                                  max_work_items_per_dim.data(),
+                                  &return_size);
+            if (err != CL_SUCCESS) {
+                ostringstream oss;
+                oss << "[!!!] clGetDeviceInfo ("
+                    << id
+                    << ":CL_DEVICE_MAX_WORK_ITEM_SIZES): '"
+                    << get_opencl_error(err) << "'.";
+                throw runtime_error(oss.str());
+            }
+            device_info dev_info{id,
+                                 cmd_queue,
+                                 device,
+                                 max_work_group_size,
+                                 max_work_item_dimensions,
+                                 move(max_work_items_per_dim)};
+            m_devices.push_back(move(dev_info));
         }
-        vector<size_t> max_work_items_per_dim(max_work_item_dimensions);
-        err = clGetDeviceInfo(device.get(),
-                              CL_DEVICE_MAX_WORK_ITEM_SIZES,
-                              sizeof(size_t)*max_work_item_dimensions,
-                              max_work_items_per_dim.data(),
-                              &return_size);
-        if (err != CL_SUCCESS) {
-            ostringstream oss;
-            oss << "[!!!] clGetDeviceInfo ("
-                << id
-                << ":CL_DEVICE_MAX_WORK_ITEM_SIZES): '"
-                << get_opencl_error(err) << "'.";
-            throw runtime_error(oss.str());
-        }
-        device_info dev_info{id,
-                             cmd_queue,
-                             device,
-                             max_work_group_size,
-                             max_work_item_dimensions,
-                             move(max_work_items_per_dim)};
-        m_devices.push_back(move(dev_info));
     }
-    m_supervisor = thread(&command_dispatcher::supervisor_loop,
-                          this,
-                          &m_job_queue,
-                          m_dummy);
+    if (m_devices.empty()) {
+        ostringstream oss;
+        oss << "[!!!] Could not create a command queue for "
+            << "any of the present devices.";
+        throw runtime_error(oss.str());
+    }
+    else {
+        m_supervisor = thread(&command_dispatcher::supervisor_loop,
+                              this,
+                              &m_job_queue,
+                              m_dummy);
+    }
 }
 
 void command_dispatcher::destroy() {
