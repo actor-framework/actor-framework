@@ -136,11 +136,11 @@ class actor_facade<Ret(Args...)> : public actor {
                 for (auto s : m_global_dimensions) {
                     number_of_values *= s;
                 }
-                for (auto s : m_local_dimensions) {
-                    if (s > 0) {
-                        number_of_values *= s;
-                    }
-                }
+//                for (auto s : m_local_dimensions) {
+//                    if (s > 0) {
+//                        number_of_values *= s;
+//                    }
+//                }
             }
             else {
                 number_of_values = get<0>(*opt).size();
