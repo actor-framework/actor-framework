@@ -162,11 +162,13 @@ if (BOOST_ROOT)
   set(Boost_NO_SYSTEM_PATHS true)
 endif ()
 
-find_package(PTHREAD REQUIRED)
-
-set(INCLUDE_DIRS . ${PTHREAD_INCLUDE_DIR})
+set(INCLUDE_DIRS .)
 set(LD_DIRS)
-set(LD_FLAGS ${CMAKE_LD_LIBS} ${PTHREAD_LIBRARIES})
+set(LD_FLAGS ${CMAKE_LD_LIBS})
+
+if (UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+endif (UNIX)
 
 if (ENABLE_OPENCL)
   find_package(OPENCL REQUIRED)

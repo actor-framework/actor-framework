@@ -264,4 +264,8 @@ void command_dispatcher::dispose() {
     delete this;
 }
 
+command_dispatcher* get_command_dispatcher() {
+    return detail::singleton_manager::get_command_dispatcher();
+}
+
 } } // namespace cppa::opencl
