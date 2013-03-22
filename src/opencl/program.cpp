@@ -29,6 +29,7 @@
 \******************************************************************************/
 
 #include <vector>
+#include <cstring>
 
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
