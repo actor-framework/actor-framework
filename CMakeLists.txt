@@ -166,9 +166,11 @@ set(INCLUDE_DIRS .)
 set(LD_DIRS)
 set(LD_FLAGS ${CMAKE_LD_LIBS})
 
-if (UNIX)
+if (APPLE)
+  # -pthread is ignored on MacOSX
+elseif (UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-endif (UNIX)
+endif ()
 
 if (ENABLE_OPENCL)
   find_package(OPENCL REQUIRED)
