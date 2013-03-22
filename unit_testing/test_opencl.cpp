@@ -12,24 +12,7 @@ using namespace std;
 using namespace cppa;
 using namespace cppa::opencl;
 
-#define STRINGIFY(A) #A
-std::string kernel_source = STRINGIFY(
-/*
-    float function_example(float a, float b) {
-        return a + b;
-    }
-
-    __kernel void add(__global float* a, __global float* b, __global float* c) {
-        unsigned int i = get_global_id(0);
-        c[i] = function_example(a[i], b[i]);
-    }
-
-    __kernel void square(__global float* input, __global float* output)
-    {
-        unsigned int i = get_global_id(0);
-        output[i] = input[i] * input[i];
-    }
-*/
+namespace { constexpr const char* kernel_source = R"__(
     __kernel void matrix(__global float* matrix1,
                          __global float* matrix2,
                          __global float* output) {
@@ -56,7 +39,7 @@ std::string kernel_source = STRINGIFY(
         int q = get_local_id(1);
         output[x+y*size] = x * 10.0f + y * 1.0f + p * 0.1f + q* 0.01f;
     }
-);
+)__"; }
 
 int main() {
     CPPA_TEST(test_opencl);
@@ -65,7 +48,7 @@ int main() {
     announce<vector<float>>();
 
     int size{6};
-    program prog{kernel_source};
+    auto prog = program::create(kernel_source);
 
     command_dispatcher* disp =
             cppa::detail::singleton_manager::get_command_dispatcher();

@@ -35,51 +35,53 @@
 
 namespace cppa { namespace opencl {
 
-program::program() : m_context(nullptr), m_program(nullptr) { }
+//program::program() : m_context(nullptr), pptr(nullptr) { }
 
-program::program(const std::string& kernel_source) {
-    m_context =
-        cppa::detail::singleton_manager::get_command_dispatcher()->m_context;
+program::program(context_ptr context, program_ptr program)
+: m_context(std::move(context)), m_program(std::move(program)) { }
+
+program program::create(const char* kernel_source) {
+    context_ptr cptr = get_command_dispatcher()->m_context;
 
     cl_int err{0};
 
-    /* create program object from kernel source */
-    size_t kernel_source_length = kernel_source.size();
-    const char *kernel_source_cstr = kernel_source.c_str();
-    m_program.adopt(clCreateProgramWithSource(m_context.get(),
-                                              1,
-                                              &kernel_source_cstr,
-                                              &kernel_source_length,
-                                              &err));
+    // create program object from kernel source
+    program_ptr pptr;
+    size_t kernel_source_length = strlen(kernel_source);
+    pptr.adopt(clCreateProgramWithSource(cptr.get(),
+                                         1,
+                                         &kernel_source,
+                                         &kernel_source_length,
+                                         &err));
 
     if (err != CL_SUCCESS) {
-        throw std::runtime_error("[!!!] clCreateProgramWithSource: '"
-                            + get_opencl_error(err)
-                            + "'.");
+        throw std::runtime_error("clCreateProgramWithSource: '"
+                                 + get_opencl_error(err)
+                                 + "'.");
     }
 
-    /* build programm from program object */
-    err = clBuildProgram(m_program.get(), 0, NULL, NULL, NULL, NULL);
+    // build programm from program object
+    err = clBuildProgram(pptr.get(), 0, NULL, NULL, NULL, NULL);
     if (err != CL_SUCCESS) {
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
                                m_devices.front().dev_id);
         cl_build_status build_status;
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_STATUS,
                                     sizeof(cl_build_status),
                                     &build_status,
                                     NULL);
         size_t ret_val_size;
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     0,
                                     NULL,
                                     &ret_val_size);
         std::vector<char> build_log(ret_val_size+1);
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     ret_val_size,
@@ -97,21 +99,21 @@ program::program(const std::string& kernel_source) {
                                get_command_dispatcher()->
                                m_devices.front().dev_id);
         cl_build_status build_status;
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_STATUS,
                                     sizeof(cl_build_status),
                                     &build_status,
                                     NULL);
         size_t ret_val_size;
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     0,
                                     NULL,
                                     &ret_val_size);
         std::vector<char> build_log(ret_val_size+1);
-        err = clGetProgramBuildInfo(m_program.get(),
+        err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     ret_val_size,
@@ -123,6 +125,7 @@ program::program(const std::string& kernel_source) {
                   << std::endl;
 #endif
     }
+    return {cptr, pptr};
 }
 
 } } // namespace cppa::opencl

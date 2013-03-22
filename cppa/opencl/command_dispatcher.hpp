@@ -76,7 +76,7 @@ class command_dispatcher {
 
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
-                    const std::string& kernel_name,
+                    const char* kernel_name,
                     size_t global_dim_1,
                     size_t global_dim_2 = 1,
                     size_t global_dim_3 = 1,
@@ -106,15 +106,15 @@ class command_dispatcher {
     }
 
     template<typename Ret, typename... Args>
-    actor_ptr spawn(const std::string& kernel_source,
-                    const std::string& kernel_name,
+    actor_ptr spawn(const char* kernel_source,
+                    const char* kernel_name,
                     size_t global_dim_1,
                     size_t global_dim_2 = 1,
                     size_t global_dim_3 = 1,
                     size_t local_dim_1 = 0,
                     size_t local_dim_2 = 0,
                     size_t local_dim_3 = 0) {
-        return spawn<Ret, Args...>(program{kernel_source},
+        return spawn<Ret, Args...>(program::create(kernel_source),
                                    kernel_name,
                                    global_dim_1,
                                    global_dim_2,
@@ -126,14 +126,14 @@ class command_dispatcher {
 
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
-                    const std::string& kernel_name) {
+                    const char* kernel_name) {
         return new actor_facade<Ret (Args...)>(this, prog, kernel_name);
     }
 
     template<typename Ret, typename... Args>
-    actor_ptr spawn(const std::string& kernel_source,
-                    const std::string& kernel_name) {
-        return spawn<Ret, Args...>(program{kernel_source}, kernel_name);
+    actor_ptr spawn(const char* kernel_source,
+                    const char* kernel_name) {
+        return spawn<Ret, Args...>(program::create(kernel_source), kernel_name);
     }
 
  private:
