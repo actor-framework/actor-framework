@@ -69,24 +69,22 @@ class actor_facade<Ret(Args...)> : public actor {
 
     actor_facade(command_dispatcher* dispatcher,
                  const program& prog,
-                 const std::string& kernel_name)
+                 const char* kernel_name)
         : m_program(prog.m_program)
         , m_context(prog.m_context)
-        , m_kernel_name(kernel_name)
         , m_dispatcher(dispatcher)
     {
         CPPA_LOG_TRACE("new actor facde with ID " << this->id());
-        init_kernel(m_program.get(), m_kernel_name);
+        init_kernel(m_program.get(), kernel_name);
     }
 
     actor_facade(command_dispatcher* dispatcher,
                  const program& prog,
-                 const std::string& kernel_name,
+                 const char* kernel_name,
                  std::vector<size_t>& global_dimensions,
                  std::vector<size_t>& local_dimensions)
         : m_program(prog.m_program)
         , m_context(prog.m_context)
-        , m_kernel_name(kernel_name)
         , m_dispatcher(dispatcher)
         , m_global_dimensions(global_dimensions)
         , m_local_dimensions(local_dimensions)
@@ -97,7 +95,7 @@ class actor_facade<Ret(Args...)> : public actor {
             throw std::runtime_error("[!!!] Creating actor facade:"
                                      " a maximum of 3 dimensions allowed");
         }
-        init_kernel(m_program.get(), m_kernel_name);
+        init_kernel(m_program.get(), kernel_name);
     }
 
     void enqueue(const actor_ptr& sender, any_tuple msg) {
@@ -114,10 +112,10 @@ class actor_facade<Ret(Args...)> : public actor {
 
  private:
 
-    void init_kernel(cl_program program, std::string& kernel_name) {
+    void init_kernel(cl_program program, const char* kernel_name) {
         cl_int err{0};
         m_kernel.adopt(clCreateKernel(program,
-                                      kernel_name.c_str(),
+                                      kernel_name,
                                       &err));
         if (err != CL_SUCCESS) {
             throw std::runtime_error("[!!!] clCreateKernel: '"
@@ -180,7 +178,6 @@ class actor_facade<Ret(Args...)> : public actor {
     program_ptr m_program;
     kernel_ptr m_kernel;
     context_ptr m_context;
-    std::string m_kernel_name;
     command_dispatcher* m_dispatcher;
     std::vector<size_t> m_global_dimensions;
     std::vector<size_t> m_local_dimensions;

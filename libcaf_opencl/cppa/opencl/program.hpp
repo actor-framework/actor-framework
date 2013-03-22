@@ -49,10 +49,12 @@ class program {
 
  public:
 
-    program();
-    program(const std::string& kernel_source);
+    static program create(const char* kernel_source);
 
  private:
+
+    //program();
+    program(context_ptr context, program_ptr program);
 
     context_ptr m_context;
     program_ptr m_program;
