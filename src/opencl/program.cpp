@@ -89,10 +89,13 @@ program program::create(const char* kernel_source) {
                                     build_log.data(),
                                     NULL);
         build_log[ret_val_size] = '\0';
-        throw std::runtime_error("[!!!] clBuildProgram: '"
-                            + get_opencl_error(err)
-                            + "'. Build log: "
-                            + build_log.data());
+        std::ostringstream oss;
+        oss << "clBuildProgram: '"
+            << get_opencl_error(err)
+            << "'. Build log: "
+            << build_log.data();
+        CPPA_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
     }
     else {
 #ifdef CPPA_DEBUG
@@ -121,9 +124,7 @@ program program::create(const char* kernel_source) {
                                     build_log.data(),
                                     NULL);
         build_log[ret_val_size] = '\0';
-        std::cout << "clBuildProgram log: '"
-                  << build_log.data()
-                  << std::endl;
+        CPPA_LOG_DEBUG("clBuildProgram log: '" << build_log.data());
 #endif
     }
     return {cptr, pptr};

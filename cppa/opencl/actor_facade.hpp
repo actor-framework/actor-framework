@@ -32,7 +32,7 @@
 #ifndef CPPA_OPENCL_ACTOR_FACADE_HPP
 #define CPPA_OPENCL_ACTOR_FACADE_HPP
 
-#include <iostream>
+#include <ostream>
 #include <stdexcept>
 
 #include "cppa/cppa.hpp"
@@ -67,6 +67,7 @@ class actor_facade<Ret(Args...)> : public actor {
 
  public:
 
+    /*
     actor_facade(command_dispatcher* dispatcher,
                  const program& prog,
                  const char* kernel_name)
@@ -92,22 +93,54 @@ class actor_facade<Ret(Args...)> : public actor {
         CPPA_LOG_TRACE("new actor facde with ID " << this->id());
         if(m_local_dimensions .size() > 3 ||
            m_global_dimensions.size() > 3) {
-            throw std::runtime_error("[!!!] Creating actor facade:"
-                                     " a maximum of 3 dimensions allowed");
+            std::ostringstream oss;
+            oss << "Creating actor facade: a maximum of 3 dimensions allowed.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
         }
         init_kernel(m_program.get(), kernel_name);
     }
+    */
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
-        CPPA_LOG_TRACE("actor_facade::enqueue()");
-        typename util::il_indices<util::type_list<Args...>>::type indices;
-        enqueue_impl(sender, msg, message_id{}, indices);
+    actor_facade(command_dispatcher* dispatcher,
+                 const program& prog,
+                 const char* kernel_name,
+                 std::vector<size_t> global_dimensions,
+                 std::vector<size_t> local_dimensions,
+                 std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
+                 std::function<any_tuple(Ret&)> map_result)
+                 //std::function<option<cow_tuple<Args...>>(any_tuple)> map_args,
+                 //std::function<any_tuple(Ret& result)> map_result)
+      : m_program(prog.m_program)
+      , m_context(prog.m_context)
+      , m_dispatcher(dispatcher)
+      , m_global_dimensions(std::move(global_dimensions))
+      , m_local_dimensions(std::move(local_dimensions))
+      , m_map_args(std::move(map_args))
+      , m_map_result(std::move(map_result))
+    {
+        CPPA_LOG_TRACE("new actor facde with ID " << this->id());
+        if(m_local_dimensions .size() > 3 ||
+           m_global_dimensions.size() > 3) {
+            std::ostringstream oss;
+            oss << "Creating actor facade: a maximum of 3 dimensions allowed.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
+        }
+        init_kernel(m_program.get(), kernel_name);
     }
 
     void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) {
         CPPA_LOG_TRACE("actor_facade::sync_enqueue()");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, id, indices);
+    }
+
+
+    void enqueue(const actor_ptr& sender, any_tuple msg) {
+        CPPA_LOG_TRACE("actor_facade::enqueue()");
+        typename util::il_indices<util::type_list<Args...>>::type indices;
+        enqueue_impl(sender, msg, message_id{}, indices);
     }
 
  private:
@@ -118,15 +151,19 @@ class actor_facade<Ret(Args...)> : public actor {
                                       kernel_name,
                                       &err));
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clCreateKernel: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            std::ostringstream oss;
+            oss << "clCreateKernel: '"
+              << get_opencl_error(err)
+              << "'.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
         }
     }
 
     template<long... Is>
     void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
-        auto opt = tuple_cast<Args...>(msg);
+        //auto opt = tuple_cast<Args...>(msg);
+        auto opt = m_map_args(msg);
         if (opt) {
             response_handle handle{this, sender, id};
             size_t number_of_values = 1;
@@ -134,11 +171,6 @@ class actor_facade<Ret(Args...)> : public actor {
                 for (auto s : m_global_dimensions) {
                     number_of_values *= s;
                 }
-//                for (auto s : m_local_dimensions) {
-//                    if (s > 0) {
-//                        number_of_values *= s;
-//                    }
-//                }
             }
             else {
                 number_of_values = get<0>(*opt).size();
@@ -147,11 +179,11 @@ class actor_facade<Ret(Args...)> : public actor {
                 m_global_dimensions.push_back(1);
             }
             if (m_global_dimensions.empty() || number_of_values <= 0) {
-                throw std::runtime_error("[!!!] enqueue: can't handle dimension sizes!");
+                std::ostringstream oss;
+                oss << "actor_facade::enqueue() can't handle dimension sizes!";
+                CPPA_LOG_ERROR(oss.str());
+                throw std::runtime_error(oss.str());
             }
-//            for (auto s : m_global_dimensions) std::cout << "[global] " << s << std::endl;
-//            for (auto s : m_local_dimensions ) std::cout << "[local ] " << s << std::endl;
-//            std::cout << "number stuff " << number_of_values << std::endl;
             Ret result_buf(number_of_values);
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel(arguments,
@@ -165,11 +197,11 @@ class actor_facade<Ret(Args...)> : public actor {
                                                                   m_kernel,
                                                                   arguments,
                                                                   m_global_dimensions,
-                                                                  m_local_dimensions));
+                                                                  m_local_dimensions,
+                                                                  m_map_result));
         }
         else {
-            aout << "*** warning: tuple_cast failed!\n";
-            // slap caller around with a large fish
+            CPPA_LOG_ERROR("actor_facade::enqueue() tuple_cast failed.");
         }
     }
 
@@ -181,6 +213,8 @@ class actor_facade<Ret(Args...)> : public actor {
     command_dispatcher* m_dispatcher;
     std::vector<size_t> m_global_dimensions;
     std::vector<size_t> m_local_dimensions;
+    std::function<option<cow_tuple<Args...>>(any_tuple)> m_map_args;
+    std::function<any_tuple(Ret& result)> m_map_result;
 
     void add_arguments_to_kernel_rec(args_vec& arguments,
                                             cl_context,
@@ -192,9 +226,12 @@ class actor_facade<Ret(Args...)> : public actor {
                                  sizeof(cl_mem),
                                  static_cast<void*>(&arguments[i]));
             if (err != CL_SUCCESS) {
-                throw std::runtime_error("[!!!] clSetKernelArg: '"
-                                         + get_opencl_error(err)
-                                         + "'.");
+                std::ostringstream oss;
+                oss << "clSetKernelArg: '"
+                    << get_opencl_error(err)
+                    << "'.";
+                CPPA_LOG_ERROR(oss.str());
+                throw std::runtime_error(oss.str());
             }
         }
         err = clSetKernelArg(kernel,
@@ -202,9 +239,12 @@ class actor_facade<Ret(Args...)> : public actor {
                              sizeof(cl_mem),
                              static_cast<void*>(&arguments[0]));
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clSetKernelArg: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            std::ostringstream oss;
+            oss << "clSetKernelArg: '"
+                << get_opencl_error(err)
+                << "'.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
         }
     }
 
@@ -221,9 +261,12 @@ class actor_facade<Ret(Args...)> : public actor {
                                   arg0.data(),
                                   &err);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clCreateBuffer: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            std::ostringstream oss;
+            oss << "clCreateBuffer: '"
+                << get_opencl_error(err)
+                << "'.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
         }
         else {
             mem_ptr tmp;
@@ -250,9 +293,12 @@ class actor_facade<Ret(Args...)> : public actor {
                                   nullptr,
                                   &err);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clCreateBuffer: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            std::ostringstream oss;
+            oss << "clCreateBuffer: '"
+                << get_opencl_error(err)
+                << "'.";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
         }
         else {
             mem_ptr tmp;

@@ -70,13 +70,15 @@ class command_impl : public command {
                  kernel_ptr kernel,
                  std::vector<mem_ptr> arguments,
                  std::vector<size_t> global_dimensions,
-                 std::vector<size_t> local_dimensions)
+                 std::vector<size_t> local_dimensions,
+                 std::function<any_tuple(T&)> map_result)
         : m_number_of_values(1)
         , m_handle(handle)
         , m_kernel(kernel)
         , m_arguments(arguments)
         , m_global_dimensions(global_dimensions)
         , m_local_dimensions(local_dimensions)
+        , m_map_result(map_result)
     {
         m_kernel_event.adopt(cl_event());
         for (size_t s : m_global_dimensions) {
@@ -135,6 +137,7 @@ class command_impl : public command {
     std::vector<mem_ptr> m_arguments;
     std::vector<size_t>  m_global_dimensions;
     std::vector<size_t>  m_local_dimensions;
+    std::function<any_tuple (T&)> m_map_result;
 
     void handle_results () {
         CPPA_LOG_TRACE("command::handle_results()");
@@ -157,7 +160,9 @@ class command_impl : public command {
                                     + get_opencl_error(err)
                                     + "'.");
         }
-        reply_to(m_handle, results);
+        auto mapped_result = m_map_result(results);
+        reply_tuple_to(m_handle, mapped_result);
+        //reply_to(m_handle, results);
     }
 };
 
