@@ -37,7 +37,10 @@
 #include <algorithm>
 #include <functional>
 
+#include "cppa/option.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/cow_tuple.hpp"
+#include "cppa/logging.hpp"
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
@@ -56,6 +59,11 @@ struct dereferencer {
     inline void operator()(ref_counted* ptr) { ptr->deref(); }
 };
 
+template<typename... Ts>
+option<cow_tuple<Ts...>> default_map_args(any_tuple msg) {
+    return tuple_cast<Ts...>(msg);
+}
+
 #ifdef CPPA_OPENCL
 class command_dispatcher {
 
@@ -68,12 +76,64 @@ class command_dispatcher {
     friend class program;
 
     friend void enqueue_to_dispatcher(command_dispatcher* dispatcher,
-                                           command_ptr cmd);
+                                      command_ptr cmd);
 
  public:
 
     void enqueue();
 
+    template<typename Ret, typename... Args>
+    actor_ptr spawn__(const program& prog,
+                 const char* kernel_name,
+                 size_t global_dim_1,
+                 size_t global_dim_2,
+                 size_t global_dim_3,
+                 size_t local_dim_1,
+                 size_t local_dim_2,
+                 size_t local_dim_3,
+                 std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
+                 std::function<any_tuple(Ret&)> map_result)
+    {
+        std::vector<size_t> local_dims{local_dim_1, local_dim_2, local_dim_3};
+        auto i = std::find(local_dims.begin(), local_dims.end(), 0);
+        if (i != local_dims.end()) local_dims.clear();
+        return new actor_facade<Ret (Args...)>(this,
+                                               prog,
+                                               kernel_name,
+                                               {global_dim_1, global_dim_2, global_dim_3},
+                                               local_dims,
+                                               map_args,
+                                               map_result);
+    }
+
+    template<typename Ret, typename... Args>
+    actor_ptr spawn(const program& prog,
+                    const char* kernel_name,
+                    size_t global_dim_1,
+                    size_t global_dim_2 = 1,
+                    size_t global_dim_3 = 1,
+                    size_t local_dim_1 = 0,
+                    size_t local_dim_2 = 0,
+                    size_t local_dim_3 = 0)
+    {
+        std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> f0 = [] (any_tuple msg) {
+            return tuple_cast<typename util::rm_ref<Args>::type...>(msg);
+        };
+        std::function<any_tuple(Ret&)> f1 = [] (Ret& result) {
+            return make_any_tuple(std::move(result));
+        };
+        return this->spawn__<Ret,Args...>(prog,
+                                          kernel_name,
+                                          global_dim_1,
+                                          global_dim_2,
+                                          global_dim_3,
+                                          local_dim_1,
+                                          local_dim_2,
+                                          local_dim_3,
+                                          std::move(f0),
+                                          std::move(f1));
+    }
+/*
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
@@ -135,6 +195,7 @@ class command_dispatcher {
                     const char* kernel_name) {
         return spawn<Ret, Args...>(program::create(kernel_source), kernel_name);
     }
+*/
 
  private:
 

@@ -31,6 +31,7 @@
 #include <sstream>
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 #include "cppa/cppa.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
@@ -77,17 +78,20 @@ struct command_dispatcher::worker {
                     job->enqueue(cmd_q);
                     cl_int err{clFlush(cmd_q)};
                     if (err != CL_SUCCESS) {
-                        throw runtime_error("[!!!] clFlush: '"
-                                                 + get_opencl_error(err)
-                                                 + "'.");
+                        ostringstream oss;
+                        oss << "clFlush: '"
+                            << get_opencl_error(err)
+                            << "'.";
+                        CPPA_LOG_ERROR(oss.str());
+                        throw runtime_error(oss.str());
                     }
                 }
                 catch (exception& e) {
-                    cerr << e.what() << endl;
+                    CPPA_LOG_ERROR("worker loop, what(): " << e.what());
                 }
             }
             else {
-                cout << "worker done" << endl;
+                CPPA_LOG_TRACE("worker done");
                 return;
             }
         }
@@ -107,7 +111,7 @@ void command_dispatcher::supervisor_loop(command_dispatcher* scheduler,
     worker->start();
     worker->m_thread.join();
     worker.reset();
-    cout << "supervisor done" << endl;
+    CPPA_LOG_TRACE("supervisor done");
 }
 
 void command_dispatcher::initialize() {
@@ -121,12 +125,18 @@ void command_dispatcher::initialize() {
     cl_uint number_of_platforms;
     err = clGetPlatformIDs(ids.size(), ids.data(), &number_of_platforms);
     if (err != CL_SUCCESS) {
-        throw logic_error("[!!!] clGetPlatformIDs: '"
-                               + get_opencl_error(err)
-                               + "'.");
+        ostringstream oss;
+        oss << "clGetPlatformIDs: '"
+            << get_opencl_error(err)
+            << "'.";
+        CPPA_LOG_ERROR(oss.str());
+        throw logic_error(oss.str());
     }
     else if (number_of_platforms < 1) {
-        throw logic_error("[!!!] clGetPlatformIDs: 'no platforms found'.");
+        ostringstream oss;
+        oss << "clGetPlatformIDs: 'no platforms found'.";
+        CPPA_LOG_ERROR(oss.str());
+        throw logic_error(oss.str());
     }
 
     /* find gpu devices on our platform */
@@ -135,57 +145,67 @@ void command_dispatcher::initialize() {
     cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
     err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
     if (err == CL_DEVICE_NOT_FOUND) {
-        cout << "NO GPU DEVICES FOUND! LOOKING FOR CPU DEVICES NOW ..." << endl;
+        CPPA_LOG_TRACE("No gpu devices found. Looking for cpu devices.");
+        cout << "No gpu devices found. Looking for cpu devices." << endl;
         dev_type = CL_DEVICE_TYPE_CPU;
         err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
     }
     if (err != CL_SUCCESS) {
-        throw runtime_error("[!!!] clGetDeviceIDs: '"
-                                 + get_opencl_error(err)
-                                 + "'.");
+        ostringstream oss;
+        oss << "clGetDeviceIDs: '"
+            << get_opencl_error(err)
+            << "'.";
+        CPPA_LOG_ERROR(oss.str());
+        throw runtime_error(oss.str());
     }
     vector<cl_device_id> devices(num_devices);
     err = clGetDeviceIDs(ids[pid], dev_type, num_devices, devices.data(), NULL);
     if (err != CL_SUCCESS) {
-        throw runtime_error("[!!!] clGetDeviceIDs: '"
-                                 + get_opencl_error(err)
-                                 + "'.");
+        ostringstream oss;
+        oss << "clGetDeviceIDs: '"
+            << get_opencl_error(err)
+            << "'.";
+        CPPA_LOG_ERROR(oss.str());
+        throw runtime_error(oss.str());
     }
 
     /* create a context */
     m_context.adopt(clCreateContext(0, 1, devices.data(), NULL, NULL, &err));
     if (err != CL_SUCCESS) {
-        throw runtime_error("[!!!] clCreateContext: '"
-                                 + get_opencl_error(err)
-                                 + "'.");
+        ostringstream oss;
+        oss << "clCreateContext: '"
+            << get_opencl_error(err)
+            << "'.";
+        CPPA_LOG_ERROR(oss.str());
+        throw runtime_error(oss.str());
     }
 
     for (auto& d : devices) {
+        CPPA_LOG_TRACE("Creating command queue for device(s).");
         device_ptr device;
         device.adopt(d);
         unsigned id{++dev_id_gen};
+        size_t return_size{0};
+        static constexpr size_t buf_size = 128;
+        char buf[buf_size];
+        err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
+        if (err != CL_SUCCESS) {
+            ostringstream oss;
+            oss << "clGetDeviceInfo (CL_DEVICE_NAME): '"
+                << get_opencl_error(err)
+                << "'.";
+            CPPA_LOG_ERROR(oss.str());
+            fill(buf, buf+buf_size, 0);
+        }
         command_queue_ptr cmd_queue;
         cmd_queue.adopt(clCreateCommandQueue(m_context.get(),
                                              device.get(),
                                              CL_QUEUE_PROFILING_ENABLE,
                                              &err));
-        size_t return_size{0};
         if (err != CL_SUCCESS) {
-            static constexpr size_t buf_size = 128;
-            char buf[buf_size];
-            err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
-            if (err == CL_SUCCESS) {
-                cout << "**** warning: Could not create command queue for device: "
-                     << buf << "." << endl;
-            }
-            else {
-                cout << "Could not create command queue unknown for device."
-                     << endl;
-            }
-//            ostringstream oss;
-//            oss << "[!!!] clCreateCommandQueue (" << id << "): '"
-//                << get_opencl_error(err) << "'.";
-//            throw runtime_error(oss.str());
+            CPPA_LOG_DEBUG("Could not create command queue for device "
+                           << buf << ": '" << get_opencl_error(err)
+                           << "'.");
         }
         else {
             size_t max_work_group_size{0};
@@ -200,6 +220,7 @@ void command_dispatcher::initialize() {
                     << id
                     << ":CL_DEVICE_MAX_WORK_GROUP_SIZE): '"
                     << get_opencl_error(err) << "'.";
+                CPPA_LOG_ERROR(oss.str());
                 throw runtime_error(oss.str());
             }
             cl_uint max_work_item_dimensions = 0;
@@ -214,6 +235,7 @@ void command_dispatcher::initialize() {
                     << id
                     << ":CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): '"
                     << get_opencl_error(err) << "'.";
+                CPPA_LOG_ERROR(oss.str());
                 throw runtime_error(oss.str());
             }
             vector<size_t> max_work_items_per_dim(max_work_item_dimensions);
@@ -228,6 +250,7 @@ void command_dispatcher::initialize() {
                     << id
                     << ":CL_DEVICE_MAX_WORK_ITEM_SIZES): '"
                     << get_opencl_error(err) << "'.";
+                CPPA_LOG_ERROR(oss.str());
                 throw runtime_error(oss.str());
             }
             device_info dev_info{id,
@@ -243,6 +266,7 @@ void command_dispatcher::initialize() {
         ostringstream oss;
         oss << "[!!!] Could not create a command queue for "
             << "any of the present devices.";
+        CPPA_LOG_ERROR(oss.str());
         throw runtime_error(oss.str());
     }
     else {
