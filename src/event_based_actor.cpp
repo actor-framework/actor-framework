@@ -36,6 +36,8 @@
 #include "cppa/logging.hpp"
 #include "cppa/event_based_actor.hpp"
 
+using namespace std;
+
 namespace cppa {
 
 class default_scheduled_actor : public event_based_actor {
@@ -46,16 +48,28 @@ class default_scheduled_actor : public event_based_actor {
 
     typedef std::function<void()> fun_type;
 
-    default_scheduled_actor(fun_type&& fun) : m_fun(std::move(fun)) { }
+    default_scheduled_actor(fun_type&& fun)
+    : super(actor_state::ready), m_fun(std::move(fun)), m_initialized(false) { }
 
-    void init() {
-        become (
-            on(atom("RUN")) >> [=] {
-                CPPA_LOGS_TRACE("init$lambda", "");
-                unbecome();
-                m_fun();
+    void init() { }
+
+    resume_result resume(util::fiber* f, actor_ptr& next) {
+        if (!m_initialized) {
+            scoped_self_setter sss{this};
+            m_initialized = true;
+            m_fun();
+            if (m_bhvr_stack.empty()) {
+                if (exit_reason() == exit_reason::not_exited) quit(exit_reason::normal);
+                set_state(actor_state::done);
+                m_bhvr_stack.clear();
+                m_bhvr_stack.cleanup();
+                on_exit();
+                next.swap(m_chained_actor);
+                set_state(actor_state::done);
+                return resume_result::actor_done;
             }
-        );
+        }
+        return event_based_actor::resume(f, next);
     }
 
     scheduled_actor_type impl_type() {
@@ -65,6 +79,7 @@ class default_scheduled_actor : public event_based_actor {
  private:
 
     fun_type m_fun;
+    bool m_initialized;
 
 };
 
@@ -72,7 +87,7 @@ intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> f
     return detail::memory::create<default_scheduled_actor>(std::move(fun));
 }
 
-event_based_actor::event_based_actor() : super(actor_state::blocked, true) { }
+event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
 
 void event_based_actor::dequeue(behavior&) {
     quit(exit_reason::unallowed_function_call);
