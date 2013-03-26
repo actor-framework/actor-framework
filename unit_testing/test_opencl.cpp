@@ -47,7 +47,7 @@ int main() {
     announce<vector<int>>();
     announce<vector<float>>();
 
-    int size{6};
+    size_t size{6};
     auto prog = program::create(kernel_source);
 
     command_dispatcher* disp =
@@ -56,7 +56,7 @@ int main() {
     auto matrix_global = disp->spawn<vector<float>,
                                      vector<float>,
                                      vector<float>>(prog, "matrix",
-                                                    size, size);
+                                                    {size, size});
 
     vector<float> m1(size * size);
     vector<float> m2(size * size);
@@ -69,8 +69,8 @@ int main() {
     receive (
         on_arg_match >> [&] (const vector<float>& result) {
             cout << "results:" << endl;
-            for (int y{0}; y < size; ++y) {
-                for (int x{0}; x < size; ++x) {
+            for (unsigned y{0}; y < size; ++y) {
+                for (unsigned x{0}; x < size; ++x) {
                     cout << fixed << setprecision(2) << setw(8) << result[x+y*size];
                 }
                 cout << endl;
@@ -85,8 +85,8 @@ int main() {
     cout << endl;
     auto matrix_local = disp->spawn<vector<float>,
                                     vector<float>>(prog, "dimensions",
-                                                   size, size, 1,
-                                                   (size/3), (size/2), 1);
+                                                   {size, size, 1},
+                                                   {(size/3), (size/2), 1});
 
     m1.clear();
     m1.push_back(0.0); // dummy
@@ -96,8 +96,8 @@ int main() {
     receive (
         on_arg_match >> [&] (const vector<float>& result) {
             cout << "dimenson example:" << endl;
-            for (int y{0}; y < size; ++y) {
-                for (int x{0}; x < size; ++x) {
+            for (unsigned y{0}; y < size; ++y) {
+                for (unsigned x{0}; x < size; ++x) {
                     cout << fixed << setprecision(2) << setw(6) << result[x+y*size];
                 }
                 cout << endl;

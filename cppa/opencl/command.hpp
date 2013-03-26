@@ -97,7 +97,7 @@ class command_impl : public command {
         /* enqueue kernel */
         err = clEnqueueNDRangeKernel(m_queue.get(),
                                      m_kernel.get(),
-                                     3,
+                                     m_global_dimensions.size(),
                                      NULL,
                                      m_global_dimensions.data(),
                                      m_local_dimensions.data(),
