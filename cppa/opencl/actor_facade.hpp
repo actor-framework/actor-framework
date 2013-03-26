@@ -67,50 +67,17 @@ class actor_facade<Ret(Args...)> : public actor {
 
  public:
 
-    /*
-    actor_facade(command_dispatcher* dispatcher,
-                 const program& prog,
-                 const char* kernel_name)
-        : m_program(prog.m_program)
-        , m_context(prog.m_context)
-        , m_dispatcher(dispatcher)
-    {
-        CPPA_LOG_TRACE("new actor facde with ID " << this->id());
-        init_kernel(m_program.get(), kernel_name);
-    }
-
-    actor_facade(command_dispatcher* dispatcher,
-                 const program& prog,
-                 const char* kernel_name,
-                 std::vector<size_t>& global_dimensions,
-                 std::vector<size_t>& local_dimensions)
-        : m_program(prog.m_program)
-        , m_context(prog.m_context)
-        , m_dispatcher(dispatcher)
-        , m_global_dimensions(global_dimensions)
-        , m_local_dimensions(local_dimensions)
-    {
-        CPPA_LOG_TRACE("new actor facde with ID " << this->id());
-        if(m_local_dimensions .size() > 3 ||
-           m_global_dimensions.size() > 3) {
-            std::ostringstream oss;
-            oss << "Creating actor facade: a maximum of 3 dimensions allowed.";
-            CPPA_LOG_ERROR(oss.str());
-            throw std::runtime_error(oss.str());
-        }
-        init_kernel(m_program.get(), kernel_name);
-    }
-    */
+    typedef cow_tuple<typename util::rm_ref<Args>::type...> args_tuple;
+    typedef std::function<option<args_tuple>(any_tuple)> arg_mapping;
+    typedef std::function<any_tuple(Ret&)> result_mapping;
 
     actor_facade(command_dispatcher* dispatcher,
                  const program& prog,
                  const char* kernel_name,
                  std::vector<size_t> global_dimensions,
                  std::vector<size_t> local_dimensions,
-                 std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
-                 std::function<any_tuple(Ret&)> map_result)
-                 //std::function<option<cow_tuple<Args...>>(any_tuple)> map_args,
-                 //std::function<any_tuple(Ret& result)> map_result)
+                 arg_mapping map_args,
+                 result_mapping map_result)
       : m_program(prog.m_program)
       , m_context(prog.m_context)
       , m_dispatcher(dispatcher)
@@ -213,8 +180,8 @@ class actor_facade<Ret(Args...)> : public actor {
     command_dispatcher* m_dispatcher;
     std::vector<size_t> m_global_dimensions;
     std::vector<size_t> m_local_dimensions;
-    std::function<option<cow_tuple<Args...>>(any_tuple)> m_map_args;
-    std::function<any_tuple(Ret& result)> m_map_result;
+    arg_mapping m_map_args;
+    result_mapping m_map_result;
 
     void add_arguments_to_kernel_rec(args_vec& arguments,
                                             cl_context,
