@@ -90,22 +90,20 @@ class command_dispatcher {
                     std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
     {
-        auto i = std::find(local_dims.begin(), local_dims.end(), 0);
-        if (i != local_dims.end()) local_dims.clear();
         return new actor_facade<Ret (Args...)>(this,
                                                prog,
                                                kernel_name,
-                                               global_dims,
-                                               local_dims,
-                                               map_args,
-                                               map_result);
+                                               std::move(global_dims),
+                                               std::move(local_dims),
+                                               std::move(map_args),
+                                               std::move(map_result));
     }
 
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
                     std::vector<size_t> global_dims = {1,1,1},
-                    std::vector<size_t> local_dims = {0,0,0})
+                    std::vector<size_t> local_dims = {})
     {
         std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> f0 = [] (any_tuple msg) {
             return tuple_cast<typename util::rm_ref<Args>::type...>(msg);
@@ -115,8 +113,8 @@ class command_dispatcher {
         };
         return this->spawn<Ret,Args...>(prog,
                                         kernel_name,
-                                        global_dims,
-                                        local_dims,
+                                        std::move(global_dims),
+                                        std::move(local_dims),
                                         std::move(f0),
                                         std::move(f1));
     }
