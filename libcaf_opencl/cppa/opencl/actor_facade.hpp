@@ -126,7 +126,7 @@ class actor_facade<Ret(Args...)> : public actor {
 
     template<long... Is>
     void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
-        auto opt = tuple_cast<Args...>(msg);
+        auto opt = tuple_cast<typename util::rm_ref<Args>::type...>(msg);
         if (opt) {
             response_handle handle{this, sender, id};
             size_t number_of_values = 1;
