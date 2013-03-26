@@ -83,7 +83,7 @@ class event_based_actor : public scheduled_actor {
 
  protected:
 
-    event_based_actor();
+    event_based_actor(actor_state st = actor_state::blocked);
 
     // provoke compiler errors for usage of receive() and related functions
 

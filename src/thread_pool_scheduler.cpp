@@ -209,20 +209,10 @@ actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
         return std::move(p);
     }
     p->attach_to_scheduler(this, is_hidden);
-    if (p->has_behavior()) {
+    if (p->has_behavior() || p->impl_type() == default_event_based_impl) {
         if (!is_hidden) get_actor_registry()->inc_running();
         p->ref(); // implicit reference that's released if actor dies
-        switch (p->impl_type()) {
-            case default_event_based_impl: {
-                p->enqueue(nullptr, make_any_tuple(atom("RUN")));
-                break;
-            }
-            case context_switching_impl: {
-                m_queue.push_back(p.get());
-                break;
-            }
-            default: break; // nothing to do
-        }
+        if (p->impl_type() != event_based_impl) m_queue.push_back(p.get());
     }
     else p->on_exit();
     return std::move(p);
