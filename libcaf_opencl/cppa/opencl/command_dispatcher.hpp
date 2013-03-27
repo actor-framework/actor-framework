@@ -86,6 +86,7 @@ class command_dispatcher {
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
                     std::vector<size_t> global_dims,
+                    std::vector<size_t> global_offs,
                     std::vector<size_t> local_dims,
                     std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
@@ -94,6 +95,7 @@ class command_dispatcher {
                                                prog,
                                                kernel_name,
                                                std::move(global_dims),
+                                               std::move(global_offs),
                                                std::move(local_dims),
                                                std::move(map_args),
                                                std::move(map_result));
@@ -103,6 +105,7 @@ class command_dispatcher {
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
                     std::vector<size_t> global_dims = {1,1,1},
+                    std::vector<size_t> global_offs = {},
                     std::vector<size_t> local_dims = {})
     {
         std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> f0 = [] (any_tuple msg) {
@@ -114,6 +117,7 @@ class command_dispatcher {
         return this->spawn<Ret,Args...>(prog,
                                         kernel_name,
                                         std::move(global_dims),
+                                        std::move(global_offs),
                                         std::move(local_dims),
                                         std::move(f0),
                                         std::move(f1));

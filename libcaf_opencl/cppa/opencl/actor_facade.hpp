@@ -75,6 +75,7 @@ class actor_facade<Ret(Args...)> : public actor {
                  const program& prog,
                  const char* kernel_name,
                  std::vector<size_t> global_dimensions,
+                 std::vector<size_t> global_offsets,
                  std::vector<size_t> local_dimensions,
                  arg_mapping map_args,
                  result_mapping map_result)
@@ -82,6 +83,7 @@ class actor_facade<Ret(Args...)> : public actor {
       , m_context(prog.m_context)
       , m_dispatcher(dispatcher)
       , m_global_dimensions(std::move(global_dimensions))
+      , m_global_offsets(std::move(global_offsets))
       , m_local_dimensions(std::move(local_dimensions))
       , m_map_args(std::move(map_args))
       , m_map_result(std::move(map_result))
@@ -164,6 +166,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                                                   m_kernel,
                                                                   arguments,
                                                                   m_global_dimensions,
+                                                                  m_global_offsets,
                                                                   m_local_dimensions,
                                                                   m_map_result));
         }
@@ -179,6 +182,7 @@ class actor_facade<Ret(Args...)> : public actor {
     context_ptr m_context;
     command_dispatcher* m_dispatcher;
     std::vector<size_t> m_global_dimensions;
+    std::vector<size_t> m_global_offsets;
     std::vector<size_t> m_local_dimensions;
     arg_mapping m_map_args;
     result_mapping m_map_result;
