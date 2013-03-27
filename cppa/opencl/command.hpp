@@ -70,6 +70,7 @@ class command_impl : public command {
                  kernel_ptr kernel,
                  std::vector<mem_ptr> arguments,
                  std::vector<size_t> global_dimensions,
+                 std::vector<size_t> global_offsets,
                  std::vector<size_t> local_dimensions,
                  std::function<any_tuple(T&)> map_result)
         : m_number_of_values(1)
@@ -77,6 +78,7 @@ class command_impl : public command {
         , m_kernel(kernel)
         , m_arguments(arguments)
         , m_global_dimensions(global_dimensions)
+        , m_global_offsets(global_offsets)
         , m_local_dimensions(local_dimensions)
         , m_map_result(map_result)
     {
@@ -98,7 +100,7 @@ class command_impl : public command {
         err = clEnqueueNDRangeKernel(m_queue.get(),
                                      m_kernel.get(),
                                      m_global_dimensions.size(),
-                                     NULL,
+                                     m_global_offsets.data(),
                                      m_global_dimensions.data(),
                                      m_local_dimensions.data(),
                                      0,
@@ -136,6 +138,7 @@ class command_impl : public command {
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
     std::vector<size_t>  m_global_dimensions;
+    std::vector<size_t>  m_global_offsets;
     std::vector<size_t>  m_local_dimensions;
     std::function<any_tuple (T&)> m_map_result;
 

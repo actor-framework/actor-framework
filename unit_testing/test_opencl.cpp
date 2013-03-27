@@ -32,12 +32,14 @@ namespace { constexpr const char* kernel_source = R"__(
     }
 
     __kernel void dimensions(__global float* dummy, __global float* output) {
-        int size = get_global_size(0); // == get_global_size_(1);
-        int x = get_global_id(0);
-        int y = get_global_id(1);
-        int p = get_local_id(0);
-        int q = get_local_id(1);
-        output[x+y*size] = x * 10.0f + y * 1.0f + p * 0.1f + q* 0.01f;
+        int g_size = get_global_size(0); // == get_global_size_(1);
+        int g_dim_0 = get_global_id(0);
+        int g_dim_1 = get_global_id(1);
+        int l_dim_0 = get_local_id(0);
+        int l_dim_1 = get_local_id(1);
+        int g_off_0 = get_global_offset(0);
+        int g_off_1 = get_global_offset(1);
+        output[(g_dim_0-g_off_0)+(g_dim_1-g_off_1)*g_size] = g_dim_0 * 10.0f + g_dim_1 * 1.0f + l_dim_0 * 0.1f + l_dim_1* 0.01f;
     }
 )__"; }
 
@@ -85,8 +87,9 @@ int main() {
     cout << endl;
     auto matrix_local = disp->spawn<vector<float>,
                                     vector<float>>(prog, "dimensions",
-                                                   {size, size, 1},
-                                                   {(size/3), (size/2), 1});
+                                                   {size, size},
+                                                   {1,2},
+                                                   {(size/3), (size/2)});
 
     m1.clear();
     m1.push_back(0.0); // dummy
