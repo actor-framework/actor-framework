@@ -24,7 +24,8 @@ void chopstick() {
             send(philos, atom("taken"), self);
             // await 'put' message and reject other 'take' messages
             become(
-                keep_behavior, // "enables" unbecome()
+                // allows us to return to the previous behavior
+                keep_behavior,
                 on(atom("take"), arg_match) >> [=](const actor_ptr& other) {
                     send(other, atom("busy"), self);
                 },
@@ -70,7 +71,7 @@ void chopstick() {
  * [ X = right => Y = left  ]
  */
 
-struct philosopher : sb_actor<philosopher> {
+struct philosopher : event_based_actor {
 
     std::string name; // the name of this philosopher
     actor_ptr left;   // left chopstick
@@ -82,7 +83,6 @@ struct philosopher : sb_actor<philosopher> {
     behavior hungry;
     behavior denied;
     behavior eating;
-    behavior init_state;
 
     // wait for second chopstick
     behavior waiting_for(const actor_ptr& what) {
@@ -107,7 +107,7 @@ struct philosopher : sb_actor<philosopher> {
     }
 
     philosopher(const std::string& n, const actor_ptr& l, const actor_ptr& r)
-        : name(n), left(l), right(r) {
+    : name(n), left(l), right(r) {
         // a philosopher that receives {eat} stops thinking and becomes hungry
         thinking = (
             on(atom("eat")) >> [=] {
@@ -151,14 +151,19 @@ struct philosopher : sb_actor<philosopher> {
                 become(thinking);
             }
         );
+    }
+
+    void init() {
         // philosophers start to think after receiving {think}
-        init_state = (
+        become (
             on(atom("think")) >> [=] {
                 aout << name << " starts to think\n";
                 delayed_send(this, seconds(5), atom("eat"));
                 become(thinking);
             }
         );
+        // start thinking
+        send(this, atom("think"));
     }
 
 };
@@ -172,19 +177,12 @@ int main(int, char**) {
         aout << " " << chopsticks.back()->id();
     }
     aout << endl;
-    // a group to address all philosophers
-    auto dinner_club = group::anonymous();
-    // spawn five philosopher, each joining the Dinner Club
-    std::vector<std::string> names = { "Plato", "Hume", "Kant",
-                                       "Nietzsche", "Descartes" };
+    // spawn five philosophers
+    std::vector<std::string> names { "Plato", "Hume", "Kant",
+                                     "Nietzsche", "Descartes" };
     for (size_t i = 0; i < 5; ++i) {
-        spawn_in_group<philosopher>(dinner_club,
-                                    names[i],
-                                    chopsticks[i],
-                                    chopsticks[(i+1) % chopsticks.size()]);
+        spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
     }
-    // tell all philosophers to start thinking
-    send(dinner_club, atom("think"));
     // real philosophers are never done
     await_all_others_done();
     shutdown();
