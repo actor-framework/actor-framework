@@ -43,6 +43,7 @@ scheduled_actor::scheduled_actor(actor_state init_state, bool chained_send)
 
 void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     CPPA_REQUIRE(sched != nullptr);
+    m_scheduler = sched;
     m_hidden = hidden;
     // init is called by the spawning actor, manipulate self to
     // point to this actor
@@ -52,7 +53,6 @@ void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     catch (...) { }
     // make sure scheduler is not set until init() is done
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    m_scheduler = sched;
 }
 
 bool scheduled_actor::initialized() const {
@@ -95,7 +95,7 @@ bool scheduled_actor::enqueue(actor_state next_state,
                               mailbox_element* e) {
     CPPA_REQUIRE(   next_state == actor_state::ready
                  || next_state == actor_state::pending);
-    CPPA_REQUIRE(e->marked == false);
+    CPPA_REQUIRE(e != nullptr && e->marked == false);
     switch (m_mailbox.enqueue(e)) {
         case intrusive::first_enqueued: {
             auto state = m_state.load();
