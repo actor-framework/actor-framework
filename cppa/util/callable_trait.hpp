@@ -31,6 +31,7 @@
 #ifndef CPPA_UTIL_CALLABLE_TRAIT
 #define CPPA_UTIL_CALLABLE_TRAIT
 
+#include <functional>
 #include <type_traits>
 
 #include "cppa/util/rm_ref.hpp"
@@ -46,6 +47,7 @@ template<class C, typename Result, typename... Ts>
 struct callable_trait<Result (C::*)(Ts...) const> {
     typedef Result result_type;
     typedef type_list<Ts...> arg_types;
+    typedef std::function<Result (Ts...)> fun_type;
 };
 
 // member function pointer
@@ -53,6 +55,7 @@ template<class C, typename Result, typename... Ts>
 struct callable_trait<Result (C::*)(Ts...)> {
     typedef Result result_type;
     typedef type_list<Ts...> arg_types;
+    typedef std::function<Result (Ts...)> fun_type;
 };
 
 // good ol' function
@@ -60,6 +63,7 @@ template<typename Result, typename... Ts>
 struct callable_trait<Result (Ts...)> {
     typedef Result result_type;
     typedef type_list<Ts...> arg_types;
+    typedef std::function<Result (Ts...)> fun_type;
 };
 
 // good ol' function pointer
@@ -67,6 +71,7 @@ template<typename Result, typename... Ts>
 struct callable_trait<Result (*)(Ts...)> {
     typedef Result result_type;
     typedef type_list<Ts...> arg_types;
+    typedef std::function<Result (Ts...)> fun_type;
 };
 
 // matches (IsFun || IsMemberFun)
