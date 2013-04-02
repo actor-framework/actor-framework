@@ -33,6 +33,7 @@
 #define CPPA_OPENCL_ACTOR_FACADE_HPP
 
 #include <ostream>
+#include <algorithm>
 #include <stdexcept>
 
 #include "cppa/cppa.hpp"
@@ -131,28 +132,19 @@ class actor_facade<Ret(Args...)> : public actor {
 
     template<long... Is>
     void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
-        //auto opt = tuple_cast<Args...>(msg);
+        if (m_global_dimensions.empty()) {
+            std::ostringstream oss;
+            oss << "actor_facade::enqueue() global dimensions can't be empty!";
+            CPPA_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
+        }
         auto opt = m_map_args(msg);
         if (opt) {
             response_handle handle{this, sender, id};
-            size_t number_of_values = 1;
-            if (!m_global_dimensions.empty()) {
-                for (auto s : m_global_dimensions) {
-                    number_of_values *= s;
-                }
-            }
-            else {
-                number_of_values = get<0>(*opt).size();
-                m_global_dimensions.push_back(number_of_values);
-                m_global_dimensions.push_back(1);
-                m_global_dimensions.push_back(1);
-            }
-            if (m_global_dimensions.empty() || number_of_values <= 0) {
-                std::ostringstream oss;
-                oss << "actor_facade::enqueue() can't handle dimension sizes!";
-                CPPA_LOG_ERROR(oss.str());
-                throw std::runtime_error(oss.str());
-            }
+            size_t number_of_values{1};
+            std::for_each(m_global_dimensions.begin(),
+                          m_global_dimensions.end(),
+                          [&](const size_t& s) { number_of_values *= s; });
             Ret result_buf(number_of_values);
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel(arguments,
@@ -164,7 +156,7 @@ class actor_facade<Ret(Args...)> : public actor {
             enqueue_to_dispatcher(m_dispatcher,
                                   make_counted<command_impl<Ret>>(handle,
                                                                   m_kernel,
-                                                                  arguments,
+                                                                  std::move(arguments),
                                                                   m_global_dimensions,
                                                                   m_global_offsets,
                                                                   m_local_dimensions,
