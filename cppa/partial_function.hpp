@@ -79,8 +79,8 @@ class partial_function {
     partial_function& operator=(partial_function&&) = default;
     partial_function& operator=(const partial_function&) = default;
 
-    template<typename... Cs>
-    partial_function(const match_expr<Cs...>& mexpr);
+    template<typename... Cs, typename... Ts>
+    partial_function(const match_expr<Cs...>& mexpr, const Ts&... args);
 
     /**
      * @brief Returns @p true if this partial function is defined for the
@@ -141,9 +141,9 @@ match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-template<typename... Cs>
-partial_function::partial_function(const match_expr<Cs...>& mexpr)
-: m_impl(mexpr.as_behavior_impl()) { }
+template<typename... Cs, typename... Ts>
+partial_function::partial_function(const match_expr<Cs...>& arg, const Ts&... args)
+: m_impl(detail::match_expr_concat(arg, args...)) { }
 
 inline bool partial_function::defined_at(const any_tuple& value) {
     return (m_impl) && m_impl->defined_at(value);
