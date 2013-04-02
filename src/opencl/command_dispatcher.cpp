@@ -87,7 +87,10 @@ struct command_dispatcher::worker {
                     }
                 }
                 catch (exception& e) {
-                    CPPA_LOG_ERROR("worker loop, what(): " << e.what());
+                    ostringstream oss;
+                    oss << "worker loop, e.what(): '" << e.what() << "'.";
+                    CPPA_LOG_ERROR(oss.str());
+                    throw runtime_error(oss.str());
                 }
             }
             else {

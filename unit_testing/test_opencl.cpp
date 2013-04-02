@@ -39,7 +39,8 @@ namespace { constexpr const char* kernel_source = R"__(
         int l_dim_1 = get_local_id(1);
         int g_off_0 = get_global_offset(0);
         int g_off_1 = get_global_offset(1);
-        output[(g_dim_0-g_off_0)+(g_dim_1-g_off_1)*g_size] = g_dim_0 * 10.0f + g_dim_1 * 1.0f + l_dim_0 * 0.1f + l_dim_1* 0.01f;
+        output[(g_dim_0-g_off_0)+(g_dim_1-g_off_1)*g_size] =
+            g_dim_0 * 10.0f + g_dim_1 * 1.0f + l_dim_0 * 0.1f + l_dim_1* 0.01f;
     }
 )__"; }
 
@@ -54,7 +55,6 @@ int main() {
 
     command_dispatcher* disp =
             cppa::detail::singleton_manager::get_command_dispatcher();
-
     auto matrix_global = disp->spawn<vector<float>,
                                      vector<float>,
                                      vector<float>>(prog, "matrix",
@@ -69,14 +69,15 @@ int main() {
     send(matrix_global, m1, m2);
 
     receive (
-        on_arg_match >> [&] (const vector<float>& result) {
-            cout << "results:" << endl;
-            for (unsigned y{0}; y < size; ++y) {
-                for (unsigned x{0}; x < size; ++x) {
-                    cout << fixed << setprecision(2) << setw(8) << result[x+y*size];
-                }
-                cout << endl;
-            }
+        on_arg_match >> [&] (const vector<float>&) {
+            cout << "done!" << endl;
+//            cout << "results:" << endl;
+//            for (unsigned y{0}; y < size; ++y) {
+//                for (unsigned x{0}; x < size; ++x) {
+//                    cout << fixed << setprecision(2) << setw(8) << result[x+y*size];
+//                }
+//                cout << endl;
+//            }
         },
         others() >> [=]() {
             cout << "Unexpected message: '"
@@ -84,33 +85,33 @@ int main() {
         }
     );
 
-    cout << endl;
-    auto matrix_local = disp->spawn<vector<float>,
-                                    vector<float>>(prog, "dimensions",
-                                                   {size, size},
-                                                   {1,2},
-                                                   {(size/3), (size/2)});
+//    cout << endl;
+//    auto matrix_local = disp->spawn<vector<float>,
+//                                    vector<float>>(prog, "dimensions",
+//                                                   {size, size},
+//                                                   {1,2},
+//                                                   {(size/3), (size/2)});
 
-    m1.clear();
-    m1.push_back(0.0); // dummy
+//    m1.clear();
+//    m1.push_back(0.0); // dummy
 
-    send(matrix_local, m1);
+//    send(matrix_local, m1);
 
-    receive (
-        on_arg_match >> [&] (const vector<float>& result) {
-            cout << "dimenson example:" << endl;
-            for (unsigned y{0}; y < size; ++y) {
-                for (unsigned x{0}; x < size; ++x) {
-                    cout << fixed << setprecision(2) << setw(6) << result[x+y*size];
-                }
-                cout << endl;
-            }
-        },
-        others() >> [=]() {
-            cout << "Unexpected message: '"
-                 << to_string(self->last_dequeued()) << "'.\n";
-        }
-    );
+//    receive (
+//        on_arg_match >> [&] (const vector<float>& result) {
+//            cout << "dimenson example: " << endl;
+//            for (unsigned y{0}; y < size; ++y) {
+//                for (unsigned x{0}; x < size; ++x) {
+//                    cout << fixed << setprecision(2) << setw(6) << result[x+y*size];
+//                }
+//                cout << endl;
+//            }
+//        },
+//        others() >> [=]() {
+//            cout << "Unexpected message: '"
+//                 << to_string(self->last_dequeued()) << "'.\n";
+//        }
+//    );
 
     cppa::await_all_others_done();
     cppa::shutdown();

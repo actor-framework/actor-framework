@@ -33,6 +33,7 @@
 #define CPPA_OPENCL_COMMAND_HPP
 
 #include <vector>
+#include <algorithm>
 #include <functional>
 
 #include "cppa/actor.hpp"
@@ -69,10 +70,10 @@ class command_impl : public command {
     command_impl(response_handle handle,
                  kernel_ptr kernel,
                  std::vector<mem_ptr> arguments,
-                 std::vector<size_t> global_dimensions,
-                 std::vector<size_t> global_offsets,
-                 std::vector<size_t> local_dimensions,
-                 std::function<any_tuple(T&)> map_result)
+                 const std::vector<size_t>& global_dimensions,
+                 const std::vector<size_t>& global_offsets,
+                 const std::vector<size_t>& local_dimensions,
+                 const std::function<any_tuple(T&)>& map_result)
         : m_number_of_values(1)
         , m_handle(handle)
         , m_kernel(kernel)
@@ -83,9 +84,9 @@ class command_impl : public command {
         , m_map_result(map_result)
     {
         m_kernel_event.adopt(cl_event());
-        for (size_t s : m_global_dimensions) {
-            m_number_of_values *= s;
-        }
+        std::for_each(m_global_dimensions.begin(),
+                      m_global_dimensions.end(),
+                      [&](const size_t& s) { m_number_of_values *= s; });
     }
 
     void enqueue (command_queue_ptr queue) {
@@ -131,7 +132,7 @@ class command_impl : public command {
 
  private:
 
-    int  m_number_of_values;
+    int m_number_of_values;
     response_handle m_handle;
     kernel_ptr      m_kernel;
     event_ptr       m_kernel_event;
