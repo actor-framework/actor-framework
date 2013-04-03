@@ -185,14 +185,14 @@ cppa/weak_intrusive_ptr.hpp
 cppa/weak_ptr_anchor.hpp
 cppa/wildcard_position.hpp
 examples/hello_world.cpp
+examples/message_passing/calculator.cpp
 examples/message_passing/dancing_kirby.cpp
 examples/message_passing/dining_philosophers.cpp
-examples/message_passing/math_actor.cpp
 examples/qtsupport/chatwidget.cpp
 examples/qtsupport/chatwidget.hpp
 examples/qtsupport/chatwindow.ui
 examples/qtsupport/qt_group_chat.cpp
-examples/remote_actors/distributed_math_actor.cpp
+examples/remote_actors/distributed_calculator.cpp
 examples/remote_actors/group_chat.cpp
 examples/remote_actors/group_server.cpp
 examples/type_system/announce_1.cpp
