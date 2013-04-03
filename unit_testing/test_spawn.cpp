@@ -202,7 +202,7 @@ string behavior_test(actor_ptr et) {
             throw runtime_error(testee_name + " does not reply");
         }
     );
-    quit_actor(et, exit_reason::user_defined);
+    send_exit(et, exit_reason::user_defined);
     await_all_others_done();
     return result;
 }
@@ -309,7 +309,7 @@ int main() {
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        quit_actor(mirror, exit_reason::user_defined);
+        send_exit(mirror, exit_reason::user_defined);
         receive (
             on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
@@ -325,7 +325,7 @@ int main() {
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        quit_actor(mirror, exit_reason::user_defined);
+        send_exit(mirror, exit_reason::user_defined);
         receive (
             on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
@@ -429,7 +429,7 @@ int main() {
         CPPA_CHECK(values == expected);
     }
     // terminate st
-    quit_actor(st, exit_reason::user_defined);
+    send_exit(st, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -625,8 +625,8 @@ int main() {
             CPPA_CHECK_EQUAL(name, "bob");
         }
     );
-    quit_actor(a1, exit_reason::user_defined);
-    quit_actor(a2, exit_reason::user_defined);
+    send_exit(a1, exit_reason::user_defined);
+    send_exit(a2, exit_reason::user_defined);
     await_all_others_done();
 
     factory::event_based([](int* i) {
@@ -652,7 +652,7 @@ int main() {
         }
         become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
-    quit_actor(legion, exit_reason::user_defined);
+    send_exit(legion, exit_reason::user_defined);
     await_all_others_done();
     CPPA_CHECKPOINT();
     self->trap_exit(true);
