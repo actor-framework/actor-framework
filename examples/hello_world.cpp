@@ -9,8 +9,8 @@ void mirror() {
     become (
         // invoke this lambda expression if we receive a string
         on_arg_match >> [](const std::string& what) {
-            // prints "Hello World!"
-            std::cout << what << std::endl;
+            // prints "Hello World!" via aout (thread-safe wrapper for cout)
+            aout << what << std::endl;
             // replies "!dlroW olleH"
             reply(std::string(what.rbegin(), what.rend()));
             // terminates this actor
@@ -20,13 +20,13 @@ void mirror() {
 }
 
 void hello_world(const actor_ptr& buddy) {
-    // send "Hello World!" to the mirror
+    // send "Hello World!" to our buddy
     send(buddy, "Hello World!");
     // wait for messages
     become (
         on_arg_match >> [](const std::string& what) {
             // prints "!dlroW olleH"
-            std::cout << what << std::endl;
+            aout << what << std::endl;
             // terminate this actor
             self->quit();
         }
@@ -42,5 +42,4 @@ int main() {
     await_all_others_done();
     // run cleanup code before exiting main
     shutdown();
-    return 0;
 }

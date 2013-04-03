@@ -39,18 +39,18 @@ struct tree_node {
     void print() const {
         // format is: value { children0, children1, ..., childrenN }
         // e.g., 10 { 20 { 21, 22 }, 30 }
-        cout << value;
+        aout << value;
         if (children.empty() == false) {
-            cout << " { ";
+            aout << " { ";
             auto begin = children.begin();
             auto end = children.end();
             for (auto i = begin; i != end; ++i) {
                 if (i != begin) {
-                    cout << ", ";
+                    aout << ", ";
                 }
                 i->print();
             }
-            cout << " } ";
+            aout << " } ";
         }
     }
 
@@ -62,9 +62,9 @@ struct tree {
 
     // print tree to stdout
     void print() const {
-        cout << "tree::print: ";
+        aout << "tree::print: ";
         root.print();
-        cout << endl;
+        aout << endl;
     }
 
 };
@@ -138,17 +138,53 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
 
 };
 
+typedef std::vector<tree> tree_vector;
+
+// receives `remaining` messages
+void testee(size_t remaining) {
+    auto set_next_behavior = [=] {
+        if (remaining > 1) testee(remaining - 1);
+        else self->quit();
+    };
+    become (
+        on_arg_match >> [=](const tree& tmsg) {
+            // prints the tree in its serialized format:
+            // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
+            aout << "to_string(self->last_dequeued()): "
+                 << to_string(self->last_dequeued())
+                 << endl;
+            // prints the tree using the print member function:
+            // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
+            tmsg.print();
+            set_next_behavior();
+        },
+        on_arg_match >> [=](const tree_vector& trees) {
+            // prints "received 2 trees"
+            aout << "received " << trees.size() << " trees" << endl;
+            // prints:
+            // @<> ( {
+            //   std::vector<tree,std::allocator<tree>> ( {
+            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ),
+            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
+            //   )
+            // } )
+            aout << "to_string: " << to_string(self->last_dequeued()) << endl;
+            set_next_behavior();
+        }
+    );
+}
+
 int main() {
     // the tree_type_info is owned by libcppa after this function call
     announce(typeid(tree), new tree_type_info);
 
-    tree t; // create a tree and fill it with some data
+    tree t0; // create a tree and fill it with some data
 
-    t.root.add_child(10);
-    t.root.children.back().add_child(11).add_child(12).add_child(13);
+    t0.root.add_child(10);
+    t0.root.children.back().add_child(11).add_child(12).add_child(13);
 
-    t.root.add_child(20);
-    t.root.children.back().add_child(21).add_child(22);
+    t0.root.add_child(20);
+    t0.root.children.back().add_child(21).add_child(22);
 
     /*
         tree t is now:
@@ -162,44 +198,20 @@ int main() {
        11 12 13 21    22
     */
 
-    // send a tree to ourselves ...
-    send(self, t);
+    // spawn a testee that receives two messages
+    auto t = spawn(testee, 2);
 
-    // send a vector of trees to ourselves
-    typedef std::vector<tree> tree_vector;
+    // send a tree
+    send(t, t0);
+
+    // send a vector of trees
     announce<tree_vector>();
     tree_vector tvec;
-    tvec.push_back(t);
-    tvec.push_back(t);
-    send(self, tvec);
+    tvec.push_back(t0);
+    tvec.push_back(t0);
+    send(t, tvec);
 
-    // receive both messages
-    int i = 0;
-    receive_for(i, 2) (
-        // ... and receive it
-        on<tree>() >> [](const tree& tmsg) {
-            // prints the tree in its serialized format:
-            // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
-            cout << "to_string(self->last_dequeued()): "
-                 << to_string(self->last_dequeued())
-                 << endl;
-            // prints the tree using the print member function:
-            // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
-            tmsg.print();
-        },
-        on<tree_vector>() >> [](const tree_vector& trees) {
-            // prints "received 2 trees"
-            cout << "received " << trees.size() << " trees" << endl;
-            // prints:
-            // @<> ( {
-            //   std::vector<tree,std::allocator<tree>> ( {
-            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ),
-            //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
-            //   )
-            // } )
-            cout << "to_string: " << to_string(self->last_dequeued()) << endl;
-        }
-    );
+    await_all_others_done();
     shutdown();
     return 0;
 }

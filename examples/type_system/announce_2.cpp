@@ -35,10 +35,22 @@ class foo {
 
 };
 
-// announce requires foo to have the equal operator implemented
+// announce requires foo to be comparable
 bool operator==(const foo& lhs, const foo& rhs) {
     return    lhs.a() == rhs.a()
            && lhs.b() == rhs.b();
+}
+
+void testee() {
+    become (
+        on<foo>() >> [](const foo& val) {
+            aout << "foo("
+                 << val.a() << ","
+                 << val.b() << ")"
+                 << endl;
+            self->quit();
+        }
+    );
 }
 
 int main(int, char**) {
@@ -46,18 +58,9 @@ int main(int, char**) {
     // we pass those to the announce function as { getter, setter } pairs.
     announce<foo>(make_pair(&foo::a, &foo::set_a),
                   make_pair(&foo::b, &foo::set_b));
-
-    // send a foo to ourselves ...
-    send(self, foo{1,2});
-    receive (
-        // ... and receive it
-        on<foo>() >> [](const foo& val) {
-            cout << "foo("
-                 << val.a() << ","
-                 << val.b() << ")"
-                 << endl;
-        }
-    );
+    auto t = spawn(testee);
+    send(t, foo{1,2});
+    await_all_others_done();
     shutdown();
     return 0;
 }

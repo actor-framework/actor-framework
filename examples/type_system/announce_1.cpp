@@ -41,6 +41,38 @@ bool operator==( const foo2& lhs, const foo2& rhs ) {
     return lhs.a == rhs.a && lhs.b == rhs.b;
 }
 
+// receives `remaining` messages
+void testee(size_t remaining) {
+    auto set_next_behavior = [=] {
+        if (remaining > 1) testee(remaining - 1);
+        else self->quit();
+    };
+    become (
+        // note: we sent a foo_pair2, but match on foo_pair
+        // that's safe because both are aliases for std::pair<int,int>
+        on<foo_pair>() >> [=](const foo_pair& val) {
+            cout << "foo_pair("
+                 << val.first << ","
+                 << val.second << ")"
+                 << endl;
+            set_next_behavior();
+        },
+        on<foo>() >> [=](const foo& val) {
+            cout << "foo({";
+            auto i = val.a.begin();
+            auto end = val.a.end();
+            if (i != end) {
+                cout << *i;
+                while (++i != end) {
+                    cout << "," << *i;
+                }
+            }
+            cout << "}," << val.b << ")" << endl;
+            set_next_behavior();
+        }
+    );
+}
+
 int main(int, char**) {
 
     // announces foo to the libcppa type system;
@@ -75,41 +107,18 @@ int main(int, char**) {
     // std::pair<int,int> is already announced
     assert(announce<foo_pair2>(&foo_pair2::first, &foo_pair2::second) == false);
 
-    // send a foo to ourselves
-    send(self, foo{std::vector<int>{1, 2, 3, 4}, 5});
-    // send a foo_pair2 to ourselves
-    send(self, foo_pair2{3, 4});
-    // quits the program
-    send(self, atom("done"));
-
     // libcppa returns the same uniform_type_info
     // instance for foo_pair and foo_pair2
     assert(uniform_typeid<foo_pair>() == uniform_typeid<foo_pair2>());
 
-    // receive two messages
-    int i = 0;
-    receive_for(i, 2) (
-        // note: we sent a foo_pair2, but match on foo_pair
-        // that's safe because both are aliases for std::pair<int,int>
-        on<foo_pair>() >> [](const foo_pair& val) {
-            cout << "foo_pair("
-                 << val.first << ","
-                 << val.second << ")"
-                 << endl;
-        },
-        on<foo>() >> [](const foo& val) {
-            cout << "foo({";
-            auto i = val.a.begin();
-            auto end = val.a.end();
-            if (i != end) {
-                cout << *i;
-                while (++i != end) {
-                    cout << "," << *i;
-                }
-            }
-            cout << "}," << val.b << ")" << endl;
-        }
-    );
+    // spawn a testee that receives two messages
+    auto t = spawn(testee, 2);
+    // send t a foo
+    send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
+    // send t a foo_pair2
+    send(t, foo_pair2{3, 4});
+
+    await_all_others_done();
     shutdown();
     return 0;
 }

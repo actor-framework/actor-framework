@@ -78,6 +78,29 @@ bool operator==(const baz& lhs, const baz& rhs) {
            && lhs.b == rhs.b;
 }
 
+// receives `remaining` messages
+void testee(size_t remaining) {
+    auto set_next_behavior = [=] {
+        if (remaining > 1) testee(remaining - 1);
+        else self->quit();
+    };
+    become (
+       on<bar>() >> [=](const bar& val) {
+            aout << "bar(foo("
+                 << val.f.a() << ","
+                 << val.f.b() << "),"
+                 << val.i << ")"
+                 << endl;
+            set_next_behavior();
+        },
+        on<baz>() >> [=](const baz& val) {
+            // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
+            aout << to_string(object::from(val)) << endl;
+            set_next_behavior();
+        }
+    );
+}
+
 int main(int, char**) {
     // bar has a non-trivial data member f, thus, we have to told
     // announce how to serialize/deserialize this member;
@@ -102,26 +125,11 @@ int main(int, char**) {
                                                   make_pair(&foo::b, &foo::set_b)),
                                   &bar::i));
 
-    // send a bar to ourselves
-    send(self, bar{foo{1,2},3});
-    // send a baz to ourselves
-    send(self, baz{foo{1,2},bar{foo{3,4},5}});
-
-    // receive two messages
-    int i = 0;
-    receive_for(i, 2) (
-        on<bar>() >> [](const bar& val) {
-            cout << "bar(foo("
-                 << val.f.a() << ","
-                 << val.f.b() << "),"
-                 << val.i << ")"
-                 << endl;
-        },
-        on<baz>() >> [](const baz& val) {
-            // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
-            cout << to_string(object::from(val)) << endl;
-        }
-    );
+    // spawn a testee that receives two messages
+    auto t = spawn(testee, 2);
+    send(t, bar{foo{1,2},3});
+    send(t, baz{foo{1,2},bar{foo{3,4},5}});
+    await_all_others_done();
     shutdown();
     return 0;
 }
