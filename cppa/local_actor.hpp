@@ -222,6 +222,13 @@ class local_actor : public extend<actor>::with<memory_cached> {
     }
 
     /**
+     * @brief Checks wheter this actor has a user-defined sync failure handler.
+     */
+    inline bool has_sync_failure_handler() {
+        return static_cast<bool>(m_sync_failure_handler);
+    }
+
+    /**
      * @brief Calls <tt>on_sync_timeout(fun); on_sync_failure(fun);</tt>.
      */
     inline void on_sync_timeout_or_failure(std::function<void()> fun) {
