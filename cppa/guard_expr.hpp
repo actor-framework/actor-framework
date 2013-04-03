@@ -338,6 +338,14 @@ struct guard_placeholder {
 
 };
 
+template<typename T>
+struct ge_value {
+    T value;
+};
+
+template<typename T>
+ge_value<T> gval(T val) { return {std::move(val)}; }
+
 // result type computation
 
 template<typename T, class Tuple>
@@ -351,6 +359,9 @@ struct ge_unbound<std::reference_wrapper<T>, Tuple> { typedef T type; };
 
 template<typename T, class Tuple>
 struct ge_unbound<std::reference_wrapper<const T>, Tuple> { typedef T type; };
+
+template<typename T, class Tuple>
+struct ge_unbound<ge_value<T>, Tuple> { typedef T type; };
 
 // unbound type of placeholder
 template<int X, typename... Ts>
@@ -383,6 +394,11 @@ struct is_ge_type<util::rebindable_reference<T> > {
 
 template<operator_id OP, typename First, typename Second>
 struct is_ge_type<guard_expr<OP, First, Second> > {
+    static constexpr bool value = true;
+};
+
+template<typename T>
+struct is_ge_type<ge_value<T>> {
     static constexpr bool value = true;
 };
 
@@ -514,6 +530,11 @@ inline const T& ge_resolve(const Tuple&, const std::reference_wrapper<const T>& 
 template<class Tuple, typename T>
 inline const T& ge_resolve(const Tuple&, const util::rebindable_reference<const T>& value) {
     return value.get();
+}
+
+template<class Tuple, typename T>
+inline const T& ge_resolve(const Tuple&, const ge_value<T>& wrapped_value) {
+    return wrapped_value.value;
 }
 
 template<class Tuple, int X>
