@@ -69,7 +69,7 @@ class actor_facade<Ret(Args...)> : public actor {
  public:
 
     typedef cow_tuple<typename util::rm_ref<Args>::type...> args_tuple;
-    typedef std::function<option<args_tuple>(any_tuple)> arg_mapping;
+    typedef std::function<option<args_tuple>(const any_tuple&)> arg_mapping;
     typedef std::function<any_tuple(Ret&)> result_mapping;
 
     static actor_facade* create(command_dispatcher* dispatcher,
