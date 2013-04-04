@@ -91,14 +91,14 @@ class command_dispatcher {
                     std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
     {
-        return new actor_facade<Ret (Args...)>(this,
-                                               prog,
-                                               kernel_name,
-                                               std::move(global_dims),
-                                               std::move(global_offs),
-                                               std::move(local_dims),
-                                               std::move(map_args),
-                                               std::move(map_result));
+        return actor_facade<Ret (Args...)>::create(this,
+                                                   prog,
+                                                   kernel_name,
+                                                   std::move(global_dims),
+                                                   std::move(global_offs),
+                                                   std::move(local_dims),
+                                                   std::move(map_args),
+                                                   std::move(map_result));
     }
 
     template<typename Ret, typename... Args>
@@ -108,10 +108,11 @@ class command_dispatcher {
                     std::vector<size_t> global_offs = {},
                     std::vector<size_t> local_dims = {})
     {
-        std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> f0 = [] (any_tuple msg) {
+        std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)>
+            map_args = [] (any_tuple msg) {
             return tuple_cast<typename util::rm_ref<Args>::type...>(msg);
         };
-        std::function<any_tuple(Ret&)> f1 = [] (Ret& result) {
+        std::function<any_tuple(Ret&)> map_result = [] (Ret& result) {
             return make_any_tuple(std::move(result));
         };
         return this->spawn<Ret,Args...>(prog,
@@ -119,8 +120,8 @@ class command_dispatcher {
                                         std::move(global_dims),
                                         std::move(global_offs),
                                         std::move(local_dims),
-                                        std::move(f0),
-                                        std::move(f1));
+                                        std::move(map_args),
+                                        std::move(map_result));
     }
 
  private:
