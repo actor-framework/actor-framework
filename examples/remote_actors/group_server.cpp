@@ -30,7 +30,8 @@ int main(int argc, char** argv) {
     }
     if (!args_valid) {
         // print_desc(&desc) returns a function printing the stored help text
-        print_desc(&desc)();
+        auto desc_printer = print_desc(&desc);
+        desc_printer();
         return 1;
     }
     try {

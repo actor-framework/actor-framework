@@ -29,7 +29,7 @@ istream& operator>>(istream& is, line& l) {
     return is;
 }
 
-string s_last_line;
+namespace { string s_last_line; }
 
 any_tuple split_line(const line& l) {
     istringstream strs(l.str);
@@ -42,46 +42,32 @@ any_tuple split_line(const line& l) {
     return any_tuple::view(std::move(result));
 }
 
-class client : public event_based_actor {
-
- public:
-
-    client(string name) : m_name(move(name)) { }
-
- protected:
-
-    void init() {
-        become (
-            on(atom("broadcast"), arg_match) >> [=](const string& message) {
-                for(auto& dest : joined_groups()) {
-                    send(dest, m_name + ": " + message);
-                }
-            },
-            on(atom("join"), arg_match) >> [=](const group_ptr& what) {
-                for (auto g : joined_groups()) {
-                    cout << "*** leave " << to_string(g) << endl;
-                    send(g, m_name + " has left the chatroom");
-                    leave(g);
-                }
-                cout << "*** join " << to_string(what) << endl;
-                join(what);
-                send(what, m_name + " has entered the chatroom");
-            },
-            on<string>() >> [=](const string& txt) {
-                // don't print own messages
-                if (last_sender() != this) cout << txt << endl;
-            },
-            others() >> [=]() {
-                cout << "unexpected: " << to_string(last_dequeued()) << endl;
+void client(const string& name) {
+    become (
+        on(atom("broadcast"), arg_match) >> [=](const string& message) {
+            for(auto& dest : self->joined_groups()) {
+                send(dest, name + ": " + message);
             }
-        );
-    }
-
- private:
-
-    string    m_name;
-
-};
+        },
+        on(atom("join"), arg_match) >> [=](const group_ptr& what) {
+            for (auto g : self->joined_groups()) {
+                cout << "*** leave " << to_string(g) << endl;
+                send(g, name + " has left the chatroom");
+                self->leave(g);
+            }
+            cout << "*** join " << to_string(what) << endl;
+            self->join(what);
+            send(what, name + " has entered the chatroom");
+        },
+        on<string>() >> [=](const string& txt) {
+            // don't print own messages
+            if (self->last_sender() != self) cout << txt << endl;
+        },
+        others() >> [=]() {
+            cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
+}
 
 int main(int argc, char** argv) {
 
@@ -105,7 +91,7 @@ int main(int argc, char** argv) {
     }
 
     cout << "*** starting client, type '/help' for a list of commands" << endl;
-    auto client_actor = spawn<client>(name);
+    auto client_actor = spawn(client, name);
 
     // evaluate group parameters
     if (!group_id.empty()) {
@@ -156,7 +142,7 @@ int main(int argc, char** argv) {
         }
     );
     // force actor to quit
-    quit_actor(client_actor, exit_reason::user_defined);
+    send_exit(client_actor, exit_reason::user_defined);
     await_all_others_done();
     shutdown();
     return 0;

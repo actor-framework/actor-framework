@@ -9,26 +9,23 @@ void mirror() {
     become (
         // invoke this lambda expression if we receive a string
         on_arg_match >> [](const std::string& what) {
-            // prints "Hello World!"
-            std::cout << what << std::endl;
+            // prints "Hello World!" via aout (thread-safe cout wrapper)
+            aout << what << std::endl;
             // replies "!dlroW olleH"
             reply(std::string(what.rbegin(), what.rend()));
-            // terminates this actor
+            // terminates this actor (become otherwise 'loops' forever)
             self->quit();
         }
     );
 }
 
 void hello_world(const actor_ptr& buddy) {
-    // send "Hello World!" to the mirror
-    send(buddy, "Hello World!");
-    // wait for messages
-    become (
+    // send "Hello World!" to our buddy ...
+    sync_send(buddy, "Hello World!").then(
+        // ... and wait for a response
         on_arg_match >> [](const std::string& what) {
             // prints "!dlroW olleH"
-            std::cout << what << std::endl;
-            // terminate this actor
-            self->quit();
+            aout << what << std::endl;
         }
     );
 }
@@ -42,5 +39,4 @@ int main() {
     await_all_others_done();
     // run cleanup code before exiting main
     shutdown();
-    return 0;
 }

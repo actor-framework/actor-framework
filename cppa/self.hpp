@@ -146,6 +146,12 @@ class scoped_self_setter {
 
 };
 
+// disambiguation (compiler gets confused with cast operator otherwise)
+bool operator==(const actor_ptr& lhs, const self_type& rhs);
+bool operator==(const self_type& lhs, const actor_ptr& rhs);
+bool operator!=(const actor_ptr& lhs, const self_type& rhs);
+bool operator!=(const self_type& lhs, const actor_ptr& rhs);
+
 #endif // CPPA_DOCUMENTATION
 
 } // namespace cppa

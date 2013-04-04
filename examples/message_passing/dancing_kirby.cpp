@@ -9,6 +9,8 @@
 
 using std::cout;
 using std::endl;
+using std::pair;
+
 using namespace cppa;
 
 // ASCII art figures
@@ -18,44 +20,60 @@ constexpr const char* figures[] = {
     "(>^.^)>"
 };
 
+struct animation_step { size_t figure_idx; size_t offset; };
+
 // array of {figure, offset} pairs
-constexpr size_t animation_steps[][2] = {
+constexpr animation_step animation_steps[] = {
     {1,  7}, {0,  7}, {0,  6}, {0,  5}, {1,  5}, {2,  5}, {2,  6},
     {2,  7}, {2,  8}, {2,  9}, {2, 10}, {1, 10}, {0, 10}, {0,  9},
     {1,  9}, {2, 10}, {2, 11}, {2, 12}, {2, 13}, {1, 13}, {0, 13},
     {0, 12}, {0, 11}, {0, 10}, {0,  9}, {0,  8}, {0,  7}, {1,  7}
 };
 
+template<typename T, size_t S>
+constexpr size_t array_size(const T (&) [S]) {
+    return S;
+}
+
 constexpr size_t animation_width = 20;
 
-// "draws" an animation step: {offset_whitespaces}{figure}{padding}
-void draw_kirby(size_t const (&animation)[2]) {
+// "draws" an animation step by printing "{offset_whitespaces}{figure}{padding}"
+void draw_kirby(const animation_step& animation) {
     cout.width(animation_width);
+    // override last figure
     cout << '\r';
-    std::fill_n(std::ostream_iterator<char>{cout}, animation[1], ' ');
-    cout << figures[animation[0]];
+    // print offset
+    std::fill_n(std::ostream_iterator<char>{cout}, animation.offset, ' ');
+    // print figure
+    cout << figures[animation.figure_idx];
+    // print padding
     cout.fill(' ');
+    // make sure figure is printed
     cout.flush();
 }
 
+// uses a message-based loop to iterate over all animation steps
 void dancing_kirby() {
     // let's get it started
-    send(self, atom("Step"));
-    // iterate over animation_steps
-    auto i = std::begin(animation_steps);
-    receive_for(i, std::end(animation_steps)) (
-        on<atom("Step")>() >> [&]() {
-            draw_kirby(*i);
+    send(self, atom("Step"), size_t{0});
+    become (
+        on(atom("Step"), array_size(animation_steps)) >> [] {
+            // we've printed all animation steps (done)
+            cout << endl;
+            self->quit();
+        },
+        on(atom("Step"), arg_match) >> [](size_t step) {
+            // print given step
+            draw_kirby(animation_steps[step]);
             // animate next step in 150ms
-            delayed_send(self, std::chrono::milliseconds(150), atom("Step"));
+            delayed_send(self, std::chrono::milliseconds(150), atom("Step"), step + 1);
         }
     );
 }
 
 int main() {
-    cout << endl;
-    dancing_kirby();
-    cout << endl;
+    spawn(dancing_kirby);
+    await_all_others_done();
     shutdown();
     return 0;
 }

@@ -46,6 +46,18 @@ typedef int (foo::*foo_getter)() const;
 // a member function pointer to set an attribute of foo
 typedef void (foo::*foo_setter)(int);
 
+void testee() {
+    become (
+        on<foo>() >> [](const foo& val) {
+            aout << "foo("
+                 << val.a() << ","
+                 << val.b() << ")"
+                 << endl;
+            self->quit();
+        }
+    );
+}
+
 int main(int, char**) {
     // since the member function "a" is ambiguous, the compiler
     // also needs a type to select the correct overload
@@ -65,17 +77,9 @@ int main(int, char**) {
                   make_pair(static_cast<foo_getter>(&foo::b),
                             static_cast<foo_setter>(&foo::b)));
 
-    // send a foo to ourselves ...
-    send(self, foo{1,2});
-    receive (
-        // ... and receive it
-        on<foo>() >> [](const foo& val) {
-            cout << "foo("
-                 << val.a() << ","
-                 << val.b() << ")"
-                 << endl;
-        }
-    );
+    // spawn a new testee and send it a foo
+    send(spawn(testee), foo{1,2});
+    await_all_others_done();
     shutdown();
     return 0;
 }

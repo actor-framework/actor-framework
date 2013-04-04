@@ -856,12 +856,15 @@ actor_ptr remote_actor(network::io_stream_ptr_pair connection);
 void shutdown(); // note: implemented in singleton_manager.cpp
 
 /**
- * @brief Causes @p whom to quit with @p reason.
- * @note Does nothing if <tt>reason == exit_reason::normal</tt>.
+ * @brief Sends an exit message to @p whom with @p reason.
+ *
+ * This function is syntactic sugar for
+ * <tt>send(whom, atom("EXIT"), reason)</tt>.
+ * @pre <tt>reason != exit_reason::normal</tt>
  */
-inline void quit_actor(const actor_ptr& whom, std::uint32_t reason) {
+inline void send_exit(const actor_ptr& whom, std::uint32_t reason) {
     CPPA_REQUIRE(reason != exit_reason::normal);
-    send(whom.get(), atom("EXIT"), reason);
+    send(whom, atom("EXIT"), reason);
 }
 
 /**
