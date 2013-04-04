@@ -64,7 +64,6 @@ option<cow_tuple<Ts...>> default_map_args(any_tuple msg) {
     return tuple_cast<Ts...>(msg);
 }
 
-#ifdef CPPA_OPENCL
 class command_dispatcher {
 
     struct worker;
@@ -173,10 +172,6 @@ class command_dispatcher {
                                 job_queue*,
                                 command_ptr);
 };
-
-#else // CPPA_OPENCL
-class command_dispatcher : public detail::singleton_mixin<command_dispatcher> { };
-#endif // CPPA_OPENCL
 
 command_dispatcher* get_command_dispatcher();
 

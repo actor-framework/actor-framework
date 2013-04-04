@@ -86,9 +86,10 @@ actor_ptr spawn_cl(const char* source,
     typedef typename t0::fun_type f0;
     typedef typename t1::fun_type f1;
     typename get_cl_spawn_helper<f0,f1>::type f;
-    f(source, fun_name, move(dimensions), move(offset), move(local_dims), f0{map_args}, f1{map_result});
+    return f(source, fun_name,
+             move(dimensions), move(offset), move(local_dims),
+             f0{map_args}, f1{map_result});
 }
-
 
 } // namespace cppa
 

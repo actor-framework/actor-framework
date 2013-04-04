@@ -48,7 +48,15 @@
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
-#include "cppa/opencl/command_dispatcher.hpp"
+#ifdef CPPA_OPENCL
+#  include "cppa/opencl/command_dispatcher.hpp"
+#else
+namespace cppa { namespace opencl {
+
+class command_dispatcher : public detail::singleton_mixin<command_dispatcher> { };
+
+} } // namespace cppa::opencl
+#endif
 
 namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
 
@@ -99,7 +107,12 @@ void singleton_manager::shutdown() {
 }
 
 opencl::command_dispatcher* singleton_manager::get_command_dispatcher() {
+#   ifdef CPPA_OPENCL
     return lazy_get(s_command_dispatcher);
+#   else
+    CPPA_LOGF_ERROR("libcppa was compiled without OpenCL support");
+    throw std::logic_error("libcppa was compiled without OpenCL support");
+#   endif
 }
 
 actor_registry* singleton_manager::get_actor_registry() {
