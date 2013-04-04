@@ -302,3 +302,4 @@ cppa/util/dptr.hpp
 cppa/util/is_callable.hpp
 cppa/util/get_result_type.hpp
 cppa/util/rebindable_reference.hpp
+cppa/opencl.hpp
