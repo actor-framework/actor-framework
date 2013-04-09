@@ -22,31 +22,35 @@ using std::endl;
 using std::string;
 using namespace cppa;
 
+void testee(int current_value, int final_result) {
+    become(
+        on_arg_match >> [=](int result) {
+            auto next = result + current_value;
+            if (next >= final_result) self->quit();
+            else testee(next, final_result);
+        },
+        after(std::chrono::seconds(2)) >> [] {
+            CPPA_UNEXPECTED_TOUT();
+            self->quit(exit_reason::user_defined);
+        }
+    );
+}
+
 int main() {
     CPPA_TEST(test__local_group);
     auto foo_group = group::get("local", "foo");
-    actor_ptr master = self;
+    actor_ptr master = spawn_in_group(foo_group, testee, 0, 10);
     for (int i = 0; i < 5; ++i) {
         // spawn five workers and let them join local/foo
-        spawn_in_group(foo_group, [master]() {
-            receive(on<int>() >> [master](int v) {
+        spawn_in_group(foo_group, [master] {
+            become(on_arg_match >> [master](int v) {
                 send(master, v);
+                self->quit();
             });
         });
     }
     send(foo_group, 2);
-    int result = 0;
-    do_receive (
-        on<int>() >> [&](int value) {
-            CPPA_CHECK_EQUAL(value, 2);
-            result += value;
-        },
-        after(std::chrono::seconds(2)) >> [&]() {
-            CPPA_UNEXPECTED_TOUT();
-            result = 10;
-        }
-    )
-    .until(gref(result) == 10);
     await_all_others_done();
+    shutdown();
     return CPPA_TEST_RESULT();
 }
