@@ -138,7 +138,7 @@ void spawn5_client() {
 }
 
 int client_part(const vector<string_pair>& args) {
-    CPPA_TEST(test__remote_actor_client_part);
+    CPPA_TEST(test_remote_actor_client_part);
     auto i = find_if(args.begin(), args.end(),
                           [](const string_pair& p) { return p.first == "port"; });
     if (i == args.end()) {
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
             return client_part(args);
         }
     }
-    CPPA_TEST(test__remote_actor);
+    CPPA_TEST(test_remote_actor);
     //auto ping_actor = spawn(ping, 10);
     uint16_t port = 4242;
     bool success = false;

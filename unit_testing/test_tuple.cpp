@@ -130,7 +130,7 @@ struct dummy_receiver : event_based_actor {
 };
 
 int main() {
-    CPPA_TEST(test__tuple);
+    CPPA_TEST(test_tuple);
 
     announce<expensive_copy_struct>(&expensive_copy_struct::value);
 

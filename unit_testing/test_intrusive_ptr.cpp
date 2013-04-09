@@ -45,7 +45,7 @@ int main() {
     // this test dosn't test thread-safety of intrusive_ptr
     // however, it is thread safe since it uses atomic operations only
 
-    CPPA_TEST(test__intrusive_ptr);
+    CPPA_TEST(test_intrusive_ptr);
     {
         auto p = make_counted<class0>();
         CPPA_CHECK_EQUAL(class0_instances, 1);

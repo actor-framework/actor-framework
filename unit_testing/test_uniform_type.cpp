@@ -45,7 +45,7 @@ inline bool operator==(const foo& lhs, const foo& rhs) {
 using namespace cppa;
 
 int main() {
-    CPPA_TEST(test__uniform_type);
+    CPPA_TEST(test_uniform_type);
     bool announce1 = announce<foo>(&foo::value);
     bool announce2 = announce<foo>(&foo::value);
     bool announce3 = announce<foo>(&foo::value);

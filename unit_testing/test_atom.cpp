@@ -29,7 +29,7 @@ void foo() {
 
 int main() {
     bool matched_pattern[3] = { false, false, false };
-    CPPA_TEST(test__atom);
+    CPPA_TEST(test_atom);
     // check if there are leading bits that distinguish "zzz" and "000 "
     CPPA_CHECK_NOT_EQUAL(atom("zzz"), atom("000 "));
     // check if there are leading bits that distinguish "abc" and " abc"

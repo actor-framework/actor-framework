@@ -23,7 +23,7 @@ using namespace cppa::util;
 
 int main() {
 
-    CPPA_TEST(test__metaprogramming);
+    CPPA_TEST(test_metaprogramming);
 
     CPPA_PRINT("test type_list");
 

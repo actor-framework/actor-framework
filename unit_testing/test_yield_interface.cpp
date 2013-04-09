@@ -36,7 +36,7 @@ struct pseudo_worker {
 void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))(); }
 
 int main() {
-    CPPA_TEST(test__yield_interface);
+    CPPA_TEST(test_yield_interface);
 #   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
     CPPA_PRINT("WARNING: context switching was explicitly disabled "
                       "using CPPA_DISABLE_CONTEXT_SWITCHING");

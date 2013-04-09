@@ -23,7 +23,7 @@ bool is_even(int i) { return i % 2 == 0; }
  */
 
 int main() {
-    CPPA_TEST(test__match);
+    CPPA_TEST(test_match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;

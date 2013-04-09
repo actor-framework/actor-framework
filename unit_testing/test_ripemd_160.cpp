@@ -27,7 +27,7 @@ std::string str_hash(const std::string& what) {
 // verify ripemd implementation with example hash results from
 // http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
 int main() {
-    CPPA_TEST(test__ripemd_160);
+    CPPA_TEST(test_ripemd_160);
 
     CPPA_CHECK_EQUAL("9c1185a5c5e9fc54612808977ee8f548b2258d31",
                      str_hash(""));

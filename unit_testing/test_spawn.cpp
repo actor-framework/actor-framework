@@ -283,7 +283,7 @@ struct simple_mirror : sb_actor<simple_mirror> {
 };
 
 int main() {
-    CPPA_TEST(test__spawn);
+    CPPA_TEST(test_spawn);
 
     CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);

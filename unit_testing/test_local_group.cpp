@@ -37,7 +37,7 @@ void testee(int current_value, int final_result) {
 }
 
 int main() {
-    CPPA_TEST(test__local_group);
+    CPPA_TEST(test_local_group);
     auto foo_group = group::get("local", "foo");
     actor_ptr master = spawn_in_group(foo_group, testee, 0, 10);
     for (int i = 0; i < 5; ++i) {

@@ -12,7 +12,7 @@ using std::equal;
 using cppa::util::fixed_vector;
 
 int main() {
-    CPPA_TEST(test__fixed_vector);
+    CPPA_TEST(test_fixed_vector);
     int arr1[] {1, 2, 3, 4};
     fixed_vector<int,4> vec1 {1, 2, 3, 4};
     fixed_vector<int,5> vec2 {4, 3, 2, 1};

@@ -166,7 +166,7 @@ struct server : event_based_actor {
 
 
 int main() {
-    CPPA_TEST(test__sync_send);
+    CPPA_TEST(test_sync_send);
     self->on_sync_failure([] {
         CPPA_ERROR("received: " << to_string(self->last_dequeued()));
     });

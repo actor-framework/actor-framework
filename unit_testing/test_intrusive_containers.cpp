@@ -60,7 +60,7 @@ inline bool operator==(int lhs, const iint& rhs) {
 typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
 
 int main() {
-    CPPA_TEST(test__intrusive_containers);
+    CPPA_TEST(test_intrusive_containers);
 
     cppa::intrusive::single_reader_queue<iint> q;
     q.enqueue(new iint(1));

@@ -144,7 +144,7 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 };
 
 int main() {
-    CPPA_TEST(test__serialization);
+    CPPA_TEST(test_serialization);
 
     announce(typeid(raw_struct), new raw_struct_type_info);
 
