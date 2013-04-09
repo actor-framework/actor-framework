@@ -41,10 +41,13 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num) {
     CPPA_PRINTERRC(fname, line_num, "unexpected timeout");
 }
 
-std::vector<std::string> split(const std::string& str, char delim) {
-    std::vector<std::string> result;
-    std::stringstream strs{str};
-    std::string tmp;
-    while (std::getline(strs, tmp, delim)) result.push_back(tmp);
+std::vector<std::string> split(const std::string& str, char delim, bool keep_empties) {
+    using namespace std;
+    vector<string> result;
+    stringstream strs{str};
+    string tmp;
+    while (getline(strs, tmp, delim)) {
+        if (!tmp.empty() || keep_empties) result.push_back(std::move(tmp));
+    }
     return result;
 }

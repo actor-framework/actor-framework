@@ -147,6 +147,6 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_UNEXPECTED_MSG_CB() [] { CPPA_UNEXPECTED_MSG(); }
 #define CPPA_UNEXPECTED_TOUT_CB() [] { CPPA_UNEXPECTED_TOUT(); }
 
-std::vector<std::string> split(const std::string& str, char delim);
+std::vector<std::string> split(const std::string& str, char delim = ' ', bool keep_empties = true);
 
 #endif // TEST_HPP
