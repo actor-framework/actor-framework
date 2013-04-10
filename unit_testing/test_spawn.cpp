@@ -693,8 +693,23 @@ int main() {
     );
     // wait for termination of all spawned actors
     await_all_others_done();
+    // don't try this at home, kids
+    send(self, atom("check"));
+    try {
+        become (
+            on(atom("check")) >> [] {
+                CPPA_CHECKPOINT();
+                self->quit();
+            }
+        );
+        CPPA_ERROR("line " << __LINE__ << " should be unreachable");
+    }
+    catch (actor_exited&) {
+        CPPA_CHECKPOINT();
+    }
     CPPA_CHECK_EQUAL(flags, 0x0F);
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 10);
+    shutdown();
     return CPPA_TEST_RESULT();
 }

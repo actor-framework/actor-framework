@@ -117,6 +117,7 @@ class stacked : public Base {
 
     void become_impl(behavior&& bhvr, bool discard_old, message_id mid) {
         auto dthis = util::dptr<Subtype>(this);
+        bool exec_afterwards = dthis->m_bhvr_stack.empty();
         if (bhvr.timeout().valid()) {
             dthis->reset_timeout();
             dthis->request_timeout(bhvr.timeout());
@@ -125,6 +126,7 @@ class stacked : public Base {
             dthis->m_bhvr_stack.pop_async_back();
         }
         dthis->m_bhvr_stack.push_back(std::move(bhvr), mid);
+        if (exec_afterwards) dthis->exec_behavior_stack();
     }
 
 };
