@@ -236,23 +236,17 @@ class local_actor : public extend<actor>::with<memory_cached> {
         on_sync_failure(fun);
     }
 
-    /**
-     * @brief Invokes the handler for synchronous timeouts.
-     */
+    /** @cond PRIVATE */
+
     inline void handle_sync_timeout() {
         if (m_sync_timeout_handler) m_sync_timeout_handler();
         else quit(exit_reason::unhandled_sync_timeout);
     }
 
-    /**
-     * @brief Invokes the handler for unexpected synchronous response messages.
-     */
     inline void handle_sync_failure() {
         if (m_sync_failure_handler) m_sync_failure_handler();
         else quit(exit_reason::unhandled_sync_failure);
     }
-
-    /** @cond PRIVATE */
 
     virtual void dequeue(behavior& bhvr) = 0;
 
