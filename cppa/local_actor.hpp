@@ -189,7 +189,7 @@ class local_actor : public extend<actor>::with<memory_cached> {
     /**
      * @brief Returns all joined groups of this actor.
      */
-    std::vector<group_ptr> joined_groups();
+    std::vector<group_ptr> joined_groups() const;
 
     /**
      * @ingroup BlockingAPI

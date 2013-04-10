@@ -98,7 +98,7 @@ void local_actor::leave(const group_ptr& what) {
     if (what) m_subscriptions.erase(what);
 }
 
-std::vector<group_ptr> local_actor::joined_groups() {
+std::vector<group_ptr> local_actor::joined_groups() const {
     std::vector<group_ptr> result;
     for (auto& kvp : m_subscriptions) {
         result.emplace_back(kvp.first);
@@ -146,7 +146,7 @@ void local_actor::forward_message(const actor_ptr& new_receiver) {
 
 response_handle local_actor::make_response_handle() {
     auto n = m_current_node;
-    response_handle result(this, n->sender, n->mid.response_id());
+    response_handle result{this, n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
     return std::move(result);
 }
