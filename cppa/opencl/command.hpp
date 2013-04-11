@@ -148,13 +148,13 @@ class command_impl : public command {
         /* get results from gpu */
         cl_int err{0};
         cl_event read_event;
-        T results(m_number_of_values);
+        T result(m_number_of_values);
         err = clEnqueueReadBuffer(m_queue.get(),
                                   m_arguments[0].get(),
                                   CL_TRUE,
                                   0,
                                   sizeof(typename T::value_type) * m_number_of_values,
-                                  results.data(),
+                                  result.data(),
                                   0,
                                   NULL,
                                   &read_event);
@@ -164,7 +164,7 @@ class command_impl : public command {
                                     + get_opencl_error(err)
                                     + "'.");
         }
-        auto mapped_result = m_map_result(results);
+        auto mapped_result = m_map_result(result);
         reply_tuple_to(m_handle, mapped_result);
         //reply_to(m_handle, results);
     }
