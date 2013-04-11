@@ -303,3 +303,5 @@ unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+examples/opencl/simple_matrix.cpp
+examples/opencl/proper_matrix.cpp
