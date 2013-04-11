@@ -31,6 +31,7 @@
 #include <vector>
 #include <iomanip>
 #include <numeric>
+#include <cassert>
 #include <iostream>
 
 #include "cppa/cppa.hpp"
@@ -39,32 +40,33 @@
 using namespace std;
 using namespace cppa;
 
-static constexpr size_t matrix_size = 8;
-static constexpr const char* kernel_name = "matrix_mult";
+namespace {
 
+using fvec = vector<float>;
+
+constexpr size_t matrix_size = 8;
+constexpr const char* kernel_name = "matrix_mult";
 
 // opencl kernel, multiplies matrix1 and matrix2
-namespace { constexpr const char* kernel_source = R"__(
+// last parameter is, by convention, the output parameter
+constexpr const char* kernel_source = R"__(
     __kernel void matrix_mult(__global float* matrix1,
                               __global float* matrix2,
                               __global float* output) {
-        int size = get_global_size(0); // == get_global_size_(1);
-        int x = get_global_id(0); // get position in matrix
-        int y = get_global_id(1); // this work item should calculate
-        int idx = 0;
+        // we only use square matrices, hence: width == height
+        size_t size = get_global_size(0); // == get_global_size_(1);
+        size_t x = get_global_id(0);
+        size_t y = get_global_id(1);
         float result = 0;
-        while (idx < size) { // calculate one element of the matrix
-            float i = matrix1[idx+y*size];
-            float j = matrix2[x+idx*size];
-            float tmp = i*j;
-            result = result + tmp;
-            ++idx;
+        for (size_t idx = 0; idx < size; ++idx) {
+            result += matrix1[idx + y * size] * matrix2[x + idx * size];
         }
         output[x+y*size] = result;
     }
-)__"; }
+)__";
 
-// represensts a square matrix
+} // namespace <anonymous>
+
 template<size_t Size>
 class square_matrix {
 
@@ -77,14 +79,11 @@ class square_matrix {
     square_matrix& operator=(square_matrix&&) = default;
     square_matrix& operator=(const square_matrix&) = default;
 
-    square_matrix() {
-        m_data.resize(num_elements);
-    }
+    square_matrix() : m_data(num_elements) { }
 
-    square_matrix(vector<float> d) : m_data(std::move(d)) { }
+    explicit square_matrix(fvec d) : m_data(move(d)) {
+        assert(m_data.size() == num_elements);
 
-    square_matrix(const std::initializer_list<float>& args) : m_data(args) {
-        m_data.resize(num_elements);
     }
 
     inline float& operator()(size_t row, size_t column) {
@@ -95,39 +94,49 @@ class square_matrix {
         return m_data[row + column * Size];
     }
 
-    inline void zeroize() {
-        std::fill(m_data.begin(), m_data.end(), 0);
-    }
-
     inline void iota_fill() {
-        std::iota(m_data.begin(), m_data.end(), 0);
+        iota(m_data.begin(), m_data.end(), 0);
     }
 
-    typedef typename vector<float>::const_iterator const_iterator;
+    typedef typename fvec::const_iterator const_iterator;
 
     const_iterator begin() const { return m_data.begin(); }
 
     const_iterator end() const { return m_data.end(); }
 
-    vector<float>& data() { return m_data; }
+    fvec& data() { return m_data; }
 
-    const vector<float>& data() const { return m_data; }
+    const fvec& data() const { return m_data; }
 
  private:
 
-    vector<float> m_data;
+    fvec m_data;
 
 };
 
-// to annouce the square_matrix to lobccpa
-// these operaters have to be implemented
 template<size_t Size>
-inline bool operator==(const square_matrix<Size>& lhs, const square_matrix<Size>& rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+string to_string(const square_matrix<Size>& m) {
+    ostringstream oss;
+    oss.fill(' ');
+    for (size_t column = 0; column < Size; ++column) {
+        for (size_t row = 0; row < Size; ++row) {
+            oss << fixed << setprecision(2) << setw(9) << m(row, column);
+        }
+        oss << '\n';
+    }
+    return oss.str();
+}
+
+// to annouce the square_matrix to libcppa, we have to define these operators
+template<size_t Size>
+inline bool operator==(const square_matrix<Size>& lhs,
+                       const square_matrix<Size>& rhs) {
+    return equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template<size_t Size>
-inline bool operator!=(const square_matrix<Size>& lhs, const square_matrix<Size>& rhs) {
+inline bool operator!=(const square_matrix<Size>& lhs,
+                       const square_matrix<Size>& rhs) {
     return !(lhs == rhs);
 }
 
@@ -135,29 +144,25 @@ using matrix_type = square_matrix<matrix_size>;
 
 void multiplier() {
 
-    // create two matrix and fill them with values 0, 1, 2, 3, 4, ...
+    // create two matrices with ascending values
     matrix_type m1;
-    matrix_type m2;
     m1.iota_fill();
-    m2.iota_fill();
+    auto m2 = m1;
 
     // print "source" matrix
-    cout << "calculating square of matrix:" << endl;
-    for (size_t y = 0; y < matrix_size; ++y) {
-        for (size_t x = 0; x < matrix_size; ++x) {
-            cout << fixed << setprecision(2) << setw(6) << m1(x,y);
-        }
-        cout << endl;
-    }
-    cout << endl;
+    cout << "calculating square of matrix:" << endl
+         << to_string(m1) << endl;
 
     // spawn an opencl actor
     // 1st arg: source code of one or more opencl kernels
     // 2nd arg: name of the kernel to use
     auto worker = spawn_cl(kernel_source, kernel_name,
-        // 3rd arg: the opencl actor can only handle vectors,
-        // this function creates vectors from a tuple of matrix_types
-        [] (any_tuple msg) -> option<cow_tuple<vector<float>,vector<float>>> {
+        // 3rd arg: the opencl function operates on vectors,
+        //          this function converts a tuple of two matrices
+        //          to a tuple of vectors; note that this function returns
+        //          an option (an empty results causes the actor to ignore
+        //          the message)
+        [] (any_tuple msg) -> option<cow_tuple<fvec,fvec>> {
             auto opt = tuple_cast<matrix_type,matrix_type>(msg);
             if (opt) {
                 return {move(get_ref<0>(*opt).data()),
@@ -165,13 +170,13 @@ void multiplier() {
             }
             return {};
         },
-        // 4th arg: builds a matrix_type from a vector
-        // allows the actor to pass a matrix_type back instead of a vector
-        [] (vector<float>& result) -> any_tuple {
-            return make_any_tuple<matrix_type>(move(result));
+        // 4th arg: converts the ouptut vector back to a matrix that is then
+        //          used as response message
+        [] (fvec& result) -> any_tuple {
+            return make_any_tuple(matrix_type{move(result)});
         },
-        // 5th arg: global dimension arguments for opencl's enqueue
-        // creates matrix_size * matrix_size global work items
+        // 5th arg: global dimension arguments for opencl's enqueue,
+        //          creates matrix_size * matrix_size global work items
         {matrix_size, matrix_size}
     );
 
@@ -179,13 +184,7 @@ void multiplier() {
     // wait for results in form of a matrix_type
     sync_send(worker, move(m1), move(m2)).then(
         [](const matrix_type& result) {
-            cout << "result:" << endl;
-            for (size_t y = 0; y < matrix_size; ++y) {
-                for (size_t x = 0; x < matrix_size; ++x) {
-                    cout << fixed << setprecision(2) << setw(9) << result(x,y);
-                }
-                cout << endl;
-            }
+            cout << "result:" << endl << to_string(result);
         }
     );
 }

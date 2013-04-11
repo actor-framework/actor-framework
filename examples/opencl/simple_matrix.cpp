@@ -39,77 +39,82 @@
 using namespace std;
 using namespace cppa;
 
-static constexpr size_t matrix_size = 8;
-static constexpr const char* kernel_name = "matrix_mult";
+namespace {
+
+using fvec = vector<float>;
+
+constexpr size_t matrix_size = 8;
+constexpr const char* kernel_name = "matrix_mult";
 
 // opencl kernel, multiplies matrix1 and matrix2
-namespace { constexpr const char* kernel_source = R"__(
+// last parameter is, by convention, the output parameter
+constexpr const char* kernel_source = R"__(
     __kernel void matrix_mult(__global float* matrix1,
                               __global float* matrix2,
                               __global float* output) {
-        int size = get_global_size(0); // == get_global_size_(1);
-        int x = get_global_id(0);
-        int y = get_global_id(1);
-        int idx = 0;
+        // we only use square matrices, hence: width == height
+        size_t size = get_global_size(0); // == get_global_size_(1);
+        size_t x = get_global_id(0);
+        size_t y = get_global_id(1);
         float result = 0;
-        while (idx < size) {
-            float i = matrix1[idx+y*size];
-            float j = matrix2[x+idx*size];
-            float tmp = i*j;
-            result = result + tmp;
-            ++idx;
+        for (size_t idx = 0; idx < size; ++idx) {
+            result += matrix1[idx + y * size] * matrix2[x + idx * size];
         }
         output[x+y*size] = result;
     }
-)__"; }
+)__";
+
+} // namespace <anonymous>
+
+void print_as_matrix(const fvec& matrix) {
+    for (size_t column = 0; column < matrix_size; ++column) {
+        for (size_t row = 0; row < matrix_size; ++row) {
+            cout << fixed << setprecision(2) << setw(9)
+                 << matrix[row + column * matrix_size];
+        }
+        cout << endl;
+    }
+}
 
 void multiplier() {
     // the opencl actor only understands vectors
     // so these vectors represent the matrices
-    vector<float> m1(matrix_size * matrix_size);
-    vector<float> m2(matrix_size * matrix_size);
+    fvec m1(matrix_size * matrix_size);
+    fvec m2(matrix_size * matrix_size);
 
-    // fill each with values from 0 to matix_size * matrix_size - 1
+    // fill each with ascending values
     iota(m1.begin(), m1.end(), 0);
     iota(m2.begin(), m2.end(), 0);
 
     // print "source" matrix
     cout << "calculating square of matrix:" << endl;
-    for (size_t y = 0; y < matrix_size; ++y) {
-        for (size_t x = 0; x < matrix_size; ++x) {
-            cout << fixed << setprecision(2) << setw(6) << m1[x+y*matrix_size];
-        }
-        cout << endl;
-    }
+    print_as_matrix(m1);
     cout << endl;
 
     // spawn an opencl actor
-    // 1st arg: sourec code of one or more kernels
+    // template parameter: signature of opencl kernel using vectors instead of
+    //                     pointer arguments and proper return type (implicitly
+    //                     mapped to the last kernel argument)
+    // 1st arg: source code of one or more kernels
     // 2nd arg: name of the kernel to use
-    // 3rd arg: global dimension arguments for opencl's enqueue
+    // 3rd arg: global dimension arguments for opencl's enqueue;
     //          creates matrix_size * matrix_size global work items
-    auto worker =
-        spawn_cl<vector<float>(vector<float>&,vector<float>&)>(kernel_source,
-                                                               kernel_name,
-                                                               {matrix_size, matrix_size});
+    // 4th arg: offsets for global dimensions (optional)
+    // 5th arg: local dimensions (optional)
+    auto worker = spawn_cl<fvec(fvec&,fvec&)>(kernel_source,
+                                              kernel_name,
+                                              {matrix_size, matrix_size});
     // send both matrices to the actor and wait for a result
     sync_send(worker, move(m1), move(m2)).then(
-        [](const vector<float>& result) {
-            cout << "result:" << endl;
-            for (size_t column = 0; column < matrix_size; ++column) {
-                for (size_t row = 0; row < matrix_size; ++row) {
-                    cout << fixed << setprecision(2) << setw(9)
-                         << result[row+column*matrix_size];
-                }
-                cout << endl;
-            }
+        [](const fvec& result) {
+            cout << "result: " << endl;
+            print_as_matrix(result);
         }
-
     );
 }
 
 int main() {
-    announce<vector<float>>();
+    announce<fvec>();
     spawn(multiplier);
     await_all_others_done();
     shutdown();
