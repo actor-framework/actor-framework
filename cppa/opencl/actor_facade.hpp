@@ -69,7 +69,7 @@ class actor_facade<Ret(Args...)> : public actor {
  public:
 
     typedef cow_tuple<typename util::rm_ref<Args>::type...> args_tuple;
-    typedef std::function<option<args_tuple>(const any_tuple&)> arg_mapping;
+    typedef std::function<option<args_tuple>(any_tuple)> arg_mapping;
     typedef std::function<any_tuple(Ret&)> result_mapping;
 
     static actor_facade* create(command_dispatcher* dispatcher,
@@ -152,7 +152,7 @@ class actor_facade<Ret(Args...)> : public actor {
     void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
         auto opt = m_map_args(msg);
         if (opt) {
-            response_handle handle{this, sender, id};
+            response_handle handle{this, sender, id.response_id()};
             size_t number_of_values{1};
             std::for_each(m_global_dimensions.begin(),
                           m_global_dimensions.end(),

@@ -56,7 +56,7 @@ template<typename MapArgs, typename MapResult>
 struct get_cl_spawn_helper;
 
 template<typename R, typename... Ts>
-struct get_cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (const any_tuple&)>,
+struct get_cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (any_tuple)>,
                            std::function<any_tuple (R&)>> {
     typedef cl_spawn_helper<R (const Ts&...)> type;
 };
@@ -87,6 +87,36 @@ actor_ptr spawn_cl(const char* source,
     typedef typename t1::fun_type f1;
     typename get_cl_spawn_helper<f0,f1>::type f;
     return f(source, fun_name,
+             move(dimensions), move(offset), move(local_dims),
+             f0{map_args}, f1{map_result});
+}
+
+template<typename Signature, typename... Ts>
+actor_ptr spawn_cl(const opencl::program& prog,
+                   const char* fun_name,
+                   std::vector<size_t> dimensions,
+                   std::vector<size_t> offset = {},
+                   std::vector<size_t> local_dims = {}) {
+    using std::move;
+    cl_spawn_helper<Signature> f;
+    return f(prog, fun_name, move(dimensions), move(offset), move(local_dims));
+}
+
+template<typename MapArgs, typename MapResult>
+actor_ptr spawn_cl(const opencl::program& prog,
+                   const char* fun_name,
+                   MapArgs map_args,
+                   MapResult map_result,
+                   std::vector<size_t> dimensions,
+                   std::vector<size_t> offset = {},
+                   std::vector<size_t> local_dims = {}) {
+    using std::move;
+    typedef typename util::get_callable_trait<MapArgs>::type t0;
+    typedef typename util::get_callable_trait<MapResult>::type t1;
+    typedef typename t0::fun_type f0;
+    typedef typename t1::fun_type f1;
+    typename get_cl_spawn_helper<f0,f1>::type f;
+    return f(prog, fun_name,
              move(dimensions), move(offset), move(local_dims),
              f0{map_args}, f1{map_result});
 }
