@@ -42,7 +42,7 @@ response_handle::response_handle(const actor_ptr&    from,
                                  const actor_ptr&    to,
                                  const message_id& id)
 : m_from(from), m_to(to), m_id(id) {
-    CPPA_REQUIRE(id.is_response());
+    CPPA_REQUIRE(id.is_response() || !id.valid());
 }
 
 bool response_handle::valid() const {
