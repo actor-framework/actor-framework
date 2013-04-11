@@ -2,18 +2,19 @@
 #include <iostream>
 #include "cppa/cppa.hpp"
 
+using namespace std;
 using namespace cppa;
 
 void mirror() {
     // wait for messages
     become (
         // invoke this lambda expression if we receive a string
-        on_arg_match >> [](const std::string& what) {
+        on_arg_match >> [](const string& what) {
             // prints "Hello World!" via aout (thread-safe cout wrapper)
-            aout << what << std::endl;
+            aout << what << endl;
             // replies "!dlroW olleH"
-            reply(std::string(what.rbegin(), what.rend()));
-            // terminates this actor (become otherwise 'loops' forever)
+            reply(string(what.rbegin(), what.rend()));
+            // terminates this actor ('become' otherwise loops forever)
             self->quit();
         }
     );
@@ -23,9 +24,9 @@ void hello_world(const actor_ptr& buddy) {
     // send "Hello World!" to our buddy ...
     sync_send(buddy, "Hello World!").then(
         // ... and wait for a response
-        on_arg_match >> [](const std::string& what) {
+        on_arg_match >> [](const string& what) {
             // prints "!dlroW olleH"
-            aout << what << std::endl;
+            aout << what << endl;
         }
     );
 }
