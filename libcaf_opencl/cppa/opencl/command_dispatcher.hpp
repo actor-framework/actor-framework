@@ -87,7 +87,7 @@ class command_dispatcher {
                     std::vector<size_t> global_dims,
                     std::vector<size_t> global_offs,
                     std::vector<size_t> local_dims,
-                    std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(const any_tuple&)> map_args,
+                    std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
     {
         return actor_facade<Ret (Args...)>::create(this,
