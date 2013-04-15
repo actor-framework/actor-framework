@@ -107,8 +107,9 @@ int main() {
                         ,152,174,196,218
                         ,248,286,324,362
                         ,344,398,452,506};
-    auto worker1 = spawn_cl<ivec(ivec&)>(kernel_source, kernel_name,
-                                        {matrix_size,matrix_size});
+    auto worker1 = spawn_cl<ivec(ivec&)>(program::create(kernel_source),
+                                         kernel_name,
+                                         {matrix_size,matrix_size});
     ivec m1(matrix_size * matrix_size);
     iota(m1.begin(), m1.end(), 0);
     send(worker1, move(m1));

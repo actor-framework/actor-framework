@@ -50,6 +50,11 @@ struct cl_spawn_helper<R (Ts...)> {
         auto cd = opencl::get_command_dispatcher();
         return cd->spawn<R, Ts...>(p, fname, std::forward<Us>(args)...);
     }
+    template<typename... Us>
+    actor_ptr operator()(const opencl::program& p, const char* fname, Us&&... args) {
+        auto cd = opencl::get_command_dispatcher();
+        return cd->spawn<R, Ts...>(p, fname, std::forward<Us>(args)...);
+    }
 };
 
 template<typename MapArgs, typename MapResult>
