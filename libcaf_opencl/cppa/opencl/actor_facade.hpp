@@ -112,9 +112,9 @@ class actor_facade<Ret(Args...)> : public actor {
         return new actor_facade<Ret (Args...)>{dispatcher,
                                                kernel,
                                                prog,
-                                               std::move(global_dims),
-                                               std::move(offsets),
-                                               std::move(local_dims),
+                                               global_dims,
+                                               offsets,
+                                               local_dims,
                                                std::move(map_args),
                                                std::move(map_result)};
     }
@@ -160,18 +160,15 @@ class actor_facade<Ret(Args...)> : public actor {
         auto opt = m_map_args(msg);
         if (opt) {
             response_handle handle{this, sender, id.response_id()};
-            size_t number_of_values{1};
-            std::for_each(m_global_dimensions.begin(),
-                          m_global_dimensions.end(),
-                          [&](const size_t& s) { number_of_values *= s; });
-            Ret result_buf(number_of_values);
+            Ret result_buf(std::accumulate(m_global_dimensions.begin(),
+                                           m_global_dimensions.end(),
+                                           1, std::multiplies<size_t>{}));
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel(arguments,
                                     m_context.get(),
                                     m_kernel.get(),
                                     result_buf,
                                     get_ref<Is>(*opt)...);
-            CPPA_LOG_TRACE("enqueue to dispatcher");
             enqueue_to_dispatcher(m_dispatcher,
                                   make_counted<command_impl<Ret>>(handle,
                                                                   m_kernel,
@@ -181,9 +178,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                                                   m_local_dimensions,
                                                                   m_map_result));
         }
-        else {
-            CPPA_LOG_ERROR("actor_facade::enqueue() tuple_cast failed.");
-        }
+        else { CPPA_LOG_ERROR("actor_facade::enqueue() tuple_cast failed."); }
     }
 
     typedef std::vector<mem_ptr> args_vec;
@@ -202,32 +197,20 @@ class actor_facade<Ret(Args...)> : public actor {
                                      cl_context,
                                      cl_kernel kernel) {
         cl_int err{0};
-        for(unsigned long i{1}; i < arguments.size(); ++i) {
+        for(size_t i = 1; i < arguments.size(); ++i) {
             err = clSetKernelArg(kernel,
                                  (i-1),
                                  sizeof(cl_mem),
                                  static_cast<void*>(&arguments[i]));
-            if (err != CL_SUCCESS) {
-                std::ostringstream oss;
-                oss << "clSetKernelArg: '"
-                    << get_opencl_error(err)
-                    << "'.";
-                CPPA_LOG_ERROR(oss.str());
-                return;
-            }
+            CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
+                              "clSetKernelArg: " << get_opencl_error(err));
         }
         err = clSetKernelArg(kernel,
                              arguments.size()-1,
                              sizeof(cl_mem),
                              static_cast<void*>(&arguments[0]));
-        if (err != CL_SUCCESS) {
-            std::ostringstream oss;
-            oss << "clSetKernelArg: '"
-                << get_opencl_error(err)
-                << "'.";
-            CPPA_LOG_ERROR(oss.str());
-            return;
-        }
+        CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
+                          "clSetKernelArg: " << get_opencl_error(err));
     }
 
     template<typename T0, typename... Ts>
@@ -239,57 +222,44 @@ class actor_facade<Ret(Args...)> : public actor {
         cl_int err{0};
         auto buf = clCreateBuffer(context,
                                   CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                  sizeof(typename T0::value_type)*arg0.size(),
+                                  sizeof(typename T0::value_type) * arg0.size(),
                                   arg0.data(),
                                   &err);
         if (err != CL_SUCCESS) {
-            std::ostringstream oss;
-            oss << "clCreateBuffer: '"
-                << get_opencl_error(err)
-                << "'.";
-            CPPA_LOG_ERROR(oss.str());
-            return;
+            CPPA_LOG_ERROR("clCreateBuffer: " << get_opencl_error(err));
         }
         else {
             mem_ptr tmp;
             tmp.adopt(std::move(buf));
             arguments.push_back(tmp);
-            return add_arguments_to_kernel_rec(arguments,
-                                               context,
-                                               kernel,
-                                               args...);
+            add_arguments_to_kernel_rec(arguments, context, kernel, args...);
         }
     }
 
     template<typename R, typename... Ts>
     void add_arguments_to_kernel(args_vec& arguments,
-                                        cl_context context,
-                                        cl_kernel kernel,
-                                        R& ret,
-                                        Ts&&... args) {
+                                 cl_context context,
+                                 cl_kernel kernel,
+                                 R& ret,
+                                 Ts&&... args) {
         arguments.clear();
         cl_int err{0};
         auto buf = clCreateBuffer(context,
                                   CL_MEM_WRITE_ONLY,
-                                  sizeof(typename R::value_type)*ret.size(),
+                                  sizeof(typename R::value_type) * ret.size(),
                                   nullptr,
                                   &err);
         if (err != CL_SUCCESS) {
-            std::ostringstream oss;
-            oss << "clCreateBuffer: '"
-                << get_opencl_error(err)
-                << "'.";
-            CPPA_LOG_ERROR(oss.str());
-            return;
+            CPPA_LOG_ERROR("clCreateBuffer: " << get_opencl_error(err));
         }
         else {
             mem_ptr tmp;
             tmp.adopt(std::move(buf));
             arguments.push_back(tmp);
-            return add_arguments_to_kernel_rec(arguments,
-                                               context,
-                                               kernel,
-                                               std::forward<Ts>(args)...);
+            add_arguments_to_kernel_rec(arguments,
+                                        context,
+                                        kernel,
+                                        std::forward<Ts>(args)...);
         }
     }
 
