@@ -32,6 +32,7 @@
 #define CPPA_LOGGING_HPP
 
 #include <sstream>
+#include <iostream>
 
 #include "cppa/singletons.hpp"
 #include "cppa/detail/demangle.hpp"
@@ -106,7 +107,9 @@ class logging {
 #define CPPA_VOID_STMT static_cast<void>(0)
 
 #ifndef CPPA_LOG_LEVEL
-#   define CPPA_LOG(classname, funname, level, message) CPPA_VOID_STMT
+#   define CPPA_LOG(classname, funname, level, message)                        \
+        std::cerr << level << " [" << classname << "::" << funname << "]: "    \
+                  << message << std::endl;
 #   define CPPA_LIF(stmt, logstmt) CPPA_VOID_STMT
 #else
 #   define CPPA_LOG(classname, funname, level, message) {                      \
@@ -119,21 +122,17 @@ class logging {
 
 #define CPPA_CLASS_NAME ::cppa::detail::demangle(typeid(*this)).c_str()
 
+// errors and warnings are enabled by default
+
 /**
  * @brief Logs a custom error message @p msg with class name @p cname
  *        and function name @p fname.
  */
 #define CPPA_LOGC_ERROR(cname, fname, msg) CPPA_LOG(cname, fname, "ERROR", msg)
-#define CPPA_LOGC_WARNING(cname, fname, msg) CPPA_VOID_STMT
+#define CPPA_LOGC_WARNING(cname, fname, msg) CPPA_LOG(cname, fname, "WARN ", msg)
 #define CPPA_LOGC_INFO(cname, fname, msg) CPPA_VOID_STMT
 #define CPPA_LOGC_DEBUG(cname, fname, msg) CPPA_VOID_STMT
 #define CPPA_LOGC_TRACE(cname, fname, msg) CPPA_VOID_STMT
-
-// enable warnings
-#if CPPA_LOG_LEVEL > 0
-#   undef CPPA_LOGC_WARNING
-#   define CPPA_LOGC_WARNING(cname, fname, msg) CPPA_LOG(cname, fname, "WARN ", msg)
-#endif
 
 // enable info messages
 #if CPPA_LOG_LEVEL > 1
