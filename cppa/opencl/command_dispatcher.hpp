@@ -87,7 +87,7 @@ class command_dispatcher {
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
                     const dim_vec& global_dims,
-                    const dim_vec& global_offs,
+                    const dim_vec& offsets,
                     const dim_vec& local_dims,
                     std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
@@ -96,7 +96,7 @@ class command_dispatcher {
                                                    prog,
                                                    kernel_name,
                                                    global_dims,
-                                                   global_offs,
+                                                   offsets,
                                                    local_dims,
                                                    std::move(map_args),
                                                    std::move(map_result));
@@ -106,7 +106,7 @@ class command_dispatcher {
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
                     const dim_vec& global_dims,
-                    const dim_vec& global_offs = {},
+                    const dim_vec& offsets = {},
                     const dim_vec& local_dims = {})
     {
         std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)>
@@ -118,9 +118,9 @@ class command_dispatcher {
         };
         return this->spawn<Ret,Args...>(prog,
                                         kernel_name,
-                                        std::move(global_dims),
-                                        std::move(global_offs),
-                                        std::move(local_dims),
+                                        global_dims,
+                                        offsets,
+                                        local_dims,
                                         std::move(map_args),
                                         std::move(map_result));
     }

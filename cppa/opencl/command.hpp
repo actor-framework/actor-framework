@@ -33,6 +33,7 @@
 #define CPPA_OPENCL_COMMAND_HPP
 
 #include <vector>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 
@@ -70,21 +71,21 @@ class command_impl : public command {
     command_impl(response_handle handle,
                  kernel_ptr kernel,
                  std::vector<mem_ptr> arguments,
-                 const dim_vec& global_dimensions,
-                 const dim_vec& global_offsets,
-                 const dim_vec& local_dimensions,
+                 const dim_vec& global_dims,
+                 const dim_vec& offsets,
+                 const dim_vec& local_dims,
                  const std::function<any_tuple(T&)>& map_result)
-        : m_number_of_values(1)
+        : m_number_of_values(std::accumulate(global_dims.begin(),
+                                             global_dims.end(),
+                                             1, std::multiplies<size_t>{}))
         , m_handle(handle)
         , m_kernel(kernel)
         , m_arguments(arguments)
-        , m_global_dimensions(global_dimensions)
-        , m_global_offsets(global_offsets)
-        , m_local_dimensions(local_dimensions)
+        , m_global_dims(global_dims)
+        , m_offsets(offsets)
+        , m_local_dims(local_dims)
         , m_map_result(map_result)
     {
-        m_kernel_event.adopt(cl_event());
-        for (auto s : m_global_dimensions) m_number_of_values *= s;
     }
 
     void enqueue (command_queue_ptr queue) {
@@ -92,9 +93,7 @@ class command_impl : public command {
         this->ref();
         cl_int err{0};
         m_queue = queue;
-
         auto ptr = m_kernel_event.get();
-
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
@@ -102,10 +101,10 @@ class command_impl : public command {
         /* enqueue kernel */
         err = clEnqueueNDRangeKernel(m_queue.get(),
                                      m_kernel.get(),
-                                     m_global_dimensions.size(),
-                                     data_or_nullptr(m_global_offsets),
-                                     data_or_nullptr(m_global_dimensions),
-                                     data_or_nullptr(m_local_dimensions),
+                                     m_global_dims.size(),
+                                     data_or_nullptr(m_offsets),
+                                     data_or_nullptr(m_global_dims),
+                                     data_or_nullptr(m_local_dims),
                                      0,
                                      nullptr,
                                      &ptr);
@@ -116,9 +115,6 @@ class command_impl : public command {
         err = clSetEventCallback(ptr,
                                  CL_COMPLETE,
                                  [](cl_event, cl_int, void* data) {
-                                     CPPA_LOGC_TRACE("command_impl",
-                                                    "enqueue",
-                                                    "command::enqueue()::callback()");
                                      auto cmd = reinterpret_cast<command_impl*>(data);
                                      cmd->handle_results();
                                      cmd->deref();
@@ -138,14 +134,12 @@ class command_impl : public command {
     event_ptr       m_kernel_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
-    dim_vec  m_global_dimensions;
-    dim_vec  m_global_offsets;
-    dim_vec  m_local_dimensions;
+    dim_vec  m_global_dims;
+    dim_vec  m_offsets;
+    dim_vec  m_local_dims;
     std::function<any_tuple (T&)> m_map_result;
 
     void handle_results () {
-        CPPA_LOG_TRACE("command::handle_results()");
-        /* get results from gpu */
         cl_int err{0};
         cl_event read_event;
         T result(m_number_of_values);
@@ -160,9 +154,8 @@ class command_impl : public command {
                                   &read_event);
         clReleaseEvent(read_event);
         if (err != CL_SUCCESS) {
-           throw std::runtime_error("[!!!] clEnqueueReadBuffer: '"
-                                    + get_opencl_error(err)
-                                    + "'.");
+           throw std::runtime_error("clEnqueueReadBuffer: "
+                                    + get_opencl_error(err));
         }
         auto mapped_result = m_map_result(result);
         reply_tuple_to(m_handle, mapped_result);
