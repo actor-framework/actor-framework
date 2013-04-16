@@ -34,10 +34,10 @@
 #include "cppa/option.hpp"
 #include "cppa/guard_expr.hpp"
 
+#include "cppa/util/call.hpp"
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/apply_args.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/get_result_type.hpp"
 

@@ -142,10 +142,10 @@ cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
 cppa/uniform_type_info.hpp
 cppa/util/abstract_uniform_type_info.hpp
-cppa/util/apply_args.hpp
 cppa/util/arg_match_t.hpp
 cppa/util/at.hpp
 cppa/util/buffer.hpp
+cppa/util/call.hpp
 cppa/util/callable_trait.hpp
 cppa/util/comparable.hpp
 cppa/util/compare_tuples.hpp
@@ -195,6 +195,8 @@ examples/hello_world.cpp
 examples/message_passing/calculator.cpp
 examples/message_passing/dancing_kirby.cpp
 examples/message_passing/dining_philosophers.cpp
+examples/opencl/proper_matrix.cpp
+examples/opencl/simple_matrix.cpp
 examples/qtsupport/chatwidget.cpp
 examples/qtsupport/chatwidget.hpp
 examples/qtsupport/chatwindow.ui
@@ -303,5 +305,3 @@ unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-examples/opencl/simple_matrix.cpp
-examples/opencl/proper_matrix.cpp

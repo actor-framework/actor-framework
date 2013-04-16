@@ -28,10 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_APPLY_ARGS_HPP
-#define CPPA_APPLY_ARGS_HPP
-
-#include <cstddef>
+#ifndef CALL_HPP
+#define CALL_HPP
 
 #include "cppa/get.hpp"
 #include "cppa/util/int_list.hpp"
@@ -56,6 +54,11 @@ inline auto apply_args_suffxied(F& f, Tuple& tup, util::int_list<Is...>, Ts&&...
     return f(get_cv_aware<Is>(tup)..., std::forward<Ts>(args)...);
 }
 
+template<typename F, typename... Ts>
+inline auto call_mv(F& f, Ts&&... args) -> decltype(f(std::move(args)...)) {
+    return f(std::move(args)...);
+}
+
 } } // namespace cppa::util
 
-#endif // CPPA_APPLY_ARGS_HPP
+#endif // CALL_HPP

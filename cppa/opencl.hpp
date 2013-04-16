@@ -33,23 +33,19 @@
 
 #include "cppa/option.hpp"
 #include "cppa/cow_tuple.hpp"
-
+#include "cppa/util/call.hpp"
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
 
 namespace cppa {
 
-template<typename Signature>
+namespace detail {
+
+template<typename Signature, typename SecondSignature = void>
 struct cl_spawn_helper;
 
 template<typename R, typename... Ts>
-struct cl_spawn_helper<R (Ts...)> {
-    template<typename... Us>
-    actor_ptr operator()(const char* source, const char* fname, Us&&... args) {
-        auto p = opencl::program::create(source);
-        auto cd = opencl::get_command_dispatcher();
-        return cd->spawn<R, Ts...>(p, fname, std::forward<Us>(args)...);
-    }
+struct cl_spawn_helper<R (Ts...), void> {
     template<typename... Us>
     actor_ptr operator()(const opencl::program& p, const char* fname, Us&&... args) {
         auto cd = opencl::get_command_dispatcher();
@@ -57,73 +53,93 @@ struct cl_spawn_helper<R (Ts...)> {
     }
 };
 
-template<typename MapArgs, typename MapResult>
-struct get_cl_spawn_helper;
-
 template<typename R, typename... Ts>
-struct get_cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (any_tuple)>,
-                           std::function<any_tuple (R&)>> {
-    typedef cl_spawn_helper<R (const Ts&...)> type;
-};
+struct cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (any_tuple)>,
+                       std::function<any_tuple (R&)>>
+: cl_spawn_helper<R (Ts...)> { };
 
+} // namespace detail
+
+/**
+ * @brief Creates a new actor facade for an OpenCL kernel that invokes
+ *        the function named @p fname from @p prog.
+ * @throws std::runtime_error if more than three dimensions are set,
+ *                            <tt>dims.empty()</tt>, or @p clCreateKernel
+ *                            failed.
+ */
 template<typename Signature, typename... Ts>
-actor_ptr spawn_cl(const char* source,
-                   const char* fun_name,
-                   std::vector<size_t> dimensions,
-                   std::vector<size_t> offset = {},
-                   std::vector<size_t> local_dims = {}) {
-    using std::move;
-    cl_spawn_helper<Signature> f;
-    return f(source, fun_name, move(dimensions), move(offset), move(local_dims));
+inline actor_ptr spawn_cl(const opencl::program& prog,
+                          const char* fname,
+                          std::vector<size_t> dims,
+                          std::vector<size_t> offset = {},
+                          std::vector<size_t> local_dims = {}) {
+    detail::cl_spawn_helper<Signature> f;
+    return util::call_mv(f, prog, fname, dims, offset, local_dims);
 }
 
-template<typename MapArgs, typename MapResult>
-actor_ptr spawn_cl(const char* source,
-                   const char* fun_name,
-                   MapArgs map_args,
-                   MapResult map_result,
-                   std::vector<size_t> dimensions,
-                   std::vector<size_t> offset = {},
-                   std::vector<size_t> local_dims = {}) {
-    using std::move;
-    typedef typename util::get_callable_trait<MapArgs>::type t0;
-    typedef typename util::get_callable_trait<MapResult>::type t1;
-    typedef typename t0::fun_type f0;
-    typedef typename t1::fun_type f1;
-    typename get_cl_spawn_helper<f0,f1>::type f;
-    return f(source, fun_name,
-             move(dimensions), move(offset), move(local_dims),
-             f0{map_args}, f1{map_result});
-}
-
+/**
+ * @brief Compiles @p source and creates a new actor facade for an OpenCL kernel
+ *        that invokes the function named @p fname.
+ * @throws std::runtime_error if more than three dimensions are set,
+ *                            <tt>dims.empty()</tt>, a compilation error
+ *                            occured, or @p clCreateKernel failed.
+ */
 template<typename Signature, typename... Ts>
-actor_ptr spawn_cl(const opencl::program& prog,
-                   const char* fun_name,
-                   std::vector<size_t> dimensions,
-                   std::vector<size_t> offset = {},
-                   std::vector<size_t> local_dims = {}) {
-    using std::move;
-    cl_spawn_helper<Signature> f;
-    return f(prog, fun_name, move(dimensions), move(offset), move(local_dims));
+inline actor_ptr spawn_cl(const char* source,
+                          const char* fname,
+                          std::vector<size_t> dims,
+                          std::vector<size_t> offset = {},
+                          std::vector<size_t> local_dims = {}) {
+    auto prog = opencl::program::create(source);
+    detail::cl_spawn_helper<Signature> f;
+    return util::call_mv(f, prog, fname, dims, offset, local_dims);
 }
 
+/**
+ * @brief Creates a new actor facade for an OpenCL kernel that invokes
+ *        the function named @p fname from @p prog, using @p map_args
+ *        to extract the function arguments from incoming messages and
+ *        @p map_result to transform the result before sending it as response.
+ * @throws std::runtime_error if more than three dimensions are set,
+ *                            <tt>dims.empty()</tt>, or @p clCreateKernel
+ *                            failed.
+ */
 template<typename MapArgs, typename MapResult>
-actor_ptr spawn_cl(const opencl::program& prog,
-                   const char* fun_name,
-                   MapArgs map_args,
-                   MapResult map_result,
-                   std::vector<size_t> dimensions,
-                   std::vector<size_t> offset = {},
-                   std::vector<size_t> local_dims = {}) {
+inline actor_ptr spawn_cl(const opencl::program& prog,
+                          const char* fname,
+                          MapArgs map_args,
+                          MapResult map_result,
+                          std::vector<size_t> dims,
+                          std::vector<size_t> offset = {},
+                          std::vector<size_t> local_dims = {}) {
+    typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
+    typedef typename util::get_callable_trait<MapResult>::fun_type f1;
+    detail::cl_spawn_helper<f0,f1> f;
+    return util::call_mv(f, prog, fname, dims, offset, local_dims,
+                         f0{map_args}, f1{map_result});
+}
+
+/**
+ * @brief Compiles @p source and creates a new actor facade for an OpenCL kernel
+ *        that invokes the function named @p fname, using @p map_args
+ *        to extract the function arguments from incoming messages and
+ *        @p map_result to transform the result before sending it as response.
+ * @throws std::runtime_error if more than three dimensions are set,
+ *                            <tt>dims.empty()</tt>, a compilation error
+ *                            occured, or @p clCreateKernel failed.
+ */
+template<typename MapArgs, typename MapResult>
+inline actor_ptr spawn_cl(const char* source,
+                          const char* fun_name,
+                          MapArgs map_args,
+                          MapResult map_result,
+                          std::vector<size_t> dims,
+                          std::vector<size_t> offset = {},
+                          std::vector<size_t> local_dims = {}) {
     using std::move;
-    typedef typename util::get_callable_trait<MapArgs>::type t0;
-    typedef typename util::get_callable_trait<MapResult>::type t1;
-    typedef typename t0::fun_type f0;
-    typedef typename t1::fun_type f1;
-    typename get_cl_spawn_helper<f0,f1>::type f;
-    return f(prog, fun_name,
-             move(dimensions), move(offset), move(local_dims),
-             f0{map_args}, f1{map_result});
+    return spawn_cl(opencl::program::create(source), fun_name,
+                    move(map_args), move(map_result),
+                    move(dims), move(offset), move(local_dims));
 }
 
 } // namespace cppa

@@ -35,12 +35,12 @@
 #include "cppa/guard_expr.hpp"
 #include "cppa/tpartial_function.hpp"
 
+#include "cppa/util/call.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/rm_option.hpp"
 #include "cppa/util/purge_refs.hpp"
-#include "cppa/util/apply_args.hpp"
 #include "cppa/util/disjunction.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/deduce_ref_type.hpp"

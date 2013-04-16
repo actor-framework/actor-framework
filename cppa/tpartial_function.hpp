@@ -34,9 +34,9 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "cppa/util/call.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/apply_args.hpp"
 #include "cppa/util/left_or_right.hpp"
 #include "cppa/util/callable_trait.hpp"
 #include "cppa/util/is_mutable_ref.hpp"

@@ -41,9 +41,9 @@
 #include "cppa/option.hpp"
 
 #include "cppa/util/at.hpp"
+#include "cppa/util/call.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/apply_args.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/tdata.hpp"

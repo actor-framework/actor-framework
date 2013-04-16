@@ -62,7 +62,7 @@ program program::create(const char* kernel_source) {
     }
 
     // build programm from program object
-    err = clBuildProgram(pptr.get(), 0, NULL, NULL, NULL, NULL);
+    err = clBuildProgram(pptr.get(), 0, nullptr, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
@@ -73,13 +73,13 @@ program program::create(const char* kernel_source) {
                                     CL_PROGRAM_BUILD_STATUS,
                                     sizeof(cl_build_status),
                                     &build_status,
-                                    NULL);
+                                    nullptr);
         size_t ret_val_size;
         err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     0,
-                                    NULL,
+                                    nullptr,
                                     &ret_val_size);
         std::vector<char> build_log(ret_val_size+1);
         err = clGetProgramBuildInfo(pptr.get(),
@@ -87,7 +87,7 @@ program program::create(const char* kernel_source) {
                                     CL_PROGRAM_BUILD_LOG,
                                     ret_val_size,
                                     build_log.data(),
-                                    NULL);
+                                    nullptr);
         build_log[ret_val_size] = '\0';
         std::ostringstream oss;
         oss << "clBuildProgram: '"
@@ -98,7 +98,7 @@ program program::create(const char* kernel_source) {
         throw std::runtime_error(oss.str());
     }
     else {
-#ifdef CPPA_DEBUG
+#       ifdef CPPA_DEBUG
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
                                m_devices.front().dev_id);
@@ -108,13 +108,13 @@ program program::create(const char* kernel_source) {
                                     CL_PROGRAM_BUILD_STATUS,
                                     sizeof(cl_build_status),
                                     &build_status,
-                                    NULL);
+                                    nullptr);
         size_t ret_val_size;
         err = clGetProgramBuildInfo(pptr.get(),
                                     device_used.get(),
                                     CL_PROGRAM_BUILD_LOG,
                                     0,
-                                    NULL,
+                                    nullptr,
                                     &ret_val_size);
         std::vector<char> build_log(ret_val_size+1);
         err = clGetProgramBuildInfo(pptr.get(),
@@ -122,10 +122,10 @@ program program::create(const char* kernel_source) {
                                     CL_PROGRAM_BUILD_LOG,
                                     ret_val_size,
                                     build_log.data(),
-                                    NULL);
+                                    nullptr);
         build_log[ret_val_size] = '\0';
         CPPA_LOG_DEBUG("clBuildProgram log: '" << build_log.data());
-#endif
+#       endif
     }
     return {cptr, pptr};
 }

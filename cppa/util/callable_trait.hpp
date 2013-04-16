@@ -91,16 +91,17 @@ struct get_callable_trait {
     // type without cv qualifiers
     typedef typename rm_ref<T>::type bare_type;
     // if type is a function pointer, this typedef identifies the function
-    typedef typename std::remove_pointer<bare_type>::type fun_type;
+    typedef typename std::remove_pointer<bare_type>::type signature_type;
     typedef typename get_callable_trait_helper<
                    std::is_function<bare_type>::value
-                || std::is_function<fun_type>::value,
+                || std::is_function<signature_type>::value,
                 std::is_member_function_pointer<bare_type>::value,
                 bare_type
             >::type
             type;
     typedef typename type::result_type result_type;
     typedef typename type::arg_types arg_types;
+    typedef typename type::fun_type fun_type;
 };
 
 template<typename C>

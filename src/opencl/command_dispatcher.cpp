@@ -146,12 +146,12 @@ void command_dispatcher::initialize() {
     int pid{0};
     cl_uint num_devices{0};
     cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
-    err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
+    err = clGetDeviceIDs(ids[pid], dev_type, 0, nullptr, &num_devices);
     if (err == CL_DEVICE_NOT_FOUND) {
         CPPA_LOG_TRACE("No gpu devices found. Looking for cpu devices.");
         cout << "No gpu devices found. Looking for cpu devices." << endl;
         dev_type = CL_DEVICE_TYPE_CPU;
-        err = clGetDeviceIDs(ids[pid], dev_type, 0, NULL, &num_devices);
+        err = clGetDeviceIDs(ids[pid], dev_type, 0, nullptr, &num_devices);
     }
     if (err != CL_SUCCESS) {
         ostringstream oss;
@@ -162,7 +162,7 @@ void command_dispatcher::initialize() {
         throw runtime_error(oss.str());
     }
     vector<cl_device_id> devices(num_devices);
-    err = clGetDeviceIDs(ids[pid], dev_type, num_devices, devices.data(), NULL);
+    err = clGetDeviceIDs(ids[pid], dev_type, num_devices, devices.data(), nullptr);
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetDeviceIDs: '"
@@ -173,7 +173,7 @@ void command_dispatcher::initialize() {
     }
 
     /* create a context */
-    m_context.adopt(clCreateContext(0, 1, devices.data(), NULL, NULL, &err));
+    m_context.adopt(clCreateContext(0, 1, devices.data(), nullptr, nullptr, &err));
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clCreateContext: '"

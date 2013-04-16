@@ -33,9 +33,9 @@
 
 #include <type_traits>
 
+#include "cppa/util/call.hpp"
 #include "cppa/util/rm_ref.hpp"
 #include "cppa/util/int_list.hpp"
-#include "cppa/util/apply_args.hpp"
 
 #include "cppa/detail/tdata.hpp"
 #include "cppa/scheduled_actor.hpp"
