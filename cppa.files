@@ -156,7 +156,6 @@ cppa/util/dptr.hpp
 cppa/util/duration.hpp
 cppa/util/element_at.hpp
 cppa/util/fiber.hpp
-cppa/util/fixed_vector.hpp
 cppa/util/get_result_type.hpp
 cppa/util/int_list.hpp
 cppa/util/is_array_of.hpp
@@ -170,6 +169,7 @@ cppa/util/is_manipulator.hpp
 cppa/util/is_mutable_ref.hpp
 cppa/util/is_primitive.hpp
 cppa/util/left_or_right.hpp
+cppa/util/limited_vector.hpp
 cppa/util/producer_consumer_list.hpp
 cppa/util/pt_dispatch.hpp
 cppa/util/pt_token.hpp

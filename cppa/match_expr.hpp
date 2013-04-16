@@ -98,7 +98,7 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
                 >::type
                 mimpl;
 
-        util::fixed_vector<size_t,util::tl_size<FilteredPattern>::value> mv;
+        util::limited_vector<size_t,util::tl_size<FilteredPattern>::value> mv;
         if (type_token == typeid(FilteredPattern) ||  mimpl::_(tup, mv)) {
             for (size_t i = 0; i < util::tl_size<FilteredPattern>::value; ++i) {
                 result[i] = const_cast<void*>(tup.at(mv[i]));
@@ -781,7 +781,7 @@ class match_expr {
 
     typedef std::pair<const std::type_info*,std::uint64_t> cache_element;
 
-    util::fixed_vector<cache_element,cache_size> m_cache;
+    util::limited_vector<cache_element,cache_size> m_cache;
 
     // ring buffer like access to m_cache
     size_t m_cache_begin;

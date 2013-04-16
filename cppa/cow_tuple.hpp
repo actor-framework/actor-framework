@@ -42,7 +42,7 @@
 #include "cppa/ref_counted.hpp"
 
 #include "cppa/util/at.hpp"
-#include "cppa/util/fixed_vector.hpp"
+#include "cppa/util/limited_vector.hpp"
 #include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
 #include "cppa/util/is_legal_tuple_type.hpp"
@@ -155,7 +155,7 @@ class cow_tuple<Head, Tail...> {
     }
 
     static cow_tuple from(cow_ptr_type ptr,
-                          const util::fixed_vector<size_t, num_elements>& mv) {
+                          const util::limited_vector<size_t, num_elements>& mv) {
         return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
     }
 

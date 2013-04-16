@@ -33,7 +33,10 @@
 
 #include "cppa/option.hpp"
 #include "cppa/cow_tuple.hpp"
+
 #include "cppa/util/call.hpp"
+#include "cppa/util/limited_vector.hpp"
+
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
 
@@ -70,11 +73,11 @@ struct cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (any_tuple)>,
 template<typename Signature, typename... Ts>
 inline actor_ptr spawn_cl(const opencl::program& prog,
                           const char* fname,
-                          std::vector<size_t> dims,
-                          std::vector<size_t> offset = {},
-                          std::vector<size_t> local_dims = {}) {
+                          const opencl::dim_vec& dims,
+                          const opencl::dim_vec& offset = {},
+                          const opencl::dim_vec& local_dims = {}) {
     detail::cl_spawn_helper<Signature> f;
-    return util::call_mv(f, prog, fname, dims, offset, local_dims);
+    return f(prog, fname, dims, offset, local_dims);
 }
 
 /**
@@ -87,12 +90,12 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
 template<typename Signature, typename... Ts>
 inline actor_ptr spawn_cl(const char* source,
                           const char* fname,
-                          std::vector<size_t> dims,
-                          std::vector<size_t> offset = {},
-                          std::vector<size_t> local_dims = {}) {
+                          const opencl::dim_vec& dims,
+                          const opencl::dim_vec& offset = {},
+                          const opencl::dim_vec& local_dims = {}) {
     auto prog = opencl::program::create(source);
     detail::cl_spawn_helper<Signature> f;
-    return util::call_mv(f, prog, fname, dims, offset, local_dims);
+    return f(prog, fname, dims, offset, local_dims);
 }
 
 /**
@@ -109,14 +112,14 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
                           const char* fname,
                           MapArgs map_args,
                           MapResult map_result,
-                          std::vector<size_t> dims,
-                          std::vector<size_t> offset = {},
-                          std::vector<size_t> local_dims = {}) {
+                          const opencl::dim_vec& dims,
+                          const opencl::dim_vec& offset = {},
+                          const opencl::dim_vec& local_dims = {}) {
     typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
     typedef typename util::get_callable_trait<MapResult>::fun_type f1;
     detail::cl_spawn_helper<f0,f1> f;
-    return util::call_mv(f, prog, fname, dims, offset, local_dims,
-                         f0{map_args}, f1{map_result});
+    return f(prog, fname, dims, offset, local_dims,
+             f0{map_args}, f1{map_result});
 }
 
 /**
@@ -133,13 +136,13 @@ inline actor_ptr spawn_cl(const char* source,
                           const char* fun_name,
                           MapArgs map_args,
                           MapResult map_result,
-                          std::vector<size_t> dims,
-                          std::vector<size_t> offset = {},
-                          std::vector<size_t> local_dims = {}) {
+                          const opencl::dim_vec& dims,
+                          const opencl::dim_vec& offset = {},
+                          const opencl::dim_vec& local_dims = {}) {
     using std::move;
     return spawn_cl(opencl::program::create(source), fun_name,
                     move(map_args), move(map_result),
-                    move(dims), move(offset), move(local_dims));
+                    dims, offset, local_dims);
 }
 
 } // namespace cppa

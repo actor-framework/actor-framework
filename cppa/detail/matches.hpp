@@ -61,7 +61,7 @@ struct matcher<wildcard_position::nil, Tuple, T...> {
     }
 
     static inline bool tmatch(const Tuple& tup,
-                              util::fixed_vector<size_t, sizeof...(T)>& mv) {
+                              util::limited_vector<size_t, sizeof...(T)>& mv) {
         if (tmatch(tup)) {
             mv.resize(sizeof...(T));
             std::iota(mv.begin(), mv.end(), 0);
@@ -86,7 +86,7 @@ struct matcher<wildcard_position::trailing, Tuple, T...> {
     }
 
     static inline bool tmatch(const Tuple& tup,
-                             util::fixed_vector<size_t, size>& mv) {
+                             util::limited_vector<size_t, size>& mv) {
         if (tmatch(tup)) {
             mv.resize(size);
             std::iota(mv.begin(), mv.end(), 0);
@@ -101,7 +101,7 @@ struct matcher<wildcard_position::leading, Tuple, anything> {
     static inline bool tmatch(const Tuple&) {
         return true;
     }
-    static inline bool tmatch(const Tuple&, util::fixed_vector<size_t, 0>&) {
+    static inline bool tmatch(const Tuple&, util::limited_vector<size_t, 0>&) {
         return true;
     }
 };
@@ -123,7 +123,7 @@ struct matcher<wildcard_position::leading, Tuple, T...> {
     }
 
     static inline bool tmatch(const Tuple& tup,
-                              util::fixed_vector<size_t, size>& mv) {
+                              util::limited_vector<size_t, size>& mv) {
         if (tmatch(tup)) {
             mv.resize(size);
             std::iota(mv.begin(), mv.end(), tup.size() - size);
@@ -164,7 +164,7 @@ struct matcher<wildcard_position::in_between, Tuple, T...> {
     }
 
     static inline bool tmatch(const Tuple& tup,
-                              util::fixed_vector<size_t, size - 1>& mv) {
+                              util::limited_vector<size_t, size - 1>& mv) {
         if (tmatch(tup)) {
             // first range
             mv.resize(size - 1);
@@ -263,7 +263,7 @@ struct match_impl {
 
     template<size_t Size>
     static inline bool _(const Tuple& tup,
-                         util::fixed_vector<size_t, Size>& mv) {
+                         util::limited_vector<size_t, Size>& mv) {
         return matcher<PC, Tuple, Ts...>::tmatch(tup, mv);
     }
 };
@@ -279,7 +279,7 @@ struct match_impl<wildcard_position::multiple, Tuple, Ts...> {
 
     template<size_t Size>
     static inline bool _(const Tuple& tup,
-                         util::fixed_vector<size_t, Size>& mv) {
+                         util::limited_vector<size_t, Size>& mv) {
         return matcher<PC, Tuple, Ts...>::tmatch(tup, mv);
     }
 
@@ -311,7 +311,7 @@ bool matches(const any_tuple& tup) {
  */
 template<typename... Ts>
 bool matches(const any_tuple& tup,
-             util::fixed_vector<
+             util::limited_vector<
                                  size_t,
                                  util::tl_count_not<
                                      util::type_list<Ts...>,
@@ -329,7 +329,7 @@ inline bool matches(const any_tuple& tup, const util::type_list<Ts...>&) {
 
 template<typename... Ts>
 inline bool matches(const any_tuple& tup, const util::type_list<Ts...>&,
-                    util::fixed_vector<
+                    util::limited_vector<
                                         size_t,
                                         util::tl_count_not<
                                             util::type_list<Ts...>,

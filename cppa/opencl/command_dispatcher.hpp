@@ -38,15 +38,17 @@
 #include <functional>
 
 #include "cppa/option.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/cow_tuple.hpp"
-#include "cppa/logging.hpp"
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/opencl/actor_facade.hpp"
+
+#include "cppa/util/limited_vector.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -84,18 +86,18 @@ class command_dispatcher {
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
-                    std::vector<size_t> global_dims,
-                    std::vector<size_t> global_offs,
-                    std::vector<size_t> local_dims,
+                    const dim_vec& global_dims,
+                    const dim_vec& global_offs,
+                    const dim_vec& local_dims,
                     std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
     {
         return actor_facade<Ret (Args...)>::create(this,
                                                    prog,
                                                    kernel_name,
-                                                   std::move(global_dims),
-                                                   std::move(global_offs),
-                                                   std::move(local_dims),
+                                                   global_dims,
+                                                   global_offs,
+                                                   local_dims,
                                                    std::move(map_args),
                                                    std::move(map_result));
     }
@@ -103,9 +105,9 @@ class command_dispatcher {
     template<typename Ret, typename... Args>
     actor_ptr spawn(const program& prog,
                     const char* kernel_name,
-                    std::vector<size_t> global_dims,
-                    std::vector<size_t> global_offs = {},
-                    std::vector<size_t> local_dims = {})
+                    const dim_vec& global_dims,
+                    const dim_vec& global_offs = {},
+                    const dim_vec& local_dims = {})
     {
         std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)>
             map_args = [] (any_tuple msg) {
@@ -131,20 +133,20 @@ class command_dispatcher {
         device_ptr dev_id;
         size_t max_itms_per_grp;
         cl_uint max_dim;
-        std::vector<size_t> max_itms_per_dim;
+        dim_vec max_itms_per_dim;
 
         device_info(unsigned id,
                     command_queue_ptr queue,
                     device_ptr device_id,
                     size_t max_itms_per_grp,
                     cl_uint max_dim,
-                    std::vector<size_t> max_itms_per_dim)
+                    const dim_vec& max_itms_per_dim)
             : id(id)
             , cmd_queue(queue)
             , dev_id(device_id)
             , max_itms_per_grp(max_itms_per_grp)
             , max_dim(max_dim)
-            , max_itms_per_dim(std::move(max_itms_per_dim)) { }
+            , max_itms_per_dim(max_itms_per_dim) { }
     };
 
     typedef intrusive::blocking_single_reader_queue<command,dereferencer>

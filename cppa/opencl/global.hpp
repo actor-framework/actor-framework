@@ -34,6 +34,8 @@
 
 #include <string>
 
+#include "cppa/util/limited_vector.hpp"
+
 #if defined __APPLE__ || defined(MACOSX)
     #include <OpenCL/opencl.h>
 #else
@@ -41,6 +43,11 @@
 #endif
 
 namespace cppa { namespace opencl {
+
+/**
+ * @brief A vector of up to three elements used for OpenCL dimensions.
+ */
+typedef util::limited_vector<size_t,3> dim_vec;
 
 std::string get_opencl_error(cl_int err);
 

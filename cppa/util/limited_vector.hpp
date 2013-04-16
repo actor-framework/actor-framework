@@ -47,7 +47,7 @@ namespace cppa { namespace util {
  *          does <b>not</b> call constructors or destructors properly.
  */
 template<typename T, size_t MaxSize>
-class fixed_vector {
+class limited_vector {
 
     //static_assert(std::is_arithmetic<T>::value || std::is_pointer<T>::value,
     //              "T must be an arithmetic or pointer type");
@@ -72,13 +72,17 @@ class fixed_vector {
     typedef std::reverse_iterator<iterator>         reverse_iterator;
     typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
 
-    inline fixed_vector() : m_size(0) { }
+    inline limited_vector() : m_size(0) { }
 
-    fixed_vector(const fixed_vector& other) : m_size(other.m_size) {
+    limited_vector(size_t initial_size) : m_size(initial_size) {
+        std::fill_n(begin(), initial_size, 0);
+    }
+
+    limited_vector(const limited_vector& other) : m_size(other.m_size) {
         std::copy(other.begin(), other.end(), begin());
     }
 
-    fixed_vector& operator=(const fixed_vector& other) {
+    limited_vector& operator=(const limited_vector& other) {
         resize(other.size());
         std::copy(other.begin(), other.end(), begin());
         return *this;
@@ -89,7 +93,7 @@ class fixed_vector {
         m_size = s;
     }
 
-    fixed_vector(std::initializer_list<T> init) : m_size(init.size()) {
+    limited_vector(std::initializer_list<T> init) : m_size(init.size()) {
         CPPA_REQUIRE(init.size() <= MaxSize);
         std::copy(init.begin(), init.end(), begin());
     }
@@ -244,7 +248,7 @@ class fixed_vector {
     inline void insert(iterator pos, InputIterator first, InputIterator last) {
         auto num_elements = std::distance(first, last);
         if ((size() + num_elements) > MaxSize) {
-            throw std::length_error("fixed_vector::insert: too much elements");
+            throw std::length_error("limited_vector::insert: too much elements");
         }
         if (pos == end()) {
             resize(size() + num_elements);

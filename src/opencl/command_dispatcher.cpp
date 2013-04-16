@@ -241,7 +241,7 @@ void command_dispatcher::initialize() {
                 CPPA_LOG_ERROR(oss.str());
                 throw runtime_error(oss.str());
             }
-            vector<size_t> max_work_items_per_dim(max_work_item_dimensions);
+            dim_vec max_work_items_per_dim(max_work_item_dimensions);
             err = clGetDeviceInfo(device.get(),
                                   CL_DEVICE_MAX_WORK_ITEM_SIZES,
                                   sizeof(size_t)*max_work_item_dimensions,
@@ -261,7 +261,7 @@ void command_dispatcher::initialize() {
                                  device,
                                  max_work_group_size,
                                  max_work_item_dimensions,
-                                 move(max_work_items_per_dim)};
+                                 max_work_items_per_dim};
             m_devices.push_back(move(dev_info));
         }
     }

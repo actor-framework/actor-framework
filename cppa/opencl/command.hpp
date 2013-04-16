@@ -70,9 +70,9 @@ class command_impl : public command {
     command_impl(response_handle handle,
                  kernel_ptr kernel,
                  std::vector<mem_ptr> arguments,
-                 const std::vector<size_t>& global_dimensions,
-                 const std::vector<size_t>& global_offsets,
-                 const std::vector<size_t>& local_dimensions,
+                 const dim_vec& global_dimensions,
+                 const dim_vec& global_offsets,
+                 const dim_vec& local_dimensions,
                  const std::function<any_tuple(T&)>& map_result)
         : m_number_of_values(1)
         , m_handle(handle)
@@ -84,9 +84,7 @@ class command_impl : public command {
         , m_map_result(map_result)
     {
         m_kernel_event.adopt(cl_event());
-        std::for_each(m_global_dimensions.begin(),
-                      m_global_dimensions.end(),
-                      [&](const size_t& s) { m_number_of_values *= s; });
+        for (auto s : m_global_dimensions) m_number_of_values *= s;
     }
 
     void enqueue (command_queue_ptr queue) {
@@ -97,20 +95,23 @@ class command_impl : public command {
 
         auto ptr = m_kernel_event.get();
 
+        auto data_or_nullptr = [](const dim_vec& vec) {
+            return vec.empty() ? nullptr : vec.data();
+        };
+
         /* enqueue kernel */
         err = clEnqueueNDRangeKernel(m_queue.get(),
                                      m_kernel.get(),
                                      m_global_dimensions.size(),
-                                     m_global_offsets.data(),
-                                     m_global_dimensions.data(),
-                                     m_local_dimensions.data(),
+                                     data_or_nullptr(m_global_offsets),
+                                     data_or_nullptr(m_global_dimensions),
+                                     data_or_nullptr(m_local_dimensions),
                                      0,
                                      nullptr,
                                      &ptr);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clEnqueueNDRangeKernel: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            throw std::runtime_error("clEnqueueNDRangeKernel: "
+                                     + get_opencl_error(err));
         }
         err = clSetEventCallback(ptr,
                                  CL_COMPLETE,
@@ -124,9 +125,8 @@ class command_impl : public command {
                                  },
                                  this);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("[!!!] clSetEventCallback: '"
-                                     + get_opencl_error(err)
-                                     + "'.");
+            throw std::runtime_error("clSetEventCallback: "
+                                     + get_opencl_error(err));
         }
     }
 
@@ -138,9 +138,9 @@ class command_impl : public command {
     event_ptr       m_kernel_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
-    std::vector<size_t>  m_global_dimensions;
-    std::vector<size_t>  m_global_offsets;
-    std::vector<size_t>  m_local_dimensions;
+    dim_vec  m_global_dimensions;
+    dim_vec  m_global_offsets;
+    dim_vec  m_local_dimensions;
     std::function<any_tuple (T&)> m_map_result;
 
     void handle_results () {
@@ -166,7 +166,6 @@ class command_impl : public command {
         }
         auto mapped_result = m_map_result(result);
         reply_tuple_to(m_handle, mapped_result);
-        //reply_to(m_handle, results);
     }
 };
 

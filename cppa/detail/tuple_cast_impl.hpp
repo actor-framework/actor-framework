@@ -57,7 +57,7 @@ struct tuple_cast_impl {
     static constexpr size_t first_wc =
             static_cast<size_t>(
                 util::tl_find<util::type_list<T...>, anything>::value);
-    typedef util::fixed_vector<size_t, size> mapping_vector;
+    typedef util::limited_vector<size_t, size> mapping_vector;
     static inline option<Result> safe(any_tuple& tup) {
         mapping_vector mv;
         if (matches<T...>(tup, mv)) return {Result::from(std::move(tup.vals()),

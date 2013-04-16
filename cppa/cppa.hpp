@@ -141,6 +141,9 @@
  * @namespace cppa::intrusive
  * @brief Contains intrusive container implementations.
  *
+ * @namespace cppa::opencl
+ * @brief Contains all classes of libcppa's OpenCL binding (optional).
+ *
  * @namespace cppa::network
  * @brief Contains all network related classes.
  *

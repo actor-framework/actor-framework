@@ -40,7 +40,7 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/fixed_vector.hpp"
+#include "cppa/util/limited_vector.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
@@ -58,7 +58,7 @@ class decorated_tuple : public abstract_tuple {
 
  public:
 
-    typedef util::fixed_vector<size_t, sizeof...(Ts)> vector_type;
+    typedef util::limited_vector<size_t, sizeof...(Ts)> vector_type;
 
     typedef cow_ptr<abstract_tuple> cow_pointer_type;
 
