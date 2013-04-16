@@ -45,7 +45,7 @@
 
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/scope_guard.hpp"
+#include "cppa/util/limited_vector.hpp"
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
@@ -75,20 +75,27 @@ class actor_facade<Ret(Args...)> : public actor {
     static actor_facade* create(command_dispatcher* dispatcher,
                                const program& prog,
                                const char* kernel_name,
-                               std::vector<size_t> global_dimensions,
-                               std::vector<size_t> global_offsets,
-                               std::vector<size_t> local_dimensions,
+                               const dim_vec& global_dims,
+                               const dim_vec& offsets,
+                               const dim_vec& local_dims,
                                arg_mapping map_args,
                                result_mapping map_result) {
-        if(local_dimensions .size() > 3 ||
-           global_dimensions.size() > 3 ||
-           global_dimensions.empty()) {
-            std::ostringstream oss;
-            oss << "OpenCL kernel allows a maximum of 3 dimensions"
-                   " and needs at least 1 global dimension.";
-            CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)), oss.str());
-            throw std::runtime_error(oss.str());
+        if (global_dims.empty()) {
+            auto str = "OpenCL kernel needs at least 1 global dimension.";
+            CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)), str);
+            throw std::runtime_error(str);
         }
+        auto check_vec = [&](const dim_vec& vec, const char* name) {
+            if (!vec.empty() && vec.size() != global_dims.size()) {
+                std::ostringstream oss;
+                oss << name << " vector is not empty, but "
+                    << "its size differs from global dimensions vector's size";
+                CPPA_LOGM_ERROR(detail::demangle<actor_facade>(), oss.str());
+                throw std::runtime_error(oss.str());
+            }
+        };
+        check_vec(offsets, "offsets");
+        check_vec(local_dims, "local dimensions");
         cl_int err{0};
         kernel_ptr kernel;
         kernel.adopt(clCreateKernel(prog.m_program.get(),
@@ -105,9 +112,9 @@ class actor_facade<Ret(Args...)> : public actor {
         return new actor_facade<Ret (Args...)>{dispatcher,
                                                kernel,
                                                prog,
-                                               std::move(global_dimensions),
-                                               std::move(global_offsets),
-                                               std::move(local_dimensions),
+                                               std::move(global_dims),
+                                               std::move(offsets),
+                                               std::move(local_dims),
                                                std::move(map_args),
                                                std::move(map_result)};
     }
@@ -130,18 +137,18 @@ class actor_facade<Ret(Args...)> : public actor {
     actor_facade(command_dispatcher* dispatcher,
                  kernel_ptr kernel,
                  const program& prog,
-                 std::vector<size_t> global_dimensions,
-                 std::vector<size_t> global_offsets,
-                 std::vector<size_t> local_dimensions,
+                 const dim_vec& global_dimensions,
+                 const dim_vec& global_offsets,
+                 const dim_vec& local_dimensions,
                  arg_mapping map_args,
                  result_mapping map_result)
       : m_kernel(kernel)
       , m_program(prog.m_program)
       , m_context(prog.m_context)
       , m_dispatcher(dispatcher)
-      , m_global_dimensions(std::move(global_dimensions))
-      , m_global_offsets(std::move(global_offsets))
-      , m_local_dimensions(std::move(local_dimensions))
+      , m_global_dimensions(global_dimensions)
+      , m_global_offsets(global_offsets)
+      , m_local_dimensions(local_dimensions)
       , m_map_args(std::move(map_args))
       , m_map_result(std::move(map_result))
     {
@@ -185,15 +192,15 @@ class actor_facade<Ret(Args...)> : public actor {
     program_ptr m_program;
     context_ptr m_context;
     command_dispatcher* m_dispatcher;
-    std::vector<size_t> m_global_dimensions;
-    std::vector<size_t> m_global_offsets;
-    std::vector<size_t> m_local_dimensions;
+    dim_vec m_global_dimensions;
+    dim_vec m_global_offsets;
+    dim_vec m_local_dimensions;
     arg_mapping m_map_args;
     result_mapping m_map_result;
 
     void add_arguments_to_kernel_rec(args_vec& arguments,
-                                            cl_context,
-                                            cl_kernel kernel) {
+                                     cl_context,
+                                     cl_kernel kernel) {
         cl_int err{0};
         for(unsigned long i{1}; i < arguments.size(); ++i) {
             err = clSetKernelArg(kernel,
@@ -225,10 +232,10 @@ class actor_facade<Ret(Args...)> : public actor {
 
     template<typename T0, typename... Ts>
     void add_arguments_to_kernel_rec(args_vec& arguments,
-                                            cl_context context,
-                                            cl_kernel kernel,
-                                            T0& arg0,
-                                            Ts&... args) {
+                                     cl_context context,
+                                     cl_kernel kernel,
+                                     T0& arg0,
+                                     Ts&... args) {
         cl_int err{0};
         auto buf = clCreateBuffer(context,
                                   CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
