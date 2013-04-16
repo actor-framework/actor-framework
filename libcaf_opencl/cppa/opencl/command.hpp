@@ -156,7 +156,7 @@ class command_impl : public command {
                                   sizeof(typename T::value_type) * m_number_of_values,
                                   result.data(),
                                   0,
-                                  NULL,
+                                  nullptr,
                                   &read_event);
         clReleaseEvent(read_event);
         if (err != CL_SUCCESS) {
