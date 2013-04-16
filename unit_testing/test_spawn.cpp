@@ -702,6 +702,7 @@ int main() {
                 self->quit();
             }
         );
+        self->exec_behavior_stack();
         CPPA_ERROR("line " << __LINE__ << " should be unreachable");
     }
     catch (actor_exited&) {

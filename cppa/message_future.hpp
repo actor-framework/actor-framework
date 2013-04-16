@@ -36,6 +36,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/message_id.hpp"
@@ -67,6 +68,7 @@ class message_future {
                 behavior cpy = ref;
                 ref = cpy.add_continuation(std::move(fun));
             }
+            else CPPA_LOG_WARNING(".continue_with: failed to add continuation");
         }
 
      private:
