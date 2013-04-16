@@ -94,7 +94,7 @@ program program::create(const char* kernel_source) {
             << get_opencl_error(err)
             << "'. Build log: "
             << build_log.data();
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGM_ERROR(detail::demangle<program>(), oss.str());
         throw std::runtime_error(oss.str());
     }
     else {

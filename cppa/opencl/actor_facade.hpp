@@ -86,7 +86,7 @@ class actor_facade<Ret(Args...)> : public actor {
             std::ostringstream oss;
             oss << "OpenCL kernel allows a maximum of 3 dimensions"
                    " and needs at least 1 global dimension.";
-            CPPA_LOG_ERROR(oss.str());
+            CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)), oss.str());
             throw std::runtime_error(oss.str());
         }
         cl_int err{0};
@@ -99,7 +99,7 @@ class actor_facade<Ret(Args...)> : public actor {
             oss << "clCreateKernel: '"
                 << get_opencl_error(err)
                 << "'.";
-            CPPA_LOG_ERROR(oss.str());
+            CPPA_LOGM_ERROR(detail::demangle<actor_facade>(), oss.str());
             throw std::runtime_error(oss.str());
         }
         return new actor_facade<Ret (Args...)>{dispatcher,
@@ -113,14 +113,14 @@ class actor_facade<Ret(Args...)> : public actor {
     }
 
     void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) {
-        CPPA_LOG_TRACE("actor_facade::sync_enqueue()");
+        CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, id, indices);
     }
 
 
     void enqueue(const actor_ptr& sender, any_tuple msg) {
-        CPPA_LOG_TRACE("actor_facade::enqueue()");
+        CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, message_id{}, indices);
     }
@@ -145,7 +145,7 @@ class actor_facade<Ret(Args...)> : public actor {
       , m_map_args(std::move(map_args))
       , m_map_result(std::move(map_result))
     {
-        CPPA_LOG_TRACE("new actor_facde with ID " << this->id());
+        CPPA_LOG_TRACE("id: " << this->id());
     }
 
     template<long... Is>
