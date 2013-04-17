@@ -98,7 +98,6 @@ void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
 }
 
 void client_repl(const string& host, uint16_t port) {
-    typedef cow_tuple<atom_value, int, int> request;
     // keeps track of requests and tries to reconnect on server failures
     aout << "Usage:\n"
             "quit                   Quit the program\n"
