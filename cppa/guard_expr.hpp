@@ -659,13 +659,6 @@ typename ge_result<
 >::type
 ge_invoke_any(const guard_expr<OP, First, Second>& ge,
               const any_tuple& tup) {
-    typedef typename ge_result<
-                OP, First, Second,
-                typename detail::tdata_from_type_list<
-                    typename util::tl_filter_not<TupleTypes, is_anything>::type
-                >::type
-            >::type
-            result_type;
     using namespace util;
     typename std::conditional<
                 std::is_same<typename TupleTypes::back,anything>::value,
