@@ -31,6 +31,7 @@
 #ifndef CPPA_FIXED_VECTOR_HPP
 #define CPPA_FIXED_VECTOR_HPP
 
+#include <cstddef>
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
