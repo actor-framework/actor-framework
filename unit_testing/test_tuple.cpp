@@ -149,9 +149,6 @@ int main() {
 
     static_assert(std::is_same<zz3, zz9>::value, "group_by failed");
 
-    typedef util::type_list<int, int> token1;
-    typedef util::type_list<float> token2;
-
     std::string invoked;
 
     auto f00 = on<int, int>() >> [&]() { invoked = "f00"; };
@@ -250,19 +247,21 @@ int main() {
     CPPA_CHECK(f10("a", static_cast<const std::string&>(foobar), "b", "c"));
     //CPPA_CHECK(f10(const static_cast<std::string&>(foobar), "b", "c"));
 
+    auto on_int = on<int>();
+
     int f11_fun = 0;
     auto f11 = (
-        on<int>().when(_x1 == 1) >> [&]() { f11_fun =  1; },
-        on<int>().when(_x1 == 2) >> [&]() { f11_fun =  2; },
-        on<int>().when(_x1 == 3) >> [&]() { f11_fun =  3; },
-        on<int>().when(_x1 == 4) >> [&]() { f11_fun =  4; },
-        on<int>().when(_x1 == 5) >> [&]() { f11_fun =  5; },
-        on<int>().when(_x1 == 6) >> [&]() { f11_fun =  6; },
-        on<int>().when(_x1 == 7) >> [&]() { f11_fun =  7; },
-        on<int>().when(_x1 == 8) >> [&]() { f11_fun =  8; },
-        on<int>().when(_x1 >= 9) >> [&]() { f11_fun =  9; },
-        on(str2int)              >> [&]() { f11_fun = 10; },
-        on<std::string>()        >> [&]() { f11_fun = 11; }
+        on_int.when(_x1 == 1) >> [&] { f11_fun =  1; },
+        on_int.when(_x1 == 2) >> [&] { f11_fun =  2; },
+        on_int.when(_x1 == 3) >> [&] { f11_fun =  3; },
+        on_int.when(_x1 == 4) >> [&] { f11_fun =  4; },
+        on_int.when(_x1 == 5) >> [&] { f11_fun =  5; },
+        on_int.when(_x1 == 6) >> [&] { f11_fun =  6; },
+        on_int.when(_x1 == 7) >> [&] { f11_fun =  7; },
+        on_int.when(_x1 == 8) >> [&] { f11_fun =  8; },
+        on_int.when(_x1 >= 9) >> [&] { f11_fun =  9; },
+        on(str2int)           >> [&] { f11_fun = 10; },
+        on<std::string>()     >> [&] { f11_fun = 11; }
     );
 
     CPPA_CHECK(f11(1));
