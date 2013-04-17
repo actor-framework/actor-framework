@@ -106,18 +106,18 @@ class logging {
 
 #define CPPA_VOID_STMT static_cast<void>(0)
 
+#define CPPA_LIF(stmt, logstmt) if (stmt) { logstmt ; } CPPA_VOID_STMT
+
 #ifndef CPPA_LOG_LEVEL
 #   define CPPA_LOG(classname, funname, level, message)                        \
         std::cerr << level << " [" << classname << "::" << funname << "]: "    \
                   << message << std::endl;
-#   define CPPA_LIF(stmt, logstmt) CPPA_VOID_STMT
 #else
 #   define CPPA_LOG(classname, funname, level, message) {                      \
         std::ostringstream scoped_oss; scoped_oss << message;                  \
         ::cppa::get_logger()->log(                                             \
             level, classname, funname, __FILE__, __LINE__, scoped_oss.str());  \
     } CPPA_VOID_STMT
-#   define CPPA_LIF(stmt, logstmt) if (stmt) { logstmt ; } CPPA_VOID_STMT
 #endif
 
 #define CPPA_CLASS_NAME ::cppa::detail::demangle(typeid(*this)).c_str()
@@ -138,12 +138,22 @@ class logging {
 #if CPPA_LOG_LEVEL > 1
 #   undef CPPA_LOGC_INFO
 #   define CPPA_LOGC_INFO(cname, fname, msg) CPPA_LOG(cname, fname, "INFO ", msg)
+#   define CPPA_LOG_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_INFO(msg))
+#   define CPPA_LOGF_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_INFO(msg))
+#else
+#   define CPPA_LOG_INFO_IF(unused1,unused2) CPPA_VOID_STMT
+#   define CPPA_LOGF_INFO_IF(unused1,unused2) CPPA_VOID_STMT
 #endif
 
 // enable debug messages
 #if CPPA_LOG_LEVEL > 2
 #   undef CPPA_LOGC_DEBUG
 #   define CPPA_LOGC_DEBUG(cname, fname, msg) CPPA_LOG(cname, fname, "DEBUG", msg)
+#   define CPPA_LOG_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_DEBUG(msg))
+#   define CPPA_LOGF_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_DEBUG(msg))
+#else
+#   define CPPA_LOG_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
+#   define CPPA_LOGF_DEBUG_IF(unused1,unused2) CPPA_VOID_STMT
 #endif
 
 // enable trace messages
@@ -192,23 +202,19 @@ class logging {
 
 // convenience macros for warnings
 #define CPPA_LOG_WARNING(msg) CPPA_LOGM_WARNING(CPPA_CLASS_NAME, msg)
-#define CPPA_LOG_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_WARNING(msg))
 #define CPPA_LOGF_WARNING(msg) CPPA_LOGM_WARNING("NONE", msg)
-#define CPPA_LOGF_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_WARNING(msg))
 #define CPPA_LOGM_WARNING(cname, msg) CPPA_LOGC_WARNING(cname, __FUNCTION__, msg)
+#define CPPA_LOG_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_WARNING(msg))
+#define CPPA_LOGF_WARNING_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_WARNING(msg))
 
 // convenience macros for info messages
 #define CPPA_LOG_INFO(msg) CPPA_LOGM_INFO(CPPA_CLASS_NAME, msg)
-#define CPPA_LOG_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_INFO(msg))
 #define CPPA_LOGF_INFO(msg) CPPA_LOGM_INFO("NONE", msg)
-#define CPPA_LOGF_INFO_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_INFO(msg))
 #define CPPA_LOGM_INFO(cname, msg) CPPA_LOGC_INFO(cname, __FUNCTION__, msg)
 
 // convenience macros for debug messages
 #define CPPA_LOG_DEBUG(msg) CPPA_LOGM_DEBUG(CPPA_CLASS_NAME, msg)
-#define CPPA_LOG_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOG_DEBUG(msg))
 #define CPPA_LOGF_DEBUG(msg) CPPA_LOGM_DEBUG("NONE", msg)
-#define CPPA_LOGF_DEBUG_IF(stmt,msg) CPPA_LIF((stmt), CPPA_LOGF_DEBUG(msg))
 #define CPPA_LOGM_DEBUG(cname, msg) CPPA_LOGC_DEBUG(cname, __FUNCTION__, msg)
 
 // convenience macros for trace messages
