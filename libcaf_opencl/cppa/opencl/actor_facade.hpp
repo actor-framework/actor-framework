@@ -103,9 +103,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                     &err));
         if (err != CL_SUCCESS) {
             std::ostringstream oss;
-            oss << "clCreateKernel: '"
-                << get_opencl_error(err)
-                << "'.";
+            oss << "clCreateKernel: " << get_opencl_error(err);
             CPPA_LOGM_ERROR(detail::demangle<actor_facade>(), oss.str());
             throw std::runtime_error(oss.str());
         }

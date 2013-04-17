@@ -36,8 +36,6 @@
 
 namespace cppa { namespace opencl {
 
-//program::program() : m_context(nullptr), pptr(nullptr) { }
-
 program::program(context_ptr context, program_ptr program)
 : m_context(std::move(context)), m_program(std::move(program)) { }
 
@@ -56,9 +54,8 @@ program program::create(const char* kernel_source) {
                                          &err));
 
     if (err != CL_SUCCESS) {
-        throw std::runtime_error("clCreateProgramWithSource: '"
-                                 + get_opencl_error(err)
-                                 + "'.");
+        throw std::runtime_error("clCreateProgramWithSource: "
+                                 + get_opencl_error(err));
     }
 
     // build programm from program object
@@ -90,10 +87,8 @@ program program::create(const char* kernel_source) {
                                     nullptr);
         build_log[ret_val_size] = '\0';
         std::ostringstream oss;
-        oss << "clBuildProgram: '"
-            << get_opencl_error(err)
-            << "'. Build log: "
-            << build_log.data();
+        oss << "clBuildProgram: " << get_opencl_error(err)
+            << ", build log: "    << build_log.data();
         CPPA_LOGM_ERROR(detail::demangle<program>(), oss.str());
         throw std::runtime_error(oss.str());
     }
@@ -124,7 +119,8 @@ program program::create(const char* kernel_source) {
                                     build_log.data(),
                                     nullptr);
         build_log[ret_val_size] = '\0';
-        CPPA_LOG_DEBUG("clBuildProgram log: '" << build_log.data());
+        CPPA_LOG_DEBUG("clBuildProgram build log: "
+                       << build_log.data());
 #       endif
     }
     return {cptr, pptr};
