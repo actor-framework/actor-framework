@@ -60,7 +60,7 @@ class command_dummy : public command {
 
  public:
 
-    void enqueue(command_queue_ptr) { }
+    void enqueue(command_queue_ptr) override { }
 };
 
 template<typename T>
@@ -88,7 +88,7 @@ class command_impl : public command {
     {
     }
 
-    void enqueue (command_queue_ptr queue) {
+    void enqueue (command_queue_ptr queue) override {
         CPPA_LOG_TRACE("command::enqueue()");
         this->ref();
         cl_int err{0};
