@@ -723,6 +723,7 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
         std::string error = "uniform_type_info::by_type_info(): ";
         error += detail::to_uniform_name(tinf);
         error += " is an unknown typeid name";
+        CPPA_LOGM_ERROR("cppa::uniform_type_info", error);
         throw std::runtime_error(error);
     }
     return result;
