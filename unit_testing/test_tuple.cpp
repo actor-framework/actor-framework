@@ -36,6 +36,7 @@ using std::endl;
 
 using namespace cppa;
 using namespace cppa::detail;
+using namespace cppa::placeholders;
 
 namespace { std::atomic<size_t> s_expensive_copies; }
 
@@ -76,37 +77,6 @@ option<int> str2int(const std::string& str) {
     return {};
 }
 
-typedef util::type_list<int, int, int, float, int, float, float> zz0;
-
-typedef util::type_list<util::type_list<int, int, int>,
-                        util::type_list<float>,
-                        util::type_list<int>,
-                        util::type_list<float, float> > zz8;
-
-typedef util::type_list<
-            util::type_list<
-                util::type_pair<std::integral_constant<size_t,0>, int>,
-                util::type_pair<std::integral_constant<size_t,1>, int>,
-                util::type_pair<std::integral_constant<size_t,2>, int>
-            >,
-            util::type_list<
-                util::type_pair<std::integral_constant<size_t,3>, float>
-            >,
-            util::type_list<
-                util::type_pair<std::integral_constant<size_t,4>, int>
-            >,
-            util::type_list<
-                util::type_pair<std::integral_constant<size_t,5>, float>,
-                util::type_pair<std::integral_constant<size_t,6>, float>
-            >
-        >
-        zz9;
-
-
-template<typename First, typename Second>
-struct is_same_ : std::is_same<typename First::second, typename Second::second> {
-};
-
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
     if ( ( FunName Args ) == false || invoked != #FunName ) {                  \
         CPPA_ERROR("invocation of " #FunName " failed");                       \
@@ -129,25 +99,57 @@ struct dummy_receiver : event_based_actor {
     }
 };
 
-int main() {
-    CPPA_TEST(test_tuple);
+template<typename First, typename Second>
+struct same_second_type : std::is_same<typename First::second, typename Second::second> { };
 
-    announce<expensive_copy_struct>(&expensive_copy_struct::value);
+void check_type_list() {
+    using namespace cppa::util;
 
+    typedef type_list<int,int,int,float,int,float,float> zz0;
+
+    typedef type_list<type_list<int,int,int>,
+                      type_list<float>,
+                      type_list<int>,
+                      type_list<float,float>> zz8;
+
+    typedef type_list<
+                type_list<
+                    type_pair<std::integral_constant<size_t,0>,int>,
+                    type_pair<std::integral_constant<size_t,1>,int>,
+                    type_pair<std::integral_constant<size_t,2>,int>
+                >,
+                type_list<
+                    type_pair<std::integral_constant<size_t,3>,float>
+                >,
+                type_list<
+                    type_pair<std::integral_constant<size_t,4>,int>
+                >,
+                type_list<
+                    type_pair<std::integral_constant<size_t,5>,float>,
+                    type_pair<std::integral_constant<size_t,6>,float>
+                >
+            >
+            zz9;
+
+    typedef typename tl_group_by<zz0,std::is_same>::type zz1;
+
+    typedef typename tl_zip_with_index<zz0>::type zz2;
+
+    static_assert(std::is_same<zz1,zz8>::value, "tl_group_by failed");
+
+    typedef typename tl_group_by<zz2,same_second_type>::type zz3;
+
+    static_assert(std::is_same<zz3,zz9>::value, "tl_group_by failed");
+}
+
+void check_default_ctors() {
+    CPPA_PRINT(__func__);
     cow_tuple<int> zero;
     CPPA_CHECK_EQUAL(get<0>(zero), 0);
+}
 
-    using namespace cppa::placeholders;
-
-    typedef typename util::tl_group_by<zz0, std::is_same>::type zz1;
-
-    typedef typename util::tl_zip_with_index<zz0>::type zz2;
-
-    static_assert(std::is_same<zz1, zz8>::value, "group_by failed");
-
-    typedef typename util::tl_group_by<zz2, is_same_>::type zz3;
-
-    static_assert(std::is_same<zz3, zz9>::value, "group_by failed");
+void check_guards() {
+    CPPA_PRINT(__func__);
 
     std::string invoked;
 
@@ -245,8 +247,10 @@ int main() {
     std::string foobar = "foobar";
     CPPA_CHECK(f10(foobar, "b", "c"));
     CPPA_CHECK(f10("a", static_cast<const std::string&>(foobar), "b", "c"));
-    //CPPA_CHECK(f10(const static_cast<std::string&>(foobar), "b", "c"));
+}
 
+void check_many_cases() {
+    CPPA_PRINT(__func__);
     auto on_int = on<int>();
 
     int f11_fun = 0;
@@ -276,6 +280,11 @@ int main() {
     CPPA_CHECK_EQUAL(f11_fun, 11);
     CPPA_CHECK(f11("10"));
     CPPA_CHECK_EQUAL(f11_fun, 10);
+}
+
+void check_wildcards() {
+    CPPA_PRINT(__func__);
+    std::string invoked;
 
     auto f12 = (
         on<int, anything, int>().when(_x1 < _x2) >> [&](int a, int b) {
@@ -389,8 +398,10 @@ int main() {
             CPPA_CHECK_EQUAL(&get<1>(*opt3), at1.at(3));
         }
     }
+}
 
-    CPPA_PRINT("check correct tuple move operations");
+void check_move_ops() {
+    CPPA_PRINT(__func__);
     send(spawn<dummy_receiver>(), expensive_copy_struct());
     receive (
         on_arg_match >> [&](expensive_copy_struct& ecs) {
@@ -398,6 +409,16 @@ int main() {
         }
     );
     CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
+}
+
+int main() {
+    CPPA_TEST(test_tuple);
+    announce<expensive_copy_struct>(&expensive_copy_struct::value);
+    check_type_list();
+    check_default_ctors();
+    check_guards();
+    check_wildcards();
+    check_move_ops();
     await_all_others_done();
     shutdown();
     return CPPA_TEST_RESULT();
