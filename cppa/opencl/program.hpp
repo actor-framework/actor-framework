@@ -42,6 +42,9 @@ namespace cppa { namespace opencl {
 template<typename Signature>
 class actor_facade;
 
+/**
+ * @brief A wrapper for OpenCL's cl_program.
+ */
 class program {
 
     template<typename Signature>
@@ -49,11 +52,15 @@ class program {
 
  public:
 
+    /**
+     * @brief Factory method, that creates a cppa::opencl::program
+     *        from a given @p kernel_source.
+     * @returns A program object.
+     */
     static program create(const char* kernel_source);
 
  private:
 
-    //program();
     program(context_ptr context, program_ptr program);
 
     context_ptr m_context;
