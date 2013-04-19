@@ -108,12 +108,12 @@ class threaded : public Base {
 
     typedef threaded combined_type;
 
-    virtual void enqueue(const actor_ptr& sender, any_tuple msg) {
+    virtual void enqueue(const actor_ptr& sender, any_tuple msg) override {
         auto ptr = this->new_mailbox_element(sender, std::move(msg));
         push_back(ptr);
     }
 
-    virtual void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) {
+    virtual void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) override {
         auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
         if (!push_back(ptr)) {
             detail::sync_request_bouncer f{this->exit_reason()};
@@ -136,8 +136,6 @@ class threaded : public Base {
     mailbox_element* await_message(const timeout_type& abs_time) {
         return try_pop(abs_time);
     }
-
- private:
 
     bool timed_wait_for_data(const timeout_type& abs_time) {
         CPPA_REQUIRE(not this->m_mailbox.closed());

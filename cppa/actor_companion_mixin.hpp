@@ -127,41 +127,41 @@ class actor_companion_mixin : public Base {
             cleanup(exit_reason::normal);
         }
 
-        void enqueue(const actor_ptr& sender, any_tuple msg) {
+        void enqueue(const actor_ptr& sender, any_tuple msg) override {
             util::shared_lock_guard<lock_type> guard(m_lock);
             if (m_parent) push_message(sender, std::move(msg));
         }
 
         void sync_enqueue(const actor_ptr& sender,
                           message_id id,
-                          any_tuple msg) {
+                          any_tuple msg) override {
             util::shared_lock_guard<lock_type> guard(m_lock);
             if (m_parent) push_message(sender, std::move(msg), id);
         }
 
-        bool initialized() const { return true; }
+        bool initialized() const override { return true; }
 
-        void quit(std::uint32_t) {
+        void quit(std::uint32_t) override {
             throw std::runtime_error("Using actor_companion_mixin::quit "
                                      "is prohibited; use Qt's widget "
                                      "management instead.");
         }
 
-        void dequeue(behavior&) {
+        void dequeue(behavior&) override {
             throw_no_recv();
         }
 
-        void dequeue_response(behavior&, message_id) {
+        void dequeue_response(behavior&, message_id) override {
             throw_no_recv();
         }
 
-        void become_waiting_for(behavior, message_id) {
+        void become_waiting_for(behavior, message_id) override {
             throw_no_become();
         }
 
      protected:
 
-        void do_become(behavior&&, bool) { throw_no_become(); }
+        void do_become(behavior&&, bool) override { throw_no_become(); }
 
      private:
 

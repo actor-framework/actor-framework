@@ -119,13 +119,13 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     virtual void run_detached();
 
-    void enqueue(const actor_ptr&, any_tuple);
+    void enqueue(const actor_ptr&, any_tuple) override;
 
-    bool chained_enqueue(const actor_ptr&, any_tuple);
+    bool chained_enqueue(const actor_ptr&, any_tuple) override;
 
-    void sync_enqueue(const actor_ptr&, message_id, any_tuple);
+    void sync_enqueue(const actor_ptr&, message_id, any_tuple) override;
 
-    bool chained_sync_enqueue(const actor_ptr&, message_id, any_tuple);
+    bool chained_sync_enqueue(const actor_ptr&, message_id, any_tuple) override;
 
     void request_timeout(const util::duration& d);
 
@@ -162,7 +162,7 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     scheduled_actor(actor_state init_state, bool enable_chained_send);
 
-    void cleanup(std::uint32_t reason);
+    void cleanup(std::uint32_t reason) override;
 
     typedef intrusive::single_reader_queue<mailbox_element,detail::disposer>
             mailbox_type;

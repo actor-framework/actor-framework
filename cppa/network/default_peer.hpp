@@ -64,11 +64,11 @@ class default_peer : public continuable_io {
                  const output_stream_ptr& out,
                  process_information_ptr peer_ptr = nullptr);
 
-    continue_reading_result continue_reading();
+    continue_reading_result continue_reading() override;
 
-    continue_writing_result continue_writing();
+    continue_writing_result continue_writing() override;
 
-    continuable_io* as_io();
+    continuable_io* as_io() override;
 
     void io_failed();
 

@@ -117,14 +117,14 @@ class actor_facade<Ret(Args...)> : public actor {
                                                std::move(map_result)};
     }
 
-    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) {
+    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) override {
         CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, id, indices);
     }
 
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
+    void enqueue(const actor_ptr& sender, any_tuple msg) override {
         CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(sender, msg, message_id{}, indices);

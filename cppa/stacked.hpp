@@ -64,11 +64,11 @@ class stacked : public Base {
 
     static constexpr auto receive_flag = detail::rp_nestable;
 
-    virtual void dequeue(behavior& bhvr) {
+    virtual void dequeue(behavior& bhvr) override {
         m_recv_policy.receive(util::dptr<Subtype>(this), bhvr);
     }
 
-    virtual void dequeue_response(behavior& bhvr, message_id request_id) {
+    virtual void dequeue_response(behavior& bhvr, message_id request_id) override {
         m_recv_policy.receive(util::dptr<Subtype>(this), bhvr, request_id);
     }
 
@@ -82,12 +82,12 @@ class stacked : public Base {
         m_behavior = std::move(fun);
     }
 
-    virtual void quit(std::uint32_t reason) {
+    virtual void quit(std::uint32_t reason) override {
         this->cleanup(reason);
         throw actor_exited(reason);
     }
 
-    virtual void exec_behavior_stack() {
+    virtual void exec_behavior_stack() override {
         this->m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
     }
 
@@ -97,11 +97,11 @@ class stacked : public Base {
     stacked(std::function<void()> fun, Ts&&... args)
     : Base(std::forward<Ts>(args)...), m_behavior(std::move(fun)) { }
 
-    virtual void do_become(behavior&& bhvr, bool discard_old) {
+    void do_become(behavior&& bhvr, bool discard_old) override {
         become_impl(std::move(bhvr), discard_old, message_id());
     }
 
-    virtual void become_waiting_for(behavior bhvr, message_id mid) {
+    void become_waiting_for(behavior bhvr, message_id mid) override {
         become_impl(std::move(bhvr), false, mid);
     }
 

@@ -76,23 +76,23 @@ class default_actor_proxy : public actor_proxy {
                         const process_information_ptr& pinfo,
                         const default_protocol_ptr& parent);
 
-    void enqueue(const actor_ptr& sender, any_tuple msg);
+    void enqueue(const actor_ptr& sender, any_tuple msg) override;
 
-    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg);
+    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) override;
 
-    void link_to(const actor_ptr& other);
+    void link_to(const actor_ptr& other) override;
 
-    void unlink_from(const actor_ptr& other);
+    void unlink_from(const actor_ptr& other) override;
 
-    bool remove_backlink(const actor_ptr& to);
+    bool remove_backlink(const actor_ptr& to) override;
 
-    bool establish_backlink(const actor_ptr& to);
+    bool establish_backlink(const actor_ptr& to) override;
 
-    void local_link_to(const actor_ptr& other);
+    void local_link_to(const actor_ptr& other) override;
 
-    void local_unlink_from(const actor_ptr& other);
+    void local_unlink_from(const actor_ptr& other) override;
 
-    void deliver(const network::message_header& hdr, any_tuple msg);
+    void deliver(const network::message_header& hdr, any_tuple msg) override;
 
     inline const process_information_ptr& process_info() const {
         return m_pinf;
