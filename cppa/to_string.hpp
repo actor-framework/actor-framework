@@ -76,9 +76,8 @@ inline std::string to_string(const group_ptr& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const process_information& what) {
-    return detail::to_string_impl(what);
-}
+// implemented in process_information.cpp
+std::string to_string(const process_information& what);
 
 inline std::string to_string(const object& what) {
     return detail::to_string_impl(what.value(), what.type());
