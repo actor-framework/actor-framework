@@ -44,7 +44,7 @@
 #include "cppa/network/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
-#include "cppa/network/message_header.hpp"
+#include "cppa/message_header.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -73,12 +73,12 @@ class local_group : public group {
         }
     }
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
-        send_all_subscribers(sender, msg);
-        m_broker->enqueue(sender, move(msg));
+    void enqueue(const message_header& hdr, any_tuple msg) override {
+        send_all_subscribers(hdr.sender, msg);
+        m_broker->enqueue(hdr, move(msg));
     }
 
-    pair<bool, size_t> add_subscriber(const channel_ptr& who) {
+    pair<bool,size_t> add_subscriber(const channel_ptr& who) {
         exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second) {
             return {true, m_subscribers.size()};
@@ -86,7 +86,7 @@ class local_group : public group {
         return {false, m_subscribers.size()};
     }
 
-    pair<bool, size_t> erase_subscriber(const channel_ptr& who) {
+    pair<bool,size_t> erase_subscriber(const channel_ptr& who) {
         exclusive_guard guard(m_mtx);
         auto erased_one = m_subscribers.erase(who) > 0;
         return {erased_one, m_subscribers.size()};
@@ -215,10 +215,9 @@ class local_group_proxy : public local_group {
         }
     }
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
+    void enqueue(const message_header& hdr, any_tuple msg) override {
         // forward message to the broker
-        m_broker->enqueue(sender,
-                          make_any_tuple(atom("FORWARD"), move(msg)));
+        m_broker->enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
     }
 
  private:
@@ -342,8 +341,8 @@ class remote_group : public group {
 
     void unsubscribe(const channel_ptr&) { /* never called */ }
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) {
-        m_decorated->enqueue(sender, msg);
+    void enqueue(const message_header& hdr, any_tuple msg) override {
+        m_decorated->enqueue(hdr, std::move(msg));
     }
 
     void serialize(serializer* sink);

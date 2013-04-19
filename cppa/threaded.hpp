@@ -108,16 +108,11 @@ class threaded : public Base {
 
     typedef threaded combined_type;
 
-    virtual void enqueue(const actor_ptr& sender, any_tuple msg) override {
-        auto ptr = this->new_mailbox_element(sender, std::move(msg));
-        push_back(ptr);
-    }
-
-    virtual void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) override {
-        auto ptr = this->new_mailbox_element(sender, std::move(msg), id);
-        if (!push_back(ptr)) {
+    void enqueue(const message_header& hdr, any_tuple msg) override {
+        auto ptr = this->new_mailbox_element(hdr, std::move(msg));
+        if (!push_back(ptr) && hdr.id.valid()) {
             detail::sync_request_bouncer f{this->exit_reason()};
-            f(sender, id);
+            f(hdr.sender, hdr.id);
         }
     }
 

@@ -86,7 +86,7 @@ class delayed_msg {
     inline void eval() {
         CPPA_REQUIRE(ptr_a || ptr_b);
         if (ptr_a) ptr_a->enqueue(from, move(msg));
-        else ptr_b->sync_enqueue(from, id, move(msg));
+        else ptr_b->enqueue({from, id}, move(msg));
     }
 
  private:

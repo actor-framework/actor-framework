@@ -28,58 +28,16 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MESSAGE_HEADER_HPP
-#define CPPA_MESSAGE_HEADER_HPP
+#ifndef PRIORITY_HPP
+#define PRIORITY_HPP
 
-#include <utility>
+namespace cppa {
 
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/message_id.hpp"
-
-namespace cppa { namespace network {
-
-/**
- * @brief Encapsulates information about sender, receiver and (synchronous)
- *        message ID of a message. The message itself is usually an any_tuple.
- */
-class message_header {
-
- public:
-
-    actor_ptr    sender;
-    actor_ptr    receiver;
-    message_id id;
-
-    message_header();
-
-    message_header(const actor_ptr& sender,
-                   const actor_ptr& receiver,
-                   message_id id = message_id::invalid);
-
-    inline void deliver(any_tuple msg) const {
-        if (receiver) {
-            if (id.valid()) {
-                receiver->sync_enqueue(sender.get(), id, std::move(msg));
-            }
-            else {
-                receiver->enqueue(sender.get(), std::move(msg));
-            }
-        }
-    }
-
+enum class message_priority {
+    normal,
+    high
 };
 
-inline bool operator==(const message_header& lhs, const message_header& rhs) {
-    return    lhs.sender == rhs.sender
-           && lhs.receiver == rhs.receiver
-           && lhs.id == rhs.id;
-}
+} // namespace cppa
 
-inline bool operator!=(const message_header& lhs, const message_header& rhs) {
-    return !(lhs == rhs);
-}
-
-} } // namespace cppa::network
-
-#endif // CPPA_MESSAGE_HEADER_HPP
+#endif // PRIORITY_HPP

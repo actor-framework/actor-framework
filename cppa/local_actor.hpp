@@ -43,6 +43,7 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/memory_cached.hpp"
+#include "cppa/message_header.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/partial_function.hpp"
@@ -431,11 +432,11 @@ inline message_id local_actor::send_sync_message(const actor_ptr& whom, any_tupl
     auto id = ++m_last_request_id;
     CPPA_REQUIRE(id.is_request());
     if (chaining_enabled()) {
-        if (whom->chained_sync_enqueue(this, id, std::move(what))) {
+        if (whom->chained_enqueue({this, id}, std::move(what))) {
             chained_actor(whom);
         }
     }
-    else whom->sync_enqueue(this, id, std::move(what));
+    else whom->enqueue({this, id}, std::move(what));
     auto awaited_response = id.response_id();
     m_pending_responses.push_back(awaited_response);
     return awaited_response;

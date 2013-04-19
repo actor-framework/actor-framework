@@ -33,10 +33,9 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/weak_intrusive_ptr.hpp"
+#include "cppa/message_header.hpp"
 #include "cppa/enable_weak_ptr.hpp"
-
-#include "cppa/network/message_header.hpp"
+#include "cppa/weak_intrusive_ptr.hpp"
 
 namespace cppa {
 
@@ -72,7 +71,7 @@ class actor_proxy : public extend<actor>::with<enable_weak_ptr> {
      * middleman's thread.
      * @note This function is guaranteed to be called non-concurrently.
      */
-    virtual void deliver(const network::message_header& hdr, any_tuple msg) = 0;
+    virtual void deliver(const message_header& hdr, any_tuple msg) = 0;
 
  protected:
 

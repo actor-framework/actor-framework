@@ -28,15 +28,40 @@
 \******************************************************************************/
 
 
-#include "cppa/network/message_header.hpp"
+#include "cppa/self.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/message_header.hpp"
 
-namespace cppa { namespace network {
+namespace cppa {
 
-message_header::message_header(const actor_ptr& s,
-                               const actor_ptr& r,
-                               message_id mid   )
-: sender(s), receiver(r), id(mid) { }
+namespace { using actor_cref = const actor_ptr&; }
 
-message_header::message_header() : sender(nullptr), receiver(nullptr), id() { }
+message_header::message_header(actor* s) : sender(s) { }
 
-} } // namespace cppa::network
+message_header::message_header(const self_type& s) : sender(s) { }
+
+message_header::message_header(actor_cref s, message_priority p)
+: sender(s), priority(p) { }
+
+message_header::message_header(actor_cref s, message_id mid, message_priority p)
+: sender(s), id(mid), priority(p) { }
+
+message_header::message_header(actor_cref s, actor_cref r, message_id mid, message_priority p)
+: sender(s), receiver(r), id(mid), priority(p) { }
+
+bool operator==(const message_header& lhs, const message_header& rhs) {
+    return    lhs.sender == rhs.sender
+           && lhs.receiver == rhs.receiver
+           && lhs.id == rhs.id
+           && lhs.priority == rhs.priority;
+}
+
+bool operator!=(const message_header& lhs, const message_header& rhs) {
+    return !(lhs == rhs);
+}
+
+void message_header::deliver(any_tuple msg) const {
+    if (receiver) receiver->enqueue(*this, std::move(msg));
+}
+
+} // namespace cppa::network

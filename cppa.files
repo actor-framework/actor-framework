@@ -88,7 +88,9 @@ cppa/match_expr.hpp
 cppa/memory_cached.hpp
 cppa/memory_managed.hpp
 cppa/message_future.hpp
+cppa/message_header.hpp
 cppa/message_id.hpp
+cppa/message_priority.hpp
 cppa/network/acceptor.hpp
 cppa/network/continuable_io.hpp
 cppa/network/continuable_reader.hpp
@@ -102,7 +104,6 @@ cppa/network/input_stream.hpp
 cppa/network/io_stream.hpp
 cppa/network/ipv4_acceptor.hpp
 cppa/network/ipv4_io_stream.hpp
-cppa/network/message_header.hpp
 cppa/network/middleman.hpp
 cppa/network/middleman_event_handler_base.hpp
 cppa/network/output_stream.hpp

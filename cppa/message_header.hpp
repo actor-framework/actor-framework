@@ -28,57 +28,56 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
-#define CPPA_RECURSIVE_QUEUE_NODE_HPP
-
-#include <cstdint>
+#ifndef CPPA_MESSAGE_HEADER_HPP
+#define CPPA_MESSAGE_HEADER_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/extend.hpp"
-#include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/memory_cached.hpp"
-#include "cppa/message_header.hpp"
+#include "cppa/message_priority.hpp"
 
-// needs access to constructor + destructor to initialize m_dummy_node
 namespace cppa {
 
-class local_actor;
+class any_tuple;
 
-class mailbox_element : public extend<memory_managed>::with<memory_cached> {
-
-    friend class local_actor;
-    friend class detail::memory;
+/**
+ * @brief Encapsulates information about sender, receiver and (synchronous)
+ *        message ID of a message. The message itself is usually an any_tuple.
+ */
+class message_header {
 
  public:
 
-    typedef mailbox_element* pointer;
+    actor_ptr  sender;
+    actor_ptr  receiver;
+    message_id id;
+    message_priority priority;
 
-    pointer    next;   // intrusive next pointer
-    bool       marked; // denotes if this node is currently processed
-    actor_ptr  sender; // points to the sender of msg
-    any_tuple  msg;    // 'content field'
-    message_id mid;
+    message_header() = default;
 
-    mailbox_element(mailbox_element&&) = delete;
-    mailbox_element(const mailbox_element&) = delete;
-    mailbox_element& operator=(mailbox_element&&) = delete;
-    mailbox_element& operator=(const mailbox_element&) = delete;
+    message_header(actor* sender);
 
-    template<typename T>
-    inline static mailbox_element* create(const message_header& hdr, T&& data) {
-        return detail::memory::create<mailbox_element>(hdr, std::forward<T>(data));
-    }
+    message_header(const self_type& sender);
 
- private:
+    message_header(const actor_ptr& sender,
+                   message_priority priority = message_priority::normal);
 
-    mailbox_element() = default;
+    message_header(const actor_ptr &sender,
+                   message_id id,
+                   message_priority priority = message_priority::normal);
 
-    mailbox_element(const message_header& hdr, any_tuple data);
+    message_header(const actor_ptr& sender,
+                   const actor_ptr& receiver,
+                   message_id id = message_id::invalid,
+                   message_priority priority = message_priority::normal);
+
+    void deliver(any_tuple msg) const;
 
 };
 
+bool operator==(const message_header& lhs, const message_header& rhs);
+
+bool operator!=(const message_header& lhs, const message_header& rhs);
+
 } // namespace cppa
 
-#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP
+#endif // CPPA_MESSAGE_HEADER_HPP

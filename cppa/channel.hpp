@@ -42,6 +42,7 @@ namespace cppa {
 class actor;
 class group;
 class any_tuple;
+class message_header;
 
 typedef intrusive_ptr<actor> actor_ptr;
 
@@ -61,7 +62,7 @@ class channel : public ref_counted {
     /**
      * @brief Enqueues @p msg to the list of received messages.
      */
-    virtual void enqueue(const actor_ptr& sender, any_tuple msg) = 0;
+    virtual void enqueue(const message_header& hdr, any_tuple msg) = 0;
 
  protected:
 

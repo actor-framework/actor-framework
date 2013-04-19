@@ -35,17 +35,13 @@ namespace cppa { namespace detail {
 scheduled_actor_dummy::scheduled_actor_dummy()
 : scheduled_actor(actor_state::blocked, false) { }
 
-void scheduled_actor_dummy::enqueue(const actor_ptr&, any_tuple) { }
+void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
 void scheduled_actor_dummy::do_become(behavior&&, bool) { }
 void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
-
-void scheduled_actor_dummy::sync_enqueue(const actor_ptr&,
-                                         message_id,
-                                         any_tuple) { }
 
 resume_result scheduled_actor_dummy::resume(util::fiber*,actor_ptr&) {
     return resume_result::actor_blocked;

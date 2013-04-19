@@ -409,9 +409,8 @@ class receive_policy {
                         if (id.valid() && !id.is_answered() && sender) {
                             CPPA_LOG_WARNING("actor did not reply to a "
                                              "synchronous request message");
-                            sender->sync_enqueue(client,
-                                                 id.response_id(),
-                                                 make_any_tuple(atom("VOID")));
+                            sender->enqueue({client, id.response_id()},
+                                            make_any_tuple(atom("VOID")));
                         }
                         hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;

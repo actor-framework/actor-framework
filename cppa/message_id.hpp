@@ -31,6 +31,8 @@
 #ifndef CPPA_MESSAGE_ID_HPP
 #define CPPA_MESSAGE_ID_HPP
 
+#include <cstdint>
+
 #include "cppa/config.hpp"
 #include "cppa/util/comparable.hpp"
 

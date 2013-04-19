@@ -62,7 +62,7 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
-#include "cppa/network/message_header.hpp"
+#include "cppa/message_header.hpp"
 
 namespace cppa { namespace detail {
 
@@ -387,7 +387,7 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
 
 };
 
-class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_header> {
+class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
 
     string any_tuple_name;
     string actor_ptr_name;
@@ -396,7 +396,7 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_h
 
     virtual void serialize(const void* instance, serializer* sink) const {
         CPPA_LOG_TRACE("");
-        auto& hdr = *reinterpret_cast<const network::message_header*>(instance);
+        auto& hdr = *reinterpret_cast<const message_header*>(instance);
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(hdr.sender, sink, actor_ptr_name);
         actor_ptr_tinfo::s_serialize(hdr.receiver, sink, actor_ptr_name);
@@ -408,7 +408,7 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<network::message_h
         CPPA_LOG_TRACE("");
         assert_type_name(source);
         source->begin_object(name());
-        auto& msg = *reinterpret_cast<network::message_header*>(instance);
+        auto& msg = *reinterpret_cast<message_header*>(instance);
         actor_ptr_tinfo::s_deserialize(msg.sender, source, actor_ptr_name);
         actor_ptr_tinfo::s_deserialize(msg.receiver, source, actor_ptr_name);
         auto msg_id = source->read<std::uint64_t>();
@@ -633,7 +633,7 @@ uniform_type_info_map::uniform_type_info_map() {
     insert({raw_name<group_ptr>()}, new group_ptr_tinfo);
     insert({raw_name<channel_ptr>()}, new channel_ptr_tinfo);
     insert({raw_name<atom_value>()}, new atom_value_tinfo);
-    insert({raw_name<network::message_header>()}, new msg_hdr_tinfo);
+    insert({raw_name<message_header>()}, new msg_hdr_tinfo);
     insert({raw_name<util::void_type>()}, new void_type_tinfo);
     insert({raw_name<process_information_ptr>()}, new process_info_ptr_tinfo);
     insert({raw_name<map<string,string>>()}, new default_uniform_type_info_impl<map<string,string>>);

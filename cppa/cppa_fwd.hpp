@@ -38,6 +38,7 @@ class group;
 class channel;
 class behavior;
 class any_tuple;
+class self_type;
 class partial_function;
 class uniform_type_info;
 class primitive_variant;

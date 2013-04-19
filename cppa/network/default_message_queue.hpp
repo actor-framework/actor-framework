@@ -33,7 +33,7 @@
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
-#include "cppa/network/message_header.hpp"
+#include "cppa/message_header.hpp"
 
 namespace cppa { namespace network {
 

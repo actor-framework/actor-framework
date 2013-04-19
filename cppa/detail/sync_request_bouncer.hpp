@@ -49,9 +49,8 @@ struct sync_request_bouncer {
         CPPA_REQUIRE(rsn != exit_reason::not_exited);
         if (mid.is_request() && sender != nullptr) {
             actor_ptr nobody;
-            sender->sync_enqueue(nobody,
-                                 mid.response_id(),
-                                 make_any_tuple(atom("EXITED"), rsn));
+            sender->enqueue({nobody, mid.response_id()},
+                            make_any_tuple(atom("EXITED"), rsn));
         }
     }
     inline void operator()(const mailbox_element& e) const {

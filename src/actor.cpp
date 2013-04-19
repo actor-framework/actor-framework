@@ -40,6 +40,7 @@
 #include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/singletons.hpp"
+#include "cppa/message_header.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -64,13 +65,8 @@ actor::actor()
                   << ", class = " << CPPA_CLASS_NAME);
 }
 
-bool actor::chained_enqueue(const actor_ptr& sender, any_tuple msg) {
-    enqueue(sender, std::move(msg));
-    return false;
-}
-
-bool actor::chained_sync_enqueue(const actor_ptr& ptr, message_id id, any_tuple msg) {
-    sync_enqueue(ptr, id, std::move(msg));
+bool actor::chained_enqueue(const message_header& hdr, any_tuple msg) {
+    enqueue(hdr, std::move(msg));
     return false;
 }
 

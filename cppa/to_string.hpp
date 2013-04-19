@@ -43,7 +43,7 @@
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/process_information.hpp"
-#include "cppa/network/message_header.hpp"
+#include "cppa/message_header.hpp"
 
 namespace std { class exception; }
 
@@ -64,7 +64,7 @@ inline std::string to_string(const any_tuple& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const network::message_header& what) {
+inline std::string to_string(const message_header& what) {
     return detail::to_string_impl(what);
 }
 

@@ -90,12 +90,12 @@ void scheduled_actor::cleanup(std::uint32_t reason) {
     super::cleanup(reason);
 }
 
-bool scheduled_actor::enqueue(actor_state next_state,
-                              bool* failed,
-                              mailbox_element* e) {
+bool scheduled_actor::enqueue_impl(actor_state next_state,
+                                   const message_header& hdr,
+                                   any_tuple&& msg) {
     CPPA_REQUIRE(   next_state == actor_state::ready
                  || next_state == actor_state::pending);
-    CPPA_REQUIRE(e != nullptr && e->marked == false);
+    auto e = new_mailbox_element(hdr, std::move(msg));
     switch (m_mailbox.enqueue(e)) {
         case intrusive::first_enqueued: {
             auto state = m_state.load();
@@ -126,27 +126,15 @@ bool scheduled_actor::enqueue(actor_state next_state,
             break;
         }
         case intrusive::queue_closed: {
-            if (failed) *failed = true;
+            if (hdr.id.is_request()) {
+                detail::sync_request_bouncer f{exit_reason()};
+                f(hdr.sender, hdr.id);
+            }
             break;
         }
         default: break;
     }
     return false;
-}
-
-bool scheduled_actor::sync_enqueue_impl(actor_state next,
-                                       const actor_ptr& sender,
-                                       any_tuple& msg,
-                                       message_id id) {
-    bool err = false;
-    auto ptr = new_mailbox_element(sender, std::move(msg), id);
-    bool res = enqueue(next, &err, ptr);
-    if (err) {
-        detail::sync_request_bouncer f{exit_reason()};
-        f(sender, id);
-        CPPA_REQUIRE(res == false);
-    }
-    return res;
 }
 
 actor_state scheduled_actor::compare_exchange_state(actor_state expected,
@@ -157,24 +145,12 @@ actor_state scheduled_actor::compare_exchange_state(actor_state expected,
     return e;
 }
 
-void scheduled_actor::enqueue(const actor_ptr& sender, any_tuple msg) {
-    enqueue_impl(actor_state::ready, sender, std::move(msg));
+void scheduled_actor::enqueue(const message_header& hdr, any_tuple msg) {
+    enqueue_impl(actor_state::ready, hdr, std::move(msg));
 }
 
-bool scheduled_actor::chained_enqueue(const actor_ptr& sender, any_tuple msg) {
-    return enqueue_impl(actor_state::pending, sender, std::move(msg));
-}
-
-void scheduled_actor::sync_enqueue(const actor_ptr& sender,
-                                   message_id id,
-                                   any_tuple msg) {
-    sync_enqueue_impl(actor_state::ready, sender, msg, id);
-}
-
-bool scheduled_actor::chained_sync_enqueue(const actor_ptr& sender,
-                                           message_id id,
-                                           any_tuple msg) {
-    return sync_enqueue_impl(actor_state::pending, sender, msg, id);
+bool scheduled_actor::chained_enqueue(const message_header& hdr, any_tuple msg) {
+    return enqueue_impl(actor_state::pending, hdr, std::move(msg));
 }
 
 } // namespace cppa

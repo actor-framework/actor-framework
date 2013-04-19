@@ -127,16 +127,9 @@ class actor_companion_mixin : public Base {
             cleanup(exit_reason::normal);
         }
 
-        void enqueue(const actor_ptr& sender, any_tuple msg) override {
+        void enqueue(const message_header& hdr, any_tuple msg) override {
             util::shared_lock_guard<lock_type> guard(m_lock);
-            if (m_parent) push_message(sender, std::move(msg));
-        }
-
-        void sync_enqueue(const actor_ptr& sender,
-                          message_id id,
-                          any_tuple msg) override {
-            util::shared_lock_guard<lock_type> guard(m_lock);
-            if (m_parent) push_message(sender, std::move(msg), id);
+            if (m_parent) push_message(hdr, std::move(msg));
         }
 
         bool initialized() const override { return true; }

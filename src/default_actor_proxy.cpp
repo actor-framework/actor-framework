@@ -73,7 +73,7 @@ default_actor_proxy::~default_actor_proxy() {
     });
 }
 
-void default_actor_proxy::deliver(const network::message_header& hdr, any_tuple msg) {
+void default_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
     // this member function is exclusively called from default_peer from inside
     // the middleman's thread, therefore we can safely access
     // m_pending_requests here
@@ -87,29 +87,24 @@ void default_actor_proxy::deliver(const network::message_header& hdr, any_tuple 
     hdr.deliver(std::move(msg));
 }
 
-void default_actor_proxy::forward_msg(const actor_ptr& sender,
-                                      any_tuple msg,
-                                      message_id mid) {
+void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
-    if (sender && mid.is_request()) {
-        switch (m_pending_requests.enqueue(new_req_info(sender, mid))) {
+    if (hdr.sender && hdr.id.is_request()) {
+        switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
             case intrusive::queue_closed: {
-                if (sender) {
-                    auto rsn = exit_reason();
-                    m_proto->run_later([rsn,sender,mid] {
-                        CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
-                                        "forward_msg$bouncer",
-                                        "bounce message for reason " << rsn);
-                        detail::sync_request_bouncer f{rsn};
-                        f(sender.get(), mid);
-                    });
-                }
+                auto rsn = exit_reason();
+                m_proto->run_later([rsn,hdr] {
+                    CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
+                                    "forward_msg$bouncer",
+                                    "bounce message for reason " << rsn);
+                    detail::sync_request_bouncer f{rsn};
+                    f(hdr.sender.get(), hdr.id);
+                });
                 return; // no need to forward message
             }
             default: break;
         }
     }
-    message_header hdr{sender, this, mid};
     auto node = m_pinf;
     auto proto = m_proto;
     m_proto->run_later([hdr, msg, node, proto] {
@@ -120,10 +115,17 @@ void default_actor_proxy::forward_msg(const actor_ptr& sender,
     });
 }
 
-void default_actor_proxy::enqueue(const actor_ptr& sender, any_tuple msg) {
-    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
+    CPPA_LOG_TRACE(CPPA_TARG(hdr.sender, to_string) << ", "
+                   << CPPA_MARG(hdr.id, integer_value) << ", "
                    << CPPA_TARG(msg, to_string));
-    auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
+    // make sure header is complete, i.e., hdr.receiver == this, because
+    // the protocol relies on this information
+    if (hdr.receiver != this) {
+        enqueue({hdr.sender, this, hdr.id}, std::move(msg));
+        return;
+    }
+    auto& arr = detail::static_types_array<atom_value,uint32_t>::arr;
     if (   msg.size() == 2
         && msg.type_at(0) == arr[0]
         && msg.get_as<atom_value>(0) == atom("KILL_PROXY")
@@ -143,16 +145,7 @@ void default_actor_proxy::enqueue(const actor_ptr& sender, any_tuple msg) {
         });
         return;
     }
-    forward_msg(sender, move(msg));
-}
-
-void default_actor_proxy::sync_enqueue(const actor_ptr& sender,
-                                       message_id mid,
-                                       any_tuple msg) {
-    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
-                   << CPPA_MARG(mid, integer_value) << ", "
-                   << CPPA_TARG(msg, to_string));
-    forward_msg(sender, move(msg), mid);
+    forward_msg(hdr, move(msg));
 }
 
 void default_actor_proxy::link_to(const intrusive_ptr<actor>& other) {

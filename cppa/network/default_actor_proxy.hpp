@@ -76,9 +76,7 @@ class default_actor_proxy : public actor_proxy {
                         const process_information_ptr& pinfo,
                         const default_protocol_ptr& parent);
 
-    void enqueue(const actor_ptr& sender, any_tuple msg) override;
-
-    void sync_enqueue(const actor_ptr& sender, message_id id, any_tuple msg) override;
+    void enqueue(const message_header& hdr, any_tuple msg) override;
 
     void link_to(const actor_ptr& other) override;
 
@@ -92,7 +90,7 @@ class default_actor_proxy : public actor_proxy {
 
     void local_unlink_from(const actor_ptr& other) override;
 
-    void deliver(const network::message_header& hdr, any_tuple msg) override;
+    void deliver(const message_header& hdr, any_tuple msg) override;
 
     inline const process_information_ptr& process_info() const {
         return m_pinf;
@@ -104,9 +102,7 @@ class default_actor_proxy : public actor_proxy {
 
  private:
 
-    void forward_msg(const actor_ptr& sender,
-                     any_tuple msg,
-                     message_id mid = message_id());
+    void forward_msg(const message_header& hdr, any_tuple msg);
 
     default_protocol_ptr    m_proto;
     process_information_ptr m_pinf;

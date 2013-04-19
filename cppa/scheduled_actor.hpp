@@ -39,6 +39,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
+#include "cppa/message_priority.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/receive_policy.hpp"
@@ -119,13 +120,9 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     virtual void run_detached();
 
-    void enqueue(const actor_ptr&, any_tuple) override;
+    void enqueue(const message_header&, any_tuple) override;
 
-    bool chained_enqueue(const actor_ptr&, any_tuple) override;
-
-    void sync_enqueue(const actor_ptr&, message_id, any_tuple) override;
-
-    bool chained_sync_enqueue(const actor_ptr&, message_id, any_tuple) override;
+    bool chained_enqueue(const message_header&, any_tuple) override;
 
     void request_timeout(const util::duration& d);
 
@@ -186,18 +183,7 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
  private:
 
-    bool enqueue(actor_state next_state, bool* failed, mailbox_element* e);
-
-    template<typename... Ts>
-    inline bool enqueue_impl(actor_state next, Ts&&... args) {
-        auto ptr = this->new_mailbox_element(std::forward<Ts>(args)...);
-        return enqueue(next, nullptr, ptr);
-    }
-
-    bool sync_enqueue_impl(actor_state next,
-                           const actor_ptr& sender,
-                           any_tuple& msg,
-                           message_id id);
+    bool enqueue_impl(actor_state, const message_header&, any_tuple&&);
 
     bool m_has_pending_tout;
     std::uint32_t m_pending_tout;

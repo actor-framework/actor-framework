@@ -48,7 +48,7 @@
 
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/default_peer.hpp"
-#include "cppa/network/message_header.hpp"
+#include "cppa/message_header.hpp"
 #include "cppa/network/default_protocol.hpp"
 
 using namespace std;
