@@ -33,6 +33,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <execinfo.h>
 
 #include "cppa/singletons.hpp"
 #include "cppa/detail/demangle.hpp"
@@ -109,9 +110,13 @@ class logging {
 #define CPPA_LIF(stmt, logstmt) if (stmt) { logstmt ; } CPPA_VOID_STMT
 
 #ifndef CPPA_LOG_LEVEL
-#   define CPPA_LOG(classname, funname, level, message)                        \
+#   define CPPA_LOG(classname, funname, level, message) {                      \
         std::cerr << level << " [" << classname << "::" << funname << "]: "    \
-                  << message << std::endl;
+                  << message << "\nStack trace:\n";                   \
+        void *array[10];                                                       \
+        size_t size = backtrace(array, 10);                                    \
+        backtrace_symbols_fd(array, size, 2);                                  \
+    } CPPA_VOID_STMT
 #else
 #   define CPPA_LOG(classname, funname, level, message) {                      \
         std::ostringstream scoped_oss; scoped_oss << message;                  \
