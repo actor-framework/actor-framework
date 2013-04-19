@@ -97,11 +97,11 @@ class stacked : public Base {
     stacked(std::function<void()> fun, Ts&&... args)
     : Base(std::forward<Ts>(args)...), m_behavior(std::move(fun)) { }
 
-    void do_become(behavior&& bhvr, bool discard_old) override {
+    virtual void do_become(behavior&& bhvr, bool discard_old) override {
         become_impl(std::move(bhvr), discard_old, message_id());
     }
 
-    void become_waiting_for(behavior bhvr, message_id mid) override {
+    virtual void become_waiting_for(behavior bhvr, message_id mid) override {
         become_impl(std::move(bhvr), false, mid);
     }
 

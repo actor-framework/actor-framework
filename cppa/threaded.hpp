@@ -108,7 +108,7 @@ class threaded : public Base {
 
     typedef threaded combined_type;
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
         auto ptr = this->new_mailbox_element(hdr, std::move(msg));
         if (!push_back(ptr) && hdr.id.valid()) {
             detail::sync_request_bouncer f{this->exit_reason()};

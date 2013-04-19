@@ -81,8 +81,11 @@ class behavior {
     template<typename F>
     behavior(util::duration d, F f);
 
-    template<typename... Cases, typename... Ts>
-    behavior(const match_expr<Cases...>& arg, const Ts&... args);
+    template<typename... Cases>
+    behavior(const match_expr<Cases...>& arg);
+
+    template<typename... Cases, typename T, typename... Ts>
+    behavior(const match_expr<Cases...>& arg0, const T& arg1, const Ts&... args);
 
     /**
      * @brief Invokes the timeout callback.
@@ -140,9 +143,13 @@ template<typename F>
 behavior::behavior(util::duration d, F f)
 : m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{}, d, f)) { }
 
-template<typename... Cases, typename... Ts>
-behavior::behavior(const match_expr<Cases...>& arg, const Ts&... args)
-: m_impl(detail::match_expr_concat(arg, args...)) { }
+template<typename... Cases>
+behavior::behavior(const match_expr<Cases...>& arg)
+: m_impl(arg.as_behavior_impl()) { }
+
+template<typename... Cases, typename T, typename... Ts>
+behavior::behavior(const match_expr<Cases...>& arg0, const T& arg1, const Ts&... args)
+: m_impl(detail::match_expr_concat(arg0, arg1, args...)) { }
 
 inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 
