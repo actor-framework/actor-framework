@@ -145,8 +145,15 @@ void default_actor_addressing::put(const process_information& node,
                                          aid));
     }
     else {
-        CPPA_LOG_ERROR("a proxy for " << aid << ":" << to_string(node)
-                       << " already exists");
+        if (i->second.expired()) {
+            CPPA_LOG_INFO("removed expired weak pointer");
+            submap.erase(i);
+            put(node, aid, proxy);
+        }
+        else {
+            CPPA_LOG_ERROR("a proxy for " << aid << ":" << to_string(node)
+                           << " already exists");
+        }
     }
 }
 
