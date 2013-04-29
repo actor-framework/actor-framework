@@ -36,6 +36,7 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/memory_cached.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
@@ -208,7 +209,14 @@ inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
  *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
  */
 template<typename T, typename... Ts>
-intrusive_ptr<T> make_counted(Ts&&... args) {
+typename std::enable_if<is_memory_cached<T>::value,intrusive_ptr<T>>::type
+make_counted(Ts&&... args) {
+    return {detail::memory::create<T>(std::forward<Ts>(args)...)};
+}
+
+template<typename T, typename... Ts>
+typename std::enable_if<not is_memory_cached<T>::value,intrusive_ptr<T>>::type
+make_counted(Ts&&... args) {
     return {new T(std::forward<Ts>(args)...)};
 }
 

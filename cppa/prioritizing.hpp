@@ -31,4 +31,57 @@
 #ifndef PRIORITIZING_HPP
 #define PRIORITIZING_HPP
 
+#include <iostream>
+
+#include "cppa/mailbox_element.hpp"
+#include "cppa/message_priority.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
+
+namespace cppa {
+
+template<class Base, class Subtype>
+class prioritizing : public Base {
+
+ public:
+
+    virtual mailbox_element* try_pop() override {
+        auto result = m_high_priority_mailbox.try_pop();
+        return (result) ? result : this->m_mailbox.try_pop();
+    }
+
+    template<typename... Ts>
+    prioritizing(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+
+ protected:
+
+    typedef prioritizing combined_type;
+
+    virtual void cleanup(std::uint32_t reason) override {
+        detail::sync_request_bouncer f{reason};
+        m_high_priority_mailbox.close(f);
+        Base::cleanup(reason);
+    }
+
+    virtual bool mailbox_empty() override {
+        return    m_high_priority_mailbox.empty()
+               && this->m_mailbox.empty();
+    }
+
+    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
+        typename Base::mailbox_type* mbox = nullptr;
+        if (hdr.priority == message_priority::high) {
+            mbox = &m_high_priority_mailbox;
+        }
+        else {
+            mbox = &this->m_mailbox;
+        }
+        this->enqueue_impl(*mbox, hdr, std::move(msg));
+    }
+
+    typename Base::mailbox_type m_high_priority_mailbox;
+
+};
+
+} // namespace cppa
+
 #endif // PRIORITIZING_HPP

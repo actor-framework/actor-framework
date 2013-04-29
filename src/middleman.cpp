@@ -146,7 +146,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         for (;;) {
             auto presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
-            CPPA_LOG_DEBUG("poll() on " << num_sockets()
+            CPPA_LOGMF(CPPA_DEBUG, self, "poll() on " << num_sockets()
                            << " sockets returned " << presult);
             if (presult < 0) {
                 switch (errno) {
@@ -156,7 +156,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
                         break;
                     }
                     case ENOMEM: {
-                        CPPA_LOG_ERROR("poll() failed for reason ENOMEM");
+                        CPPA_LOGMF(CPPA_ERROR, self, "poll() failed for reason ENOMEM");
                         // there's not much we can do other than try again
                         // in hope someone releases memory
                         //this_thread::yield();
@@ -186,7 +186,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
                 tmp.events = to_poll_bitmask(new_bitmask);
                 tmp.revents = 0;
                 m_pollset.insert(lb(fd), tmp);
-                CPPA_LOG_DEBUG("inserted new element");
+                CPPA_LOGMF(CPPA_DEBUG, self, "inserted new element");
                 break;
             }
             case fd_meta_event::erase: {
@@ -196,7 +196,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOG_DEBUG("erased element");
+                    CPPA_LOGMF(CPPA_DEBUG, self, "erased element");
                     m_pollset.erase(iter);
                 }
                 break;
@@ -208,7 +208,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOG_DEBUG("updated bitmask");
+                    CPPA_LOGMF(CPPA_DEBUG, self, "updated bitmask");
                     iter->events = to_poll_bitmask(new_bitmask);
                 }
                 break;
@@ -281,10 +281,10 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
     pair<event_iterator,event_iterator> poll() {
         CPPA_REQUIRE(m_meta.empty() == false);
         for (;;) {
-            CPPA_LOG_DEBUG("epoll_wait on " << num_sockets() << " sockets");
+            CPPA_LOGMF(CPPA_DEBUG, self, "epoll_wait on " << num_sockets() << " sockets");
             auto presult = epoll_wait(m_epollfd, m_events.data(),
                                       (int) m_events.size(), -1);
-            CPPA_LOG_DEBUG("epoll_wait returned " << presult);
+            CPPA_LOGMF(CPPA_DEBUG, self, "epoll_wait returned " << presult);
             if (presult < 0) {
                 // try again unless critical error occured
                 presult = 0;
@@ -349,18 +349,18 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
             switch (errno) {
                 // supplied file descriptor is already registered
                 case EEXIST: {
-                    CPPA_LOG_ERROR("file descriptor registered twice");
+                    CPPA_LOGMF(CPPA_ERROR, self, "file descriptor registered twice");
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    CPPA_LOG_ERROR("cannot delete file descriptor "
+                    CPPA_LOGMF(CPPA_ERROR, self, "cannot delete file descriptor "
                                    "because it isn't registered");
                     break;
                 }
                 default: {
-                    CPPA_LOG_ERROR(strerror(errno));
+                    CPPA_LOGMF(CPPA_ERROR, self, strerror(errno));
                     perror("epoll_ctl() failed");
                     CPPA_CRITICAL("epoll_ctl() failed");
                 }
@@ -411,7 +411,7 @@ class middleman_impl : public abstract_middleman {
 
     void add_protocol(const protocol_ptr& impl) {
         if (!impl) {
-            CPPA_LOG_ERROR("impl == nullptr");
+            CPPA_LOGMF(CPPA_ERROR, self, "impl == nullptr");
             throw std::invalid_argument("impl == nullptr");
         }
         CPPA_LOG_TRACE("identifier = " << to_string(impl->identifier()));
@@ -491,14 +491,14 @@ class middleman_overseer : public continuable_reader {
         static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
-        CPPA_LOG_DEBUG("read " << read_result << " messages from queue");
+        CPPA_LOGMF(CPPA_DEBUG, self, "read " << read_result << " messages from queue");
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
                 return read_continue_later;
             }
             else {
-                CPPA_LOG_ERROR("cannot read from pipe");
+                CPPA_LOGMF(CPPA_ERROR, self, "cannot read from pipe");
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
@@ -506,10 +506,10 @@ class middleman_overseer : public continuable_reader {
         for (int i = 0; i < read_result; ++i) {
             unique_ptr<middleman_event> msg(m_queue.try_pop());
             if (!msg) {
-                CPPA_LOG_ERROR("nullptr dequeued");
+                CPPA_LOGMF(CPPA_ERROR, self, "nullptr dequeued");
                 CPPA_CRITICAL("nullptr dequeued");
             }
-            CPPA_LOG_DEBUG("execute run_later functor");
+            CPPA_LOGMF(CPPA_DEBUG, self, "execute run_later functor");
             (*msg)();
         }
         return read_continue_later;

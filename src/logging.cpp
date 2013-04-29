@@ -40,6 +40,7 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
+#include "cppa/actor_proxy.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
@@ -70,11 +71,11 @@ class logging_impl : public logging {
 
     void initialize() {
         m_thread = thread([this] { (*this)(); });
-        log("TRACE", "logging", "run", __FILE__, __LINE__, "ENTRY");
+        log("TRACE", "logging", "run", __FILE__, __LINE__, nullptr, "ENTRY");
     }
 
     void destroy() {
-        log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
+        log("TRACE", "logging", "run", __FILE__, __LINE__, nullptr, "EXIT");
         // an empty string means: shut down
         m_queue.push_back(new log_event{0, ""});
         m_thread.join();
@@ -101,6 +102,7 @@ class logging_impl : public logging {
              const char* function_name,
              const char* c_full_file_name,
              int line_num,
+             const actor_ptr& from,
              const std::string& msg) {
         string class_name = c_class_name;
         replace_all(class_name, "::", ".");
@@ -114,9 +116,16 @@ class logging_impl : public logging {
             else file_name = string(i, full_file_name.end());
         }
         else file_name = move(full_file_name);
+        auto print_from = [&](ostream& oss) -> ostream& {
+            if (!from) oss << "null";
+            else if (from->is_proxy()) oss << to_string(from);
+            else oss << from->id() << "@local";
+            return oss;
+        };
         ostringstream line;
         line << time(0) << " "
-             << level << " "
+             << level << " ";
+                print_from(line) << " "
              << this_thread::get_id() << " "
              << class_name << " "
              << function_name << " "
@@ -139,16 +148,17 @@ logging::trace_helper::trace_helper(std::string class_name,
                                     const char* fun_name,
                                     const char* file_name,
                                     int line_num,
+                                    actor_ptr ptr,
                                     const std::string& msg)
 : m_class(std::move(class_name)), m_fun_name(fun_name)
-, m_file_name(file_name), m_line_num(line_num) {
+, m_file_name(file_name), m_line_num(line_num), m_self(std::move(ptr)) {
     get_logger()->log("TRACE", m_class.c_str(), fun_name,
-                      file_name, line_num, "ENTRY " + msg);
+                      file_name, line_num, m_self, "ENTRY " + msg);
 }
 
 logging::trace_helper::~trace_helper() {
     get_logger()->log("TRACE", m_class.c_str(), m_fun_name,
-                      m_file_name, m_line_num, "EXIT");
+                      m_file_name, m_line_num, m_self, "EXIT");
 }
 
 logging::~logging() { }

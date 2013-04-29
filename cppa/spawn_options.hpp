@@ -45,12 +45,13 @@ namespace cppa {
 class spawn_options { };
 #else
 enum class spawn_options : int {
-    no_flags          = 0x00,
-    link_flag         = 0x01,
-    monitor_flag      = 0x02,
-    detach_flag       = 0x04,
-    hide_flag         = 0x08,
-    blocking_api_flag = 0x10
+    no_flags            = 0x00,
+    link_flag           = 0x01,
+    monitor_flag        = 0x02,
+    detach_flag         = 0x04,
+    hide_flag           = 0x08,
+    blocking_api_flag   = 0x10,
+    priority_aware_flag = 0x24  // priority-aware actors are also detached
 };
 #endif
 
@@ -93,6 +94,12 @@ constexpr spawn_options hidden           = spawn_options::hide_flag;
  */
 constexpr spawn_options blocking_api     = spawn_options::blocking_api_flag;
 
+/**
+ * @brief Causes the new actor to evaluate message priorities.
+ * @note This implicitly causes the actor to run in its own thread.
+ */
+constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag;
+
 #ifndef CPPA_DOCUMENTATION
 } // namespace <anonymous>
 #endif
@@ -120,6 +127,14 @@ constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
  */
 constexpr bool has_detach_flag(spawn_options opts) {
     return has_spawn_option(opts, detached);
+}
+
+/**
+ * @brief Checks wheter the {@link priority_aware} flag is set in @p opts.
+ * @relates spawn_options
+ */
+constexpr bool has_priority_aware_flag(spawn_options opts) {
+    return has_spawn_option(opts, priority_aware);
 }
 
 /**

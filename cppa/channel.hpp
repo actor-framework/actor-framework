@@ -64,6 +64,15 @@ class channel : public ref_counted {
      */
     virtual void enqueue(const message_header& hdr, any_tuple msg) = 0;
 
+
+    /**
+     * @brief Enqueues @p msg to the list of received messages and returns
+     *        true if this is an scheduled actor that successfully changed
+     *        its state to @p pending in response to the enqueue operation.
+     */
+    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg);
+
+
  protected:
 
     virtual ~channel();

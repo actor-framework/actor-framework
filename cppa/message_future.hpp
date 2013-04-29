@@ -68,7 +68,7 @@ class message_future {
                 behavior cpy = ref;
                 ref = cpy.add_continuation(std::move(fun));
             }
-            else CPPA_LOG_WARNING(".continue_with: failed to add continuation");
+            else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
         }
 
      private:

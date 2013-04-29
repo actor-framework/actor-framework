@@ -56,7 +56,7 @@ atom_value default_actor_addressing::technology_id() const {
 void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
     CPPA_REQUIRE(sink != nullptr);
     if (ptr == nullptr) {
-        CPPA_LOG_DEBUG("serialized nullptr");
+        CPPA_LOGMF(CPPA_DEBUG, self, "serialized nullptr");
         sink->begin_object("@0");
         sink->end_object();
     }
@@ -69,9 +69,7 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
         if (ptr->is_proxy()) {
             auto dptr = ptr.downcast<default_actor_proxy>();
             if (dptr) pinf = dptr->process_info();
-            else {
-                CPPA_LOG_ERROR("ptr is not a default_actor_proxy instance");
-            }
+            else CPPA_LOGMF(CPPA_ERROR, self, "downcast failed");
         }
         sink->begin_object("@actor");
         sink->write_value(ptr->id());
@@ -86,7 +84,7 @@ actor_ptr default_actor_addressing::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
     auto cname = source->seek_object();
     if (cname == "@0") {
-        CPPA_LOG_DEBUG("deserialized nullptr");
+        CPPA_LOGMF(CPPA_DEBUG, self, "deserialized nullptr");
         source->begin_object("@0");
         source->end_object();
         return nullptr;
@@ -123,9 +121,9 @@ actor_ptr default_actor_addressing::get(const process_information& inf,
     auto i = submap.find(aid);
     if (i != submap.end()) {
         auto result = i->second.promote();
-        CPPA_LOG_INFO_IF(!result, "proxy instance expired; "
-                                  << CPPA_TARG(inf, to_string) << ", "
-                                  << CPPA_ARG(aid));
+        CPPA_LOGMF_IF(!result, CPPA_INFO, self, "proxy instance expired; "
+                      << CPPA_TARG(inf, to_string) << ", "<< CPPA_ARG(aid));
+        if (!result) submap.erase(i);
         return result;
     }
     return nullptr;
@@ -137,7 +135,7 @@ void default_actor_addressing::put(const process_information& node,
     auto& submap = m_proxies[node];
     auto i = submap.find(aid);
     if (i == submap.end()) {
-        submap.insert(make_pair(aid, proxy));
+        submap.emplace(aid, proxy);
         m_parent->enqueue(node,
                           {nullptr, nullptr},
                           make_any_tuple(atom("MONITOR"),
@@ -145,15 +143,8 @@ void default_actor_addressing::put(const process_information& node,
                                          aid));
     }
     else {
-        if (i->second.expired()) {
-            CPPA_LOG_INFO("removed expired weak pointer");
-            submap.erase(i);
-            put(node, aid, proxy);
-        }
-        else {
-            CPPA_LOG_ERROR("a proxy for " << aid << ":" << to_string(node)
-                           << " already exists");
-        }
+        CPPA_LOGMF(CPPA_ERROR, self, "proxy for " << aid << ":"
+                   << to_string(node) << " already exists");
     }
 }
 
@@ -162,8 +153,8 @@ actor_ptr default_actor_addressing::get_or_put(const process_information& inf,
                                                actor_id aid) {
     auto result = get(inf, aid);
     if (result == nullptr) {
-        CPPA_LOG_INFO("created new proxy instance; "
-                      << CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
+        CPPA_LOGMF(CPPA_INFO, self, "created new proxy instance; "
+                   << CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
         auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
         put(inf, aid, ptr);
         result = ptr;
@@ -176,12 +167,12 @@ auto default_actor_addressing::proxies(process_information& i) -> proxy_map& {
 }
 
 void default_actor_addressing::erase(process_information& inf) {
-    CPPA_LOG_TRACE("inf = " << to_string(inf));
+    CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string));
     m_proxies.erase(inf);
 }
 
 void default_actor_addressing::erase(process_information& inf, actor_id aid) {
-    CPPA_LOG_TRACE("inf = " << to_string(inf) << ", aid = " << aid);
+    CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
     auto i = m_proxies.find(inf);
     if (i != m_proxies.end()) {
         i->second.erase(aid);

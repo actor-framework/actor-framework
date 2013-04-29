@@ -108,8 +108,8 @@ class scheduler_helper {
     typedef intrusive_ptr<thread_mapped_actor> ptr_type;
 
     void start() {
-        ptr_type mt{detail::memory::create<thread_mapped_actor>()};
-        ptr_type mp{detail::memory::create<thread_mapped_actor>()};
+        auto mt = make_counted<thread_mapped_actor>();
+        auto mp = make_counted<thread_mapped_actor>();
         // launch threads
         m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt};
         m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp};
@@ -177,7 +177,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
             done = true;
         },
         others() >> [&]() {
-#           ifdef CPPA_DEBUG
+#           ifdef CPPA_ENABLE_DEBUG
                 std::cerr << "scheduler_helper::timer_loop: UNKNOWN MESSAGE: "
                           << to_string(msg_ptr->msg)
                           << std::endl;

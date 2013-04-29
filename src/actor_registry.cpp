@@ -32,6 +32,7 @@
 #include <limits>
 #include <stdexcept>
 
+#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
@@ -58,7 +59,7 @@ actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     if (i != m_entries.end()) {
         return i->second;
     }
-    CPPA_LOG_DEBUG("no cache entry found for " << CPPA_ARG(key));
+    CPPA_LOGMF(CPPA_DEBUG, self, "key not found: " << key);
     return {nullptr, exit_reason::not_exited};
 }
 
@@ -76,7 +77,7 @@ void actor_registry::put(actor_id key, const actor_ptr& value) {
         }
     }
     if (add_attachable) {
-        CPPA_LOG_INFO("added actor with ID " << key);
+        CPPA_LOGMF(CPPA_INFO, self, "added actor with ID " << key);
         struct eraser : attachable {
             actor_id m_id;
             actor_registry* m_registry;
@@ -97,8 +98,8 @@ void actor_registry::erase(actor_id key, std::uint32_t reason) {
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
         auto& entry = i->second;
-        CPPA_LOG_INFO("erased actor with ID " << key
-                      << ", reason " << reason);
+        CPPA_LOGMF(CPPA_INFO, self, "erased actor with ID " << key
+                                    << ", reason " << reason);
         entry.first = nullptr;
         entry.second = reason;
     }
@@ -109,7 +110,11 @@ std::uint32_t actor_registry::next_id() {
 }
 
 void actor_registry::inc_running() {
+#   if CPPA_LOG_LEVEL >= CPPA_DEBUG
+    CPPA_LOG_DEBUG("new value = " << ++m_running);
+#   else
     ++m_running;
+#   endif
 }
 
 size_t actor_registry::running() const {
@@ -126,12 +131,14 @@ void actor_registry::dec_running() {
         std::unique_lock<std::mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
     }
+    CPPA_LOG_DEBUG(CPPA_ARG(new_val));
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
-    CPPA_LOG_TRACE(CPPA_ARG(expected));
-    std::unique_lock<std::mutex> guard(m_running_mtx);
-    while (m_running.load() != expected) {
+    CPPA_LOGMF(CPPA_TRACE, self.unchecked(), CPPA_ARG(expected));
+    std::unique_lock<std::mutex> guard{m_running_mtx};
+    while (m_running != expected) {
+        CPPA_LOG_DEBUG("count = " << m_running.load());
         m_running_cv.wait(guard);
     }
 }

@@ -39,9 +39,6 @@
 
 namespace cppa {
 
-template<typename T>
-struct has_blocking_receive;
-
 template<class Base, class Subtype>
 class mailbox_based : public Base {
 
@@ -65,7 +62,7 @@ class mailbox_based : public Base {
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
-    void cleanup(std::uint32_t reason) {
+    virtual void cleanup(std::uint32_t reason) override {
         detail::sync_request_bouncer f{reason};
         m_mailbox.close(f);
         Base::cleanup(reason);

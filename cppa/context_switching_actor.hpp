@@ -77,6 +77,10 @@ class context_switching_actor : public extend<scheduled_actor,context_switching_
 
     mailbox_element* await_message(const timeout_type& abs_time);
 
+    inline mailbox_element* try_pop() {
+        return m_mailbox.try_pop();
+    }
+
  private:
 
     // required by util::fiber

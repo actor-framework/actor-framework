@@ -177,7 +177,7 @@ int main() {
             invoked = true;
         }
     );
-    if (!invoked) { CPPA_ERROR("match(\"abc\") failed"); }
+    if (!invoked) { CPPA_FAILURE("match(\"abc\") failed"); }
     invoked = false;
 
     bool disable_case1 = true;
@@ -223,7 +223,7 @@ int main() {
             invoked = true;
         }
     );
-    if (!invoked) { CPPA_ERROR("match({1, 2, 3}) failed"); }
+    if (!invoked) { CPPA_FAILURE("match({1, 2, 3}) failed"); }
     invoked = false;
 
     string sum;
@@ -240,17 +240,11 @@ int main() {
                 on<char>().when(_x1.in({'w', 't', 'f'})) >> [&](char c) {
                     sum += c;
                 },
-                on<char>() >> [&](char c) {
-                    CPPA_ERROR("whaaaaat? guard didn't match: " << c);
-                },
-                others() >> [&]() {
-                    CPPA_ERROR("unexpected match");
-                }
+                on<char>() >> CPPA_FAILURE_CB("guard didn't match"),
+                others() >> CPPA_FAILURE_CB("unexpected match")
             );
         },
-        others() >> [&]() {
-            CPPA_ERROR("unexpected match");
-        }
+        others() >> CPPA_FAILURE_CB("unexpected match")
     );
     CPPA_CHECK_EQUAL(sum, "-h--versionwtf");
 
@@ -270,7 +264,7 @@ int main() {
             str = "C";
         }
     );
-    if (!invoked) { CPPA_ERROR("match({\"a\", \"b\", \"c\"}) failed"); }
+    if (!invoked) { CPPA_FAILURE("match({\"a\", \"b\", \"c\"}) failed"); }
     CPPA_CHECK_EQUAL(vec.back(), "C");
     invoked = false;
 
@@ -280,7 +274,7 @@ int main() {
             str = "A";
         }
     );
-    if (!invoked) { CPPA_ERROR("match_each({\"a\", \"b\", \"C\"}) failed"); }
+    if (!invoked) { CPPA_FAILURE("match_each({\"a\", \"b\", \"C\"}) failed"); }
     CPPA_CHECK_EQUAL(vec.front(), "A");
     invoked = false;
 
@@ -328,7 +322,7 @@ int main() {
             else return false;
         },
         on_arg_match >> [](const string& arg) -> bool{
-            CPPA_ERROR("unexpected string: " << arg);
+            CPPA_FAILURE("unexpected string: " << arg);
             return false;
         }
     );

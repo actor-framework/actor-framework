@@ -55,7 +55,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifdef CPPA_DEBUG
+#ifdef CPPA_ENABLE_DEBUG
 #include <execinfo.h>
 
 #define CPPA_REQUIRE__(stmt, file, line)                                       \
@@ -70,9 +70,9 @@
     if ((stmt) == false) {                                                     \
         CPPA_REQUIRE__(#stmt, __FILE__, __LINE__);                             \
     }((void) 0)
-#else // CPPA_DEBUG
+#else // CPPA_ENABLE_DEBUG
 #define CPPA_REQUIRE(unused) ((void) 0)
-#endif // CPPA_DEBUG
+#endif // CPPA_ENABLE_DEBUG
 
 #define CPPA_CRITICAL__(error, file, line) {                                   \
         printf("%s:%u: critical error: '%s'\n", file, line, error);            \

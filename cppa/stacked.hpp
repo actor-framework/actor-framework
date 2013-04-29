@@ -94,8 +94,7 @@ class stacked : public Base {
  protected:
 
     template<typename... Ts>
-    stacked(std::function<void()> fun, Ts&&... args)
-    : Base(std::forward<Ts>(args)...), m_behavior(std::move(fun)) { }
+    stacked(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
     virtual void do_become(behavior&& bhvr, bool discard_old) override {
         become_impl(std::move(bhvr), discard_old, message_id());

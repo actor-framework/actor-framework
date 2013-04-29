@@ -138,7 +138,8 @@ class scheduler {
                                   util::duration{rel_time},
                                   to,
                                   std::move(data));
-        delayed_send_helper()->enqueue(self, std::move(tup));
+        auto dsh = delayed_send_helper();
+        dsh->enqueue({self, dsh}, std::move(tup));
     }
 
     template<typename Duration, typename... Data>
@@ -153,7 +154,8 @@ class scheduler {
                                       to,
                                       id,
                                       std::move(data));
-            delayed_send_helper()->enqueue(self, std::move(tup));
+            auto dsh = delayed_send_helper();
+            dsh->enqueue({self, dsh}, std::move(tup));
         }
         else {
             this->delayed_send(to, rel_time, std::move(data));

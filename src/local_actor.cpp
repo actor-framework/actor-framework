@@ -113,15 +113,15 @@ void local_actor::reply_message(any_tuple&& what) {
     }
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_message(whom.get(), std::move(what));
+        send_tuple(whom, std::move(what));
     }
     else if (!id.is_answered()) {
         if (chaining_enabled()) {
-            if (whom->chained_enqueue({this, id.response_id()}, std::move(what))) {
+            if (whom->chained_enqueue({this, whom, id.response_id()}, std::move(what))) {
                 chained_actor(whom);
             }
         }
-        else whom->enqueue({this, id.response_id()}, std::move(what));
+        else whom->enqueue({this, whom, id.response_id()}, std::move(what));
         id.mark_as_answered();
     }
 }
@@ -129,7 +129,7 @@ void local_actor::reply_message(any_tuple&& what) {
 void local_actor::forward_message(const actor_ptr& new_receiver) {
     if (new_receiver == nullptr) return;
     auto& id = m_current_node->mid;
-    new_receiver->enqueue({last_sender(), id}, m_current_node->msg);
+    new_receiver->enqueue({last_sender(), new_receiver, id}, m_current_node->msg);
     // treat this message as asynchronous message from now on
     id = message_id{};
 }
@@ -141,6 +141,7 @@ response_handle local_actor::make_response_handle() {
     return std::move(result);
 }
 
+/*
 message_id local_actor::send_timed_sync_message(const actor_ptr& whom,
                                                   const util::duration& rel_time,
                                                   any_tuple&& what) {
@@ -149,6 +150,7 @@ message_id local_actor::send_timed_sync_message(const actor_ptr& whom,
     get_scheduler()->delayed_reply(this, rel_time, mid, std::move(tmp));
     return mid;
 }
+*/
 
 void local_actor::exec_behavior_stack() {
     // default implementation does nothing

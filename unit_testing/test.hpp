@@ -29,9 +29,9 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num);
 
 #define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
 
-#define CPPA_PRINTERRC(filename, linenum, message)                             \
-    CPPA_LOGF_ERROR(CPPA_STREAMIFY(filename, linenum, message));               \
-    std::cerr << "ERROR: " << CPPA_STREAMIFY(filename, linenum, message)       \
+#define CPPA_PRINTERRC(fname, linenum, msg)                                    \
+    CPPA_LOGF(CPPA_ERROR, ::cppa::self, CPPA_STREAMIFY(fname, linenum, msg));  \
+    std::cerr << "ERROR: " << CPPA_STREAMIFY(fname, linenum, msg)              \
               << std::endl
 
 #define CPPA_PRINTERR(message) CPPA_PRINTERRC(__FILE__, __LINE__, message)
@@ -98,10 +98,11 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_VERBOSE_EVAL(LineOfCode)                                          \
     CPPA_PRINT(#LineOfCode << " = " << (LineOfCode));
 
-#define CPPA_TEST(name)                                                        \
+#define CPPA_TEST(testname)                                                    \
     auto cppa_test_scope_guard = ::cppa::util::make_scope_guard([] {           \
         std::cout << cppa_error_count() << " error(s) detected" << std::endl;  \
-    });
+    });                                                                        \
+    CPPA_LOGF(CPPA_TRACE, nullptr, "run unit test " << #testname)
 
 #define CPPA_TEST_RESULT() ((cppa_error_count() == 0) ? 0 : -1)
 
@@ -127,7 +128,7 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_CHECK_NOT_EQUAL(rhs_loc, lhs_loc)                                 \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__, false)
 
-#define CPPA_ERROR(err_msg) {                                                  \
+#define CPPA_FAILURE(err_msg) {                                                  \
         CPPA_PRINTERR("ERROR: " << err_msg);                                   \
         cppa_inc_error_count();                                                \
     } ((void) 0)
@@ -143,7 +144,7 @@ inline void cppa_check_value(V1 v1,
 
 // some convenience macros for defining callbacks
 #define CPPA_CHECKPOINT_CB() [] { CPPA_CHECKPOINT(); }
-#define CPPA_ERROR_CB(err_msg) [] { CPPA_ERROR(err_msg); }
+#define CPPA_FAILURE_CB(err_msg) [] { CPPA_FAILURE(err_msg); }
 #define CPPA_UNEXPECTED_MSG_CB() [] { CPPA_UNEXPECTED_MSG(); }
 #define CPPA_UNEXPECTED_TOUT_CB() [] { CPPA_UNEXPECTED_TOUT(); }
 

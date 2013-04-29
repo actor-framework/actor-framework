@@ -35,6 +35,7 @@
 #include <atomic>
 #include <stdexcept>
 
+#include "cppa/send.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
@@ -61,21 +62,19 @@ actor::actor(actor_id aid)
 actor::actor()
 : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
 , m_exit_reason(exit_reason::not_exited) {
-    CPPA_LOG_INFO("spawned new actor with ID " << id()
-                  << ", class = " << CPPA_CLASS_NAME);
+    CPPA_LOGMF(CPPA_INFO, self, "spawned new local actor with ID " << m_id);
 }
 
-bool actor::chained_enqueue(const message_header& hdr, any_tuple msg) {
-    enqueue(hdr, std::move(msg));
-    return false;
+actor::~actor() {
+    CPPA_LOG_INFO("ID = " << m_id << "");
 }
 
 bool actor::link_to_impl(const actor_ptr& other) {
     if (other && other != this) {
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         // send exit message if already exited
         if (exited()) {
-            other->enqueue(this, make_any_tuple(atom("EXIT"), exit_reason()));
+            send_as(this, other, atom("EXIT"), exit_reason());
         }
         // add link if not already linked to other
         // (checked by establish_backlink)
@@ -89,12 +88,12 @@ bool actor::link_to_impl(const actor_ptr& other) {
 
 bool actor::attach(attachable_ptr ptr) {
     if (ptr == nullptr) {
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         return m_exit_reason == exit_reason::not_exited;
     }
     std::uint32_t reason;
     { // lifetime scope of guard
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         reason = m_exit_reason;
         if (reason == exit_reason::not_exited) {
             m_attachables.push_back(std::move(ptr));
@@ -108,7 +107,7 @@ bool actor::attach(attachable_ptr ptr) {
 void actor::detach(const attachable::token& what) {
     attachable_ptr ptr;
     { // lifetime scope of guard
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         auto end = m_attachables.end();
         auto i = std::find_if(
                     m_attachables.begin(), end,
@@ -131,7 +130,7 @@ void actor::unlink_from(const actor_ptr& other) {
 
 bool actor::remove_backlink(const actor_ptr& other) {
     if (other && other != this) {
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         auto i = std::find(m_links.begin(), m_links.end(), other);
         if (i != m_links.end()) {
             m_links.erase(i);
@@ -144,7 +143,7 @@ bool actor::remove_backlink(const actor_ptr& other) {
 bool actor::establish_backlink(const actor_ptr& other) {
     std::uint32_t reason = exit_reason::not_exited;
     if (other && other != this) {
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         reason = m_exit_reason;
         if (reason == exit_reason::not_exited) {
             auto i = std::find(m_links.begin(), m_links.end(), other);
@@ -156,13 +155,13 @@ bool actor::establish_backlink(const actor_ptr& other) {
     }
     // send exit message without lock
     if (reason != exit_reason::not_exited) {
-        other->enqueue(this, make_any_tuple(atom("EXIT"), reason));
+        send_as(this, other, make_any_tuple(atom("EXIT"), reason));
     }
     return false;
 }
 
 bool actor::unlink_from_impl(const actor_ptr& other) {
-    guard_type guard(m_mtx);
+    guard_type guard{m_mtx};
     // remove_backlink returns true if this actor is linked to other
     if (other && !exited() && other->remove_backlink(this)) {
         auto i = std::find(m_links.begin(), m_links.end(), other);
@@ -179,7 +178,7 @@ void actor::cleanup(std::uint32_t reason) {
     decltype(m_links) mlinks;
     decltype(m_attachables) mattachables;
     { // lifetime scope of guard
-        guard_type guard(m_mtx);
+        guard_type guard{m_mtx};
         if (m_exit_reason != exit_reason::not_exited) {
             // already exited
             return;
@@ -191,9 +190,14 @@ void actor::cleanup(std::uint32_t reason) {
         m_links.clear();
         m_attachables.clear();
     }
+    CPPA_LOG_INFO((is_proxy() ? "proxy" : "local")
+                  << " actor had " << mlinks.size() << " links and "
+                  << mattachables.size() << " attached functors; "
+                  << CPPA_ARG(reason) << ", " << CPPA_ARG(m_id));
     // send exit messages
+    auto msg = make_any_tuple(atom("EXIT"), reason);
     for (actor_ptr& aptr : mlinks) {
-        aptr->enqueue(this, make_any_tuple(atom("EXIT"), reason));
+        send_tuple_as(this, aptr, msg);
     }
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);

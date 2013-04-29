@@ -31,6 +31,7 @@
 #ifndef CPPA_MESSAGE_HEADER_HPP
 #define CPPA_MESSAGE_HEADER_HPP
 
+#include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/message_priority.hpp"
@@ -47,28 +48,70 @@ class message_header {
 
  public:
 
-    actor_ptr  sender;
-    actor_ptr  receiver;
+    actor_ptr   sender;
+    channel_ptr receiver;
     message_id id;
     message_priority priority;
 
+    /**
+     * @brief An invalid message header without receiver or sender;
+     **/
     message_header() = default;
 
-    message_header(actor* sender);
+    /**
+     * @brief Creates a message header with <tt>receiver = dest</tt>
+     *        and <tt>sender = self</tt>.
+     **/
+    template<typename T>
+    message_header(intrusive_ptr<T> dest)
+    : sender(self), receiver(dest), priority(message_priority::normal) {
+        static_assert(std::is_convertible<T*,channel*>::value,
+                      "illegal receiver");
+    }
 
-    message_header(const self_type& sender);
+    template<typename T>
+    message_header(T* dest)
+    : sender(self), receiver(dest), priority(message_priority::normal) {
+        static_assert(std::is_convertible<T*,channel*>::value,
+                      "illegal receiver");
+    }
 
-    message_header(const actor_ptr& sender,
-                   message_priority priority = message_priority::normal);
+    message_header(const std::nullptr_t&);
 
-    message_header(const actor_ptr &sender,
-                   message_id id,
-                   message_priority priority = message_priority::normal);
+    /**
+     * @brief Creates a message header with <tt>receiver = self</tt>
+     *        and <tt>sender = self</tt>.
+     **/
+    message_header(const self_type&);
 
-    message_header(const actor_ptr& sender,
-                   const actor_ptr& receiver,
-                   message_id id = message_id::invalid,
-                   message_priority priority = message_priority::normal);
+    /**
+     * @brief Creates a message header with <tt>receiver = dest</tt>
+     *        and <tt>sender = self</tt>.
+     */
+    message_header(channel_ptr dest,
+                   message_id mid,
+                   message_priority prio = message_priority::normal);
+
+    /**
+     * @brief Creates a message header with <tt>receiver = dest</tt> and
+     *        <tt>sender = self</tt>.
+     */
+    message_header(channel_ptr dest, message_priority prio);
+
+    /**
+     * @brief Creates a message header with <tt>receiver = dest</tt> and
+     *        <tt>sender = source</tt>.
+     */
+    message_header(actor_ptr source,
+                   channel_ptr dest,
+                   message_id mid = message_id::invalid,
+                   message_priority prio = message_priority::normal);
+
+    /**
+     * @brief Creates a message header with <tt>receiver = dest</tt> and
+     *        <tt>sender = self</tt>.
+     */
+    message_header(actor_ptr source, channel_ptr dest, message_priority prio);
 
     void deliver(any_tuple msg) const;
 

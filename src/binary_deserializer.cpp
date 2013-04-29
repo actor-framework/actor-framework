@@ -38,6 +38,7 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/binary_deserializer.hpp"
 
@@ -51,7 +52,7 @@ typedef const char* iterator;
 
 inline void range_check(iterator begin, iterator end, size_t read_size) {
     if ((begin + read_size) > end) {
-        CPPA_LOGF_ERROR("range_check failed");
+        CPPA_LOGF(CPPA_ERROR, self, "range_check failed");
         throw out_of_range("binary_deserializer::read_range()");
     }
 }
@@ -153,7 +154,7 @@ void binary_deserializer::begin_object(const string&) { }
 void binary_deserializer::end_object() { }
 
 size_t binary_deserializer::begin_sequence() {
-    CPPA_LOG_TRACE("");
+    CPPA_LOGMF(CPPA_TRACE, self, "");
     static_assert(sizeof(size_t) >= sizeof(uint32_t),
                   "sizeof(size_t) < sizeof(uint32_t)");
     uint32_t result;

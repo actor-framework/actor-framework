@@ -80,14 +80,14 @@ struct command_dispatcher::worker {
                     if (err != CL_SUCCESS) {
                         ostringstream oss;
                         oss << "clFlush: " << get_opencl_error(err);
-                        CPPA_LOG_ERROR(oss.str());
+                        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                         throw runtime_error(oss.str());
                     }
                 }
                 catch (exception& e) {
                     ostringstream oss;
                     oss << "worker loop, e.what(): " << e.what();
-                    CPPA_LOG_ERROR(oss.str());
+                    CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                     throw runtime_error(oss.str());
                 }
             }
@@ -107,12 +107,12 @@ void command_dispatcher::worker_loop(command_dispatcher::worker* w) {
 
 void command_dispatcher::supervisor_loop(command_dispatcher* scheduler,
                                          job_queue* jq, command_ptr m_dummy) {
+    CPPA_LOGF_TRACE("");
     unique_ptr<command_dispatcher::worker> worker;
     worker.reset(new command_dispatcher::worker(scheduler, jq, m_dummy));
     worker->start();
     worker->m_thread.join();
     worker.reset();
-    CPPA_LOG_TRACE("supervisor done");
 }
 
 void command_dispatcher::initialize() {
@@ -128,13 +128,13 @@ void command_dispatcher::initialize() {
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetPlatformIDs: " << get_opencl_error(err);
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw logic_error(oss.str());
     }
     else if (number_of_platforms < 1) {
         ostringstream oss;
         oss << "clGetPlatformIDs: 'no platforms found'.";
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw logic_error(oss.str());
     }
 
@@ -152,7 +152,7 @@ void command_dispatcher::initialize() {
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetDeviceIDs: " << get_opencl_error(err);
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw runtime_error(oss.str());
     }
     vector<cl_device_id> devices(num_devices);
@@ -160,7 +160,7 @@ void command_dispatcher::initialize() {
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetDeviceIDs: " << get_opencl_error(err);
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw runtime_error(oss.str());
     }
 
@@ -169,7 +169,7 @@ void command_dispatcher::initialize() {
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clCreateContext: " << get_opencl_error(err);
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw runtime_error(oss.str());
     }
 
@@ -183,7 +183,7 @@ void command_dispatcher::initialize() {
         char buf[buf_size];
         err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
         if (err != CL_SUCCESS) {
-            CPPA_LOG_ERROR("clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, self, "clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
             fill(buf, buf+buf_size, 0);
         }
         command_queue_ptr cmd_queue;
@@ -192,7 +192,7 @@ void command_dispatcher::initialize() {
                                              CL_QUEUE_PROFILING_ENABLE,
                                              &err));
         if (err != CL_SUCCESS) {
-            CPPA_LOG_DEBUG("Could not create command queue for device "
+            CPPA_LOGMF(CPPA_DEBUG, self, "Could not create command queue for device "
                            << buf << ": " << get_opencl_error(err));
         }
         else {
@@ -207,7 +207,7 @@ void command_dispatcher::initialize() {
                 oss << "clGetDeviceInfo (" << id
                     << ":CL_DEVICE_MAX_WORK_GROUP_SIZE): "
                     << get_opencl_error(err);
-                CPPA_LOG_ERROR(oss.str());
+                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
             }
             cl_uint max_work_item_dimensions = 0;
@@ -221,7 +221,7 @@ void command_dispatcher::initialize() {
                 oss << "clGetDeviceInfo (" << id
                     << ":CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): "
                     << get_opencl_error(err);
-                CPPA_LOG_ERROR(oss.str());
+                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
             }
             dim_vec max_work_items_per_dim(max_work_item_dimensions);
@@ -235,7 +235,7 @@ void command_dispatcher::initialize() {
                 oss << "clGetDeviceInfo (" << id
                     << ":CL_DEVICE_MAX_WORK_ITEM_SIZES): "
                     << get_opencl_error(err);
-                CPPA_LOG_ERROR(oss.str());
+                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
             }
             device_info dev_info{id,
@@ -251,7 +251,7 @@ void command_dispatcher::initialize() {
         ostringstream oss;
         oss << "Could not create a command queue for "
             << "any of the present devices.";
-        CPPA_LOG_ERROR(oss.str());
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw runtime_error(oss.str());
     }
     else {

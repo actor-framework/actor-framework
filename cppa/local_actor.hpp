@@ -46,6 +46,7 @@
 #include "cppa/message_header.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
+#include "cppa/message_priority.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -55,6 +56,7 @@
 namespace cppa {
 
 // forward declarations
+class self_type;
 class scheduler;
 class message_future;
 class local_scheduler;
@@ -87,6 +89,8 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
  * @extends actor
  */
 class local_actor : public extend<actor>::with<memory_cached> {
+
+    friend class self_type;
 
     typedef combined_type super;
 
@@ -239,6 +243,12 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     /** @cond PRIVATE */
 
+    inline message_id new_request_id() {
+        auto result = ++m_last_request_id;
+        m_pending_responses.push_back(result.response_id());
+        return result;
+    }
+
     inline void handle_sync_timeout() {
         if (m_sync_timeout_handler) m_sync_timeout_handler();
         else quit(exit_reason::unhandled_sync_timeout);
@@ -257,13 +267,15 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     inline void dequeue_response(behavior&&, message_id);
 
+/*
     template<bool Discard, typename... Ts>
     void become(behavior_policy<Discard>, Ts&&... args);
 
     template<typename T, typename... Ts>
     void become(T arg, Ts&&... args);
+*/
 
-    inline void unbecome();
+    inline void do_unbecome();
 
     local_actor(bool is_scheduled = false);
 
@@ -271,14 +283,8 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     inline bool chaining_enabled();
 
-    inline void send_message(channel* whom, any_tuple&& what);
-
-    inline void send_message(actor* whom, any_tuple&& what);
-
-    inline message_id send_sync_message(const actor_ptr& whom,
-                                        any_tuple&& what);
-
-    message_id send_timed_sync_message(const actor_ptr& whom,
+    message_id send_timed_sync_message(message_priority mp,
+                                       const actor_ptr& whom,
                                        const util::duration& rel_time,
                                        any_tuple&& what);
 
@@ -302,11 +308,11 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     inline detail::behavior_stack& bhvr_stack();
 
- protected:
-
     virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
 
     inline void do_become(const behavior& bhvr, bool discard_old);
+
+ protected:
 
     inline void remove_handler(message_id id);
 
@@ -397,6 +403,7 @@ inline actor_ptr& local_actor::last_sender() {
     return m_current_node->sender;
 }
 
+/*
 template<bool Discard, typename... Ts>
 inline void local_actor::become(behavior_policy<Discard>, Ts&&... args) {
     do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
@@ -406,40 +413,14 @@ template<typename T, typename... Ts>
 inline void local_actor::become(T arg, Ts&&... args) {
     do_become(match_expr_convert(arg, std::forward<Ts>(args)...), true);
 }
+*/
 
-inline void local_actor::unbecome() {
+inline void local_actor::do_unbecome() {
     m_bhvr_stack.pop_async_back();
 }
 
 inline bool local_actor::chaining_enabled() {
     return m_chaining && !m_chained_actor;
-}
-
-inline void local_actor::send_message(channel* whom, any_tuple&& what) {
-    whom->enqueue(this, std::move(what));
-}
-
-inline void local_actor::send_message(actor* whom, any_tuple&& what) {
-    if (chaining_enabled()) {
-        if (whom->chained_enqueue(this, std::move(what))) {
-            m_chained_actor.reset(whom);
-        }
-    }
-    else whom->enqueue(this, std::move(what));
-}
-
-inline message_id local_actor::send_sync_message(const actor_ptr& whom, any_tuple&& what) {
-    auto id = ++m_last_request_id;
-    CPPA_REQUIRE(id.is_request());
-    if (chaining_enabled()) {
-        if (whom->chained_enqueue({this, id}, std::move(what))) {
-            chained_actor(whom);
-        }
-    }
-    else whom->enqueue({this, id}, std::move(what));
-    auto awaited_response = id.response_id();
-    m_pending_responses.push_back(awaited_response);
-    return awaited_response;
 }
 
 inline message_id local_actor::get_response_id() {

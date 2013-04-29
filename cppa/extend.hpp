@@ -38,14 +38,14 @@ namespace cppa {
 
 namespace detail {
 
-template<class B, class D, CPPA_MIXIN... Ms>
+template<class D, class B, CPPA_MIXIN... Ms>
 struct extend_helper;
 
-template<class B, class D>
-struct extend_helper<B,D> { typedef D type; };
+template<class D, class B>
+struct extend_helper<D,B> { typedef B type; };
 
-template<class B, class D, CPPA_MIXIN M, CPPA_MIXIN... Ms>
-struct extend_helper<B,D,M,Ms...> : extend_helper<B,M<D,B>,Ms...> { };
+template<class D, class B, CPPA_MIXIN M, CPPA_MIXIN... Ms>
+struct extend_helper<D,B,M,Ms...> : extend_helper<D,M<B,D>,Ms...> { };
 
 } // namespace detail
 
@@ -57,7 +57,7 @@ struct extend_helper<B,D,M,Ms...> : extend_helper<B,M<D,B>,Ms...> { };
  * Mixins in libcppa always have two template parameters: base type and
  * derived type. This allows mixins to make use of the curiously recurring
  * template pattern (CRTP). However, if none of the used mixins use CRTP,
- * the second template argument can ignored (it is then set to Base).
+ * the second template argument can be ignored (it is then set to Base).
  */
 template<class Base, class Derived = Base>
 struct extend {

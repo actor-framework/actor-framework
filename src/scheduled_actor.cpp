@@ -105,7 +105,7 @@ bool scheduled_actor::enqueue_impl(actor_state next_state,
                         if (m_state.compare_exchange_weak(state, next_state)) {
                             CPPA_REQUIRE(m_scheduler != nullptr);
                             if (next_state == actor_state::ready) {
-                                CPPA_LOG_DEBUG("enqueued actor with id " << id()
+                                CPPA_LOGMF(CPPA_DEBUG, self, "enqueued actor with id " << id()
                                                << " to job queue");
                                 m_scheduler->enqueue(this);
                                 return false;

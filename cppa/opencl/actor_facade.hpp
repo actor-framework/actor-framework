@@ -82,7 +82,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                result_mapping map_result) {
         if (global_dims.empty()) {
             auto str = "OpenCL kernel needs at least 1 global dimension.";
-            CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)), str);
+            CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
             throw std::runtime_error(str);
         }
         auto check_vec = [&](const dim_vec& vec, const char* name) {
@@ -90,7 +90,7 @@ class actor_facade<Ret(Args...)> : public actor {
                 std::ostringstream oss;
                 oss << name << " vector is not empty, but "
                     << "its size differs from global dimensions vector's size";
-                CPPA_LOGM_ERROR(detail::demangle<actor_facade>(), oss.str());
+                CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
                 throw std::runtime_error(oss.str());
             }
         };
@@ -104,7 +104,7 @@ class actor_facade<Ret(Args...)> : public actor {
         if (err != CL_SUCCESS) {
             std::ostringstream oss;
             oss << "clCreateKernel: " << get_opencl_error(err);
-            CPPA_LOGM_ERROR(detail::demangle<actor_facade>(), oss.str());
+            CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
             throw std::runtime_error(oss.str());
         }
         return new actor_facade<Ret (Args...)>{dispatcher,
@@ -169,7 +169,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                                                   m_local_dimensions,
                                                                   m_map_result));
         }
-        else { CPPA_LOG_ERROR("actor_facade::enqueue() tuple_cast failed."); }
+        else { CPPA_LOGMF(CPPA_ERROR, this, "actor_facade::enqueue() tuple_cast failed."); }
     }
 
     typedef std::vector<mem_ptr> args_vec;
@@ -217,7 +217,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                   arg0.data(),
                                   &err);
         if (err != CL_SUCCESS) {
-            CPPA_LOG_ERROR("clCreateBuffer: " << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, this, "clCreateBuffer: " << get_opencl_error(err));
         }
         else {
             mem_ptr tmp;
@@ -241,7 +241,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                   nullptr,
                                   &err);
         if (err != CL_SUCCESS) {
-            CPPA_LOG_ERROR("clCreateBuffer: " << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, this, "clCreateBuffer: " << get_opencl_error(err));
         }
         else {
             mem_ptr tmp;

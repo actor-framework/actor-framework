@@ -204,4 +204,13 @@ std::string to_string(const process_information& what) {
     return oss.str();
 }
 
+std::string to_string(const process_information_ptr& what) {
+    std::ostringstream oss;
+    oss << "@process_info(";
+    if (!what) oss << "null";
+    else oss << to_string(*what);
+    oss << ")";
+    return oss.str();
+}
+
 } // namespace cppa

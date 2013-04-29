@@ -68,6 +68,12 @@ namespace cppa { namespace detail {
 
 namespace {
 
+// see 'to_uniform_names.cpp' for a list of all type names
+std::string actor_ptr_tname = "@actor";
+std::string group_ptr_tname = "@group";
+std::string channel_ptr_tname = "@channel";
+std::string any_tuple_tname = "@<>";
+
 using namespace std;
 
 inline uniform_type_info_map& uti_map() {
@@ -174,18 +180,14 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
 
  public:
 
-    static void s_serialize(const actor_ptr& ptr,
-                            serializer* sink,
-                            const string&) {
+    static void s_serialize(const actor_ptr& ptr, serializer* sink) {
         auto impl = sink->addressing();
         if (impl) impl->write(sink, ptr);
         else throw std::runtime_error("unable to serialize actor_ptr: "
                                       "no actor addressing defined");
     }
 
-    static void s_deserialize(actor_ptr& ptrref,
-                              deserializer* source,
-                              const string&) {
+    static void s_deserialize(actor_ptr& ptrref, deserializer* source) {
         auto impl = source->addressing();
         if (impl) ptrref = impl->read(source);
         else throw std::runtime_error("unable to deserialize actor_ptr: "
@@ -195,11 +197,11 @@ class actor_ptr_tinfo : public util::abstract_uniform_type_info<actor_ptr> {
  protected:
 
     void serialize(const void* ptr, serializer* sink) const {
-        s_serialize(*reinterpret_cast<const actor_ptr*>(ptr), sink, name());
+        s_serialize(*reinterpret_cast<const actor_ptr*>(ptr), sink);
     }
 
     void deserialize(void* ptr, deserializer* source) const {
-        s_deserialize(*reinterpret_cast<actor_ptr*>(ptr), source, name());
+        s_deserialize(*reinterpret_cast<actor_ptr*>(ptr), source);
     }
 
 };
@@ -208,33 +210,29 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
 
  public:
 
-    static void s_serialize(const group_ptr& ptr,
-                            serializer* sink,
-                            const string& name) {
+    static void s_serialize(const group_ptr& ptr, serializer* sink) {
         if (ptr == nullptr) {
             serialize_nullptr(sink);
         }
         else {
-            sink->begin_object(name);
+            sink->begin_object(group_ptr_tname);
             sink->write_value(ptr->module_name());
             ptr->serialize(sink);
             sink->end_object();
         }
     }
 
-    static void s_deserialize(group_ptr& ptrref,
-                              deserializer* source,
-                              const string& name) {
+    static void s_deserialize(group_ptr& ptrref, deserializer* source) {
         auto cname = source->seek_object();
-        if (cname != name) {
+        if (cname != group_ptr_tname) {
             if (cname == s_nullptr_type_name) {
                 deserialize_nullptr(source);
                 ptrref.reset();
             }
-            else assert_type_name(source, name); // throws
+            else assert_type_name(source, group_ptr_tname); // throws
         }
         else {
-            source->begin_object(name);
+            source->begin_object(group_ptr_tname);
             auto modname = source->read<string>();
             ptrref = group::get_module(modname)
                     ->deserialize(source);
@@ -245,66 +243,47 @@ class group_ptr_tinfo : public util::abstract_uniform_type_info<group_ptr> {
  protected:
 
     void serialize(const void* ptr, serializer* sink) const {
-        s_serialize(*reinterpret_cast<const group_ptr*>(ptr),
-                    sink,
-                    name());
+        s_serialize(*reinterpret_cast<const group_ptr*>(ptr), sink);
     }
 
     void deserialize(void* ptr, deserializer* source) const {
-        s_deserialize(*reinterpret_cast<group_ptr*>(ptr), source, name());
+        s_deserialize(*reinterpret_cast<group_ptr*>(ptr), source);
     }
 
 };
 
 class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
 
-    string group_ptr_name;
-    string actor_ptr_name;
-
  public:
 
-    static void s_serialize(const channel_ptr& ptr,
-                            serializer* sink,
-                            const string& channel_type_name,
-                            const string& actor_ptr_type_name,
-                            const string& group_ptr_type_name) {
-        sink->begin_object(channel_type_name);
-        if (ptr == nullptr) {
-            serialize_nullptr(sink);
-        }
+    static void s_serialize(const channel_ptr& ptr, serializer* sink) {
+        sink->begin_object(channel_ptr_tname);
+        if (ptr == nullptr) serialize_nullptr(sink);
         else {
-            group_ptr gptr;
             auto aptr = ptr.downcast<actor>();
-            if (aptr) {
-                actor_ptr_tinfo::s_serialize(aptr, sink, actor_ptr_type_name);
-            }
-            else if ((gptr = ptr.downcast<group>())) {
-                group_ptr_tinfo::s_serialize(gptr, sink, group_ptr_type_name);
-            }
+            if (aptr) actor_ptr_tinfo::s_serialize(aptr, sink);
             else {
-                throw logic_error("channel is neither "
+                auto gptr = ptr.downcast<group>();
+                if (gptr) group_ptr_tinfo::s_serialize(gptr, sink);
+                else throw logic_error("channel is neither "
                                        "an actor nor a group");
             }
         }
         sink->end_object();
     }
 
-    static void s_deserialize(channel_ptr& ptrref,
-                              deserializer* source,
-                              const string& name,
-                              const string& actor_ptr_type_name,
-                              const string& group_ptr_type_name) {
-        assert_type_name(source, name);
-        source->begin_object(name);
+    static void s_deserialize(channel_ptr& ptrref, deserializer* source) {
+        assert_type_name(source, channel_ptr_tname);
+        source->begin_object(channel_ptr_tname);
         string subobj = source->peek_object();
-        if (subobj == actor_ptr_type_name) {
+        if (subobj == actor_ptr_tname) {
             actor_ptr tmp;
-            actor_ptr_tinfo::s_deserialize(tmp, source, actor_ptr_type_name);
+            actor_ptr_tinfo::s_deserialize(tmp, source);
             ptrref = tmp;
         }
-        else if (subobj == group_ptr_type_name) {
+        else if (subobj == group_ptr_tname) {
             group_ptr tmp;
-            group_ptr_tinfo::s_deserialize(tmp, source, group_ptr_type_name);
+            group_ptr_tinfo::s_deserialize(tmp, source);
             ptrref = tmp;
         }
         else if (subobj == s_nullptr_type_name) { (void) source->seek_object();
@@ -320,25 +299,12 @@ class channel_ptr_tinfo : public util::abstract_uniform_type_info<channel_ptr> {
  protected:
 
     void serialize(const void* instance, serializer* sink) const {
-        s_serialize(*reinterpret_cast<const channel_ptr*>(instance),
-                    sink,
-                    name(),
-                    actor_ptr_name,
-                    group_ptr_name);
+        s_serialize(*reinterpret_cast<const channel_ptr*>(instance), sink);
     }
 
     void deserialize(void* instance, deserializer* source) const {
-        s_deserialize(*reinterpret_cast<channel_ptr*>(instance),
-                      source,
-                      name(),
-                      actor_ptr_name,
-                      group_ptr_name);
+        s_deserialize(*reinterpret_cast<channel_ptr*>(instance), source);
     }
-
- public:
-
-    channel_ptr_tinfo() : group_ptr_name(to_uniform_name(typeid(group_ptr)))
-                        , actor_ptr_name(to_uniform_name(typeid(actor_ptr))) { }
 
 };
 
@@ -346,10 +312,8 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
 
  public:
 
-    static void s_serialize(const any_tuple& atup,
-                            serializer* sink,
-                            const string& name) {
-        sink->begin_object(name);
+    static void s_serialize(const any_tuple& atup, serializer* sink) {
+        sink->begin_object(any_tuple_tname);
         sink->begin_sequence(atup.size());
         for (size_t i = 0; i < atup.size(); ++i) {
             atup.type_at(i)->serialize(atup.at(i), sink);
@@ -358,12 +322,10 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
         sink->end_object();
     }
 
-    static void s_deserialize(any_tuple& atref,
-                              deserializer* source,
-                              const string& name) {
-        uniform_type_info::assert_type_name(source, name);
+    static void s_deserialize(any_tuple& atref, deserializer* source) {
+        uniform_type_info::assert_type_name(source, any_tuple_tname);
         auto result = new detail::object_array;
-        source->begin_object(name);
+        source->begin_object(any_tuple_tname);
         size_t tuple_size = source->begin_sequence();
         for (size_t i = 0; i < tuple_size; ++i) {
             auto tname = source->peek_object();
@@ -378,19 +340,16 @@ class any_tuple_tinfo : public util::abstract_uniform_type_info<any_tuple> {
  protected:
 
     void serialize(const void* instance, serializer* sink) const {
-        s_serialize(*reinterpret_cast<const any_tuple*>(instance),sink,name());
+        s_serialize(*reinterpret_cast<const any_tuple*>(instance), sink);
     }
 
     void deserialize(void* instance, deserializer* source) const {
-        s_deserialize(*reinterpret_cast<any_tuple*>(instance), source, name());
+        s_deserialize(*reinterpret_cast<any_tuple*>(instance), source);
     }
 
 };
 
 class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
-
-    string any_tuple_name;
-    string actor_ptr_name;
 
  public:
 
@@ -398,8 +357,8 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
         CPPA_LOG_TRACE("");
         auto& hdr = *reinterpret_cast<const message_header*>(instance);
         sink->begin_object(name());
-        actor_ptr_tinfo::s_serialize(hdr.sender, sink, actor_ptr_name);
-        actor_ptr_tinfo::s_serialize(hdr.receiver, sink, actor_ptr_name);
+        actor_ptr_tinfo::s_serialize(hdr.sender, sink);
+        channel_ptr_tinfo::s_serialize(hdr.receiver, sink);
         sink->write_value(hdr.id.integer_value());
         sink->end_object();
     }
@@ -409,16 +368,12 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
         assert_type_name(source);
         source->begin_object(name());
         auto& msg = *reinterpret_cast<message_header*>(instance);
-        actor_ptr_tinfo::s_deserialize(msg.sender, source, actor_ptr_name);
-        actor_ptr_tinfo::s_deserialize(msg.receiver, source, actor_ptr_name);
+        actor_ptr_tinfo::s_deserialize(msg.sender, source);
+        channel_ptr_tinfo::s_deserialize(msg.receiver, source);
         auto msg_id = source->read<std::uint64_t>();
         msg.id = message_id::from_integer_value(msg_id);
         source->end_object();
     }
-
-    msg_hdr_tinfo() : any_tuple_name(to_uniform_name<any_tuple>())
-                    , actor_ptr_name(to_uniform_name<actor_ptr>()) { }
-
 
 };
 

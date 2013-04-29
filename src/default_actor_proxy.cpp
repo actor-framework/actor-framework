@@ -52,12 +52,18 @@ sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
 default_actor_proxy::default_actor_proxy(actor_id mid,
                                          const process_information_ptr& pinfo,
                                          const default_protocol_ptr& parent)
-: super(mid), m_proto(parent), m_pinf(pinfo) { }
+: super(mid), m_proto(parent), m_pinf(pinfo) {
+    CPPA_REQUIRE(parent != nullptr);
+    CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(pinfo, to_string)
+                  << "protocol = " << detail::demangle(typeid(*parent)));
+}
 
 default_actor_proxy::~default_actor_proxy() {
     auto aid = id();
     auto node = m_pinf;
     auto proto = m_proto;
+    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TARG(m_pinf, to_string)
+                  << "protocol = " << detail::demangle(typeid(*m_proto)));
     proto->run_later([aid, node, proto] {
         CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                         "~default_actor_proxy$run_later",
@@ -89,6 +95,7 @@ void default_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
 
 void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
+    CPPA_REQUIRE(hdr.receiver == this);
     if (hdr.sender && hdr.id.is_request()) {
         switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
             case intrusive::queue_closed: {
@@ -116,15 +123,7 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
 }
 
 void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
-    CPPA_LOG_TRACE(CPPA_TARG(hdr.sender, to_string) << ", "
-                   << CPPA_MARG(hdr.id, integer_value) << ", "
-                   << CPPA_TARG(msg, to_string));
-    // make sure header is complete, i.e., hdr.receiver == this, because
-    // the protocol relies on this information
-    if (hdr.receiver != this) {
-        enqueue({hdr.sender, this, hdr.id}, std::move(msg));
-        return;
-    }
+    CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value,uint32_t>::arr;
     if (   msg.size() == 2
         && msg.type_at(0) == arr[0]
@@ -143,9 +142,8 @@ void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
                 f(e.sender.get(), e.mid);
             });
         });
-        return;
     }
-    forward_msg(hdr, move(msg));
+    else forward_msg(hdr, move(msg));
 }
 
 void default_actor_proxy::link_to(const intrusive_ptr<actor>& other) {

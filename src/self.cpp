@@ -101,7 +101,7 @@ void self_type::cleanup_fun(cppa::local_actor* what) {
         auto ptr = dynamic_cast<thread_mapped_actor*>(what);
         if (ptr) {
             // make sure "unspawned" actors quit properly
-            ptr->cleanup(cppa::exit_reason::normal);
+            what->cleanup(cppa::exit_reason::normal);
         }
         what->deref();
     }

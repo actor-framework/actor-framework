@@ -36,6 +36,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/logging.hpp"
+#include "cppa/prioritizing.hpp"
 #include "cppa/event_based_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 #include "cppa/context_switching_actor.hpp"
@@ -99,24 +100,24 @@ struct thread_pool_scheduler::worker {
         actor_ptr next;
         for (;;) {
             aggressive(job) || moderate(job) || relaxed(job);
-            CPPA_LOG_DEBUG("dequeued new job");
+            CPPA_LOGMF(CPPA_DEBUG, self, "dequeued new job");
             if (job == m_dummy) {
-                CPPA_LOG_DEBUG("received dummy (quit)");
+                CPPA_LOGMF(CPPA_DEBUG, self, "received dummy (quit)");
                 // dummy of doom received ...
                 m_job_queue->push_back(job); // kill the next guy
                 return;                      // and say goodbye
             }
             do {
-                CPPA_LOG_DEBUG("resume actor with ID " << job->id());
+                CPPA_LOGMF(CPPA_DEBUG, self, "resume actor with ID " << job->id());
                 CPPA_REQUIRE(next == nullptr);
                 if (job->resume(&fself, next) == resume_result::actor_done) {
-                    CPPA_LOG_DEBUG("actor is done");
+                    CPPA_LOGMF(CPPA_DEBUG, self, "actor is done");
                     bool hidden = job->is_hidden();
                     job->deref();
                     if (!hidden) get_actor_registry()->dec_running();
                 }
                 if (next) {
-                    CPPA_LOG_DEBUG("got new job trough chaining");
+                    CPPA_LOGMF(CPPA_DEBUG, self, "got new job trough chaining");
                     job = static_cast<job_ptr>(next.get());
                     next.reset();
                 }
@@ -163,11 +164,11 @@ void thread_pool_scheduler::initialize() {
 void thread_pool_scheduler::destroy() {
     CPPA_LOG_TRACE("");
     m_queue.push_back(&m_dummy);
-    CPPA_LOG_DEBUG("join supervisor");
+    CPPA_LOGMF(CPPA_DEBUG, self, "join supervisor");
     m_supervisor.join();
     // make sure job queue is empty, because destructor of m_queue would
     // otherwise delete elements it shouldn't
-    CPPA_LOG_DEBUG("flush queue");
+    CPPA_LOGMF(CPPA_DEBUG, self, "flush queue");
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
@@ -224,14 +225,22 @@ actor_ptr thread_pool_scheduler::exec(spawn_options os,
     if (has_blocking_api_flag(os)) {
 #       ifndef   CPPA_DISABLE_CONTEXT_SWITCHING
         if (!has_detach_flag(os)) {
-            return exec(os,
-                        memory::create<context_switching_actor>(std::move(f)));
+            return exec(os, make_counted<context_switching_actor>(std::move(f)));
         }
 #       endif
-        thread_mapped_actor_ptr p;
-        p.reset(memory::create<thread_mapped_actor>(std::move(f)));
+        auto p = make_counted<thread_mapped_actor>(std::move(f));
         exec_as_thread(has_hide_flag(os), p, [p] {
             p->run();
+            p->on_exit();
+        });
+        return std::move(p);
+    }
+    else if (has_priority_aware_flag(os)) {
+        using impl = extend<thread_mapped_actor>::with<prioritizing>;
+        auto p = make_counted<impl>();
+        exec_as_thread(has_hide_flag(os), p, [p, f] {
+            f();
+            p->exec_behavior_stack();
             p->on_exit();
         });
         return std::move(p);
