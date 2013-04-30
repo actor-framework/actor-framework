@@ -329,7 +329,7 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
     }
 
     inline void* mutable_at(size_t p) {
-#       ifdef CPPA_ENABLE_DEBUG
+#       ifdef CPPA_DEBUG_MODE
         if (p == 0) {
             if (std::is_same<decltype(ptr_to(head)), const void*>::value) {
                 throw std::logic_error{"mutable_at with const head"};

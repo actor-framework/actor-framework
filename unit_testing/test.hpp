@@ -102,7 +102,7 @@ inline void cppa_check_value(V1 v1,
     auto cppa_test_scope_guard = ::cppa::util::make_scope_guard([] {           \
         std::cout << cppa_error_count() << " error(s) detected" << std::endl;  \
     });                                                                        \
-    CPPA_LOGF(CPPA_TRACE, nullptr, "run unit test " << #testname)
+    CPPA_LOGF_INFO("run unit test " << #testname)
 
 #define CPPA_TEST_RESULT() ((cppa_error_count() == 0) ? 0 : -1)
 
@@ -120,7 +120,7 @@ inline void cppa_check_value(V1 v1,
         CPPA_PRINTERR(#line_of_code);                                          \
         cppa_inc_error_count();                                                \
     }                                                                          \
-    else CPPA_PRINT("passed")
+    else { CPPA_PRINT("passed"); } CPPA_VOID_STMT
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__)

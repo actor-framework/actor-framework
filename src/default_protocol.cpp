@@ -193,7 +193,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     if (*pinf == *pinfptr) {
         // dude, this is not a remote actor, it's a local actor!
         CPPA_LOGMF(CPPA_ERROR, self, "remote_actor() called to access a local actor");
-#       ifndef CPPA_ENABLE_DEBUG
+#       ifndef CPPA_DEBUG_MODE
         std::cerr << "*** warning: remote_actor() called to access a local actor\n"
                   << std::flush;
 #       endif

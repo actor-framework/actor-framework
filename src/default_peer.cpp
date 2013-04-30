@@ -254,9 +254,6 @@ void default_peer::kill_proxy(const actor_ptr& sender,
         CPPA_LOGMF(CPPA_DEBUG, self, "received KILL_PROXY for " << aid
                        << ":" << to_string(*node));
         send_as(nullptr, proxy, atom("KILL_PROXY"), reason);
-        /*proxy->enqueue(nullptr,
-                       make_any_tuple(
-                           atom("KILL_PROXY"), reason));*/
     }
     else {
         CPPA_LOG_INFO("received KILL_PROXY message but "
@@ -271,24 +268,6 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
         hdr.sender.downcast<actor_proxy>()->deliver(hdr, std::move(msg));
     }
     else hdr.deliver(std::move(msg));
-    /*
-    auto receiver = hdr.receiver.get();
-    if (receiver) {
-        if (hdr.id.valid()) {
-            CPPA_LOGMF(CPPA_DEBUG, self, "sync message for actor " << receiver->id());
-            receiver->sync_enqueue(hdr.sender.get(), hdr.id, move(msg));
-        }
-        else {
-            CPPA_LOGMF(CPPA_DEBUG, self, "async message with "
-                           << (hdr.sender ? "" : "in")
-                           << "valid sender");
-            receiver->enqueue(hdr.sender.get(), move(msg));
-        }
-    }
-    else {
-        CPPA_LOGMF(CPPA_ERROR, self, "received message with invalid receiver");
-    }
-    */
 }
 
 void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {

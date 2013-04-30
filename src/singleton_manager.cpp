@@ -77,32 +77,31 @@ std::atomic<logging*> s_logger;
 } // namespace <anonymous>
 
 void singleton_manager::shutdown() {
-    CPPA_LOGF_INFO("prepare to shutdown");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "prepare to shutdown");
     if (self.unchecked() != nullptr) {
         try { self.unchecked()->quit(exit_reason::normal); }
         catch (actor_exited&) { }
     }
     //auto rptr = s_actor_registry.load();
     //if (rptr) rptr->await_running_count_equal(0);
-    CPPA_LOGF_DEBUG("shutdown scheduler");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown scheduler");
     destroy(s_scheduler);
-    CPPA_LOGF_DEBUG("shutdown middleman");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown middleman");
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe to delete all other singletons now
-    CPPA_LOGF_DEBUG("close OpenCL command dispather");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "close OpenCL command dispather");
     destroy(s_command_dispatcher);
-    CPPA_LOGF_DEBUG("close actor registry");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "close actor registry");
     destroy(s_actor_registry);
-    CPPA_LOGF_DEBUG("shutdown group manager");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown group manager");
     destroy(s_group_manager);
-    CPPA_LOGF_DEBUG("destroy empty tuple singleton");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "destroy empty tuple singleton");
     destroy(s_empty_tuple);
-    CPPA_LOGF_DEBUG("clear type info map");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "clear type info map");
     destroy(s_uniform_type_info_map);
-    CPPA_LOGF_DEBUG("clear decorated names log");
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "clear decorated names log");
     destroy(s_decorated_names_map);
-    CPPA_LOGF_DEBUG("shutdown logger");
     destroy(s_logger);
 }
 

@@ -72,7 +72,7 @@ endif ()
 # set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_ENABLE_DEBUG")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG_MODE")
 endif (ENABLE_DEBUG)
 
 if (CPPA_LOG_LEVEL)

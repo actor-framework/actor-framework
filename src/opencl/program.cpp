@@ -93,7 +93,7 @@ program program::create(const char* kernel_source) {
         throw std::runtime_error(oss.str());
     }
     else {
-#       ifdef CPPA_ENABLE_DEBUG
+#       ifdef CPPA_DEBUG_MODE
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
                                m_devices.front().dev_id);

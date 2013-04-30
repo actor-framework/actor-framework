@@ -365,6 +365,7 @@ int main() {
 
     CPPA_PRINT("test priority aware mirror"); {
         auto mirror = spawn<simple_mirror,monitored+priority_aware>();
+        CPPA_CHECKPOINT();
         send(mirror, "hello mirror");
         receive (
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),

@@ -59,11 +59,11 @@ default_actor_proxy::default_actor_proxy(actor_id mid,
 }
 
 default_actor_proxy::~default_actor_proxy() {
-    auto aid = id();
+    auto aid = m_id;
     auto node = m_pinf;
     auto proto = m_proto;
-    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TARG(m_pinf, to_string)
-                  << "protocol = " << detail::demangle(typeid(*m_proto)));
+    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(m_pinf)
+                   << ", protocol = " << detail::demangle(typeid(*m_proto)));
     proto->run_later([aid, node, proto] {
         CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                         "~default_actor_proxy$run_later",
@@ -94,8 +94,14 @@ void default_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
 }
 
 void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
-    CPPA_LOG_TRACE("");
-    CPPA_REQUIRE(hdr.receiver == this);
+    CPPA_LOG_TRACE(CPPA_ARG(m_id) << ", " << CPPA_TSARG(hdr)
+                   << ", " << CPPA_TSARG(msg));
+    if (hdr.receiver != this) {
+        auto cpy = hdr;
+        cpy.receiver = this;
+        forward_msg(cpy, std::move(msg));
+        return;
+    }
     if (hdr.sender && hdr.id.is_request()) {
         switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
             case intrusive::queue_closed: {

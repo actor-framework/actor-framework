@@ -30,6 +30,7 @@
 
 #include <ctime>
 #include <thread>
+#include <cstring>
 #include <fstream>
 #include <algorithm>
 
@@ -85,7 +86,7 @@ class logging_impl : public logging {
     void operator()() {
         ostringstream fname;
         fname << "libcppa_" << getpid() << "_" << time(0) << ".log";
-        fstream out(fname.str().c_str(), ios::out);
+        fstream out(fname.str().c_str(), ios::out | ios::app);
         unique_ptr<log_event> event;
         for (;;) {
             event.reset(m_queue.pop());
@@ -117,9 +118,18 @@ class logging_impl : public logging {
         }
         else file_name = move(full_file_name);
         auto print_from = [&](ostream& oss) -> ostream& {
-            if (!from) oss << "null";
+            if (!from) {
+                if (strcmp(c_class_name, "logging") == 0) oss << "logging";
+                else oss << "null";
+            }
             else if (from->is_proxy()) oss << to_string(from);
-            else oss << from->id() << "@local";
+            else {
+#               ifdef CPPA_DEBUG_MODE
+                oss << from.downcast<local_actor>()->debug_name();
+#               else // CPPA_DEBUG_MODE
+                oss << from->id() << "@local";
+#               endif // CPPA_DEBUG_MODE
+            }
             return oss;
         };
         ostringstream line;

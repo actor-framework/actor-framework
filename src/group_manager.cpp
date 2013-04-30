@@ -181,10 +181,10 @@ class local_broker : public event_based_actor {
         // send to all remote subscribers
         auto sender = last_sender();
         CPPA_LOG_DEBUG("forward message to " << m_acquaintances.size()
-                       << " acquaintances; " << CPPA_TTARG(sender)
-                       << ", " << CPPA_TTARG(what));
+                       << " acquaintances; " << CPPA_TSARG(sender)
+                       << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            send_tuple_as(sender, acquaintance, what);
+            acquaintance->enqueue({sender, acquaintance}, what);
         }
     }
 
@@ -216,7 +216,7 @@ class local_group_proxy : public local_group {
     }
 
     group::subscription subscribe(const channel_ptr& who) {
-        CPPA_LOG_TRACE(CPPA_TTARG(who));
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = add_subscriber(who);
         if (res.first) {
             if (res.second == 1) {
@@ -229,7 +229,7 @@ class local_group_proxy : public local_group {
     }
 
     void unsubscribe(const channel_ptr& who) {
-        CPPA_LOG_TRACE(CPPA_TTARG(who));
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = erase_subscriber(who);
         if (res.first && res.second == 0) {
             // leave the remote source,
@@ -358,7 +358,7 @@ class remote_group : public group {
     : super(parent, move(id)), m_decorated(decorated) { }
 
     group::subscription subscribe(const channel_ptr& who) {
-        CPPA_LOG_TRACE(CPPA_TTARG(who));
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         return m_decorated->subscribe(who);
     }
 

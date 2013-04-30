@@ -61,13 +61,7 @@ actor::actor(actor_id aid)
 
 actor::actor()
 : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
-, m_exit_reason(exit_reason::not_exited) {
-    CPPA_LOGMF(CPPA_INFO, self, "spawned new local actor with ID " << m_id);
-}
-
-actor::~actor() {
-    CPPA_LOG_INFO("ID = " << m_id << "");
-}
+, m_exit_reason(exit_reason::not_exited) { }
 
 bool actor::link_to_impl(const actor_ptr& other) {
     if (other && other != this) {
@@ -173,6 +167,8 @@ bool actor::unlink_from_impl(const actor_ptr& other) {
 }
 
 void actor::cleanup(std::uint32_t reason) {
+    // log as 'actor'
+    CPPA_LOGM_TRACE("cppa::actor", CPPA_ARG(m_id) << ", " << CPPA_ARG(reason));
     CPPA_REQUIRE(reason != exit_reason::not_exited);
     // move everyhting out of the critical section before processing it
     decltype(m_links) mlinks;
@@ -190,14 +186,16 @@ void actor::cleanup(std::uint32_t reason) {
         m_links.clear();
         m_attachables.clear();
     }
-    CPPA_LOG_INFO((is_proxy() ? "proxy" : "local")
-                  << " actor had " << mlinks.size() << " links and "
-                  << mattachables.size() << " attached functors; "
-                  << CPPA_ARG(reason) << ", " << CPPA_ARG(m_id));
+    CPPA_LOGC_INFO_IF(not is_proxy(), "cppa::actor", __func__,
+                      "actor with ID " << m_id << " had " << mlinks.size()
+                      << " links and " << mattachables.size()
+                      << " attached functors; exit reason = " << reason
+                      << ", class = " << detail::demangle(typeid(*this)));
     // send exit messages
     auto msg = make_any_tuple(atom("EXIT"), reason);
     for (actor_ptr& aptr : mlinks) {
-        send_tuple_as(this, aptr, msg);
+        message_header hdr{this, aptr, message_priority::high};
+        hdr.deliver(msg);
     }
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);

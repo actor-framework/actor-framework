@@ -74,8 +74,6 @@ class actor : public channel {
 
  public:
 
-    ~actor();
-
     /**
      * @brief Attaches @p ptr to this actor.
      *

@@ -114,12 +114,8 @@ inline actor_ptr fwd_aptr(const self_type& s) {
     return s.unchecked();
 }
 
-inline actor_ptr fwd_aptr(actor* ptr) {
-    return ptr;
-}
-
-inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
-    return ptr;
+inline actor_ptr fwd_aptr(actor_ptr ptr) {
+    return std::move(ptr);
 }
 
 struct oss_wr {
@@ -165,6 +161,13 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_DEBUG    3
 #define CPPA_TRACE    4
 
+#ifdef CPPA_DEBUG_MODE
+#   define CPPA_SET_DEBUG_NAME(strstr)                                            \
+        self->debug_name((::cppa::oss_wr{} << strstr).str());
+#else
+#   define CPPA_SET_DEBUG_NAME(unused)
+#endif
+
 #define CPPA_LVL_NAME0() "ERROR"
 #define CPPA_LVL_NAME1() "WARN "
 #define CPPA_LVL_NAME2() "INFO "
@@ -172,9 +175,9 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_LVL_NAME4() "TRACE"
 
 #ifndef CPPA_LOG_LEVEL
-#   define CPPA_LOG_IMPL(lvlname, classname, funname, unused, message) {\
-        std::cerr << "[" << lvlname << "] " << classname << "::" << funname << ": " \
-                  << message << "\nStack trace:\n";                            \
+#   define CPPA_LOG_IMPL(lvlname, classname, funname, unused, message) {       \
+        std::cerr << "[" << lvlname << "] " << classname << "::"               \
+                  << funname << ": " << message << "\nStack trace:\n";         \
         void *array[10];                                                       \
         size_t size = backtrace(array, 10);                                    \
         backtrace_symbols_fd(array, size, 2);                                  \
@@ -254,7 +257,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
  * @def CPPA_LOGMF
  * @brief Logs a message inside a member function.
  **/
-#define CPPA_LOGMF(level, actorptr, msg)                                        \
+#define CPPA_LOGMF(level, actorptr, msg)                                       \
     CPPA_LOGC(level, CPPA_CLASS_NAME, __func__, actorptr, msg)
 
 /**
@@ -287,7 +290,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 
 
 /******************************************************************************
- *                 backward compatibility for version <= 0.6                  *
+ *                             convenience macros                             *
  ******************************************************************************/
 
 #define CPPA_LOG_ERROR(msg)   CPPA_LOGMF(CPPA_ERROR, ::cppa::self, msg)

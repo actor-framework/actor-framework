@@ -34,6 +34,7 @@
 #include <tuple>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <type_traits>
 
@@ -450,7 +451,7 @@ operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
 }
 
 inline const self_type& operator<<(const self_type& s, any_tuple what) {
-    send_tuple(s, std::move(what));
+    send_tuple(s.get(), std::move(what));
     return s;
 }
 
@@ -458,17 +459,9 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
  * @}
  */
 
-/*
-// matches "send(this, ...)" and "send(self, ...)"
-inline void send_tuple(channel* whom, any_tuple what) {
-    detail::send_impl(whom, std::move(what));
-}
-template<typename... Ts>
-inline void send(channel* whom, Ts&&... args) {
-    detail::send_tpl_impl(whom, std::forward<Ts>(args)...);
-}
-*/
-inline actor_ptr eval_sopts(spawn_options opts, actor_ptr ptr) {
+inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
+    CPPA_LOGF_INFO("spawned new local actor with ID " << ptr->id()
+                   << " of type " << detail::demangle(typeid(*ptr)));
     if (has_monitor_flag(opts)) self->monitor(ptr);
     if (has_link_flag(opts)) self->link_to(ptr);
     return std::move(ptr);
@@ -548,9 +541,9 @@ actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    auto rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
-    rawptr->join(grp);
-    return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
+    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    ptr->join(grp);
+    return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
 }
 
 /** @} */

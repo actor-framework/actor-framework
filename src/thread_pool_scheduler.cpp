@@ -200,7 +200,7 @@ void exec_as_thread(bool is_hidden, local_actor_ptr p, F f) {
     }).detach();
 }
 
-actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
+local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
     CPPA_REQUIRE(p != nullptr);
     bool is_hidden = has_hide_flag(os);
     if (has_detach_flag(os)) {
@@ -219,35 +219,62 @@ actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
     return std::move(p);
 }
 
-actor_ptr thread_pool_scheduler::exec(spawn_options os,
-                                      init_callback cb,
-                                      void_function f) {
-    if (has_blocking_api_flag(os)) {
-#       ifndef   CPPA_DISABLE_CONTEXT_SWITCHING
-        if (!has_detach_flag(os)) {
-            return exec(os, make_counted<context_switching_actor>(std::move(f)));
-        }
-#       endif
-        auto p = make_counted<thread_mapped_actor>(std::move(f));
-        exec_as_thread(has_hide_flag(os), p, [p] {
-            p->run();
-            p->on_exit();
-        });
-        return std::move(p);
-    }
-    else if (has_priority_aware_flag(os)) {
+local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
+                                            init_callback cb,
+                                            void_function f) {
+    local_actor_ptr result;
+    auto set_result = [&](local_actor_ptr value) {
+        CPPA_REQUIRE(result == nullptr && value != nullptr);
+        result = std::move(value);
+        if (cb) cb(result.get());
+    };
+    if (has_priority_aware_flag(os)) {
         using impl = extend<thread_mapped_actor>::with<prioritizing>;
-        auto p = make_counted<impl>();
-        exec_as_thread(has_hide_flag(os), p, [p, f] {
-            f();
-            p->exec_behavior_stack();
-            p->on_exit();
+        set_result(make_counted<impl>());
+        exec_as_thread(has_hide_flag(os), result, [result, f] {
+            try {
+                f();
+                result->exec_behavior_stack();
+            }
+            catch (actor_exited& e) { }
+            catch (std::exception& e) {
+                CPPA_LOGF_ERROR("actor with ID " << result->id()
+                                << " terminated due to an unhandled exception; "
+                                << detail::demangle(typeid(e)) << ": "
+                                << e.what());
+            }
+            catch (...) {
+                CPPA_LOGF_ERROR("actor with ID " << result->id()
+                                << " terminated due to an unknown exception");
+            }
+            result->on_exit();
         });
-        return std::move(p);
     }
-    auto p = event_based_actor::from(std::move(f));
-    if (cb) cb(p.get());
-    return exec(os, p);
+    else if (has_blocking_api_flag(os)) {
+#       ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+        if (!has_detach_flag(os)) {
+            auto p = make_counted<context_switching_actor>(std::move(f));
+            set_result(p);
+            exec(os, std::move(p));
+        }
+        else
+#       endif
+        /* else tree */ {
+            auto p = make_counted<thread_mapped_actor>(std::move(f));
+            set_result(p);
+            exec_as_thread(has_hide_flag(os), p, [p] {
+                p->run();
+                p->on_exit();
+            });
+        }
+    }
+    else {
+        auto p = event_based_actor::from(std::move(f));
+        set_result(p);
+        exec(os, p);
+    }
+    CPPA_REQUIRE(result != nullptr);
+    return std::move(result);
 }
 
 } } // namespace cppa::detail

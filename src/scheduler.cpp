@@ -177,7 +177,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
             done = true;
         },
         others() >> [&]() {
-#           ifdef CPPA_ENABLE_DEBUG
+#           ifdef CPPA_DEBUG_MODE
                 std::cerr << "scheduler_helper::timer_loop: UNKNOWN MESSAGE: "
                           << to_string(msg_ptr->msg)
                           << std::endl;

@@ -38,7 +38,6 @@
 #include "cppa/stacked.hpp"
 #include "cppa/scheduled_actor.hpp"
 
-
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/yield_interface.hpp"

@@ -107,7 +107,7 @@ class decorated_tuple : public abstract_tuple {
     decorated_tuple(cow_pointer_type d, const vector_type& v)
         : super(false)
         , m_decorated(std::move(d)), m_mapping(v) {
-#       ifdef CPPA_ENABLE_DEBUG
+#       ifdef CPPA_DEBUG_MODE
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
         CPPA_REQUIRE(ptr->size() >= sizeof...(Ts));
@@ -117,7 +117,7 @@ class decorated_tuple : public abstract_tuple {
 
     decorated_tuple(cow_pointer_type d, size_t offset)
         : super(false), m_decorated(std::move(d)) {
-#       ifdef CPPA_ENABLE_DEBUG
+#       ifdef CPPA_DEBUG_MODE
         const cow_pointer_type& ptr = m_decorated; // prevent detaching
 #       endif
         CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(Ts));

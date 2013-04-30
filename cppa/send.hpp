@@ -46,19 +46,33 @@ namespace cppa {
  * @{
  */
 
+struct destination_header {
+    channel_ptr receiver;
+    message_priority priority;
+    inline destination_header(const self_type& s)
+    : receiver(s), priority(message_priority::normal) { }
+    template<typename T>
+    inline destination_header(T dest)
+    : receiver(std::move(dest)), priority(message_priority::normal) { }
+    inline destination_header(channel_ptr dest, message_priority prio)
+    : receiver(std::move(dest)), priority(prio) { }
+    inline destination_header(destination_header&& hdr)
+    : receiver(std::move(hdr.receiver)), priority(hdr.priority) { }
+};
+
 /**
  * @brief Sends @p what to the receiver specified in @p hdr.
  */
-inline void send_tuple(const message_header& hdr, any_tuple what) {
+inline void send_tuple(destination_header hdr, any_tuple what) {
     if (hdr.receiver == nullptr) return;
-    local_actor* sptr = self.unchecked();
-    if (sptr && sptr->chaining_enabled()) {
-        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
+    message_header fhdr{self, std::move(hdr.receiver), hdr.priority};
+    if (self->chaining_enabled()) {
+        if (fhdr.receiver->chained_enqueue(fhdr, std::move(what))) {
             // only actors implement chained_enqueue to return true
-            sptr->chained_actor(static_cast<actor*>(hdr.receiver.get()));
+            self->chained_actor(fhdr.receiver.downcast<actor>());
         }
     }
-    else hdr.receiver->enqueue(hdr, std::move(what));
+    else fhdr.deliver(std::move(what));
 }
 
 /**
@@ -66,16 +80,17 @@ inline void send_tuple(const message_header& hdr, any_tuple what) {
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<typename... Ts>
-inline void send(const message_header& hdr, Ts&&... what) {
+inline void send(destination_header hdr, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    send_tuple(hdr, make_any_tuple(std::forward<Ts>(what)...));
+    send_tuple(std::move(hdr), make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
  * @brief Sends @p what to @p whom, but sets the sender information to @p from.
  */
 inline void send_tuple_as(actor_ptr from, channel_ptr whom, any_tuple what) {
-    send_tuple({std::move(from), std::move(whom)}, std::move(what));
+    message_header hdr{std::move(from), std::move(whom)};
+    hdr.deliver(std::move(what));
 }
 
 /**
@@ -88,8 +103,8 @@ inline void send_tuple_as(actor_ptr from, channel_ptr whom, any_tuple what) {
  */
 template<typename... Ts>
 inline void send_as(actor_ptr from, channel_ptr whom, Ts&&... what) {
-    send_tuple({std::move(from), std::move(whom)},
-               make_any_tuple(std::forward<Ts>(what)...));
+    send_tuple_as(std::move(from), std::move(whom),
+                  make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
@@ -104,7 +119,13 @@ inline void send_as(actor_ptr from, channel_ptr whom, Ts&&... what) {
 inline message_future sync_send_tuple(actor_ptr whom, any_tuple what) {
     if (!whom) throw std::invalid_argument("whom == nullptr");
     auto req = self->new_request_id();
-    send_tuple({std::move(whom), req}, std::move(what));
+    message_header hdr{self, std::move(whom), req};
+    if (self->chaining_enabled()) {
+        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
+            self->chained_actor(hdr.receiver.downcast<actor>());
+        }
+    }
+    else hdr.deliver(std::move(what));
     return req.response_id();
 }
 

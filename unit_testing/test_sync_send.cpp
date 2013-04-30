@@ -77,7 +77,6 @@ struct B : popular_actor {
 struct C : sb_actor<C> {
     behavior init_state = (
         on(atom("gogo")) >> [=] {
-            CPPA_CHECKPOINT();
             reply(atom("gogogo"));
             self->quit();
         }

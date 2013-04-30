@@ -354,7 +354,6 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
  public:
 
     virtual void serialize(const void* instance, serializer* sink) const {
-        CPPA_LOG_TRACE("");
         auto& hdr = *reinterpret_cast<const message_header*>(instance);
         sink->begin_object(name());
         actor_ptr_tinfo::s_serialize(hdr.sender, sink);
@@ -364,7 +363,6 @@ class msg_hdr_tinfo : public util::abstract_uniform_type_info<message_header> {
     }
 
     virtual void deserialize(void* instance, deserializer* source) const {
-        CPPA_LOG_TRACE("");
         assert_type_name(source);
         source->begin_object(name());
         auto& msg = *reinterpret_cast<message_header*>(instance);

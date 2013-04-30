@@ -96,6 +96,8 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
  public:
 
+    ~local_actor();
+
     /**
      * @brief Causes this actor to subscribe to the group @p what.
      *
@@ -267,14 +269,6 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     inline void dequeue_response(behavior&&, message_id);
 
-/*
-    template<bool Discard, typename... Ts>
-    void become(behavior_policy<Discard>, Ts&&... args);
-
-    template<typename T, typename... Ts>
-    void become(T arg, Ts&&... args);
-*/
-
     inline void do_unbecome();
 
     local_actor(bool is_scheduled = false);
@@ -312,11 +306,18 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     inline void do_become(const behavior& bhvr, bool discard_old);
 
+    const char* debug_name() const;
+
+    void debug_name(std::string str);
+
  protected:
 
     inline void remove_handler(message_id id);
 
     void cleanup(std::uint32_t reason);
+
+    // used *only* when compiled in debug mode
+    union { std::string m_debug_name; };
 
     // true if this actor uses the chained_send optimization
     bool m_chaining;
@@ -402,18 +403,6 @@ inline any_tuple& local_actor::last_dequeued() {
 inline actor_ptr& local_actor::last_sender() {
     return m_current_node->sender;
 }
-
-/*
-template<bool Discard, typename... Ts>
-inline void local_actor::become(behavior_policy<Discard>, Ts&&... args) {
-    do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
-}
-
-template<typename T, typename... Ts>
-inline void local_actor::become(T arg, Ts&&... args) {
-    do_become(match_expr_convert(arg, std::forward<Ts>(args)...), true);
-}
-*/
 
 inline void local_actor::do_unbecome() {
     m_bhvr_stack.pop_async_back();
