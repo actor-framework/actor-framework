@@ -135,7 +135,7 @@ void default_actor_addressing::put(const process_information& node,
     auto& submap = m_proxies[node];
     auto i = submap.find(aid);
     if (i == submap.end()) {
-        submap.emplace(aid, proxy);
+        submap.insert(make_pair(aid, proxy));
         m_parent->enqueue(node,
                           {nullptr, nullptr},
                           make_any_tuple(atom("MONITOR"),
