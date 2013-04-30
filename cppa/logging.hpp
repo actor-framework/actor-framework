@@ -34,6 +34,7 @@
 #include <sstream>
 #include <iostream>
 #include <execinfo.h>
+#include <type_traits>
 
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
@@ -121,6 +122,37 @@ inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
     return ptr;
 }
 
+struct oss_wr {
+
+    inline oss_wr() { }
+    inline oss_wr(oss_wr&& other) : m_str(std::move(other.m_str)) { }
+
+    std::string m_str;
+
+    inline std::string str() {
+        return std::move(m_str);
+    }
+
+};
+
+inline oss_wr operator<<(oss_wr&& lhs, std::string str) {
+    lhs.m_str += std::move(str);
+    return std::move(lhs);
+}
+
+inline oss_wr operator<<(oss_wr&& lhs, const char* str) {
+    lhs.m_str += str;
+    return std::move(lhs);
+}
+
+template<typename T>
+oss_wr operator<<(oss_wr&& lhs, T rhs) {
+    std::ostringstream oss;
+    oss << rhs;
+    lhs.m_str += oss.str();
+    return std::move(lhs);
+}
+
 } // namespace cppa
 
 #define CPPA_VOID_STMT static_cast<void>(0)
@@ -141,7 +173,7 @@ inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
 
 #ifndef CPPA_LOG_LEVEL
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, unused, message) {\
-        std::cerr << "[" << lvlname << "] classname << "::" << funname << ": " \
+        std::cerr << "[" << lvlname << "] " << classname << "::" << funname << ": " \
                   << message << "\nStack trace:\n";                            \
         void *array[10];                                                       \
         size_t size = backtrace(array, 10);                                    \
@@ -151,8 +183,8 @@ inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
 #else
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, aptr, message)           \
         ::cppa::get_logger()->log(lvlname, classname, funname, __FILE__,       \
-                                  __LINE__, ::cppa::fwd_aptr(aptr),            \
-                                  (::std::ostringstream{} << message).str())
+            __LINE__, ::cppa::fwd_aptr(aptr),                                  \
+            (::cppa::oss_wr{} << message).str())
 #endif
 
 #define CPPA_CLASS_NAME ::cppa::detail::demangle(typeid(*this)).c_str()
@@ -177,7 +209,7 @@ inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
                ::cppa::logging::trace_helper cppa_trace_helper_ {              \
                    classname, funname, __FILE__, __LINE__,                     \
                    ::cppa::fwd_aptr(actorptr),                                 \
-                   (::std::ostringstream{} << msg).str()                       \
+                   (::cppa::oss_wr{} << msg).str()                             \
                }
 #endif
 
@@ -251,7 +283,7 @@ inline actor_ptr fwd_aptr(const actor_ptr& ptr) {
 #define CPPA_ARG(arg) #arg << " = " << arg
 #define CPPA_TARG(arg, trans) #arg << " = " << trans ( arg )
 #define CPPA_MARG(arg, memfun) #arg << " = " << arg . memfun ()
-#define CPPA_TTARG(arg) #arg << " = " << to_string ( arg )
+#define CPPA_TSARG(arg) #arg << " = " << to_string ( arg )
 
 
 /******************************************************************************
