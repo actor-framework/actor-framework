@@ -44,7 +44,6 @@
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/detail/decorated_names_map.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
@@ -66,7 +65,6 @@ namespace {
 
 std::atomic<opencl::command_dispatcher*> s_command_dispatcher;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
-std::atomic<decorated_names_map*> s_decorated_names_map;
 std::atomic<network::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
@@ -100,8 +98,6 @@ void singleton_manager::shutdown() {
     destroy(s_empty_tuple);
     CPPA_LOGF(CPPA_DEBUG, nullptr, "clear type info map");
     destroy(s_uniform_type_info_map);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "clear decorated names log");
-    destroy(s_decorated_names_map);
     destroy(s_logger);
 }
 
@@ -128,10 +124,6 @@ group_manager* singleton_manager::get_group_manager() {
 
 scheduler* singleton_manager::get_scheduler() {
     return lazy_get(s_scheduler);
-}
-
-decorated_names_map* singleton_manager::get_decorated_names_map() {
-    return lazy_get(s_decorated_names_map);
 }
 
 logging* singleton_manager::get_logger() {

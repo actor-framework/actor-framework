@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <cstring>
 #include <cstddef>
 #include <sstream>
 #include <iostream>
@@ -43,7 +44,9 @@ struct both_integral {
 };
 
 template<bool V, typename T1, typename T2>
-struct enable_integral : std::enable_if<both_integral<T1,T2>::value == V> { };
+struct enable_integral : std::enable_if<   both_integral<T1,T2>::value == V
+                                        && not std::is_pointer<T1>::value
+                                        && not std::is_pointer<T2>::value> { };
 
 template<typename T>
 const T& cppa_stream_arg(const T& value) {
@@ -71,6 +74,15 @@ inline void cppa_failed(const V1& v1,
                    "expected value: " << cppa_stream_arg(v2)
                    << ", found: " << cppa_stream_arg(v1));
     cppa_inc_error_count();
+}
+
+inline void cppa_check_value(const std::string& v1,
+                             const std::string& v2,
+                             const char* fname,
+                             int line,
+                             bool expected = true) {
+    if ((v1 == v2) == expected) cppa_passed(fname, line);
+    else cppa_failed(v1, v2, fname, line);
 }
 
 template<typename V1, typename V2>

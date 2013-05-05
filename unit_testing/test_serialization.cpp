@@ -229,6 +229,7 @@ int main() {
         if (msg1str != msg1_tostring) {
             CPPA_FAILURE("msg1str != to_string(msg1)");
             cerr << "to_string(msg1) = " << msg1_tostring << endl;
+            cerr << "to_string(msg1str) = " << msg1str << endl;
         }
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf, &addressing);

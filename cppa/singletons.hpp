@@ -67,10 +67,6 @@ inline detail::empty_tuple* get_empty_tuple() {
     return detail::singleton_manager::get_empty_tuple();
 }
 
-inline detail::decorated_names_map* get_decorated_names_map() {
-    return detail::singleton_manager::get_decorated_names_map();
-}
-
 } // namespace cppa
 
 #endif // CPPA_SINGLETONS_HPP

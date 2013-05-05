@@ -32,57 +32,93 @@
 #define CPPA_UNIFORM_TYPE_INFO_MAP_HPP
 
 #include <set>
+#include <map>
 #include <string>
-#include <utility> // std::pair
+#include <utility>
+#include <type_traits>
+
+#include "cppa/cppa_fwd.hpp"
+
+#include "cppa/util/duration.hpp"
+#include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 namespace cppa { class uniform_type_info; }
 
 namespace cppa { namespace detail {
 
+using mapped_type_list = util::type_list<
+    bool,
+    any_tuple,
+    atom_value,
+    actor_ptr,
+    channel_ptr,
+    group_ptr,
+    process_information_ptr,
+    message_header,
+    std::nullptr_t,
+    util::duration,
+    util::void_type,
+    double,
+    float,
+    long double,
+    std::string,
+    std::u16string,
+    std::u32string,
+    std::map<std::string,std::string>
+>;
+
+using zipped_type_list = util::tl_zip_with_index<mapped_type_list>::type;
+
+// lookup table for built-in types
+extern const char* mapped_type_names[][2];
+
+template<typename T>
+constexpr const char* mapped_name() {
+    return mapped_type_names[util::tl_index_of<zipped_type_list,T>::value][1];
+}
+
+const char* mapped_name_by_decorated_name(const char* decorated_type_name);
+
+// lookup table for integer types
+extern const char* mapped_int_names[][2];
+
+template<typename T>
+constexpr const char* mapped_int_name() {
+    return mapped_int_names[sizeof(T)][std::is_signed<T>::value ? 1 : 0];
+}
+
 class uniform_type_info_map_helper;
 
 // note: this class is implemented in uniform_type_info.cpp
-class uniform_type_info_map : public singleton_mixin<uniform_type_info_map> {
+class uniform_type_info_map {
 
     friend class uniform_type_info_map_helper;
     friend class singleton_mixin<uniform_type_info_map>;
 
  public:
 
-    typedef std::set<std::string> set_type;
-    typedef std::map<std::string, uniform_type_info*> uti_map_type;
-    typedef std::map<int, std::pair<set_type, set_type> > int_map_type;
+    typedef const uniform_type_info* pointer;
 
-    inline const int_map_type& int_names() const {
-        return m_ints;
-    }
+    virtual ~uniform_type_info_map();
 
-    const uniform_type_info* by_raw_name(const std::string& name) const;
+    virtual pointer by_uniform_name(const std::string& name) const = 0;
 
-    const uniform_type_info* by_uniform_name(const std::string& name) const;
+    virtual pointer by_rtti(const std::type_info& ti) const = 0;
 
-    std::vector<const uniform_type_info*> get_all() const;
+    virtual std::vector<pointer> get_all() const = 0;
 
     // NOT thread safe!
-    bool insert(const std::set<std::string>& raw_names, uniform_type_info* uti);
+    virtual bool insert(uniform_type_info* uti) = 0;
 
- private:
+    static uniform_type_info_map* create_singleton();
 
-    // maps raw typeid names to uniform type informations
-    uti_map_type m_by_rname;
+    inline void dispose() { delete this; }
 
-    // maps uniform names to uniform type informations
-    uti_map_type m_by_uname;
+    inline void destroy() { delete this; }
 
-    // maps sizeof(-integer_type-) to { signed-names-set, unsigned-names-set }
-    int_map_type m_ints;
-
-    uniform_type_info_map();
-
-    ~uniform_type_info_map();
+    virtual void initialize() = 0;
 
 };
 
