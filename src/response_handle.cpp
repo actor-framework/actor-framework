@@ -58,11 +58,11 @@ void response_handle::apply(any_tuple msg) const {
         local_actor* sptr = self.unchecked();
         bool use_chaining = sptr && sptr == m_from && sptr->chaining_enabled();
         if (use_chaining) {
-            if (m_to->chained_enqueue({m_from, m_id}, move(msg))) {
+            if (m_to->chained_enqueue({m_from, m_to, m_id}, move(msg))) {
                 sptr->chained_actor(m_to);
             }
         }
-        else m_to->enqueue({m_from, m_id}, move(msg));
+        else m_to->enqueue({m_from, m_to, m_id}, move(msg));
     }
 }
 
