@@ -122,18 +122,28 @@ void command_dispatcher::initialize() {
     cl_int err{0};
 
     /* find up to two available platforms */
-    vector<cl_platform_id> ids(2);
     cl_uint number_of_platforms;
-    err = clGetPlatformIDs(ids.size(), ids.data(), &number_of_platforms);
+    err = clGetPlatformIDs(0, nullptr, &number_of_platforms);
     if (err != CL_SUCCESS) {
         ostringstream oss;
-        oss << "clGetPlatformIDs: " << get_opencl_error(err);
+        oss << "clGetPlatformIDs (getting number of platforms): "
+            << get_opencl_error(err);
         CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw logic_error(oss.str());
     }
     else if (number_of_platforms < 1) {
         ostringstream oss;
-        oss << "clGetPlatformIDs: 'no platforms found'.";
+        oss << "clGetPlatformIDs: no platforms found.";
+        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        throw logic_error(oss.str());
+    }
+
+    vector<cl_platform_id> ids(number_of_platforms);
+    err = clGetPlatformIDs(ids.size(), ids.data(), nullptr);
+    if (err != CL_SUCCESS) {
+        ostringstream oss;
+        oss << "clGetPlatformIDs (getting platform ids): "
+            << get_opencl_error(err);
         CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw logic_error(oss.str());
     }

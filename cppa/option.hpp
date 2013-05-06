@@ -63,7 +63,7 @@ class option {
     option(T value) : m_valid(false) { cr(std::move(value)); }
 
     template<typename T0, typename T1, typename... Ts>
-    option(T0&& arg0, T1&& arg1, Ts&&... args) {
+    option(T0&& arg0, T1&& arg1, Ts&&... args) : m_valid(false) {
         cr(T(std::forward<T0>(arg0),
              std::forward<T1>(arg1),
              std::forward<Ts>(args)...));

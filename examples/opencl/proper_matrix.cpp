@@ -86,12 +86,12 @@ class square_matrix {
 
     }
 
-    inline float& operator()(size_t row, size_t column) {
-        return m_data[row + column * Size];
+    inline float& operator()(size_t column, size_t row) {
+        return m_data[column + row * Size];
     }
 
-    inline const float& operator()(size_t row, size_t column) const {
-        return m_data[row + column * Size];
+    inline const float& operator()(size_t column, size_t row) const {
+        return m_data[column + row * Size];
     }
 
     inline void iota_fill() {
@@ -118,9 +118,9 @@ template<size_t Size>
 string to_string(const square_matrix<Size>& m) {
     ostringstream oss;
     oss.fill(' ');
-    for (size_t column = 0; column < Size; ++column) {
-        for (size_t row = 0; row < Size; ++row) {
-            oss << fixed << setprecision(2) << setw(9) << m(row, column);
+    for (size_t row = 0; row < Size; ++row) {
+        for (size_t column = 0; column < Size; ++column) {
+            oss << fixed << setprecision(2) << setw(9) << m(column, row);
         }
         oss << '\n';
     }

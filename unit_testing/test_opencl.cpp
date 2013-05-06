@@ -30,7 +30,7 @@ constexpr const char* kernel_source = R"__(
         for (size_t idx = 0; idx < size; ++idx) {
             result += matrix[idx + y * size] * matrix[x + idx * size];
         }
-        output[x+y*size] = result;
+        output[x + y * size] = result;
     }
 )__";
 
@@ -54,12 +54,12 @@ class square_matrix {
         assert(m_data.size() == num_elements);
     }
 
-    inline float& operator()(size_t row, size_t column) {
-        return m_data[row + column * Size];
+    inline float& operator()(size_t column, size_t row) {
+        return m_data[column + row * Size];
     }
 
-    inline const float& operator()(size_t row, size_t column) const {
-        return m_data[row + column * Size];
+    inline const float& operator()(size_t column, size_t row) const {
+        return m_data[column + row * Size];
     }
 
     inline void iota_fill() {
