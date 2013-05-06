@@ -39,6 +39,8 @@
 
 #include "cppa/cppa_fwd.hpp"
 
+#include "cppa/atom.hpp"
+#include "cppa/process_information.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
 
