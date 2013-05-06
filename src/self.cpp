@@ -31,6 +31,7 @@
 #include <pthread.h>
 
 #include "cppa/self.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
@@ -45,6 +46,7 @@ pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 local_actor* tss_constructor() {
     local_actor* result = detail::memory::create<thread_mapped_actor>();
+    CPPA_LOGF_INFO("converted thread to actor; ID = " << result->id());
     result->ref();
     get_scheduler()->register_converted_context(result);
     return result;
@@ -101,7 +103,7 @@ void self_type::cleanup_fun(cppa::local_actor* what) {
         auto ptr = dynamic_cast<thread_mapped_actor*>(what);
         if (ptr) {
             // make sure "unspawned" actors quit properly
-            ptr->cleanup(cppa::exit_reason::normal);
+            what->cleanup(cppa::exit_reason::normal);
         }
         what->deref();
     }

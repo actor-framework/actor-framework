@@ -31,8 +31,11 @@
 #ifndef CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 #define CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
+#include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
+
 #include "cppa/detail/to_uniform_name.hpp"
+#include "cppa/detail/uniform_type_info_map.hpp"
 
 namespace cppa { namespace util {
 
@@ -43,19 +46,23 @@ namespace cppa { namespace util {
 template<typename T>
 class abstract_uniform_type_info : public uniform_type_info {
 
-    inline static const T& deref(const void* ptr) {
-        return *reinterpret_cast<const T*>(ptr);
+ public:
+
+    bool equals(const std::type_info& tinfo) const {
+        return typeid(T) == tinfo;
     }
 
-    inline static T& deref(void* ptr) {
-        return *reinterpret_cast<T*>(ptr);
+    const char* name() const {
+        return m_name.c_str();
     }
 
  protected:
 
-    abstract_uniform_type_info(const std::string& uname
-                           = detail::to_uniform_name(typeid(T)))
-        : uniform_type_info(uname) {
+    abstract_uniform_type_info() {
+        auto uname = detail::to_uniform_name<T>();
+        auto cname = detail::mapped_name_by_decorated_name(uname.c_str());
+        if (cname == uname.c_str()) m_name = std::move(uname);
+        else m_name = cname;
     }
 
     bool equals(const void* lhs, const void* rhs) const {
@@ -70,14 +77,32 @@ class abstract_uniform_type_info : public uniform_type_info {
         delete reinterpret_cast<T*>(instance);
     }
 
- public:
-
-    bool equals(const std::type_info& tinfo) const {
-        return typeid(T) == tinfo;
+    void assert_type_name(deserializer* source) const {
+        auto tname = source->seek_object();
+        if (tname != name()) {
+            std::string error_msg = "wrong type name found; expected \"";
+            error_msg += name();
+            error_msg += "\", found \"";
+            error_msg += tname;
+            error_msg += "\"";
+            throw std::logic_error(std::move(error_msg));
+        }
     }
+
+ private:
+
+    static inline const T& deref(const void* ptr) {
+        return *reinterpret_cast<const T*>(ptr);
+    }
+
+    static inline T& deref(void* ptr) {
+        return *reinterpret_cast<T*>(ptr);
+    }
+
+    std::string m_name;
 
 };
 
-} }
+} } // namespace cppa::util
 
 #endif // CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP

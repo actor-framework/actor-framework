@@ -58,21 +58,13 @@ namespace cppa {
 
 class self_type;
 class scheduler_helper;
-class thread_mapped_actor;
-
-template<>
-struct has_blocking_receive<thread_mapped_actor> : std::true_type { };
 
 /**
  * @brief An actor using the blocking API running in its own thread.
  * @extends local_actor
  */
-class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with<mailbox_based,stacked,threaded> {
-
-    friend class self_type;              // needs access to cleanup()
-    friend class scheduler_helper;       // needs access to mailbox
-    friend class detail::receive_policy; // needs access to await_message(), etc.
-    friend class detail::behavior_stack; // needs same access as receive_policy
+class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::
+                                   with<mailbox_based,stacked,threaded> {
 
     typedef combined_type super;
 
@@ -84,11 +76,7 @@ class thread_mapped_actor : public extend<local_actor,thread_mapped_actor>::with
 
     inline void initialized(bool value) { m_initialized = value; }
 
-    bool initialized() const;
-
- protected:
-
-    void cleanup(std::uint32_t reason);
+    virtual bool initialized() const override;
 
  private:
 

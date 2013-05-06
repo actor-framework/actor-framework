@@ -38,190 +38,114 @@ vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
     return result;
 }
 
-struct reflector : public event_based_actor {
-    void init() {
-        become (
-            others() >> [=] {
-                reply_tuple(last_dequeued());
-                quit();
-            }
-        );
-    }
-};
+void reflector() {
+    CPPA_SET_DEBUG_NAME("reflector" << self->id());
+    become (
+        others() >> [=] {
+            CPPA_LOGF_INFO("reflect and quit");
+            reply_tuple(self->last_dequeued());
+            self->quit();
+        }
+    );
+}
 
-struct replier : public event_based_actor {
-    void init() {
-        become (
-            others() >> [=] {
-                reply(42);
-                quit();
-            }
-        );
-    }
-};
-
-// receive seven reply messages (2 local, 5 remote)
-void spawn5_server(actor_ptr client, bool inverted) {
-    group_ptr grp;
-    if (!inverted) {
-        grp = group::get("local", "foobar");
-    }
-    else {
-        send(client, atom("GetGroup"));
-        receive (
-            on_arg_match >> [&](const group_ptr& remote_group) {
-                grp = remote_group;
-            }
-        );
-    }
-    spawn_in_group<reflector>(grp);
-    spawn_in_group<reflector>(grp);
-    sync_send(client, atom("Spawn5"), grp).await(
-        on(atom("ok"), arg_match) >> [&](const actor_vector& vec) {
+void spawn5_server_impl(actor_ptr client, group_ptr grp) {
+    CPPA_LOGF_TRACE(CPPA_TARG(client, to_string)
+                    << ", " << CPPA_TARG(grp, to_string));
+    spawn_in_group(grp, reflector);
+    spawn_in_group(grp, reflector);
+    CPPA_LOGF_INFO("send {'Spawn5'} and await {'ok', actor_vector}");
+    sync_send(client, atom("Spawn5"), grp).then(
+        on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
+            CPPA_LOGF_INFO("received vector with " << vec.size() << " elements");
             send(grp, "Hello reflectors!", 5.0);
             if (vec.size() != 5) {
                 CPPA_PRINTERR("remote client did not spawn five reflectors!");
             }
             for (auto& a : vec) self->monitor(a);
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB(),
-        after(chrono::seconds(10)) >> CPPA_UNEXPECTED_TOUT_CB()
-    );
-    CPPA_PRINT("wait for reflected messages");
-    // receive seven reply messages (2 local, 5 remote)
-    int x = 0;
-    receive_for(x, 7) (
-        on("Hello reflectors!", 5.0) >> [] { },
-        after(std::chrono::seconds(2)) >> CPPA_UNEXPECTED_TOUT_CB()
-    );
-    CPPA_PRINT("wait for DOWN messages");
-    // wait for DOWN messages
-    {int i = 0; receive_for(i, 5) (
-        on(atom("DOWN"), arg_match) >> [](std::uint32_t reason) {
-            if (reason != exit_reason::normal) {
-                CPPA_PRINTERR("reflector exited for non-normal exit reason!");
-            }
+        others() >> [] {
+            CPPA_UNEXPECTED_MSG();
+            self->quit(exit_reason::unhandled_exception);
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB(),
-        after(chrono::seconds(2)) >> [&] {
-            i = 4;
+        after(chrono::seconds(10)) >> [] {
             CPPA_UNEXPECTED_TOUT();
+            self->quit(exit_reason::unhandled_exception);
         }
-    );}
-    CPPA_CHECKPOINT();
-    // wait for locally spawned reflectors
-    await_all_others_done();
-    CPPA_CHECKPOINT();
-    send(client, atom("Spawn5Done"));
-}
-
-void spawn5_client() {
-    bool spawned_reflectors = false;
-    do_receive (
-        on(atom("Spawn5"), arg_match) >> [&](const group_ptr& grp) {
-            actor_vector vec;
-            for (int i = 0; i < 5; ++i) {
-                vec.push_back(spawn_in_group<reflector>(grp));
-            }
-            reply(atom("ok"), std::move(vec));
-            spawned_reflectors = true;
-        },
-        on(atom("GetGroup")) >> [] {
-            reply(group::get("local", "foobar"));
-        }
-    ).until(gref(spawned_reflectors));
-    await_all_others_done();
-    // wait for server
-    receive (
-        on(atom("Spawn5Done")) >> [] { }
-    );
-}
-
-int client_part(const vector<string_pair>& args) {
-    CPPA_TEST(test_remote_actor_client_part);
-    auto i = find_if(args.begin(), args.end(),
-                          [](const string_pair& p) { return p.first == "port"; });
-    if (i == args.end()) {
-        throw runtime_error("no port specified");
-    }
-    auto port = static_cast<uint16_t>(stoi(i->second));
-    auto server = remote_actor("localhost", port);
-    // remote_actor is supposed to return the same server when connecting to
-    // the same host again
-    for (int i = 0; i < 5; ++i) {
-        auto server2 = remote_actor("localhost", port);
-        CPPA_CHECK(server == server2);
-    }
-    send(server, atom("SpawnPing"));
-    receive (
-        on(atom("PingPtr"), arg_match) >> [](actor_ptr ping_actor) {
-            spawn<detached + blocking_api>(pong, ping_actor);
-        }
-    );
-    await_all_others_done();
-    sync_send(server, atom("SyncMsg")).await(
-        others() >> [&] {
-            if (self->last_dequeued() != make_cow_tuple(atom("SyncReply"))) {
-                ostringstream oss;
-                oss << "unexpected message; "
-                    << __FILE__ << " line " << __LINE__ << ": "
-                    << to_string(self->last_dequeued()) << endl;
-                send(server, atom("Failure"), oss.str());
-            }
-            else {
-                send(server, atom("Done"));
-            }
-        },
-        after(chrono::seconds(5)) >> [&] {
-            CPPA_PRINTERR("sync_send timed out!");
-            send(server, atom("Timeout"));
-        }
-    );
-    receive (
-        others() >> [&] {
-            CPPA_ERROR("unexpected message; "
-                       << __FILE__ << " line " << __LINE__ << ": "
-                       << to_string(self->last_dequeued()));
-        },
-        after(chrono::seconds(0)) >> [&] { }
-    );
-    // test 100 sync_messages
-    for (int i = 0; i < 100; ++i) {
-        sync_send(server, atom("foo"), atom("bar"), i).await(
-            on(atom("foo"), atom("bar"), i) >> [] { },
-            others() >> [&] {
-                CPPA_ERROR("unexpected message; "
-                           << __FILE__ << " line " << __LINE__ << ": "
-                           << to_string(self->last_dequeued()));
+    )
+    .continue_with([=] {
+        CPPA_PRINT("wait for reflected messages");
+        // receive seven reply messages (2 local, 5 remote)
+        auto replies = std::make_shared<int>(0);
+        become (
+            on("Hello reflectors!", 5.0) >> [=] {
+                if (++*replies == 7) {
+                    CPPA_PRINT("wait for DOWN messages");
+                    auto downs = std::make_shared<int>(0);
+                    become (
+                        on(atom("DOWN"), arg_match) >> [=](std::uint32_t reason) {
+                            if (reason != exit_reason::normal) {
+                                CPPA_PRINTERR("reflector exited for non-normal exit reason!");
+                            }
+                            if (++*downs == 5) {
+                                CPPA_CHECKPOINT();
+                                send(client, atom("Spawn5Done"));
+                                self->quit();
+                            }
+                        },
+                        others() >> [] {
+                            CPPA_UNEXPECTED_MSG();
+                            self->quit(exit_reason::unhandled_exception);
+                        },
+                        after(chrono::seconds(2)) >> [] {
+                            CPPA_UNEXPECTED_TOUT();
+                            self->quit(exit_reason::unhandled_exception);
+                        }
+                    );
+                }
             },
-            after(chrono::seconds(10)) >> [&] {
-                CPPA_ERROR("unexpected timeout!");
+            after(std::chrono::seconds(2)) >> [] {
+                CPPA_UNEXPECTED_TOUT();
+                self->quit(exit_reason::unhandled_exception);
+            }
+        );
+    });
+}
+
+// receive seven reply messages (2 local, 5 remote)
+void spawn5_server(actor_ptr client, bool inverted) {
+    CPPA_SET_DEBUG_NAME("spawn5_server");
+    if (!inverted) spawn5_server_impl(client, group::get("local", "foobar"));
+    else {
+        CPPA_LOGF_INFO("request group");
+        sync_send(client, atom("GetGroup")).then (
+            [=](const group_ptr& remote_group) {
+                spawn5_server_impl(client, remote_group);
             }
         );
     }
-    CPPA_CHECKPOINT();
-    spawn5_server(server, false);
-    CPPA_CHECKPOINT();
-    spawn5_client();
-    CPPA_CHECKPOINT();
-    // wait for locally spawned reflectors
-    await_all_others_done();
-    CPPA_CHECKPOINT();
+}
 
-    receive (
-        on(atom("fwd"), arg_match) >> [&](const actor_ptr& fwd, const string&) {
-            forward_to(fwd);
+void spawn5_client() {
+    CPPA_SET_DEBUG_NAME("spawn5_client");
+    become (
+        on(atom("GetGroup")) >> [] {
+            CPPA_LOGF_INFO("received {'GetGroup'}");
+            reply(group::get("local", "foobar"));
+        },
+        on(atom("Spawn5"), arg_match) >> [=](const group_ptr& grp) {
+            CPPA_LOGF_INFO("received {'Spawn5'}");
+            actor_vector vec;
+            for (int i = 0; i < 5; ++i) {
+                vec.push_back(spawn_in_group(grp, reflector));
+            }
+            reply(atom("ok"), std::move(vec));
+        },
+        on(atom("Spawn5Done")) >> [] {
+            CPPA_LOGF_INFO("received {'Spawn5Done'}");
+            self->quit();
         }
     );
-    CPPA_CHECKPOINT();
-    // shutdown handshake
-    send(server, atom("farewell"));
-    CPPA_CHECKPOINT();
-    receive(on(atom("cu")) >> [] { });
-    CPPA_CHECKPOINT();
-    shutdown();
-    CPPA_CHECKPOINT();
-    return CPPA_TEST_RESULT();
 }
 
 } // namespace <anonymous>
@@ -239,28 +163,235 @@ void verbose_terminate() {
     abort();
 }
 
+template<typename T>
+void await_down(actor_ptr ptr, T continuation) {
+    become (
+        on(atom("DOWN"), arg_match) >> [=](uint32_t) -> bool {
+            if (self->last_sender() == ptr) {
+                continuation();
+                return true;
+            }
+            return false; // not the 'DOWN' message we are waiting for
+        }
+    );
+}
+
+class client : public event_based_actor {
+
+ public:
+
+    client(actor_ptr server) : m_server(std::move(server)) { }
+
+    void init() {
+        CPPA_SET_DEBUG_NAME("client");
+        spawn_ping();
+    }
+
+ private:
+
+    void spawn_ping() {
+        CPPA_PRINT("send {'SpawnPing'}");
+        send(m_server, atom("SpawnPing"));
+        become (
+            on(atom("PingPtr"), arg_match) >> [=](const actor_ptr& ping) {
+                auto pptr = spawn<monitored+detached+blocking_api>(pong, ping);
+                await_down(pptr, [=] {
+                    send_sync_msg();
+                });
+            }
+
+        );
+    }
+
+    void send_sync_msg() {
+        CPPA_PRINT("sync send {'SyncMsg'}");
+        sync_send(m_server, atom("SyncMsg")).then(
+            on(atom("SyncReply")) >> [=] {
+                send_foobars();
+            }
+        );
+    }
+
+    void send_foobars(int i = 0) {
+        if (i == 0) { CPPA_PRINT("send foobars"); }
+        if (i == 100) test_group_comm();
+        else {
+            CPPA_LOG_DEBUG("send message nr. " << (i+1));
+            sync_send(m_server, atom("foo"), atom("bar"), i).then (
+                on(atom("foo"), atom("bar"), i) >> [=] {
+                    send_foobars(i+1);
+                }
+            );
+        }
+    }
+
+    void test_group_comm() {
+        CPPA_PRINT("test group communication via network");
+        sync_send(m_server, atom("GClient")).then(
+            on(atom("GClient"), arg_match) >> [=](actor_ptr gclient) {
+                auto s5a = spawn<monitored>(spawn5_server, gclient, false);
+                await_down(s5a, [=]{
+                    test_group_comm_inverted();
+                });
+            }
+        );
+    }
+
+    void test_group_comm_inverted() {
+        CPPA_PRINT("test group communication via network (inverted setup)");
+        become (
+            on(atom("GClient")) >> [=] {
+                auto cptr = self->last_sender();
+                auto s5c = spawn<monitored>(spawn5_client);
+                reply(atom("GClient"), s5c);
+                await_down(s5c, [=] {
+                    CPPA_CHECKPOINT();
+                    self->quit();
+                });
+            }
+        );
+    }
+
+    actor_ptr m_server;
+
+};
+
+class server : public event_based_actor {
+
+ public:
+
+    void init() {
+        CPPA_SET_DEBUG_NAME("server");
+        await_spawn_ping();
+    }
+
+ private:
+
+    void await_spawn_ping() {
+        CPPA_PRINT("await {'SpawnPing'}");
+        become (
+            on(atom("SpawnPing")) >> [=] {
+                CPPA_PRINT("received {'SpawnPing'}");
+                auto client = self->last_sender();
+                CPPA_LOGF_ERROR_IF(!client, "last_sender() == nullptr");
+                CPPA_LOGF_INFO("spawn event-based ping actor");
+                auto pptr = spawn<monitored>(event_based_ping, 10);
+                reply(atom("PingPtr"), pptr);
+                CPPA_LOGF_INFO("wait until spawned ping actor is done");
+                await_down(pptr, [=] {
+                    CPPA_CHECK_EQUAL(pongs(), 10);
+                    await_sync_msg();
+                });
+            }
+        );
+    }
+
+    void await_sync_msg() {
+        CPPA_PRINT("await {'SyncMsg'}");
+        become (
+            on(atom("SyncMsg")) >> [=] {
+                CPPA_PRINT("received {'SyncMsg'}");
+                reply(atom("SyncReply"));
+                await_foobars();
+            }
+        );
+    }
+
+    void await_foobars() {
+        CPPA_PRINT("await foobars");
+        auto foobars = make_shared<int>(0);
+        become (
+            on(atom("foo"), atom("bar"), arg_match) >> [=](int i) {
+                ++*foobars;
+                reply_tuple(self->last_dequeued());
+                if (i == 99) {
+                    CPPA_CHECK_EQUAL(*foobars, 100);
+                    test_group_comm();
+                }
+            }
+        );
+    }
+
+    void test_group_comm() {
+        CPPA_PRINT("test group communication via network");
+        become (
+            on(atom("GClient")) >> [=] {
+                auto cptr = self->last_sender();
+                auto s5c = spawn<monitored>(spawn5_client);
+                reply(atom("GClient"), s5c);
+                await_down(s5c, [=] {
+                    test_group_comm_inverted(cptr);
+                });
+            }
+        );
+    }
+
+    void test_group_comm_inverted(actor_ptr cptr) {
+        CPPA_PRINT("test group communication via network (inverted setup)");
+        sync_send(cptr, atom("GClient")).then (
+            on(atom("GClient"), arg_match) >> [=](actor_ptr gclient) {
+                await_down(spawn<monitored>(spawn5_server, gclient, true), [=] {
+                    CPPA_CHECKPOINT();
+                    self->quit();
+                });
+            }
+        );
+    }
+
+};
+
+void run_client_part(const vector<string_pair>& args) {
+    CPPA_LOGF_INFO("run in client mode");
+    CPPA_TEST(test_remote_actor_client_part);
+    auto i = find_if(args.begin(), args.end(),
+                     [](const string_pair& p) { return p.first == "port"; });
+    if (i == args.end()) {
+        CPPA_LOGF_ERROR("no port specified");
+        throw std::logic_error("no port specified");
+    }
+    auto port = static_cast<uint16_t>(stoi(i->second));
+    auto serv = remote_actor("localhost", port);
+    // remote_actor is supposed to return the same server when connecting to
+    // the same host again
+    {
+        auto server2 = remote_actor("localhost", port);
+        CPPA_CHECK(serv == server2);
+    }
+    auto c = spawn<client,monitored>(serv);
+    receive (
+        on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
+            CPPA_CHECK_EQUAL(self->last_sender(), c);
+            CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
+        }
+    );
+}
+
 int main(int argc, char** argv) {
     set_terminate(verbose_terminate);
     announce<actor_vector>();
+    CPPA_SET_DEBUG_NAME("main");
     cout.unsetf(ios_base::unitbuf);
     string app_path = argv[0];
     bool run_remote_actor = true;
     if (argc > 1) {
         if (strcmp(argv[1], "run_remote_actor=false") == 0) {
+            CPPA_LOGF_INFO("don't run remote actor");
             run_remote_actor = false;
         }
         else {
-            auto args = get_kv_pairs(argc, argv);
-            return client_part(args);
+            run_client_part(get_kv_pairs(argc, argv));
+            await_all_others_done();
+            shutdown();
+            return CPPA_TEST_RESULT();
         }
     }
     CPPA_TEST(test_remote_actor);
-    //auto ping_actor = spawn(ping, 10);
+    auto serv = spawn<server,monitored>();
     uint16_t port = 4242;
     bool success = false;
     do {
         try {
-            publish(self, port, "127.0.0.1");
+            publish(serv, port, "127.0.0.1");
             success = true;
             CPPA_LOGF_DEBUG("running on port " << port);
         }
@@ -286,72 +417,18 @@ int main(int argc, char** argv) {
         });
     }
     else { CPPA_PRINT("actor published at port " << port); }
-    //CPPA_PRINT("await SpawnPing message");
-    actor_ptr remote_client;
-    CPPA_LOGF_DEBUG("send 'SpawnPing', expect 'PingPtr'");
+    CPPA_CHECKPOINT();
     receive (
-        on(atom("SpawnPing")) >> [&]() {
-            remote_client = self->last_sender();
-            CPPA_LOGF_ERROR_IF(!remote_client, "last_sender() == nullptr");
-            CPPA_LOGF_DEBUG("spawn 10 event-based ping actors");
-            reply(atom("PingPtr"), spawn_event_based_ping(10));
+        on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
+            CPPA_CHECK_EQUAL(self->last_sender(), serv);
+            CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
         }
     );
-    CPPA_LOGF_DEBUG("wait until spawned ping actors are done");
-    await_all_others_done();
-    CPPA_CHECK_EQUAL(pongs(), 10);
-    CPPA_PRINT("test remote sync_send");
-    receive (
-        on(atom("SyncMsg")) >> [] {
-            reply(atom("SyncReply"));
-        }
-    );
-    receive (
-        on(atom("Done")) >> [] {
-            // everything's fine
-        },
-        on(atom("Failure"), arg_match) >> [&](const string& str) {
-            CPPA_ERROR(str);
-        },
-        on(atom("Timeout")) >> [&] {
-            CPPA_ERROR("sync_send timed out");
-        }
-    );
-    // test 100 sync messages
-    CPPA_PRINT("test 100 synchronous messages");
-    int i = 0;
-    receive_for(i, 100) (
-        others() >> [] {
-            reply_tuple(self->last_dequeued());
-        }
-    );
-    CPPA_PRINT("test group communication via network");
-    // group test
-    spawn5_client();
-    CPPA_PRINT("test group communication via network (inverted setup)");
-    spawn5_server(remote_client, true);
-
-    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
-
-    // test forward_to "over network and back"
-    CPPA_PRINT("test forwarding over network 'and back'");
-    auto ra = spawn<replier>();
-    timed_sync_send(remote_client, chrono::seconds(5), atom("fwd"), ra, "hello replier!").await(
-        [&](int forty_two) {
-            CPPA_CHECK_EQUAL(forty_two, 42);
-            auto from = self->last_sender();
-            CPPA_CHECK_EQUAL(from, ra);
-            if (from) CPPA_CHECK_EQUAL(from->is_proxy(), false);
-        }
-    );
-
-    CPPA_PRINT("wait for a last goodbye");
-    receive(on(atom("farewell")) >> [&] {
-        send(remote_client, atom("cu"));
-        CPPA_CHECKPOINT();
-    });
     // wait until separate process (in sep. thread) finished execution
+    await_all_others_done();
+    CPPA_CHECKPOINT();
     if (run_remote_actor) child.join();
+    CPPA_CHECKPOINT();
     shutdown();
     return CPPA_TEST_RESULT();
 }

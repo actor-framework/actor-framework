@@ -75,13 +75,6 @@ class actor : public channel {
  public:
 
     /**
-     * @brief Enqueues @p msg to the actor's mailbox and returns true if
-     *        this actor is an scheduled actor that successfully changed
-     *        its state to @p pending in response to the enqueue operation.
-     */
-    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg);
-
-    /**
      * @brief Attaches @p ptr to this actor.
      *
      * The actor will call <tt>ptr->detach(...)</tt> on exit, or immediately
@@ -192,13 +185,13 @@ class actor : public channel {
      */
     inline bool exited() const;
 
- private:
-
     // cannot be changed after construction
     const actor_id m_id;
 
     // you're either a proxy or you're not
     const bool m_is_proxy;
+
+ private:
 
     // initially exit_reason::not_exited
     std::atomic<std::uint32_t> m_exit_reason;

@@ -70,22 +70,22 @@ int main() {
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
         "bool",
-        "@_::foo",                        // <anonymous namespace>::foo
+        "$::foo",                         // <anonymous namespace>::foo
         "@i8", "@i16", "@i32", "@i64",    // signed integer names
         "@u8", "@u16", "@u32", "@u64",    // unsigned integer names
         "@str", "@u16str", "@u32str",     // strings
         "@strmap",                        // string containers
-        "float", "double", "long double", // floating points
+        "float", "double", "@ldouble",    // floating points
         "@0",                             // cppa::util::void_type
         // default announced cppa types
         "@atom",               // cppa::atom_value
-        "@<>",                 // cppa::any_tuple
-        "@hdr",                // cppa::detail::addressed_message
+        "@tuple",              // cppa::any_tuple
+        "@header",             // cppa::message_header
         "@actor",              // cppa::actor_ptr
         "@group",              // cppa::group_ptr
         "@channel",            // cppa::channel_ptr
-        "@process_info",       // cppa::intrusive_ptr<cppa::process_information>
-        "cppa::util::duration"
+        "@proc",               // cppa::intrusive_ptr<cppa::process_information>
+        "@duration"            // cppa::util::duration
     };
     // holds the type names we see at runtime
     std::set<std::string> found;

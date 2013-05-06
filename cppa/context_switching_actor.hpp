@@ -38,7 +38,6 @@
 #include "cppa/stacked.hpp"
 #include "cppa/scheduled_actor.hpp"
 
-
 #include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/yield_interface.hpp"
@@ -76,6 +75,10 @@ class context_switching_actor : public extend<scheduled_actor,context_switching_
     mailbox_element* await_message();
 
     mailbox_element* await_message(const timeout_type& abs_time);
+
+    inline mailbox_element* try_pop() {
+        return m_mailbox.try_pop();
+    }
 
  private:
 

@@ -34,11 +34,13 @@
 #include <tuple>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <type_traits>
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
+#include "cppa/send.hpp"
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
@@ -57,6 +59,7 @@
 #include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/response_handle.hpp"
@@ -424,76 +427,10 @@
 
 namespace cppa {
 
-namespace detail {
-
-template<typename T>
-inline void send_impl(T* ptr, any_tuple&& arg) {
-    if (ptr) self->send_message(ptr, std::move(arg));
-}
-
-template<typename T, typename... Ts>
-inline void send_tpl_impl(T* ptr, Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    if (ptr) self->send_message(ptr, make_any_tuple(std::forward<Ts>(args)...));
-}
-
-} // namespace detail
-
 /**
  * @ingroup MessageHandling
  * @{
  */
-
-/**
- * @brief Sends @p what as a message to @p whom.
- * @param whom Receiver of the message.
- * @param what Message content as tuple.
- */
-template<class C, typename... Ts>
-inline typename enable_if_channel<C>::type
-send_tuple(const intrusive_ptr<C>& whom, any_tuple what) {
-    detail::send_impl(whom.get(), std::move(what));
-}
-
-/**
- * @brief Sends <tt>{what...}</tt> as a message to @p whom.
- * @param whom Receiver of the message.
- * @param what Message elements.
- * @pre <tt>sizeof...(Ts) > 0</tt>
- */
-template<class C, typename... Ts>
-inline typename enable_if_channel<C>::type
-send(const intrusive_ptr<C>& whom, Ts&&... args) {
-    detail::send_tpl_impl(whom.get(), std::forward<Ts>(args)...);
-}
-
-/**
- * @brief Sends @p what as a message to @p whom, but sets
- *        the sender information to @p from.
- * @param from Sender as seen by @p whom.
- * @param whom Receiver of the message.
- * @param what Message elements.
- * @pre <tt>sizeof...(Ts) > 0</tt>
- */
-template<class C, typename... Ts>
-inline typename enable_if_channel<C>::type
-send_tuple_as(const actor_ptr& from, const intrusive_ptr<C>& whom, any_tuple what) {
-    if (whom) whom->enqueue(from.get(), std::move(what));
-}
-
-/**
- * @brief Sends <tt>{what...}</tt> as a message to @p whom, but sets
- *        the sender information to @p from.
- * @param from Sender as seen by @p whom.
- * @param whom Receiver of the message.
- * @param what Message elements.
- * @pre <tt>sizeof...(Ts) > 0</tt>
- */
-template<class C, typename... Ts>
-inline typename enable_if_channel<C>::type
-send_as(const actor_ptr& from, const intrusive_ptr<C>& whom, Ts&&... what) {
-    send_tuple_as(from, whom, make_any_tuple(std::forward<Ts>(what)...));
-}
 
 /**
  * @brief Sends a message to @p whom.
@@ -513,204 +450,18 @@ operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
     return whom;
 }
 
-/**
- * @brief Sends @p what as a synchronous message to @p whom.
- * @param whom Receiver of the message.
- * @param what Message content as tuple.
- * @returns A handle identifying a future to the response of @p whom.
- * @warning The returned handle is actor specific and the response to the sent
- *          message cannot be received by another actor.
- * @throws std::invalid_argument if <tt>whom == nullptr</tt>
- */
-inline message_future sync_send_tuple(const actor_ptr& whom, any_tuple what) {
-    if (whom) return self->send_sync_message(whom.get(), std::move(what));
-    else throw std::invalid_argument("whom == nullptr");
-}
-
-/**
- * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
- * @param whom Receiver of the message.
- * @param what Message elements.
- * @returns A handle identifying a future to the response of @p whom.
- * @warning The returned handle is actor specific and the response to the sent
- *          message cannot be received by another actor.
- * @pre <tt>sizeof...(Ts) > 0</tt>
- * @throws std::invalid_argument if <tt>whom == nullptr</tt>
- */
-template<typename... Ts>
-inline message_future sync_send(const actor_ptr& whom, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return sync_send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
-}
-
-/**
- * @brief Sends @p what as a synchronous message to @p whom with a timeout.
- *
- * The calling actor receives a 'TIMEOUT' message as response after
- * given timeout exceeded and no response messages was received.
- * @param whom Receiver of the message.
- * @param what Message content as tuple.
- * @returns A handle identifying a future to the response of @p whom.
- * @warning The returned handle is actor specific and the response to the sent
- *          message cannot be received by another actor.
- * @throws std::invalid_argument if <tt>whom == nullptr</tt>
- */
-template<class Rep, class Period, typename... Ts>
-message_future timed_sync_send_tuple(const actor_ptr& whom,
-                                     const std::chrono::duration<Rep,Period>& rel_time,
-                                     any_tuple what) {
-    if (whom) return self->send_timed_sync_message(whom.get(),
-                                                   rel_time,
-                                                   std::move(what));
-    else throw std::invalid_argument("whom == nullptr");
-}
-
-/**
- * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom
- *        with a timeout.
- *
- * The calling actor receives a 'TIMEOUT' message as response after
- * given timeout exceeded and no response messages was received.
- * @param whom Receiver of the message.
- * @param what Message elements.
- * @returns A handle identifying a future to the response of @p whom.
- * @warning The returned handle is actor specific and the response to the sent
- *          message cannot be received by another actor.
- * @pre <tt>sizeof...(Ts) > 0</tt>
- * @throws std::invalid_argument if <tt>whom == nullptr</tt>
- */
-template<class Rep, class Period, typename... Ts>
-message_future timed_sync_send(const actor_ptr& whom,
-                               const std::chrono::duration<Rep,Period>& rel_time,
-                               Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return timed_sync_send_tuple(whom,
-                                 rel_time,
-                                 make_any_tuple(std::forward<Ts>(what)...));
-}
-
-/**
- * @brief Sends a message to the sender of the last received message.
- * @param what Message content as a tuple.
- */
-inline void reply_tuple(any_tuple what) {
-    self->reply_message(std::move(what));
-}
-
-/**
- * @brief Sends a message to the sender of the last received message.
- * @param what Message elements.
- */
-template<typename... Ts>
-inline void reply(Ts&&... what) {
-    self->reply_message(make_any_tuple(std::forward<Ts>(what)...));
-}
-
-/**
- * @brief Sends a message as reply to @p handle.
- */
-template<typename... Ts>
-inline void reply_to(const response_handle& handle, Ts&&... what) {
-    if (handle.valid()) {
-        handle.apply(make_any_tuple(std::forward<Ts>(what)...));
-    }
-}
-
-/**
- * @brief Replies with @p what to @p handle.
- * @param handle Identifies a previously received request.
- * @param what Response message.
- */
-inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
-    handle.apply(std::move(what));
-}
-
-/**
- * @brief Forwards the last received message to @p whom.
- */
-inline void forward_to(const actor_ptr& whom) {
-    self->forward_message(whom);
-}
-
-/**
- * @brief Sends a message to @p whom that is delayed by @p rel_time.
- * @param whom Receiver of the message.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_send_tuple(const channel_ptr& whom,
-                               const std::chrono::duration<Rep,Period>& rtime,
-                               any_tuple what) {
-    if (whom) get_scheduler()->delayed_send(whom, rtime, what);
-}
-
-/**
- * @brief Sends a message to @p whom that is delayed by @p rel_time.
- * @param whom Receiver of the message.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message elements.
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_send(const channel_ptr& whom,
-                         const std::chrono::duration<Rep,Period>& rtime,
-                         Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    if (whom) {
-        delayed_send_tuple(whom,
-                           rtime,
-                           make_any_tuple(std::forward<Ts>(what)...));
-    }
-}
-
-/**
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- * @see delayed_send()
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
-                                any_tuple what) {
-    get_scheduler()->delayed_reply(self->last_sender(),
-                                   rtime,
-                                   self->get_response_id(),
-                                   std::move(what));
-}
-
-/**
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message elements.
- * @see delayed_send()
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
-                          Ts&&... what) {
-    delayed_reply_tuple(rtime, make_any_tuple(std::forward<Ts>(what)...));
+inline const self_type& operator<<(const self_type& s, any_tuple what) {
+    send_tuple(s.get(), std::move(what));
+    return s;
 }
 
 /**
  * @}
  */
 
-// matches "send(this, ...)" and "send(self, ...)"
-inline void send_tuple(channel* whom, any_tuple what) {
-    detail::send_impl(whom, std::move(what));
-}
-template<typename... Ts>
-inline void send(channel* whom, Ts&&... args) {
-    detail::send_tpl_impl(whom, std::forward<Ts>(args)...);
-}
-inline const self_type& operator<<(const self_type& s, any_tuple what) {
-    detail::send_impl(static_cast<channel*>(s.get()), std::move(what));
-    return s;
-}
-inline actor_ptr eval_sopts(spawn_options opts, actor_ptr ptr) {
+inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
+    CPPA_LOGF_INFO("spawned new local actor with ID " << ptr->id()
+                   << " of type " << detail::demangle(typeid(*ptr)));
     if (has_monitor_flag(opts)) self->monitor(ptr);
     if (has_link_flag(opts)) self->link_to(ptr);
     return std::move(ptr);
@@ -747,13 +498,17 @@ template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn(Ts&&... args) {
     static_assert(std::is_base_of<event_based_actor,Impl>::value,
                   "Impl is not a derived type of event_based_actor");
-    scheduled_actor* rawptr;
-    if (has_detach_flag(Options)) {
-        typedef typename extend<Impl>::template with<threaded> derived;
-        rawptr = detail::memory::create<derived>(std::forward<Ts>(args)...);
+    scheduled_actor_ptr ptr;
+    if (has_priority_aware_flag(Options)) {
+        using derived = typename extend<Impl>::template with<threaded,prioritizing>;
+        ptr = make_counted<derived>(std::forward<Ts>(args)...);
     }
-    else rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
-    return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
+    else if (has_detach_flag(Options)) {
+        using derived = typename extend<Impl>::template with<threaded>;
+        ptr = make_counted<derived>(std::forward<Ts>(args)...);
+    }
+    else ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    return eval_sopts(Options, get_scheduler()->exec(Options, std::move(ptr)));
 }
 
 /**
@@ -786,9 +541,9 @@ actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    auto rawptr = detail::memory::create<Impl>(std::forward<Ts>(args)...);
-    rawptr->join(grp);
-    return eval_sopts(Options, get_scheduler()->exec(Options, rawptr));
+    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    ptr->join(grp);
+    return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
 }
 
 /** @} */
@@ -865,25 +620,31 @@ void shutdown(); // note: implemented in singleton_manager.cpp
  * <tt>send(whom, atom("EXIT"), reason)</tt>.
  * @pre <tt>reason != exit_reason::normal</tt>
  */
-inline void send_exit(const actor_ptr& whom, std::uint32_t reason) {
+inline void send_exit(actor_ptr whom, std::uint32_t reason) {
     CPPA_REQUIRE(reason != exit_reason::normal);
-    send(whom, atom("EXIT"), reason);
+    send(std::move(whom), atom("EXIT"), reason);
 }
 
 /**
  * @brief Sets the actor's behavior and discards the previous behavior
  *        unless {@link keep_behavior} is given as first argument.
  */
-template<typename... Ts>
-inline void become(Ts&&... args) {
-    self->become(std::forward<Ts>(args)...);
+template<typename T, typename... Ts>
+inline void become(T arg, Ts&&... args) {
+    self->do_become(match_expr_convert(arg, std::forward<Ts>(args)...), true);
+    //become(std::forward<Ts>(args)...);
+}
+
+template<bool Discard, typename... Ts>
+inline void become(behavior_policy<Discard>, Ts&&... args) {
+    self->do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
 }
 
 /**
  * @brief Returns to a previous behavior if available.
  */
 inline void unbecome() {
-    self->unbecome();
+    self->do_unbecome();
 }
 
 struct actor_ostream {

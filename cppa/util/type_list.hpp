@@ -340,6 +340,18 @@ struct tl_zip_with_index<empty_type_list> {
     typedef empty_type_list type;
 };
 
+// int index_of(list, type)
+
+template<class List, typename T>
+struct tl_index_of {
+    static constexpr size_t value = tl_index_of<typename tl_tail<List>::type,T>::value;
+};
+
+template<size_t N, typename T, typename... Ts>
+struct tl_index_of<type_list<type_pair<std::integral_constant<size_t,N>,T>,Ts...>,T> {
+    static constexpr size_t value = N;
+};
+
 // list reverse()
 
 template<class From, typename... Elements>

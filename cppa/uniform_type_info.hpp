@@ -187,12 +187,6 @@ class uniform_type_info {
     static std::vector<const uniform_type_info*> instances();
 
     /**
-     * @brief Get the internal @p libcppa name for this type.
-     * @returns A string describing the @p libcppa internal type name.
-     */
-    inline const std::string& name() const { return m_name; }
-
-    /**
      * @brief Creates an object of this type.
      */
     object create() const;
@@ -201,6 +195,12 @@ class uniform_type_info {
      * @brief Deserializes an object of this type from @p source.
      */
     object deserialize(deserializer* source) const;
+
+    /**
+     * @brief Get the internal @p libcppa name for this type.
+     * @returns A string describing the @p libcppa internal type name.
+     */
+    virtual const char* name() const = 0;
 
     /**
      * @brief Determines if this uniform_type_info describes the same
@@ -234,23 +234,9 @@ class uniform_type_info {
      */
     virtual void deserialize(void* instance, deserializer* source) const = 0;
 
-    /**
-     * @brief Checks wheter <tt>src->seek_object()</tt>
-     *        returns @p tname and throws an exception if not.
-     * @throws std::logic_error
-     */
-    static void assert_type_name(deserializer* src, const std::string& tname);
-
  protected:
 
-    /**
-     * @brief Checks wheter <tt>src->seek_object()</tt>
-     *        returns {@link name()} and throws an exception if not.
-     * @throws std::logic_error
-     */
-    void assert_type_name(deserializer* src) const;
-
-    uniform_type_info(const std::string& uniform_name);
+    uniform_type_info() = default;
 
     /**
      * @brief Casts @p instance to the native type and deletes it.
@@ -269,10 +255,6 @@ class uniform_type_info {
      * @pre @p instance has the type of @p this or is set to @p nullptr.
      */
     virtual void* new_instance(const void* instance = nullptr) const = 0;
-
- private:
-
-    std::string m_name;
 
 };
 

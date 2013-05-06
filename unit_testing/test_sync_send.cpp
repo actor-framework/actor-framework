@@ -49,7 +49,9 @@ struct A : popular_actor {
     void init() {
         become (
             on(atom("go"), arg_match) >> [=](const actor_ptr& next) {
+                CPPA_CHECKPOINT();
                 sync_send(next, atom("gogo")).then([=] {
+                    CPPA_CHECKPOINT();
                     send(buddy(), atom("success"));
                     quit();
                 });
@@ -59,29 +61,18 @@ struct A : popular_actor {
     }
 };
 
-#ifdef __clang__
-struct B : sb_actor<B,popular_actor> {
-    B(const actor_ptr& buddy) : sb_actor<B,popular_actor>(buddy) { }
-    behavior init_state = (
-        others() >> [=] {
-            forward_to(buddy());
-            quit();
-        }
-    );
-};
-#else
 struct B : popular_actor {
     B(const actor_ptr& buddy) : popular_actor(buddy) { }
     void init() {
         become (
             others() >> [=] {
+                CPPA_CHECKPOINT();
                 forward_to(buddy());
                 quit();
             }
         );
     }
 };
-#endif
 
 struct C : sb_actor<C> {
     behavior init_state = (
@@ -168,7 +159,7 @@ struct server : event_based_actor {
 int main() {
     CPPA_TEST(test_sync_send);
     self->on_sync_failure([] {
-        CPPA_ERROR("received: " << to_string(self->last_dequeued()));
+        CPPA_FAILURE("received: " << to_string(self->last_dequeued()));
     });
     spawn<monitored + blocking_api>([] {
         CPPA_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << self->id());
@@ -177,7 +168,7 @@ int main() {
         send(foi, atom("i"));
         receive(on_arg_match >> [](int i) { CPPA_CHECK_EQUAL(i, 0); });
         self->on_sync_failure([] {
-            CPPA_ERROR("received: " << to_string(self->last_dequeued()));
+            CPPA_FAILURE("received: " << to_string(self->last_dequeued()));
         });
         sync_send(foi, atom("i")).then(
             [&](int i) { CPPA_CHECK_EQUAL(i, 0); ++invocations; },
@@ -191,6 +182,7 @@ int main() {
         });
         self->exec_behavior_stack();
         CPPA_CHECK_EQUAL(invocations, 2);
+        CPPA_PRINT("trigger sync failure");
         // provoke invocation of self->handle_sync_failure()
         bool sync_failure_called = false;
         bool int_handler_called = false;
@@ -198,7 +190,9 @@ int main() {
             sync_failure_called = true;
         });
         sync_send(foi, atom("f")).await(
-            on<int>() >> [&] { int_handler_called = true; }
+            on<int>() >> [&] {
+                int_handler_called = true;
+            }
         );
         CPPA_CHECK_EQUAL(sync_failure_called, true);
         CPPA_CHECK_EQUAL(int_handler_called, false);
@@ -221,10 +215,10 @@ int main() {
     auto await_success_message = [&] {
         receive (
             on(atom("success")) >> CPPA_CHECKPOINT_CB(),
-            on(atom("failure")) >> CPPA_ERROR_CB("A didn't receive sync response"),
+            on(atom("failure")) >> CPPA_FAILURE_CB("A didn't receive sync response"),
             on(atom("DOWN"), arg_match).when(_x2 != exit_reason::normal)
             >> [&](uint32_t err) {
-                CPPA_ERROR("A exited for reason " << err);
+                CPPA_FAILURE("A exited for reason " << err);
             }
         );
     };
@@ -263,8 +257,8 @@ int main() {
     self->on_sync_timeout([&] { timeout_occured = true; });
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
     timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
-    .then(CPPA_ERROR_CB("C replied to 'HiThere'!"))
-    .continue_with(CPPA_ERROR_CB("bad continuation"));
+    .then(CPPA_FAILURE_CB("C replied to 'HiThere'!"))
+    .continue_with(CPPA_FAILURE_CB("bad continuation"));
     self->exec_behavior_stack();
     CPPA_CHECK_EQUAL(timeout_occured, true);
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());

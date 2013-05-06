@@ -89,11 +89,11 @@ program program::create(const char* kernel_source) {
         std::ostringstream oss;
         oss << "clBuildProgram: " << get_opencl_error(err)
             << ", build log: "    << build_log.data();
-        CPPA_LOGM_ERROR(detail::demangle<program>(), oss.str());
+        CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
         throw std::runtime_error(oss.str());
     }
     else {
-#       ifdef CPPA_DEBUG
+#       ifdef CPPA_DEBUG_MODE
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
                                m_devices.front().dev_id);
@@ -119,8 +119,8 @@ program program::create(const char* kernel_source) {
                                     build_log.data(),
                                     nullptr);
         build_log[ret_val_size] = '\0';
-        CPPA_LOG_DEBUG("clBuildProgram build log: "
-                       << build_log.data());
+        CPPA_LOGM_DEBUG("program", "clBuildProgram build log: "
+                                   << build_log.data());
 #       endif
     }
     return {cptr, pptr};

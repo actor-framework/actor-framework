@@ -282,6 +282,35 @@ struct simple_mirror : sb_actor<simple_mirror> {
 
 };
 
+void high_priority_testee() {
+    send(self, atom("b"));
+    send({self, message_priority::high}, atom("a"));
+    // 'a' must be received before 'b'
+    become (
+        on(atom("b")) >> [] {
+            CPPA_FAILURE("received 'b' before 'a'");
+            self->quit();
+        },
+        on(atom("a")) >> [] {
+            CPPA_CHECKPOINT();
+            become (
+                on(atom("b")) >> [] {
+                    CPPA_CHECKPOINT();
+                    self->quit();
+                },
+                others() >> CPPA_UNEXPECTED_MSG_CB()
+            );
+        },
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
+}
+
+struct high_priority_testee_class : event_based_actor {
+    void init() {
+        high_priority_testee();
+    }
+};
+
 int main() {
     CPPA_TEST(test_spawn);
 
@@ -320,6 +349,23 @@ int main() {
 
     CPPA_PRINT("test detached mirror"); {
         auto mirror = spawn<simple_mirror,monitored+detached>();
+        send(mirror, "hello mirror");
+        receive (
+            on("hello mirror") >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        send_exit(mirror, exit_reason::user_defined);
+        receive (
+            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+        await_all_others_done();
+        CPPA_CHECKPOINT();
+    }
+
+    CPPA_PRINT("test priority aware mirror"); {
+        auto mirror = spawn<simple_mirror,monitored+priority_aware>();
+        CPPA_CHECKPOINT();
         send(mirror, "hello mirror");
         receive (
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
@@ -373,7 +419,7 @@ int main() {
     CPPA_CHECKPOINT();
 
     auto factory = factory::event_based([&](int* i, float*, string*) {
-        self->become (
+        become (
             on(atom("get_int")) >> [i]() {
                 reply(*i);
             },
@@ -474,7 +520,7 @@ int main() {
     CPPA_PRINT("test sync send with factory spawned actor");
     auto sync_testee_factory = factory::event_based(
         [&]() {
-            self->become (
+            become (
                 on("hi") >> [&]() {
                     auto handle = sync_send(self->last_sender(), "whassup?");
                     handle_response(handle) (
@@ -526,7 +572,7 @@ int main() {
 
     auto inflater = factory::event_based(
         [](string*, actor_ptr* receiver) {
-            self->become(
+            become(
                 on_arg_match >> [=](int n, const string& s) {
                     send(*receiver, n * 2, s);
                 },
@@ -560,7 +606,7 @@ int main() {
             if (*name == "Joe" && !*pal) {
                 *pal = spawn_next("Bob", self);
             }
-            self->become (
+            become (
                 others() >> [pal]() {
                     // forward message and die
                     *pal << self->last_dequeued();
@@ -605,7 +651,7 @@ int main() {
     CPPA_CHECK_EQUAL(zombie_on_exit_called, 3);
 
     auto f = factory::event_based([](string* name) {
-        self->become (
+        become (
             on(atom("get_name")) >> [name]() {
                 reply(atom("name"), *name);
             }
@@ -630,7 +676,7 @@ int main() {
     await_all_others_done();
 
     factory::event_based([](int* i) {
-        self->become(
+        become(
             after(chrono::milliseconds(50)) >> [=]() {
                 if (++(*i) >= 5) self->quit();
             }
@@ -685,13 +731,22 @@ int main() {
             flags |= 0x08;
         },
         others() >> [&]() {
-            CPPA_ERROR("unexpected message: " << to_string(self->last_dequeued()));
+            CPPA_FAILURE("unexpected message: " << to_string(self->last_dequeued()));
         },
         after(chrono::seconds(5)) >> [&]() {
-            CPPA_ERROR("timeout in file " << __FILE__ << " in line " << __LINE__);
+            CPPA_FAILURE("timeout in file " << __FILE__ << " in line " << __LINE__);
         }
     );
     // wait for termination of all spawned actors
+    await_all_others_done();
+    CPPA_CHECK_EQUAL(flags, 0x0F);
+    // verify pong messages
+    CPPA_CHECK_EQUAL(pongs(), 10);
+    CPPA_CHECKPOINT();
+    spawn<priority_aware>(high_priority_testee);
+    await_all_others_done();
+    CPPA_CHECKPOINT();
+    spawn<high_priority_testee_class,priority_aware>();
     await_all_others_done();
     // don't try this at home, kids
     send(self, atom("check"));
@@ -703,14 +758,11 @@ int main() {
             }
         );
         self->exec_behavior_stack();
-        CPPA_ERROR("line " << __LINE__ << " should be unreachable");
+        CPPA_FAILURE("line " << __LINE__ << " should be unreachable");
     }
     catch (actor_exited&) {
         CPPA_CHECKPOINT();
     }
-    CPPA_CHECK_EQUAL(flags, 0x0F);
-    // verify pong messages
-    CPPA_CHECK_EQUAL(pongs(), 10);
     shutdown();
     return CPPA_TEST_RESULT();
 }

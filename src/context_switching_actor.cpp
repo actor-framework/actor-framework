@@ -39,8 +39,10 @@
 namespace cppa {
 
 context_switching_actor::context_switching_actor(std::function<void()> fun)
-: super(std::move(fun), actor_state::ready, true)
-, m_fiber(&context_switching_actor::trampoline, this) { }
+: super(actor_state::ready, true)
+, m_fiber(&context_switching_actor::trampoline, this) {
+    set_behavior(std::move(fun));
+}
 
 auto context_switching_actor::init_timeout(const util::duration& tout) -> timeout_type {
     // request explicit timeout message
@@ -94,7 +96,7 @@ scheduled_actor_type context_switching_actor::impl_type() {
 }
 
 resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next_job) {
-    CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
+    CPPA_LOGMF(CPPA_TRACE, this, "state = " << static_cast<int>(state()));
     CPPA_REQUIRE(from != nullptr);
     CPPA_REQUIRE(next_job == nullptr);
     using namespace detail;

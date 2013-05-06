@@ -32,6 +32,7 @@
 #include <cstdint>
 
 #include "cppa/on.hpp"
+#include "cppa/send.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
 #include "cppa/logging.hpp"
@@ -123,7 +124,7 @@ continue_reading_result default_peer::continue_reading() {
                               << std::endl;
                     return read_failure;
                 }
-                CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
+                CPPA_LOGMF(CPPA_DEBUG, self, "read process info: " << to_string(*m_node));
                 m_parent->register_peer(*m_node, this);
                 // initialization done
                 m_state = wait_for_msg_size;
@@ -149,12 +150,12 @@ continue_reading_result default_peer::continue_reading() {
                     m_meta_msg->deserialize(&msg, &bd);
                 }
                 catch (exception& e) {
-                    CPPA_LOG_ERROR("exception during read_message: "
+                    CPPA_LOGMF(CPPA_ERROR, self, "exception during read_message: "
                                    << detail::demangle(typeid(e))
                                    << ", what(): " << e.what());
                     return read_failure;
                 }
-                CPPA_LOG_DEBUG("deserialized: " << to_string(hdr) << " " << to_string(msg));
+                CPPA_LOGMF(CPPA_DEBUG, self, "deserialized: " << to_string(hdr) << " " << to_string(msg));
                 //DEBUG("<-- " << to_string(msg));
                 match(msg) (
                     // monitor messages are sent automatically whenever
@@ -193,22 +194,22 @@ void default_peer::monitor(const actor_ptr&,
                            actor_id aid) {
     CPPA_LOG_TRACE(CPPA_MARG(node, get) << ", " << CPPA_ARG(aid));
     if (!node) {
-        CPPA_LOG_ERROR("received MONITOR from invalid peer");
+        CPPA_LOGMF(CPPA_ERROR, self, "received MONITOR from invalid peer");
         return;
     }
     auto entry = get_actor_registry()->get_entry(aid);
     auto pself = process_information::get();
 
     if (*node == *pself) {
-        CPPA_LOG_ERROR("received 'MONITOR' from pself");
+        CPPA_LOGMF(CPPA_ERROR, self, "received 'MONITOR' from pself");
     }
     else if (entry.first == nullptr) {
         if (entry.second == exit_reason::not_exited) {
-            CPPA_LOG_ERROR("received MONITOR for unknown "
+            CPPA_LOGMF(CPPA_ERROR, self, "received MONITOR for unknown "
                            "actor id: " << aid);
         }
         else {
-            CPPA_LOG_DEBUG("received MONITOR for an actor "
+            CPPA_LOGMF(CPPA_DEBUG, self, "received MONITOR for an actor "
                            "that already finished "
                            "execution; reply KILL_PROXY");
             // this actor already finished execution;
@@ -218,7 +219,7 @@ void default_peer::monitor(const actor_ptr&,
         }
     }
     else {
-        CPPA_LOG_DEBUG("attach functor to " << entry.first.get());
+        CPPA_LOGMF(CPPA_DEBUG, self, "attach functor to " << entry.first.get());
         default_protocol_ptr proto = m_parent;
         entry.first->attach_functor([=](uint32_t reason) {
             proto->run_later([=] {
@@ -236,25 +237,23 @@ void default_peer::kill_proxy(const actor_ptr& sender,
                               const process_information_ptr& node,
                               actor_id aid,
                               std::uint32_t reason) {
-    CPPA_LOG_TRACE(CPPA_MARG(sender, get)
+    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)
                    << ", " << CPPA_MARG(node, get)
                    << ", " << CPPA_ARG(aid)
                    << ", " << CPPA_ARG(reason));
     if (!node) {
-        CPPA_LOG_ERROR("node = nullptr");
+        CPPA_LOGMF(CPPA_ERROR, self, "node = nullptr");
         return;
     }
     if (sender != nullptr) {
-        CPPA_LOG_ERROR("sender != nullptr");
+        CPPA_LOGMF(CPPA_ERROR, self, "sender != nullptr");
         return;
     }
     auto proxy = m_parent->addressing()->get(*node, aid);
     if (proxy) {
-        CPPA_LOG_DEBUG("received KILL_PROXY for " << aid
+        CPPA_LOGMF(CPPA_DEBUG, self, "received KILL_PROXY for " << aid
                        << ":" << to_string(*node));
-        proxy->enqueue(nullptr,
-                       make_any_tuple(
-                           atom("KILL_PROXY"), reason));
+        send_as(nullptr, proxy, atom("KILL_PROXY"), reason);
     }
     else {
         CPPA_LOG_INFO("received KILL_PROXY message but "
@@ -269,24 +268,6 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
         hdr.sender.downcast<actor_proxy>()->deliver(hdr, std::move(msg));
     }
     else hdr.deliver(std::move(msg));
-    /*
-    auto receiver = hdr.receiver.get();
-    if (receiver) {
-        if (hdr.id.valid()) {
-            CPPA_LOG_DEBUG("sync message for actor " << receiver->id());
-            receiver->sync_enqueue(hdr.sender.get(), hdr.id, move(msg));
-        }
-        else {
-            CPPA_LOG_DEBUG("async message with "
-                           << (hdr.sender ? "" : "in")
-                           << "valid sender");
-            receiver->enqueue(hdr.sender.get(), move(msg));
-        }
-    }
-    else {
-        CPPA_LOG_ERROR("received message with invalid receiver");
-    }
-    */
 }
 
 void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
@@ -332,13 +313,13 @@ continue_writing_result default_peer::continue_writing() {
         size_t written;
         try { written = m_out->write_some(m_wr_buf.data(), m_wr_buf.size()); }
         catch (exception& e) {
-            CPPA_LOG_ERROR(to_verbose_string(e));
+            CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
             static_cast<void>(e); // keep compiler happy
             disconnected();
             return write_failure;
         }
         if (written != m_wr_buf.size()) {
-            CPPA_LOG_DEBUG("tried to write " << m_wr_buf.size() << "bytes, "
+            CPPA_LOGMF(CPPA_DEBUG, self, "tried to write " << m_wr_buf.size() << "bytes, "
                            << "only " << written << " bytes written");
             m_wr_buf.erase_leading(written);
             return write_continue_later;
@@ -346,7 +327,7 @@ continue_writing_result default_peer::continue_writing() {
         else {
             m_wr_buf.reset();
             m_has_unwritten_data = false;
-            CPPA_LOG_DEBUG("write done, " << written << "bytes written");
+            CPPA_LOGMF(CPPA_DEBUG, self, "write done, " << written << "bytes written");
         }
         // try to write next message in queue
         while (!m_has_unwritten_data && !queue().empty()) {
@@ -374,19 +355,19 @@ void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
     m_wr_buf.write(sizeof(uint32_t), &size, util::grow_if_needed);
     try { bs << hdr << msg; }
     catch (exception& e) {
-        CPPA_LOG_ERROR(to_verbose_string(e));
+        CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
         cerr << "*** exception in default_peer::enqueue; "
              << to_verbose_string(e)
              << endl;
         return;
     }
-    CPPA_LOG_DEBUG("serialized: " << to_string(hdr) << " " << to_string(msg));
+    CPPA_LOGMF(CPPA_DEBUG, self, "serialized: " << to_string(hdr) << " " << to_string(msg));
     size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
     memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
     CPPA_LOG_DEBUG_IF(m_has_unwritten_data, "still registered for writing");
     if (!m_has_unwritten_data) {
-        CPPA_LOG_DEBUG("register for writing");
+        CPPA_LOGMF(CPPA_DEBUG, self, "register for writing");
         m_has_unwritten_data = true;
         m_parent->continue_writer(this);
     }

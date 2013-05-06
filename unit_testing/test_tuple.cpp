@@ -79,12 +79,12 @@ option<int> str2int(const std::string& str) {
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
     if ( ( FunName Args ) == false || invoked != #FunName ) {                  \
-        CPPA_ERROR("invocation of " #FunName " failed");                       \
+        CPPA_FAILURE("invocation of " #FunName " failed");                       \
     } invoked = ""
 
 #define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
     if ( ( FunName Args ) == true || invoked == #FunName ) {                   \
-        CPPA_ERROR(#FunName " erroneously invoked");                           \
+        CPPA_FAILURE(#FunName " erroneously invoked");                           \
     } invoked = ""
 
 struct dummy_receiver : event_based_actor {
@@ -222,13 +222,13 @@ void check_guards() {
     CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     f09_any_val.get_as_mutable<int>(1) = 666;
     any_tuple f09_any_val_copy{f09_any_val};
-    CPPA_CHECK_EQUAL(f09_any_val.at(0), f09_any_val_copy.at(0));
+    CPPA_CHECK(f09_any_val.at(0) == f09_any_val_copy.at(0));
     // detaches f09_any_val from f09_any_val_copy
     CPPA_CHECK(f09.invoke(f09_any_val));
     CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     CPPA_CHECK_EQUAL(f09_any_val_copy.get_as<int>(1), 666);
     // no longer the same data
-    CPPA_CHECK_NOT_EQUAL(f09_any_val.at(0), f09_any_val_copy.at(0));
+    CPPA_CHECK(f09_any_val.at(0) != f09_any_val_copy.at(0));
 
     auto f10 = (
         on<int>().when(_x1 < 10)    >> [&]() { invoked = "f10.0"; },
@@ -351,11 +351,11 @@ void check_wildcards() {
         CPPA_CHECK_EQUAL(get<0>(v0), "1");
         CPPA_CHECK_EQUAL(get<0>(t0), get<0>(v0));
         // check cow semantics
-        CPPA_CHECK_EQUAL(&get<0>(t0), &get<0>(v0));     // point to the same
+        CPPA_CHECK(&get<0>(t0) == &get<0>(v0));         // point to the same
         get_ref<0>(t0) = "hello world";                 // detaches t0 from v0
         CPPA_CHECK_EQUAL(get<0>(t0), "hello world");    // t0 contains new value
         CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value
-        CPPA_CHECK_NOT_EQUAL(&get<0>(t0), &get<0>(v0)); // no longer the same
+        CPPA_CHECK(&get<0>(t0) != &get<0>(v0));         // no longer the same
         // check operator==
         auto lhs = make_cow_tuple(1,2,3,4);
         auto rhs = make_cow_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
@@ -368,24 +368,24 @@ void check_wildcards() {
         CPPA_CHECK(opt0);
         if (opt0) {
             CPPA_CHECK((*opt0 == make_cow_tuple("one", 2, 3.f, 4.0)));
-            CPPA_CHECK_EQUAL(&get<0>(*opt0), at1.at(0));
-            CPPA_CHECK_EQUAL(&get<1>(*opt0), at1.at(1));
-            CPPA_CHECK_EQUAL(&get<2>(*opt0), at1.at(2));
-            CPPA_CHECK_EQUAL(&get<3>(*opt0), at1.at(3));
+            CPPA_CHECK(&get<0>(*opt0) == at1.at(0));
+            CPPA_CHECK(&get<1>(*opt0) == at1.at(1));
+            CPPA_CHECK(&get<2>(*opt0) == at1.at(2));
+            CPPA_CHECK(&get<3>(*opt0) == at1.at(3));
         }
         // leading wildcard
         auto opt1 = tuple_cast<anything, double>(at1);
         CPPA_CHECK(opt1);
         if (opt1) {
             CPPA_CHECK_EQUAL(get<0>(*opt1), 4.0);
-            CPPA_CHECK_EQUAL(&get<0>(*opt1), at1.at(3));
+            CPPA_CHECK(&get<0>(*opt1) == at1.at(3));
         }
         // trailing wildcard
         auto opt2 = tuple_cast<std::string, anything>(at1);
         CPPA_CHECK(opt2);
         if (opt2) {
             CPPA_CHECK_EQUAL(get<0>(*opt2), "one");
-            CPPA_CHECK_EQUAL(&get<0>(*opt2), at1.at(0));
+            CPPA_CHECK(&get<0>(*opt2) == at1.at(0));
         }
         // wildcard in between
         auto opt3 = tuple_cast<std::string, anything, double>(at1);
@@ -394,8 +394,8 @@ void check_wildcards() {
             CPPA_CHECK((*opt3 == make_cow_tuple("one", 4.0)));
             CPPA_CHECK_EQUAL(get<0>(*opt3), "one");
             CPPA_CHECK_EQUAL(get<1>(*opt3), 4.0);
-            CPPA_CHECK_EQUAL(&get<0>(*opt3), at1.at(0));
-            CPPA_CHECK_EQUAL(&get<1>(*opt3), at1.at(3));
+            CPPA_CHECK(&get<0>(*opt3) == at1.at(0));
+            CPPA_CHECK(&get<1>(*opt3) == at1.at(3));
         }
     }
 }

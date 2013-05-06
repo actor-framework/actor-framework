@@ -34,20 +34,28 @@
 
 namespace cppa {
 
-namespace { using actor_cref = const actor_ptr&; }
+message_header::message_header(const std::nullptr_t&)
+: priority(message_priority::normal) { }
 
-message_header::message_header(actor* s) : sender(s) { }
+message_header::message_header(const self_type&)
+: sender(self), receiver(self), priority(message_priority::normal) { }
 
-message_header::message_header(const self_type& s) : sender(s) { }
+message_header::message_header(channel_ptr dest, message_id mid, message_priority prio)
+: sender(self), receiver(dest), id(mid), priority(prio) { }
 
-message_header::message_header(actor_cref s, message_priority p)
-: sender(s), priority(p) { }
+message_header::message_header(channel_ptr dest, message_priority prio)
+: sender(self), receiver(dest), priority(prio) { }
 
-message_header::message_header(actor_cref s, message_id mid, message_priority p)
-: sender(s), id(mid), priority(p) { }
+message_header::message_header(actor_ptr source,
+                               channel_ptr dest,
+                               message_id mid,
+                               message_priority prio)
+: sender(source), receiver(dest), id(mid), priority(prio) { }
 
-message_header::message_header(actor_cref s, actor_cref r, message_id mid, message_priority p)
-: sender(s), receiver(r), id(mid), priority(p) { }
+message_header::message_header(actor_ptr source,
+                               channel_ptr dest,
+                               message_priority prio)
+: sender(source), receiver(dest), priority(prio) { }
 
 bool operator==(const message_header& lhs, const message_header& rhs) {
     return    lhs.sender == rhs.sender

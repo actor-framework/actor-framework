@@ -32,6 +32,7 @@
 #include <cwchar>
 #include <limits>
 #include <vector>
+#include <cstring>
 #include <typeinfo>
 #include <stdexcept>
 #include <algorithm>
@@ -42,14 +43,14 @@
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/message_header.hpp"
 
 #include "cppa/util/void_type.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/message_header.hpp"
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/detail/decorated_names_map.hpp"
+#include "cppa/detail/uniform_type_info_map.hpp"
 
 namespace {
 
@@ -57,6 +58,47 @@ using namespace std;
 using namespace cppa;
 using namespace detail;
 
+struct platform_int_mapping { const char* name; size_t size; bool is_signed; };
+
+// WARNING: this list is sorted and searched with std::lower_bound;
+//          keep ordered when adding elements!
+platform_int_mapping platform_dependent_sizes[] = {
+    {"char",                sizeof(char),               true},
+    {"char16_t",            sizeof(char16_t),           true},
+    {"char32_t",            sizeof(char32_t),           true},
+    {"int",                 sizeof(int),                true},
+    {"long",                sizeof(long),               true},
+    {"long int",            sizeof(long int),           true},
+    {"long long",           sizeof(long long),          true},
+    {"short",               sizeof(short),              true},
+    {"short int",           sizeof(short int),          true},
+    {"signed char",         sizeof(signed char),        true},
+    {"signed int",          sizeof(signed int),         true},
+    {"signed long",         sizeof(signed long),        true},
+    {"signed long int",     sizeof(signed long int),    true},
+    {"signed long long",    sizeof(signed long long),   true},
+    {"signed short",        sizeof(signed short),       true},
+    {"signed short int",    sizeof(signed short int),   true},
+    {"unsigned char",       sizeof(unsigned char),      false},
+    {"unsigned int",        sizeof(unsigned int),       false},
+    {"unsigned long",       sizeof(unsigned long),      false},
+    {"unsigned long int",   sizeof(unsigned long int),  false},
+    {"unsigned long long",  sizeof(unsigned long long), false},
+    {"unsigned short",      sizeof(unsigned short),     false},
+    {"unsigned short int",  sizeof(unsigned short int), false}
+};
+
+string map2decorated(const char* name) {
+    auto cmp = [](const platform_int_mapping& pim, const char* name) {
+        return strcmp(pim.name, name) < 0;
+    };
+    auto e = end(platform_dependent_sizes);
+    auto i = lower_bound(begin(platform_dependent_sizes), e, name, cmp);
+    if (i != e && strcmp(i->name, name) == 0) {
+        return mapped_int_names[i->size][i->is_signed ? 1 : 0];
+    }
+    return mapped_name_by_decorated_name(name);
+}
 
 class parse_tree {
 
@@ -67,7 +109,7 @@ class parse_tree {
         if (m_volatile) result += "volatile ";
         if (m_const) result += "const ";
         if (!m_template) {
-            result += dmm->decorate(m_name);
+            result += map2decorated(m_name.c_str());
         }
         else {
             string full_name = m_name;
@@ -79,7 +121,7 @@ class parse_tree {
             }
             full_name += ">";
             // decorate full name
-            result += dmm->decorate(full_name);
+            result += map2decorated(full_name.c_str());
         }
         if (m_pointer) result += "*";
         if (m_lvalue_ref) result += "&";
@@ -167,9 +209,7 @@ class parse_tree {
 
     parse_tree()
     : m_const(false), m_pointer(false), m_volatile(false), m_template(false)
-    , m_lvalue_ref(false), m_rvalue_ref(false) {
-        dmm = singleton_manager::get_decorated_names_map();
-    }
+    , m_lvalue_ref(false), m_rvalue_ref(false) { }
 
     bool m_const;
     bool m_pointer;
@@ -177,7 +217,6 @@ class parse_tree {
     bool m_template;
     bool m_lvalue_ref;
     bool m_rvalue_ref;
-    const decorated_names_map* dmm;
 
     string m_name;
     vector<parse_tree> m_template_parameters;
@@ -221,7 +260,7 @@ void replace_all(string& str, const char (&before)[RawSize], const char* after) 
 }
 
 const char s_rawan[] = "anonymous namespace";
-const char s_an[] = "@_";
+const char s_an[] = "$";
 
 } // namespace <anonymous>
 

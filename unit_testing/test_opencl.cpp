@@ -137,7 +137,7 @@ int main() {
     auto map_args = [] (any_tuple msg) -> option<cow_tuple<ivec>> {
         auto opt = tuple_cast<matrix_type>(msg);
         if (opt) {
-            return {move(get_ref<0>(*opt).data())};
+            return {make_cow_tuple(move(get_ref<0>(*opt).data()))};
         }
         return {};
     };

@@ -138,7 +138,8 @@ class scheduler {
                                   util::duration{rel_time},
                                   to,
                                   std::move(data));
-        delayed_send_helper()->enqueue(self, std::move(tup));
+        auto dsh = delayed_send_helper();
+        dsh->enqueue({self, dsh}, std::move(tup));
     }
 
     template<typename Duration, typename... Data>
@@ -153,7 +154,8 @@ class scheduler {
                                       to,
                                       id,
                                       std::move(data));
-            delayed_send_helper()->enqueue(self, std::move(tup));
+            auto dsh = delayed_send_helper();
+            dsh->enqueue({self, dsh}, std::move(tup));
         }
         else {
             this->delayed_send(to, rel_time, std::move(data));
@@ -163,19 +165,19 @@ class scheduler {
     /**
      * @brief Executes @p ptr in this scheduler.
      */
-    virtual actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) = 0;
+    virtual local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) = 0;
 
     /**
      * @brief Creates a new actor from @p actor_behavior and executes it
      *        in this scheduler.
      */
-    virtual actor_ptr exec(spawn_options opts,
+    virtual local_actor_ptr exec(spawn_options opts,
                            init_callback init_cb,
                            void_function actor_behavior) = 0;
 
     template<typename F, typename T, typename... Ts>
-    actor_ptr exec(spawn_options opts, init_callback cb,
-                   F f, T&& a0, Ts&&... as) {
+    local_actor_ptr exec(spawn_options opts, init_callback cb,
+                         F f, T&& a0, Ts&&... as) {
         return this->exec(opts, cb, std::bind(f, detail::fwd<T>(a0),
                                                  detail::fwd<Ts>(as)...));
     }

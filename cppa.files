@@ -25,7 +25,6 @@ cppa/detail/behavior_impl.hpp
 cppa/detail/behavior_stack.hpp
 cppa/detail/boxed.hpp
 cppa/detail/container_tuple_view.hpp
-cppa/detail/decorated_names_map.hpp
 cppa/detail/decorated_tuple.hpp
 cppa/detail/default_uniform_type_info_impl.hpp
 cppa/detail/demangle.hpp
@@ -122,6 +121,7 @@ cppa/option.hpp
 cppa/partial_function.hpp
 cppa/primitive_type.hpp
 cppa/primitive_variant.hpp
+cppa/prioritizing.hpp
 cppa/process_information.hpp
 cppa/qtsupport/actor_widget_mixin.hpp
 cppa/receive.hpp
@@ -131,6 +131,7 @@ cppa/sb_actor.hpp
 cppa/scheduled_actor.hpp
 cppa/scheduler.hpp
 cppa/self.hpp
+cppa/send.hpp
 cppa/serializer.hpp
 cppa/singletons.hpp
 cppa/spawn_options.hpp
@@ -227,7 +228,6 @@ src/channel.cpp
 src/context_switching_actor.cpp
 src/continuable_reader.cpp
 src/continuable_writer.cpp
-src/decorated_names_map.cpp
 src/default_actor_addressing.cpp
 src/default_actor_proxy.cpp
 src/default_peer.cpp
@@ -283,6 +283,7 @@ src/thread_pool_scheduler.cpp
 src/to_uniform_name.cpp
 src/unicast_network.cpp
 src/uniform_type_info.cpp
+src/uniform_type_info_map.cpp
 src/weak_ptr_anchor.cpp
 src/yield_interface.cpp
 unit_testing/ping_pong.cpp
@@ -306,4 +307,3 @@ unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-cppa/prioritizing.hpp

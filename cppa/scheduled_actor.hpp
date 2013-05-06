@@ -64,9 +64,6 @@ enum scheduled_actor_type {
 
 class scheduled_actor;
 
-template<>
-struct has_blocking_receive<scheduled_actor> : std::true_type { };
-
 /**
  * @brief A base class for cooperatively scheduled actors.
  * @extends local_actor

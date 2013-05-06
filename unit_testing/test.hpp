@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <cstring>
 #include <cstddef>
 #include <sstream>
 #include <iostream>
@@ -29,9 +30,9 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num);
 
 #define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
 
-#define CPPA_PRINTERRC(filename, linenum, message)                             \
-    CPPA_LOGF_ERROR(CPPA_STREAMIFY(filename, linenum, message));               \
-    std::cerr << "ERROR: " << CPPA_STREAMIFY(filename, linenum, message)       \
+#define CPPA_PRINTERRC(fname, linenum, msg)                                    \
+    CPPA_LOGF(CPPA_ERROR, ::cppa::self, CPPA_STREAMIFY(fname, linenum, msg));  \
+    std::cerr << "ERROR: " << CPPA_STREAMIFY(fname, linenum, msg)              \
               << std::endl
 
 #define CPPA_PRINTERR(message) CPPA_PRINTERRC(__FILE__, __LINE__, message)
@@ -43,7 +44,9 @@ struct both_integral {
 };
 
 template<bool V, typename T1, typename T2>
-struct enable_integral : std::enable_if<both_integral<T1,T2>::value == V> { };
+struct enable_integral : std::enable_if<   both_integral<T1,T2>::value == V
+                                        && not std::is_pointer<T1>::value
+                                        && not std::is_pointer<T2>::value> { };
 
 template<typename T>
 const T& cppa_stream_arg(const T& value) {
@@ -73,6 +76,15 @@ inline void cppa_failed(const V1& v1,
     cppa_inc_error_count();
 }
 
+inline void cppa_check_value(const std::string& v1,
+                             const std::string& v2,
+                             const char* fname,
+                             int line,
+                             bool expected = true) {
+    if ((v1 == v2) == expected) cppa_passed(fname, line);
+    else cppa_failed(v1, v2, fname, line);
+}
+
 template<typename V1, typename V2>
 inline void cppa_check_value(const V1& v1,
                              const V2& v2,
@@ -98,10 +110,11 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_VERBOSE_EVAL(LineOfCode)                                          \
     CPPA_PRINT(#LineOfCode << " = " << (LineOfCode));
 
-#define CPPA_TEST(name)                                                        \
+#define CPPA_TEST(testname)                                                    \
     auto cppa_test_scope_guard = ::cppa::util::make_scope_guard([] {           \
         std::cout << cppa_error_count() << " error(s) detected" << std::endl;  \
-    });
+    });                                                                        \
+    CPPA_LOGF_INFO("run unit test " << #testname)
 
 #define CPPA_TEST_RESULT() ((cppa_error_count() == 0) ? 0 : -1)
 
@@ -119,7 +132,7 @@ inline void cppa_check_value(V1 v1,
         CPPA_PRINTERR(#line_of_code);                                          \
         cppa_inc_error_count();                                                \
     }                                                                          \
-    else CPPA_PRINT("passed")
+    else { CPPA_PRINT("passed"); } CPPA_VOID_STMT
 
 #define CPPA_CHECK_EQUAL(lhs_loc, rhs_loc)                                     \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__)
@@ -127,7 +140,7 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_CHECK_NOT_EQUAL(rhs_loc, lhs_loc)                                 \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__, false)
 
-#define CPPA_ERROR(err_msg) {                                                  \
+#define CPPA_FAILURE(err_msg) {                                                  \
         CPPA_PRINTERR("ERROR: " << err_msg);                                   \
         cppa_inc_error_count();                                                \
     } ((void) 0)
@@ -143,7 +156,7 @@ inline void cppa_check_value(V1 v1,
 
 // some convenience macros for defining callbacks
 #define CPPA_CHECKPOINT_CB() [] { CPPA_CHECKPOINT(); }
-#define CPPA_ERROR_CB(err_msg) [] { CPPA_ERROR(err_msg); }
+#define CPPA_FAILURE_CB(err_msg) [] { CPPA_FAILURE(err_msg); }
 #define CPPA_UNEXPECTED_MSG_CB() [] { CPPA_UNEXPECTED_MSG(); }
 #define CPPA_UNEXPECTED_TOUT_CB() [] { CPPA_UNEXPECTED_TOUT(); }
 

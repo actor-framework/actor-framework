@@ -121,9 +121,21 @@ inline bool equal(const process_information::node_id_type& node_id,
 }
 
 /**
+ * @brief A smart pointer type that manages instances of
+ *        {@link process_information}.
+ * @relates process_information
+ */
+typedef intrusive_ptr<process_information> process_information_ptr;
+
+/**
  * @relates process_information
  */
 std::string to_string(const process_information& what);
+
+/**
+ * @relates process_information
+ */
+std::string to_string(const process_information_ptr& what);
 
 /**
  * @brief Converts a {@link process_information::node_id_type node_id}
@@ -133,13 +145,6 @@ std::string to_string(const process_information& what);
  * @relates process_information
  */
 std::string to_string(const process_information::node_id_type& node_id);
-
-/**
- * @brief A smart pointer type that manages instances of
- *        {@link process_information}.
- * @relates process_information
- */
-typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa
 

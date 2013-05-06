@@ -72,7 +72,7 @@ endif ()
 # set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG_MODE")
 endif (ENABLE_DEBUG)
 
 if (CPPA_LOG_LEVEL)
@@ -102,7 +102,6 @@ set(LIBCPPA_SRC
     src/context_switching_actor.cpp
     src/continuable_reader.cpp
     src/continuable_writer.cpp
-    src/decorated_names_map.cpp
     src/default_actor_addressing.cpp
     src/default_actor_proxy.cpp
     src/default_peer.cpp
@@ -154,6 +153,7 @@ set(LIBCPPA_SRC
     src/to_uniform_name.cpp
     src/unicast_network.cpp
     src/uniform_type_info.cpp
+    src/uniform_type_info_map.cpp
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 

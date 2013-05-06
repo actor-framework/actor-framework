@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include <string>
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/logging.hpp"
@@ -54,8 +55,8 @@ class down_observer : public attachable {
 
     void actor_exited(std::uint32_t reason) {
         if (m_observer) {
-            m_observer->enqueue(m_observed.get(),
-                                make_any_tuple(atom("DOWN"), reason));
+            message_header hdr{m_observed, m_observer, message_priority::high};
+            hdr.deliver(make_any_tuple(atom("DOWN"), reason));
         }
     }
 
@@ -69,11 +70,41 @@ class down_observer : public attachable {
 
 };
 
+constexpr const char* s_default_debug_name = "actor";
+
 } // namespace <anonymous>
 
 local_actor::local_actor(bool sflag)
 : m_chaining(sflag), m_trap_exit(false)
-, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) { }
+, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) {
+#   ifdef CPPA_DEBUG_MODE
+    new (&m_debug_name) std::string (std::to_string(m_id) + "@local");
+#   endif // CPPA_DEBUG_MODE
+}
+
+local_actor::~local_actor() {
+    using std::string;
+#   ifdef CPPA_DEBUG_MODE
+    m_debug_name.~string();
+#   endif // CPPA_DEBUG_MODE
+}
+
+const char* local_actor::debug_name() const {
+#   ifdef CPPA_DEBUG_MODE
+    return m_debug_name.c_str();
+#   else // CPPA_DEBUG_MODE
+    return s_default_debug_name;
+#   endif // CPPA_DEBUG_MODE
+}
+
+void local_actor::debug_name(std::string str) {
+#   ifdef CPPA_DEBUG_MODE
+    m_debug_name = std::move(str);
+#   else // CPPA_DEBUG_MODE
+    CPPA_LOG_WARNING("unable to set debug name to " << str
+                     << " (compiled without debug mode enabled)");
+#   endif // CPPA_DEBUG_MODE
+}
 
 void local_actor::monitor(const actor_ptr& whom) {
     if (whom) whom->attach(attachable_ptr{new down_observer(this, whom)});
@@ -113,15 +144,15 @@ void local_actor::reply_message(any_tuple&& what) {
     }
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_message(whom.get(), std::move(what));
+        send_tuple(whom, std::move(what));
     }
     else if (!id.is_answered()) {
         if (chaining_enabled()) {
-            if (whom->chained_enqueue({this, id.response_id()}, std::move(what))) {
+            if (whom->chained_enqueue({this, whom, id.response_id()}, std::move(what))) {
                 chained_actor(whom);
             }
         }
-        else whom->enqueue({this, id.response_id()}, std::move(what));
+        else whom->enqueue({this, whom, id.response_id()}, std::move(what));
         id.mark_as_answered();
     }
 }
@@ -129,7 +160,7 @@ void local_actor::reply_message(any_tuple&& what) {
 void local_actor::forward_message(const actor_ptr& new_receiver) {
     if (new_receiver == nullptr) return;
     auto& id = m_current_node->mid;
-    new_receiver->enqueue({last_sender(), id}, m_current_node->msg);
+    new_receiver->enqueue({last_sender(), new_receiver, id}, m_current_node->msg);
     // treat this message as asynchronous message from now on
     id = message_id{};
 }
@@ -139,15 +170,6 @@ response_handle local_actor::make_response_handle() {
     response_handle result{this, n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
     return std::move(result);
-}
-
-message_id local_actor::send_timed_sync_message(const actor_ptr& whom,
-                                                  const util::duration& rel_time,
-                                                  any_tuple&& what) {
-    auto mid = this->send_sync_message(whom, std::move(what));
-    auto tmp = make_any_tuple(atom("TIMEOUT"));
-    get_scheduler()->delayed_reply(this, rel_time, mid, std::move(tmp));
-    return mid;
 }
 
 void local_actor::exec_behavior_stack() {

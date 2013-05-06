@@ -153,7 +153,7 @@ class receive_policy {
         else if (!invoke_from_cache(client, bhvr)) {
             if (bhvr.timeout().is_zero()) {
                 pointer e = nullptr;
-                while ((e = client->m_mailbox.try_pop()) != nullptr) {
+                while ((e = client->try_pop()) != nullptr) {
                     CPPA_REQUIRE(e->marked == false);
                     if (invoke(client, e, bhvr)) {
                         return; // done
@@ -356,15 +356,15 @@ class receive_policy {
                 CPPA_CRITICAL("illegal filter result");
             }
             case normal_exit_signal: {
-                CPPA_LOG_DEBUG("dropped message: normal exit signal");
+                CPPA_LOGMF(CPPA_DEBUG, client, "dropped normal exit signal");
                 return hm_drop_msg;
             }
             case expired_sync_response: {
-                CPPA_LOG_DEBUG("dropped message: expired sync response");
+                CPPA_LOGMF(CPPA_DEBUG, client, "dropped expired sync response");
                 return hm_drop_msg;
             }
             case expired_timeout_message: {
-                CPPA_LOG_DEBUG("dropped message: expired timeout message");
+                CPPA_LOGMF(CPPA_DEBUG, client, "dropped expired timeout message");
                 return hm_drop_msg;
             }
             case non_normal_exit_signal: {
@@ -388,7 +388,7 @@ class receive_policy {
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = hm_begin(client, node, policy);
                     if (!fun(node->msg) && handle_sync_failure_on_mismatch) {
-                        CPPA_LOG_WARNING("sync failure occured");
+                        CPPA_LOGMF(CPPA_WARNING, client, "sync failure occured");
                         client->handle_sync_failure();
                     }
                     client->mark_arrived(awaited_response);
@@ -407,9 +407,10 @@ class receive_policy {
                         auto id = node->mid;
                         auto sender = node->sender;
                         if (id.valid() && !id.is_answered() && sender) {
-                            CPPA_LOG_WARNING("actor did not reply to a "
-                                             "synchronous request message");
-                            sender->enqueue({client, id.response_id()},
+                            CPPA_LOGMF(CPPA_WARNING, client,
+                                       "actor did not reply to a "
+                                       "synchronous request message");
+                            sender->enqueue({client, sender, id.response_id()},
                                             make_any_tuple(atom("VOID")));
                         }
                         hm_cleanup(client, previous_node, policy);

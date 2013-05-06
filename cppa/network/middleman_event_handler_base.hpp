@@ -107,7 +107,7 @@ class middleman_event_handler_base {
                 auto wptr = ptr->as_io();
                 if (wptr) fd = wptr->write_handle();
                 else {
-                    CPPA_LOG_ERROR("ptr->downcast() returned nullptr");
+                    CPPA_LOGMF(CPPA_ERROR, self, "ptr->downcast() returned nullptr");
                     return;
                 }
                 break;
@@ -118,7 +118,7 @@ class middleman_event_handler_base {
                 if (wptr) {
                     auto wrfd = wptr->write_handle();
                     if (fd != wrfd) {
-                        CPPA_LOG_DEBUG("read_handle != write_handle, split "
+                        CPPA_LOGMF(CPPA_DEBUG, self, "read_handle != write_handle, split "
                                        "into two function calls");
                         // split into two function calls
                         e = event::read;
@@ -126,13 +126,13 @@ class middleman_event_handler_base {
                     }
                 }
                 else {
-                    CPPA_LOG_ERROR("ptr->downcast() returned nullptr");
+                    CPPA_LOGMF(CPPA_ERROR, self, "ptr->downcast() returned nullptr");
                     return;
                 }
                 break;
             }
             default:
-                CPPA_LOG_ERROR("invalid bitmask");
+                CPPA_LOGMF(CPPA_ERROR, self, "invalid bitmask");
                 return;
         }
         m_alterations.emplace_back(fd_meta_info(fd, ptr, e), etype);
@@ -163,7 +163,7 @@ class middleman_event_handler_base {
             if (iter != last) old = iter->mask;
             auto mask = next_bitmask(old, elem.mask, elem_pair.second);
             auto ptr = elem.ptr.get();
-            CPPA_LOG_DEBUG("new bitmask for "
+            CPPA_LOGMF(CPPA_DEBUG, self, "new bitmask for "
                            << elem.ptr.get() << ": " << eb2str(mask));
             if (iter == last || iter->fd != elem.fd) {
                 CPPA_LOG_INFO_IF(mask == event::none,

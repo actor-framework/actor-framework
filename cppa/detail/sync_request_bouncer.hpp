@@ -48,13 +48,12 @@ struct sync_request_bouncer {
     inline void operator()(const actor_ptr& sender, const message_id& mid) const {
         CPPA_REQUIRE(rsn != exit_reason::not_exited);
         if (mid.is_request() && sender != nullptr) {
-            actor_ptr nobody;
-            sender->enqueue({nobody, mid.response_id()},
+            sender->enqueue({nullptr, sender, mid.response_id()},
                             make_any_tuple(atom("EXITED"), rsn));
         }
     }
     inline void operator()(const mailbox_element& e) const {
-        (*this)(e.sender.get(), e.mid);
+        (*this)(e.sender, e.mid);
     }
 };
 

@@ -36,6 +36,7 @@
 #include <condition_variable>
 
 #include "cppa/cppa.hpp"
+#include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
@@ -67,18 +68,23 @@ class local_group : public group {
  public:
 
     void send_all_subscribers(const actor_ptr& sender, const any_tuple& msg) {
+        CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+                       << CPPA_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
-            s->enqueue(sender, msg);
+            send_tuple_as(sender, s, msg);
         }
     }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
+        CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", "
+                       << CPPA_TARG(msg, to_string));
         send_all_subscribers(hdr.sender, msg);
         m_broker->enqueue(hdr, move(msg));
     }
 
     pair<bool,size_t> add_subscriber(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second) {
             return {true, m_subscribers.size()};
@@ -87,12 +93,14 @@ class local_group : public group {
     }
 
     pair<bool,size_t> erase_subscriber(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
-        auto erased_one = m_subscribers.erase(who) > 0;
-        return {erased_one, m_subscribers.size()};
+        auto success = m_subscribers.erase(who) > 0;
+        return {success, m_subscribers.size()};
     }
 
     group::subscription subscribe(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         if (add_subscriber(who).first) {
             return {who, this};
         }
@@ -100,6 +108,7 @@ class local_group : public group {
     }
 
     void unsubscribe(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         erase_subscriber(who);
     }
 
@@ -130,27 +139,38 @@ class local_broker : public event_based_actor {
     void init() {
         become (
             on(atom("JOIN"), arg_match) >> [=](const actor_ptr& other) {
+                CPPA_LOGC_TRACE("cppa::local_broker", "init$JOIN",
+                                CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.insert(other).second) {
                     monitor(other);
                 }
             },
             on(atom("LEAVE"), arg_match) >> [=](const actor_ptr& other) {
+                CPPA_LOGC_TRACE("cppa::local_broker", "init$LEAVE",
+                                CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.erase(other) > 0) {
                     demonitor(other);
                 }
             },
             on(atom("FORWARD"), arg_match) >> [=](const any_tuple& what) {
+                CPPA_LOGC_TRACE("cppa::local_broker", "init$FORWARD",
+                                CPPA_TARG(what, to_string));
                 // local forwarding
-                m_group->send_all_subscribers(last_sender().get(), what);
+                m_group->send_all_subscribers(last_sender(), what);
                 // forward to all acquaintances
                 send_to_acquaintances(what);
             },
-            on<atom("DOWN"), uint32_t>() >> [=] {
+            on(atom("DOWN"), arg_match) >> [=](uint32_t) {
                 actor_ptr other = last_sender();
+                CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
+                                CPPA_TARG(other, to_string));
                 if (other) m_acquaintances.erase(other);
             },
             others() >> [=] {
-                send_to_acquaintances(last_dequeued());
+                auto msg = last_dequeued();
+                CPPA_LOGC_TRACE("cppa::local_broker", "init$others",
+                                CPPA_TARG(msg, to_string));
+                send_to_acquaintances(msg);
             }
         );
     }
@@ -159,9 +179,12 @@ class local_broker : public event_based_actor {
 
     void send_to_acquaintances(const any_tuple& what) {
         // send to all remote subscribers
-        auto sender = last_sender().get();
+        auto sender = last_sender();
+        CPPA_LOG_DEBUG("forward message to " << m_acquaintances.size()
+                       << " acquaintances; " << CPPA_TSARG(sender)
+                       << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            acquaintance->enqueue(sender, what);
+            acquaintance->enqueue({sender, acquaintance}, what);
         }
     }
 
@@ -193,12 +216,12 @@ class local_group_proxy : public local_group {
     }
 
     group::subscription subscribe(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = add_subscriber(who);
         if (res.first) {
             if (res.second == 1) {
                 // join the remote source
-                m_broker->enqueue(nullptr,
-                                  make_any_tuple(atom("JOIN"), m_proxy_broker));
+                send_as(nullptr, m_broker, atom("JOIN"), m_proxy_broker);
             }
             return {who, this};
         }
@@ -206,12 +229,12 @@ class local_group_proxy : public local_group {
     }
 
     void unsubscribe(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = erase_subscriber(who);
         if (res.first && res.second == 0) {
             // leave the remote source,
             // because there's no more subscriber on this node
-            m_broker->enqueue(nullptr,
-                              make_any_tuple(atom("LEAVE"), m_proxy_broker));
+            send_as(nullptr, m_broker, atom("LEAVE"), m_proxy_broker);
         }
     }
 
@@ -237,8 +260,7 @@ class proxy_broker : public event_based_actor {
     void init() {
         become (
             others() >> [=] {
-                m_group->send_all_subscribers(last_sender().get(),
-                                              last_dequeued());
+                m_group->send_all_subscribers(last_sender(), last_dequeued());
             }
         );
     }
@@ -336,19 +358,24 @@ class remote_group : public group {
     : super(parent, move(id)), m_decorated(decorated) { }
 
     group::subscription subscribe(const channel_ptr& who) {
+        CPPA_LOG_TRACE(CPPA_TSARG(who));
         return m_decorated->subscribe(who);
     }
 
-    void unsubscribe(const channel_ptr&) { /* never called */ }
+    void unsubscribe(const channel_ptr&) {
+        CPPA_LOG_ERROR("should never be called");
+    }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
+        CPPA_LOG_TRACE("");
         m_decorated->enqueue(hdr, std::move(msg));
     }
 
     void serialize(serializer* sink);
 
     void group_down() {
-        group_ptr _this(this);
+        CPPA_LOG_TRACE("");
+        group_ptr _this{this};
         m_decorated->send_all_subscribers(nullptr,
                                           make_any_tuple(atom("GROUP_DOWN"),
                                                          _this));
@@ -374,7 +401,7 @@ class shared_map : public ref_counted {
             lock_type guard(m_mtx);
             auto i = m_instances.find(key);
             if (i == m_instances.end()) {
-                m_worker->enqueue(nullptr, make_any_tuple(atom("FETCH"), key));
+                send_as(nullptr, m_worker, atom("FETCH"), key);
                 do {
                     m_cond.wait(guard);
                 } while ((i = m_instances.find(key)) == m_instances.end());

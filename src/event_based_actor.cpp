@@ -84,7 +84,7 @@ class default_scheduled_actor : public event_based_actor {
 };
 
 intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> fun) {
-    return detail::memory::create<default_scheduled_actor>(std::move(fun));
+    return make_counted<default_scheduled_actor>(std::move(fun));
 }
 
 event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
@@ -119,7 +119,7 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
             //e = m_mailbox.try_pop();
             if (e == nullptr) {
                 CPPA_REQUIRE(next_job == nullptr);
-                CPPA_LOG_DEBUG("no more element in mailbox; going to block");
+                CPPA_LOGMF(CPPA_DEBUG, self, "no more element in mailbox; going to block");
                 next_job.swap(m_chained_actor);
                 set_state(actor_state::about_to_block);
                 std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -131,20 +131,20 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
                             // restore members
                             CPPA_REQUIRE(m_chained_actor == nullptr);
                             next_job.swap(m_chained_actor);
-                            CPPA_LOG_DEBUG("switched back to ready: "
+                            CPPA_LOGMF(CPPA_DEBUG, self, "switched back to ready: "
                                            "interrupted by arriving message");
                             break;
                         case actor_state::blocked:
-                            CPPA_LOG_DEBUG("set state successfully to blocked");
+                            CPPA_LOGMF(CPPA_DEBUG, self, "set state successfully to blocked");
                             // done setting actor to blocked
                             return resume_result::actor_blocked;
                         default:
-                            CPPA_LOG_ERROR("invalid state");
+                            CPPA_LOGMF(CPPA_ERROR, self, "invalid state");
                             CPPA_CRITICAL("invalid state");
                     };
                 }
                 else {
-                    CPPA_LOG_DEBUG("switched back to ready: "
+                    CPPA_LOGMF(CPPA_DEBUG, self, "switched back to ready: "
                                    "mailbox can fetch more");
                     set_state(actor_state::ready);
                     CPPA_REQUIRE(m_chained_actor == nullptr);
@@ -152,14 +152,14 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
                 }
             }
             else {
-                CPPA_LOG_DEBUG("try to invoke message: " << to_string(e->msg));
+                CPPA_LOGMF(CPPA_DEBUG, self, "try to invoke message: " << to_string(e->msg));
                 if (m_bhvr_stack.invoke(m_recv_policy, this, e)) {
                     CPPA_LOG_DEBUG_IF(m_chained_actor,
                                       "set actor with ID "
                                       << m_chained_actor->id()
                                       << " as successor");
                     if (m_bhvr_stack.empty()) {
-                        CPPA_LOG_DEBUG("behavior stack empty");
+                        CPPA_LOGMF(CPPA_DEBUG, self, "behavior stack empty");
                         done_cb();
                         return resume_result::actor_done;
                     }

@@ -151,13 +151,16 @@ default_behavior_impl<MatchExpr, F>* new_default_behavior_impl(const MatchExpr& 
 template<typename F>
 class continuation_decorator : public behavior_impl {
 
+    typedef behavior_impl super;
+
  public:
 
     typedef typename behavior_impl::pointer pointer;
 
     template<typename Fun>
     continuation_decorator(Fun&& fun, pointer decorated)
-    : m_fun(std::forward<Fun>(fun)), m_decorated(std::move(decorated)) {
+    : super(decorated->timeout()), m_fun(std::forward<Fun>(fun))
+    , m_decorated(std::move(decorated)) {
         CPPA_REQUIRE(m_decorated != nullptr);
     }
 

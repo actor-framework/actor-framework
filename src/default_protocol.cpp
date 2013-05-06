@@ -136,10 +136,10 @@ default_peer_ptr default_protocol::get_peer(const process_information& n) {
     CPPA_LOG_TRACE("n = " << to_string(n));
     auto i = m_peers.find(n);
     if (i != m_peers.end()) {
-        CPPA_LOG_DEBUG("result = " << i->second.impl.get());
+        CPPA_LOGMF(CPPA_DEBUG, self, "result = " << i->second.impl.get());
         return i->second.impl;
     }
-    CPPA_LOG_DEBUG("result = nullptr");
+    CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
     return nullptr;
 }
 
@@ -192,8 +192,8 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     auto pinfptr = make_counted<process_information>(peer_pid, peer_node_id);
     if (*pinf == *pinfptr) {
         // dude, this is not a remote actor, it's a local actor!
-        CPPA_LOG_ERROR("remote_actor() called to access a local actor");
-#       ifndef CPPA_DEBUG
+        CPPA_LOGMF(CPPA_ERROR, self, "remote_actor() called to access a local actor");
+#       ifndef CPPA_DEBUG_MODE
         std::cerr << "*** warning: remote_actor() called to access a local actor\n"
                   << std::flush;
 #       endif

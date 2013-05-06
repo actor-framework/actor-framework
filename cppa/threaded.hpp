@@ -56,8 +56,10 @@ class threaded : public Base {
 
  public:
 
+    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+
     template<typename... Ts>
-    threaded(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    threaded(Ts&&... args) : Base(std::forward<Ts>(args)...), m_initialized(false) { }
 
     inline void reset_timeout() { }
 
@@ -71,30 +73,17 @@ class threaded : public Base {
 
     inline bool waits_for_timeout(std::uint32_t) { return false; }
 
+    virtual mailbox_element* try_pop() {
+        return this->m_mailbox.try_pop();
+    }
+
     mailbox_element* pop() {
         wait_for_data();
-        return this->m_mailbox.try_pop();
+        return try_pop();
     }
 
-    inline mailbox_element* try_pop() {
-        return this->m_mailbox.try_pop();
-    }
-
-    template<typename TimePoint>
-    mailbox_element* try_pop(const TimePoint& abs_time) {
+    inline mailbox_element* try_pop(const timeout_type& abs_time) {
         return (timed_wait_for_data(abs_time)) ? try_pop() : nullptr;
-    }
-
-    bool push_back(mailbox_element* new_element) {
-        switch (this->m_mailbox.enqueue(new_element)) {
-            case intrusive::first_enqueued: {
-                lock_type guard(m_mtx);
-                m_cv.notify_one();
-                return true;
-            }
-            default: return true;
-            case intrusive::queue_closed: return false;
-        }
     }
 
     void run_detached() {
@@ -104,19 +93,46 @@ class threaded : public Base {
         dthis->on_exit();
     }
 
+    inline void initialized(bool value) {
+        m_initialized = value;
+    }
+
+    virtual bool initialized() const override {
+        return m_initialized;
+    }
+
  protected:
 
     typedef threaded combined_type;
 
-    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue_impl(typename Base::mailbox_type& mbox,
+                      const message_header& hdr,
+                      any_tuple&& msg) {
         auto ptr = this->new_mailbox_element(hdr, std::move(msg));
-        if (!push_back(ptr) && hdr.id.valid()) {
-            detail::sync_request_bouncer f{this->exit_reason()};
-            f(hdr.sender, hdr.id);
+        switch (mbox.enqueue(ptr)) {
+            case intrusive::first_enqueued: {
+                lock_type guard(m_mtx);
+                m_cv.notify_one();
+                break;
+            }
+            default: break;
+            case intrusive::queue_closed:
+                if (hdr.id.valid()) {
+                    detail::sync_request_bouncer f{this->exit_reason()};
+                    f(hdr.sender, hdr.id);
+                }
+                break;
         }
     }
 
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
+        enqueue_impl(this->m_mailbox, hdr, std::move(msg));
+    }
+
+    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg) override {
+        enqueue(hdr, std::move(msg));
+        return false;
+    }
 
     timeout_type init_timeout(const util::duration& rel_time) {
         auto result = std::chrono::high_resolution_clock::now();
@@ -132,11 +148,15 @@ class threaded : public Base {
         return try_pop(abs_time);
     }
 
+    virtual bool mailbox_empty() {
+        return this->m_mailbox.empty();
+    }
+
     bool timed_wait_for_data(const timeout_type& abs_time) {
         CPPA_REQUIRE(not this->m_mailbox.closed());
-        if (this->m_mailbox.empty()) {
+        if (mailbox_empty()) {
             lock_type guard(m_mtx);
-            while (this->m_mailbox.empty()) {
+            while (mailbox_empty()) {
                 if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {
                     return false;
                 }
@@ -146,14 +166,18 @@ class threaded : public Base {
     }
 
     void wait_for_data() {
-        if (this->m_mailbox.empty()) {
+        if (mailbox_empty()) {
             lock_type guard(m_mtx);
-            while (this->m_mailbox.empty()) m_cv.wait(guard);
+            while (mailbox_empty()) m_cv.wait(guard);
         }
     }
 
     std::mutex m_mtx;
     std::condition_variable m_cv;
+
+ private:
+
+    bool m_initialized;
 
 };
 

@@ -29,9 +29,15 @@
 
 
 #include "cppa/channel.hpp"
+#include "cppa/any_tuple.hpp"
 
 namespace cppa {
 
 channel::~channel() { }
+
+bool channel::chained_enqueue(const message_header& hdr, any_tuple msg) {
+    enqueue(hdr, std::move(msg));
+    return false;
+}
 
 } // namespace cppa

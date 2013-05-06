@@ -31,6 +31,9 @@
 #ifndef CPPA_MEMORY_CACHED_HPP
 #define CPPA_MEMORY_CACHED_HPP
 
+#include <utility>
+#include <type_traits>
+
 #include "cppa/detail/memory.hpp"
 
 namespace cppa {
@@ -46,6 +49,10 @@ class memory_cached : public Base {
 
     template<typename>
     friend class detail::basic_memory_cache;
+
+ public:
+
+    static constexpr bool is_memory_cached_type = true;
 
  protected:
 
@@ -72,6 +79,16 @@ class memory_cached : public Base {
 
     detail::instance_wrapper* outer_memory;
 
+};
+
+template<typename T>
+struct is_memory_cached {
+    template<class U, bool = U::is_memory_cached_type>
+    static std::true_type check(int);
+    template<class>
+    static std::false_type check(...);
+public:
+    static constexpr bool value = decltype(check<T>(0))::value;
 };
 
 } // namespace cppa

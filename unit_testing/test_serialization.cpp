@@ -165,7 +165,7 @@ int main() {
             CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
     }
-    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         // test raw_type in both binary and string serialization
@@ -184,7 +184,7 @@ int main() {
         rs2 = from_string<raw_struct>(rsstr);
         CPPA_CHECK_EQUAL(rs2.str, rs.str);
     }
-    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         auto ttup = make_any_tuple(1, 2, actor_ptr(self));
@@ -201,7 +201,7 @@ int main() {
         CPPA_CHECK(ttup  == ttup3);
         CPPA_CHECK(ttup2 == ttup3);
     }
-    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         // serialize b1 to buf
@@ -221,14 +221,15 @@ int main() {
             CPPA_CHECK_EQUAL(get<1>(tup), "foo");
         }
     }
-    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         any_tuple msg1 = cppa::make_cow_tuple(42, string("Hello \"World\"!"));
         auto msg1_tostring = to_string(msg1);
         if (msg1str != msg1_tostring) {
-            CPPA_ERROR("msg1str != to_string(msg1)");
+            CPPA_FAILURE("msg1str != to_string(msg1)");
             cerr << "to_string(msg1) = " << msg1_tostring << endl;
+            cerr << "to_string(msg1str) = " << msg1str << endl;
         }
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf, &addressing);
@@ -256,10 +257,10 @@ int main() {
             }
         }
         else {
-            CPPA_ERROR("obj.type() != typeid(message)");
+            CPPA_FAILURE("obj.type() != typeid(message)");
         }
     }
-    catch (exception& e) { CPPA_ERROR(to_verbose_string(e)); }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     CPPA_CHECK((is_iterable<int>::value) == false);
     // string is primitive and thus not identified by is_iterable
