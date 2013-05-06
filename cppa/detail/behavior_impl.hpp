@@ -133,7 +133,6 @@ class default_behavior_impl : public behavior_impl {
         return new default_behavior_impl<MatchExpr,std::function<void()> >(m_expr, tdef);
     }
 
-
     void handle_timeout() { m_fun(); }
 
  private:
