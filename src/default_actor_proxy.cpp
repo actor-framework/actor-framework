@@ -157,7 +157,7 @@ void default_actor_proxy::link_to(const intrusive_ptr<actor>& other) {
     if (link_to_impl(other)) {
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
-        forward_msg(this, make_any_tuple(atom("LINK"), other));
+        forward_msg({this, this}, make_any_tuple(atom("LINK"), other));
     }
 }
 
@@ -165,7 +165,7 @@ void default_actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (unlink_from_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(this, make_any_tuple(atom("UNLINK"), other));
+        forward_msg({this, this}, make_any_tuple(atom("UNLINK"), other));
     }
 }
 
@@ -173,7 +173,7 @@ bool default_actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) 
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (super::establish_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(this, make_any_tuple(atom("LINK"), other));
+        forward_msg({this, this}, make_any_tuple(atom("LINK"), other));
         return true;
     }
     return false;
@@ -183,7 +183,7 @@ bool default_actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (super::remove_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(this, make_any_tuple(atom("UNLINK"), other));
+        forward_msg({this, this}, make_any_tuple(atom("UNLINK"), other));
         return true;
     }
     return false;

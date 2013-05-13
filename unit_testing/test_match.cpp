@@ -382,5 +382,19 @@ int main() {
     bhvr_check(bhvr1, make_any_tuple(2.f), true, "<float>@2");
     bhvr_check(bhvr1, make_any_tuple(""), true, "<*>@4");
 
+    partial_function pf11 {
+        on_arg_match >> [&](int) { last_invoked_fun = "<int>@1"; }
+    };
+
+    partial_function pf12 {
+        on_arg_match >> [&](int) { last_invoked_fun = "<int>@2"; },
+        on_arg_match >> [&](float) { last_invoked_fun = "<float>@2"; }
+    };
+
+    auto pf13 = pf11.or_else(pf12);
+
+    bhvr_check(pf13, make_any_tuple(42), true, "<int>@1");
+    bhvr_check(pf13, make_any_tuple(42.24f), true, "<float>@2");
+
     return CPPA_TEST_RESULT();
 }

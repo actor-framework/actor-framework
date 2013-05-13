@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <cstring>
+#include <iostream>
 
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/command_dispatcher.hpp"
@@ -61,34 +62,41 @@ program program::create(const char* kernel_source) {
     // build programm from program object
     err = clBuildProgram(pptr.get(), 0, nullptr, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
+        cl_int bi_err{0};
         device_ptr device_used(cppa::detail::singleton_manager::
                                get_command_dispatcher()->
                                m_devices.front().dev_id);
         cl_build_status build_status;
-        err = clGetProgramBuildInfo(pptr.get(),
-                                    device_used.get(),
-                                    CL_PROGRAM_BUILD_STATUS,
-                                    sizeof(cl_build_status),
-                                    &build_status,
-                                    nullptr);
+        bi_err = clGetProgramBuildInfo(pptr.get(),
+                                       device_used.get(),
+                                       CL_PROGRAM_BUILD_STATUS,
+                                       sizeof(cl_build_status),
+                                       &build_status,
+                                       nullptr);
         size_t ret_val_size;
-        err = clGetProgramBuildInfo(pptr.get(),
-                                    device_used.get(),
-                                    CL_PROGRAM_BUILD_LOG,
-                                    0,
-                                    nullptr,
-                                    &ret_val_size);
-        std::vector<char> build_log(ret_val_size+1);
-        err = clGetProgramBuildInfo(pptr.get(),
-                                    device_used.get(),
-                                    CL_PROGRAM_BUILD_LOG,
-                                    ret_val_size,
-                                    build_log.data(),
-                                    nullptr);
-        build_log[ret_val_size] = '\0';
+        bi_err = clGetProgramBuildInfo(pptr.get(),
+                                       device_used.get(),
+                                       CL_PROGRAM_BUILD_LOG,
+                                       0,
+                                       nullptr,
+                                       &ret_val_size);
+        std::vector<char> build_log(ret_val_size);
+        bi_err = clGetProgramBuildInfo(pptr.get(),
+                                       device_used.get(),
+                                       CL_PROGRAM_BUILD_LOG,
+                                       ret_val_size,
+                                       build_log.data(),
+                                       nullptr);
         std::ostringstream oss;
-        oss << "clBuildProgram: " << get_opencl_error(err)
-            << ", build log: "    << build_log.data();
+        if (ret_val_size <= 1) {
+            oss << "clBuildProgram: " << get_opencl_error(err)
+                << " (no build log available)";
+        }
+        else {
+            oss << "clBuildProgram: " << get_opencl_error(err);
+            build_log[ret_val_size - 1] = '\0';
+            std::cerr << build_log.data() << std::endl;
+        }
         CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
         throw std::runtime_error(oss.str());
     }
@@ -118,9 +126,13 @@ program program::create(const char* kernel_source) {
                                     ret_val_size,
                                     build_log.data(),
                                     nullptr);
-        build_log[ret_val_size] = '\0';
-        CPPA_LOGM_DEBUG("program", "clBuildProgram build log: "
-                                   << build_log.data());
+        if (ret_val_size > 1) {
+            CPPA_LOGM_ERROR(detail::demangle<program>().c_str(),
+                            "clBuildProgram: error");
+            build_log[ret_val_size - 1] = '\0';
+            std::cerr << "clBuildProgram build log:\n"
+                      << build_log.data() << std::endl;
+        }
 #       endif
     }
     return {cptr, pptr};

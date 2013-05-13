@@ -67,6 +67,10 @@ detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
     return {storage};
 }
 
+inline std::function<void()> set_flag(bool& storage) {
+    return [&] { storage = true; };
+}
+
 /**
  * @brief Stores a help text along with the number of expected arguments.
  */

@@ -34,6 +34,12 @@ constexpr const char* kernel_source = R"__(
     }
 )__";
 
+constexpr const char* kernel_source_error = R"__(
+    __kernel void matrix_square(__global int*) {
+        size_t semicolon
+    }
+)__";
+
 }
 
 template<size_t Size>
@@ -170,6 +176,14 @@ int main() {
             CPPA_CHECK(expected2 == result);
         }
     );
+
+    try {
+        program create_error = program::create(kernel_source_error);
+    }
+    catch (const exception& exc) {
+        cout << exc.what() << endl;
+        CPPA_CHECK_EQUAL("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what());
+    }
 
     cppa::await_all_others_done();
     cppa::shutdown();
