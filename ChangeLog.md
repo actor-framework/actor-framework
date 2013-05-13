@@ -1,3 +1,17 @@
+Version 0.7
+-----------
+
+__2013_05_12__
+
+- Default actor impl. is now event-based
+- Unified spawn options
+- Blocking API still available, but opt-in
+- Priority-based messaging (opt-in feature)
+- Support for OpenCL-based actors (enable with --with-opencl)
+- Changed license to LGPL 2.1
+- Added `gval` for guard expression
+- Implemented thread-mapped, event-based actors
+
 Version 0.6
 -----------
 
