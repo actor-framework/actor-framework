@@ -48,6 +48,7 @@ namespace cppa { namespace detail {
 namespace {
 
 constexpr size_t s_alloc_size = 1024;  // allocate ~1kb chunks
+constexpr size_t s_min_elements = 5;   // don't create less than 5 elements
 constexpr size_t s_cache_size = 10240; // cache about 10kb per thread
 
 } // namespace <anonymous>
@@ -96,6 +97,9 @@ class basic_memory_cache : public memory_cache {
 
     class storage : public ref_counted {
 
+        static constexpr size_t ne = s_alloc_size / sizeof(T);
+        static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
+
      public:
 
         storage() {
@@ -110,11 +114,11 @@ class basic_memory_cache : public memory_cache {
 
         iterator begin() { return data; }
 
-        iterator end() { return begin() + (s_alloc_size / sizeof(T)); }
+        iterator end() { return begin() + dsize; }
 
      private:
 
-        wrapper data[s_alloc_size / sizeof(T)];
+        wrapper data[dsize];
 
     };
 
