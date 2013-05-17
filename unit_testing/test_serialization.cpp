@@ -41,6 +41,7 @@
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
+#include "cppa/util/get_mac_addresses.hpp"
 
 #include "cppa/util/pt_token.hpp"
 #include "cppa/util/is_iterable.hpp"
@@ -145,6 +146,12 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 
 int main() {
     CPPA_TEST(test_serialization);
+
+    auto addresses = util::get_mac_addresses();
+    for (auto& addr : addresses) {
+        cout << addr << endl;
+    }
+    return 0;
 
     announce(typeid(raw_struct), new raw_struct_type_info);
 

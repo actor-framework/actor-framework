@@ -307,3 +307,9 @@ unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/util/algorithm.hpp
+src/algorithm.cpp
+cppa/util/get_mac_addresses.hpp
+src/get_mac_addresses.cpp
+cppa/util/get_root_uuid.hpp
+src/get_root_uuid.cpp

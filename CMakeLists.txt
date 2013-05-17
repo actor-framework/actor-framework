@@ -90,6 +90,7 @@ set(LIBCPPA_SRC
     src/actor_addressing.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
+    src/algorithm.cpp
     src/any_tuple.cpp
     src/atom.cpp
     src/attachable.cpp
@@ -117,6 +118,8 @@ set(LIBCPPA_SRC
     src/factory.cpp
     src/fd_util.cpp
     src/fiber.cpp
+    src/get_root_uuid.cpp
+    src/get_mac_addresses.cpp
     src/group.cpp
     src/group_manager.cpp
     src/ipv4_acceptor.cpp

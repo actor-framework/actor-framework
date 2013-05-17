@@ -29,6 +29,7 @@
 
 
 #include "cppa/config.hpp"
+#include "cppa/process_information.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -37,57 +38,20 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-
+#include "cppa/util/algorithm.hpp"
 #include "cppa/util/ripemd_160.hpp"
-#include "cppa/process_information.hpp"
+#include "cppa/util/get_root_uuid.hpp"
+#include "cppa/util/get_mac_addresses.hpp"
 
 namespace {
 
-inline void erase_trailing_newline(std::string& str) {
-    while (!str.empty() && (*str.rbegin()) == '\n') {
-        str.resize(str.size() - 1);
-    }
-}
-
-#ifdef CPPA_MACOS
-const char* s_get_uuid =
-    "/usr/sbin/diskutil info / | "
-    "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
-const char* s_get_mac =
-    "/usr/sbin/system_profiler SPNetworkDataType | "
-    "/usr/bin/grep -Fw MAC | "
-    "/usr/bin/grep -o '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}' | "
-    "/usr/bin/head -n1";
-#elif defined(CPPA_LINUX)
-const char* s_get_uuid =
-    "/bin/egrep -o 'UUID=(([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3})\\s+/\\s+' "
-                  "/etc/fstab | "
-    "/bin/egrep -o '([0-9a-fA-F-]+)(-[0-9a-fA-F-]+){3}'";
-const char* s_get_mac =
-    "/sbin/ifconfig | "
-    "/bin/egrep -o '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}' | "
-    "head -n1";
-#endif
-
 cppa::process_information* compute_proc_info() {
-    char cbuf[100];
-    // fetch hd serial
-    std::string hd_serial_and_mac_addr;
-    FILE* get_uuid_cmd = popen(s_get_uuid, "r");
-    while (fgets(cbuf, 100, get_uuid_cmd) != 0) {
-        hd_serial_and_mac_addr += cbuf;
-    }
-    pclose(get_uuid_cmd);
-    erase_trailing_newline(hd_serial_and_mac_addr);
-    // fetch mac address of first network device
-    FILE* get_mac_cmd = popen(s_get_mac, "r");
-    while (fgets(cbuf, 100, get_mac_cmd) != 0) {
-        hd_serial_and_mac_addr += cbuf;
-    }
-    pclose(get_mac_cmd);
-    erase_trailing_newline(hd_serial_and_mac_addr);
+    using namespace cppa::util;
+    auto macs = get_mac_addresses();
+    auto hd_serial_and_mac_addr = join(macs.begin(), macs.end())
+                                + get_root_uuid();
     cppa::process_information::node_id_type node_id;
-    cppa::util::ripemd_160(node_id, hd_serial_and_mac_addr);
+    ripemd_160(node_id, hd_serial_and_mac_addr);
     return new cppa::process_information(getpid(), node_id);
 }
 
