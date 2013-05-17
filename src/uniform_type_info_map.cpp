@@ -63,6 +63,8 @@ namespace cppa { namespace detail {
     { "double",                                                                         "double" },
     { "float",                                                                          "float" },
     { "long double",                                                                    "@ldouble" },
+    { "std::basic_string<@i16,std::char_traits<@i16>,std::allocator<@i16>>",            "@u16str" },
+    { "std::basic_string<@i32,std::char_traits<@i32>,std::allocator<@i32>>",            "@u32str" },
     { "std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",               "@str" },
     { "std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",            "@u16str" },
     { "std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>",            "@u32str" },
