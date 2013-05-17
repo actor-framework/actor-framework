@@ -147,15 +147,11 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 int main() {
     CPPA_TEST(test_serialization);
 
-    auto addresses = util::get_mac_addresses();
-    for (auto& addr : addresses) {
-        cout << addr << endl;
-    }
-    return 0;
-
     announce(typeid(raw_struct), new raw_struct_type_info);
 
     network::default_actor_addressing addressing;
+
+    cout << "process id: " << to_string(process_information::get()) << endl;
 
     auto oarr = new detail::object_array;
     oarr->push_back(object::from(static_cast<uint32_t>(42)));

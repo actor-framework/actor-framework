@@ -82,6 +82,8 @@ std::string get_root_uuid() {
 #include <unistd.h>
 #include <iostream>
 
+#include "cppa/util/algorithm.hpp"
+
 using namespace std;
 
 struct columns_iterator : iterator<forward_iterator_tag, vector<string>> {
@@ -93,7 +95,7 @@ struct columns_iterator : iterator<forward_iterator_tag, vector<string>> {
     columns_iterator& operator++() {
         string line;
         if (!getline(*fs, line)) fs = nullptr;
-        else cols = split(line);
+        else cols = cppa::util::split(line);
         return *this;
     }
 
@@ -123,7 +125,7 @@ std::string get_root_uuid() {
     sck = socket(AF_INET, SOCK_DGRAM, 0);
     if(sck < 0) {
         perror("socket");
-        return 1;
+        return "";
     }
 
     // Query available interfaces.
@@ -131,7 +133,7 @@ std::string get_root_uuid() {
     ifc.ifc_buf = buf;
     if(ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
         perror("ioctl(SIOCGIFCONF)");
-        return 1;
+        return "";
     }
 
     vector<string> hw_addresses;
@@ -146,7 +148,7 @@ std::string get_root_uuid() {
         // Get the MAC address
         if(ioctl(sck, SIOCGIFHWADDR, item) < 0) {
             perror("ioctl(SIOCGIFHWADDR)");
-            return 1;
+            return "";
         }
         std::ostringstream oss;
         oss << hex;
@@ -180,11 +182,7 @@ std::string get_root_uuid() {
         // discard invalid UUID
         if (cpy != "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF") uuid.clear();
     }
-    for (auto& addr : hw_addresses) {
-        cout << addr << endl;
-    }
-
-    cout << uuid << endl;
+    return uuid;
 }
 
 } } // namespace cppa::util

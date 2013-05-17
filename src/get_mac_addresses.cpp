@@ -117,7 +117,7 @@ std::vector<std::string> get_mac_addresses() {
 
     // query available interfaces
     char buf[1024] = {0};
-    ifconf ifc = {0};
+    ifconf ifc;
     ifc.ifc_len = sizeof(buf);
     ifc.ifc_buf = buf;
     if (ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
@@ -132,12 +132,12 @@ std::vector<std::string> get_mac_addresses() {
     // iterate through interfaces
     auto ifr = ifc.ifc_req;
     auto num_ifaces = ifc.ifc_len / sizeof(struct ifreq);
-    for (int i = 0; i < num_ifaces; i++) {
-        struct ifreq *item = &ifr[i];
+    for (size_t i = 0; i < num_ifaces; ++i) {
+        auto item = &ifr[i];
         // get mac address
         if (ioctl(sck, SIOCGIFHWADDR, item) < 0) {
             perror("ioctl(SIOCGIFHWADDR)");
-            return 1;
+            return {};
         }
         std::ostringstream oss;
         oss << hex;
