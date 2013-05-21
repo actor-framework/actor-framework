@@ -1,3 +1,13 @@
+Version 0.7.1
+-------------
+
+__2013_05_21__
+
+- Fixed type name lookup
+- Workaround for GCC 4.8 SFINAE
+- Do not call grep/ifconfig for host information on Linux
+- Fixed printer example in manual (Section 6.1)
+
 Version 0.7
 -----------
 
