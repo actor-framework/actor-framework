@@ -65,11 +65,12 @@ struct destination_header {
  */
 inline void send_tuple(destination_header hdr, any_tuple what) {
     if (hdr.receiver == nullptr) return;
-    message_header fhdr{self, std::move(hdr.receiver), hdr.priority};
-    if (self->chaining_enabled()) {
+    auto s = self.get();
+    message_header fhdr{s, std::move(hdr.receiver), hdr.priority};
+    if (fhdr.receiver != s && s->chaining_enabled()) {
         if (fhdr.receiver->chained_enqueue(fhdr, std::move(what))) {
             // only actors implement chained_enqueue to return true
-            self->chained_actor(fhdr.receiver.downcast<actor>());
+            s->chained_actor(fhdr.receiver.downcast<actor>());
         }
     }
     else fhdr.deliver(std::move(what));
