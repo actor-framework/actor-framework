@@ -52,52 +52,34 @@ namespace cppa { namespace detail {
 
 typedef std::unique_ptr<uniform_type_info> unique_uti;
 
+// check if there's a 'push_back' that takes a C::value_type
 template<typename T>
-class is_stl_compliant_list {
+char is_stl_compliant_list_fun(T* ptr,
+                               typename T::value_type* val = nullptr,
+                               decltype(ptr->push_back(*val))* = nullptr);
 
-    template<class C>
-    static bool cmp_help_fun (
-        // mutable pointer
-        C* mc,
-        // check if there's a 'void push_back()' that takes C::value_type
-        decltype(mc->push_back(typename C::value_type()))* = nullptr
-    ) {
-        return true;
-    }
+long is_stl_compliant_list_fun(void*); // SFNINAE default
 
-    // SFNINAE default
-    static void cmp_help_fun(void*) { }
+template<typename T>
+struct is_stl_compliant_list {
 
-    typedef decltype(cmp_help_fun(static_cast<T*>(nullptr))) result_type;
-
- public:
-
-    static constexpr bool value =    util::is_iterable<T>::value
-                              && std::is_same<bool, result_type>::value;
-
+    static constexpr bool value = util::is_iterable<T>::value &&
+        sizeof(is_stl_compliant_list_fun(static_cast<T*>(nullptr))) == sizeof(char);
 };
 
+// check if there's an 'insert' that takes a C::value_type
 template<typename T>
-class is_stl_compliant_map {
+char is_stl_compliant_map_fun(T* ptr,
+                              typename T::value_type* val = nullptr,
+                              decltype(ptr->insert(*val))* = nullptr);
 
-    template<class C>
-    static bool cmp_help_fun (
-        // mutable pointer
-        C* mc,
-        // check if there's an 'insert()' that takes C::value_type
-        decltype(mc->insert(typename C::value_type()))* = nullptr
-    ) {
-        return true;
-    }
+long is_stl_compliant_map_fun(void*); // SFNINAE default
 
-    static void cmp_help_fun(void*) { }
+template<typename T>
+struct is_stl_compliant_map {
 
-    typedef decltype(cmp_help_fun(static_cast<T*>(nullptr))) result_type;
-
- public:
-
-    static constexpr bool value =    util::is_iterable<T>::value
-                                  && std::is_same<bool, result_type>::value;
+    static constexpr bool value = util::is_iterable<T>::value &&
+        sizeof(is_stl_compliant_map_fun(static_cast<T*>(nullptr))) == sizeof(char);
 
 };
 

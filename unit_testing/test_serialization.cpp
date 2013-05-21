@@ -147,6 +147,14 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 int main() {
     CPPA_TEST(test_serialization);
 
+    typedef std::integral_constant<int,detail::impl_id<strmap>()> token;
+    CPPA_CHECK_EQUAL(util::is_iterable<strmap>::value, true);
+    CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
+    CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
+    CPPA_CHECK_EQUAL(detail::is_stl_compliant_map<strmap>::value, true);
+    CPPA_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
+    CPPA_CHECK_EQUAL(token::value, 2);
+
     announce(typeid(raw_struct), new raw_struct_type_info);
 
     network::default_actor_addressing addressing;
