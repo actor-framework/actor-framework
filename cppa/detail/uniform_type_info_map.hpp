@@ -50,6 +50,7 @@ namespace cppa { class uniform_type_info; }
 
 namespace cppa { namespace detail {
 
+// ordered according to demangled type name (see uniform_type_info_map.cpp)
 using mapped_type_list = util::type_list<
     bool,
     any_tuple,
@@ -65,6 +66,8 @@ using mapped_type_list = util::type_list<
     double,
     float,
     long double,
+    std::u16string,
+    std::u32string,
     std::string,
     std::u16string,
     std::u32string,
