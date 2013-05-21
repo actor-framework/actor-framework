@@ -162,8 +162,6 @@ struct philosopher : event_based_actor {
                 become(thinking);
             }
         );
-        // start thinking
-        send(this, atom("think"));
     }
 
 };
@@ -181,7 +179,10 @@ int main(int, char**) {
     std::vector<std::string> names { "Plato", "Hume", "Kant",
                                      "Nietzsche", "Descartes" };
     for (size_t i = 0; i < 5; ++i) {
-        spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
+        auto p = spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
+
+        // start thinking
+        send(p, atom("think"));
     }
     // real philosophers are never done
     await_all_others_done();
