@@ -41,8 +41,6 @@ using namespace cppa;
 
 namespace {
 
-using fvec = vector<float>;
-
 constexpr size_t matrix_size = 8;
 constexpr const char* kernel_name = "matrix_mult";
 
@@ -66,7 +64,7 @@ constexpr const char* kernel_source = R"__(
 
 } // namespace <anonymous>
 
-void print_as_matrix(const fvec& matrix) {
+void print_as_matrix(const vector<float>& matrix) {
     for (size_t column = 0; column < matrix_size; ++column) {
         for (size_t row = 0; row < matrix_size; ++row) {
             cout << fixed << setprecision(2) << setw(9)
@@ -79,8 +77,8 @@ void print_as_matrix(const fvec& matrix) {
 void multiplier() {
     // the opencl actor only understands vectors
     // so these vectors represent the matrices
-    fvec m1(matrix_size * matrix_size);
-    fvec m2(matrix_size * matrix_size);
+    vector<float> m1(matrix_size * matrix_size);
+    vector<float> m2(matrix_size * matrix_size);
 
     // fill each with ascending values
     iota(m1.begin(), m1.end(), 0);
@@ -92,8 +90,8 @@ void multiplier() {
     cout << endl;
 
     // spawn an opencl actor
-    // template parameter: signature of opencl kernel using vectors instead of
-    //                     pointer arguments and proper return type (implicitly
+    // template parameter: signature of opencl kernel using proper return type
+    //                     instead of output parameter (implicitly
     //                     mapped to the last kernel argument)
     // 1st arg: source code of one or more kernels
     // 2nd arg: name of the kernel to use
@@ -101,12 +99,12 @@ void multiplier() {
     //          creates matrix_size * matrix_size global work items
     // 4th arg: offsets for global dimensions (optional)
     // 5th arg: local dimensions (optional)
-    auto worker = spawn_cl<fvec(fvec&, fvec&)>(kernel_source,
-                                              kernel_name,
-                                              {matrix_size, matrix_size});
+    auto worker = spawn_cl<float*(float*,float*)>(kernel_source,
+                                                  kernel_name,
+                                                  {matrix_size, matrix_size});
     // send both matrices to the actor and wait for a result
     sync_send(worker, move(m1), move(m2)).then(
-        [](const fvec& result) {
+        [](const vector<float>& result) {
             cout << "result: " << endl;
             print_as_matrix(result);
         }
@@ -114,7 +112,7 @@ void multiplier() {
 }
 
 int main() {
-    announce<fvec>();
+    announce<vector<float>>();
     spawn(multiplier);
     await_all_others_done();
     shutdown();

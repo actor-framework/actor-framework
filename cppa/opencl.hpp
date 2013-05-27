@@ -44,6 +44,13 @@ namespace cppa {
 
 namespace detail {
 
+// converts C arrays, i.e., pointers, to vectors
+template<typename T>
+struct carr_to_vec { typedef T type; };
+
+template<typename T>
+struct carr_to_vec<T*> { typedef std::vector<T> type; };
+
 template<typename Signature, typename SecondSignature = void>
 struct cl_spawn_helper;
 
@@ -52,7 +59,7 @@ struct cl_spawn_helper<R (Ts...), void> {
     template<typename... Us>
     actor_ptr operator()(const opencl::program& p, const char* fname, Us&&... args) {
         auto cd = opencl::get_command_dispatcher();
-        return cd->spawn<R, Ts...>(p, fname, std::forward<Us>(args)...);
+        return cd->spawn<typename carr_to_vec<R>::type, typename carr_to_vec<Ts>::type...>(p, fname, std::forward<Us>(args)...);
     }
 };
 
