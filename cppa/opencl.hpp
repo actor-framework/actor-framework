@@ -117,7 +117,7 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
                           const opencl::dim_vec& local_dims = {}) {
     typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
     typedef typename util::get_callable_trait<MapResult>::fun_type f1;
-    detail::cl_spawn_helper<f0,f1> f;
+    detail::cl_spawn_helper<f0, f1> f;
     return f(prog, fname, dims, offset, local_dims,
              f0{map_args}, f1{map_result});
 }

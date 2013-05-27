@@ -357,7 +357,7 @@ void run_client_part(const vector<string_pair>& args) {
         auto server2 = remote_actor("localhost", port);
         CPPA_CHECK(serv == server2);
     }
-    auto c = spawn<client,monitored>(serv);
+    auto c = spawn<client, monitored>(serv);
     receive (
         on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
             CPPA_CHECK_EQUAL(self->last_sender(), c);
@@ -386,7 +386,7 @@ int main(int argc, char** argv) {
         }
     }
     CPPA_TEST(test_remote_actor);
-    auto serv = spawn<server,monitored>();
+    auto serv = spawn<server, monitored>();
     uint16_t port = 4242;
     bool success = false;
     do {

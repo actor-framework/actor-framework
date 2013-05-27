@@ -37,7 +37,7 @@
 
 #include "cppa/primitive_type.hpp"
 
-#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace detail {
 
@@ -48,11 +48,11 @@ struct wrapped_ptype { static const primitive_type ptype = PT; };
 template<typename T>
 struct type_to_ptype_impl {
     static constexpr primitive_type ptype =
-        std::is_convertible<T,std::string>::value
+        std::is_convertible<T, std::string>::value
         ? pt_u8string
-        : (std::is_convertible<T,std::u16string>::value
+        : (std::is_convertible<T, std::u16string>::value
            ? pt_u16string
-           : (std::is_convertible<T,std::u32string>::value
+           : (std::is_convertible<T, std::u32string>::value
               ? pt_u32string
               : pt_null));
 };
@@ -73,7 +73,7 @@ template<> struct type_to_ptype_impl<double>      : wrapped_ptype<pt_double     
 template<> struct type_to_ptype_impl<long double> : wrapped_ptype<pt_long_double> { };
 
 template<typename T>
-struct type_to_ptype : type_to_ptype_impl<typename util::rm_ref<T>::type> { };
+struct type_to_ptype : type_to_ptype_impl<typename util::rm_const_and_ref<T>::type> { };
 
 } } // namespace cppa::detail
 

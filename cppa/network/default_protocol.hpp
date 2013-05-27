@@ -94,8 +94,8 @@ class default_protocol : public protocol {
     };
 
     default_actor_addressing m_addressing;
-    std::map<actor_ptr,std::vector<default_peer_acceptor_ptr> > m_acceptors;
-    std::map<process_information,peer_entry> m_peers;
+    std::map<actor_ptr, std::vector<default_peer_acceptor_ptr> > m_acceptors;
+    std::map<process_information, peer_entry> m_peers;
 
 };
 

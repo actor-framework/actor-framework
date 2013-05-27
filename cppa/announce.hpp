@@ -50,8 +50,8 @@ namespace cppa {
  * The output of this example program is:
  *
  * <tt>
- * foo(1,2)<br>
- * foo_pair(3,4)
+ * foo(1, 2)<br>
+ * foo_pair(3, 4)
  * </tt>
  * @example announce_1.cpp
  */
@@ -61,7 +61,7 @@ namespace cppa {
  *
  * The output of this example program is:
  *
- * <tt>foo(1,2)</tt>
+ * <tt>foo(1, 2)</tt>
  * @example announce_2.cpp
  */
 
@@ -71,7 +71,7 @@ namespace cppa {
  *
  * The output of this example program is:
  *
- * <tt>foo(1,2)</tt>
+ * <tt>foo(1, 2)</tt>
  * @example announce_3.cpp
  */
 
@@ -80,7 +80,7 @@ namespace cppa {
  *
  * The output of this example program is:
  *
- * <tt>bar(foo(1,2),3)</tt>
+ * <tt>bar(foo(1, 2), 3)</tt>
  * @example announce_4.cpp
  */
 
@@ -142,11 +142,11 @@ compound_member(C& (Parent::*getter)(), const Ts&... args) {
 template<class Parent, typename GRes,
          typename SRes, typename SArg, typename... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
-          util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>
+          util::abstract_uniform_type_info<typename util::rm_const_and_ref<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
                                 SRes (Parent::*)(SArg)  >& gspair,
                 const Ts&... args) {
-    typedef typename util::rm_ref<GRes>::type mtype;
+    typedef typename util::rm_const_and_ref<GRes>::type mtype;
     return {gspair, new detail::default_uniform_type_info_impl<mtype>(args...)};
 }
 
@@ -159,7 +159,8 @@ compound_member(const std::pair<GRes (Parent::*)() const,
  */
 template<typename T, typename... Ts>
 inline bool announce(const Ts&... args) {
-    return announce(typeid(T), new detail::default_uniform_type_info_impl<T>(args...));
+    auto ptr = new detail::default_uniform_type_info_impl<T>(args...);
+    return announce(typeid(T), ptr);
 }
 
 /**

@@ -41,11 +41,9 @@
 #include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 
-#include "cppa/util/at.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/limited_vector.hpp"
-#include "cppa/util/is_comparable.hpp"
 #include "cppa/util/compare_tuples.hpp"
-#include "cppa/util/is_legal_tuple_type.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
@@ -184,8 +182,8 @@ struct cow_tuple_from_type_list< util::type_list<Ts...> > {
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
-    typedef typename util::at<N, Ts...>::type result_type;
+const typename util::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
+    typedef typename util::type_at<N, Ts...>::type result_type;
     return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
@@ -195,12 +193,12 @@ const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
  * @param tup The cow_tuple object.
  * @returns A reference of type T, whereas T is the type of the
  *          <tt>N</tt>th element of @p tup.
- * @note Detaches @p tup if there are two or more references to the cow_tuple data.
+ * @note Detaches @p tup if there are two or more references to the cow_tuple.
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
-    typedef typename util::at<N, Ts...>::type result_type;
+typename util::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
+    typedef typename util::type_at<N, Ts...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 

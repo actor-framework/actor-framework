@@ -44,7 +44,7 @@ namespace cppa { namespace network {
 /**
  * @brief A pair of input and output stream pointers.
  */
-typedef std::pair<input_stream_ptr,output_stream_ptr> io_stream_ptr_pair;
+typedef std::pair<input_stream_ptr, output_stream_ptr> io_stream_ptr_pair;
 
 /**
  * @brief Accepts connections from client processes.

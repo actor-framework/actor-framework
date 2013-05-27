@@ -36,15 +36,11 @@
 #include "cppa/tpartial_function.hpp"
 
 #include "cppa/util/call.hpp"
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/rm_option.hpp"
 #include "cppa/util/purge_refs.hpp"
-#include "cppa/util/disjunction.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/left_or_right.hpp"
-#include "cppa/util/deduce_ref_type.hpp"
-#include "cppa/util/get_result_type.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/matches.hpp"
@@ -82,7 +78,7 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
     template<class Tuple>
     static bool can_invoke(const std::type_info& type_token,
                            const Tuple& tup) {
-        typedef typename match_impl_from_type_list<Tuple,Pattern>::type mimpl;
+        typedef typename match_impl_from_type_list<Tuple, Pattern>::type mimpl;
         return type_token == typeid(FilteredPattern) ||  mimpl::_(tup);
     }
 
@@ -98,7 +94,7 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
                 >::type
                 mimpl;
 
-        util::limited_vector<size_t,util::tl_size<FilteredPattern>::value> mv;
+        util::limited_vector<size_t, util::tl_size<FilteredPattern>::value> mv;
         if (type_token == typeid(FilteredPattern) ||  mimpl::_(tup, mv)) {
             for (size_t i = 0; i < util::tl_size<FilteredPattern>::value; ++i) {
                 result[i] = const_cast<void*>(tup.at(mv[i]));
@@ -352,15 +348,15 @@ struct invoke_policy
         : invoke_policy_impl<
             get_wildcard_position<Pattern>(),
             Pattern,
-            typename util::tl_filter_not_type<Pattern,anything>::type> {
+            typename util::tl_filter_not_type<Pattern, anything>::type> {
 };
 
 
 template<class Pattern, class Projection, class PartialFun>
-struct projection_partial_function_pair : std::pair<Projection,PartialFun> {
+struct projection_partial_function_pair : std::pair<Projection, PartialFun> {
     template<typename... Ts>
     projection_partial_function_pair(Ts&&... args)
-    : std::pair<Projection,PartialFun>(std::forward<Ts>(args)...) { }
+    : std::pair<Projection, PartialFun>(std::forward<Ts>(args)...) { }
     typedef Pattern pattern_type;
 };
 
@@ -405,7 +401,7 @@ struct get_case_ {
     typedef typename util::tl_zip<
                 typename util::tl_map<
                     padded_transformers,
-                    util::get_result_type,
+                    util::map_to_result_type,
                     util::rm_option,
                     std::add_lvalue_reference
                 >::type,
@@ -444,28 +440,28 @@ struct get_case_ {
             >::type
             type2;
 
-    typedef projection_partial_function_pair<Pattern,type1,type2> type;
+    typedef projection_partial_function_pair<Pattern, type1, type2> type;
 
 };
 
 template<bool Complete, class Expr, class Guard, class Trans, class Pattern>
 struct get_case {
-    typedef typename get_case_<Expr,Guard,Trans,Pattern>::type type;
+    typedef typename get_case_<Expr, Guard, Trans, Pattern>::type type;
 };
 
 template<class Expr, class Guard, class Trans, class Pattern>
-struct get_case<false,Expr,Guard,Trans,Pattern> {
+struct get_case<false, Expr, Guard, Trans, Pattern> {
     typedef typename util::tl_pop_back<Pattern>::type lhs_pattern;
     typedef typename util::tl_map<
-                typename util::get_arg_types<Expr>::types,
-                util::rm_ref
+                typename util::get_callable_trait<Expr>::arg_types,
+                util::rm_const_and_ref
             >::type
             rhs_pattern;
     typedef typename get_case_<
                 Expr,
                 Guard,
                 Trans,
-                typename util::tl_concat<lhs_pattern,rhs_pattern>::type
+                typename util::tl_concat<lhs_pattern, rhs_pattern>::type
             >::type
             type;
 };
@@ -473,8 +469,8 @@ struct get_case<false,Expr,Guard,Trans,Pattern> {
 template<typename Fun>
 struct has_bool_result {
     typedef typename Fun::result_type result_type;
-    static constexpr bool value = std::is_same<bool,result_type>::value;
-    typedef std::integral_constant<bool,value> token_type;
+    static constexpr bool value = std::is_same<bool, result_type>::value;
+    typedef std::integral_constant<bool, value> token_type;
 };
 
 template<typename T1, typename T2>
@@ -510,7 +506,7 @@ bool unroll_expr(PPFPs& fs,
     }
     if ((bitmask & (0x01 << N)) == 0) return false;
     auto& f = get<N>(fs);
-    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_policy<pattern_type> policy;
     typename policy::tuple_type targs;
@@ -539,7 +535,7 @@ inline bool can_unroll_expr(PPFPs& fs, long_constant<N>, const std::type_info& a
         return true;
     }
     auto& f = get<N>(fs);
-    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_policy<pattern_type> policy;
     return policy::can_invoke(arg_types, tup);
@@ -553,7 +549,7 @@ inline std::uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const 
 template<class PPFPs, long N, class Tuple>
 inline std::uint64_t calc_bitmask(PPFPs& fs, long_constant<N>, const std::type_info& tinf, const Tuple& tup) {
     auto& f = get<N>(fs);
-    typedef typename util::rm_ref<decltype(f)>::type Fun;
+    typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_policy<pattern_type> policy;
     std::uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
@@ -566,12 +562,12 @@ struct mexpr_fwd_ {
 };
 
 template<typename T>
-struct mexpr_fwd_<false,const T&,T> {
+struct mexpr_fwd_<false, const T&, T> {
     typedef std::reference_wrapper<const T> type;
 };
 
 template<typename T>
-struct mexpr_fwd_<true,T&,T> {
+struct mexpr_fwd_<true, T&, T> {
     typedef std::reference_wrapper<T> type;
 };
 
@@ -581,7 +577,7 @@ struct mexpr_fwd {
                 IsManipulator,
                 T,
                 typename detail::implicit_conversions<
-                    typename util::rm_ref<T>::type
+                    typename util::rm_const_and_ref<T>::type
                 >::type
             >::type
             type;
@@ -638,7 +634,7 @@ class match_expr {
 
     typedef util::type_list<Cs...> cases_list;
 
-    static constexpr bool has_manipulator = util::tl_exists<cases_list,is_manipulator_case>::value;
+    static constexpr bool has_manipulator = util::tl_exists<cases_list, is_manipulator_case>::value;
 
     typedef detail::long_constant<sizeof...(Cs)-1l> idx_token_type;
 
@@ -736,7 +732,7 @@ class match_expr {
     }
 
     template<class... Ds>
-    match_expr<Cs...,Ds...> or_else(const match_expr<Ds...>& other) const {
+    match_expr<Cs..., Ds...> or_else(const match_expr<Ds...>& other) const {
         detail::tdata<util::rebindable_reference<const Cs>...,
                       util::rebindable_reference<const Ds>...    > all_cases;
         rebind_tdata(all_cases, m_cases, other.cases());
@@ -762,7 +758,7 @@ class match_expr {
         }
         typedef typename detail::behavior_impl::pointer pointer;
         pointer copy(const generic_timeout_definition& tdef) const {
-            return new_default_behavior_impl(pfun, tdef.timeout, tdef.handler);
+            return new_default_behavior(pfun, tdef.timeout, tdef.handler);
         }
     };
 
@@ -779,9 +775,9 @@ class match_expr {
 
     static constexpr size_t cache_size = 10;
 
-    typedef std::pair<const std::type_info*,std::uint64_t> cache_element;
+    typedef std::pair<const std::type_info*, std::uint64_t> cache_element;
 
-    util::limited_vector<cache_element,cache_size> m_cache;
+    util::limited_vector<cache_element, cache_size> m_cache;
 
     // ring buffer like access to m_cache
     size_t m_cache_begin;
@@ -831,7 +827,7 @@ class match_expr {
 
     template<class Tuple>
     bool invoke_impl(Tuple& tup) {
-        std::integral_constant<bool,has_manipulator> mutator_token;
+        std::integral_constant<bool, has_manipulator> mutator_token;
         // returns either a reference or a new object
         typedef decltype(detail::detach_if_needed(tup, mutator_token)) detached;
         detached tref = detail::detach_if_needed(tup, mutator_token);
@@ -863,7 +859,7 @@ struct match_expr_from_type_list<util::type_list<Ts...> > {
 };
 
 template<typename... Lhs, typename... Rhs>
-inline match_expr<Lhs...,Rhs...> operator,(const match_expr<Lhs...>& lhs,
+inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
                                            const match_expr<Rhs...>& rhs) {
     return lhs.or_else(rhs);
 }
@@ -917,7 +913,7 @@ typedef std::false_type without_timeout;
 template<class Data, class Token, typename F>
 behavior_impl* concat_rec(const Data& data, Token, const timeout_definition<F>& arg) {
     typedef typename match_expr_from_type_list<Token>::type combined_type;
-    return new default_behavior_impl<combined_type,F>{data, arg};
+    return new default_behavior_impl<combined_type, F>{data, arg};
 }
 
 // recursive concatenation function
@@ -942,7 +938,7 @@ behavior_impl* concat_rec(const Data& data, Token, const T& arg, const Ts&... ar
 
 template<typename F>
 behavior_impl* concat_expr(with_timeout, const timeout_definition<F>& arg) {
-    typedef default_behavior_impl<dummy_match_expr,F> impl_type;
+    typedef default_behavior_impl<dummy_match_expr, F> impl_type;
     return new impl_type(dummy_match_expr{}, arg);
 }
 
@@ -980,15 +976,15 @@ behavior_impl* concat_expr(without_timeout, const T& arg, const Ts&... args) {
                 >::type
             >::type
             combined_type;
-    auto lvoid = []() { };
-    typedef default_behavior_impl<combined_type,decltype(lvoid)> impl_type;
+    auto lvoid = [] { };
+    typedef default_behavior_impl<combined_type, decltype(lvoid)> impl_type;
     rebind_tdata(all_cases, arg.cases(), args.cases()...);
     return new impl_type(all_cases, util::duration{}, lvoid);
 }
 
 template<typename T, typename... Ts>
 behavior_impl_ptr match_expr_concat(const T& arg, const Ts&... args) {
-    std::integral_constant<bool,util::disjunction<T::may_have_timeout,Ts::may_have_timeout...>::value> token;
+    std::integral_constant<bool, util::disjunction<T::may_have_timeout, Ts::may_have_timeout...>::value> token;
     // use static call dispatch to select correct function
     return concat_expr(token, arg, args...);
 }

@@ -44,8 +44,7 @@
 #include "cppa/util/get_mac_addresses.hpp"
 
 #include "cppa/util/pt_token.hpp"
-#include "cppa/util/is_iterable.hpp"
-#include "cppa/util/is_primitive.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
 #include "cppa/network/default_actor_addressing.hpp"
@@ -147,7 +146,7 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 int main() {
     CPPA_TEST(test_serialization);
 
-    typedef std::integral_constant<int,detail::impl_id<strmap>()> token;
+    typedef std::integral_constant<int, detail::impl_id<strmap>()> token;
     CPPA_CHECK_EQUAL(util::is_iterable<strmap>::value, true);
     CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
     CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
@@ -277,7 +276,7 @@ int main() {
     // string is primitive and thus not identified by is_iterable
     CPPA_CHECK((is_iterable<string>::value) == false);
     CPPA_CHECK((is_iterable<list<int>>::value) == true);
-    CPPA_CHECK((is_iterable<map<int,int>>::value) == true);
+    CPPA_CHECK((is_iterable<map<int, int>>::value) == true);
     { // test meta_object implementation for primitive types
         auto meta_int = uniform_typeid<uint32_t>();
         CPPA_CHECK(meta_int != nullptr);

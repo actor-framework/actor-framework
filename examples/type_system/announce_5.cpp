@@ -163,7 +163,7 @@ void testee(size_t remaining) {
             aout << "received " << trees.size() << " trees" << endl;
             // prints:
             // @<> ( {
-            //   std::vector<tree,std::allocator<tree>> ( {
+            //   std::vector<tree, std::allocator<tree>> ( {
             //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ),
             //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
             //   )

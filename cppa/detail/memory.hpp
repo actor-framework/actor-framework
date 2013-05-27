@@ -47,9 +47,9 @@ namespace cppa { namespace detail {
 
 namespace {
 
-constexpr size_t s_alloc_size = 1024;  // allocate ~1kb chunks
+constexpr size_t s_alloc_size = 1024*1024;  // allocate ~1mb chunks
 constexpr size_t s_min_elements = 5;   // don't create less than 5 elements
-constexpr size_t s_cache_size = 10240; // cache about 10kb per thread
+constexpr size_t s_cache_size = 10*1024*1024; // cache about 10mb per thread
 
 } // namespace <anonymous>
 
@@ -76,7 +76,7 @@ class memory_cache {
     // calls dtor and either releases memory or re-uses it later
     virtual void release_instance(void*) = 0;
 
-    virtual std::pair<instance_wrapper*,void*> new_instance() = 0;
+    virtual std::pair<instance_wrapper*, void*> new_instance() = 0;
 
     // casts @p ptr to the derived type and returns it
     virtual void* downcast(memory_managed* ptr) = 0;
@@ -149,7 +149,7 @@ class basic_memory_cache : public memory_cache {
         else wptr->deallocate();
     }
 
-    virtual std::pair<instance_wrapper*,void*> new_instance() {
+    virtual std::pair<instance_wrapper*, void*> new_instance() {
         if (cached_elements.empty()) {
             auto elements = new storage;
             for (auto i = elements->begin(); i != elements->end(); ++i) {

@@ -38,10 +38,10 @@
 #include "cppa/get.hpp"
 #include "cppa/option.hpp"
 
-#include "cppa/util/at.hpp"
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/boxed.hpp"
@@ -86,7 +86,7 @@ inline const uniform_type_info* utype_of(const T&) {
 
 template<typename T>
 inline const uniform_type_info* utype_of(const std::reference_wrapper<T>&) {
-    return static_types_array<typename util::rm_ref<T>::type>::arr[0];
+    return static_types_array<typename util::rm_const_and_ref<T>::type>::arr[0];
 }
 
 template<typename T>
@@ -144,7 +144,7 @@ struct tdata<> {
     // swallow any number of additional boxed or void_type arguments silently
     template<typename... Ts>
     tdata(Ts&&...) {
-        typedef util::type_list<typename util::rm_ref<Ts>::type...> incoming;
+        typedef util::type_list<typename util::rm_const_and_ref<Ts>::type...> incoming;
         typedef typename util::tl_filter_not_type<incoming, tdata>::type iargs;
         static_assert(util::tl_forall<iargs, boxed_or_void>::value,
                       "Additional unboxed arguments provided");
@@ -212,16 +212,16 @@ template<typename Head, typename T>
 auto td_filter(T&& arg)
     -> decltype(
         td_filter_<
-            is_boxed<typename util::rm_ref<T>::type>::value,
-            std::is_function<typename util::rm_ref<T>::type>::value,
+            is_boxed<typename util::rm_const_and_ref<T>::type>::value,
+            std::is_function<typename util::rm_const_and_ref<T>::type>::value,
             Head,
-            typename util::rm_ref<T>::type
+            typename util::rm_const_and_ref<T>::type
         >::_(std::forward<T>(arg))) {
     return  td_filter_<
-                is_boxed<typename util::rm_ref<T>::type>::value,
-                std::is_function<typename util::rm_ref<T>::type>::value,
+                is_boxed<typename util::rm_const_and_ref<T>::type>::value,
+                std::is_function<typename util::rm_const_and_ref<T>::type>::value,
                 Head,
-                typename util::rm_ref<T>::type
+                typename util::rm_const_and_ref<T>::type
             >::_(std::forward<T>(arg));
 }
 
@@ -354,33 +354,33 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
         }
     }
 
-    Head& _back(std::integral_constant<size_t,0>) {
+    Head& _back(std::integral_constant<size_t, 0>) {
         return head;
     }
 
     template<size_t Pos>
-    back_type& _back(std::integral_constant<size_t,Pos>) {
-        std::integral_constant<size_t,Pos-1> token;
+    back_type& _back(std::integral_constant<size_t, Pos>) {
+        std::integral_constant<size_t, Pos-1> token;
         return super::_back(token);
     }
 
     back_type& back() {
-        std::integral_constant<size_t,sizeof...(Tail)> token;
+        std::integral_constant<size_t, sizeof...(Tail)> token;
         return _back(token);
     }
 
-    const Head& _back(std::integral_constant<size_t,0>) const {
+    const Head& _back(std::integral_constant<size_t, 0>) const {
         return head;
     }
 
     template<size_t Pos>
-    const back_type& _back(std::integral_constant<size_t,Pos>) const {
-        std::integral_constant<size_t,Pos-1> token;
+    const back_type& _back(std::integral_constant<size_t, Pos>) const {
+        std::integral_constant<size_t, Pos-1> token;
         return super::_back(token);
     }
 
     const back_type& back() const {
-        std::integral_constant<size_t,sizeof...(Tail)> token;
+        std::integral_constant<size_t, sizeof...(Tail)> token;
         return _back(token);
     }
 };
@@ -444,13 +444,13 @@ void rebind_tdata(tdata<Ts...>& td, const tdata<Us...>& arg, const Vs&... args) 
 namespace cppa {
 
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const detail::tdata<Ts...>& tv) {
+const typename util::type_at<N, Ts...>::type& get(const detail::tdata<Ts...>& tv) {
     static_assert(N < sizeof...(Ts), "N >= tv.size()");
     return static_cast<const typename detail::tdata_upcast_helper<N, Ts...>::type&>(tv).head;
 }
 
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(detail::tdata<Ts...>& tv) {
+typename util::type_at<N, Ts...>::type& get_ref(detail::tdata<Ts...>& tv) {
     static_assert(N < sizeof...(Ts), "N >= tv.size()");
     return static_cast<typename detail::tdata_upcast_helper<N, Ts...>::type&>(tv).head;
 }

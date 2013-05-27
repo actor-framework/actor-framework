@@ -46,7 +46,7 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
@@ -247,7 +247,7 @@ struct functor_attachable : attachable {
 
 template<typename F>
 bool actor::attach_functor(F&& f) {
-    typedef typename util::rm_ref<F>::type f_type;
+    typedef typename util::rm_const_and_ref<F>::type f_type;
     typedef functor_attachable<f_type> impl;
     return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }

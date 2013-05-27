@@ -34,8 +34,8 @@
 #include <type_traits>
 
 #include "cppa/util/call.hpp"
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/int_list.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/tdata.hpp"
 #include "cppa/scheduled_actor.hpp"
@@ -114,9 +114,8 @@ class ftor_behavior<false, true, F, Ts...>  : public scheduled_actor {
     ftor_behavior(const F& f, const Ts&... args) : m_fun(f), m_args(args...) {
     }
 
-    ftor_behavior(F&& f,const Ts&... args) : m_fun(std::move(f))
-                                             , m_args(args...) {
-    }
+    ftor_behavior(F&& f, const Ts&... args)
+    : m_fun(std::move(f)), m_args(args...) { }
 
     virtual void act() {
         util::apply_args(m_fun, m_args, util::get_indices(m_args));
@@ -125,7 +124,7 @@ class ftor_behavior<false, true, F, Ts...>  : public scheduled_actor {
 };
 
 template<typename R>
-scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)()) {
+scheduled_actor* get_behavior(std::integral_constant<bool, true>, R (*fptr)()) {
     static_assert(std::is_convertible<R, scheduled_actor*>::value == false,
                   "Spawning a function returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
@@ -134,12 +133,12 @@ scheduled_actor* get_behavior(std::integral_constant<bool,true>, R (*fptr)()) {
 }
 
 template<typename F>
-scheduled_actor* get_behavior(std::integral_constant<bool,false>, F&& ftor) {
+scheduled_actor* get_behavior(std::integral_constant<bool, false>, F&& ftor) {
     static_assert(std::is_convertible<decltype(ftor()), scheduled_actor*>::value == false,
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that functor?");
-    typedef typename util::rm_ref<F>::type ftype;
+    typedef typename util::rm_const_and_ref<F>::type ftype;
     return new ftor_behavior<false, false, ftype>(std::forward<F>(ftor));
 }
 
@@ -159,7 +158,7 @@ scheduled_actor* get_behavior(std::false_type, F ftor, const T& arg, const Ts&..
                   "Spawning a functor returning an actor_behavior? "
                   "Are you sure that you do not want to spawn the behavior "
                   "returned by that functor?");
-    typedef typename util::rm_ref<F>::type ftype;
+    typedef typename util::rm_const_and_ref<F>::type ftype;
     typedef ftor_behavior<false, true, ftype, T, Ts...> impl;
     return new impl(std::forward<F>(ftor), arg, args...);
 }

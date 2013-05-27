@@ -83,7 +83,7 @@ class duration {
     }
 
     template<class Rep>
-    constexpr duration(std::chrono::duration<Rep, std::ratio<60,1> > d)
+    constexpr duration(std::chrono::duration<Rep, std::ratio<60, 1> > d)
     : unit(time_unit::seconds), count(d.count() * 60) { }
 
     /**

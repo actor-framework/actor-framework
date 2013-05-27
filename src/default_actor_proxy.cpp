@@ -106,7 +106,7 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
         switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
             case intrusive::queue_closed: {
                 auto rsn = exit_reason();
-                m_proto->run_later([rsn,hdr] {
+                m_proto->run_later([rsn, hdr] {
                     CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                                     "forward_msg$bouncer",
                                     "bounce message for reason " << rsn);
@@ -130,7 +130,7 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
 
 void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
-    auto& arr = detail::static_types_array<atom_value,uint32_t>::arr;
+    auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2
         && msg.type_at(0) == arr[0]
         && msg.get_as<atom_value>(0) == atom("KILL_PROXY")

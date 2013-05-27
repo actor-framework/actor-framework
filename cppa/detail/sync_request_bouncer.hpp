@@ -33,6 +33,7 @@
 
 #include <cstdint>
 
+#include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"

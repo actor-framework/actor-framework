@@ -36,12 +36,12 @@
 
 namespace cppa { namespace detail {
 
-class empty_tuple : public singleton_mixin<empty_tuple,abstract_tuple> {
+class empty_tuple : public singleton_mixin<empty_tuple, abstract_tuple> {
 
     friend class singleton_manager;
-    friend class singleton_mixin<empty_tuple,abstract_tuple>;
+    friend class singleton_mixin<empty_tuple, abstract_tuple>;
 
-    typedef singleton_mixin<empty_tuple,abstract_tuple> super;
+    typedef singleton_mixin<empty_tuple, abstract_tuple> super;
 
  public:
 

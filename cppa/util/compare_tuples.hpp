@@ -32,14 +32,14 @@
 #define CPPA_COMPARE_TUPLES_HPP
 
 #include "cppa/get.hpp"
-#include "cppa/util/at.hpp"
+
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/is_comparable.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace detail {
 
 template<size_t N, template<typename...> class Tuple, typename... Ts>
-const typename util::at<N, Ts...>::type&
+const typename util::type_at<N, Ts...>::type&
 do_get(const Tuple<Ts...>& t) {
     return ::cppa::get<N, Ts...>(t);
 }

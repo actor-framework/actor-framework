@@ -14,8 +14,8 @@
 #include "cppa/sb_actor.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/event_based_actor.hpp"
-#include "cppa/util/callable_trait.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -275,7 +275,7 @@ void echo_actor() {
 struct simple_mirror : sb_actor<simple_mirror> {
 
     behavior init_state = (
-        others() >> []() {
+        others() >> [] {
             reply_tuple(self->last_dequeued());
         }
     );
@@ -314,25 +314,27 @@ struct high_priority_testee_class : event_based_actor {
 int main() {
     CPPA_TEST(test_spawn);
 
+    cout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
+
     CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);
-    receive(on(1, 2, 3, true) >> []() { });
+    receive(on(1, 2, 3, true) >> [] { });
     self << any_tuple{};
-    receive(on() >> []() { });
+    receive(on() >> [] { });
     CPPA_CHECKPOINT();
 
     self << any_tuple{};
-    receive(on() >> []() { });
+    receive(on() >> [] { });
 
     CPPA_PRINT("test receive with zero timeout");
     receive (
         others() >> CPPA_UNEXPECTED_MSG_CB(),
-        after(chrono::seconds(0)) >> []() { /* mailbox empty */ }
+        after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
     );
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test mirror"); {
-        auto mirror = spawn<simple_mirror,monitored>();
+        auto mirror = spawn<simple_mirror, monitored>();
         send(mirror, "hello mirror");
         receive (
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
@@ -348,7 +350,7 @@ int main() {
     }
 
     CPPA_PRINT("test detached mirror"); {
-        auto mirror = spawn<simple_mirror,monitored+detached>();
+        auto mirror = spawn<simple_mirror, monitored+detached>();
         send(mirror, "hello mirror");
         receive (
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
@@ -364,7 +366,7 @@ int main() {
     }
 
     CPPA_PRINT("test priority aware mirror"); {
-        auto mirror = spawn<simple_mirror,monitored+priority_aware>();
+        auto mirror = spawn<simple_mirror, monitored+priority_aware>();
         CPPA_CHECKPOINT();
         send(mirror, "hello mirror");
         receive (
@@ -384,7 +386,7 @@ int main() {
     auto mecho = spawn(echo_actor);
     send(mecho, "hello echo");
     receive (
-        on("hello echo") >> []() { },
+        on("hello echo") >> [] { },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     await_all_others_done();
@@ -392,11 +394,11 @@ int main() {
 
     CPPA_PRINT("test delayed_send()");
     delayed_send(self, chrono::seconds(1), 1, 2, 3);
-    receive(on(1, 2, 3) >> []() { });
+    receive(on(1, 2, 3) >> [] { });
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test timeout");
-    receive(after(chrono::seconds(1)) >> []() { });
+    receive(after(chrono::seconds(1)) >> [] { });
     CPPA_CHECKPOINT();
 
     spawn(testee1);
@@ -426,7 +428,7 @@ int main() {
             on(atom("set_int"), arg_match) >> [i](int new_value) {
                 *i = new_value;
             },
-            on(atom("done")) >> []() {
+            on(atom("done")) >> [] {
                 self->quit();
             }
         );
@@ -481,7 +483,7 @@ int main() {
 
     auto sync_testee1 = spawn<blocking_api>([] {
         receive (
-            on(atom("get")) >> []() {
+            on(atom("get")) >> [] {
                 reply(42, 2);
             }
         );
@@ -489,7 +491,7 @@ int main() {
     send(self, 0, 0);
     auto handle = sync_send(sync_testee1, atom("get"));
     // wait for some time (until sync response arrived in mailbox)
-    receive (after(chrono::milliseconds(50)) >> []() { });
+    receive (after(chrono::milliseconds(50)) >> [] { });
     // enqueue async messages (must be skipped by receive_response)
     send(self, 42, 1);
     // must skip sync message
@@ -512,7 +514,7 @@ int main() {
     // make sure there's no other message in our mailbox
     receive (
         others() >> CPPA_UNEXPECTED_MSG_CB(),
-        after(chrono::seconds(0)) >> []() { }
+        after(chrono::seconds(0)) >> [] { }
     );
     await_all_others_done();
     CPPA_CHECKPOINT();
@@ -530,7 +532,7 @@ int main() {
                             reply("goodbye!");
                             self->quit();
                         },
-                        after(chrono::minutes(1)) >> []() {
+                        after(chrono::minutes(1)) >> [] {
                             cerr << "PANIC!!!!" << endl;
                             abort();
                         }
@@ -576,7 +578,7 @@ int main() {
                 on_arg_match >> [=](int n, const string& s) {
                     send(*receiver, n * 2, s);
                 },
-                on(atom("done")) >> []() {
+                on(atom("done")) >> [] {
                     self->quit();
                 }
             );
@@ -692,9 +694,9 @@ int main() {
     // create some actors linked to one single actor
     // and kill them all through killing the link
     auto legion = spawn([] {
-        CPPA_LOGF_INFO("spawn 1,000 actors");
+        CPPA_LOGF_INFO("spawn 1, 000 actors");
         for (int i = 0; i < 1000; ++i) {
-            spawn<event_testee,linked>();
+            spawn<event_testee, linked>();
         }
         become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
@@ -746,7 +748,7 @@ int main() {
     spawn<priority_aware>(high_priority_testee);
     await_all_others_done();
     CPPA_CHECKPOINT();
-    spawn<high_priority_testee_class,priority_aware>();
+    spawn<high_priority_testee_class, priority_aware>();
     await_all_others_done();
     // don't try this at home, kids
     send(self, atom("check"));

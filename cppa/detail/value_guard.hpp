@@ -33,10 +33,9 @@
 
 #include <type_traits>
 
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -115,7 +114,7 @@ class value_guard {
 
     template<typename T0, typename T1, typename... Ts,
              typename U, typename... Us>
-    static inline bool _eval(const T0& head, const tdata<T1,Ts...>& tail,
+    static inline bool _eval(const T0& head, const tdata<T1, Ts...>& tail,
                              const U& arg, const Us&... args) {
         return cmp(head, arg) && _eval(tail.head, tail.tail(), args...);
     }

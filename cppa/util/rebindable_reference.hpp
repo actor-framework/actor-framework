@@ -32,13 +32,14 @@
 #define CPPA_REBINDABLE_REFERENCE_HPP
 
 #include "cppa/config.hpp"
-#include "cppa/util/get_result_type.hpp"
+
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace util {
 
 template<typename T>
 struct call_helper {
-    typedef typename get_result_type<T>::type result_type;
+    typedef typename map_to_result_type<T>::type result_type;
     template<typename... Ts>
     result_type operator()(T& f, const Ts&... args) const {
         return f(std::forward<Ts>(args)...);

@@ -37,12 +37,8 @@
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
 
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
-#include "cppa/util/is_builtin.hpp"
-#include "cppa/util/is_iterable.hpp"
-#include "cppa/util/is_primitive.hpp"
-#include "cppa/util/is_forward_iterator.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
 #include "cppa/detail/types_array.hpp"
@@ -87,7 +83,7 @@ template<typename T>
 struct is_stl_pair : std::false_type { };
 
 template<typename F, typename S>
-struct is_stl_pair<std::pair<F,S> > : std::true_type { };
+struct is_stl_pair<std::pair<F, S> > : std::true_type { };
 
 template<typename T>
 class builtin_member : public util::abstract_uniform_type_info<T> {
@@ -110,11 +106,11 @@ class builtin_member : public util::abstract_uniform_type_info<T> {
 
 };
 
-typedef std::integral_constant<int,0> primitive_impl;
-typedef std::integral_constant<int,1> list_impl;
-typedef std::integral_constant<int,2> map_impl;
-typedef std::integral_constant<int,3> pair_impl;
-typedef std::integral_constant<int,9> recursive_impl;
+typedef std::integral_constant<int, 0> primitive_impl;
+typedef std::integral_constant<int, 1> list_impl;
+typedef std::integral_constant<int, 2> map_impl;
+typedef std::integral_constant<int, 3> pair_impl;
+typedef std::integral_constant<int, 9> recursive_impl;
 
 template<typename T>
 constexpr int impl_id() {
@@ -135,10 +131,10 @@ struct deconst_pair {
 };
 
 template<typename K, typename V>
-struct deconst_pair<std::pair<K,V> > {
+struct deconst_pair<std::pair<K, V> > {
     typedef typename std::remove_const<K>::type first_type;
     typedef typename std::remove_const<V>::type second_type;
-    typedef std::pair<first_type,second_type> type;
+    typedef std::pair<first_type, second_type> type;
 };
 
 class default_serialize_policy {
@@ -147,13 +143,13 @@ class default_serialize_policy {
 
     template<typename T>
     void operator()(const T& val, serializer* s) const {
-        std::integral_constant<int,impl_id<T>()> token;
+        std::integral_constant<int, impl_id<T>()> token;
         simpl(val, s, token);
     }
 
     template<typename T>
     void operator()(T& val, deserializer* d) const {
-        std::integral_constant<int,impl_id<T>()> token;
+        std::integral_constant<int, impl_id<T>()> token;
         dimpl(val, d, token);
         //static_types_array<T>::arr[0]->deserialize(&val, d);
     }
@@ -380,31 +376,31 @@ struct fake_access_policy {
 
 template<typename T, class C>
 unique_uti new_member_tinfo(T C::* memptr) {
-    typedef memptr_access_policy<T,C> access_policy;
-    typedef member_tinfo<T,access_policy> result_type;
+    typedef memptr_access_policy<T, C> access_policy;
+    typedef member_tinfo<T, access_policy> result_type;
     return unique_uti(new result_type(memptr));
 }
 
 template<typename T, class C>
 unique_uti new_member_tinfo(T C::* memptr, std::unique_ptr<uniform_type_info> meminf) {
-    typedef memptr_access_policy<T,C> access_policy;
-    typedef member_tinfo<T,access_policy,forwarding_serialize_policy> result_type;
+    typedef memptr_access_policy<T, C> access_policy;
+    typedef member_tinfo<T, access_policy, forwarding_serialize_policy> result_type;
     return unique_uti(new result_type(memptr, std::move(meminf)));
 }
 
 template<class C, typename GRes, typename SRes, typename SArg>
 unique_uti new_member_tinfo(GRes (C::*getter)() const, SRes (C::*setter)(SArg)) {
     typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
-    typedef typename util::rm_ref<GRes>::type value_type;
-    typedef member_tinfo<value_type,access_policy> result_type;
+    typedef typename util::rm_const_and_ref<GRes>::type value_type;
+    typedef member_tinfo<value_type, access_policy> result_type;
     return unique_uti(new result_type(access_policy(getter, setter)));
 }
 
 template<class C, typename GRes, typename SRes, typename SArg>
 unique_uti new_member_tinfo(GRes (C::*getter)() const, SRes (C::*setter)(SArg), std::unique_ptr<uniform_type_info> meminf) {
     typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
-    typedef typename util::rm_ref<GRes>::type value_type;
-    typedef member_tinfo<value_type,access_policy,forwarding_serialize_policy> result_type;
+    typedef typename util::rm_const_and_ref<GRes>::type value_type;
+    typedef member_tinfo<value_type, access_policy, forwarding_serialize_policy> result_type;
     return unique_uti(new result_type(access_policy(getter, setter), std::move(meminf)));
 }
 
@@ -443,7 +439,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     // pr.first = getter / setter pair
     // pr.second = meta object to handle pr.first
     template<typename GRes, typename SRes, typename SArg, typename C, typename... Ts>
-    void push_back(const std::pair<std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>, util::abstract_uniform_type_info<typename util::rm_ref<GRes>::type>*>& pr,
+    void push_back(const std::pair<std::pair<GRes (C::*)() const, SRes (C::*)(SArg)>, util::abstract_uniform_type_info<typename util::rm_const_and_ref<GRes>::type>*>& pr,
                    Ts&&... args) {
         m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second, unique_uti(pr.second)));
         push_back(std::forward<Ts>(args)...);
@@ -457,7 +453,7 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
     default_uniform_type_info_impl() {
-        typedef member_tinfo<T,fake_access_policy<T> > result_type;
+        typedef member_tinfo<T, fake_access_policy<T> > result_type;
         m_members.push_back(unique_uti(new result_type));
     }
 

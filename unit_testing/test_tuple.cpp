@@ -21,9 +21,7 @@
 #include "cppa/tpartial_function.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/rm_option.hpp"
-#include "cppa/util/purge_refs.hpp"
-#include "cppa/util/deduce_ref_type.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/projection.hpp"
@@ -79,12 +77,12 @@ option<int> str2int(const std::string& str) {
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
     if ( ( FunName Args ) == false || invoked != #FunName ) {                  \
-        CPPA_FAILURE("invocation of " #FunName " failed");                       \
+        CPPA_FAILURE("invocation of " #FunName " failed");                     \
     } invoked = ""
 
 #define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
     if ( ( FunName Args ) == true || invoked == #FunName ) {                   \
-        CPPA_FAILURE(#FunName " erroneously invoked");                           \
+        CPPA_FAILURE(#FunName " erroneously invoked");                         \
     } invoked = ""
 
 struct dummy_receiver : event_based_actor {
@@ -105,41 +103,41 @@ struct same_second_type : std::is_same<typename First::second, typename Second::
 void check_type_list() {
     using namespace cppa::util;
 
-    typedef type_list<int,int,int,float,int,float,float> zz0;
+    typedef type_list<int, int, int, float, int, float, float> zz0;
 
-    typedef type_list<type_list<int,int,int>,
+    typedef type_list<type_list<int, int, int>,
                       type_list<float>,
                       type_list<int>,
-                      type_list<float,float>> zz8;
+                      type_list<float, float>> zz8;
 
     typedef type_list<
                 type_list<
-                    type_pair<std::integral_constant<size_t,0>,int>,
-                    type_pair<std::integral_constant<size_t,1>,int>,
-                    type_pair<std::integral_constant<size_t,2>,int>
+                    type_pair<std::integral_constant<size_t, 0>, int>,
+                    type_pair<std::integral_constant<size_t, 1>, int>,
+                    type_pair<std::integral_constant<size_t, 2>, int>
                 >,
                 type_list<
-                    type_pair<std::integral_constant<size_t,3>,float>
+                    type_pair<std::integral_constant<size_t, 3>, float>
                 >,
                 type_list<
-                    type_pair<std::integral_constant<size_t,4>,int>
+                    type_pair<std::integral_constant<size_t, 4>, int>
                 >,
                 type_list<
-                    type_pair<std::integral_constant<size_t,5>,float>,
-                    type_pair<std::integral_constant<size_t,6>,float>
+                    type_pair<std::integral_constant<size_t, 5>, float>,
+                    type_pair<std::integral_constant<size_t, 6>, float>
                 >
             >
             zz9;
 
-    typedef typename tl_group_by<zz0,std::is_same>::type zz1;
+    typedef typename tl_group_by<zz0, std::is_same>::type zz1;
 
     typedef typename tl_zip_with_index<zz0>::type zz2;
 
-    static_assert(std::is_same<zz1,zz8>::value, "tl_group_by failed");
+    static_assert(std::is_same<zz1, zz8>::value, "tl_group_by failed");
 
-    typedef typename tl_group_by<zz2,same_second_type>::type zz3;
+    typedef typename tl_group_by<zz2, same_second_type>::type zz3;
 
-    static_assert(std::is_same<zz3,zz9>::value, "tl_group_by failed");
+    static_assert(std::is_same<zz3, zz9>::value, "tl_group_by failed");
 }
 
 void check_default_ctors() {
@@ -357,7 +355,7 @@ void check_wildcards() {
         CPPA_CHECK_EQUAL(get<0>(v0), "1");              // v0 contains old value
         CPPA_CHECK(&get<0>(t0) != &get<0>(v0));         // no longer the same
         // check operator==
-        auto lhs = make_cow_tuple(1,2,3,4);
+        auto lhs = make_cow_tuple(1, 2, 3, 4);
         auto rhs = make_cow_tuple(static_cast<std::uint8_t>(1), 2.0, 3, 4);
         CPPA_CHECK(lhs == rhs);
         CPPA_CHECK(rhs == lhs);

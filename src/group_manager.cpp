@@ -83,7 +83,7 @@ class local_group : public group {
         m_broker->enqueue(hdr, move(msg));
     }
 
-    pair<bool,size_t> add_subscriber(const channel_ptr& who) {
+    pair<bool, size_t> add_subscriber(const channel_ptr& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second) {
@@ -92,7 +92,7 @@ class local_group : public group {
         return {false, m_subscribers.size()};
     }
 
-    pair<bool,size_t> erase_subscriber(const channel_ptr& who) {
+    pair<bool, size_t> erase_subscriber(const channel_ptr& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         auto success = m_subscribers.erase(who) > 0;
@@ -212,7 +212,7 @@ class local_group_proxy : public local_group {
         CPPA_REQUIRE(remote_broker != nullptr);
         CPPA_REQUIRE(remote_broker->is_proxy());
         m_broker = move(remote_broker);
-        m_proxy_broker = spawn<proxy_broker,hidden>(this);
+        m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
 
     group::subscription subscribe(const channel_ptr& who) {
@@ -342,9 +342,9 @@ class local_group_module : public group::module {
     process_information_ptr m_process;
     const uniform_type_info* m_actor_utype;
     util::shared_spinlock m_instances_mtx;
-    map<string,local_group_ptr> m_instances;
+    map<string, local_group_ptr> m_instances;
     util::shared_spinlock m_proxies_mtx;
-    map<actor_ptr,local_group_ptr> m_proxies;
+    map<actor_ptr, local_group_ptr> m_proxies;
 
 };
 
@@ -456,7 +456,7 @@ class remote_group_module : public group::module {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
                             "remote_group_module$worker",
                             "");
-            typedef map<string,pair<actor_ptr,vector<pair<string,remote_group_ptr>>>>
+            typedef map<string, pair<actor_ptr, vector<pair<string, remote_group_ptr>>>>
                     peer_map;
             peer_map peers;
             receive_loop (

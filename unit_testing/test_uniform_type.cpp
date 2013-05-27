@@ -24,7 +24,7 @@
 #include "cppa/detail/types_array.hpp"
 #include "cppa/message_header.hpp"
 
-#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_traits.hpp"
 
 using std::cout;
 using std::endl;
@@ -122,8 +122,10 @@ int main() {
                     float, double,
                     atom_value, any_tuple, message_header,
                     actor_ptr, group_ptr,
-                    channel_ptr, intrusive_ptr<process_information>
+                    channel_ptr, process_information_ptr
                  >::arr;
+
+    CPPA_CHECK(sarr.is_pure());
 
     std::vector<const uniform_type_info*> rarr{
         uniform_typeid<std::int8_t>(),
@@ -145,10 +147,8 @@ int main() {
         uniform_typeid<actor_ptr>(),
         uniform_typeid<group_ptr>(),
         uniform_typeid<channel_ptr>(),
-        uniform_typeid<intrusive_ptr<process_information> >()
+        uniform_typeid<process_information_ptr>()
     };
-
-    CPPA_CHECK_EQUAL(sarr.is_pure(), true);
 
     for (size_t i = 0; i < sarr.size; ++i) {
         CPPA_CHECK_EQUAL(sarr[i]->name(), rarr[i]->name());

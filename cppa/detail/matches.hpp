@@ -229,8 +229,8 @@ struct matcher<wildcard_position::multiple, Tuple, T...> {
         auto& tarr = static_types_array<T...>::arr;
         if (tup.size() >= (sizeof...(T) - wc_count)) {
             auto fpush = [](const typename Tuple::const_iterator&) { };
-            auto fcommit = []() { };
-            auto frollback = []() { };
+            auto fcommit = [] { };
+            auto frollback = [] { };
             return match(tup.begin(), tup.end(), tarr.begin(), tarr.end(),
                          fpush, fcommit, frollback);
         }

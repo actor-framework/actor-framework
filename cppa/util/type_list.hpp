@@ -34,7 +34,6 @@
 #include <typeinfo>
 #include <type_traits>
 
-#include "cppa/util/at.hpp"
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_pair.hpp"
 #include "cppa/util/void_type.hpp"
@@ -48,10 +47,6 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
 namespace cppa { namespace util {
-
-/**
- * @defgroup MetaProgramming Metaprogramming utility.
- */
 
 /**
  * @addtogroup MetaProgramming
@@ -93,7 +88,7 @@ struct tl_head<List<>> {
 };
 
 template<template<typename...> class List, typename T0, typename... Ts>
-struct tl_head<List<T0,Ts...>> {
+struct tl_head<List<T0, Ts...>> {
     typedef T0 type;
 };
 
@@ -112,7 +107,7 @@ struct tl_tail<List<>> {
 };
 
 template<template<typename...> class List, typename T0, typename... Ts>
-struct tl_tail<List<T0,Ts...>> {
+struct tl_tail<List<T0, Ts...>> {
     typedef List<Ts...> type;
 };
 
@@ -149,10 +144,10 @@ struct tl_back<List<T0>> {
 };
 
 template<template<typename...> class List, typename T0, typename T1, typename... Ts>
-struct tl_back<List<T0,T1,Ts...>> {
+struct tl_back<List<T0, T1, Ts...>> {
     // remaining arguments are forwarded as type_list to prevent
     // recursive instantiation of List class
-    typedef typename tl_back<type_list<T1,Ts...>>::type type;
+    typedef typename tl_back<type_list<T1, Ts...>>::type type;
 };
 
 
@@ -163,7 +158,7 @@ struct tl_back<List<T0,T1,Ts...>> {
  */
 template<class List>
 struct tl_empty {
-    static constexpr bool value = std::is_same<empty_type_list,List>::value;
+    static constexpr bool value = std::is_same<empty_type_list, List>::value;
 };
 
 // list slice(size_t, size_t)
@@ -244,8 +239,8 @@ struct tl_slice {
  * @brief Zips two lists of equal size.
  *
  * Creates a list formed from the two lists @p ListA and @p ListB,
- * e.g., tl_zip<type_list<int,double>,type_list<float,string>>::type
- * is type_list<type_pair<int,float>,type_pair<double,string>>.
+ * e.g., tl_zip<type_list<int, double>, type_list<float, string>>::type
+ * is type_list<type_pair<int, float>, type_pair<double, string>>.
  */
 template<class ListA, class ListB,
          template<typename, typename> class Fun = to_type_pair>
@@ -344,11 +339,11 @@ struct tl_zip_with_index<empty_type_list> {
 
 template<class List, typename T>
 struct tl_index_of {
-    static constexpr size_t value = tl_index_of<typename tl_tail<List>::type,T>::value;
+    static constexpr size_t value = tl_index_of<typename tl_tail<List>::type, T>::value;
 };
 
 template<size_t N, typename T, typename... Ts>
-struct tl_index_of<type_list<type_pair<std::integral_constant<size_t,N>,T>,Ts...>,T> {
+struct tl_index_of<type_list<type_pair<std::integral_constant<size_t, N>, T>, Ts...>, T> {
     static constexpr size_t value = N;
 };
 
@@ -399,25 +394,25 @@ struct tl_find_impl<type_list<T0, Ts...>, Predicate, Pos> {
 };
 
 /**
- * @brief Finds the first element of type @p What beginning at
- *        index @p Pos.
- */
-template<class List, typename What, int Pos = 0>
-struct tl_find {
-    static constexpr int value =
-            tl_find_impl<List,
-                         tbind<std::is_same, What>::template type,
-                         Pos
-            >::value;
-};
-
-/**
  * @brief Finds the first element satisfying @p Predicate beginning at
  *        index @p Pos.
  */
 template<class List, template<typename> class Predicate, int Pos = 0>
 struct tl_find_if {
     static constexpr int value = tl_find_impl<List, Predicate, Pos>::value;
+};
+
+/**
+ * @brief Finds the first element of type @p What beginning at
+ *        index @p Pos.
+ */
+template<class List, typename What, int Pos = 0>
+struct tl_find {
+    static constexpr int value = tl_find_impl<
+                                     List,
+                                     tbind<std::is_same, What>::template type,
+                                     Pos
+                                 >::value;
 };
 
 // bool forall(predicate)
@@ -923,7 +918,7 @@ struct tl_is_zipped {
 template<class List, typename What = void_type>
 struct tl_trim {
     typedef typename std::conditional<
-                std::is_same<typename tl_back<List>::type,What>::value,
+                std::is_same<typename tl_back<List>::type, What>::value,
                 typename tl_trim<typename tl_pop_back<List>::type, What>::type,
                 List
             >::type
@@ -1009,7 +1004,7 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
 
 namespace cppa {
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&) {
+typename util::tl_at<util::type_list<Ts...>, N>::type get(const util::type_list<Ts...>&) {
     return {};
 }
 } // namespace cppa

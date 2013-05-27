@@ -47,7 +47,7 @@ pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 memory_cache::~memory_cache() { }
 
-typedef map<const type_info*,unique_ptr<memory_cache> > cache_map;
+typedef map<const type_info*, unique_ptr<memory_cache> > cache_map;
 
 void cache_map_destructor(void* ptr) {
     if (ptr) delete reinterpret_cast<cache_map*>(ptr);
@@ -84,7 +84,7 @@ void memory::add_cache_map_entry(const type_info* tinf, memory_cache* instance) 
 
 instance_wrapper::~instance_wrapper() { }
 
-//pair<instance_wrapper*,void*> memory::allocate(const type_info* type) {
+//pair<instance_wrapper*, void*> memory::allocate(const type_info* type) {
 //    return get_cache_map_entry(type)->allocate();
 //}
 

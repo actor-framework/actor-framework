@@ -104,7 +104,7 @@ int main() {
     CPPA_CHECK_EQUAL((ge_invoke(expr14, 2, 3)), 5);
 
     auto expr15 = _x1 + _x2 + _x3;
-    static_assert(std::is_same<decltype(ge_invoke(expr15,1,2,3)), int>::value,
+    static_assert(std::is_same<decltype(ge_invoke(expr15, 1, 2, 3)), int>::value,
                   "wrong return type");
     CPPA_CHECK_EQUAL((ge_invoke(expr15, 7, 10, 25)), 42);
 
@@ -339,17 +339,17 @@ int main() {
     }
 
     partial_function pf0 = (
-        on<int,int>() >> [&] { last_invoked_fun = "<int,int>@1"; },
+        on<int, int>() >> [&] { last_invoked_fun = "<int, int>@1"; },
         on<float>() >> [&] { last_invoked_fun = "<float>@2"; }
     );
 
     auto pf1 = pf0.or_else(
-        on<int,int>() >> [&] { last_invoked_fun = "<int,int>@3"; },
+        on<int, int>() >> [&] { last_invoked_fun = "<int, int>@3"; },
         on<string>() >> [&] { last_invoked_fun = "<string>@4"; }
     );
 
-    check(pf0, make_any_tuple(1, 2), "<int,int>@1");
-    check(pf1, make_any_tuple(1, 2), "<int,int>@1");
+    check(pf0, make_any_tuple(1, 2), "<int, int>@1");
+    check(pf1, make_any_tuple(1, 2), "<int, int>@1");
     check(pf0, make_any_tuple("hi"), "");
     check(pf1, make_any_tuple("hi"), "<string>@4");
 

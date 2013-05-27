@@ -109,13 +109,13 @@ int main() {
     announce<matrix_type>();
 
     const ivec expected1{ 56, 62, 68, 74
-                        ,152,174,196,218
-                        ,248,286,324,362
-                        ,344,398,452,506};
+                        , 152, 174, 196, 218
+                        , 248, 286, 324, 362
+                        , 344, 398, 452, 506};
 
     auto worker1 = spawn_cl<ivec(ivec&)>(program::create(kernel_source),
                                          kernel_name,
-                                         {matrix_size,matrix_size});
+                                         {matrix_size, matrix_size});
     ivec m1(matrix_size * matrix_size);
     iota(m1.begin(), m1.end(), 0);
     send(worker1, move(m1));
@@ -127,7 +127,7 @@ int main() {
 
     auto worker2 = spawn_cl<ivec(ivec&)>(kernel_source,
                                          kernel_name,
-                                         {matrix_size,matrix_size});
+                                         {matrix_size, matrix_size});
     ivec m2(matrix_size * matrix_size);
     iota(m2.begin(), m2.end(), 0);
     send(worker2, move(m2));

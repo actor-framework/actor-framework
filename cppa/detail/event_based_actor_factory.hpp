@@ -55,7 +55,7 @@ class event_based_actor_impl : public event_based_actor {
     void init() { apply(m_init); }
 
     void on_exit() {
-        typedef typename util::get_arg_types<CleanupFun>::types arg_types;
+        typedef typename util::get_callable_trait<CleanupFun>::arg_types arg_types;
         std::integral_constant<size_t, util::tl_size<arg_types>::value> token;
         on_exit_impl(m_on_exit, token);
     }
@@ -126,8 +126,8 @@ struct ebaf_from_type_list<InitFun, CleanupFun, util::type_list<Ts...> > {
 
 template<typename Init, typename Cleanup>
 struct ebaf_from_functor {
-    typedef typename util::get_arg_types<Init>::types arg_types;
-    typedef typename util::get_arg_types<Cleanup>::types arg_types2;
+    typedef typename util::get_callable_trait<Init>::arg_types arg_types;
+    typedef typename util::get_callable_trait<Cleanup>::arg_types arg_types2;
     static_assert(util::tl_forall<arg_types, std::is_pointer>::value,
                   "First functor takes non-pointer arguments");
     static_assert(   std::is_same<arg_types, arg_types2>::value

@@ -37,10 +37,9 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/timeout_definition.hpp"
 
-#include "cppa/util/tbind.hpp"
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
@@ -81,11 +80,11 @@ class behavior {
     template<typename F>
     behavior(util::duration d, F f);
 
-    template<typename... Cases>
-    behavior(const match_expr<Cases...>& arg);
+    template<typename... Cs>
+    behavior(const match_expr<Cs...>& arg);
 
-    template<typename... Cases, typename T, typename... Ts>
-    behavior(const match_expr<Cases...>& arg0, const T& arg1, const Ts&... args);
+    template<typename... Cs, typename T, typename... Ts>
+    behavior(const match_expr<Cs...>& arg0, const T& arg1, const Ts&... args);
 
     /**
      * @brief Invokes the timeout callback.
@@ -122,8 +121,8 @@ class behavior {
  * @brief Creates a behavior from a match expression and a timeout definition.
  * @relates behavior
  */
-template<typename... Cases, typename F>
-inline behavior operator,(const match_expr<Cases...>& lhs,
+template<typename... Cs, typename F>
+inline behavior operator,(const match_expr<Cs...>& lhs,
                           const timeout_definition<F>& rhs) {
     return match_expr_convert(lhs, rhs);
 }
@@ -135,21 +134,19 @@ inline behavior operator,(const match_expr<Cases...>& lhs,
 
 template<typename F>
 behavior::behavior(const timeout_definition<F>& arg)
-: m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{},
-                                           arg.timeout,
-                                           arg.handler)               ) { }
+: m_impl(detail::new_default_behavior(arg.timeout, arg.handler)) { }
 
 template<typename F>
 behavior::behavior(util::duration d, F f)
-: m_impl(detail::new_default_behavior_impl(detail::dummy_match_expr{}, d, f)) { }
+: m_impl(detail::new_default_behavior(d, f)) { }
 
-template<typename... Cases>
-behavior::behavior(const match_expr<Cases...>& arg)
+template<typename... Cs>
+behavior::behavior(const match_expr<Cs...>& arg)
 : m_impl(arg.as_behavior_impl()) { }
 
-template<typename... Cases, typename T, typename... Ts>
-behavior::behavior(const match_expr<Cases...>& arg0, const T& arg1, const Ts&... args)
-: m_impl(detail::match_expr_concat(arg0, arg1, args...)) { }
+template<typename... Cs, typename T, typename... Ts>
+behavior::behavior(const match_expr<Cs...>& v0, const T& v1, const Ts&... vs)
+: m_impl(detail::match_expr_concat(v0, v1, vs...)) { }
 
 inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 

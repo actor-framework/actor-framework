@@ -46,7 +46,7 @@ class blocking_single_reader_queue {
 
  public:
 
-    typedef single_reader_queue<T,Delete>  impl_type;
+    typedef single_reader_queue<T, Delete>  impl_type;
     typedef typename impl_type::value_type value_type;
     typedef typename impl_type::pointer    pointer;
 

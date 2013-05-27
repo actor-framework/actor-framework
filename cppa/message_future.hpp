@@ -42,7 +42,7 @@
 #include "cppa/message_id.hpp"
 #include "cppa/local_actor.hpp"
 
-#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 

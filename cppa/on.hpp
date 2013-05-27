@@ -46,7 +46,7 @@
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/arg_match_t.hpp"
-#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
@@ -68,7 +68,7 @@ template<bool ToVoid, typename T>
 struct to_void_impl { typedef util::void_type type; };
 
 template<typename T>
-struct to_void_impl<false,T> { typedef typename add_ptr_to_fun<T>::type type; };
+struct to_void_impl<false, T> { typedef typename add_ptr_to_fun<T>::type type; };
 
 template<typename T>
 struct boxed_and_not_callable_to_void
@@ -125,7 +125,7 @@ struct rvalue_builder {
     typedef typename util::tl_back<Pattern>::type back_type;
 
     static constexpr bool is_complete =
-            !std::is_same<util::arg_match_t,back_type>::value;
+            !std::is_same<util::arg_match_t, back_type>::value;
 
     typedef typename util::tl_apply<Transformers, tdata>::type fun_container;
 
@@ -201,13 +201,13 @@ struct pattern_type_ {
     typedef util::get_callable_trait<T> ctrait;
     typedef typename ctrait::arg_types args;
     static_assert(util::tl_size<args>::value == 1, "only unary functions allowed");
-    typedef typename util::rm_ref<typename util::tl_head<args>::type>::type type;
+    typedef typename util::rm_const_and_ref<typename util::tl_head<args>::type>::type type;
 };
 
 template<typename T>
 struct pattern_type_<false, T> {
     typedef typename implicit_conversions<
-                typename util::rm_ref<
+                typename util::rm_const_and_ref<
                     typename detail::unboxed<T>::type
                 >::type
             >::type
@@ -303,7 +303,7 @@ detail::rvalue_builder<
         typename util::tl_filter_not<
             typename util::tl_trim<
                 typename util::tl_map<
-                    util::type_list<T,Ts...>,
+                    util::type_list<T, Ts...>,
                     detail::boxed_and_callable_to_void,
                     detail::implicit_conversions
                 >::type
@@ -312,7 +312,7 @@ detail::rvalue_builder<
         >::type
     >,
     typename util::tl_map<
-        util::type_list<T,Ts...>,
+        util::type_list<T, Ts...>,
         detail::boxed_and_not_callable_to_void
     >::type,
     util::type_list<typename detail::pattern_type<T>::type,

@@ -65,14 +65,14 @@ class message_header {
     template<typename T>
     message_header(intrusive_ptr<T> dest)
     : sender(self), receiver(dest), priority(message_priority::normal) {
-        static_assert(std::is_convertible<T*,channel*>::value,
+        static_assert(std::is_convertible<T*, channel*>::value,
                       "illegal receiver");
     }
 
     template<typename T>
     message_header(T* dest)
     : sender(self), receiver(dest), priority(message_priority::normal) {
-        static_assert(std::is_convertible<T*,channel*>::value,
+        static_assert(std::is_convertible<T*, channel*>::value,
                       "illegal receiver");
     }
 

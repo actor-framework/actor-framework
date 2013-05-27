@@ -153,7 +153,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 
 #define CPPA_VOID_STMT static_cast<void>(0)
 
-#define CPPA_CAT(a,b) a ## b
+#define CPPA_CAT(a, b) a ## b
 
 #define CPPA_ERROR    0
 #define CPPA_WARNING  1

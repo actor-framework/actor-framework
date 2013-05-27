@@ -158,7 +158,7 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     void cleanup(std::uint32_t reason) override;
 
-    typedef intrusive::single_reader_queue<mailbox_element,detail::disposer>
+    typedef intrusive::single_reader_queue<mailbox_element, detail::disposer>
             mailbox_type;
 
     actor_state compare_exchange_state(actor_state expected, actor_state desired);

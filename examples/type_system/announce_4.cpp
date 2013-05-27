@@ -87,8 +87,8 @@ void testee(size_t remaining) {
     become (
        on<bar>() >> [=](const bar& val) {
             aout << "bar(foo("
-                 << val.f.a() << ","
-                 << val.f.b() << "),"
+                 << val.f.a() << ", "
+                 << val.f.b() << "), "
                  << val.i << ")"
                  << endl;
             set_next_behavior();
@@ -127,8 +127,8 @@ int main(int, char**) {
 
     // spawn a testee that receives two messages
     auto t = spawn(testee, 2);
-    send(t, bar{foo{1,2},3});
-    send(t, baz{foo{1,2},bar{foo{3,4},5}});
+    send(t, bar{foo{1, 2}, 3});
+    send(t, baz{foo{1, 2}, bar{foo{3, 4}, 5}});
     await_all_others_done();
     shutdown();
     return 0;

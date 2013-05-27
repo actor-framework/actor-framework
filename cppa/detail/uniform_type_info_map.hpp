@@ -71,7 +71,7 @@ using mapped_type_list = util::type_list<
     std::string,
     std::u16string,
     std::u32string,
-    std::map<std::string,std::string>
+    std::map<std::string, std::string>
 >;
 
 using zipped_type_list = util::tl_zip_with_index<mapped_type_list>::type;
@@ -81,7 +81,7 @@ extern const char* mapped_type_names[][2];
 
 template<typename T>
 constexpr const char* mapped_name() {
-    return mapped_type_names[util::tl_index_of<zipped_type_list,T>::value][1];
+    return mapped_type_names[util::tl_index_of<zipped_type_list, T>::value][1];
 }
 
 const char* mapped_name_by_decorated_name(const char* decorated_type_name);

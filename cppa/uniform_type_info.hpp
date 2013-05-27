@@ -41,7 +41,7 @@
 #include "cppa/object.hpp"
 
 #include "cppa/util/comparable.hpp"
-#include "cppa/util/callable_trait.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
@@ -91,7 +91,7 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
  *
  * int main()
  * {
- *     send(self, foo{1,2});
+ *     send(self, foo{1, 2});
  *     return 0;
  * }
  * @endcode

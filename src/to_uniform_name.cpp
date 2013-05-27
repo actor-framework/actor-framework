@@ -116,15 +116,15 @@ class parse_tree {
             full_name += "<";
             for (auto& tparam : m_template_parameters) {
                 // decorate each single template parameter
-                if (full_name.back() != '<') full_name += ",";
+                if (full_name.back() != '<') full_name += ',';
                 full_name += tparam.compile();
             }
             full_name += ">";
             // decorate full name
             result += map2decorated(full_name.c_str());
         }
-        if (m_pointer) result += "*";
-        if (m_lvalue_ref) result += "&";
+        if (m_pointer) result += '*';
+        if (m_lvalue_ref) result += '&';
         if (m_rvalue_ref) result += "&&";
         return result;
     }

@@ -93,7 +93,7 @@ struct pair_member_impl<T1, T2, false> {
 };
 
 template<typename T1, typename T2>
-class pair_member : public util::abstract_uniform_type_info<std::pair<T1,T2>> {
+class pair_member : public util::abstract_uniform_type_info<std::pair<T1, T2>> {
 
     static_assert(util::is_builtin<T1>::value, "T1 is not a builtin type");
     static_assert(util::is_builtin<T1>::value, "T2 is not a builtin type");

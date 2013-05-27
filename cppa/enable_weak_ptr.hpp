@@ -53,7 +53,7 @@ class enable_weak_ptr : public Base {
     template<typename T>
     friend class weak_intrusive_ptr;
 
-    static_assert(std::is_base_of<ref_counted,Base>::value,
+    static_assert(std::is_base_of<ref_counted, Base>::value,
                   "Base needs to be derived from ref_counted");
 
  protected:

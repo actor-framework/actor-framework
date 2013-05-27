@@ -31,29 +31,39 @@
 #ifndef CPPA_FWD_HPP
 #define CPPA_FWD_HPP
 
+#include <cstdint>
+
 namespace cppa {
 
+// classes
 class actor;
 class group;
 class channel;
 class behavior;
 class any_tuple;
 class self_type;
+class message_header;
 class partial_function;
 class uniform_type_info;
 class primitive_variant;
+class process_information;
 
+// structs
+struct anything;
+
+// enums
 enum primitive_type : unsigned char;
+enum class atom_value : std::uint64_t;
 
-template<typename>
-class option;
+// class templates
+template<typename> class option;
+template<typename> class intrusive_ptr;
 
-template<typename>
-class intrusive_ptr;
-
-typedef intrusive_ptr<actor>   actor_ptr;
-typedef intrusive_ptr<group>   group_ptr;
-typedef intrusive_ptr<channel> channel_ptr;
+// typedefs
+typedef intrusive_ptr<actor>               actor_ptr;
+typedef intrusive_ptr<group>               group_ptr;
+typedef intrusive_ptr<channel>             channel_ptr;
+typedef intrusive_ptr<process_information> process_information_ptr;
 
 } // namespace cppa
 

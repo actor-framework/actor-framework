@@ -7,10 +7,8 @@
 
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/at.hpp"
 #include "cppa/util/int_list.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/element_at.hpp"
 
 #include "cppa/detail/demangle.hpp"
 
@@ -27,32 +25,32 @@ int main() {
 
     CPPA_PRINT("test type_list");
 
-    typedef type_list<int,float,std::string> l1;
+    typedef type_list<int, float, std::string> l1;
     typedef typename tl_reverse<l1>::type r1;
 
-    CPPA_CHECK((is_same<int,element_at<0,l1>::type>::value));
-    CPPA_CHECK((is_same<float,element_at<1,l1>::type>::value));
-    CPPA_CHECK((is_same<std::string,element_at<2,l1>::type>::value));
+    CPPA_CHECK((is_same<int, tl_at<l1, 0>::type>::value));
+    CPPA_CHECK((is_same<float, tl_at<l1, 1>::type>::value));
+    CPPA_CHECK((is_same<std::string, tl_at<l1, 2>::type>::value));
 
-    CPPA_CHECK_EQUAL(3 ,tl_size<l1>::value);
+    CPPA_CHECK_EQUAL(3 , tl_size<l1>::value);
     CPPA_CHECK_EQUAL(tl_size<r1>::value, tl_size<l1>::value);
-    CPPA_CHECK((is_same<element_at<0,l1>::type,element_at<2,r1>::type>::value));
-    CPPA_CHECK((is_same<element_at<1,l1>::type,element_at<1,r1>::type>::value));
-    CPPA_CHECK((is_same<element_at<2,l1>::type,element_at<0,r1>::type>::value));
+    CPPA_CHECK((is_same<tl_at<l1, 0>::type, tl_at<r1, 2>::type>::value));
+    CPPA_CHECK((is_same<tl_at<l1, 1>::type, tl_at<r1, 1>::type>::value));
+    CPPA_CHECK((is_same<tl_at<l1, 2>::type, tl_at<r1, 0>::type>::value));
 
-    typedef tl_concat<type_list<int>,l1>::type l2;
+    typedef tl_concat<type_list<int>, l1>::type l2;
 
-    CPPA_CHECK((is_same<int,tl_head<l2>::type>::value));
-    CPPA_CHECK((is_same<l1,tl_tail<l2>::type>::value));
+    CPPA_CHECK((is_same<int, tl_head<l2>::type>::value));
+    CPPA_CHECK((is_same<l1, tl_tail<l2>::type>::value));
 
 
     CPPA_PRINT("test int_list");
 
-    typedef int_list<0,1,2,3,4,5> il0;
-    typedef int_list<4,5> il1;
-    typedef typename il_right<il0,2>::type il2;
-    CPPA_CHECK_VERBOSE((is_same<il2,il1>::value),
-                       "il_right<il0,2> returned " <<detail::demangle<il2>()
+    typedef int_list<0, 1, 2, 3, 4, 5> il0;
+    typedef int_list<4, 5> il1;
+    typedef typename il_right<il0, 2>::type il2;
+    CPPA_CHECK_VERBOSE((is_same<il2, il1>::value),
+                       "il_right<il0, 2> returned " <<detail::demangle<il2>()
                        << "expected: " << detail::demangle<il1>());
 
     return CPPA_TEST_RESULT();

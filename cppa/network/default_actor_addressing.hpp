@@ -48,7 +48,7 @@ class default_actor_addressing : public actor_addressing {
 
     default_actor_addressing(default_protocol* parent = nullptr);
 
-    typedef std::map<actor_id,weak_actor_proxy_ptr> proxy_map;
+    typedef std::map<actor_id, weak_actor_proxy_ptr> proxy_map;
 
     atom_value technology_id() const;
 
@@ -77,7 +77,7 @@ class default_actor_addressing : public actor_addressing {
 
     default_protocol* m_parent;
     process_information_ptr m_pinf;
-    std::map<process_information,proxy_map> m_proxies;
+    std::map<process_information, proxy_map> m_proxies;
 
 };
 

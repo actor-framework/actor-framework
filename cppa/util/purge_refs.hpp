@@ -34,7 +34,7 @@
 #include <functional>
 
 #include "cppa/guard_expr.hpp"
-#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
 namespace cppa { namespace util {
@@ -69,7 +69,7 @@ struct purge_refs_impl<std::reference_wrapper<const T> > {
  */
 template<typename T>
 struct purge_refs {
-    typedef typename purge_refs_impl<typename util::rm_ref<T>::type>::type type;
+    typedef typename purge_refs_impl<typename util::rm_const_and_ref<T>::type>::type type;
 };
 
 } } // namespace cppa::util

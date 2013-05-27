@@ -37,9 +37,7 @@
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 
-#include "cppa/util/rm_ref.hpp"
-#include "cppa/util/is_array_of.hpp"
-#include "cppa/util/replace_type.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { class local_actor; }
 
@@ -89,7 +87,7 @@ struct implicit_conversions {
 
 template<typename T>
 struct strip_and_convert {
-    typedef typename implicit_conversions<typename util::rm_ref<T>::type>::type
+    typedef typename implicit_conversions<typename util::rm_const_and_ref<T>::type>::type
             type;
 };
 

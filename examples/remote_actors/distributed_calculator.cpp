@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
     uint16_t port = 0;
     options_description desc;
     auto set_mode = [&](const string& arg) -> function<bool()> {
-        return [arg,&mode]() -> bool {
+        return [arg, &mode]() -> bool {
             if (!mode.empty()) {
                 cerr << "mode already set to " << mode << endl;
                 return false;

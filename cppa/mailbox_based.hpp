@@ -57,7 +57,7 @@ class mailbox_based : public Base {
 
     typedef mailbox_based combined_type;
 
-    typedef intrusive::single_reader_queue<mailbox_element,del> mailbox_type;
+    typedef intrusive::single_reader_queue<mailbox_element, del> mailbox_type;
 
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }

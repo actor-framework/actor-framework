@@ -47,7 +47,7 @@ namespace cppa { namespace opencl {
 /**
  * @brief A vector of up to three elements used for OpenCL dimensions.
  */
-typedef util::limited_vector<size_t,3> dim_vec;
+typedef util::limited_vector<size_t, 3> dim_vec;
 
 std::string get_opencl_error(cl_int err);
 

@@ -45,7 +45,7 @@ void testee() {
     become (
         on<foo>() >> [](const foo& val) {
             aout << "foo("
-                 << val.a() << ","
+                 << val.a() << ", "
                  << val.b() << ")"
                  << endl;
             self->quit();
@@ -59,7 +59,7 @@ int main(int, char**) {
     announce<foo>(make_pair(&foo::a, &foo::set_a),
                   make_pair(&foo::b, &foo::set_b));
     auto t = spawn(testee);
-    send(t, foo{1,2});
+    send(t, foo{1, 2});
     await_all_others_done();
     shutdown();
     return 0;

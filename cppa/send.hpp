@@ -161,7 +161,7 @@ inline message_future sync_send(actor_ptr whom, Ts&&... what) {
  */
 template<class Rep, class Period, typename... Ts>
 message_future timed_sync_send_tuple(actor_ptr whom,
-                                     const std::chrono::duration<Rep,Period>& rel_time,
+                                     const std::chrono::duration<Rep, Period>& rel_time,
                                      any_tuple what) {
     auto mf = sync_send_tuple(std::move(whom), std::move(what));
     auto tmp = make_any_tuple(atom("TIMEOUT"));
@@ -185,7 +185,7 @@ message_future timed_sync_send_tuple(actor_ptr whom,
  */
 template<class Rep, class Period, typename... Ts>
 message_future timed_sync_send(actor_ptr whom,
-                               const std::chrono::duration<Rep,Period>& rel_time,
+                               const std::chrono::duration<Rep, Period>& rel_time,
                                Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     return timed_sync_send_tuple(std::move(whom),
@@ -245,7 +245,7 @@ inline void forward_to(const actor_ptr& whom) {
  */
 template<class Rep, class Period, typename... Ts>
 inline void delayed_send_tuple(const channel_ptr& whom,
-                               const std::chrono::duration<Rep,Period>& rtime,
+                               const std::chrono::duration<Rep, Period>& rtime,
                                any_tuple what) {
     if (whom) get_scheduler()->delayed_send(whom, rtime, what);
 }
@@ -259,7 +259,7 @@ inline void delayed_send_tuple(const channel_ptr& whom,
  */
 template<class Rep, class Period, typename... Ts>
 inline void delayed_send(const channel_ptr& whom,
-                         const std::chrono::duration<Rep,Period>& rtime,
+                         const std::chrono::duration<Rep, Period>& rtime,
                          Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     if (whom) {

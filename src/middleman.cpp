@@ -81,7 +81,7 @@ namespace cppa { namespace network {
 
 #ifdef CPPA_POLL_IMPL
 
-typedef pair<vector<pollfd>::iterator,vector<fd_meta_info>::iterator>
+typedef pair<vector<pollfd>::iterator, vector<fd_meta_info>::iterator>
         pfd_iterator;
 
 #ifndef POLLRDHUP
@@ -117,7 +117,7 @@ struct pfd_access {
 
 };
 
-typedef event_iterator_impl<pfd_iterator,pfd_access> event_iterator;
+typedef event_iterator_impl<pfd_iterator, pfd_access> event_iterator;
 
 struct pollfd_meta_info_less {
     inline bool operator()(const pollfd& lhs, native_socket_type rhs) const {
@@ -142,7 +142,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
 
     size_t num_sockets() const { return m_pollset.size(); }
 
-    pair<event_iterator,event_iterator> poll() {
+    pair<event_iterator, event_iterator> poll() {
         CPPA_REQUIRE(m_pollset.empty() == false);
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         for (;;) {
@@ -258,7 +258,7 @@ struct epoll_iterator_access {
 
 };
 
-typedef event_iterator_impl<vector<epoll_event>::iterator,epoll_iterator_access>
+typedef event_iterator_impl<vector<epoll_event>::iterator, epoll_iterator_access>
         event_iterator;
 
 class middleman_event_handler : public middleman_event_handler_base<middleman_event_handler> {
@@ -279,7 +279,7 @@ class middleman_event_handler : public middleman_event_handler_base<middleman_ev
 
     size_t num_sockets() const { return m_meta.size(); }
 
-    pair<event_iterator,event_iterator> poll() {
+    pair<event_iterator, event_iterator> poll() {
         CPPA_REQUIRE(m_meta.empty() == false);
         for (;;) {
             CPPA_LOGMF(CPPA_DEBUG, self, "epoll_wait on " << num_sockets() << " sockets");
@@ -470,7 +470,7 @@ class middleman_impl : public abstract_middleman {
     middleman_event_handler m_handler;
 
     util::shared_spinlock m_protocols_lock;
-    map<atom_value,protocol_ptr> m_protocols;
+    map<atom_value, protocol_ptr> m_protocols;
 
 };
 

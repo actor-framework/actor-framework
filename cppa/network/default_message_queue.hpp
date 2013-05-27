@@ -41,7 +41,7 @@ class default_message_queue : public ref_counted {
 
  public:
 
-    typedef std::pair<message_header,any_tuple> value_type;
+    typedef std::pair<message_header, any_tuple> value_type;
 
     typedef value_type& reference;
 

@@ -41,7 +41,7 @@
 
 #include "cppa/util/pt_token.hpp"
 #include "cppa/util/pt_dispatch.hpp"
-#include "cppa/util/is_primitive.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"

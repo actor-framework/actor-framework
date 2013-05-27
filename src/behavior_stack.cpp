@@ -37,7 +37,7 @@ using namespace std;
 
 namespace cppa { namespace detail {
 
-struct behavior_stack_mover : iterator<output_iterator_tag,void,void,void,void>{
+struct behavior_stack_mover : iterator<output_iterator_tag, void, void, void, void>{
 
  public:
 

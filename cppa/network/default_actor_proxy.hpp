@@ -106,7 +106,7 @@ class default_actor_proxy : public actor_proxy {
 
     default_protocol_ptr    m_proto;
     process_information_ptr m_pinf;
-    intrusive::single_reader_queue<sync_request_info,detail::disposer> m_pending_requests;
+    intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
 
 };
 

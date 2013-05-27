@@ -40,10 +40,9 @@
 #include "cppa/config.hpp"
 #include "cppa/option.hpp"
 
-#include "cppa/util/at.hpp"
 #include "cppa/util/call.hpp"
-#include "cppa/util/rm_ref.hpp"
 #include "cppa/util/void_type.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
 #include "cppa/detail/tdata.hpp"
@@ -215,7 +214,7 @@ struct ge_get_front {
                            >::type* = 0) const
     -> option<
         std::reference_wrapper<
-            const typename util::rm_ref<decltype(what.front())>::type> > {
+            const typename util::rm_const_and_ref<decltype(what.front())>::type> > {
         if (what.empty() == false) return {what.front()};
         return {};
     }
@@ -369,7 +368,7 @@ struct ge_unbound<guard_placeholder<X>, detail::tdata<Ts...> > {
     static_assert(X < sizeof...(Ts),
                   "Cannot unbind placeholder (too few arguments)");
     typedef typename ge_unbound<
-                typename util::at<X, Ts...>::type,
+                typename util::type_at<X, Ts...>::type,
                 detail::tdata<std::reference_wrapper<Ts>...>
             >::type
             type;
@@ -477,9 +476,9 @@ struct ge_result_<guard_expr<exec_fun2_op, First, Second>, Tuple> {
 template<typename First, typename Second, class Tuple>
 struct ge_result_<guard_expr<exec_fun3_op, First, Second>, Tuple> {
     typedef typename First::first_type type0;
-    typedef typename ge_unbound<typename First::second_type,Tuple>::type type1;
-    typedef typename ge_unbound<typename Second::first_type,Tuple>::type type2;
-    typedef typename ge_unbound<typename Second::second_type,Tuple>::type type3;
+    typedef typename ge_unbound<typename First::second_type, Tuple>::type type1;
+    typedef typename ge_unbound<typename Second::first_type, Tuple>::type type2;
+    typedef typename ge_unbound<typename Second::second_type, Tuple>::type type3;
     typedef decltype( (*static_cast<const type0*>(nullptr))(
                  *static_cast<const type1*>(nullptr),
                  *static_cast<const type2*>(nullptr),
@@ -661,9 +660,9 @@ ge_invoke_any(const guard_expr<OP, First, Second>& ge,
               const any_tuple& tup) {
     using namespace util;
     typename std::conditional<
-                std::is_same<typename TupleTypes::back,anything>::value,
+                std::is_same<typename TupleTypes::back, anything>::value,
                 TupleTypes,
-                wrapped<typename tl_push_back<TupleTypes,anything>::type>
+                wrapped<typename tl_push_back<TupleTypes, anything>::type>
             >::type
             cast_token;
     auto x = tuple_cast(tup, cast_token);
@@ -684,7 +683,7 @@ bool guard_expr<OP, First, Second>::operator()(const Ts&... args) const {
 
 template<typename T>
 struct gref_wrapped {
-    typedef util::rebindable_reference<const typename util::rm_ref<T>::type> type;
+    typedef util::rebindable_reference<const typename util::rm_const_and_ref<T>::type> type;
 };
 
 template<typename T>

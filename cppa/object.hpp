@@ -37,7 +37,7 @@
 #include <type_traits>
 
 #include "cppa/exception.hpp"
-#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
@@ -165,7 +165,7 @@ class object {
 
 template<typename T>
 object object::from(T what) {
-    typedef typename util::rm_ref<T>::type plain_type;
+    typedef typename util::rm_const_and_ref<T>::type plain_type;
     typedef typename detail::implicit_conversions<plain_type>::type value_type;
     auto rtti = uniform_typeid(typeid(value_type)); // throws on error
     return { new value_type(std::move(what)), rtti };

@@ -195,7 +195,7 @@ class middleman_event_handler_base {
     fd_meta_info_less m_less;
     vector_type m_meta; // this vector is *always* sorted
 
-    std::vector<std::pair<fd_meta_info,fd_meta_event> > m_alterations;
+    std::vector<std::pair<fd_meta_info, fd_meta_event> > m_alterations;
 
  private:
 
@@ -257,14 +257,14 @@ class event_iterator_impl {
 };
 
 template<class Iter, class Access>
-inline bool operator==(const event_iterator_impl<Iter,Access>& lhs,
-                       const event_iterator_impl<Iter,Access>& rhs) {
+inline bool operator==(const event_iterator_impl<Iter, Access>& lhs,
+                       const event_iterator_impl<Iter, Access>& rhs) {
     return lhs.equal_to(rhs);
 }
 
 template<class Iter, class Access>
-inline bool operator!=(const event_iterator_impl<Iter,Access>& lhs,
-                       const event_iterator_impl<Iter,Access>& rhs) {
+inline bool operator!=(const event_iterator_impl<Iter, Access>& lhs,
+                       const event_iterator_impl<Iter, Access>& rhs) {
     return !lhs.equal_to(rhs);
 }
 

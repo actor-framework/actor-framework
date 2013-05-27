@@ -107,7 +107,7 @@ class partial_function {
      */
     template<typename... Ts>
     typename std::conditional<
-        util::disjunction<util::rm_ref<Ts>::type::may_have_timeout...>::value,
+        util::disjunction<util::rm_const_and_ref<Ts>::type::may_have_timeout...>::value,
         behavior,
         partial_function
     >::type
@@ -120,7 +120,7 @@ class partial_function {
 };
 
 template<typename T>
-typename std::conditional<T::may_have_timeout,behavior,partial_function>::type
+typename std::conditional<T::may_have_timeout, behavior, partial_function>::type
 match_expr_convert(const T& arg) {
     return {arg};
 }
@@ -163,7 +163,7 @@ inline bool partial_function::operator()(T&& arg) {
 
 template<typename... Ts>
 typename std::conditional<
-    util::disjunction<util::rm_ref<Ts>::type::may_have_timeout...>::value,
+    util::disjunction<util::rm_const_and_ref<Ts>::type::may_have_timeout...>::value,
     behavior,
     partial_function
 >::type

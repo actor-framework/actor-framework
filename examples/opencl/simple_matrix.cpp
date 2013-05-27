@@ -101,7 +101,7 @@ void multiplier() {
     //          creates matrix_size * matrix_size global work items
     // 4th arg: offsets for global dimensions (optional)
     // 5th arg: local dimensions (optional)
-    auto worker = spawn_cl<fvec(fvec&,fvec&)>(kernel_source,
+    auto worker = spawn_cl<fvec(fvec&, fvec&)>(kernel_source,
                                               kernel_name,
                                               {matrix_size, matrix_size});
     // send both matrices to the actor and wait for a result

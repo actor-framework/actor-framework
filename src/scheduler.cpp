@@ -157,9 +157,9 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // setup & local variables
     self.set(m_self.get());
     bool done = false;
-    std::unique_ptr<mailbox_element,detail::disposer> msg_ptr;
+    std::unique_ptr<mailbox_element, detail::disposer> msg_ptr;
     auto tout = hrc::now();
-    std::multimap<decltype(tout),delayed_msg> messages;
+    std::multimap<decltype(tout), delayed_msg> messages;
     // message handling rules
     auto mfun = (
         on(atom("SEND"), arg_match) >> [&](const util::duration& d,
@@ -210,7 +210,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
 
 void scheduler_helper::printer_loop(ptr_type m_self) {
     self.set(m_self.get());
-    std::map<actor_ptr,std::string> out;
+    std::map<actor_ptr, std::string> out;
     auto flush_output = [&out](const actor_ptr& s) {
         auto i = out.find(s);
         if (i != out.end()) {

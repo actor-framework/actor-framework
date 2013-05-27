@@ -66,7 +66,7 @@
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/event_based_actor.hpp"
 
-#include "cppa/util/rm_ref.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/network/acceptor.hpp"
 
 #include "cppa/detail/memory.hpp"
@@ -165,7 +165,7 @@
  * passing implementation.
  *
  * {@link cppa::cow_tuple Tuples} should @b always be used with by-value
- * semantic,since tuples use a copy-on-write smart pointer internally.
+ * semantic, since tuples use a copy-on-write smart pointer internally.
  * Let's assume two
  * tuple @p x and @p y, whereas @p y is a copy of @p x:
  *
@@ -358,7 +358,7 @@
  * delayed_send(self, std::chrono::seconds(1), atom("poll"));
  * receive_loop (
  *     // ...
- *     on(atom("poll")) >> []() {
+ *     on(atom("poll")) >> [] {
  *         // ... poll something ...
  *         // and do it again after 1sec
  *         delayed_send(self, std::chrono::seconds(1), atom("poll"));
@@ -394,12 +394,13 @@
  *
  * receive (
  *     // equal to: on(std::string("hello actor!"))
- *     on("hello actor!") >> []() { }
+ *     on("hello actor!") >> [] { }
  * );
  * @endcode
  *
  * @defgroup ActorCreation Actor creation.
  *
+ * @defgroup MetaProgramming Metaprogramming utility.
  */
 
 // examples
@@ -444,7 +445,7 @@ namespace cppa {
  * @returns @p whom.
  */
 template<class C>
-inline typename enable_if_channel<C,const intrusive_ptr<C>&>::type
+inline typename enable_if_channel<C, const intrusive_ptr<C>&>::type
 operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
     send_tuple(whom, std::move(what));
     return whom;
@@ -496,11 +497,11 @@ actor_ptr spawn(Ts&&... args) {
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn(Ts&&... args) {
-    static_assert(std::is_base_of<event_based_actor,Impl>::value,
+    static_assert(std::is_base_of<event_based_actor, Impl>::value,
                   "Impl is not a derived type of event_based_actor");
     scheduled_actor_ptr ptr;
     if (has_priority_aware_flag(Options)) {
-        using derived = typename extend<Impl>::template with<threaded,prioritizing>;
+        using derived = typename extend<Impl>::template with<threaded, prioritizing>;
         ptr = make_counted<derived>(std::forward<Ts>(args)...);
     }
     else if (has_detach_flag(Options)) {
@@ -590,7 +591,7 @@ void publish(actor_ptr whom, std::unique_ptr<network::acceptor> acceptor);
 actor_ptr remote_actor(const char* host, std::uint16_t port);
 
 /**
- * @copydoc remote_actor(const char*,std::uint16_t)
+ * @copydoc remote_actor(const char*, std::uint16_t)
  */
 inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
     return remote_actor(host.c_str(), port);
@@ -677,8 +678,8 @@ inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& 
 
 template<typename T>
 inline typename std::enable_if<
-       !std::is_convertible<T,std::string>::value
-    && !std::is_convertible<T,any_tuple>::value,
+       !std::is_convertible<T, std::string>::value
+    && !std::is_convertible<T, any_tuple>::value,
     const actor_ostream&
 >::type
 operator<<(const actor_ostream& o, T&& arg) {

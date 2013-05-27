@@ -82,7 +82,7 @@ struct option_info {
 /**
  * @brief Stores a help text for program options with option groups.
  */
-typedef std::map<std::string,std::map<std::pair<char,std::string>,option_info> >
+typedef std::map<std::string, std::map<std::pair<char, std::string>, option_info> >
         options_description;
 
 /**

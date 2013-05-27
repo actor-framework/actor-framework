@@ -36,10 +36,9 @@
 
 #include "cppa/util/call.hpp"
 #include "cppa/util/int_list.hpp"
-#include "cppa/util/rm_option.hpp"
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/type_traits.hpp"
 #include "cppa/util/left_or_right.hpp"
-#include "cppa/util/get_result_type.hpp"
 
 #include "cppa/detail/tdata.hpp"
 
@@ -56,7 +55,7 @@ struct collected_args_tuple {
             typename util::tl_zip<
                 typename util::tl_map<
                     ProjectionFuns,
-                    util::get_result_type,
+                    util::map_to_result_type,
                     util::rm_option
                 >::type,
                 typename util::tl_map<
@@ -93,7 +92,7 @@ class projection {
      */
     template<class PartFun>
     bool invoke(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
-        typename collected_args_tuple<ProjectionFuns,Ts...>::type pargs;
+        typename collected_args_tuple<ProjectionFuns, Ts...>::type pargs;
         if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
             auto indices = util::get_indices(pargs);
             if (is_defined_at(fun, pargs, indices)) {
@@ -109,7 +108,7 @@ class projection {
      */
     template<class PartFun>
     bool operator()(PartFun& fun, Ts... args) const {
-        typename collected_args_tuple<ProjectionFuns,Ts...>::type pargs;
+        typename collected_args_tuple<ProjectionFuns, Ts...>::type pargs;
         auto indices = util::get_indices(pargs);
         if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
             if (is_defined_at(fun, pargs, indices)) {

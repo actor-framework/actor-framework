@@ -44,7 +44,7 @@ struct both_integral {
 };
 
 template<bool V, typename T1, typename T2>
-struct enable_integral : std::enable_if<   both_integral<T1,T2>::value == V
+struct enable_integral : std::enable_if<   both_integral<T1, T2>::value == V
                                         && not std::is_pointer<T1>::value
                                         && not std::is_pointer<T2>::value> { };
 
@@ -91,7 +91,7 @@ inline void cppa_check_value(const V1& v1,
                              const char* fname,
                              int line,
                              bool expected = true,
-                             typename enable_integral<false,V1,V2>::type* = 0) {
+                             typename enable_integral<false, V1, V2>::type* = 0) {
     if ((v1 == v2) == expected) cppa_passed(fname, line);
     else cppa_failed(v1, v2, fname, line);
 }
@@ -102,7 +102,7 @@ inline void cppa_check_value(V1 v1,
                              const char* fname,
                              int line,
                              bool expected = true,
-                             typename enable_integral<true,V1,V2>::type* = 0) {
+                             typename enable_integral<true, V1, V2>::type* = 0) {
     if ((v1 == static_cast<V1>(v2)) == expected) cppa_passed(fname, line);
     else cppa_failed(v1, v2, fname, line);
 }

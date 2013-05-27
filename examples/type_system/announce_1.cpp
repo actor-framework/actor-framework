@@ -26,10 +26,10 @@ bool operator==(const foo& lhs, const foo& rhs) {
 }
 
 // a pair of two ints
-typedef std::pair<int,int> foo_pair;
+typedef std::pair<int, int> foo_pair;
 
 // another pair of two ints
-typedef std::pair<int,int> foo_pair2;
+typedef std::pair<int, int> foo_pair2;
 
 // a struct with member vector<vector<...>>
 struct foo2 {
@@ -49,10 +49,10 @@ void testee(size_t remaining) {
     };
     become (
         // note: we sent a foo_pair2, but match on foo_pair
-        // that's safe because both are aliases for std::pair<int,int>
+        // that's safe because both are aliases for std::pair<int, int>
         on<foo_pair>() >> [=](const foo_pair& val) {
             cout << "foo_pair("
-                 << val.first << ","
+                 << val.first << ", "
                  << val.second << ")"
                  << endl;
             set_next_behavior();
@@ -64,10 +64,10 @@ void testee(size_t remaining) {
             if (i != end) {
                 cout << *i;
                 while (++i != end) {
-                    cout << "," << *i;
+                    cout << ", " << *i;
                 }
             }
-            cout << "}," << val.b << ")" << endl;
+            cout << "}, " << val.b << ")" << endl;
             set_next_behavior();
         }
     );
@@ -98,13 +98,13 @@ int main(int, char**) {
 
     assert(vd == vd2);
 
-    // announce std::pair<int,int> to the type system;
+    // announce std::pair<int, int> to the type system;
     // NOTE: foo_pair is NOT distinguishable from foo_pair2!
     assert(announce<foo_pair>(&foo_pair::first, &foo_pair::second) == true);
 
     // since foo_pair and foo_pair2 are not distinguishable since typedefs
     // do not 'create' an own type, this announce fails, since
-    // std::pair<int,int> is already announced
+    // std::pair<int, int> is already announced
     assert(announce<foo_pair2>(&foo_pair2::first, &foo_pair2::second) == false);
 
     // libcppa returns the same uniform_type_info

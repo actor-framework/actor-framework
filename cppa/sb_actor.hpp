@@ -48,7 +48,7 @@ namespace cppa {
 template<class Derived, class Base = event_based_actor>
 class sb_actor : public Base {
 
-    static_assert(std::is_base_of<event_based_actor,Base>::value,
+    static_assert(std::is_base_of<event_based_actor, Base>::value,
                   "Base must be either event_based_actor or a derived type");
 
  protected:

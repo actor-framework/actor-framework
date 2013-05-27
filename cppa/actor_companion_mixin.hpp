@@ -59,7 +59,7 @@ class actor_companion_mixin : public Base {
 
  public:
 
-    typedef std::unique_ptr<mailbox_element,detail::disposer> message_pointer;
+    typedef std::unique_ptr<mailbox_element, detail::disposer> message_pointer;
 
     template<typename... Ts>
     actor_companion_mixin(Ts&&... args) : super(std::forward<Ts>(args)...) {
@@ -128,8 +128,12 @@ class actor_companion_mixin : public Base {
         }
 
         void enqueue(const message_header& hdr, any_tuple msg) override {
+            using std::move;
             util::shared_lock_guard<lock_type> guard(m_lock);
-            if (m_parent) push_message(hdr, std::move(msg));
+            if (!m_parent) return;
+            message_pointer ptr;
+            ptr.reset(detail::memory::create<mailbox_element>(hdr, move(msg)));
+            m_parent->new_message(move(ptr));
         }
 
         bool initialized() const override { return true; }
@@ -157,13 +161,6 @@ class actor_companion_mixin : public Base {
         void do_become(behavior&&, bool) override { throw_no_become(); }
 
      private:
-
-        template<typename... Ts>
-        void push_message(Ts&&... args) {
-            message_pointer ptr;
-            ptr.reset(detail::memory::create<mailbox_element>(std::forward<Ts>(args)...));
-            m_parent->new_message(std::move(ptr));
-        }
 
         void throw_no_become() {
             throw std::runtime_error("actor_companion_companion "

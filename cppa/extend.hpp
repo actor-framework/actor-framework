@@ -32,7 +32,7 @@
 #define CPPA_MIXED_HPP
 
 // saves some typing
-#define CPPA_MIXIN template<class,class> class
+#define CPPA_MIXIN template<class, class> class
 
 namespace cppa {
 
@@ -42,17 +42,17 @@ template<class D, class B, CPPA_MIXIN... Ms>
 struct extend_helper;
 
 template<class D, class B>
-struct extend_helper<D,B> { typedef B type; };
+struct extend_helper<D, B> { typedef B type; };
 
 template<class D, class B, CPPA_MIXIN M, CPPA_MIXIN... Ms>
-struct extend_helper<D,B,M,Ms...> : extend_helper<D,M<B,D>,Ms...> { };
+struct extend_helper<D, B, M, Ms...> : extend_helper<D, M<B, D>, Ms...> { };
 
 } // namespace detail
 
 /**
  * @brief Allows convenient definition of types using mixins.
- *        For example, @p extend<ar,T>::with<ob,fo> is an alias for
- *        @p fo<ob<ar,T>,T>.
+ *        For example, @p extend<ar, T>::with<ob, fo> is an alias for
+ *        @p fo<ob<ar, T>, T>.
  *
  * Mixins in libcppa always have two template parameters: base type and
  * derived type. This allows mixins to make use of the curiously recurring
@@ -64,8 +64,8 @@ struct extend {
     /**
      * @brief Identifies the combined type.
      */
-    template<template<class,class> class... Mixins>
-    using with = typename detail::extend_helper<Derived,Base,Mixins...>::type;
+    template<template<class, class> class... Mixins>
+    using with = typename detail::extend_helper<Derived, Base, Mixins...>::type;
 };
 
 } // namespace cppa

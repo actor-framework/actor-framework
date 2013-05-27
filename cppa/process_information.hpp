@@ -44,8 +44,8 @@ namespace cppa {
 /**
  * @brief Identifies a process.
  */
-class process_information : public ref_counted,
-                            util::comparable<process_information> {
+class process_information : public ref_counted
+                          , util::comparable<process_information> {
 
     typedef ref_counted super;
 

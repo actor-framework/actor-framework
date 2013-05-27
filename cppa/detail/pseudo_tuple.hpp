@@ -32,7 +32,8 @@
 #define CPPA_PSEUDO_TUPLE_HPP
 
 #include <cstddef>
-#include "cppa/util/at.hpp"
+
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace detail {
 
@@ -70,15 +71,15 @@ struct pseudo_tuple_from_type_list<util::type_list<Ts...> > {
 namespace cppa {
 
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv) {
+const typename util::type_at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv) {
     static_assert(N < sizeof...(Ts), "N >= tv.size()");
-    return *reinterpret_cast<const typename util::at<N, Ts...>::type*>(tv.at(N));
+    return *reinterpret_cast<const typename util::type_at<N, Ts...>::type*>(tv.at(N));
 }
 
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv) {
+typename util::type_at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv) {
     static_assert(N < sizeof...(Ts), "N >= tv.size()");
-    return *reinterpret_cast<typename util::at<N, Ts...>::type*>(tv.mutable_at(N));
+    return *reinterpret_cast<typename util::type_at<N, Ts...>::type*>(tv.mutable_at(N));
 }
 
 } // namespace cppa

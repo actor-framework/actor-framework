@@ -50,7 +50,7 @@ void testee() {
     become (
         on<foo>() >> [](const foo& val) {
             aout << "foo("
-                 << val.a() << ","
+                 << val.a() << ", "
                  << val.b() << ")"
                  << endl;
             self->quit();
@@ -78,7 +78,7 @@ int main(int, char**) {
                             static_cast<foo_setter>(&foo::b)));
 
     // spawn a new testee and send it a foo
-    send(spawn(testee), foo{1,2});
+    send(spawn(testee), foo{1, 2});
     await_all_others_done();
     shutdown();
     return 0;

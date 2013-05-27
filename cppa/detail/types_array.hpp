@@ -31,10 +31,11 @@
 #ifndef CPPA_TYPES_ARRAY_HPP
 #define CPPA_TYPES_ARRAY_HPP
 
+#include <atomic>
 #include <typeinfo>
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/is_builtin.hpp"
+#include "cppa/util/type_traits.hpp"
 
 // forward declarations
 namespace cppa {
@@ -108,8 +109,8 @@ struct types_array_impl<false, T...> {
     mutable std::atomic<const uniform_type_info* *> pairs;
     // pairs[sizeof...(T)];
     types_array_impl()
-        : tinfo_data{ta_util<std_tinf,util::is_builtin<T>::value,T>::get()...} {
-        bool static_init[sizeof...(T)] = {    !std::is_same<T,anything>::value
+        : tinfo_data{ta_util<std_tinf, util::is_builtin<T>::value, T>::get()...} {
+        bool static_init[sizeof...(T)] = {    !std::is_same<T, anything>::value
                                            && util::is_builtin<T>::value ...  };
         for (size_t i = 0; i < sizeof...(T); ++i) {
             if (static_init[i]) {
@@ -159,7 +160,7 @@ struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
                                       T...> {
     static constexpr size_t size = sizeof...(T);
     typedef util::type_list<T...> types;
-    typedef typename util::tl_filter_not<types, is_anything>::type
+    typedef typename util::tl_filter_not<types, util::is_anything>::type
             filtered_types;
     static constexpr size_t filtered_size = util::tl_size<filtered_types>::value;
     inline bool has_values() const { return false; }

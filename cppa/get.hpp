@@ -34,7 +34,7 @@
 #include <tuple>
 #include <cstddef>
 
-#include "cppa/util/at.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
@@ -53,31 +53,31 @@ template<typename...> class cow_tuple;
 
 // forward declaration of get(const detail::tdata<...>&)
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const detail::tdata<Ts...>&);
+const typename util::type_at<N, Ts...>::type& get(const detail::tdata<Ts...>&);
 
 // forward declarations of get(const tuple<...>&)
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const cow_tuple<Ts...>&);
+const typename util::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>&);
 
 // forward declarations of get(detail::pseudo_tuple<...>&)
 template<size_t N, typename... Ts>
-const typename util::at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv);
+const typename util::type_at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv);
 
 // forward declarations of get(util::type_list<...>&)
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type get(const util::type_list<Ts...>&);
+typename util::type_at<N, Ts...>::type get(const util::type_list<Ts...>&);
 
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(detail::tdata<Ts...>&);
+typename util::type_at<N, Ts...>::type& get_ref(detail::tdata<Ts...>&);
 
 // forward declarations of get_ref(tuple<...>&)
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(cow_tuple<Ts...>&);
+typename util::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>&);
 
 // forward declarations of get_ref(detail::pseudo_tuple<...>&)
 template<size_t N, typename... Ts>
-typename util::at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv);
+typename util::type_at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv);
 
 // support get_ref access to std::tuple
 template<size_t Pos, typename... Ts>

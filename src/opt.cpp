@@ -110,7 +110,7 @@ function<void()> print_desc(options_description* desc, ostream& out) {
                     tmp << "=<arg1>";
                 }
                 for (size_t num = 2; num <= opt.second.num_args; ++num) {
-                    tmp << ",<arg" << num << ">";
+                    tmp << ", <arg" << num << ">";
                 }
                 out << tmp.str() << opt.second.help_text << "\n";
             }

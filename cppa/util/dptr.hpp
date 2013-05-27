@@ -41,13 +41,13 @@ namespace cppa { namespace util {
  */
 template<class Subtype, class MixinType>
 typename std::conditional<
-    std::is_base_of<MixinType,Subtype>::value,
+    std::is_base_of<MixinType, Subtype>::value,
     Subtype,
     MixinType
 >::type*
 dptr(MixinType* ptr) {
     typedef typename std::conditional<
-            std::is_base_of<MixinType,Subtype>::value,
+            std::is_base_of<MixinType, Subtype>::value,
             Subtype,
             MixinType
         >::type

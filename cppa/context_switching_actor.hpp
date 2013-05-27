@@ -48,7 +48,7 @@ namespace cppa {
  * @brief Context-switching actor implementation.
  * @extends scheduled_actor
  */
-class context_switching_actor : public extend<scheduled_actor,context_switching_actor>::with<stacked> {
+class context_switching_actor : public extend<scheduled_actor, context_switching_actor>::with<stacked> {
 
     friend class detail::behavior_stack;
     friend class detail::receive_policy;

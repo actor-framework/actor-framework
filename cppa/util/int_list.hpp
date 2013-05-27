@@ -36,10 +36,6 @@
 namespace cppa { namespace util {
 
 /**
- * @defgroup MetaProgramming Metaprogramming utility.
- */
-
-/**
  * @addtogroup MetaProgramming
  * @{
  */
@@ -74,7 +70,7 @@ template<class List>
 struct il_head;
 
 template<long I0, long... Is>
-struct il_head<int_list<I0,Is...>> {
+struct il_head<int_list<I0, Is...>> {
     static constexpr long value = I0;
 };
 
@@ -93,7 +89,7 @@ struct il_tail<empty_int_list> {
 };
 
 template<long I0, long... Is>
-struct il_tail<int_list<I0,Is...>> {
+struct il_tail<int_list<I0, Is...>> {
     typedef int_list<Is...> type;
 };
 
@@ -125,8 +121,8 @@ struct il_back<int_list<I0>> {
 };
 
 template<long I0, long I1, long... Is>
-struct il_back<int_list<I0,I1,Is...> > {
-    static constexpr long value = il_back<int_list<I1,Is...>>::value;
+struct il_back<int_list<I0, I1, Is...> > {
+    static constexpr long value = il_back<int_list<I1, Is...>>::value;
 };
 
 
@@ -137,7 +133,7 @@ struct il_back<int_list<I0,I1,Is...> > {
  */
 template<class List>
 struct il_empty {
-    static constexpr bool value = std::is_same<empty_int_list,List>::value;
+    static constexpr bool value = std::is_same<empty_int_list, List>::value;
 };
 
 
@@ -153,8 +149,8 @@ struct il_min<int_list<I0>> {
 };
 
 template<long I0, long I1, long... Is>
-struct il_min<int_list<I0,I1,Is...> > {
-    static constexpr long value = il_min<int_list<(I0 < I1) ? I0 : I1,Is...>>::value;
+struct il_min<int_list<I0, I1, Is...> > {
+    static constexpr long value = il_min<int_list<(I0 < I1) ? I0 : I1, Is...>>::value;
 };
 
 
@@ -170,8 +166,8 @@ struct il_max<int_list<I0>> {
 };
 
 template<long I0, long I1, long... Is>
-struct il_max<int_list<I0,I1,Is...> > {
-    static constexpr long value = il_max<int_list<(I0 > I1) ? I0 : I1,Is...>>::value;
+struct il_max<int_list<I0, I1, Is...> > {
+    static constexpr long value = il_max<int_list<(I0 > I1) ? I0 : I1, Is...>>::value;
 };
 
 
@@ -228,11 +224,11 @@ struct il_slice_impl<0, 0, PadValue, empty_int_list, Is...> {
 
 template<class List, size_t ListSize, size_t First, size_t Last, long PadValue = 0>
 struct il_slice_ {
-    typedef typename il_slice_impl<First,(Last-First),PadValue,List>::type type;
+    typedef typename il_slice_impl<First, (Last-First), PadValue, List>::type type;
 };
 
 template<class List, size_t ListSize, long PadValue>
-struct il_slice_<List,ListSize,0,ListSize,PadValue> {
+struct il_slice_<List, ListSize, 0, ListSize, PadValue> {
     typedef List type;
 };
 
@@ -242,7 +238,7 @@ struct il_slice_<List,ListSize,0,ListSize,PadValue> {
 template<class List, size_t First, size_t Last>
 struct il_slice {
     static_assert(First <= Last, "First > Last");
-    typedef typename il_slice_<List,il_size<List>::value,First,Last>::type type;
+    typedef typename il_slice_<List, il_size<List>::value, First, Last>::type type;
 };
 
 /**
@@ -252,11 +248,11 @@ template<class List, size_t N>
 struct il_right {
     static constexpr size_t list_size = il_size<List>::value;
     static constexpr size_t first_idx = (list_size > N) ? (list_size - N) : 0;
-    typedef typename il_slice<List,first_idx,list_size>::type type;
+    typedef typename il_slice<List, first_idx, list_size>::type type;
 };
 
 template<size_t N>
-struct il_right<empty_int_list,N> {
+struct il_right<empty_int_list, N> {
     typedef empty_int_list type;
 };
 
@@ -266,12 +262,12 @@ template<class List, long... Vs>
 struct il_reverse_impl;
 
 template<long I0, long... Is, long... Vs>
-struct il_reverse_impl<int_list<I0,Is...>,Vs...> {
-    typedef typename il_reverse_impl<int_list<Is...>,I0,Vs...>::type type;
+struct il_reverse_impl<int_list<I0, Is...>, Vs...> {
+    typedef typename il_reverse_impl<int_list<Is...>, I0, Vs...>::type type;
 };
 
 template<long... Vs>
-struct il_reverse_impl<empty_int_list,Vs...> {
+struct il_reverse_impl<empty_int_list, Vs...> {
     typedef int_list<Vs...> type;
 };
 
@@ -288,8 +284,8 @@ template<class List1, class List2>
 struct il_concat_impl;
 
 template<long... As, long... Bs>
-struct il_concat_impl<int_list<As...>,int_list<Bs...>> {
-    typedef int_list<As...,Bs...> type;
+struct il_concat_impl<int_list<As...>, int_list<Bs...>> {
+    typedef int_list<As..., Bs...> type;
 };
 
 // static list concat(list, list)
@@ -306,9 +302,9 @@ struct il_concat<List0> {
 };
 
 template<class List0, class List1, class... Lists>
-struct il_concat<List0,List1,Lists...> {
+struct il_concat<List0, List1, Lists...> {
     typedef typename il_concat<
-                typename il_concat_impl<List0,List1>::type,
+                typename il_concat_impl<List0, List1>::type,
                 Lists...
             >::type
             type;
@@ -323,8 +319,8 @@ struct il_push_back;
  * @brief Appends @p What to given list.
  */
 template<long... Is, long Val>
-struct il_push_back<int_list<Is...>,Val> {
-    typedef int_list<Is...,Val> type;
+struct il_push_back<int_list<Is...>, Val> {
+    typedef int_list<Is..., Val> type;
 };
 
 template<class List, long Val>
@@ -334,8 +330,8 @@ struct il_push_front;
  * @brief Appends @p What to given list.
  */
 template<long... Is, long Val>
-struct il_push_front<int_list<Is...>,Val> {
-    typedef int_list<Val,Is...> type;
+struct il_push_front<int_list<Is...>, Val> {
+    typedef int_list<Val, Is...> type;
 };
 
 
@@ -346,7 +342,7 @@ struct il_push_front<int_list<Is...>,Val> {
  */
 template<class List>
 struct il_pop_back {
-    typedef typename il_slice<List,0,il_size<List>::value-1>::type type;
+    typedef typename il_slice<List, 0, il_size<List>::value-1>::type type;
 };
 
 template<>
@@ -360,10 +356,10 @@ template<size_t N, long... Is>
 struct il_at_impl;
 
 template<size_t N, long I0, long... Is>
-struct il_at_impl<N,I0,Is...> : il_at_impl<N-1,Is...> { };
+struct il_at_impl<N, I0, Is...> : il_at_impl<N-1, Is...> { };
 
 template<long I0, long... Is>
-struct il_at_impl<0,I0,Is...> {
+struct il_at_impl<0, I0, Is...> {
     static constexpr long value = I0;
 };
 
@@ -388,8 +384,8 @@ struct il_prepend;
  * @brief Creates a new list with @p What prepended to @p List.
  */
 template<long Val, long... Is>
-struct il_prepend<int_list<Is...>,Val> {
-    typedef int_list<Val,Is...> type;
+struct il_prepend<int_list<Is...>, Val> {
+    typedef int_list<Val, Is...> type;
 };
 
 // list resize(list, size, fill_type)
@@ -399,12 +395,12 @@ template<class List, bool OldSizeLessNewSize,
 struct il_pad_right_impl;
 
 template<class List, size_t OldSize, size_t NewSize, long FillVal>
-struct il_pad_right_impl<List,false,OldSize,NewSize,FillVal> {
-    typedef typename il_slice<List,0,NewSize>::type type;
+struct il_pad_right_impl<List, false, OldSize, NewSize, FillVal> {
+    typedef typename il_slice<List, 0, NewSize>::type type;
 };
 
 template<class List, size_t Size, long FillVal>
-struct il_pad_right_impl<List,false,Size,Size,FillVal> {
+struct il_pad_right_impl<List, false, Size, Size, FillVal> {
     typedef List type;
 };
 
@@ -470,12 +466,12 @@ struct il_pad_left {
  */
 template<long From, long To, long... Is>
 struct il_range {
-    typedef typename il_range<From,To-1,To,Is...>::type type;
+    typedef typename il_range<From, To-1, To, Is...>::type type;
 };
 
 template<long X, long... Is>
-struct il_range<X,X,Is...> {
-    typedef int_list<X,Is...> type;
+struct il_range<X, X, Is...> {
+    typedef int_list<X, Is...> type;
 };
 
 /**
@@ -485,14 +481,14 @@ template<typename List, long Pos = 0, typename Indices = empty_int_list>
 struct il_indices;
 
 template<template<class...> class List, long... Is, long Pos>
-struct il_indices<List<>,Pos,int_list<Is...>> {
+struct il_indices<List<>, Pos, int_list<Is...>> {
     typedef int_list<Is...> type;
 };
 
 template<template<class...> class List, typename T0, typename... Ts, long Pos, long... Is>
-struct il_indices<List<T0,Ts...>,Pos,int_list<Is...>> {
+struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
     // always use type_list to forward remaining Ts... arguments
-    typedef typename il_indices<type_list<Ts...>,Pos+1,int_list<Is...,Pos>>::type type;
+    typedef typename il_indices<type_list<Ts...>, Pos+1, int_list<Is..., Pos>>::type type;
 };
 
 template<typename T>
@@ -502,7 +498,7 @@ constexpr auto get_indices(const T&) -> typename il_indices<T>::type {
 
 template<size_t Num, typename T>
 constexpr auto get_right_indices(const T&)
--> typename il_right<typename il_indices<T>::type,Num>::type {
+-> typename il_right<typename il_indices<T>::type, Num>::type {
     return {};
 }
 

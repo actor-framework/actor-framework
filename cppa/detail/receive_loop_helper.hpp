@@ -39,7 +39,6 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/partial_function.hpp"
 
-#include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
 namespace cppa { namespace detail {

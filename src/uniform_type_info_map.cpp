@@ -534,7 +534,7 @@ void push_native_type(abstract_int_tinfo* m [][2]) {
 template<typename T0, typename T1, typename... Ts>
 void push_native_type(abstract_int_tinfo* m [][2]) {
     push_native_type<T0>(m);
-    push_native_type<T1,Ts...>(m);
+    push_native_type<T1, Ts...>(m);
 }
 
 class utim_impl : public uniform_type_info_map {
@@ -667,7 +667,7 @@ class utim_impl : public uniform_type_info_map {
 
  private:
 
-    typedef std::map<std::string,std::string> strmap;
+    typedef std::map<std::string, std::string> strmap;
 
     uti_impl<process_information_ptr>       m_type_proc;
     uti_impl<channel_ptr>                   m_type_channel;
@@ -696,7 +696,7 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer,25> m_builtin_types;
+    std::array<pointer, 25> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
 
     template<typename Container>

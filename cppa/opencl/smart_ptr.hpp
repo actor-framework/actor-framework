@@ -109,14 +109,14 @@ class smart_ptr {
 
 };
 
-typedef smart_ptr<cl_mem,clRetainMemObject,clReleaseMemObject> mem_ptr;
-typedef smart_ptr<cl_event,clRetainEvent,clReleaseEvent>       event_ptr;
-typedef smart_ptr<cl_kernel,clRetainKernel,clReleaseKernel>    kernel_ptr;
-typedef smart_ptr<cl_context,clRetainContext,clReleaseContext> context_ptr;
-typedef smart_ptr<cl_program,clRetainProgram,clReleaseProgram> program_ptr;
-typedef smart_ptr<cl_device_id,clRetainDeviceDummy,clReleaseDeviceDummy>
+typedef smart_ptr<cl_mem, clRetainMemObject, clReleaseMemObject> mem_ptr;
+typedef smart_ptr<cl_event, clRetainEvent, clReleaseEvent>       event_ptr;
+typedef smart_ptr<cl_kernel, clRetainKernel, clReleaseKernel>    kernel_ptr;
+typedef smart_ptr<cl_context, clRetainContext, clReleaseContext> context_ptr;
+typedef smart_ptr<cl_program, clRetainProgram, clReleaseProgram> program_ptr;
+typedef smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>
         device_ptr;
-typedef smart_ptr<cl_command_queue,clRetainCommandQueue,clReleaseCommandQueue>
+typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
         command_queue_ptr;
 
 } } // namespace cppa::opencl

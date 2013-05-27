@@ -130,7 +130,7 @@ class default_behavior_impl : public behavior_impl {
     }
 
     typename behavior_impl::pointer copy(const generic_timeout_definition& tdef) const {
-        return new default_behavior_impl<MatchExpr,std::function<void()> >(m_expr, tdef);
+        return new default_behavior_impl<MatchExpr, std::function<void()> >(m_expr, tdef);
     }
 
     void handle_timeout() { m_fun(); }
@@ -143,8 +143,13 @@ class default_behavior_impl : public behavior_impl {
 };
 
 template<class MatchExpr, typename F>
-default_behavior_impl<MatchExpr, F>* new_default_behavior_impl(const MatchExpr& mexpr, util::duration d, F f) {
+default_behavior_impl<MatchExpr, F>* new_default_behavior(const MatchExpr& mexpr, util::duration d, F f) {
     return new default_behavior_impl<MatchExpr, F>(mexpr, d, f);
+}
+
+template<typename F>
+default_behavior_impl<dummy_match_expr, F>* new_default_behavior(util::duration d, F f) {
+    return new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{}, d, f);
 }
 
 template<typename F>

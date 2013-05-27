@@ -144,7 +144,7 @@ size_t run_case(std::vector<T>& vec,
 template<size_t N, size_t Size>
 struct unwind_and_call {
 
-    typedef unwind_and_call<N+1,Size> next;
+    typedef unwind_and_call<N+1, Size> next;
 
     template<class Target, typename T, typename... Unwinded>
     static inline bool _(Target& target, std::vector<T>& vec, Unwinded&&... args) {
@@ -222,7 +222,7 @@ size_t run_case(std::vector<T>& vec,
     typedef typename Case::second_type partial_fun_type;
     typedef typename partial_fun_type::result_type result_type;
     typedef typename partial_fun_type::arg_types arg_types;
-    typedef typename util::tl_map<arg_types, util::rm_ref>::type plain_args;
+    typedef typename util::tl_map<arg_types, util::rm_const_and_ref>::type plain_args;
     static_assert(num_args > 0,
                   "empty match expressions are not allowed in stream matching");
     static_assert(util::tl_forall<plain_args, util::tbind<std::is_same, T>::template type>::value,

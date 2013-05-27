@@ -63,7 +63,7 @@ class receive_policy {
  public:
 
     typedef mailbox_element* pointer;
-    typedef std::unique_ptr<mailbox_element,disposer> smart_pointer;
+    typedef std::unique_ptr<mailbox_element, disposer> smart_pointer;
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -77,7 +77,7 @@ class receive_policy {
     bool invoke_from_cache(Client* client,
                            Fun& fun,
                            message_id awaited_response = message_id{}) {
-        std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
+        std::integral_constant<receive_policy_flag, Client::receive_flag> policy;
         auto i = m_cache.begin();
         auto e = m_cache.end();
         while (i != e) {
@@ -110,7 +110,7 @@ class receive_policy {
                 Fun& fun,
                 message_id awaited_response = message_id()) {
         smart_pointer node(node_ptr);
-        std::integral_constant<receive_policy_flag,Client::receive_flag> policy;
+        std::integral_constant<receive_policy_flag, Client::receive_flag> policy;
         switch (this->handle_message(client, node.get(), fun,
                                      awaited_response, policy)) {
             case hm_msg_handled: {
@@ -205,7 +205,7 @@ class receive_policy {
     typedef typename rp_flag<rp_nestable>::type nestable;
     typedef typename rp_flag<rp_sequential>::type sequential;
 
-    std::list<std::unique_ptr<mailbox_element,disposer> > m_cache;
+    std::list<std::unique_ptr<mailbox_element, disposer> > m_cache;
 
     template<class Client>
     inline void handle_timeout(Client* client, behavior& bhvr) {
@@ -237,7 +237,7 @@ class receive_policy {
     filter_result filter_msg(Client* client, pointer node) {
         const any_tuple& msg = node->msg;
         auto mid = node->mid;
-        auto& arr = detail::static_types_array<atom_value,std::uint32_t>::arr;
+        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
         if (   msg.size() == 2
             && msg.type_at(0) == arr[0]
             && msg.type_at(1) == arr[1]) {
