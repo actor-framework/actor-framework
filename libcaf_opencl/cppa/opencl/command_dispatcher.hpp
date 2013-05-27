@@ -89,7 +89,7 @@ class command_dispatcher {
                     const dim_vec& global_dims,
                     const dim_vec& offsets,
                     const dim_vec& local_dims,
-                    std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)> map_args,
+                    std::function<option<cow_tuple<typename util::rm_const_and_ref<Args>::type...>>(any_tuple)> map_args,
                     std::function<any_tuple(Ret&)> map_result)
     {
         return actor_facade<Ret (Args...)>::create(this,
@@ -109,14 +109,14 @@ class command_dispatcher {
                     const dim_vec& offsets = {},
                     const dim_vec& local_dims = {})
     {
-        std::function<option<cow_tuple<typename util::rm_ref<Args>::type...>>(any_tuple)>
+        std::function<option<cow_tuple<typename util::rm_const_and_ref<Args>::type...>>(any_tuple)>
             map_args = [] (any_tuple msg) {
-            return tuple_cast<typename util::rm_ref<Args>::type...>(msg);
+            return tuple_cast<typename util::rm_const_and_ref<Args>::type...>(msg);
         };
         std::function<any_tuple(Ret&)> map_result = [] (Ret& result) {
             return make_any_tuple(std::move(result));
         };
-        return this->spawn<Ret,Args...>(prog,
+        return this->spawn<Ret, Args...>(prog,
                                         kernel_name,
                                         global_dims,
                                         offsets,
@@ -149,7 +149,7 @@ class command_dispatcher {
             , max_itms_per_dim(max_itms_per_dim) { }
     };
 
-    typedef intrusive::blocking_single_reader_queue<command,dereferencer>
+    typedef intrusive::blocking_single_reader_queue<command, dereferencer>
             job_queue;
 
     static inline command_dispatcher* create_singleton() {
