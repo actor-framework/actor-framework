@@ -67,6 +67,11 @@ inline detail::empty_tuple* get_empty_tuple() {
     return detail::singleton_manager::get_empty_tuple();
 }
 
+inline opencl::command_dispatcher* get_command_dispatcher() {
+    return detail::singleton_manager::get_command_dispatcher();
+}
+
+
 } // namespace cppa
 
 #endif // CPPA_SINGLETONS_HPP
