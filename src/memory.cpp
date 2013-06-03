@@ -36,6 +36,12 @@
 
 using namespace std;
 
+#ifdef CPPA_DISABLE_MEM_MANAGEMENT
+
+int cppa_memory_keep_compiler_happy() { return 0; }
+
+#else // CPPA_DISABLE_MEM_MANAGEMENT
+
 namespace cppa { namespace detail {
 
 namespace {
@@ -84,17 +90,6 @@ void memory::add_cache_map_entry(const type_info* tinf, memory_cache* instance) 
 
 instance_wrapper::~instance_wrapper() { }
 
-//pair<instance_wrapper*, void*> memory::allocate(const type_info* type) {
-//    return get_cache_map_entry(type)->allocate();
-//}
-
-//recursive_queue_node* memory::new_queue_node() {
-//    typedef recursive_queue_node type;
-//    return get_cache_map_entry(&typeid(type))->typed_new<type>();
-//}
-
-//void memory::deallocate(const type_info* type, void* ptr) {
-//    return get_cache_map_entry(type)->deallocate(ptr);
-//}
-
 } } // namespace cppa::detail
+
+#endif // CPPA_DISABLE_MEM_MANAGEMENT
