@@ -34,6 +34,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <type_traits>
+
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace util {
 
@@ -42,12 +45,20 @@ std::vector<std::string> split(const std::string& str,
                                bool keep_empties = true);
 
 template<typename Iterator>
-std::string join(Iterator begin, Iterator end) {
+typename std::enable_if<is_forward_iterator<Iterator>::value,std::string>::type
+join(Iterator begin, Iterator end, const std::string& glue = "") {
     std::string result;
     std::for_each(begin, end, [&](const std::string& str) {
+        if (!result.empty()) result += glue;
         result += str;
     });
     return result;
+}
+
+template<typename Container>
+typename std::enable_if<is_iterable<Container>::value,std::string>::type
+join(const Container& c, const std::string& glue = "") {
+    return join(c.begin(), c.end(), glue);
 }
 
 } } // namespace cppa::util
