@@ -47,11 +47,17 @@ namespace cppa { namespace detail {
 
 namespace {
 
-constexpr size_t s_alloc_size = 1024*1024;  // allocate ~1mb chunks
-constexpr size_t s_min_elements = 5;   // don't create less than 5 elements
-constexpr size_t s_cache_size = 10*1024*1024; // cache about 10mb per thread
+constexpr size_t s_alloc_size   = 1024*1024;    // allocate ~1mb chunks
+constexpr size_t s_cache_size   = 10*1024*1024; // cache about 10mb per thread
+constexpr size_t s_min_elements = 5;            // don't create < 5 elements
 
 } // namespace <anonymous>
+
+struct disposer {
+    inline void operator()(memory_managed* ptr) const {
+        ptr->request_deletion();
+    }
+};
 
 class instance_wrapper {
 
@@ -82,6 +88,36 @@ class memory_cache {
     virtual void* downcast(memory_managed* ptr) = 0;
 
 };
+
+class instance_wrapper;
+
+template<typename T>
+class basic_memory_cache;
+
+#ifdef CPPA_DISABLE_MEM_MANAGEMENT
+
+class memory {
+
+    memory() = delete;
+
+ public:
+
+    /*
+     * @brief Allocates storage, initializes a new object, and returns
+     *        the new instance.
+     */
+    template<typename T, typename... Ts>
+    static T* create(Ts&&... args) {
+        return new T (std::forward<Ts>(args)...);
+    }
+
+    static inline memory_cache* get_cache_map_entry(const std::type_info*) {
+        return nullptr;
+    }
+
+};
+
+#else // CPPA_DISABLE_MEM_MANAGEMENT
 
 template<typename T>
 class basic_memory_cache : public memory_cache {
@@ -163,12 +199,6 @@ class basic_memory_cache : public memory_cache {
 
 };
 
-struct disposer {
-    inline void operator()(memory_managed* ptr) const {
-        ptr->request_deletion();
-    }
-};
-
 class memory {
 
     memory() = delete;
@@ -208,6 +238,8 @@ class memory {
     }
 
 };
+
+#endif // CPPA_DISABLE_MEM_MANAGEMENT
 
 } } // namespace cppa::detail
 

@@ -26,7 +26,7 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
-  set(CMAKE_CXX_FLAGS_RELEASE        "-O3")
+  set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
 
@@ -72,11 +72,11 @@ endif ()
 # set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DEBUG_MODE")
+  add_definitions(-DCPPA_DEBUG_MODE)
 endif (ENABLE_DEBUG)
 
 if (CPPA_LOG_LEVEL)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL}")
+  add_definitions(-DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL})
 endif(CPPA_LOG_LEVEL)
 
 # set build default build type if not set
@@ -185,8 +185,12 @@ if (ENABLE_OPENCL)
       src/opencl/program.cpp
       src/opencl/actor_facade.cpp
       src/opencl/command_dispatcher.cpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_OPENCL")
+  add_definitions(-DCPPA_OPENCL)
 endif (ENABLE_OPENCL)
+
+if (DISABLE_MEM_MANAGEMENT)
+  add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
+endif (DISABLE_MEM_MANAGEMENT)
 
 if (DISABLE_CONTEXT_SWITCHING)
   # explicitly disabled
@@ -355,8 +359,10 @@ endmacro ()
 
 toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
 toYesNo(ENABLE_OPENCL BUILD_OPENCL_STR)
+toYesNo(DISABLE_MEM_MANAGEMENT DISABLE_MEM_MANAGEMENT_STR)
 invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
 invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
+invertYesNo(DISABLE_MEM_MANAGEMENT_STR WITH_MEM_MANAGEMENT)
 
 if (NOT "${CPPA_BUILD_STATIC}" STREQUAL "yes")
   set(CPPA_BUILD_STATIC "no")
@@ -383,6 +389,7 @@ message("\n====================|  Build Summary  |===================="
         "\nBuild static:      ${CPPA_BUILD_STATIC}"
         "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
         "\nBuild OpenCL:      ${BUILD_OPENCL_STR}"
+        "\nWith mem. mgmt.:   ${WITH_MEM_MANAGEMENT}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
