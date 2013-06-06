@@ -80,7 +80,7 @@ class command_impl : public command {
                                              1, std::multiplies<size_t>{}))
         , m_handle(handle)
         , m_kernel(kernel)
-        , m_arguments(arguments)
+        , m_arguments(move(arguments))
         , m_global_dims(global_dims)
         , m_offsets(offsets)
         , m_local_dims(local_dims)
@@ -141,7 +141,6 @@ class command_impl : public command {
 
     void handle_results () {
         cl_int err{0};
-        cl_event read_event;
         T result(m_number_of_values);
         err = clEnqueueReadBuffer(m_queue.get(),
                                   m_arguments[0].get(),
@@ -151,14 +150,12 @@ class command_impl : public command {
                                   result.data(),
                                   0,
                                   nullptr,
-                                  &read_event);
-        clReleaseEvent(read_event);
+                                  nullptr);
         if (err != CL_SUCCESS) {
            throw std::runtime_error("clEnqueueReadBuffer: "
                                     + get_opencl_error(err));
         }
-        auto mapped_result = m_map_result(result);
-        reply_tuple_to(m_handle, mapped_result);
+        reply_tuple_to(m_handle, m_map_result(result));
     }
 };
 
