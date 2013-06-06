@@ -395,6 +395,13 @@ void check_wildcards() {
             CPPA_CHECK(&get<0>(*opt3) == at1.at(0));
             CPPA_CHECK(&get<1>(*opt3) == at1.at(3));
         }
+        auto opt4 = tuple_cast<anything, double>(at1);
+        CPPA_CHECK(opt4);
+        if (opt4) {
+            CPPA_CHECK((*opt4 == make_any_tuple(4.0)));
+            CPPA_CHECK_EQUAL(get<0>(*opt4), 4.0);
+            CPPA_CHECK(&get<0>(*opt4) == at1.at(3));
+        }
     }
 }
 
@@ -409,6 +416,26 @@ void check_move_ops() {
     CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
 }
 
+void check_drop() {
+    CPPA_PRINT(__func__);
+    auto t0 = make_any_tuple(0, 1, 2, 3);
+    auto t1 = t0.drop(2);
+    CPPA_CHECK_EQUAL(t1.size(), 2);
+    CPPA_CHECK_EQUAL(t1.get_as<int>(0), 2);
+    CPPA_CHECK_EQUAL(t1.get_as<int>(1), 3);
+    CPPA_CHECK(t1 == make_any_tuple(2, 3));
+    auto t2 = t0.drop_right(2);
+    CPPA_CHECK_EQUAL(t2.size(), 2);
+    CPPA_CHECK_EQUAL(t2.get_as<int>(0), 0);
+    CPPA_CHECK_EQUAL(t2.get_as<int>(1), 1);
+    CPPA_CHECK(t2 == make_any_tuple(0, 1));
+    CPPA_CHECK(t0.take(3) == t0.drop_right(1));
+    CPPA_CHECK(t0.take_right(3) == t0.drop(1));
+    CPPA_CHECK(t0 == t0.take(4));
+    CPPA_CHECK(t0.take(4) == t0.take_right(20));
+    CPPA_CHECK(t0.take(0).empty());
+}
+
 int main() {
     CPPA_TEST(test_tuple);
     announce<expensive_copy_struct>(&expensive_copy_struct::value);
@@ -417,6 +444,7 @@ int main() {
     check_guards();
     check_wildcards();
     check_move_ops();
+    check_drop();
     await_all_others_done();
     shutdown();
     return CPPA_TEST_RESULT();

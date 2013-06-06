@@ -38,7 +38,6 @@
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
-#include "cppa/detail/decorated_tuple.hpp"
 
 namespace cppa { namespace detail {
 

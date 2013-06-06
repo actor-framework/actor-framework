@@ -103,6 +103,7 @@ set(LIBCPPA_SRC
     src/context_switching_actor.cpp
     src/continuable_reader.cpp
     src/continuable_writer.cpp
+    src/decorated_tuple.cpp
     src/default_actor_addressing.cpp
     src/default_actor_proxy.cpp
     src/default_peer.cpp

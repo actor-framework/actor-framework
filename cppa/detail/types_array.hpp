@@ -183,14 +183,32 @@ struct static_types_array_from_type_list<util::type_list<T...>> {
     typedef static_types_array<T...> type;
 };
 
-// utility for singleton-like access to a type_info instance of a type_list
 template<typename... T>
-struct static_type_list {
+struct static_type_list;
+
+template<typename T>
+struct static_type_list<T> {
     static const std::type_info* list;
+    static inline const std::type_info* by_offset(size_t offset) {
+        return offset == 0 ? list : &typeid(util::type_list<>);
+    }
 };
 
-template<typename... T>
-const std::type_info* static_type_list<T...>::list = &typeid(util::type_list<T...>);
+template<typename T>
+const std::type_info* static_type_list<T>::list = &typeid(util::type_list<T>);
+
+
+// utility for singleton-like access to a type_info instance of a type_list
+template<typename T0, typename T1, typename... Ts>
+struct static_type_list<T0, T1, Ts...> {
+    static const std::type_info* list;
+    static inline const std::type_info* by_offset(size_t offset) {
+        return offset == 0 ? list : static_type_list<T1, Ts...>::list;
+    }
+};
+
+template<typename T0, typename T1, typename... Ts>
+const std::type_info* static_type_list<T0, T1, Ts...>::list = &typeid(util::type_list<T0, T1, Ts...>);
 
 } } // namespace cppa::detail
 

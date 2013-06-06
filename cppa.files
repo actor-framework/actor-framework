@@ -294,3 +294,4 @@ src/get_mac_addresses.cpp
 cppa/util/get_root_uuid.hpp
 src/get_root_uuid.cpp
 cppa/util/type_traits.hpp
+src/decorated_tuple.cpp

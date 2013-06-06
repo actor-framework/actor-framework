@@ -28,61 +28,71 @@
 \******************************************************************************/
 
 
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/detail/empty_tuple.hpp"
+#include "cppa/detail/decorated_tuple.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-any_tuple::any_tuple() : m_vals(get_empty_tuple()) { }
-
-any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
-
-any_tuple::any_tuple(any_tuple&& other) : m_vals(get_empty_tuple()) {
-    m_vals.swap(other.m_vals);
+void* decorated_tuple::mutable_at(size_t pos) {
+    CPPA_REQUIRE(pos < size());
+    return m_decorated->mutable_at(m_mapping[pos]);
 }
 
-any_tuple::any_tuple(const data_ptr& vals) : m_vals(vals) { }
-
-any_tuple& any_tuple::operator=(any_tuple&& other) {
-    m_vals.swap(other.m_vals);
-    return *this;
+size_t decorated_tuple::size() const {
+    return m_mapping.size();
 }
 
-void any_tuple::reset() {
-    m_vals.reset(get_empty_tuple());
+decorated_tuple* decorated_tuple::copy() const {
+    return new decorated_tuple(*this);
 }
 
-void* any_tuple::mutable_at(size_t p) {
-    return m_vals->mutable_at(p);
+const void* decorated_tuple::at(size_t pos) const {
+    CPPA_REQUIRE(pos < size());
+    return m_decorated->at(m_mapping[pos]);
 }
 
-const void* any_tuple::at(size_t p) const {
-    return m_vals->at(p);
+const uniform_type_info* decorated_tuple::type_at(size_t pos) const {
+    CPPA_REQUIRE(pos < size());
+    return m_decorated->type_at(m_mapping[pos]);
 }
 
-const uniform_type_info* any_tuple::type_at(size_t p) const {
-    return m_vals->type_at(p);
+auto decorated_tuple::type_token() const -> rtti {
+    return m_token;
 }
 
-bool any_tuple::equals(const any_tuple& other) const {
-    return m_vals->equals(*other.vals());
+void decorated_tuple::init() {
+    CPPA_REQUIRE(   m_mapping.empty()
+                 ||   *(std::max_element(m_mapping.begin(), m_mapping.end()))
+                    < static_cast<const pointer&>(m_decorated)->size());
 }
 
-any_tuple any_tuple::drop(size_t n) const {
-    if (n == 0) return *this;
-    if (n >= size()) return any_tuple{};
-    return any_tuple{detail::decorated_tuple::create(m_vals, n)};
+void decorated_tuple::init(size_t offset) {
+    const pointer& dec = m_decorated;
+    if (offset < dec->size()) {
+        size_t i = offset;
+        m_mapping.resize(dec->size() - offset);
+        std::generate(m_mapping.begin(), m_mapping.end(), [&] {return i++;});
+    }
+    init();
 }
 
-any_tuple any_tuple::drop_right(size_t n) const {
-    using namespace std;
-    if (n == 0) return *this;
-    if (n >= size()) return any_tuple{};
-    vector<size_t> mapping(size() - n);
-    size_t i = 0;
-    generate(mapping.begin(), mapping.end(), [&] { return i++; });
-    return any_tuple{detail::decorated_tuple::create(m_vals, move(mapping))};
+decorated_tuple::decorated_tuple(pointer d, vector_type&& v)
+: super(true), m_decorated(std::move(d)), m_token(&typeid(void)), m_mapping(std::move(v)) {
+    init();
 }
 
-} // namespace cppa
+decorated_tuple::decorated_tuple(pointer d, rtti ti, vector_type&& v)
+: super(false), m_decorated(std::move(d)), m_token(ti), m_mapping(std::move(v)) {
+    init();
+}
+
+decorated_tuple::decorated_tuple(pointer d, size_t offset)
+: super(true), m_decorated(std::move(d)), m_token(&typeid(void)) {
+    init(offset);
+}
+
+decorated_tuple::decorated_tuple(pointer d, rtti ti, size_t offset)
+: super(false), m_decorated(std::move(d)), m_token(ti) {
+    init(offset);
+}
+
+} } // namespace cppa::detail

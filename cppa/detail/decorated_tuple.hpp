@@ -40,7 +40,6 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/limited_vector.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
@@ -48,97 +47,72 @@
 
 namespace cppa { namespace detail {
 
-template<typename... Ts>
 class decorated_tuple : public abstract_tuple {
 
     typedef abstract_tuple super;
 
-    static_assert(sizeof...(Ts) > 0,
-                  "decorated_tuple is not allowed to be empty");
+    decorated_tuple& operator=(const decorated_tuple&) = delete;
 
  public:
 
-    typedef util::limited_vector<size_t, sizeof...(Ts)> vector_type;
+    typedef std::vector<size_t> vector_type;
 
-    typedef cow_ptr<abstract_tuple> cow_pointer_type;
+    typedef cow_ptr<abstract_tuple> pointer;
 
-    static inline cow_pointer_type create(cow_pointer_type d,
-                                          const vector_type& v) {
-        return cow_pointer_type{new decorated_tuple(std::move(d), v)};
+    typedef const std::type_info* rtti;
+
+    // creates a dynamically typed subtuple from @p d with an offset
+    static inline pointer create(pointer d, vector_type v) {
+        return pointer{new decorated_tuple(std::move(d), std::move(v))};
     }
 
-    // creates a subtuple form @p d with an offset
-    static inline cow_pointer_type create(cow_pointer_type d, size_t offset) {
-        return cow_pointer_type{new decorated_tuple(std::move(d), offset)};
+    // creates a statically typed subtuple from @p d with an offset
+    static inline pointer create(pointer d, rtti ti, vector_type v) {
+        return pointer{new decorated_tuple(std::move(d), ti, std::move(v))};
     }
 
-    virtual void* mutable_at(size_t pos) {
-        CPPA_REQUIRE(pos < size());
-        return m_decorated->mutable_at(m_mapping[pos]);
+    // creates a dynamically typed subtuple from @p d with an offset
+    static inline pointer create(pointer d, size_t offset) {
+        return pointer{new decorated_tuple(std::move(d), offset)};
     }
 
-    virtual size_t size() const {
-        return sizeof...(Ts);
+    // creates a statically typed subtuple from @p d with an offset
+    static inline pointer create(pointer d, rtti ti, size_t offset) {
+        return pointer{new decorated_tuple(std::move(d), ti, offset)};
     }
 
-    virtual decorated_tuple* copy() const {
-        return new decorated_tuple(*this);
-    }
+    virtual void* mutable_at(size_t pos) override;
 
-    virtual const void* at(size_t pos) const {
-        CPPA_REQUIRE(pos < size());
-        return m_decorated->at(m_mapping[pos]);
-    }
+    virtual size_t size() const override;
 
-    virtual const uniform_type_info* type_at(size_t pos) const {
-        CPPA_REQUIRE(pos < size());
-        return m_decorated->type_at(m_mapping[pos]);
-    }
+    virtual decorated_tuple* copy() const override;
 
-    const std::type_info* type_token() const {
-        return static_type_list<Ts...>::list;
-    }
+    virtual const void* at(size_t pos) const override;
+
+    virtual const uniform_type_info* type_at(size_t pos) const override;
+
+    rtti type_token() const override;
 
  private:
 
-    cow_pointer_type m_decorated;
+    pointer     m_decorated;
+    rtti        m_token;
     vector_type m_mapping;
 
-    decorated_tuple(cow_pointer_type d, const vector_type& v)
-        : super(false)
-        , m_decorated(std::move(d)), m_mapping(v) {
-#       ifdef CPPA_DEBUG_MODE
-        const cow_pointer_type& ptr = m_decorated; // prevent detaching
-#       endif
-        CPPA_REQUIRE(ptr->size() >= sizeof...(Ts));
-        CPPA_REQUIRE(v.size() == sizeof...(Ts));
-        CPPA_REQUIRE(*(std::max_element(v.begin(), v.end())) < ptr->size());
-    }
+    void init();
 
-    decorated_tuple(cow_pointer_type d, size_t offset)
-        : super(false), m_decorated(std::move(d)) {
-#       ifdef CPPA_DEBUG_MODE
-        const cow_pointer_type& ptr = m_decorated; // prevent detaching
-#       endif
-        CPPA_REQUIRE((ptr->size() - offset) >= sizeof...(Ts));
-        CPPA_REQUIRE(offset > 0);
-        size_t i = offset;
-        m_mapping.resize(sizeof...(Ts));
-        std::generate(m_mapping.begin(), m_mapping.end(), [&]() {return i++;});
-    }
+    void init(size_t);
+
+    decorated_tuple(pointer, size_t);
+
+    decorated_tuple(pointer, rtti, size_t);
+
+    decorated_tuple(pointer, vector_type&&);
+
+    decorated_tuple(pointer, rtti, vector_type&&);
 
     decorated_tuple(const decorated_tuple&) = default;
 
-    decorated_tuple& operator=(const decorated_tuple&) = delete;
-
-};
-
-template<typename TypeList>
-struct decorated_cow_tuple_from_type_list;
-
-template<typename... Ts>
-struct decorated_cow_tuple_from_type_list< util::type_list<Ts...> > {
-    typedef decorated_tuple<Ts...> type;
 };
 
 } } // namespace cppa::detail

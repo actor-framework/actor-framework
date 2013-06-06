@@ -110,7 +110,27 @@ class any_tuple {
     /**
      * @brief Gets the size of this tuple.
      */
-    size_t size() const;
+    inline size_t size() const;
+
+    /**
+     * @brief Creates a new tuple with all but the first n values.
+     */
+    any_tuple drop(size_t n) const;
+
+    /**
+     * @brief Creates a new tuple with all but the last n values.
+     */
+    any_tuple drop_right(size_t n) const;
+
+    /**
+     * @brief Creates a new tuple from the first n values.
+     */
+    inline any_tuple take(size_t n) const;
+
+    /**
+     * @brief Creates a new tuple from the last n values.
+     */
+    inline any_tuple take_right(size_t n) const;
 
     /**
      * @brief Gets a mutable pointer to the element at position @p p.
@@ -308,6 +328,18 @@ inline bool any_tuple::dynamically_typed() const {
 
 inline void any_tuple::force_detach() {
     m_vals.detach();
+}
+
+inline size_t any_tuple::size() const {
+    return m_vals->size();
+}
+
+inline any_tuple any_tuple::take(size_t n) const {
+    return n >= size() ? *this : drop_right(size() - n);
+}
+
+inline any_tuple any_tuple::take_right(size_t n) const {
+    return n >= size() ? *this : drop(size() - n);
 }
 
 template<typename T, bool IsIterable = true>

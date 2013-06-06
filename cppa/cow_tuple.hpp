@@ -73,7 +73,6 @@ class cow_tuple<Head, Tail...> {
     friend class any_tuple;
 
     typedef detail::tuple_vals<Head, Tail...> data_type;
-    typedef detail::decorated_tuple<Head, Tail...> decorated_type;
 
     cow_ptr<detail::abstract_tuple> m_vals;
 
@@ -114,7 +113,8 @@ class cow_tuple<Head, Tail...> {
 
     static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset) {
         CPPA_REQUIRE(offset > 0);
-        return {priv_ctor{}, decorated_type::create(std::move(ptr), offset)};
+        auto ti = detail::static_type_list<Head, Tail...>::by_offset(offset);
+        return {priv_ctor{}, detail::decorated_tuple::create(std::move(ptr), ti, offset)};
     }
 
     /**
@@ -152,9 +152,15 @@ class cow_tuple<Head, Tail...> {
         return {priv_ctor{}, std::move(ptr)};
     }
 
-    static cow_tuple from(cow_ptr_type ptr,
-                          const util::limited_vector<size_t, num_elements>& mv) {
-        return {priv_ctor{}, decorated_type::create(std::move(ptr), mv)};
+    static cow_tuple from(cow_ptr_type ptr, std::vector<size_t> mv) {
+        auto ti = detail::static_type_list<Head, Tail...>::list;
+        return {priv_ctor{}, detail::decorated_tuple::create(std::move(ptr), ti, std::move(mv))};
+    }
+
+    static cow_tuple from(cow_ptr_type ptr, const util::limited_vector<size_t, num_elements>& mv) {
+        std::vector<size_t> v(mv.size());
+        std::copy(mv.begin(), mv.end(), v.begin());
+        return from(ptr, std::move(v));
     }
 
     inline const cow_ptr<detail::abstract_tuple>& vals() const {
