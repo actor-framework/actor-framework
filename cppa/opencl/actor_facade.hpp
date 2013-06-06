@@ -151,15 +151,15 @@ class actor_facade<Ret(Args...)> : public actor {
         auto opt = m_map_args(msg);
         if (opt) {
             response_handle handle{this, sender, id.response_id()};
-            Ret result_buf(std::accumulate(m_global_dimensions.begin(),
-                                           m_global_dimensions.end(),
-                                           1, std::multiplies<size_t>{}));
+            size_t ret_size = std::accumulate(m_global_dimensions.begin(),
+                                              m_global_dimensions.end(),
+                                              1, std::multiplies<size_t>{});
             std::vector<mem_ptr> arguments;
-            add_arguments_to_kernel(arguments,
-                                    m_context.get(),
-                                    m_kernel.get(),
-                                    result_buf,
-                                    get_ref<Is>(*opt)...);
+            add_arguments_to_kernel<Ret>(arguments,
+                                         m_context.get(),
+                                         m_kernel.get(),
+                                         ret_size,
+                                         get_ref<Is>(*opt)...);
             enqueue_to_dispatcher(m_dispatcher,
                                   make_counted<command_impl<Ret>>(handle,
                                                                   m_kernel,
@@ -231,13 +231,13 @@ class actor_facade<Ret(Args...)> : public actor {
     void add_arguments_to_kernel(args_vec& arguments,
                                  cl_context context,
                                  cl_kernel kernel,
-                                 R& ret,
+                                 size_t ret_size,
                                  Ts&&... args) {
         arguments.clear();
         cl_int err{0};
         auto buf = clCreateBuffer(context,
                                   CL_MEM_WRITE_ONLY,
-                                  sizeof(typename R::value_type) * ret.size(),
+                                  sizeof(typename R::value_type) * ret_size,
                                   nullptr,
                                   &err);
         if (err != CL_SUCCESS) {
