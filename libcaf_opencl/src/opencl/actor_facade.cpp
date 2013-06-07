@@ -30,15 +30,13 @@
 
 
 #include "cppa/opencl/actor_facade.hpp"
-#include "cppa/opencl/command_dispatcher.hpp"
+#include "cppa/opencl/opencl_metainfo.hpp"
 
 namespace cppa { namespace opencl {
 
-void enqueue_to_dispatcher(command_dispatcher* dispatcher,
-                           command_ptr cmd) {
-    cmd->ref(); // implicit ref count of m_job_queue
-    dispatcher->m_job_queue.push_back(cmd.get());
-
+// todo: find device by id
+command_queue_ptr get_command_queue(uint32_t) {
+    return get_opencl_metainfo()->m_devices.front().cmd_queue;
 }
 
 } } // namespace cppa::opencl

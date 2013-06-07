@@ -57,12 +57,13 @@ class program {
      *        from a given @p kernel_source.
      * @returns A program object.
      */
-    static program create(const char* kernel_source);
+    static program create(const char* kernel_source, uint32_t device_id = 0);
 
  private:
 
-    program(context_ptr context, program_ptr program);
+    program(context_ptr context, program_ptr program, uint32_t device_id);
 
+    uint32_t  m_device_id;
     context_ptr m_context;
     program_ptr m_program;
 

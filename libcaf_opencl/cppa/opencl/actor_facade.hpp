@@ -56,9 +56,9 @@
 
 namespace cppa { namespace opencl {
 
-class command_dispatcher;
+class opencl_metainfo;
 
-void enqueue_to_dispatcher(command_dispatcher*, command_ptr);
+command_queue_ptr get_command_queue(uint32_t);
 
 template<typename Signature>
 class actor_facade;
@@ -66,20 +66,21 @@ class actor_facade;
 template<typename Ret, typename... Args>
 class actor_facade<Ret(Args...)> : public actor {
 
+    friend class command_impl<actor_facade, Ret>;
+
  public:
 
     typedef cow_tuple<typename util::rm_const_and_ref<Args>::type...> args_tuple;
     typedef std::function<option<args_tuple>(any_tuple)> arg_mapping;
     typedef std::function<any_tuple(Ret&)> result_mapping;
 
-    static actor_facade* create(command_dispatcher* dispatcher,
-                               const program& prog,
-                               const char* kernel_name,
-                               const dim_vec& global_dims,
-                               const dim_vec& offsets,
-                               const dim_vec& local_dims,
-                               arg_mapping map_args,
-                               result_mapping map_result) {
+    static intrusive_ptr<actor_facade> create(const program& prog,
+                                              const char* kernel_name,
+                                              arg_mapping map_args,
+                                              result_mapping map_result,
+                                              const dim_vec& global_dims,
+                                              const dim_vec& offsets,
+                                              const dim_vec& local_dims) {
         if (global_dims.empty()) {
             auto str = "OpenCL kernel needs at least 1 global dimension.";
             CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
@@ -107,8 +108,7 @@ class actor_facade<Ret(Args...)> : public actor {
             CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
             throw std::runtime_error(oss.str());
         }
-        return new actor_facade<Ret (Args...)>{dispatcher,
-                                               kernel,
+        return new actor_facade<Ret (Args...)>{kernel,
                                                prog,
                                                global_dims,
                                                offsets,
@@ -125,8 +125,7 @@ class actor_facade<Ret(Args...)> : public actor {
 
  private:
 
-    actor_facade(command_dispatcher* dispatcher,
-                 kernel_ptr kernel,
+    actor_facade(kernel_ptr kernel,
                  const program& prog,
                  const dim_vec& global_dimensions,
                  const dim_vec& global_offsets,
@@ -136,7 +135,6 @@ class actor_facade<Ret(Args...)> : public actor {
       : m_kernel(kernel)
       , m_program(prog.m_program)
       , m_context(prog.m_context)
-      , m_dispatcher(dispatcher)
       , m_global_dimensions(global_dimensions)
       , m_global_offsets(global_offsets)
       , m_local_dimensions(local_dimensions)
@@ -160,14 +158,20 @@ class actor_facade<Ret(Args...)> : public actor {
                                          m_kernel.get(),
                                          ret_size,
                                          get_ref<Is>(*opt)...);
-            enqueue_to_dispatcher(m_dispatcher,
-                                  make_counted<command_impl<Ret>>(handle,
-                                                                  m_kernel,
-                                                                  std::move(arguments),
-                                                                  m_global_dimensions,
-                                                                  m_global_offsets,
-                                                                  m_local_dimensions,
-                                                                  m_map_result));
+            auto cmd = make_counted<command_impl<actor_facade, Ret>>(handle,
+                                                                  this,
+                                                                  std::move(arguments));
+            cmd->ref();
+            cl_command_queue cmd_q = get_command_queue(0).get(); // todo: get the id from program
+            cmd->enqueue(cmd_q);
+            clFlush(cmd_q);
+//            cl_int err{clFlush(cmd_q)};
+//            if (err != CL_SUCCESS) {
+//                ostringstream oss;
+//                oss << "clFlush: " << get_opencl_error(err);
+//                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+//                throw runtime_error(oss.str());
+//            }
         }
         else { CPPA_LOGMF(CPPA_ERROR, this, "actor_facade::enqueue() tuple_cast failed."); }
     }
@@ -177,7 +181,6 @@ class actor_facade<Ret(Args...)> : public actor {
     kernel_ptr m_kernel;
     program_ptr m_program;
     context_ptr m_context;
-    command_dispatcher* m_dispatcher;
     dim_vec m_global_dimensions;
     dim_vec m_global_offsets;
     dim_vec m_local_dimensions;
