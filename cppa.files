@@ -112,7 +112,6 @@ cppa/on.hpp
 cppa/opencl.hpp
 cppa/opencl/actor_facade.hpp
 cppa/opencl/command.hpp
-cppa/opencl/command_dispatcher.hpp
 cppa/opencl/global.hpp
 cppa/opencl/program.hpp
 cppa/opencl/smart_ptr.hpp
@@ -239,7 +238,6 @@ src/object.cpp
 src/object_array.cpp
 src/on.cpp
 src/opencl/actor_facade.cpp
-src/opencl/command_dispatcher.cpp
 src/opencl/global.cpp
 src/opencl/program.cpp
 src/opt.cpp
@@ -295,3 +293,5 @@ cppa/util/get_root_uuid.hpp
 src/get_root_uuid.cpp
 cppa/util/type_traits.hpp
 src/decorated_tuple.cpp
+cppa/opencl/opencl_metainfo.hpp
+src/opencl/opencl_metainfo.cpp

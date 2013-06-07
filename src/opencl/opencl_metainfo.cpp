@@ -16,7 +16,7 @@
  * This file is part of libcppa.                                              *
  * libcppa is free software: you can redistribute it and/or modify it under   *
  * the terms of the GNU Lesser General Public License as published by the     *
- * Free Software Foundation; either version 2.1 of the License,               *
+ * Free Software Foundation, either version 3 of the License                  *
  * or (at your option) any later version.                                     *
  *                                                                            *
  * libcppa is distributed in the hope that it will be useful,                 *
@@ -28,100 +28,18 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#include <sstream>
-#include <iostream>
-#include <stdexcept>
-#include <algorithm>
-
-#include "cppa/cppa.hpp"
-#include "cppa/opencl/command_dispatcher.hpp"
+#include "cppa/opencl/opencl_metainfo.hpp"
 
 using namespace std;
 
 namespace cppa { namespace opencl {
 
-struct command_dispatcher::worker {
-
-    command_dispatcher* m_parent;
-
-    typedef command_ptr job_ptr;
-
-    job_queue* m_job_queue;
-    thread m_thread;
-    job_ptr m_dummy;
-
-    worker(command_dispatcher* parent, job_queue* jq, job_ptr dummy)
-        : m_parent(parent), m_job_queue(jq), m_dummy(dummy) { }
-
-    void start() {
-        m_thread = thread(&command_dispatcher::worker_loop, this);
-    }
-
-    worker(const worker&) = delete;
-
-    worker& operator=(const worker&) = delete;
-
-    void operator()() {
-        job_ptr job;
-        for (;;) {
-            /*
-             * todo:
-             *  manage device usage
-             *  wait for device
-             */
-            // adopt reference count of job queue
-            job.adopt(m_job_queue->pop());
-            if(job != m_dummy) {
-                try {
-                    cl_command_queue cmd_q =
-                            m_parent->m_devices.front().cmd_queue.get();
-                    job->enqueue(cmd_q);
-                    cl_int err{clFlush(cmd_q)};
-                    if (err != CL_SUCCESS) {
-                        ostringstream oss;
-                        oss << "clFlush: " << get_opencl_error(err);
-                        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
-                        throw runtime_error(oss.str());
-                    }
-                }
-                catch (exception& e) {
-                    ostringstream oss;
-                    oss << "worker loop, e.what(): " << e.what();
-                    CPPA_LOGMF(CPPA_ERROR, self, oss.str());
-                    throw runtime_error(oss.str());
-                }
-            }
-            else {
-                CPPA_LOG_TRACE("worker done");
-                return;
-            }
-        }
-    }
-
-};
-
-
-void command_dispatcher::worker_loop(command_dispatcher::worker* w) {
-    (*w)();
-}
-
-void command_dispatcher::supervisor_loop(command_dispatcher* scheduler,
-                                         job_queue* jq, command_ptr m_dummy) {
-    CPPA_LOGF_TRACE("");
-    unique_ptr<command_dispatcher::worker> worker;
-    worker.reset(new command_dispatcher::worker(scheduler, jq, m_dummy));
-    worker->start();
-    worker->m_thread.join();
-    worker.reset();
-}
-
-void command_dispatcher::initialize() {
-
-    m_dummy = make_counted<command_dummy>();
-
+void opencl_metainfo::initialize()
+{
     cl_int err{0};
 
-    /* find up to two available platforms */
+
+    // get number of available platforms
     cl_uint number_of_platforms;
     err = clGetPlatformIDs(0, nullptr, &number_of_platforms);
     if (err != CL_SUCCESS) {
@@ -131,13 +49,9 @@ void command_dispatcher::initialize() {
         CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw logic_error(oss.str());
     }
-    else if (number_of_platforms < 1) {
-        ostringstream oss;
-        oss << "clGetPlatformIDs: no platforms found.";
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
-        throw logic_error(oss.str());
-    }
 
+
+    // get platform ids
     vector<cl_platform_id> ids(number_of_platforms);
     err = clGetPlatformIDs(ids.size(), ids.data(), nullptr);
     if (err != CL_SUCCESS) {
@@ -148,7 +62,8 @@ void command_dispatcher::initialize() {
         throw logic_error(oss.str());
     }
 
-    /* find gpu devices on our platform */
+
+    // find gpu devices on our platform
     int pid{0};
     cl_uint num_devices{0};
     cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
@@ -174,7 +89,8 @@ void command_dispatcher::initialize() {
         throw runtime_error(oss.str());
     }
 
-    /* create a context */
+
+    // create a context
     m_context.adopt(clCreateContext(0, 1, devices.data(), nullptr, nullptr, &err));
     if (err != CL_SUCCESS) {
         ostringstream oss;
@@ -183,11 +99,12 @@ void command_dispatcher::initialize() {
         throw runtime_error(oss.str());
     }
 
+
     for (auto& d : devices) {
         CPPA_LOG_TRACE("Creating command queue for device(s).");
         device_ptr device;
         device.adopt(d);
-        unsigned id{++dev_id_gen};
+        uint32_t id{++dev_id_gen};
         size_t return_size{0};
         static constexpr size_t buf_size = 128;
         char buf[buf_size];
@@ -257,34 +174,28 @@ void command_dispatcher::initialize() {
             m_devices.push_back(move(dev_info));
         }
     }
+
     if (m_devices.empty()) {
         ostringstream oss;
         oss << "Could not create a command queue for "
-            << "any of the present devices.";
+            << "any present device.";
         CPPA_LOGMF(CPPA_ERROR, self, oss.str());
         throw runtime_error(oss.str());
     }
-    else {
-        m_supervisor = thread(&command_dispatcher::supervisor_loop,
-                              this,
-                              &m_job_queue,
-                              m_dummy);
-    }
 }
 
-void command_dispatcher::destroy() {
-    m_dummy->ref(); // reference of m_job_queue
-    m_job_queue.push_back(m_dummy.get());
-    m_supervisor.join();
+void opencl_metainfo::destroy() {
     delete this;
 }
 
-void command_dispatcher::dispose() {
+void opencl_metainfo::dispose() {
     delete this;
 }
 
-command_dispatcher* get_command_dispatcher() {
-    return detail::singleton_manager::get_command_dispatcher();
+opencl_metainfo* get_opencl_metainfo() {
+    return detail::singleton_manager::get_opencl_metainfo();
+    return nullptr;
 }
 
 } } // namespace cppa::opencl
+

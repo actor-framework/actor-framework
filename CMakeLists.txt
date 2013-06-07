@@ -185,7 +185,7 @@ if (ENABLE_OPENCL)
       src/opencl/global.cpp
       src/opencl/program.cpp
       src/opencl/actor_facade.cpp
-      src/opencl/command_dispatcher.cpp)
+      src/opencl/opencl_metainfo.cpp)
   add_definitions(-DCPPA_OPENCL)
 endif (ENABLE_OPENCL)
 

@@ -42,7 +42,7 @@ class scheduler;
 
 namespace cppa { namespace network { class middleman; } }
 
-namespace cppa { namespace opencl { class command_dispatcher; } }
+namespace cppa { namespace opencl { class opencl_metainfo; } }
 
 namespace cppa { namespace detail {
 
@@ -78,7 +78,7 @@ class singleton_manager {
 
     static empty_tuple* get_empty_tuple();
 
-    static opencl::command_dispatcher* get_command_dispatcher();
+    static opencl::opencl_metainfo* get_opencl_metainfo();
 
  private:
 

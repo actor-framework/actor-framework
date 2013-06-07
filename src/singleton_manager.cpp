@@ -48,11 +48,11 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 
 #ifdef CPPA_OPENCL
-#  include "cppa/opencl/command_dispatcher.hpp"
+#  include "cppa/opencl/opencl_metainfo.hpp"
 #else
 namespace cppa { namespace opencl {
 
-class command_dispatcher : public detail::singleton_mixin<command_dispatcher> { };
+class opencl_metainfo : public detail::singleton_mixin<opencl_metainfo> { };
 
 } } // namespace cppa::opencl
 #endif
@@ -63,7 +63,7 @@ namespace cppa { namespace detail {
 
 namespace {
 
-std::atomic<opencl::command_dispatcher*> s_command_dispatcher;
+std::atomic<opencl::opencl_metainfo*> s_opencl_metainfo;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<network::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
@@ -88,8 +88,8 @@ void singleton_manager::shutdown() {
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe to delete all other singletons now
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "close OpenCL command dispather");
-    destroy(s_command_dispatcher);
+    CPPA_LOGF(CPPA_DEBUG, nullptr, "close OpenCL metainfo");
+    destroy(s_opencl_metainfo);
     CPPA_LOGF(CPPA_DEBUG, nullptr, "close actor registry");
     destroy(s_actor_registry);
     CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown group manager");
@@ -101,9 +101,9 @@ void singleton_manager::shutdown() {
     destroy(s_logger);
 }
 
-opencl::command_dispatcher* singleton_manager::get_command_dispatcher() {
+opencl::opencl_metainfo* singleton_manager::get_opencl_metainfo() {
 #   ifdef CPPA_OPENCL
-    return lazy_get(s_command_dispatcher);
+    return lazy_get(s_opencl_metainfo);
 #   else
     CPPA_LOGF_ERROR("libcppa was compiled without OpenCL support");
     throw std::logic_error("libcppa was compiled without OpenCL support");

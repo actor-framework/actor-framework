@@ -35,18 +35,18 @@
 
 #include "cppa/singletons.hpp"
 #include "cppa/opencl/program.hpp"
-#include "cppa/opencl/command_dispatcher.hpp"
+#include "cppa/opencl/opencl_metainfo.hpp"
 
 using namespace std;
 
 namespace cppa { namespace opencl {
 
 
-program::program(context_ptr context, program_ptr program)
-: m_context(move(context)), m_program(move(program)) { }
+program::program(context_ptr context, program_ptr program, uint32_t device_id)
+: m_device_id(device_id), m_context(move(context)), m_program(move(program)) { }
 
-program program::create(const char* kernel_source) {
-    context_ptr cptr = get_command_dispatcher()->m_context;
+program program::create(const char* kernel_source, uint32_t device_id) {
+    context_ptr cptr = get_opencl_metainfo()->m_context;
 
     cl_int err{0};
 
@@ -76,7 +76,8 @@ program program::create(const char* kernel_source) {
     // build programm from program object
     err = clBuildProgram(pptr.get(), 0, nullptr, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
-        device_ptr device{get_command_dispatcher()->m_devices.front().dev_id};
+        // todo: chosoe device, not just front
+        device_ptr device{get_opencl_metainfo()->m_devices.front().dev_id};
         const char* where = "CL_PROGRAM_BUILD_LOG:get size";
         size_t ret_size;
         auto bi_err = program_build_info(device, 0, nullptr, &ret_size);
@@ -107,7 +108,7 @@ program program::create(const char* kernel_source) {
     }
     else {
 #       ifdef CPPA_DEBUG_MODE
-        device_ptr device{get_command_dispatcher()->m_devices.front().dev_id};
+        device_ptr device{get_opencl_metainfo()->m_devices.front().dev_id};
         const char* where = "CL_PROGRAM_BUILD_LOG:get size";
         size_t ret_size;
         err = program_build_info(device, 0, nullptr, &ret_size);
@@ -132,7 +133,7 @@ program program::create(const char* kernel_source) {
         }
 #       endif
     }
-    return {cptr, pptr};
+    return {cptr, pptr, device_id};
 }
 
 } } // namespace cppa::opencl

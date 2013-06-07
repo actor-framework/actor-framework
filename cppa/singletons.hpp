@@ -67,8 +67,8 @@ inline detail::empty_tuple* get_empty_tuple() {
     return detail::singleton_manager::get_empty_tuple();
 }
 
-inline opencl::command_dispatcher* get_command_dispatcher() {
-    return detail::singleton_manager::get_command_dispatcher();
+inline opencl::opencl_metainfo* get_opencl_metainfo() {
+    return detail::singleton_manager::get_opencl_metainfo();
 }
 
 

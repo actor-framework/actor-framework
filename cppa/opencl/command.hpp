@@ -63,28 +63,20 @@ class command_dummy : public command {
     void enqueue(command_queue_ptr) override { }
 };
 
-template<typename T>
+template<typename T, typename R>
 class command_impl : public command {
 
  public:
 
     command_impl(response_handle handle,
-                 kernel_ptr kernel,
-                 std::vector<mem_ptr> arguments,
-                 const dim_vec& global_dims,
-                 const dim_vec& offsets,
-                 const dim_vec& local_dims,
-                 const std::function<any_tuple(T&)>& map_result)
-        : m_number_of_values(std::accumulate(global_dims.begin(),
-                                             global_dims.end(),
+                 intrusive_ptr<T> af_ptr,
+                 std::vector<mem_ptr> arguments)
+        : m_number_of_values(std::accumulate(af_ptr->m_global_dimensions.begin(),
+                                             af_ptr->m_global_dimensions.end(),
                                              1, std::multiplies<size_t>{}))
         , m_handle(handle)
-        , m_kernel(kernel)
+        , m_af_ptr(af_ptr)
         , m_arguments(move(arguments))
-        , m_global_dims(global_dims)
-        , m_offsets(offsets)
-        , m_local_dims(local_dims)
-        , m_map_result(map_result)
     {
     }
 
@@ -93,26 +85,26 @@ class command_impl : public command {
         this->ref();
         cl_int err{0};
         m_queue = queue;
-        auto ptr = m_kernel_event.get();
+        auto evnt = m_kernel_event.get();
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
 
         /* enqueue kernel */
         err = clEnqueueNDRangeKernel(m_queue.get(),
-                                     m_kernel.get(),
-                                     m_global_dims.size(),
-                                     data_or_nullptr(m_offsets),
-                                     data_or_nullptr(m_global_dims),
-                                     data_or_nullptr(m_local_dims),
+                                     m_af_ptr->m_kernel.get(),
+                                     m_af_ptr->m_global_dimensions.size(),
+                                     data_or_nullptr(m_af_ptr->m_global_offsets),
+                                     data_or_nullptr(m_af_ptr->m_global_dimensions),
+                                     data_or_nullptr(m_af_ptr->m_local_dimensions),
                                      0,
                                      nullptr,
-                                     &ptr);
+                                     &evnt);
         if (err != CL_SUCCESS) {
             throw std::runtime_error("clEnqueueNDRangeKernel: "
                                      + get_opencl_error(err));
         }
-        err = clSetEventCallback(ptr,
+        err = clSetEventCallback(evnt,
                                  CL_COMPLETE,
                                  [](cl_event, cl_int, void* data) {
                                      auto cmd = reinterpret_cast<command_impl*>(data);
@@ -130,32 +122,28 @@ class command_impl : public command {
 
     int m_number_of_values;
     response_handle m_handle;
-    kernel_ptr      m_kernel;
-    event_ptr       m_kernel_event;
+    intrusive_ptr<T> m_af_ptr;
+    event_ptr m_kernel_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
-    dim_vec  m_global_dims;
-    dim_vec  m_offsets;
-    dim_vec  m_local_dims;
-    std::function<any_tuple (T&)> m_map_result;
 
     void handle_results () {
         cl_int err{0};
-        T result(m_number_of_values);
+        R result(m_number_of_values);
         err = clEnqueueReadBuffer(m_queue.get(),
                                   m_arguments[0].get(),
                                   CL_TRUE,
                                   0,
-                                  sizeof(typename T::value_type) * m_number_of_values,
+                                  sizeof(typename R::value_type) * m_number_of_values,
                                   result.data(),
                                   0,
                                   nullptr,
                                   nullptr);
         if (err != CL_SUCCESS) {
-           throw std::runtime_error("clEnqueueReadBuffer: "
-                                    + get_opencl_error(err));
+            throw std::runtime_error("clEnqueueReadBuffer: "
+                                     + get_opencl_error(err));
         }
-        reply_tuple_to(m_handle, m_map_result(result));
+        reply_tuple_to(m_handle, m_af_ptr->m_map_result(result));
     }
 };
 
