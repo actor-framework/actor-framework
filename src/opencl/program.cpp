@@ -42,18 +42,30 @@ using namespace std;
 namespace cppa { namespace opencl {
 
 
-program::program(context_ptr context, program_ptr program, uint32_t device_id)
-: m_device_id(device_id), m_context(move(context)), m_program(move(program)) { }
+program::program(context_ptr context, command_queue_ptr queue, program_ptr program)
+: m_context(move(context)), m_program(move(program)), m_queue(move(queue)) { }
 
 program program::create(const char* kernel_source, uint32_t device_id) {
-    context_ptr cptr = get_opencl_metainfo()->m_context;
+    auto metainfo = get_opencl_metainfo();
+    auto devices  = metainfo->get_devices();
+    auto context  = metainfo->m_context;
+
+
+    if (devices.size() <= device_id) {
+        ostringstream oss;
+        oss << "Device id " << device_id
+            << " is not a vaild device. Maximum id is: "
+            << (devices.size() -1) << ".";
+        CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
+        throw runtime_error(oss.str());
+    }
 
     cl_int err{0};
 
     // create program object from kernel source
     size_t kernel_source_length = strlen(kernel_source);
     program_ptr pptr;
-    pptr.adopt(clCreateProgramWithSource(cptr.get(),
+    pptr.adopt(clCreateProgramWithSource(context.get(),
                                          1,
                                          &kernel_source,
                                          &kernel_source_length,
@@ -77,7 +89,7 @@ program program::create(const char* kernel_source, uint32_t device_id) {
     err = clBuildProgram(pptr.get(), 0, nullptr, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         // todo: chosoe device, not just front
-        device_ptr device{get_opencl_metainfo()->m_devices.front().dev_id};
+        device_ptr device{devices[device_id].m_device};
         const char* where = "CL_PROGRAM_BUILD_LOG:get size";
         size_t ret_size;
         auto bi_err = program_build_info(device, 0, nullptr, &ret_size);
@@ -108,7 +120,7 @@ program program::create(const char* kernel_source, uint32_t device_id) {
     }
     else {
 #       ifdef CPPA_DEBUG_MODE
-        device_ptr device{get_opencl_metainfo()->m_devices.front().dev_id};
+        device_ptr device{devices[device_id].m_device};
         const char* where = "CL_PROGRAM_BUILD_LOG:get size";
         size_t ret_size;
         err = program_build_info(device, 0, nullptr, &ret_size);
@@ -133,7 +145,7 @@ program program::create(const char* kernel_source, uint32_t device_id) {
         }
 #       endif
     }
-    return {cptr, pptr, device_id};
+    return {context, devices[device_id].m_cmd_queue, pptr};
 }
 
 } } // namespace cppa::opencl

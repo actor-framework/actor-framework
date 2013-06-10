@@ -295,3 +295,4 @@ cppa/util/type_traits.hpp
 src/decorated_tuple.cpp
 cppa/opencl/opencl_metainfo.hpp
 src/opencl/opencl_metainfo.cpp
+cppa/opencl/device_info.hpp

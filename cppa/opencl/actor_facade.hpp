@@ -35,6 +35,7 @@
 #include <ostream>
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
 #include "cppa/cppa.hpp"
 
@@ -57,8 +58,6 @@
 namespace cppa { namespace opencl {
 
 class opencl_metainfo;
-
-command_queue_ptr get_command_queue(uint32_t);
 
 template<typename Signature>
 class actor_facade;
@@ -120,7 +119,7 @@ class actor_facade<Ret(Args...)> : public actor {
     void enqueue(const message_header& hdr, any_tuple msg) override {
         CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
-        enqueue_impl(hdr.sender, msg, hdr.id, indices);
+        enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
     }
 
  private:
@@ -135,6 +134,7 @@ class actor_facade<Ret(Args...)> : public actor {
       : m_kernel(kernel)
       , m_program(prog.m_program)
       , m_context(prog.m_context)
+      , m_queue(prog.m_queue)
       , m_global_dimensions(global_dimensions)
       , m_global_offsets(global_offsets)
       , m_local_dimensions(local_dimensions)
@@ -145,8 +145,11 @@ class actor_facade<Ret(Args...)> : public actor {
     }
 
     template<long... Is>
-    void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id, util::int_list<Is...>) {
-        auto opt = m_map_args(msg);
+    void enqueue_impl(const actor_ptr& sender,
+                      any_tuple msg,
+                      message_id id,
+                      util::int_list<Is...>) {
+        auto opt = m_map_args(std::move(msg));
         if (opt) {
             response_handle handle{this, sender, id.response_id()};
             size_t ret_size = std::accumulate(m_global_dimensions.begin(),
@@ -159,19 +162,10 @@ class actor_facade<Ret(Args...)> : public actor {
                                          ret_size,
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command_impl<actor_facade, Ret>>(handle,
-                                                                  this,
-                                                                  std::move(arguments));
-            cmd->ref();
-            cl_command_queue cmd_q = get_command_queue(0).get(); // todo: get the id from program
-            cmd->enqueue(cmd_q);
-            clFlush(cmd_q);
-//            cl_int err{clFlush(cmd_q)};
-//            if (err != CL_SUCCESS) {
-//                ostringstream oss;
-//                oss << "clFlush: " << get_opencl_error(err);
-//                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
-//                throw runtime_error(oss.str());
-//            }
+                                                                     this,
+                                                                     std::move(arguments),
+                                                                     m_queue);
+            cmd->enqueue();
         }
         else { CPPA_LOGMF(CPPA_ERROR, this, "actor_facade::enqueue() tuple_cast failed."); }
     }
@@ -181,6 +175,7 @@ class actor_facade<Ret(Args...)> : public actor {
     kernel_ptr m_kernel;
     program_ptr m_program;
     context_ptr m_context;
+    command_queue_ptr m_queue;
     dim_vec m_global_dimensions;
     dim_vec m_global_offsets;
     dim_vec m_local_dimensions;
