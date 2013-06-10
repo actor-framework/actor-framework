@@ -52,7 +52,7 @@ class command : public ref_counted {
 
     command* next;
 
-    virtual void enqueue(command_queue_ptr queue) = 0;
+    virtual void enqueue() = 0;
 
 };
 
@@ -60,7 +60,7 @@ class command_dummy : public command {
 
  public:
 
-    void enqueue(command_queue_ptr) override { }
+    void enqueue() override { }
 };
 
 template<typename T, typename R>
@@ -69,42 +69,41 @@ class command_impl : public command {
  public:
 
     command_impl(response_handle handle,
-                 intrusive_ptr<T> af_ptr,
-                 std::vector<mem_ptr> arguments)
-        : m_number_of_values(std::accumulate(af_ptr->m_global_dimensions.begin(),
-                                             af_ptr->m_global_dimensions.end(),
+                 intrusive_ptr<T> actor_facade,
+                 std::vector<mem_ptr> arguments,
+                 command_queue_ptr queue)
+        : m_number_of_values(std::accumulate(actor_facade->m_global_dimensions.begin(),
+                                             actor_facade->m_global_dimensions.end(),
                                              1, std::multiplies<size_t>{}))
         , m_handle(handle)
-        , m_af_ptr(af_ptr)
-        , m_arguments(move(arguments))
-    {
-    }
+        , m_actor_facade(actor_facade)
+        , m_queue(queue)
+        , m_arguments(move(arguments)) { }
 
-    void enqueue (command_queue_ptr queue) override {
+    void enqueue () override {
         CPPA_LOG_TRACE("command::enqueue()");
-        this->ref();
+        this->ref(); // reference held by the OpenCL comand queue
         cl_int err{0};
-        m_queue = queue;
-        auto evnt = m_kernel_event.get();
+        auto event = m_kernel_event.get();
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
 
-        /* enqueue kernel */
         err = clEnqueueNDRangeKernel(m_queue.get(),
-                                     m_af_ptr->m_kernel.get(),
-                                     m_af_ptr->m_global_dimensions.size(),
-                                     data_or_nullptr(m_af_ptr->m_global_offsets),
-                                     data_or_nullptr(m_af_ptr->m_global_dimensions),
-                                     data_or_nullptr(m_af_ptr->m_local_dimensions),
+                                     m_actor_facade->m_kernel.get(),
+                                     m_actor_facade->m_global_dimensions.size(),
+                                     data_or_nullptr(m_actor_facade->m_global_offsets),
+                                     data_or_nullptr(m_actor_facade->m_global_dimensions),
+                                     data_or_nullptr(m_actor_facade->m_local_dimensions),
                                      0,
                                      nullptr,
-                                     &evnt);
+                                     &event);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("clEnqueueNDRangeKernel: "
-                                     + get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, self, "clEnqueueNDRangeKernel: "
+                                         << get_opencl_error(err));
         }
-        err = clSetEventCallback(evnt,
+
+        err = clSetEventCallback(event,
                                  CL_COMPLETE,
                                  [](cl_event, cl_int, void* data) {
                                      auto cmd = reinterpret_cast<command_impl*>(data);
@@ -113,8 +112,13 @@ class command_impl : public command {
                                  },
                                  this);
         if (err != CL_SUCCESS) {
-            throw std::runtime_error("clSetEventCallback: "
-                                     + get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, self, "clSetEventCallback: "
+                                         << get_opencl_error(err));
+        }
+
+        err = clFlush(m_queue.get());
+        if (err != CL_SUCCESS) {
+            CPPA_LOGMF(CPPA_ERROR, self, "clFlush: " << get_opencl_error(err));
         }
     }
 
@@ -122,7 +126,7 @@ class command_impl : public command {
 
     int m_number_of_values;
     response_handle m_handle;
-    intrusive_ptr<T> m_af_ptr;
+    intrusive_ptr<T> m_actor_facade;
     event_ptr m_kernel_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
@@ -143,7 +147,7 @@ class command_impl : public command {
             throw std::runtime_error("clEnqueueReadBuffer: "
                                      + get_opencl_error(err));
         }
-        reply_tuple_to(m_handle, m_af_ptr->m_map_result(result));
+        reply_tuple_to(m_handle, m_actor_facade->m_map_result(result));
     }
 };
 
