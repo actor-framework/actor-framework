@@ -27,7 +27,13 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
+#include <ios>
+#include <string>
+#include <vector>
+
+#include <string.h>
 #include <sys/epoll.h>
+
 #include "cppa/network/middleman_event_handler.hpp"
 
 namespace cppa { namespace network {
@@ -44,8 +50,10 @@ class middleman_event_handler_impl : public middleman_event_handler {
 
     void init() {
         m_epollfd = epoll_create1(EPOLL_CLOEXEC);
-        if (m_epollfd == -1) throw ios_base::failure(  string("epoll_create1: ")
-                                                     + strerror(errno));
+        if (m_epollfd == -1) {
+            throw std::ios_base::failure(  std::string("epoll_create1: ")
+                                         + strerror(errno));
+        }
         // handle at most 64 events at a time
         m_epoll_events.resize(64);
     }
