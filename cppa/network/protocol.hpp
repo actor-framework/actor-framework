@@ -47,9 +47,8 @@ namespace cppa { class actor_addressing; }
 
 namespace cppa { namespace network {
 
-class abstract_middleman;
-class continuable_reader;
 class continuable_io;
+class abstract_middleman;
 
 /**
  * @brief Implements a communication protocol.
@@ -86,16 +85,16 @@ class protocol : public ref_counted {
  protected:
 
     // note: not thread-safe; call only in run_later functor!
-    void continue_reader(continuable_reader* what);
+    void continue_reader(continuable_io* what);
 
     // note: not thread-safe; call only in run_later functor!
-    void continue_writer(continuable_reader* what);
+    void continue_writer(continuable_io* what);
 
     // note: not thread-safe; call only in run_later functor!
-    void stop_reader(continuable_reader* what);
+    void stop_reader(continuable_io* what);
 
     // note: not thread-safe; call only in run_later functor!
-    void stop_writer(continuable_reader* what);
+    void stop_writer(continuable_io* what);
 
     inline abstract_middleman* parent() { return m_parent.get(); }
 

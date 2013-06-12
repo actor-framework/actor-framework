@@ -34,9 +34,18 @@
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/network/continuable_reader.hpp"
 
 namespace cppa { namespace network {
+
+/**
+ * @brief Denotes the return value of
+ *        {@link continuable_io::continue_reading()}.
+ */
+enum continue_reading_result {
+    read_failure,
+    read_closed,
+    read_continue_later
+};
 
 /**
  * @brief Denotes the return value of
@@ -52,32 +61,46 @@ enum continue_writing_result {
 /**
  * @brief An object performing asynchronous input and output.
  */
-class continuable_io : public continuable_reader {
-
-    typedef continuable_reader super;
+class continuable_io : public ref_counted {
 
  public:
 
     /**
+     * @brief Returns the file descriptor for incoming data.
+     */
+    inline native_socket_type read_handle() const { return m_rd; }
+
+    /**
      * @brief Returns the file descriptor for outgoing data.
      */
-    native_socket_type write_handle() const {
+    inline native_socket_type write_handle() const {
         return m_wr;
     }
 
-    continuable_io* as_io();
+    /**
+     * @brief Reads from {@link read_handle()} if valid.
+     */
+    virtual continue_reading_result continue_reading();
 
     /**
-     * @brief Writes to {@link write_handle()}.
+     * @brief Writes to {@link write_handle()} if valid.
      */
-    virtual continue_writing_result continue_writing() = 0;
+    virtual continue_writing_result continue_writing();
+
+    /**
+     * @brief Called from middleman before it removes this object
+     *        due to an IO failure.
+     */
+     virtual void io_failed() = 0;
 
  protected:
 
-    continuable_io(native_socket_type read_fd, native_socket_type write_fd);
+    continuable_io(native_socket_type read_fd,
+                   native_socket_type write_fd = invalid_socket);
 
  private:
 
+    native_socket_type m_rd;
     native_socket_type m_wr;
 
 };

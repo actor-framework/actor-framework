@@ -84,7 +84,16 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
+else ()
+  message(FATAL_ERROR "This platform is not supported by libcppa")
+endif()
+
 set(LIBCPPA_SRC
+    ${LIBCPPA_PLATFORM_SRC}
     src/abstract_tuple.cpp
     src/actor.cpp
     src/actor_addressing.cpp
@@ -101,8 +110,7 @@ set(LIBCPPA_SRC
     src/buffer.cpp
     src/channel.cpp
     src/context_switching_actor.cpp
-    src/continuable_reader.cpp
-    src/continuable_writer.cpp
+    src/continuable_io.cpp
     src/decorated_tuple.cpp
     src/default_actor_addressing.cpp
     src/default_actor_proxy.cpp
@@ -133,6 +141,7 @@ set(LIBCPPA_SRC
     src/memory_managed.cpp
     src/message_header.cpp
     src/middleman.cpp
+    src/middleman_event_handler.cpp
     src/object.cpp
     src/object_array.cpp
     src/on.cpp

@@ -34,15 +34,15 @@
 #include "cppa/actor.hpp"
 
 #include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/continuable_reader.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace network {
 
 class default_protocol;
 
-class default_peer_acceptor : public continuable_reader {
+class default_peer_acceptor : public continuable_io {
 
-    typedef continuable_reader super;
+    typedef continuable_io super;
 
  public:
 

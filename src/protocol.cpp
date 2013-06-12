@@ -43,23 +43,22 @@ void protocol::run_later(std::function<void()> fun) {
     m_parent->run_later(std::move(fun));
 }
 
-void protocol::continue_reader(continuable_reader* ptr) {
+void protocol::continue_reader(continuable_io* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_parent->continue_reader(ptr);
 }
 
-void protocol::continue_writer(continuable_reader* ptr) {
+void protocol::continue_writer(continuable_io* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    CPPA_REQUIRE(ptr->as_io() != nullptr);
     m_parent->continue_writer(ptr);
 }
 
-void protocol::stop_reader(continuable_reader* ptr) {
+void protocol::stop_reader(continuable_io* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_parent->stop_reader(ptr);
 }
 
-void protocol::stop_writer(continuable_reader* ptr) {
+void protocol::stop_writer(continuable_io* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_parent->stop_writer(ptr);
 }

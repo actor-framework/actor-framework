@@ -36,7 +36,7 @@
 #include <memory>
 #include <functional>
 
-#include "cppa/network/continuable_reader.hpp"
+#include "cppa/network/continuable_io.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 
@@ -92,11 +92,11 @@ class abstract_middleman : public middleman {
 
     inline abstract_middleman() : m_done(false) { }
 
-    void stop_writer(const continuable_reader_ptr& ptr);
-    void continue_writer(const continuable_reader_ptr& ptr);
+    void stop_writer(const continuable_io_ptr& ptr);
+    void continue_writer(const continuable_io_ptr& ptr);
 
-    void stop_reader(const continuable_reader_ptr& what);
-    void continue_reader(const continuable_reader_ptr& what);
+    void stop_reader(const continuable_io_ptr& what);
+    void continue_reader(const continuable_io_ptr& what);
 
  protected:
 
@@ -104,7 +104,7 @@ class abstract_middleman : public middleman {
     inline bool done() const { return m_done; }
 
     bool m_done;
-    std::vector<continuable_reader_ptr> m_readers;
+    std::vector<continuable_io_ptr> m_readers;
 
     middleman_event_handler& handler();
 
