@@ -34,9 +34,4 @@
 
 namespace cppa { namespace opencl {
 
-// todo: find device by id
-command_queue_ptr get_command_queue(uint32_t) {
-    return get_opencl_metainfo()->m_devices.front().cmd_queue;
-}
-
 } } // namespace cppa::opencl

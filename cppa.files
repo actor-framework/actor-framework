@@ -111,6 +111,7 @@ cppa/on.hpp
 cppa/opencl.hpp
 cppa/opencl/actor_facade.hpp
 cppa/opencl/command.hpp
+cppa/opencl/device_info.hpp
 cppa/opencl/global.hpp
 cppa/opencl/opencl_metainfo.hpp
 cppa/opencl/program.hpp

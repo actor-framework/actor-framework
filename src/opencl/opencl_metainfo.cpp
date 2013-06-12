@@ -34,6 +34,10 @@ using namespace std;
 
 namespace cppa { namespace opencl {
 
+const std::vector<device_info> opencl_metainfo::get_devices() const {
+    return m_devices;
+}
+
 void opencl_metainfo::initialize()
 {
     cl_int err{0};
@@ -104,13 +108,13 @@ void opencl_metainfo::initialize()
         CPPA_LOG_TRACE("Creating command queue for device(s).");
         device_ptr device;
         device.adopt(d);
-        uint32_t id{++dev_id_gen};
         size_t return_size{0};
         static constexpr size_t buf_size = 128;
         char buf[buf_size];
         err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, self, "clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, self, "clGetDeviceInfo (CL_DEVICE_NAME): "
+                                         << get_opencl_error(err));
             fill(buf, buf+buf_size, 0);
         }
         command_queue_ptr cmd_queue;
@@ -131,8 +135,8 @@ void opencl_metainfo::initialize()
                                   &return_size);
             if (err != CL_SUCCESS) {
                 ostringstream oss;
-                oss << "clGetDeviceInfo (" << id
-                    << ":CL_DEVICE_MAX_WORK_GROUP_SIZE): "
+                oss << "clGetDeviceInfo ("
+                    << "CL_DEVICE_MAX_WORK_GROUP_SIZE): "
                     << get_opencl_error(err);
                 CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
@@ -145,8 +149,8 @@ void opencl_metainfo::initialize()
                                   &return_size);
             if (err != CL_SUCCESS) {
                 ostringstream oss;
-                oss << "clGetDeviceInfo (" << id
-                    << ":CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): "
+                oss << "clGetDeviceInfo ("
+                    << "CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): "
                     << get_opencl_error(err);
                 CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
@@ -159,15 +163,14 @@ void opencl_metainfo::initialize()
                                   &return_size);
             if (err != CL_SUCCESS) {
                 ostringstream oss;
-                oss << "clGetDeviceInfo (" << id
-                    << ":CL_DEVICE_MAX_WORK_ITEM_SIZES): "
+                oss << "clGetDeviceInfo ("
+                    << "CL_DEVICE_MAX_WORK_ITEM_SIZES): "
                     << get_opencl_error(err);
                 CPPA_LOGMF(CPPA_ERROR, self, oss.str());
                 throw runtime_error(oss.str());
             }
-            device_info dev_info{id,
+            device_info dev_info{device,
                                  cmd_queue,
-                                 device,
                                  max_work_group_size,
                                  max_work_item_dimensions,
                                  max_work_items_per_dim};
@@ -194,7 +197,6 @@ void opencl_metainfo::dispose() {
 
 opencl_metainfo* get_opencl_metainfo() {
     return detail::singleton_manager::get_opencl_metainfo();
-    return nullptr;
 }
 
 } } // namespace cppa::opencl

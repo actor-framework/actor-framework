@@ -22,6 +22,86 @@ bool is_even(int i) { return i % 2 == 0; }
  *
  */
 
+struct dummy {
+
+    inline operator actor_ptr() const { return nullptr; }
+    inline actor_ptr as_facade() const { return nullptr; }
+
+};
+
+inline dummy operator|(const dummy&, const dummy&) { return {}; }
+
+template<typename T>
+dummy operator|(const dummy& lhs, const T&) {
+    return lhs;
+}
+
+template<typename T>
+dummy operator|(const T&, const dummy& rhs) {
+    return rhs;
+}
+
+dummy slice(int,int) { return {}; }
+dummy prepend(atom_value) { return {}; }
+dummy consume(atom_value) { return {}; }
+dummy split(int) { return {}; }
+dummy join(int) { return {}; }
+
+void example() {
+    // {}: tuple
+    // []: list
+    // 'a': atom 'a' == atom("a")
+    // x => y: replies to x with y
+
+    {
+        // for starters: get the internally used user-ID from a key-value store
+        // and get the user role, e.g., "admin", from the user database
+
+        // {'get', key} => {user_id, [tags]}
+        actor_ptr kvstore;
+        // {'info', user_id} => {name, address, phone, role}
+        actor_ptr userinfo;
+        // {username} => {role}
+        auto query = kvstore | slice(0,0) | prepend(atom("info")) | userinfo | slice(3,3);
+        // check whether Dirty Harry has admin access
+        sync_send(query, atom("get"), "Dirty Harry").then(
+            on("admin") >> [] {
+                // grant access
+            },
+            others() >> [] {
+                // deny access (well, no one denies Dirty Harry access anyways)
+            }
+        );
+        // creates a new actor providing the interface {username} => {role}
+        actor_ptr roles = query.as_facade();
+    }
+
+    {
+        // we have an actor representing a database for orders and we want
+        // to have the net price of all orders from Dirty Harry
+
+        // {'orders', user_id} => {[order_id]}
+        // {'price', order_id} => {net_price}
+        actor_ptr orders;
+        // {'prices', user_id} => {[net_price]}
+        auto query = consume(atom("prices"))
+                   | prepend(atom("orders"))
+                   | orders
+                   | prepend(atom("price"))
+                   | split(1)
+                   | orders
+                   | join(0);
+        sync_send(query, atom("prices"), "Dirty Harry").then(
+            [](const vector<float>& prices) {
+                cout << "Dirty Harry has ordered products "
+                     << "with a total net price of $"
+                     << accumulate(prices.begin(), prices.end(), 0)
+                     << endl;
+            }
+        );
+    }
+}
+
 int main() {
     CPPA_TEST(test_match);
 

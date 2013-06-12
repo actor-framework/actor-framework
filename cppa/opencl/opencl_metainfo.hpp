@@ -42,54 +42,13 @@
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
+#include "cppa/opencl/device_info.hpp"
 #include "cppa/opencl/actor_facade.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa { namespace opencl {
-
-//template<typename Ret, typename... Args>
-//actor_ptr spawn(const program& prog,
-//                const char* kernel_name,
-//                const dim_vec& global_dims,
-//                const dim_vec& offsets,
-//                const dim_vec& local_dims,
-//                std::function<option<cow_tuple<typename util::rm_const_and_ref<Args>::type...>>(any_tuple)> map_args,
-//                std::function<any_tuple(Ret&)> map_result)
-//{
-//    return actor_facade<Ret (Args...)>::create(prog,
-//                                               kernel_name,
-//                                               global_dims,
-//                                               offsets,
-//                                               local_dims,
-//                                               std::move(map_args),
-//                                               std::move(map_result));
-//}
-
-//template<typename Ret, typename... Args>
-//actor_ptr spawn(const program& prog,
-//                const char* kernel_name,
-//                const dim_vec& global_dims,
-//                const dim_vec& offsets = {},
-//                const dim_vec& local_dims = {})
-//{
-//    std::function<option<cow_tuple<typename util::rm_const_and_ref<Args>::type...>>(any_tuple)>
-//        map_args = [] (any_tuple msg) {
-//        return tuple_cast<typename util::rm_const_and_ref<Args>::type...>(msg);
-//    };
-//    std::function<any_tuple(Ret&)> map_result = [] (Ret& result) {
-//        return make_any_tuple(std::move(result));
-//    };
-//    return spawn<Ret, Args...>(prog,
-//                               kernel_name,
-//                               global_dims,
-//                               offsets,
-//                               local_dims,
-//                               std::move(map_args),
-//                               std::move(map_result));
-//}
-
 
 class opencl_metainfo {
 
@@ -99,29 +58,9 @@ class opencl_metainfo {
 
  public:
 
+    const std::vector<device_info> get_devices() const;
+
  private:
-
-    struct device_info {
-        uint32_t id;
-        command_queue_ptr cmd_queue;
-        device_ptr dev_id;
-        size_t max_itms_per_grp;
-        cl_uint max_dim;
-        dim_vec max_itms_per_dim;
-
-        device_info(unsigned id,
-                    command_queue_ptr queue,
-                    device_ptr device_id,
-                    size_t max_itms_per_grp,
-                    cl_uint max_dim,
-                    const dim_vec& max_itms_per_dim)
-            : id(id)
-            , cmd_queue(queue)
-            , dev_id(device_id)
-            , max_itms_per_grp(max_itms_per_grp)
-            , max_dim(max_dim)
-            , max_itms_per_dim(max_itms_per_dim) { }
-    };
 
     static inline opencl_metainfo* create_singleton() {
         return new opencl_metainfo;
@@ -130,8 +69,6 @@ class opencl_metainfo {
     void initialize();
     void dispose();
     void destroy();
-
-    std::atomic<uint32_t> dev_id_gen;
 
     context_ptr m_context;
     std::vector<device_info> m_devices;

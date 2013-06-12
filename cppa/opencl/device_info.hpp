@@ -16,7 +16,7 @@
  * This file is part of libcppa.                                              *
  * libcppa is free software: you can redistribute it and/or modify it under   *
  * the terms of the GNU Lesser General Public License as published by the     *
- * Free Software Foundation; either version 2.1 of the License,               *
+ * Free Software Foundation, either version 3 of the License                  *
  * or (at your option) any later version.                                     *
  *                                                                            *
  * libcppa is distributed in the hope that it will be useful,                 *
@@ -29,46 +29,65 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OPENCL_PROGRAM_HPP
-#define CPPA_OPENCL_PROGRAM_HPP
-
-#include <memory>
+#ifndef DEVICE_INFO_HPP
+#define DEVICE_INFO_HPP
 
 #include "cppa/opencl/global.hpp"
+#include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
 namespace cppa { namespace opencl {
 
-template<typename Signature>
-class actor_facade;
+class device_info {
 
-/**
- * @brief A wrapper for OpenCL's cl_program.
- */
-class program {
-
-    template<typename Signature>
-    friend class actor_facade;
+    friend class program;
 
  public:
 
-    /**
-     * @brief Factory method, that creates a cppa::opencl::program
-     *        from a given @p kernel_source.
-     * @returns A program object.
-     */
-    static program create(const char* kernel_source, uint32_t device_id = 0);
+    device_info(device_ptr device,
+                command_queue_ptr queue,
+                size_t work_group_size,
+                cl_uint dimensons,
+                const dim_vec& items_per_dimension)
+        : m_max_work_group_size(work_group_size)
+        , m_max_dimensions(dimensons)
+        , m_max_work_items_per_dim(items_per_dimension)
+        , m_device(device)
+        , m_cmd_queue(queue) { }
+
+    // todo: need getter, m_
+    // see actor.hpp
+
+    inline size_t get_max_work_group_size();
+    inline cl_uint get_max_dimensions();
+    inline dim_vec get_max_work_items_per_dim();
 
  private:
 
-    program(context_ptr context, command_queue_ptr queue, program_ptr program);
-
-    context_ptr m_context;
-    program_ptr m_program;
-    command_queue_ptr m_queue;
-
+    size_t  m_max_work_group_size;
+    cl_uint m_max_dimensions;
+    dim_vec m_max_work_items_per_dim;
+    device_ptr m_device;
+    command_queue_ptr m_cmd_queue;
 };
+
+/******************************************************************************\
+ *                 implementation of inline member functions                  *
+\******************************************************************************/
+
+inline size_t device_info::get_max_work_group_size() {
+    return m_max_work_group_size;
+}
+
+inline cl_uint device_info::get_max_dimensions() {
+    return m_max_dimensions;
+}
+
+inline dim_vec device_info::get_max_work_items_per_dim() {
+    return m_max_work_items_per_dim;
+}
 
 } } // namespace cppa::opencl
 
-#endif // CPPA_OPENCL_PROGRAM_HPP
+
+#endif // DEVICE_INFO_HPP
