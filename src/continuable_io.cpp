@@ -33,8 +33,14 @@
 namespace cppa { namespace network {
 
 continuable_io::continuable_io(native_socket_type rd, native_socket_type wr)
-: super(rd), m_wr(wr) { }
+: m_rd(rd), m_wr(wr) { }
 
-continuable_io* continuable_io::as_io() { return this; }
+continue_reading_result continuable_io::continue_reading() {
+    return read_closed;
+}
+
+continue_writing_result continuable_io::continue_writing() {
+    return write_closed;
+}
 
 } } // namespace cppa::network

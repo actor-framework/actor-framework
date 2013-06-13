@@ -343,10 +343,6 @@ continue_writing_result default_peer::continue_writing() {
     return write_done;
 }
 
-continuable_io* default_peer::as_io() {
-    return this;
-}
-
 void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
     binary_serializer bs(&m_wr_buf, m_parent->addressing());

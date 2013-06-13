@@ -43,7 +43,6 @@
 
 #include "cppa/network/input_stream.hpp"
 #include "cppa/network/output_stream.hpp"
-#include "cppa/network/continuable_reader.hpp"
 #include "cppa/network/continuable_io.hpp"
 #include "cppa/network/default_message_queue.hpp"
 
@@ -67,8 +66,6 @@ class default_peer : public continuable_io {
     continue_reading_result continue_reading() override;
 
     continue_writing_result continue_writing() override;
-
-    continuable_io* as_io() override;
 
     void io_failed();
 
