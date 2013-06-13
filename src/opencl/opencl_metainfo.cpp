@@ -95,7 +95,12 @@ void opencl_metainfo::initialize()
 
 
     // create a context
-    m_context.adopt(clCreateContext(0, 1, devices.data(), nullptr, nullptr, &err));
+    m_context.adopt(clCreateContext(0,
+                                    devices.size(),
+                                    devices.data(),
+                                    nullptr,
+                                    nullptr,
+                                    &err));
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clCreateContext: " << get_opencl_error(err);
