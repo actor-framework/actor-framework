@@ -77,30 +77,27 @@ struct fd_meta_info {
     : fd(a0), ptr(a1), mask(a2) { }
 };
 
-struct fd_meta_info_less {
-    inline bool operator()(const fd_meta_info& lhs, native_socket_type rhs) const {
-        return lhs.fd < rhs;
-    }
-};
-
 enum class fd_meta_event { add, erase, mod };
 
 class middleman_event_handler {
 
  public:
 
-    typedef std::pair<event_bitmask, continuable_io*> io_event;
-
     virtual ~middleman_event_handler();
 
-    void alteration(const continuable_io_ptr& ptr, event_bitmask e, fd_meta_event etype);
+    /**
+     * @brief Enqueues an add operation.
+     */
+    void add_later(const continuable_io_ptr& ptr, event_bitmask e);
 
-    void add(const continuable_io_ptr& ptr, event_bitmask e);
+    /**
+     * @brief Enqueues an erase operation.
+     */
+    void erase_later(const continuable_io_ptr& ptr, event_bitmask e);
 
-    void erase(const continuable_io_ptr& ptr, event_bitmask e);
-
-    event_bitmask next_bitmask(event_bitmask old, event_bitmask arg, fd_meta_event op) const;
-
+    /**
+     * @brief Poll all events.
+     */
     template<typename F>
     void poll(const F& fun) {
         poll_impl();
@@ -113,7 +110,26 @@ class middleman_event_handler {
 
     virtual void init() = 0;
 
-    virtual size_t num_sockets() const = 0;
+    inline size_t num_sockets() const { return m_meta.size(); }
+
+    // implemented in platform-dependent .cpp file
+    static std::unique_ptr<middleman_event_handler> create();
+
+    /**
+     * @brief Performs all actions enqueued by {@link add_later}
+     *        or {@link erase_later}.
+     */
+    void update();
+
+ protected:
+
+    std::vector<fd_meta_info> m_meta; // this vector is *always* sorted
+
+    std::vector<std::pair<fd_meta_info, fd_meta_event>> m_alterations;
+
+    std::vector<std::pair<event_bitmask, continuable_io*>> m_events;
+
+    middleman_event_handler();
 
     // fills the event vector
     virtual void poll_impl() = 0;
@@ -124,29 +140,11 @@ class middleman_event_handler {
                               event_bitmask new_bitmask,
                               continuable_io* ptr) = 0;
 
-    // implemented in platform-dependent .cpp file
-    static std::unique_ptr<middleman_event_handler> create();
-
-    void update();
-
- protected:
-
-    fd_meta_info_less m_less;
-    std::vector<fd_meta_info> m_meta; // this vector is *always* sorted
-
-    std::vector<std::pair<fd_meta_info, fd_meta_event> > m_alterations;
-
-    std::vector<io_event> m_events;
-
-    middleman_event_handler();
-
  private:
 
-    std::vector<fd_meta_info>::iterator find_meta(native_socket_type fd) {
-        auto last = end(m_meta);
-        auto iter = lower_bound(begin(m_meta), last, fd, m_less);
-        return (iter != last && iter->fd == fd) ? iter : last;
-    }
+    void alteration(const continuable_io_ptr& ptr, event_bitmask e, fd_meta_event etype);
+
+    event_bitmask next_bitmask(event_bitmask old, event_bitmask arg, fd_meta_event op) const;
 
 };
 

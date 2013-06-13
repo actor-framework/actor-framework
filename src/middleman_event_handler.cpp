@@ -67,12 +67,12 @@ void middleman_event_handler::alteration(const continuable_io_ptr& ptr,
     m_alterations.emplace_back(fd_meta_info(fd, ptr, e), etype);
 }
 
-void middleman_event_handler::add(const continuable_io_ptr& ptr, event_bitmask e) {
+void middleman_event_handler::add_later(const continuable_io_ptr& ptr, event_bitmask e) {
     CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
     alteration(ptr, e, fd_meta_event::add);
 }
 
-void middleman_event_handler::erase(const continuable_io_ptr& ptr, event_bitmask e) {
+void middleman_event_handler::erase_later(const continuable_io_ptr& ptr, event_bitmask e) {
     CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
     alteration(ptr, e, fd_meta_event::erase);
 }
@@ -84,11 +84,14 @@ event_bitmask middleman_event_handler::next_bitmask(event_bitmask old, event_bit
 
 void middleman_event_handler::update() {
     CPPA_LOG_TRACE("");
+    auto mless = [](const fd_meta_info& lhs, native_socket_type rhs) {
+        return lhs.fd < rhs;
+    };
     for (auto& elem_pair : m_alterations) {
         auto& elem = elem_pair.first;
         auto old = event::none;
-        auto last = end(m_meta);
-        auto iter = lower_bound(begin(m_meta), last, elem.fd, m_less);
+        auto last = m_meta.end();
+        auto iter = std::lower_bound(m_meta.begin(), last, elem.fd, mless);
         if (iter != last) old = iter->mask;
         auto mask = next_bitmask(old, elem.mask, elem_pair.second);
         auto ptr = elem.ptr.get();

@@ -58,7 +58,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
         m_epoll_events.resize(64);
     }
 
-    size_t num_sockets() const { return m_meta.size(); }
+ protected:
 
     void poll_impl() {
         CPPA_REQUIRE(m_meta.empty() == false);
@@ -100,10 +100,9 @@ class middleman_event_handler_impl : public middleman_event_handler {
 
     void handle_event(fd_meta_event me,
                       native_socket_type fd,
-                      event_bitmask old_bitmask,
+                      event_bitmask,
                       event_bitmask new_bitmask,
                       continuable_io* ptr) {
-        static_cast<void>(old_bitmask); // no need for it
         int operation;
         epoll_event ee;
         ee.data.ptr = ptr;

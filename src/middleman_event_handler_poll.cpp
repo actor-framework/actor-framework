@@ -58,7 +58,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
 
     void init() { }
 
-    size_t num_sockets() const { return m_pollset.size(); }
+ protected:
 
     void poll_impl() {
         CPPA_REQUIRE(m_pollset.empty() == false);
@@ -108,23 +108,22 @@ class middleman_event_handler_impl : public middleman_event_handler {
 
     void handle_event(fd_meta_event me,
                       native_socket_type fd,
-                      event_bitmask old_bitmask,
+                      event_bitmask,
                       event_bitmask new_bitmask,
                       continuable_io*) {
-        static_cast<void>(old_bitmask); // no need for it
+        auto last = m_pollset.end();
+        auto iter = std::lower_bound(m_pollset.begin(), last, fd, pollfd_less);
         switch (me) {
             case fd_meta_event::add: {
                 pollfd tmp;
                 tmp.fd = fd;
                 tmp.events = to_poll_bitmask(new_bitmask);
                 tmp.revents = 0;
-                m_pollset.insert(lb(fd), tmp);
+                m_pollset.insert(iter, tmp);
                 CPPA_LOGMF(CPPA_DEBUG, self, "inserted new element");
                 break;
             }
             case fd_meta_event::erase: {
-                auto last = end(m_pollset);
-                auto iter = lb(fd);
                 CPPA_LOG_ERROR_IF(iter == last || iter->fd != fd,
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
@@ -135,8 +134,6 @@ class middleman_event_handler_impl : public middleman_event_handler {
                 break;
             }
             case fd_meta_event::mod: {
-                auto last = end(m_pollset);
-                auto iter = lb(fd);
                 CPPA_LOG_ERROR_IF(iter == last || iter->fd != fd,
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
@@ -150,10 +147,6 @@ class middleman_event_handler_impl : public middleman_event_handler {
     }
 
  private:
-
-    std::vector<pollfd>::iterator lb(native_socket_type fd) {
-        return lower_bound(begin(m_pollset), end(m_pollset), fd, pollfd_less);
-    }
 
     std::vector<pollfd> m_pollset; // always in sync with m_meta
 

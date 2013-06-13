@@ -221,23 +221,23 @@ middleman_event_handler& abstract_middleman::handler() {
 
 void abstract_middleman::continue_writer(const continuable_io_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().add(ptr, event::write);
+    handler().add_later(ptr, event::write);
 }
 
 void abstract_middleman::stop_writer(const continuable_io_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().erase(ptr, event::write);
+    handler().erase_later(ptr, event::write);
 }
 
 void abstract_middleman::continue_reader(const continuable_io_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
     m_readers.push_back(ptr);
-    handler().add(ptr, event::read);
+    handler().add_later(ptr, event::read);
 }
 
 void abstract_middleman::stop_reader(const continuable_io_ptr& ptr) {
     CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().erase(ptr, event::read);
+    handler().erase_later(ptr, event::read);
 
     auto last = end(m_readers);
     auto i = find_if(begin(m_readers), last, [ptr](const continuable_io_ptr& value) {
@@ -305,7 +305,7 @@ void middleman_loop(default_middleman_impl* impl) {
     }
     CPPA_LOGF_DEBUG("event loop done, erase all readers");
     // make sure to write everything before shutting down
-    for (auto ptr : impl->m_readers) { handler->erase(ptr, event::read); }
+    for (auto ptr : impl->m_readers) { handler->erase_later(ptr, event::read); }
     handler->update();
     CPPA_LOGF_DEBUG("flush outgoing messages");
     CPPA_LOGF_DEBUG_IF(handler->num_sockets() == 0,
@@ -318,19 +318,19 @@ void middleman_loop(default_middleman_impl* impl) {
                         case write_closed:
                         case write_failure:
                         case write_done:
-                            handler->erase(io, event::write);
+                            handler->erase_later(io, event::write);
                             break;
                         default: break;
                     }
                     break;
                 case event::error:
                     io->io_failed();
-                    handler->erase(io, event::both);
+                    handler->erase_later(io, event::both);
                     break;
                 default:
                     CPPA_LOGF_ERROR("expected event::write only "
                                     "during shutdown phase");
-                    handler->erase(io, event::read);
+                    handler->erase_later(io, event::read);
                     break;
             }
         });
