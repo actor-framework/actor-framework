@@ -58,6 +58,7 @@ namespace cppa { namespace detail {
     { "cppa::intrusive_ptr<cppa::process_information>",                                 "@proc"},
     { "cppa::message_header",                                                           "@header" },
     { "cppa::nullptr_t",                                                                "@null" },
+    { "cppa::util::buffer",                                                             "@buffer" },
     { "cppa::util::duration",                                                           "@duration" },
     { "cppa::util::void_type",                                                          "@0" },
     { "double",                                                                         "double" },
@@ -526,6 +527,69 @@ class int_tinfo : public abstract_int_tinfo {
 
 };
 
+class buffer_type_info_impl : public uniform_type_info {
+
+ public:
+
+    void serialize(const void* instance, serializer* sink) const {
+        auto& val = deref(instance);
+        sink->begin_object(static_name());
+        sink->write_value(static_cast<uint32_t>(val.size()));
+        sink->write_raw(val.size(), val.data());
+        sink->end_object();
+    }
+
+    void deserialize(void* instance, deserializer* source) const {
+        assert_type_name(static_name(), source);
+        auto& ref = deref(instance);
+        source->begin_object(static_name());
+        auto s = source->read<uint32_t>();
+        source->read_raw(s, ref);
+        source->end_object();
+    }
+
+    const char* name() const {
+        return static_name();
+    }
+
+ protected:
+
+    bool equals(const std::type_info& ti) const {
+        return ti == typeid(util::buffer);
+    }
+
+    bool equals(const void* vlhs, const void* vrhs) const {
+        auto& lhs = deref(vlhs);
+        auto& rhs = deref(vrhs);
+        return    (lhs.empty() && rhs.empty())
+               || (   lhs.size() == rhs.size()
+                   && std::equal(lhs.begin(), lhs.end(), rhs.begin()));
+    }
+
+    void* new_instance(const void* ptr) const {
+        return (ptr) ? new util::buffer(deref(ptr)) : new util::buffer;
+    }
+
+    void delete_instance(void* instance) const {
+        delete reinterpret_cast<util::buffer*>(instance);
+    }
+
+ private:
+
+    static inline util::buffer& deref(void* ptr) {
+        return *reinterpret_cast<util::buffer*>(ptr);
+    }
+
+    static inline const util::buffer& deref(const void* ptr) {
+        return *reinterpret_cast<const util::buffer*>(ptr);
+    }
+
+    static inline const char* static_name() {
+        return "@buffer";
+    }
+
+};
+
 template<typename T>
 void push_native_type(abstract_int_tinfo* m [][2]) {
     m[sizeof(T)][std::is_signed<T>::value ? 1 : 0]->add_native_type(typeid(T));
@@ -574,31 +638,32 @@ class utim_impl : public uniform_type_info_map {
                          intptr_t                                >(mapping);
         // fill builtin types *in sorted order* (by uniform name)
         size_t i = 0;
-        m_builtin_types[i++] = &m_type_void;
-        m_builtin_types[i++] = &m_type_actor;
-        m_builtin_types[i++] = &m_type_atom;
-        m_builtin_types[i++] = &m_type_channel;
-        m_builtin_types[i++] = &m_type_duration;
-        m_builtin_types[i++] = &m_type_group;
-        m_builtin_types[i++] = &m_type_header;
-        m_builtin_types[i++] = &m_type_i16;
-        m_builtin_types[i++] = &m_type_i32;
-        m_builtin_types[i++] = &m_type_i64;
-        m_builtin_types[i++] = &m_type_i8;
-        m_builtin_types[i++] = &m_type_long_double;
-        m_builtin_types[i++] = &m_type_proc;
-        m_builtin_types[i++] = &m_type_str;
-        m_builtin_types[i++] = &m_type_strmap;
-        m_builtin_types[i++] = &m_type_tuple;
-        m_builtin_types[i++] = &m_type_u16;
-        m_builtin_types[i++] = &m_type_u16str;
-        m_builtin_types[i++] = &m_type_u32;
-        m_builtin_types[i++] = &m_type_u32str;
-        m_builtin_types[i++] = &m_type_u64;
-        m_builtin_types[i++] = &m_type_u8;
-        m_builtin_types[i++] = &m_type_bool;
-        m_builtin_types[i++] = &m_type_double;
-        m_builtin_types[i++] = &m_type_float;
+        m_builtin_types[i++] = &m_type_void;            // @0
+        m_builtin_types[i++] = &m_type_actor;           // @actor
+        m_builtin_types[i++] = &m_type_atom;            // @atom
+        m_builtin_types[i++] = &m_type_buffer;          // @buffer
+        m_builtin_types[i++] = &m_type_channel;         // @channel
+        m_builtin_types[i++] = &m_type_duration;        // @duration
+        m_builtin_types[i++] = &m_type_group;           // @group
+        m_builtin_types[i++] = &m_type_header;          // @header
+        m_builtin_types[i++] = &m_type_i16;             // @i16
+        m_builtin_types[i++] = &m_type_i32;             // @i32
+        m_builtin_types[i++] = &m_type_i64;             // @i64
+        m_builtin_types[i++] = &m_type_i8;              // @i8
+        m_builtin_types[i++] = &m_type_long_double;     // @ldouble
+        m_builtin_types[i++] = &m_type_proc;            // @proc
+        m_builtin_types[i++] = &m_type_str;             // @str
+        m_builtin_types[i++] = &m_type_strmap;          // @strmap
+        m_builtin_types[i++] = &m_type_tuple;           // @tuple
+        m_builtin_types[i++] = &m_type_u16;             // @u16
+        m_builtin_types[i++] = &m_type_u16str;          // @u16str
+        m_builtin_types[i++] = &m_type_u32;             // @u32
+        m_builtin_types[i++] = &m_type_u32str;          // @u32str
+        m_builtin_types[i++] = &m_type_u64;             // @u64
+        m_builtin_types[i++] = &m_type_u8;              // @u8
+        m_builtin_types[i++] = &m_type_bool;            // bool
+        m_builtin_types[i++] = &m_type_double;          // double
+        m_builtin_types[i++] = &m_type_float;           // float
         CPPA_REQUIRE(i == m_builtin_types.size());
 #       if CPPA_DEBUG_MODE
         auto cmp = [](pointer lhs, pointer rhs) {
@@ -671,6 +736,7 @@ class utim_impl : public uniform_type_info_map {
 
     uti_impl<process_information_ptr>       m_type_proc;
     uti_impl<channel_ptr>                   m_type_channel;
+    buffer_type_info_impl                   m_type_buffer;
     uti_impl<actor_ptr>                     m_type_actor;
     uti_impl<group_ptr>                     m_type_group;
     uti_impl<any_tuple>                     m_type_tuple;
@@ -696,7 +762,7 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 25> m_builtin_types;
+    std::array<pointer, 26> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
 
     template<typename Container>

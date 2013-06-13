@@ -45,11 +45,11 @@ const size_t default_max_size   = 16 * 1024 * 1024;
 } // namespace anonymous
 
 buffer::buffer()
-: m_data(0), m_written(0), m_allocated(0), m_final_size(0)
+: m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
 , m_chunk_size(default_chunk_size), m_max_buffer_size(default_max_size) { }
 
 buffer::buffer(size_t chunk_size, size_t max_buffer_size)
-: m_data(0), m_written(0), m_allocated(0), m_final_size(0)
+: m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
 , m_chunk_size(chunk_size), m_max_buffer_size(max_buffer_size) { }
 
 buffer::buffer(buffer&& other)
@@ -59,6 +59,19 @@ buffer::buffer(buffer&& other)
     other.m_data = nullptr;
     other.m_written = other.m_allocated = other.m_final_size = 0;
 }
+
+buffer::buffer(const buffer& other)
+: m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
+, m_chunk_size(default_chunk_size), m_max_buffer_size(default_max_size) {
+    write(other, grow_if_needed);
+}
+
+buffer& buffer::operator=(const buffer& other) {
+    clear();
+    write(other, grow_if_needed);
+    return *this;
+}
+
 
 buffer& buffer::operator=(buffer&& other) {
     std::swap(m_data,            other.m_data);
@@ -148,6 +161,10 @@ void buffer::write(size_t num_bytes, const void* data, buffer_write_policy wp) {
     }
     memcpy(wr_ptr(), data, num_bytes);
     inc_size(num_bytes);
+}
+
+void buffer::write(const buffer& other, buffer_write_policy wp) {
+    write(other.size(), other.data(), wp);
 }
 
 void buffer::append_from(network::input_stream* istream) {

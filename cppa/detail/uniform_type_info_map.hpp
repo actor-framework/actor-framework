@@ -41,6 +41,8 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/process_information.hpp"
+
+#include "cppa/util/buffer.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
 
@@ -61,6 +63,7 @@ using mapped_type_list = util::type_list<
     process_information_ptr,
     message_header,
     std::nullptr_t,
+    util::buffer,
     util::duration,
     util::void_type,
     double,

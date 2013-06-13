@@ -85,7 +85,8 @@ int main() {
         "@group",              // cppa::group_ptr
         "@channel",            // cppa::channel_ptr
         "@proc",               // cppa::intrusive_ptr<cppa::process_information>
-        "@duration"            // cppa::util::duration
+        "@duration",           // cppa::util::duration
+        "@buffer"              // cppa::util::buffer
     };
     // holds the type names we see at runtime
     std::set<std::string> found;

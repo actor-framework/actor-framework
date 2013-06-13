@@ -33,6 +33,9 @@
 #include "cppa/object.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
+
+#include "cppa/util/buffer.hpp"
+
 #include "cppa/detail/to_uniform_name.hpp"
 
 namespace cppa {
@@ -40,6 +43,12 @@ namespace cppa {
 deserializer::deserializer(actor_addressing* aa) : m_addressing(aa) { }
 
 deserializer::~deserializer() { }
+
+void deserializer::read_raw(size_t num_bytes, util::buffer& storage) {
+    storage.acquire(num_bytes);
+    read_raw(num_bytes, storage.data());
+    storage.inc_size(num_bytes);
+}
 
 deserializer& operator>>(deserializer& d, object& what) {
     std::string tname = d.peek_object();

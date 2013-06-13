@@ -33,6 +33,8 @@
 
 #include <cstddef> // size_t
 
+namespace cppa { class deserializer; }
+
 namespace cppa { namespace network { class input_stream; } }
 
 namespace cppa { namespace util {
@@ -49,6 +51,8 @@ enum buffer_write_policy {
  */
 class buffer {
 
+    friend class deserializer;
+
  public:
 
     buffer();
@@ -57,7 +61,11 @@ class buffer {
 
     buffer(buffer&& other);
 
+    buffer(const buffer& other);
+
     buffer& operator=(buffer&& other);
+
+    buffer& operator=(const buffer& other);
 
     ~buffer();
 
@@ -117,6 +125,12 @@ class buffer {
     }
 
     void write(size_t num_bytes, const void* data, buffer_write_policy wp);
+
+    void write(const buffer& other, buffer_write_policy wp);
+
+    const char* begin() const { return m_data; }
+
+    const char* end() const { return m_data + m_written; }
 
     /**
      * @brief Appends up to @p remaining() bytes from @p istream to the buffer.

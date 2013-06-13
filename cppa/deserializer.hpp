@@ -42,6 +42,8 @@ namespace cppa {
 class object;
 class actor_addressing;
 
+namespace util { class buffer; }
+
 /**
  * @ingroup TypeSystem
  * @brief Technology-independent deserialization interface.
@@ -126,6 +128,9 @@ class deserializer {
     virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
     inline actor_addressing* addressing() { return m_addressing; }
+
+    void read_raw(size_t num_bytes, util::buffer& storage);
+
 
  private:
 
