@@ -41,13 +41,20 @@ void delayed_send_tuple(const channel_ptr& to,
 }
 
 void delayed_reply_tuple(const util::duration& rel_time,
+                         actor_ptr whom,
                          message_id mid,
                          any_tuple data) {
-    auto& receiver = self->last_sender();
-    if (receiver) get_scheduler()->delayed_reply(receiver,
-                                                 rel_time,
-                                                 mid,
-                                                 std::move(data));
+    if (whom) get_scheduler()->delayed_reply(whom,
+                                             rel_time,
+                                             mid,
+                                             std::move(data));
+}
+
+
+void delayed_reply_tuple(const util::duration& rel_time,
+                         message_id mid,
+                         any_tuple data) {
+    delayed_reply_tuple(rel_time, self->last_sender(), mid, std::move(data));
 }
 
 void delayed_reply_tuple(const util::duration& rel_time, any_tuple data) {

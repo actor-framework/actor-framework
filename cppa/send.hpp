@@ -191,6 +191,18 @@ void delayed_reply_tuple(const util::duration& rel_time,
  * @param what Message content as a tuple.
  * @see delayed_send()
  */
+void delayed_reply_tuple(const util::duration& rel_time,
+                         actor_ptr whom,
+                         message_id mid,
+                         any_tuple data);
+
+/**
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ * @see delayed_send()
+ */
 void delayed_reply_tuple(const util::duration& rel_time, any_tuple data);
 
 /**
@@ -223,7 +235,7 @@ message_future timed_sync_send_tuple(actor_ptr whom,
                                      any_tuple what) {
     auto mf = sync_send_tuple(std::move(whom), std::move(what));
     auto tmp = make_any_tuple(atom("TIMEOUT"));
-    delayed_reply_tuple(util::duration{rel_time}, mf.id(), std::move(tmp));
+    delayed_reply_tuple(util::duration{rel_time}, self, mf.id(), std::move(tmp));
     return mf;
 }
 
