@@ -563,7 +563,7 @@ class buffer_type_info_impl : public uniform_type_info {
         auto& rhs = deref(vrhs);
         return    (lhs.empty() && rhs.empty())
                || (   lhs.size() == rhs.size()
-                   && std::equal(lhs.begin(), lhs.end(), rhs.begin()));
+                   && memcmp(lhs.data(), rhs.data(), lhs.size()) == 0);
     }
 
     void* new_instance(const void* ptr) const {
