@@ -89,14 +89,6 @@ intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> f
 
 event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
 
-void event_based_actor::dequeue(behavior&) {
-    quit(exit_reason::unallowed_function_call);
-}
-
-void event_based_actor::dequeue_response(behavior&, message_id) {
-    quit(exit_reason::unallowed_function_call);
-}
-
 resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
     CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
     CPPA_REQUIRE(   state() == actor_state::ready
