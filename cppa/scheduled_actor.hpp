@@ -35,6 +35,7 @@
 
 #include "cppa/config.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/threadless.hpp"
 #include "cppa/actor_state.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
@@ -68,13 +69,11 @@ class scheduled_actor;
  * @brief A base class for cooperatively scheduled actors.
  * @extends local_actor
  */
-class scheduled_actor : public extend<local_actor>::with<mailbox_based> {
+class scheduled_actor : public extend<local_actor>::with<mailbox_based, threadless> {
 
     typedef combined_type super;
 
  public:
-
-    static constexpr bool has_blocking_receive = false;
 
     ~scheduled_actor();
 
@@ -121,37 +120,6 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based> {
 
     bool chained_enqueue(const message_header&, any_tuple) override;
 
-    void request_timeout(const util::duration& d);
-
-    inline bool has_pending_timeout() const {
-        return m_has_pending_tout;
-    }
-
-    inline void reset_timeout() {
-        if (m_has_pending_tout) {
-            ++m_pending_tout;
-            m_has_pending_tout = false;
-        }
-    }
-
-    inline void handle_timeout(behavior& bhvr) {
-        bhvr.handle_timeout();
-        reset_timeout();
-    }
-
-    inline void push_timeout() {
-        ++m_pending_tout;
-    }
-
-    inline void pop_timeout() {
-        CPPA_REQUIRE(m_pending_tout > 0);
-        --m_pending_tout;
-    }
-
-    inline bool waits_for_timeout(std::uint32_t timeout_id) {
-        return m_has_pending_tout && m_pending_tout == timeout_id;
-    }
-
  protected:
 
     scheduled_actor(actor_state init_state, bool enable_chained_send);
@@ -177,15 +145,12 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based> {
 
     bool enqueue_impl(actor_state, const message_header&, any_tuple&&);
 
-    bool m_has_pending_tout;
-    std::uint32_t m_pending_tout;
     std::atomic<actor_state> m_state;
 
  protected:
 
     scheduler* m_scheduler;
     bool m_hidden;
-    mailbox_type m_mailbox;
 
 };
 

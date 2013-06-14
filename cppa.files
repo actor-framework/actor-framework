@@ -137,8 +137,10 @@ cppa/serializer.hpp
 cppa/singletons.hpp
 cppa/spawn_options.hpp
 cppa/stacked.hpp
+cppa/stackless.hpp
 cppa/thread_mapped_actor.hpp
 cppa/threaded.hpp
+cppa/threadless.hpp
 cppa/timeout_definition.hpp
 cppa/to_string.hpp
 cppa/tpartial_function.hpp
@@ -268,6 +270,7 @@ src/scheduled_actor.cpp
 src/scheduled_actor_dummy.cpp
 src/scheduler.cpp
 src/self.cpp
+src/send.cpp
 src/serializer.cpp
 src/shared_spinlock.cpp
 src/singleton_manager.cpp

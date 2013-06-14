@@ -28,53 +28,83 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_THREADLESS_HPP
+#define CPPA_THREADLESS_HPP
 
-#include <tuple>
-#include <stack>
-#include <memory>
-#include <vector>
-
-#include "cppa/config.hpp"
-#include "cppa/extend.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/stackless.hpp"
-#include "cppa/scheduled_actor.hpp"
-#include "cppa/detail/receive_policy.hpp"
+#include "cppa/send.hpp"
 
 namespace cppa {
 
 /**
- * @brief Base class for all event-based actor implementations.
+ * @brief An actor that is scheduled or otherwise managed.
  */
-class event_based_actor : public extend<scheduled_actor>::with<stackless> {
-
-    friend class detail::receive_policy;
-
-    typedef combined_type super;
-
- public:
-
-    resume_result resume(util::fiber*, actor_ptr&);
-
-    /**
-     * @brief Initializes the actor.
-     */
-    virtual void init() = 0;
-
-    virtual void quit(std::uint32_t reason = exit_reason::normal);
-
-    scheduled_actor_type impl_type();
-
-    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
+template<class Base, class Subtype>
+class threadless : public Base {
 
  protected:
 
-    event_based_actor(actor_state st = actor_state::blocked);
+    typedef threadless combined_type;
+
+ public:
+
+    static constexpr bool has_blocking_receive = false;
+
+    template<typename... Ts>
+    threadless(Ts&&... args) : Base(std::forward<Ts>(args)...)
+                             , m_has_pending_tout(false)
+                             , m_pending_tout(0) { }
+
+    inline void reset_timeout() {
+        if (m_has_pending_tout) {
+            ++m_pending_tout;
+            m_has_pending_tout = false;
+        }
+    }
+
+    void request_timeout(const util::duration& d) {
+        if (!d.valid()) m_has_pending_tout = false;
+        else {
+            auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
+            if (d.is_zero()) {
+                // immediately enqueue timeout message if duration == 0s
+                this->enqueue(this, std::move(msg));
+                //auto e = this->new_mailbox_element(this, std::move(msg));
+                //this->m_mailbox.enqueue(e);
+            }
+            else delayed_send_tuple(this, d, std::move(msg));
+            m_has_pending_tout = true;
+        }
+    }
+
+    inline void handle_timeout(behavior& bhvr) {
+        bhvr.handle_timeout();
+        reset_timeout();
+    }
+
+    inline void pop_timeout() {
+        CPPA_REQUIRE(m_pending_tout > 0);
+        --m_pending_tout;
+    }
+
+    inline void push_timeout() {
+        ++m_pending_tout;
+    }
+
+    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
+        return m_has_pending_tout && m_pending_tout == timeout_id;
+    }
+
+    inline bool has_pending_timeout() const {
+        return m_has_pending_tout;
+    }
+
+ private:
+
+    bool m_has_pending_tout;
+    std::uint32_t m_pending_tout;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_THREADLESS_HPP

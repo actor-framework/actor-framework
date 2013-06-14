@@ -37,9 +37,8 @@
 namespace cppa {
 
 scheduled_actor::scheduled_actor(actor_state init_state, bool chained_send)
-: super(chained_send), next(nullptr), m_has_pending_tout(false)
-, m_pending_tout(0), m_state(init_state), m_scheduler(nullptr)
-, m_hidden(false) { }
+: super(chained_send), next(nullptr), m_state(init_state)
+, m_scheduler(nullptr), m_hidden(false) { }
 
 void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     CPPA_REQUIRE(sched != nullptr);
@@ -57,20 +56,6 @@ void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
 
 bool scheduled_actor::initialized() const {
     return m_scheduler != nullptr;
-}
-
-void scheduled_actor::request_timeout(const util::duration& d) {
-    if (!d.valid()) m_has_pending_tout = false;
-    else {
-        auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
-        if (d.is_zero()) {
-            // immediately enqueue timeout message if duration == 0s
-            auto e = this->new_mailbox_element(this, std::move(msg));
-            this->m_mailbox.enqueue(e);
-        }
-        else get_scheduler()->delayed_send(this, d, std::move(msg));
-        m_has_pending_tout = true;
-    }
 }
 
 scheduled_actor::~scheduled_actor() {

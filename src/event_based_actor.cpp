@@ -185,24 +185,9 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
     return resume_result::actor_done;
 }
 
-bool event_based_actor::has_behavior() {
-    return m_bhvr_stack.empty() == false;
-}
 
-void event_based_actor::do_become(behavior&& bhvr, bool discard_old) {
-    reset_timeout();
-    request_timeout(bhvr.timeout());
-    if (discard_old) m_bhvr_stack.pop_async_back();
-    m_bhvr_stack.push_back(std::move(bhvr));
-}
 
-void event_based_actor::become_waiting_for(behavior bhvr, message_id mf) {
-    if (bhvr.timeout().valid()) {
-        reset_timeout();
-        request_timeout(bhvr.timeout());
-    }
-    m_bhvr_stack.push_back(std::move(bhvr), mf);
-}
+
 
 void event_based_actor::quit(std::uint32_t reason) {
     CPPA_LOG_TRACE("reason = " << reason
