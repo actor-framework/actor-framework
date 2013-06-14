@@ -62,8 +62,6 @@ class message_future;
 class local_scheduler;
 class sync_handle_helper;
 
-namespace detail { class receive_policy; }
-
 template<bool DiscardBehavior>
 struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
 
