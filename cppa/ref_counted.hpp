@@ -65,7 +65,7 @@ class ref_counted : public memory_managed {
     /**
      * @brief Queries whether there is exactly one reference.
      */
-    inline bool unique() { return m_rc == 1; }
+    inline bool unique() const { return m_rc == 1; }
 
     inline size_t get_reference_count() const { return m_rc; }
 
