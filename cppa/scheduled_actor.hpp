@@ -68,7 +68,7 @@ class scheduled_actor;
  * @brief A base class for cooperatively scheduled actors.
  * @extends local_actor
  */
-class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
+class scheduled_actor : public extend<local_actor>::with<mailbox_based> {
 
     typedef combined_type super;
 
@@ -162,11 +162,6 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
             mailbox_type;
 
     actor_state compare_exchange_state(actor_state expected, actor_state desired);
-
-    template<typename... Ts>
-    inline mailbox_element* new_mailbox_element(Ts&&... args) {
-        return mailbox_element::create(std::forward<Ts>(args)...);
-    }
 
     inline void set_state(actor_state new_value) {
         m_state.store(new_value);
