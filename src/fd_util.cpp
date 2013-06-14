@@ -60,9 +60,7 @@ void throw_io_failure(const char* what, bool add_errno_failure) {
 
 int rd_flags(native_socket_type fd) {
     auto flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
-        throw_io_failure("unable to read socket flags");
-    }
+    if (flags == -1) throw_io_failure("unable to read socket flags");
     return flags;
 }
 
@@ -94,22 +92,21 @@ void tcp_nodelay(native_socket_type fd, bool new_value) {
     }
 }
 
-void handle_write_result(ssize_t result, bool is_nonblocking_io) {
-    if (result < 0) {
-        if (is_nonblocking_io) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return; // don't throw, just try again
-            }
-        }
-        throw_io_failure("cannot write to file descriptor");
+void handle_io_result(ssize_t res, bool is_nonblock, const char* msg) {
+    if (res < 0) {
+        // don't throw for 'failed' non-blocking IO
+        if (is_nonblock && (errno == EAGAIN || errno == EWOULDBLOCK)) { }
+        else throw_io_failure(msg);
     }
 }
 
-void handle_read_result(ssize_t result, bool is_nonblocking_io) {
-    handle_write_result(result, is_nonblocking_io);
-    if (result == 0) {
-        throw_io_failure("cannot read from closed socket / file handle");
-    }
+void handle_write_result(ssize_t res, bool is_nonblock) {
+    handle_io_result(res, is_nonblock, "cannot write to file descriptor");
+}
+
+void handle_read_result(ssize_t res, bool is_nonblock) {
+    handle_io_result(res, is_nonblock, "cannot read from file descriptor");
+    if (res == 0) throw_io_failure("cannot read from closed file descriptor");
 }
 
 } } } // namespace cppa::detail::fd_util
