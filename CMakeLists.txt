@@ -157,6 +157,7 @@ set(LIBCPPA_SRC
     src/scheduled_actor.cpp
     src/scheduled_actor_dummy.cpp
     src/scheduler.cpp
+    src/send.cpp
     src/self.cpp
     src/serializer.cpp
     src/shared_spinlock.cpp

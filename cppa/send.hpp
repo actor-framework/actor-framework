@@ -34,10 +34,11 @@
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/message_future.hpp"
+
+#include "cppa/util/duration.hpp"
 
 namespace cppa {
 
@@ -148,6 +149,63 @@ inline message_future sync_send(actor_ptr whom, Ts&&... what) {
 }
 
 /**
+ * @brief Sends a message to @p whom that is delayed by @p rel_time.
+ * @param whom Receiver of the message.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ */
+void delayed_send_tuple(const channel_ptr& to,
+                        const util::duration& rel_time,
+                        any_tuple data);
+
+/**
+ * @brief Sends a message to @p whom that is delayed by @p rel_time.
+ * @param whom Receiver of the message.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ */
+template<class Rep, class Period, typename... Ts>
+inline void delayed_send_tuple(const channel_ptr& whom,
+                               const std::chrono::duration<Rep, Period>& rtime,
+                               any_tuple what) {
+    delayed_send_tuple(whom, util::duration{rtime}, std::move(what));
+}
+
+/**
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ * @see delayed_send()
+ */
+void delayed_reply_tuple(const util::duration& rel_time,
+                         message_id mid,
+                         any_tuple data);
+
+/**
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ * @see delayed_send()
+ */
+void delayed_reply_tuple(const util::duration& rel_time, any_tuple data);
+
+/**
+ * @brief Sends a reply message that is delayed by @p rel_time.
+ * @param rtime Relative time duration to delay the message in
+ *              microseconds, milliseconds, seconds or minutes.
+ * @param what Message content as a tuple.
+ * @see delayed_send()
+ */
+template<class Rep, class Period, typename... Ts>
+inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
+                                any_tuple what) {
+    delayed_reply_tuple(util::duration{rtime}, std::move(what));
+}
+/**
  * @brief Sends @p what as a synchronous message to @p whom with a timeout.
  *
  * The calling actor receives a 'TIMEOUT' message as response after
@@ -165,7 +223,7 @@ message_future timed_sync_send_tuple(actor_ptr whom,
                                      any_tuple what) {
     auto mf = sync_send_tuple(std::move(whom), std::move(what));
     auto tmp = make_any_tuple(atom("TIMEOUT"));
-    get_scheduler()->delayed_reply(self, rel_time, mf.id(), std::move(tmp));
+    delayed_reply_tuple(util::duration{rel_time}, mf.id(), std::move(tmp));
     return mf;
 }
 
@@ -241,20 +299,6 @@ inline void forward_to(const actor_ptr& whom) {
  * @param whom Receiver of the message.
  * @param rtime Relative time duration to delay the message in
  *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_send_tuple(const channel_ptr& whom,
-                               const std::chrono::duration<Rep, Period>& rtime,
-                               any_tuple what) {
-    if (whom) get_scheduler()->delayed_send(whom, rtime, what);
-}
-
-/**
- * @brief Sends a message to @p whom that is delayed by @p rel_time.
- * @param whom Receiver of the message.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
  * @param what Message elements.
  */
 template<class Rep, class Period, typename... Ts>
@@ -267,22 +311,6 @@ inline void delayed_send(const channel_ptr& whom,
                            rtime,
                            make_any_tuple(std::forward<Ts>(what)...));
     }
-}
-
-/**
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- * @see delayed_send()
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
-                                any_tuple what) {
-    get_scheduler()->delayed_reply(self->last_sender(),
-                                   rtime,
-                                   self->get_response_id(),
-                                   std::move(what));
 }
 
 /**
