@@ -1,0 +1,13 @@
+package org.libcppa;
+
+message Ping {
+  required int32 id = 1;
+}
+message Pong {
+  required int32 id = 1;
+}
+
+message PingOrPong {
+    optional Ping ping = 1;
+    optional Pong pong = 2;
+}

@@ -100,6 +100,9 @@ cppa/network/default_peer.hpp
 cppa/network/default_peer_acceptor.hpp
 cppa/network/default_protocol.hpp
 cppa/network/input_stream.hpp
+cppa/network/io_actor.hpp
+cppa/network/io_actor_backend.hpp
+cppa/network/io_service.hpp
 cppa/network/io_stream.hpp
 cppa/network/ipv4_acceptor.hpp
 cppa/network/ipv4_io_stream.hpp
@@ -238,6 +241,9 @@ src/get_mac_addresses.cpp
 src/get_root_uuid.cpp
 src/group.cpp
 src/group_manager.cpp
+src/io_actor.cpp
+src/io_actor_backend.cpp
+src/io_service.cpp
 src/ipv4_acceptor.cpp
 src/ipv4_io_stream.cpp
 src/local_actor.cpp

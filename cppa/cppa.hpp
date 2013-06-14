@@ -68,6 +68,12 @@
 
 #include "cppa/util/type_traits.hpp"
 #include "cppa/network/acceptor.hpp"
+#include "cppa/network/io_actor.hpp"
+#include "cppa/network/middleman.hpp"
+#include "cppa/network/io_service.hpp"
+#include "cppa/network/input_stream.hpp"
+#include "cppa/network/output_stream.hpp"
+#include "cppa/network/io_actor_backend.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -605,6 +611,46 @@ inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
  *          representing a remote actor.
  */
 actor_ptr remote_actor(network::io_stream_ptr_pair connection);
+
+/**
+ * @brief Spawns an IO actor of type @p Impl.
+ * @param args Constructor arguments.
+ * @tparam Impl Subtype of {@link network::io_actor}.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_io(network::input_stream_ptr in,
+                   network::output_stream_ptr out,
+                   Ts&&... args) {
+    using namespace network;
+    auto mm = get_middleman();
+    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
+    backend->init();
+    mm->run_later([=] { mm->continue_reader(backend); });
+    return eval_sopts(Options, ptr);
+}
+
+/**
+ * @brief Spawns a new {@link actor} that evaluates given arguments.
+ * @param args A functor followed by its arguments.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ */
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_io(std::function<void (network::io_service*)> fun,
+                   network::input_stream_ptr in,
+                   network::output_stream_ptr out,
+                   Ts&&... args) {
+    using namespace network;
+    auto mm = get_middleman();
+    auto ptr = io_actor::from(std::move(fun));
+    auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
+    backend->init();
+    mm->run_later([=] { mm->continue_reader(backend); });
+    return eval_sopts(Options, ptr);
+}
 
 /**
  * @brief Destroys all singletons, disconnects all peers and stops the

@@ -132,6 +132,9 @@ set(LIBCPPA_SRC
     src/get_mac_addresses.cpp
     src/group.cpp
     src/group_manager.cpp
+    src/io_actor.cpp
+    src/io_actor_backend.cpp
+    src/io_service.cpp
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp
     src/local_actor.cpp

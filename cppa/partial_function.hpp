@@ -139,6 +139,11 @@ match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
     return detail::match_expr_concat(arg0, arg1, args...);
 }
 
+template<typename... Cases>
+partial_function operator,(const match_expr<Cases...>& mexpr,
+                           const partial_function& pfun) {
+    return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl);
+}
 
 /******************************************************************************
  *             inline and template member function implementations            *
