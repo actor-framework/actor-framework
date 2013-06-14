@@ -28,58 +28,53 @@
 \******************************************************************************/
 
 
-#include "cppa/config.hpp"
+#ifndef BUFFERED_WRITER_HPP
+#define BUFFERED_WRITER_HPP
 
-#include <ios> // ios_base::failure
-#include <list>
-#include <memory>
-#include <cstring>    // memset
-#include <iostream>
-#include <stdexcept>
+#include "cppa/util/buffer.hpp"
 
-#include <netinet/tcp.h>
+#include "cppa/network/output_stream.hpp"
+#include "cppa/network/continuable_io.hpp"
 
-#include "cppa/cppa.hpp"
-#include "cppa/atom.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/exception.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/binary_serializer.hpp"
-#include "cppa/binary_deserializer.hpp"
+namespace cppa { namespace network {
 
-#include "cppa/intrusive/single_reader_queue.hpp"
+class middleman;
 
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/ipv4_io_stream.hpp"
+class buffered_writer : public continuable_io {
 
-namespace cppa {
+    typedef continuable_io super;
 
-using namespace detail;
-using namespace network;
+ public:
 
-namespace { protocol* proto() {
-    return get_middleman()->get_protocol();
-} }
+    buffered_writer(middleman* parent,
+                    native_socket_type read_fd,
+                    output_stream_ptr out);
 
-void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
-    proto()->publish(whom, move(aptr), {});
-}
+    continue_writing_result continue_writing() override;
 
-actor_ptr remote_actor(io_stream_ptr_pair io) {
-    return proto()->remote_actor(io, {});
-}
+    inline bool has_unwritten_data() const {
+        return m_has_unwritten_data;
+    }
 
-void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
-    if (!addr) proto()->publish(whom, {port});
-    else proto()->publish(whom, {port, addr});
-}
+ protected:
 
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
-    return proto()->remote_actor({port, host});
-}
+    void write(size_t num_bytes, const void* data);
 
-} // namespace cppa
+    void register_for_writing();
+
+    inline util::buffer& write_buffer() {
+        return m_buf;
+    }
+
+ private:
+
+    middleman* m_middleman;
+    output_stream_ptr m_out;
+    bool m_has_unwritten_data;
+    util::buffer m_buf;
+
+};
+
+} } // namespace cppa::network
+
+#endif // BUFFERED_WRITER_HPP

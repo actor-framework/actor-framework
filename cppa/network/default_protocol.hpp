@@ -38,6 +38,7 @@
 #include "cppa/process_information.hpp"
 
 #include "cppa/network/protocol.hpp"
+#include "cppa/network/middleman.hpp"
 #include "cppa/network/default_peer.hpp"
 #include "cppa/network/default_peer_acceptor.hpp"
 #include "cppa/network/default_message_queue.hpp"
@@ -51,7 +52,7 @@ class default_protocol : public protocol {
 
  public:
 
-    default_protocol(abstract_middleman* parent);
+    default_protocol(middleman* multiplexer);
 
     atom_value identifier() const;
 
@@ -98,8 +99,6 @@ class default_protocol : public protocol {
     std::map<process_information, peer_entry> m_peers;
 
 };
-
-typedef intrusive_ptr<default_protocol> default_protocol_ptr;
 
 } } // namespace cppa::network
 

@@ -28,58 +28,56 @@
 \******************************************************************************/
 
 
-#include "cppa/config.hpp"
-
-#include <ios> // ios_base::failure
-#include <list>
-#include <memory>
-#include <cstring>    // memset
-#include <iostream>
-#include <stdexcept>
-
-#include <netinet/tcp.h>
-
-#include "cppa/cppa.hpp"
-#include "cppa/atom.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/exception.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/binary_serializer.hpp"
-#include "cppa/binary_deserializer.hpp"
 
-#include "cppa/intrusive/single_reader_queue.hpp"
-
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/protocol.hpp"
 #include "cppa/network/middleman.hpp"
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/ipv4_io_stream.hpp"
+#include "cppa/network/buffered_writer.hpp"
 
-namespace cppa {
+namespace cppa { namespace network {
 
-using namespace detail;
-using namespace network;
+buffered_writer::buffered_writer(middleman* pptr, native_socket_type rfd, output_stream_ptr out)
+: super(rfd, out->write_handle()), m_middleman(pptr)
+, m_out(out), m_has_unwritten_data(false) { }
 
-namespace { protocol* proto() {
-    return get_middleman()->get_protocol();
-} }
-
-void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
-    proto()->publish(whom, move(aptr), {});
+continue_writing_result buffered_writer::continue_writing() {
+    CPPA_LOG_TRACE("");
+    CPPA_LOG_DEBUG_IF(!m_has_unwritten_data, "nothing to write (done)");
+    while (m_has_unwritten_data) {
+        size_t written;
+        try { written = m_out->write_some(m_buf.data(), m_buf.size()); }
+        catch (std::exception& e) {
+            CPPA_LOG_ERROR(to_verbose_string(e));
+            static_cast<void>(e); // keep compiler happy
+            return write_failure;
+        }
+        if (written != m_buf.size()) {
+            CPPA_LOGMF(CPPA_DEBUG, self, "tried to write " << m_buf.size() << "bytes, "
+                           << "only " << written << " bytes written");
+            m_buf.erase_leading(written);
+            return write_continue_later;
+        }
+        else {
+            m_buf.clear();
+            m_has_unwritten_data = false;
+            CPPA_LOGMF(CPPA_DEBUG, self, "write done, " << written << "bytes written");
+        }
+    }
+    return write_done;
 }
 
-actor_ptr remote_actor(io_stream_ptr_pair io) {
-    return proto()->remote_actor(io, {});
+void buffered_writer::write(size_t num_bytes, const void* data) {
+    m_buf.write(num_bytes, data);
+    register_for_writing();
 }
 
-void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
-    if (!addr) proto()->publish(whom, {port});
-    else proto()->publish(whom, {port, addr});
+void buffered_writer::register_for_writing() {
+    if (!m_has_unwritten_data) {
+        CPPA_LOGMF(CPPA_DEBUG, self, "register for writing");
+        m_has_unwritten_data = true;
+        m_middleman->continue_writer(this);
+    }
 }
 
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
-    return proto()->remote_actor({port, host});
-}
-
-} // namespace cppa
+} } // namespace cppa::network

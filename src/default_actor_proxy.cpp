@@ -51,8 +51,8 @@ sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
 
 default_actor_proxy::default_actor_proxy(actor_id mid,
                                          const process_information_ptr& pinfo,
-                                         const default_protocol_ptr& parent)
-: super(mid), m_proto(parent), m_pinf(pinfo) {
+                                         default_protocol* parent)
+: super(mid), m_parent(parent), m_pinf(pinfo) {
     CPPA_REQUIRE(parent != nullptr);
     CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(pinfo, to_string)
                   << "protocol = " << detail::demangle(typeid(*parent)));
@@ -61,9 +61,9 @@ default_actor_proxy::default_actor_proxy(actor_id mid,
 default_actor_proxy::~default_actor_proxy() {
     auto aid = m_id;
     auto node = m_pinf;
-    auto proto = m_proto;
+    auto proto = m_parent;
     CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(m_pinf)
-                   << ", protocol = " << detail::demangle(typeid(*m_proto)));
+                   << ", protocol = " << detail::demangle(typeid(*m_parent)));
     proto->run_later([aid, node, proto] {
         CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                         "~default_actor_proxy$run_later",
@@ -106,7 +106,7 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
         switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
             case intrusive::queue_closed: {
                 auto rsn = exit_reason();
-                m_proto->run_later([rsn, hdr] {
+                m_parent->run_later([rsn, hdr] {
                     CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                                     "forward_msg$bouncer",
                                     "bounce message for reason " << rsn);
@@ -119,8 +119,8 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
         }
     }
     auto node = m_pinf;
-    auto proto = m_proto;
-    m_proto->run_later([hdr, msg, node, proto] {
+    auto proto = m_parent;
+    m_parent->run_later([hdr, msg, node, proto] {
         CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                         "forward_msg$forwarder",
                         "");
@@ -138,7 +138,7 @@ void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
         CPPA_LOG_DEBUG("received KILL_PROXY message");
         intrusive_ptr<default_actor_proxy> _this{this};
         auto reason = msg.get_as<uint32_t>(1);
-        m_proto->run_later([_this, reason] {
+        m_parent->run_later([_this, reason] {
             CPPA_LOGC_TRACE("cppa::network::default_actor_proxy",
                             "enqueue$kill_proxy_helper",
                             "KILL_PROXY with exit reason " << reason);

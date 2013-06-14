@@ -34,33 +34,8 @@
 
 namespace cppa { namespace network {
 
-protocol::protocol(abstract_middleman* parent) : m_parent(parent) {
+protocol::protocol(middleman* parent) : m_parent(parent) {
     CPPA_REQUIRE(parent != nullptr);
-}
-
-void protocol::run_later(std::function<void()> fun) {
-    CPPA_REQUIRE(m_parent != nullptr);
-    m_parent->run_later(std::move(fun));
-}
-
-void protocol::continue_reader(continuable_io* ptr) {
-    CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    m_parent->continue_reader(ptr);
-}
-
-void protocol::continue_writer(continuable_io* ptr) {
-    CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    m_parent->continue_writer(ptr);
-}
-
-void protocol::stop_reader(continuable_io* ptr) {
-    CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    m_parent->stop_reader(ptr);
-}
-
-void protocol::stop_writer(continuable_io* ptr) {
-    CPPA_LOG_TRACE(CPPA_ARG(ptr));
-    m_parent->stop_writer(ptr);
 }
 
 } } // namespace cppa::network

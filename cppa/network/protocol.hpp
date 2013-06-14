@@ -53,15 +53,13 @@ class abstract_middleman;
 /**
  * @brief Implements a communication protocol.
  */
-class protocol : public ref_counted {
-
-    typedef ref_counted super;
+class protocol {
 
  public:
 
     typedef std::initializer_list<primitive_variant> variant_args;
 
-    protocol(abstract_middleman* parent);
+    protocol(middleman* parent);
 
     virtual atom_value identifier() const = 0;
 
@@ -80,33 +78,78 @@ class protocol : public ref_counted {
 
     virtual actor_addressing* addressing() = 0;
 
-    void run_later(std::function<void()> fun);
+    /**
+     * @brief Convenience member function to be used by children of
+     *        this protocol.
+     */
+    template<typename T>
+    inline void run_later(T&& what);
 
- protected:
+    /**
+     * @brief Convenience member function to be used by children of
+     *        this protocol.
+     */
+    inline void stop_writer(const continuable_io_ptr& ptr);
 
-    // note: not thread-safe; call only in run_later functor!
-    void continue_reader(continuable_io* what);
+    /**
+     * @brief Convenience member function to be used by children of
+     *        this protocol.
+     */
+    inline void continue_writer(const continuable_io_ptr& ptr);
 
-    // note: not thread-safe; call only in run_later functor!
-    void continue_writer(continuable_io* what);
+    /**
+     * @brief Convenience member function to be used by children of
+     *        this protocol.
+     */
+    inline void stop_reader(const continuable_io_ptr& ptr);
 
-    // note: not thread-safe; call only in run_later functor!
-    void stop_reader(continuable_io* what);
+    /**
+     * @brief Convenience member function to be used by children of
+     *        this protocol.
+     */
+    inline void continue_reader(const continuable_io_ptr& ptr);
 
-    // note: not thread-safe; call only in run_later functor!
-    void stop_writer(continuable_io* what);
-
-    inline abstract_middleman* parent() { return m_parent.get(); }
-
-    inline const abstract_middleman* parent() const { return m_parent.get(); }
+    /**
+     * @brief Returns the parent of this protocol instance.
+     */
+    inline middleman* parent();
 
  private:
 
-    intrusive_ptr<abstract_middleman> m_parent;
+    middleman* m_parent;
 
 };
 
 typedef intrusive_ptr<protocol> protocol_ptr;
+
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+inline middleman* protocol::parent() {
+    return m_parent;
+}
+
+template<typename T>
+inline void protocol::run_later(T&& what) {
+    m_parent->run_later(std::forward<T>(what));
+}
+
+inline void protocol::stop_writer(const continuable_io_ptr& ptr) {
+    m_parent->stop_writer(ptr);
+}
+
+inline void protocol::continue_writer(const continuable_io_ptr& ptr) {
+    m_parent->continue_writer(ptr);
+}
+
+inline void protocol::stop_reader(const continuable_io_ptr& ptr) {
+    m_parent->stop_reader(ptr);
+}
+
+inline void protocol::continue_reader(const continuable_io_ptr& ptr) {
+    m_parent->continue_reader(ptr);
+}
 
 } } // namespace cppa::network
 

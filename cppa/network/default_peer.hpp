@@ -43,16 +43,16 @@
 
 #include "cppa/network/input_stream.hpp"
 #include "cppa/network/output_stream.hpp"
-#include "cppa/network/continuable_io.hpp"
+#include "cppa/network/buffered_writer.hpp"
 #include "cppa/network/default_message_queue.hpp"
 
 namespace cppa { namespace network {
 
 class default_protocol;
 
-class default_peer : public continuable_io {
+class default_peer : public buffered_writer {
 
-    typedef continuable_io super;
+    typedef buffered_writer super;
 
     friend class default_protocol;
 
@@ -67,7 +67,7 @@ class default_peer : public continuable_io {
 
     continue_writing_result continue_writing() override;
 
-    void io_failed();
+    void io_failed() override;
 
     void enqueue(const message_header& hdr, const any_tuple& msg);
 
@@ -79,17 +79,7 @@ class default_peer : public continuable_io {
         return *m_node;
     }
 
-    inline bool has_unwritten_data() const {
-        return m_has_unwritten_data;
-    }
-
- protected:
-
-    ~default_peer();
-
  private:
-
-    void disconnected();
 
     enum read_state {
         // connection just established; waiting for process information
@@ -102,10 +92,8 @@ class default_peer : public continuable_io {
 
     default_protocol* m_parent;
     input_stream_ptr m_in;
-    output_stream_ptr m_out;
     read_state m_state;
     process_information_ptr m_node;
-    bool m_has_unwritten_data;
 
     const uniform_type_info* m_meta_hdr;
     const uniform_type_info* m_meta_msg;
@@ -142,6 +130,8 @@ class default_peer : public continuable_io {
     inline void enqueue(const any_tuple& msg) {
         enqueue({nullptr, nullptr}, msg);
     }
+
+    void enqueue_impl(const message_header& hdr, const any_tuple& msg);
 
 };
 

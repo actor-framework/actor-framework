@@ -60,14 +60,13 @@ default_peer::default_peer(default_protocol* parent,
                            const input_stream_ptr& in,
                            const output_stream_ptr& out,
                            process_information_ptr peer_ptr)
-: super(in->read_handle(), out->write_handle())
-, m_parent(parent), m_in(in), m_out(out)
+: super(parent->parent(), in->read_handle(), out)
+, m_parent(parent), m_in(in)
 , m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
-, m_node(peer_ptr)
-, m_has_unwritten_data(false) {
-    m_rd_buf.reset(m_state == wait_for_process_info
-                   ? sizeof(uint32_t) + process_information::node_id_size
-                   : sizeof(uint32_t));
+, m_node(peer_ptr) {
+    m_rd_buf.final_size( m_state == wait_for_process_info
+                       ? sizeof(uint32_t) + process_information::node_id_size
+                       : sizeof(uint32_t));
     // state == wait_for_msg_size iff peer was created using remote_peer()
     // in this case, this peer must be erased if no proxy of it remains
     m_erase_on_last_proxy_exited = m_state == wait_for_msg_size;
@@ -75,11 +74,7 @@ default_peer::default_peer(default_protocol* parent,
     m_meta_msg = uniform_typeid<any_tuple>();
 }
 
-default_peer::~default_peer() {
-    disconnected();
-}
-
-void default_peer::disconnected() {
+void default_peer::io_failed() {
     CPPA_LOG_TRACE("node = " << (m_node ? to_string(*m_node) : "nullptr"));
     if (m_node) {
         // kill all proxies
@@ -94,17 +89,11 @@ void default_peer::disconnected() {
     }
 }
 
-void default_peer::io_failed() {
-    CPPA_LOG_TRACE("");
-    disconnected();
-}
-
 continue_reading_result default_peer::continue_reading() {
     CPPA_LOG_TRACE("");
     for (;;) {
         try { m_rd_buf.append_from(m_in.get()); }
         catch (exception&) {
-            disconnected();
             return read_failure;
         }
         if (!m_rd_buf.full()) return read_continue_later; // try again later
@@ -115,7 +104,7 @@ continue_reading_result default_peer::continue_reading() {
                 uint32_t process_id;
                 process_information::node_id_type node_id;
                 memcpy(&process_id, m_rd_buf.data(), sizeof(uint32_t));
-                memcpy(node_id.data(), m_rd_buf.data() + sizeof(uint32_t),
+                memcpy(node_id.data(), m_rd_buf.offset_data(sizeof(uint32_t)),
                        process_information::node_id_size);
                 m_node.reset(new process_information(process_id, node_id));
                 if (*process_information::get() == *m_node) {
@@ -128,14 +117,16 @@ continue_reading_result default_peer::continue_reading() {
                 m_parent->register_peer(*m_node, this);
                 // initialization done
                 m_state = wait_for_msg_size;
-                m_rd_buf.reset(sizeof(uint32_t));
+                m_rd_buf.clear();
+                m_rd_buf.final_size(sizeof(uint32_t));
                 break;
             }
             case wait_for_msg_size: {
                 //DEBUG("peer_connection::continue_reading: wait_for_msg_size");
                 uint32_t msg_size;
                 memcpy(&msg_size, m_rd_buf.data(), sizeof(uint32_t));
-                m_rd_buf.reset(msg_size);
+                m_rd_buf.clear();
+                m_rd_buf.final_size(msg_size);
                 m_state = read_message;
                 break;
             }
@@ -177,7 +168,8 @@ continue_reading_result default_peer::continue_reading() {
                         deliver(hdr, move(msg));
                     }
                 );
-                m_rd_buf.reset(sizeof(uint32_t));
+                m_rd_buf.clear();
+                m_rd_buf.final_size(sizeof(uint32_t));
                 m_state = wait_for_msg_size;
                 break;
             }
@@ -220,7 +212,7 @@ void default_peer::monitor(const actor_ptr&,
     }
     else {
         CPPA_LOGMF(CPPA_DEBUG, self, "attach functor to " << entry.first.get());
-        default_protocol_ptr proto = m_parent;
+        default_protocol* proto = m_parent;
         entry.first->attach_functor([=](uint32_t reason) {
             proto->run_later([=] {
                 CPPA_LOGC_TRACE("cppa::network::default_peer",
@@ -308,47 +300,27 @@ void default_peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
 
 continue_writing_result default_peer::continue_writing() {
     CPPA_LOG_TRACE("");
-    CPPA_LOG_DEBUG_IF(!m_has_unwritten_data, "nothing to write (done)");
-    while (m_has_unwritten_data) {
-        size_t written;
-        try { written = m_out->write_some(m_wr_buf.data(), m_wr_buf.size()); }
-        catch (exception& e) {
-            CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
-            static_cast<void>(e); // keep compiler happy
-            disconnected();
-            return write_failure;
-        }
-        if (written != m_wr_buf.size()) {
-            CPPA_LOGMF(CPPA_DEBUG, self, "tried to write " << m_wr_buf.size() << "bytes, "
-                           << "only " << written << " bytes written");
-            m_wr_buf.erase_leading(written);
-            return write_continue_later;
-        }
-        else {
-            m_wr_buf.reset();
-            m_has_unwritten_data = false;
-            CPPA_LOGMF(CPPA_DEBUG, self, "write done, " << written << "bytes written");
-        }
-        // try to write next message in queue
-        while (!m_has_unwritten_data && !queue().empty()) {
-            auto tmp = queue().pop();
-            enqueue(tmp.first, tmp.second);
-        }
+    auto result = super::continue_writing();
+    while (result == write_done && !queue().empty()) {
+        auto tmp = queue().pop();
+        enqueue(tmp.first, tmp.second);
+        result = super::continue_writing();
     }
-    if (erase_on_last_proxy_exited() && !has_unwritten_data()) {
+    if (result == write_done && erase_on_last_proxy_exited() && !has_unwritten_data()) {
         if (m_parent->addressing()->count_proxies(*m_node) == 0) {
             m_parent->last_proxy_exited(this);
         }
     }
-    return write_done;
+    return result;
 }
 
-void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
+void default_peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
-    binary_serializer bs(&m_wr_buf, m_parent->addressing());
     uint32_t size = 0;
-    auto before = m_wr_buf.size();
-    m_wr_buf.write(sizeof(uint32_t), &size, util::grow_if_needed);
+    auto& wbuf = write_buffer();
+    auto before = wbuf.size();
+    binary_serializer bs(&wbuf, m_parent->addressing());
+    wbuf.write(sizeof(uint32_t), &size);
     try { bs << hdr << msg; }
     catch (exception& e) {
         CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
@@ -358,15 +330,14 @@ void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
         return;
     }
     CPPA_LOGMF(CPPA_DEBUG, self, "serialized: " << to_string(hdr) << " " << to_string(msg));
-    size = (m_wr_buf.size() - before) - sizeof(std::uint32_t);
+    size = (wbuf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
-    memcpy(m_wr_buf.data() + before, &size, sizeof(std::uint32_t));
-    CPPA_LOG_DEBUG_IF(m_has_unwritten_data, "still registered for writing");
-    if (!m_has_unwritten_data) {
-        CPPA_LOGMF(CPPA_DEBUG, self, "register for writing");
-        m_has_unwritten_data = true;
-        m_parent->continue_writer(this);
-    }
+    memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));
+}
+
+void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
+    enqueue_impl(hdr, msg);
+    register_for_writing();
 }
 
 } } // namespace cppa::network

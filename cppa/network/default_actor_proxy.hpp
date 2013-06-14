@@ -74,7 +74,7 @@ class default_actor_proxy : public actor_proxy {
 
     default_actor_proxy(actor_id mid,
                         const process_information_ptr& pinfo,
-                        const default_protocol_ptr& parent);
+                        default_protocol* parent);
 
     void enqueue(const message_header& hdr, any_tuple msg) override;
 
@@ -104,7 +104,7 @@ class default_actor_proxy : public actor_proxy {
 
     void forward_msg(const message_header& hdr, any_tuple msg);
 
-    default_protocol_ptr    m_proto;
+    default_protocol*       m_parent;
     process_information_ptr m_pinf;
     intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
 

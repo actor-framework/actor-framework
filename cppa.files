@@ -91,6 +91,7 @@ cppa/message_header.hpp
 cppa/message_id.hpp
 cppa/message_priority.hpp
 cppa/network/acceptor.hpp
+cppa/network/buffered_writer.hpp
 cppa/network/continuable_io.hpp
 cppa/network/default_actor_addressing.hpp
 cppa/network/default_actor_proxy.hpp
@@ -211,6 +212,7 @@ src/behavior_stack.cpp
 src/binary_deserializer.cpp
 src/binary_serializer.cpp
 src/buffer.cpp
+src/buffered_writer.cpp
 src/channel.cpp
 src/context_switching_actor.cpp
 src/continuable_io.cpp

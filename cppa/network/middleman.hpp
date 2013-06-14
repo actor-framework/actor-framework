@@ -43,13 +43,12 @@ namespace cppa { namespace detail { class singleton_manager; } }
 namespace cppa { namespace network {
 
 class protocol;
-
-typedef intrusive_ptr<protocol> protocol_ptr;
+class middleman_impl;
 
 /**
  * @brief Multiplexes asynchronous IO.
  */
-class middleman : public ref_counted {
+class middleman {
 
     friend class detail::singleton_manager;
 
@@ -58,55 +57,60 @@ class middleman : public ref_counted {
     virtual ~middleman();
 
     /**
-     * @brief Add a new communication protocol to the middleman.
+     * @brief Returns the networking protocol in use.
      */
-    virtual void add_protocol(const protocol_ptr& impl) = 0;
-
-    /**
-     * @brief Returns the protocol associated with @p id.
-     */
-    virtual protocol_ptr protocol(atom_value id) = 0;
+    protocol* get_protocol();
 
     /**
      * @brief Runs @p fun in the middleman's event loop.
      */
-    virtual void run_later(std::function<void()> fun) = 0;
+    void run_later(std::function<void()> fun);
+
+    /**
+     * @brief Removes @p ptr from the list of active writers.
+     * @warning This member function is not thread-safe.
+     */
+    void stop_writer(const continuable_io_ptr& ptr);
+
+    /**
+     * @brief Adds @p ptr to the list of active writers.
+     * @warning This member function is not thread-safe.
+     */
+    void continue_writer(const continuable_io_ptr& ptr);
+
+    /**
+     * @brief Removes @p ptr from the list of active readers.
+     * @warning This member function is not thread-safe.
+     */
+    void stop_reader(const continuable_io_ptr& ptr);
+
+    /**
+     * @brief Adds @p ptr to the list of active readers.
+     * @warning This member function is not thread-safe.
+     */
+    void continue_reader(const continuable_io_ptr& ptr);
 
  protected:
 
-    virtual void destroy() = 0;
-    virtual void initialize() = 0;
+    // destroys singleton
+    void destroy();
+
+    // initializes singletons
+    void initialize();
 
  private:
 
+    // sets m_impl and binds implementation to given protocol
+    void set_pimpl(std::unique_ptr<protocol>&&);
+
+    // creates a middleman using network::default_protocol
     static middleman* create_singleton();
+
+    // destroys uninitialized instances
     inline void dispose() { delete this; }
 
-};
-
-class middleman_event_handler;
-
-class abstract_middleman : public middleman {
-
- public:
-
-    inline abstract_middleman() : m_done(false) { }
-
-    void stop_writer(const continuable_io_ptr& ptr);
-    void continue_writer(const continuable_io_ptr& ptr);
-
-    void stop_reader(const continuable_io_ptr& what);
-    void continue_reader(const continuable_io_ptr& what);
-
- protected:
-
-    inline void quit() { m_done = true; }
-    inline bool done() const { return m_done; }
-
-    bool m_done;
-    std::vector<continuable_io_ptr> m_readers;
-
-    middleman_event_handler& handler();
+    // pointer to implementation
+    std::unique_ptr<middleman_impl> m_impl;
 
 };
 

@@ -53,7 +53,7 @@ using namespace cppa::detail;
 
 namespace cppa { namespace network {
 
-default_protocol::default_protocol(abstract_middleman* parent)
+default_protocol::default_protocol(middleman* parent)
 : super(parent), m_addressing(this) { }
 
 atom_value default_protocol::identifier() const {
@@ -90,7 +90,7 @@ void default_protocol::publish(const actor_ptr& whom,
     CPPA_REQUIRE(args.size() == 0);
     static_cast<void>(args); // keep compiler happy
     get_actor_registry()->put(whom->id(), whom);
-    default_protocol_ptr proto = this;
+    default_protocol* proto = this;
     auto impl = make_counted<default_peer_acceptor>(this, move(ptr), whom);
     run_later([=] {
         CPPA_LOGC_TRACE("cppa::network::default_protocol",
@@ -102,7 +102,7 @@ void default_protocol::publish(const actor_ptr& whom,
 
 void default_protocol::unpublish(const actor_ptr& whom) {
     CPPA_LOG_TRACE("whom = " << to_string(whom));
-    default_protocol_ptr proto = this;
+    default_protocol* proto = this;
     run_later([=] {
         CPPA_LOGC_TRACE("cppa::network::default_protocol",
                         "unpublish$remove_acceptors", "");
@@ -199,7 +199,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
 #       endif
         return get_actor_registry()->get(remote_aid);
     }
-    default_protocol_ptr proto = this;
+    default_protocol* proto = this;
     intrusive::blocking_single_reader_queue<remote_actor_result> q;
     run_later([proto, io, pinfptr, remote_aid, &q] {
         CPPA_LOGC_TRACE("cppa::network::default_protocol",

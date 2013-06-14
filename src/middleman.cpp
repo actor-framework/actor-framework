@@ -51,6 +51,7 @@
 
 #include "cppa/util/buffer.hpp"
 
+#include "cppa/network/protocol.hpp"
 #include "cppa/network/acceptor.hpp"
 #include "cppa/network/middleman.hpp"
 #include "cppa/network/input_stream.hpp"
@@ -87,32 +88,19 @@ class middleman_event {
 
 typedef intrusive::single_reader_queue<middleman_event> middleman_queue;
 
-class default_middleman_impl : public abstract_middleman {
+class middleman_impl {
 
-    friend class abstract_middleman;
-    friend void middleman_loop(default_middleman_impl*);
+    friend class middleman;
+    friend void middleman_loop(middleman_impl*);
 
  public:
 
-    default_middleman_impl() : m_handler(middleman_event_handler::create()) {
-        m_protocols.insert(make_pair(atom("DEFAULT"),
-                                     new network::default_protocol(this)));
-    }
+    middleman_impl(std::unique_ptr<protocol>&& proto)
+    : m_handler(middleman_event_handler::create())
+    , m_protocol(std::move(proto)) { }
 
-    void add_protocol(const protocol_ptr& impl) {
-        if (!impl) {
-            CPPA_LOGMF(CPPA_ERROR, self, "impl == nullptr");
-            throw std::invalid_argument("impl == nullptr");
-        }
-        CPPA_LOG_TRACE("identifier = " << to_string(impl->identifier()));
-        std::lock_guard<util::shared_spinlock> guard(m_protocols_lock);
-        m_protocols.insert(make_pair(impl->identifier(), impl));
-    }
-
-    protocol_ptr protocol(atom_value id) {
-        util::shared_lock_guard<util::shared_spinlock> guard(m_protocols_lock);
-        auto i = m_protocols.find(id);
-        return (i != m_protocols.end()) ? i->second : nullptr;
+    protocol* get_protocol() {
+        return m_protocol.get();
     }
 
     void run_later(function<void()> fun) {
@@ -121,6 +109,32 @@ class default_middleman_impl : public abstract_middleman {
         uint8_t dummy = 0;
         // ignore result; write error only means middleman already exited
         static_cast<void>(write(m_pipe_write, &dummy, sizeof(dummy)));
+    }
+
+    void continue_writer(const continuable_io_ptr& ptr) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        m_handler->add_later(ptr, event::write);
+    }
+
+    void stop_writer(const continuable_io_ptr& ptr) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        m_handler->erase_later(ptr, event::write);
+    }
+
+    void continue_reader(const continuable_io_ptr& ptr) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        m_readers.push_back(ptr);
+        m_handler->add_later(ptr, event::read);
+    }
+
+    void stop_reader(const continuable_io_ptr& ptr) {
+        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        m_handler->erase_later(ptr, event::read);
+        auto last = m_readers.end();
+        auto i = find_if(m_readers.begin(), last, [&](const continuable_io_ptr& lhs) {
+            return lhs == ptr;
+        });
+        if (i != last) m_readers.erase(i);
     }
 
  protected:
@@ -133,8 +147,6 @@ class default_middleman_impl : public abstract_middleman {
         detail::fd_util::nonblocking(m_pipe_read, true);
         // start threads
         m_thread = thread([this] { middleman_loop(this); });
-        // increase reference count for singleton manager
-        ref();
     }
 
     void destroy() {
@@ -145,12 +157,18 @@ class default_middleman_impl : public abstract_middleman {
         m_thread.join();
         close(m_pipe_read);
         close(m_pipe_write);
-        // decrease reference count for singleton manager
-        deref();
-        //delete this;
     }
 
  private:
+
+    inline void quit() { m_done = true; }
+
+    inline bool done() const { return m_done; }
+
+    bool m_done;
+    std::vector<continuable_io_ptr> m_readers;
+
+    middleman_event_handler& handler();
 
     thread m_thread;
     native_socket_type m_pipe_read;
@@ -158,13 +176,18 @@ class default_middleman_impl : public abstract_middleman {
     middleman_queue m_queue;
     std::unique_ptr<middleman_event_handler> m_handler;
 
-    util::shared_spinlock m_protocols_lock;
-    map<atom_value, protocol_ptr> m_protocols;
+    std::unique_ptr<protocol> m_protocol;
 
 };
 
+void middleman::set_pimpl(std::unique_ptr<protocol>&& proto) {
+    m_impl.reset(new middleman_impl(std::move(proto)));
+}
+
 middleman* middleman::create_singleton() {
-    return new default_middleman_impl;
+    auto ptr = new middleman;
+    ptr->set_pimpl(std::unique_ptr<protocol>{new default_protocol(ptr)});
+    return ptr;
 }
 
 class middleman_overseer : public continuable_io {
@@ -215,38 +238,39 @@ class middleman_overseer : public continuable_io {
 
 middleman::~middleman() { }
 
-middleman_event_handler& abstract_middleman::handler() {
-    return *(static_cast<default_middleman_impl*>(this)->m_handler);
+void middleman::destroy() {
+    m_impl->destroy();
 }
 
-void abstract_middleman::continue_writer(const continuable_io_ptr& ptr) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().add_later(ptr, event::write);
+void middleman::initialize() {
+    m_impl->initialize();
 }
 
-void abstract_middleman::stop_writer(const continuable_io_ptr& ptr) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().erase_later(ptr, event::write);
+protocol* middleman::get_protocol() {
+    return m_impl->get_protocol();
 }
 
-void abstract_middleman::continue_reader(const continuable_io_ptr& ptr) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get());
-    m_readers.push_back(ptr);
-    handler().add_later(ptr, event::read);
+void middleman::run_later(std::function<void()> fun) {
+    m_impl->run_later(std::move(fun));
 }
 
-void abstract_middleman::stop_reader(const continuable_io_ptr& ptr) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get());
-    handler().erase_later(ptr, event::read);
-
-    auto last = end(m_readers);
-    auto i = find_if(begin(m_readers), last, [ptr](const continuable_io_ptr& value) {
-        return value == ptr;
-    });
-    if (i != last) m_readers.erase(i);
+void middleman::continue_writer(const continuable_io_ptr& ptr) {
+    m_impl->continue_writer(ptr);
 }
 
-void middleman_loop(default_middleman_impl* impl) {
+void middleman::stop_writer(const continuable_io_ptr& ptr) {
+    m_impl->stop_writer(ptr);
+}
+
+void middleman::continue_reader(const continuable_io_ptr& ptr) {
+    m_impl->continue_reader(ptr);
+}
+
+void middleman::stop_reader(const continuable_io_ptr& ptr) {
+    m_impl->stop_reader(ptr);
+}
+
+void middleman_loop(middleman_impl* impl) {
 #   ifdef CPPA_LOG_LEVEL
     auto mself = make_counted<thread_mapped_actor>();
     scoped_self_setter sss(mself.get());

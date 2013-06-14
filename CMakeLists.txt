@@ -108,6 +108,7 @@ set(LIBCPPA_SRC
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
     src/buffer.cpp
+    src/buffered_writer.cpp
     src/channel.cpp
     src/context_switching_actor.cpp
     src/continuable_io.cpp
