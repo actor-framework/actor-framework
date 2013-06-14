@@ -66,7 +66,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
         int presult;
         do {
             presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
-            CPPA_LOGMF(CPPA_DEBUG, self, "poll() on " << num_sockets()
+            CPPA_LOG_DEBUG("poll() on " << num_sockets()
                            << " sockets returned " << presult);
             if (presult < 0) {
                 switch (errno) {
@@ -92,13 +92,19 @@ class middleman_event_handler_impl : public middleman_event_handler {
                 for (size_t i = 0; i < m_pollset.size(); ++i) {
                     event_bitmask eb = event::none;
                     auto& revents = m_pollset[i].revents;
-                    if (revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)) {
+                    // read as long as possible, ignore POLLHUP as long as
+                    // there is still data available
+                    if (revents & (POLLIN | POLLPRI)) eb |= event::read;
+                    else if (revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)) {
+                        CPPA_LOG_DEBUG_IF(revents & POLLRDHUP, "POLLRDHUP");
+                        CPPA_LOG_DEBUG_IF(revents & POLLERR,   "POLLERR");
+                        CPPA_LOG_DEBUG_IF(revents & POLLHUP,   "POLLHUP");
+                        CPPA_LOG_DEBUG_IF(revents & POLLNVAL,  "POLLNVAL");
                         eb = event::error;
                     }
-                    else {
-                        if (revents & (POLLIN | POLLPRI)) eb |= event::read;
-                        if (revents & POLLOUT) eb |= event::write;
-                    }
+                    // POLLOUT and POLLHUP are mutually exclusive:
+                    // no need to check wheter event::error has been set
+                    if (revents & POLLOUT) eb |= event::write;
                     revents = 0;
                     m_events.emplace_back(eb, m_meta[i].ptr.get());
                 }
