@@ -45,10 +45,10 @@ class binary_deserializer : public deserializer {
 
  public:
 
-    binary_deserializer(const char* buf, size_t buf_size,
+    binary_deserializer(const void* buf, size_t buf_size,
                         actor_addressing* addressing = nullptr);
 
-    binary_deserializer(const char* begin, const char* end,
+    binary_deserializer(const void* begin, const void* m_end,
                         actor_addressing* addressing = nullptr);
 
     std::string seek_object();
@@ -65,8 +65,8 @@ class binary_deserializer : public deserializer {
 
  private:
 
-    const char* pos;
-    const char* end;
+    const void* m_pos;
+    const void* m_end;
 
 };
 

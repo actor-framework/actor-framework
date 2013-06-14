@@ -48,36 +48,44 @@ namespace cppa {
 
 namespace {
 
-typedef const char* iterator;
+typedef const void* pointer;
 
-inline void range_check(iterator begin, iterator end, size_t read_size) {
-    if ((begin + read_size) > end) {
+const char* as_char_pointer(pointer ptr) {
+    return reinterpret_cast<const char*>(ptr);
+}
+
+pointer advanced(pointer ptr, size_t num_bytes) {
+    return reinterpret_cast<const char*>(ptr) + num_bytes;
+}
+
+inline void range_check(pointer begin, pointer end, size_t read_size) {
+    if (advanced(begin, read_size) > end) {
         CPPA_LOGF(CPPA_ERROR, self, "range_check failed");
         throw out_of_range("binary_deserializer::read_range()");
     }
 }
 
 template<typename T>
-iterator read_range(iterator begin, iterator end, T& storage,
-              typename enable_if<is_integral<T>::value>::type* = 0) {
+pointer read_range(pointer begin, pointer end, T& storage,
+                   typename enable_if<is_integral<T>::value>::type* = 0) {
     range_check(begin, end, sizeof(T));
     memcpy(&storage, begin, sizeof(T));
-    return begin + sizeof(T);
+    return advanced(begin, sizeof(T));
 }
 
-iterator read_range(iterator begin, iterator end, string& storage) {
+pointer read_range(pointer begin, pointer end, string& storage) {
     uint32_t str_size;
     begin = read_range(begin, end, str_size);
     range_check(begin, end, str_size);
     storage.clear();
     storage.reserve(str_size);
-    iterator cpy_end = begin + str_size;
-    copy(begin, cpy_end, back_inserter(storage));
-    return begin + str_size;
+    pointer cpy_end = advanced(begin, str_size);
+    copy(as_char_pointer(begin), as_char_pointer(cpy_end), back_inserter(storage));
+    return advanced(begin, str_size);
 }
 
 template<typename CharType, typename StringType>
-iterator read_unicode_string(iterator begin, iterator end, StringType& str) {
+pointer read_unicode_string(pointer begin, pointer end, StringType& str) {
     uint32_t str_size;
     begin = read_range(begin, end, str_size);
     str.reserve(str_size);
@@ -91,7 +99,7 @@ iterator read_unicode_string(iterator begin, iterator end, StringType& str) {
 
 // @returns the next iterator position
 template<typename T>
-iterator read_range(iterator begin, iterator end, T& value,
+pointer read_range(pointer begin, pointer end, T& value,
               typename enable_if<is_floating_point<T>::value>::type* = 0) {
     // floating points are written as strings
     string str;
@@ -101,13 +109,13 @@ iterator read_range(iterator begin, iterator end, T& value,
     return result;
 }
 
-iterator read_range(iterator begin, iterator end, u16string& storage) {
+pointer read_range(pointer begin, pointer end, u16string& storage) {
     // char16_t is guaranteed to has *at least* 16 bytes,
     // but not to have *exactly* 16 bytes; thus use uint16_t
     return read_unicode_string<uint16_t>(begin, end, storage);
 }
 
-iterator read_range(iterator begin, iterator end, u32string& storage) {
+pointer read_range(pointer begin, pointer end, u32string& storage) {
     // char32_t is guaranteed to has *at least* 32 bytes,
     // but not to have *exactly* 32 bytes; thus use uint32_t
     return read_unicode_string<uint32_t>(begin, end, storage);
@@ -115,10 +123,10 @@ iterator read_range(iterator begin, iterator end, u32string& storage) {
 
 struct pt_reader {
 
-    iterator begin;
-    iterator end;
+    pointer begin;
+    pointer end;
 
-    pt_reader(iterator bbegin, iterator bend) : begin(bbegin), end(bend) { }
+    pt_reader(pointer bbegin, pointer bend) : begin(bbegin), end(bend) { }
 
     template<typename T>
     inline void operator()(T& value) {
@@ -129,23 +137,23 @@ struct pt_reader {
 
 } // namespace <anonmyous>
 
-binary_deserializer::binary_deserializer(const char* buf, size_t buf_size,
+binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
                                          actor_addressing* addressing)
-: super(addressing), pos(buf), end(buf + buf_size) { }
+: super(addressing), m_pos(buf), m_end(advanced(buf, buf_size)) { }
 
-binary_deserializer::binary_deserializer(const char* bbegin, const char* bend,
+binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
                                          actor_addressing* addressing)
-: super(addressing), pos(bbegin), end(bend) { }
+: super(addressing), m_pos(bbegin), m_end(bend) { }
 
 string binary_deserializer::seek_object() {
     string result;
-    pos = read_range(pos, end, result);
+    m_pos = read_range(m_pos, m_end, result);
     return result;
 }
 
 string binary_deserializer::peek_object() {
     string result;
-    read_range(pos, end, result);
+    read_range(m_pos, m_end, result);
     return result;
 }
 
@@ -158,7 +166,7 @@ size_t binary_deserializer::begin_sequence() {
     static_assert(sizeof(size_t) >= sizeof(uint32_t),
                   "sizeof(size_t) < sizeof(uint32_t)");
     uint32_t result;
-    pos = read_range(pos, end, result);
+    m_pos = read_range(m_pos, m_end, result);
     return static_cast<size_t>(result);
 }
 
@@ -166,9 +174,9 @@ void binary_deserializer::end_sequence() { }
 
 primitive_variant binary_deserializer::read_value(primitive_type ptype) {
     primitive_variant val(ptype);
-    pt_reader ptr(pos, end);
+    pt_reader ptr(m_pos, m_end);
     val.apply(ptr);
-    pos = ptr.begin;
+    m_pos = ptr.begin;
     return val;
 }
 
@@ -182,9 +190,9 @@ void binary_deserializer::read_tuple(size_t size,
 }
 
 void binary_deserializer::read_raw(size_t num_bytes, void* storage) {
-    range_check(pos, end, num_bytes);
-    memcpy(storage, pos, num_bytes);
-    pos += num_bytes;
+    range_check(m_pos, m_end, num_bytes);
+    memcpy(storage, m_pos, num_bytes);
+    m_pos = advanced(m_pos, num_bytes);
 }
 
 } // namespace cppa

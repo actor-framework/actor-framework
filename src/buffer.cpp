@@ -87,56 +87,47 @@ buffer::~buffer() {
     delete[] m_data;
 }
 
-void buffer::reset(size_t new_final_size) {
-    if (new_final_size > m_max_buffer_size) {
-        m_written = 0;
-        m_allocated = 0;
-        m_final_size = 0;
-        delete[] m_data;
-        m_data = nullptr;
-        throw std::ios_base::failure("maximum buffer size exceeded");
+void buffer::final_size(size_t new_value) {
+    if (new_value > m_max_buffer_size) {
+        throw std::invalid_argument("new_value > maximum_size()");
     }
-    m_written = 0;
-    m_final_size = new_final_size;
-    if (new_final_size > m_allocated) {
-        auto remainder = (new_final_size % m_chunk_size);
-        if (remainder == 0) {
-            m_allocated = new_final_size;
-        }
-        else {
-            m_allocated = (new_final_size - remainder) + m_chunk_size;
-        }
+    m_final_size = new_value;
+
+
+    if (new_value > m_allocated) {
+        auto remainder = (new_value % m_chunk_size);
+        if (remainder == 0) m_allocated = new_value;
+        else m_allocated = (new_value - remainder) + m_chunk_size;
+
+        if (remainder == 0) m_allocated = new_value;
+        else m_allocated = (new_value - remainder) + m_chunk_size;
+
+
+
         delete[] m_data;
         m_data = new char[m_allocated];
     }
 }
 
 void buffer::acquire(size_t num_bytes) {
-    if (!m_data) {
-        reset(num_bytes);
+    if (m_data == nullptr) {
+        if (num_bytes > m_final_size) m_final_size = num_bytes;
+        m_allocated = adjust(m_final_size);
+        m_data = new char[m_allocated];
     }
-    else if (remaining() < num_bytes) {
-        m_final_size += num_bytes - remaining();
-        if ((m_allocated - m_written) < num_bytes) {
-            auto remainder = (m_final_size % m_chunk_size);
-            if (remainder == 0) {
-                m_allocated = m_final_size;
-            }
-            else {
-                m_allocated = (m_final_size - remainder) + m_chunk_size;
-            }
-            auto old_data = m_data;
-            m_data = new char[m_allocated];
-            memcpy(m_data, old_data, m_written);
-            delete[] old_data;
-        }
+    if (remaining() >= num_bytes) return; // nothing to do
+    m_final_size += num_bytes - remaining();
+    if ((m_allocated - m_written) < num_bytes) {
+        auto old_data = m_data;
+        m_allocated = adjust(m_final_size);
+        m_data = new char[m_allocated];
+        memcpy(m_data, old_data, m_written);
+        delete[] old_data;
     }
 }
 
 void buffer::erase_leading(size_t num_bytes) {
-    if (num_bytes >= size()) {
-        clear();
-    }
+    if (num_bytes >= size()) clear();
     else {
         memmove(m_data, m_data + num_bytes, size() - num_bytes);
         dec_size(num_bytes);
@@ -144,12 +135,8 @@ void buffer::erase_leading(size_t num_bytes) {
 }
 
 void buffer::erase_trailing(size_t num_bytes) {
-    if (num_bytes >= size()) {
-        clear();
-    }
-    else {
-        dec_size(num_bytes);
-    }
+    if (num_bytes >= size()) clear();
+    else dec_size(num_bytes);
 }
 
 void buffer::write(size_t num_bytes, const void* data, buffer_write_policy wp) {
@@ -165,6 +152,14 @@ void buffer::write(size_t num_bytes, const void* data, buffer_write_policy wp) {
 
 void buffer::write(const buffer& other, buffer_write_policy wp) {
     write(other.size(), other.data(), wp);
+}
+
+void buffer::write(buffer&& other, buffer_write_policy wp) {
+    if (empty() && (wp == grow_if_needed || other.size() <= remaining())) {
+        *this = std::move(other);
+    }
+    else write(other.size(), other.data(), wp);
+    other.clear();
 }
 
 void buffer::append_from(network::input_stream* istream) {
