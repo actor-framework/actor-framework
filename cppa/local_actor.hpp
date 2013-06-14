@@ -261,11 +261,11 @@ class local_actor : public extend<actor>::with<memory_cached> {
         else quit(exit_reason::unhandled_sync_failure);
     }
 
-    virtual void dequeue(behavior& bhvr) = 0;
+    virtual void dequeue(behavior& bhvr);
 
     inline void dequeue(behavior&& bhvr);
 
-    virtual void dequeue_response(behavior&, message_id) = 0;
+    virtual void dequeue_response(behavior&, message_id);
 
     inline void dequeue_response(behavior&&, message_id);
 

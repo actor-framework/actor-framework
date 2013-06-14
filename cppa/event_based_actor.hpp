@@ -55,17 +55,6 @@ class event_based_actor : public scheduled_actor {
 
  public:
 
-    /**
-     * @brief Finishes execution with exit reason
-     *        {@link exit_reason::unallowed_function_call unallowed_function_call}.
-     */
-    void dequeue(behavior&);
-
-    /**
-     * @copydoc dequeue(behavior&)
-     */
-    void dequeue_response(behavior&, message_id);
-
     resume_result resume(util::fiber*, actor_ptr&);
 
     /**

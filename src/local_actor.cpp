@@ -181,4 +181,12 @@ void local_actor::cleanup(std::uint32_t reason) {
     super::cleanup(reason);
 }
 
+void local_actor::dequeue(behavior&) {
+    quit(exit_reason::unallowed_function_call);
+}
+
+void local_actor::dequeue_response(behavior&, message_id) {
+    quit(exit_reason::unallowed_function_call);
+}
+
 } // namespace cppa
