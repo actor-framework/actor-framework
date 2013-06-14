@@ -77,10 +77,6 @@ local_actor* fwd(U& arg, typename std::enable_if<is_self<T>::value>::type* = 0){
  */
 class scheduler {
 
-    scheduler_helper* m_helper;
-
-    const actor_ptr& delayed_send_helper();
-
     friend class detail::singleton_manager;
 
  protected:
@@ -99,12 +95,6 @@ class scheduler {
      * @warning Always call scheduler::destroy on overriding.
      */
     virtual void destroy();
-
- private:
-
-    static scheduler* create_singleton();
-
-    inline void dispose() { delete this; }
 
  public:
 
@@ -181,6 +171,16 @@ class scheduler {
         return this->exec(opts, cb, std::bind(f, detail::fwd<T>(a0),
                                                  detail::fwd<Ts>(as)...));
     }
+
+ private:
+
+    static scheduler* create_singleton();
+
+    inline void dispose() { delete this; }
+
+    const actor_ptr& delayed_send_helper();
+
+    scheduler_helper* m_helper;
 
 };
 
