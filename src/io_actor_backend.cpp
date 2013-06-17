@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <iostream>
+
 #include "cppa/singletons.hpp"
 
 #include "cppa/network/middleman.hpp"
@@ -51,8 +53,8 @@ io_actor_backend::io_actor_backend(input_stream_ptr in,
 }
 
 io_actor_backend::~io_actor_backend() {
+    std::cout << "~io_actor_backend" << std::endl;
     handle_disconnect();
-    get_actor_registry()->dec_running();
 }
 
 void io_actor_backend::init() {
@@ -64,11 +66,19 @@ void io_actor_backend::init() {
 
 void io_actor_backend::handle_disconnect() {
     if (m_self) {
-        CPPA_LOG_DEBUG("became disconnected");
-        if (m_self->exit_reason() == exit_reason::not_exited) {
-            m_self->invoke_message(make_any_tuple(atom("IO_closed")));
-        }
+        auto ms = m_self;
         m_self.reset();
+        bool dec_count = ms->exit_reason() == exit_reason::not_exited;
+        CPPA_LOG_DEBUG("became disconnected");
+        if (ms->exit_reason() == exit_reason::not_exited) {
+            ms->invoke_message(make_any_tuple(atom("IO_closed")));
+        }
+        get_middleman()->stop_reader(this);
+        if (dec_count) {
+            if (ms->exit_reason() != exit_reason::not_exited) {
+                get_actor_registry()->dec_running();
+            }
+        }
     }
 }
 

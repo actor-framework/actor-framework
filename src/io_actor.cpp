@@ -29,6 +29,7 @@
 
 
 #include "cppa/singletons.hpp"
+#include "cppa/detail/actor_registry.hpp"
 
 #include "cppa/network/io_actor.hpp"
 #include "cppa/network/middleman.hpp"
@@ -45,7 +46,9 @@ class io_actor_continuation {
     io_actor_continuation(io_actor_ptr ptr, mailbox_element* elem)
     : m_self(std::move(ptr)), m_elem(elem) { }
 
-    void operator()() const { m_self->invoke_message(m_elem); }
+    void operator()() const {
+        m_self->invoke_message(m_elem);
+    }
 
  private:
 
@@ -96,6 +99,9 @@ void io_actor::invoke_message(mailbox_element* elem) {
     catch (...) {
         CPPA_LOG_ERROR("IO actor killed due to an unhandled exception");
         quit(exit_reason::unhandled_exception);
+    }
+    if (exit_reason() != exit_reason::not_exited) {
+        get_actor_registry()->dec_running();
     }
 }
 
