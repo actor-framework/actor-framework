@@ -28,66 +28,29 @@
 \******************************************************************************/
 
 
-#ifndef IO_ACTOR_HPP
-#define IO_ACTOR_HPP
+#ifndef FWD_HPP
+#define FWD_HPP
 
-#include <functional>
+#include "cppa/self.hpp"
 
-#include "cppa/stackless.hpp"
-#include "cppa/threadless.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/mailbox_element.hpp"
+namespace cppa { namespace detail {
 
-#include "cppa/network/io_service.hpp"
-
-#include "cppa/detail/fwd.hpp"
-
-namespace cppa { namespace network {
-
-class io_actor_backend;
-class io_actor_continuation;
-
-class io_actor : public extend<local_actor>::with<threadless, stackless> {
-
-    typedef combined_type super;
-
-    friend class io_actor_backend;
-    friend class io_actor_continuation;
-
- public:
-
-    void enqueue(const message_header& hdr, any_tuple msg);
-
-    bool initialized() const;
-
-    void quit(std::uint32_t reason);
-
-    static intrusive_ptr<io_actor> from(std::function<void (io_service*)> fun);
-
-    template<typename F, typename T0, typename... Ts>
-    static intrusive_ptr<io_actor> from(F fun, T0&& arg0, Ts&&... args) {
-        return from(std::bind(std::move(fun),
-                              std::placeholders::_1,
-                              detail::fwd<T0>(arg0),
-                              detail::fwd<Ts>(args)...));
-    }
-
- protected:
-
-    io_service& io_handle();
-
- private:
-
-    void invoke_message(mailbox_element* elem);
-
-    void invoke_message(any_tuple msg);
-
-    intrusive_ptr<io_actor_backend> m_parent;
-
+template<typename T>
+struct is_self {
+    typedef typename util::rm_const_and_ref<T>::type plain_type;
+    static constexpr bool value = std::is_same<plain_type, self_type>::value;
 };
 
-typedef intrusive_ptr<io_actor> io_actor_ptr;
+template<typename T, typename U>
+auto fwd(U& arg, typename std::enable_if<!is_self<T>::value>::type* = 0)
+-> decltype(std::forward<T>(arg)) {
+    return std::forward<T>(arg);
+}
+template<typename T, typename U>
+local_actor* fwd(U& arg, typename std::enable_if<is_self<T>::value>::type* = 0){
+    return arg;
+}
 
-} } // namespace cppa::network
+} } // namespace cppa::detail
 
-#endif // IO_ACTOR_HPP
+#endif // FWD_HPP

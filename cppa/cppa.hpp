@@ -629,7 +629,7 @@ actor_ptr spawn_io(network::input_stream_ptr in,
     auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
     backend->init();
     mm->run_later([=] { mm->continue_reader(backend); });
-    return eval_sopts(Options, ptr);
+    return eval_sopts(Options, std::move(ptr));
 }
 
 /**
@@ -638,18 +638,20 @@ actor_ptr spawn_io(network::input_stream_ptr in,
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_io(std::function<void (network::io_service*)> fun,
+template<spawn_options Options = no_spawn_options,
+         typename F = std::function<void (network::io_service*)>,
+         typename... Ts>
+actor_ptr spawn_io(F fun,
                    network::input_stream_ptr in,
                    network::output_stream_ptr out,
                    Ts&&... args) {
     using namespace network;
     auto mm = get_middleman();
-    auto ptr = io_actor::from(std::move(fun));
+    auto ptr = io_actor::from(std::move(fun), std::forward<Ts>(args)...);
     auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
     backend->init();
     mm->run_later([=] { mm->continue_reader(backend); });
-    return eval_sopts(Options, ptr);
+    return eval_sopts(Options, std::move(ptr));
 }
 
 /**

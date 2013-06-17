@@ -32,6 +32,7 @@ cppa/detail/disablable_delete.hpp
 cppa/detail/empty_tuple.hpp
 cppa/detail/event_based_actor_factory.hpp
 cppa/detail/fd_util.hpp
+cppa/detail/fwd.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/implicit_conversions.hpp

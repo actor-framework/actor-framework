@@ -48,28 +48,13 @@
 
 #include "cppa/util/duration.hpp"
 
+#include "cppa/detail/fwd.hpp"
+
 namespace cppa {
 
 class self_type;
 class scheduler_helper;
 namespace detail { class singleton_manager; } // namespace detail
-
-namespace detail {
-template<typename T>
-struct is_self {
-    typedef typename util::rm_const_and_ref<T>::type plain_type;
-    static constexpr bool value = std::is_same<plain_type, self_type>::value;
-};
-template<typename T, typename U>
-auto fwd(U& arg, typename std::enable_if<!is_self<T>::value>::type* = 0)
--> decltype(std::forward<T>(arg)) {
-    return std::forward<T>(arg);
-}
-template<typename T, typename U>
-local_actor* fwd(U& arg, typename std::enable_if<is_self<T>::value>::type* = 0){
-    return arg;
-}
-} // namespace detail
 
 /**
  * @brief This abstract class allows to create (spawn) new actors
