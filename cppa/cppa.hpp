@@ -679,9 +679,14 @@ inline void send_exit(actor_ptr whom, std::uint32_t reason) {
  *        unless {@link keep_behavior} is given as first argument.
  */
 template<typename T, typename... Ts>
-inline void become(T arg, Ts&&... args) {
-    self->do_become(match_expr_convert(arg, std::forward<Ts>(args)...), true);
-    //become(std::forward<Ts>(args)...);
+inline typename std::enable_if<
+    !is_behavior_policy<typename util::rm_const_and_ref<T>::type>::value,
+    void
+>::type
+become(T&& arg, Ts&&... args) {
+    self->do_become(match_expr_convert(std::forward<T>(arg),
+                                       std::forward<Ts>(args)...),
+                    true);
 }
 
 template<bool Discard, typename... Ts>

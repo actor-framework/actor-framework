@@ -65,6 +65,12 @@ class sync_handle_helper;
 template<bool DiscardBehavior>
 struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
 
+template<typename T>
+struct is_behavior_policy : std::false_type { };
+
+template<bool DiscardBehavior>
+struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { };
+
 typedef behavior_policy<false> keep_behavior_t;
 typedef behavior_policy<true > discard_behavior_t;
 
