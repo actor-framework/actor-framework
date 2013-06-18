@@ -46,14 +46,14 @@ class io_actor_continuation {
     io_actor_continuation(io_actor_ptr ptr, mailbox_element* elem)
     : m_self(std::move(ptr)), m_elem(elem) { }
 
-    void operator()() const {
+    inline void operator()() const {
         m_self->invoke_message(m_elem);
     }
 
  private:
 
-    intrusive_ptr<io_actor> m_self;
-    mailbox_element*        m_elem;
+    io_actor_ptr     m_self;
+    mailbox_element* m_elem;
 
 };
 
@@ -63,7 +63,7 @@ class default_io_actor_impl : public io_actor {
 
     typedef std::function<void (io_service*)> function_type;
 
-    default_io_actor_impl(function_type fun) : m_fun(std::move(fun)) { }
+    default_io_actor_impl(function_type&& fun) : m_fun(std::move(fun)) { }
 
     void init() override {
         m_fun(&io_handle());
@@ -102,6 +102,7 @@ void io_actor::invoke_message(mailbox_element* elem) {
     }
     if (exit_reason() != exit_reason::not_exited) {
         get_actor_registry()->dec_running();
+        m_parent.reset();
     }
 }
 

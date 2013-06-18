@@ -28,8 +28,6 @@
 \******************************************************************************/
 
 
-#include <iostream>
-
 #include "cppa/singletons.hpp"
 
 #include "cppa/network/middleman.hpp"
@@ -53,7 +51,6 @@ io_actor_backend::io_actor_backend(input_stream_ptr in,
 }
 
 io_actor_backend::~io_actor_backend() {
-    std::cout << "~io_actor_backend" << std::endl;
     handle_disconnect();
 }
 
