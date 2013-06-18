@@ -115,49 +115,43 @@ bool operator!=(const columns_iterator& lhs, const columns_iterator& rhs) {
 namespace cppa { namespace util {
 
 std::string get_root_uuid() {
-    char          buf[1024] = {0};
-    struct ifconf ifc = {0};
-    struct ifreq *ifr = NULL;
-    int           sck = 0;
-    int           nInterfaces = 0;
-
-    // Get a socket handle.
-    sck = socket(AF_INET, SOCK_DGRAM, 0);
-    if(sck < 0) {
+    int sck = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sck < 0) {
         perror("socket");
         return "";
     }
-
-    // Query available interfaces.
+    // query available interfaces
+    char buf[1024];
+    ifconf ifc;
     ifc.ifc_len = sizeof(buf);
     ifc.ifc_buf = buf;
-    if(ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
+    if (ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
         perror("ioctl(SIOCGIFCONF)");
         return "";
     }
-
     vector<string> hw_addresses;
     auto ctoi = [](char c) -> unsigned {
         return static_cast<unsigned char>(c);
     };
-    // Iterate through the list of interfaces.
-    ifr = ifc.ifc_req;
-    nInterfaces = ifc.ifc_len / sizeof(struct ifreq);
-    for(int i = 0; i < nInterfaces; i++) {
-        struct ifreq *item = &ifr[i];
-        // Get the MAC address
-        if(ioctl(sck, SIOCGIFHWADDR, item) < 0) {
+    // iterate through interfaces.
+    auto ifr = ifc.ifc_req;
+    size_t num_interfaces = ifc.ifc_len / sizeof(ifreq);
+    for (size_t i = 0; i < num_interfaces; i++) {
+        auto& item = ifr[i];
+        // get MAC address
+        if (ioctl(sck, SIOCGIFHWADDR, &item) < 0) {
             perror("ioctl(SIOCGIFHWADDR)");
             return "";
         }
+        // convert MAC address to standard string representation
         std::ostringstream oss;
         oss << hex;
         oss.width(2);
-        oss << ctoi(item->ifr_hwaddr.sa_data[0]);
+        oss << ctoi(item.ifr_hwaddr.sa_data[0]);
         for (size_t i = 1; i < 6; ++i) {
             oss << ":";
             oss.width(2);
-            oss << ctoi(item->ifr_hwaddr.sa_data[i]);
+            oss << ctoi(item.ifr_hwaddr.sa_data[i]);
         }
         auto addr = oss.str();
         if (addr != "00:00:00:00:00:00") {
@@ -188,3 +182,4 @@ std::string get_root_uuid() {
 } } // namespace cppa::util
 
 #endif // CPPA_LINUX
+
