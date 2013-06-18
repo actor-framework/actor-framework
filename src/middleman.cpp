@@ -96,7 +96,7 @@ class middleman_impl {
  public:
 
     middleman_impl(std::unique_ptr<protocol>&& proto)
-    : m_handler(middleman_event_handler::create())
+    : m_done(false), m_handler(middleman_event_handler::create())
     , m_protocol(std::move(proto)) { }
 
     protocol* get_protocol() {
