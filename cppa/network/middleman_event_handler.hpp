@@ -53,18 +53,14 @@ constexpr event_bitmask error = 0x04;
 
 } } // namespace event
 
-/**
- * @brief Converts an event bitmask to a human-readable string.
- */
-inline const char* eb2str(event_bitmask e) {
-    switch (e) {
-        default: return "INVALID";
-        case event::none:  return "event::none";
-        case event::read:  return "event::read";
-        case event::write: return "event::write";
-        case event::both:  return "event::both";
-        case event::error: return "event::error";
-    }
+template<unsigned InputEvent, unsigned OutputEvent, unsigned ErrorEvent>
+inline event_bitmask from_int_bitmask(unsigned mask) {
+    event_bitmask result = event::none;
+    // read/write as long as possible
+    if (mask & InputEvent) result = event::read;
+    if (mask & OutputEvent) result |= event::write;
+    if (result == event::none && mask & ErrorEvent) result = event::error;
+    return result;
 }
 
 struct fd_meta_info {

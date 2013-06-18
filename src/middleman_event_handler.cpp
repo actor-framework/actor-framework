@@ -32,6 +32,17 @@
 
 namespace cppa { namespace network {
 
+inline std::string eb2str(event_bitmask e) {
+    switch (e) {
+        default: return "INVALID";
+        case event::none:  return "event::none";
+        case event::read:  return "event::read";
+        case event::write: return "event::write";
+        case event::both:  return "event::both";
+        case event::error: return "event::error";
+    }
+}
+
 middleman_event_handler::middleman_event_handler() { }
 
 middleman_event_handler::~middleman_event_handler() { }

@@ -39,6 +39,10 @@ namespace cppa { namespace network {
 
 namespace {
 
+static constexpr unsigned input_event  = POLLIN | POLLPRI;
+static constexpr unsigned error_event  = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+static constexpr unsigned output_event = POLLOUT;
+
 bool pollfd_less(const pollfd& lhs, native_socket_type rhs) {
     return lhs.fd < rhs;
 }
@@ -63,23 +67,22 @@ class middleman_event_handler_impl : public middleman_event_handler {
     void poll_impl() {
         CPPA_REQUIRE(m_pollset.empty() == false);
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
-        int presult;
-        do {
+        int presult = -1;
+        while (presult < 0) {
             presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
             CPPA_LOG_DEBUG("poll() on " << num_sockets()
                            << " sockets returned " << presult);
             if (presult < 0) {
                 switch (errno) {
-                    // a signal was caught
                     case EINTR: {
+                        // a signal was caught
                         // just try again
                         break;
                     }
                     case ENOMEM: {
-                        CPPA_LOGMF(CPPA_ERROR, self, "poll() failed for reason ENOMEM");
+                        CPPA_LOG_ERROR("poll() failed for reason ENOMEM");
                         // there's not much we can do other than try again
-                        // in hope someone releases memory
-                        //this_thread::yield();
+                        // in hope someone else releases memory
                         break;
                     }
                     default: {
@@ -88,28 +91,15 @@ class middleman_event_handler_impl : public middleman_event_handler {
                     }
                 }
             }
-            else {
-                for (size_t i = 0; i < m_pollset.size(); ++i) {
-                    event_bitmask eb = event::none;
-                    auto& revents = m_pollset[i].revents;
-                    // read as long as possible, ignore POLLHUP as long as
-                    // there is still data available
-                    if (revents & (POLLIN | POLLPRI)) eb |= event::read;
-                    else if (revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)) {
-                        CPPA_LOG_DEBUG_IF(revents & POLLRDHUP, "POLLRDHUP");
-                        CPPA_LOG_DEBUG_IF(revents & POLLERR,   "POLLERR");
-                        CPPA_LOG_DEBUG_IF(revents & POLLHUP,   "POLLHUP");
-                        CPPA_LOG_DEBUG_IF(revents & POLLNVAL,  "POLLNVAL");
-                        eb = event::error;
-                    }
-                    // POLLOUT and POLLHUP are mutually exclusive:
-                    // no need to check wheter event::error has been set
-                    if (revents & POLLOUT) eb |= event::write;
-                    revents = 0;
-                    m_events.emplace_back(eb, m_meta[i].ptr.get());
-                }
-            }
-        } while (presult < 0);
+        }
+        for (size_t i = 0; i < m_pollset.size(); ++i) {
+            auto mask = static_cast<unsigned>(m_pollset[i].revents);
+            auto eb = from_int_bitmask<input_event,
+                                       output_event,
+                                       error_event>(mask);
+            m_pollset[i].revents = 0;
+            if (eb != event::none) m_events.emplace_back(eb, m_meta[i].ptr.get());
+        }
     }
 
     void handle_event(fd_meta_event me,

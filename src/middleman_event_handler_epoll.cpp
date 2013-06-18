@@ -40,6 +40,10 @@ namespace cppa { namespace network {
 
 namespace {
 
+static constexpr unsigned input_event  = EPOLLIN;
+static constexpr unsigned error_event  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+static constexpr unsigned output_event = EPOLLOUT;
+
 class middleman_event_handler_impl : public middleman_event_handler {
 
  public:
@@ -55,47 +59,45 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                          + strerror(errno));
         }
         // handle at most 64 events at a time
-        m_epoll_events.resize(64);
+        m_epollset.resize(64);
     }
 
  protected:
 
     void poll_impl() {
         CPPA_REQUIRE(m_meta.empty() == false);
-        int presult;
-        do {
-            CPPA_LOGMF(CPPA_DEBUG, self, "epoll_wait on " << num_sockets() << " sockets");
-            presult = epoll_wait(m_epollfd, m_epoll_events.data(), (int) m_epoll_events.size(), -1);
-            CPPA_LOGMF(CPPA_DEBUG, self, "epoll_wait returned " << presult);
+        int presult = -1;
+        while (presult < 0) {
+            presult = epoll_wait(m_epollfd,
+                                 m_epollset.data(),
+                                 static_cast<int>(m_epollset.size()),
+                                 -1);
+            CPPA_LOG_DEBUG("epoll_wait on " << num_sockets()
+                           << " sockets returned " << presult);
             if (presult < 0) {
-                // try again unless critical error occured
-                presult = 0;
                 switch (errno) {
-                    // a signal was caught
                     case EINTR: {
+                        // a signal was caught
                         // just try again
                         break;
                     }
                     default: {
-                        perror("epoll() failed");
-                        CPPA_CRITICAL("epoll() failed");
+                        perror("epoll_wait() failed");
+                        CPPA_CRITICAL("epoll_wait() failed");
                     }
                 }
             }
-            else {
-                for (size_t i = 0; i < static_cast<size_t>(presult); ++i) {
-                    auto events = m_epoll_events[i].events;
-                    auto mask = event::none;
-                    if (events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP)) mask = event::error;
-                    else {
-                        if (events & EPOLLIN)  mask |= event::read;
-                        if (events & EPOLLOUT) mask |= event::write;
-                    }
-                    CPPA_REQUIRE(mask != 0);
-                    m_events.emplace_back(mask, reinterpret_cast<continuable_io*>(m_epoll_events[i].data.ptr));
-                }
-            }
-        } while (presult < 0);
+        }
+        auto iter = m_epollset.begin();
+        auto last = iter + static_cast<size_t>(presult);
+        for ( ; iter != last; ++iter) {
+            auto eb = from_int_bitmask<input_event,
+                                       output_event,
+                                       error_event>(iter->events);
+            auto ptr = reinterpret_cast<continuable_io*>(iter->data.ptr);
+            CPPA_REQUIRE(eb != event::none);
+            m_events.emplace_back(eb, ptr);
+        }
     }
 
     void handle_event(fd_meta_event me,
@@ -159,7 +161,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
  private:
 
     int m_epollfd;
-    std::vector<epoll_event> m_epoll_events;
+    std::vector<epoll_event> m_epollset;
 
 };
 
