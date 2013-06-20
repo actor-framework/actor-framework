@@ -37,9 +37,9 @@
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 
-#include "cppa/network/continuable_io.hpp"
+#include "cppa/io/continuable.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 typedef int event_bitmask;
 
@@ -65,10 +65,10 @@ inline event_bitmask from_int_bitmask(unsigned mask) {
 
 struct fd_meta_info {
     native_socket_type fd;
-    continuable_io_ptr ptr;
+    continuable_ptr ptr;
     event_bitmask mask;
     fd_meta_info(native_socket_type a0,
-                 const continuable_io_ptr& a1,
+                 const continuable_ptr& a1,
                  event_bitmask a2)
     : fd(a0), ptr(a1), mask(a2) { }
 };
@@ -84,12 +84,12 @@ class middleman_event_handler {
     /**
      * @brief Enqueues an add operation.
      */
-    void add_later(const continuable_io_ptr& ptr, event_bitmask e);
+    void add_later(const continuable_ptr& ptr, event_bitmask e);
 
     /**
      * @brief Enqueues an erase operation.
      */
-    void erase_later(const continuable_io_ptr& ptr, event_bitmask e);
+    void erase_later(const continuable_ptr& ptr, event_bitmask e);
 
     /**
      * @brief Poll all events.
@@ -123,7 +123,7 @@ class middleman_event_handler {
 
     std::vector<std::pair<fd_meta_info, fd_meta_event>> m_alterations;
 
-    std::vector<std::pair<event_bitmask, continuable_io*>> m_events;
+    std::vector<std::pair<event_bitmask, continuable*>> m_events;
 
     middleman_event_handler();
 
@@ -134,11 +134,11 @@ class middleman_event_handler {
                               native_socket_type fd,
                               event_bitmask old_bitmask,
                               event_bitmask new_bitmask,
-                              continuable_io* ptr) = 0;
+                              continuable* ptr) = 0;
 
  private:
 
-    void alteration(const continuable_io_ptr& ptr, event_bitmask e, fd_meta_event etype);
+    void alteration(const continuable_ptr& ptr, event_bitmask e, fd_meta_event etype);
 
     event_bitmask next_bitmask(event_bitmask old, event_bitmask arg, fd_meta_event op) const;
 

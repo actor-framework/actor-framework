@@ -42,7 +42,7 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/event_based_actor.hpp"
 
-#include "cppa/network/middleman.hpp"
+#include "cppa/io/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/message_header.hpp"

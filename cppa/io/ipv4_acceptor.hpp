@@ -28,66 +28,41 @@
 \******************************************************************************/
 
 
-#ifndef IO_ACTOR_HPP
-#define IO_ACTOR_HPP
+#ifndef CPPA_IPV4_ACCEPTOR_HPP
+#define CPPA_IPV4_ACCEPTOR_HPP
 
-#include <functional>
+#include <memory>
+#include <cstdint>
 
-#include "cppa/stackless.hpp"
-#include "cppa/threadless.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/mailbox_element.hpp"
+#include "cppa/config.hpp"
+#include "cppa/io/acceptor.hpp"
 
-#include "cppa/network/io_service.hpp"
+namespace cppa { namespace io {
 
-#include "cppa/detail/fwd.hpp"
-
-namespace cppa { namespace network {
-
-class io_actor_backend;
-class io_actor_continuation;
-
-class io_actor : public extend<local_actor>::with<threadless, stackless> {
-
-    typedef combined_type super;
-
-    friend class io_actor_backend;
-    friend class io_actor_continuation;
+class ipv4_acceptor : public acceptor {
 
  public:
 
-    void enqueue(const message_header& hdr, any_tuple msg);
+    static std::unique_ptr<acceptor> create(std::uint16_t port,
+                                            const char* addr = nullptr);
 
-    bool initialized() const;
+    ~ipv4_acceptor();
 
-    void quit(std::uint32_t reason);
+    native_socket_type file_handle() const;
 
-    static intrusive_ptr<io_actor> from(std::function<void (io_service*)> fun);
+    stream_ptr_pair accept_connection();
 
-    template<typename F, typename T0, typename... Ts>
-    static intrusive_ptr<io_actor> from(F fun, T0&& arg0, Ts&&... args) {
-        return from(std::bind(std::move(fun),
-                              std::placeholders::_1,
-                              detail::fwd<T0>(arg0),
-                              detail::fwd<Ts>(args)...));
-    }
-
- protected:
-
-    io_service& io_handle();
+    option<stream_ptr_pair> try_accept_connection();
 
  private:
 
-    void invoke_message(mailbox_element* elem);
+    ipv4_acceptor(native_socket_type fd, bool nonblocking);
 
-    void invoke_message(any_tuple msg);
-
-    intrusive_ptr<io_actor_backend> m_parent;
+    native_socket_type m_fd;
+    bool m_is_nonblocking;
 
 };
 
-typedef intrusive_ptr<io_actor> io_actor_ptr;
+} } // namespace cppa::detail
 
-} } // namespace cppa::network
-
-#endif // IO_ACTOR_HPP
+#endif // CPPA_IPV4_ACCEPTOR_HPP

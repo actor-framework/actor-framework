@@ -28,19 +28,92 @@
 \******************************************************************************/
 
 
-#include "cppa/network/continuable_io.hpp"
+#ifndef MIDDLEMAN_HPP
+#define MIDDLEMAN_HPP
 
-namespace cppa { namespace network {
+#include <map>
+#include <vector>
+#include <memory>
+#include <functional>
 
-continuable_io::continuable_io(native_socket_type rd, native_socket_type wr)
-: m_rd(rd), m_wr(wr) { }
+#include "cppa/io/continuable.hpp"
 
-continue_reading_result continuable_io::continue_reading() {
-    return read_closed;
-}
+namespace cppa { namespace detail { class singleton_manager; } }
 
-continue_writing_result continuable_io::continue_writing() {
-    return write_closed;
-}
+namespace cppa { namespace io {
 
-} } // namespace cppa::network
+class protocol;
+class middleman_impl;
+
+/**
+ * @brief Multiplexes asynchronous IO.
+ */
+class middleman {
+
+    friend class detail::singleton_manager;
+
+ public:
+
+    virtual ~middleman();
+
+    /**
+     * @brief Returns the networking protocol in use.
+     */
+    protocol* get_protocol();
+
+    /**
+     * @brief Runs @p fun in the middleman's event loop.
+     */
+    void run_later(std::function<void()> fun);
+
+    /**
+     * @brief Removes @p ptr from the list of active writers.
+     * @warning This member function is not thread-safe.
+     */
+    void stop_writer(const continuable_ptr& ptr);
+
+    /**
+     * @brief Adds @p ptr to the list of active writers.
+     * @warning This member function is not thread-safe.
+     */
+    void continue_writer(const continuable_ptr& ptr);
+
+    /**
+     * @brief Removes @p ptr from the list of active readers.
+     * @warning This member function is not thread-safe.
+     */
+    void stop_reader(const continuable_ptr& ptr);
+
+    /**
+     * @brief Adds @p ptr to the list of active readers.
+     * @warning This member function is not thread-safe.
+     */
+    void continue_reader(const continuable_ptr& ptr);
+
+ protected:
+
+    // destroys singleton
+    void destroy();
+
+    // initializes singletons
+    void initialize();
+
+ private:
+
+    // sets m_impl and binds implementation to given protocol
+    void set_pimpl(std::unique_ptr<protocol>&&);
+
+    // creates a middleman using io::default_protocol
+    static middleman* create_singleton();
+
+    // destroys uninitialized instances
+    inline void dispose() { delete this; }
+
+    // pointer to implementation
+    std::unique_ptr<middleman_impl> m_impl;
+
+};
+
+} } // namespace cppa::detail
+
+#endif // MIDDLEMAN_HPP

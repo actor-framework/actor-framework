@@ -30,70 +30,60 @@
 
 #include "cppa/singletons.hpp"
 
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/io_actor_backend.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/broker_backend.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-io_actor_backend::io_actor_backend(input_stream_ptr in,
+broker_backend::broker_backend(input_stream_ptr in,
                                    output_stream_ptr out,
-                                   io_actor_ptr ptr)
+                                   broker_ptr ptr)
 : super(get_middleman(), in->read_handle(), std::move(out))
-, m_in(in), m_self(ptr) {
+, m_dirty(false), m_policy(at_least)
+, m_policy_buffer_size(0)
+, m_in(in), m_self(ptr)
+, m_read(atom("IO_read"), static_cast<uint32_t>(in->read_handle())) {
     m_self->m_parent = this;
-    get_ref<0>(m_read) = atom("IO_read");
-    get_ref<1>(m_read).final_size(default_max_buffer_size);
-    m_dirty = false;
-    m_policy = at_least;
-    m_policy_buffer_size = 0;
+    get_ref<2>(m_read).final_size(default_max_buffer_size);
 }
 
-io_actor_backend::~io_actor_backend() {
-    handle_disconnect();
-}
-
-void io_actor_backend::init() {
+void broker_backend::init() {
     get_actor_registry()->inc_running();
     auto selfptr = m_self.get();
     scoped_self_setter sss{selfptr};
     selfptr->init();
 }
 
-void io_actor_backend::handle_disconnect() {
-    if (m_self) {
-        auto ms = m_self;
-        m_self.reset();
-        bool dec_count = ms->exit_reason() == exit_reason::not_exited;
-        CPPA_LOG_DEBUG("became disconnected");
-        if (ms->exit_reason() == exit_reason::not_exited) {
-            ms->invoke_message(make_any_tuple(atom("IO_closed")));
-        }
-        get_middleman()->stop_reader(this);
-        if (dec_count) {
-            if (ms->exit_reason() != exit_reason::not_exited) {
-                get_actor_registry()->dec_running();
-            }
-        }
+void broker_backend::handle_disconnect() {
+    if (m_self == nullptr) return;
+    auto ms = m_self;
+    m_self.reset();
+    CPPA_LOG_DEBUG("became disconnected");
+    if (ms->exit_reason() == exit_reason::not_exited) {
+        auto msg = make_any_tuple(atom("IO_closed"),
+                                  static_cast<uint32_t>(m_in->read_handle()));
+        ms->invoke_message(std::move(msg));
     }
+    get_middleman()->stop_reader(this);
 }
 
-void io_actor_backend::io_failed() {
+void broker_backend::io_failed() {
     handle_disconnect();
 }
 
-void io_actor_backend::receive_policy(policy_flag policy, size_t buffer_size) {
+void broker_backend::receive_policy(policy_flag policy, size_t buffer_size) {
     CPPA_LOG_TRACE(CPPA_ARG(policy) << ", " << CPPA_ARG(buffer_size));
     m_dirty = true;
     m_policy = policy;
     m_policy_buffer_size = buffer_size;
 }
 
-continue_reading_result io_actor_backend::continue_reading() {
+continue_reading_result broker_backend::continue_reading() {
     CPPA_LOG_TRACE("");
     for (;;) {
-        auto& buf = get_ref<1>(m_read);
+        auto& buf = get_ref<2>(m_read);
         if (m_dirty) {
             m_dirty = false;
             if (m_policy == at_most || m_policy == exactly) {
@@ -119,21 +109,21 @@ continue_reading_result io_actor_backend::continue_reading() {
             m_self->invoke_message(m_read);
             CPPA_LOG_INFO_IF(!m_read.vals()->unique(), "buffer became detached");
             if (m_self == nullptr) {
-                // io_actor::quit() calls handle_disconnect, which sets
+                // broker::quit() calls handle_disconnect, which sets
                 // m_self to nullptr
                 return read_closed;
             }
-            get_ref<1>(m_read).clear();
+            get_ref<2>(m_read).clear();
         }
     }
 }
 
-void io_actor_backend::close() {
+void broker_backend::close() {
     CPPA_LOG_DEBUG("");
     get_middleman()->stop_reader(this);
 }
 
-void io_actor_backend::write(size_t num_bytes, const void* data) {
+void broker_backend::write(size_t num_bytes, const void* data) {
     super::write(num_bytes, data);
 }
 

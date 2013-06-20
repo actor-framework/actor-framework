@@ -28,44 +28,43 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_ACCEPTOR_HPP
-#define IPV4_PEER_ACCEPTOR_HPP
+#ifndef IO_SERVICE_HPP
+#define IO_SERVICE_HPP
 
-#include "cppa/actor.hpp"
+#include <cstddef>
 
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/continuable_io.hpp"
+namespace cppa { namespace io {
 
-namespace cppa { namespace network {
-
-class default_protocol;
-
-class default_peer_acceptor : public continuable_io {
-
-    typedef continuable_io super;
+class io_handle {
 
  public:
 
-    continue_reading_result continue_reading();
+    virtual ~io_handle();
 
-    default_peer_acceptor(default_protocol* parent,
-                          acceptor_uptr ptr,
-                          const actor_ptr& published_actor);
+    /**
+     * @brief Denotes when an actor will receive a read buffer.
+     */
+    enum policy_flag { at_least, at_most, exactly };
 
-    inline const actor_ptr& published_actor() const { return m_pa; }
+    /**
+     * @brief Closes the network connection.
+     */
+    virtual void close() = 0;
 
-    void io_failed();
+    /**
+     * @brief Asynchronously sends @p size bytes of @p data.
+     */
+    virtual void write(size_t size, const void* data) = 0;
 
- private:
-
-    default_protocol* m_parent;
-    acceptor_uptr m_ptr;
-    actor_ptr m_pa;
+    /**
+     * @brief Adjusts the rule receiving 'IO_receive' messages.
+     *        The default settings are <tt>policy = io_handle::at_least</tt>
+     *        and <tt>buffer_size = 0</tt>.
+     */
+    virtual void receive_policy(policy_flag policy, size_t buffer_size) = 0;
 
 };
 
-typedef intrusive_ptr<default_peer_acceptor> default_peer_acceptor_ptr;
+} } // namespace cppa::network
 
-} } // namespace cppa::detail
-
-#endif // IPV4_PEER_ACCEPTOR_HPP
+#endif // IO_SERVICE_HPP

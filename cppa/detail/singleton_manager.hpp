@@ -40,7 +40,7 @@ class scheduler;
 
 } // namespace cppa
 
-namespace cppa { namespace network { class middleman; } }
+namespace cppa { namespace io { class middleman; } }
 
 namespace cppa { namespace opencl { class opencl_metainfo; } }
 
@@ -70,7 +70,7 @@ class singleton_manager {
 
     static actor_registry* get_actor_registry();
 
-    static network::middleman* get_middleman();
+    static io::middleman* get_middleman();
 
     static uniform_type_info_map* get_uniform_type_info_map();
 

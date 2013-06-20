@@ -28,92 +28,88 @@
 \******************************************************************************/
 
 
-#ifndef MIDDLEMAN_HPP
-#define MIDDLEMAN_HPP
+#ifndef DEFAULT_ACTOR_PROXY_HPP
+#define DEFAULT_ACTOR_PROXY_HPP
 
-#include <map>
-#include <vector>
-#include <memory>
-#include <functional>
+#include "cppa/extend.hpp"
+#include "cppa/actor_proxy.hpp"
+#include "cppa/memory_cached.hpp"
+#include "cppa/io/default_protocol.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/network/continuable_io.hpp"
+namespace cppa { namespace detail {
 
-namespace cppa { namespace detail { class singleton_manager; } }
-
-namespace cppa { namespace network {
-
-class protocol;
-class middleman_impl;
-
-/**
- * @brief Multiplexes asynchronous IO.
- */
-class middleman {
-
-    friend class detail::singleton_manager;
-
- public:
-
-    virtual ~middleman();
-
-    /**
-     * @brief Returns the networking protocol in use.
-     */
-    protocol* get_protocol();
-
-    /**
-     * @brief Runs @p fun in the middleman's event loop.
-     */
-    void run_later(std::function<void()> fun);
-
-    /**
-     * @brief Removes @p ptr from the list of active writers.
-     * @warning This member function is not thread-safe.
-     */
-    void stop_writer(const continuable_io_ptr& ptr);
-
-    /**
-     * @brief Adds @p ptr to the list of active writers.
-     * @warning This member function is not thread-safe.
-     */
-    void continue_writer(const continuable_io_ptr& ptr);
-
-    /**
-     * @brief Removes @p ptr from the list of active readers.
-     * @warning This member function is not thread-safe.
-     */
-    void stop_reader(const continuable_io_ptr& ptr);
-
-    /**
-     * @brief Adds @p ptr to the list of active readers.
-     * @warning This member function is not thread-safe.
-     */
-    void continue_reader(const continuable_io_ptr& ptr);
-
- protected:
-
-    // destroys singleton
-    void destroy();
-
-    // initializes singletons
-    void initialize();
-
- private:
-
-    // sets m_impl and binds implementation to given protocol
-    void set_pimpl(std::unique_ptr<protocol>&&);
-
-    // creates a middleman using network::default_protocol
-    static middleman* create_singleton();
-
-    // destroys uninitialized instances
-    inline void dispose() { delete this; }
-
-    // pointer to implementation
-    std::unique_ptr<middleman_impl> m_impl;
-
-};
+class memory;
+class instance_wrapper;
+template<typename>
+class basic_memory_cache;
 
 } } // namespace cppa::detail
 
-#endif // MIDDLEMAN_HPP
+namespace cppa { namespace io {
+
+class sync_request_info : public extend<memory_managed>::with<memory_cached> {
+
+    friend class detail::memory;
+
+ public:
+
+    typedef sync_request_info* pointer;
+
+    pointer      next;   // intrusive next pointer
+    actor_ptr    sender; // points to the sender of the message
+    message_id mid;    // sync message ID
+
+ private:
+
+    sync_request_info(actor_ptr sptr, message_id id);
+
+};
+
+class default_actor_proxy : public actor_proxy {
+
+    typedef actor_proxy super;
+
+ public:
+
+    default_actor_proxy(actor_id mid,
+                        const process_information_ptr& pinfo,
+                        default_protocol* parent);
+
+    void enqueue(const message_header& hdr, any_tuple msg) override;
+
+    void link_to(const actor_ptr& other) override;
+
+    void unlink_from(const actor_ptr& other) override;
+
+    bool remove_backlink(const actor_ptr& to) override;
+
+    bool establish_backlink(const actor_ptr& to) override;
+
+    void local_link_to(const actor_ptr& other) override;
+
+    void local_unlink_from(const actor_ptr& other) override;
+
+    void deliver(const message_header& hdr, any_tuple msg) override;
+
+    inline const process_information_ptr& process_info() const {
+        return m_pinf;
+    }
+
+ protected:
+
+    ~default_actor_proxy();
+
+ private:
+
+    void forward_msg(const message_header& hdr, any_tuple msg);
+
+    default_protocol*       m_parent;
+    process_information_ptr m_pinf;
+    intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
+
+};
+
+} } // namespace cppa::network
+
+#endif // DEFAULT_ACTOR_PROXY_HPP

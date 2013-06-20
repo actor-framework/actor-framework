@@ -28,85 +28,44 @@
 \******************************************************************************/
 
 
-#ifndef CONTINUABLE_WRITER_HPP
-#define CONTINUABLE_WRITER_HPP
+#ifndef IPV4_PEER_ACCEPTOR_HPP
+#define IPV4_PEER_ACCEPTOR_HPP
 
-#include "cppa/config.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/actor.hpp"
 
-namespace cppa { namespace network {
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/continuable.hpp"
 
-/**
- * @brief Denotes the return value of
- *        {@link continuable_io::continue_reading()}.
- */
-enum continue_reading_result {
-    read_failure,
-    read_closed,
-    read_continue_later
-};
+namespace cppa { namespace io {
 
-/**
- * @brief Denotes the return value of
- *        {@link continuable_io::continue_writing()}.
- */
-enum continue_writing_result {
-    write_failure,
-    write_closed,
-    write_continue_later,
-    write_done
-};
+class default_protocol;
 
-/**
- * @brief An object performing asynchronous input and output.
- */
-class continuable_io : public ref_counted {
+class default_peer_acceptor : public continuable {
+
+    typedef continuable super;
 
  public:
 
-    /**
-     * @brief Returns the file descriptor for incoming data.
-     */
-    inline native_socket_type read_handle() const { return m_rd; }
+    continue_reading_result continue_reading();
 
-    /**
-     * @brief Returns the file descriptor for outgoing data.
-     */
-    inline native_socket_type write_handle() const {
-        return m_wr;
-    }
+    default_peer_acceptor(default_protocol* parent,
+                          acceptor_uptr ptr,
+                          const actor_ptr& published_actor);
 
-    /**
-     * @brief Reads from {@link read_handle()} if valid.
-     */
-    virtual continue_reading_result continue_reading();
+    inline const actor_ptr& published_actor() const { return m_pa; }
 
-    /**
-     * @brief Writes to {@link write_handle()} if valid.
-     */
-    virtual continue_writing_result continue_writing();
-
-    /**
-     * @brief Called from middleman before it removes this object
-     *        due to an IO failure.
-     */
-     virtual void io_failed() = 0;
-
- protected:
-
-    continuable_io(native_socket_type read_fd,
-                   native_socket_type write_fd = invalid_socket);
+    void io_failed();
 
  private:
 
-    native_socket_type m_rd;
-    native_socket_type m_wr;
+    default_protocol* m_parent;
+    acceptor_uptr m_ptr;
+    actor_ptr m_pa;
 
 };
 
-typedef intrusive_ptr<continuable_io> continuable_io_ptr;
+typedef intrusive_ptr<default_peer_acceptor> default_peer_acceptor_ptr;
 
-} } // namespace cppa::network
+} } // namespace cppa::detail
 
-#endif // CONTINUABLE_WRITER_HPP
+#endif // IPV4_PEER_ACCEPTOR_HPP

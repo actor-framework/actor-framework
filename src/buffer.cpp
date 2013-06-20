@@ -33,7 +33,7 @@
 #include <utility>
 
 #include "cppa/util/buffer.hpp"
-#include "cppa/network/input_stream.hpp"
+#include "cppa/io/input_stream.hpp"
 
 namespace cppa { namespace util {
 
@@ -162,7 +162,7 @@ void buffer::write(buffer&& other, buffer_write_policy wp) {
     other.clear();
 }
 
-void buffer::append_from(network::input_stream* istream) {
+void buffer::append_from(io::input_stream* istream) {
     CPPA_REQUIRE(remaining() > 0);
     auto num_bytes = istream->read_some(wr_ptr(), remaining());
     if (num_bytes > 0) {

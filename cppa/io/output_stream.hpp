@@ -28,56 +28,50 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACCEPTOR_HPP
-#define CPPA_ACCEPTOR_HPP
-
-#include <memory>
+#ifndef CPPA_OUTPUT_STREAM_HPP
+#define CPPA_OUTPUT_STREAM_HPP
 
 #include "cppa/config.hpp"
-#include "cppa/option.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
-
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 /**
- * @brief A pair of input and output stream pointers.
+ * @brief An abstract output stream interface.
  */
-typedef std::pair<input_stream_ptr, output_stream_ptr> io_stream_ptr_pair;
-
-/**
- * @brief Accepts connections from client processes.
- */
-class acceptor {
+class output_stream : public virtual ref_counted {
 
  public:
-
-    virtual ~acceptor() { }
 
     /**
      * @brief Returns the internal file descriptor. This descriptor is needed
      *        for socket multiplexing using select().
      */
-    virtual native_socket_type file_handle() const = 0;
+    virtual native_socket_type write_handle() const = 0;
 
     /**
-     * @brief Accepts a new connection and returns an input/output stream pair.
-     * @note This member function blocks until a new connection was established.
+     * @brief Writes @p num_bytes bytes from @p buf to the data sink.
+     * @note This member function blocks until @p num_bytes were successfully
+     *       written.
+     * @throws std::ios_base::failure
      */
-    virtual io_stream_ptr_pair accept_connection() = 0;
+    virtual void write(const void* buf, size_t num_bytes) = 0;
 
     /**
-     * @brief Tries to accept a new connection but immediately returns if
-     *        there is no pending connection.
+     * @brief Tries to write up to @p num_bytes bytes from @p buf.
+     * @returns The number of written bytes.
+     * @throws std::ios_base::failure
      */
-    virtual option<io_stream_ptr_pair> try_accept_connection() = 0;
+    virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
 
 };
 
-typedef std::unique_ptr<acceptor> acceptor_uptr;
-
+/**
+ * @brief An output stream pointer.
+ */
+typedef intrusive_ptr<output_stream> output_stream_ptr;
 
 } } // namespace cppa::util
 
-#endif // CPPA_ACCEPTOR_HPP
+#endif // CPPA_OUTPUT_STREAM_HPP

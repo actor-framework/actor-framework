@@ -28,10 +28,10 @@
 \******************************************************************************/
 
 
-#include "cppa/network/io_service.hpp"
+#include "cppa/io/io_handle.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-io_service::~io_service() { }
+io_handle::~io_handle() { }
 
 } } // namespace cppa::network

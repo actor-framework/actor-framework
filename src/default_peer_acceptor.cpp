@@ -35,15 +35,15 @@
 #include "cppa/to_string.hpp"
 #include "cppa/process_information.hpp"
 
-#include "cppa/network/default_protocol.hpp"
-#include "cppa/network/default_peer.hpp"
-#include "cppa/network/default_peer_acceptor.hpp"
+#include "cppa/io/default_protocol.hpp"
+#include "cppa/io/default_peer.hpp"
+#include "cppa/io/default_peer_acceptor.hpp"
 
 #include "cppa/detail/demangle.hpp"
 
 using namespace std;
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 default_peer_acceptor::default_peer_acceptor(default_protocol* parent,
                                              acceptor_uptr aur,
@@ -53,7 +53,7 @@ default_peer_acceptor::default_peer_acceptor(default_protocol* parent,
 continue_reading_result default_peer_acceptor::continue_reading() {
     CPPA_LOG_TRACE("");
     for (;;) {
-        option<io_stream_ptr_pair> opt;
+        option<stream_ptr_pair> opt;
         try { opt = m_ptr->try_accept_connection(); }
         catch (exception& e) {
             CPPA_LOG_ERROR(to_verbose_string(e));

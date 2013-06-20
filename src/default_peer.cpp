@@ -47,14 +47,14 @@
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/default_peer.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/default_peer.hpp"
 #include "cppa/message_header.hpp"
-#include "cppa/network/default_protocol.hpp"
+#include "cppa/io/default_protocol.hpp"
 
 using namespace std;
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 default_peer::default_peer(default_protocol* parent,
                            const input_stream_ptr& in,
@@ -215,7 +215,7 @@ void default_peer::monitor(const actor_ptr&,
         default_protocol* proto = m_parent;
         entry.first->attach_functor([=](uint32_t reason) {
             proto->run_later([=] {
-                CPPA_LOGC_TRACE("cppa::network::default_peer",
+                CPPA_LOGC_TRACE("cppa::io::default_peer",
                                 "monitor$kill_proxy_helper",
                                 "reason = " << reason);
                 auto p = proto->get_peer(*node);

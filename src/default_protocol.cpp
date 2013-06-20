@@ -36,12 +36,12 @@
 #include "cppa/to_string.hpp"
 #include "cppa/singletons.hpp"
 
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/default_peer.hpp"
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/ipv4_io_stream.hpp"
-#include "cppa/network/default_protocol.hpp"
-#include "cppa/network/default_peer_acceptor.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/default_peer.hpp"
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/ipv4_io_stream.hpp"
+#include "cppa/io/default_protocol.hpp"
+#include "cppa/io/default_peer_acceptor.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -51,7 +51,7 @@
 using namespace std;
 using namespace cppa::detail;
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 default_protocol::default_protocol(middleman* parent)
 : super(parent), m_addressing(this) { }
@@ -93,7 +93,7 @@ void default_protocol::publish(const actor_ptr& whom,
     default_protocol* proto = this;
     auto impl = make_counted<default_peer_acceptor>(this, move(ptr), whom);
     run_later([=] {
-        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+        CPPA_LOGC_TRACE("cppa::io::default_protocol",
                         "publish$add_acceptor", "");
         proto->m_acceptors[whom].push_back(impl);
         proto->continue_reader(impl.get());
@@ -104,7 +104,7 @@ void default_protocol::unpublish(const actor_ptr& whom) {
     CPPA_LOG_TRACE("whom = " << to_string(whom));
     default_protocol* proto = this;
     run_later([=] {
-        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+        CPPA_LOGC_TRACE("cppa::io::default_protocol",
                         "unpublish$remove_acceptors", "");
         auto& acceptors = m_acceptors[whom];
         for (auto& ptr : acceptors) proto->stop_reader(ptr.get());
@@ -167,12 +167,12 @@ actor_ptr default_protocol::remote_actor(variant_args args) {
     auto port = get<uint16_t>(*i++);
     auto& host = get<string>(*i);
     auto io = ipv4_io_stream::connect_to(host.c_str(), port);
-    return remote_actor(io_stream_ptr_pair(io, io), {});
+    return remote_actor(stream_ptr_pair(io, io), {});
 }
 
 struct remote_actor_result { remote_actor_result* next; actor_ptr value; };
 
-actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
+actor_ptr default_protocol::remote_actor(stream_ptr_pair io,
                                          variant_args args         ) {
     CPPA_LOG_TRACE("io = {" << io.first.get() << ", " << io.second.get() << "}, "
                    << "args.size() = " << args.size());
@@ -202,7 +202,7 @@ actor_ptr default_protocol::remote_actor(io_stream_ptr_pair io,
     default_protocol* proto = this;
     intrusive::blocking_single_reader_queue<remote_actor_result> q;
     run_later([proto, io, pinfptr, remote_aid, &q] {
-        CPPA_LOGC_TRACE("cppa::network::default_protocol",
+        CPPA_LOGC_TRACE("cppa::io::default_protocol",
                         "remote_actor$create_connection", "");
         auto pp = proto->get_peer(*pinfptr);
         CPPA_LOGF_INFO_IF(pp, "connection already exists (re-use old one)");

@@ -28,88 +28,78 @@
 \******************************************************************************/
 
 
-#ifndef DEFAULT_ACTOR_PROXY_HPP
-#define DEFAULT_ACTOR_PROXY_HPP
+#ifndef DEFAULT_PROTOCOL_HPP
+#define DEFAULT_PROTOCOL_HPP
 
-#include "cppa/extend.hpp"
-#include "cppa/actor_proxy.hpp"
-#include "cppa/memory_cached.hpp"
-#include "cppa/network/default_protocol.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include <map>
+#include <vector>
 
-namespace cppa { namespace detail {
+#include "cppa/actor_addressing.hpp"
+#include "cppa/process_information.hpp"
 
-class memory;
-class instance_wrapper;
-template<typename>
-class basic_memory_cache;
+#include "cppa/io/protocol.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/default_peer.hpp"
+#include "cppa/io/default_peer_acceptor.hpp"
+#include "cppa/io/default_message_queue.hpp"
+#include "cppa/io/default_actor_addressing.hpp"
 
-} } // namespace cppa::detail
+namespace cppa { namespace io {
 
-namespace cppa { namespace network {
+class default_protocol : public protocol {
 
-class sync_request_info : public extend<memory_managed>::with<memory_cached> {
-
-    friend class detail::memory;
+    typedef protocol super;
 
  public:
 
-    typedef sync_request_info* pointer;
+    default_protocol(middleman* multiplexer);
 
-    pointer      next;   // intrusive next pointer
-    actor_ptr    sender; // points to the sender of the message
-    message_id mid;    // sync message ID
+    atom_value identifier() const;
 
- private:
+    void publish(const actor_ptr& whom, variant_args args);
 
-    sync_request_info(actor_ptr sptr, message_id id);
+    void publish(const actor_ptr& whom,
+                 std::unique_ptr<acceptor> acceptor,
+                 variant_args args                  );
 
-};
+    void unpublish(const actor_ptr& whom);
 
-class default_actor_proxy : public actor_proxy {
+    actor_ptr remote_actor(variant_args args);
 
-    typedef actor_proxy super;
+    actor_ptr remote_actor(stream_ptr_pair ioptrs, variant_args args);
 
- public:
+    void register_peer(const process_information& node, default_peer* ptr);
 
-    default_actor_proxy(actor_id mid,
-                        const process_information_ptr& pinfo,
-                        default_protocol* parent);
+    default_peer_ptr get_peer(const process_information& node);
 
-    void enqueue(const message_header& hdr, any_tuple msg) override;
+    void enqueue(const process_information& node,
+                 const message_header& hdr,
+                 any_tuple msg);
 
-    void link_to(const actor_ptr& other) override;
+    void new_peer(const input_stream_ptr& in,
+                  const output_stream_ptr& out,
+                  const process_information_ptr& node = nullptr);
 
-    void unlink_from(const actor_ptr& other) override;
+    void last_proxy_exited(const default_peer_ptr& pptr);
 
-    bool remove_backlink(const actor_ptr& to) override;
+    void continue_writer(const default_peer_ptr& pptr);
 
-    bool establish_backlink(const actor_ptr& to) override;
-
-    void local_link_to(const actor_ptr& other) override;
-
-    void local_unlink_from(const actor_ptr& other) override;
-
-    void deliver(const message_header& hdr, any_tuple msg) override;
-
-    inline const process_information_ptr& process_info() const {
-        return m_pinf;
-    }
-
- protected:
-
-    ~default_actor_proxy();
+    // covariant return type
+    default_actor_addressing* addressing();
 
  private:
 
-    void forward_msg(const message_header& hdr, any_tuple msg);
+    struct peer_entry {
+        default_peer_ptr impl;
+        default_message_queue_ptr queue;
+    };
 
-    default_protocol*       m_parent;
-    process_information_ptr m_pinf;
-    intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
+    default_actor_addressing m_addressing;
+    std::map<actor_ptr, std::vector<default_peer_acceptor_ptr> > m_acceptors;
+    std::map<process_information, peer_entry> m_peers;
 
 };
 
 } } // namespace cppa::network
 
-#endif // DEFAULT_ACTOR_PROXY_HPP
+#endif // DEFAULT_PROTOCOL_HPP

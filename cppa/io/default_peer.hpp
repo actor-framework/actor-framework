@@ -41,12 +41,12 @@
 
 #include "cppa/util/buffer.hpp"
 
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
-#include "cppa/network/buffered_writer.hpp"
-#include "cppa/network/default_message_queue.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/buffered_writer.hpp"
+#include "cppa/io/default_message_queue.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 class default_protocol;
 

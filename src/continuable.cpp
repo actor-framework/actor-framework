@@ -28,78 +28,19 @@
 \******************************************************************************/
 
 
-#ifndef DEFAULT_PROTOCOL_HPP
-#define DEFAULT_PROTOCOL_HPP
+#include "cppa/io/continuable.hpp"
 
-#include <map>
-#include <vector>
+namespace cppa { namespace io {
 
-#include "cppa/actor_addressing.hpp"
-#include "cppa/process_information.hpp"
+continuable::continuable(native_socket_type rd, native_socket_type wr)
+: m_rd(rd), m_wr(wr) { }
 
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/default_peer.hpp"
-#include "cppa/network/default_peer_acceptor.hpp"
-#include "cppa/network/default_message_queue.hpp"
-#include "cppa/network/default_actor_addressing.hpp"
+continue_reading_result continuable::continue_reading() {
+    return read_closed;
+}
 
-namespace cppa { namespace network {
-
-class default_protocol : public protocol {
-
-    typedef protocol super;
-
- public:
-
-    default_protocol(middleman* multiplexer);
-
-    atom_value identifier() const;
-
-    void publish(const actor_ptr& whom, variant_args args);
-
-    void publish(const actor_ptr& whom,
-                 std::unique_ptr<acceptor> acceptor,
-                 variant_args args                  );
-
-    void unpublish(const actor_ptr& whom);
-
-    actor_ptr remote_actor(variant_args args);
-
-    actor_ptr remote_actor(io_stream_ptr_pair ioptrs, variant_args args);
-
-    void register_peer(const process_information& node, default_peer* ptr);
-
-    default_peer_ptr get_peer(const process_information& node);
-
-    void enqueue(const process_information& node,
-                 const message_header& hdr,
-                 any_tuple msg);
-
-    void new_peer(const input_stream_ptr& in,
-                  const output_stream_ptr& out,
-                  const process_information_ptr& node = nullptr);
-
-    void last_proxy_exited(const default_peer_ptr& pptr);
-
-    void continue_writer(const default_peer_ptr& pptr);
-
-    // covariant return type
-    default_actor_addressing* addressing();
-
- private:
-
-    struct peer_entry {
-        default_peer_ptr impl;
-        default_message_queue_ptr queue;
-    };
-
-    default_actor_addressing m_addressing;
-    std::map<actor_ptr, std::vector<default_peer_acceptor_ptr> > m_acceptors;
-    std::map<process_information, peer_entry> m_peers;
-
-};
+continue_writing_result continuable::continue_writing() {
+    return write_closed;
+}
 
 } } // namespace cppa::network
-
-#endif // DEFAULT_PROTOCOL_HPP

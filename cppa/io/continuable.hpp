@@ -28,59 +28,85 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
-#define CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#ifndef CONTINUABLE_WRITER_HPP
+#define CONTINUABLE_WRITER_HPP
 
-#include <map>
-#include <cstdint>
+#include "cppa/config.hpp"
+#include "cppa/ref_counted.hpp"
+#include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/actor_proxy.hpp"
-#include "cppa/actor_addressing.hpp"
-#include "cppa/process_information.hpp"
+namespace cppa { namespace io {
 
-namespace cppa { namespace network {
+/**
+ * @brief Denotes the return value of
+ *        {@link continuable::continue_reading()}.
+ */
+enum continue_reading_result {
+    read_failure,
+    read_closed,
+    read_continue_later
+};
 
-class default_protocol;
+/**
+ * @brief Denotes the return value of
+ *        {@link continuable::continue_writing()}.
+ */
+enum continue_writing_result {
+    write_failure,
+    write_closed,
+    write_continue_later,
+    write_done
+};
 
-class default_actor_addressing : public actor_addressing {
+/**
+ * @brief An object performing asynchronous input and output.
+ */
+class continuable : public ref_counted {
 
  public:
 
-    default_actor_addressing(default_protocol* parent = nullptr);
+    /**
+     * @brief Returns the file descriptor for incoming data.
+     */
+    inline native_socket_type read_handle() const { return m_rd; }
 
-    typedef std::map<actor_id, weak_actor_proxy_ptr> proxy_map;
+    /**
+     * @brief Returns the file descriptor for outgoing data.
+     */
+    inline native_socket_type write_handle() const {
+        return m_wr;
+    }
 
-    atom_value technology_id() const;
+    /**
+     * @brief Reads from {@link read_handle()} if valid.
+     */
+    virtual continue_reading_result continue_reading();
 
-    void write(serializer* sink, const actor_ptr& ptr);
+    /**
+     * @brief Writes to {@link write_handle()} if valid.
+     */
+    virtual continue_writing_result continue_writing();
 
-    actor_ptr read(deserializer* source);
+    /**
+     * @brief Called from middleman before it removes this object
+     *        due to an IO failure.
+     */
+     virtual void io_failed() = 0;
 
-    // returns the number of proxy instances for given parent
-    size_t count_proxies(const process_information& parent);
+ protected:
 
-    actor_ptr get(const process_information& parent, actor_id aid);
-
-    actor_ptr get_or_put(const process_information& parent, actor_id aid);
-
-    void put(const process_information& parent,
-             actor_id aid,
-             const actor_proxy_ptr& proxy);
-
-    proxy_map& proxies(process_information& from);
-
-    void erase(process_information& info);
-
-    void erase(process_information& info, actor_id aid);
+    continuable(native_socket_type read_fd,
+                   native_socket_type write_fd = invalid_socket);
 
  private:
 
-    default_protocol* m_parent;
-    process_information_ptr m_pinf;
-    std::map<process_information, proxy_map> m_proxies;
+    native_socket_type m_rd;
+    native_socket_type m_wr;
 
 };
 
+typedef intrusive_ptr<continuable> continuable_ptr;
+
 } } // namespace cppa::network
 
-#endif // CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#endif // CONTINUABLE_WRITER_HPP

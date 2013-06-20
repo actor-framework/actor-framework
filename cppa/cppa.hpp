@@ -67,13 +67,13 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/io_actor.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/io_service.hpp"
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
-#include "cppa/network/io_actor_backend.hpp"
+#include "cppa/io/acceptor.hpp"
+#include "cppa/io/broker.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/io_handle.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/broker_backend.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -585,7 +585,7 @@ void publish(actor_ptr whom, std::uint16_t port, const char* addr = nullptr);
  * @param whom Actor that should be published at @p port.
  * @param acceptor Network technology-specific acceptor implementation.
  */
-void publish(actor_ptr whom, std::unique_ptr<network::acceptor> acceptor);
+void publish(actor_ptr whom, std::unique_ptr<io::acceptor> acceptor);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.
@@ -610,23 +610,23 @@ inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
  */
-actor_ptr remote_actor(network::io_stream_ptr_pair connection);
+actor_ptr remote_actor(io::stream_ptr_pair connection);
 
 /**
  * @brief Spawns an IO actor of type @p Impl.
  * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link network::io_actor}.
+ * @tparam Impl Subtype of {@link io::broker}.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_io(network::input_stream_ptr in,
-                   network::output_stream_ptr out,
+actor_ptr spawn_io(io::input_stream_ptr in,
+                   io::output_stream_ptr out,
                    Ts&&... args) {
-    using namespace network;
+    using namespace io;
     auto mm = get_middleman();
     auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
+    auto backend = make_counted<broker_backend>(std::move(in), std::move(out), ptr);
     backend->init();
     mm->run_later([=] { mm->continue_reader(backend); });
     return eval_sopts(Options, std::move(ptr));
@@ -639,16 +639,16 @@ actor_ptr spawn_io(network::input_stream_ptr in,
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (network::io_service*)>,
+         typename F = std::function<void (io::io_handle*)>,
          typename... Ts>
 actor_ptr spawn_io(F fun,
-                   network::input_stream_ptr in,
-                   network::output_stream_ptr out,
+                   io::input_stream_ptr in,
+                   io::output_stream_ptr out,
                    Ts&&... args) {
-    using namespace network;
+    using namespace io;
     auto mm = get_middleman();
-    auto ptr = io_actor::from(std::move(fun), std::forward<Ts>(args)...);
-    auto backend = make_counted<io_actor_backend>(std::move(in), std::move(out), ptr);
+    auto ptr = broker::from(std::move(fun), std::forward<Ts>(args)...);
+    auto backend = make_counted<broker_backend>(std::move(in), std::move(out), ptr);
     backend->init();
     mm->run_later([=] { mm->continue_reader(backend); });
     return eval_sopts(Options, std::move(ptr));

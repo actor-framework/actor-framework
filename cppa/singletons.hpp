@@ -51,7 +51,7 @@ inline detail::actor_registry* get_actor_registry() {
     return detail::singleton_manager::get_actor_registry();
 }
 
-inline network::middleman* get_middleman() {
+inline io::middleman* get_middleman() {
     return detail::singleton_manager::get_middleman();
 }
 

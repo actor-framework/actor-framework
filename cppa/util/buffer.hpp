@@ -35,7 +35,7 @@
 
 namespace cppa { class deserializer; }
 
-namespace cppa { namespace network { class input_stream; } }
+namespace cppa { namespace io { class input_stream; } }
 
 namespace cppa { namespace util {
 
@@ -187,7 +187,7 @@ class buffer {
     /**
      * @brief Appends up to @p remaining() bytes from @p istream to the buffer.
      */
-    void append_from(network::input_stream* istream);
+    void append_from(io::input_stream* istream);
 
     /**
      * @brief Returns the number of bytes used as minimal allocation unit.

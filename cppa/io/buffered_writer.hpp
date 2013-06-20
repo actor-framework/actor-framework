@@ -28,43 +28,53 @@
 \******************************************************************************/
 
 
-#ifndef IO_SERVICE_HPP
-#define IO_SERVICE_HPP
+#ifndef BUFFERED_WRITER_HPP
+#define BUFFERED_WRITER_HPP
 
-#include <cstddef>
+#include "cppa/util/buffer.hpp"
 
-namespace cppa { namespace network {
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/continuable.hpp"
 
-class io_service {
+namespace cppa { namespace io {
+
+class middleman;
+
+class buffered_writer : public continuable {
+
+    typedef continuable super;
 
  public:
 
-    virtual ~io_service();
+    buffered_writer(middleman* parent,
+                    native_socket_type read_fd,
+                    output_stream_ptr out);
 
-    /**
-     * @brief Denotes when an actor will receive a read buffer.
-     */
-    enum policy_flag { at_least, at_most, exactly };
+    continue_writing_result continue_writing() override;
 
-    /**
-     * @brief Closes the network connection.
-     */
-    virtual void close() = 0;
+    inline bool has_unwritten_data() const {
+        return m_has_unwritten_data;
+    }
 
-    /**
-     * @brief Asynchronously sends @p size bytes of @p data.
-     */
-    virtual void write(size_t size, const void* data) = 0;
+ protected:
 
-    /**
-     * @brief Adjusts the rule receiving 'IO_receive' messages.
-     *        The default settings are <tt>policy = io_handle::at_least</tt>
-     *        and <tt>buffer_size = 0</tt>.
-     */
-    virtual void receive_policy(policy_flag policy, size_t buffer_size) = 0;
+    void write(size_t num_bytes, const void* data);
+
+    void register_for_writing();
+
+    inline util::buffer& write_buffer() {
+        return m_buf;
+    }
+
+ private:
+
+    middleman* m_middleman;
+    output_stream_ptr m_out;
+    bool m_has_unwritten_data;
+    util::buffer m_buf;
 
 };
 
 } } // namespace cppa::network
 
-#endif // IO_SERVICE_HPP
+#endif // BUFFERED_WRITER_HPP

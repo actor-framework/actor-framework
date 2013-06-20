@@ -28,50 +28,46 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OUTPUT_STREAM_HPP
-#define CPPA_OUTPUT_STREAM_HPP
+#ifndef CPPA_MESSAGE_QUEUE_HPP
+#define CPPA_MESSAGE_QUEUE_HPP
 
-#include "cppa/config.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/message_header.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-/**
- * @brief An abstract output stream interface.
- */
-class output_stream : public virtual ref_counted {
+class default_message_queue : public ref_counted {
 
  public:
 
-    /**
-     * @brief Returns the internal file descriptor. This descriptor is needed
-     *        for socket multiplexing using select().
-     */
-    virtual native_socket_type write_handle() const = 0;
+    typedef std::pair<message_header, any_tuple> value_type;
 
-    /**
-     * @brief Writes @p num_bytes bytes from @p buf to the data sink.
-     * @note This member function blocks until @p num_bytes were successfully
-     *       written.
-     * @throws std::ios_base::failure
-     */
-    virtual void write(const void* buf, size_t num_bytes) = 0;
+    typedef value_type& reference;
 
-    /**
-     * @brief Tries to write up to @p num_bytes bytes from @p buf.
-     * @returns The number of written bytes.
-     * @throws std::ios_base::failure
-     */
-    virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
+    template<typename... Ts>
+    void emplace(Ts&&... args) {
+        m_impl.emplace_back(std::forward<Ts>(args)...);
+    }
+
+    inline bool empty() const { return m_impl.empty(); }
+
+    inline value_type pop() {
+        value_type result(std::move(m_impl.front()));
+        m_impl.erase(m_impl.begin());
+        return std::move(result);
+    }
+
+ private:
+
+    std::vector<value_type> m_impl;
 
 };
 
-/**
- * @brief An output stream pointer.
- */
-typedef intrusive_ptr<output_stream> output_stream_ptr;
+typedef intrusive_ptr<default_message_queue> default_message_queue_ptr;
 
-} } // namespace cppa::util
+} } // namespace cppa::network
 
-#endif // CPPA_OUTPUT_STREAM_HPP
+
+
+#endif // CPPA_MESSAGE_QUEUE_HPP

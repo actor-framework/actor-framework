@@ -28,41 +28,55 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_ACCEPTOR_HPP
-#define CPPA_IPV4_ACCEPTOR_HPP
+#ifndef IO_ACTOR_BACKEND_HPP
+#define IO_ACTOR_BACKEND_HPP
 
-#include <memory>
 #include <cstdint>
 
-#include "cppa/config.hpp"
-#include "cppa/network/acceptor.hpp"
+#include "cppa/io/broker.hpp"
+#include "cppa/io/io_handle.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/buffered_writer.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-class ipv4_acceptor : public acceptor {
+class broker_backend : public buffered_writer, public io_handle {
+
+    typedef buffered_writer super; // io_service is merely an interface
+
+    // 65k is the maximum TCP package size
+    static constexpr size_t default_max_buffer_size = 65535;
 
  public:
 
-    static std::unique_ptr<acceptor> create(std::uint16_t port,
-                                            const char* addr = nullptr);
+    broker_backend(input_stream_ptr in, output_stream_ptr out, broker_ptr ptr);
 
-    ~ipv4_acceptor();
+    void init();
 
-    native_socket_type file_handle() const;
+    void handle_disconnect();
 
-    io_stream_ptr_pair accept_connection();
+    void io_failed() override;
 
-    option<io_stream_ptr_pair> try_accept_connection();
+    void receive_policy(policy_flag policy, size_t buffer_size) override;
+
+    continue_reading_result continue_reading() override;
+
+    void close() override;
+
+    void write(size_t num_bytes, const void* data) override;
 
  private:
 
-    ipv4_acceptor(native_socket_type fd, bool nonblocking);
-
-    native_socket_type m_fd;
-    bool m_is_nonblocking;
+    bool m_dirty;
+    policy_flag m_policy;
+    size_t m_policy_buffer_size;
+    input_stream_ptr m_in;
+    intrusive_ptr<broker> m_self;
+    cow_tuple<atom_value, uint32_t, util::buffer> m_read;
 
 };
 
-} } // namespace cppa::detail
+} } // namespace cppa::network
 
-#endif // CPPA_IPV4_ACCEPTOR_HPP
+#endif // IO_ACTOR_BACKEND_HPP

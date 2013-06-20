@@ -29,13 +29,13 @@
 
 
 #include <poll.h>
-#include "cppa/network/middleman_event_handler.hpp"
+#include "cppa/io/middleman_event_handler.hpp"
 
 #ifndef POLLRDHUP
 #define POLLRDHUP POLLHUP
 #endif
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 namespace {
 
@@ -106,7 +106,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                       native_socket_type fd,
                       event_bitmask,
                       event_bitmask new_bitmask,
-                      continuable_io*) {
+                      continuable*) {
         auto last = m_pollset.end();
         auto iter = std::lower_bound(m_pollset.begin(), last, fd, pollfd_less);
         switch (me) {

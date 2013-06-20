@@ -28,22 +28,23 @@
 \******************************************************************************/
 
 
+#include "cppa/cppa.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
-#include "cppa/network/io_actor.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/io_actor_backend.hpp"
+#include "cppa/io/broker.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/broker_backend.hpp"
 
 #include "cppa/detail/sync_request_bouncer.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-class io_actor_continuation {
+class broker_continuation {
 
  public:
 
-    io_actor_continuation(io_actor_ptr ptr, mailbox_element* elem)
+    broker_continuation(broker_ptr ptr, mailbox_element* elem)
     : m_self(std::move(ptr)), m_elem(elem) { }
 
     inline void operator()() const {
@@ -52,21 +53,26 @@ class io_actor_continuation {
 
  private:
 
-    io_actor_ptr     m_self;
+    broker_ptr     m_self;
     mailbox_element* m_elem;
 
 };
 
-class default_io_actor_impl : public io_actor {
+class default_broker_impl : public broker {
 
  public:
 
-    typedef std::function<void (io_service*)> function_type;
+    typedef std::function<void (io_handle*)> function_type;
 
-    default_io_actor_impl(function_type&& fun) : m_fun(std::move(fun)) { }
+    default_broker_impl(function_type&& fun) : m_fun(std::move(fun)) { }
 
     void init() override {
-        m_fun(&io_handle());
+        enqueue(nullptr, make_any_tuple(atom("INITMSG")));
+        become(
+            on(atom("INITMSG")) >> [=] {
+                m_fun(&io());
+            }
+        );
     }
 
  private:
@@ -75,7 +81,7 @@ class default_io_actor_impl : public io_actor {
 
 };
 
-void io_actor::invoke_message(mailbox_element* elem) {
+void broker::invoke_message(mailbox_element* elem) {
     if (exit_reason() != exit_reason::not_exited) {
         if (elem->mid.valid()) {
             detail::sync_request_bouncer srb{exit_reason()};
@@ -106,30 +112,30 @@ void io_actor::invoke_message(mailbox_element* elem) {
     }
 }
 
-void io_actor::invoke_message(any_tuple msg) {
+void broker::invoke_message(any_tuple msg) {
     invoke_message(mailbox_element::create(this, std::move(msg)));
 }
 
-void io_actor::enqueue(const message_header& hdr, any_tuple msg) {
+void broker::enqueue(const message_header& hdr, any_tuple msg) {
     auto e = mailbox_element::create(hdr, std::move(msg));
-    get_middleman()->run_later(io_actor_continuation{this, e});
+    get_middleman()->run_later(broker_continuation{this, e});
 }
 
-bool io_actor::initialized() const {
+bool broker::initialized() const {
     return true;
 }
 
-void io_actor::quit(std::uint32_t reason) {
+void broker::quit(std::uint32_t reason) {
     cleanup(reason);
     m_parent->handle_disconnect();
 }
 
-io_service& io_actor::io_handle() {
+io_handle& broker::io() {
     return *m_parent;
 }
 
-intrusive_ptr<io_actor> io_actor::from(std::function<void (io_service*)> fun) {
-    return make_counted<default_io_actor_impl>(std::move(fun));
+intrusive_ptr<broker> broker::from(std::function<void (io_handle*)> fun) {
+    return make_counted<default_broker_impl>(std::move(fun));
 }
 
 } } // namespace cppa::network

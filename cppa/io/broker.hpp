@@ -28,42 +28,66 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_IO_STREAM_HPP
-#define CPPA_IPV4_IO_STREAM_HPP
+#ifndef IO_ACTOR_HPP
+#define IO_ACTOR_HPP
 
-#include "cppa/config.hpp"
-#include "cppa/network/io_stream.hpp"
+#include <functional>
 
-namespace cppa { namespace network {
+#include "cppa/stackless.hpp"
+#include "cppa/threadless.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/mailbox_element.hpp"
 
-class ipv4_io_stream : public io_stream {
+#include "cppa/io/io_handle.hpp"
+
+#include "cppa/detail/fwd.hpp"
+
+namespace cppa { namespace io {
+
+class broker_backend;
+class broker_continuation;
+
+class broker : public extend<local_actor>::with<threadless, stackless> {
+
+    typedef combined_type super;
+
+    friend class broker_backend;
+    friend class broker_continuation;
 
  public:
 
-    static io_stream_ptr connect_to(const char* host, std::uint16_t port);
+    void enqueue(const message_header& hdr, any_tuple msg);
 
-    static io_stream_ptr from_native_socket(native_socket_type fd);
+    bool initialized() const;
 
-    native_socket_type read_handle() const;
+    void quit(std::uint32_t reason);
 
-    native_socket_type write_handle() const;
+    static intrusive_ptr<broker> from(std::function<void (io_handle*)> fun);
 
-    void read(void* buf, size_t len);
+    template<typename F, typename T0, typename... Ts>
+    static intrusive_ptr<broker> from(F fun, T0&& arg0, Ts&&... args) {
+        return from(std::bind(std::move(fun),
+                              std::placeholders::_1,
+                              detail::fwd<T0>(arg0),
+                              detail::fwd<Ts>(args)...));
+    }
 
-    size_t read_some(void* buf, size_t len);
+ protected:
 
-    void write(const void* buf, size_t len);
-
-    size_t write_some(const void* buf, size_t len);
+    io_handle& io();
 
  private:
 
-    ipv4_io_stream(native_socket_type fd);
+    void invoke_message(mailbox_element* elem);
 
-    native_socket_type m_fd;
+    void invoke_message(any_tuple msg);
+
+    intrusive_ptr<broker_backend> m_parent;
 
 };
 
-} } // namespace cppa::detail
+typedef intrusive_ptr<broker> broker_ptr;
 
-#endif // CPPA_IPV4_IO_STREAM_HPP
+} } // namespace cppa::network
+
+#endif // IO_ACTOR_HPP

@@ -32,10 +32,10 @@
 #include "cppa/to_string.hpp"
 #include "cppa/singletons.hpp"
 
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/buffered_writer.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/buffered_writer.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 buffered_writer::buffered_writer(middleman* pptr, native_socket_type rfd, output_stream_ptr out)
 : super(rfd, out->write_handle()), m_middleman(pptr)

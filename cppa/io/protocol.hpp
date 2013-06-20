@@ -40,14 +40,14 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/primitive_variant.hpp"
 
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/middleman.hpp"
+#include "cppa/io/acceptor.hpp"
+#include "cppa/io/middleman.hpp"
 
 namespace cppa { class actor_addressing; }
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-class continuable_io;
+class continuable;
 class abstract_middleman;
 
 /**
@@ -73,7 +73,7 @@ class protocol {
 
     virtual actor_ptr remote_actor(variant_args args) = 0;
 
-    virtual actor_ptr remote_actor(io_stream_ptr_pair ioptrs,
+    virtual actor_ptr remote_actor(stream_ptr_pair ioptrs,
                                    variant_args args         ) = 0;
 
     virtual actor_addressing* addressing() = 0;
@@ -89,25 +89,25 @@ class protocol {
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void stop_writer(const continuable_io_ptr& ptr);
+    inline void stop_writer(const continuable_ptr& ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void continue_writer(const continuable_io_ptr& ptr);
+    inline void continue_writer(const continuable_ptr& ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void stop_reader(const continuable_io_ptr& ptr);
+    inline void stop_reader(const continuable_ptr& ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void continue_reader(const continuable_io_ptr& ptr);
+    inline void continue_reader(const continuable_ptr& ptr);
 
     /**
      * @brief Returns the parent of this protocol instance.
@@ -135,19 +135,19 @@ inline void protocol::run_later(T&& what) {
     m_parent->run_later(std::forward<T>(what));
 }
 
-inline void protocol::stop_writer(const continuable_io_ptr& ptr) {
+inline void protocol::stop_writer(const continuable_ptr& ptr) {
     m_parent->stop_writer(ptr);
 }
 
-inline void protocol::continue_writer(const continuable_io_ptr& ptr) {
+inline void protocol::continue_writer(const continuable_ptr& ptr) {
     m_parent->continue_writer(ptr);
 }
 
-inline void protocol::stop_reader(const continuable_io_ptr& ptr) {
+inline void protocol::stop_reader(const continuable_ptr& ptr) {
     m_parent->stop_reader(ptr);
 }
 
-inline void protocol::continue_reader(const continuable_io_ptr& ptr) {
+inline void protocol::continue_reader(const continuable_ptr& ptr) {
     m_parent->continue_reader(ptr);
 }
 

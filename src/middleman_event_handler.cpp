@@ -28,9 +28,9 @@
 \******************************************************************************/
 
 
-#include "cppa/network/middleman_event_handler.hpp"
+#include "cppa/io/middleman_event_handler.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 inline std::string eb2str(event_bitmask e) {
     switch (e) {
@@ -47,7 +47,7 @@ middleman_event_handler::middleman_event_handler() { }
 
 middleman_event_handler::~middleman_event_handler() { }
 
-void middleman_event_handler::alteration(const continuable_io_ptr& ptr,
+void middleman_event_handler::alteration(const continuable_ptr& ptr,
                                          event_bitmask e,
                                          fd_meta_event etype) {
     native_socket_type fd;
@@ -78,12 +78,12 @@ void middleman_event_handler::alteration(const continuable_io_ptr& ptr,
     m_alterations.emplace_back(fd_meta_info(fd, ptr, e), etype);
 }
 
-void middleman_event_handler::add_later(const continuable_io_ptr& ptr, event_bitmask e) {
+void middleman_event_handler::add_later(const continuable_ptr& ptr, event_bitmask e) {
     CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
     alteration(ptr, e, fd_meta_event::add);
 }
 
-void middleman_event_handler::erase_later(const continuable_io_ptr& ptr, event_bitmask e) {
+void middleman_event_handler::erase_later(const continuable_ptr& ptr, event_bitmask e) {
     CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
     alteration(ptr, e, fd_meta_event::erase);
 }

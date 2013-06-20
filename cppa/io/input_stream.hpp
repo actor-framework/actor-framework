@@ -35,7 +35,7 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 /**
  * @brief An abstract input stream interface.

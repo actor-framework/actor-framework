@@ -28,53 +28,56 @@
 \******************************************************************************/
 
 
-#ifndef BUFFERED_WRITER_HPP
-#define BUFFERED_WRITER_HPP
+#ifndef CPPA_ACCEPTOR_HPP
+#define CPPA_ACCEPTOR_HPP
 
-#include "cppa/util/buffer.hpp"
+#include <memory>
 
-#include "cppa/network/output_stream.hpp"
-#include "cppa/network/continuable_io.hpp"
+#include "cppa/config.hpp"
+#include "cppa/option.hpp"
 
-namespace cppa { namespace network {
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
 
-class middleman;
+namespace cppa { namespace io {
 
-class buffered_writer : public continuable_io {
+/**
+ * @brief A pair of input and output stream pointers.
+ */
+typedef std::pair<input_stream_ptr, output_stream_ptr> stream_ptr_pair;
 
-    typedef continuable_io super;
+/**
+ * @brief Accepts connections from client processes.
+ */
+class acceptor {
 
  public:
 
-    buffered_writer(middleman* parent,
-                    native_socket_type read_fd,
-                    output_stream_ptr out);
+    virtual ~acceptor() { }
 
-    continue_writing_result continue_writing() override;
+    /**
+     * @brief Returns the internal file descriptor. This descriptor is needed
+     *        for socket multiplexing using select().
+     */
+    virtual native_socket_type file_handle() const = 0;
 
-    inline bool has_unwritten_data() const {
-        return m_has_unwritten_data;
-    }
+    /**
+     * @brief Accepts a new connection and returns an input/output stream pair.
+     * @note This member function blocks until a new connection was established.
+     */
+    virtual stream_ptr_pair accept_connection() = 0;
 
- protected:
-
-    void write(size_t num_bytes, const void* data);
-
-    void register_for_writing();
-
-    inline util::buffer& write_buffer() {
-        return m_buf;
-    }
-
- private:
-
-    middleman* m_middleman;
-    output_stream_ptr m_out;
-    bool m_has_unwritten_data;
-    util::buffer m_buf;
+    /**
+     * @brief Tries to accept a new connection but immediately returns if
+     *        there is no pending connection.
+     */
+    virtual option<stream_ptr_pair> try_accept_connection() = 0;
 
 };
 
-} } // namespace cppa::network
+typedef std::unique_ptr<acceptor> acceptor_uptr;
 
-#endif // BUFFERED_WRITER_HPP
+
+} } // namespace cppa::util
+
+#endif // CPPA_ACCEPTOR_HPP

@@ -37,7 +37,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
-#include "cppa/network/middleman.hpp"
+#include "cppa/io/middleman.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 

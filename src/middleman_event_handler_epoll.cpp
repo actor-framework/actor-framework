@@ -34,9 +34,9 @@
 #include <string.h>
 #include <sys/epoll.h>
 
-#include "cppa/network/middleman_event_handler.hpp"
+#include "cppa/io/middleman_event_handler.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 namespace {
 
@@ -94,7 +94,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
             auto eb = from_int_bitmask<input_event,
                                        output_event,
                                        error_event>(iter->events);
-            auto ptr = reinterpret_cast<continuable_io*>(iter->data.ptr);
+            auto ptr = reinterpret_cast<continuable*>(iter->data.ptr);
             CPPA_REQUIRE(eb != event::none);
             m_events.emplace_back(eb, ptr);
         }
@@ -104,7 +104,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                       native_socket_type fd,
                       event_bitmask,
                       event_bitmask new_bitmask,
-                      continuable_io* ptr) {
+                      continuable* ptr) {
         int operation;
         epoll_event ee;
         ee.data.ptr = ptr;

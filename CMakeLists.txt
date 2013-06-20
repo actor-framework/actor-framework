@@ -107,11 +107,13 @@ set(LIBCPPA_SRC
     src/behavior_stack.cpp
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
+    src/broker.cpp
+    src/broker_backend.cpp
     src/buffer.cpp
     src/buffered_writer.cpp
     src/channel.cpp
     src/context_switching_actor.cpp
-    src/continuable_io.cpp
+    src/continuable.cpp
     src/decorated_tuple.cpp
     src/default_actor_addressing.cpp
     src/default_actor_proxy.cpp
@@ -132,8 +134,6 @@ set(LIBCPPA_SRC
     src/get_mac_addresses.cpp
     src/group.cpp
     src/group_manager.cpp
-    src/io_actor.cpp
-    src/io_actor_backend.cpp
     src/io_service.cpp
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp

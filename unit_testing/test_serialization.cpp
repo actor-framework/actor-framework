@@ -47,7 +47,7 @@
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
-#include "cppa/network/default_actor_addressing.hpp"
+#include "cppa/io/default_actor_addressing.hpp"
 
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
@@ -156,7 +156,7 @@ int main() {
 
     announce(typeid(raw_struct), new raw_struct_type_info);
 
-    network::default_actor_addressing addressing;
+    io::default_actor_addressing addressing;
 
     cout << "process id: " << to_string(process_information::get()) << endl;
 

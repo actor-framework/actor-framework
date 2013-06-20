@@ -36,15 +36,15 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/primitive_variant.hpp"
 
-#include "cppa/network/default_actor_proxy.hpp"
-#include "cppa/network/default_actor_addressing.hpp"
+#include "cppa/io/default_actor_proxy.hpp"
+#include "cppa/io/default_actor_addressing.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
 using namespace std;
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 default_actor_addressing::default_actor_addressing(default_protocol* parent)
 : m_parent(parent), m_pinf(process_information::get()) { }

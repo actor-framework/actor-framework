@@ -28,46 +28,42 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MESSAGE_QUEUE_HPP
-#define CPPA_MESSAGE_QUEUE_HPP
+#ifndef CPPA_IPV4_IO_STREAM_HPP
+#define CPPA_IPV4_IO_STREAM_HPP
 
-#include "cppa/any_tuple.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/message_header.hpp"
+#include "cppa/config.hpp"
+#include "cppa/io/stream.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-class default_message_queue : public ref_counted {
+class ipv4_io_stream : public stream {
 
  public:
 
-    typedef std::pair<message_header, any_tuple> value_type;
+    static stream_ptr connect_to(const char* host, std::uint16_t port);
 
-    typedef value_type& reference;
+    static stream_ptr from_native_socket(native_socket_type fd);
 
-    template<typename... Ts>
-    void emplace(Ts&&... args) {
-        m_impl.emplace_back(std::forward<Ts>(args)...);
-    }
+    native_socket_type read_handle() const;
 
-    inline bool empty() const { return m_impl.empty(); }
+    native_socket_type write_handle() const;
 
-    inline value_type pop() {
-        value_type result(std::move(m_impl.front()));
-        m_impl.erase(m_impl.begin());
-        return std::move(result);
-    }
+    void read(void* buf, size_t len);
+
+    size_t read_some(void* buf, size_t len);
+
+    void write(const void* buf, size_t len);
+
+    size_t write_some(const void* buf, size_t len);
 
  private:
 
-    std::vector<value_type> m_impl;
+    ipv4_io_stream(native_socket_type fd);
+
+    native_socket_type m_fd;
 
 };
 
-typedef intrusive_ptr<default_message_queue> default_message_queue_ptr;
+} } // namespace cppa::detail
 
-} } // namespace cppa::network
-
-
-
-#endif // CPPA_MESSAGE_QUEUE_HPP
+#endif // CPPA_IPV4_IO_STREAM_HPP

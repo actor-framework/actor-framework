@@ -44,7 +44,7 @@
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/network/default_actor_addressing.hpp"
+#include "cppa/io/default_actor_addressing.hpp"
 
 using namespace std;
 
@@ -64,7 +64,7 @@ class string_serializer : public serializer {
     typedef serializer super;
 
     ostream& out;
-    network::default_actor_addressing m_addressing;
+    io::default_actor_addressing m_addressing;
 
     struct pt_writer {
 
@@ -202,7 +202,7 @@ class string_deserializer : public deserializer {
     //size_t m_obj_count;
     stack<bool> m_obj_had_left_parenthesis;
     stack<string> m_open_objects;
-    network::default_actor_addressing m_addressing;
+    io::default_actor_addressing m_addressing;
 
     void skip_space_and_comma() {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;

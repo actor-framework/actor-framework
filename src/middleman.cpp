@@ -51,13 +51,13 @@
 
 #include "cppa/util/buffer.hpp"
 
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
-#include "cppa/network/default_protocol.hpp"
-#include "cppa/network/middleman_event_handler.hpp"
+#include "cppa/io/protocol.hpp"
+#include "cppa/io/acceptor.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/default_protocol.hpp"
+#include "cppa/io/middleman_event_handler.hpp"
 
 #include "cppa/detail/fd_util.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -66,7 +66,7 @@
 
 using namespace std;
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 class middleman_event {
 
@@ -111,27 +111,27 @@ class middleman_impl {
         static_cast<void>(write(m_pipe_write, &dummy, sizeof(dummy)));
     }
 
-    void continue_writer(const continuable_io_ptr& ptr) {
+    void continue_writer(const continuable_ptr& ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->add_later(ptr, event::write);
     }
 
-    void stop_writer(const continuable_io_ptr& ptr) {
+    void stop_writer(const continuable_ptr& ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->erase_later(ptr, event::write);
     }
 
-    void continue_reader(const continuable_io_ptr& ptr) {
+    void continue_reader(const continuable_ptr& ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_readers.push_back(ptr);
         m_handler->add_later(ptr, event::read);
     }
 
-    void stop_reader(const continuable_io_ptr& ptr) {
+    void stop_reader(const continuable_ptr& ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->erase_later(ptr, event::read);
         auto last = m_readers.end();
-        auto i = find_if(m_readers.begin(), last, [&](const continuable_io_ptr& lhs) {
+        auto i = find_if(m_readers.begin(), last, [&](const continuable_ptr& lhs) {
             return lhs == ptr;
         });
         if (i != last) m_readers.erase(i);
@@ -166,7 +166,7 @@ class middleman_impl {
     inline bool done() const { return m_done; }
 
     bool m_done;
-    std::vector<continuable_io_ptr> m_readers;
+    std::vector<continuable_ptr> m_readers;
 
     middleman_event_handler& handler();
 
@@ -190,9 +190,9 @@ middleman* middleman::create_singleton() {
     return ptr;
 }
 
-class middleman_overseer : public continuable_io {
+class middleman_overseer : public continuable {
 
-    typedef continuable_io super;
+    typedef continuable super;
 
  public:
 
@@ -254,19 +254,19 @@ void middleman::run_later(std::function<void()> fun) {
     m_impl->run_later(std::move(fun));
 }
 
-void middleman::continue_writer(const continuable_io_ptr& ptr) {
+void middleman::continue_writer(const continuable_ptr& ptr) {
     m_impl->continue_writer(ptr);
 }
 
-void middleman::stop_writer(const continuable_io_ptr& ptr) {
+void middleman::stop_writer(const continuable_ptr& ptr) {
     m_impl->stop_writer(ptr);
 }
 
-void middleman::continue_reader(const continuable_io_ptr& ptr) {
+void middleman::continue_reader(const continuable_ptr& ptr) {
     m_impl->continue_reader(ptr);
 }
 
-void middleman::stop_reader(const continuable_io_ptr& ptr) {
+void middleman::stop_reader(const continuable_ptr& ptr) {
     m_impl->stop_reader(ptr);
 }
 
@@ -284,7 +284,7 @@ void middleman_loop(middleman_impl* impl) {
     impl->continue_reader(make_counted<middleman_overseer>(impl->m_pipe_read, impl->m_queue));
     handler->update();
     while (!impl->done()) {
-        handler->poll([&](event_bitmask mask, continuable_io* io) {
+        handler->poll([&](event_bitmask mask, continuable* io) {
             switch (mask) {
                 default: CPPA_CRITICAL("invalid event");
                 case event::none: break;
@@ -335,7 +335,7 @@ void middleman_loop(middleman_impl* impl) {
     CPPA_LOGF_DEBUG_IF(handler->num_sockets() == 0,
                        "nothing to flush, no writer left");
     while (handler->num_sockets() > 0) {
-        handler->poll([&](event_bitmask mask, continuable_io* io) {
+        handler->poll([&](event_bitmask mask, continuable* io) {
             switch (mask) {
                 case event::write:
                     switch (io->continue_writing()) {

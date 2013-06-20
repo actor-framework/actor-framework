@@ -28,24 +28,59 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IO_STREAM_HPP
-#define CPPA_IO_STREAM_HPP
+#ifndef CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#define CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
 
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
+#include <map>
+#include <cstdint>
 
-namespace cppa { namespace network {
+#include "cppa/actor_proxy.hpp"
+#include "cppa/actor_addressing.hpp"
+#include "cppa/process_information.hpp"
 
-/**
- * @brief A stream capable of both reading and writing.
- */
-class io_stream : public input_stream, public output_stream { };
+namespace cppa { namespace io {
 
-/**
- * @brief An IO stream pointer.
- */
-typedef intrusive_ptr<io_stream> io_stream_ptr;
+class default_protocol;
 
-} } // namespace cppa::util
+class default_actor_addressing : public actor_addressing {
 
-#endif // CPPA_IO_STREAM_HPP
+ public:
+
+    default_actor_addressing(default_protocol* parent = nullptr);
+
+    typedef std::map<actor_id, weak_actor_proxy_ptr> proxy_map;
+
+    atom_value technology_id() const;
+
+    void write(serializer* sink, const actor_ptr& ptr);
+
+    actor_ptr read(deserializer* source);
+
+    // returns the number of proxy instances for given parent
+    size_t count_proxies(const process_information& parent);
+
+    actor_ptr get(const process_information& parent, actor_id aid);
+
+    actor_ptr get_or_put(const process_information& parent, actor_id aid);
+
+    void put(const process_information& parent,
+             actor_id aid,
+             const actor_proxy_ptr& proxy);
+
+    proxy_map& proxies(process_information& from);
+
+    void erase(process_information& info);
+
+    void erase(process_information& info, actor_id aid);
+
+ private:
+
+    default_protocol* m_parent;
+    process_information_ptr m_pinf;
+    std::map<process_information, proxy_map> m_proxies;
+
+};
+
+} } // namespace cppa::network
+
+#endif // CPPA_DEFAULT_ACTOR_ADDRESSING_HPP

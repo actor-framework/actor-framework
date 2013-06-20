@@ -28,55 +28,24 @@
 \******************************************************************************/
 
 
-#ifndef IO_ACTOR_BACKEND_HPP
-#define IO_ACTOR_BACKEND_HPP
+#ifndef CPPA_IO_STREAM_HPP
+#define CPPA_IO_STREAM_HPP
 
-#include "cppa/network/io_actor.hpp"
-#include "cppa/network/io_service.hpp"
-#include "cppa/network/input_stream.hpp"
-#include "cppa/network/output_stream.hpp"
-#include "cppa/network/buffered_writer.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
-class io_actor_backend : public buffered_writer, public io_service {
+/**
+ * @brief A stream capable of both reading and writing.
+ */
+class stream : public input_stream, public output_stream { };
 
-    typedef buffered_writer super; // io_service is merely an interface
+/**
+ * @brief An IO stream pointer.
+ */
+typedef intrusive_ptr<stream> stream_ptr;
 
-    // 65k is the maximum TCP package size
-    static constexpr size_t default_max_buffer_size = 65535;
+} } // namespace cppa::util
 
- public:
-
-    io_actor_backend(input_stream_ptr in, output_stream_ptr out, io_actor_ptr ptr);
-
-    ~io_actor_backend();
-
-    void init();
-
-    void handle_disconnect();
-
-    void io_failed() override;
-
-    void receive_policy(policy_flag policy, size_t buffer_size) override;
-
-    continue_reading_result continue_reading() override;
-
-    void close() override;
-
-    void write(size_t num_bytes, const void* data) override;
-
- private:
-
-    bool m_dirty;
-    policy_flag m_policy;
-    size_t m_policy_buffer_size;
-    input_stream_ptr m_in;
-    intrusive_ptr<io_actor> m_self;
-    cow_tuple<atom_value, util::buffer> m_read;
-
-};
-
-} } // namespace cppa::network
-
-#endif // IO_ACTOR_BACKEND_HPP
+#endif // CPPA_IO_STREAM_HPP

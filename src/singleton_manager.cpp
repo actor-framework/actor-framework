@@ -38,7 +38,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 
-#include "cppa/network/middleman.hpp"
+#include "cppa/io/middleman.hpp"
 
 #include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
@@ -65,7 +65,7 @@ namespace {
 
 std::atomic<opencl::opencl_metainfo*> s_opencl_metainfo;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
-std::atomic<network::middleman*> s_middleman;
+std::atomic<io::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
 std::atomic<empty_tuple*> s_empty_tuple;
@@ -142,7 +142,7 @@ bool singleton_manager::set_scheduler(scheduler* ptr) {
     }
 }
 
-network::middleman* singleton_manager::get_middleman() {
+io::middleman* singleton_manager::get_middleman() {
     return lazy_get(s_middleman);
 }
 

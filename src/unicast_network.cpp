@@ -50,16 +50,16 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/network/acceptor.hpp"
-#include "cppa/network/protocol.hpp"
-#include "cppa/network/middleman.hpp"
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/ipv4_io_stream.hpp"
+#include "cppa/io/acceptor.hpp"
+#include "cppa/io/protocol.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/ipv4_io_stream.hpp"
 
 namespace cppa {
 
 using namespace detail;
-using namespace network;
+using namespace io;
 
 namespace { protocol* proto() {
     return get_middleman()->get_protocol();
@@ -69,7 +69,7 @@ void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
     proto()->publish(whom, move(aptr), {});
 }
 
-actor_ptr remote_actor(io_stream_ptr_pair io) {
+actor_ptr remote_actor(stream_ptr_pair io) {
     return proto()->remote_actor(io, {});
 }
 

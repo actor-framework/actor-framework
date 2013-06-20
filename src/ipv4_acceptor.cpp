@@ -34,9 +34,9 @@
 #include <iostream>
 #include "cppa/exception.hpp"
 
-#include "cppa/network/io_stream.hpp"
-#include "cppa/network/ipv4_acceptor.hpp"
-#include "cppa/network/ipv4_io_stream.hpp"
+#include "cppa/io/stream.hpp"
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/ipv4_io_stream.hpp"
 
 #include "cppa/detail/fd_util.hpp"
 
@@ -51,7 +51,7 @@
 #   include <netinet/tcp.h>
 #endif
 
-namespace cppa { namespace network {
+namespace cppa { namespace io {
 
 using namespace ::cppa::detail::fd_util;
 
@@ -76,7 +76,7 @@ struct socket_guard {
 
 };
 
-bool accept_impl(io_stream_ptr_pair& result,
+bool accept_impl(stream_ptr_pair& result,
                  native_socket_type fd,
                  bool nonblocking) {
     sockaddr addr;
@@ -91,7 +91,7 @@ bool accept_impl(io_stream_ptr_pair& result,
         }
         throw_io_failure("accept failed");
     }
-    io_stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
+    stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
     return true;
@@ -147,22 +147,22 @@ native_socket_type ipv4_acceptor::file_handle() const {
     return m_fd;
 }
 
-io_stream_ptr_pair ipv4_acceptor::accept_connection() {
+stream_ptr_pair ipv4_acceptor::accept_connection() {
     if (m_is_nonblocking) {
         nonblocking(m_fd, false);
         m_is_nonblocking = false;
     }
-    io_stream_ptr_pair result;
+    stream_ptr_pair result;
     accept_impl(result, m_fd, m_is_nonblocking);
     return result;
 }
 
-option<io_stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
+option<stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
     if (!m_is_nonblocking) {
         nonblocking(m_fd, true);
         m_is_nonblocking = true;
     }
-    io_stream_ptr_pair result;
+    stream_ptr_pair result;
     if (accept_impl(result, m_fd, m_is_nonblocking)) {
         return result;
     }
