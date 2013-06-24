@@ -88,4 +88,9 @@ void default_peer_acceptor::io_failed() {
                   << this << " due to an IO failure");
 }
 
+void default_peer_acceptor::dispose() {
+    m_parent->del_acceptor(this);
+    delete this;
+}
+
 } } // namespace cppa::network

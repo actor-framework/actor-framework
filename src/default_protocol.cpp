@@ -91,12 +91,12 @@ void default_protocol::publish(const actor_ptr& whom,
     static_cast<void>(args); // keep compiler happy
     get_actor_registry()->put(whom->id(), whom);
     default_protocol* proto = this;
-    auto impl = make_counted<default_peer_acceptor>(this, move(ptr), whom);
+    auto impl = new default_peer_acceptor(this, move(ptr), whom);
     run_later([=] {
         CPPA_LOGC_TRACE("cppa::io::default_protocol",
                         "publish$add_acceptor", "");
         proto->m_acceptors[whom].push_back(impl);
-        proto->continue_reader(impl.get());
+        proto->continue_reader(impl);
     });
 }
 
@@ -107,7 +107,7 @@ void default_protocol::unpublish(const actor_ptr& whom) {
         CPPA_LOGC_TRACE("cppa::io::default_protocol",
                         "unpublish$remove_acceptors", "");
         auto& acceptors = m_acceptors[whom];
-        for (auto& ptr : acceptors) proto->stop_reader(ptr.get());
+        for (auto& ptr : acceptors) proto->stop_reader(ptr);
         m_acceptors.erase(whom);
     });
 }
@@ -119,7 +119,7 @@ void default_protocol::register_peer(const process_information& node,
     if (entry.impl == nullptr) {
         if (entry.queue == nullptr) entry.queue.emplace();
         ptr->set_queue(entry.queue);
-        entry.impl.reset(ptr);
+        entry.impl = ptr;
         if (!entry.queue->empty()) {
             auto tmp = entry.queue->pop();
             ptr->enqueue(tmp.first, tmp.second);
@@ -132,7 +132,7 @@ void default_protocol::register_peer(const process_information& node,
     }
 }
 
-default_peer_ptr default_protocol::get_peer(const process_information& n) {
+default_peer* default_protocol::get_peer(const process_information& n) {
     CPPA_LOG_TRACE("n = " << to_string(n));
     auto i = m_peers.find(n);
     if (i != m_peers.end()) {
@@ -141,6 +141,23 @@ default_peer_ptr default_protocol::get_peer(const process_information& n) {
     }
     CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
     return nullptr;
+}
+
+void default_protocol::del_peer(default_peer* ptr) {
+    m_peers.erase(ptr->node());
+}
+
+void default_protocol::del_acceptor(default_peer_acceptor* ptr) {
+    auto i = m_acceptors.begin();
+    auto e = m_acceptors.end();
+    while (i != e) {
+        auto& vec = i->second;
+        auto last = vec.end();
+        auto iter = std::find(vec.begin(), last, ptr);
+        if (iter != last) vec.erase(iter);
+        if (not vec.empty()) ++i;
+        else i = m_acceptors.erase(i);
+    }
 }
 
 void default_protocol::enqueue(const process_information& node,
@@ -215,12 +232,12 @@ actor_ptr default_protocol::remote_actor(stream_ptr_pair io,
     return result->value;
 }
 
-void default_protocol::last_proxy_exited(const default_peer_ptr& pptr) {
+void default_protocol::last_proxy_exited(default_peer* pptr) {
     CPPA_REQUIRE(pptr != nullptr);
     CPPA_LOG_TRACE("pptr = " << pptr.get()
                    << ", pptr->node() = " << to_string(pptr->node()));
     if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
-        stop_reader(pptr.get());
+        stop_reader(pptr);
         auto i = m_peers.find(pptr->node());
         if (i != m_peers.end()) {
             CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
@@ -237,14 +254,14 @@ void default_protocol::new_peer(const input_stream_ptr& in,
                                 const output_stream_ptr& out,
                                 const process_information_ptr& node) {
     CPPA_LOG_TRACE("");
-    auto ptr = make_counted<default_peer>(this, in, out, node);
-    continue_reader(ptr.get());
-    if (node) register_peer(*node, ptr.get());
+    auto ptr = new default_peer(this, in, out, node);
+    continue_reader(ptr);
+    if (node) register_peer(*node, ptr);
 }
 
-void default_protocol::continue_writer(const default_peer_ptr& pptr) {
+void default_protocol::continue_writer(default_peer* pptr) {
     CPPA_LOG_TRACE(CPPA_MARG(pptr, get));
-    super::continue_writer(pptr.get());
+    super::continue_writer(pptr);
 }
 
 default_actor_addressing* default_protocol::addressing() {

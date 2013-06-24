@@ -70,25 +70,37 @@ class middleman {
      * @brief Removes @p ptr from the list of active writers.
      * @warning This member function is not thread-safe.
      */
-    void stop_writer(const continuable_ptr& ptr);
+    void stop_writer(continuable* ptr);
 
     /**
      * @brief Adds @p ptr to the list of active writers.
      * @warning This member function is not thread-safe.
      */
-    void continue_writer(const continuable_ptr& ptr);
+    void continue_writer(continuable* ptr);
+
+    /**
+     * @brief Checks wheter @p ptr is an active writer.
+     * @warning This member function is not thread-safe.
+     */
+    bool has_writer(continuable* ptr);
 
     /**
      * @brief Removes @p ptr from the list of active readers.
      * @warning This member function is not thread-safe.
      */
-    void stop_reader(const continuable_ptr& ptr);
+    void stop_reader(continuable* ptr);
 
     /**
      * @brief Adds @p ptr to the list of active readers.
      * @warning This member function is not thread-safe.
      */
-    void continue_reader(const continuable_ptr& ptr);
+    void continue_reader(continuable* ptr);
+
+    /**
+     * @brief Checks wheter @p ptr is an active reader.
+     * @warning This member function is not thread-safe.
+     */
+    bool has_reader(continuable* ptr);
 
  protected:
 

@@ -36,21 +36,18 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
+#include "cppa/singletons.hpp"
+
+#include "cppa/io/broker.hpp"
+#include "cppa/io/middleman.hpp"
 #include "cppa/io/ipv4_acceptor.hpp"
 #include "cppa/io/ipv4_io_stream.hpp"
 
 #include "pingpong.pb.h"
 
-
-#include "cppa/singletons.hpp"
-#include "cppa/io/broker.hpp"
-#include "cppa/io/middleman.hpp"
-#include "cppa/io/io_handle.hpp"
-#include "cppa/io/broker_backend.hpp"
-
 using namespace std;
 using namespace cppa;
-using namespace cppa::network;
+using namespace cppa::io;
 
 void ping(size_t num_pings) {
     auto count = make_shared<size_t>(0);
@@ -77,7 +74,7 @@ void pong() {
     );
 }
 
-void protobuf_io(io_handle* ios, const actor_ptr& buddy) {
+void protobuf_io(broker* ios, const actor_ptr& buddy) {
     self->monitor(buddy);
     auto write = [=](const org::libcppa::PingOrPong& p) {
             string buf = p.SerializeAsString();
@@ -125,7 +122,7 @@ void protobuf_io(io_handle* ios, const actor_ptr& buddy) {
                 cerr << "neither Pong nor Ping!" << endl;
             }
             // receive next length prefix
-            ios->receive_policy(io_handle::exactly, 4);
+            ios->receive_policy(broker::exactly, 4);
             unbecome();
         },
         default_bhvr
@@ -140,13 +137,13 @@ void protobuf_io(io_handle* ios, const actor_ptr& buddy) {
                 return;
             }
             // receive protobuf data
-            ios->receive_policy(io_handle::exactly, (size_t) num_bytes);
+            ios->receive_policy(broker::exactly, (size_t) num_bytes);
             become(keep_behavior, await_protobuf_data);
         },
         default_bhvr
     };
     // initial setup
-    ios->receive_policy(io_handle::exactly, 4);
+    ios->receive_policy(broker::exactly, 4);
     become(await_length_prefix);
 }
 

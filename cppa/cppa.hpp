@@ -73,7 +73,6 @@
 #include "cppa/io/io_handle.hpp"
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
-#include "cppa/io/broker_backend.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -625,10 +624,12 @@ actor_ptr spawn_io(io::input_stream_ptr in,
                    Ts&&... args) {
     using namespace io;
     auto mm = get_middleman();
-    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    auto backend = make_counted<broker_backend>(std::move(in), std::move(out), ptr);
-    backend->init();
-    mm->run_later([=] { mm->continue_reader(backend); });
+    auto ptr = make_counted<Impl>(std::move(in), std::move(out), std::forward<Ts>(args)...);
+    {
+        scoped_self_setter sss{ptr.get()};
+        ptr->init();
+    }
+    if (ptr->has_behavior()) mm->run_later([=] { mm->continue_reader(ptr.get()); });
     return eval_sopts(Options, std::move(ptr));
 }
 
@@ -647,10 +648,12 @@ actor_ptr spawn_io(F fun,
                    Ts&&... args) {
     using namespace io;
     auto mm = get_middleman();
-    auto ptr = broker::from(std::move(fun), std::forward<Ts>(args)...);
-    auto backend = make_counted<broker_backend>(std::move(in), std::move(out), ptr);
-    backend->init();
-    mm->run_later([=] { mm->continue_reader(backend); });
+    auto ptr = broker::from(std::move(fun), std::move(in), std::move(out), std::forward<Ts>(args)...);
+    {
+        scoped_self_setter sss{ptr.get()};
+        ptr->init();
+    }
+    // default_broker_impl will call continue_reader()
     return eval_sopts(Options, std::move(ptr));
 }
 

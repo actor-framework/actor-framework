@@ -54,6 +54,8 @@ class default_peer_acceptor : public continuable {
 
     inline const actor_ptr& published_actor() const { return m_pa; }
 
+    void dispose() override;
+
     void io_failed();
 
  private:
@@ -63,8 +65,6 @@ class default_peer_acceptor : public continuable {
     actor_ptr m_pa;
 
 };
-
-typedef intrusive_ptr<default_peer_acceptor> default_peer_acceptor_ptr;
 
 } } // namespace cppa::detail
 

@@ -65,10 +65,10 @@ inline event_bitmask from_int_bitmask(unsigned mask) {
 
 struct fd_meta_info {
     native_socket_type fd;
-    continuable_ptr ptr;
+    continuable* ptr;
     event_bitmask mask;
     fd_meta_info(native_socket_type a0,
-                 const continuable_ptr& a1,
+                 continuable* a1,
                  event_bitmask a2)
     : fd(a0), ptr(a1), mask(a2) { }
 };
@@ -84,12 +84,12 @@ class middleman_event_handler {
     /**
      * @brief Enqueues an add operation.
      */
-    void add_later(const continuable_ptr& ptr, event_bitmask e);
+    void add_later(continuable* ptr, event_bitmask e);
 
     /**
      * @brief Enqueues an erase operation.
      */
-    void erase_later(const continuable_ptr& ptr, event_bitmask e);
+    void erase_later(continuable* ptr, event_bitmask e);
 
     /**
      * @brief Poll all events.
@@ -117,6 +117,12 @@ class middleman_event_handler {
      */
     void update();
 
+    std::vector<continuable*> readers();
+
+    bool has_reader(continuable* ptr);
+
+    bool has_writer(continuable* ptr);
+
  protected:
 
     std::vector<fd_meta_info> m_meta; // this vector is *always* sorted
@@ -124,6 +130,8 @@ class middleman_event_handler {
     std::vector<std::pair<fd_meta_info, fd_meta_event>> m_alterations;
 
     std::vector<std::pair<event_bitmask, continuable*>> m_events;
+
+    std::vector<continuable*> m_dispose_list;
 
     middleman_event_handler();
 
@@ -138,7 +146,7 @@ class middleman_event_handler {
 
  private:
 
-    void alteration(const continuable_ptr& ptr, event_bitmask e, fd_meta_event etype);
+    void alteration(continuable* ptr, event_bitmask e, fd_meta_event etype);
 
     event_bitmask next_bitmask(event_bitmask old, event_bitmask arg, fd_meta_event op) const;
 

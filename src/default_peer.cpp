@@ -340,4 +340,9 @@ void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
     register_for_writing();
 }
 
+void default_peer::dispose() {
+    m_parent->del_peer(this);
+    delete this;
+}
+
 } } // namespace cppa::network

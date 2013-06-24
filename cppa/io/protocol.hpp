@@ -89,25 +89,25 @@ class protocol {
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void stop_writer(const continuable_ptr& ptr);
+    inline void stop_writer(continuable* ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void continue_writer(const continuable_ptr& ptr);
+    inline void continue_writer(continuable* ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void stop_reader(const continuable_ptr& ptr);
+    inline void stop_reader(continuable* ptr);
 
     /**
      * @brief Convenience member function to be used by children of
      *        this protocol.
      */
-    inline void continue_reader(const continuable_ptr& ptr);
+    inline void continue_reader(continuable* ptr);
 
     /**
      * @brief Returns the parent of this protocol instance.
@@ -135,19 +135,19 @@ inline void protocol::run_later(T&& what) {
     m_parent->run_later(std::forward<T>(what));
 }
 
-inline void protocol::stop_writer(const continuable_ptr& ptr) {
+inline void protocol::stop_writer(continuable* ptr) {
     m_parent->stop_writer(ptr);
 }
 
-inline void protocol::continue_writer(const continuable_ptr& ptr) {
+inline void protocol::continue_writer(continuable* ptr) {
     m_parent->continue_writer(ptr);
 }
 
-inline void protocol::stop_reader(const continuable_ptr& ptr) {
+inline void protocol::stop_reader(continuable* ptr) {
     m_parent->stop_reader(ptr);
 }
 
-inline void protocol::continue_reader(const continuable_ptr& ptr) {
+inline void protocol::continue_reader(continuable* ptr) {
     m_parent->continue_reader(ptr);
 }
 

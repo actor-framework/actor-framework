@@ -108,7 +108,6 @@ set(LIBCPPA_SRC
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
     src/broker.cpp
-    src/broker_backend.cpp
     src/buffer.cpp
     src/buffered_writer.cpp
     src/channel.cpp

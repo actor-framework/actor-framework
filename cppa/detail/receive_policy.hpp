@@ -104,6 +104,10 @@ class receive_policy {
         return false;
     }
 
+    inline void add_to_cache(pointer node_ptr) {
+        m_cache.emplace_back(std::move(node_ptr));
+    }
+
     template<class Client, class Fun>
     bool invoke(Client* client,
                 pointer node_ptr,

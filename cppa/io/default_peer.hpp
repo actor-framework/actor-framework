@@ -67,6 +67,8 @@ class default_peer : public buffered_writer {
 
     continue_writing_result continue_writing() override;
 
+    void dispose() override;
+
     void io_failed() override;
 
     void enqueue(const message_header& hdr, const any_tuple& msg);
@@ -134,8 +136,6 @@ class default_peer : public buffered_writer {
     void enqueue_impl(const message_header& hdr, const any_tuple& msg);
 
 };
-
-typedef intrusive_ptr<default_peer> default_peer_ptr;
 
 } } // namespace cppa::network
 

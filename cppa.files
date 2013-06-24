@@ -81,7 +81,6 @@ cppa/intrusive/single_reader_queue.hpp
 cppa/intrusive_ptr.hpp
 cppa/io/acceptor.hpp
 cppa/io/broker.hpp
-cppa/io/broker_backend.hpp
 cppa/io/buffered_writer.hpp
 cppa/io/continuable.hpp
 cppa/io/default_actor_addressing.hpp
@@ -218,7 +217,6 @@ src/behavior_stack.cpp
 src/binary_deserializer.cpp
 src/binary_serializer.cpp
 src/broker.cpp
-src/broker_backend.cpp
 src/buffer.cpp
 src/buffered_writer.cpp
 src/channel.cpp

@@ -98,7 +98,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                        output_event,
                                        error_event>(mask);
             m_pollset[i].revents = 0;
-            if (eb != event::none) m_events.emplace_back(eb, m_meta[i].ptr.get());
+            if (eb != event::none) m_events.emplace_back(eb, m_meta[i].ptr);
         }
     }
 

@@ -111,30 +111,32 @@ class middleman_impl {
         static_cast<void>(write(m_pipe_write, &dummy, sizeof(dummy)));
     }
 
-    void continue_writer(const continuable_ptr& ptr) {
+    void continue_writer(continuable* ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->add_later(ptr, event::write);
     }
 
-    void stop_writer(const continuable_ptr& ptr) {
+    void stop_writer(continuable* ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->erase_later(ptr, event::write);
     }
 
-    void continue_reader(const continuable_ptr& ptr) {
+    inline bool has_writer(continuable* ptr) {
+        return m_handler->has_writer(ptr);
+    }
+
+    void continue_reader(continuable* ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
-        m_readers.push_back(ptr);
         m_handler->add_later(ptr, event::read);
     }
 
-    void stop_reader(const continuable_ptr& ptr) {
+    void stop_reader(continuable* ptr) {
         CPPA_LOG_TRACE("ptr = " << ptr.get());
         m_handler->erase_later(ptr, event::read);
-        auto last = m_readers.end();
-        auto i = find_if(m_readers.begin(), last, [&](const continuable_ptr& lhs) {
-            return lhs == ptr;
-        });
-        if (i != last) m_readers.erase(i);
+    }
+
+    inline bool has_reader(continuable* ptr) {
+        return m_handler->has_reader(ptr);
     }
 
  protected:
@@ -166,7 +168,6 @@ class middleman_impl {
     inline bool done() const { return m_done; }
 
     bool m_done;
-    std::vector<continuable_ptr> m_readers;
 
     middleman_event_handler& handler();
 
@@ -198,6 +199,10 @@ class middleman_overseer : public continuable {
 
     middleman_overseer(int pipe_fd, middleman_queue& q)
     : super(pipe_fd), m_queue(q) { }
+
+    void dispose() override {
+        delete this;
+    }
 
     continue_reading_result continue_reading() {
         CPPA_LOG_TRACE("");
@@ -254,21 +259,30 @@ void middleman::run_later(std::function<void()> fun) {
     m_impl->run_later(std::move(fun));
 }
 
-void middleman::continue_writer(const continuable_ptr& ptr) {
+void middleman::continue_writer(continuable* ptr) {
     m_impl->continue_writer(ptr);
 }
 
-void middleman::stop_writer(const continuable_ptr& ptr) {
+void middleman::stop_writer(continuable* ptr) {
     m_impl->stop_writer(ptr);
 }
 
-void middleman::continue_reader(const continuable_ptr& ptr) {
+bool middleman::has_writer(continuable* ptr) {
+    return m_impl->has_writer(ptr);
+}
+
+void middleman::continue_reader(continuable* ptr) {
     m_impl->continue_reader(ptr);
 }
 
-void middleman::stop_reader(const continuable_ptr& ptr) {
+void middleman::stop_reader(continuable* ptr) {
     m_impl->stop_reader(ptr);
 }
+
+bool middleman::has_reader(continuable* ptr) {
+    return m_impl->has_reader(ptr);
+}
+
 
 void middleman_loop(middleman_impl* impl) {
 #   ifdef CPPA_LOG_LEVEL
@@ -281,7 +295,7 @@ void middleman_loop(middleman_impl* impl) {
     CPPA_LOGF_INFO("middleman runs at "
                    << to_string(*process_information::get()));
     handler->init();
-    impl->continue_reader(make_counted<middleman_overseer>(impl->m_pipe_read, impl->m_queue));
+    impl->continue_reader(new middleman_overseer(impl->m_pipe_read, impl->m_queue));
     handler->update();
     while (!impl->done()) {
         handler->poll([&](event_bitmask mask, continuable* io) {
@@ -329,7 +343,8 @@ void middleman_loop(middleman_impl* impl) {
     }
     CPPA_LOGF_DEBUG("event loop done, erase all readers");
     // make sure to write everything before shutting down
-    for (auto ptr : impl->m_readers) { handler->erase_later(ptr, event::read); }
+    auto readers = handler->readers();
+    for (auto reader : readers) { handler->erase_later(reader, event::read); }
     handler->update();
     CPPA_LOGF_DEBUG("flush outgoing messages");
     CPPA_LOGF_DEBUG_IF(handler->num_sockets() == 0,
@@ -359,9 +374,6 @@ void middleman_loop(middleman_impl* impl) {
             }
         });
     }
-    CPPA_LOGF_DEBUG("clear all containers");
-    //impl->m_peers.clear();
-    impl->m_readers.clear();
     CPPA_LOGF_DEBUG("middleman loop done");
 }
 

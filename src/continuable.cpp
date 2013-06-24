@@ -28,9 +28,13 @@
 \******************************************************************************/
 
 
+#include "cppa/detail/demangle.hpp"
+
 #include "cppa/io/continuable.hpp"
 
 namespace cppa { namespace io {
+
+continuable::~continuable() { }
 
 continuable::continuable(native_socket_type rd, native_socket_type wr)
 : m_rd(rd), m_wr(wr) { }

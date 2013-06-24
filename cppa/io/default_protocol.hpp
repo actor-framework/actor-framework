@@ -50,6 +50,9 @@ class default_protocol : public protocol {
 
     typedef protocol super;
 
+    friend class default_peer;
+    friend class default_peer_acceptor;
+
  public:
 
     default_protocol(middleman* multiplexer);
@@ -70,7 +73,7 @@ class default_protocol : public protocol {
 
     void register_peer(const process_information& node, default_peer* ptr);
 
-    default_peer_ptr get_peer(const process_information& node);
+    default_peer* get_peer(const process_information& node);
 
     void enqueue(const process_information& node,
                  const message_header& hdr,
@@ -80,22 +83,26 @@ class default_protocol : public protocol {
                   const output_stream_ptr& out,
                   const process_information_ptr& node = nullptr);
 
-    void last_proxy_exited(const default_peer_ptr& pptr);
+    void last_proxy_exited(default_peer* pptr);
 
-    void continue_writer(const default_peer_ptr& pptr);
+    void continue_writer(default_peer* pptr);
 
     // covariant return type
     default_actor_addressing* addressing();
 
  private:
 
+    void del_acceptor(default_peer_acceptor* ptr);
+
+    void del_peer(default_peer* ptr);
+
     struct peer_entry {
-        default_peer_ptr impl;
+        default_peer* impl;
         default_message_queue_ptr queue;
     };
 
     default_actor_addressing m_addressing;
-    std::map<actor_ptr, std::vector<default_peer_acceptor_ptr> > m_acceptors;
+    std::map<actor_ptr, std::vector<default_peer_acceptor*>> m_acceptors;
     std::map<process_information, peer_entry> m_peers;
 
 };

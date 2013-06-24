@@ -61,21 +61,34 @@ enum continue_writing_result {
 /**
  * @brief An object performing asynchronous input and output.
  */
-class continuable : public ref_counted {
+class continuable {
+
+    continuable(const continuable&) = delete;
+    continuable& operator=(const continuable&) = delete;
 
  public:
+
+    virtual ~continuable();
+
+    /**
+     * @brief Disposes this instance. This member function is invoked by
+     *        the middleman once it has neither pending reads nor pending
+     *        writes for this instance.
+     *
+     * This member function is expected to perform cleanup code
+     * and to release memory, e.g., by calling <tt>delete this</tt>.
+     */
+    virtual void dispose() = 0;
 
     /**
      * @brief Returns the file descriptor for incoming data.
      */
-    inline native_socket_type read_handle() const { return m_rd; }
+    inline native_socket_type read_handle() const;
 
     /**
      * @brief Returns the file descriptor for outgoing data.
      */
-    inline native_socket_type write_handle() const {
-        return m_wr;
-    }
+    inline native_socket_type write_handle() const;
 
     /**
      * @brief Reads from {@link read_handle()} if valid.
@@ -96,7 +109,7 @@ class continuable : public ref_counted {
  protected:
 
     continuable(native_socket_type read_fd,
-                   native_socket_type write_fd = invalid_socket);
+                native_socket_type write_fd = invalid_socket);
 
  private:
 
@@ -105,7 +118,21 @@ class continuable : public ref_counted {
 
 };
 
-typedef intrusive_ptr<continuable> continuable_ptr;
+/******************************************************************************
+ *             inline and template member function implementations            *
+ ******************************************************************************/
+
+
+inline native_socket_type continuable::read_handle() const {
+    return m_rd;
+}
+
+/**
+ * @brief Returns the file descriptor for outgoing data.
+ */
+inline native_socket_type continuable::write_handle() const {
+    return m_wr;
+}
 
 } } // namespace cppa::network
 

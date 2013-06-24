@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IO_ACTOR_HPP
-#define IO_ACTOR_HPP
+#ifndef CPPA_BROKER_HPP
+#define CPPA_BROKER_HPP
 
 #include <functional>
 
@@ -38,23 +38,37 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/io/io_handle.hpp"
+#include "cppa/io/buffered_writer.hpp"
 
 #include "cppa/detail/fwd.hpp"
 
 namespace cppa { namespace io {
 
-class broker_backend;
 class broker_continuation;
 
-class broker : public extend<local_actor>::with<threadless, stackless> {
+class broker : public extend<local_actor>::with<threadless, stackless>
+             , public buffered_writer {
 
-    typedef combined_type super;
+    typedef combined_type super1;
+    typedef buffered_writer super2;
 
-    friend class broker_backend;
     friend class broker_continuation;
 
  public:
+
+    enum policy_flag { at_least, at_most, exactly };
+
+    broker(input_stream_ptr in, output_stream_ptr out);
+
+    void io_failed() override;
+
+    void dispose() override;
+
+    void receive_policy(policy_flag policy, size_t buffer_size);
+
+    continue_reading_result continue_reading() override;
+
+    void write(size_t num_bytes, const void* data);
 
     void enqueue(const message_header& hdr, any_tuple msg);
 
@@ -62,27 +76,43 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     void quit(std::uint32_t reason);
 
-    static intrusive_ptr<broker> from(std::function<void (io_handle*)> fun);
+    static intrusive_ptr<broker> from(std::function<void (broker*)> fun,
+                                      input_stream_ptr in,
+                                      output_stream_ptr out);
 
     template<typename F, typename T0, typename... Ts>
-    static intrusive_ptr<broker> from(F fun, T0&& arg0, Ts&&... args) {
+    static intrusive_ptr<broker> from(F fun,
+                                      input_stream_ptr in,
+                                      output_stream_ptr out,
+                                      T0&& arg0,
+                                      Ts&&... args) {
         return from(std::bind(std::move(fun),
                               std::placeholders::_1,
                               detail::fwd<T0>(arg0),
-                              detail::fwd<Ts>(args)...));
+                              detail::fwd<Ts>(args)...),
+                    std::move(in),
+                    std::move(out));
     }
 
  protected:
 
-    io_handle& io();
+    void cleanup(std::uint32_t reason);
 
  private:
 
-    void invoke_message(mailbox_element* elem);
+    void invoke_message(const message_header& hdr, any_tuple msg);
 
-    void invoke_message(any_tuple msg);
+    void disconnect();
 
-    intrusive_ptr<broker_backend> m_parent;
+    static constexpr size_t default_max_buffer_size = 65535;
+
+    bool m_is_continue_reading;
+    bool m_disconnected;
+    bool m_dirty;
+    policy_flag m_policy;
+    size_t m_policy_buffer_size;
+    input_stream_ptr m_in;
+    cow_tuple<atom_value, uint32_t, util::buffer> m_read;
 
 };
 
@@ -90,4 +120,4 @@ typedef intrusive_ptr<broker> broker_ptr;
 
 } } // namespace cppa::network
 
-#endif // IO_ACTOR_HPP
+#endif // CPPA_BROKER_HPP
