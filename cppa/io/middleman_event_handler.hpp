@@ -117,11 +117,14 @@ class middleman_event_handler {
      */
     void update();
 
-    std::vector<continuable*> readers();
-
     bool has_reader(continuable* ptr);
 
     bool has_writer(continuable* ptr);
+
+    template<typename F>
+    inline void for_each_reader(F fun) {
+        for (auto& meta : m_meta) if (meta.mask & event::read) fun(meta.ptr);
+    }
 
  protected:
 

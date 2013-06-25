@@ -343,8 +343,9 @@ void middleman_loop(middleman_impl* impl) {
     }
     CPPA_LOGF_DEBUG("event loop done, erase all readers");
     // make sure to write everything before shutting down
-    auto readers = handler->readers();
-    for (auto reader : readers) { handler->erase_later(reader, event::read); }
+    handler->for_each_reader([handler](continuable* ptr) {
+        handler->erase_later(ptr, event::read);
+    });
     handler->update();
     CPPA_LOGF_DEBUG("flush outgoing messages");
     CPPA_LOGF_DEBUG_IF(handler->num_sockets() == 0,

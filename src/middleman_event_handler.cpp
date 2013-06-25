@@ -141,25 +141,15 @@ void middleman_event_handler::update() {
         return iter != last && iter->fd == fd;
     };
     // check whether elements in dispose list can be safely deleted
-    for (auto& elem : m_dispose_list) {
+    for (auto elem : m_dispose_list) {
         auto rd = elem->read_handle();
         auto wr = elem->write_handle();
         if  ( (rd == wr && !is_alive(rd))
            || (rd != wr && !is_alive(rd) && !is_alive(wr))) {
-           std::cout << "SAFE TO DISPOSE ELEMENT: " << elem << std::endl;
            elem->dispose();
         }
-        else std::cout << "GOTTA KEEP ELEMENT: " << elem << std::endl;
     }
     m_dispose_list.clear();
-}
-
-std::vector<continuable*> middleman_event_handler::readers() {
-    std::vector<continuable*> result;
-    for (auto& meta : m_meta) {
-        if (meta.mask & event::read) result.push_back(meta.ptr);
-    }
-    return result;
 }
 
 bool middleman_event_handler::has_reader(continuable* ptr) {
