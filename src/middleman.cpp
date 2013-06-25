@@ -112,12 +112,12 @@ class middleman_impl {
     }
 
     void continue_writer(continuable* ptr) {
-        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        CPPA_LOG_TRACE(CPPA_ARG(ptr));
         m_handler->add_later(ptr, event::write);
     }
 
     void stop_writer(continuable* ptr) {
-        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        CPPA_LOG_TRACE(CPPA_ARG(ptr));
         m_handler->erase_later(ptr, event::write);
     }
 
@@ -126,12 +126,12 @@ class middleman_impl {
     }
 
     void continue_reader(continuable* ptr) {
-        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        CPPA_LOG_TRACE(CPPA_ARG(ptr));
         m_handler->add_later(ptr, event::read);
     }
 
     void stop_reader(continuable* ptr) {
-        CPPA_LOG_TRACE("ptr = " << ptr.get());
+        CPPA_LOG_TRACE(CPPA_ARG(ptr));
         m_handler->erase_later(ptr, event::read);
     }
 

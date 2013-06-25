@@ -136,7 +136,7 @@ default_peer* default_protocol::get_peer(const process_information& n) {
     CPPA_LOG_TRACE("n = " << to_string(n));
     auto i = m_peers.find(n);
     if (i != m_peers.end()) {
-        CPPA_LOGMF(CPPA_DEBUG, self, "result = " << i->second.impl.get());
+        CPPA_LOG_DEBUG("result = " << i->second.impl);
         return i->second.impl;
     }
     CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
@@ -234,7 +234,7 @@ actor_ptr default_protocol::remote_actor(stream_ptr_pair io,
 
 void default_protocol::last_proxy_exited(default_peer* pptr) {
     CPPA_REQUIRE(pptr != nullptr);
-    CPPA_LOG_TRACE("pptr = " << pptr.get()
+    CPPA_LOG_TRACE(CPPA_ARG(pptr)
                    << ", pptr->node() = " << to_string(pptr->node()));
     if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
         stop_reader(pptr);
@@ -260,7 +260,7 @@ void default_protocol::new_peer(const input_stream_ptr& in,
 }
 
 void default_protocol::continue_writer(default_peer* pptr) {
-    CPPA_LOG_TRACE(CPPA_MARG(pptr, get));
+    CPPA_LOG_TRACE(CPPA_ARG(pptr));
     super::continue_writer(pptr);
 }
 

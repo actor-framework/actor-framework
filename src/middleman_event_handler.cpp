@@ -79,12 +79,12 @@ void middleman_event_handler::alteration(continuable* ptr,
 }
 
 void middleman_event_handler::add_later(continuable* ptr, event_bitmask e) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
+    CPPA_LOG_TRACE(CPPA_ARG(ptr) << ", " << CPPA_TARG(e, eb2str));
     alteration(ptr, e, fd_meta_event::add);
 }
 
 void middleman_event_handler::erase_later(continuable* ptr, event_bitmask e) {
-    CPPA_LOG_TRACE("ptr = " << ptr.get() << ", e = " << eb2str(e));
+    CPPA_LOG_TRACE(CPPA_ARG(ptr) << ", e = " << eb2str(e));
     alteration(ptr, e, fd_meta_event::erase);
 }
 
@@ -107,7 +107,7 @@ void middleman_event_handler::update() {
         auto mask = next_bitmask(old, elem.mask, elem_pair.second);
         auto ptr = elem.ptr;
         CPPA_LOG_DEBUG("new bitmask for "
-                       << elem.ptr.get() << ": " << eb2str(mask));
+                       << elem.ptr << ": " << eb2str(mask));
         if (iter == last || iter->fd != elem.fd) {
             CPPA_LOG_ERROR_IF(mask == event::none,
                               "cannot erase " << ptr << " (no such element)");
