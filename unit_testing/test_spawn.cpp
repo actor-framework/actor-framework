@@ -315,6 +315,7 @@ int main() {
     CPPA_TEST(test_spawn);
 
     cout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
+    cout << "sizeof(broker) = " << sizeof(io::broker) << endl;
 
     CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);

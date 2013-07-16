@@ -204,10 +204,10 @@ class receive_policy {
         return client->await_message();
     }
 
- private:
-
     typedef typename rp_flag<rp_nestable>::type nestable;
     typedef typename rp_flag<rp_sequential>::type sequential;
+
+ private:
 
     std::list<std::unique_ptr<mailbox_element, disposer> > m_cache;
 
@@ -342,6 +342,7 @@ class receive_policy {
         client->m_current_node = previous;
     }
 
+ public:
 
     // workflow 'template'
 

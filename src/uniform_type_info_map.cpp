@@ -33,6 +33,7 @@
 #include <vector>
 #include <cstring>
 #include <algorithm>
+#include <type_traits>
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
@@ -41,6 +42,7 @@
 #include "cppa/util/duration.hpp"
 #include "cppa/util/limited_vector.hpp"
 
+#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
@@ -49,27 +51,41 @@ namespace cppa { namespace detail {
 // maps demangled names to libcppa names
 // WARNING: this map is sorted, insert new elements *in sorted order* as well!
 /* extern */ const char* mapped_type_names[][2] = {
-    { "bool",                                                                           "bool" },
-    { "cppa::any_tuple",                                                                "@tuple" },
-    { "cppa::atom_value",                                                               "@atom" },
-    { "cppa::intrusive_ptr<cppa::actor>",                                               "@actor" },
-    { "cppa::intrusive_ptr<cppa::channel>",                                             "@channel" },
-    { "cppa::intrusive_ptr<cppa::group>",                                               "@group" },
-    { "cppa::intrusive_ptr<cppa::process_information>",                                 "@proc"},
-    { "cppa::message_header",                                                           "@header" },
-    { "cppa::nullptr_t",                                                                "@null" },
-    { "cppa::util::buffer",                                                             "@buffer" },
-    { "cppa::util::duration",                                                           "@duration" },
-    { "cppa::util::void_type",                                                          "@0" },
-    { "double",                                                                         "double" },
-    { "float",                                                                          "float" },
-    { "long double",                                                                    "@ldouble" },
-    { "std::basic_string<@i16,std::char_traits<@i16>,std::allocator<@i16>>",            "@u16str" },
-    { "std::basic_string<@i32,std::char_traits<@i32>,std::allocator<@i32>>",            "@u32str" },
-    { "std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",               "@str" },
-    { "std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",            "@u16str" },
-    { "std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>",            "@u32str" },
-    { "std::map<@str,@str,std::less<@str>,std::allocator<std::pair<const @str,@str>>>", "@strmap" }
+    { "bool",                                           "bool" },
+    { "cppa::any_tuple",                                "@tuple" },
+    { "cppa::atom_value",                               "@atom" },
+    { "cppa::intrusive_ptr<cppa::actor>",               "@actor" },
+    { "cppa::intrusive_ptr<cppa::channel>",             "@channel" },
+    { "cppa::intrusive_ptr<cppa::group>",               "@group" },
+    { "cppa::intrusive_ptr<cppa::process_information>", "@proc"},
+    { "cppa::io::accept_handle",                        "@ac_hdl" },
+    { "cppa::io::connection_handle",                    "@cn_hdl" },
+    { "cppa::message_header",                           "@header" },
+    { "cppa::nullptr_t",                                "@null" },
+    { "cppa::util::buffer",                             "@buffer" },
+    { "cppa::util::duration",                           "@duration" },
+    { "cppa::util::void_type",                          "@0" },
+    { "double",                                         "double" },
+    { "float",                                          "float" },
+    { "long double",                                    "@ldouble" },
+    // std::u16string
+    { "std::basic_string<@i16,std::char_traits<@i16>,std::allocator<@i16>>",
+      "@u16str" },
+    // std::u32string
+    { "std::basic_string<@i32,std::char_traits<@i32>,std::allocator<@i32>>",
+      "@u32str" },
+    // std::string
+    { "std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",
+      "@str" },
+    // std::u16string (again, using unsigned char type)
+    { "std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",
+      "@u16str" },
+    // std::u32string (again, using unsigned char type)
+    { "std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>",
+      "@u32str" },
+    // std::map<std::string,std::string>
+    { "std::map<@str,@str,std::less<@str>,std::allocator<std::pair<const @str,@str>>>",
+      "@strmap" }
 };
 
 // maps sizeof(T) => {unsigned name, signed name}
@@ -133,17 +149,35 @@ void assert_type_name(const char* expected_name, deserializer* source) {
 }
 
 template<typename T>
-void serialize_impl(const T& val, serializer* sink) {
+typename std::enable_if<util::is_primitive<T>::value>::type
+serialize_impl(const T& val, serializer* sink) {
     sink->begin_object(mapped_name<T>());
     sink->write_value(val);
     sink->end_object();
 }
 
 template<typename T>
-void deserialize_impl(T& val, deserializer* source) {
+typename std::enable_if<util::is_primitive<T>::value>::type
+deserialize_impl(T& val, deserializer* source) {
     assert_type_name(mapped_name<T>(), source);
     source->begin_object(mapped_name<T>());
     val = source->read<T>();
+    source->end_object();
+}
+
+template<typename T>
+void serialize_impl(const detail::handle<T>& hdl, serializer* sink) {
+    sink->begin_object(mapped_name<T>());
+    sink->write_value(static_cast<int32_t>(hdl.id()));
+    sink->end_object();
+}
+
+template<typename T>
+void deserialize_impl(detail::handle<T>& hdl, deserializer* source) {
+    auto tname = mapped_name<T>();
+    assert_type_name(tname, source);
+    source->begin_object(tname);
+    hdl = T::from_int(source->read<int32_t>());
     source->end_object();
 }
 
@@ -639,10 +673,12 @@ class utim_impl : public uniform_type_info_map {
         // fill builtin types *in sorted order* (by uniform name)
         size_t i = 0;
         m_builtin_types[i++] = &m_type_void;            // @0
+        m_builtin_types[i++] = &m_ac_hdl;               // @ac_hdl
         m_builtin_types[i++] = &m_type_actor;           // @actor
         m_builtin_types[i++] = &m_type_atom;            // @atom
         m_builtin_types[i++] = &m_type_buffer;          // @buffer
         m_builtin_types[i++] = &m_type_channel;         // @channel
+        m_builtin_types[i++] = &m_cn_hdl;               // @cn_hdl
         m_builtin_types[i++] = &m_type_duration;        // @duration
         m_builtin_types[i++] = &m_type_group;           // @group
         m_builtin_types[i++] = &m_type_header;          // @header
@@ -735,6 +771,8 @@ class utim_impl : public uniform_type_info_map {
     typedef std::map<std::string, std::string> strmap;
 
     uti_impl<process_information_ptr>       m_type_proc;
+    uti_impl<io::accept_handle>             m_ac_hdl;
+    uti_impl<io::connection_handle>         m_cn_hdl;
     uti_impl<channel_ptr>                   m_type_channel;
     buffer_type_info_impl                   m_type_buffer;
     uti_impl<actor_ptr>                     m_type_actor;
@@ -762,7 +800,7 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 26> m_builtin_types;
+    std::array<pointer, 28> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
 
     template<typename Container>

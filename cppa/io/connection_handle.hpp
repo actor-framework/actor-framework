@@ -31,37 +31,25 @@
 #ifndef IO_SERVICE_HPP
 #define IO_SERVICE_HPP
 
-#include <cstddef>
+#include "cppa/detail/handle.hpp"
 
 namespace cppa { namespace io {
 
-class io_handle {
+class broker;
+
+class connection_handle : public detail::handle<connection_handle> {
+
+    friend class detail::handle<connection_handle>;
+
+    typedef detail::handle<connection_handle> super;
 
  public:
 
-    virtual ~io_handle();
+    connection_handle() = default;
 
-    /**
-     * @brief Denotes when an actor will receive a read buffer.
-     */
-    enum policy_flag { at_least, at_most, exactly };
+ private:
 
-    /**
-     * @brief Closes the network connection.
-     */
-    virtual void close() = 0;
-
-    /**
-     * @brief Asynchronously sends @p size bytes of @p data.
-     */
-    virtual void write(size_t size, const void* data) = 0;
-
-    /**
-     * @brief Adjusts the rule receiving 'IO_receive' messages.
-     *        The default settings are <tt>policy = io_handle::at_least</tt>
-     *        and <tt>buffer_size = 0</tt>.
-     */
-    virtual void receive_policy(policy_flag policy, size_t buffer_size) = 0;
+    inline connection_handle(int handle_id) : super{handle_id} { }
 
 };
 

@@ -80,6 +80,11 @@ class behavior_stack
         return m_elements.back().first;
     }
 
+    inline message_id back_id() {
+        CPPA_REQUIRE(!empty());
+        return m_elements.back().second;
+    }
+
     inline void push_back(behavior&& what,
                           message_id response_id = message_id::invalid) {
         m_elements.emplace_back(std::move(what), response_id);

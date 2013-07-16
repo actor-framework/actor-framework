@@ -9,10 +9,13 @@
 #include <iostream>
 #include <type_traits>
 
+#include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/util/scope_guard.hpp"
+
+void set_default_test_settings();
 
 size_t cppa_error_count();
 void cppa_inc_error_count();
@@ -114,6 +117,7 @@ inline void cppa_check_value(V1 v1,
     auto cppa_test_scope_guard = ::cppa::util::make_scope_guard([] {           \
         std::cout << cppa_error_count() << " error(s) detected" << std::endl;  \
     });                                                                        \
+    set_default_test_settings();                                               \
     CPPA_LOGF_INFO("run unit test " << #testname)
 
 #define CPPA_TEST_RESULT() ((cppa_error_count() == 0) ? 0 : -1)
@@ -161,5 +165,21 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_UNEXPECTED_TOUT_CB() [] { CPPA_UNEXPECTED_TOUT(); }
 
 std::vector<std::string> split(const std::string& str, char delim = ' ', bool keep_empties = true);
+
+std::map<std::string, std::string> get_kv_pairs(int argc, char** argv, int begin = 1);
+
+template<typename F>
+void run_client_part(const std::map<std::string, std::string>& args, F fun) {
+    CPPA_LOGF_INFO("run in client mode");
+    auto i = args.find("port");
+    if (i == args.end()) {
+        CPPA_LOGF_ERROR("no port specified");
+        throw std::logic_error("no port specified");
+    }
+    auto port = static_cast<std::uint16_t>(stoi(i->second));
+    fun(port);
+    cppa::await_all_others_done();
+    cppa::shutdown();
+}
 
 #endif // TEST_HPP

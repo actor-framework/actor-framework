@@ -55,7 +55,6 @@
 #include "cppa/util/void_type.hpp"
 
 #include "cppa/detail/demangle.hpp"
-#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/singleton_manager.hpp"

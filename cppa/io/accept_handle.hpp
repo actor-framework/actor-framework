@@ -28,10 +28,31 @@
 \******************************************************************************/
 
 
-#include "cppa/io/io_handle.hpp"
+#ifndef CPPA_IO_ACCEPT_HANDLE_HPP
+#define CPPA_IO_ACCEPT_HANDLE_HPP
+
+#include "cppa/detail/handle.hpp"
 
 namespace cppa { namespace io {
 
-io_handle::~io_handle() { }
+class broker;
 
-} } // namespace cppa::network
+class accept_handle : public detail::handle<accept_handle> {
+
+    friend class detail::handle<accept_handle>;
+
+    typedef detail::handle<accept_handle> super;
+
+ public:
+
+    accept_handle() = default;
+
+ private:
+
+    inline accept_handle(int handle_id) : super{handle_id} { }
+
+};
+
+} } // namespace cppa::io
+
+#endif // CPPA_IO_ACCEPT_HANDLE_HPP

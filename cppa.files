@@ -81,7 +81,6 @@ cppa/intrusive/single_reader_queue.hpp
 cppa/intrusive_ptr.hpp
 cppa/io/acceptor.hpp
 cppa/io/broker.hpp
-cppa/io/buffered_writer.hpp
 cppa/io/continuable.hpp
 cppa/io/default_actor_addressing.hpp
 cppa/io/default_actor_proxy.hpp
@@ -90,7 +89,7 @@ cppa/io/default_peer.hpp
 cppa/io/default_peer_acceptor.hpp
 cppa/io/default_protocol.hpp
 cppa/io/input_stream.hpp
-cppa/io/io_handle.hpp
+cppa/io/connection_handle.hpp
 cppa/io/ipv4_acceptor.hpp
 cppa/io/ipv4_io_stream.hpp
 cppa/io/middleman.hpp
@@ -218,7 +217,6 @@ src/binary_deserializer.cpp
 src/binary_serializer.cpp
 src/broker.cpp
 src/buffer.cpp
-src/buffered_writer.cpp
 src/channel.cpp
 src/context_switching_actor.cpp
 src/continuable.cpp
@@ -242,7 +240,6 @@ src/get_mac_addresses.cpp
 src/get_root_uuid.cpp
 src/group.cpp
 src/group_manager.cpp
-src/io_service.cpp
 src/ipv4_acceptor.cpp
 src/ipv4_io_stream.cpp
 src/local_actor.cpp
@@ -309,3 +306,7 @@ unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/io/accept_handle.hpp
+unit_testing/test_broker.cpp
+cppa/io/buffered_writing.hpp
+cppa/detail/handle.hpp

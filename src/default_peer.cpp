@@ -60,7 +60,7 @@ default_peer::default_peer(default_protocol* parent,
                            const input_stream_ptr& in,
                            const output_stream_ptr& out,
                            process_information_ptr peer_ptr)
-: super(parent->parent(), in->read_handle(), out)
+: super(parent->parent(), out, in->read_handle(), out->write_handle())
 , m_parent(parent), m_in(in)
 , m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
 , m_node(peer_ptr) {

@@ -48,6 +48,9 @@
 
 #include "cppa/detail/singleton_mixin.hpp"
 
+#include "cppa/io/accept_handle.hpp"
+#include "cppa/io/connection_handle.hpp"
+
 namespace cppa { class uniform_type_info; }
 
 namespace cppa { namespace detail {
@@ -61,6 +64,8 @@ using mapped_type_list = util::type_list<
     channel_ptr,
     group_ptr,
     process_information_ptr,
+    io::accept_handle,
+    io::connection_handle,
     message_header,
     std::nullptr_t,
     util::buffer,

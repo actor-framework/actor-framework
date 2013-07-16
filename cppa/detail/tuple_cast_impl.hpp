@@ -36,7 +36,6 @@
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa { namespace detail {

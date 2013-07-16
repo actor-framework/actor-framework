@@ -34,6 +34,7 @@
 #include <map>
 #include <cstdint>
 
+#include "cppa/extend.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
@@ -43,16 +44,16 @@
 
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
-#include "cppa/io/buffered_writer.hpp"
+#include "cppa/io/buffered_writing.hpp"
 #include "cppa/io/default_message_queue.hpp"
 
 namespace cppa { namespace io {
 
 class default_protocol;
 
-class default_peer : public buffered_writer {
+class default_peer : public extend<continuable>::with<buffered_writing> {
 
-    typedef buffered_writer super;
+    typedef combined_type super;
 
     friend class default_protocol;
 

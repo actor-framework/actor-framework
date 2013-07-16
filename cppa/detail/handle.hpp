@@ -28,53 +28,56 @@
 \******************************************************************************/
 
 
-#ifndef BUFFERED_WRITER_HPP
-#define BUFFERED_WRITER_HPP
+#ifndef CPPA_DETAIL_HANDLE_HPP
+#define CPPA_DETAIL_HANDLE_HPP
 
-#include "cppa/util/buffer.hpp"
+#include "cppa/util/comparable.hpp"
 
-#include "cppa/io/output_stream.hpp"
-#include "cppa/io/continuable.hpp"
+namespace cppa { namespace detail {
 
-namespace cppa { namespace io {
-
-class middleman;
-
-class buffered_writer : public continuable {
-
-    typedef continuable super;
+template<typename Subtype>
+class handle : util::comparable<Subtype> {
 
  public:
 
-    buffered_writer(middleman* parent,
-                    native_socket_type read_fd,
-                    output_stream_ptr out);
+    inline handle() : m_id{-1} { }
 
-    continue_writing_result continue_writing() override;
-
-    inline bool has_unwritten_data() const {
-        return m_has_unwritten_data;
+    handle(const Subtype& other) {
+        m_id = other.id();
     }
+
+    Subtype& operator=(const handle& other) {
+        m_id = other.id();
+        return *static_cast<Subtype*>(this);
+    }
+
+    inline int id() const {
+        return m_id;
+    }
+
+    inline int compare(const Subtype& other) const {
+        return m_id - other.id();
+    }
+
+    inline bool invalid() const {
+        return m_id == -1;
+    }
+
+    static inline Subtype from_int(int id) {
+        return {id};
+    }
+
 
  protected:
 
-    void write(size_t num_bytes, const void* data);
-
-    void register_for_writing();
-
-    inline util::buffer& write_buffer() {
-        return m_buf;
-    }
+    inline handle(int handle_id) : m_id{handle_id} { }
 
  private:
 
-    middleman* m_middleman;
-    output_stream_ptr m_out;
-    bool m_has_unwritten_data;
-    util::buffer m_buf;
+    int m_id;
 
 };
 
-} } // namespace cppa::network
+} } // namespace cppa::detail
 
-#endif // BUFFERED_WRITER_HPP
+#endif // CPPA_DETAIL_HANDLE_HPP

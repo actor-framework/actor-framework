@@ -46,7 +46,7 @@ class default_peer_acceptor : public continuable {
 
  public:
 
-    continue_reading_result continue_reading();
+    continue_reading_result continue_reading() override;
 
     default_peer_acceptor(default_protocol* parent,
                           acceptor_uptr ptr,
@@ -56,7 +56,7 @@ class default_peer_acceptor : public continuable {
 
     void dispose() override;
 
-    void io_failed();
+    void io_failed() override;
 
  private:
 

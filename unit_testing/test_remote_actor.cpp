@@ -20,24 +20,6 @@ typedef std::pair<std::string, std::string> string_pair;
 
 typedef vector<actor_ptr> actor_vector;
 
-vector<string_pair> get_kv_pairs(int argc, char** argv, int begin = 1) {
-    vector<string_pair> result;
-    for (int i = begin; i < argc; ++i) {
-        auto vec = split(argv[i], '=');
-        auto eq_fun = [&](const string_pair& p) { return p.first == vec[0]; };
-        if (vec.size() != 2) {
-            CPPA_PRINTERR("\"" << argv[i] << "\" is not a key-value pair");
-        }
-        else if (any_of(result.begin(), result.end(), eq_fun)) {
-            CPPA_PRINTERR("key \"" << vec[0] << "\" is already defined");
-        }
-        else {
-            result.emplace_back(vec[0], vec[1]);
-        }
-    }
-    return result;
-}
-
 void reflector() {
     CPPA_SET_DEBUG_NAME("reflector" << self->id());
     become (
@@ -149,19 +131,6 @@ void spawn5_client() {
 }
 
 } // namespace <anonymous>
-
-void verbose_terminate() {
-    try { if (std::uncaught_exception()) throw; }
-    catch (std::exception& e) {
-        CPPA_PRINTERR("terminate called after throwing "
-                      << to_verbose_string(e));
-    }
-    catch (...) {
-        CPPA_PRINTERR("terminate called after throwing an unknown exception");
-    }
-
-    abort();
-}
 
 template<typename T>
 void await_down(actor_ptr ptr, T continuation) {
@@ -340,37 +309,8 @@ class server : public event_based_actor {
 
 };
 
-void run_client_part(const vector<string_pair>& args) {
-    CPPA_LOGF_INFO("run in client mode");
-    CPPA_TEST(test_remote_actor_client_part);
-    auto i = find_if(args.begin(), args.end(),
-                     [](const string_pair& p) { return p.first == "port"; });
-    if (i == args.end()) {
-        CPPA_LOGF_ERROR("no port specified");
-        throw std::logic_error("no port specified");
-    }
-    auto port = static_cast<uint16_t>(stoi(i->second));
-    auto serv = remote_actor("localhost", port);
-    // remote_actor is supposed to return the same server when connecting to
-    // the same host again
-    {
-        auto server2 = remote_actor("localhost", port);
-        CPPA_CHECK(serv == server2);
-    }
-    auto c = spawn<client, monitored>(serv);
-    receive (
-        on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
-            CPPA_CHECK_EQUAL(self->last_sender(), c);
-            CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
-        }
-    );
-}
-
 int main(int argc, char** argv) {
-    set_terminate(verbose_terminate);
     announce<actor_vector>();
-    CPPA_SET_DEBUG_NAME("main");
-    cout.unsetf(ios_base::unitbuf);
     string app_path = argv[0];
     bool run_remote_actor = true;
     if (argc > 1) {
@@ -379,9 +319,22 @@ int main(int argc, char** argv) {
             run_remote_actor = false;
         }
         else {
-            run_client_part(get_kv_pairs(argc, argv));
-            await_all_others_done();
-            shutdown();
+            run_client_part(get_kv_pairs(argc, argv), [](uint16_t port) {
+                auto serv = remote_actor("localhost", port);
+                // remote_actor is supposed to return the same server
+                // when connecting to the same host again
+                {
+                    auto server2 = remote_actor("localhost", port);
+                    CPPA_CHECK(serv == server2);
+                }
+                auto c = spawn<client, monitored>(serv);
+                receive (
+                    on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
+                        CPPA_CHECK_EQUAL(self->last_sender(), c);
+                        CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
+                    }
+                );
+            });
             return CPPA_TEST_RESULT();
         }
     }

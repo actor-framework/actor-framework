@@ -67,12 +67,16 @@
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
-#include "cppa/io/acceptor.hpp"
+
 #include "cppa/io/broker.hpp"
+#include "cppa/io/acceptor.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/io_handle.hpp"
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
+#include "cppa/io/accept_handle.hpp"
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/ipv4_io_stream.hpp"
+#include "cppa/io/connection_handle.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/get_behavior.hpp"
@@ -623,14 +627,9 @@ actor_ptr spawn_io(io::input_stream_ptr in,
                    io::output_stream_ptr out,
                    Ts&&... args) {
     using namespace io;
-    auto mm = get_middleman();
-    auto ptr = make_counted<Impl>(std::move(in), std::move(out), std::forward<Ts>(args)...);
-    {
-        scoped_self_setter sss{ptr.get()};
-        ptr->init();
-    }
-    if (ptr->has_behavior()) mm->run_later([=] { mm->continue_reader(ptr.get()); });
-    return eval_sopts(Options, std::move(ptr));
+    using namespace std;
+    auto ptr = make_counted<Impl>(move(in), move(out), forward<Ts>(args)...);
+    return eval_sopts(Options, io::init_and_launch(move(ptr)));
 }
 
 /**
@@ -640,21 +639,40 @@ actor_ptr spawn_io(io::input_stream_ptr in,
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::io_handle*)>,
+         typename F = std::function<void (io::broker*)>,
          typename... Ts>
 actor_ptr spawn_io(F fun,
                    io::input_stream_ptr in,
                    io::output_stream_ptr out,
                    Ts&&... args) {
-    using namespace io;
-    auto mm = get_middleman();
-    auto ptr = broker::from(std::move(fun), std::move(in), std::move(out), std::forward<Ts>(args)...);
-    {
-        scoped_self_setter sss{ptr.get()};
-        ptr->init();
-    }
-    // default_broker_impl will call continue_reader()
-    return eval_sopts(Options, std::move(ptr));
+    using namespace std;
+    auto ptr = io::broker::from(move(fun), move(in), move(out),
+                                forward<Ts>(args)...);
+    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+}
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
+    auto ptr = io::ipv4_io_stream(host, port);
+    return spawn_io<Impl>(ptr, ptr, std::forward<Ts>(args)...);
+}
+
+template<spawn_options Options = no_spawn_options,
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
+actor_ptr spawn_io(F fun, const char* host, uint16_t port, Ts&&... args) {
+    auto ptr = io::ipv4_io_stream::connect_to(host, port);
+    return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
+}
+
+template<spawn_options Options = no_spawn_options,
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
+actor_ptr spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+    using namespace std;
+    auto ptr = io::broker::from(move(fun), io::ipv4_acceptor::create(port),
+                                forward<Ts>(args)...);
+    return eval_sopts(Options, io::init_and_launch(move(ptr)));
 }
 
 /**

@@ -31,44 +31,57 @@
 #ifndef CPPA_BROKER_HPP
 #define CPPA_BROKER_HPP
 
-#include <functional>
+#include <map>
 
 #include "cppa/stackless.hpp"
 #include "cppa/threadless.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/mailbox_element.hpp"
 
-#include "cppa/io/buffered_writer.hpp"
+#include "cppa/util/buffer.hpp"
+
+#include "cppa/io/acceptor.hpp"
+#include "cppa/io/input_stream.hpp"
+#include "cppa/io/output_stream.hpp"
+#include "cppa/io/accept_handle.hpp"
+#include "cppa/io/connection_handle.hpp"
 
 #include "cppa/detail/fwd.hpp"
 
 namespace cppa { namespace io {
 
-class broker_continuation;
+class broker;
 
-class broker : public extend<local_actor>::with<threadless, stackless>
-             , public buffered_writer {
+typedef intrusive_ptr<broker> broker_ptr;
 
-    typedef combined_type super1;
-    typedef buffered_writer super2;
+local_actor_ptr init_and_launch(broker_ptr);
 
-    friend class broker_continuation;
+/**
+ * @brief A broker mediates between a libcppa-based actor system
+ *        and other components in the network.
+ * @extends local_actor
+ */
+class broker : public extend<local_actor>::with<threadless, stackless> {
+
+    typedef combined_type super;
+
+    // implementation relies on several helper classes ...
+    class scribe;
+    class servant;
+    class doorman;
+    class continuation;
+
+    // ... and some helpers need friendship
+    friend class scribe;
+    friend class doorman;
+    friend class continuation;
+
+    friend local_actor_ptr init_and_launch(broker_ptr);
+
+    broker() = delete;
 
  public:
 
     enum policy_flag { at_least, at_most, exactly };
-
-    broker(input_stream_ptr in, output_stream_ptr out);
-
-    void io_failed() override;
-
-    void dispose() override;
-
-    void receive_policy(policy_flag policy, size_t buffer_size);
-
-    continue_reading_result continue_reading() override;
-
-    void write(size_t num_bytes, const void* data);
 
     void enqueue(const message_header& hdr, any_tuple msg);
 
@@ -76,16 +89,23 @@ class broker : public extend<local_actor>::with<threadless, stackless>
 
     void quit(std::uint32_t reason);
 
-    static intrusive_ptr<broker> from(std::function<void (broker*)> fun,
-                                      input_stream_ptr in,
-                                      output_stream_ptr out);
+    void receive_policy(const connection_handle& hdl,
+                        broker::policy_flag policy,
+                        size_t buffer_size);
+
+    void write(const connection_handle& hdl, size_t num_bytes, const void* buf);
+
+    void write(const connection_handle& hdl, const util::buffer& buf);
+
+    void write(const connection_handle& hdl, util::buffer&& buf);
+
+    static broker_ptr from(std::function<void (broker*)> fun,
+                           input_stream_ptr in,
+                           output_stream_ptr out);
 
     template<typename F, typename T0, typename... Ts>
-    static intrusive_ptr<broker> from(F fun,
-                                      input_stream_ptr in,
-                                      output_stream_ptr out,
-                                      T0&& arg0,
-                                      Ts&&... args) {
+    static broker_ptr from(F fun, input_stream_ptr in, output_stream_ptr out,
+                           T0&& arg0, Ts&&... args) {
         return from(std::bind(std::move(fun),
                               std::placeholders::_1,
                               detail::fwd<T0>(arg0),
@@ -94,29 +114,75 @@ class broker : public extend<local_actor>::with<threadless, stackless>
                     std::move(out));
     }
 
+    static broker_ptr from(std::function<void (broker*)> fun, acceptor_uptr in);
+
+    template<typename F, typename T0, typename... Ts>
+    static broker_ptr from(F fun, acceptor_uptr in, T0&& arg0, Ts&&... args) {
+        return from(std::bind(std::move(fun),
+                              std::placeholders::_1,
+                              detail::fwd<T0>(arg0),
+                              detail::fwd<Ts>(args)...),
+                    std::move(in));
+    }
+
+    actor_ptr fork(std::function<void (broker*)> fun,
+                   const connection_handle& hdl);
+
+    template<typename F, typename T0, typename... Ts>
+    actor_ptr fork(F fun,
+                   const connection_handle& hdl,
+                   T0&& arg0,
+                   Ts&&... args) {
+        return this->fork(std::bind(std::move(fun),
+                                    std::placeholders::_1,
+                                    detail::fwd<T0>(arg0),
+                                    detail::fwd<Ts>(args)...),
+                          hdl);
+    }
+
+    template<typename F>
+    inline void for_each_connection(F fun) const {
+        for (auto& kvp : m_io) fun(kvp.first);
+    }
+
+    inline size_t num_connections() const {
+        return m_io.size();
+    }
+
  protected:
 
-    void cleanup(std::uint32_t reason);
+    broker(input_stream_ptr in, output_stream_ptr out);
+
+    broker(acceptor_uptr in);
+
+    void cleanup(std::uint32_t reason) override;
+
+    typedef std::unique_ptr<broker::scribe> scribe_pointer;
+
+    typedef std::unique_ptr<broker::doorman> doorman_pointer;
+
+    explicit broker(scribe_pointer);
 
  private:
 
     void invoke_message(const message_header& hdr, any_tuple msg);
 
-    void disconnect();
+    void erase_io(int id);
 
-    static constexpr size_t default_max_buffer_size = 65535;
+    void erase_acceptor(int id);
 
-    bool m_is_continue_reading;
-    bool m_disconnected;
-    bool m_dirty;
-    policy_flag m_policy;
-    size_t m_policy_buffer_size;
-    input_stream_ptr m_in;
-    cow_tuple<atom_value, uint32_t, util::buffer> m_read;
+    void init_broker();
+
+    connection_handle add_scribe(input_stream_ptr in, output_stream_ptr out);
+
+    accept_handle add_doorman(acceptor_uptr ptr);
+
+    std::map<accept_handle, doorman_pointer> m_accept;
+    std::map<connection_handle, scribe_pointer> m_io;
 
 };
 
-typedef intrusive_ptr<broker> broker_ptr;
+//typedef intrusive_ptr<broker> broker_ptr;
 
 } } // namespace cppa::network
 
