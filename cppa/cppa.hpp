@@ -653,7 +653,7 @@ actor_ptr spawn_io(F fun,
 
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
-    auto ptr = io::ipv4_io_stream(host, port);
+    auto ptr = io::ipv4_io_stream::connect_to(host, port);
     return spawn_io<Impl>(ptr, ptr, std::forward<Ts>(args)...);
 }
 
