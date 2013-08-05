@@ -166,6 +166,7 @@ set(LIBCPPA_SRC
     src/thread_mapped_actor.cpp
     src/thread_pool_scheduler.cpp
     src/to_uniform_name.cpp
+    src/type_lookup_table.cpp
     src/unicast_network.cpp
     src/uniform_type_info.cpp
     src/uniform_type_info_map.cpp

@@ -39,12 +39,15 @@
 #include "cppa/object.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/from_string.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/io/default_actor_addressing.hpp"
+
+#include "cppa/detail/uniform_type_info_map.hpp"
 
 using namespace std;
 
@@ -115,11 +118,12 @@ class string_serializer : public serializer {
     string_serializer(ostream& mout)
     : super(&m_addressing), out(mout), m_after_value(false), m_obj_just_opened(false) { }
 
-    void begin_object(const string& type_name) {
+    void begin_object(const uniform_type_info* uti) {
         clear();
-        m_open_objects.push(type_name);
+        std::string tname = uti->name();
+        m_open_objects.push(tname);
         // do not print type names for strings and atoms
-        if (!isbuiltin(type_name)) out << type_name;
+        if (!isbuiltin(tname)) out << tname;
         m_obj_just_opened = true;
     }
 
@@ -274,43 +278,34 @@ class string_deserializer : public deserializer {
         m_pos = m_str.begin();
     }
 
-    string seek_object() {
+    const uniform_type_info* begin_object() override {
         skip_space_and_comma();
+        string type_name;
         // shortcuts for builtin types
         if (*m_pos == '"') {
-            return "@str";
+            type_name = "@str";
         }
         else if (*m_pos == '\'') {
-            return "@atom";
+            type_name = "@atom";
         }
         else if (*m_pos == '{') {
-            return "@tuple";
+            type_name = "@tuple";
         }
-        // default case
-        auto substr_end = next_delimiter();
-        if (m_pos == substr_end) {
-            throw_malformed("could not seek object type name");
+        else {
+            auto substr_end = next_delimiter();
+            if (m_pos == substr_end) {
+                throw_malformed("could not seek object type name");
+            }
+            type_name = string(m_pos, substr_end);
+            m_pos = substr_end;
         }
-        string result(m_pos, substr_end);
-        m_pos = substr_end;
-        return result;
-    }
-
-    string peek_object() {
-        auto pos = m_pos;
-        string result = seek_object();
-        // restore position in stream
-        m_pos = pos;
-        return result;
-    }
-
-    void begin_object(const string& type_name) {
         m_open_objects.push(type_name);
         //++m_obj_count;
         skip_space_and_comma();
         // suppress leading parenthesis for builtin types
         m_obj_had_left_parenthesis.push(try_consume('('));
         //consume('(');
+        return get_uniform_type_info_map()->by_uniform_name(type_name);
     }
 
     void end_object() {
@@ -493,12 +488,10 @@ class string_deserializer : public deserializer {
 
 object from_string(const string& what) {
     string_deserializer strd(what);
-    string uname = strd.peek_object();
-    auto utype = uniform_type_info::from(uname);
-    if (utype == nullptr) {
-        throw logic_error(uname + " is not announced");
-    }
-    return utype->deserialize(&strd);
+    auto utype = strd.begin_object();
+    auto result = utype->deserialize(&strd);
+    strd.end_object();
+    return result;
 }
 
 namespace detail {
@@ -506,7 +499,9 @@ namespace detail {
 string to_string_impl(const void *what, const uniform_type_info *utype) {
     ostringstream osstr;
     string_serializer strs(osstr);
+    strs.begin_object(utype);
     utype->serialize(what, &strs);
+    strs.end_object();
     return osstr.str();
 }
 

@@ -32,7 +32,8 @@
 
 namespace cppa {
 
-serializer::serializer(actor_addressing* aa) : m_addressing(aa) { }
+serializer::serializer(actor_addressing* aa, type_lookup_table* it)
+: m_addressing{aa}, m_outgoing_types{it} { }
 
 serializer::~serializer() { }
 

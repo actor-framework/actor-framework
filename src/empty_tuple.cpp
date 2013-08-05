@@ -63,4 +63,9 @@ const std::type_info* empty_tuple::type_token() const {
     return &typeid(util::empty_type_list);
 }
 
+const std::string* empty_tuple::tuple_type_names() const {
+    static std::string result = "";
+    return &result;
+}
+
 } } // namespace cppa::detail

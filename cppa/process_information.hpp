@@ -41,6 +41,8 @@
 
 namespace cppa {
 
+class serializer;
+
 /**
  * @brief Identifies a process.
  */
@@ -99,8 +101,14 @@ class process_information : public ref_counted
      */
     static const intrusive_ptr<process_information>& get();
 
+    /** @cond PRIVATE */
+
     // "inherited" from comparable<process_information>
     int compare(const process_information& other) const;
+
+    static void serialize_invalid(serializer*);
+
+    /** @endcond */
 
  private:
 

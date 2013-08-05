@@ -40,16 +40,20 @@
 #include "cppa/singletons.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/actor_proxy.hpp"
+#include "cppa/message_header.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/util/algorithm.hpp"
+
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/uniform_type_info_map.hpp"
 
 #include "cppa/io/middleman.hpp"
 #include "cppa/io/default_peer.hpp"
-#include "cppa/message_header.hpp"
 #include "cppa/io/default_protocol.hpp"
 
 using namespace std;
@@ -113,7 +117,7 @@ continue_reading_result default_peer::continue_reading() {
                               << std::endl;
                     return read_failure;
                 }
-                CPPA_LOGMF(CPPA_DEBUG, self, "read process info: " << to_string(*m_node));
+                CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
                 m_parent->register_peer(*m_node, this);
                 // initialization done
                 m_state = wait_for_msg_size;
@@ -135,7 +139,7 @@ continue_reading_result default_peer::continue_reading() {
                 message_header hdr;
                 any_tuple msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size(),
-                                       m_parent->addressing());
+                                       m_parent->addressing(), &m_incoming_types);
                 try {
                     m_meta_hdr->deserialize(&hdr, &bd);
                     m_meta_msg->deserialize(&msg, &bd);
@@ -146,8 +150,7 @@ continue_reading_result default_peer::continue_reading() {
                                    << ", what(): " << e.what());
                     return read_failure;
                 }
-                CPPA_LOGMF(CPPA_DEBUG, self, "deserialized: " << to_string(hdr) << " " << to_string(msg));
-                //DEBUG("<-- " << to_string(msg));
+                CPPA_LOG_DEBUG("deserialized: " << to_string(hdr) << " " << to_string(msg));
                 match(msg) (
                     // monitor messages are sent automatically whenever
                     // actor_proxy_cache creates a new proxy
@@ -163,6 +166,11 @@ continue_reading_result default_peer::continue_reading() {
                     },
                     on(atom("UNLINK"), arg_match) >> [&](const actor_ptr& ptr) {
                         unlink(hdr.sender, ptr);
+                    },
+                    on(atom("ADD_TYPE"), arg_match) >> [&](std::uint32_t id, const std::string& name) {
+                        auto imap = get_uniform_type_info_map();
+                        auto uti = imap->by_uniform_name(name);
+                        m_incoming_types.emplace(id, uti);
                     },
                     others() >> [&] {
                         deliver(hdr, move(msg));
@@ -314,12 +322,24 @@ continue_writing_result default_peer::continue_writing() {
     return result;
 }
 
+void default_peer::add_type_if_needed(const std::string& tname) {
+    if (m_outgoing_types.id_of(tname) == 0) {
+        auto id = m_outgoing_types.max_id() + 1;
+        auto imap = get_uniform_type_info_map();
+        auto uti = imap->by_uniform_name(tname);
+        m_outgoing_types.emplace(id, uti);
+        enqueue_impl({nullptr}, make_any_tuple(atom("ADD_TYPE"), id, tname));
+    }
+}
+
 void default_peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
+    auto tname = msg.tuple_type_names();
+    add_type_if_needed((tname) ? *tname : detail::get_tuple_type_names(*msg.vals()));
     uint32_t size = 0;
     auto& wbuf = write_buffer();
     auto before = wbuf.size();
-    binary_serializer bs(&wbuf, m_parent->addressing());
+    binary_serializer bs(&wbuf, m_parent->addressing(), &m_outgoing_types);
     wbuf.write(sizeof(uint32_t), &size);
     try { bs << hdr << msg; }
     catch (exception& e) {

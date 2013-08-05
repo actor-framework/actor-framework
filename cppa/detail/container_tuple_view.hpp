@@ -81,6 +81,11 @@ class container_tuple_view : public abstract_tuple {
         return static_types_array<value_type>::arr[0];
     }
 
+    const std::string* tuple_type_names() const {
+        static std::string result = demangle<value_type>();
+        return &result;
+    }
+
  private:
 
     std::unique_ptr<Container, disablable_delete> m_ptr;

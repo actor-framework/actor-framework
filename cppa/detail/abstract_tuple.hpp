@@ -31,6 +31,7 @@
 #ifndef CPPA_ABSTRACT_TUPLE_HPP
 #define CPPA_ABSTRACT_TUPLE_HPP
 
+#include <string>
 #include <iterator>
 #include <typeinfo>
 
@@ -60,6 +61,7 @@ class abstract_tuple : public ref_counted {
     virtual abstract_tuple* copy() const = 0;
     virtual const void* at(size_t pos) const = 0;
     virtual const uniform_type_info* type_at(size_t pos) const = 0;
+    virtual const std::string* tuple_type_names() const = 0;
 
     // returns either tdata<...> object or nullptr (default) if tuple
     // is not a 'native' implementation
@@ -120,6 +122,8 @@ namespace {
 constexpr full_eq_type full_eq;
 constexpr types_only_eq_type types_only_eq;
 } // namespace <anonymous>
+
+std::string get_tuple_type_names(const detail::abstract_tuple&);
 
 } } // namespace cppa::detail
 

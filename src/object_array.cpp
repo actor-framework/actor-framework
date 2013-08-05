@@ -62,4 +62,8 @@ const uniform_type_info* object_array::type_at(size_t pos) const {
     return m_elements[pos].type();
 }
 
+const std::string* object_array::tuple_type_names() const {
+    return nullptr; // get_tuple_type_names(*this);
+}
+
 } } // namespace cppa::detail

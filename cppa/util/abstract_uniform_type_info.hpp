@@ -56,6 +56,10 @@ class abstract_uniform_type_info : public uniform_type_info {
         return m_name.c_str();
     }
 
+    any_tuple as_any_tuple(void* instance) const override {
+        return make_any_tuple(deref(instance));
+    }
+
  protected:
 
     abstract_uniform_type_info() {
@@ -75,18 +79,6 @@ class abstract_uniform_type_info : public uniform_type_info {
 
     void delete_instance(void* instance) const {
         delete reinterpret_cast<T*>(instance);
-    }
-
-    void assert_type_name(deserializer* source) const {
-        auto tname = source->seek_object();
-        if (tname != name()) {
-            std::string error_msg = "wrong type name found; expected \"";
-            error_msg += name();
-            error_msg += "\", found \"";
-            error_msg += tname;
-            error_msg += "\"";
-            throw std::logic_error(std::move(error_msg));
-        }
     }
 
  private:

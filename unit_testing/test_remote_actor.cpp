@@ -311,6 +311,9 @@ class server : public event_based_actor {
 
 int main(int argc, char** argv) {
     announce<actor_vector>();
+    add_tuple_hint<atom_value>();
+    add_tuple_hint<atom_value, actor_ptr>();
+    add_tuple_hint<atom_value, atom_value, int>();
     string app_path = argv[0];
     bool run_remote_actor = true;
     if (argc > 1) {

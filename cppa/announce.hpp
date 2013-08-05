@@ -31,6 +31,7 @@
 #ifndef CPPA_ANNOUNCE_HPP
 #define CPPA_ANNOUNCE_HPP
 
+#include <memory>
 #include <typeinfo>
 
 #include "cppa/uniform_type_info.hpp"
@@ -98,7 +99,8 @@ namespace cppa {
  *         instance (mapped to @p plain_type); otherwise @c false
  *         is returned and @p uniform_type was deleted.
  */
-bool announce(const std::type_info& tinfo, uniform_type_info* utype);
+const uniform_type_info* announce(const std::type_info& tinfo,
+                                  std::unique_ptr<uniform_type_info> utype);
 
 // deals with member pointer
 /**
@@ -154,13 +156,12 @@ compound_member(const std::pair<GRes (Parent::*)() const,
 /**
  * @brief Adds a new type mapping for @p T to the libcppa type system.
  * @param args Members of @p T.
- * @returns @c true if @p T was added to the libcppa type system,
- *          @c false otherwise.
+ * @warning @p announce is <b>not</b> thead safe!
  */
 template<typename T, typename... Ts>
-inline bool announce(const Ts&... args) {
+inline const uniform_type_info* announce(const Ts&... args) {
     auto ptr = new detail::default_uniform_type_info_impl<T>(args...);
-    return announce(typeid(T), ptr);
+    return announce(typeid(T), std::unique_ptr<uniform_type_info>{ptr});
 }
 
 /**

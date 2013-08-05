@@ -54,21 +54,23 @@ class binary_serializer : public serializer {
      * @brief Creates a binary serializer writing to @p write_buffer.
      * @warning @p write_buffer must be guaranteed to outlive @p this
      */
-    binary_serializer(util::buffer* write_buffer, actor_addressing* ptr = 0);
+    binary_serializer(util::buffer* write_buffer,
+                      actor_addressing* addressing = nullptr,
+                      type_lookup_table* lookup_table = nullptr);
 
-    void begin_object(const std::string& tname);
+    void begin_object(const uniform_type_info*) override;
 
-    void end_object();
+    void end_object() override;
 
-    void begin_sequence(size_t list_size);
+    void begin_sequence(size_t list_size) override;
 
-    void end_sequence();
+    void end_sequence() override;
 
-    void write_value(const primitive_variant& value);
+    void write_value(const primitive_variant& value) override;
 
-    void write_tuple(size_t size, const primitive_variant* values);
+    void write_tuple(size_t size, const primitive_variant* values) override;
 
-    void write_raw(size_t num_bytes, const void* data);
+    void write_raw(size_t num_bytes, const void* data) override;
 
  private:
 

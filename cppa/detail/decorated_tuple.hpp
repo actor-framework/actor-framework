@@ -81,15 +81,17 @@ class decorated_tuple : public abstract_tuple {
         return pointer{new decorated_tuple(std::move(d), ti, offset)};
     }
 
-    virtual void* mutable_at(size_t pos) override;
+    void* mutable_at(size_t pos) override;
 
-    virtual size_t size() const override;
+    size_t size() const override;
 
-    virtual decorated_tuple* copy() const override;
+    decorated_tuple* copy() const override;
 
-    virtual const void* at(size_t pos) const override;
+    const void* at(size_t pos) const override;
 
-    virtual const uniform_type_info* type_at(size_t pos) const override;
+    const uniform_type_info* type_at(size_t pos) const override;
+
+    const std::string* tuple_type_names() const override;
 
     rtti type_token() const override;
 

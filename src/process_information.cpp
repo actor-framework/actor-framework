@@ -28,15 +28,17 @@
 \******************************************************************************/
 
 
-#include "cppa/config.hpp"
-#include "cppa/process_information.hpp"
-
 #include <cstdio>
 #include <cstring>
 #include <sstream>
 
 #include <unistd.h>
 #include <sys/types.h>
+
+#include "cppa/config.hpp"
+#include "cppa/serializer.hpp"
+#include "cppa/primitive_variant.hpp"
+#include "cppa/process_information.hpp"
 
 #include "cppa/util/algorithm.hpp"
 #include "cppa/util/ripemd_160.hpp"
@@ -123,17 +125,15 @@ bool equal(const std::string& hash,
 }
 
 process_information::process_information(const process_information& other)
-    : super(), m_process_id(other.process_id()), m_node_id(other.node_id()) {
-}
+: super(), m_process_id(other.process_id()), m_node_id(other.node_id()) { }
 
 process_information::process_information(std::uint32_t a, const std::string& b)
-    : m_process_id(a) {
+: m_process_id(a) {
     node_id_from_string(b, m_node_id);
 }
 
 process_information::process_information(std::uint32_t a, const node_id_type& b)
-    : m_process_id(a), m_node_id(b) {
-}
+: m_process_id(a), m_node_id(b) { }
 
 std::string to_string(const process_information::node_id_type& node_id) {
     std::ostringstream oss;
@@ -160,6 +160,13 @@ int process_information::compare(const process_information& other) const {
         return 1;
     }
     return tmp;
+}
+
+void process_information::serialize_invalid(serializer* sink) {
+    sink->write_value(static_cast<uint32_t>(0));
+    process_information::node_id_type zero;
+    std::fill(zero.begin(), zero.end(), 0);
+    sink->write_raw(process_information::node_id_size, zero.data());
 }
 
 std::string to_string(const process_information& what) {

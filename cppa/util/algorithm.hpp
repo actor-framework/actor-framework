@@ -61,6 +61,16 @@ join(const Container& c, const std::string& glue = "") {
     return join(c.begin(), c.end(), glue);
 }
 
+// end of recursion
+inline void splice(std::string&, const std::string&) { }
+
+template<typename T, typename... Ts>
+void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... args) {
+    str += glue;
+    str += std::forward<T>(arg);
+    splice(str, glue, std::forward<Ts>(args)...);
+}
+
 } } // namespace cppa::util
 
 #endif // CPPA_UTIL_SPLIT_HPP

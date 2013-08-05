@@ -116,14 +116,13 @@ class uniform_type_info_map {
 
     virtual ~uniform_type_info_map();
 
-    virtual pointer by_uniform_name(const std::string& name) const = 0;
+    virtual pointer by_uniform_name(const std::string& name) = 0;
 
     virtual pointer by_rtti(const std::type_info& ti) const = 0;
 
     virtual std::vector<pointer> get_all() const = 0;
 
-    // NOT thread safe!
-    virtual bool insert(uniform_type_info* uti) = 0;
+    virtual pointer insert(std::unique_ptr<uniform_type_info> uti) = 0;
 
     static uniform_type_info_map* create_singleton();
 

@@ -28,6 +28,11 @@
 \******************************************************************************/
 
 
+#include <iostream>
+
+
+
+
 #include <array>
 #include <string>
 #include <vector>
@@ -35,12 +40,18 @@
 #include <algorithm>
 #include <type_traits>
 
+#include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/add_tuple_hint.hpp"
 #include "cppa/actor_addressing.hpp"
 
 #include "cppa/util/duration.hpp"
+#include "cppa/util/algorithm.hpp"
+#include "cppa/util/scope_guard.hpp"
 #include "cppa/util/limited_vector.hpp"
+#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/util/shared_lock_guard.hpp"
 
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
@@ -126,72 +137,31 @@ inline bool operator==(const util::void_type&, const util::void_type&) {
 
 template<typename T> struct type_token { };
 
-void serialize_nullptr(serializer* sink) {
-    sink->begin_object(mapped_name<std::nullptr_t>());
-    sink->end_object();
-}
-
-void deserialize_nullptr(deserializer* source) {
-    source->begin_object(mapped_name<std::nullptr_t>());
-    source->end_object();
-}
-
-void assert_type_name(const char* expected_name, deserializer* source) {
-    auto tname = source->seek_object();
-    if (tname != expected_name) {
-        std::string error_msg = "wrong type name found; expected \"";
-        error_msg += expected_name;
-        error_msg += "\", found \"";
-        error_msg += tname;
-        error_msg += "\"";
-        throw std::logic_error(std::move(error_msg));
-    }
-}
-
 template<typename T>
-typename std::enable_if<util::is_primitive<T>::value>::type
+inline typename std::enable_if<util::is_primitive<T>::value>::type
 serialize_impl(const T& val, serializer* sink) {
-    sink->begin_object(mapped_name<T>());
     sink->write_value(val);
-    sink->end_object();
 }
 
 template<typename T>
-typename std::enable_if<util::is_primitive<T>::value>::type
+inline typename std::enable_if<util::is_primitive<T>::value>::type
 deserialize_impl(T& val, deserializer* source) {
-    assert_type_name(mapped_name<T>(), source);
-    source->begin_object(mapped_name<T>());
     val = source->read<T>();
-    source->end_object();
 }
 
 template<typename T>
-void serialize_impl(const detail::handle<T>& hdl, serializer* sink) {
-    sink->begin_object(mapped_name<T>());
+inline void serialize_impl(const detail::handle<T>& hdl, serializer* sink) {
     sink->write_value(static_cast<int32_t>(hdl.id()));
-    sink->end_object();
 }
 
 template<typename T>
-void deserialize_impl(detail::handle<T>& hdl, deserializer* source) {
-    auto tname = mapped_name<T>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
+inline void deserialize_impl(detail::handle<T>& hdl, deserializer* source) {
     hdl = T::from_int(source->read<int32_t>());
-    source->end_object();
 }
 
-void serialize_impl(const util::void_type&, serializer* sink) {
-    sink->begin_object(mapped_name<util::void_type>());
-    sink->end_object();
-}
+inline void serialize_impl(const util::void_type&, serializer*) { }
 
-void deserialize_impl(util::void_type&, deserializer* source) {
-    auto tname = mapped_name<util::void_type>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
-    source->end_object();
-}
+inline void deserialize_impl(util::void_type&, deserializer*) { }
 
 void serialize_impl(const actor_ptr& ptr, serializer* sink) {
     auto impl = sink->addressing();
@@ -208,182 +178,171 @@ void deserialize_impl(actor_ptr& ptrref, deserializer* source) {
 }
 
 void serialize_impl(const group_ptr& ptr, serializer* sink) {
-    if (ptr == nullptr) serialize_nullptr(sink);
+    if (ptr == nullptr) {
+        // write an empty string as module name
+        std::string empty_string;
+        sink->write_value(empty_string);
+    }
     else {
-        sink->begin_object(mapped_name<group_ptr>());
         sink->write_value(ptr->module_name());
         ptr->serialize(sink);
-        sink->end_object();
     }
 }
 
 void deserialize_impl(group_ptr& ptrref, deserializer* source) {
-    auto tname = mapped_name<group_ptr>();
-    auto cname = source->seek_object();
-    if (cname != tname) {
-        if (cname == mapped_name<std::nullptr_t>()) {
-            deserialize_nullptr(source);
-            ptrref.reset();
-        }
-        else assert_type_name(tname, source); // throws
-    }
-    else {
-        source->begin_object(tname);
-        auto modname = source->read<std::string>();
-        ptrref = group::get_module(modname)
-                ->deserialize(source);
-        source->end_object();
-    }
+    auto modname = source->read<std::string>();
+    if (modname.empty()) ptrref.reset();
+    else ptrref = group::get_module(modname)->deserialize(source);
 }
 
 void serialize_impl(const channel_ptr& ptr, serializer* sink) {
-    auto tname = mapped_name<channel_ptr>();
-    sink->begin_object(tname);
-    if (ptr == nullptr) serialize_nullptr(sink);
+    // channel is an abstract base class that's either an actor or a group
+    // to indicate that, we write a flag first, that is
+    //     0 if ptr == nullptr
+    //     1 if ptr points to an actor
+    //     2 if ptr points to a group
+    uint8_t flag = 0;
+    auto wr_nullptr = [&] {
+        sink->write_value(flag);
+    };
+    if (ptr == nullptr) wr_nullptr();
     else {
         auto aptr = ptr.downcast<actor>();
-        if (aptr) serialize_impl(aptr, sink);
+        if (aptr != nullptr) {
+            flag = 1;
+            sink->write_value(flag);
+            serialize_impl(aptr, sink);
+        }
         else {
             auto gptr = ptr.downcast<group>();
-            if (gptr) serialize_impl(gptr, sink);
-            else throw std::logic_error("channel is neither "
-                                        "an actor nor a group");
+            if (gptr != nullptr) {
+                flag = 2;
+                sink->write_value(flag);
+                serialize_impl(gptr, sink);
+            }
+            else {
+                CPPA_LOGF_ERROR("ptr is neither an actor nor a group");
+                wr_nullptr();
+            }
         }
     }
-    sink->end_object();
 }
 
 void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
-    auto tname = mapped_name<channel_ptr>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
-    auto subobj = source->peek_object();
-    if (subobj == mapped_name<actor_ptr>()) {
-        actor_ptr tmp;
-        deserialize_impl(tmp, source);
-        ptrref = tmp;
+    auto flag = source->read<uint8_t>();
+    switch (flag) {
+        case 0: {
+            ptrref.reset();
+            break;
+        }
+        case 1: {
+            actor_ptr tmp;
+            deserialize_impl(tmp, source);
+            ptrref = tmp;
+            break;
+        }
+        case 2: {
+            group_ptr tmp;
+            deserialize_impl(tmp, source);
+            ptrref = tmp;
+            break;
+        }
+        default: {
+            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel_ptr'");
+            throw std::runtime_error("invalid flag");
+        }
     }
-    else if (subobj == mapped_name<group_ptr>()) {
-        group_ptr tmp;
-        deserialize_impl(tmp, source);
-        ptrref = tmp;
-    }
-    else if (subobj == mapped_name<std::nullptr_t>()) {
-        static_cast<void>(source->seek_object());
-        deserialize_nullptr(source);
-        ptrref.reset();
-    }
-    else throw std::logic_error("unexpected type name: " + subobj);
-    source->end_object();
 }
 
 void serialize_impl(const any_tuple& tup, serializer* sink) {
-    auto tname = mapped_name<any_tuple>();
-    sink->begin_object(tname);
-    sink->begin_sequence(tup.size());
+    auto tname = tup.tuple_type_names();
+    auto uti = get_uniform_type_info_map()->by_uniform_name(tname ? *tname : detail::get_tuple_type_names(*tup.vals()));
+    if (uti == nullptr) {
+        std::string err = "could not get uniform type info for ";
+        err += tname ? *tname : detail::get_tuple_type_names(*tup.vals());
+        throw std::runtime_error(err);
+    }
+    sink->begin_object(uti);
     for (size_t i = 0; i < tup.size(); ++i) {
         tup.type_at(i)->serialize(tup.at(i), sink);
     }
-    sink->end_sequence();
     sink->end_object();
 }
 
 void deserialize_impl(any_tuple& atref, deserializer* source) {
-    auto tname = mapped_name<any_tuple>();
-    assert_type_name(tname, source);
-    auto result = new detail::object_array;
-    source->begin_object(tname);
-    size_t tuple_size = source->begin_sequence();
-    for (size_t i = 0; i < tuple_size; ++i) {
-        auto uname = source->peek_object();
-        auto utype = uniform_type_info::from(uname);
-        result->push_back(utype->deserialize(source));
-    }
-    source->end_sequence();
+    auto uti = source->begin_object();
+    auto ptr = uti->new_instance();
+    auto ptr_guard = util::make_scope_guard([&] {
+        uti->delete_instance(ptr);
+    });
+    uti->deserialize(ptr, source);
     source->end_object();
-    atref = any_tuple{result};
+    atref = uti->as_any_tuple(ptr);
+    /*
+    else {
+        auto names = util::split(full_name, '+', false);
+        auto result = create_unique<detail::object_array>();
+        source->begin_object(full_name);
+        for (auto& name : names) {
+            auto uti = uniform_type_info::from(name);
+            result->push_back(uti->deserialize(source));
+        }
+        source->end_object();
+        atref = any_tuple{result.release()};
+    }
+    */
 }
 
 void serialize_impl(const message_header& hdr, serializer* sink) {
-    auto tname = mapped_name<message_header>();
-    sink->begin_object(tname);
     serialize_impl(hdr.sender, sink);
     serialize_impl(hdr.receiver, sink);
     sink->write_value(hdr.id.integer_value());
-    sink->end_object();
 }
 
 void deserialize_impl(message_header& hdr, deserializer* source) {
-    auto tname = mapped_name<message_header>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
     deserialize_impl(hdr.sender, source);
     deserialize_impl(hdr.receiver, source);
-    auto msg_id = source->read<std::uint64_t>();
-    hdr.id = message_id::from_integer_value(msg_id);
-    source->end_object();
+    hdr.id = message_id::from_integer_value(source->read<std::uint64_t>());
 }
 
 void serialize_impl(const process_information_ptr& ptr, serializer* sink) {
-    if (ptr == nullptr) serialize_nullptr(sink);
+    if (ptr == nullptr) {
+        process_information::serialize_invalid(sink);
+    }
     else {
-        auto tname = mapped_name<process_information_ptr>();
-        sink->begin_object(tname);
         sink->write_value(ptr->process_id());
         sink->write_raw(ptr->node_id().size(), ptr->node_id().data());
-        sink->end_object();
     }
 }
 
 void deserialize_impl(process_information_ptr& ptr, deserializer* source) {
-    auto tname = mapped_name<process_information_ptr>();
-    auto cname = source->seek_object();
-    if (cname != tname) {
-        if (cname == mapped_name<std::nullptr_t>()) {
-            deserialize_nullptr(source);
-            ptr.reset();
-        }
-        else assert_type_name(tname, source); // throws
+    process_information::node_id_type nid;
+    auto pid = source->read<uint32_t>();
+    source->read_raw(process_information::node_id_size, nid.data());
+    auto is_zero = [](uint8_t value) { return value == 0; };
+    if (pid == 0 && std::all_of(nid.begin(), nid.end(), is_zero)) {
+        // invalid process information (nullptr)
+        ptr.reset();
     }
-    else {
-        source->begin_object(tname);
-        auto id = source->read<uint32_t>();
-        process_information::node_id_type nid;
-        source->read_raw(nid.size(), nid.data());
-        source->end_object();
-        ptr.reset(new process_information{id, nid});
-    }
+    else ptr.reset(new process_information{pid, nid});
 }
 
-void serialize_impl(const atom_value& val, serializer* sink) {
-    sink->begin_object(mapped_name<atom_value>());
+inline void serialize_impl(const atom_value& val, serializer* sink) {
     sink->write_value(static_cast<uint64_t>(val));
-    sink->end_object();
 }
 
-void deserialize_impl(atom_value& val, deserializer* source) {
-    auto tname = mapped_name<atom_value>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
+inline void deserialize_impl(atom_value& val, deserializer* source) {
     val = static_cast<atom_value>(source->read<uint64_t>());
-    source->end_object();
 }
 
-void serialize_impl(const util::duration& val, serializer* sink) {
-    auto tname = mapped_name<util::duration>();
-    sink->begin_object(tname);
+inline void serialize_impl(const util::duration& val, serializer* sink) {
     sink->write_value(static_cast<uint32_t>(val.unit));
     sink->write_value(val.count);
-    sink->end_object();
 }
 
-void deserialize_impl(util::duration& val, deserializer* source) {
-    auto tname = mapped_name<util::duration>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
+inline void deserialize_impl(util::duration& val, deserializer* source) {
     auto unit_val = source->read<uint32_t>();
     auto count_val = source->read<uint32_t>();
-    source->end_object();
     switch (unit_val) {
         case 1:
             val.unit = util::time_unit::seconds;
@@ -404,23 +363,17 @@ void deserialize_impl(util::duration& val, deserializer* source) {
     val.count = count_val;
 }
 
-void serialize_impl(bool val, serializer* sink) {
-    sink->begin_object(mapped_name<bool>());
+inline void serialize_impl(bool val, serializer* sink) {
     sink->write_value(static_cast<uint8_t>(val ? 1 : 0));
-    sink->end_object();
 }
 
-void deserialize_impl(bool& val, deserializer* source) {
-    auto tname = mapped_name<bool>();
-    assert_type_name(tname, source);
-    source->begin_object(tname);
+inline void deserialize_impl(bool& val, deserializer* source) {
     val = source->read<uint8_t>() != 0;
-    source->end_object();
 }
 
-inline bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
-    // in some cases (when dealing with dynamic libraries), address can be
-    // different although types are equal
+bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
+    // in some cases (when dealing with dynamic libraries),
+    // address can be different although types are equal
     return lhs == rhs || *lhs == *rhs;
 }
 
@@ -445,6 +398,10 @@ class uti_base : public uniform_type_info {
 
     void delete_instance(void* instance) const {
         delete reinterpret_cast<T*>(instance);
+    }
+
+    any_tuple as_any_tuple(void* instance) const override {
+        return make_any_tuple(deref(instance));
     }
 
     static inline const T& deref(const void* ptr) {
@@ -506,22 +463,19 @@ class int_tinfo : public abstract_int_tinfo {
  public:
 
     void serialize(const void* instance, serializer* sink) const {
-        auto& val = deref(instance);
-        sink->begin_object(static_name());
-        sink->write_value(val);
-        sink->end_object();
+        sink->write_value(deref(instance));
     }
 
     void deserialize(void* instance, deserializer* source) const {
-        assert_type_name(static_name(), source);
-        auto& ref = deref(instance);
-        source->begin_object(static_name());
-        ref = source->read<T>();
-        source->end_object();
+        deref(instance) = source->read<T>();
     }
 
     const char* name() const {
         return static_name();
+    }
+
+    any_tuple as_any_tuple(void* instance) const override {
+        return make_any_tuple(deref(instance));
     }
 
  protected:
@@ -567,23 +521,21 @@ class buffer_type_info_impl : public uniform_type_info {
 
     void serialize(const void* instance, serializer* sink) const {
         auto& val = deref(instance);
-        sink->begin_object(static_name());
         sink->write_value(static_cast<uint32_t>(val.size()));
         sink->write_raw(val.size(), val.data());
-        sink->end_object();
     }
 
     void deserialize(void* instance, deserializer* source) const {
-        assert_type_name(static_name(), source);
-        auto& ref = deref(instance);
-        source->begin_object(static_name());
         auto s = source->read<uint32_t>();
-        source->read_raw(s, ref);
-        source->end_object();
+        source->read_raw(s, deref(instance));
     }
 
     const char* name() const {
         return static_name();
+    }
+
+    any_tuple as_any_tuple(void* instance) const override {
+        return make_any_tuple(deref(instance));
     }
 
  protected:
@@ -624,6 +576,88 @@ class buffer_type_info_impl : public uniform_type_info {
 
 };
 
+class default_meta_tuple : public uniform_type_info {
+
+ public:
+
+    default_meta_tuple(const std::string& name) {
+        m_name = name;
+        auto elements = util::split(name, '+', false);
+        auto uti_map = get_uniform_type_info_map();
+        CPPA_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
+        // ignore first element, because it's always "@<>"
+        for (size_t i = 1; i != elements.size(); ++i) {
+            try { m_elements.push_back(uti_map->by_uniform_name(elements[i])); }
+            catch (std::exception&) {
+                CPPA_LOG_ERROR("type name " << elements[i] << " not found");
+            }
+        }
+    }
+
+    void* new_instance(const void* instance = nullptr) const override {
+        object_array* result = nullptr;
+        if (instance) result = new object_array{*cast(instance)};
+        else {
+            result = new object_array;
+            for (auto uti : m_elements) result->push_back(uti->create());
+        }
+        result->ref();
+        return result;
+    }
+
+    void delete_instance(void* ptr) const override {
+        cast(ptr)->deref();
+    }
+
+    any_tuple as_any_tuple(void* ptr) const override {
+        return any_tuple{cast(ptr)};
+    }
+
+    const char* name() const override {
+        return m_name.c_str();
+    }
+
+    void serialize(const void* ptr, serializer* sink) const override {
+        auto& oarr = *cast(ptr);
+        for (size_t i = 0; i < m_elements.size(); ++i) {
+            m_elements[i]->serialize(oarr.at(i), sink);
+        }
+    }
+
+    void deserialize(void* ptr, deserializer* source) const override {
+        auto& oarr = *cast(ptr);
+        for (size_t i = 0; i < m_elements.size(); ++i) {
+            m_elements[i]->deserialize(oarr.mutable_at(i), source);
+        }
+    }
+
+    bool equals(const std::type_info&) const override {
+        return false;
+    }
+
+    bool equals(const void* instance1, const void* instance2) const override {
+        auto& lhs = *cast(instance1);
+        auto& rhs = *cast(instance2);
+        full_eq_type cmp;
+        return std::equal(lhs.begin(), lhs.end(), rhs.begin(), cmp);
+    }
+
+
+ private:
+
+    std::string m_name;
+    std::vector<const uniform_type_info*> m_elements;
+
+    inline object_array* cast(void* ptr) const {
+        return reinterpret_cast<object_array*>(ptr);
+    }
+
+    inline const object_array* cast(const void* ptr) const {
+        return reinterpret_cast<const object_array*>(ptr);
+    }
+
+};
+
 template<typename T>
 void push_native_type(abstract_int_tinfo* m [][2]) {
     m[sizeof(T)][std::is_signed<T>::value ? 1 : 0]->add_native_type(typeid(T));
@@ -633,6 +667,11 @@ template<typename T0, typename T1, typename... Ts>
 void push_native_type(abstract_int_tinfo* m [][2]) {
     push_native_type<T0>(m);
     push_native_type<T1, Ts...>(m);
+}
+
+template<typename... Ts>
+inline void push_hint(uniform_type_info_map* thisptr) {
+    thisptr->insert(create_unique<meta_cow_tuple<Ts...>>());
 }
 
 class utim_impl : public uniform_type_info_map {
@@ -724,19 +763,37 @@ class utim_impl : public uniform_type_info_map {
             abort();
         }
 #       endif
+        // insert default hints
+        push_hint<atom_value>(this);
+        push_hint<atom_value, std::uint32_t>(this);
+        push_hint<atom_value, process_information_ptr>(this);
+        push_hint<atom_value, actor_ptr>(this);
+        push_hint<atom_value, process_information_ptr, std::uint32_t, std::uint32_t>(this);
+        push_hint<atom_value, std::uint32_t, std::string>(this);
     }
 
     pointer by_rtti(const std::type_info& ti) const {
+        util::shared_lock_guard<util::shared_spinlock> guard(m_lock);
         auto res = find_rtti(m_builtin_types, ti);
         return (res) ? res : find_rtti(m_user_types, ti);
     }
 
-    pointer by_uniform_name(const std::string& name) const {
-        auto res = find_name(m_builtin_types, name);
-        return (res) ? res : find_name(m_user_types, name);
+    pointer by_uniform_name(const std::string& name) {
+        pointer result = nullptr;
+        /* lifetime scope of guard */ {
+            util::shared_lock_guard<util::shared_spinlock> guard(m_lock);
+            result = find_name(m_builtin_types, name);
+            result = (result) ? result : find_name(m_user_types, name);
+        }
+        if (!result && name.compare(0, 4, "@<>+") == 0) {
+            // create tuple UTI on-the-fly
+            result = insert(create_unique<default_meta_tuple>(name));
+        }
+        return result; //(res) ? res : find_name(m_user_types, name);
     }
 
     std::vector<pointer> get_all() const {
+        util::shared_lock_guard<util::shared_spinlock> guard(m_lock);
         std::vector<pointer> res;
         res.reserve(m_builtin_types.size() + m_user_types.size());
         res.insert(res.end(), m_builtin_types.begin(), m_builtin_types.end());
@@ -744,21 +801,26 @@ class utim_impl : public uniform_type_info_map {
         return std::move(res);
     }
 
-    bool insert(uniform_type_info* uti) {
+    pointer insert(std::unique_ptr<uniform_type_info> uti) {
+        std::unique_lock<util::shared_spinlock> guard(m_lock);
         auto e = m_user_types.end();
-        auto i = std::lower_bound(m_user_types.begin(), e, uti, [](uniform_type_info* lhs, pointer rhs) {
+        auto i = std::lower_bound(m_user_types.begin(), e, uti.get(), [](uniform_type_info* lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         });
-        if (i == e) m_user_types.push_back(uti);
+        if (i == e) {
+            m_user_types.push_back(uti.release());
+            return m_user_types.back();
+        }
         else {
             if (strcmp(uti->name(), (*i)->name()) == 0) {
                 // type already known
-                return false;
+                return *i;
             }
             // insert after lower bound (vector is always sorted)
-            m_user_types.insert(i, uti);
+            auto new_pos = std::distance(m_user_types.begin(), i);
+            m_user_types.insert(i, uti.release());
+            return m_user_types[new_pos];
         }
-        return true;
     }
 
     ~utim_impl() {
@@ -802,6 +864,7 @@ class utim_impl : public uniform_type_info_map {
     // both containers are sorted by uniform name
     std::array<pointer, 28> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
+    mutable util::shared_spinlock m_lock;
 
     template<typename Container>
     pointer find_rtti(const Container& c, const std::type_info& ti) const {

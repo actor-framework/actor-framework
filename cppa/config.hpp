@@ -52,6 +52,7 @@
 #  error Plattform and/or compiler not supportet
 #endif
 
+#include <memory>
 #include <cstdio>
 #include <cstdlib>
 
@@ -87,6 +88,15 @@
 #endif
 
 namespace cppa {
+
+/**
+ * @brief An alternative for the 'missing' @p std::make_unqiue.
+ */
+template<typename T, typename... Args>
+std::unique_ptr<T> create_unique(Args&&... args) {
+    return std::unique_ptr<T>{new T(std::forward<Args>(args)...)};
+}
+
 
 #ifdef CPPA_WINDOWS
     typedef SOCKET native_socket_type;

@@ -102,11 +102,60 @@ void example() {
     }
 }
 
+template<typename T>
+struct type_token { typedef T type; };
+
+template<typename... Ts>
+struct variant;
+
+template<typename T>
+struct variant<T> {
+
+    T& get(type_token<T>) { return m_value; }
+
+    T m_value;
+
+};
+
+template<typename T0, typename T1>
+struct variant<T0, T1> {
+
+ public:
+
+    T0& get(type_token<T0>) { return m_v0; }
+    T1& get(type_token<T1>) { return m_v1; }
+
+    variant() : m_type{0}, m_v0{} { }
+
+    ~variant() {
+        switch (m_type) {
+            case 0: m_v0.~T0(); break;
+            case 1: m_v1.~T1(); break;
+        }
+    }
+
+ private:
+
+    size_t m_type;
+
+    union { T0 m_v0; T1 m_v1; };
+
+};
+
+template<typename T, typename... Ts>
+T& get(variant<Ts...>& v) {
+    return v.get(type_token<T>{});
+}
+
 int main() {
     CPPA_TEST(test_match);
 
     using namespace std::placeholders;
     using namespace cppa::placeholders;
+
+    variant<int, double> rofl;
+    get<int>(rofl) = 42;
+    cout << "rofl = " << get<int>(rofl) << endl;
 
     auto ascending = [](int a, int b, int c) -> bool {
         return a < b && b < c;

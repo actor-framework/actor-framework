@@ -234,10 +234,6 @@ class uniform_type_info {
      */
     virtual void deserialize(void* instance, deserializer* source) const = 0;
 
- protected:
-
-    uniform_type_info() = default;
-
     /**
      * @brief Casts @p instance to the native type and deletes it.
      * @param instance Instance of this type.
@@ -255,6 +251,15 @@ class uniform_type_info {
      * @pre @p instance has the type of @p this or is set to @p nullptr.
      */
     virtual void* new_instance(const void* instance = nullptr) const = 0;
+
+    /**
+     * @brief Returns @p instance encapsulated as an @p any_tuple.
+     */
+    virtual any_tuple as_any_tuple(void* instance) const = 0;
+
+ protected:
+
+    uniform_type_info() = default;
 
 };
 

@@ -206,7 +206,7 @@ class any_tuple {
 
     /**
      * @brief Checks whether this tuple is dynamically typed, i.e.,
-     *        its types were not known during compile time.
+     *        its types were not known at compile time.
      */
     inline bool dynamically_typed() const;
 
@@ -220,6 +220,8 @@ class any_tuple {
     void reset();
 
     explicit any_tuple(raw_ptr);
+
+    inline const std::string* tuple_type_names() const;
 
     /** @endcond */
 
@@ -329,6 +331,11 @@ inline bool any_tuple::dynamically_typed() const {
 inline void any_tuple::force_detach() {
     m_vals.detach();
 }
+
+inline const std::string* any_tuple::tuple_type_names() const {
+    return m_vals->tuple_type_names();
+}
+
 
 inline size_t any_tuple::size() const {
     return m_vals->size();

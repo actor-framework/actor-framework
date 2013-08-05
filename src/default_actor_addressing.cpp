@@ -56,9 +56,9 @@ atom_value default_actor_addressing::technology_id() const {
 void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
     CPPA_REQUIRE(sink != nullptr);
     if (ptr == nullptr) {
-        CPPA_LOGMF(CPPA_DEBUG, self, "serialized nullptr");
-        sink->begin_object("@0");
-        sink->end_object();
+        CPPA_LOG_DEBUG("serialize nullptr");
+        sink->write_value(static_cast<actor_id>(0));
+        process_information::serialize_invalid(sink);
     }
     else {
         // local actor?
@@ -69,45 +69,33 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
         if (ptr->is_proxy()) {
             auto dptr = ptr.downcast<default_actor_proxy>();
             if (dptr) pinf = dptr->process_info();
-            else CPPA_LOGMF(CPPA_ERROR, self, "downcast failed");
+            else CPPA_LOG_ERROR("downcast failed");
         }
-        sink->begin_object("@actor");
         sink->write_value(ptr->id());
         sink->write_value(pinf->process_id());
         sink->write_raw(process_information::node_id_size,
                         pinf->node_id().data());
-        sink->end_object();
     }
 }
 
 actor_ptr default_actor_addressing::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
-    auto cname = source->seek_object();
-    if (cname == "@0") {
-        CPPA_LOGMF(CPPA_DEBUG, self, "deserialized nullptr");
-        source->begin_object("@0");
-        source->end_object();
+    process_information::node_id_type nid;
+    auto aid = source->read<uint32_t>();
+    auto pid = source->read<uint32_t>();
+    source->read_raw(process_information::node_id_size, nid.data());
+    // local actor?
+    auto pinf = process_information::get();
+    if (aid == 0 && pid == 0) {
         return nullptr;
     }
-    else if (cname == "@actor") {
-        process_information::node_id_type nid;
-        source->begin_object(cname);
-        auto aid = source->read<uint32_t>();
-        auto pid = source->read<uint32_t>();
-        source->read_raw(process_information::node_id_size, nid.data());
-        source->end_object();
-        // local actor?
-        auto pinf = process_information::get();
-        if (pid == pinf->process_id() && nid == pinf->node_id()) {
-            return get_actor_registry()->get(aid);
-        }
-        else {
-            process_information tmp(pid, nid);
-            return get_or_put(tmp, aid);
-        }
+    else if (pid == pinf->process_id() && nid == pinf->node_id()) {
+        return get_actor_registry()->get(aid);
     }
-    else throw runtime_error("expected type name \"@0\" or \"@actor\"; "
-                             "found: " + cname);
+    else {
+        process_information tmp{pid, nid};
+        return get_or_put(tmp, aid);
+    }
 }
 
 size_t default_actor_addressing::count_proxies(const process_information& inf) {
@@ -148,16 +136,20 @@ void default_actor_addressing::put(const process_information& node,
     }
 }
 
-
 actor_ptr default_actor_addressing::get_or_put(const process_information& inf,
                                                actor_id aid) {
     auto result = get(inf, aid);
     if (result == nullptr) {
         CPPA_LOGMF(CPPA_INFO, self, "created new proxy instance; "
                    << CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
-        auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
-        put(inf, aid, ptr);
-        result = ptr;
+        if (m_parent == nullptr) {
+            CPPA_LOG_ERROR("m_parent == nullptr (cannot create proxy without MM)");
+        }
+        else {
+            auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
+            put(inf, aid, ptr);
+            result = ptr;
+        }
     }
     return result;
 }

@@ -54,6 +54,7 @@ class empty_tuple : public singleton_mixin<empty_tuple, abstract_tuple> {
     bool equals(const abstract_tuple& other) const;
     const uniform_type_info* type_at(size_t) const;
     const std::type_info* type_token() const;
+    const std::string* tuple_type_names() const;
 
  private:
 

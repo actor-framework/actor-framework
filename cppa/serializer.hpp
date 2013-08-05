@@ -41,6 +41,7 @@ namespace cppa {
 
 class actor_addressing;
 class primitive_variant;
+class type_lookup_table;
 
 /**
  * @ingroup TypeSystem
@@ -53,7 +54,11 @@ class serializer {
 
  public:
 
-    serializer(actor_addressing* addressing = nullptr);
+    /**
+     * @note @p addressing must be guaranteed to outlive the serializer
+     */
+    serializer(actor_addressing* addressing = nullptr,
+               type_lookup_table* outgoing_types = nullptr);
 
     virtual ~serializer();
 
@@ -62,7 +67,7 @@ class serializer {
      *        named @p type_name.
      * @param type_name The platform-independent @p libcppa type name.
      */
-    virtual void begin_object(const std::string& type_name) = 0;
+    virtual void begin_object(const uniform_type_info*) = 0;
 
     /**
      * @brief Ends serialization of an object.
@@ -99,11 +104,18 @@ class serializer {
      */
     virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
 
-    inline actor_addressing* addressing() { return m_addressing; }
+    inline actor_addressing* addressing() {
+        return m_addressing;
+    }
+
+    inline type_lookup_table* outgoing_types() {
+        return m_outgoing_types;
+    }
 
  private:
 
     actor_addressing* m_addressing;
+    type_lookup_table* m_outgoing_types;
 
 };
 

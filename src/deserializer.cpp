@@ -40,7 +40,8 @@
 
 namespace cppa {
 
-deserializer::deserializer(actor_addressing* aa) : m_addressing(aa) { }
+deserializer::deserializer(actor_addressing* aa, type_lookup_table* ot)
+: m_addressing{aa}, m_incoming_types{ot} { }
 
 deserializer::~deserializer() { }
 
@@ -48,16 +49,6 @@ void deserializer::read_raw(size_t num_bytes, util::buffer& storage) {
     storage.acquire(num_bytes);
     read_raw(num_bytes, storage.data());
     storage.inc_size(num_bytes);
-}
-
-deserializer& operator>>(deserializer& d, object& what) {
-    std::string tname = d.peek_object();
-    auto mtype = uniform_type_info::from(tname);
-    if (mtype == nullptr) {
-        throw std::logic_error("no uniform type info found for " + tname);
-    }
-    what = std::move(mtype->deserialize(&d));
-    return d;
 }
 
 } // namespace cppa

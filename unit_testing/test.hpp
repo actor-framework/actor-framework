@@ -28,7 +28,7 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num);
     cppa_strip_path(fname) << ":" << cppa_fill4(line) << " " << message
 
 #define CPPA_PRINTC(filename, linenum, message)                                \
-    CPPA_LOGF_INFO(CPPA_STREAMIFY(filename, linenum, message));               \
+    CPPA_LOGF_INFO(CPPA_STREAMIFY(filename, linenum, message));                \
     std::cout << CPPA_STREAMIFY(filename, linenum, message) << std::endl
 
 #define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
@@ -144,7 +144,7 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_CHECK_NOT_EQUAL(rhs_loc, lhs_loc)                                 \
     cppa_check_value((lhs_loc), (rhs_loc), __FILE__, __LINE__, false)
 
-#define CPPA_FAILURE(err_msg) {                                                  \
+#define CPPA_FAILURE(err_msg) {                                                \
         CPPA_PRINTERR("ERROR: " << err_msg);                                   \
         cppa_inc_error_count();                                                \
     } ((void) 0)

@@ -458,20 +458,11 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
     }
 
     void serialize(const void* obj, serializer* s) const {
-        s->begin_object(this->name());
-        for (auto& m : m_members) {
-            m->serialize(obj, s);
-        }
-        s->end_object();
+        for (auto& m : m_members) m->serialize(obj, s);
     }
 
     void deserialize(void* obj, deserializer* d) const {
-        this->assert_type_name(d);
-        d->begin_object(this->name());
-        for (auto& m : m_members) {
-            m->deserialize(obj, d);
-        }
-        d->end_object();
+        for (auto& m : m_members) m->deserialize(obj, d);
     }
 
 };

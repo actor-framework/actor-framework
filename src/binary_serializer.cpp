@@ -37,6 +37,7 @@
 
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
+#include "cppa/type_lookup_table.hpp"
 
 using std::enable_if;
 
@@ -110,11 +111,19 @@ class binary_writer {
 
 } // namespace <anonymous>
 
-binary_serializer::binary_serializer(util::buffer* buf, actor_addressing* ptr)
-: super(ptr), m_sink(buf) { }
+binary_serializer::binary_serializer(util::buffer* buf,
+                                     actor_addressing* aa,
+                                     type_lookup_table* tbl)
+: super(aa, tbl), m_sink(buf) { }
 
-void binary_serializer::begin_object(const std::string& tname) {
-    binary_writer::write_string(m_sink, tname);
+void binary_serializer::begin_object(const uniform_type_info* uti) {
+    CPPA_REQUIRE(uti != nullptr);
+    auto ot = outgoing_types();
+    std::uint32_t id = (ot) ? ot->id_of(uti) : 0;
+    std::uint8_t flag = (id == 0) ? 1 : 0;
+    binary_writer::write_int(m_sink, flag);
+    if (flag == 1) binary_writer::write_string(m_sink, uti->name());
+    else binary_writer::write_int(m_sink, id);
 }
 
 void binary_serializer::end_object() { }

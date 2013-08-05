@@ -95,4 +95,10 @@ decorated_tuple::decorated_tuple(pointer d, rtti ti, size_t offset)
     init(offset);
 }
 
+const std::string* decorated_tuple::tuple_type_names() const {
+    // produced name is equal for all instances
+    static std::string result = get_tuple_type_names(*this);
+    return &result;
+}
+
 } } // namespace cppa::detail

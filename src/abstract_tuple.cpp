@@ -55,4 +55,14 @@ void* abstract_tuple::mutable_native_data() {
     return nullptr;
 }
 
+std::string get_tuple_type_names(const detail::abstract_tuple& tup) {
+    std::string result = "@<>";
+    for (size_t i = 0; i < tup.size(); ++i) {
+        auto uti = tup.type_at(i);
+        result += "+";
+        result += uti->name();
+    }
+    return result;
+}
+
 } } // namespace cppa::detail

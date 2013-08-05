@@ -41,6 +41,7 @@ namespace cppa {
 
 class object;
 class actor_addressing;
+class type_lookup_table;
 
 namespace util { class buffer; }
 
@@ -55,7 +56,8 @@ class deserializer {
 
  public:
 
-    deserializer(actor_addressing* addressing = nullptr);
+    deserializer(actor_addressing* addressing = nullptr,
+                 type_lookup_table* incoming_types = nullptr);
 
     virtual ~deserializer();
 
@@ -63,19 +65,13 @@ class deserializer {
      * @brief Seeks the beginning of the next object and return
      *        its uniform type name.
      */
-    virtual std::string seek_object() = 0;
-
-    /**
-     * @brief Equal to {@link seek_object()} but doesn't
-     *        modify the internal in-stream position.
-     */
-    virtual std::string peek_object() = 0;
+    //virtual std::string seek_object() = 0;
 
     /**
      * @brief Begins deserialization of an object of type @p type_name.
      * @param type_name The platform-independent @p libcppa type name.
      */
-    virtual void begin_object(const std::string& type_name) = 0;
+    virtual const uniform_type_info* begin_object() = 0;
 
     /**
      * @brief Ends deserialization of an object.
@@ -127,25 +123,22 @@ class deserializer {
      */
     virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
-    inline actor_addressing* addressing() { return m_addressing; }
+    inline actor_addressing* addressing() {
+        return m_addressing;
+    }
+
+    inline type_lookup_table* incoming_types() {
+        return m_incoming_types;
+    }
 
     void read_raw(size_t num_bytes, util::buffer& storage);
-
 
  private:
 
     actor_addressing* m_addressing;
+    type_lookup_table* m_incoming_types;
 
 };
-
-/**
- * @brief Deserializes a value and stores the result in @p storage.
- * @param d A valid deserializer.
- * @param storage An that should contain the deserialized value.
- * @returns @p d
- * @relates deserializer
- */
-deserializer& operator>>(deserializer& d, object& storage);
 
 } // namespace cppa
 

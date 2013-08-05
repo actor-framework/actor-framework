@@ -113,6 +113,12 @@ class tuple_vals : public abstract_tuple {
         return detail::static_type_list<Ts...>::list;
     }
 
+    const std::string* tuple_type_names() const override {
+        // produced name is equal for all instances
+        static std::string result = get_tuple_type_names(*this);
+        return &result;
+    }
+
  private:
 
     data_type m_data;

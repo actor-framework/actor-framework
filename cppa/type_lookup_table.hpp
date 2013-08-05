@@ -28,46 +28,65 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_BINARY_DESERIALIZER_HPP
-#define CPPA_BINARY_DESERIALIZER_HPP
+#ifndef CPPA_TYPE_LOOKUP_TABLE_HPP
+#define CPPA_TYPE_LOOKUP_TABLE_HPP
 
-#include "cppa/deserializer.hpp"
+#include <vector>
+#include <memory>
+#include <utility>
+
+#include "cppa/uniform_type_info.hpp"
 
 namespace cppa {
 
 /**
- * @brief Implements the deserializer interface with
- *        a binary serialization protocol.
+ *
+ * Default types are:
+ *
+ *  1: {atom_value}
+ *  2: {atom_value, uint32_t}
+ *  3: {atom_value, process_information}
+ *  4: {atom_value, process_information, uint32_t}
+ *  5: {atom_value, process_information, uint32_t, uint32_t}
+ *  6: {atom_value, actor_ptr}
+ *  7: {atom_value, uint32_t, string}
+ *
  */
-class binary_deserializer : public deserializer {
-
-    typedef deserializer super;
+class type_lookup_table {
 
  public:
 
-    binary_deserializer(const void* buf, size_t buf_size,
-                        actor_addressing* addressing = nullptr,
-                        type_lookup_table* table = nullptr);
+    typedef const uniform_type_info* pointer;
 
-    binary_deserializer(const void* begin, const void* m_end,
-                        actor_addressing* addressing = nullptr,
-                        type_lookup_table* table = nullptr);
+    type_lookup_table();
 
-    const uniform_type_info* begin_object() override;
-    void end_object() override;
-    size_t begin_sequence() override;
-    void end_sequence() override;
-    primitive_variant read_value(primitive_type ptype) override;
-    void read_tuple(size_t, const primitive_type*, primitive_variant*) override;
-    void read_raw(size_t num_bytes, void* storage) override;
+    pointer by_id(std::uint32_t id) const;
+
+    pointer by_name(const std::string& name) const;
+
+    std::uint32_t id_of(const std::string& name) const;
+
+    std::uint32_t id_of(pointer uti) const;
+
+    void emplace(std::uint32_t id, pointer instance);
+
+    std::uint32_t max_id() const;
 
  private:
 
-    const void* m_pos;
-    const void* m_end;
+    typedef std::vector<std::pair<std::uint32_t, pointer>> container;
+    typedef container::value_type value_type;
+    typedef container::iterator iterator;
+    typedef container::const_iterator const_iterator;
+
+    container m_data;
+
+    const_iterator find(std::uint32_t) const;
+
+    iterator find(std::uint32_t);
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_BINARY_DESERIALIZER_HPP
+#endif // CPPA_TYPE_LOOKUP_TABLE_HPP

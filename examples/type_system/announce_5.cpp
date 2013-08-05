@@ -90,26 +90,16 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
     void serialize(const void* ptr, serializer* sink) const {
         // ptr is guaranteed to be a pointer of type tree
         auto tree_ptr = reinterpret_cast<const tree*>(ptr);
-        // serialization always begins with begin_object(name())
-        // and ends with end_object();
-        // name() returns the uniform type name of tree
-        sink->begin_object(name());
         // recursively serialize nodes, beginning with root
         serialize_node(tree_ptr->root, sink);
-        sink->end_object();
     }
 
     void deserialize(void* ptr, deserializer* source) const {
-        // throws an exception if the next object in source is not a tree
-        assert_type_name(source);
         // ptr is guaranteed to be a pointer of type tree
         auto tree_ptr = reinterpret_cast<tree*>(ptr);
         tree_ptr->root.children.clear();
-        // workflow is analogous to serialize: begin_object() ... end_object()
-        source->begin_object(name());
         // recursively deserialize nodes, beginning with root
         deserialize_node(tree_ptr->root, source);
-        source->end_object();
     }
 
  private:
@@ -176,7 +166,7 @@ void testee(size_t remaining) {
 
 int main() {
     // the tree_type_info is owned by libcppa after this function call
-    announce(typeid(tree), new tree_type_info);
+    announce(typeid(tree), std::unique_ptr<uniform_type_info>{new tree_type_info});
 
     tree t0; // create a tree and fill it with some data
 

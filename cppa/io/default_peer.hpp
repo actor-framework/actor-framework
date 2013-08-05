@@ -37,6 +37,7 @@
 #include "cppa/extend.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/partial_function.hpp"
+#include "cppa/type_lookup_table.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
 #include "cppa/process_information.hpp"
 
@@ -120,6 +121,9 @@ class default_peer : public extend<continuable>::with<buffered_writing> {
 
     partial_function m_content_handler;
 
+    type_lookup_table m_incoming_types;
+    type_lookup_table m_outgoing_types;
+
     void monitor(const actor_ptr& sender, const process_information_ptr& node, actor_id aid);
 
     void kill_proxy(const actor_ptr& sender, const process_information_ptr& node, actor_id aid, std::uint32_t reason);
@@ -135,6 +139,8 @@ class default_peer : public extend<continuable>::with<buffered_writing> {
     }
 
     void enqueue_impl(const message_header& hdr, const any_tuple& msg);
+
+    void add_type_if_needed(const std::string& tname);
 
 };
 

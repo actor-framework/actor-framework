@@ -66,6 +66,8 @@ class object_array : public abstract_tuple {
 
     const uniform_type_info* type_at(size_t pos) const;
 
+    const std::string* tuple_type_names() const;
+
  private:
 
     std::vector<object> m_elements;

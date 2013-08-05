@@ -46,10 +46,14 @@ using namespace cppa;
 
 int main() {
     CPPA_TEST(test_uniform_type);
-    bool announce1 = announce<foo>(&foo::value);
-    bool announce2 = announce<foo>(&foo::value);
-    bool announce3 = announce<foo>(&foo::value);
-    bool announce4 = announce<foo>(&foo::value);
+    auto announce1 = announce<foo>(&foo::value);
+    auto announce2 = announce<foo>(&foo::value);
+    auto announce3 = announce<foo>(&foo::value);
+    auto announce4 = announce<foo>(&foo::value);
+    CPPA_CHECK(announce1 == announce2);
+    CPPA_CHECK(announce1 == announce3);
+    CPPA_CHECK(announce1 == announce4);
+    CPPA_CHECK_EQUAL(announce1->name(), "$::foo");
     {
         //bar.create_object();
         object obj1 = uniform_typeid<foo>()->create();
@@ -60,12 +64,6 @@ int main() {
         CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
         CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
     }
-    auto int_val = [](bool val) { return val ? 1 : 0; };
-    int successful_announces =   int_val(announce1)
-                               + int_val(announce2)
-                               + int_val(announce3)
-                               + int_val(announce4);
-    CPPA_CHECK_EQUAL(1, successful_announces);
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
@@ -78,6 +76,8 @@ int main() {
         "float", "double", "@ldouble",    // floating points
         "@0",                             // cppa::util::void_type
         // default announced cppa types
+        "@ac_hdl",             // cppa::io::accept_handle
+        "@cn_hdl",             // cppa::io::connection_handle
         "@atom",               // cppa::atom_value
         "@tuple",              // cppa::any_tuple
         "@header",             // cppa::message_header

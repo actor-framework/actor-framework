@@ -43,6 +43,10 @@ class disablable_delete {
         m_enabled = false;
     }
 
+    inline void enable() {
+        m_enabled = true;
+    }
+
     template<typename T>
     inline void operator()(T* ptr) {
         if (m_enabled) delete ptr;
