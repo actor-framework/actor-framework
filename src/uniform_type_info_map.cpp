@@ -28,11 +28,6 @@
 \******************************************************************************/
 
 
-#include <iostream>
-
-
-
-
 #include <array>
 #include <string>
 #include <vector>
@@ -41,9 +36,9 @@
 #include <type_traits>
 
 #include "cppa/logging.hpp"
+#include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
-#include "cppa/add_tuple_hint.hpp"
 #include "cppa/actor_addressing.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -278,19 +273,6 @@ void deserialize_impl(any_tuple& atref, deserializer* source) {
     uti->deserialize(ptr, source);
     source->end_object();
     atref = uti->as_any_tuple(ptr);
-    /*
-    else {
-        auto names = util::split(full_name, '+', false);
-        auto result = create_unique<detail::object_array>();
-        source->begin_object(full_name);
-        for (auto& name : names) {
-            auto uti = uniform_type_info::from(name);
-            result->push_back(uti->deserialize(source));
-        }
-        source->end_object();
-        atref = any_tuple{result.release()};
-    }
-    */
 }
 
 void serialize_impl(const message_header& hdr, serializer* sink) {

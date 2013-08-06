@@ -31,6 +31,7 @@
 #ifndef CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 #define CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
+#include "cppa/any_tuple.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 

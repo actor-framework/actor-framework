@@ -310,6 +310,5 @@ cppa/io/accept_handle.hpp
 unit_testing/test_broker.cpp
 cppa/io/buffered_writing.hpp
 cppa/detail/handle.hpp
-cppa/add_tuple_hint.hpp
 cppa/type_lookup_table.hpp
 src/type_lookup_table.cpp

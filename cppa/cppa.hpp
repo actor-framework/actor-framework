@@ -62,7 +62,6 @@
 #include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/message_future.hpp"
-#include "cppa/add_tuple_hint.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/event_based_actor.hpp"
