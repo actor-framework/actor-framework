@@ -70,7 +70,8 @@ inline void range_check(pointer begin, pointer end, size_t read_size) {
 
 template<typename T>
 pointer read_range(pointer begin, pointer end, T& storage,
-                   typename enable_if<is_integral<T>::value>::type* = 0) {
+//                   typename enable_if<is_integral<T>::value>::type* = 0) {
+                   typename enable_if<is_arithmetic<T>::value>::type* = 0) {
     range_check(begin, end, sizeof(T));
     memcpy(&storage, begin, sizeof(T));
     return advanced(begin, sizeof(T));
@@ -100,6 +101,7 @@ pointer read_unicode_string(pointer begin, pointer end, StringType& str) {
     return begin;
 }
 
+/*
 // @returns the next iterator position
 template<typename T>
 pointer read_range(pointer begin, pointer end, T& value,
@@ -111,6 +113,7 @@ pointer read_range(pointer begin, pointer end, T& value,
     iss >> value;
     return result;
 }
+*/
 
 pointer read_range(pointer begin, pointer end, u16string& storage) {
     // char16_t is guaranteed to has *at least* 16 bytes,

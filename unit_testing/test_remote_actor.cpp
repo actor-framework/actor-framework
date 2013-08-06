@@ -145,6 +145,8 @@ void await_down(actor_ptr ptr, T continuation) {
     );
 }
 
+static constexpr size_t num_pings = 10;
+
 class client : public event_based_actor {
 
  public:
@@ -173,8 +175,8 @@ class client : public event_based_actor {
     }
 
     void send_sync_msg() {
-        CPPA_PRINT("sync send {'SyncMsg'}");
-        sync_send(m_server, atom("SyncMsg")).then(
+        CPPA_PRINT("sync send {'SyncMsg', 4.2fSyncMsg}");
+        sync_send(m_server, atom("SyncMsg"), 4.2f).then(
             on(atom("SyncReply")) >> [=] {
                 send_foobars();
             }
@@ -244,11 +246,11 @@ class server : public event_based_actor {
                 auto client = self->last_sender();
                 CPPA_LOGF_ERROR_IF(!client, "last_sender() == nullptr");
                 CPPA_LOGF_INFO("spawn event-based ping actor");
-                auto pptr = spawn<monitored>(event_based_ping, 10);
+                auto pptr = spawn<monitored>(event_based_ping, num_pings);
                 reply(atom("PingPtr"), pptr);
                 CPPA_LOGF_INFO("wait until spawned ping actor is done");
                 await_down(pptr, [=] {
-                    CPPA_CHECK_EQUAL(pongs(), 10);
+                    CPPA_CHECK_EQUAL(pongs(), num_pings);
                     await_sync_msg();
                 });
             }
@@ -258,8 +260,9 @@ class server : public event_based_actor {
     void await_sync_msg() {
         CPPA_PRINT("await {'SyncMsg'}");
         become (
-            on(atom("SyncMsg")) >> [=] {
-                CPPA_PRINT("received {'SyncMsg'}");
+            on(atom("SyncMsg"), arg_match) >> [=](float f) {
+                CPPA_PRINT("received {'SyncMsg', " << f << "}");
+                CPPA_CHECK_EQUAL(f, 4.2f);
                 reply(atom("SyncReply"));
                 await_foobars();
             }
@@ -311,8 +314,7 @@ class server : public event_based_actor {
 
 int main(int argc, char** argv) {
     announce<actor_vector>();
-    add_tuple_hint<atom_value>();
-    add_tuple_hint<atom_value, actor_ptr>();
+    add_tuple_hint<atom_value, int>();
     add_tuple_hint<atom_value, atom_value, int>();
     string app_path = argv[0];
     bool run_remote_actor = true;

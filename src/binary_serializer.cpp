@@ -69,10 +69,12 @@ class binary_writer {
 
     template<typename T>
     void operator()(const T& value,
-                    typename enable_if<std::is_integral<T>::value>::type* = 0) {
+//                    typename enable_if<std::is_integral<T>::value>::type* = 0) {
+                    typename enable_if<std::is_arithmetic<T>::value>::type* = 0) {
         write_int(m_sink, value);
     }
 
+/*
     template<typename T>
     void operator()(const T& value,
                     typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
@@ -82,6 +84,7 @@ class binary_writer {
         iss << value;
         (*this)(iss.str());
     }
+*/
 
     void operator()(const std::string& str) {
         write_string(m_sink, str);
