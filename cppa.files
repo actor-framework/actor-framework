@@ -35,6 +35,7 @@ cppa/detail/fd_util.hpp
 cppa/detail/fwd.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
+cppa/detail/handle.hpp
 cppa/detail/implicit_conversions.hpp
 cppa/detail/matches.hpp
 cppa/detail/memory.hpp
@@ -79,8 +80,11 @@ cppa/guard_expr.hpp
 cppa/intrusive/blocking_single_reader_queue.hpp
 cppa/intrusive/single_reader_queue.hpp
 cppa/intrusive_ptr.hpp
+cppa/io/accept_handle.hpp
 cppa/io/acceptor.hpp
 cppa/io/broker.hpp
+cppa/io/buffered_writing.hpp
+cppa/io/connection_handle.hpp
 cppa/io/continuable.hpp
 cppa/io/default_actor_addressing.hpp
 cppa/io/default_actor_proxy.hpp
@@ -89,7 +93,6 @@ cppa/io/default_peer.hpp
 cppa/io/default_peer_acceptor.hpp
 cppa/io/default_protocol.hpp
 cppa/io/input_stream.hpp
-cppa/io/connection_handle.hpp
 cppa/io/ipv4_acceptor.hpp
 cppa/io/ipv4_io_stream.hpp
 cppa/io/middleman.hpp
@@ -146,7 +149,9 @@ cppa/threadless.hpp
 cppa/timeout_definition.hpp
 cppa/to_string.hpp
 cppa/tpartial_function.hpp
+cppa/trivariant.hpp
 cppa/tuple_cast.hpp
+cppa/type_lookup_table.hpp
 cppa/uniform_type_info.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/algorithm.hpp
@@ -280,6 +285,7 @@ src/string_serialization.cpp
 src/thread_mapped_actor.cpp
 src/thread_pool_scheduler.cpp
 src/to_uniform_name.cpp
+src/type_lookup_table.cpp
 src/unicast_network.cpp
 src/uniform_type_info.cpp
 src/uniform_type_info_map.cpp
@@ -290,6 +296,7 @@ unit_testing/ping_pong.hpp
 unit_testing/test.cpp
 unit_testing/test.hpp
 unit_testing/test_atom.cpp
+unit_testing/test_broker.cpp
 unit_testing/test_fixed_vector.cpp
 unit_testing/test_intrusive_containers.cpp
 unit_testing/test_intrusive_ptr.cpp
@@ -303,12 +310,7 @@ unit_testing/test_ripemd_160.cpp
 unit_testing/test_serialization.cpp
 unit_testing/test_spawn.cpp
 unit_testing/test_sync_send.cpp
+unit_testing/test_trivariant.cpp
 unit_testing/test_tuple.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-cppa/io/accept_handle.hpp
-unit_testing/test_broker.cpp
-cppa/io/buffered_writing.hpp
-cppa/detail/handle.hpp
-cppa/type_lookup_table.hpp
-src/type_lookup_table.cpp
