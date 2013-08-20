@@ -12,7 +12,7 @@ endmacro()
 
 add_unit_test(ripemd_160)
 add_unit_test(atom)
-add_unit_test(trivariant)
+add_unit_test(optional_variant)
 add_unit_test(metaprogramming)
 add_unit_test(intrusive_containers)
 add_unit_test(serialization)

@@ -359,7 +359,6 @@ class local_actor : public extend<actor>::with<memory_cached> {
     std::function<void()> m_sync_failure_handler;
     std::function<void()> m_sync_timeout_handler;
 
-    /** @endcond */
 
 };
 
