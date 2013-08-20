@@ -56,6 +56,12 @@ struct lift_void { typedef  T type; };
 template<>
 struct lift_void<void> { typedef util::void_type type; };
 
+template<typename T>
+struct unlift_void { typedef  T type; };
+
+template<>
+struct unlift_void<util::void_type> { typedef void type; };
+
 template<typename T0,                   typename T1 = util::void_type,
          typename T2 = util::void_type, typename T3 = util::void_type,
          typename T4 = util::void_type, typename T5 = util::void_type,
@@ -69,11 +75,6 @@ struct optional_variant_data {
     };
 
     optional_variant_data() { }
-
-    template<int Id, typename U>
-    optional_variant_data(std::integral_constant<int, Id> token, U&& arg) {
-        cr(get(token), std::forward<U>(arg));
-    }
 
     ~optional_variant_data() { }
 

@@ -36,6 +36,7 @@
 
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/void_type.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/optional_variant_data.hpp"
 
@@ -67,35 +68,26 @@ class optional_variant {
 
     static constexpr int void_pos = util::tl_find<types, void>::value;
 
-    template<typename U>
+    /**
+     * @brief Checks whether this objects holds a value of type @p T.
+     */
+    template<typename T>
     inline bool is() const {
-        static_assert(util::tl_find<types, U>::value != -1, "invalid type");
-        return m_type == util::tl_find<types, U>::value;
+        return m_type != -1 && m_type == util::tl_find<types, T>::value;
     }
 
     template<typename U>
-    optional_variant& operator=(const U& arg) {
-        static_assert(util::tl_find<types, U>::value != -1, "invalid type");
+    optional_variant& operator=(U&& arg) {
         destroy_data();
-        m_type = util::tl_find<types, U>::value;
-        auto& ref = get(make_int_token<util::tl_find<types, U>::value>());
-        new (&ref) U (arg);
+        set(std::forward<U>(arg));
         return *this;
     }
 
     optional_variant() : m_type(-1) { }
 
     template<typename U>
-    optional_variant(const U& value)
-    : m_type{util::tl_find<types, U>::value}
-    , m_data{std::integral_constant<int, util::tl_find<types, U>::value>{}, value} {
-        static_assert(util::tl_find<types, U>::value >= 0, "invalid type");
-    }
-
-    optional_variant(const util::void_type& value)
-    : m_type{void_pos}
-    , m_data{std::integral_constant<int, void_pos>{}, value} {
-        static_assert(void_pos >= 0, "this variant does not allow 'void' value");
+    optional_variant(U&& arg) {
+        set(std::forward<U>(arg));
     }
 
     ~optional_variant() {
@@ -105,8 +97,15 @@ class optional_variant {
     /**
      * @brief Checks whether this optional_variant is valid.
      */
-    explicit operator bool() const {
+    inline explicit operator bool() const {
         return m_type != -1;
+    }
+
+    /**
+     * @brief Checks whether this optional_variant is invalid.
+     */
+    inline bool operator!() const {
+        return m_type == -1;
     }
 
     /** @cond PRIVATE */
@@ -195,6 +194,22 @@ class optional_variant {
     inline void destroy_data() {
         apply(detail::optional_variant_data_destructor{});
     }
+
+    template<typename U>
+    typename std::enable_if<
+        !std::is_same<typename util::rm_const_and_ref<U>::type, none_t>::value
+    >::type
+    set(U&& arg) {
+        typedef typename util::rm_const_and_ref<U>::type stripped_type;
+        typedef typename detail::unlift_void<stripped_type>::type type;
+        static constexpr int type_id = util::tl_find<types, type>::value;
+        static_assert(type_id != -1, "invalid type");
+        m_type = type_id;
+        auto& ref = m_data.get(make_int_token<type_id>());
+        new (&ref) stripped_type (std::forward<U>(arg));
+    }
+
+    inline void set(const none_t&) { m_type = -1; }
 
     int m_type;
     detail::optional_variant_data<typename detail::lift_void<Ts>::type...> m_data;

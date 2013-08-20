@@ -85,7 +85,10 @@ int main() {
         CPPA_CHECK_EQUAL(apply_visitor(dv, t4), static_cast<double>(2.3f));
 
         t4 = 1;
-        CPPA_CHECK(t4.is<int>() && get<int>(t4) == 1);
+        CPPA_CHECK(t4 && t4.is<int>() && get<int>(t4) == 1);
+
+        t4 = none_t{};
+        CPPA_CHECK(!t4);
     }
 
     /* run tests using user-defined types */ {
