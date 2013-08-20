@@ -76,17 +76,24 @@ int main() {
         "float", "double", "@ldouble",    // floating points
         "@0",                             // cppa::util::void_type
         // default announced cppa types
-        "@ac_hdl",             // cppa::io::accept_handle
-        "@cn_hdl",             // cppa::io::connection_handle
-        "@atom",               // cppa::atom_value
-        "@tuple",              // cppa::any_tuple
-        "@header",             // cppa::message_header
-        "@actor",              // cppa::actor_ptr
-        "@group",              // cppa::group_ptr
-        "@channel",            // cppa::channel_ptr
-        "@proc",               // cppa::intrusive_ptr<cppa::process_information>
-        "@duration",           // cppa::util::duration
-        "@buffer"              // cppa::util::buffer
+        "@ac_hdl",                   // io::accept_handle
+        "@cn_hdl",                   // io::connection_handle
+        "@atom",                     // atom_value
+        "@tuple",                    // any_tuple
+        "@header",                   // message_header
+        "@actor",                    // actor_ptr
+        "@group",                    // group_ptr
+        "@channel",                  // channel_ptr
+        "@proc",                     // intrusive_ptr<process_information>
+        "@duration",                 // util::duration
+        "@buffer",                   // util::buffer
+        // default announced cpap tuples
+        "@<>+@atom",                 // {atom_value}
+        "@<>+@atom+@actor",          // {atom_value, actor_ptr}
+        "@<>+@atom+@proc",           // {atom_value, process_information}
+        "@<>+@atom+@proc+@u32+@u32", // {atom_value, process_information, uint32_t, uint32_t}
+        "@<>+@atom+@u32",            // {atom_value, uint32_t}
+        "@<>+@atom+@u32+@str"        // {atom_value, uint32_t, std::string}
     };
     // holds the type names we see at runtime
     std::set<std::string> found;
