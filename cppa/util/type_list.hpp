@@ -795,7 +795,7 @@ struct tl_filter_type;
 
 template<class Type, typename... T>
 struct tl_filter_type<type_list<T...>, Type> {
-    typedef typename tl_filter_impl<type_list<T...>, std::is_same<T, Type>::value...>::type type;
+    typedef typename tl_filter_impl<type_list<T...>, !std::is_same<T, Type>::value...>::type type;
 };
 
 /**
