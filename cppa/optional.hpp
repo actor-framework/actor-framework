@@ -239,6 +239,27 @@ class optional<T&> {
 
 };
 
+template<>
+class optional<void> {
+
+    optional() : m_valid(true) { }
+
+    optional(const none_t&) : m_valid(false) { }
+
+    inline bool valid() const { return m_valid; }
+
+    inline bool empty() const { return !m_valid; }
+
+    inline explicit operator bool() const { return valid(); }
+
+    inline bool operator!() const { return empty(); }
+
+ private:
+
+    bool m_valid;
+
+};
+
 /** @relates option */
 template<typename T>
 struct is_optional { static constexpr bool value = false; };
