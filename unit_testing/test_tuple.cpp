@@ -72,7 +72,7 @@ optional<int> str2int(const std::string& str) {
     if (endptr != nullptr && *endptr == '\0') {
         return result;
     }
-    return {};
+    return none;
 }
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \

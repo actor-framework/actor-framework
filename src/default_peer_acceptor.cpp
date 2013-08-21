@@ -53,7 +53,7 @@ default_peer_acceptor::default_peer_acceptor(default_protocol* parent,
 continue_reading_result default_peer_acceptor::continue_reading() {
     CPPA_LOG_TRACE("");
     for (;;) {
-        optional<stream_ptr_pair> opt;
+        optional<stream_ptr_pair> opt{none};
         try { opt = m_ptr->try_accept_connection(); }
         catch (exception& e) {
             CPPA_LOG_ERROR(to_verbose_string(e));

@@ -34,6 +34,8 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/none.hpp"
+
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/void_type.hpp"
 #include "cppa/util/type_traits.hpp"
@@ -46,8 +48,6 @@
                             make_int_token< x >())                             \
 
 namespace cppa {
-
-struct none_t { };
 
 template<int Value>
 constexpr std::integral_constant<int, Value> make_int_token() { return {}; }

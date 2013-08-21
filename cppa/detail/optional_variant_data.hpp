@@ -34,6 +34,8 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/none.hpp"
+
 #define CPPA_OPTIONAL_VARIANT_DATA_CONCAT(x, y) x ## y
 
 #define CPPA_OPTIONAL_VARIANT_DATA_GETTER(pos)                                 \
@@ -45,8 +47,6 @@
     get(std::integral_constant<int, pos >) const {                             \
         return CPPA_OPTIONAL_VARIANT_DATA_CONCAT(v, pos) ;                     \
     }
-
-namespace cppa { struct none_t; }
 
 namespace cppa { namespace detail {
 

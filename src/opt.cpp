@@ -58,7 +58,7 @@ detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
         else if (equal(begin(prefix) + 1, end(prefix), begin(input))) {
             return input.substr(prefix.size() - 1);
         }
-        return {};
+        return none;
     };
     vector<string> opts;
     opts.push_back(lhs_str);

@@ -113,6 +113,7 @@ cppa/message_future.hpp
 cppa/message_header.hpp
 cppa/message_id.hpp
 cppa/message_priority.hpp
+cppa/none.hpp
 cppa/object.hpp
 cppa/on.hpp
 cppa/opencl.hpp

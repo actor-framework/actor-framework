@@ -144,7 +144,7 @@ void client_repl(const string& host, uint16_t port) {
                 try { return {std::stoi(str)}; }
                 catch (std::exception&) {
                     aout << "\"" << str << "\" is not an integer" << endl;
-                    return {};
+                    return none;
                 }
             };
 

@@ -171,7 +171,7 @@ optional<stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
     if (accept_impl(result, m_fd, m_is_nonblocking)) {
         return result;
     }
-    return {};
+    return none;
 }
 
 } } // namespace cppa::detail

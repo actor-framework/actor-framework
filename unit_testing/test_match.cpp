@@ -290,7 +290,7 @@ int main() {
         if (endptr != nullptr && *endptr == '\0') {
             return result;
         }
-        return {};
+        return none;
     };
     match("42") (
         on(toint) >> [&](int i) {
@@ -432,7 +432,7 @@ int main() {
                 return vec.back();
             }
         }
-        return {};
+        return none;
     };
 
     const char* svec[] = {"-n", "foo", "--name=bar", "-p", "2"};

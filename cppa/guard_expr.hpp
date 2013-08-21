@@ -216,7 +216,7 @@ struct ge_get_front {
         std::reference_wrapper<
             const typename util::rm_const_and_ref<decltype(what.front())>::type> > {
         if (what.empty() == false) return {what.front()};
-        return {};
+        return none;
     }
     template<class C>
     inline auto operator()(const C& what,
@@ -227,7 +227,7 @@ struct ge_get_front {
                            >::type* = 0) const
     -> optional<decltype(what.front())> {
         if (what.empty() == false) return {what.front()};
-        return {};
+        return none;
     }
 };
 

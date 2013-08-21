@@ -33,6 +33,8 @@
 
 #include <new>
 #include <utility>
+
+#include "cppa/none.hpp"
 #include "cppa/config.hpp"
 
 namespace cppa {
@@ -50,24 +52,22 @@ class optional {
      */
     typedef T type;
 
-    /**
+    /* *
      * @brief Default constructor.
      * @post <tt>valid() == false</tt>
      */
-    optional() : m_valid(false) { }
+    //optional() : m_valid(false) { }
+
+    /**
+     * @post <tt>valid() == false</tt>
+     */
+    optional(const none_t&) : m_valid(false) { }
 
     /**
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
     optional(T value) : m_valid(false) { cr(std::move(value)); }
-
-    template<typename T0, typename T1, typename... Ts>
-    optional(T0&& arg0, T1&& arg1, Ts&&... args) : m_valid(false) {
-        cr(T(std::forward<T0>(arg0),
-             std::forward<T1>(arg1),
-             std::forward<Ts>(args)...));
-    }
 
     optional(const optional& other) : m_valid(false) {
         if (other.m_valid) cr(other.m_value);

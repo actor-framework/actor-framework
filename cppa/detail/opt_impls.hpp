@@ -49,7 +49,7 @@ struct conv_arg_impl {
         if (iss >> result && iss.eof()) {
             return result;
         }
-        return {};
+        return none;
     }
 };
 
