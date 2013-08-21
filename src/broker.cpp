@@ -249,9 +249,11 @@ class broker::doorman : public broker::servant {
 
     doorman(broker_ptr parent, acceptor_uptr ptr)
     : super{move(parent), ptr->file_handle()}
-    , m_ptr{move(ptr)}
+    //, m_ptr{move(ptr)}
     , m_accept_msg{atom("IO_accept"),
-                   accept_handle::from_int(m_ptr->file_handle())} { }
+                   accept_handle::from_int(ptr->file_handle())} {
+        m_ptr.reset(ptr.release());
+    }
 
     continue_reading_result continue_reading() override {
         CPPA_LOG_TRACE("");
@@ -404,12 +406,20 @@ local_actor_ptr init_and_launch(broker_ptr ptr) {
     scoped_self_setter sss{ptr.get()};
     ptr->init();
     // continue reader only if not inherited from default_broker_impl
+    CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
     auto mm = get_middleman();
     if (ptr->has_behavior()) {
         mm->run_later([=] {
+            CPPA_LOGC_TRACE("NONE", "init_and_launch::run_later_functor", "");
+            CPPA_LOGF_WARNING_IF(ptr->m_io.empty() && ptr->m_accept.empty(),
+                                 "both m_io and m_accept are empty");
             // 'launch' all backends
+            CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
+                            "add " << ptr->m_io.size() << " IO servants");
             for (auto& kvp : ptr->m_io)
                 mm->continue_reader(kvp.second.get());
+            CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
+                            "add " << ptr->m_accept.size() << " acceptors");
             for (auto& kvp : ptr->m_accept)
                 mm->continue_reader(kvp.second.get());
         });

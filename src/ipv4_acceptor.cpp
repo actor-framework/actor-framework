@@ -32,6 +32,8 @@
 #include <cstring>
 #include <errno.h>
 #include <iostream>
+
+#include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 
 #include "cppa/io/stream.hpp"
@@ -104,6 +106,8 @@ ipv4_acceptor::ipv4_acceptor(native_socket_type fd, bool nonblocking)
 
 std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
                                                 const char* addr) {
+    CPPA_LOGM_TRACE("ipv4_acceptor", CPPA_ARG(port) << ", addr = "
+                                     << (addr ? addr : "nullptr"));
     native_socket_type sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
@@ -136,6 +140,7 @@ std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
     nonblocking(sockfd, true);
     // ok, no exceptions
     sguard.release();
+    CPPA_LOGM_DEBUG("ipv4_acceptor", "sockfd = " << sockfd);
     return std::unique_ptr<ipv4_acceptor>(new ipv4_acceptor(sockfd, true));
 }
 

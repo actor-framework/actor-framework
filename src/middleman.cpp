@@ -220,14 +220,13 @@ class middleman_overseer : public continuable {
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
-        atomic_thread_fence(memory_order_seq_cst);
         for (int i = 0; i < read_result; ++i) {
             unique_ptr<middleman_event> msg(m_queue.try_pop());
             if (!msg) {
                 CPPA_LOGMF(CPPA_ERROR, self, "nullptr dequeued");
                 CPPA_CRITICAL("nullptr dequeued");
             }
-            CPPA_LOGMF(CPPA_DEBUG, self, "execute run_later functor");
+            CPPA_LOGF_DEBUG("execute run_later functor");
             (*msg)();
         }
         return read_continue_later;

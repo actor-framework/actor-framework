@@ -79,7 +79,9 @@ void middleman_event_handler::alteration(continuable* ptr,
 }
 
 void middleman_event_handler::add_later(continuable* ptr, event_bitmask e) {
-    CPPA_LOG_TRACE(CPPA_ARG(ptr) << ", " << CPPA_TARG(e, eb2str));
+    CPPA_LOG_TRACE(CPPA_ARG(ptr) << ", "
+                   << CPPA_TARG(e, eb2str)
+                   << ", socket = " << ptr->read_handle());
     alteration(ptr, e, fd_meta_event::add);
 }
 

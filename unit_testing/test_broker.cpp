@@ -39,6 +39,11 @@ using namespace cppa;
 
 namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
 
+void report_unexpected() {
+    std::cerr << "unexpected message: " << to_string(self->last_dequeued())
+              << std::endl;
+}
+
 void ping(size_t num_pings) {
     auto count = std::make_shared<size_t>(0);
     become (
@@ -48,9 +53,11 @@ void ping(size_t num_pings) {
                 on(atom("pong"), arg_match) >> [=](int value) {
                     if (++*count >= num_pings) self->quit();
                     else reply(atom("ping"), value + 1);
-                }
+                },
+                others() >> report_unexpected
             );
-        }
+        },
+        others() >> report_unexpected
     );
 }
 
@@ -65,9 +72,11 @@ void pong() {
                 },
                 on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
                     self->quit(reason);
-                }
+                },
+                others() >> report_unexpected
             );
-        }
+        },
+        others() >> report_unexpected
     );
 }
 
@@ -106,21 +115,18 @@ void peer(io::broker* thisptr, const actor_ptr& buddy) {
         on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
             if (thisptr->last_sender() == buddy) self->quit(reason);
         },
-        others() >> [] {
-            cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
-        }
+        others() >> report_unexpected
     );
 }
 
 void peer_acceptor(io::broker* thisptr, const actor_ptr& buddy) {
     become (
         on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
+            CPPA_LOGF_INFO("received IO_accept");
             thisptr->fork(peer, hdl, buddy);
             self->quit();
         },
-        others() >> [] {
-            cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
-        }
+        others() >> report_unexpected
     );
 }
 

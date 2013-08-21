@@ -122,7 +122,8 @@ io::stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd) {
 }
 
 io::stream_ptr ipv4_io_stream::connect_to(const char* host,
-                                                  std::uint16_t port) {
+                                          std::uint16_t port) {
+    CPPA_LOGF_TRACE(CPPA_ARG(host) << ", " << CPPA_ARG(port));
     CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
     struct sockaddr_in serv_addr;
     struct hostent* server;
@@ -140,9 +141,13 @@ io::stream_ptr ipv4_io_stream::connect_to(const char* host,
     serv_addr.sin_family = AF_INET;
     memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
     serv_addr.sin_port = htons(port);
+    CPPA_LOGF_DEBUG("call connect()");
     if (connect(fd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
+        CPPA_LOGF_ERROR("could not connect to to " << host
+                        << " on port " << port);
         throw network_error("could not connect to host");
     }
+    CPPA_LOGF_DEBUG("enable nodelay + nonblocking for socket");
     tcp_nodelay(fd, true);
     nonblocking(fd, true);
     return new ipv4_io_stream(fd);
