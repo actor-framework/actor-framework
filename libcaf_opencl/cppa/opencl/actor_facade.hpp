@@ -70,7 +70,7 @@ class actor_facade<Ret(Args...)> : public actor {
  public:
 
     typedef cow_tuple<typename util::rm_const_and_ref<Args>::type...> args_tuple;
-    typedef std::function<option<args_tuple>(any_tuple)> arg_mapping;
+    typedef std::function<optional<args_tuple>(any_tuple)> arg_mapping;
     typedef std::function<any_tuple(Ret&)> result_mapping;
 
     static intrusive_ptr<actor_facade> create(const program& prog,
