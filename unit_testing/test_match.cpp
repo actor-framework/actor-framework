@@ -284,7 +284,7 @@ int main() {
     CPPA_CHECK(invoked);
     invoked = false;
 
-    auto toint = [](const string& str) -> option<int> {
+    auto toint = [](const string& str) -> optional<int> {
         char* endptr = nullptr;
         int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
         if (endptr != nullptr && *endptr == '\0') {
@@ -425,7 +425,7 @@ int main() {
     );
     CPPA_CHECK_EQUAL(success, true);
 
-    auto extract_name = [](const string& kvp) -> option<string> {
+    auto extract_name = [](const string& kvp) -> optional<string> {
         auto vec = split(kvp, '=');
         if (vec.size() == 2) {
             if (vec.front() == "--name") {

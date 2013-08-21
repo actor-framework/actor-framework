@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 #include "cppa/cow_tuple.hpp"
 
 #include "cppa/util/call.hpp"
@@ -104,7 +104,7 @@ struct cl_spawn_helper<R (Ts...), void> {
 };
 
 template<typename R, typename... Ts>
-struct cl_spawn_helper<std::function<option<cow_tuple<Ts...>> (any_tuple)>,
+struct cl_spawn_helper<std::function<optional<cow_tuple<Ts...>> (any_tuple)>,
                        std::function<any_tuple (R&)>>
 : cl_spawn_helper<R (Ts...)> { };
 

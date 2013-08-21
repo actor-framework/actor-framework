@@ -162,7 +162,7 @@ void multiplier() {
         //          to a tuple of vectors; note that this function returns
         //          an option (an empty results causes the actor to ignore
         //          the message)
-        [] (any_tuple msg) -> option<cow_tuple<fvec, fvec>> {
+        [] (any_tuple msg) -> optional<cow_tuple<fvec, fvec>> {
             auto opt = tuple_cast<matrix_type, matrix_type>(msg);
             if (opt) {
                 return {move(get_ref<0>(*opt).data()),

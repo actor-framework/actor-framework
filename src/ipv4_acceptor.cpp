@@ -162,7 +162,7 @@ stream_ptr_pair ipv4_acceptor::accept_connection() {
     return result;
 }
 
-option<stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
+optional<stream_ptr_pair> ipv4_acceptor::try_accept_connection() {
     if (!m_is_nonblocking) {
         nonblocking(m_fd, true);
         m_is_nonblocking = true;

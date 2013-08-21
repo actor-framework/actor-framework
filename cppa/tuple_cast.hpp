@@ -33,7 +33,7 @@
 
 #include <type_traits>
 
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 
 #include "cppa/util/type_list.hpp"
 
@@ -90,7 +90,7 @@ auto tuple_cast(any_tuple tup, const util::type_list<T...>&);
 
 template<typename... T>
 auto moving_tuple_cast(any_tuple& tup)
-    -> option<
+    -> optional<
         typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
                                          is_anything>::type
@@ -110,7 +110,7 @@ auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
 
 template<typename... T>
 auto tuple_cast(any_tuple tup)
-     -> option<
+     -> optional<
           typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
                                          is_anything>::type

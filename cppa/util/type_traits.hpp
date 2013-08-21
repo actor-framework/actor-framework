@@ -302,12 +302,12 @@ struct is_mutable_ref {
  * @brief Returns either @p T or @p T::type if @p T is an option.
  */
 template<typename T>
-struct rm_option {
+struct rm_optional {
     typedef T type;
 };
 
 template<typename T>
-struct rm_option<option<T> > {
+struct rm_optional<optional<T> > {
     typedef T type;
 };
 

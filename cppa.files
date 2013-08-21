@@ -124,7 +124,7 @@ cppa/opencl/opencl_metainfo.hpp
 cppa/opencl/program.hpp
 cppa/opencl/smart_ptr.hpp
 cppa/opt.hpp
-cppa/option.hpp
+cppa/optional.hpp
 cppa/optional_variant.hpp
 cppa/partial_function.hpp
 cppa/primitive_type.hpp

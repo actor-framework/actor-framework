@@ -34,7 +34,7 @@
 #include <sstream>
 
 #include "cppa/on.hpp"
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 
 // this header contains implementation details for opt.hpp
 
@@ -42,7 +42,7 @@ namespace cppa { namespace detail {
 
 template<typename T>
 struct conv_arg_impl {
-    typedef option<T> result_type;
+    typedef optional<T> result_type;
     static inline result_type _(const std::string& arg) {
         std::istringstream iss(arg);
         T result;
@@ -55,7 +55,7 @@ struct conv_arg_impl {
 
 template<>
 struct conv_arg_impl<std::string> {
-    typedef option<std::string> result_type;
+    typedef optional<std::string> result_type;
     static inline result_type _(const std::string& arg) { return arg; }
 };
 
@@ -165,7 +165,7 @@ class opt1_rvalue_builder {
                     .when(cppa::placeholders::_x1.in(std::vector<std::string>())))
             left_type;
 
-    typedef decltype(on(std::function<option<std::string>(const std::string&)>()))
+    typedef decltype(on(std::function<optional<std::string>(const std::string&)>()))
             right_type;
 
     template<typename Left, typename Right>
@@ -203,7 +203,7 @@ class opt1_rvalue_builder<false> {
 
  public:
 
-    typedef decltype(on(std::function<option<std::string>(const std::string&)>()))
+    typedef decltype(on(std::function<optional<std::string>(const std::string&)>()))
             sub_type;
 
     template<typename SubType>

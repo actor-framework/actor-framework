@@ -62,7 +62,7 @@ struct behavior_stack_mover : iterator<output_iterator_tag, void, void, void, vo
 
 inline behavior_stack_mover move_iter(behavior_stack* bs) { return {bs}; }
 
-option<behavior&> behavior_stack::sync_handler(message_id expected_response) {
+optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
     if (expected_response.valid()) {
         auto e = m_elements.rend();
         auto i = find_if(m_elements.rbegin(), e, [=](element_type& val) {

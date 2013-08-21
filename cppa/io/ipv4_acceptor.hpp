@@ -52,7 +52,7 @@ class ipv4_acceptor : public acceptor {
 
     stream_ptr_pair accept_connection();
 
-    option<stream_ptr_pair> try_accept_connection();
+    optional<stream_ptr_pair> try_accept_connection();
 
  private:
 

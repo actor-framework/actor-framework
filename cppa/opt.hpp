@@ -38,14 +38,14 @@
 #include <functional>
 
 #include "cppa/on.hpp"
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/opt_impls.hpp"
 
 namespace cppa {
 
 //template<typename T>
-//option<T> conv_arg(const std::string& arg) {
+//optional<T> conv_arg(const std::string& arg) {
 //    return detail::conv_arg_impl<T>::_(arg);
 //}
 

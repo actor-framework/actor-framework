@@ -36,7 +36,7 @@
 #include <type_traits>
 
 #include "cppa/get.hpp"
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"

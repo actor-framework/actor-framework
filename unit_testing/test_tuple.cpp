@@ -66,7 +66,7 @@ std::string int2str(int i) {
     return std::to_string(i);
 }
 
-option<int> str2int(const std::string& str) {
+optional<int> str2int(const std::string& str) {
     char* endptr = nullptr;
     int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
     if (endptr != nullptr && *endptr == '\0') {
@@ -336,7 +336,7 @@ void check_wildcards() {
     // use tuple cast to get a subtuple
     any_tuple at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
-    CPPA_CHECK((std::is_same<decltype(v0opt), option<cow_tuple<std::string>>>::value));
+    CPPA_CHECK((std::is_same<decltype(v0opt), optional<cow_tuple<std::string>>>::value));
     CPPA_CHECK((v0opt));
     CPPA_CHECK(   at0.size() == 2
                && at0.at(0) == &get<0>(t0)

@@ -56,7 +56,7 @@ struct tuple_cast_impl {
             static_cast<size_t>(
                 util::tl_find<util::type_list<T...>, anything>::value);
     typedef util::limited_vector<size_t, size> mapping_vector;
-    static inline option<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(any_tuple& tup) {
         mapping_vector mv;
         if (matches<T...>(tup, mv)) return {Result::from(std::move(tup.vals()),
                                                          mv)};
@@ -66,7 +66,7 @@ struct tuple_cast_impl {
 
 template<class Result, typename... T>
 struct tuple_cast_impl<wildcard_position::nil, Result, T...> {
-    static inline option<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(any_tuple& tup) {
         if (matches<T...>(tup)) return {Result::from(std::move(tup.vals()))};
         return {};
     }
@@ -79,7 +79,7 @@ struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
 
 template<class Result, typename... T>
 struct tuple_cast_impl<wildcard_position::leading, Result, T...> {
-    static inline option<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(any_tuple& tup) {
         size_t o = tup.size() - (sizeof...(T) - 1);
         if (matches<T...>(tup)) return {Result::offset_subtuple(tup.vals(), o)};
         return {};

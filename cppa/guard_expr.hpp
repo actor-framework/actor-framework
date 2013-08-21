@@ -38,7 +38,7 @@
 #include <type_traits>
 
 #include "cppa/config.hpp"
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 
 #include "cppa/util/call.hpp"
 #include "cppa/util/void_type.hpp"
@@ -212,7 +212,7 @@ struct ge_get_front {
                                    decltype(what.front())
                                >::value
                            >::type* = 0) const
-    -> option<
+    -> optional<
         std::reference_wrapper<
             const typename util::rm_const_and_ref<decltype(what.front())>::type> > {
         if (what.empty() == false) return {what.front()};
@@ -225,7 +225,7 @@ struct ge_get_front {
                                    decltype(what.front())
                                >::value == false
                            >::type* = 0) const
-    -> option<decltype(what.front())> {
+    -> optional<decltype(what.front())> {
         if (what.empty() == false) return {what.front()};
         return {};
     }

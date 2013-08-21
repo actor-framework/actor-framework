@@ -140,7 +140,7 @@ void client_repl(const string& host, uint16_t port) {
             );
         }
         else {
-            auto toint = [](const string& str) -> option<int> {
+            auto toint = [](const string& str) -> optional<int> {
                 try { return {std::stoi(str)}; }
                 catch (std::exception&) {
                     aout << "\"" << str << "\" is not an integer" << endl;

@@ -51,7 +51,7 @@ detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
     string prefix = "--";
     prefix += long_opt;
     prefix += "=";
-    function<option<string> (const string&)> kvp = [prefix](const string& input) -> option<string> {
+    function<optional<string> (const string&)> kvp = [prefix](const string& input) -> optional<string> {
         if (equal(begin(prefix), end(prefix), begin(input))) {
             return input.substr(prefix.size());
         }

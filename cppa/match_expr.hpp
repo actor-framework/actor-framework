@@ -31,7 +31,7 @@
 #ifndef CPPA_MATCH_EXPR_HPP
 #define CPPA_MATCH_EXPR_HPP
 
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 #include "cppa/guard_expr.hpp"
 #include "cppa/tpartial_function.hpp"
 
@@ -402,7 +402,7 @@ struct get_case_ {
                 typename util::tl_map<
                     padded_transformers,
                     util::map_to_result_type,
-                    util::rm_option,
+                    util::rm_optional,
                     std::add_lvalue_reference
                 >::type,
                 typename util::tl_zip<

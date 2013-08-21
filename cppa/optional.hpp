@@ -41,7 +41,7 @@ namespace cppa {
  * @brief Represents an optional value of @p T.
  */
 template<typename T>
-class option {
+class optional {
 
  public:
 
@@ -54,32 +54,32 @@ class option {
      * @brief Default constructor.
      * @post <tt>valid() == false</tt>
      */
-    option() : m_valid(false) { }
+    optional() : m_valid(false) { }
 
     /**
      * @brief Creates an @p option from @p value.
      * @post <tt>valid() == true</tt>
      */
-    option(T value) : m_valid(false) { cr(std::move(value)); }
+    optional(T value) : m_valid(false) { cr(std::move(value)); }
 
     template<typename T0, typename T1, typename... Ts>
-    option(T0&& arg0, T1&& arg1, Ts&&... args) : m_valid(false) {
+    optional(T0&& arg0, T1&& arg1, Ts&&... args) : m_valid(false) {
         cr(T(std::forward<T0>(arg0),
              std::forward<T1>(arg1),
              std::forward<Ts>(args)...));
     }
 
-    option(const option& other) : m_valid(false) {
+    optional(const optional& other) : m_valid(false) {
         if (other.m_valid) cr(other.m_value);
     }
 
-    option(option&& other) : m_valid(false) {
+    optional(optional&& other) : m_valid(false) {
         if (other.m_valid) cr(std::move(other.m_value));
     }
 
-    ~option() { destroy(); }
+    ~optional() { destroy(); }
 
-    option& operator=(const option& other) {
+    optional& operator=(const optional& other) {
         if (m_valid) {
             if (other.m_valid) m_value = other.m_value;
             else destroy();
@@ -90,7 +90,7 @@ class option {
         return *this;
     }
 
-    option& operator=(option&& other) {
+    optional& operator=(optional&& other) {
         if (m_valid) {
             if (other.m_valid) m_value = std::move(other.m_value);
             else destroy();
@@ -186,19 +186,19 @@ class option {
 };
 
 template<typename T>
-class option<T&> {
+class optional<T&> {
 
  public:
 
     typedef T type;
 
-    option() : m_value(nullptr) { }
+    optional() : m_value(nullptr) { }
 
-    option(T& value) : m_value(&value) { }
+    optional(T& value) : m_value(&value) { }
 
-    option(const option& other) = default;
+    optional(const optional& other) = default;
 
-    option& operator=(const option& other) = default;
+    optional& operator=(const optional& other) = default;
 
     inline bool valid() const { return m_value != nullptr; }
 
@@ -241,46 +241,46 @@ class option<T&> {
 
 /** @relates option */
 template<typename T>
-struct is_option { static constexpr bool value = false; };
+struct is_optional { static constexpr bool value = false; };
 
 template<typename T>
-struct is_option<option<T>> { static constexpr bool value = true; };
+struct is_optional<optional<T>> { static constexpr bool value = true; };
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(const option<T>& lhs, const option<U>& rhs) {
+bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
     if ((lhs) && (rhs)) return *lhs == *rhs;
     return false;
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(const option<T>& lhs, const U& rhs) {
+bool operator==(const optional<T>& lhs, const U& rhs) {
     if (lhs) return *lhs == rhs;
     return false;
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator==(const T& lhs, const option<U>& rhs) {
+bool operator==(const T& lhs, const optional<U>& rhs) {
     return rhs == lhs;
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(const option<T>& lhs, const option<U>& rhs) {
+bool operator!=(const optional<T>& lhs, const optional<U>& rhs) {
     return !(lhs == rhs);
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(const option<T>& lhs, const U& rhs) {
+bool operator!=(const optional<T>& lhs, const U& rhs) {
     return !(lhs == rhs);
 }
 
 /** @relates option */
 template<typename T, typename U>
-bool operator!=(const T& lhs, const option<U>& rhs) {
+bool operator!=(const T& lhs, const optional<U>& rhs) {
     return !(lhs == rhs);
 }
 

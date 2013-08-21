@@ -31,7 +31,7 @@
 #ifndef CPPA_PROJECTION_HPP
 #define CPPA_PROJECTION_HPP
 
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 #include "cppa/guard_expr.hpp"
 
 #include "cppa/util/call.hpp"
@@ -56,7 +56,7 @@ struct collected_args_tuple {
                 typename util::tl_map<
                     ProjectionFuns,
                     util::map_to_result_type,
-                    util::rm_option
+                    util::rm_optional
                 >::type,
                 typename util::tl_map<
                     util::type_list<Ts...>,
@@ -142,7 +142,7 @@ class projection {
     }
 
     template<class Storage>
-    static inline bool store(Storage& storage, option<Storage>&& value) {
+    static inline bool store(Storage& storage, optional<Storage>&& value) {
         if (value) {
             storage = std::move(*value);
             return true;

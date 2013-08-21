@@ -34,7 +34,7 @@
 #include <memory>
 
 #include "cppa/config.hpp"
-#include "cppa/option.hpp"
+#include "cppa/optional.hpp"
 
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
@@ -71,7 +71,7 @@ class acceptor {
      * @brief Tries to accept a new connection but immediately returns if
      *        there is no pending connection.
      */
-    virtual option<stream_ptr_pair> try_accept_connection() = 0;
+    virtual optional<stream_ptr_pair> try_accept_connection() = 0;
 
 };
 

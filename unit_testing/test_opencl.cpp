@@ -140,7 +140,7 @@ int main() {
 
     const matrix_type expected2(move(expected1));
 
-    auto map_args = [] (any_tuple msg) -> option<cow_tuple<ivec>> {
+    auto map_args = [] (any_tuple msg) -> optional<cow_tuple<ivec>> {
         auto opt = tuple_cast<matrix_type>(msg);
         if (opt) {
             return {make_cow_tuple(move(get_ref<0>(*opt).data()))};
