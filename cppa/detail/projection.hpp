@@ -68,6 +68,11 @@ struct collected_args_tuple {
         type;
 };
 
+template<typename Fun>
+struct is_void_fun {
+    static constexpr bool value = std::is_same<typename Fun::result_type, void>::value;
+};
+
 /**
  * @brief Projection implemented by a set of functors.
  */
@@ -90,6 +95,7 @@ class projection {
      * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
      *        the result of @p fun in @p result.
      */
+    /*
     template<class PartFun>
     bool invoke(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
         typename collected_args_tuple<ProjectionFuns, Ts...>::type pargs;
@@ -102,35 +108,21 @@ class projection {
         }
         return false;
     }
+    */
 
     /**
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
      */
     template<class PartFun>
-    bool operator()(PartFun& fun, Ts... args) const {
+    optional<typename PartFun::result_type> operator()(PartFun& fun, Ts... args) const {
         typename collected_args_tuple<ProjectionFuns, Ts...>::type pargs;
         auto indices = util::get_indices(pargs);
         if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
             if (is_defined_at(fun, pargs, indices)) {
-                util::apply_args(fun, pargs, indices);
-                return true;
+                return util::apply_args(fun, pargs, indices);
             }
         }
-        return false;
-    }
-
-    /**
-     * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
-     *        the result of @p fun in @p result.
-     */
-    template<class PartFun>
-    inline bool operator()(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
-        return invoke(fun, result, args...);
-    }
-
-    template<class PartFun>
-    inline bool operator()(PartFun& fun, const util::void_type&, Ts... args) const {
-        return (*this)(fun, args...);
+        return none;
     }
 
  private:
@@ -151,7 +143,7 @@ class projection {
     }
 
     template<typename T>
-    static inline auto fetch(const util::void_type&, T&& arg)
+    static inline auto fetch(const unit_t&, T&& arg)
     -> decltype(std::forward<T>(arg)) {
         return std::forward<T>(arg);
     }
@@ -187,30 +179,11 @@ class projection<util::empty_type_list> {
     projection(const projection&) = default;
 
     template<class PartFun>
-    bool operator()(PartFun& fun) const {
+    optional<typename PartFun::result_type> operator()(PartFun& fun) const {
         if (fun.defined_at()) {
-            fun();
-            return true;
+            return fun();
         }
-        return false;
-    }
-
-    template<class PartFun>
-    bool operator()(PartFun& fun, const util::void_type&) const {
-        if (fun.defined_at()) {
-            fun();
-            return true;
-        }
-        return false;
-    }
-
-    template<class PartFun>
-    bool operator()(PartFun& fun, typename PartFun::result_type& res) const {
-        if (fun.defined_at()) {
-            res = fun();
-            return true;
-        }
-        return false;
+        return none;
     }
 
 };

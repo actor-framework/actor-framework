@@ -35,6 +35,7 @@
 #include <utility>
 
 #include "cppa/none.hpp"
+#include "cppa/unit.hpp"
 #include "cppa/config.hpp"
 
 namespace cppa {
@@ -122,6 +123,8 @@ class optional {
      */
     inline bool operator!() const { return empty(); }
 
+    inline bool operator==(const none_t&) { return empty(); }
+
     /**
      * @brief Returns the value.
      */
@@ -208,6 +211,8 @@ class optional<T&> {
 
     inline bool operator!() const { return empty(); }
 
+    inline bool operator==(const none_t&) { return empty(); }
+
     inline T& operator*() {
         CPPA_REQUIRE(valid());
         return *m_value;
@@ -242,7 +247,9 @@ class optional<T&> {
 template<>
 class optional<void> {
 
-    optional() : m_valid(true) { }
+ public:
+
+    optional(const unit_t&) : m_valid(true) { }
 
     optional(const none_t&) : m_valid(false) { }
 
@@ -253,6 +260,10 @@ class optional<void> {
     inline explicit operator bool() const { return valid(); }
 
     inline bool operator!() const { return empty(); }
+
+    inline bool operator==(const none_t&) { return empty(); }
+
+    inline const unit_t& operator*() const { return unit; }
 
  private:
 

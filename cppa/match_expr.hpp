@@ -33,6 +33,7 @@
 
 #include "cppa/optional.hpp"
 #include "cppa/guard_expr.hpp"
+#include "cppa/optional_variant.hpp"
 #include "cppa/tpartial_function.hpp"
 
 #include "cppa/util/call.hpp"
@@ -473,38 +474,29 @@ struct has_bool_result {
     typedef std::integral_constant<bool, value> token_type;
 };
 
-template<typename T1, typename T2>
-T1& select_if(std::true_type, T1& lhs, T2&) { return lhs; }
-
-template<typename T1, typename T2>
-T2& select_if(std::false_type, T1&, T2& rhs) { return rhs; }
-
-template<class PPFPs, typename PtrType, class Tuple>
-inline bool unroll_expr(PPFPs&,
-                        bool&,
-                        std::uint64_t,
-                        minus1l,
-                        const std::type_info&,
-                        bool,
-                        PtrType*,
-                        Tuple&) {
-    return false;
+template<typename Result, class PPFPs, typename PtrType, class Tuple>
+Result unroll_expr(PPFPs&, std::uint64_t, minus1l, const std::type_info&,
+                   bool, PtrType*, Tuple&) {
+    return none;
 }
 
-template<class PPFPs, long N, typename PtrType, class Tuple>
-bool unroll_expr(PPFPs& fs,
-                 bool& invoke_res,
-                 std::uint64_t bitmask,
-                 long_constant<N>,
-                 const std::type_info& type_token,
-                 bool is_dynamic,
-                 PtrType* ptr,
-                 Tuple& tup) {
-    if (unroll_expr(fs, invoke_res, bitmask, long_constant<N-1>{},
-                    type_token, is_dynamic, ptr, tup)) {
-        return true;
+template<typename A, typename B>
+struct wtf { };
+
+template<typename Result, class PPFPs, long N, typename PtrType, class Tuple>
+Result unroll_expr(PPFPs& fs,
+                   std::uint64_t bitmask,
+                   long_constant<N>,
+                   const std::type_info& type_token,
+                   bool is_dynamic,
+                   PtrType* ptr,
+                   Tuple& tup) {
+    /* recursively evaluate sub expressions */ {
+        Result res = unroll_expr<Result>(fs, bitmask, long_constant<N-1>{},
+                                         type_token, is_dynamic, ptr, tup);
+        if (res) return res;
     }
-    if ((bitmask & (0x01 << N)) == 0) return false;
+    if ((bitmask & (0x01 << N)) == 0) return none;
     auto& f = get<N>(fs);
     typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
@@ -512,15 +504,12 @@ bool unroll_expr(PPFPs& fs,
     typename policy::tuple_type targs;
     if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
         auto is = util::get_indices(targs);
-        util::void_type dummy;
-        typename has_bool_result<typename Fun::second_type>::token_type stoken;
         return util::apply_args_prefixed(f.first,
                                          deduce_const(tup, targs),
                                          is,
-                                         f.second,
-                                         select_if(stoken, invoke_res, dummy));
+                                         f.second);
     }
-    return false;
+    return none;
 }
 
 // PPFP = projection_partial_function_pair
@@ -618,6 +607,12 @@ template<typename T>
 struct is_manipulator_case {
     static constexpr bool value = T::second_type::manipulates_args;
 };
+
+template<typename T>
+struct get_case_result {
+    typedef typename T::second_type::result_type type;
+};
+
 /** @endcond */
 
 /**
@@ -633,6 +628,16 @@ class match_expr {
     static constexpr bool may_have_timeout = false;
 
     typedef util::type_list<Cs...> cases_list;
+
+    typedef typename optional_variant_from_type_list<
+                typename util::tl_distinct<
+                    typename util::tl_map<
+                        cases_list,
+                        get_case_result
+                    >::type
+                >::type
+            >::type
+            result_type;
 
     static constexpr bool has_manipulator = util::tl_exists<cases_list, is_manipulator_case>::value;
 
@@ -653,18 +658,20 @@ class match_expr {
         init();
     }
 
-    inline bool invoke(const any_tuple& tup) {
-        return invoke_impl(tup);
+    /*
+    inline result_type invoke(const any_tuple& tup) {
+        return apply(tup);
     }
 
-    inline bool invoke(any_tuple& tup) {
-        return invoke_impl(tup);
+    inline result_type invoke(any_tuple& tup) {
+        return apply(tup);
     }
 
-    inline bool invoke(any_tuple&& tup) {
+    inline result_type invoke(any_tuple&& tup) {
         any_tuple tmp{tup};
-        return invoke_impl(tmp);
+        return apply(tmp);
     }
+    */
 
     bool can_invoke(const any_tuple& tup) {
         auto type_token = tup.type_token();
@@ -678,30 +685,42 @@ class match_expr {
                                tup);
     }
 
-    inline bool operator()(const any_tuple& tup) {
-        return invoke_impl(tup);
+    inline result_type operator()(const any_tuple& tup) {
+        return apply(tup);
     }
 
-    inline bool operator()(any_tuple& tup) {
-        return invoke_impl(tup);
+    inline result_type operator()(any_tuple& tup) {
+        return apply(tup);
     }
 
-    inline bool operator()(any_tuple&& tup) {
+    inline result_type operator()(any_tuple&& tup) {
         any_tuple tmp{tup};
-        return invoke_impl(tmp);
+        return apply(tmp);
     }
 
-    template<typename... Ts>
-    bool operator()(Ts&&... args) {
+    template<typename T, typename... Ts>
+    typename std::enable_if<
+           not std::is_same<
+               typename util::rm_const_and_ref<T>::type,
+               any_tuple
+           >::value
+        && not is_cow_tuple<T>::value,
+        result_type
+    >::type
+    operator()(T&& arg0, Ts&&... args) {
         // wraps and applies implicit conversions to args
         typedef detail::tdata<
+                    typename detail::mexpr_fwd<
+                        has_manipulator,
+                        T
+                    >::type,
                     typename detail::mexpr_fwd<
                         has_manipulator,
                         Ts
                     >::type...
                 >
                 tuple_type;
-        tuple_type tup{std::forward<Ts>(args)...};
+        tuple_type tup{std::forward<T>(arg0), std::forward<Ts>(args)...};
         auto& type_token = typeid(typename tuple_type::types);
         auto bitmask = get_cache_entry(&type_token, tup);
         // ref_type keeps track of whether this match_expr is a mutator
@@ -719,16 +738,13 @@ class match_expr {
                 >::type
                 ptr_type;
         // iterate over cases and return if any case was invoked
-        bool invoke_result = true;
-        bool unroll_result = unroll_expr(m_cases,
-                                         invoke_result,
-                                         bitmask,
-                                         idx_token,
-                                         type_token,
-                                         false, // not dynamically_typed
-                                         static_cast<ptr_type>(nullptr),
-                                         static_cast<ref_type>(tup));
-        return unroll_result && invoke_result;
+        return detail::unroll_expr<result_type>(m_cases,
+                                                bitmask,
+                                                idx_token,
+                                                type_token,
+                                                false, // not dynamically_typed
+                                                static_cast<ptr_type>(nullptr),
+                                                static_cast<ref_type>(tup));
     }
 
     template<class... Ds>
@@ -743,27 +759,11 @@ class match_expr {
         return m_cases;
     }
 
-    struct pfun_impl : detail::behavior_impl {
-        match_expr pfun;
-        template<typename Arg>
-        pfun_impl(const Arg& from) : pfun(from) { }
-        bool invoke(any_tuple& tup) {
-            return pfun.invoke(tup);
-        }
-        bool invoke(const any_tuple& tup) {
-            return pfun.invoke(tup);
-        }
-        bool defined_at(const any_tuple& tup) {
-            return pfun.can_invoke(tup);
-        }
-        typedef typename detail::behavior_impl::pointer pointer;
-        pointer copy(const generic_timeout_definition& tdef) const {
-            return new_default_behavior(pfun, tdef.timeout, tdef.handler);
-        }
-    };
-
     intrusive_ptr<detail::behavior_impl> as_behavior_impl() const {
-        return new pfun_impl(*this);
+        //return new pfun_impl(*this);
+        auto lvoid = [] { };
+        using impl = detail::default_behavior_impl<match_expr, decltype(lvoid)>;
+        return new impl(*this, util::duration{}, lvoid);
     }
 
  private:
@@ -826,7 +826,7 @@ class match_expr {
     }
 
     template<class Tuple>
-    bool invoke_impl(Tuple& tup) {
+    result_type apply(Tuple& tup) {
         std::integral_constant<bool, has_manipulator> mutator_token;
         // returns either a reference or a new object
         typedef decltype(detail::detach_if_needed(tup, mutator_token)) detached;
@@ -836,16 +836,13 @@ class match_expr {
         auto token_ptr = vals->type_token();
         auto bitmask = get_cache_entry(token_ptr, *vals);
         auto dynamically_typed = vals->dynamically_typed();
-        bool invoke_result = true; // may be set to false by an invoked functor
-        bool unroll_result = unroll_expr(m_cases,
-                                         invoke_result,
-                                         bitmask,
-                                         idx_token,
-                                         *token_ptr,
-                                         dynamically_typed,
-                                         ndp,
-                                         *vals);
-        return invoke_result && unroll_result;
+        return detail::unroll_expr<result_type>(m_cases,
+                                                bitmask,
+                                                idx_token,
+                                                *token_ptr,
+                                                dynamically_typed,
+                                                ndp,
+                                                *vals);
     }
 
 };

@@ -107,6 +107,7 @@ cppa/mailbox_based.hpp
 cppa/mailbox_element.hpp
 cppa/match.hpp
 cppa/match_expr.hpp
+cppa/match_hint.hpp
 cppa/memory_cached.hpp
 cppa/memory_managed.hpp
 cppa/message_future.hpp
@@ -155,6 +156,7 @@ cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
 cppa/type_lookup_table.hpp
 cppa/uniform_type_info.hpp
+cppa/unit.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/algorithm.hpp
 cppa/util/arg_match_t.hpp
@@ -184,7 +186,6 @@ cppa/util/type_list.hpp
 cppa/util/type_pair.hpp
 cppa/util/type_traits.hpp
 cppa/util/upgrade_lock_guard.hpp
-cppa/util/void_type.hpp
 cppa/util/wrapped.hpp
 cppa/weak_intrusive_ptr.hpp
 cppa/weak_ptr_anchor.hpp

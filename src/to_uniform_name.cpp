@@ -45,8 +45,6 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
 
-#include "cppa/util/void_type.hpp"
-
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/singleton_manager.hpp"

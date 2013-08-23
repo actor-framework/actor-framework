@@ -68,9 +68,9 @@ namespace cppa { namespace detail {
     { "cppa::io::connection_handle",                    "@cn_hdl" },
     { "cppa::message_header",                           "@header" },
     { "cppa::nullptr_t",                                "@null" },
+    { "cppa::unit_t",                                   "@0" },
     { "cppa::util::buffer",                             "@buffer" },
     { "cppa::util::duration",                           "@duration" },
-    { "cppa::util::void_type",                          "@0" },
     { "double",                                         "double" },
     { "float",                                          "float" },
     { "long double",                                    "@ldouble" },
@@ -126,7 +126,7 @@ const char* mapped_name_by_decorated_name(const char* cstr) {
 
 namespace {
 
-inline bool operator==(const util::void_type&, const util::void_type&) {
+inline bool operator==(const unit_t&, const unit_t&) {
     return true;
 }
 
@@ -154,9 +154,9 @@ inline void deserialize_impl(detail::handle<T>& hdl, deserializer* source) {
     hdl = T::from_int(source->read<int32_t>());
 }
 
-inline void serialize_impl(const util::void_type&, serializer*) { }
+inline void serialize_impl(const unit_t&, serializer*) { }
 
-inline void deserialize_impl(util::void_type&, deserializer*) { }
+inline void deserialize_impl(unit_t&, deserializer*) { }
 
 void serialize_impl(const actor_ptr& ptr, serializer* sink) {
     auto impl = sink->addressing();
@@ -693,7 +693,7 @@ class utim_impl : public uniform_type_info_map {
                          intptr_t                                >(mapping);
         // fill builtin types *in sorted order* (by uniform name)
         size_t i = 0;
-        m_builtin_types[i++] = &m_type_void;            // @0
+        m_builtin_types[i++] = &m_type_unit;            // @0
         m_builtin_types[i++] = &m_ac_hdl;               // @ac_hdl
         m_builtin_types[i++] = &m_type_actor;           // @actor
         m_builtin_types[i++] = &m_type_atom;            // @atom
@@ -824,7 +824,7 @@ class utim_impl : public uniform_type_info_map {
     uti_impl<any_tuple>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
     uti_impl<message_header>                m_type_header;
-    uti_impl<util::void_type>               m_type_void;
+    uti_impl<unit_t>                        m_type_unit;
     uti_impl<atom_value>                    m_type_atom;
     uti_impl<std::string>                   m_type_str;
     uti_impl<std::u16string>                m_type_u16str;

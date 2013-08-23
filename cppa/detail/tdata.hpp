@@ -36,6 +36,7 @@
 #include <type_traits>
 
 #include "cppa/get.hpp"
+#include "cppa/unit.hpp"
 #include "cppa/optional.hpp"
 
 #include "cppa/util/wrapped.hpp"
@@ -100,7 +101,7 @@ struct boxed_or_void {
 };
 
 template<>
-struct boxed_or_void<util::void_type> {
+struct boxed_or_void<unit_t> {
     static constexpr bool value = true;
 };
 
@@ -130,18 +131,18 @@ struct tdata<> {
 
     typedef tdata super;
 
-    util::void_type head;
+    unit_t head;
 
-    typedef util::void_type head_type;
+    typedef unit_t head_type;
     typedef tdata<> tail_type;
-    typedef util::void_type back_type;
+    typedef unit_t back_type;
     typedef util::empty_type_list types;
 
     static constexpr size_t num_elements = 0;
 
     constexpr tdata() { }
 
-    // swallow any number of additional boxed or void_type arguments silently
+    // swallow any number of additional boxed or unit_t arguments silently
     template<typename... Ts>
     tdata(Ts&&...) {
         typedef util::type_list<typename util::rm_const_and_ref<Ts>::type...> incoming;

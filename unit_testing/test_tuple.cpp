@@ -76,14 +76,16 @@ optional<int> str2int(const std::string& str) {
 }
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
-    if ( ( FunName Args ) == false || invoked != #FunName ) {                  \
+    invoked.clear();                                                           \
+    if ( !( FunName Args ) || invoked != #FunName ) {                          \
         CPPA_FAILURE("invocation of " #FunName " failed");                     \
-    } invoked = ""
+    } else CPPA_CHECKPOINT()
 
 #define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
-    if ( ( FunName Args ) == true || invoked == #FunName ) {                   \
+    invoked.clear();                                                           \
+    if ( FunName Args || invoked == #FunName ) {                               \
         CPPA_FAILURE(#FunName " erroneously invoked");                         \
-    } invoked = ""
+    } else CPPA_CHECKPOINT()
 
 struct dummy_receiver : event_based_actor {
     void init() {
@@ -164,9 +166,9 @@ void check_guards() {
     CPPA_CHECK_NOT_INVOKED(f02, (2, 1));
     CPPA_CHECK_INVOKED(f02, (42, 21));
 
-    CPPA_CHECK(f02.invoke(make_cow_tuple(42, 21)));
+    CPPA_CHECK(f02(make_cow_tuple(42, 21)));
     CPPA_CHECK_EQUAL(invoked, "f02");
-    invoked = "";
+    invoked.clear();
 
     auto f03 = on(42, val<int>) >> [&](const int& a, int&) { invoked = "f03"; CPPA_CHECK_EQUAL(a, 42); };
     CPPA_CHECK_NOT_INVOKED(f03, (0, 0));
@@ -200,14 +202,14 @@ void check_guards() {
     CPPA_CHECK_NOT_INVOKED(f07, (0));
     CPPA_CHECK_NOT_INVOKED(f07, (1));
     CPPA_CHECK_INVOKED(f07, (2));
-    CPPA_CHECK(f07.invoke(make_cow_tuple(2)));
+    CPPA_CHECK(f07(make_cow_tuple(2)));
 
     int f08_val = 666;
     auto f08 = on<int>() >> [&](int& mref) { mref = 8; invoked = "f08"; };
     CPPA_CHECK_INVOKED(f08, (f08_val));
     CPPA_CHECK_EQUAL(f08_val, 8);
     any_tuple f08_any_val = make_cow_tuple(666);
-    CPPA_CHECK(f08.invoke(f08_any_val));
+    CPPA_CHECK(f08(f08_any_val));
     CPPA_CHECK_EQUAL(f08_any_val.get_as<int>(0), 8);
 
     int f09_val = 666;
@@ -216,13 +218,13 @@ void check_guards() {
     CPPA_CHECK_INVOKED(f09, ("0", f09_val));
     CPPA_CHECK_EQUAL(f09_val, 9);
     any_tuple f09_any_val = make_cow_tuple("0", 666);
-    CPPA_CHECK(f09.invoke(f09_any_val));
+    CPPA_CHECK(f09(f09_any_val));
     CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     f09_any_val.get_as_mutable<int>(1) = 666;
     any_tuple f09_any_val_copy{f09_any_val};
     CPPA_CHECK(f09_any_val.at(0) == f09_any_val_copy.at(0));
     // detaches f09_any_val from f09_any_val_copy
-    CPPA_CHECK(f09.invoke(f09_any_val));
+    CPPA_CHECK(f09(f09_any_val));
     CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     CPPA_CHECK_EQUAL(f09_any_val_copy.get_as<int>(1), 666);
     // no longer the same data

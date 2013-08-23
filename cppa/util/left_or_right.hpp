@@ -31,12 +31,12 @@
 #ifndef CPPA_LEFT_OR_RIGHT_HPP
 #define CPPA_LEFT_OR_RIGHT_HPP
 
-#include "cppa/util/void_type.hpp"
+#include "cppa/unit.hpp"
 
 namespace cppa { namespace util {
 
 /**
- * @brief Evaluates to @p Right if @p Left == void_type, @p Left otherwise.
+ * @brief Evaluates to @p Right if @p Left == unit_t, @p Left otherwise.
  */
 template<typename Left, typename Right>
 struct left_or_right {
@@ -44,30 +44,30 @@ struct left_or_right {
 };
 
 template<typename Right>
-struct left_or_right<util::void_type, Right> {
+struct left_or_right<unit_t, Right> {
     typedef Right type;
 };
 
 template<typename Right>
-struct left_or_right<util::void_type&, Right> {
+struct left_or_right<unit_t&, Right> {
     typedef Right type;
 };
 
 template<typename Right>
-struct left_or_right<const util::void_type&, Right> {
+struct left_or_right<const unit_t&, Right> {
     typedef Right type;
 };
 
 /**
- * @brief Evaluates to @p Right if @p Left != void_type, @p void_type otherwise.
+ * @brief Evaluates to @p Right if @p Left != unit_t, @p unit_t otherwise.
  */
 template<typename Left, typename Right>
 struct if_not_left {
-    typedef void_type type;
+    typedef unit_t type;
 };
 
 template<typename Right>
-struct if_not_left<util::void_type, Right> {
+struct if_not_left<unit_t, Right> {
     typedef Right type;
 };
 

@@ -33,7 +33,7 @@
 
 #include <type_traits>
 
-#include "cppa/util/void_type.hpp"
+#include "cppa/unit.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 
@@ -47,13 +47,13 @@ const T& vg_fwd(const T& arg, typename std::enable_if<not util::is_callable<T>::
     return arg;
 }
 
-inline util::void_type vg_fwd(const anything&) {
-    return {};
+inline unit_t vg_fwd(const anything&) {
+    return unit;
 }
 
 template<typename T>
-util::void_type vg_fwd(const T&, typename std::enable_if<util::is_callable<T>::value>::type* = 0) {
-    return {};
+unit_t vg_fwd(const T&, typename std::enable_if<util::is_callable<T>::value>::type* = 0) {
+    return unit;
 }
 
 template<typename T>
@@ -65,9 +65,9 @@ struct vg_cmp {
 };
 
 template<>
-struct vg_cmp<util::void_type> {
+struct vg_cmp<unit_t> {
     template<typename T>
-    inline static bool _(const util::void_type&, const T&) {
+    inline static bool _(const unit_t&, const T&) {
         return true;
     }
 };
@@ -102,7 +102,7 @@ class value_guard {
         return vg_cmp<T>::_(lhs, rhs.get());
     }
 
-    static inline bool _eval(const util::void_type&, const tdata<>&) {
+    static inline bool _eval(const unit_t&, const tdata<>&) {
         return true;
     }
 

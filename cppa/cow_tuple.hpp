@@ -179,6 +179,12 @@ struct cow_tuple_from_type_list< util::type_list<Ts...> > {
     typedef cow_tuple<Ts...> type;
 };
 
+template<typename T>
+struct is_cow_tuple { static constexpr bool value = false; };
+
+template<typename... Ts>
+struct is_cow_tuple<cow_tuple<Ts...>> { static constexpr bool value = true; };
+
 /**
  * @ingroup CopyOnWrite
  * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.

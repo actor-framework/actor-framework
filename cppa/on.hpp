@@ -35,11 +35,13 @@
 #include <memory>
 #include <type_traits>
 
+#include "cppa/unit.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/guard_expr.hpp"
+#include "cppa/match_hint.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/partial_function.hpp"
 
@@ -65,7 +67,7 @@ template<typename T>
 struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> { };
 
 template<bool ToVoid, typename T>
-struct to_void_impl { typedef util::void_type type; };
+struct to_void_impl { typedef unit_t type; };
 
 template<typename T>
 struct to_void_impl<false, T> { typedef typename add_ptr_to_fun<T>::type type; };
@@ -138,19 +140,16 @@ struct rvalue_builder {
 
     template<typename... Ts>
     rvalue_builder(rvalue_builder_args_ctor, const Ts&... args)
-        : m_guard(args...)
-        , m_funs(args...) {
-    }
+    : m_guard(args...), m_funs(args...) { }
 
     rvalue_builder(Guard arg0, fun_container arg1)
-        : m_guard(std::move(arg0)), m_funs(std::move(arg1)) {
-    }
+    : m_guard(std::move(arg0)), m_funs(std::move(arg1)) { }
 
     template<typename NewGuard>
     rvalue_builder<
         guard_expr<
             logical_and_op,
-            guard_expr<exec_xfun_op, Guard, util::void_type>,
+            guard_expr<exec_xfun_op, Guard, unit_t>,
             NewGuard>,
         Transformers,
         Pattern>
@@ -228,6 +227,11 @@ namespace cppa {
  */
 constexpr anything any_vals = anything{};
 
+/**
+ * @brief Returns {@link match_hint skipped}.
+ */
+match_hint skip_message();
+
 #ifdef CPPA_DOCUMENTATION
 
 /**
@@ -243,11 +247,6 @@ constexpr __unspecified__ arg_match;
  * Equal to <tt>on(arg_match)</tt>.
  */
 constexpr __unspecified__ on_arg_match;
-
-/**
- * @brief Right-hand side expression to *not* match a particular pattern.
- */
-constexpr __unspecified__ skip_message;
 
 /**
  * @brief A wildcard that matches any value of type @p T.
@@ -285,8 +284,6 @@ template<atom_value... Atoms, typename... Ts>
 __unspecified__ on();
 
 #else
-
-bool skip_message();
 
 template<typename T>
 constexpr typename detail::boxed<T>::type val() {

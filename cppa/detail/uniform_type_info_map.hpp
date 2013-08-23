@@ -40,6 +40,8 @@
 #include "cppa/cppa_fwd.hpp"
 
 #include "cppa/atom.hpp"
+#include "cppa/unit.hpp"
+#include "cppa/none.hpp"
 #include "cppa/process_information.hpp"
 
 #include "cppa/util/buffer.hpp"
@@ -68,9 +70,9 @@ using mapped_type_list = util::type_list<
     io::connection_handle,
     message_header,
     std::nullptr_t,
+    unit_t,
     util::buffer,
     util::duration,
-    util::void_type,
     double,
     float,
     long double,

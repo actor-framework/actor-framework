@@ -74,7 +74,7 @@ int main() {
         "@str", "@u16str", "@u32str",     // strings
         "@strmap",                        // string containers
         "float", "double", "@ldouble",    // floating points
-        "@0",                             // cppa::util::void_type
+        "@0",                             // cppa::util::unit_t
         // default announced cppa types
         "@ac_hdl",                   // io::accept_handle
         "@cn_hdl",                   // io::connection_handle

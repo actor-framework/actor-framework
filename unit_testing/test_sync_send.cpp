@@ -258,7 +258,7 @@ int main() {
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
     timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
     .then(CPPA_FAILURE_CB("C replied to 'HiThere'!"))
-    .continue_with(CPPA_FAILURE_CB("bad continuation"));
+    .continue_with(CPPA_FAILURE_CB("continuation erroneously invoked"));
     self->exec_behavior_stack();
     CPPA_CHECK_EQUAL(timeout_occured, true);
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());

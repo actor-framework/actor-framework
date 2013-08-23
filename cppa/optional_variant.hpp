@@ -35,9 +35,11 @@
 #include <type_traits>
 
 #include "cppa/none.hpp"
+#include "cppa/unit.hpp"
+#include "cppa/optional.hpp"
+#include "cppa/match_hint.hpp"
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/void_type.hpp"
 #include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/optional_variant_data.hpp"
@@ -55,6 +57,45 @@ constexpr std::integral_constant<int, Value> make_int_token() { return {}; }
 template<bool Value>
 constexpr std::integral_constant<bool, Value> make_bool_token() { return {}; }
 
+template<typename T>
+struct optional_variant_copy_helper {
+    T& lhs;
+    optional_variant_copy_helper(T& lhs_ref) : lhs(lhs_ref) { }
+    template<typename U>
+    inline void operator()(const U& rhs) const {
+        lhs = rhs;
+    }
+    inline void operator()() const {
+        lhs = unit;
+    }
+};
+
+template<typename T>
+struct optional_variant_move_helper {
+    T& lhs;
+    optional_variant_move_helper(T& lhs_ref) : lhs(lhs_ref) { }
+    template<typename U>
+    inline void operator()(const U& rhs) const {
+        lhs = std::move(rhs);
+    }
+    inline void operator()() const {
+        lhs = unit;
+    }
+};
+
+template<typename... Ts>
+class optional_variant;
+
+template<typename T>
+struct is_optional_variant {
+    static constexpr bool value = false;
+};
+
+template<typename... Ts>
+struct is_optional_variant<optional_variant<Ts...>> {
+    static constexpr bool value = true;
+};
+
 /**
  * @brief A optional_variant is either invalid or holds
           a value of one of the types <tt>Ts</tt>.
@@ -67,6 +108,8 @@ class optional_variant {
     typedef util::type_list<Ts...> types;
 
     static constexpr int void_pos = util::tl_find<types, void>::value;
+
+    static constexpr bool has_match_hint = util::tl_find<types, match_hint>::value != -1;
 
     /**
      * @brief Checks whether this objects holds a value of type @p T.
@@ -83,11 +126,35 @@ class optional_variant {
         return *this;
     }
 
+    optional_variant& operator=(const optional_variant& other) {
+        destroy_data();
+        optional_variant_copy_helper<optional_variant> helper{*this};
+        other.apply(helper);
+        return *this;
+    }
+
+    optional_variant& operator=(optional_variant&& other) {
+        destroy_data();
+        optional_variant_move_helper<optional_variant> helper{*this};
+        other.apply(helper);
+        return *this;
+    }
+
     optional_variant() : m_type(-1) { }
 
     template<typename U>
     optional_variant(U&& arg) {
         set(std::forward<U>(arg));
+    }
+
+    optional_variant(const optional_variant& other) : m_type(-1) {
+        optional_variant_copy_helper<optional_variant> helper{*this};
+        other.apply(helper);
+    }
+
+    optional_variant(optional_variant&& other) : m_type(-1) {
+        optional_variant_move_helper<optional_variant> helper{*this};
+        other.apply(helper);
     }
 
     ~optional_variant() {
@@ -197,7 +264,9 @@ class optional_variant {
 
     template<typename U>
     typename std::enable_if<
-        !std::is_same<typename util::rm_const_and_ref<U>::type, none_t>::value
+           !std::is_same<typename util::rm_const_and_ref<U>::type, none_t>::value
+        && !is_optional_variant<typename util::rm_const_and_ref<U>::type>::value
+        && !is_optional<typename util::rm_const_and_ref<U>::type>::value
     >::type
     set(U&& arg) {
         typedef typename util::rm_const_and_ref<U>::type stripped_type;
@@ -207,6 +276,28 @@ class optional_variant {
         m_type = type_id;
         auto& ref = m_data.get(make_int_token<type_id>());
         new (&ref) stripped_type (std::forward<U>(arg));
+    }
+
+    inline void set(const optional_variant& other) {
+        optional_variant_copy_helper<optional_variant> helper{*this};
+        other.apply(helper);
+    }
+
+    inline void set(optional_variant&& other) {
+        optional_variant_move_helper<optional_variant> helper{*this};
+        other.apply(helper);
+    }
+
+    template<typename T>
+    inline void set(const optional<T>& arg) {
+        if (arg) set(*arg);
+        else set(none);
+    }
+
+    template<typename T>
+    inline void set(optional<T>&& arg) {
+        if (arg) set(std::move(*arg));
+        else set(none);
     }
 
     inline void set(const none_t&) { m_type = -1; }
@@ -249,6 +340,14 @@ template<typename Visitor, typename... Ts>
 auto apply_visitor(const Visitor& visitor, optional_variant<Ts...>& data) -> decltype(visitor(none_t{})) {
     return data.apply(visitor);
 }
+
+template<typename T>
+struct optional_variant_from_type_list;
+
+template<typename... Ts>
+struct optional_variant_from_type_list<util::type_list<Ts...>> {
+    typedef optional_variant<Ts...> type;
+};
 
 } // namespace cppa
 

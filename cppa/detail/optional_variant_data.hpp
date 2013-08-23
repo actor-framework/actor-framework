@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "cppa/unit.hpp"
 #include "cppa/none.hpp"
 
 #define CPPA_OPTIONAL_VARIANT_DATA_CONCAT(x, y) x ## y
@@ -54,19 +55,19 @@ template<typename T>
 struct lift_void { typedef  T type; };
 
 template<>
-struct lift_void<void> { typedef util::void_type type; };
+struct lift_void<void> { typedef unit_t type; };
 
 template<typename T>
 struct unlift_void { typedef  T type; };
 
 template<>
-struct unlift_void<util::void_type> { typedef void type; };
+struct unlift_void<unit_t> { typedef void type; };
 
-template<typename T0,                   typename T1 = util::void_type,
-         typename T2 = util::void_type, typename T3 = util::void_type,
-         typename T4 = util::void_type, typename T5 = util::void_type,
-         typename T6 = util::void_type, typename T7 = util::void_type,
-         typename T8 = util::void_type, typename T9 = util::void_type>
+template<typename T0,          typename T1 = unit_t,
+         typename T2 = unit_t, typename T3 = unit_t,
+         typename T4 = unit_t, typename T5 = unit_t,
+         typename T6 = unit_t, typename T7 = unit_t,
+         typename T8 = unit_t, typename T9 = unit_t>
 struct optional_variant_data {
 
     union {

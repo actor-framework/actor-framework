@@ -98,8 +98,9 @@ class behavior_impl : public ref_counted {
 };
 
 struct dummy_match_expr {
-    inline bool invoke(const any_tuple&) { return false; }
-    inline bool can_invoke(const any_tuple&) { return false; }
+    inline optional_variant<void> invoke(const any_tuple&) const { return none; }
+    inline bool can_invoke(const any_tuple&) const { return false; }
+    inline optional_variant<void> operator()(const any_tuple&) const { return none; }
 };
 
 template<class MatchExpr, typename F>
@@ -118,11 +119,11 @@ class default_behavior_impl : public behavior_impl {
     : super(tout), m_expr(std::forward<Expr>(expr)), m_fun(f) { }
 
     bool invoke(any_tuple& tup) {
-        return m_expr.invoke(tup);
+        return eval_res(m_expr(tup));
     }
 
     bool invoke(const any_tuple& tup) {
-        return m_expr.invoke(tup);
+        return eval_res(m_expr(tup));
     }
 
     bool defined_at(const any_tuple& tup) {
@@ -137,8 +138,26 @@ class default_behavior_impl : public behavior_impl {
 
  private:
 
-   MatchExpr m_expr;
-   F m_fun;
+    template<typename T>
+    typename std::enable_if<T::has_match_hint == true, bool>::type
+    eval_res(const T& res) {
+        if (res) {
+            if (res.template is<match_hint>()) {
+                return get<match_hint>(res) == match_hint::handle;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    template<typename T>
+    typename std::enable_if<T::has_match_hint == false, bool>::type
+    eval_res(const T& res) {
+        return static_cast<bool>(res);
+    }
+
+    MatchExpr m_expr;
+    F m_fun;
 
 };
 

@@ -27,12 +27,22 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#include "cppa/on.hpp"
+
+#ifndef CPPA_MATCH_HINT_HPP
+#define CPPA_MATCH_HINT_HPP
 
 namespace cppa {
 
-match_hint skip_message() {
-    return match_hint::skip;
-}
+/**
+ * @brief Optional return type for functors used in pattern matching
+ *        expressions. This type is evaluated by the runtime system of libcppa
+ *        and can be used to intentionally skip messages.
+ */
+enum class match_hint {
+    skip,
+    handle
+};
 
 } // namespace cppa
+
+#endif // CPPA_MATCH_HINT_HPP

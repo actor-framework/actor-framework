@@ -442,17 +442,17 @@ int main() {
             CPPA_CHECK(name == "foo" || name == "bar");
             return name == "foo" || name == "bar";
         },
-        on("-p", arg_match) >> [&](const string& port) -> bool {
+        on("-p", arg_match) >> [&](const string& port) -> match_hint {
             auto i = toint(port);
             if (i) {
                 CPPA_CHECK_EQUAL(*i, 2);
-                return true;
+                return match_hint::handle;
             }
-            else return false;
+            else return match_hint::skip;
         },
-        on_arg_match >> [](const string& arg) -> bool{
+        on_arg_match >> [](const string& arg) -> match_hint {
             CPPA_FAILURE("unexpected string: " << arg);
-            return false;
+            return match_hint::skip;
         }
     );
     CPPA_CHECK_EQUAL(success, true);
@@ -491,9 +491,9 @@ int main() {
     }
 
     behavior bhvr1 = (
-        on<int>() >> [&](int i) -> bool {
+        on<int>() >> [&](int i) -> match_hint {
             last_invoked_fun = "<int>@1";
-            return i != 42;
+            return (i == 42) ? match_hint::skip : match_hint::handle;
         },
         on<float>() >> [&] {
             last_invoked_fun = "<float>@2";

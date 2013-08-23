@@ -34,12 +34,38 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "cppa/none.hpp"
+#include "cppa/unit.hpp"
+#include "cppa/optional.hpp"
+
 #include "cppa/util/call.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/left_or_right.hpp"
 
 namespace cppa {
+
+template<typename Result, typename... Ts>
+struct tpartial_function_helper {
+    template<typename Fun>
+    inline optional<Result> operator()(const Fun& fun, Ts... args) {
+        if (fun.defined_at(args...)) return fun.invoke(args...);
+        return none;
+    }
+};
+
+template<typename... Ts>
+struct tpartial_function_helper<void, Ts...> {
+    template<typename Fun>
+    inline optional<void> operator()(const Fun& fun, Ts... args) {
+        if (fun.defined_at(args...)) {
+            fun.invoke(args...);
+            return unit;
+        }
+        return none;
+    }
+};
+
 
 template<class Expr, class Guard, typename Result, typename... Ts>
 class tpartial_function {
@@ -76,14 +102,22 @@ class tpartial_function {
 
     tpartial_function(const tpartial_function&) = default;
 
-    bool defined_at(Ts... args) const {
+    inline bool defined_at(Ts... args) const {
         return m_guard(args...);
     }
 
-    result_type operator()(Ts... args) const {
+    /**
+     * @brief Invokes the function without evaluating the guard.
+     */
+    result_type invoke(Ts... args) const {
         auto targs = std::forward_as_tuple(args...);
         auto indices = util::get_right_indices<num_expr_args>(targs);
         return util::apply_args(m_expr, targs, indices);
+    }
+
+    inline optional<result_type> operator()(Ts... args) const {
+        tpartial_function_helper<result_type, Ts...> helper;
+        return helper(*this, args...);
     }
 
  private:
@@ -94,7 +128,7 @@ class tpartial_function {
 };
 
 template<class Expr, class Guard, typename Ts,
-         typename Result = util::void_type, size_t Step = 0>
+         typename Result = unit_t, size_t Step = 0>
 struct get_tpartial_function;
 
 template<class Expr, class Guard, typename... Ts, typename Result>
@@ -104,7 +138,7 @@ struct get_tpartial_function<Expr, Guard, util::type_list<Ts...>, Result, 1> {
 
 template<class Expr, class Guard, typename... Ts>
 struct get_tpartial_function<Expr, Guard,
-                             util::type_list<Ts...>, util::void_type, 0> {
+                             util::type_list<Ts...>, unit_t, 0> {
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types arg_types;
 

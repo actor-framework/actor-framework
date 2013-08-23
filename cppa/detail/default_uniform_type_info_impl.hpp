@@ -33,11 +33,11 @@
 
 #include <memory>
 
+#include "cppa/unit.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
 
-#include "cppa/util/void_type.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 

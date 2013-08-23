@@ -44,7 +44,7 @@ int main() {
         using tri_type = optional_variant<void, int, double, float>;
 
         tri_type t0;
-        tri_type t1{util::void_type{}};
+        tri_type t1{unit};
         tri_type t2{0};
         tri_type t3{0.0};
         tri_type t4{0.0f};

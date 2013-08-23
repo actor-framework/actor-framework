@@ -142,9 +142,9 @@ class message_future {
 
     template<typename... Fs>
     behavior fs2bhvr(Fs... fs) {
-        auto handle_sync_timeout = []() -> bool {
+        auto handle_sync_timeout = []() -> match_hint {
             self->handle_sync_timeout();
-            return false;
+            return match_hint::skip;
         };
         return {
             on(atom("EXITED"), val<std::uint32_t>) >> skip_message,

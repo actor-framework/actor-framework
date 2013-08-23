@@ -37,6 +37,7 @@
 #include <type_traits>
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/match_hint.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/partial_function.hpp"
 
@@ -147,23 +148,15 @@ struct unwind_and_call {
     typedef unwind_and_call<N+1, Size> next;
 
     template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, std::vector<T>& vec, Unwinded&&... args) {
-        return next::_(target, vec, std::forward<Unwinded>(args)..., vec[N]);
-    }
-
-    template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, bool& sub_result, std::vector<T>& vec, Unwinded&&... args) {
-        return next::_(target, sub_result, vec, std::forward<Unwinded>(args)..., vec[N]);
+    static inline bool _(Target& target, bool& skipped, std::vector<T>& vec, Unwinded&&... args) {
+        return next::_(target, skipped, vec, std::forward<Unwinded>(args)..., vec[N]);
     }
 
     template<typename T, typename InputIterator, class MatchExpr>
     static inline bool _(std::vector<T>& vec, InputIterator& pos, InputIterator end, MatchExpr& ex) {
-        bool match_returned_false = false;
-        if (run_case(vec, match_returned_false, pos, end, get<N>(ex.cases())) == 0) {
-            if (match_returned_false) {
-                return false;
-            }
-            return next::_(vec, pos, end, ex);
+        bool skipped = false;
+        if (run_case(vec, skipped, pos, end, get<N>(ex.cases())) == 0) {
+            return (skipped) ? false : next::_(vec, pos, end, ex);
         }
         return true;
     }
@@ -173,14 +166,25 @@ struct unwind_and_call {
 template<size_t Size>
 struct unwind_and_call<Size, Size> {
 
-    template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, std::vector<T>&, Unwinded&&... args) {
-        return target.first(target.second, std::forward<Unwinded>(args)...);
+    template<typename T>
+    static inline bool eval_res(const optional<T>& res, bool&) {
+        return static_cast<bool>(res);
+    }
+
+    static inline bool eval_res(const optional<match_hint>& res, bool& skipped) {
+        if (res) {
+            if (*res == match_hint::skip) {
+                skipped = true;
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
     template<class Target, typename T, typename... Unwinded>
-    static inline bool _(Target& target, bool& sub_result, std::vector<T>&, Unwinded&&... args) {
-        return target.first.invoke(target.second, sub_result, std::forward<Unwinded>(args)...);
+    static inline bool _(Target& target, bool& skipped, std::vector<T>&, Unwinded&&... args) {
+        return eval_res(target.first(target.second, std::forward<Unwinded>(args)...), skipped);
     }
 
     template<typename T, typename... Ts>
@@ -188,33 +192,15 @@ struct unwind_and_call<Size, Size> {
 
 };
 
-template<bool EvaluateSubResult> // default = false
-struct run_case_impl {
-    template<class Case, typename T>
-    static inline bool _(Case& target, std::vector<T>& vec, bool&) {
-        return unwind_and_call<0, util::tl_size<typename Case::pattern_type>::value>::_(target, vec);
-    }
-};
-
-template<>
-struct run_case_impl<true> {
-    template<class Case, typename T>
-    static inline bool _(Case& target, std::vector<T>& vec, bool& match_returned_false) {
-        bool sub_result;
-        if (unwind_and_call<0, util::tl_size<typename Case::pattern_type>::value>::_(target, sub_result, vec)) {
-            if (sub_result == false) {
-                match_returned_false = true;
-            }
-            return true;
-        }
-        return false;
-    }
-};
+template<class Case, typename T>
+inline bool run_case_impl(Case& target, std::vector<T>& vec, bool& skipped) {
+    return unwind_and_call<0, util::tl_size<typename Case::pattern_type>::value>::_(target, skipped, vec);
+}
 
 // Case is a projection_partial_function_pair
 template<typename T, typename InputIterator, class Case>
 size_t run_case(std::vector<T>& vec,
-                bool& match_returned_false,
+                bool& skipped,
                 InputIterator& pos,
                 const InputIterator& end,
                 Case& target) {
@@ -234,7 +220,7 @@ size_t run_case(std::vector<T>& vec,
         }
         vec.emplace_back(*pos++);
     }
-    if (run_case_impl<std::is_same<result_type, bool>::value>::_(target, vec, match_returned_false)) {
+    if (run_case_impl(target, vec, skipped)) {
         if (vec.size() == num_args) {
             vec.clear();
         }
@@ -242,7 +228,7 @@ size_t run_case(std::vector<T>& vec,
             auto i = vec.begin();
             vec.erase(i, i + num_args);
         }
-        return match_returned_false ? 0 : num_args;
+        return skipped ? 0 : num_args;
     }
     return 0;
 }

@@ -34,9 +34,10 @@
 #include <typeinfo>
 #include <type_traits>
 
+#include "cppa/unit.hpp"
+
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_pair.hpp"
-#include "cppa/util/void_type.hpp"
 
 namespace cppa {
 
@@ -135,7 +136,7 @@ struct tl_back;
 
 template<template<typename...> class List>
 struct tl_back<List<>> {
-    typedef void_type type;
+    typedef unit_t type;
 };
 
 template<template<typename...> class List, typename T0>
@@ -212,7 +213,7 @@ struct tl_slice_impl<0, 0, PadType, empty_type_list, T...> {
 };
 
 template<class List, size_t ListSize, size_t First, size_t Last,
-         typename PadType = void_type>
+         typename PadType = unit_t>
 struct tl_slice_ {
     typedef typename tl_slice_impl<
                 First, (Last - First),
@@ -274,8 +275,8 @@ struct tl_zip {
 
 template<class ListA,
          class ListB,
-         typename PadA = void_type,
-         typename PadB = void_type,
+         typename PadA = unit_t,
+         typename PadB = unit_t,
          template<typename, typename> class Fun = to_type_pair>
 struct tl_zip_all {
     static constexpr size_t result_size = (tl_size<ListA>::value > tl_size<ListB>::value) ? tl_size<ListA>::value
@@ -863,7 +864,7 @@ struct tl_pad_right_impl<List, true, OldSize, NewSize, FillType> {
  * @brief Resizes the list to contain @p NewSize elements and uses
  *        @p FillType to initialize the new elements with.
  */
-template<class List, size_t NewSize, typename FillType = void_type>
+template<class List, size_t NewSize, typename FillType = unit_t>
 struct tl_pad_right {
     typedef typename tl_pad_right_impl<
             List, (tl_size<List>::value < NewSize), tl_size<List>::value, NewSize, FillType
@@ -893,7 +894,7 @@ struct tl_pad_left_impl<List, Size, Size, FillType> {
  * @brief Resizes the list to contain @p NewSize elements and uses
  *        @p FillType to initialize prepended elements with.
  */
-template<class List, size_t NewSize, typename FillType = void_type>
+template<class List, size_t NewSize, typename FillType = unit_t>
 struct tl_pad_left {
     static constexpr size_t list_size = tl_size<List>::value;
     //static_assert(NewSize >= tl_size<List>::value, "List too big");
@@ -915,7 +916,7 @@ struct tl_is_zipped {
 /**
  * @brief Removes trailing @p What elements from the end.
  */
-template<class List, typename What = void_type>
+template<class List, typename What = unit_t>
 struct tl_trim {
     typedef typename std::conditional<
                 std::is_same<typename tl_back<List>::type, What>::value,

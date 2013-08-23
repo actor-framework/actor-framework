@@ -445,12 +445,12 @@ struct map_to_result_type_impl {
 
 template<typename C>
 struct map_to_result_type_impl<false, C> {
-    typedef void_type type;
+    typedef unit_t type;
 };
 
 /**
  * @brief Maps @p T to its result type if it's callable,
- *        {@link void_type} otherwise.
+ *        {@link unit_t} otherwise.
  */
 template<typename T>
 struct map_to_result_type {

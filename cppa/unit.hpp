@@ -28,19 +28,18 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UTIL_VOID_TYPE_HPP
-#define CPPA_UTIL_VOID_TYPE_HPP
+#ifndef CPPA_UNIT_HPP
+#define CPPA_UNIT_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
 
-struct void_type {
-    constexpr void_type() { }
-    constexpr void_type(const void_type&) { }
-    // anything could be used to initialize a void...
-    template<typename Arg>
-    constexpr void_type(const Arg&) { }
+struct unit_t {
+    constexpr unit_t() { }
+    template<typename T> constexpr unit_t(T&&) { }
 };
 
-} } // namespace cppa::util
+static constexpr unit_t unit = unit_t{};
 
-#endif // CPPA_UTIL_VOID_TYPE_HPP
+} // namespace cppa
+
+#endif // CPPA_UNIT_HPP

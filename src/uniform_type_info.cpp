@@ -52,7 +52,6 @@
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/duration.hpp"
-#include "cppa/util/void_type.hpp"
 
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/actor_registry.hpp"

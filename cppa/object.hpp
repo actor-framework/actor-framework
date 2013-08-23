@@ -95,7 +95,7 @@ class object {
 
     /**
      * @brief Creates an empty object.
-     * @post {type() == *uniform_typeid<util::void_type>()}
+     * @post {type() == *uniform_typeid<unit_t>()}
      */
     object();
 

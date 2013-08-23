@@ -30,19 +30,19 @@
 
 #include <algorithm>
 
+#include "cppa/unit.hpp"
 #include "cppa/config.hpp"
 #include "cppa/object.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/void_type.hpp"
 #include "cppa/detail/types_array.hpp"
 
 namespace {
 
-cppa::util::void_type s_void;
+cppa::unit_t s_unit;
 
-inline const cppa::uniform_type_info* tvoid() {
-    return cppa::detail::static_types_array<cppa::util::void_type>::arr[0];
+inline const cppa::uniform_type_info* unit_type() {
+    return cppa::detail::static_types_array<cppa::unit_t>::arr[0];
 }
 
 } // namespace <anonymous>
@@ -60,20 +60,20 @@ object::object(void* val, const uniform_type_info* utype)
     CPPA_REQUIRE(utype != nullptr);
 }
 
-object::object() : m_value(&s_void), m_type(tvoid()) {
+object::object() : m_value(&s_unit), m_type(unit_type()) {
 }
 
 object::~object() {
-    if (m_value != &s_void) m_type->delete_instance(m_value);
+    if (m_value != &s_unit) m_type->delete_instance(m_value);
 }
 
 object::object(const object& other) {
     m_type = other.m_type;
-    m_value = (other.m_value == &s_void) ? other.m_value
+    m_value = (other.m_value == &s_unit) ? other.m_value
                                          : m_type->new_instance(other.m_value);
 }
 
-object::object(object&& other) : m_value(&s_void), m_type(tvoid()) {
+object::object(object&& other) : m_value(&s_unit), m_type(unit_type()) {
     swap(other);
 }
 

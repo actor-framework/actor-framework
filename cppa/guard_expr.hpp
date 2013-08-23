@@ -37,11 +37,11 @@
 #include <functional>
 #include <type_traits>
 
+#include "cppa/unit.hpp"
 #include "cppa/config.hpp"
 #include "cppa/optional.hpp"
 
 #include "cppa/util/call.hpp"
-#include "cppa/util/void_type.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
@@ -168,8 +168,8 @@ typename gcall3<Fun, T1, T2, T3>::result gcall(Fun fun, T1 t1, T2 t2, T3 t3) {
  *        The functor @p fun must return a boolean.
  */
 template<typename Fun>
-guard_expr<exec_xfun_op, Fun, util::void_type> ge_sub_function(Fun fun) {
-    return {fun, util::void_type{}};
+guard_expr<exec_xfun_op, Fun, unit_t> ge_sub_function(Fun fun) {
+    return {fun, unit};
 }
 
 struct ge_search_container {
@@ -449,7 +449,7 @@ struct ge_result_<guard_expr<OP, First, Second>, Tuple> {
 };
 
 template<typename Fun, class Tuple>
-struct ge_result_<guard_expr<exec_xfun_op, Fun, util::void_type>, Tuple> {
+struct ge_result_<guard_expr<exec_xfun_op, Fun, unit_t>, Tuple> {
     typedef bool type;
 };
 
@@ -574,8 +574,8 @@ struct ge_eval_<logical_or_op, Tuple, First, Second> {
 };
 
 template<class Tuple, typename Fun>
-struct ge_eval_<exec_xfun_op, Tuple, Fun, util::void_type> {
-    static inline bool _(const Tuple& tup, const Fun& fun, const util::void_type&) {
+struct ge_eval_<exec_xfun_op, Tuple, Fun, unit_t> {
+    static inline bool _(const Tuple& tup, const Fun& fun, const unit_t&) {
         return util::apply_args(fun, tup, util::get_indices(tup));
     }
 };
