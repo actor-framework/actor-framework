@@ -165,10 +165,10 @@ void multiplier() {
         [] (any_tuple msg) -> optional<cow_tuple<fvec, fvec>> {
             auto opt = tuple_cast<matrix_type, matrix_type>(msg);
             if (opt) {
-                return {move(get_ref<0>(*opt).data()),
-                        move(get_ref<1>(*opt).data())};
+                return make_cow_tuple(move(get_ref<0>(*opt).data()),
+                                      move(get_ref<1>(*opt).data()));
             }
-            return {};
+            return none;
         },
         // 4th arg: converts the ouptut vector back to a matrix that is then
         //          used as response message
