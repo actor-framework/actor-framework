@@ -111,8 +111,6 @@ bool operator!=(const struct_c& lhs, const struct_c& rhs) {
     return !(lhs == rhs);
 }
 
-static const char* msg1str = u8R"__({ @i32 ( 42 ), "Hello \"World\"!" })__";
-
 struct raw_struct {
     string str;
 };
