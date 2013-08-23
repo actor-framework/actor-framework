@@ -79,13 +79,13 @@ optional<int> str2int(const std::string& str) {
     invoked.clear();                                                           \
     if ( !( FunName Args ) || invoked != #FunName ) {                          \
         CPPA_FAILURE("invocation of " #FunName " failed");                     \
-    } else CPPA_CHECKPOINT()
+    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
 
 #define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
     invoked.clear();                                                           \
     if ( FunName Args || invoked == #FunName ) {                               \
         CPPA_FAILURE(#FunName " erroneously invoked");                         \
-    } else CPPA_CHECKPOINT()
+    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
 
 struct dummy_receiver : event_based_actor {
     void init() {
