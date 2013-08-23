@@ -206,7 +206,6 @@ size_t run_case(std::vector<T>& vec,
                 Case& target) {
     static constexpr size_t num_args = util::tl_size<typename Case::pattern_type>::value;
     typedef typename Case::second_type partial_fun_type;
-    typedef typename partial_fun_type::result_type result_type;
     typedef typename partial_fun_type::arg_types arg_types;
     typedef typename util::tl_map<arg_types, util::rm_const_and_ref>::type plain_args;
     static_assert(num_args > 0,
