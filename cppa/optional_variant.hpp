@@ -31,6 +31,7 @@
 #ifndef OPTIONAL_VARIANT_HPP
 #define OPTIONAL_VARIANT_HPP
 
+#include <iosfwd>
 #include <stdexcept>
 #include <type_traits>
 
@@ -196,12 +197,12 @@ class optional_variant {
     }
 
     template<typename Visitor>
-    auto apply(const Visitor& visitor) const -> decltype(visitor(none_t{})) {
+    auto apply(Visitor& visitor) const -> decltype(visitor(none_t{})) {
         return do_apply(*this, visitor);
     }
 
     template<typename Visitor>
-    auto apply(const Visitor& visitor) -> decltype(visitor(none_t{})) {
+    auto apply(Visitor& visitor) -> decltype(visitor(none_t{})) {
         return do_apply(*this, visitor);
     }
 
@@ -241,7 +242,7 @@ class optional_variant {
     }
 
     template<typename Self, typename Visitor>
-    static auto do_apply(Self& from, const Visitor& visitor) -> decltype(visitor(none_t{})) {
+    static auto do_apply(Self& from, Visitor& visitor) -> decltype(visitor(none_t{})) {
         switch (from.m_type) {
             default: throw std::runtime_error("invalid type found");
             case -1: return visitor(none_t{});
@@ -259,7 +260,8 @@ class optional_variant {
     }
 
     inline void destroy_data() {
-        apply(detail::optional_variant_data_destructor{});
+        detail::optional_variant_data_destructor f;
+        apply(f);
     }
 
     template<typename U>
@@ -329,7 +331,23 @@ T& get_ref(optional_variant<Us...>& value) {
  * @relates optional_variant
  */
 template<typename Visitor, typename... Ts>
+auto apply_visitor(Visitor& visitor, const optional_variant<Ts...>& data) -> decltype(visitor(none_t{})) {
+    return data.apply(visitor);
+}
+
+/**
+ * @relates optional_variant
+ */
+template<typename Visitor, typename... Ts>
 auto apply_visitor(const Visitor& visitor, const optional_variant<Ts...>& data) -> decltype(visitor(none_t{})) {
+    return data.apply(visitor);
+}
+
+/**
+ * @relates optional_variant
+ */
+template<typename Visitor, typename... Ts>
+auto apply_visitor(Visitor& visitor, optional_variant<Ts...>& data) -> decltype(visitor(none_t{})) {
     return data.apply(visitor);
 }
 
@@ -348,6 +366,59 @@ template<typename... Ts>
 struct optional_variant_from_type_list<util::type_list<Ts...>> {
     typedef optional_variant<Ts...> type;
 };
+
+namespace detail {
+template<typename T>
+struct optional_variant_cmp_helper {
+    const T& lhs;
+    optional_variant_cmp_helper(const T& value) : lhs{value} { }
+    // variant is comparable
+    template<typename U>
+    typename std::enable_if<util::is_comparable<T, U>::value, bool>::type
+    operator()(const U& rhs) const { return lhs == rhs; }
+    // variant is not comparable
+    template<typename U>
+    typename std::enable_if<!util::is_comparable<T, U>::value, bool>::type
+    operator()(const U&) const { return false; }
+    // variant is void
+    bool operator()() const { return false; }
+};
+} // namespace detail
+
+/**
+ * @relates optional_variant
+ */
+template<typename T, typename... Ts>
+bool operator==(const T& lhs, const optional_variant<Ts...>& rhs) {
+    return apply_visitor(detail::optional_variant_cmp_helper<T>{lhs}, rhs);
+}
+
+/**
+ * @relates optional_variant
+ */
+template<typename T, typename... Ts>
+bool operator==(const optional_variant<Ts...>& lhs, const T& rhs) {
+    return rhs == lhs;
+}
+
+namespace detail {
+struct optional_variant_ostream_helper {
+    std::ostream& lhs;
+    inline optional_variant_ostream_helper(std::ostream& os) : lhs(os) { }
+    template<typename T>
+    std::ostream& operator()(const T& value) const { return lhs << value; }
+    inline std::ostream& operator()(const none_t&) const { return lhs; }
+    inline std::ostream& operator()() const { return lhs; }
+};
+} // namespace detail
+
+/**
+ * @relates optional_variant
+ */
+template<typename T0, typename... Ts>
+std::ostream& operator<<(std::ostream& lhs, const optional_variant<T0, Ts...>& rhs) {
+    return apply_visitor(detail::optional_variant_ostream_helper{lhs}, rhs);
+}
 
 } // namespace cppa
 
