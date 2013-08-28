@@ -65,7 +65,7 @@ class actor_facade;
 template<typename Ret, typename... Args>
 class actor_facade<Ret(Args...)> : public actor {
 
-    friend class command_impl<actor_facade, Ret>;
+    friend class command<actor_facade, Ret>;
 
  public:
 
@@ -159,10 +159,10 @@ class actor_facade<Ret(Args...)> : public actor {
             add_arguments_to_kernel<Ret>(arguments,
                                          ret_size,
                                          get_ref<Is>(*opt)...);
-            auto cmd = make_counted<command_impl<actor_facade, Ret>>(handle,
-                                                                     this,
-                                                                     std::move(arguments),
-                                                                     m_queue);
+            auto cmd = make_counted<command<actor_facade, Ret>>(handle,
+                                                                this,
+                                                                std::move(arguments),
+                                                                m_queue);
             cmd->enqueue();
         }
         else { CPPA_LOGMF(CPPA_ERROR, this, "actor_facade::enqueue() tuple_cast failed."); }
