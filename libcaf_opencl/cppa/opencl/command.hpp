@@ -46,32 +46,15 @@
 
 namespace cppa { namespace opencl {
 
+template<typename T, typename R>
 class command : public ref_counted {
 
  public:
 
-    command* next;
-
-    virtual void enqueue() = 0;
-
-};
-
-class command_dummy : public command {
-
- public:
-
-    void enqueue() override { }
-};
-
-template<typename T, typename R>
-class command_impl : public command {
-
- public:
-
-    command_impl(response_handle handle,
-                 intrusive_ptr<T> actor_facade,
-                 std::vector<mem_ptr> arguments,
-                 command_queue_ptr queue)
+    command(response_handle handle,
+            intrusive_ptr<T> actor_facade,
+            std::vector<mem_ptr> arguments,
+            command_queue_ptr queue)
         : m_number_of_values(std::accumulate(actor_facade->m_global_dimensions.begin(),
                                              actor_facade->m_global_dimensions.end(),
                                              1, std::multiplies<size_t>{}))
@@ -80,7 +63,7 @@ class command_impl : public command {
         , m_queue(queue)
         , m_arguments(move(arguments)) { }
 
-    void enqueue () override {
+    void enqueue () {
         CPPA_LOG_TRACE("command::enqueue()");
         this->ref(); // reference held by the OpenCL comand queue
         cl_int err{0};
@@ -106,7 +89,7 @@ class command_impl : public command {
         err = clSetEventCallback(event,
                                  CL_COMPLETE,
                                  [](cl_event, cl_int, void* data) {
-                                     auto cmd = reinterpret_cast<command_impl*>(data);
+                                     auto cmd = reinterpret_cast<command*>(data);
                                      cmd->handle_results();
                                      cmd->deref();
                                  },
@@ -150,8 +133,6 @@ class command_impl : public command {
         reply_tuple_to(m_handle, m_actor_facade->m_map_result(result));
     }
 };
-
-typedef intrusive_ptr<command> command_ptr;
 
 } } // namespace cppa::opencl
 
