@@ -157,8 +157,6 @@ class actor_facade<Ret(Args...)> : public actor {
                                               1, std::multiplies<size_t>{});
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel<Ret>(arguments,
-                                         m_context.get(),
-                                         m_kernel.get(),
                                          ret_size,
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command_impl<actor_facade, Ret>>(handle,
@@ -182,19 +180,17 @@ class actor_facade<Ret(Args...)> : public actor {
     arg_mapping m_map_args;
     result_mapping m_map_result;
 
-    void add_arguments_to_kernel_rec(args_vec& arguments,
-                                     cl_context,
-                                     cl_kernel kernel) {
+    void add_arguments_to_kernel_rec(args_vec& arguments) {
         cl_int err{0};
         for(size_t i = 1; i < arguments.size(); ++i) {
-            err = clSetKernelArg(kernel,
+            err = clSetKernelArg(m_kernel.get(),
                                  (i-1),
                                  sizeof(cl_mem),
                                  static_cast<void*>(&arguments[i]));
             CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
                               "clSetKernelArg: " << get_opencl_error(err));
         }
-        err = clSetKernelArg(kernel,
+        err = clSetKernelArg(m_kernel.get(),
                              arguments.size()-1,
                              sizeof(cl_mem),
                              static_cast<void*>(&arguments[0]));
@@ -203,13 +199,10 @@ class actor_facade<Ret(Args...)> : public actor {
     }
 
     template<typename T0, typename... Ts>
-    void add_arguments_to_kernel_rec(args_vec& arguments,
-                                     cl_context context,
-                                     cl_kernel kernel,
-                                     T0& arg0,
-                                     Ts&... args) {
+    void add_arguments_to_kernel_rec(args_vec& arguments, 
+                                     T0& arg0, Ts&... args) {
         cl_int err{0};
-        auto buf = clCreateBuffer(context,
+        auto buf = clCreateBuffer(m_context.get(),
                                   CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                   sizeof(typename T0::value_type) * arg0.size(),
                                   arg0.data(),
@@ -221,19 +214,17 @@ class actor_facade<Ret(Args...)> : public actor {
             mem_ptr tmp;
             tmp.adopt(std::move(buf));
             arguments.push_back(tmp);
-            add_arguments_to_kernel_rec(arguments, context, kernel, args...);
+            add_arguments_to_kernel_rec(arguments, args...);
         }
     }
 
     template<typename R, typename... Ts>
     void add_arguments_to_kernel(args_vec& arguments,
-                                 cl_context context,
-                                 cl_kernel kernel,
                                  size_t ret_size,
                                  Ts&&... args) {
         arguments.clear();
         cl_int err{0};
-        auto buf = clCreateBuffer(context,
+        auto buf = clCreateBuffer(m_context.get(),
                                   CL_MEM_WRITE_ONLY,
                                   sizeof(typename R::value_type) * ret_size,
                                   nullptr,
@@ -245,10 +236,7 @@ class actor_facade<Ret(Args...)> : public actor {
             mem_ptr tmp;
             tmp.adopt(std::move(buf));
             arguments.push_back(tmp);
-            add_arguments_to_kernel_rec(arguments,
-                                        context,
-                                        kernel,
-                                        std::forward<Ts>(args)...);
+            add_arguments_to_kernel_rec(arguments, std::forward<Ts>(args)...);
         }
     }
 
