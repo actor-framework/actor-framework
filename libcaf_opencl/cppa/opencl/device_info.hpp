@@ -55,9 +55,6 @@ class device_info {
         , m_device(device)
         , m_cmd_queue(queue) { }
 
-    // todo: need getter, m_
-    // see actor.hpp
-
     inline size_t get_max_work_group_size();
     inline cl_uint get_max_dimensions();
     inline dim_vec get_max_work_items_per_dim();
