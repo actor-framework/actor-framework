@@ -83,6 +83,8 @@ class projection {
 
     typedef typename tdata_from_type_list<ProjectionFuns>::type fun_container;
 
+    typedef util::type_list<typename util::rm_const_and_ref<Ts>::type...> arg_types;
+
     projection() = default;
 
     projection(fun_container&& args) : m_funs(std::move(args)) { }
