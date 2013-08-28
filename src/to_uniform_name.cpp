@@ -104,26 +104,34 @@ class parse_tree {
 
     string compile() const {
         string result;
-        if (m_volatile) result += "volatile ";
-        if (m_const) result += "const ";
-        if (!m_template) {
-            result += map2decorated(m_name.c_str());
+        if (has_children()) {
+            for (auto& c : m_children) {
+                if (!result.empty()) result += "::";
+                result += map2decorated(c.compile().c_str());
+            }
         }
         else {
-            string full_name = m_name;
-            full_name += "<";
-            for (auto& tparam : m_template_parameters) {
-                // decorate each single template parameter
-                if (full_name.back() != '<') full_name += ',';
-                full_name += tparam.compile();
+            if (m_volatile) result += "volatile ";
+            if (m_const) result += "const ";
+            if (!is_template()) {
+                result += map2decorated(m_name.c_str());
             }
-            full_name += ">";
-            // decorate full name
-            result += map2decorated(full_name.c_str());
+            else {
+                string full_name = m_name;
+                full_name += "<";
+                for (auto& tparam : m_template_parameters) {
+                    // decorate each single template parameter
+                    if (full_name.back() != '<') full_name += ",";
+                    full_name += map2decorated(tparam.compile().c_str());
+                }
+                full_name += ">";
+                // decorate full name
+                result += map2decorated(full_name.c_str());
+            }
+            if (m_pointer) result += "*";
+            if (m_lvalue_ref) result += "&";
+            if (m_rvalue_ref) result += "&&";
         }
-        if (m_pointer) result += '*';
-        if (m_lvalue_ref) result += '&';
-        if (m_rvalue_ref) result += "&&";
         return result;
     }
 
@@ -132,21 +140,68 @@ class parse_tree {
 
     template<typename Iterator>
     static parse_tree parse(Iterator first, Iterator last) {
-        typedef reverse_iterator<Iterator> rev_iter;
-        auto sub_first = find(first, last, '<');
-        auto sub_last = find(rev_iter(last), rev_iter(first), '>').base() - 1;
-        if (sub_last < sub_first) {
-            sub_first = sub_last = last;
+        parse_tree result;
+        typedef std::pair<Iterator, Iterator> range;
+        std::vector<range> subranges;
+        /* lifetime scope of temporary variables needed to fill 'subranges' */ {
+            auto find_end = [&](Iterator from) {
+                auto open = 1;
+                for (auto i = from + 1; i != last && open > 0; ++i) {
+                    switch (*i) {
+                        default: break;
+                        case '<': ++open; break;
+                        case '>': if (--open == 0) return i; break;
+                    }
+                }
+                return last;
+            };
+            auto sub_first = find(first, last, '<');
+            while (sub_first != last) {
+                subranges.emplace_back(sub_first, find_end(sub_first));
+                sub_first = find(sub_first + 1, last, '<');
+            }
         }
         auto islegal = [](char c) { return isalnum(c) || c == ':' || c == '_'; };
         vector<string> tokens;
         tokens.push_back("");
-        for (auto i = first; i != last;) {
-            if (i == sub_first) {
-                tokens.push_back("");
-                i = sub_last;
+        vector<Iterator> scope_resolution_ops;
+        auto is_in_subrange = [&](Iterator i) {
+            for (auto& r : subranges) {
+                if (i >= r.first && i < r.second) return true;
             }
-            else {
+            return false;
+        };
+        auto add_child = [&](Iterator ch_first, Iterator ch_last) {
+            result.m_children.push_back(parse(ch_first, ch_last));
+        };
+        // scan string for "::" separators
+        const char* scope_resultion = "::";
+        auto sr_first = scope_resultion;
+        auto sr_last = sr_first + 2;
+        auto scope_iter = search(first, last, sr_first, sr_last);
+        if (scope_iter != last) {
+            Iterator itermediate = first;
+            if (!is_in_subrange(scope_iter)) {
+                add_child(first, scope_iter);
+                itermediate = scope_iter + 2;
+            }
+            while (scope_iter != last) {
+                scope_iter = find_first_of(scope_iter + 2, last, sr_first, sr_last);
+                if (scope_iter != last && !is_in_subrange(scope_iter)) {
+                    add_child(itermediate, scope_iter);
+                    itermediate = scope_iter + 2;
+                }
+            }
+            if (!result.m_children.empty()) {
+                add_child(itermediate, last);
+            }
+        }
+        if (result.m_children.empty()) {
+            // no children -> leaf node; parse non-template part now
+            CPPA_REQUIRE(subranges.size() < 2);
+            auto non_template_last = subranges.empty() ? last
+                                                       : subranges[0].first;
+            for (auto i = first; i != non_template_last; ++i) {
                 char c = *i;
                 if (islegal(c)) {
                     if (!tokens.back().empty() && !islegal(tokens.back().back())) {
@@ -168,56 +223,66 @@ class parse_tree {
                 else if (c == '*') {
                     tokens.push_back("*");
                 }
-                ++i;
             }
-        }
-        parse_tree result;
-        if (sub_first != sub_last) {
-            result.m_template = true;
-            result.m_template_parameters = parse_tpl_args(sub_first + 1, sub_last);
-        }
-        for (auto& token: tokens) {
-            if (token == "const") {
-                result.m_const = true;
+            if (!subranges.empty()) {
+                auto& range0 = subranges.front();
+                result.m_template_parameters = parse_tpl_args(range0.first + 1,
+                                                              range0.second);
             }
-            else if (token == "volatile") {
-                result.m_volatile = true;
-            }
-            else if (token == "&") {
-                result.m_lvalue_ref = true;
-            }
-            else if (token == "&&") {
-                result.m_rvalue_ref = true;
-            }
-            else if (token == "*") {
-                result.m_pointer = true;
-            }
-            else if (token == "class" || token == "struct") {
-                // ignored (created by visual c++ compilers)
-            }
-            else if (!token.empty()) {
-                if (!result.m_name.empty()) result.m_name += " ";
-                result.m_name += token;
+            for (auto& token: tokens) {
+                if (token == "const") {
+                    result.m_const = true;
+                }
+                else if (token == "volatile") {
+                    result.m_volatile = true;
+                }
+                else if (token == "&") {
+                    result.m_lvalue_ref = true;
+                }
+                else if (token == "&&") {
+                    result.m_rvalue_ref = true;
+                }
+                else if (token == "*") {
+                    result.m_pointer = true;
+                }
+                else if (token == "class" || token == "struct") {
+                    // ignored (created by visual c++ compilers)
+                }
+                else if (!token.empty()) {
+                    if (!result.m_name.empty()) result.m_name += " ";
+                    result.m_name += token;
+                }
             }
         }
         return result;
     }
 
+    inline bool has_children() const {
+        return !m_children.empty();
+    }
+
+    inline bool is_template() const {
+        return !m_template_parameters.empty();
+    }
+
  private:
 
     parse_tree()
-    : m_const(false), m_pointer(false), m_volatile(false), m_template(false)
+    : m_const(false), m_pointer(false), m_volatile(false)
     , m_lvalue_ref(false), m_rvalue_ref(false) { }
 
     bool m_const;
     bool m_pointer;
     bool m_volatile;
-    bool m_template;
     bool m_lvalue_ref;
     bool m_rvalue_ref;
+    bool m_nested_type;
 
     string m_name;
+
     vector<parse_tree> m_template_parameters;
+
+    vector<parse_tree> m_children;
 
 };
 
