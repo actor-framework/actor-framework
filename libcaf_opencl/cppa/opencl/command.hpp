@@ -53,14 +53,13 @@ class command : public ref_counted {
 
     command(response_handle handle,
             intrusive_ptr<T> actor_facade,
-            std::vector<mem_ptr> arguments,
-            command_queue_ptr queue)
+            std::vector<mem_ptr> arguments)
         : m_number_of_values(std::accumulate(actor_facade->m_global_dimensions.begin(),
                                              actor_facade->m_global_dimensions.end(),
                                              1, std::multiplies<size_t>{}))
         , m_handle(handle)
         , m_actor_facade(actor_facade)
-        , m_queue(queue)
+        , m_queue(actor_facade->m_queue)
         , m_arguments(move(arguments)) { }
 
     void enqueue () {
