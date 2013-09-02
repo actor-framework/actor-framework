@@ -86,7 +86,8 @@ program program::create(const char* kernel_source, uint32_t device_id) {
     };
 
     // build programm from program object
-    err = clBuildProgram(pptr.get(), 0, nullptr, nullptr, nullptr, nullptr);
+    auto dev_tmp = devices[device_id].m_device.get();
+    err = clBuildProgram(pptr.get(), 1, &dev_tmp, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         // todo: chosoe device, not just front
         device_ptr device{devices[device_id].m_device};
