@@ -161,8 +161,7 @@ class actor_facade<Ret(Args...)> : public actor {
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command<actor_facade, Ret>>(handle,
                                                                 this,
-                                                                std::move(arguments),
-                                                                m_queue);
+                                                                std::move(arguments));
             cmd->enqueue();
         }
         else { CPPA_LOGMF(CPPA_ERROR, this, "actor_facade::enqueue() tuple_cast failed."); }
