@@ -94,7 +94,13 @@ constexpr const char* mapped_name() {
     return mapped_type_names[util::tl_index_of<zipped_type_list, T>::value][1];
 }
 
-const char* mapped_name_by_decorated_name(const char* decorated_type_name);
+const char* mapped_name_by_decorated_name(const char* decorated_name);
+
+std::string mapped_name_by_decorated_name(std::string&& decorated_name);
+
+inline const char* mapped_name_by_decorated_name(const std::string& decorated_name) {
+    return mapped_name_by_decorated_name(decorated_name.c_str());
+}
 
 // lookup table for integer types
 extern const char* mapped_int_names[][2];

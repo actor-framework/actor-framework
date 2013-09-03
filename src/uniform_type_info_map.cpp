@@ -123,6 +123,11 @@ const char* mapped_name_by_decorated_name(const char* cstr) {
     return cstr;
 }
 
+std::string mapped_name_by_decorated_name(std::string&& str) {
+    auto res = mapped_name_by_decorated_name(str.c_str());
+    if (res == str.c_str()) return std::move(str);
+    return res;
+}
 
 namespace {
 

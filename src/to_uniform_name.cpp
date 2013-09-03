@@ -45,10 +45,32 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
 
+#include "cppa/util/algorithm.hpp"
+#include "cppa/util/scope_guard.hpp"
+
 #include "cppa/detail/demangle.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
+
+//#define DEBUG_PARSER
+
+#ifdef DEBUG_PARSER
+    namespace { size_t s_indentation = 0; }
+#   define PARSER_INIT(message)                                                \
+        std::cout << std::string(s_indentation, ' ') << ">>> " << message      \
+                  << std::endl;                                                \
+        s_indentation += 2;                                                    \
+        auto ____sg = cppa::util::make_scope_guard([] { s_indentation -= 2; })
+#   define PARSER_OUT(condition, message)                                      \
+        if (condition) {                                                       \
+            std::cout << std::string(s_indentation, ' ') << "### " << message  \
+                      << std::endl;                                            \
+        } static_cast<void>(0)
+#else
+#   define PARSER_INIT(unused) static_cast<void>(0)
+#   define PARSER_OUT(unused1, unused2) static_cast<void>(0)
+#endif
 
 namespace {
 
@@ -86,6 +108,7 @@ platform_int_mapping platform_dependent_sizes[] = {
     {"unsigned short int",  sizeof(unsigned short int), false}
 };
 
+/*
 string map2decorated(const char* name) {
     auto cmp = [](const platform_int_mapping& pim, const char* name) {
         return strcmp(pim.name, name) < 0;
@@ -97,42 +120,66 @@ string map2decorated(const char* name) {
     }
     return mapped_name_by_decorated_name(name);
 }
+*/
+
+string map2decorated(string&& name) {
+    auto cmp = [](const platform_int_mapping& pim, const string& str) {
+        return strcmp(pim.name, str.c_str()) < 0;
+    };
+    auto e = end(platform_dependent_sizes);
+    auto i = lower_bound(begin(platform_dependent_sizes), e, name, cmp);
+    if (i != e && i->name == name) {
+        PARSER_OUT(true, name << " => " << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
+        return mapped_int_names[i->size][i->is_signed ? 1 : 0];
+    }
+#   ifdef DEBUG_PARSER
+    auto mapped = mapped_name_by_decorated_name(name.c_str());
+    PARSER_OUT(mapped != name, name << " => " << string{mapped});
+    return mapped;
+#   else
+    return mapped_name_by_decorated_name(std::move(name));
+#   endif
+}
 
 class parse_tree {
 
  public:
 
-    string compile() const {
+    string compile(bool parent_invoked = false) {
         string result;
-        if (has_children()) {
-            for (auto& c : m_children) {
-                if (!result.empty()) result += "::";
-                result += map2decorated(c.compile().c_str());
-            }
-        }
-        else {
+        propagate_flags();
+        if (!parent_invoked) {
             if (m_volatile) result += "volatile ";
             if (m_const) result += "const ";
-            if (!is_template()) {
-                result += map2decorated(m_name.c_str());
+        }
+        if (has_children()) {
+            string sub_result = m_children.front().compile(true);
+            for (auto i = m_children.begin() + 1; i != m_children.end(); ++i) {
+                sub_result += "::";
+                sub_result += i->compile(true);
             }
-            else {
-                string full_name = m_name;
+            result += map2decorated(std::move(sub_result));
+        }
+        else {
+            string full_name = map2decorated(std::move(m_name));
+            if (is_template()) {
                 full_name += "<";
                 for (auto& tparam : m_template_parameters) {
                     // decorate each single template parameter
                     if (full_name.back() != '<') full_name += ",";
-                    full_name += map2decorated(tparam.compile().c_str());
+                    full_name += tparam.compile();
                 }
                 full_name += ">";
                 // decorate full name
-                result += map2decorated(full_name.c_str());
             }
+            result += map2decorated(std::move(full_name));
+        }
+        if (!parent_invoked) {
             if (m_pointer) result += "*";
             if (m_lvalue_ref) result += "&";
             if (m_rvalue_ref) result += "&&";
         }
-        return result;
+        return map2decorated(std::move(result));
     }
 
     template<typename Iterator>
@@ -140,6 +187,7 @@ class parse_tree {
 
     template<typename Iterator>
     static parse_tree parse(Iterator first, Iterator last) {
+        PARSER_INIT((std::string{first, last}));
         parse_tree result;
         typedef std::pair<Iterator, Iterator> range;
         std::vector<range> subranges;
@@ -157,8 +205,9 @@ class parse_tree {
             };
             auto sub_first = find(first, last, '<');
             while (sub_first != last) {
-                subranges.emplace_back(sub_first, find_end(sub_first));
-                sub_first = find(sub_first + 1, last, '<');
+                auto sub_last = find_end(sub_first);
+                subranges.emplace_back(sub_first, sub_last);
+                sub_first = find(sub_last + 1, last, '<');
             }
         }
         auto islegal = [](char c) { return isalnum(c) || c == ':' || c == '_'; };
@@ -172,6 +221,8 @@ class parse_tree {
             return false;
         };
         auto add_child = [&](Iterator ch_first, Iterator ch_last) {
+            PARSER_OUT(true, "new child: [" << distance(first, ch_first) << ", "
+                             << ", " << distance(first, ch_last) << ")");
             result.m_children.push_back(parse(ch_first, ch_last));
         };
         // scan string for "::" separators
@@ -180,13 +231,13 @@ class parse_tree {
         auto sr_last = sr_first + 2;
         auto scope_iter = search(first, last, sr_first, sr_last);
         if (scope_iter != last) {
-            Iterator itermediate = first;
+            auto itermediate = first;
             if (!is_in_subrange(scope_iter)) {
                 add_child(first, scope_iter);
                 itermediate = scope_iter + 2;
             }
             while (scope_iter != last) {
-                scope_iter = find_first_of(scope_iter + 2, last, sr_first, sr_last);
+                scope_iter = search(scope_iter + 2, last, sr_first, sr_last);
                 if (scope_iter != last && !is_in_subrange(scope_iter)) {
                     add_child(itermediate, scope_iter);
                     itermediate = scope_iter + 2;
@@ -199,33 +250,48 @@ class parse_tree {
         if (result.m_children.empty()) {
             // no children -> leaf node; parse non-template part now
             CPPA_REQUIRE(subranges.size() < 2);
-            auto non_template_last = subranges.empty() ? last
-                                                       : subranges[0].first;
-            for (auto i = first; i != non_template_last; ++i) {
-                char c = *i;
-                if (islegal(c)) {
-                    if (!tokens.back().empty() && !islegal(tokens.back().back())) {
-                        tokens.push_back("");
-                    }
-                    tokens.back() += c;
+            vector<range> non_template_ranges;
+            if (subranges.empty()) {
+                non_template_ranges.emplace_back(first, last);
+            }
+            else {
+                non_template_ranges.emplace_back(first, subranges[0].first);
+                for (size_t i = 1; i < subranges.size(); ++i) {
+                    non_template_ranges.emplace_back(subranges[i-1].second + 1,
+                                                     subranges[i].first);
                 }
-                else if (c == ' ') {
-                    tokens.push_back("");
-                }
-                else if (c == '&') {
-                    if (tokens.back().empty() || tokens.back().back() == '&') {
+                non_template_ranges.emplace_back(subranges.back().second + 1, last);
+            }
+            for (auto& ntr : non_template_ranges) {
+                for (auto i = ntr.first; i != ntr.second; ++i) {
+                    char c = *i;
+                    if (islegal(c)) {
+                        if (!tokens.back().empty() && !islegal(tokens.back().back())) {
+                            tokens.push_back("");
+                        }
                         tokens.back() += c;
                     }
-                    else {
-                        tokens.push_back("&");
+                    else if (c == ' ') {
+                        tokens.push_back("");
+                    }
+                    else if (c == '&') {
+                        if (tokens.back().empty() || tokens.back().back() == '&') {
+                            tokens.back() += c;
+                        }
+                        else {
+                            tokens.push_back("&");
+                        }
+                    }
+                    else if (c == '*') {
+                        tokens.push_back("*");
                     }
                 }
-                else if (c == '*') {
-                    tokens.push_back("*");
-                }
+                tokens.push_back("");
             }
             if (!subranges.empty()) {
                 auto& range0 = subranges.front();
+                PARSER_OUT(true, "subrange: [" << distance(first, range0.first + 1)
+                                 << "," << distance(first, range0.second) << ")");
                 result.m_template_parameters = parse_tpl_args(range0.first + 1,
                                                               range0.second);
             }
@@ -254,6 +320,8 @@ class parse_tree {
                 }
             }
         }
+        PARSER_OUT(!subranges.empty(), subranges.size() << " subranges");
+        PARSER_OUT(!result.m_children.empty(), result.m_children.size() << " children");
         return result;
     }
 
@@ -266,6 +334,17 @@ class parse_tree {
     }
 
  private:
+
+    void propagate_flags() {
+        for (auto& c : m_children) {
+            c.propagate_flags();
+            if (c.m_volatile) m_volatile = true;
+            if (c.m_const) m_const = true;
+            if (c.m_pointer) m_pointer = true;
+            if (c.m_lvalue_ref) m_lvalue_ref = true;
+            if (c.m_rvalue_ref) m_rvalue_ref = true;
+        }
+    }
 
     parse_tree()
     : m_const(false), m_pointer(false), m_volatile(false)
@@ -333,7 +412,7 @@ std::string to_uniform_name(const std::string& dname) {
     auto r = parse_tree::parse(begin(dname), end(dname)).compile();
     // replace compiler-dependent "anonmyous namespace" with "@_"
     replace_all(r, s_rawan, s_an);
-    return r;
+    return r.c_str();
 }
 
 std::string to_uniform_name(const std::type_info& tinfo) {

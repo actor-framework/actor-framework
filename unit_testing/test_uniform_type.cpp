@@ -64,6 +64,11 @@ int main() {
         CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
         CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
     }
+    {
+        auto uti = uniform_typeid<atom_value>();
+        CPPA_CHECK(uti != nullptr);
+        CPPA_CHECK_EQUAL(uti->name(), "@atom");
+    }
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
