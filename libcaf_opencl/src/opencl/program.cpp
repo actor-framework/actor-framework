@@ -76,9 +76,9 @@ program program::create(const char* kernel_source, uint32_t device_id) {
                                  + get_opencl_error(err));
     }
 
-    auto program_build_info = [&](device_ptr dev, size_t vs, void* v, size_t* vsr) {
+    auto program_build_info = [&](size_t vs, void* v, size_t* vsr) {
         return clGetProgramBuildInfo(pptr.get(),
-                                     dev.get(),
+                                     devices[device_id].m_device.get(),
                                      CL_PROGRAM_BUILD_LOG,
                                      vs,
                                      v,
@@ -89,46 +89,41 @@ program program::create(const char* kernel_source, uint32_t device_id) {
     auto dev_tmp = devices[device_id].m_device.get();
     err = clBuildProgram(pptr.get(), 1, &dev_tmp, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
-        // todo: chosoe device, not just front
-        device_ptr device{devices[device_id].m_device};
-        const char* where = "CL_PROGRAM_BUILD_LOG:get size";
+        ostringstream oss;
+        oss << "clBuildProgram: " << get_opencl_error(err);
         size_t ret_size;
-        auto bi_err = program_build_info(device, 0, nullptr, &ret_size);
+        auto bi_err = program_build_info(0, nullptr, &ret_size);
         if (bi_err == CL_SUCCESS) {
-            where = "CL_PROGRAM_BUILD_LOG:get log";
             vector<char> build_log(ret_size);
-            bi_err = program_build_info(device, ret_size, build_log.data(), nullptr);
+            bi_err = program_build_info(ret_size, build_log.data(), nullptr);
             if (bi_err == CL_SUCCESS) {
-                ostringstream oss;
                 if (ret_size <= 1) {
-                    oss << "clBuildProgram: " << get_opencl_error(err)
-                        << " (no build log available)";
+                    oss << " (no build log available)";
                 }
                 else {
-                    oss << "clBuildProgram: " << get_opencl_error(err);
                     build_log[ret_size - 1] = '\0';
                     cerr << build_log.data() << endl;
                 }
-                CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
-                throw runtime_error(oss.str());
+            }
+            else { // program_build_info failed to get log
+                oss << " (with CL_PROGRAM_BUILD_LOG to get log)";
             }
         }
-        if (bi_err != CL_SUCCESS) {
-            CPPA_LOGM_ERROR(detail::demangle<program>().c_str(),
-                            "clGetProgramBuildInfo (" << where << "): "
-                            << get_opencl_error(bi_err));
+        else { // program_build_info failed to get size of the log
+            oss << " (with CL_PROGRAM_BUILD_LOG to get size)";
         }
+        CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
+        throw runtime_error(oss.str());
     }
+#   ifdef CPPA_DEBUG_MODE
     else {
-#       ifdef CPPA_DEBUG_MODE
-        device_ptr device{devices[device_id].m_device};
         const char* where = "CL_PROGRAM_BUILD_LOG:get size";
         size_t ret_size;
-        err = program_build_info(device, 0, nullptr, &ret_size);
+        err = program_build_info(0, nullptr, &ret_size);
         if (err == CL_SUCCESS) {
             where = "CL_PROGRAM_BUILD_LOG:get log";
             vector<char> build_log(ret_size+1);
-            err = program_build_info(device, ret_size, build_log.data(), nullptr);
+            err = program_build_info(ret_size, build_log.data(), nullptr);
             if (err == CL_SUCCESS) {
                 if (ret_size > 1) {
                     CPPA_LOGM_ERROR(detail::demangle<program>().c_str(),
@@ -144,8 +139,8 @@ program program::create(const char* kernel_source, uint32_t device_id) {
                             "clGetProgramBuildInfo (" << where << "): "
                             << get_opencl_error(err));
         }
-#       endif
     }
+#   endif
     return {context, devices[device_id].m_cmd_queue, pptr};
 }
 
