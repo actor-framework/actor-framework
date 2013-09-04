@@ -598,11 +598,6 @@ inline const void* fetch_native_data(const Ptr& ptr, std::false_type) {
     return ptr->native_data();
 }
 
-} } // namespace cppa::detail
-
-namespace cppa {
-
-/** @cond PRIVATE */
 template<typename T>
 struct is_manipulator_case {
     static constexpr bool value = T::second_type::manipulates_args;
@@ -613,7 +608,9 @@ struct get_case_result {
     typedef typename T::second_type::result_type type;
 };
 
-/** @endcond */
+} } // namespace cppa::detail
+
+namespace cppa {
 
 /**
  * @brief A match expression encapsulating cases <tt>Cs...</tt>.
@@ -633,13 +630,16 @@ class match_expr {
                 typename util::tl_distinct<
                     typename util::tl_map<
                         cases_list,
-                        get_case_result
+                        detail::get_case_result
                     >::type
                 >::type
             >::type
             result_type;
 
-    static constexpr bool has_manipulator = util::tl_exists<cases_list, is_manipulator_case>::value;
+    static constexpr bool has_manipulator = util::tl_exists<
+                                                cases_list,
+                                                detail::is_manipulator_case
+                                            >::value;
 
     typedef detail::long_constant<sizeof...(Cs)-1l> idx_token_type;
 
@@ -657,21 +657,6 @@ class match_expr {
     match_expr(const match_expr& other) : m_cases(other.m_cases) {
         init();
     }
-
-    /*
-    inline result_type invoke(const any_tuple& tup) {
-        return apply(tup);
-    }
-
-    inline result_type invoke(any_tuple& tup) {
-        return apply(tup);
-    }
-
-    inline result_type invoke(any_tuple&& tup) {
-        any_tuple tmp{tup};
-        return apply(tmp);
-    }
-    */
 
     bool can_invoke(const any_tuple& tup) {
         auto type_token = tup.type_token();
@@ -755,6 +740,8 @@ class match_expr {
         return {all_cases};
     }
 
+    /** @cond PRIVATE */
+
     inline const detail::tdata<Cs...>& cases() const {
         return m_cases;
     }
@@ -765,6 +752,8 @@ class match_expr {
         using impl = detail::default_behavior_impl<match_expr, decltype(lvoid)>;
         return new impl(*this, util::duration{}, lvoid);
     }
+
+    /** @endcond */
 
  private:
 
@@ -790,7 +779,7 @@ class match_expr {
     }
 
     inline size_t find_token_pos(const std::type_info* type_token) {
-        for (size_t i = m_cache_begin ; i != m_cache_end; advance_(i)) {
+        for (size_t i = m_cache_begin ; i != m_cache_end; ++i) {
             if (m_cache[i].first == type_token) return i;
         }
         return m_cache_end;

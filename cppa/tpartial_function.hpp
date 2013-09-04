@@ -71,7 +71,9 @@ template<class Expr, class Guard, typename Result, typename... Ts>
 class tpartial_function {
 
     typedef typename util::get_callable_trait<Expr>::type ctrait;
+
     typedef typename ctrait::arg_types ctrait_args;
+
     static constexpr size_t num_expr_args = util::tl_size<ctrait_args>::value;
 
     static_assert(util::tl_exists<util::type_list<Ts...>,
@@ -81,6 +83,8 @@ class tpartial_function {
  public:
 
     typedef util::type_list<Ts...> arg_types;
+
+    typedef Guard guard_type;
 
     static constexpr size_t num_arguments = sizeof...(Ts);
 

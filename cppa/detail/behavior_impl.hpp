@@ -31,13 +31,34 @@
 #ifndef BEHAVIOR_IMPL_HPP
 #define BEHAVIOR_IMPL_HPP
 
+#include "cppa/optional.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/optional_variant.hpp"
 #include "cppa/timeout_definition.hpp"
 
 #include "cppa/util/duration.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa { namespace detail {
+
+struct optional_any_tuple_visitor {
+    typedef optional<any_tuple> result_type;
+    inline result_type operator()() const { return any_tuple{}; }
+    inline result_type operator()(const none_t&) const { return none; }
+    template<typename T>
+    inline result_type operator()(T& value) const {
+        return make_any_tuple(std::move(value));
+    }
+};
+
+template<typename... Ts>
+struct has_match_hint {
+    static constexpr bool value = util::disjunction<
+                                      std::is_same<Ts, match_hint>::value...
+                                  >::value;
+};
 
 class behavior_impl : public ref_counted {
 
@@ -47,9 +68,9 @@ class behavior_impl : public ref_counted {
 
     inline behavior_impl(util::duration tout) : m_timeout(tout) { }
 
-    virtual bool invoke(any_tuple&) = 0;
-    virtual bool invoke(const any_tuple&) = 0;
-    inline bool invoke(any_tuple&& arg) {
+    virtual optional<any_tuple> invoke(any_tuple&) = 0;
+    virtual optional<any_tuple> invoke(const any_tuple&) = 0;
+    inline optional<any_tuple> invoke(any_tuple&& arg) {
         any_tuple tmp(std::move(arg));
         return invoke(tmp);
     }
@@ -68,11 +89,15 @@ class behavior_impl : public ref_counted {
         struct combinator : behavior_impl {
             pointer first;
             pointer second;
-            bool invoke(any_tuple& arg) {
-                return first->invoke(arg) || second->invoke(arg);
+            optional<any_tuple> invoke(any_tuple& arg) {
+                auto res = first->invoke(arg);
+                if (!res) return second->invoke(arg);
+                return res;
             }
-            bool invoke(const any_tuple& arg) {
-                return first->invoke(arg) || second->invoke(arg);
+            optional<any_tuple> invoke(const any_tuple& arg) {
+                auto res = first->invoke(arg);
+                if (!res) return second->invoke(arg);
+                return res;
             }
             bool defined_at(const any_tuple& arg) {
                 return first->defined_at(arg) || second->defined_at(arg);
@@ -110,6 +135,8 @@ class default_behavior_impl : public behavior_impl {
 
  public:
 
+    typedef optional<any_tuple> invoke_result;
+
     template<typename Expr>
     default_behavior_impl(Expr&& expr, const timeout_definition<F>& d)
     : super(d.timeout), m_expr(std::forward<Expr>(expr)), m_fun(d.handler) { }
@@ -118,11 +145,11 @@ class default_behavior_impl : public behavior_impl {
     default_behavior_impl(Expr&& expr, util::duration tout, F f)
     : super(tout), m_expr(std::forward<Expr>(expr)), m_fun(f) { }
 
-    bool invoke(any_tuple& tup) {
+    invoke_result invoke(any_tuple& tup) {
         return eval_res(m_expr(tup));
     }
 
-    bool invoke(const any_tuple& tup) {
+    invoke_result invoke(const any_tuple& tup) {
         return eval_res(m_expr(tup));
     }
 
@@ -138,22 +165,25 @@ class default_behavior_impl : public behavior_impl {
 
  private:
 
-    template<typename T>
-    typename std::enable_if<T::has_match_hint == true, bool>::type
-    eval_res(const T& res) {
+    template<typename... Ts>
+    typename std::enable_if<has_match_hint<Ts...>::value, invoke_result>::type
+    eval_res(optional_variant<Ts...>&& res) {
         if (res) {
             if (res.template is<match_hint>()) {
-                return get<match_hint>(res) == match_hint::handle;
+                if (get<match_hint>(res) == match_hint::handle) {
+                    return any_tuple{};
+                }
+                return none;
             }
-            return true;
+            return apply_visitor(optional_any_tuple_visitor{}, res);
         }
-        return false;
+        return none;
     }
 
-    template<typename T>
-    typename std::enable_if<T::has_match_hint == false, bool>::type
-    eval_res(const T& res) {
-        return static_cast<bool>(res);
+    template<typename... Ts>
+    typename std::enable_if<!has_match_hint<Ts...>::value, invoke_result>::type
+    eval_res(optional_variant<Ts...>&& res) {
+        return apply_visitor(optional_any_tuple_visitor{}, res);
     }
 
     MatchExpr m_expr;
@@ -188,19 +218,17 @@ class continuation_decorator : public behavior_impl {
     }
 
     template<typename T>
-    inline bool invoke_impl(T& tup) {
-        if (m_decorated->invoke(tup)) {
-            m_fun();
-            return true;
-        }
-        return false;
+    inline optional<any_tuple> invoke_impl(T& tup) {
+        auto res = m_decorated->invoke(tup);
+        if (res) m_fun();
+        return res;
     }
 
-    bool invoke(any_tuple& tup) {
+    optional<any_tuple> invoke(any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    bool invoke(const any_tuple& tup) {
+    optional<any_tuple> invoke(const any_tuple& tup) {
         return invoke_impl(tup);
     }
 
