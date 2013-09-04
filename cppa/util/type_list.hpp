@@ -833,6 +833,17 @@ struct tl_distinct<type_list<T0, Ts...> > {
             type;
 };
 
+// bool is_distinct
+
+/**
+ * @brief Tests whether a list is distinct.
+ */
+template<class L>
+struct tl_is_distinct {
+    static constexpr bool value =
+        tl_size<L>::value == tl_size<typename tl_distinct<L>::type>::value;
+};
+
 // list resize(list, size, fill_type)
 
 template<class List, bool OldSizeLessNewSize,
@@ -998,9 +1009,38 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
     typedef VarArgTemplate<Ts...> type;
 };
 
+// bool is_strict_subset(list,list)
+
+template<class ListB>
+struct tl_is_strict_subset_step {
+    template<typename T>
+    struct inner {
+        typedef std::integral_constant<bool, tl_find<ListB, T>::value != -1> type;
+    };
+};
+
+/**
+ * @brief Tests whether ListA ist a strict subset of ListB (or equal).
+ */
+template<class ListA, class ListB>
+struct tl_is_strict_subset {
+    static constexpr bool value =
+           std::is_same<ListA, ListB>::value
+        || std::is_same<
+               type_list<std::integral_constant<bool, true>>,
+               typename tl_distinct<
+                   typename tl_map<
+                       ListA,
+                       tl_is_strict_subset_step<ListB>::template inner
+                   >::type
+               >::type
+           >::value;
+};
+
 /**
  * @}
  */
+
 } } // namespace cppa::util
 
 namespace cppa {
