@@ -53,5 +53,13 @@ int main() {
                        "il_right<il0, 2> returned " <<detail::demangle<il2>()
                        << "expected: " << detail::demangle<il1>());
 
+    /* test tl_is_strict_subset */ {
+        typedef type_list<int,float,double> list_a;
+        typedef type_list<float,int,double,std::string> list_b;
+        CPPA_CHECK((tl_is_strict_subset<list_a, list_b>::value));
+        CPPA_CHECK(!(tl_is_strict_subset<list_b, list_a>::value));
+        CPPA_CHECK((tl_is_strict_subset<list_a, list_a>::value));
+    }
+
     return CPPA_TEST_RESULT();
 }
