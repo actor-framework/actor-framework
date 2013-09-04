@@ -99,7 +99,7 @@ class partial_function {
      *       does <b>not</b> evaluate guards.
      */
     template<typename T>
-    inline bool operator()(T&& arg);
+    inline optional<any_tuple> operator()(T&& arg);
 
     /**
      * @brief Adds a fallback which is used where
@@ -162,8 +162,8 @@ inline bool partial_function::defined_at(const any_tuple& value) {
 }
 
 template<typename T>
-inline bool partial_function::operator()(T&& arg) {
-    return (m_impl) && m_impl->invoke(std::forward<T>(arg));
+inline optional<any_tuple> partial_function::operator()(T&& arg) {
+    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
 }
 
 template<typename... Ts>

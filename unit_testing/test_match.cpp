@@ -171,7 +171,14 @@ int main() {
         CPPA_CHECK_EQUAL(expr19(expr19_tup), 2);
         partial_function expr20 = expr19;
         enable_case1 = false;
-        CPPA_CHECK_EQUAL(expr20(expr19_tup), 1);
+        CPPA_CHECK(expr20(expr19_tup) == make_any_tuple(1));
+        partial_function expr21 {
+            on(atom("add"), arg_match) >> [](int a, int b) {
+                return a + b;
+            }
+        };
+        CPPA_CHECK(expr21(make_any_tuple(atom("add"), 1, 2)) == make_any_tuple(3));
+        CPPA_CHECK(!expr21(make_any_tuple(atom("sub"), 1, 2)));
     }
     /* test 'match' function */ {
         auto res0 = match(5) (
@@ -277,7 +284,7 @@ int main() {
     std::string last_invoked_fun;
 #   define bhvr_check(pf, tup, expected_result, str) {                         \
         last_invoked_fun = "";                                                 \
-        CPPA_CHECK_EQUAL(pf(tup), expected_result);                            \
+        CPPA_CHECK_EQUAL(static_cast<bool>(pf(tup)), expected_result);         \
         CPPA_CHECK_EQUAL(last_invoked_fun, str);                               \
     }
     /* test if match hints are evaluated properly */ {

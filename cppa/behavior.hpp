@@ -101,7 +101,7 @@ class behavior {
      * @copydoc partial_function::operator()()
      */
     template<typename T>
-    inline bool operator()(T&& arg);
+    inline optional<any_tuple> operator()(T&& arg);
 
     /**
      * @brief Adds a continuation to this behavior that is executed
@@ -159,8 +159,8 @@ inline const util::duration& behavior::timeout() const {
 }
 
 template<typename T>
-inline bool behavior::operator()(T&& arg) {
-    return (m_impl) && m_impl->invoke(std::forward<T>(arg));
+inline optional<any_tuple> behavior::operator()(T&& arg) {
+    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
 }
 
 
