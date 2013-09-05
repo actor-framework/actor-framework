@@ -322,7 +322,9 @@ struct invoke_policy_impl<wildcard_position::leading,
         size_t i = tup.size() - sizeof...(Ts);
         size_t j = 0;
         while (j < sizeof...(Ts)) {
-            if (arr[i++] != tup.type_at(j++)) return false;
+            if (arr[j++] != tup.type_at(i++)) {
+                return false;
+            }
         }
         return true;
     }
@@ -494,7 +496,7 @@ Result unroll_expr(PPFPs& fs,
     /* recursively evaluate sub expressions */ {
         Result res = unroll_expr<Result>(fs, bitmask, long_constant<N-1>{},
                                          type_token, is_dynamic, ptr, tup);
-        if (res) return res;
+        if (res) return std::move(res);
     }
     if ((bitmask & (0x01 << N)) == 0) return none;
     auto& f = get<N>(fs);
@@ -519,7 +521,10 @@ inline bool can_unroll_expr(PPFPs&, minus1l, const std::type_info&, const Tuple&
 }
 
 template<class PPFPs, long N, class Tuple>
-inline bool can_unroll_expr(PPFPs& fs, long_constant<N>, const std::type_info& arg_types, const Tuple& tup) {
+inline bool can_unroll_expr(PPFPs& fs,
+                            long_constant<N>,
+                            const std::type_info& arg_types,
+                            const Tuple& tup) {
     if (can_unroll_expr(fs, long_constant<N-1l>(), arg_types, tup)) {
         return true;
     }
@@ -531,12 +536,18 @@ inline bool can_unroll_expr(PPFPs& fs, long_constant<N>, const std::type_info& a
 }
 
 template<class PPFPs, class Tuple>
-inline std::uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const Tuple&) {
+inline std::uint64_t calc_bitmask(PPFPs&,
+                                  minus1l,
+                                  const std::type_info&,
+                                  const Tuple&) {
     return 0x00;
 }
 
 template<class PPFPs, long N, class Tuple>
-inline std::uint64_t calc_bitmask(PPFPs& fs, long_constant<N>, const std::type_info& tinf, const Tuple& tup) {
+inline std::uint64_t calc_bitmask(PPFPs& fs,
+                                  long_constant<N>,
+                                  const std::type_info& tinf,
+                                  const Tuple& tup) {
     auto& f = get<N>(fs);
     typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
@@ -779,7 +790,7 @@ class match_expr {
     }
 
     inline size_t find_token_pos(const std::type_info* type_token) {
-        for (size_t i = m_cache_begin ; i != m_cache_end; ++i) {
+        for (size_t i = m_cache_begin ; i != m_cache_end; advance_(i)) {
             if (m_cache[i].first == type_token) return i;
         }
         return m_cache_end;
