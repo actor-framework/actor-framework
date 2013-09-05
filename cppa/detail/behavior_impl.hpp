@@ -51,6 +51,10 @@ struct optional_any_tuple_visitor {
     inline result_type operator()(T& value) const {
         return make_any_tuple(std::move(value));
     }
+    template<typename... Ts>
+    inline result_type operator()(cow_tuple<Ts...>& value) const {
+        return any_tuple{std::move(value)};
+    }
 };
 
 template<typename... Ts>
