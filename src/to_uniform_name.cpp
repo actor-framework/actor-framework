@@ -192,7 +192,7 @@ class parse_tree {
         typedef std::pair<Iterator, Iterator> range;
         std::vector<range> subranges;
         /* lifetime scope of temporary variables needed to fill 'subranges' */ {
-            auto find_end = [&](Iterator from) {
+            auto find_end = [&](Iterator from) -> Iterator {
                 auto open = 1;
                 for (auto i = from + 1; i != last && open > 0; ++i) {
                     switch (*i) {
@@ -214,7 +214,7 @@ class parse_tree {
         vector<string> tokens;
         tokens.push_back("");
         vector<Iterator> scope_resolution_ops;
-        auto is_in_subrange = [&](Iterator i) {
+        auto is_in_subrange = [&](Iterator i) -> bool {
             for (auto& r : subranges) {
                 if (i >= r.first && i < r.second) return true;
             }
