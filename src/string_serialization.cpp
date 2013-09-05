@@ -513,4 +513,9 @@ string to_verbose_string(const exception& e) {
     return oss.str();
 }
 
+std::ostream& operator<<(std::ostream& out, match_hint mh) {
+     return out << (mh == match_hint::handle ? "match_hint::handle"
+                                             : "match_hint::skip");
+}
+
 } // namespace cppa

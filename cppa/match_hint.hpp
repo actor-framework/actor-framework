@@ -31,6 +31,8 @@
 #ifndef CPPA_MATCH_HINT_HPP
 #define CPPA_MATCH_HINT_HPP
 
+#include <iosfwd>
+
 namespace cppa {
 
 /**
@@ -42,6 +44,9 @@ enum class match_hint {
     skip,
     handle
 };
+
+// implemented in string_serialization.cpp
+std::ostream& operator<<(std::ostream&, match_hint);
 
 } // namespace cppa
 
