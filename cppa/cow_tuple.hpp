@@ -146,6 +146,10 @@ class cow_tuple<Head, Tail...> {
         return m_vals->type_at(p);
     }
 
+    inline cow_tuple<Tail...> drop_left() const {
+        return cow_tuple<Tail...>::offset_subtuple(m_vals, 1);
+    }
+
     /** @cond PRIVATE */
 
     static cow_tuple from(cow_ptr_type ptr) {
