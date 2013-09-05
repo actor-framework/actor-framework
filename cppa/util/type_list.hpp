@@ -844,6 +844,21 @@ struct tl_is_distinct {
         tl_size<L>::value == tl_size<typename tl_distinct<L>::type>::value;
 };
 
+/**
+ * @brief Creates a new list containing the last @p N elements.
+ */
+template<class List, size_t N>
+struct tl_right {
+    static constexpr size_t list_size = tl_size<List>::value;
+    static constexpr size_t first_idx = (list_size > N) ? (list_size - N) : 0;
+    typedef typename tl_slice<List, first_idx, list_size>::type type;
+};
+
+template<size_t N>
+struct tl_right<empty_type_list, N> {
+    typedef empty_type_list type;
+};
+
 // list resize(list, size, fill_type)
 
 template<class List, bool OldSizeLessNewSize,
