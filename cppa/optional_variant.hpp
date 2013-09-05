@@ -406,9 +406,24 @@ struct optional_variant_ostream_helper {
     std::ostream& lhs;
     inline optional_variant_ostream_helper(std::ostream& os) : lhs(os) { }
     template<typename T>
-    std::ostream& operator()(const T& value) const { return lhs << value; }
-    inline std::ostream& operator()(const none_t&) const { return lhs; }
-    inline std::ostream& operator()() const { return lhs; }
+    std::ostream& operator()(const T& value) const {
+        return lhs << value;
+    }
+    inline std::ostream& operator()(const none_t&) const {
+        return lhs << "<none>";
+    }
+    inline std::ostream& operator()() const {
+        return lhs << "<void>";
+    }
+    template<typename T0>
+    std::ostream& operator()(const cow_tuple<T0>& value) const {
+        return lhs << get<0>(value);
+    }
+    template<typename T0, typename T1, typename... Ts>
+    std::ostream& operator()(const cow_tuple<T0, T1, Ts...>& value) const {
+        lhs << get<0>(value) << " ";
+        return (*this)(value.drop_left());
+    }
 };
 } // namespace detail
 
