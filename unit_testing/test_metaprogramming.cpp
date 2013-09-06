@@ -19,6 +19,12 @@ using std::is_same;
 using namespace cppa;
 using namespace cppa::util;
 
+template<typename T>
+struct is_int : std::false_type { };
+
+template<>
+struct is_int<int> : std::true_type { };
+
 int main() {
 
     CPPA_TEST(test_metaprogramming);
@@ -43,6 +49,8 @@ int main() {
     CPPA_CHECK((is_same<int, tl_head<l2>::type>::value));
     CPPA_CHECK((is_same<l1, tl_tail<l2>::type>::value));
 
+    CPPA_CHECK_EQUAL((util::tl_count<l1, is_int>::value), 1);
+    CPPA_CHECK_EQUAL((util::tl_count<l2, is_int>::value), 2);
 
     CPPA_PRINT("test int_list");
 
