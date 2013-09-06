@@ -70,7 +70,7 @@ class cow_ptr : util::comparable<cow_ptr<T> >,
     cow_ptr& operator=(const cow_ptr&) = default;
 
     template<typename Y>
-    cow_ptr(cow_ptr<Y> other) : m_ptr(other.m_ptr.release()) {
+    cow_ptr(cow_ptr<Y> other) : m_ptr(other.get()) {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
     }
