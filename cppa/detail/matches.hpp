@@ -140,14 +140,13 @@ struct matcher<wildcard_position::in_between, Tuple, T...> {
     static constexpr size_t size = sizeof...(T);
     static constexpr size_t wc_pos = static_cast<size_t>(signed_wc_pos);
 
-    static_assert(   signed_wc_pos != -1
-                  && signed_wc_pos != 0
-                  && signed_wc_pos != (sizeof...(T) - 1),
+    static_assert(   signed_wc_pos > 0
+                  && signed_wc_pos < (sizeof...(T) - 1),
                   "illegal wildcard position");
 
     static inline bool tmatch(const Tuple& tup) {
         auto tup_size = tup.size();
-        if (tup_size >= size) {
+        if (tup_size >= (size - 1)) {
             auto& tarr = static_types_array<T...>::arr;
             // first range [0, X1)
             auto begin = tup.begin();
@@ -245,9 +244,14 @@ struct matcher<wildcard_position::multiple, Tuple, T...> {
             auto fpush = [&](const typename Tuple::const_iterator& iter) {
                 mv.push_back(iter.position());
             };
-            auto fcommit = [&]() { commited_size = mv.size(); };
-            auto frollback = [&]() { mv.resize(commited_size); };
-            return match(tup.begin(), tup.end(), tarr.begin(), tarr.end(),
+            auto fcommit = [&] {
+                commited_size = mv.size();
+            };
+            auto frollback = [&] {
+                mv.resize(commited_size);
+            };
+            return match(tup.begin(), tup.end(),
+                         tarr.begin(), tarr.end(),
                          fpush, fcommit, frollback);
         }
         return false;
@@ -290,7 +294,7 @@ struct match_impl_from_type_list;
 
 template<class Tuple, typename... Ts>
 struct match_impl_from_type_list<Tuple, util::type_list<Ts...> > {
-    typedef match_impl<get_wildcard_position<util::type_list<Ts...> >(),
+    typedef match_impl<get_wildcard_position<util::type_list<Ts...>>(),
                        Tuple,
                        Ts...>
             type;
