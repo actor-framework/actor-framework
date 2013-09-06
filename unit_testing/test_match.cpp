@@ -8,6 +8,7 @@
 #include "cppa/announce.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/guard_expr.hpp"
+#include "cppa/detail/object_array.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -354,20 +355,117 @@ void test_pattern_matching() {
     CPPA_CHECK(!res2);
 }
 
+inline void make_dynamically_typed_impl(detail::object_array&) { }
+
+template<typename T0, typename... Ts>
+void make_dynamically_typed_impl(detail::object_array& arr, T0&& arg0, Ts&&... args) {
+    arr.push_back(object::from(std::forward<T0>(arg0)));
+    make_dynamically_typed_impl(arr, std::forward<Ts>(args)...);
+}
+
+template<typename... Ts>
+any_tuple make_dynamically_typed(Ts&&... args) {
+    auto oarr = new detail::object_array;
+    make_dynamically_typed_impl(*oarr, std::forward<Ts>(args)...);
+    return any_tuple{oarr};
+}
+
 void test_wildcards() {
-    auto expr = (
+    // leading wildcard
+    auto expr0 = (
         on(any_vals, arg_match) >> [](int a, int b) {
-            cout << "invoked: " << a << ", " << b << endl;
+            CPPA_CHECK_EQUAL(a, 1);
+            CPPA_CHECK_EQUAL(b, 2);
         }
     );
-    CPPA_CHECK(expr(make_any_tuple(1, 2, 3)));
-    CPPA_CHECK(expr(make_any_tuple(1, 2)));
-    partial_function pf = expr;
-    CPPA_CHECK(pf(make_any_tuple(1, 2)));
-    CPPA_CHECK(pf(make_any_tuple(1, 2, 3)));
-    behavior bhvr = expr;
-    CPPA_CHECK(bhvr(make_any_tuple(1, 2)));
-    CPPA_CHECK(bhvr(make_any_tuple(1, 2, 3)));
+    CPPA_CHECK(not expr0(1));
+    CPPA_CHECK(expr0(1, 2));
+    CPPA_CHECK(expr0(0, 1, 2));
+    partial_function pf0 = expr0;
+    CPPA_CHECK(not pf0(make_any_tuple(1)));
+    CPPA_CHECK(pf0(make_any_tuple(1, 2)));
+    CPPA_CHECK(pf0(make_any_tuple(0, 1, 2)));
+    CPPA_CHECK(not pf0(make_dynamically_typed(1)));
+    CPPA_CHECK(pf0(make_dynamically_typed(1, 2)));
+    CPPA_CHECK(pf0(make_dynamically_typed(0, 1, 2)));
+    behavior bhvr0 = expr0;
+    CPPA_CHECK(bhvr0(make_any_tuple(1, 2)));
+    CPPA_CHECK(bhvr0(make_any_tuple(0, 1, 2)));
+    CPPA_CHECK(bhvr0(make_dynamically_typed(1, 2)));
+    CPPA_CHECK(bhvr0(make_dynamically_typed(0, 1, 2)));
+    // wildcard in between
+    partial_function pf1 {
+        on<int, anything, int>() >> [](int a, int b) {
+            CPPA_CHECK_EQUAL(a, 10);
+            CPPA_CHECK_EQUAL(b, 20);
+        }
+    };
+    CPPA_CHECK(pf1(make_any_tuple(10, 20)));
+    CPPA_CHECK(pf1(make_any_tuple(10, 15, 20)));
+    CPPA_CHECK(pf1(make_any_tuple(10, "hello world", 15, 20)));
+    CPPA_CHECK(pf1(make_dynamically_typed(10, 20)));
+    CPPA_CHECK(pf1(make_dynamically_typed(10, 15, 20)));
+    CPPA_CHECK(pf1(make_dynamically_typed(10, "hello world", 15, 20)));
+    // multiple wildcards: one leading
+    partial_function pf2 {
+        on<anything, int, anything, int>() >> [](int a, int b) {
+            CPPA_CHECK_EQUAL(a, 10);
+            CPPA_CHECK_EQUAL(b, 20);
+        }
+    };
+    CPPA_CHECK(pf2(make_any_tuple(10, 20)));
+    CPPA_CHECK(pf2(make_any_tuple(10, 15, 20)));
+    CPPA_CHECK(pf2(make_any_tuple(10, "hello world", 15, 20)));
+    CPPA_CHECK(pf2(make_any_tuple("hello world", 10, 20)));
+    CPPA_CHECK(pf2(make_any_tuple("hello", 10, "world", 15, 20)));
+    CPPA_CHECK(pf2(make_dynamically_typed(10, 20)));
+    CPPA_CHECK(pf2(make_dynamically_typed(10, 15, 20)));
+    CPPA_CHECK(pf2(make_dynamically_typed(10, "hello world", 15, 20)));
+    CPPA_CHECK(pf2(make_dynamically_typed("hello world", 10, 20)));
+    CPPA_CHECK(pf2(make_dynamically_typed("hello", 10, "world", 15, 20)));
+    // multiple wildcards: in between
+    partial_function pf3 {
+        on<int, anything, int, anything, int>() >> [](int a, int b, int c) {
+            CPPA_CHECK_EQUAL(a, 10);
+            CPPA_CHECK_EQUAL(b, 20);
+            CPPA_CHECK_EQUAL(c, 30);
+        }
+    };
+    CPPA_CHECK(pf3(make_any_tuple(10, 20, 30)));
+    CPPA_CHECK(pf3(make_any_tuple(10, 20, 25, 30)));
+    CPPA_CHECK(pf3(make_any_tuple(10, "hello", 20, "world", 30)));
+    CPPA_CHECK(pf3(make_any_tuple(10, "hello", 20, "world", 1, 2, 30)));
+    CPPA_CHECK(pf3(make_dynamically_typed(10, 20, 30)));
+    CPPA_CHECK(pf3(make_dynamically_typed(10, 20, 25, 30)));
+    CPPA_CHECK(pf3(make_dynamically_typed(10, "hello", 20, "world", 30)));
+    CPPA_CHECK(pf3(make_dynamically_typed(10, "hello", 20, "world", 1, 2, 30)));
+    // multiple wildcards: one trailing
+    partial_function pf4 {
+        on<int, anything, int, anything>() >> [](int a, int b) {
+            CPPA_CHECK_EQUAL(a, 10);
+            CPPA_CHECK_EQUAL(b, 20);
+        }
+    };
+    CPPA_CHECK(pf4(make_any_tuple(10, 20, 30)));
+    CPPA_CHECK(pf4(make_any_tuple(10, 20, 25, 30)));
+    CPPA_CHECK(pf4(make_any_tuple(10, "hello", 20, "world", 30)));
+    CPPA_CHECK(pf4(make_any_tuple(10, "hello", 20, "world", 1, 2, 30)));
+    CPPA_CHECK(pf4(make_dynamically_typed(10, 20, 30)));
+    CPPA_CHECK(pf4(make_dynamically_typed(10, 20, 25, 30)));
+    CPPA_CHECK(pf4(make_dynamically_typed(10, "hello", 20, "world", 30)));
+    CPPA_CHECK(pf4(make_dynamically_typed(10, "hello", 20, "world", 1, 2, 30)));
+    // multiple wildcards: leading and trailing
+    partial_function pf5 {
+        on<anything, int, anything>() >> [](int a) {
+            CPPA_CHECK_EQUAL(a, 10);
+        }
+    };
+    CPPA_CHECK(pf5(make_any_tuple(10, 20, 30)));
+    CPPA_CHECK(pf5(make_any_tuple("hello", 10, "world", 30)));
+    CPPA_CHECK(pf5(make_any_tuple("hello", "world", 10)));
+    CPPA_CHECK(pf5(make_dynamically_typed(10, 20, 30)));
+    CPPA_CHECK(pf5(make_dynamically_typed("hello", 10, "world", 30)));
+    CPPA_CHECK(pf5(make_dynamically_typed("hello", "world", 10)));
 }
 
 int main() {
