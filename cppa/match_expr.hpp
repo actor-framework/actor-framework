@@ -94,9 +94,14 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
                     Pattern
                 >::type
                 mimpl;
-
         util::limited_vector<size_t, util::tl_size<FilteredPattern>::value> mv;
-        if (type_token == typeid(FilteredPattern) ||  mimpl::_(tup, mv)) {
+        if (type_token == typeid(FilteredPattern)) {
+            for (size_t i = 0; i < util::tl_size<FilteredPattern>::value; ++i) {
+                result[i] = const_cast<void*>(tup.at(i));
+            }
+            return true;
+        }
+        else if (mimpl::_(tup, mv)) {
             for (size_t i = 0; i < util::tl_size<FilteredPattern>::value; ++i) {
                 result[i] = const_cast<void*>(tup.at(mv[i]));
             }
