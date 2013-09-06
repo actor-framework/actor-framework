@@ -47,7 +47,6 @@
 #include "cppa/util/algorithm.hpp"
 
 #include "cppa/detail/demangle.hpp"
-#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
