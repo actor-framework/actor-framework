@@ -50,7 +50,7 @@ size_t object_array::size() const {
     return m_elements.size();
 }
 
-abstract_tuple* object_array::copy() const {
+object_array* object_array::copy() const {
     return new object_array(*this);
 }
 
