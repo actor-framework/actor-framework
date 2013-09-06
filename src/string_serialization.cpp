@@ -38,6 +38,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/object.hpp"
 #include "cppa/to_string.hpp"
+#include "cppa/match_hint.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/from_string.hpp"
