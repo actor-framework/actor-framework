@@ -34,7 +34,6 @@
 #include <iostream>
 
 #include "cppa/detail/tuple_vals.hpp"
-#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/disablable_delete.hpp"
 
