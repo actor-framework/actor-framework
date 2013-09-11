@@ -100,9 +100,13 @@ class singleton_manager {
         T* result = ptr.load();
         while (result == nullptr) {
             auto tmp = T::create_singleton();
-            if (ptr.compare_exchange_weak(result, tmp)) {
+            // double check if singleton is still undefined
+            if (ptr.load() == nullptr) {
                 tmp->initialize();
-                result = tmp;
+                if (ptr.compare_exchange_weak(result, tmp)) {
+                    result = tmp;
+                }
+                else tmp->destroy();
             }
             else tmp->dispose();
         }
