@@ -107,8 +107,8 @@ class actor_facade<Ret(Args...)> : public actor {
             CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
             throw std::runtime_error(oss.str());
         }
-        return new actor_facade<Ret (Args...)>{kernel,
-                                               prog,
+        return new actor_facade<Ret (Args...)>{prog,
+                                               kernel,
                                                global_dims,
                                                offsets,
                                                local_dims,
@@ -124,8 +124,8 @@ class actor_facade<Ret(Args...)> : public actor {
 
  private:
 
-    actor_facade(kernel_ptr kernel,
-                 const program& prog,
+    actor_facade(const program& prog,
+                 kernel_ptr kernel,
                  const dim_vec& global_dimensions,
                  const dim_vec& global_offsets,
                  const dim_vec& local_dimensions,
