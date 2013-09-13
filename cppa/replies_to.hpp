@@ -28,61 +28,22 @@
 \******************************************************************************/
 
 
-#include "cppa/behavior.hpp"
-#include "cppa/partial_function.hpp"
+#ifndef CPPA_REPLIES_TO_HPP
+#define CPPA_REPLIES_TO_HPP
+
+#include "cppa/util/type_list.hpp"
 
 namespace cppa {
 
-class continuation_decorator : public detail::behavior_impl {
-
-    typedef behavior_impl super;
-
- public:
-
-    typedef typename behavior_impl::pointer pointer;
-
-    continuation_decorator(const partial_function& fun, pointer ptr)
-    : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
-        CPPA_REQUIRE(m_decorated != nullptr);
-    }
-
-    template<typename T>
-    inline optional<any_tuple> invoke_impl(T& tup) {
-        auto res = m_decorated->invoke(tup);
-        if (res) return m_fun(*res);
-        return none;
-    }
-
-    optional<any_tuple> invoke(any_tuple& tup) {
-        return invoke_impl(tup);
-    }
-
-    optional<any_tuple> invoke(const any_tuple& tup) {
-        return invoke_impl(tup);
-    }
-
-    bool defined_at(const any_tuple& tup) {
-        return m_decorated->defined_at(tup);
-    }
-
-    pointer copy(const generic_timeout_definition& tdef) const {
-        return new continuation_decorator(m_fun, m_decorated->copy(tdef));
-    }
-
-    void handle_timeout() { m_decorated->handle_timeout(); }
-
- private:
-
-    partial_function m_fun;
-    pointer m_decorated;
-
+template<typename... Is>
+struct replies_to {
+    template<typename... Os>
+    struct with {
+        typedef util::type_list<Is...> input_types;
+        typedef util::type_list<Os...> output_types;
+    };
 };
 
-behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
-
-behavior behavior::add_continuation(const partial_function& fun) {
-    return {new continuation_decorator(fun, m_impl)};
-}
-
-
 } // namespace cppa
+
+#endif // CPPA_REPLIES_TO_HPP

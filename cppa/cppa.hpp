@@ -44,6 +44,7 @@
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
+#include "cppa/spawn.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/receive.hpp"
 #include "cppa/factory.hpp"
@@ -57,12 +58,14 @@
 #include "cppa/cow_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/singletons.hpp"
+#include "cppa/typed_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/response_handle.hpp"
+#include "cppa/typed_actor_ptr.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/event_based_actor.hpp"
 
@@ -469,95 +472,6 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
  * @}
  */
 
-inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
-    CPPA_LOGF_INFO("spawned new local actor with ID " << ptr->id()
-                   << " of type " << detail::demangle(typeid(*ptr)));
-    if (has_monitor_flag(opts)) self->monitor(ptr);
-    if (has_link_flag(opts)) self->link_to(ptr);
-    return std::move(ptr);
-}
-
-/**
- * @ingroup ActorCreation
- * @{
- */
-
-/**
- * @brief Spawns a new {@link actor} that evaluates given arguments.
- * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn(Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    return eval_sopts(Options,
-                      get_scheduler()->exec(Options,
-                                            scheduler::init_callback{},
-                                            std::forward<Ts>(args)...));
-}
-
-/**
- * @brief Spawns an actor of type @p Impl.
- * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn(Ts&&... args) {
-    static_assert(std::is_base_of<event_based_actor, Impl>::value,
-                  "Impl is not a derived type of event_based_actor");
-    scheduled_actor_ptr ptr;
-    if (has_priority_aware_flag(Options)) {
-        using derived = typename extend<Impl>::template with<threaded, prioritizing>;
-        ptr = make_counted<derived>(std::forward<Ts>(args)...);
-    }
-    else if (has_detach_flag(Options)) {
-        using derived = typename extend<Impl>::template with<threaded>;
-        ptr = make_counted<derived>(std::forward<Ts>(args)...);
-    }
-    else ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    return eval_sopts(Options, get_scheduler()->exec(Options, std::move(ptr)));
-}
-
-/**
- * @brief Spawns a new actor that evaluates given arguments and
- *        immediately joins @p grp.
- * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note The spawned has joined the group before this function returns.
- */
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    auto init_cb = [=](local_actor* ptr) {
-        ptr->join(grp);
-    };
-    return eval_sopts(Options,
-                      get_scheduler()->exec(Options,
-                                            init_cb,
-                                            std::forward<Ts>(args)...));
-}
-
-/**
- * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
- * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
- * @note The spawned has joined the group before this function returns.
- */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    ptr->join(grp);
-    return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
-}
-
-/** @} */
-
 /**
  * @brief Blocks execution of this actor until all
  *        other actors finished execution.
@@ -682,18 +596,6 @@ actor_ptr spawn_io_server(F fun, uint16_t port, Ts&&... args) {
  *        using libcppa's networking infrastructure.
  */
 void shutdown(); // note: implemented in singleton_manager.cpp
-
-/**
- * @brief Sends an exit message to @p whom with @p reason.
- *
- * This function is syntactic sugar for
- * <tt>send(whom, atom("EXIT"), reason)</tt>.
- * @pre <tt>reason != exit_reason::normal</tt>
- */
-inline void send_exit(actor_ptr whom, std::uint32_t reason) {
-    CPPA_REQUIRE(reason != exit_reason::normal);
-    send(std::move(whom), atom("EXIT"), reason);
-}
 
 /**
  * @brief Sets the actor's behavior and discards the previous behavior

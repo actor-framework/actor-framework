@@ -34,6 +34,19 @@
 
 namespace cppa {
 
+message_future sync_send_tuple(actor_ptr whom, any_tuple what) {
+    if (!whom) throw std::invalid_argument("whom == nullptr");
+    auto req = self->new_request_id();
+    message_header hdr{self, std::move(whom), req};
+    if (self->chaining_enabled()) {
+        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
+            self->chained_actor(hdr.receiver.downcast<actor>());
+        }
+    }
+    else hdr.deliver(std::move(what));
+    return req.response_id();
+}
+
 void delayed_send_tuple(const channel_ptr& to,
                         const util::duration& rel_time,
                         any_tuple data) {

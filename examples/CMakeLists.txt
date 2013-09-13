@@ -22,6 +22,13 @@ add(distributed_calculator remote_actors)
 add(group_server remote_actors)
 add(group_chat remote_actors)
 
+find_package(CURL)
+if (CURL_FOUND)
+    add_executable(curl_fuse curl/curl_fuse.cpp)
+    target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
+    add_dependencies(curl_fuse all_examples)
+endif (CURL_FOUND)
+
 if (NOT "${CPPA_NO_QT_EXAMPLES}" STREQUAL "yes")
 
   find_package(Qt4)

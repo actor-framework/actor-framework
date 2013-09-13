@@ -34,9 +34,10 @@
 #include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
-#include "cppa/local_actor.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/message_future.hpp"
+#include "cppa/typed_actor_ptr.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -47,6 +48,9 @@ namespace cppa {
  * @{
  */
 
+/**
+ * @brief Stores sender, receiver, and message priority.
+ */
 struct destination_header {
     channel_ptr receiver;
     message_priority priority;
@@ -118,18 +122,7 @@ inline void send_as(actor_ptr from, channel_ptr whom, Ts&&... what) {
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-inline message_future sync_send_tuple(actor_ptr whom, any_tuple what) {
-    if (!whom) throw std::invalid_argument("whom == nullptr");
-    auto req = self->new_request_id();
-    message_header hdr{self, std::move(whom), req};
-    if (self->chaining_enabled()) {
-        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
-            self->chained_actor(hdr.receiver.downcast<actor>());
-        }
-    }
-    else hdr.deliver(std::move(what));
-    return req.response_id();
-}
+message_future sync_send_tuple(actor_ptr whom, any_tuple what);
 
 /**
  * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -146,6 +139,33 @@ inline message_future sync_send(actor_ptr whom, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     return sync_send_tuple(std::move(whom),
                            make_any_tuple(std::forward<Ts>(what)...));
+}
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
+ * @param whom Receiver of the message.
+ * @param what Message elements.
+ * @returns A handle identifying a future to the response of @p whom.
+ * @warning The returned handle is actor specific and the response to the sent
+ *          message cannot be received by another actor.
+ * @pre <tt>sizeof...(Ts) > 0</tt>
+ * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+ */
+template<typename... Signatures, typename... Ts>
+typed_message_future<
+    typename detail::deduce_output_type<
+        util::type_list<Signatures...>,
+        util::type_list<
+            typename detail::implicit_conversions<
+                typename util::rm_const_and_ref<
+                    Ts
+                >::type
+            >::type...
+        >
+    >::type
+>
+sync_send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
+    return sync_send(whom.unbox(), std::forward<Ts>(what)...);
 }
 
 /**
@@ -336,6 +356,27 @@ template<class Rep, class Period, typename... Ts>
 inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
                           Ts&&... what) {
     delayed_reply_tuple(rtime, make_any_tuple(std::forward<Ts>(what)...));
+}
+
+/**
+ * @brief Sends an exit message to @p whom with @p reason.
+ *
+ * This function is syntactic sugar for
+ * <tt>send(whom, atom("EXIT"), reason)</tt>.
+ * @pre <tt>reason != exit_reason::normal</tt>
+ */
+inline void send_exit(actor_ptr whom, std::uint32_t rsn) {
+    CPPA_REQUIRE(rsn != exit_reason::normal);
+    send(std::move(whom), atom("EXIT"), rsn);
+}
+
+/**
+ * @brief Sends an exit message to @p whom with @p reason.
+ * @pre <tt>reason != exit_reason::normal</tt>
+ */
+template<typename... Signatures>
+void send_exit(const typed_actor_ptr<Signatures...>& whom, std::uint32_t rsn) {
+    send_exit(whom.unbox(), rsn);
 }
 
 /**

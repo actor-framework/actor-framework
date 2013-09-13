@@ -205,54 +205,6 @@ default_behavior_impl<dummy_match_expr, F>* new_default_behavior(util::duration 
     return new default_behavior_impl<dummy_match_expr, F>(dummy_match_expr{}, d, f);
 }
 
-template<typename F>
-class continuation_decorator : public behavior_impl {
-
-    typedef behavior_impl super;
-
- public:
-
-    typedef typename behavior_impl::pointer pointer;
-
-    template<typename Fun>
-    continuation_decorator(Fun&& fun, pointer decorated)
-    : super(decorated->timeout()), m_fun(std::forward<Fun>(fun))
-    , m_decorated(std::move(decorated)) {
-        CPPA_REQUIRE(m_decorated != nullptr);
-    }
-
-    template<typename T>
-    inline optional<any_tuple> invoke_impl(T& tup) {
-        auto res = m_decorated->invoke(tup);
-        if (res) m_fun();
-        return res;
-    }
-
-    optional<any_tuple> invoke(any_tuple& tup) {
-        return invoke_impl(tup);
-    }
-
-    optional<any_tuple> invoke(const any_tuple& tup) {
-        return invoke_impl(tup);
-    }
-
-    bool defined_at(const any_tuple& tup) {
-        return m_decorated->defined_at(tup);
-    }
-
-    pointer copy(const generic_timeout_definition& tdef) const {
-        return new continuation_decorator<F>(m_fun, m_decorated->copy(tdef));
-    }
-
-    void handle_timeout() { m_decorated->handle_timeout(); }
-
- private:
-
-    F m_fun;
-    pointer m_decorated;
-
-};
-
 typedef intrusive_ptr<behavior_impl> behavior_impl_ptr;
 
 } } // namespace cppa::detail

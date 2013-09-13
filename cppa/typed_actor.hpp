@@ -28,61 +28,84 @@
 \******************************************************************************/
 
 
-#include "cppa/behavior.hpp"
-#include "cppa/partial_function.hpp"
+#ifndef CPPA_TYPED_ACTOR_HPP
+#define CPPA_TYPED_ACTOR_HPP
+
+#include "cppa/replies_to.hpp"
+#include "cppa/message_future.hpp"
+#include "cppa/event_based_actor.hpp"
+
+#include "cppa/detail/typed_actor_util.hpp"
 
 namespace cppa {
 
-class continuation_decorator : public detail::behavior_impl {
+struct typed_actor_result_visitor {
 
-    typedef behavior_impl super;
-
- public:
-
-    typedef typename behavior_impl::pointer pointer;
-
-    continuation_decorator(const partial_function& fun, pointer ptr)
-    : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
-        CPPA_REQUIRE(m_decorated != nullptr);
+    inline void operator()(const none_t&) const {
+        CPPA_LOG_ERROR("a typed actor received a "
+                       "non-matching message: "
+                       << to_string(self->last_dequeued()));
     }
+
+    inline void operator()() const { }
 
     template<typename T>
-    inline optional<any_tuple> invoke_impl(T& tup) {
-        auto res = m_decorated->invoke(tup);
-        if (res) return m_fun(*res);
-        return none;
+    inline void operator()(T& value) const {
+        reply(std::move(value));
     }
 
-    optional<any_tuple> invoke(any_tuple& tup) {
-        return invoke_impl(tup);
+    template<typename... Ts>
+    inline void operator()(cow_tuple<Ts...>& value) const {
+        reply_tuple(std::move(value));
     }
 
-    optional<any_tuple> invoke(const any_tuple& tup) {
-        return invoke_impl(tup);
+    template<typename R>
+    inline void operator()(typed_continue_helper<R>& ch) const {
+        auto hdl = self->make_response_handle();
+        ch.continue_with([=](R value) {
+            reply_to(hdl, std::move(value));
+        });
     }
 
-    bool defined_at(const any_tuple& tup) {
-        return m_decorated->defined_at(tup);
+    template<typename... Rs>
+    inline void operator()(typed_continue_helper<cow_tuple<Rs...>>& ch) const {
+        auto hdl = self->make_response_handle();
+        ch.continue_with([=](cow_tuple<Rs...> value) {
+            reply_tuple_to(hdl, std::move(value));
+        });
     }
-
-    pointer copy(const generic_timeout_definition& tdef) const {
-        return new continuation_decorator(m_fun, m_decorated->copy(tdef));
-    }
-
-    void handle_timeout() { m_decorated->handle_timeout(); }
-
- private:
-
-    partial_function m_fun;
-    pointer m_decorated;
 
 };
 
-behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
+template<typename MatchExpr>
+class typed_actor : public event_based_actor {
 
-behavior behavior::add_continuation(const partial_function& fun) {
-    return {new continuation_decorator(fun, m_impl)};
-}
+ public:
 
+    typed_actor(MatchExpr expr) : m_fun(std::move(expr)) { }
+
+ protected:
+
+    void init() override {
+        m_bhvr_stack.push_back(partial_function{
+            on<anything>() >> [=] {
+                auto result = m_fun(last_dequeued());
+                apply_visitor(typed_actor_result_visitor{}, result);
+            }
+        });
+    }
+
+    virtual void do_become(behavior&&, bool) override {
+        CPPA_LOG_ERROR("typed actors are not allowed to call become()");
+        quit(exit_reason::unallowed_function_call);
+    }
+
+ private:
+
+    MatchExpr m_fun;
+
+};
 
 } // namespace cppa
+
+#endif // CPPA_TYPED_ACTOR_HPP

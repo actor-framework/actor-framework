@@ -32,6 +32,7 @@
 #define CPPA_TYPE_TO_PTYPE_HPP
 
 #include <string>
+#include <limits>
 #include <cstdint>
 #include <type_traits>
 
@@ -44,6 +45,32 @@ namespace cppa { namespace detail {
 template<primitive_type PT>
 struct wrapped_ptype { static const primitive_type ptype = PT; };
 
+template<bool IsInteger, bool IsSigned, size_t Sizeof>
+struct type_to_ptype_int {
+    static constexpr primitive_type ptype = pt_null;
+};
+
+template<> struct type_to_ptype_int<true, true , 1> : wrapped_ptype<pt_int8  > { };
+template<> struct type_to_ptype_int<true, false, 1> : wrapped_ptype<pt_uint8 > { };
+template<> struct type_to_ptype_int<true, true , 2> : wrapped_ptype<pt_int16 > { };
+template<> struct type_to_ptype_int<true, false, 2> : wrapped_ptype<pt_uint16> { };
+template<> struct type_to_ptype_int<true, true , 4> : wrapped_ptype<pt_int32 > { };
+template<> struct type_to_ptype_int<true, false, 4> : wrapped_ptype<pt_uint32> { };
+template<> struct type_to_ptype_int<true, true , 8> : wrapped_ptype<pt_int64 > { };
+template<> struct type_to_ptype_int<true, false, 8> : wrapped_ptype<pt_uint64> { };
+
+template<bool IsArithmetic, typename T>
+struct type_to_ptype_impl_helper : wrapped_ptype<pt_null> { };
+
+template<typename T>
+struct type_to_ptype_impl_helper<true, T> {
+    static constexpr auto ptype = type_to_ptype_int<
+                    std::numeric_limits<T>::is_integer,
+                    std::numeric_limits<T>::is_signed,
+                    sizeof(T)
+                >::ptype;
+};
+
 // maps type T the the corresponding fundamental_type
 template<typename T>
 struct type_to_ptype_impl {
@@ -54,18 +81,8 @@ struct type_to_ptype_impl {
            ? pt_u16string
            : (std::is_convertible<T, std::u32string>::value
               ? pt_u32string
-              : pt_null));
+              : type_to_ptype_impl_helper<std::is_arithmetic<T>::value, T>::ptype));
 };
-
-// integers
-template<> struct type_to_ptype_impl<std::int8_t  > : wrapped_ptype<pt_int8  > { };
-template<> struct type_to_ptype_impl<std::uint8_t > : wrapped_ptype<pt_uint8 > { };
-template<> struct type_to_ptype_impl<std::int16_t > : wrapped_ptype<pt_int16 > { };
-template<> struct type_to_ptype_impl<std::uint16_t> : wrapped_ptype<pt_uint16> { };
-template<> struct type_to_ptype_impl<std::int32_t > : wrapped_ptype<pt_int32 > { };
-template<> struct type_to_ptype_impl<std::uint32_t> : wrapped_ptype<pt_uint32> { };
-template<> struct type_to_ptype_impl<std::int64_t > : wrapped_ptype<pt_int64 > { };
-template<> struct type_to_ptype_impl<std::uint64_t> : wrapped_ptype<pt_uint64> { };
 
 // floating points
 template<> struct type_to_ptype_impl<float>       : wrapped_ptype<pt_float      > { };

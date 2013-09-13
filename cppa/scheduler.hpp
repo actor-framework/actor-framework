@@ -44,7 +44,7 @@
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/spawn_options.hpp"
-#include "cppa/scheduled_actor.hpp"
+//#include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -53,7 +53,9 @@
 namespace cppa {
 
 class self_type;
+class scheduled_actor;
 class scheduler_helper;
+typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
 namespace detail { class singleton_manager; } // namespace detail
 
 /**
@@ -140,7 +142,8 @@ class scheduler {
     /**
      * @brief Executes @p ptr in this scheduler.
      */
-    virtual local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) = 0;
+    virtual local_actor_ptr exec(spawn_options opts,
+                                 scheduled_actor_ptr ptr) = 0;
 
     /**
      * @brief Creates a new actor from @p actor_behavior and executes it
