@@ -195,6 +195,7 @@ cppa/util/wrapped.hpp
 cppa/weak_intrusive_ptr.hpp
 cppa/weak_ptr_anchor.hpp
 cppa/wildcard_position.hpp
+examples/curl/curl_fuse.cpp
 examples/hello_world.cpp
 examples/message_passing/calculator.cpp
 examples/message_passing/dancing_kirby.cpp
