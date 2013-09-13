@@ -63,6 +63,7 @@ cppa/detail/tuple_iterator.hpp
 cppa/detail/tuple_vals.hpp
 cppa/detail/tuple_view.hpp
 cppa/detail/type_to_ptype.hpp
+cppa/detail/typed_actor_util.hpp
 cppa/detail/types_array.hpp
 cppa/detail/unboxed.hpp
 cppa/detail/uniform_type_info_map.hpp
@@ -136,6 +137,7 @@ cppa/process_information.hpp
 cppa/qtsupport/actor_widget_mixin.hpp
 cppa/receive.hpp
 cppa/ref_counted.hpp
+cppa/replies_to.hpp
 cppa/response_handle.hpp
 cppa/sb_actor.hpp
 cppa/scheduled_actor.hpp
@@ -144,6 +146,7 @@ cppa/self.hpp
 cppa/send.hpp
 cppa/serializer.hpp
 cppa/singletons.hpp
+cppa/spawn.hpp
 cppa/spawn_options.hpp
 cppa/stacked.hpp
 cppa/stackless.hpp
@@ -155,6 +158,8 @@ cppa/to_string.hpp
 cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
 cppa/type_lookup_table.hpp
+cppa/typed_actor.hpp
+cppa/typed_actor_ptr.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
 cppa/util/abstract_uniform_type_info.hpp

@@ -185,7 +185,8 @@ class primitive_variant {
      */
     template<typename V>
     primitive_variant(V&& value) : m_ptype(pt_null) {
-        static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
+        typedef typename util::rm_const_and_ref<V>::type raw_type;
+        static constexpr auto ptype = detail::type_to_ptype<raw_type>::ptype;
         static_assert(ptype != pt_null, "V is not a primitive type");
         detail::ptv_set<ptype>(m_ptype,
                                get(util::pt_token<ptype>()),
@@ -219,7 +220,8 @@ class primitive_variant {
      */
     template<typename V>
     primitive_variant& operator=(V&& value) {
-        static constexpr primitive_type ptype = detail::type_to_ptype<V>::ptype;
+        typedef typename util::rm_const_and_ref<V>::type raw_type;
+        static constexpr primitive_type ptype = detail::type_to_ptype<raw_type>::ptype;
         static_assert(ptype != pt_null, "V is not a primitive type");
         util::pt_token<ptype> token;
         if (ptype == m_ptype) {
@@ -228,7 +230,6 @@ class primitive_variant {
         else {
             destroy();
             detail::ptv_set<ptype>(m_ptype, get(token), std::forward<V>(value));
-            //set(std::forward<V>(value));
         }
         return *this;
     }
@@ -276,7 +277,9 @@ class primitive_variant {
 template<typename T>
 const T& get(const primitive_variant& pv) {
     static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
-    return pv.get_as<ptype>();
+    // this cast shuts down annoying erorrs such as
+    // "reference to 'char' cannot bind to 'signed char'"
+    return reinterpret_cast<const T&>(pv.get_as<ptype>());
 }
 
 /**
@@ -290,7 +293,9 @@ const T& get(const primitive_variant& pv) {
 template<typename T>
 T& get_ref(primitive_variant& pv) {
     static const primitive_type ptype = detail::type_to_ptype<T>::ptype;
-    return pv.get_as<ptype>();
+    // this cast shuts down annoying erorrs such as
+    // "reference to 'char' cannot bind to 'signed char'"
+    return reinterpret_cast<T&>(pv.get_as<ptype>());
 }
 
 /**

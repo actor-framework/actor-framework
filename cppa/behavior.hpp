@@ -108,8 +108,10 @@ class behavior {
      *        whenever this behavior was successfully applied to
      *        a message.
      */
-    template<typename F>
-    inline behavior add_continuation(F fun);
+    behavior add_continuation(const partial_function& fun);
+
+    //template<typename F>
+    //inline behavior add_continuation(F fun);
 
  private:
 
@@ -168,10 +170,10 @@ inline auto behavior::as_behavior_impl() const -> const impl_ptr& {
     return m_impl;
 }
 
-template<typename F>
-inline behavior behavior::add_continuation(F fun) {
-    return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
-}
+//template<typename F>
+//inline behavior behavior::add_continuation(F fun) {
+//    return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
+//}
 
 } // namespace cppa
 

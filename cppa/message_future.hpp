@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MESSAGE_FUTURE_HPP
-#define MESSAGE_FUTURE_HPP
+#ifndef CPPA_MESSAGE_FUTURE_HPP
+#define CPPA_MESSAGE_FUTURE_HPP
 
 #include <cstdint>
 #include <type_traits>
@@ -40,11 +40,40 @@
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/message_id.hpp"
-#include "cppa/local_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
 
+#include "cppa/detail/typed_actor_util.hpp"
+
 namespace cppa {
+
+/**
+ * @brief Provides the @p continue_with member function as used in
+ *        <tt>sync_send(...).then(...).continue_with(...)</tt>.
+ */
+class continue_helper {
+
+ public:
+
+    inline continue_helper(message_id mid) : m_mid(mid) { }
+
+    template<typename F>
+    void continue_with(F fun) {
+        auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
+        if (ref_opt) {
+            auto& ref = *ref_opt;
+            // copy original behavior
+            behavior cpy = ref;
+            ref = cpy.add_continuation(on(any_vals, arg_match) >> fun);
+        }
+        else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
+    }
+
+ private:
+
+    message_id m_mid;
+
+};
 
 /**
  * @brief Represents the result of a synchronous send.
@@ -52,30 +81,6 @@ namespace cppa {
 class message_future {
 
  public:
-
-    class continue_helper {
-
-     public:
-
-        inline continue_helper(message_id mid) : m_mid(mid) { }
-
-        template<typename F>
-        void continue_with(F fun) {
-            auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
-            if (ref_opt) {
-                auto& ref = *ref_opt;
-                // copy original behavior
-                behavior cpy = ref;
-                ref = cpy.add_continuation(std::move(fun));
-            }
-            else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
-        }
-
-     private:
-
-        message_id m_mid;
-
-    };
 
     message_future() = delete;
 
@@ -165,6 +170,55 @@ class message_future {
 
 };
 
+template<typename R>
+class typed_continue_helper {
+
+ public:
+
+    typedef typename detail::lifted_result_type<R>::type result_types;
+
+    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
+
+    template<typename F>
+    void continue_with(F fun) {
+        detail::assert_types<result_types, F>();
+        m_ch.continue_with(std::move(fun));
+    }
+
+ private:
+
+    continue_helper m_ch;
+
+};
+
+template<typename OutputList>
+class typed_message_future {
+
+ public:
+
+    typed_message_future(message_future&& mf) : m_mf(std::move(mf)) { }
+
+    template<typename F>
+    void await(F fun) {
+        detail::assert_types<OutputList, F>();
+        m_mf.await(fun);
+    }
+
+    template<typename F>
+    typed_continue_helper<
+        typename util::get_callable_trait<F>::result_type
+    >
+    then(F fun) {
+        detail::assert_types<OutputList, F>();
+        return m_mf.then(fun);
+    }
+
+ private:
+
+    message_future m_mf;
+
+};
+
 class sync_handle_helper {
 
  public:
@@ -172,7 +226,7 @@ class sync_handle_helper {
     inline sync_handle_helper(const message_future& mf) : m_mf(mf) { }
 
     template<typename... Ts>
-    inline message_future::continue_helper operator()(Ts&&... args) {
+    inline continue_helper operator()(Ts&&... args) {
         return m_mf.then(std::forward<Ts>(args)...);
     }
 
@@ -223,4 +277,4 @@ inline sync_receive_helper receive_response(const message_future& f) {
 
 } // namespace cppa
 
-#endif // MESSAGE_FUTURE_HPP
+#endif // CPPA_MESSAGE_FUTURE_HPP

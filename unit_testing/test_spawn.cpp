@@ -305,254 +305,42 @@ void high_priority_testee() {
     );
 }
 
-
-
-
-
-
-
-
-template<typename... Is>
-struct replies_to {
-    template<typename... Os>
-    struct with {
-        typedef util::type_list<Is...> input_types;
-        typedef util::type_list<Os...> output_types;
-    };
-};
-
 struct high_priority_testee_class : event_based_actor {
     void init() {
         high_priority_testee();
     }
 };
 
-template<typename R, typename T>
-struct deduce_signature_helper;
-
-template<typename R, typename... Ts>
-struct deduce_signature_helper<R, util::type_list<Ts...>> {
-    typedef typename replies_to<Ts...>::template with<R> type;
-};
-
-template<typename... Rs, typename... Ts>
-struct deduce_signature_helper<cow_tuple<Rs...>, util::type_list<Ts...>> {
-    typedef typename replies_to<Ts...>::template with<Rs...> type;
-};
-
-template<typename T>
-struct deduce_signature {
-    typedef typename detail::implicit_conversions<
-                typename T::second_type::result_type
-            >::type
-            result_type;
-    typedef typename util::tl_map<
-                typename T::second_type::arg_types,
-                util::rm_const_and_ref
-            >::type
-            arg_types;
-    typedef typename deduce_signature_helper<result_type, arg_types>::type type;
-};
-
-template<typename T>
-struct match_expr_has_no_guard {
-    static constexpr bool value = std::is_same<
-                                      typename T::second_type::guard_type,
-                                      detail::empty_value_guard
-                                  >::value;
-};
-
-/* <EXPERIMENTAL TYPED ACTORS> */
-
-template<typename... Signatures>
-class typed_actor_ptr;
-
-template<spawn_options Options, typename... Ts>
-typed_actor_ptr<typename deduce_signature<Ts>::type...>
-spawn_typed(const match_expr<Ts...>& me);
-
-
-template<typename... Signatures>
-class typed_actor_ptr {
-
-    template<spawn_options Options, typename... Ts>
-    friend typed_actor_ptr<typename deduce_signature<Ts>::type...>
-           spawn_typed(const match_expr<Ts...>& me);
-
- public:
-
-    typedef util::type_list<Signatures...> signatures;
-
-    typed_actor_ptr() = default;
-    typed_actor_ptr(typed_actor_ptr&&) = default;
-    typed_actor_ptr(const typed_actor_ptr&) = default;
-    typed_actor_ptr& operator=(typed_actor_ptr&&) = default;
-    typed_actor_ptr& operator=(const typed_actor_ptr&) = default;
-
-    /** @cond PRIVATE */
-
-    const actor_ptr& unbox() const { return m_ptr; }
-
-    /** @endcond */
-
- private:
-
-    typed_actor_ptr(actor_ptr ptr) : m_ptr(std::move(ptr)) { }
-
-    actor_ptr m_ptr;
-
-};
-
-class typed_actor : public event_based_actor {
-
- public:
-
-    template<typename MatchExpr>
-    typed_actor(MatchExpr&& expr) : m_fun(std::forward<MatchExpr>(expr)) { }
-
- protected:
-
-    void init() override {
-        m_bhvr_stack.push_back(partial_function{
-            on<anything>() >> [=] {
-                auto result = m_fun(last_dequeued());
-                if (result) reply_tuple(*result);
-                else {
-                    CPPA_LOG_ERROR("a typed actor received a "
-                                   "non-matching message: "
-                                   << to_string(last_dequeued()));
-                }
-            }
-        });
-    }
-
-    virtual void do_become(behavior&&, bool) override {
-        CPPA_LOG_ERROR("typed actors are not allowed to call become()");
-        quit(exit_reason::unallowed_function_call);
-    }
-
- private:
-
-    partial_function m_fun;
-
-};
-
-template<spawn_options Options, typename... Ts>
-typed_actor_ptr<typename deduce_signature<Ts>::type...>
-spawn_typed(const match_expr<Ts...>& me) {
-
-    typedef typed_actor_ptr<replies_to<std::string>::template with<int>> ta;
-
-    static_assert(util::conjunction<match_expr_has_no_guard<Ts>::value...>::value,
-                  "typed actors are not allowed to use guard expressions");
-
-    typedef util::type_list<typename deduce_signature<Ts>::arg_types...> args;
-
-    static_assert(util::tl_is_distinct<args>::value,
-                  "typed actors are not allowed to define multiple patterns "
-                  "with identical signature");
-
-    auto ptr = make_counted<typed_actor>(me);
-
-    return {eval_sopts(Options, get_scheduler()->exec(Options, std::move(ptr)))};
-
-}
-
-template<typename... Ts>
-typed_actor_ptr<typename deduce_signature<Ts>::type...>
-spawn_typed(const match_expr<Ts...>& me) {
-    return spawn_typed<no_spawn_options>(me);
-}
-
-template<typename T0, typename T1, typename... Ts>
-auto spawn_typed(T0&& v0, T1&& v1, Ts&&... vs)
--> decltype(spawn_typed(match_expr_collect(std::forward<T0>(v0),
-                                           std::forward<T1>(v1),
-                                           std::forward<Ts>(vs)...))) {
-    return spawn_typed(match_expr_collect(std::forward<T0>(v0),
-                                          std::forward<T1>(v1),
-                                          std::forward<Ts>(vs)...));
-}
-
-
-template<typename Arguments>
-struct input_is {
-    template<typename Signature>
-    struct eval {
-        static constexpr bool value = std::is_same<
-                                          Arguments,
-                                          typename Signature::input_types
-                                      >::value;
-    };
-};
-
-template<typename Signatures, typename InputTypes>
-struct deduce_output_type {
-    static constexpr int input_pos = util::tl_find_if<
-                                         Signatures,
-                                         input_is<InputTypes>::template eval
-                                     >::value;
-    static_assert(input_pos >= 0, "typed actor does not support given input");
-    typedef typename util::tl_at<Signatures, input_pos>::type signature;
-    typedef typename signature::output_types type;
-};
-
-template<typename OutputList>
-struct typed_sync_send_helper {
-
-    typed_sync_send_helper(message_future&& mf) : m_mf(std::move(mf)) { }
-
-    template<typename F>
-    void await(F fun) {
-        typedef typename util::tl_map<
-                    typename util::get_callable_trait<F>::arg_types,
-                    util::rm_const_and_ref
-                >::type
-                arg_types;
-        static constexpr size_t fun_args = util::tl_size<arg_types>::value;
-        static_assert(fun_args <= util::tl_size<OutputList>::value,
-                      "functor takes too much arguments");
-        typedef typename util::tl_right<OutputList, fun_args>::type recv_types;
-        static_assert(std::is_same<arg_types, recv_types>::value,
-                      "wrong functor signature");
-        m_mf.await(fun);
-    }
-
- private:
-
-    message_future m_mf;
-
-};
-
-template<typename... Signatures, typename... Ts>
-typed_sync_send_helper<
-    typename deduce_output_type<
-        util::type_list<Signatures...>,
-        util::type_list<Ts...>
-    >::type
->
-sync_send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
-    return sync_send(whom.unbox(), std::forward<Ts>(what)...);
-}
-
-/* </EXPERIMENTAL TYPED ACTORS> */
-
-int main() {
-    CPPA_TEST(test_spawn);
-
-
-    /* <EXPERIMENTAL TYPED ACTORS> */
-
+void test_typed_actors() {
+    auto ptr0 = spawn_typed(
+        on_arg_match >> [](double d) {
+            return d * d;
+        }
+    );
+    CPPA_CHECK((std::is_same<
+                    decltype(ptr0),
+                    typed_actor_ptr<
+                        replies_to<double>::with<double>
+                    >
+                >::value));
     auto ptr = spawn_typed(
         on<int>() >> [] { return "wtf"; },
         on<string>() >> [] { return 42; },
         on<float>() >> [] { return make_cow_tuple(1, 2, 3); },
-        on<double>() >> [] { }
+        on<double>() >> [=](double d) {
+            return sync_send(ptr0, d).then(
+                [](double res) { return res + res; }
+            );
+        }
     );
-
+    sync_send(ptr, 10.0).await(
+        [](double d) {
+            CPPA_CHECK_EQUAL(d, 200.0);
+        }
+    );
     sync_send(ptr, 42).await(
         [](const std::string& str) {
-            cout << "42 => " << str << endl;
+            CPPA_CHECK_EQUAL(str, "wtf");
         }
     );
     sync_send(ptr, 1.2f).await(
@@ -576,14 +364,19 @@ int main() {
     sync_send(ptr, 1.2f).await(
         [] { CPPA_CHECKPOINT(); }
     );
+    send_exit(ptr0, exit_reason::user_defined);
+    send_exit(ptr,  exit_reason::user_defined);
+    await_all_others_done();
+    CPPA_CHECKPOINT();
+}
 
-    send_exit(ptr.unbox(), exit_reason::user_defined);
-
-    /* </EXPERIMENTAL TYPED ACTORS> */
-
+int main() {
+    CPPA_TEST(test_spawn);
 
     cout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
     cout << "sizeof(broker) = " << sizeof(io::broker) << endl;
+
+    test_typed_actors();
 
     CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);
