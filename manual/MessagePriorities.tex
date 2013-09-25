@@ -1,0 +1,35 @@
+\section{Message Priorities}
+
+By default, all messages have the same priority and actors ignore priority flags.
+Actors that should evaluate priorities must be spawned using the \lstinline^priority_aware^ flag.
+This flag causes the actor to use a priority-aware mailbox implementation.
+It is not possible to change this implementation dynamically at runtime.
+
+\begin{lstlisting}
+void testee() {
+  // send 'b' with normal priority
+  send(self, atom("b"));
+  // send 'a' with high priority
+  send({self, message_priority::high}, atom("a"));
+  // terminate after receiving a 'b'
+  become (
+    on(atom("b")) >> [] {
+      aout << "received 'b' => quit" << endl;
+      self->quit();
+    },
+    on(atom("a")) >> [] {
+      aout << "received 'a'" << endl;
+    },
+  );
+}
+
+int main() {
+  // will print "received 'b' => quit"
+  spawn(testee);
+  await_all_others_done();
+  // will print "received 'a'" and then "received 'b' => quit"
+  spawn<priority_aware>(testee);
+  await_all_others_done();
+  shutdown();
+}
+\end{lstlisting}

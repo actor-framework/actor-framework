@@ -1,0 +1,147 @@
+%%
+%% This is file `cmbright.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% cmbright.dtx  (with options: `package')
+%% 
+%% IMPORTANT NOTICE:
+%% 
+%% For the copyright see the source file.
+%% 
+%% Any modified versions of this file must be renamed
+%% with new filenames distinct from cmbright.sty.
+%% 
+%% For distribution of the original source see the terms
+%% for copying and modification in the file cmbright.dtx.
+%% 
+%% This generated file may be distributed as long as the
+%% original source files, as listed above, are part of the
+%% same distribution. (The sources need not necessarily be
+%% in the same archive or directory.)
+\ProvidesPackage{cmbright}
+           [2005/04/13 v8.1 (WaS)]
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\renewcommand{\familydefault}{\sfdefault}
+\renewcommand{\sfdefault}{cmbr}
+\renewcommand{\ttdefault}{cmtl}
+\DeclareSymbolFont      {operators} {OT1}{cmbr}{m}{n}
+\DeclareSymbolFont        {letters} {OML}{cmbrm}{m}{it}
+\SetSymbolFont      {letters}{bold} {OML}{cmbrm}{b}{it}
+\DeclareSymbolFont        {symbols} {OMS}{cmbrs}{m}{n}
+\DeclareMathAlphabet{\mathit} {OT1}{cmbr}{m}{sl}
+\DeclareMathAlphabet{\mathbf} {OT1}{cmbr}{bx}{n}
+\DeclareMathAlphabet{\mathtt} {OT1}{cmtl}{m}{n}
+\DeclareMathAlphabet{\mathbold}{OML}{cmbrm}{b}{it}
+\DeclareMathSymbol{\alpha}{\mathalpha}{letters}{11}
+\DeclareMathSymbol{\beta}{\mathalpha}{letters}{12}
+\DeclareMathSymbol{\gamma}{\mathalpha}{letters}{13}
+\DeclareMathSymbol{\delta}{\mathalpha}{letters}{14}
+\DeclareMathSymbol{\epsilon}{\mathalpha}{letters}{15}
+\DeclareMathSymbol{\zeta}{\mathalpha}{letters}{16}
+\DeclareMathSymbol{\eta}{\mathalpha}{letters}{17}
+\DeclareMathSymbol{\theta}{\mathalpha}{letters}{18}
+\DeclareMathSymbol{\iota}{\mathalpha}{letters}{19}
+\DeclareMathSymbol{\kappa}{\mathalpha}{letters}{20}
+\DeclareMathSymbol{\lambda}{\mathalpha}{letters}{21}
+\DeclareMathSymbol{\mu}{\mathalpha}{letters}{22}
+\DeclareMathSymbol{\nu}{\mathalpha}{letters}{23}
+\DeclareMathSymbol{\xi}{\mathalpha}{letters}{24}
+\DeclareMathSymbol{\pi}{\mathalpha}{letters}{25}
+\DeclareMathSymbol{\rho}{\mathalpha}{letters}{26}
+\DeclareMathSymbol{\sigma}{\mathalpha}{letters}{27}
+\DeclareMathSymbol{\tau}{\mathalpha}{letters}{28}
+\DeclareMathSymbol{\upsilon}{\mathalpha}{letters}{29}
+\DeclareMathSymbol{\phi}{\mathalpha}{letters}{30}
+\DeclareMathSymbol{\chi}{\mathalpha}{letters}{31}
+\DeclareMathSymbol{\psi}{\mathalpha}{letters}{32}
+\DeclareMathSymbol{\omega}{\mathalpha}{letters}{33}
+\DeclareMathSymbol{\varepsilon}{\mathalpha}{letters}{34}
+\DeclareMathSymbol{\vartheta}{\mathalpha}{letters}{35}
+\DeclareMathSymbol{\varpi}{\mathalpha}{letters}{36}
+\DeclareMathSymbol{\varrho}{\mathalpha}{letters}{37}
+\DeclareMathSymbol{\varsigma}{\mathalpha}{letters}{38}
+\DeclareMathSymbol{\varphi}{\mathalpha}{letters}{39}
+\DeclareOption{slantedGreek}{%
+  \DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{0}
+  \DeclareMathSymbol{\Delta}{\mathalpha}{letters}{1}
+  \DeclareMathSymbol{\Theta}{\mathalpha}{letters}{2}
+  \DeclareMathSymbol{\Lambda}{\mathalpha}{letters}{3}
+  \DeclareMathSymbol{\Xi}{\mathalpha}{letters}{4}
+  \DeclareMathSymbol{\Pi}{\mathalpha}{letters}{5}
+  \DeclareMathSymbol{\Sigma}{\mathalpha}{letters}{6}
+  \DeclareMathSymbol{\Upsilon}{\mathalpha}{letters}{7}
+  \DeclareMathSymbol{\Phi}{\mathalpha}{letters}{8}
+  \DeclareMathSymbol{\Psi}{\mathalpha}{letters}{9}
+  \DeclareMathSymbol{\Omega}{\mathalpha}{letters}{10}
+}
+\let\upDelta\Delta
+\let\upOmega\Omega
+\let\upGamma\Gamma
+\let\upTheta\Theta
+\let\upLambda\Lambda
+\let\upXi\Xi
+\let\upPi\Pi
+\let\upSigma\Sigma
+\let\upUpsilon\Upsilon
+\let\upPhi\Phi
+\let\upPsi\Psi
+\def\bright@baselineskip@table
+   {<\@viiipt>10<\@ixpt>11.25<\@xpt>12.5<\@xipt>13.7<\@xiipt>15}
+\def\bright@setfontsize#1#2#3%
+   {\edef\@tempa{\def\noexpand\@tempb####1<#2}%
+    \@tempa>##2<##3\@nil{\def\bright@baselineskip@value{##2}}%
+    \edef\@tempa{\noexpand\@tempb\bright@baselineskip@table<#2}%
+    \@tempa><\@nil
+    \ifx\bright@baselineskip@value\@empty
+       \def\bright@baselineskip@value{#3}%
+    \fi
+    \old@setfontsize{#1}{#2}\bright@baselineskip@value}
+\let\old@setfontsize=\@setfontsize
+\DeclareOption{enlarged-baselineskips}{%
+  \let\@setfontsize=\bright@setfontsize}
+\DeclareOption{standard-baselineskips}{%
+ \let\@setfontsize=\old@setfontsize}
+\DeclareTextCommand{\textsterling}{OT1}{{%
+   \ifdim \fontdimen\@ne\font >\z@
+      \fontfamily{\rmdefault}\fontshape{it}\selectfont
+   \else
+      \fontfamily{\rmdefault}\fontshape{ui}\selectfont
+   \fi
+   \char`\$}}
+\def\mathsterling{\textsl{\textsterling}}
+\AtBeginDocument{%
+  \DeclareFontFamily{U}{msa}{}
+  \DeclareFontShape{U}{msa}{m}{n}{%
+  <-9>cmbras8%
+  <9-10>cmbras9%
+  <10->cmbras10%
+  }{}
+  \DeclareFontFamily{U}{msb}{}
+  \DeclareFontShape{U}{msb}{m}{n}{%
+  <-9>cmbrbs8%
+  <9-10>cmbrbs9%
+  <10->cmbrbs10%
+  }{}
+}
+\def\TeX{T\kern-.19em\lower.5ex\hbox{E}\kern-.05emX\@}
+\DeclareRobustCommand{\LaTeX}{L\kern-.3em%
+        {\sbox\z@ T%
+         \vbox to\ht\z@{\hbox{\check@mathfonts
+                              \fontsize\sf@size\z@
+                              \math@fontsfalse\selectfont
+                              A}%
+                        \vss}%
+        }%
+        \kern-.15em%
+        \TeX}
+\DeclareRobustCommand{\LaTeXe}{\mbox{\m@th
+  \if b\expandafter\@car\f@series\@nil\boldmath\fi
+  \LaTeX\kern.15em2$_{\textstyle\varepsilon}$}}
+\ExecuteOptions{enlarged-baselineskips}
+\ProcessOptions\relax
+\normalfont\normalsize
+\endinput
+%%
+%% End of file `cmbright.sty'.

@@ -1,0 +1,273 @@
+\section{Pattern Matching}
+\label{Sec::PatternMatching}
+
+C++ does not provide pattern matching facilities.
+A general pattern matching solution for arbitrary data structures would require a language extension.
+Hence, we decided to restrict our implementation to tuples, to be able to use an internal domain-specific language approach.
+
+\subsection{Basics}
+\label{Sec::PatternMatching::Basics}
+
+A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing the member function \lstinline^when^ and \lstinline^operator>>^.
+The right-hand side of the operator denotes a callback, usually a lambda expression, that should be invoked if a tuple matches the types given to \lstinline^on^,
+as shown in the example below.
+
+\begin{lstlisting}
+on<int>() >> [](int i) { /*...*/ }
+on<int, float>() >> [](int i, float f) { /*...*/ }
+on<int, int, int>() >> [](int a, int b, int c) { /*...*/ }
+\end{lstlisting}
+
+The result of \lstinline^operator>>^ is a \textit{match statement}.
+A partial function can consist of any number of match statements.
+At most one callback is invoked, since the evaluation stops at the first match.
+
+\begin{lstlisting}
+partial_function fun {
+  on<int>() >> [](int i) {
+    // case1
+  },
+  on<int>() >> [](int i) {
+    // case2; never invoked, since case1 always matches first
+  }
+};
+\end{lstlisting}
+
+The function ``\lstinline^on^'' can be used in two ways.
+Either with template parameters only or with function parameters only.
+The latter version deduces all types from its arguments and matches for both type and value.
+To match for any value of a given type, ``\lstinline^val^'' can be used, as shown in the following example.
+
+\begin{lstlisting}
+on(42) >> [](int i) { assert(i == 42); }
+on("hello world") >> [] { /* ... */ }
+on("print", val<std::string>) >> [](const std::string& what) {
+  // ...
+}
+\end{lstlisting}
+
+\textbf{Note:} The given callback can have less arguments than the pattern.
+But it is only allowed to skip arguments from left to right.
+
+\begin{lstlisting}
+on<int, float, double>() >> [](double) { /*...*/ }             // ok
+on<int, float, double>() >> [](float, double) { /*...*/ }      // ok
+on<int, float, double>() >> [](int, float, double) { /*...*/ } // ok
+
+on<int, float, double>() >> [](int i) { /*...*/ } // compiler error
+\end{lstlisting}
+
+\subsection{Reducing Redundancy with ``\lstinline^arg_match^'' and ``\lstinline^on_arg_match^''}
+
+Our previous examples always used the most verbose form, which is quite redundant, since you have to type the types twice -- as template parameter and as argument type for the lambda.
+To avoid such redundancy, \lstinline^arg_match^ can be used as last argument to the function \lstinline^on^.
+This causes the compiler to deduce all further types from the signature of the given callback.
+
+\begin{lstlisting}
+on<int, int>() >> [](int a, int b) { /*...*/ }
+// is equal to:
+on(arg_match) >> [](int a, int b) { /*...*/ }
+\end{lstlisting}
+
+Note that the second version does call \lstinline^on^ without template parameters.
+Furthermore, \lstinline^arg_match^ must be passed as last parameter.
+If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used.
+It is equal to \lstinline^on(arg_match)^.
+
+\begin{lstlisting}
+on_arg_match >> [](const std::string& str) { /*...*/ }
+\end{lstlisting}
+
+\subsection{Atoms}
+\label{Sec::PatternMatching::Atoms}
+
+Assume an actor provides a mathematical service for integers.
+It takes two arguments, performs a predefined operation and returns the result.
+It cannot determine an operation, such as multiply or add, by receiving two operands.
+Thus, the operation must be encoded into the message.
+The Erlang programming language introduced an approach to use non-numerical
+constants, so-called \textit{atoms}, which have an unambiguous, special-purpose type and do not have the runtime overhead of string constants.
+Atoms are mapped to integer values at compile time in \libcppa.
+This mapping is guaranteed to be collision-free and invertible, but limits atom literals to ten characters and prohibits special characters.
+Legal characters are ``\lstinline[language=C++]^_0-9A-Za-z^'' and the whitespace character.
+Atoms are created using the \lstinline^constexpr^ function \lstinline^atom^, as the following example illustrates.
+
+\begin{lstlisting}
+on(atom("add"), arg_match) >> [](int a, int b) { /*...*/ },
+on(atom("multiply"), arg_match) >> [](int a, int b) { /*...*/ },
+// ...
+\end{lstlisting}
+
+\textbf{Note}: The compiler cannot enforce the restrictions at compile time, except for a length check.
+The assertion \lstinline^atom("!?") != atom("?!")^ is not true, because each invalid character is mapped to the whitespace character.
+
+\clearpage
+\subsection{Wildcards}
+\label{Sec::PatternMatching::Wildcards}
+
+The type \lstinline^anything^ can be used as wildcard to match any number of any types.
+%The \lstinline^constexpr^ value \lstinline^any_vals^ can be used as function argument if \lstinline^on^ is used without template paremeters.
+A pattern created by \lstinline^on<anything>()^ or its alias \lstinline^others()^ is useful to define a default case.
+For patterns defined without template parameters, the \lstinline^constexpr^ value \lstinline^any_vals^ can be used as function argument.
+The constant \lstinline^any_vals^ is of type \lstinline^anything^ and is nothing but syntactic sugar for defining patterns.
+
+\begin{lstlisting}[language=C++]
+on<int, anything>() >> [](int i) {
+  // tuple with int as first element
+},
+on(any_vals, arg_match) >> [](int i) {
+  // tuple with int as last element
+  // "on(any_vals, arg_match)" is equal to "on(anything{}, arg_match)"
+},
+others() >> [] {
+  // everything else (default handler)
+  // "others()" is equal to "on<anything>()" and "on(any_vals)"
+}
+\end{lstlisting}
+
+\subsection{Guards}
+
+Guards can be used to constrain a given match statement by using placeholders, as the following example illustrates.
+
+\begin{lstlisting}
+using namespace cppa::placeholders; // contains _x1 - _x9
+
+on<int>().when(_x1 % 2 == 0) >> [] {
+  // int is even
+},
+on<int>() >> [] {
+  // int is odd
+}
+\end{lstlisting}
+
+Guard expressions are a lazy evaluation technique.
+The placeholder \lstinline^_x1^ is substituted with the first value of a given tuple.
+All binary comparison and arithmetic operators are supported, as well as \lstinline^&&^ and \lstinline^||^.
+In addition, there are three functions designed to be used in guard expressions: \lstinline^gref^ (``guard reference''), \lstinline^gval^ (``guard value''), and \lstinline^gcall^ (``guard function call'').
+The function \lstinline^gref^ creates a reference wrapper, while \lstinline^gval^ encloses a value.
+It is similar to \lstinline^std::ref^ but it is always \lstinline^const^ and ``lazy''.
+A few examples to illustrate some pitfalls:
+
+\begin{lstlisting}
+int val = 42;
+
+on<int>().when(_x1 == val)           // (1) matches if _x1 == 42
+on<int>().when(_x1 == gref(val))     // (2) matches if _x1 == val
+on<int>().when(_x1 == std::ref(val)) // (3) ok, because of placeholder
+others().when(gref(val) == 42)       // (4) matches everything
+                                     //     as long as val == 42
+others().when(std::ref(val) == 42)   // (5) compiler error
+\end{lstlisting}
+
+Statement \texttt{(5)} is evaluated immediately and returns a boolean, whereas statement \texttt{(4)} creates a valid guard expression.
+Thus, you should always use \lstinline^gref^ instead of \lstinline^std::ref^ to avoid errors.
+
+The second function, \lstinline^gcall^, encapsulates a function call.
+Its usage is similar to \lstinline^std::bind^, but there is also a short version for unary functions: \lstinline^gcall(fun, _x1)^ is equal to \lstinline^_x1(fun)^.
+
+\begin{lstlisting}
+auto vec_sorted = [](const std::vector<int>& vec) {
+  return std::is_sorted(vec.begin(), vec.end());
+};
+
+on<std::vector<int>>().when(gcall(vec_sorted, _x1)) // is equal to:
+on<std::vector<int>>().when(_x1(vec_sorted)))
+\end{lstlisting}
+
+\subsubsection{Placeholder Interface}
+
+\begin{lstlisting}
+template<int X>
+struct guard_placeholder;
+\end{lstlisting}
+
+\begin{tabular*}{\textwidth}{m{0.3\linewidth}m{0.7\linewidth}}
+  \multicolumn{2}{m{\linewidth}}{\large{\textbf{Member functions} \small{(\lstinline^x^ represents the value at runtime, \lstinline^y^ represents an iterable container)}}\vspace{3pt}} \\
+  \hline
+  \lstinline^size()^ & Returns \lstinline^x.size()^ \\
+  \hline
+  \lstinline^empty()^ & Returns \lstinline^x.empty()^ \\
+  \hline
+  \lstinline^not_empty()^ & Returns \lstinline^!x.empty()^ \\
+  \hline
+  \lstinline^front()^ & Returns an \lstinline^option^ (see Section \ref{Appendix::Option}) to \lstinline^x.front()^  \\
+  \hline
+  \lstinline^in(y)^ & Returns \lstinline^true^ if \lstinline^y^ contains \lstinline^x^, \lstinline^false^ otherwise\\
+  \hline
+  \lstinline^not_in(y)^ & Returns \lstinline^!in(y)^  \\
+  \hline
+  \\
+\end{tabular*}
+
+\subsubsection{Examples for Guard Expressions}
+
+\begin{lstlisting}
+using namespace std;
+typedef vector<int> ivec;
+
+vector<string> strings{"abc", "def"};
+
+on_arg_match.when(_x1.front() == 0) >> [](const ivec& v) {
+  // note: we don't have to check whether _x1 is empty in our guard,
+  //       because '_x1.front()' returns an option for a 
+  //       reference to the first element
+  assert(v.size() >= 1);
+  assert(v.front() == 0);
+},
+on<int>().when(_x1.in({10, 20, 30})) >> [](int i) {
+  assert(i == 10 || i == 20 || i == 30);
+},
+on<string>().when(_x1.not_in(strings)) >> [](const string& str) {
+  assert(str != "abc" && str != "def");
+},
+on<string>().when(_x1.size() == 10) >> [](const string& str) {
+  // ...
+}
+\end{lstlisting}
+
+\subsection{Projections and Extractors}
+
+Projections perform type conversions or extract data from a given input.
+If a callback expects an integer but the received message contains a string, a projection can be used to perform a type conversion on-the-fly.
+This conversion should be free of side-effects and, in particular, shall not throw exceptions, because a failed projection is not an error.
+A pattern simply does not match if a projection failed.
+Let us have a look at a simple example.
+
+\begin{lstlisting}
+auto intproj = [](const string& str) -> option<int> {
+  char* endptr = nullptr;
+  int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
+  if (endptr != nullptr && *endptr == '\0') return result;
+  return {};
+};
+partial_function fun {
+  on(intproj) >> [](int i) {
+    // case 1: successfully converted a string
+  },
+  on_arg_match >> [](const string& str) {
+    // case 2: str is not an integer
+  }
+};
+\end{lstlisting}
+
+The lambda \lstinline^intproj^ is a \lstinline^string^ $\Rightarrow$ \lstinline^int^ projection, but note that it does not return an integer.
+It returns \lstinline^option<int>^, because the projection is not guaranteed to always succeed.
+An empty \lstinline^option^ indicates, that a value does not have a valid mapping to an integer.
+A pattern does not match if a projection failed.
+
+\textbf{Note}: Functors used as projection must take exactly one argument and must return a value.
+The types for the pattern are deduced from the functor's signature.
+If the functor returns an \lstinline^option<T>^, then \lstinline^T^ is deduced.
+
+%\clearpage
+%\subsection{Match Expressions}
+
+
+
+
+
+
+
+
+
+

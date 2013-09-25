@@ -1,0 +1,83 @@
+\section{Actors}
+
+\libcppa provides several actor implementations, each covering a particular use case.
+The class \lstinline^local_actor^ is the base class for all implementations, except for (remote) proxy actors.
+Hence, \lstinline^local_actor^ provides a common interface for actor operations like trapping exit messages or finishing execution.
+The default actor implementation in \libcppa is event-based.
+Event-based actors have a very small memory footprint and are thus very lightweight and scalable.
+Context-switching actors are used for actors that make use of the blocking API (see Section \ref{Sec::BlockingAPI}), but do not need to run in a separate thread.
+Context-switching and event-based actors are scheduled cooperatively in a thread pool.
+Thread-mapped actors can be used to opt-out of this cooperative scheduling.
+
+%\subsection{Local Actors}
+
+%The class \lstinline^local_actor^ describes a local running actor.
+%It provides a common interface for actor operations like trapping exit messages or finishing execution.
+
+\subsection{The ``Keyword'' \texttt{self}}
+
+The \lstinline^self^ pointer is an essential ingredient of our design.
+It identifies the running actor similar to the implicit \lstinline^this^ pointer identifying an object within a member function.
+Unlike \lstinline^this^, though, \lstinline^self^ is not limited to a particular scope.
+The \lstinline^self^ pointer is used implicitly, whenever an actor calls functions like \lstinline^send^ or \lstinline^become^, but can be accessed to use more advanced actor operations such as linking to another actor, e.g., by calling \lstinline^self->link_to(other)^.
+The \lstinline^self^ pointer is convertible to \lstinline^actor_ptr^ and \lstinline^local_actor*^, but it is neither copyable nor assignable.
+Thus, \lstinline^auto s = self^ will cause a compiler error, while \lstinline^actor_ptr s = self^ works as expected.
+
+A thread that accesses \lstinline^self^ is converted on-the-fly to an actor if needed.
+Hence, ``everything is an actor'' in \libcppa.
+However, automatically converted actors use an implementation based on the blocking API, which behaves slightly different than the default, i.e., event-based, implementation.
+
+\clearpage
+\subsection{Interface}
+
+\begin{lstlisting}
+class local_actor;
+\end{lstlisting}
+
+{\small
+\begin{tabular*}{\textwidth}{m{0.45\textwidth}m{0.5\textwidth}}
+  \multicolumn{2}{m{\linewidth}}{\large{\textbf{Member functions}}\vspace{3pt}} \\
+  \\
+  \hline
+  \lstinline^quit(uint32_t reason = normal)^ & Finishes execution of this actor \\
+  \hline
+  \\
+  \multicolumn{2}{l}{\textbf{Observers}\vspace{3pt}} \\
+  \hline
+  \lstinline^bool trap_exit()^ & Checks whether this actor traps exit messages \\
+  \hline
+  \lstinline^bool chaining()^ & Checks whether this actor uses the ``chained send'' optimization (see Section \ref{Sec::Send::ChainedSend}) \\
+  \hline
+  \lstinline^any_tuple last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
+  \hline
+  \lstinline^actor_ptr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note$_{1}$}: Only set during callback invocation\newline\textbf{Note$_{2}$}: Used by the function \lstinline^reply^ (see Section \ref{Sec::Send::Reply}) \\
+  \hline
+  \lstinline^vector<group_ptr> joined_groups()^ & Returns all subscribed groups \\
+  \hline
+  \\
+  \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
+  \hline
+  \lstinline^void trap_exit(bool enabled)^ & Enables or disables trapping of exit messages \\
+  \hline
+  \lstinline^void chaining(bool enabled)^ & Enables or disables chained send \\
+  \hline
+  \lstinline^void join(const group_ptr& g)^ & Subscribes to group \lstinline^g^ \\
+  \hline
+  \lstinline^void leave(const group_ptr& g)^ & Unsubscribes group \lstinline^g^ \\
+  \hline
+  \lstinline^auto make_response_handle()^ & Creates a handle that can be used to respond to the last received message later on, e.g., after receiving another message \\
+  \hline
+  \lstinline^void on_sync_failure(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for unexpected synchronous response messages (default action is to kill the actor for reason \lstinline^unhandled_sync_failure^) \\
+  \hline
+  \lstinline^void on_sync_timeout(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for \lstinline^timed_sync_send^ timeout messages (default action is to kill the actor for reason \lstinline^unhandled_sync_timeout^) \\
+  \hline
+  \lstinline^void monitor(actor_ptr whom)^ & Adds a unidirectional monitor to \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
+  \hline
+  \lstinline^void demonitor(actor_ptr whom)^ & Removes a monitor from \lstinline^whom^ \\
+  \hline
+  \lstinline^void exec_behavior_stack()^ & Executes an actor's behavior stack until it is empty \\
+  \hline
+  \lstinline^bool has_sync_failure_handler()^ & Checks wheter this actor has a user-defined sync failure handler \\
+  \hline
+\end{tabular*}
+}

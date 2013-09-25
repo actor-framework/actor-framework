@@ -1,0 +1,167 @@
+\documentclass[%
+  a4paper,%                                        % DIN A4
+  oneside,%                                        % einseitiger Druck
+  12pt,%                                           % 12pt Schriftgröße
+]{article}
+
+%\usepackage{ifpdf}
+
+%\usepackage[english]{babel}
+
+% UTF8 input
+\usepackage[utf8]{inputenc}
+
+% grafics
+%\usepackage{graphicx}
+%\usepackage{picinpar}
+
+% others
+%\usepackage{parcolumns}
+%\usepackage[font=footnotesize,format=plain,labelfont=bf]{caption}
+%\usepackage{paralist}
+\usepackage{url}
+\usepackage{array}
+%\usepackage{tocloft}
+\usepackage{color}
+\usepackage{listings}
+\usepackage{xspace}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\usepackage{fancyhdr}
+
+\usepackage{multicol}
+
+\usepackage{hevea}
+
+\usepackage{cmbright}
+\usepackage{txfonts}
+\usepackage[scaled=.90]{helvet}
+\usepackage{courier}
+%\usepackage{natbib}
+
+%\usepackage{lmodern}
+%\usepackage{newcent}
+
+%\renewcommand{\ttdefault}{lmtt}
+
+%\usepackage{fontspec}
+%\defaultfontfeatures{Mapping=tex-text}  % For archaic input (e.g. convert -- to en-dash)
+%\setmainfont{Times New Roman}                 % Computer Modern Unicode font
+%\setmonofont{Anonymous Pro}
+%\setsansfont{Times New Roman}
+
+% par. settings
+\parindent 0pt
+\parskip 8pt
+
+\definecolor{blue}{rgb}{0,0,1}
+\definecolor{violet}{rgb}{0.5,0,0.5}
+
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+
+\newcommand{\libcppa}{\textit{libcppa}\xspace}
+
+\pagenumbering{arabic}
+
+\title{%
+%BEGIN LATEX
+\texttt{\huge{\textbf{libcppa}}}\\~\\A C++ library for actor programming\\~\\~\\~\\%
+%END LATEX
+User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
+
+\author{Dominik Charousset}
+
+\date{\today}
+
+% page setup
+
+\setlength{\voffset}{-0.5in}
+\setlength{\hoffset}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\textheight}{1.5in}
+
+\setlength{\headheight}{15pt}
+
+% some HEVEA / HTML style sheets
+\newstyle{body}{width:600px;margin:auto;padding-top:20px;text-align: justify;}
+
+\newenvironment{itemize*}%
+  {\begin{itemize}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{itemize}}
+
+\begin{document}
+%\fontfamily{ptm}\selectfont
+
+%BEGIN LATEX
+\fancypagestyle{plain}{%
+\fancyhf{} % clear all header and footer fields
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+}
+%END LATEX
+\maketitle
+\clearpage
+\pagestyle{empty}
+\tableofcontents
+\clearpage
+
+%BEGIN LATEX
+\setcounter{page}{1}
+\pagenumbering{arabic}
+\pagestyle{fancy}
+\fancyhead[L,R]{}
+\fancyhead[C]{\leftmark}
+\renewcommand{\sectionmark}[1]{%
+\markboth{\MakeUppercase{#1}}{}%
+}
+%END LATEX
+
+%{\parskip=0mm \tableofcontents}
+% basic setup for listings
+
+\lstset{%
+  language=C++,%
+  morekeywords={constexpr,nullptr,size_t,uint32_t,assert},%
+  basicstyle=\ttfamily\small,%
+  sensitive=true,%
+  keywordstyle=\color{blue},%
+  stringstyle=\color{darkgreen},%
+  commentstyle=\color{violet},%
+  showstringspaces=false,%
+  tabsize=4,%
+  numberstyle=\footnotesize%
+}
+
+\include{FirstSteps}
+\include{CopyOnWriteTuples}
+\include{PatternMatching}
+\include{Actors}
+\include{SendingMessages}
+\include{ReceivingMessages}
+\include{SynchronousMessages}
+\include{ActorManagement}
+\include{SpawningActors}
+\include{MessagePriorities}
+\include{StronglyTypedActors}
+\include{NetworkTransparency}
+\include{GroupCommunication}
+\include{ActorCompanions}
+\include{TypeSystem}
+\include{BlockingAPI}
+%\include{OpenCL}
+\include{CommonPitfalls}
+\include{Appendix}
+
+%\clearpage
+%\bibliographystyle{dinat}
+%\bibliographystyle{apalike}
+%\bibliography{/bib/programming,/bib/rfcs}
+%\clearpage
+%{\parskip=0mm \listoffigures}
+%\clearpage
+\end{document}

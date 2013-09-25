@@ -1,0 +1,101 @@
+\section{First Steps}
+
+%\subsection{Why Actors?}
+
+%\subsection{Some Terminology}
+
+To compile \libcppa, you will need CMake and a C++11 compiler. To get and compile the sources, open a terminal (on Linux or Mac OS X) and type:
+
+\begin{verbatim}
+git clone git://github.com/Neverlord/libcppa.git
+cd libcppa
+./configure
+make
+make install [as root, optional]
+\end{verbatim}
+
+It is recommended to run the unit tests as well:
+
+\begin{verbatim}
+make test
+\end{verbatim}
+
+Please submit a bug report that includes (a) your compiler version, (b) your OS, and (c) the content of the file \texttt{build/Testing/Temporary/LastTest.log} if an error occurs.
+
+\subsection{Features Overview}
+
+\begin{itemize*}
+  \item Lightweight, fast and efficient actor implementations
+  \item Network transparent messaging
+  \item Error handling based on Erlang's failure model
+  \item Pattern matching for messages as internal DSL to ease development
+  \item Thread-mapped actors and on-the-fly conversions for soft migration of existing applications
+  \item Publish/subscribe group communication
+\end{itemize*}
+
+
+\subsection{Supported Compilers}
+
+\begin{itemize*}
+  \item GCC $\ge$ 4.7
+  \item Clang $\ge$ 3.2
+\end{itemize*}
+
+\subsection{Supported Operating Systems}
+
+\begin{itemize*}
+\item Linux
+\item Mac OS X
+\item \textit{Note for MS Windows}:
+\libcppa relies on C++11 features such as variadic templates.
+We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
+\end{itemize*}
+
+\clearpage
+\subsection{Hello World Example}
+
+\begin{lstlisting}
+#include <string>
+#include <iostream>
+#include "cppa/cppa.hpp"
+
+using namespace std;
+using namespace cppa;
+
+void mirror() {
+  // wait for messages
+  become (
+    // invoke this lambda expression if we receive a string
+    on_arg_match >> [](const string& what) {
+      // prints "Hello World!" via aout (thread-safe cout wrapper)
+      aout << what << endl;
+      // replies "!dlroW olleH"
+      reply(string(what.rbegin(), what.rend()));
+      // terminates this actor ('become' otherwise loops forever)
+      self->quit();
+    }
+  );
+}
+
+void hello_world(const actor_ptr& buddy) {
+  // send "Hello World!" to our buddy ...
+  sync_send(buddy, "Hello World!").then(
+    // ... and wait for a response
+    on_arg_match >> [](const string& what) {
+      // prints "!dlroW olleH"
+      aout << what << endl;
+    }
+  );
+}
+
+int main() {
+  // create a new actor that calls 'mirror()'
+  auto mirror_actor = spawn(mirror);
+  // create another actor that calls 'hello_world(mirror_actor)'
+  spawn(hello_world, mirror_actor);
+  // wait until all other actors we have spawned are done
+  await_all_others_done();
+  // run cleanup code before exiting main
+  shutdown();
+}
+\end{lstlisting}
