@@ -315,22 +315,34 @@ void test_typed_actors() {
     auto ptr0 = spawn_typed(
         on_arg_match >> [](double d) {
             return d * d;
+        },
+        on_arg_match >> [](float f) {
+            return f / 2.0f;
         }
+
     );
     CPPA_CHECK((std::is_same<
                     decltype(ptr0),
                     typed_actor_ptr<
-                        replies_to<double>::with<double>
+                        replies_to<double>::with<double>,
+                        replies_to<float>::with<float>
                     >
                 >::value));
+    typed_actor_ptr<replies_to<double>::with<double>> ptr0_double = ptr0;
+    typed_actor_ptr<replies_to<float>::with<float>> ptr0_float = ptr0;
     auto ptr = spawn_typed(
         on<int>() >> [] { return "wtf"; },
         on<string>() >> [] { return 42; },
         on<float>() >> [] { return make_cow_tuple(1, 2, 3); },
         on<double>() >> [=](double d) {
-            return sync_send(ptr0, d).then(
+            return sync_send(ptr0_double, d).then(
                 [](double res) { return res + res; }
             );
+        }
+    );
+    sync_send(ptr0_float, 4.0f).await(
+        [](float f) {
+            CPPA_CHECK_EQUAL(f, 4.0f / 2.0f);
         }
     );
     sync_send(ptr, 10.0).await(
