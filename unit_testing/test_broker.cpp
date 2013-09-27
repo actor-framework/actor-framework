@@ -80,20 +80,20 @@ void pong() {
     );
 }
 
-void peer(io::broker* thisptr, const actor_ptr& buddy) {
+void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy) {
     self->monitor(buddy);
     if (thisptr->num_connections() == 0) {
         cout << "num_connections() != 1" << endl;
         throw std::logic_error("num_connections() != 1");
     }
-    thisptr->for_each_connection([=](io::connection_handle hdl) {
-        thisptr->receive_policy(hdl, io::broker::exactly, message_size);
-    });
+    //thisptr->for_each_connection([=](io::connection_handle hdl) {
+    //    thisptr->receive_policy(hdl, io::broker::exactly, message_size);
+    //});
     auto write = [=](atom_value type, int value) {
-        thisptr->for_each_connection([=](io::connection_handle hdl) {
+        //thisptr->for_each_connection([=](io::connection_handle hdl) {
             thisptr->write(hdl, sizeof(type), &type);
             thisptr->write(hdl, sizeof(value), &value);
-        });
+        //});
     };
     become (
         on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
@@ -122,6 +122,7 @@ void peer(io::broker* thisptr, const actor_ptr& buddy) {
 void peer_acceptor(io::broker* thisptr, const actor_ptr& buddy) {
     become (
         on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
+            CPPA_CHECKPOINT();
             CPPA_LOGF_INFO("received IO_accept");
             thisptr->fork(peer, hdl, buddy);
             self->quit();

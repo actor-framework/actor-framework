@@ -565,17 +565,19 @@ actor_ptr spawn_io(F fun,
     return eval_sopts(Options, io::init_and_launch(move(ptr)));
 }
 
+/*
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
     auto ptr = io::ipv4_io_stream::connect_to(host, port);
     return spawn_io<Impl>(ptr, ptr, std::forward<Ts>(args)...);
 }
+*/
 
 template<spawn_options Options = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor_ptr spawn_io(F fun, const char* host, uint16_t port, Ts&&... args) {
-    auto ptr = io::ipv4_io_stream::connect_to(host, port);
+actor_ptr spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
+    auto ptr = io::ipv4_io_stream::connect_to(host.c_str(), port);
     return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
 }
 

@@ -49,6 +49,12 @@ using namespace std;
 using namespace cppa;
 using namespace cppa::io;
 
+void print_on_exit(const actor_ptr& ptr, const std::string& name) {
+    ptr->attach_functor([=](std::uint32_t reason) {
+        aout << name << " exited with reason " << reason << endl;
+    });
+}
+
 void ping(size_t num_pings) {
     auto count = make_shared<size_t>(0);
     become  (
@@ -56,7 +62,7 @@ void ping(size_t num_pings) {
             send(pong, atom("ping"), 1);
             become (
                 on(atom("pong"), arg_match) >> [=](int value) {
-                    cout << "<- pong " << value << endl;
+                    aout << "pong: " << value << endl;
                     if (++*count >= num_pings) self->quit();
                     else reply(atom("ping"), value + 1);
                 }
@@ -68,23 +74,24 @@ void ping(size_t num_pings) {
 void pong() {
     become  (
         on(atom("ping"), arg_match) >> [](int value) {
-            cout << "<- ping " << value << endl;
+            aout << "ping: " << value << endl;
             reply(atom("pong"), value);
         }
     );
 }
 
-void protobuf_io(broker* ios, const actor_ptr& buddy) {
+void protobuf_io(broker* thisptr, connection_handle hdl, const actor_ptr& buddy) {
     self->monitor(buddy);
     auto write = [=](const org::libcppa::PingOrPong& p) {
             string buf = p.SerializeAsString();
             int32_t s = htonl(static_cast<int32_t>(buf.size()));
-            ios->write(sizeof(int32_t), &s);
-            ios->write(buf.size(), buf.data());
+            thisptr->write(hdl, sizeof(int32_t), &s);
+            thisptr->write(hdl, buf.size(), buf.data());
     };
     auto default_bhvr = (
-        on(atom("IO_closed"), arg_match) >> [=](uint32_t) {
+        on(atom("IO_closed"), hdl) >> [=] {
             cout << "IO_closed" << endl;
+            send_exit(buddy, exit_reason::remote_link_unreachable);
             self->quit(exit_reason::remote_link_unreachable);
         },
         on(atom("ping"), arg_match) >> [=](int i) {
@@ -105,12 +112,9 @@ void protobuf_io(broker* ios, const actor_ptr& buddy) {
         }
     );
     partial_function await_protobuf_data {
-        on(atom("IO_read"), arg_match) >> [=](uint32_t, const util::buffer& buf) {
+        on(atom("IO_read"), hdl, arg_match) >> [=](const util::buffer& buf) {
             org::libcppa::PingOrPong p;
             p.ParseFromArray(buf.data(), static_cast<int>(buf.size()));
-            auto print = [](const char* name, int value) {
-                cout << name << "{" << value << "}" << endl;
-            };
             if (p.has_ping()) {
                 send(buddy, atom("ping"), p.ping().id());
             }
@@ -119,62 +123,74 @@ void protobuf_io(broker* ios, const actor_ptr& buddy) {
             }
             else {
                 self->quit(exit_reason::user_defined);
-                cerr << "neither Pong nor Ping!" << endl;
+                cerr << "neither Ping nor Pong!" << endl;
             }
             // receive next length prefix
-            ios->receive_policy(broker::exactly, 4);
+            thisptr->receive_policy(hdl, broker::exactly, 4);
             unbecome();
         },
         default_bhvr
     };
     partial_function await_length_prefix {
-        on(atom("IO_read"), arg_match) >> [=](uint32_t, const util::buffer& buf) {
-            int num_bytes;
+        on(atom("IO_read"), hdl, arg_match) >> [=](const util::buffer& buf) {
+            int32_t num_bytes;
             memcpy(&num_bytes, buf.data(), 4);
             num_bytes = htonl(num_bytes);
             if (num_bytes < 0 || num_bytes > (1024 * 1024)) {
+                aout << "someone is trying something nasty" << endl;
                 self->quit(exit_reason::user_defined);
                 return;
             }
             // receive protobuf data
-            ios->receive_policy(broker::exactly, (size_t) num_bytes);
+            thisptr->receive_policy(hdl, broker::exactly, static_cast<size_t>(num_bytes));
             become(keep_behavior, await_protobuf_data);
         },
         default_bhvr
     };
     // initial setup
-    ios->receive_policy(broker::exactly, 4);
+    thisptr->receive_policy(hdl, broker::exactly, 4);
     become(await_length_prefix);
 }
 
-int main(int argc, char** argv) {
-    auto print_exit = [](const actor_ptr& ptr, const std::string& name) {
-        ptr->attach_functor([=](std::uint32_t reason) {
-            cout << name << " exited with reason " << reason << endl;
-        });
-    };
-    match(std::vector<string>{argv + 1, argv + argc}) (
-        on("-s") >> [&] {
-            cout << "run in server mode" << endl;
-            std::string hi = "hello";
-            auto po = spawn(pong);
-            auto ack = io::ipv4_acceptor::create(4242);
-            for (;;) {
-                auto p = ack->accept_connection();
-                //spawn_io<protobuf_io>(p.first, p.second);
-                auto s = spawn_io(protobuf_io, std::move(p.first), std::move(p.second), po);
-                print_exit(s, "io actor");
-                print_exit(po, "pong");
-            }
+void server(broker* thisptr, actor_ptr buddy) {
+    aout << "server is running" << endl;
+    become (
+        on(atom("IO_accept"), arg_match) >> [=](accept_handle, connection_handle hdl) {
+            aout << "server: IO_accept" << endl;
+            auto io_actor = thisptr->fork(protobuf_io, hdl, buddy);
+            print_on_exit(io_actor, "protobuf_io");
+            // only accept 1 connection
+            thisptr->quit();
         },
-        on_arg_match >> [&](const string& host, const string& port_str) {
-            auto port = static_cast<uint16_t>(stoul(port_str));
-            auto io = io::ipv4_io_stream::connect_to(host.c_str(), port);
-            auto pi = spawn(ping, 20);
-            auto pr = spawn_io(protobuf_io, io, io, pi);
-            send_as(pr, pi, atom("kickoff"), pr);
-            print_exit(pr, "io actor");
-            print_exit(pi, "ping");
+        others() >> [=] {
+            cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
+}
+
+optional<uint16_t> as_u16(const std::string& str) {
+    return static_cast<uint16_t>(stoul(str));
+}
+
+int main(int argc, char** argv) {
+    match(std::vector<string>{argv + 1, argv + argc}) (
+        on("-s", as_u16) >> [&](uint16_t port) {
+            cout << "run in server mode" << endl;
+            auto pong_actor = spawn(pong);
+            auto sever_actor = spawn_io_server(server, port, pong_actor);
+            print_on_exit(sever_actor, "server");
+            print_on_exit(pong_actor, "pong");
+        },
+        on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {
+            auto ping_actor = spawn(ping, 20);
+            auto io_actor = spawn_io(protobuf_io, host, port, ping_actor);
+            print_on_exit(io_actor, "protobuf_io");
+            print_on_exit(ping_actor, "ping");
+            send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
+        },
+        others() >> [] {
+            cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
+                 << endl;
         }
     );
     await_all_others_done();

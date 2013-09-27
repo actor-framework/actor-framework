@@ -87,7 +87,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     bool initialized() const;
 
-    void quit(std::uint32_t reason);
+    void quit(std::uint32_t reason = exit_reason::normal) override;
 
     void receive_policy(const connection_handle& hdl,
                         broker::policy_flag policy,
@@ -99,7 +99,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     void write(const connection_handle& hdl, util::buffer&& buf);
 
-    static broker_ptr from(std::function<void (broker*)> fun,
+    static broker_ptr from(std::function<void (broker*, connection_handle)> fun,
                            input_stream_ptr in,
                            output_stream_ptr out);
 
@@ -108,6 +108,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
                            T0&& arg0, Ts&&... args) {
         return from(std::bind(std::move(fun),
                               std::placeholders::_1,
+                              std::placeholders::_2,
                               detail::fwd<T0>(arg0),
                               detail::fwd<Ts>(args)...),
                     std::move(in),
@@ -125,16 +126,17 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
                     std::move(in));
     }
 
-    actor_ptr fork(std::function<void (broker*)> fun,
-                   const connection_handle& hdl);
+    actor_ptr fork(std::function<void (broker*, connection_handle)> fun,
+                   connection_handle hdl);
 
     template<typename F, typename T0, typename... Ts>
     actor_ptr fork(F fun,
-                   const connection_handle& hdl,
+                   connection_handle hdl,
                    T0&& arg0,
                    Ts&&... args) {
         return this->fork(std::bind(std::move(fun),
                                     std::placeholders::_1,
+                                    std::placeholders::_2,
                                     detail::fwd<T0>(arg0),
                                     detail::fwd<Ts>(args)...),
                           hdl);
