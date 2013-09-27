@@ -1,3 +1,10 @@
+Version 0.7.2
+-------------
+
+__2013_09_27__
+
+- Fixed a bug in the chaining implementation
+
 Version 0.7.1
 -------------
 
