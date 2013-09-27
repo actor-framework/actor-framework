@@ -69,22 +69,13 @@ class binary_writer {
 
     template<typename T>
     void operator()(const T& value,
-//                    typename enable_if<std::is_integral<T>::value>::type* = 0) {
                     typename enable_if<std::is_arithmetic<T>::value>::type* = 0) {
         write_int(m_sink, value);
     }
 
-/*
-    template<typename T>
-    void operator()(const T& value,
-                    typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
-        // write floating points as strings
-        std::ostringstream iss;
-        iss.precision(std::numeric_limits<T>::max_digits10);
-        iss << value;
-        (*this)(iss.str());
+    void operator()(const atom_value& val) {
+        (*this)(static_cast<uint64_t>(val));
     }
-*/
 
     void operator()(const std::string& str) {
         write_string(m_sink, str);

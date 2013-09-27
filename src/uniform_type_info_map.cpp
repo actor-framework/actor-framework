@@ -315,11 +315,11 @@ void deserialize_impl(process_information_ptr& ptr, deserializer* source) {
 }
 
 inline void serialize_impl(const atom_value& val, serializer* sink) {
-    sink->write_value(static_cast<uint64_t>(val));
+    sink->write_value(val);
 }
 
 inline void deserialize_impl(atom_value& val, deserializer* source) {
-    val = static_cast<atom_value>(source->read<uint64_t>());
+    val = source->read<atom_value>();
 }
 
 inline void serialize_impl(const util::duration& val, serializer* sink) {

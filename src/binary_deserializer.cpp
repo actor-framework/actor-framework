@@ -101,19 +101,12 @@ pointer read_unicode_string(pointer begin, pointer end, StringType& str) {
     return begin;
 }
 
-/*
-// @returns the next iterator position
-template<typename T>
-pointer read_range(pointer begin, pointer end, T& value,
-              typename enable_if<is_floating_point<T>::value>::type* = 0) {
-    // floating points are written as strings
-    string str;
-    auto result = read_unicode_string<char>(begin, end, str);
-    istringstream iss(str);
-    iss >> value;
+pointer read_range(pointer begin, pointer end, atom_value& storage) {
+    std::uint64_t tmp;
+    auto result = read_range(begin, end, tmp);
+    storage = static_cast<atom_value>(tmp);
     return result;
 }
-*/
 
 pointer read_range(pointer begin, pointer end, u16string& storage) {
     // char16_t is guaranteed to has *at least* 16 bytes,

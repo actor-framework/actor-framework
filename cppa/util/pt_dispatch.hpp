@@ -31,6 +31,9 @@
 #ifndef CPPA_PT_DISPATCH_HPP
 #define CPPA_PT_DISPATCH_HPP
 
+#include "cppa/primitive_type.hpp"
+#include "cppa/util/pt_token.hpp"
+
 namespace cppa { namespace util {
 
 /**
@@ -55,6 +58,7 @@ void pt_dispatch(primitive_type ptype, Fun&& f) {
      case pt_u8string:    f(pt_token<pt_u8string>());    break;
      case pt_u16string:   f(pt_token<pt_u16string>());   break;
      case pt_u32string:   f(pt_token<pt_u32string>());   break;
+     case pt_atom:        f(pt_token<pt_atom>());        break;
      default: break;
     }
 }

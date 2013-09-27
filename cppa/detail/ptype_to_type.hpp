@@ -43,6 +43,9 @@ namespace cppa { namespace detail {
 template<primitive_type PT>
 struct ptype_to_type : util::wrapped<void> { };
 
+// libcppa types
+template<> struct ptype_to_type<pt_atom  > : util::wrapped<atom_value   > { };
+
 // integer types
 template<> struct ptype_to_type<pt_int8  > : util::wrapped<std::int8_t  > { };
 template<> struct ptype_to_type<pt_uint8 > : util::wrapped<std::uint8_t > { };
