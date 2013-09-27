@@ -121,6 +121,8 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based>{
 
     bool chained_enqueue(const message_header&, any_tuple) override;
 
+    void unchain() override;
+
     void request_timeout(const util::duration& d);
 
     inline bool has_pending_timeout() const {

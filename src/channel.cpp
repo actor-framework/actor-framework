@@ -40,4 +40,6 @@ bool channel::chained_enqueue(const message_header& hdr, any_tuple msg) {
     return false;
 }
 
+void channel::unchain() { }
+
 } // namespace cppa

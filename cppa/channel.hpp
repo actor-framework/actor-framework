@@ -72,6 +72,10 @@ class channel : public ref_counted {
      */
     virtual bool chained_enqueue(const message_header& hdr, any_tuple msg);
 
+    /**
+     * @brief Sets the state from @p pending to @p ready.
+     */
+    virtual void unchain();
 
  protected:
 
@@ -89,7 +93,7 @@ typedef intrusive_ptr<channel> channel_ptr;
  * @brief Convenience alias.
  */
 template<typename T, typename R = void>
-using enable_if_channel = std::enable_if<std::is_base_of<channel,T>::value,R>;
+using enable_if_channel = std::enable_if<std::is_base_of<channel, T>::value, R>;
 
 } // namespace cppa
 
