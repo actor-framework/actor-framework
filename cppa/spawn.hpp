@@ -137,8 +137,6 @@ template<spawn_options Options, typename... Ts>
 typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
 spawn_typed(const match_expr<Ts...>& me) {
 
-    typedef typed_actor_ptr<replies_to<std::string>::template with<int>> ta;
-
     static_assert(util::conjunction<
                       detail::match_expr_has_no_guard<Ts>::value...
                   >::value,
