@@ -120,6 +120,8 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based, threadle
 
     bool chained_enqueue(const message_header&, any_tuple) override;
 
+    void unchain() override;
+
  protected:
 
     scheduled_actor(actor_state init_state, bool enable_chained_send);
