@@ -100,6 +100,7 @@ class primitive_variant {
         std::string s8;
         std::u16string s16;
         std::u32string s32;
+        atom_value av;
     };
 
     // use static call dispatching to select member
@@ -117,6 +118,7 @@ class primitive_variant {
     inline std::string&    get(util::pt_token<pt_u8string>)    { return s8;  }
     inline std::u16string& get(util::pt_token<pt_u16string>)   { return s16; }
     inline std::u32string& get(util::pt_token<pt_u32string>)   { return s32; }
+    inline atom_value&     get(util::pt_token<pt_atom>)        { return av;  }
 
     // get(...) const overload
     template<primitive_type PT>

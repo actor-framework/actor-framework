@@ -57,6 +57,7 @@ enum primitive_type : unsigned char {
     pt_u8string,     /**< equivalent of @p std::string */
     pt_u16string,    /**< equivalent of @p std::u16string */
     pt_u32string,    /**< equivalent of @p std::u32string */
+    pt_atom,         /**< equivalent of @p atom_value */
     pt_null          /**< equivalent of @p void */
 };
 
@@ -65,7 +66,7 @@ constexpr const char* primitive_type_names[] = {
     "pt_uint8",       "pt_uint16",      "pt_uint32",      "pt_uint64",
     "pt_float",       "pt_double",      "pt_long_double",
     "pt_u8string",    "pt_u16string",   "pt_u32string",
-    "pt_null"
+    "pt_atom",        "pt_null"
 };
 
 /**

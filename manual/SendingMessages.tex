@@ -1,0 +1,151 @@
+\section{Sending Messages}
+\label{Sec::Send}
+
+Messages can be sent by using \lstinline^send^, \lstinline^send_tuple^, or \lstinline^operator<<^. The variadic template function \lstinline^send^ has the following signature.
+
+\begin{lstlisting}
+template<typename... Args>
+void send(actor_ptr whom, Args&&... what);
+\end{lstlisting}
+
+The variadic template pack \lstinline^what...^ is converted to a dynamically typed tuple (see Section \ref{Sec::Tuples::DynamicallyTypedTuples}) and then enqueued to the mailbox of \lstinline^whom^.
+The following example shows two equal sends, one using \lstinline^send^ and the other using \lstinline^operator<<^.
+
+\begin{lstlisting}
+actor_ptr other = spawn(...);
+send(other, 1, 2, 3);
+other << make_any_tuple(1, 2, 3);
+\end{lstlisting}
+
+Using the function \lstinline^send^ is more compact, but does not have any other benefit.
+However, note that you should not use \lstinline^send^ if you already have an instance of \lstinline^any_tuple^, because it creates a new tuple containing the old one.
+
+\begin{lstlisting}
+actor_ptr other = spawn(...);
+auto msg = make_any_tuple(1, 2, 3);
+send(other, msg); // oops, creates a new tuple that contains msg
+send_tuple(other, msg); // ok
+other << msg; // ok
+\end{lstlisting}
+
+The function \lstinline^send_tuple^ is equal to \lstinline^operator<<^.
+Choosing one or the other is merely a matter of personal preferences.
+
+\clearpage
+\subsection{Replying to Messages}
+\label{Sec::Send::Reply}
+
+During callback invokation, \lstinline^self->last_sender()^ is set.
+This identifies the sender of the received message and is used implicitly by the functions \lstinline^reply^ and \lstinline^reply_tuple^.
+
+Using \lstinline^reply(...)^ is \textbf{not} equal to \lstinline^send(self->last_sender(), ...)^.
+The function \lstinline^send^ always uses asynchronous message passing, whereas \lstinline^reply^ will send a synchronous response message if the received message was a synchronous request (see Section \ref{Sec::Sync}).
+%Note that you cannot reply more than once.
+
+To delay a response, i.e., reply to a message after receiving another message, actors can use \lstinline^self->make_response_handle()^.
+The functions \lstinline^reply_to^ and \lstinline^reply_tuple_to^ then can be used to reply the the original request, as shown in the example below.
+
+\begin{lstlisting}
+void broker(const actor_ptr& master) {
+  become (
+    on("foo", arg_match) >> [=](const std::string& request) {
+      auto hdl = make_response_handle();
+      sync_send(master, atom("bar"), request).then(
+        on_arg_match >> [=](const std::string& response) {
+          reply_to(hdl, response);
+        }
+      );
+    }
+  );
+};
+\end{lstlisting}
+
+In any case, do never reply than more than once.
+Additional (synchronous) response message will be ignored by the receiver.
+
+\clearpage
+\subsection{Chaining}
+\label{Sec::Send::ChainedSend}
+
+Sending a message to a cooperatively scheduled actor usually causes the receiving actor to be put into the scheduler's job queue if it is currently blocked, i.e., is waiting for a new message.
+This job queue is accessed by worker threads.
+The \textit{chaining} optimization does not cause the receiver to be put into the scheduler's job queue if it is currently blocked.
+The receiver is stored as successor of the currently running actor instead.
+Hence, the active worker thread does not need to access the job queue, which significantly speeds up execution.
+However, this optimization can be inefficient if an actor first sends a message and then starts computation.
+
+\begin{lstlisting}
+void foo(actor_ptr other) {
+  send(other, ...);
+  very_long_computation();
+  // ...
+}
+
+int main() {
+  // ...
+  auto a = spawn(...);
+  auto b = spawn(foo, a);
+  // ...
+}
+\end{lstlisting}
+
+The example above illustrates an inefficient work flow.
+The actor \lstinline^other^ is marked as successor of the \lstinline^foo^ actor but its execution is delayed until \lstinline^very_long_computation()^ is done.
+In general, actors should follow the work flow \lstinline^receive^ $\Rightarrow$\lstinline^compute^ $\Rightarrow$ \lstinline^send results^.
+However, this optimization can be disabled by calling \lstinline^self->chaining(false)^ if an actor does not match this work flow.
+
+\begin{lstlisting}
+void foo(actor_ptr other) {
+  self->chaining(false);   // disable chaining optimization
+  send(other, ...);        // not delayed by very_long_compuation
+  very_long_computation();
+  // ...
+}
+\end{lstlisting}
+
+\subsection{Delaying Messages}
+
+Messages can be delayed, e.g., to implement time-based polling strategies, by using one of \lstinline^delayed_send^, \lstinline^delayed_send_tuple^, \lstinline^delayed_reply^, or \lstinline^delayed_reply_tuple^.
+The following example illustrates a polling strategy using \lstinline^delayed_send^.
+
+\begin{lstlisting}
+delayed_send(self, std::chrono::seconds(1), atom("poll"));
+become (
+  on(atom("poll")) >> []() {
+    // poll a resource...
+    // schedule next polling
+    delayed_send(self, std::chrono::seconds(1), atom("poll"));
+  }
+);
+\end{lstlisting}
+
+\clearpage
+\subsection{Forwarding Messages}
+
+The function \lstinline^forward_to^ forwards the last dequeued message to an other actor.
+Forwarding a synchronous message will also transfer responsibility for the request, i.e., the receiver of the forwarded message can reply as usual and the original sender of the message will receive the response.
+The following diagram illustrates forwarding of a synchronous message from actor \texttt{B} to actor \texttt{C}.
+
+\begin{footnotesize}
+\begin{verbatim}
+               A                  B                  C
+               |                  |                  |
+               | --(sync_send)--> |                  |
+               |                  | --(forward_to)-> |
+               |                  X                  |---\
+               |                                     |   | compute
+               |                                     |   | result
+               |                                     |<--/
+               | <-------------(reply)-------------- |
+               |                                     X
+               |---\
+               |   | handle
+               |   | response
+               |<--/
+               |
+               X
+\end{verbatim}
+\end{footnotesize}
+
+The forwarding is completely transparent to actor \texttt{C}, since it will see actor \texttt{A} as sender of the message.
+However, actor \texttt{A} will see actor \texttt{C} as sender of the response message instead of actor \texttt{B} and thus could recognize the forwarding by evaluating \lstinline^self->last_sender()^.

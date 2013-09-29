@@ -1,0 +1,73 @@
+\section{Common Pitfalls}
+\label{Sec::Pitfalls}
+
+\subsection{Event-Based API}
+
+\begin{itemize}
+\item The functions \lstinline^become^ and \lstinline^handle_response^ do not block, i.e., always return immediately.
+Thus, you should \textit{always} capture by value in event-based actors, because all references on the stack will cause undefined behavior if a lambda is executed.
+\end{itemize}
+
+\subsection{Mixing Event-Based and Blocking API}
+
+\begin{itemize}
+\item Blocking \libcppa function such as \lstinline^receive^ will \emph{throw an exception} if accessed from an event-based actor.
+%To catch as many errors as possible at compile-time, \libcppa will produce an error if \lstinline^receive^ is called and the \lstinline^this^ pointer is set and points to an event-based actor.
+
+\item Context-switching and thread-mapped actors \emph{can} use the \lstinline^become^ API.
+Whenever a non-event-based actor calls \lstinline^become()^ for the first time, it will create a behavior stack and execute it until the behavior stack is empty.
+Thus, the \textit{initial} \lstinline^become^ blocks until the behavior stack is empty, whereas all subsequent calls to \lstinline^become^ will return immediately.
+Related functions, e.g., \lstinline^sync_send(...).then(...)^, behave the same, as they manipulate the behavior stack as well.
+\end{itemize}
+
+\subsection{Synchronous Messages}
+
+\begin{itemize}
+
+\item
+\lstinline^send(self->last_sender(), ...)^ is \textbf{not} equal to \lstinline^reply(...)^.
+The two functions \lstinline^receive_response^ and \lstinline^handle_response^ will only recognize messages send via either \lstinline^reply^ or \lstinline^reply_tuple^.
+
+\item
+A handle returned by \lstinline^sync_send^ represents \emph{exactly one} response message.
+Therefore, it is not possible to receive more than one response message.
+Calling \lstinline^reply^ more than once will result in lost messages and calling \lstinline^handle_response^ or \lstinline^receive_response^ more than once on a future will throw an exception.
+
+\item
+The future returned by \lstinline^sync_send^ is bound to the calling actor.
+It is not possible to transfer such a future to another actor.
+Calling \lstinline^receive_response^ or \lstinline^handle_response^ for a future bound to another actor is undefined behavior.
+
+\end{itemize}
+
+\subsection{Sending Messages}
+
+\begin{itemize}
+
+\item
+\lstinline^send(whom, ...)^ is syntactic sugar for \lstinline^whom << make_any_tuple(...)^.
+Hence, a message sent via \lstinline^send(whom, self->last_dequeued())^ will not yield the expected result, since it wraps \lstinline^self->last_dequeued()^ into another \lstinline^any_tuple^ instance.
+The correct way of forwarding messages is \lstinline^self->forward_to(whom)^.
+
+\end{itemize}
+
+\clearpage
+
+\subsection{Sharing}
+
+\begin{itemize}
+\item It is strongly recommended to \textbf{not} share states between actors.
+In particular, no actor shall ever access member variables or member functions of another actor.
+Accessing shared memory segments concurrently can cause undefined behavior that is incredibly hard to find and debug.
+However, sharing \textit{data} between actors is fine, as long as the data is \textit{immutable} and all actors access the data only via smart pointers such as \lstinline^std::shared_ptr^.
+Nevertheless, the recommended way of sharing informations is message passing.
+Sending data to multiple actors does \textit{not} result in copying the data several times.
+Read Section \ref{Sec::Tuples} to learn more about \libcppa's copy-on-write optimization for tuples.
+\end{itemize}
+
+\subsection{Constructors of Class-based Actors}
+
+\begin{itemize}
+\item During constructor invocation, \lstinline^self^ does \textbf{not} point to \lstinline^this^. It points to the invoking actor instead.
+\item You should \textbf{not} send or receive messages in a constructor or destructor.
+\end{itemize}

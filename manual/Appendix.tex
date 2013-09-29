@@ -1,0 +1,90 @@
+\section{Appendix}
+
+\subsection{Class \texttt{option}}
+\label{Appendix::Option}
+
+Defined in header \lstinline^"cppa/option.hpp"^.
+
+\begin{lstlisting}
+template<typename T>
+class option;
+\end{lstlisting}
+
+Represents an optional value.
+
+{\small
+\begin{tabular*}{\textwidth}{m{0.5\linewidth}m{0.45\linewidth}}
+  \multicolumn{2}{l}{\large{\textbf{Member types}}\vspace{3pt}} \\
+  \hline
+  \textbf{Member type} & \textbf{Definition} \\
+  \hline
+  \lstinline^type^ & \lstinline^T^ \\
+  \hline
+  \\
+  \multicolumn{2}{l}{\large{\textbf{Member functions}}\vspace{3pt}} \\
+  \hline
+  \lstinline^option()^ & Constructs an empty option \\
+  \hline
+  \lstinline^option(T value)^ & Initializes \lstinline^this^ with \lstinline^value^ \\
+  \hline
+  \lstinline^option(const option&)^\newline\lstinline^option(option&&)^ & Copy/move construction \\
+  \hline
+  \lstinline^option& operator=(const option&)^\newline\lstinline^option& operator=(option&&)^ & Copy/move assignment \\
+  \hline
+  \\
+  \multicolumn{2}{l}{\textbf{Observers}\vspace{3pt}} \\
+  \hline
+  \lstinline^bool valid()^\newline\lstinline^explicit operator bool()^ & Returns \lstinline^true^ if \lstinline^this^ has a value \\
+  \hline
+  \lstinline^bool empty()^\newline\lstinline^bool operator!()^ & Returns \lstinline^true^ if \lstinline^this^ does \textbf{not} has a value \\
+  \hline
+  \lstinline^const T& get()^\newline\lstinline^const T& operator*()^ & Access stored value \\
+  \hline
+  \lstinline^const T& get_or_else(const T& x)^ & Returns \lstinline^get()^ if valid, \lstinline^x^ otherwise  \\
+  \hline
+  \\
+  \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
+  \hline
+  \lstinline^T& get()^\newline\lstinline^T& operator*()^ & Access stored value \\
+  \hline
+\end{tabular*}
+}
+
+\clearpage
+\subsection{Using \texttt{aout} -- A Concurrency-safe Wrapper for \texttt{cout}}
+
+When using \lstinline^cout^ from multiple actors, output often appears interleaved.
+Moreover, using \lstinline^cout^ from multiple actors -- and thus multiple threads -- in parallel should be avoided, since the standard does not guarantee a thread-safe implementation.
+
+By replacing \texttt{std::cout} with \texttt{cppa::aout}, actors can achieve a concurrency-safe text output.
+The header \lstinline^cppa/cppa.hpp^ also defines overloads for \texttt{std::endl} and \texttt{std::flush} for \lstinline^aout^, but does not support the full range of ostream operations (yet).
+Each write operation to \texttt{aout} sends a message to a `hidden' actor (keep in mind, sending messages from actor constructors is not safe).
+This actor only prints lines, unless output is forced using \lstinline^flush^.
+
+\begin{lstlisting}
+#include <chrono>
+#include <cstdlib>
+#include "cppa/cppa.hpp"
+
+using namespace cppa;
+using std::endl;
+
+int main() {
+    std::srand(std::time(0));
+    for (int i = 1; i <= 50; ++i) {
+        spawn([i] {
+          aout << "Hi there! This is actor nr. " << i << "!" << endl;
+          std::chrono::milliseconds tout{std::rand() % 1000};
+          delayed_send(self, tout, atom("done"));
+          receive(others() >> [i] {
+              aout << "Actor nr. " << i << " says goodbye!" << endl;
+          });
+        });
+    }
+    // wait until all other actors we've spawned are done
+    await_all_others_done();
+    // done
+    shutdown();
+    return 0;
+}
+\end{lstlisting}

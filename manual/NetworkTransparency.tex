@@ -1,0 +1,46 @@
+\section{Network Transparency}
+
+All actor operations as well as sending messages are network transparent.
+Remote actors are represented by actor proxies that forward all messages.
+
+\subsection{Publishing of Actors}
+
+\begin{lstlisting}
+void publish(actor_ptr whom, std::uint16_t port, const char* addr = 0)
+\end{lstlisting}
+
+The function \lstinline^publish^ binds an actor to a given port.
+It throws \lstinline^network_error^ if socket related errors occur or \lstinline^bind_failure^ if the specified port is already in use.
+The optional \lstinline^addr^ parameter can be used to listen only to the given IP address.
+Otherwise, the actor accepts all incoming connections (\lstinline^INADDR_ANY^).
+
+\begin{lstlisting}
+publish(self, 4242);
+become (
+  on(atom("ping"), arg_match) >> [](int i) {
+    reply(atom("pong"), i);
+  }
+);
+\end{lstlisting}
+
+\subsection{Connecting to Remote Actors}
+
+\begin{lstlisting}
+actor_ptr remote_actor(const char* host, std::uint16_t port)
+\end{lstlisting}
+
+The function \lstinline^remote_actor^ connects to the actor at given host and port.
+A \lstinline^network_error^ is thrown if the connection failed.
+
+\begin{lstlisting}
+auto pong = remote_actor("localhost", 4242);
+send(pong, atom("ping"), 0);
+become (
+  on(atom("pong"), 10) >> [] {
+    self->quit();
+  },
+  on(atom("pong"), arg_match) >> [](int i) {
+    reply(atom("ping"), i+1);
+  }
+);
+\end{lstlisting}

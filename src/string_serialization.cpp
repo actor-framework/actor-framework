@@ -46,6 +46,8 @@
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/algorithm.hpp"
+
 #include "cppa/io/default_actor_addressing.hpp"
 
 #include "cppa/detail/uniform_type_info_map.hpp"
@@ -95,10 +97,15 @@ class string_serializer : public serializer {
 
         void operator()(const u32string&) { }
 
+        void operator()(const atom_value& value) {
+            out << "'" << to_string(value) << "'";
+        }
+
     };
 
     bool m_after_value;
     bool m_obj_just_opened;
+    stack<size_t> m_object_pos;
     stack<string> m_open_objects;
 
     inline void clear() {
@@ -117,7 +124,8 @@ class string_serializer : public serializer {
  public:
 
     string_serializer(ostream& mout)
-    : super(&m_addressing), out(mout), m_after_value(false), m_obj_just_opened(false) { }
+    : super(&m_addressing), out(mout), m_after_value(false)
+    , m_obj_just_opened(false) { }
 
     void begin_object(const uniform_type_info* uti) {
         clear();
@@ -125,6 +133,10 @@ class string_serializer : public serializer {
         m_open_objects.push(tname);
         // do not print type names for strings and atoms
         if (!isbuiltin(tname)) out << tname;
+        else if (tname.compare(0, 3, "@<>") == 0) {
+            auto subtypes = util::split(tname, '+', false);
+
+        }
         m_obj_just_opened = true;
     }
 
@@ -157,19 +169,7 @@ class string_serializer : public serializer {
         if (m_open_objects.empty()) {
             throw runtime_error("write_value(): m_open_objects.empty()");
         }
-        if (m_open_objects.top() == "@atom") {
-            if (value.ptype() != pt_uint64) {
-                throw runtime_error("expected uint64 value after @atom");
-            }
-            // write atoms as strings instead of integer values
-            auto av = static_cast<atom_value>(get<uint64_t>(value));
-            out << "'";
-            (pt_writer(out, true))(to_string(av));
-            out << "'";
-        }
-        else {
-            value.apply(pt_writer(out));
-        }
+        value.apply(pt_writer(out));
         m_after_value = true;
     }
 
@@ -348,28 +348,15 @@ class string_deserializer : public deserializer {
         void operator()(string& what) {
             what = str;
         }
+        void operator()(atom_value& what) {
+            what = static_cast<atom_value>(detail::atom_val(str.c_str(), 0xF));
+        }
         void operator()(u16string&) { }
         void operator()(u32string&) { }
     };
 
     primitive_variant read_value(primitive_type ptype) {
         integrity_check();
-        if (m_open_objects.top() == "@atom") {
-            if (ptype != pt_uint64) {
-                throw_malformed("expected read of pt_uint64 after @atom");
-            }
-            consume('\'');
-            auto substr_end = find(m_pos, m_str.end(), '\'');
-            if (substr_end == m_str.end()) {
-                throw_malformed("couldn't find trailing ' for atom");
-            }
-            else if ((substr_end - m_pos) > 10) {
-                throw_malformed("atom string size > 10");
-            }
-            string substr(m_pos, substr_end);
-            m_pos += substr.size() + 1;
-            return detail::atom_val(substr.c_str(), 0xF);
-        }
         skip_space_and_comma();
         string::iterator substr_end;
         auto find_if_cond = [] (char c) -> bool {
@@ -381,13 +368,14 @@ class string_deserializer : public deserializer {
              default : return false;
             }
         };
-        if (ptype == pt_u8string) {
-            if (*m_pos == '"') {
+        if (ptype == pt_u8string || ptype == pt_atom) {
+            char needle = (ptype == pt_u8string) ? '"' : '\'';
+            if (*m_pos == needle) {
                 // skip leading "
                 ++m_pos;
-                char last_char = '"';
-                auto find_if_str_cond = [&last_char] (char c) -> bool {
-                    if (c == '"' && last_char != '\\') {
+                char last_char = needle;
+                auto find_if_str_cond = [&last_char, needle] (char c) -> bool {
+                    if (c == needle && last_char != '\\') {
                         return true;
                     }
                     last_char = c;
@@ -407,11 +395,14 @@ class string_deserializer : public deserializer {
         }
         string substr(m_pos, substr_end);
         m_pos += substr.size();
-        if (ptype == pt_u8string) {
+        if (ptype == pt_u8string || ptype == pt_atom) {
+            char needle = (ptype == pt_u8string) ? '"' : '\'';
             // skip trailing "
-            if (*m_pos != '"') {
+            if (*m_pos != needle) {
                 string error_msg;
-                error_msg  = "malformed string, expected '\"' found '";
+                error_msg  = "malformed string, expected '";
+                error_msg += needle;
+                error_msg += "' found '";
                 error_msg += *m_pos;
                 error_msg += "'";
                 throw logic_error(error_msg);
@@ -419,8 +410,8 @@ class string_deserializer : public deserializer {
             ++m_pos;
             // replace '\"' by '"'
             char last_char = ' ';
-            auto cond = [&last_char] (char c) -> bool {
-                if (c == '"' && last_char == '\\') {
+            auto cond = [&last_char, needle] (char c) -> bool {
+                if (c == needle && last_char == '\\') {
                     return true;
                 }
                 last_char = c;
@@ -434,7 +425,7 @@ class string_deserializer : public deserializer {
                  i = find_if(i, send, cond)) {
                 --i;
                 tmp.append(sbegin, i);
-                tmp += '"';
+                tmp += needle;
                 i += 2;
                 sbegin = i;
             }

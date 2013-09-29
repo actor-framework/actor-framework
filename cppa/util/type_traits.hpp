@@ -180,7 +180,8 @@ struct is_primitive {
     static constexpr bool value =  std::is_arithmetic<T>::value
                                 || std::is_convertible<T, std::string>::value
                                 || std::is_convertible<T, std::u16string>::value
-                                || std::is_convertible<T, std::u32string>::value;
+                                || std::is_convertible<T, std::u32string>::value
+                                || std::is_convertible<T, atom_value>::value;
 };
 
 /**

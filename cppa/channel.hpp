@@ -72,6 +72,10 @@ class channel : public ref_counted {
      */
     virtual bool chained_enqueue(const message_header& hdr, any_tuple msg);
 
+    /**
+     * @brief Sets the state from @p pending to @p ready.
+     */
+    virtual void unchain();
 
  protected:
 

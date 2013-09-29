@@ -2,6 +2,8 @@
 
 #include "cppa/primitive_variant.hpp"
 
+#include "cppa/detail/to_uniform_name.hpp"
+
 namespace {
 
 struct streamer {
@@ -49,6 +51,9 @@ int main() {
     CPPA_CHECK(equal(v1, v2));
     v2 = u"Hello World";
     CPPA_CHECK(!equal(v1, v2));
+    primitive_variant v3{atom("hello")};
+    CPPA_CHECK(v3.type() == typeid(atom_value));
+    CPPA_CHECK(get<atom_value>(v3) == atom("hello"));
 
     return CPPA_TEST_RESULT();
 }

@@ -67,6 +67,9 @@ sync_send(const typed_actor_ptr<Ts...>&, Us&&...);
 template<typename... Signatures>
 class typed_actor_ptr {
 
+    template<typename... OtherSignatures>
+    friend class typed_actor_ptr;
+
     template<spawn_options Options, typename... Ts>
     friend typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
            spawn_typed(const match_expr<Ts...>&);
@@ -98,6 +101,16 @@ class typed_actor_ptr {
     typed_actor_ptr(const typed_actor_ptr&) = default;
     typed_actor_ptr& operator=(typed_actor_ptr&&) = default;
     typed_actor_ptr& operator=(const typed_actor_ptr&) = default;
+
+    template<typename... Others>
+    typed_actor_ptr(typed_actor_ptr<Others...> other) {
+        static_assert(util::tl_is_strict_subset<
+                          util::type_list<Signatures...>,
+                          util::type_list<Others...>
+                      >::value,
+                      "'this' must be a strict subset of 'other'");
+        m_ptr = std::move(other.m_ptr);
+    }
 
  private:
 

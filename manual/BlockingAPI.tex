@@ -1,0 +1,120 @@
+\section{Blocking API}
+\label{Sec::BlockingAPI}
+
+Besides event-based actors (the default implementation), \libcppa also provides context-switching and thread-mapped actors that can make use of the blocking API.
+Those actor implementations are intended to ease migration of existing applications or to implement actors that need to have access to blocking receive primitives for other reasons.
+
+Event-based actors differ in receiving messages from context-switching and thread-mapped actors: the former define their behavior as a message handler that is invoked whenever a new messages arrives in the actor's mailbox (by using \lstinline^become^), whereas the latter use an explicit, blocking receive function.
+
+\subsection{Receiving Messages}
+
+The function \lstinline^receive^ sequentially iterates over all elements in the mailbox beginning with the first.
+It takes a partial function that is applied to the elements in the mailbox until an element was matched by the partial function.
+An actor calling \lstinline^receive^ is blocked until it successfully dequeued a message from its mailbox or an optional timeout occurs.
+
+\begin{lstlisting}
+receive (
+  on<int>().when(_x1 > 0) >> // ...
+);
+\end{lstlisting}
+
+The code snippet above illustrates the use of \lstinline^receive^.
+Note that the partial function passed to \lstinline^receive^ is a temporary object at runtime.
+Hence, using receive inside a loop would cause creation of a new partial function on each iteration.
+\libcppa provides three predefined receive loops to provide a more efficient but yet convenient way of defining receive loops.
+
+\begin{tabular*}{\textwidth}{p{0.47\textwidth}|p{0.47\textwidth}}
+\lstinline^// DON'T^ & \lstinline^// DO^ \\
+\begin{lstlisting}
+for (;;) {
+  receive (
+    // ...
+  );
+}
+\end{lstlisting} & %
+\begin{lstlisting}
+receive_loop (
+  // ...
+);
+\end{lstlisting} \\
+\begin{lstlisting}
+std::vector<int> results;
+for (size_t i = 0; i < 10; ++i) {
+  receive (
+    on<int>() >> [&](int value) {
+      results.push_back(value);
+    }
+  );
+}
+\end{lstlisting} & %
+\begin{lstlisting}
+std::vector<int> results;
+size_t i = 0;
+receive_for(i, 10) (
+  on<int>() >> [&](int value) {
+    results.push_back(value);
+  }
+);
+\end{lstlisting} \\
+\begin{lstlisting}
+size_t received = 0;
+do {
+  receive (
+    others() >> [&]() {
+      ++received;
+    }
+  );
+} while (received < 10);
+\end{lstlisting} & %
+\begin{lstlisting}
+size_t received = 0;
+do_receive (
+  others() >> [&]() {
+    ++received;
+  }
+).until(gref(received) >= 10);
+\end{lstlisting} \\
+\end{tabular*}
+
+The examples above illustrate the correct usage of the three loops \lstinline^receive_loop^, \lstinline^receive_for^ and \lstinline^do_receive(...).until^.
+It is possible to nest receives and receive loops.
+
+\begin{lstlisting}
+receive_loop (
+  on<int>() >> [](int value1) {
+    receive (
+      on<float>() >> [&](float value2) {
+        cout << value1 << " => " << value2 << endl;
+      }
+    );
+  }
+);
+\end{lstlisting}
+
+\clearpage
+\subsection{Receiving Synchronous Responses}
+
+\begin{lstlisting}
+actor_ptr testee = ...; // replies with a string to 'get'
+
+auto future = sync_send(testee, atom("get"));
+receive_response (future) (
+  on_arg_match >> [&](const std::string& str) {
+    // handle str
+  },
+  after(std::chrono::seconds(30)) >> [&]() {
+    // handle error
+  }
+);
+
+// or:
+
+sync_send(testee, atom("get")).await (
+  on_arg_match >> [&](const std::string& str) {
+    // handle str
+  },
+  after(std::chrono::seconds(30)) >> [&]() {
+    // handle error
+  }
+);
+\end{lstlisting}

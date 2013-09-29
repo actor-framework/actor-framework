@@ -1,0 +1,140 @@
+\section{Synchronous Communication}
+\label{Sec::Sync}
+
+\libcppa uses a future-based API for synchronous communication.
+The functions \lstinline^sync_send^ and \lstinline^sync_send_tuple^ send synchronous request messages to the receiver and return a future to the response message.
+Note that the returned future is \textit{actor-local}, i.e., only the actor that has send the corresponding request message is able to receive the response identified by such a future.
+
+\begin{lstlisting}
+template<typename... Args>
+message_future sync_send(actor_ptr whom, Args&&... what);
+
+message_future sync_send_tuple(actor_ptr whom, any_tuple what);
+
+template<typename Duration, typename... Args>
+message_future timed_sync_send(actor_ptr whom,
+                               Duration timeout,
+                               Args&&... what);
+
+template<typename Duration, typename... Args>
+message_future timed_sync_send_tuple(actor_ptr whom,
+                                     Duration timeout,
+                                     any_tuple what);
+\end{lstlisting}
+
+A synchronous message is sent to the receiving actor's mailbox like any other asynchronous message.
+The response message, on the other hand, is treated separately.
+
+The difference between \lstinline^sync_send^ and \lstinline^timed_sync_send^ is how timeouts are handled.
+The behavior of \lstinline^sync_send^ is analogous to \lstinline^send^, i.e., timeouts are specified by using \lstinline^after(...)^ statements (see \ref{Sec::Receive::Timeouts}).
+When using \lstinline^timed_sync_send^ function, \lstinline^after(...)^ statements are ignored and the actor will receive a \lstinline^'TIMEOUT'^ message after the given duration instead.
+
+\subsection{Error Messages}
+
+When using synchronous messaging, \libcppa's runtime environment will send ...
+
+\begin{itemize}
+\item \lstinline^{'EXITED', uint32_t exit_reason}^ if the receiver is not alive
+\item \lstinline^{'VOID'}^ if the receiver handled the message but did not call \lstinline^reply^
+\item \lstinline^{'TIMEOUT'}^ if a message send by \lstinline^timed_sync_send^ timed out
+\end{itemize}
+
+\clearpage
+\subsection{Receive Response Messages}
+
+The function \lstinline^handle_response^ can be used to set a one-shot handler receiving the response message send by \lstinline^sync_send^.
+
+\begin{lstlisting}
+actor_ptr testee = ...; // replies with a string to 'get'
+
+// "handle_response" usage example
+auto handle = sync_send(testee, atom("get"));
+handle_response (handle) (
+  on_arg_match >> [=](const std::string& str) {
+    // handle str
+  },
+  after(std::chrono::seconds(30)) >> [=]() {
+    // handle error
+  }
+);
+\end{lstlisting}
+
+Similar to \lstinline^become^, the function \lstinline^handle_response^ modifies an actor's behavior stack.
+However, it is used as ``one-shot handler'' and automatically returns the previous actor behavior afterwards.
+It is possible to ``stack'' multiple \lstinline^handle_response^ calls.
+Each response handler is executed once and then automatically discarded.
+
+\subsection{Synchronous Failures and Error Handlers}
+
+An unexpected response message, i.e., a message that is not handled by given behavior, will invoke the actor's \lstinline^on_sync_failure^ handler.
+The default handler kills the actor by calling \lstinline^self->quit(exit_reason::unhandled_sync_failure)^.
+The handler can be overridden by calling \lstinline^self->on_sync_failure(/*...*/)^.
+
+Unhandled \lstinline^'TIMEOUT'^ messages trigger the \lstinline^on_sync_timeout^ handler.
+The default handler kills the actor for reason \lstinline^exit_reason::unhandled_sync_failure^.
+It is possible set both error handlers by calling \lstinline^self->on_sync_timeout_or_failure(/*...*)^.
+
+
+\clearpage
+\subsection{Using \lstinline^then^ to Receive a Response}
+
+Often, an actor sends a synchronous message and then wants to wait for the response.
+In this case, using either \lstinline^handle_response^ is quite verbose.
+To allow for a more compact code, \lstinline^message_future^ provides the member function \lstinline^then^.
+Using this member function is equal to using \lstinline^handle_response^, as illustrated by the following example.
+
+\begin{lstlisting}
+actor_ptr testee = ...; // replies with a string to 'get'
+
+// set handler for unexpected messages
+self->on_sync_failure = [] {
+    aout << "received: " << to_string(self->last_dequeued()) << endl;
+};
+
+// set handler for timeouts
+self->on_sync_timeout = [] {
+    aout << "timeout occured" << endl;
+};
+
+// set response handler by using "then"
+timed_sync_send(testee, std::chrono::seconds(30), atom("get")).then(
+  on_arg_match >> [=](const std::string& str) { /* handle str */ }
+);
+\end{lstlisting}
+
+\subsubsection{Using Functors without Patterns}
+
+To reduce verbosity, \libcppa supports synchronous response handlers without patterns.
+In this case, the pattern is automatically deduced by the functor's signature.
+
+\begin{lstlisting}
+actor_ptr testee = ...; // replies with a string to 'get'
+
+// (1) functor only usage
+sync_send(testee, atom("get")).then(
+  [=](const std::string& str) { /*...*/ }
+);
+// statement (1) is equal to:
+sync_send(testee, atom("get")).then(
+  on(any_vals, arg_match) >> [=](const std::string& str) { /*...*/ }
+);
+\end{lstlisting}
+
+\subsubsection{Continuations for Event-based Actors}
+
+\libcppa supports continuations to enable chaining of send/receive statements.
+The functions \lstinline^handle_response^ and \lstinline^message_future::then^ both return a helper object offering \lstinline^continue_with^, which takes a functor $f$ without arguments.
+After receiving a message, $f$ is invoked if and only if the received messages was handled successfully, i.e., neither \lstinline^sync_failure^ nor \lstinline^sync_timeout^ occurred.
+
+\begin{lstlisting}
+actor_ptr d_or_s = ...; // replies with either a double or a string
+
+sync_send(d_or_s, atom("get")).then(
+  [=](double value) { /* functor f1 */ },
+  [=](const string& value) { /* functor f2*/ }
+).continue_with([=] {
+  // this continuation is invoked in both cases
+  // *after* f1 or f2 is done, but *not* in case
+  // of sync_failure or sync_timeout
+});
+\end{lstlisting}

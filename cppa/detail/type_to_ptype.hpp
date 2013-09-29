@@ -88,6 +88,7 @@ struct type_to_ptype_impl {
 template<> struct type_to_ptype_impl<float>       : wrapped_ptype<pt_float      > { };
 template<> struct type_to_ptype_impl<double>      : wrapped_ptype<pt_double     > { };
 template<> struct type_to_ptype_impl<long double> : wrapped_ptype<pt_long_double> { };
+template<> struct type_to_ptype_impl<atom_value>  : wrapped_ptype<pt_atom       > { };
 
 template<typename T>
 struct type_to_ptype : type_to_ptype_impl<typename util::rm_const_and_ref<T>::type> { };
