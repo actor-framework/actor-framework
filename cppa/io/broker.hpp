@@ -99,20 +99,18 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     void write(const connection_handle& hdl, util::buffer&& buf);
 
-    static broker_ptr from(std::function<void (broker*, connection_handle)> fun,
+    template<typename F, typename... Ts>
+    static broker_ptr from(F fun,
                            input_stream_ptr in,
-                           output_stream_ptr out);
-
-    template<typename F, typename T0, typename... Ts>
-    static broker_ptr from(F fun, input_stream_ptr in, output_stream_ptr out,
-                           T0&& arg0, Ts&&... args) {
-        return from(std::bind(std::move(fun),
-                              std::placeholders::_1,
-                              std::placeholders::_2,
-                              detail::fwd<T0>(arg0),
-                              detail::fwd<Ts>(args)...),
-                    std::move(in),
-                    std::move(out));
+                           output_stream_ptr out,
+                           Ts&&... args) {
+        auto hdl = connection_handle::from_int(in->read_handle());
+        return from_impl(std::bind(std::move(fun),
+                                   std::placeholders::_1,
+                                   hdl,
+                                   detail::fwd<Ts>(args)...),
+                         std::move(in),
+                         std::move(out));
     }
 
     static broker_ptr from(std::function<void (broker*)> fun, acceptor_uptr in);
@@ -126,20 +124,15 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
                     std::move(in));
     }
 
-    actor_ptr fork(std::function<void (broker*, connection_handle)> fun,
-                   connection_handle hdl);
-
-    template<typename F, typename T0, typename... Ts>
+    template<typename F, typename... Ts>
     actor_ptr fork(F fun,
                    connection_handle hdl,
-                   T0&& arg0,
                    Ts&&... args) {
-        return this->fork(std::bind(std::move(fun),
-                                    std::placeholders::_1,
-                                    std::placeholders::_2,
-                                    detail::fwd<T0>(arg0),
-                                    detail::fwd<Ts>(args)...),
-                          hdl);
+        return this->fork_impl(std::bind(std::move(fun),
+                                         std::placeholders::_1,
+                                         hdl,
+                                         detail::fwd<Ts>(args)...),
+                               hdl);
     }
 
     template<typename F>
@@ -166,6 +159,13 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
     explicit broker(scribe_pointer);
 
  private:
+
+    actor_ptr fork_impl(std::function<void (broker*)> fun,
+                        connection_handle hdl);
+
+    static broker_ptr from_impl(std::function<void (broker*)> fun,
+                                input_stream_ptr in,
+                                output_stream_ptr out);
 
     void invoke_message(const message_header& hdr, any_tuple msg);
 

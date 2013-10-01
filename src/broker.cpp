@@ -63,20 +63,9 @@ class default_broker : public broker {
 
     typedef std::function<void (broker*)> function_type;
 
-    struct fork_flag { };
-
     template<typename... Ts>
     default_broker(function_type&& fun, Ts&&... args)
     : broker{std::forward<Ts>(args)...}, m_fun{move(fun)} { }
-
-    template<typename... Ts>
-    default_broker(fork_flag,
-                   std::function<void (broker*, connection_handle)>&& fun,
-                   connection_handle hdl,
-                   Ts&&... args)
-    : broker{std::forward<Ts>(args)...}
-    , m_fun{std::bind(move(fun), std::placeholders::_1, hdl)} { }
-
 
     void init() override {
         enqueue(nullptr, make_any_tuple(atom("INITMSG")));
@@ -265,7 +254,6 @@ class broker::doorman : public broker::servant {
     }
 
     continue_reading_result continue_reading() override {
-        CPPA_REQUIRE(parent() != nullptr);
         CPPA_LOG_TRACE("");
         for (;;) {
             optional<stream_ptr_pair> opt{none};
@@ -437,15 +425,10 @@ local_actor_ptr init_and_launch(broker_ptr ptr) {
     return move(ptr);
 }
 
-broker_ptr broker::from(std::function<void (broker*, connection_handle)> fun,
-                        input_stream_ptr in,
-                        output_stream_ptr out) {
-    auto hdl = connection_handle::from_int(in->read_handle());
-    return make_counted<default_broker>(std::bind(move(fun),
-                                                  std::placeholders::_1,
-                                                  hdl),
-                                        move(in),
-                                        move(out));
+broker_ptr broker::from_impl(std::function<void (broker*)> fun,
+                             input_stream_ptr in,
+                             output_stream_ptr out) {
+    return make_counted<default_broker>(move(fun), move(in), move(out));
 }
 
 broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
@@ -475,15 +458,12 @@ accept_handle broker::add_doorman(acceptor_uptr ptr) {
     return id;
 }
 
-actor_ptr broker::fork(std::function<void (broker*, connection_handle)> fun,
-                       connection_handle hdl) {
+actor_ptr broker::fork_impl(std::function<void (broker*)> fun,
+                            connection_handle hdl) {
     auto i = m_io.find(hdl);
     if (i == m_io.end()) throw std::invalid_argument("invalid handle");
     scribe* sptr = i->second.get(); // non-owning pointer
-    auto result = make_counted<default_broker>(default_broker::fork_flag{},
-                                               move(fun),
-                                               hdl,
-                                               move(i->second));
+    auto result = make_counted<default_broker>(move(fun), move(i->second));
     init_and_launch(result);
     sptr->set_parent(result); // set new parent
     m_io.erase(i);

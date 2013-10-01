@@ -29,7 +29,7 @@
 
 
 #include <memory>
-#include<iostream>
+#include <iostream>
 
 #include "test.hpp"
 #include "cppa/cppa.hpp"
@@ -38,11 +38,6 @@ using namespace std;
 using namespace cppa;
 
 namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
-
-void report_unexpected() {
-    std::cerr << "unexpected message: " << to_string(self->last_dequeued())
-              << std::endl;
-}
 
 void ping(size_t num_pings) {
     auto count = std::make_shared<size_t>(0);
@@ -54,10 +49,10 @@ void ping(size_t num_pings) {
                     if (++*count >= num_pings) self->quit();
                     else reply(atom("ping"), value + 1);
                 },
-                others() >> report_unexpected
+                others() >> CPPA_UNEXPECTED_MSG_CB()
             );
         },
-        others() >> report_unexpected
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }
 
@@ -73,10 +68,10 @@ void pong() {
                 on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
                     self->quit(reason);
                 },
-                others() >> report_unexpected
+                others() >> CPPA_UNEXPECTED_MSG_CB()
             );
         },
-        others() >> report_unexpected
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }
 
@@ -86,14 +81,9 @@ void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy
         cout << "num_connections() != 1" << endl;
         throw std::logic_error("num_connections() != 1");
     }
-    //thisptr->for_each_connection([=](io::connection_handle hdl) {
-    //    thisptr->receive_policy(hdl, io::broker::exactly, message_size);
-    //});
     auto write = [=](atom_value type, int value) {
-        //thisptr->for_each_connection([=](io::connection_handle hdl) {
-            thisptr->write(hdl, sizeof(type), &type);
-            thisptr->write(hdl, sizeof(value), &value);
-        //});
+        thisptr->write(hdl, sizeof(type), &type);
+        thisptr->write(hdl, sizeof(value), &value);
     };
     become (
         on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
@@ -115,7 +105,7 @@ void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy
         on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
             if (thisptr->last_sender() == buddy) self->quit(reason);
         },
-        others() >> report_unexpected
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }
 
@@ -127,7 +117,7 @@ void peer_acceptor(io::broker* thisptr, const actor_ptr& buddy) {
             thisptr->fork(peer, hdl, buddy);
             self->quit();
         },
-        others() >> report_unexpected
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }
 
