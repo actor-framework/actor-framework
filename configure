@@ -31,7 +31,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build both with gcc and clang
     --no-examples               build libcppa without examples
     --no-qt-examples            build libcppa without Qt examples
-    --no-protobuf-example       build libcppa without protobuf examples
+    --no-protobuf-examples      build libcppa without protobuf examples
     --no-unit-tests             build libcppa without unit tests
     --build-static              build libcppa as static and shared library
     --build-static-only         build libcppa as static library only
