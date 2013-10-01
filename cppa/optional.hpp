@@ -144,6 +144,22 @@ class optional {
     /**
      * @brief Returns the value.
      */
+    inline const T* operator->() const {
+        CPPA_REQUIRE(valid());
+        return &m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
+    inline T* operator->() {
+        CPPA_REQUIRE(valid());
+        return &m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
     inline T& get() {
         CPPA_REQUIRE(valid());
         return m_value;
