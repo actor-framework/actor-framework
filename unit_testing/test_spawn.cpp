@@ -311,7 +311,30 @@ struct high_priority_testee_class : event_based_actor {
     }
 };
 
+struct my_request { int a; int b; };
+
+bool operator==(const my_request& lhs, const my_request& rhs) {
+    return lhs.a == rhs.a && lhs.b == rhs.b;
+}
+
+typed_actor_ptr<replies_to<my_request>::with<bool>>
+spawn_typed_server() {
+    return spawn_typed(
+        on_arg_match >> [](const my_request& req) {
+            return req.a == req.b;
+        }
+    );
+}
+
 void test_typed_actors() {
+    announce<my_request>(&my_request::a, &my_request::b);
+    auto sptr = spawn_typed_server();
+    sync_send(sptr, my_request{2, 2}).await(
+        [](bool value) {
+            CPPA_CHECK_EQUAL(value, true);
+        }
+    );
+    send_exit(sptr, exit_reason::user_defined);
     auto ptr0 = spawn_typed(
         on_arg_match >> [](double d) {
             return d * d;
