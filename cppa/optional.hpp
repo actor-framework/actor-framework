@@ -62,7 +62,7 @@ class optional {
     /**
      * @post <tt>valid() == false</tt>
      */
-    optional(const none_t&) : m_valid(false) { }
+    optional(const none_t& = none) : m_valid(false) { }
 
     /**
      * @brief Creates an @p option from @p value.
