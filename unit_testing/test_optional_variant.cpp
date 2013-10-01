@@ -28,13 +28,11 @@ struct int_visitor {
 
 using dlimits = std::numeric_limits<double>;
 
-
 struct double_visitor {
     double operator()(none_t) const { return dlimits::signaling_NaN(); }
-    double operator()(void) const { return dlimits::quiet_NaN(); }
-    double operator()(int i) const { return i; }
-    double operator()(float f) const { return f; }
-    double operator()(double d) const { return d; }
+    double operator()() const { return dlimits::quiet_NaN(); }
+    template<typename T>
+    double operator()(T value) const { return value; }
 };
 
 int main() {

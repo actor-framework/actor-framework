@@ -76,11 +76,14 @@ struct optional_variant_move_helper {
     T& lhs;
     optional_variant_move_helper(T& lhs_ref) : lhs(lhs_ref) { }
     template<typename U>
-    inline void operator()(const U& rhs) const {
+    inline void operator()(U& rhs) const {
         lhs = std::move(rhs);
     }
     inline void operator()() const {
         lhs = unit;
+    }
+    inline void operator()(const none_t&) const {
+        lhs = none;
     }
 };
 
@@ -382,6 +385,8 @@ struct optional_variant_cmp_helper {
     operator()(const U&) const { return false; }
     // variant is void
     bool operator()() const { return false; }
+    // variant is undefined
+    bool operator()(const none_t&) const { return false; }
 };
 } // namespace detail
 
