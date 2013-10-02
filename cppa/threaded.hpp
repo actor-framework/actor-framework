@@ -129,6 +129,11 @@ class threaded : public Base {
         enqueue_impl(this->m_mailbox, hdr, std::move(msg));
     }
 
+    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg) override {
+        enqueue(hdr, std::move(msg));
+        return false;
+    }
+
     timeout_type init_timeout(const util::duration& rel_time) {
         auto result = std::chrono::high_resolution_clock::now();
         result += rel_time;
