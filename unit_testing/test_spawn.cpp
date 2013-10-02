@@ -405,13 +405,50 @@ void test_typed_actors() {
     CPPA_CHECKPOINT();
 }
 
+
+
+
+
+struct master : event_based_actor {
+    virtual void init() override {
+        become(
+            on(atom("done")) >> []() {
+                self->quit(exit_reason::user_defined);
+            }
+        );
+    }
+};
+
+struct slave : event_based_actor {
+
+    slave(actor_ptr master) : master{master} { }
+
+    virtual void init() override {
+        link_to(master);
+        become (
+            others() >> CPPA_UNEXPECTED_MSG_CB()
+        );
+    }
+
+    actor_ptr master;
+
+};
+
 int main() {
     CPPA_TEST(test_spawn);
 
-    cout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
-    cout << "sizeof(broker) = " << sizeof(io::broker) << endl;
+    aout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
+    aout << "sizeof(broker) = " << sizeof(io::broker) << endl;
 
     test_typed_actors();
+
+    // check whether detached actors and scheduled actors interact w/o errors
+    auto m = spawn<master, detached>();
+    spawn<slave>(m);
+    spawn<slave>(m);
+    send(m, atom("done"));
+    await_all_others_done();
+    CPPA_CHECKPOINT();
 
     CPPA_PRINT("test send()");
     send(self, 1, 2, 3, true);
