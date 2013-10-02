@@ -62,7 +62,7 @@ class optional {
     /**
      * @post <tt>valid() == false</tt>
      */
-    optional(const none_t&) : m_valid(false) { }
+    optional(const none_t& = none) : m_valid(false) { }
 
     /**
      * @brief Creates an @p option from @p value.
@@ -139,6 +139,22 @@ class optional {
     inline const T& operator*() const {
         CPPA_REQUIRE(valid());
         return m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
+    inline const T* operator->() const {
+        CPPA_REQUIRE(valid());
+        return &m_value;
+    }
+
+    /**
+     * @brief Returns the value.
+     */
+    inline T* operator->() {
+        CPPA_REQUIRE(valid());
+        return &m_value;
     }
 
     /**
