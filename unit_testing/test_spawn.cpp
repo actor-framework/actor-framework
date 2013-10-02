@@ -34,29 +34,29 @@ class event_testee : public sb_actor<event_testee> {
 
     event_testee() {
         wait4string = (
-            on<string>() >> [=]() {
+            on<string>() >> [=] {
                 become(wait4int);
             },
-            on<atom("get_state")>() >> [=]() {
-                reply("wait4string");
+            on<atom("get_state")>() >> [=] {
+                return "wait4string";
             }
         );
 
         wait4float = (
-            on<float>() >> [=]() {
+            on<float>() >> [=] {
                 become(wait4string);
             },
-            on<atom("get_state")>() >> [=]() {
-                reply("wait4float");
+            on<atom("get_state")>() >> [=] {
+                return "wait4float";
             }
         );
 
         wait4int = (
-            on<int>() >> [=]() {
+            on<int>() >> [=] {
                 become(wait4float);
             },
-            on<atom("get_state")>() >> [=]() {
-                reply("wait4int");
+            on<atom("get_state")>() >> [=] {
+                return "wait4int";
             }
         );
     }
@@ -86,10 +86,10 @@ struct chopstick : public sb_actor<chopstick> {
 
     behavior taken_by(actor_ptr whom) {
         return (
-            on<atom("take")>() >> [=]() {
-                reply(atom("busy"));
+            on<atom("take")>() >> [=] {
+                return atom("busy");
             },
-            on(atom("put"), whom) >> [=]() {
+            on(atom("put"), whom) >> [=] {
                 become(available);
             },
             on(atom("break")) >> [=]() {
@@ -104,11 +104,11 @@ struct chopstick : public sb_actor<chopstick> {
 
     chopstick() {
         available = (
-            on(atom("take"), arg_match) >> [=](actor_ptr whom) {
+            on(atom("take"), arg_match) >> [=](actor_ptr whom) -> atom_value {
                 become(taken_by(whom));
-                reply(atom("taken"));
+                return atom("taken");
             },
-            on(atom("break")) >> [=]() {
+            on(atom("break")) >> [=] {
                 quit();
             }
         );
@@ -125,7 +125,7 @@ class testee_actor {
                 string_received = true;
             },
             on<atom("get_state")>() >> [&] {
-                reply("wait4string");
+                return "wait4string";
             }
         )
         .until(gref(string_received));
@@ -138,7 +138,7 @@ class testee_actor {
                 float_received = true;
             },
             on<atom("get_state")>() >> [&] {
-                reply("wait4float");
+                return "wait4float";
             }
         )
         .until(gref(float_received));
@@ -153,7 +153,7 @@ class testee_actor {
                 wait4float();
             },
             on<atom("get_state")>() >> [&] {
-                reply("wait4int");
+                return "wait4int";
             }
         );
     }
@@ -253,8 +253,8 @@ class fixed_stack : public sb_actor<fixed_stack> {
                 data.push_back(what);
                 become(filled);
             },
-            on(atom("pop")) >> [=]() {
-                reply(atom("failure"));
+            on(atom("pop")) >> [=] {
+                return atom("failure");
             }
         );
 
@@ -276,7 +276,7 @@ struct simple_mirror : sb_actor<simple_mirror> {
 
     behavior init_state = (
         others() >> [] {
-            reply_tuple(self->last_dequeued());
+            return self->last_dequeued();
         }
     );
 
@@ -556,8 +556,8 @@ int main() {
 
     auto factory = factory::event_based([&](int* i, float*, string*) {
         become (
-            on(atom("get_int")) >> [i]() {
-                reply(*i);
+            on(atom("get_int")) >> [i] {
+                return *i;
             },
             on(atom("set_int"), arg_match) >> [i](int new_value) {
                 *i = new_value;
@@ -618,7 +618,7 @@ int main() {
     auto sync_testee1 = spawn<blocking_api>([] {
         receive (
             on(atom("get")) >> [] {
-                reply(42, 2);
+                return make_cow_tuple(42, 2);
             }
         );
     });
@@ -681,11 +681,11 @@ int main() {
     self->monitor(sync_testee);
     send(sync_testee, "hi");
     receive (
-        on("whassup?") >> [&] {
+        on("whassup?") >> [&]() -> std::string {
             CPPA_CHECK(true);
             // this is NOT a reply, it's just an asynchronous message
             send(self->last_sender(), "a lot!");
-            reply("nothing");
+            return "nothing";
         }
     );
     receive (
@@ -788,8 +788,8 @@ int main() {
 
     auto f = factory::event_based([](string* name) {
         become (
-            on(atom("get_name")) >> [name]() {
-                reply(atom("name"), *name);
+            on(atom("get_name")) >> [name] {
+                return make_cow_tuple(atom("name"), *name);
             }
         );
     });

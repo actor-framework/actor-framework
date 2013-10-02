@@ -7,15 +7,15 @@ using namespace cppa::placeholders;
 
 struct sync_mirror : sb_actor<sync_mirror> {
     behavior init_state = (
-        others() >> [] { reply_tuple(self->last_dequeued()); }
+        others() >> [] { return self->last_dequeued(); }
     );
 };
 
 // replies to 'f' with 0.0f and to 'i' with 0
 struct float_or_int : sb_actor<float_or_int> {
     behavior init_state = (
-        on(atom("f")) >> [] { reply(0.0f); },
-        on(atom("i")) >> [] { reply(0); }
+        on(atom("f")) >> [] { return 0.0f; },
+        on(atom("i")) >> [] { return 0; }
     );
 };
 
@@ -273,7 +273,7 @@ int main() {
     spawn<monitored + blocking_api>([] {  // client
         auto s = spawn<server, linked>(); // server
         auto w = spawn<linked>([] {       // worker
-            become(on(atom("request")) >> []{ reply(atom("response")); });
+            become(on(atom("request")) >> []{ return atom("response"); });
         });
         // first 'idle', then 'request'
         send_as(w, s, atom("idle"));

@@ -406,17 +406,24 @@ class receive_policy {
             case ordinary_message: {
                 if (!awaited_response.valid()) {
                     auto previous_node = hm_begin(client, node, policy);
-                    if (fun(node->msg)) {
-                        // make sure synchronous request
-                        // always receive a response
-                        auto id = node->mid;
+                    auto res = fun(node->msg);
+                    if (res) {
+                        auto mid = node->mid;
                         auto sender = node->sender;
-                        if (id.valid() && !id.is_answered() && sender) {
-                            CPPA_LOGMF(CPPA_WARNING, client,
-                                       "actor did not reply to a "
-                                       "synchronous request message");
-                            sender->enqueue({client, sender, id.response_id()},
-                                            make_any_tuple(atom("VOID")));
+                        message_header hdr{client, sender, mid.response_id()};
+                        if (res->empty()) {
+                            // make sure synchronous requests
+                            // always receive a response
+                            if (mid.valid() && !mid.is_answered() && sender) {
+                                CPPA_LOGMF(CPPA_WARNING, client,
+                                           "actor did not reply to a "
+                                           "synchronous request message");
+                                sender->enqueue(std::move(hdr),
+                                                make_any_tuple(atom("VOID")));
+                            }
+                        } else {
+                            // respond by using the result of 'fun'
+                            sender->enqueue(std::move(hdr), std::move(*res));
                         }
                         hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;
