@@ -1,3 +1,11 @@
+Version 0.8
+-----------
+
+__2013_10_01__
+
+- Added support for typed actors
+- Added `brokers`: actors that encapsulate networking
+
 Version 0.7.2
 -------------
 
