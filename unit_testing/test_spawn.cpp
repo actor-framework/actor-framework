@@ -227,10 +227,10 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
         full = (
             on(atom("push"), arg_match) >> [=](int) { },
-            on(atom("pop")) >> [=]() {
-                reply(atom("ok"), data.back());
+            on(atom("pop")) >> [=]() -> any_tuple {
                 data.pop_back();
                 become(filled);
+                return {atom("ok"), data.back()};
             }
         );
 
@@ -240,11 +240,12 @@ class fixed_stack : public sb_actor<fixed_stack> {
                 if (data.size() == max_size)
                     become(full);
             },
-            on(atom("pop")) >> [=]() {
-                reply(atom("ok"), data.back());
+            on(atom("pop")) >> [=]() -> any_tuple {
+                auto result = data.back();
                 data.pop_back();
                 if (data.empty())
                     become(empty);
+                return {atom("ok"), result};
             }
         );
 
@@ -264,9 +265,9 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
 void echo_actor() {
     become (
-        others() >> [] {
-            reply_tuple(self->last_dequeued());
+        others() >> []() -> any_tuple {
             self->quit(exit_reason::normal);
+            return self->last_dequeued();
         }
     );
 }
@@ -616,7 +617,7 @@ int main() {
             }
         );
         vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-        CPPA_CHECK(values == expected);
+        CPPA_CHECK_EQUAL(util::join(values, ","), util::join(values, ","));
     }
     // terminate st
     send_exit(st, exit_reason::user_defined);
@@ -671,8 +672,9 @@ int main() {
                         on_arg_match >> [&](const string& str) {
                             CPPA_CHECK(self->last_sender() != nullptr);
                             CPPA_CHECK_EQUAL(str, "nothing");
-                            reply("goodbye!");
                             self->quit();
+                            // TODO: should return the value instead
+                            send(self->last_sender(), "goodbye!");
                         },
                         after(chrono::minutes(1)) >> [] {
                             cerr << "PANIC!!!!" << endl;
@@ -690,7 +692,7 @@ int main() {
     send(sync_testee, "hi");
     receive (
         on("whassup?") >> [&]() -> std::string {
-            CPPA_CHECK(true);
+            CPPA_CHECKPOINT();
             // this is NOT a reply, it's just an asynchronous message
             send(self->last_sender(), "a lot!");
             return "nothing";

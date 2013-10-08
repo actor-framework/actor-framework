@@ -184,8 +184,6 @@ class local_actor : public extend<actor>::with<memory_cached> {
     /**
      * @brief Returns the sender of the last dequeued message.
      * @warning Only set during callback invocation.
-     * @note Implicitly used by the function {@link cppa::reply}.
-     * @see cppa::reply()
      */
     inline actor_ptr& last_sender();
 

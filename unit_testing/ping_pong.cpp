@@ -17,7 +17,7 @@ size_t s_pongs = 0;
 
 behavior ping_behavior(size_t num_pings) {
     return  (
-        on(atom("pong"), arg_match) >> [num_pings](int value) {
+        on(atom("pong"), arg_match) >> [num_pings](int value) -> any_tuple {
             CPPA_LOGF_ERROR_IF(!self->last_sender(), "last_sender() == nullptr");
             CPPA_LOGF_INFO("received {'pong', " << value << "}");
             //cout << to_string(self->last_dequeued()) << endl;
@@ -27,7 +27,7 @@ behavior ping_behavior(size_t num_pings) {
                 send_exit(self->last_sender(), exit_reason::user_defined);
                 self->quit();
             }
-            else reply(atom("ping"), value);
+            return {atom("ping"), value};
         },
         others() >> [] {
             CPPA_LOGF_ERROR("unexpected message; "
@@ -39,9 +39,9 @@ behavior ping_behavior(size_t num_pings) {
 
 behavior pong_behavior() {
     return  (
-        on(atom("ping"), arg_match) >> [](int value) {
+        on(atom("ping"), arg_match) >> [](int value) -> any_tuple {
             CPPA_LOGF_INFO("received {'ping', " << value << "}");
-            reply(atom("pong"), value + 1);
+            return {atom("pong"), value + 1};
         },
         others() >> [] {
             CPPA_LOGF_ERROR("unexpected message; "

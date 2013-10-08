@@ -159,7 +159,7 @@ int main() {
     oarr->push_back(object::from(static_cast<uint32_t>(42)));
     oarr->push_back(object::from("foo"  ));
 
-    any_tuple atuple1(oarr);
+    any_tuple atuple1{static_cast<any_tuple::raw_ptr>(oarr)};
     try {
         auto opt = tuple_cast<uint32_t, string>(atuple1);
         CPPA_CHECK(opt.valid());

@@ -61,10 +61,10 @@ void ping(size_t num_pings) {
         on(atom("kickoff"), arg_match) >> [=](const actor_ptr& pong) {
             send(pong, atom("ping"), 1);
             become (
-                on(atom("pong"), arg_match) >> [=](int value) {
+                on(atom("pong"), arg_match) >> [=](int value) -> any_tuple {
                     aout << "pong: " << value << endl;
-                    if (++*count >= num_pings) self->quit_later();
-                    else reply(atom("ping"), value + 1);
+                    if (++*count >= num_pings) self->quit();
+                    return {atom("ping"), value + 1};
                 }
             );
         }

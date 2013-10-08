@@ -90,10 +90,10 @@ optional<int> str2int(const std::string& str) {
 struct dummy_receiver : event_based_actor {
     void init() {
         become(
-            on_arg_match >> [=](expensive_copy_struct& ecs) {
+            on_arg_match >> [=](expensive_copy_struct& ecs) -> expensive_copy_struct {
                 ecs.value = 42;
-                reply(std::move(ecs));
                 quit();
+                return std::move(ecs);
             }
         );
     }

@@ -76,9 +76,9 @@ struct B : popular_actor {
 
 struct C : sb_actor<C> {
     behavior init_state = (
-        on(atom("gogo")) >> [=] {
-            reply(atom("gogogo"));
+        on(atom("gogo")) >> [=]() -> atom_value {
             self->quit();
+            return atom("gogogo");
         }
     );
 };

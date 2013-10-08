@@ -597,7 +597,7 @@ class default_meta_tuple : public uniform_type_info {
     }
 
     any_tuple as_any_tuple(void* ptr) const override {
-        return any_tuple{cast(ptr)};
+        return any_tuple{static_cast<any_tuple::raw_ptr>(cast(ptr))};
     }
 
     const char* name() const override {

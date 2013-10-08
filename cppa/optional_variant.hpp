@@ -440,6 +440,17 @@ std::ostream& operator<<(std::ostream& lhs, const optional_variant<T0, Ts...>& r
     return apply_visitor(detail::optional_variant_ostream_helper{lhs}, rhs);
 }
 
+template<typename T, typename... Ts>
+optional_variant<T, typename util::rm_const_and_ref<Ts>::type...>
+make_optional_variant(T value, Ts&&... args) {
+    return {std::move(value), std::forward<Ts>(args)...};
+}
+
+template<typename... Ts>
+inline optional_variant<Ts...> make_optional_variant(optional_variant<Ts...> value) {
+    return std::move(value);
+}
+
 } // namespace cppa
 
 #endif // OPTIONAL_VARIANT_HPP

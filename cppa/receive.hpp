@@ -67,7 +67,7 @@ void receive_loop(Ts&&... args);
  * @code
  * int i = 0;
  * receive_for(i, 10) (
- *     on(atom("get")) >> [&]() { reply("result", i); }
+ *     on(atom("get")) >> [&]() -> any_tuple { return {"result", i}; }
  * );
  * @endcode
  * @param begin First value in range.

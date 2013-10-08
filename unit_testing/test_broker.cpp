@@ -45,9 +45,10 @@ void ping(size_t num_pings) {
         on(atom("kickoff"), arg_match) >> [=](const actor_ptr& pong) {
             send(pong, atom("ping"), 1);
             become (
-                on(atom("pong"), arg_match) >> [=](int value) {
+                on(atom("pong"), arg_match)
+                >> [=](int value) -> cow_tuple<atom_value, int> {
                     if (++*count >= num_pings) self->quit();
-                    else reply(atom("ping"), value + 1);
+                    return make_cow_tuple(atom("ping"), value + 1);
                 },
                 others() >> CPPA_UNEXPECTED_MSG_CB()
             );
@@ -58,18 +59,21 @@ void ping(size_t num_pings) {
 
 void pong() {
     become  (
-        on(atom("ping"), arg_match) >> [](int value) {
+        on(atom("ping"), arg_match)
+        >> [](int value) -> cow_tuple<atom_value, int> {
             self->monitor(self->last_sender());
-            reply(atom("pong"), value);
+            // set next behavior
             become (
                 on(atom("ping"), arg_match) >> [](int value) {
-                    reply(atom("pong"), value);
+                    return make_cow_tuple(atom("pong"), value);
                 },
                 on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
                     self->quit(reason);
                 },
                 others() >> CPPA_UNEXPECTED_MSG_CB()
             );
+            // reply to 'ping'
+            return {atom("pong"), value};
         },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
