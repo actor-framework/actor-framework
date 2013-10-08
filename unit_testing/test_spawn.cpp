@@ -363,6 +363,14 @@ void test_typed_actors() {
             );
         }
     );
+    // check async messages
+    send(ptr0_float, 4.0f);
+    receive(
+        on_arg_match >> [](float f) {
+            CPPA_CHECK_EQUAL(f, 4.0f / 2.0f);
+        }
+    );
+    // check sync messages
     sync_send(ptr0_float, 4.0f).await(
         [](float f) {
             CPPA_CHECK_EQUAL(f, 4.0f / 2.0f);

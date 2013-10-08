@@ -41,21 +41,26 @@
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_traits.hpp"
 
+namespace cppa {
+
+typedef optional<any_tuple> bhvr_invoke_result;
+
+} // namespace cppa
+
 namespace cppa { namespace detail {
 
 struct optional_any_tuple_visitor {
-    typedef optional<any_tuple> result_type;
-    inline result_type operator()() const { return any_tuple{}; }
-    inline result_type operator()(const none_t&) const { return none; }
+    inline bhvr_invoke_result operator()() const { return any_tuple{}; }
+    inline bhvr_invoke_result operator()(const none_t&) const { return none; }
     template<typename T>
-    inline result_type operator()(T& value) const {
+    inline bhvr_invoke_result operator()(T& value) const {
         return make_any_tuple(std::move(value));
     }
     template<typename... Ts>
-    inline result_type operator()(cow_tuple<Ts...>& value) const {
+    inline bhvr_invoke_result operator()(cow_tuple<Ts...>& value) const {
         return any_tuple{std::move(value)};
     }
-    inline result_type operator()(any_tuple& value) const {
+    inline bhvr_invoke_result operator()(any_tuple& value) const {
         return std::move(value);
     }
 };
@@ -75,9 +80,9 @@ class behavior_impl : public ref_counted {
 
     inline behavior_impl(util::duration tout) : m_timeout(tout) { }
 
-    virtual optional<any_tuple> invoke(any_tuple&) = 0;
-    virtual optional<any_tuple> invoke(const any_tuple&) = 0;
-    inline optional<any_tuple> invoke(any_tuple&& arg) {
+    virtual bhvr_invoke_result invoke(any_tuple&) = 0;
+    virtual bhvr_invoke_result invoke(const any_tuple&) = 0;
+    inline bhvr_invoke_result invoke(any_tuple&& arg) {
         any_tuple tmp(std::move(arg));
         return invoke(tmp);
     }
@@ -96,12 +101,12 @@ class behavior_impl : public ref_counted {
         struct combinator : behavior_impl {
             pointer first;
             pointer second;
-            optional<any_tuple> invoke(any_tuple& arg) {
+            bhvr_invoke_result invoke(any_tuple& arg) {
                 auto res = first->invoke(arg);
                 if (!res) return second->invoke(arg);
                 return res;
             }
-            optional<any_tuple> invoke(const any_tuple& arg) {
+            bhvr_invoke_result invoke(const any_tuple& arg) {
                 auto res = first->invoke(arg);
                 if (!res) return second->invoke(arg);
                 return res;
@@ -142,8 +147,6 @@ class default_behavior_impl : public behavior_impl {
 
  public:
 
-    typedef optional<any_tuple> invoke_result;
-
     template<typename Expr>
     default_behavior_impl(Expr&& expr, const timeout_definition<F>& d)
     : super(d.timeout), m_expr(std::forward<Expr>(expr)), m_fun(d.handler) { }
@@ -152,11 +155,11 @@ class default_behavior_impl : public behavior_impl {
     default_behavior_impl(Expr&& expr, util::duration tout, F f)
     : super(tout), m_expr(std::forward<Expr>(expr)), m_fun(f) { }
 
-    invoke_result invoke(any_tuple& tup) {
+    bhvr_invoke_result invoke(any_tuple& tup) {
         return eval_res(m_expr(tup));
     }
 
-    invoke_result invoke(const any_tuple& tup) {
+    bhvr_invoke_result invoke(const any_tuple& tup) {
         return eval_res(m_expr(tup));
     }
 
@@ -173,7 +176,7 @@ class default_behavior_impl : public behavior_impl {
  private:
 
     template<typename... Ts>
-    typename std::enable_if<has_match_hint<Ts...>::value, invoke_result>::type
+    typename std::enable_if<has_match_hint<Ts...>::value, bhvr_invoke_result>::type
     eval_res(optional_variant<Ts...>&& res) {
         if (res) {
             if (res.template is<match_hint>()) {
@@ -188,7 +191,7 @@ class default_behavior_impl : public behavior_impl {
     }
 
     template<typename... Ts>
-    typename std::enable_if<!has_match_hint<Ts...>::value, invoke_result>::type
+    typename std::enable_if<!has_match_hint<Ts...>::value, bhvr_invoke_result>::type
     eval_res(optional_variant<Ts...>&& res) {
         return apply_visitor(optional_any_tuple_visitor{}, res);
     }

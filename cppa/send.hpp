@@ -82,6 +82,25 @@ inline void send_tuple(destination_header hdr, any_tuple what) {
 }
 
 /**
+ * @brief Sends @p what to the receiver specified in @p hdr.
+ */
+template<typename... Signatures, typename... Ts>
+void send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
+    static constexpr int input_pos = util::tl_find_if<
+                                         util::type_list<Signatures...>,
+                                         detail::input_is<util::type_list<
+                                            typename detail::implicit_conversions<
+                                                typename util::rm_const_and_ref<
+                                                    Ts
+                                                >::type
+                                            >::type...
+                                         >>::template eval
+                                     >::value;
+    static_assert(input_pos >= 0, "typed actor does not support given input");
+    send(whom.unbox(), std::forward<Ts>(what)...);
+}
+
+/**
  * @brief Sends <tt>{what...}</tt> to the receiver specified in @p hdr.
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
@@ -287,7 +306,7 @@ message_future timed_sync_send(actor_ptr whom,
  * @brief Sends a message to the sender of the last received message.
  * @param what Message content as a tuple.
  */
-inline void reply_tuple(any_tuple what) {
+CPPA_DEPRECATED inline void reply_tuple(any_tuple what) {
     self->reply_message(std::move(what));
 }
 
@@ -296,7 +315,7 @@ inline void reply_tuple(any_tuple what) {
  * @param what Message elements.
  */
 template<typename... Ts>
-inline void reply(Ts&&... what) {
+CPPA_DEPRECATED inline void reply(Ts&&... what) {
     self->reply_message(make_any_tuple(std::forward<Ts>(what)...));
 }
 

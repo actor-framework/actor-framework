@@ -91,7 +91,7 @@ struct group_nameserver : event_based_actor {
     void init() {
         become (
             on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                reply(atom("GROUP"), group::get("local", name));
+                return make_cow_tuple(atom("GROUP"), group::get("local", name));
             },
             on(atom("SHUTDOWN")) >> [=] {
                 quit();

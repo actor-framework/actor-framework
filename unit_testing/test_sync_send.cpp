@@ -109,6 +109,11 @@ struct D : popular_actor {
                     reply_to(handle, last_dequeued());
                     quit();
                 });
+                /*/
+                return sync_send_tuple(buddy(), last_dequeued()).then([=]() -> any_tuple {
+                    quit();
+                    return last_dequeued();
+                });//*/
             }
         );
     }

@@ -54,7 +54,7 @@ class event_based_actor_impl : public event_based_actor {
 
     void init() { apply(m_init); }
 
-    void on_exit() {
+    void on_exit() override {
         typedef typename util::get_callable_trait<CleanupFun>::arg_types arg_types;
         std::integral_constant<size_t, util::tl_size<arg_types>::value> token;
         on_exit_impl(m_on_exit, token);

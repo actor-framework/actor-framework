@@ -47,17 +47,17 @@ class continuation_decorator : public detail::behavior_impl {
     }
 
     template<typename T>
-    inline optional<any_tuple> invoke_impl(T& tup) {
+    inline bhvr_invoke_result invoke_impl(T& tup) {
         auto res = m_decorated->invoke(tup);
         if (res) return m_fun(*res);
         return none;
     }
 
-    optional<any_tuple> invoke(any_tuple& tup) {
+    bhvr_invoke_result invoke(any_tuple& tup) {
         return invoke_impl(tup);
     }
 
-    optional<any_tuple> invoke(const any_tuple& tup) {
+    bhvr_invoke_result invoke(const any_tuple& tup) {
         return invoke_impl(tup);
     }
 

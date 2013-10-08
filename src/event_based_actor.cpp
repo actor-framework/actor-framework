@@ -59,13 +59,17 @@ class default_scheduled_actor : public event_based_actor {
             m_initialized = true;
             m_fun();
             if (m_bhvr_stack.empty()) {
-                if (exit_reason() == exit_reason::not_exited) quit(exit_reason::normal);
-                set_state(actor_state::done);
-                m_bhvr_stack.clear();
-                m_bhvr_stack.cleanup();
-                on_exit();
-                next.swap(m_chained_actor);
-                set_state(actor_state::done);
+                if (exit_reason() == exit_reason::not_exited) {
+                    quit(exit_reason::normal);
+                }
+                else {
+                    set_state(actor_state::done);
+                    m_bhvr_stack.clear();
+                    m_bhvr_stack.cleanup();
+                    on_exit();
+                    next.swap(m_chained_actor);
+                    set_state(actor_state::done);
+                }
                 return resume_result::actor_done;
             }
         }
@@ -94,15 +98,26 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
     CPPA_REQUIRE(   state() == actor_state::ready
                  || state() == actor_state::pending);
     scoped_self_setter sss{this};
-    auto done_cb = [&]() {
+    auto done_cb = [&]() -> bool {
         CPPA_LOG_TRACE("");
-        if (exit_reason() == exit_reason::not_exited) quit(exit_reason::normal);
+        if (exit_reason() == exit_reason::not_exited) {
+            if (planned_exit_reason() == exit_reason::not_exited) {
+                planned_exit_reason(exit_reason::normal);
+            }
+            on_exit();
+            if (!m_bhvr_stack.empty()) {
+                planned_exit_reason(exit_reason::not_exited);
+                return false; // on_exit did set a new behavior
+            }
+            cleanup(planned_exit_reason());
+        }
         set_state(actor_state::done);
         m_bhvr_stack.clear();
         m_bhvr_stack.cleanup();
         on_exit();
         CPPA_REQUIRE(next_job == nullptr);
         next_job.swap(m_chained_actor);
+        return true;
     };
     CPPA_REQUIRE(next_job == nullptr);
     try {
@@ -150,9 +165,8 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
                                       "set actor with ID "
                                       << m_chained_actor->id()
                                       << " as successor");
-                    if (m_bhvr_stack.empty()) {
+                    if (m_bhvr_stack.empty() && done_cb()) {
                         CPPA_LOGMF(CPPA_DEBUG, self, "behavior stack empty");
-                        done_cb();
                         return resume_result::actor_done;
                     }
                     m_bhvr_stack.cleanup();
@@ -183,27 +197,6 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
     }
     done_cb();
     return resume_result::actor_done;
-}
-
-
-
-
-
-void event_based_actor::quit(std::uint32_t reason) {
-    CPPA_LOG_TRACE("reason = " << reason
-                   << ", class " << detail::demangle(typeid(*this)));
-    cleanup(reason);
-    m_bhvr_stack.clear();
-    if (reason == exit_reason::unallowed_function_call) {
-        CPPA_LOG_WARNING("actor tried to use a blocking function");
-        // when using receive(), the non-blocking nature of event-based
-        // actors breaks any assumption the user has about his code,
-        // in particular, receive_loop() is a deadlock when not throwing
-        // an exception here
-        aout << "*** warning: event-based actor killed because it tried to "
-                "use receive()\n";
-        throw actor_exited(reason);
-    }
 }
 
 scheduled_actor_type event_based_actor::impl_type() {

@@ -63,7 +63,7 @@ void ping(size_t num_pings) {
             become (
                 on(atom("pong"), arg_match) >> [=](int value) {
                     aout << "pong: " << value << endl;
-                    if (++*count >= num_pings) self->quit();
+                    if (++*count >= num_pings) self->quit_later();
                     else reply(atom("ping"), value + 1);
                 }
             );

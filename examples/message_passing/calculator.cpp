@@ -21,10 +21,10 @@ void blocking_math_fun() {
         // - on<atom("plus"), int, int>()
         // - on(atom("plus"), val<int>, val<int>)
         on(atom("plus"), arg_match) >> [](int a, int b) {
-            reply(atom("result"), a + b);
+            return make_cow_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) {
-            reply(atom("result"), a - b);
+            return make_cow_tuple(atom("result"), a - b);
         },
         on(atom("quit")) >> [&]() {
             // note: this actor uses the blocking API, hence self->quit()
@@ -38,10 +38,10 @@ void calculator() {
     // execute this behavior until actor terminates
     become (
         on(atom("plus"), arg_match) >> [](int a, int b) {
-            reply(atom("result"), a + b);
+            return make_cow_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) {
-            reply(atom("result"), a - b);
+            return make_cow_tuple(atom("result"), a - b);
         },
         on(atom("quit")) >> [] {
             // terminate actor with normal exit reason

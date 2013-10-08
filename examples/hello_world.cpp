@@ -9,13 +9,13 @@ void mirror() {
     // wait for messages
     become (
         // invoke this lambda expression if we receive a string
-        on_arg_match >> [](const string& what) {
+        on_arg_match >> [](const string& what) -> string {
             // prints "Hello World!" via aout (thread-safe cout wrapper)
             aout << what << endl;
-            // replies "!dlroW olleH"
-            reply(string(what.rbegin(), what.rend()));
             // terminates this actor ('become' otherwise loops forever)
             self->quit();
+            // reply "!dlroW olleH"
+            return string(what.rbegin(), what.rend());
         }
     );
 }

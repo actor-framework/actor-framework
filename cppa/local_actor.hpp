@@ -62,6 +62,24 @@ class message_future;
 class local_scheduler;
 class sync_handle_helper;
 
+#ifdef CPPA_DOCUMENTATION
+
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        discard the current behavior.
+ * @relates local_actor
+ */
+constexpr auto discard_behavior;
+
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        keep the current behavior available.
+ * @relates local_actor
+ */
+constexpr auto keep_behavior;
+
+#else
+
 template<bool DiscardBehavior>
 struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
 
@@ -74,19 +92,11 @@ struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { }
 typedef behavior_policy<false> keep_behavior_t;
 typedef behavior_policy<true > discard_behavior_t;
 
-/**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *        discard the current behavior.
- * @relates local_actor
- */
 constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
 
-/**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *        keep the current behavior available.
- * @relates local_actor
- */
 constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
+
+#endif
 
 /**
  * @brief Base class for local running Actors.
@@ -119,16 +129,30 @@ class local_actor : public extend<actor>::with<memory_cached> {
     void leave(const group_ptr& what);
 
     /**
-     * @brief Finishes execution of this actor.
+     * @brief Finishes execution of this actor after any currently running
+     *        message handler is done.
      *
-     * Causes this actor to send an exit message to all of its
-     * linked actors, sets its state to @c exited and finishes execution.
+     * This member function clear the behavior stack of the running actor
+     * and invokes {@link on_exit()}. The actors does not finish execution
+     * if the implementation of {@link on_exit()} sets a new behavior.
+     * When setting a new behavior in {@link on_exit()}, one has to make sure
+     * to not produce an infinite recursion.
+     *
+     * If {@link on_exit()} did not set a new behavior, the actor sends an
+     * exit message to all of its linked actors, sets its state to @c exited
+     * and finishes execution.
+     *
      * @param reason Exit reason that will be send to
-     *        linked actors and monitors.
+     *               linked actors and monitors. Can be queried using
+     *               {@link planned_exit_reason()}, e.g., from inside
+     *               {@link on_exit()}.
      * @note Throws {@link actor_exited} to unwind the stack
      *       when called in context-switching or thread-based actors.
+     * @warning This member function throws imeediately in thread-based actors
+     *          that do not use the behavior stack, i.e., actors that use
+     *          blocking API calls such as {@link receive()}.
      */
-    virtual void quit(std::uint32_t reason = exit_reason::normal) = 0;
+    virtual void quit(std::uint32_t reason = exit_reason::normal);
 
     /**
      * @brief Checks whether this actor traps exit messages.
@@ -314,6 +338,10 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     void debug_name(std::string str);
 
+    inline std::uint32_t planned_exit_reason() const;
+
+    inline void planned_exit_reason(std::uint32_t value);
+
  protected:
 
     inline void remove_handler(message_id id);
@@ -354,11 +382,15 @@ class local_actor : public extend<actor>::with<memory_cached> {
     // allows actors to keep previous behaviors and enables unbecome()
     detail::behavior_stack m_bhvr_stack;
 
+    // set by quit
+    std::uint32_t m_planned_exit_reason;
+
+    /** @endcond */
+
  private:
 
     std::function<void()> m_sync_failure_handler;
     std::function<void()> m_sync_timeout_handler;
-
 
 };
 
@@ -373,7 +405,9 @@ typedef intrusive_ptr<local_actor> local_actor_ptr;
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-void local_actor::dequeue(behavior&& bhvr) {
+/** @cond PRIVATE */
+
+inline void local_actor::dequeue(behavior&& bhvr) {
     behavior tmp{std::move(bhvr)};
     dequeue(tmp);
 }
@@ -455,6 +489,16 @@ inline void local_actor::do_become(const behavior& bhvr, bool discard_old) {
 inline void local_actor::remove_handler(message_id id) {
     m_bhvr_stack.erase(id);
 }
+
+inline std::uint32_t local_actor::planned_exit_reason() const {
+    return m_planned_exit_reason;
+}
+
+inline void local_actor::planned_exit_reason(std::uint32_t value) {
+    m_planned_exit_reason = value;
+}
+
+/** @endcond */
 
 } // namespace cppa
 

@@ -89,8 +89,16 @@ class threaded : public Base {
     void run_detached() {
         auto dthis = util::dptr<Subtype>(this);
         dthis->init();
-        dthis->m_bhvr_stack.exec(dthis->m_recv_policy, dthis);
-        dthis->on_exit();
+        if (dthis->planned_exit_reason() != exit_reason::not_exited) {
+            // init() did indeed call quit() for some reason
+            dthis->on_exit();
+        }
+        while (!dthis->m_bhvr_stack.empty()) {
+            dthis->m_bhvr_stack.exec(dthis->m_recv_policy, dthis);
+            dthis->on_exit();
+        }
+        auto rsn = dthis->planned_exit_reason();
+        dthis->cleanup(rsn == exit_reason::not_exited ? exit_reason::normal : rsn);
     }
 
     inline void initialized(bool value) {
