@@ -95,7 +95,7 @@ class typed_actor : public event_based_actor {
         });
     }
 
-    virtual void do_become(behavior&&, bool) override {
+    void do_become(behavior&&, bool) override {
         CPPA_LOG_ERROR("typed actors are not allowed to call become()");
         quit(exit_reason::unallowed_function_call);
     }

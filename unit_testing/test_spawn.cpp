@@ -418,7 +418,7 @@ void test_typed_actors() {
 
 
 struct master : event_based_actor {
-    virtual void init() override {
+    void init() override {
         become(
             on(atom("done")) >> []() {
                 self->quit(exit_reason::user_defined);
@@ -431,7 +431,7 @@ struct slave : event_based_actor {
 
     slave(actor_ptr master) : master{master} { }
 
-    virtual void init() override {
+    void init() override {
         link_to(master);
         become (
             others() >> CPPA_UNEXPECTED_MSG_CB()

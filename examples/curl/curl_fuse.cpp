@@ -152,7 +152,7 @@ class client_job : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         send(m_parent,
              atom("read"),
@@ -186,7 +186,7 @@ class client : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         using std::chrono::milliseconds;
         link_to(m_parent);
         print() << "init" << color::reset_endl;
@@ -224,7 +224,7 @@ class curl_worker : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         m_curl = curl_easy_init();
         curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &curl_worker::cb);
@@ -314,7 +314,7 @@ class curl_master : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         // spawn workers
         for(size_t i = 0; i < num_curl_workers; ++i) {

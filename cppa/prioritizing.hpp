@@ -44,7 +44,7 @@ class prioritizing : public Base {
 
  public:
 
-    virtual mailbox_element* try_pop() override {
+    mailbox_element* try_pop() override {
         auto result = m_high_priority_mailbox.try_pop();
         return (result) ? result : this->m_mailbox.try_pop();
     }
@@ -56,18 +56,18 @@ class prioritizing : public Base {
 
     typedef prioritizing combined_type;
 
-    virtual void cleanup(std::uint32_t reason) override {
+    void cleanup(std::uint32_t reason) override {
         detail::sync_request_bouncer f{reason};
         m_high_priority_mailbox.close(f);
         Base::cleanup(reason);
     }
 
-    virtual bool mailbox_empty() override {
+    bool mailbox_empty() override {
         return    m_high_priority_mailbox.empty()
                && this->m_mailbox.empty();
     }
 
-    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(const message_header& hdr, any_tuple msg) override {
         typename Base::mailbox_type* mbox = nullptr;
         if (hdr.priority == message_priority::high) {
             mbox = &m_high_priority_mailbox;

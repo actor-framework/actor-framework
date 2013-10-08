@@ -76,7 +76,7 @@ class thread_mapped_actor : public extend<local_actor, thread_mapped_actor>::
 
     inline void initialized(bool value) { m_initialized = value; }
 
-    virtual bool initialized() const override;
+    bool initialized() const override;
 
  private:
 

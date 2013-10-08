@@ -105,7 +105,7 @@ class threaded : public Base {
         m_initialized = value;
     }
 
-    virtual bool initialized() const override {
+    bool initialized() const override {
         return m_initialized;
     }
 
@@ -133,11 +133,11 @@ class threaded : public Base {
         }
     }
 
-    virtual void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(const message_header& hdr, any_tuple msg) override {
         enqueue_impl(this->m_mailbox, hdr, std::move(msg));
     }
 
-    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg) override {
+    bool chained_enqueue(const message_header& hdr, any_tuple msg) override {
         enqueue(hdr, std::move(msg));
         return false;
     }

@@ -54,17 +54,17 @@ class object_array : public abstract_tuple {
 
     void push_back(const object& what);
 
-    virtual void* mutable_at(size_t pos) override;
+    void* mutable_at(size_t pos) override;
 
-    virtual size_t size() const override;
+    size_t size() const override;
 
-    virtual object_array* copy() const override;
+    object_array* copy() const override;
 
-    virtual const void* at(size_t pos) const override;
+    const void* at(size_t pos) const override;
 
-    virtual const uniform_type_info* type_at(size_t pos) const override;
+    const uniform_type_info* type_at(size_t pos) const override;
 
-    virtual const std::string* tuple_type_names() const override;
+    const std::string* tuple_type_names() const override;
 
  private:
 

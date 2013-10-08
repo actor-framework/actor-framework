@@ -61,7 +61,7 @@ class sb_actor : public Base {
      * @brief Overrides {@link event_based_actor::init()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
-    virtual void init() override {
+    void init() override {
         become(util::dptr<Derived>(this)->init_state);
     }
 

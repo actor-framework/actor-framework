@@ -61,9 +61,9 @@ class thread_pool_scheduler : public scheduler {
 
     void enqueue(scheduled_actor* what);
 
-    virtual local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) override;
+    local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) override;
 
-    virtual local_actor_ptr exec(spawn_options opts, init_callback init_cb, void_function f) override;
+    local_actor_ptr exec(spawn_options opts, init_callback init_cb, void_function f) override;
 
  private:
 
