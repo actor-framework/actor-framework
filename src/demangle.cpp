@@ -33,7 +33,7 @@
 #include "cppa/config.hpp"
 #include "cppa/detail/demangle.hpp"
 
-#ifdef CPPA_GCC
+#if defined(CPPA_GCC) || defined(CPPA_CLANG)
 #include <cxxabi.h>
 #endif
 
@@ -79,7 +79,7 @@ std::string demangle(const char* decorated) {
         }
     }
     free(undecorated);
-#   ifdef __clang__
+#   ifdef CPPA_CLANG
     // replace "std::__1::" with "std::" (fixes strange clang names)
     std::string needle = "std::__1::";
     std::string fixed_string = "std::";

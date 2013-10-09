@@ -33,6 +33,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 #include <algorithm>
 #include <type_traits>
 
@@ -47,12 +48,14 @@ std::vector<std::string> split(const std::string& str,
 template<typename Iterator>
 typename std::enable_if<is_forward_iterator<Iterator>::value,std::string>::type
 join(Iterator begin, Iterator end, const std::string& glue = "") {
-    std::string result;
-    std::for_each(begin, end, [&](const std::string& str) {
-        if (!result.empty()) result += glue;
-        result += str;
-    });
-    return result;
+    bool first = true;
+    std::ostringstream oss;
+    for ( ; begin != end; ++begin) {
+        if (first) first = false;
+        else oss << glue;
+        oss << *begin;
+    }
+    return oss.str();
 }
 
 template<typename Container>

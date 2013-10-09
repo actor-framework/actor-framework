@@ -76,11 +76,14 @@ struct optional_variant_move_helper {
     T& lhs;
     optional_variant_move_helper(T& lhs_ref) : lhs(lhs_ref) { }
     template<typename U>
-    inline void operator()(const U& rhs) const {
+    inline void operator()(U& rhs) const {
         lhs = std::move(rhs);
     }
     inline void operator()() const {
         lhs = unit;
+    }
+    inline void operator()(const none_t&) const {
+        lhs = none;
     }
 };
 
@@ -382,6 +385,8 @@ struct optional_variant_cmp_helper {
     operator()(const U&) const { return false; }
     // variant is void
     bool operator()() const { return false; }
+    // variant is undefined
+    bool operator()(const none_t&) const { return false; }
 };
 } // namespace detail
 
@@ -433,6 +438,17 @@ struct optional_variant_ostream_helper {
 template<typename T0, typename... Ts>
 std::ostream& operator<<(std::ostream& lhs, const optional_variant<T0, Ts...>& rhs) {
     return apply_visitor(detail::optional_variant_ostream_helper{lhs}, rhs);
+}
+
+template<typename T, typename... Ts>
+optional_variant<T, typename util::rm_const_and_ref<Ts>::type...>
+make_optional_variant(T value, Ts&&... args) {
+    return {std::move(value), std::forward<Ts>(args)...};
+}
+
+template<typename... Ts>
+inline optional_variant<Ts...> make_optional_variant(optional_variant<Ts...> value) {
+    return std::move(value);
 }
 
 } // namespace cppa

@@ -49,6 +49,9 @@ spawn_typed(const match_expr<Ts...>&);
 template<typename... Ts>
 void send_exit(const typed_actor_ptr<Ts...>&, std::uint32_t);
 
+template<typename... Signatures, typename... Ts>
+void send(const typed_actor_ptr<Signatures...>&, Ts&&...);
+
 template<typename... Ts, typename... Us>
 typed_message_future<
     typename detail::deduce_output_type<
@@ -76,6 +79,10 @@ class typed_actor_ptr {
 
     template<typename... Ts>
     friend void send_exit(const typed_actor_ptr<Ts...>&, std::uint32_t);
+
+    template<typename... Sigs, typename... Ts>
+    friend void send(const typed_actor_ptr<Sigs...>&, Ts&&...);
+
 
     template<typename... Ts, typename... Us>
     friend typed_message_future<
@@ -114,7 +121,9 @@ class typed_actor_ptr {
 
  private:
 
+    /** @cond PRIVATE */
     const actor_ptr& unbox() const { return m_ptr; }
+    /** @endcond */
 
     typed_actor_ptr(actor_ptr ptr) : m_ptr(std::move(ptr)) { }
 

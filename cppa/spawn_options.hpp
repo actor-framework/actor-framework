@@ -55,18 +55,19 @@ enum class spawn_options : int {
 };
 #endif
 
-#ifndef CPPA_DOCUMENTATION
-namespace {
-#endif
-
 /**
  * @brief Concatenates two {@link spawn_options}.
  * @relates spawn_options
  */
 constexpr spawn_options operator+(const spawn_options& lhs,
                                   const spawn_options& rhs) {
-    return static_cast<spawn_options>(static_cast<int>(lhs) | static_cast<int>(rhs));
+    return static_cast<spawn_options>( static_cast<int>(lhs)
+                                     | static_cast<int>(rhs));
 }
+
+#ifndef CPPA_DOCUMENTATION
+namespace {
+#endif
 
 /**
  * @brief Denotes default settings.

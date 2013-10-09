@@ -35,8 +35,16 @@
 // if boost.context is not available on your platform
 //#define CPPA_DISABLE_CONTEXT_SWITCHING
 
-#if defined(__GNUC__)
+#if defined(__clang__)
+#  define CPPA_CLANG
+#  define CPPA_DEPRECATED __attribute__((__deprecated__))
+#elif defined(__GNUC__)
 #  define CPPA_GCC
+#  define CPPA_DEPRECATED __attribute__((__deprecated__))
+#elif defined(_MSC_VER)
+#  define CPPA_DEPRECATED __declspec(deprecated)
+#else
+#  define CPPA_DEPRECATED
 #endif
 
 #if defined(__APPLE__)

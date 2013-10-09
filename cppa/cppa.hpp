@@ -276,7 +276,7 @@
  *     on(atom("compute"), arg_match) >> [](int i0, int i1, int i2)
  *     {
  *         // send our result back to the sender of this messages
- *         reply(atom("result"), i0 + i1 + i2);
+ *         return make_cow_tuple(atom("result"), i0 + i1 + i2);
  *     }
  * );
  * @endcode
@@ -296,10 +296,10 @@
  * void math_actor() {
  *     receive_loop (
  *         on(atom("plus"), arg_match) >> [](int a, int b) {
- *             reply(atom("result"), a + b);
+ *             return make_cow_tuple(atom("result"), a + b);
  *         },
  *         on(atom("minus"), arg_match) >> [](int a, int b) {
- *             reply(atom("result"), a - b);
+ *             return make_cow_tuple(atom("result"), a - b);
  *         }
  *     );
  * }
@@ -340,7 +340,7 @@
  * std::vector<int> vec {1, 2, 3, 4};
  * auto i = vec.begin();
  * receive_for(i, vec.end()) (
- *     on(atom("get")) >> [&]() { reply(atom("result"), *i); }
+ *     on(atom("get")) >> [&]() -> any_tuple { return {atom("result"), *i}; }
  * );
  * @endcode
  *
@@ -652,6 +652,11 @@ inline const actor_ostream& operator<<(const actor_ostream& o, std::string arg) 
 
 inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& arg) {
     return o.write(cppa::to_string(arg));
+}
+
+// disambiguate between conversion to string and to any_tuple
+inline const actor_ostream& operator<<(const actor_ostream& o, const char* arg) {
+    return o << std::string{arg};
 }
 
 template<typename T>

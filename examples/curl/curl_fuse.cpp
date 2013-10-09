@@ -129,7 +129,7 @@ class base_actor : public event_based_actor {
         return ::print(m_color.c_str(), m_name.c_str());
     }
 
-    virtual void on_exit() override {
+    void on_exit() override {
         print() << "on_exit" << color::reset_endl;
     }
 
@@ -152,7 +152,7 @@ class client_job : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         send(m_parent,
              atom("read"),
@@ -186,7 +186,7 @@ class client : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         using std::chrono::milliseconds;
         link_to(m_parent);
         print() << "init" << color::reset_endl;
@@ -224,21 +224,20 @@ class curl_worker : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         m_curl = curl_easy_init();
         curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &curl_worker::cb);
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1);
         become (
-            on(atom("read"), arg_match) >> [=](const std::string& file_name,
-                                               uint64_t offset,
-                                               uint64_t range) {
+            on(atom("read"), arg_match)
+            >> [=](const std::string& fname, uint64_t offset, uint64_t range)
+            -> cow_tuple<atom_value, util::buffer> {
                 print() << "read" << color::reset_endl;
-                bool request_done = false;
-                while (!request_done) {
+                for (;;) {
                     m_buf.clear();
                     // set URL
-                    curl_easy_setopt(m_curl, CURLOPT_URL, file_name.c_str());
+                    curl_easy_setopt(m_curl, CURLOPT_URL, fname.c_str());
                     // set range
                     std::ostringstream oss;
                     oss << offset << "-" << range;
@@ -270,11 +269,9 @@ class curl_worker : public base_actor {
                                         << " bytes with 'HTTP RETURN CODE': "
                                         << hc
                                         << color::reset_endl;
-                                reply(atom("reply"), m_buf);
                                 // tell parent that this worker is done
                                 send(m_parent, atom("finished"));
-                                request_done = true;
-                                break;
+                                return make_cow_tuple(atom("reply"), m_buf);
                             case 404: // file does not exist
                                 print() << "http error: download failed with "
                                            "'HTTP RETURN CODE': 404 (file does "
@@ -282,14 +279,14 @@ class curl_worker : public base_actor {
                                         << color::reset_endl;
                         }
                     }
+                    // avoid 100% cpu utilization if remote side is not accessible
+                    usleep(100000); // 100000 == 100ms
                 }
-                // avoid 100% cpu utilization if remote side is not accessible
-                if (!request_done) usleep(100000); // 100000 == 100ms
             }
         );
     }
 
-    virtual void on_exit() override {
+    void on_exit() override {
         curl_easy_cleanup(m_curl);
         print() << "on_exit" << color::reset_endl;
     }
@@ -317,7 +314,7 @@ class curl_master : public base_actor {
 
  protected:
 
-    virtual void init() override {
+    void init() override {
         print() << "init" << color::reset_endl;
         // spawn workers
         for(size_t i = 0; i < num_curl_workers; ++i) {

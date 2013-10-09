@@ -53,7 +53,7 @@ class buffered_writing : public Base {
     : super{std::forward<Ts>(args)...}, m_middleman{mm}, m_out{out}
     , m_has_unwritten_data{false} { }
 
-    virtual continue_writing_result continue_writing() override {
+    continue_writing_result continue_writing() override {
         CPPA_LOG_TRACE("");
         CPPA_LOG_DEBUG_IF(!m_has_unwritten_data, "nothing to write (done)");
         while (m_has_unwritten_data) {

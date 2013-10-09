@@ -87,7 +87,7 @@ class actor_companion_mixin : public Base {
     /**
      * @brief Defines the message handler.
      * @note While the message handler is invoked, @p self will point
-     *       to the companion object to enable send() and reply().
+     *       to the companion object to enable function calls to send().
      */
     template<typename... Ts>
     void set_message_handler(Ts&&... args) {
@@ -97,7 +97,7 @@ class actor_companion_mixin : public Base {
     /**
      * @brief Invokes the message handler with @p msg.
      * @note While the message handler is invoked, @p self will point
-     *       to the companion object to enable send() and reply().
+     *       to the companion object to enable function calls to send().
      */
     void handle_message(const message_pointer& msg) {
         if (!msg) return;

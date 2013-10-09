@@ -367,7 +367,7 @@ template<typename... Ts>
 any_tuple make_dynamically_typed(Ts&&... args) {
     auto oarr = new detail::object_array;
     make_dynamically_typed_impl(*oarr, std::forward<Ts>(args)...);
-    return any_tuple{oarr};
+    return any_tuple{static_cast<any_tuple::raw_ptr>(oarr)};
 }
 
 void test_wildcards() {

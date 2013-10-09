@@ -76,7 +76,8 @@ constexpr const char* s_default_debug_name = "actor";
 
 local_actor::local_actor(bool sflag)
 : m_chaining(sflag), m_trap_exit(false)
-, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node) {
+, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node)
+, m_planned_exit_reason(exit_reason::not_exited) {
 #   ifdef CPPA_DEBUG_MODE
     new (&m_debug_name) std::string (std::to_string(m_id) + "@local");
 #   endif // CPPA_DEBUG_MODE
@@ -187,6 +188,26 @@ void local_actor::dequeue(behavior&) {
 
 void local_actor::dequeue_response(behavior&, message_id) {
     quit(exit_reason::unallowed_function_call);
+}
+
+void local_actor::quit(std::uint32_t reason) {
+    CPPA_LOG_TRACE("reason = " << reason
+                   << ", class " << detail::demangle(typeid(*this)));
+    if (reason == exit_reason::unallowed_function_call) {
+        // this is the only reason that causes an exception
+        cleanup(reason);
+        m_bhvr_stack.clear();
+        CPPA_LOG_WARNING("actor tried to use a blocking function");
+        // when using receive(), the non-blocking nature of event-based
+        // actors breaks any assumption the user has about his code,
+        // in particular, receive_loop() is a deadlock when not throwing
+        // an exception here
+        aout << "*** warning: event-based actor killed because it tried to "
+                "use receive()\n";
+        throw actor_exited(reason);
+    }
+    m_bhvr_stack.clear();
+    planned_exit_reason(reason);
 }
 
 } // namespace cppa

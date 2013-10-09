@@ -47,6 +47,7 @@ namespace cppa {
 
 /**
  * @brief Base class for all event-based actor implementations.
+ * @extends scheduled_actor
  */
 class event_based_actor : public extend<scheduled_actor>::with<stackless> {
 
@@ -62,8 +63,6 @@ class event_based_actor : public extend<scheduled_actor>::with<stackless> {
      * @brief Initializes the actor.
      */
     virtual void init() = 0;
-
-    virtual void quit(std::uint32_t reason = exit_reason::normal);
 
     scheduled_actor_type impl_type();
 

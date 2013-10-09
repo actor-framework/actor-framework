@@ -64,43 +64,58 @@ class stacked : public Base {
 
     static constexpr auto receive_flag = detail::rp_nestable;
 
-    virtual void dequeue(behavior& bhvr) override {
+    void dequeue(behavior& bhvr) override {
+        ++m_nested_count;
         m_recv_policy.receive(util::dptr<Subtype>(this), bhvr);
+        --m_nested_count;
+        check_quit();
     }
 
-    virtual void dequeue_response(behavior& bhvr, message_id request_id) override {
+    void dequeue_response(behavior& bhvr, message_id request_id) override {
+        ++m_nested_count;
         m_recv_policy.receive(util::dptr<Subtype>(this), bhvr, request_id);
+        --m_nested_count;
+        check_quit();
     }
 
     virtual void run() {
-        auto dthis = util::dptr<Subtype>(this);
-        if (!dthis->m_bhvr_stack.empty()) dthis->exec_behavior_stack();
+        exec_behavior_stack();
         if (m_behavior) m_behavior();
+        auto dthis = util::dptr<Subtype>(this);
+        auto rsn = dthis->planned_exit_reason();
+        dthis->cleanup(rsn == exit_reason::not_exited ? exit_reason::normal : rsn);
     }
 
     inline void set_behavior(std::function<void()> fun) {
         m_behavior = std::move(fun);
     }
 
-    virtual void quit(std::uint32_t reason) override {
-        this->cleanup(reason);
-        throw actor_exited(reason);
-    }
-
-    virtual void exec_behavior_stack() override {
-        this->m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
+    void exec_behavior_stack() override {
+        m_in_bhvr_loop = true;
+        auto dthis = util::dptr<Subtype>(this);
+        if (!stack_empty() && !m_nested_count) {
+            while (!stack_empty()) {
+                ++m_nested_count;
+                dthis->m_bhvr_stack.exec(m_recv_policy, dthis);
+                --m_nested_count;
+                check_quit();
+            }
+        }
+        m_in_bhvr_loop = false;
     }
 
  protected:
 
     template<typename... Ts>
-    stacked(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    stacked(Ts&&... args) : Base(std::forward<Ts>(args)...)
+                          , m_in_bhvr_loop(false)
+                          , m_nested_count(0) { }
 
-    virtual void do_become(behavior&& bhvr, bool discard_old) override {
+    void do_become(behavior&& bhvr, bool discard_old) override {
         become_impl(std::move(bhvr), discard_old, message_id());
     }
 
-    virtual void become_waiting_for(behavior bhvr, message_id mid) override {
+    void become_waiting_for(behavior bhvr, message_id mid) override {
         become_impl(std::move(bhvr), false, mid);
     }
 
@@ -114,6 +129,10 @@ class stacked : public Base {
 
  private:
 
+    inline bool stack_empty() {
+        return util::dptr<Subtype>(this)->m_bhvr_stack.empty();
+    }
+
     void become_impl(behavior&& bhvr, bool discard_old, message_id mid) {
         auto dthis = util::dptr<Subtype>(this);
         if (bhvr.timeout().valid()) {
@@ -125,6 +144,27 @@ class stacked : public Base {
         }
         dthis->m_bhvr_stack.push_back(std::move(bhvr), mid);
     }
+
+    void check_quit() {
+        // do nothing if other message handlers are still running
+        if (m_nested_count > 0) return;
+        auto dthis = util::dptr<Subtype>(this);
+        auto rsn = dthis->planned_exit_reason();
+        if (rsn != exit_reason::not_exited) {
+            dthis->on_exit();
+            if (stack_empty()) {
+                dthis->cleanup(rsn);
+                throw actor_exited(rsn);
+            }
+            else {
+                dthis->planned_exit_reason(exit_reason::not_exited);
+                if (!m_in_bhvr_loop) exec_behavior_stack();
+            }
+        }
+    }
+
+    bool m_in_bhvr_loop;
+    size_t m_nested_count;
 
 };
 

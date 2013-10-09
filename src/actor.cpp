@@ -202,6 +202,4 @@ void actor::cleanup(std::uint32_t reason) {
     }
 }
 
-
-
 } // namespace cppa

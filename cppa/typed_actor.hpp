@@ -41,6 +41,10 @@ namespace cppa {
 
 struct typed_actor_result_visitor {
 
+    typed_actor_result_visitor() : m_hdl(self->make_response_handle()) { }
+
+    typed_actor_result_visitor(response_handle hdl) : m_hdl(hdl) { }
+
     inline void operator()(const none_t&) const {
         CPPA_LOG_ERROR("a typed actor received a "
                        "non-matching message: "
@@ -51,29 +55,27 @@ struct typed_actor_result_visitor {
 
     template<typename T>
     inline void operator()(T& value) const {
-        reply(std::move(value));
+        reply_to(m_hdl, std::move(value));
     }
 
     template<typename... Ts>
     inline void operator()(cow_tuple<Ts...>& value) const {
-        reply_tuple(std::move(value));
+        reply_tuple_to(m_hdl, std::move(value));
     }
 
     template<typename R>
     inline void operator()(typed_continue_helper<R>& ch) const {
-        auto hdl = self->make_response_handle();
+        auto hdl = m_hdl;
         ch.continue_with([=](R value) {
-            reply_to(hdl, std::move(value));
+            typed_actor_result_visitor tarv{hdl};
+            auto ov = make_optional_variant(std::move(value));
+            apply_visitor(tarv, ov);
         });
     }
 
-    template<typename... Rs>
-    inline void operator()(typed_continue_helper<cow_tuple<Rs...>>& ch) const {
-        auto hdl = self->make_response_handle();
-        ch.continue_with([=](cow_tuple<Rs...> value) {
-            reply_tuple_to(hdl, std::move(value));
-        });
-    }
+ private:
+
+    response_handle m_hdl;
 
 };
 
@@ -95,7 +97,7 @@ class typed_actor : public event_based_actor {
         });
     }
 
-    virtual void do_become(behavior&&, bool) override {
+    void do_become(behavior&&, bool) override {
         CPPA_LOG_ERROR("typed actors are not allowed to call become()");
         quit(exit_reason::unallowed_function_call);
     }

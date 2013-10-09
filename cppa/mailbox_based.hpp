@@ -62,7 +62,7 @@ class mailbox_based : public Base {
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
-    virtual void cleanup(std::uint32_t reason) override {
+    void cleanup(std::uint32_t reason) override {
         detail::sync_request_bouncer f{reason};
         m_mailbox.close(f);
         Base::cleanup(reason);

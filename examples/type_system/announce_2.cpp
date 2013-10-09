@@ -17,9 +17,7 @@ class foo {
 
  public:
 
-    foo() : m_a(0), m_b(0) { }
-
-    foo(int a0, int b0) : m_a(a0), m_b(b0) { }
+    foo(int a0 = 0, int b0 = 0) : m_a(a0), m_b(b0) { }
 
     foo(const foo&) = default;
 
@@ -64,4 +62,3 @@ int main(int, char**) {
     shutdown();
     return 0;
 }
-

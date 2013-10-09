@@ -64,7 +64,7 @@ struct type_to_ptype_impl_helper : wrapped_ptype<pt_null> { };
 
 template<typename T>
 struct type_to_ptype_impl_helper<true, T> {
-    static constexpr auto ptype = type_to_ptype_int<
+    static constexpr primitive_type ptype = type_to_ptype_int<
                     std::numeric_limits<T>::is_integer,
                     std::numeric_limits<T>::is_signed,
                     sizeof(T)
