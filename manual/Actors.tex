@@ -50,7 +50,7 @@ class local_actor;
   \hline
   \lstinline^any_tuple last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
   \hline
-  \lstinline^actor_ptr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note$_{1}$}: Only set during callback invocation\newline\textbf{Note$_{2}$}: Used by the function \lstinline^reply^ (see Section \ref{Sec::Send::Reply}) \\
+  \lstinline^actor_ptr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note$_{1}$}: Only set during callback invocation\newline\textbf{Note$_{2}$}: Used implicitly to send response messages (see Section \ref{Sec::Send::Reply}) \\
   \hline
   \lstinline^vector<group_ptr> joined_groups()^ & Returns all subscribed groups \\
   \hline

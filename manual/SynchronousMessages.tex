@@ -35,7 +35,7 @@ When using synchronous messaging, \libcppa's runtime environment will send ...
 
 \begin{itemize}
 \item \lstinline^{'EXITED', uint32_t exit_reason}^ if the receiver is not alive
-\item \lstinline^{'VOID'}^ if the receiver handled the message but did not call \lstinline^reply^
+\item \lstinline^{'VOID'}^ if the receiver handled the message but did not respond to it
 \item \lstinline^{'TIMEOUT'}^ if a message send by \lstinline^timed_sync_send^ timed out
 \end{itemize}
 
@@ -120,10 +120,11 @@ sync_send(testee, atom("get")).then(
 );
 \end{lstlisting}
 
+\clearpage
 \subsubsection{Continuations for Event-based Actors}
 
 \libcppa supports continuations to enable chaining of send/receive statements.
-The functions \lstinline^handle_response^ and \lstinline^message_future::then^ both return a helper object offering \lstinline^continue_with^, which takes a functor $f$ without arguments.
+The functions \lstinline^handle_response^ and \lstinline^message_future::then^ both return a helper object offering the member function \lstinline^continue_with^, which takes a functor $f$ without arguments.
 After receiving a message, $f$ is invoked if and only if the received messages was handled successfully, i.e., neither \lstinline^sync_failure^ nor \lstinline^sync_timeout^ occurred.
 
 \begin{lstlisting}

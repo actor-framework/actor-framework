@@ -35,33 +35,24 @@ Choosing one or the other is merely a matter of personal preferences.
 \subsection{Replying to Messages}
 \label{Sec::Send::Reply}
 
+The return value of a message handler is used as response message.
 During callback invokation, \lstinline^self->last_sender()^ is set.
-This identifies the sender of the received message and is used implicitly by the functions \lstinline^reply^ and \lstinline^reply_tuple^.
-
-Using \lstinline^reply(...)^ is \textbf{not} equal to \lstinline^send(self->last_sender(), ...)^.
-The function \lstinline^send^ always uses asynchronous message passing, whereas \lstinline^reply^ will send a synchronous response message if the received message was a synchronous request (see Section \ref{Sec::Sync}).
-%Note that you cannot reply more than once.
-
-To delay a response, i.e., reply to a message after receiving another message, actors can use \lstinline^self->make_response_handle()^.
-The functions \lstinline^reply_to^ and \lstinline^reply_tuple_to^ then can be used to reply the the original request, as shown in the example below.
+This identifies the sender of the received message and is used implicitly to reply to the correct sender.
+However, using \lstinline^send(self->last_sender(), ...)^ does \emph{not} reply to the message, i.e., synchronous messages will not recognize the message as response.
 
 \begin{lstlisting}
-void broker(const actor_ptr& master) {
+void client(const actor_ptr& master) {
   become (
-    on("foo", arg_match) >> [=](const std::string& request) {
-      auto hdl = make_response_handle();
-      sync_send(master, atom("bar"), request).then(
+    on("foo", arg_match) >> [=](const string& request) -> string {
+      return sync_send(master, atom("bar"), request).then(
         on_arg_match >> [=](const std::string& response) {
-          reply_to(hdl, response);
+          return response;
         }
       );
     }
   );
 };
 \end{lstlisting}
-
-In any case, do never reply than more than once.
-Additional (synchronous) response message will be ignored by the receiver.
 
 \clearpage
 \subsection{Chaining}

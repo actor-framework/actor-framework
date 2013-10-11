@@ -18,7 +18,7 @@ Otherwise, the actor accepts all incoming connections (\lstinline^INADDR_ANY^).
 publish(self, 4242);
 become (
   on(atom("ping"), arg_match) >> [](int i) {
-    reply(atom("pong"), i);
+    return make_cow_tuple(atom("pong"), i);
   }
 );
 \end{lstlisting}
@@ -40,7 +40,7 @@ become (
     self->quit();
   },
   on(atom("pong"), arg_match) >> [](int i) {
-    reply(atom("ping"), i+1);
+    return make_cow_tuple(atom("ping"), i+1);
   }
 );
 \end{lstlisting}

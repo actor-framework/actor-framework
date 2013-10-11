@@ -4,52 +4,27 @@
   12pt,%                                           % 12pt Schriftgröße
 ]{article}
 
-%\usepackage{ifpdf}
-
-%\usepackage[english]{babel}
-
-% UTF8 input
 \usepackage[utf8]{inputenc}
 
-% grafics
-%\usepackage{graphicx}
-%\usepackage{picinpar}
-
-% others
-%\usepackage{parcolumns}
-%\usepackage[font=footnotesize,format=plain,labelfont=bf]{caption}
-%\usepackage{paralist}
+% include required packages
 \usepackage{url}
 \usepackage{array}
-%\usepackage{tocloft}
 \usepackage{color}
 \usepackage{listings}
 \usepackage{xspace}
 \usepackage{tabularx}
 \usepackage{hyperref}
-
 \usepackage{fancyhdr}
-
 \usepackage{multicol}
 
+% HTML compilation
 \usepackage{hevea}
 
+% font setup
 \usepackage{cmbright}
 \usepackage{txfonts}
 \usepackage[scaled=.90]{helvet}
 \usepackage{courier}
-%\usepackage{natbib}
-
-%\usepackage{lmodern}
-%\usepackage{newcent}
-
-%\renewcommand{\ttdefault}{lmtt}
-
-%\usepackage{fontspec}
-%\defaultfontfeatures{Mapping=tex-text}  % For archaic input (e.g. convert -- to en-dash)
-%\setmainfont{Times New Roman}                 % Computer Modern Unicode font
-%\setmonofont{Anonymous Pro}
-%\setsansfont{Times New Roman}
 
 % par. settings
 \parindent 0pt
@@ -77,17 +52,16 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
 \date{\today}
 
 % page setup
-
 \setlength{\voffset}{-0.5in}
 \setlength{\hoffset}{-0.5in}
 \addtolength{\textwidth}{1in}
 \addtolength{\textheight}{1.5in}
-
 \setlength{\headheight}{15pt}
 
 % some HEVEA / HTML style sheets
 \newstyle{body}{width:600px;margin:auto;padding-top:20px;text-align: justify;}
 
+% more compact itemize
 \newenvironment{itemize*}%
   {\begin{itemize}%
     \setlength{\itemsep}{0pt}%
@@ -95,8 +69,8 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
   {\end{itemize}}
 
 \begin{document}
-%\fontfamily{ptm}\selectfont
 
+% fancy header setup
 %BEGIN LATEX
 \fancypagestyle{plain}{%
 \fancyhf{} % clear all header and footer fields
@@ -104,12 +78,14 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
 \renewcommand{\footrulewidth}{0pt}
 }
 %END LATEX
+
 \maketitle
 \clearpage
 \pagestyle{empty}
 \tableofcontents
 \clearpage
 
+% fancy header setup for page 1
 %BEGIN LATEX
 \setcounter{page}{1}
 \pagenumbering{arabic}
@@ -121,9 +97,7 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
 }
 %END LATEX
 
-%{\parskip=0mm \tableofcontents}
-% basic setup for listings
-
+% code listings setup
 \lstset{%
   language=C++,%
   morekeywords={constexpr,nullptr,size_t,uint32_t,assert},%
@@ -137,6 +111,7 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
   numberstyle=\footnotesize%
 }
 
+% content
 \include{FirstSteps}
 \include{CopyOnWriteTuples}
 \include{PatternMatching}
@@ -147,21 +122,13 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.8}\vfill}
 \include{ActorManagement}
 \include{SpawningActors}
 \include{MessagePriorities}
-\include{StronglyTypedActors}
 \include{NetworkTransparency}
 \include{GroupCommunication}
 \include{ActorCompanions}
 \include{TypeSystem}
 \include{BlockingAPI}
-%\include{OpenCL}
+\include{StronglyTypedActors}
 \include{CommonPitfalls}
 \include{Appendix}
 
-%\clearpage
-%\bibliographystyle{dinat}
-%\bibliographystyle{apalike}
-%\bibliography{/bib/programming,/bib/rfcs}
-%\clearpage
-%{\parskip=0mm \listoffigures}
-%\clearpage
 \end{document}
