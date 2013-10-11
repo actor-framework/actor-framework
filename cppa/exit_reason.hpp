@@ -53,7 +53,8 @@ static constexpr std::uint32_t unhandled_exception = 0x00002;
 
 /**
  * @brief Indicates that an event-based actor
- *        tried to use receive().
+ *        tried to use {@link receive()} or a strongly typed actor tried
+ *        to call {@link become()}.
  */
 static constexpr std::uint32_t unallowed_function_call = 0x00003;
 
@@ -67,6 +68,12 @@ static constexpr std::uint32_t unhandled_sync_failure = 0x00004;
  * @brief Indicates that a synchronous message timed out.
  */
 static constexpr std::uint32_t unhandled_sync_timeout = 0x00005;
+
+/**
+ * @brief Indicates that the actor was forced to shutdown by
+ *        a user-generated event.
+ */
+static constexpr std::uint32_t user_shutdown = 0x00010;
 
 /**
  * @brief Indicates that an actor finishied execution
