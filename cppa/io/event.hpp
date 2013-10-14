@@ -28,44 +28,33 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_ACCEPTOR_HPP
-#define IPV4_PEER_ACCEPTOR_HPP
-
-#include "cppa/actor.hpp"
-
-#include "cppa/io/ipv4_acceptor.hpp"
-#include "cppa/io/continuable.hpp"
+#ifndef EVENT_HPP
+#define EVENT_HPP
 
 namespace cppa { namespace io {
 
-class default_protocol;
+typedef int event_bitmask;
 
-class default_peer_acceptor : public continuable {
+namespace event { namespace {
 
-    typedef continuable super;
+constexpr event_bitmask none  = 0x00;
+constexpr event_bitmask read  = 0x01;
+constexpr event_bitmask write = 0x02;
+constexpr event_bitmask both  = 0x03;
+constexpr event_bitmask error = 0x04;
 
- public:
+} } // namespace <anonymous>::event
 
-    continue_reading_result continue_reading() override;
+template<unsigned InputEvent, unsigned OutputEvent, unsigned ErrorEvent>
+inline event_bitmask from_int_bitmask(unsigned mask) {
+    event_bitmask result = event::none;
+    // read/write as long as possible
+    if (mask & InputEvent) result = event::read;
+    if (mask & OutputEvent) result |= event::write;
+    if (result == event::none && mask & ErrorEvent) result = event::error;
+    return result;
+}
 
-    default_peer_acceptor(default_protocol* parent,
-                          acceptor_uptr ptr,
-                          const actor_ptr& published_actor);
+} } // namespace cppa::io
 
-    inline const actor_ptr& published_actor() const { return m_pa; }
-
-    void dispose() override;
-
-    void io_failed(event_bitmask) override;
-
- private:
-
-    default_protocol* m_parent;
-    acceptor_uptr m_ptr;
-    actor_ptr m_pa;
-
-};
-
-} } // namespace cppa::detail
-
-#endif // IPV4_PEER_ACCEPTOR_HPP
+#endif // EVENT_HPP

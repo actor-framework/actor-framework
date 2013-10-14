@@ -83,7 +83,7 @@ continue_reading_result default_peer_acceptor::continue_reading() {
    }
 }
 
-void default_peer_acceptor::io_failed() {
+void default_peer_acceptor::io_failed(event_bitmask) {
     CPPA_LOG_INFO("removed default_peer_acceptor "
                   << this << " due to an IO failure");
 }

@@ -193,6 +193,7 @@ void actor::cleanup(std::uint32_t reason) {
                       << ", class = " << detail::demangle(typeid(*this)));
     // send exit messages
     auto msg = make_any_tuple(atom("EXIT"), reason);
+    CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size() << " links");
     for (actor_ptr& aptr : mlinks) {
         message_header hdr{this, aptr, message_priority::high};
         hdr.deliver(msg);

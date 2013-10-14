@@ -69,6 +69,9 @@ struct optional_variant_copy_helper {
     inline void operator()() const {
         lhs = unit;
     }
+    inline void operator()(const none_t&) const {
+        lhs = none;
+    }
 };
 
 template<typename T>

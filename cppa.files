@@ -325,3 +325,4 @@ unit_testing/test_tuple.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/io/event.hpp
