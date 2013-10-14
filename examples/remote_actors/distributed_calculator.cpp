@@ -112,7 +112,7 @@ void client_repl(const string& host, uint16_t port) {
         line = trim(std::move(line)); // ignore leading and trailing whitespaces
         if (line == "quit") {
             // force client to quit
-            send_exit(client, exit_reason::user_defined);
+            send_exit(client, exit_reason::user_shutdown);
             return;
         }
         // the STL way of line.starts_with("connect")

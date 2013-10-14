@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
         }
     );
     // force actor to quit
-    send_exit(client_actor, exit_reason::user_defined);
+    send_exit(client_actor, exit_reason::user_shutdown);
     await_all_others_done();
     shutdown();
     return 0;

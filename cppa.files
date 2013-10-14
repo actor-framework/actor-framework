@@ -160,6 +160,7 @@ cppa/tuple_cast.hpp
 cppa/type_lookup_table.hpp
 cppa/typed_actor.hpp
 cppa/typed_actor_ptr.hpp
+cppa/typed_behavior.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
 cppa/util/abstract_uniform_type_info.hpp
@@ -209,8 +210,8 @@ examples/qtsupport/qt_group_chat.cpp
 examples/remote_actors/distributed_calculator.cpp
 examples/remote_actors/group_chat.cpp
 examples/remote_actors/group_server.cpp
-examples/remote_actors/protobuf_broker.cpp
 examples/remote_actors/protobuf.scala
+examples/remote_actors/protobuf_broker.cpp
 examples/type_system/announce_1.cpp
 examples/type_system/announce_2.cpp
 examples/type_system/announce_3.cpp
@@ -321,5 +322,6 @@ unit_testing/test_serialization.cpp
 unit_testing/test_spawn.cpp
 unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
+unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp

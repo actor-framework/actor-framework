@@ -7,6 +7,9 @@ When calling \lstinline^become^ in a strongly typed actor, the actor will be kil
 Typed actors use \lstinline^typed_actor_ptr<...>^ instead of \lstinline^actor_ptr^, whereas the template parameters hold the messaging interface.
 For example, an actor responding to two integers with a dobule would use the type \lstinline^typed_actor_ptr<replies_to<int, int>::with<double>>^.
 
+All functions for message passing, linking and monitoring are overloaded to accept both types of actors.
+As of version 0.8, strongly typed actors cannot be published (this is a planned feature for future releases).
+
 \subsection{Spawning Typed Actors}
 \label{sec:strong:spawn}
 
@@ -40,5 +43,35 @@ using subtype2 = typed_actor_ptr<
 subtype1 p3 = p0;
 \end{lstlisting}
 
-All functions for message passing, linking and monitoring are overloaded to accept both types of actors.
-As of version 0.8, strongly typed actors cannot be published (this is a planned feature for future releases).
+\clearpage
+\subsection{Class-based Typed Actors}
+
+Typed actors can be implemented using a class by inheriting from \lstinline^typed_actor<...>^, whereas the template parameter pack denotes the messaging interface.
+Derived classes have to implemented the pure virtual member function \lstinline^make_behavior^, as shown in the example below.
+
+\begin{lstlisting}
+// implementation
+class typed_testee : public typed_actor<replies_to<int>::with<bool>> {
+
+ protected:
+
+  behavior_type make_behavior() override {
+    // returning a non-matching expression 
+    // results in a compile-time error
+    return (
+      on_arg_match >> [](int value) {
+        return value == 42;
+      }
+    );
+  }
+
+};
+
+// instantiation
+auto testee = spawn_typed<typed_testee>();
+\end{lstlisting}
+
+It is worth mentioning that \lstinline^typed_actor^ implements the member function \lstinline^init()^ using the \lstinline^final^ qualifier.
+Hence, derived classes are not allowed to override \lstinline^init()^.
+However, typed actors are allowed to override other member functions such as \lstinline^on_exit()^.
+The return type of \lstinline^make_behavior^ is \lstinline^typed_behavior<...>^, which is aliased as \lstinline^behavior_type^ for convenience.

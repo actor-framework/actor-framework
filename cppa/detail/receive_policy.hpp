@@ -36,6 +36,7 @@
 #include <iostream>
 #include <type_traits>
 
+#include "cppa/on.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/to_string.hpp"
@@ -45,6 +46,9 @@
 #include "cppa/partial_function.hpp"
 
 #include "cppa/detail/memory.hpp"
+#include "cppa/detail/matches.hpp"
+
+#include "cppa/util/scope_guard.hpp"
 
 namespace cppa { namespace detail {
 
@@ -344,6 +348,90 @@ class receive_policy {
 
  public:
 
+    template<class Client>
+    inline response_handle fetch_response_handle(Client* cl, int) {
+        return cl->make_response_handle();
+    }
+
+    template<class Client>
+    inline response_handle fetch_response_handle(Client*, response_handle& hdl) {
+        return std::move(hdl);
+    }
+
+    // - extracts response message from handler
+    // - returns true if fun was successfully invoked
+    template<class Client, class Fun, class MaybeResponseHandle = int>
+    optional<any_tuple> invoke_fun(Client* client,
+                                   any_tuple& msg,
+                                   message_id& mid,
+                                   Fun& fun,
+                                   MaybeResponseHandle hdl = MaybeResponseHandle{}) {
+        auto res = fun(msg); // might change mid
+        if (res) {
+            //message_header hdr{client, sender, mid.is_request() ? mid.response_id()
+            //                                                    : message_id{}};
+            if (res->empty()) {
+                // make sure synchronous requests
+                // always receive a response
+                if (mid.is_request() && !mid.is_answered()) {
+                    CPPA_LOGMF(CPPA_WARNING, client,
+                               "actor with ID " << client->id()
+                               << " did not reply to a "
+                                  "synchronous request message");
+                    auto fhdl = fetch_response_handle(client, hdl);
+                    if (fhdl.valid()) fhdl.apply(atom("VOID"));
+                }
+            } else {
+                if (   matches<atom_value, std::uint64_t>(*res)
+                    && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
+                    auto id = res->template get_as<std::uint64_t>(1);
+                    auto msg_id = message_id::from_integer_value(id);
+                    auto ref_opt = client->bhvr_stack().sync_handler(msg_id);
+                    // calls client->response_handle() if hdl is a dummy
+                    // argument, forwards hdl otherwise to reply to the
+                    // original request message
+                    auto fhdl = fetch_response_handle(client, hdl);
+                    if (ref_opt) {
+                        auto& ref = *ref_opt;
+                        // copy original behavior
+                        behavior cpy = ref;
+                        ref = cpy.add_continuation(
+                            [=](any_tuple& intermediate) -> optional<any_tuple> {
+                                if (!intermediate.empty()) {
+                                    // do no use lamba expresion type to
+                                    // avoid recursive template intantiaton
+                                    behavior::continuation_fun f2 = [=](any_tuple& m) -> optional<any_tuple> {
+                                        return std::move(m);
+                                    };
+                                    auto mutable_mid = mid;
+                                    // recursively call invoke_fun on the
+                                    // result to correctly handle stuff like
+                                    // sync_send(...).then(...).then(...)...
+                                    return invoke_fun(client,
+                                                      intermediate,
+                                                      mutable_mid,
+                                                      f2,
+                                                      fhdl);
+                                }
+                                return none;
+                            }
+                        );
+                    }
+                    // reset res to prevent "outer" invoke_fun
+                    // from handling the result again
+                    res->reset();
+                } else {
+                    // respond by using the result of 'fun'
+                    auto fhdl = fetch_response_handle(client, hdl);
+                    if (fhdl.valid()) fhdl.apply(std::move(*res));
+                }
+            }
+            return res;
+        }
+        // fun did not return a value => no match
+        return none;
+    }
+
     // workflow 'template'
 
     template<class Client, class Fun, class Policy>
@@ -392,8 +480,15 @@ class receive_policy {
             case sync_response: {
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = hm_begin(client, node, policy);
-                    if (!fun(node->msg) && handle_sync_failure_on_mismatch) {
-                        CPPA_LOGMF(CPPA_WARNING, client, "sync failure occured");
+                    auto res = invoke_fun(client,
+                                          node->msg,
+                                          node->mid,
+                                          fun);
+                    if (!res && handle_sync_failure_on_mismatch) {
+                        CPPA_LOGMF(CPPA_WARNING,
+                                   client,
+                                   "sync failure occured in actor with ID "
+                                   << client->id());
                         client->handle_sync_failure();
                     }
                     client->mark_arrived(awaited_response);
@@ -406,25 +501,11 @@ class receive_policy {
             case ordinary_message: {
                 if (!awaited_response.valid()) {
                     auto previous_node = hm_begin(client, node, policy);
-                    auto res = fun(node->msg);
+                    auto res = invoke_fun(client,
+                                          node->msg,
+                                          node->mid,
+                                          fun);
                     if (res) {
-                        auto mid = node->mid;
-                        auto sender = node->sender;
-                        message_header hdr{client, sender, mid.response_id()};
-                        if (res->empty()) {
-                            // make sure synchronous requests
-                            // always receive a response
-                            if (mid.valid() && !mid.is_answered() && sender) {
-                                CPPA_LOGMF(CPPA_WARNING, client,
-                                           "actor did not reply to a "
-                                           "synchronous request message");
-                                sender->enqueue(std::move(hdr),
-                                                make_any_tuple(atom("VOID")));
-                            }
-                        } else {
-                            // respond by using the result of 'fun'
-                            sender->enqueue(std::move(hdr), std::move(*res));
-                        }
                         hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;
                     }

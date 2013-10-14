@@ -97,7 +97,7 @@ void send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
                                          >>::template eval
                                      >::value;
     static_assert(input_pos >= 0, "typed actor does not support given input");
-    send(whom.unbox(), std::forward<Ts>(what)...);
+    send(whom.type_erased(), std::forward<Ts>(what)...);
 }
 
 /**
@@ -184,7 +184,7 @@ typed_message_future<
     >::type
 >
 sync_send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
-    return sync_send(whom.unbox(), std::forward<Ts>(what)...);
+    return sync_send(whom.type_erased(), std::forward<Ts>(what)...);
 }
 
 /**
@@ -395,7 +395,7 @@ inline void send_exit(actor_ptr whom, std::uint32_t rsn) {
  */
 template<typename... Signatures>
 void send_exit(const typed_actor_ptr<Signatures...>& whom, std::uint32_t rsn) {
-    send_exit(whom.unbox(), rsn);
+    send_exit(whom.type_erased(), rsn);
 }
 
 /**

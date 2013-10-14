@@ -54,6 +54,8 @@ class behavior {
 
  public:
 
+    typedef std::function<optional<any_tuple> (any_tuple&)> continuation_fun;
+
     /** @cond PRIVATE */
 
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
@@ -108,7 +110,7 @@ class behavior {
      *        whenever this behavior was successfully applied to
      *        a message.
      */
-    behavior add_continuation(const partial_function& fun);
+    behavior add_continuation(continuation_fun fun);
 
     //template<typename F>
     //inline behavior add_continuation(F fun);

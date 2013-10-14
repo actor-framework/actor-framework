@@ -32,6 +32,7 @@
 #define CPPA_TYPED_ACTOR_HPP
 
 #include "cppa/replies_to.hpp"
+#include "cppa/typed_behavior.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/event_based_actor.hpp"
 
@@ -39,75 +40,60 @@
 
 namespace cppa {
 
-struct typed_actor_result_visitor {
+template<typename... Signatures>
+class typed_actor_ptr;
 
-    typed_actor_result_visitor() : m_hdl(self->make_response_handle()) { }
-
-    typed_actor_result_visitor(response_handle hdl) : m_hdl(hdl) { }
-
-    inline void operator()(const none_t&) const {
-        CPPA_LOG_ERROR("a typed actor received a "
-                       "non-matching message: "
-                       << to_string(self->last_dequeued()));
-    }
-
-    inline void operator()() const { }
-
-    template<typename T>
-    inline void operator()(T& value) const {
-        reply_to(m_hdl, std::move(value));
-    }
-
-    template<typename... Ts>
-    inline void operator()(cow_tuple<Ts...>& value) const {
-        reply_tuple_to(m_hdl, std::move(value));
-    }
-
-    template<typename R>
-    inline void operator()(typed_continue_helper<R>& ch) const {
-        auto hdl = m_hdl;
-        ch.continue_with([=](R value) {
-            typed_actor_result_visitor tarv{hdl};
-            auto ov = make_optional_variant(std::move(value));
-            apply_visitor(tarv, ov);
-        });
-    }
-
- private:
-
-    response_handle m_hdl;
-
-};
-
-template<typename MatchExpr>
+template<typename... Signatures>
 class typed_actor : public event_based_actor {
 
  public:
 
-    typed_actor(MatchExpr expr) : m_fun(std::move(expr)) { }
+    using signatures = util::type_list<Signatures...>;
+
+    using behavior_type = typed_behavior<Signatures...>;
+
+    using typed_pointer_type = typed_actor_ptr<Signatures...>;
 
  protected:
 
-    void init() override {
-        m_bhvr_stack.push_back(partial_function{
-            on<anything>() >> [=] {
-                auto result = m_fun(last_dequeued());
-                apply_visitor(typed_actor_result_visitor{}, result);
-            }
-        });
+    virtual behavior_type make_behavior() = 0;
+
+    void init() final {
+        auto bhvr = make_behavior();
+        m_bhvr_stack.push_back(std::move(bhvr.unbox()));
     }
 
-    void do_become(behavior&&, bool) override {
+    void do_become(behavior&&, bool) final {
         CPPA_LOG_ERROR("typed actors are not allowed to call become()");
         quit(exit_reason::unallowed_function_call);
     }
 
- private:
-
-    MatchExpr m_fun;
-
 };
 
 } // namespace cppa
+
+namespace cppa { namespace detail {
+
+template<typename... Signatures>
+class default_typed_actor : public typed_actor<Signatures...> {
+
+ public:
+
+    template<typename... Cases>
+    default_typed_actor(match_expr<Cases...> expr) : m_bhvr(std::move(expr)) { }
+
+ protected:
+
+    typed_behavior<Signatures...> make_behavior() override {
+        return m_bhvr;
+    }
+
+ private:
+
+    typed_behavior<Signatures...> m_bhvr;
+
+};
+
+} } // namespace cppa::detail
 
 #endif // CPPA_TYPED_ACTOR_HPP

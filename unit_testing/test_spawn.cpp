@@ -202,7 +202,7 @@ string behavior_test(actor_ptr et) {
             throw runtime_error(testee_name + " does not reply");
         }
     );
-    send_exit(et, exit_reason::user_defined);
+    send_exit(et, exit_reason::user_shutdown);
     await_all_others_done();
     return result;
 }
@@ -224,31 +224,27 @@ class fixed_stack : public sb_actor<fixed_stack> {
  public:
 
     fixed_stack(size_t max) : max_size(max)  {
-
         full = (
-            on(atom("push"), arg_match) >> [=](int) { },
-            on(atom("pop")) >> [=]() -> any_tuple {
-                data.pop_back();
-                become(filled);
-                return {atom("ok"), data.back()};
-            }
-        );
-
-        filled = (
-            on(atom("push"), arg_match) >> [=](int what) {
-                data.push_back(what);
-                if (data.size() == max_size)
-                    become(full);
-            },
-            on(atom("pop")) >> [=]() -> any_tuple {
+            on(atom("push"), arg_match) >> [=](int) { /* discard */ },
+            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
                 auto result = data.back();
                 data.pop_back();
-                if (data.empty())
-                    become(empty);
+                become(filled);
                 return {atom("ok"), result};
             }
         );
-
+        filled = (
+            on(atom("push"), arg_match) >> [=](int what) {
+                data.push_back(what);
+                if (data.size() == max_size) become(full);
+            },
+            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+                auto result = data.back();
+                data.pop_back();
+                if (data.empty()) become(empty);
+                return {atom("ok"), result};
+            }
+        );
         empty = (
             on(atom("push"), arg_match) >> [=](int what) {
                 data.push_back(what);
@@ -312,117 +308,11 @@ struct high_priority_testee_class : event_based_actor {
     }
 };
 
-struct my_request { int a; int b; };
-
-bool operator==(const my_request& lhs, const my_request& rhs) {
-    return lhs.a == rhs.a && lhs.b == rhs.b;
-}
-
-typed_actor_ptr<replies_to<my_request>::with<bool>>
-spawn_typed_server() {
-    return spawn_typed(
-        on_arg_match >> [](const my_request& req) {
-            return req.a == req.b;
-        }
-    );
-}
-
-void test_typed_actors() {
-    announce<my_request>(&my_request::a, &my_request::b);
-    auto sptr = spawn_typed_server();
-    sync_send(sptr, my_request{2, 2}).await(
-        [](bool value) {
-            CPPA_CHECK_EQUAL(value, true);
-        }
-    );
-    send_exit(sptr, exit_reason::user_defined);
-    auto ptr0 = spawn_typed(
-        on_arg_match >> [](double d) {
-            return d * d;
-        },
-        on_arg_match >> [](float f) {
-            return f / 2.0f;
-        }
-
-    );
-    CPPA_CHECK((std::is_same<
-                    decltype(ptr0),
-                    typed_actor_ptr<
-                        replies_to<double>::with<double>,
-                        replies_to<float>::with<float>
-                    >
-                >::value));
-    typed_actor_ptr<replies_to<double>::with<double>> ptr0_double = ptr0;
-    typed_actor_ptr<replies_to<float>::with<float>> ptr0_float = ptr0;
-    auto ptr = spawn_typed(
-        on<int>() >> [] { return "wtf"; },
-        on<string>() >> [] { return 42; },
-        on<float>() >> [] { return make_cow_tuple(1, 2, 3); },
-        on<double>() >> [=](double d) {
-            return sync_send(ptr0_double, d).then(
-                [](double res) { return res + res; }
-            );
-        }
-    );
-    // check async messages
-    send(ptr0_float, 4.0f);
-    receive(
-        on_arg_match >> [](float f) {
-            CPPA_CHECK_EQUAL(f, 4.0f / 2.0f);
-        }
-    );
-    // check sync messages
-    sync_send(ptr0_float, 4.0f).await(
-        [](float f) {
-            CPPA_CHECK_EQUAL(f, 4.0f / 2.0f);
-        }
-    );
-    sync_send(ptr, 10.0).await(
-        [](double d) {
-            CPPA_CHECK_EQUAL(d, 200.0);
-        }
-    );
-    sync_send(ptr, 42).await(
-        [](const std::string& str) {
-            CPPA_CHECK_EQUAL(str, "wtf");
-        }
-    );
-    sync_send(ptr, 1.2f).await(
-        [](int a, int b, int c) {
-            CPPA_CHECK_EQUAL(a, 1);
-            CPPA_CHECK_EQUAL(b, 2);
-            CPPA_CHECK_EQUAL(c, 3);
-        }
-    );
-    sync_send(ptr, 1.2f).await(
-        [](int b, int c) {
-            CPPA_CHECK_EQUAL(b, 2);
-            CPPA_CHECK_EQUAL(c, 3);
-        }
-    );
-    sync_send(ptr, 1.2f).await(
-        [](int c) {
-            CPPA_CHECK_EQUAL(c, 3);
-        }
-    );
-    sync_send(ptr, 1.2f).await(
-        [] { CPPA_CHECKPOINT(); }
-    );
-    send_exit(ptr0, exit_reason::user_defined);
-    send_exit(ptr,  exit_reason::user_defined);
-    await_all_others_done();
-    CPPA_CHECKPOINT();
-}
-
-
-
-
-
 struct master : event_based_actor {
     void init() override {
         become(
             on(atom("done")) >> []() {
-                self->quit(exit_reason::user_defined);
+                self->quit(exit_reason::user_shutdown);
             }
         );
     }
@@ -443,13 +333,67 @@ struct slave : event_based_actor {
 
 };
 
+void test_serial_reply() {
+    auto mirror_behavior = [](int num) {
+        become(others() >> [=]() -> any_tuple {
+            cout << "right back at you from " << num
+                 << "; ID: " << self->id() << endl;
+            return self->last_dequeued();
+        });
+    };
+    auto master = spawn([=] {
+        cout << "ID of master: " << self->id() << endl;
+        // produce 5 mirror actors
+        auto c0 = spawn<linked>(mirror_behavior, 0);
+        auto c1 = spawn<linked>(mirror_behavior, 1);
+        auto c2 = spawn<linked>(mirror_behavior, 2);
+        auto c3 = spawn<linked>(mirror_behavior, 3);
+        auto c4 = spawn<linked>(mirror_behavior, 4);
+        become (
+            on(atom("hi there")) >> [=] {
+                // *
+                return sync_send(c0, atom("sub0")).then(
+                    on(atom("sub0")) >> [=] {
+                        return sync_send(c1, atom("sub1")).then(
+                            on(atom("sub1")) >> [=] {
+                                return sync_send(c2, atom("sub2")).then(
+                                    on(atom("sub2")) >> [=] {
+                                        return sync_send(c3, atom("sub3")).then(
+                                            on(atom("sub3")) >> [=] {
+                                                return sync_send(c4, atom("sub4")).then(
+                                                    on(atom("sub4")) >> [=] {
+                                                        return atom("hiho");
+                                                    }
+                                                );
+                                            }
+                                        );
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+                //*/
+                //return atom("hiho");
+            }
+        );
+    });
+    cout << "ID of main: " << self->id() << endl;
+    sync_send(master, atom("hi there")).await(
+        on(atom("hiho")) >> [] {
+            CPPA_CHECKPOINT();
+        },
+        others() >> CPPA_UNEXPECTED_MSG_CB()
+    );
+    send_exit(master, exit_reason::user_shutdown);
+    await_all_others_done();
+
+}
+
 int main() {
     CPPA_TEST(test_spawn);
 
-    aout << "sizeof(event_based_actor) = " << sizeof(event_based_actor) << endl;
-    aout << "sizeof(broker) = " << sizeof(io::broker) << endl;
-
-    test_typed_actors();
+    test_serial_reply();
 
     // check whether detached actors and scheduled actors interact w/o errors
     auto m = spawn<master, detached>();
@@ -483,9 +427,9 @@ int main() {
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        send_exit(mirror, exit_reason::user_defined);
+        send_exit(mirror, exit_reason::user_shutdown);
         receive (
-            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         await_all_others_done();
@@ -499,9 +443,9 @@ int main() {
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        send_exit(mirror, exit_reason::user_defined);
+        send_exit(mirror, exit_reason::user_shutdown);
         receive (
-            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         await_all_others_done();
@@ -516,9 +460,9 @@ int main() {
             on("hello mirror") >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        send_exit(mirror, exit_reason::user_defined);
+        send_exit(mirror, exit_reason::user_shutdown);
         receive (
-            on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         await_all_others_done();
@@ -620,7 +564,7 @@ int main() {
         CPPA_CHECK_EQUAL(util::join(values, ","), util::join(values, ","));
     }
     // terminate st
-    send_exit(st, exit_reason::user_defined);
+    send_exit(st, exit_reason::user_shutdown);
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -817,8 +761,8 @@ int main() {
             CPPA_CHECK_EQUAL(name, "bob");
         }
     );
-    send_exit(a1, exit_reason::user_defined);
-    send_exit(a2, exit_reason::user_defined);
+    send_exit(a1, exit_reason::user_shutdown);
+    send_exit(a2, exit_reason::user_shutdown);
     await_all_others_done();
 
     factory::event_based([](int* i) {
@@ -844,7 +788,7 @@ int main() {
         }
         become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
-    send_exit(legion, exit_reason::user_defined);
+    send_exit(legion, exit_reason::user_shutdown);
     await_all_others_done();
     CPPA_CHECKPOINT();
     self->trap_exit(true);
@@ -857,7 +801,7 @@ int main() {
     // wait for DOWN and EXIT messages of pong
     receive_for(i, 4) (
         on(atom("EXIT"), arg_match) >> [&](uint32_t reason) {
-            CPPA_CHECK_EQUAL(exit_reason::user_defined, reason);
+            CPPA_CHECK_EQUAL(exit_reason::user_shutdown, reason);
             CPPA_CHECK(self->last_sender() == pong_actor);
             flags |= 0x01;
         },
@@ -865,7 +809,7 @@ int main() {
             auto who = self->last_sender();
             if (who == pong_actor) {
                 flags |= 0x02;
-                CPPA_CHECK_EQUAL(reason, exit_reason::user_defined);
+                CPPA_CHECK_EQUAL(reason, exit_reason::user_shutdown);
             }
             else if (who == ping_actor) {
                 flags |= 0x04;
