@@ -5,6 +5,15 @@ __2013_10_01__
 
 - Added support for typed actors
 - Added `brokers`: actors that encapsulate networking
+- timed_* function family now correctly handles priorities
+- Fixed monitoring of remote actors
+- Added new exit reason `user_shutdown`
+- Deprecated `reply` function and recommend returning values instead
+- Provide operator-> for optional
+- New class `optional_variant` with visitor-based API
+- Added manual to Git repository
+- Added new libCURL example
+- Bugfixes
 
 Version 0.7.2
 -------------
