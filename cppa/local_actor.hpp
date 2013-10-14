@@ -314,7 +314,7 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     void reply_message(any_tuple&& what);
 
-    void forward_message(const actor_ptr& new_receiver);
+    void forward_message(const actor_ptr& new_receiver, message_priority prio);
 
     inline const actor_ptr& chained_actor();
 

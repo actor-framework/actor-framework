@@ -66,6 +66,7 @@ class typed_testee : public typed_actor<replies_to<my_request>::with<bool>> {
 
 int main() {
     CPPA_TEST(test_typed_spawn);
+
     announce<my_request>(&my_request::a, &my_request::b);
     auto sptr = spawn_typed_server();
     sync_send(sptr, my_request{2, 2}).await(

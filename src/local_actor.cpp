@@ -158,10 +158,10 @@ void local_actor::reply_message(any_tuple&& what) {
     }
 }
 
-void local_actor::forward_message(const actor_ptr& new_receiver) {
-    if (new_receiver == nullptr) return;
+void local_actor::forward_message(const actor_ptr& dest, message_priority p) {
+    if (dest == nullptr) return;
     auto& id = m_current_node->mid;
-    new_receiver->enqueue({last_sender(), new_receiver, id}, m_current_node->msg);
+    dest->enqueue({last_sender(), dest, id, p}, m_current_node->msg);
     // treat this message as asynchronous message from now on
     id = message_id{};
 }

@@ -66,17 +66,9 @@ class delayed_msg {
 
  public:
 
-    delayed_msg(const channel_ptr& arg0,
-                const actor_ptr&   arg1,
-                message_id,
-                any_tuple&&        arg3)
-    : ptr_a(arg0), from(arg1), msg(move(arg3)) { }
-
-    delayed_msg(const actor_ptr&   arg0,
-                const actor_ptr&   arg1,
-                message_id       arg2,
-                any_tuple&&        arg3)
-    : ptr_b(arg0), from(arg1), id(arg2), msg(move(arg3)) { }
+    delayed_msg(message_header&& arg1,
+                any_tuple&&      arg2)
+    : hdr(move(arg1)), msg(move(arg2)) { }
 
     delayed_msg(delayed_msg&&) = default;
     delayed_msg(const delayed_msg&) = default;
@@ -84,18 +76,13 @@ class delayed_msg {
     delayed_msg& operator=(const delayed_msg&) = default;
 
     inline void eval() {
-        CPPA_REQUIRE(ptr_a || ptr_b);
-        if (ptr_a) ptr_a->enqueue(from, move(msg));
-        else ptr_b->enqueue({from, id}, move(msg));
+        hdr.deliver(std::move(msg));
     }
 
  private:
 
-    channel_ptr   ptr_a;
-    actor_ptr     ptr_b;
-    actor_ptr     from;
-    message_id  id;
-    any_tuple     msg;
+    message_header hdr;
+    any_tuple      msg;
 
 };
 
@@ -140,16 +127,14 @@ class scheduler_helper {
 
 };
 
-template<class Map, class T>
+template<class Map>
 inline void insert_dmsg(Map& storage,
-                 const util::duration& d,
-                 const T& to,
-                 const actor_ptr& sender,
-                 any_tuple&& tup,
-                 message_id id = message_id{}) {
+                        const util::duration& d,
+                        message_header&& hdr,
+                        any_tuple&& tup        ) {
     auto tout = hrc::now();
     tout += d;
-    delayed_msg dmsg{to, sender, id, move(tup)};
+    delayed_msg dmsg{move(hdr), move(tup)};
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
@@ -163,15 +148,9 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // message handling rules
     auto mfun = (
         on(atom("SEND"), arg_match) >> [&](const util::duration& d,
-                                           const channel_ptr& ptr,
+                                           message_header& hdr,
                                            any_tuple& tup) {
-            insert_dmsg(messages, d, ptr, msg_ptr->sender, move(tup));
-        },
-        on(atom("REPLY"), arg_match) >> [&](const util::duration& d,
-                                            const actor_ptr& ptr,
-                                            message_id id,
-                                            any_tuple& tup) {
-            insert_dmsg(messages, d, ptr, msg_ptr->sender, move(tup), id);
+            insert_dmsg(messages, d, move(hdr), move(tup));
         },
         on(atom("DIE")) >> [&] {
             done = true;

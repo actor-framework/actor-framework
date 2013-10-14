@@ -51,27 +51,30 @@ namespace cppa {
 /**
  * @brief Stores sender, receiver, and message priority.
  */
+template<typename T = channel_ptr>
 struct destination_header {
-    channel_ptr receiver;
+    T receiver;
     message_priority priority;
-    inline destination_header(const self_type& s)
-    : receiver(s), priority(message_priority::normal) { }
-    template<typename T>
-    inline destination_header(T dest)
-    : receiver(std::move(dest)), priority(message_priority::normal) { }
-    inline destination_header(channel_ptr dest, message_priority prio)
-    : receiver(std::move(dest)), priority(prio) { }
-    inline destination_header(destination_header&& hdr)
-    : receiver(std::move(hdr.receiver)), priority(hdr.priority) { }
+    template<typename U>
+    destination_header(U&& dest, message_priority mp = message_priority::normal)
+    : receiver(std::forward<U>(dest)), priority(mp) { }
+    destination_header(destination_header&&) = default;
+    destination_header(const destination_header&) = default;
+    destination_header& operator=(destination_header&&) = default;
+    destination_header& operator=(const destination_header&) = default;
 };
+
+using channel_destination = destination_header<channel_ptr>;
+
+using actor_destination = destination_header<actor_ptr>;
 
 /**
  * @brief Sends @p what to the receiver specified in @p hdr.
  */
-inline void send_tuple(destination_header hdr, any_tuple what) {
-    if (hdr.receiver == nullptr) return;
+inline void send_tuple(channel_destination dest, any_tuple what) {
+    if (dest.receiver == nullptr) return;
     auto s = self.get();
-    message_header fhdr{s, std::move(hdr.receiver), hdr.priority};
+    message_header fhdr{s, std::move(dest.receiver), dest.priority};
     if (fhdr.receiver != s && s->chaining_enabled()) {
         if (fhdr.receiver->chained_enqueue(fhdr, std::move(what))) {
             // only actors implement chained_enqueue to return true
@@ -85,7 +88,7 @@ inline void send_tuple(destination_header hdr, any_tuple what) {
  * @brief Sends @p what to the receiver specified in @p hdr.
  */
 template<typename... Signatures, typename... Ts>
-void send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
+void send(const typed_actor_ptr<Signatures...>& dest, Ts&&... what) {
     static constexpr int input_pos = util::tl_find_if<
                                          util::type_list<Signatures...>,
                                          detail::input_is<util::type_list<
@@ -97,7 +100,7 @@ void send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
                                          >>::template eval
                                      >::value;
     static_assert(input_pos >= 0, "typed actor does not support given input");
-    send(whom.type_erased(), std::forward<Ts>(what)...);
+    send(dest./*receiver.*/type_erased(), std::forward<Ts>(what)...);
 }
 
 /**
@@ -105,17 +108,17 @@ void send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<typename... Ts>
-inline void send(destination_header hdr, Ts&&... what) {
+inline void send(channel_destination dest, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    send_tuple(std::move(hdr), make_any_tuple(std::forward<Ts>(what)...));
+    send_tuple(std::move(dest), make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
  * @brief Sends @p what to @p whom, but sets the sender information to @p from.
  */
-inline void send_tuple_as(actor_ptr from, channel_ptr whom, any_tuple what) {
-    message_header hdr{std::move(from), std::move(whom)};
-    hdr.deliver(std::move(what));
+inline void send_tuple_as(actor_ptr from, channel_destination dest, any_tuple what) {
+    message_header mhdr{std::move(from), std::move(dest.receiver), dest.priority};
+    mhdr.deliver(std::move(what));
 }
 
 /**
@@ -127,8 +130,8 @@ inline void send_tuple_as(actor_ptr from, channel_ptr whom, any_tuple what) {
  * @pre <tt>sizeof...(Ts) > 0</tt>
  */
 template<typename... Ts>
-inline void send_as(actor_ptr from, channel_ptr whom, Ts&&... what) {
-    send_tuple_as(std::move(from), std::move(whom),
+inline void send_as(actor_ptr from, channel_destination dest, Ts&&... what) {
+    send_tuple_as(std::move(from), std::move(dest),
                   make_any_tuple(std::forward<Ts>(what)...));
 }
 
@@ -141,7 +144,7 @@ inline void send_as(actor_ptr from, channel_ptr whom, Ts&&... what) {
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-message_future sync_send_tuple(actor_ptr whom, any_tuple what);
+message_future sync_send_tuple(actor_destination dest, any_tuple what);
 
 /**
  * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -154,9 +157,9 @@ message_future sync_send_tuple(actor_ptr whom, any_tuple what);
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
 template<typename... Ts>
-inline message_future sync_send(actor_ptr whom, Ts&&... what) {
+inline message_future sync_send(actor_destination dest, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return sync_send_tuple(std::move(whom),
+    return sync_send_tuple(std::move(dest),
                            make_any_tuple(std::forward<Ts>(what)...));
 }
 
@@ -192,27 +195,13 @@ sync_send(const typed_actor_ptr<Signatures...>& whom, Ts&&... what) {
  * @param whom Receiver of the message.
  * @param rtime Relative time duration to delay the message in
  *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
+ * @param data Message content as a tuple.
  */
-void delayed_send_tuple(const channel_ptr& to,
-                        const util::duration& rel_time,
+void delayed_send_tuple(channel_destination dest,
+                        const util::duration& rtime,
                         any_tuple data);
 
 /**
- * @brief Sends a message to @p whom that is delayed by @p rel_time.
- * @param whom Receiver of the message.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_send_tuple(const channel_ptr& whom,
-                               const std::chrono::duration<Rep, Period>& rtime,
-                               any_tuple what) {
-    delayed_send_tuple(whom, util::duration{rtime}, std::move(what));
-}
-
-/**
  * @brief Sends a reply message that is delayed by @p rel_time.
  * @param rtime Relative time duration to delay the message in
  *              microseconds, milliseconds, seconds or minutes.
@@ -220,18 +209,6 @@ inline void delayed_send_tuple(const channel_ptr& whom,
  * @see delayed_send()
  */
 void delayed_reply_tuple(const util::duration& rel_time,
-                         message_id mid,
-                         any_tuple data);
-
-/**
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- * @see delayed_send()
- */
-void delayed_reply_tuple(const util::duration& rel_time,
-                         actor_ptr whom,
                          message_id mid,
                          any_tuple data);
 
@@ -244,39 +221,22 @@ void delayed_reply_tuple(const util::duration& rel_time,
  */
 void delayed_reply_tuple(const util::duration& rel_time, any_tuple data);
 
-/**
- * @brief Sends a reply message that is delayed by @p rel_time.
- * @param rtime Relative time duration to delay the message in
- *              microseconds, milliseconds, seconds or minutes.
- * @param what Message content as a tuple.
- * @see delayed_send()
- */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_reply_tuple(const std::chrono::duration<Rep, Period>& rtime,
-                                any_tuple what) {
-    delayed_reply_tuple(util::duration{rtime}, std::move(what));
-}
+
 /**
  * @brief Sends @p what as a synchronous message to @p whom with a timeout.
  *
  * The calling actor receives a 'TIMEOUT' message as response after
  * given timeout exceeded and no response messages was received.
- * @param whom Receiver of the message.
+ * @param dest Receiver and optional priority flag.
  * @param what Message content as tuple.
  * @returns A handle identifying a future to the response of @p whom.
  * @warning The returned handle is actor specific and the response to the sent
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-template<class Rep, class Period, typename... Ts>
-message_future timed_sync_send_tuple(actor_ptr whom,
-                                     const std::chrono::duration<Rep, Period>& rel_time,
-                                     any_tuple what) {
-    auto mf = sync_send_tuple(std::move(whom), std::move(what));
-    auto tmp = make_any_tuple(atom("TIMEOUT"));
-    delayed_reply_tuple(util::duration{rel_time}, self, mf.id(), std::move(tmp));
-    return mf;
-}
+message_future timed_sync_send_tuple(actor_destination dest,
+                                     const util::duration& rtime,
+                                     any_tuple what);
 
 /**
  * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom
@@ -292,13 +252,13 @@ message_future timed_sync_send_tuple(actor_ptr whom,
  * @pre <tt>sizeof...(Ts) > 0</tt>
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-template<class Rep, class Period, typename... Ts>
-message_future timed_sync_send(actor_ptr whom,
-                               const std::chrono::duration<Rep, Period>& rel_time,
+template<typename... Ts>
+message_future timed_sync_send(actor_destination whom,
+                               const util::duration& rtime,
                                Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     return timed_sync_send_tuple(std::move(whom),
-                                 rel_time,
+                                 rtime,
                                  make_any_tuple(std::forward<Ts>(what)...));
 }
 
@@ -341,8 +301,8 @@ inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
 /**
  * @brief Forwards the last received message to @p whom.
  */
-inline void forward_to(const actor_ptr& whom) {
-    self->forward_message(whom);
+inline void forward_to(actor_destination dest) {
+    self->forward_message(dest.receiver, dest.priority);
 }
 
 /**
@@ -352,13 +312,13 @@ inline void forward_to(const actor_ptr& whom) {
  *              microseconds, milliseconds, seconds or minutes.
  * @param what Message elements.
  */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_send(const channel_ptr& whom,
-                         const std::chrono::duration<Rep, Period>& rtime,
+template<typename... Ts>
+inline void delayed_send(channel_destination dest,
+                         const util::duration& rtime,
                          Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    if (whom) {
-        delayed_send_tuple(whom,
+    if (dest.receiver) {
+        delayed_send_tuple(std::move(dest),
                            rtime,
                            make_any_tuple(std::forward<Ts>(what)...));
     }
@@ -371,9 +331,8 @@ inline void delayed_send(const channel_ptr& whom,
  * @param what Message elements.
  * @see delayed_send()
  */
-template<class Rep, class Period, typename... Ts>
-inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
-                          Ts&&... what) {
+template<typename... Ts>
+inline void delayed_reply(const util::duration& rtime, Ts&&... what) {
     delayed_reply_tuple(rtime, make_any_tuple(std::forward<Ts>(what)...));
 }
 
@@ -384,9 +343,9 @@ inline void delayed_reply(const std::chrono::duration<Rep, Period>& rtime,
  * <tt>send(whom, atom("EXIT"), reason)</tt>.
  * @pre <tt>reason != exit_reason::normal</tt>
  */
-inline void send_exit(actor_ptr whom, std::uint32_t rsn) {
+inline void send_exit(channel_destination dest, std::uint32_t rsn) {
     CPPA_REQUIRE(rsn != exit_reason::normal);
-    send(std::move(whom), atom("EXIT"), rsn);
+    send(std::move(dest), atom("EXIT"), rsn);
 }
 
 /**

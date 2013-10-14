@@ -34,10 +34,10 @@
 
 namespace cppa {
 
-message_future sync_send_tuple(actor_ptr whom, any_tuple what) {
-    if (!whom) throw std::invalid_argument("whom == nullptr");
+message_future sync_send_tuple(actor_destination dest, any_tuple what) {
+    if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
     auto req = self->new_request_id();
-    message_header hdr{self, std::move(whom), req};
+    message_header hdr{self, std::move(dest.receiver), req, dest.priority};
     if (self->chaining_enabled()) {
         if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
             self->chained_actor(hdr.receiver.downcast<actor>());
@@ -47,27 +47,30 @@ message_future sync_send_tuple(actor_ptr whom, any_tuple what) {
     return req.response_id();
 }
 
-void delayed_send_tuple(const channel_ptr& to,
-                        const util::duration& rel_time,
+void delayed_send_tuple(channel_destination dest,
+                        const util::duration& rtime,
                         any_tuple data) {
-    if (to) get_scheduler()->delayed_send(to, rel_time, std::move(data));
+    if (dest.receiver) {
+        message_header hdr{self, std::move(dest.receiver), dest.priority};
+        get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
+    }
 }
 
-void delayed_reply_tuple(const util::duration& rel_time,
-                         actor_ptr whom,
-                         message_id mid,
-                         any_tuple data) {
-    if (whom) get_scheduler()->delayed_reply(whom,
-                                             rel_time,
-                                             mid,
-                                             std::move(data));
+message_future timed_sync_send_tuple(actor_destination dest,
+                                     const util::duration& rtime,
+                                     any_tuple what) {
+    auto mf = sync_send_tuple(std::move(dest), std::move(what));
+    message_header hdr{self, self, mf.id()};
+    auto tmp = make_any_tuple(atom("TIMEOUT"));
+    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(tmp));
+    return mf;
 }
 
-
-void delayed_reply_tuple(const util::duration& rel_time,
+void delayed_reply_tuple(const util::duration& rtime,
                          message_id mid,
                          any_tuple data) {
-    delayed_reply_tuple(rel_time, self->last_sender(), mid, std::move(data));
+    message_header hdr{self, self->last_sender(), mid};
+    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
 }
 
 void delayed_reply_tuple(const util::duration& rel_time, any_tuple data) {

@@ -82,6 +82,7 @@ class duration {
                       "only seconds, milliseconds or microseconds allowed");
     }
 
+    // convert minutes to seconds
     template<class Rep>
     constexpr duration(std::chrono::duration<Rep, std::ratio<60, 1> > d)
     : unit(time_unit::seconds), count(d.count() * 60) { }

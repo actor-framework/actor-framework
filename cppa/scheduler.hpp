@@ -108,35 +108,26 @@ class scheduler {
     virtual attachable* register_hidden_context();
 
     template<typename Duration, typename... Data>
-    void delayed_send(const channel_ptr& to,
+    void delayed_send(message_header hdr,
                       const Duration& rel_time,
                       any_tuple data           ) {
         auto tup = make_any_tuple(atom("SEND"),
                                   util::duration{rel_time},
-                                  to,
+                                  std::move(hdr),
                                   std::move(data));
-        auto dsh = delayed_send_helper();
-        dsh->enqueue({self, dsh}, std::move(tup));
+        delayed_send_helper()->enqueue(nullptr, std::move(tup));
     }
 
     template<typename Duration, typename... Data>
-    void delayed_reply(const actor_ptr& to,
+    void delayed_reply(message_header hdr,
                        const Duration& rel_time,
-                       message_id id,
                        any_tuple data           ) {
-        CPPA_REQUIRE(!id.valid() || id.is_response());
-        if (id.valid()) {
-            auto tup = make_any_tuple(atom("REPLY"),
-                                      util::duration{rel_time},
-                                      to,
-                                      id,
-                                      std::move(data));
-            auto dsh = delayed_send_helper();
-            dsh->enqueue({self, dsh}, std::move(tup));
-        }
-        else {
-            this->delayed_send(to, rel_time, std::move(data));
-        }
+        CPPA_REQUIRE(hdr.id.valid() && hdr.id.is_response());
+        auto tup = make_any_tuple(atom("SEND"),
+                                  util::duration{rel_time},
+                                  std::move(hdr),
+                                  std::move(data));
+        delayed_send_helper()->enqueue(nullptr, std::move(tup));
     }
 
     /**
