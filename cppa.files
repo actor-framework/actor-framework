@@ -36,6 +36,7 @@ cppa/detail/fwd.hpp
 cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/handle.hpp
+cppa/detail/ieee_754.hpp
 cppa/detail/implicit_conversions.hpp
 cppa/detail/matches.hpp
 cppa/detail/memory.hpp
@@ -94,6 +95,7 @@ cppa/io/default_message_queue.hpp
 cppa/io/default_peer.hpp
 cppa/io/default_peer_acceptor.hpp
 cppa/io/default_protocol.hpp
+cppa/io/event.hpp
 cppa/io/input_stream.hpp
 cppa/io/ipv4_acceptor.hpp
 cppa/io/ipv4_io_stream.hpp
@@ -325,4 +327,3 @@ unit_testing/test_tuple.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-cppa/io/event.hpp

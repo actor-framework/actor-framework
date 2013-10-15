@@ -51,6 +51,7 @@
 
 #include "cppa/io/default_actor_addressing.hpp"
 
+#include "cppa/detail/ieee_754.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
@@ -138,8 +139,25 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
     }
 };
 
+void test_ieee_754() {
+    // check float packing
+    float f1 = 3.1415925;                  // float value
+    auto p1 = cppa::detail::pack754(f1);   // packet value
+    CPPA_CHECK_EQUAL(p1, 0x40490FDA);
+    auto u1 = cppa::detail::unpack754(p1); // unpacked value
+    CPPA_CHECK_EQUAL(f1, u1);
+    // check double packing
+    double f2 = 3.14159265358979311600;    // float value
+    auto p2 = cppa::detail::pack754(f2);   // packet value
+    CPPA_CHECK_EQUAL(p2, 0x400921FB54442D18);
+    auto u2 = cppa::detail::unpack754(p2); // unpacked value
+    CPPA_CHECK_EQUAL(f2, u2);
+}
+
 int main() {
     CPPA_TEST(test_serialization);
+
+    test_ieee_754();
 
     typedef std::integral_constant<int, detail::impl_id<strmap>()> token;
     CPPA_CHECK_EQUAL(util::is_iterable<strmap>::value, true);

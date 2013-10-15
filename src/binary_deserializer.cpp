@@ -43,6 +43,7 @@
 #include "cppa/type_lookup_table.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/detail/ieee_754.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
 using namespace std;
@@ -68,13 +69,33 @@ inline void range_check(pointer begin, pointer end, size_t read_size) {
     }
 }
 
+pointer read_range(pointer begin, pointer end, string& storage);
+
 template<typename T>
 pointer read_range(pointer begin, pointer end, T& storage,
-//                   typename enable_if<is_integral<T>::value>::type* = 0) {
-                   typename enable_if<is_arithmetic<T>::value>::type* = 0) {
+                   typename enable_if<is_integral<T>::value>::type* = 0) {
     range_check(begin, end, sizeof(T));
     memcpy(&storage, begin, sizeof(T));
     return advanced(begin, sizeof(T));
+}
+
+template<typename T>
+pointer read_range(pointer begin, pointer end, T& storage,
+                   typename enable_if<is_floating_point<T>::value>::type* = 0) {
+    typename detail::ieee_754_trait<T>::packed_type tmp;
+    auto result = read_range(begin, end, tmp);
+    storage = detail::unpack754(tmp);
+    return result;
+}
+
+// the IEEE-754 conversion does not work for long double
+// => fall back to string serialization (event though it sucks)
+pointer read_range(pointer begin, pointer end, long double& storage) {
+    std::string tmp;
+    auto result = read_range(begin, end, tmp);
+    std::istringstream iss{std::move(tmp)};
+    iss >> storage;
+    return result;
 }
 
 pointer read_range(pointer begin, pointer end, string& storage) {

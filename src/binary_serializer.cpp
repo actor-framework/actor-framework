@@ -30,6 +30,7 @@
 
 #include <limits>
 #include <string>
+#include <iomanip>
 #include <cstdint>
 #include <sstream>
 #include <cstring>
@@ -39,14 +40,13 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/type_lookup_table.hpp"
 
+#include "cppa/detail/ieee_754.hpp"
+
 using std::enable_if;
 
 namespace cppa {
 
 namespace {
-
-constexpr size_t chunk_size = 512;
-constexpr size_t ui32_size = sizeof(std::uint32_t);
 
 using util::grow_if_needed;
 
@@ -69,8 +69,23 @@ class binary_writer {
 
     template<typename T>
     void operator()(const T& value,
-                    typename enable_if<std::is_arithmetic<T>::value>::type* = 0) {
+                    typename enable_if<std::is_integral<T>::value>::type* = 0) {
         write_int(m_sink, value);
+    }
+
+    template<typename T>
+    void operator()(const T& value,
+                    typename enable_if<std::is_floating_point<T>::value>::type* = 0) {
+        auto tmp = detail::pack754(value);
+        write_int(m_sink, tmp);
+    }
+
+    // the IEEE-754 conversion does not work for long double
+    // => fall back to string serialization (event though it sucks)
+    void operator()(const long double& v) {
+        std::ostringstream oss;
+        oss << std::setprecision(std::numeric_limits<long double>::digits) << v;
+        write_string(m_sink, oss.str());
     }
 
     void operator()(const atom_value& val) {
