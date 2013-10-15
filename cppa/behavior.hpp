@@ -112,9 +112,6 @@ class behavior {
      */
     behavior add_continuation(continuation_fun fun);
 
-    //template<typename F>
-    //inline behavior add_continuation(F fun);
-
  private:
 
     impl_ptr m_impl;

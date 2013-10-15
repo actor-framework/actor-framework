@@ -40,3 +40,19 @@ partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 void detail::behavior_impl::handle_timeout() { }
 
 } // namespace cppa
+
+namespace cppa { namespace detail {
+
+behavior_impl_ptr combine(behavior_impl_ptr lhs, const partial_function& rhs) {
+    return lhs->or_else(rhs.as_behavior_impl());
+}
+
+behavior_impl_ptr combine(const partial_function& lhs, behavior_impl_ptr rhs) {
+    return lhs.as_behavior_impl()->or_else(rhs);
+}
+
+behavior_impl_ptr extract(const partial_function& arg) {
+    return arg.as_behavior_impl();
+}
+
+} } // namespace cppa::detail

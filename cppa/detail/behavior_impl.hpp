@@ -44,6 +44,7 @@
 
 namespace cppa {
 
+class partial_function;
 typedef optional<any_tuple> bhvr_invoke_result;
 
 } // namespace cppa
@@ -223,6 +224,11 @@ default_behavior_impl<dummy_match_expr, F>* new_default_behavior(util::duration 
 }
 
 typedef intrusive_ptr<behavior_impl> behavior_impl_ptr;
+
+// implemented in partial_function.cpp
+behavior_impl_ptr combine(behavior_impl_ptr, const partial_function&);
+behavior_impl_ptr combine(const partial_function&, behavior_impl_ptr);
+behavior_impl_ptr extract(const partial_function&);
 
 } } // namespace cppa::detail
 

@@ -390,10 +390,86 @@ void test_serial_reply() {
 
 }
 
+void test_or_else() {
+    partial_function handle_a {
+        on("a") >> [] { return 1; }
+    };
+    partial_function handle_b {
+        on("b") >> [] { return 2; }
+    };
+    partial_function handle_c {
+        on("c") >> [] { return 3; }
+    };
+    auto run_testee([](actor_ptr testee) {
+        sync_send(testee, "a").await([](int i) {
+            CPPA_CHECK_EQUAL(i, 1);
+        });
+        sync_send(testee, "b").await([](int i) {
+            CPPA_CHECK_EQUAL(i, 2);
+        });
+        sync_send(testee, "c").await([](int i) {
+            CPPA_CHECK_EQUAL(i, 3);
+        });
+        send_exit(testee, exit_reason::user_shutdown);
+        await_all_others_done();
+    });
+    run_testee(
+        spawn([=] {
+            become(handle_a.or_else(handle_b).or_else(handle_c));
+        })
+    );
+    run_testee(
+        spawn([=] {
+            become(handle_a, handle_b, handle_c);
+        })
+    );
+    run_testee(
+        spawn([=] {
+            become(
+                handle_a.or_else(handle_b),
+                on("c") >> [] { return 3; }
+            );
+        })
+    );
+    run_testee(
+        spawn([=] {
+            become(
+                on("a") >> [] { return 1; },
+                handle_b.or_else(handle_c)
+            );
+        })
+    );
+}
+
+void test_continuation() {
+    auto mirror = spawn<simple_mirror>();
+    spawn([=] {
+        sync_send(mirror, 42).then(
+            on(42) >> [] {
+                return "fourty-two";
+            }
+        ).continue_with(
+            [=](const string& ref) {
+                CPPA_CHECK_EQUAL(ref, "fourty-two");
+                return 4.2f;
+            }
+        ).continue_with(
+            [=](float f) {
+                CPPA_CHECK_EQUAL(f, 4.2f);
+                send_exit(mirror, exit_reason::user_shutdown);
+                self->quit();
+            }
+        );
+    });
+    await_all_others_done();
+}
+
 int main() {
     CPPA_TEST(test_spawn);
 
     test_serial_reply();
+    test_or_else();
+    test_continuation();
 
     // check whether detached actors and scheduled actors interact w/o errors
     auto m = spawn<master, detached>();

@@ -153,8 +153,26 @@ int main() {
     sync_send(ptr, 1.2f).await(
         [] { CPPA_CHECKPOINT(); }
     );
-    send_exit(ptr0, exit_reason::user_shutdown);
-    send_exit(ptr,  exit_reason::user_shutdown);
+    spawn([=] {
+        sync_send(ptr, 2.3f).then(
+            [] (int c) {
+                CPPA_CHECK_EQUAL(c, 3);
+                return "hello continuation";
+            }
+        ).continue_with(
+            [] (const string& str) {
+                CPPA_CHECK_EQUAL(str, "hello continuation");
+                return 4.2;
+            }
+        ).continue_with(
+            [=] (double d) {
+                CPPA_CHECK_EQUAL(d, 4.2);
+                send_exit(ptr0, exit_reason::user_shutdown);
+                send_exit(ptr,  exit_reason::user_shutdown);
+                self->quit();
+            }
+        );
+    });
     await_all_others_done();
     CPPA_CHECKPOINT();
     shutdown();
