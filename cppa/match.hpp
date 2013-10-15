@@ -308,7 +308,7 @@ namespace cppa {
  * @returns A helper object providing <tt>operator(...)</tt>.
  */
 inline detail::match_helper match(any_tuple what) {
-    return std::move(what);
+    return what;
 }
 
 /**

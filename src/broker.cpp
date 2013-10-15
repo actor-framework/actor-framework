@@ -422,7 +422,7 @@ local_actor_ptr init_and_launch(broker_ptr ptr) {
                 mm->continue_reader(kvp.second.get());
         });
     }
-    return move(ptr);
+    return ptr;
 }
 
 broker_ptr broker::from_impl(std::function<void (broker*)> fun,

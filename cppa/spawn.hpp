@@ -49,7 +49,7 @@ inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
                    << " of type " << detail::demangle(typeid(*ptr)));
     if (has_monitor_flag(opts)) self->monitor(ptr);
     if (has_link_flag(opts)) self->link_to(ptr);
-    return std::move(ptr);
+    return ptr;
 }
 
 /** @endcond */

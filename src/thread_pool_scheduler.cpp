@@ -207,7 +207,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_pt
         exec_as_thread(is_hidden, p, [p] {
             p->run_detached();
         });
-        return std::move(p);
+        return p;
     }
     p->attach_to_scheduler(this, is_hidden);
     if (p->has_behavior() || p->impl_type() == default_event_based_impl) {
@@ -216,7 +216,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_pt
         if (p->impl_type() != event_based_impl) m_queue.push_back(p.get());
     }
     else p->on_exit();
-    return std::move(p);
+    return p;
 }
 
 local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
@@ -274,7 +274,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
         exec(os, p);
     }
     CPPA_REQUIRE(result != nullptr);
-    return std::move(result);
+    return result;
 }
 
 } } // namespace cppa::detail

@@ -170,7 +170,7 @@ response_handle local_actor::make_response_handle() {
     auto n = m_current_node;
     response_handle result{this, n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
-    return std::move(result);
+    return result;
 }
 
 void local_actor::exec_behavior_stack() {

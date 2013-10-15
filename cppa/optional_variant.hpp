@@ -451,7 +451,7 @@ make_optional_variant(T value, Ts&&... args) {
 
 template<typename... Ts>
 inline optional_variant<Ts...> make_optional_variant(optional_variant<Ts...> value) {
-    return std::move(value);
+    return value;
 }
 
 } // namespace cppa

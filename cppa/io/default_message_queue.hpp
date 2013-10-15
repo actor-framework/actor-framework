@@ -55,7 +55,7 @@ class default_message_queue : public ref_counted {
     inline value_type pop() {
         value_type result(std::move(m_impl.front()));
         m_impl.erase(m_impl.begin());
-        return std::move(result);
+        return result;
     }
 
  private:

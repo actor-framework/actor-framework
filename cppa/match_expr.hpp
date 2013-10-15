@@ -501,7 +501,7 @@ Result unroll_expr(PPFPs& fs,
     /* recursively evaluate sub expressions */ {
         Result res = unroll_expr<Result>(fs, bitmask, long_constant<N-1>{},
                                          type_token, is_dynamic, ptr, tup);
-        if (res) return std::move(res);
+        if (res) return res;
     }
     if ((bitmask & (0x01 << N)) == 0) return none;
     auto& f = get<N>(fs);
@@ -597,7 +597,7 @@ inline any_tuple& detach_if_needed(any_tuple& tup, std::true_type) {
 inline any_tuple detach_if_needed(const any_tuple& tup, std::true_type) {
     any_tuple cpy{tup};
     cpy.force_detach();
-    return std::move(cpy);
+    return cpy;
 }
 
 inline const any_tuple& detach_if_needed(const any_tuple& tup, std::false_type) {
