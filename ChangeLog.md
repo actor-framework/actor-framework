@@ -1,3 +1,13 @@
+Version 0.8.1
+-------------
+
+__2013_10_16__
+
+- GCC 4.7 compatibility
+- Fixed handling of partial functions in `match_expr_concat`
+- Serialize floating points as IEEE 754
+- Removed ftemplate-backtrace-limit option (causes build error in GCC 4.7)
+
 Version 0.8
 -----------
 
