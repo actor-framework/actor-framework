@@ -68,8 +68,8 @@ struct ieee_754_trait<std::uint64_t> : ieee_754_trait<double> { };
 
 template<typename T>
 typename ieee_754_trait<T>::packed_type pack754(T f) {
-    using trait = ieee_754_trait<T>;
-    using result_type = typename trait::packed_type;
+    typedef ieee_754_trait<T> trait;
+    typedef typename trait::packed_type result_type;
     // filter special type
     if (f == trait::zero) return 0;
     auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
@@ -106,8 +106,8 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
 
 template<typename T>
 typename ieee_754_trait<T>::float_type unpack754(T i) {
-    using trait = ieee_754_trait<T>;
-    using result_type = typename trait::float_type;
+    typedef ieee_754_trait<T> trait;
+    typedef typename trait::float_type result_type;
     if (i == 0) return trait::zero;
     auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
     // pull the significand
