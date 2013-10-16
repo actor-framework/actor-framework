@@ -37,31 +37,10 @@
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 
+#include "cppa/io/event.hpp"
 #include "cppa/io/continuable.hpp"
 
 namespace cppa { namespace io {
-
-typedef int event_bitmask;
-
-namespace event { namespace {
-
-constexpr event_bitmask none  = 0x00;
-constexpr event_bitmask read  = 0x01;
-constexpr event_bitmask write = 0x02;
-constexpr event_bitmask both  = 0x03;
-constexpr event_bitmask error = 0x04;
-
-} } // namespace event
-
-template<unsigned InputEvent, unsigned OutputEvent, unsigned ErrorEvent>
-inline event_bitmask from_int_bitmask(unsigned mask) {
-    event_bitmask result = event::none;
-    // read/write as long as possible
-    if (mask & InputEvent) result = event::read;
-    if (mask & OutputEvent) result |= event::write;
-    if (result == event::none && mask & ErrorEvent) result = event::error;
-    return result;
-}
 
 struct fd_meta_info {
     native_socket_type fd;

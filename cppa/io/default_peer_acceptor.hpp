@@ -56,7 +56,7 @@ class default_peer_acceptor : public continuable {
 
     void dispose() override;
 
-    void io_failed() override;
+    void io_failed(event_bitmask) override;
 
  private:
 

@@ -122,7 +122,7 @@ void protobuf_io(broker* thisptr, connection_handle hdl, const actor_ptr& buddy)
                 send(buddy, atom("pong"), p.pong().id());
             }
             else {
-                self->quit(exit_reason::user_defined);
+                self->quit(exit_reason::user_shutdown);
                 cerr << "neither Ping nor Pong!" << endl;
             }
             // receive next length prefix
@@ -138,7 +138,7 @@ void protobuf_io(broker* thisptr, connection_handle hdl, const actor_ptr& buddy)
             num_bytes = htonl(num_bytes);
             if (num_bytes < 0 || num_bytes > (1024 * 1024)) {
                 aout << "someone is trying something nasty" << endl;
-                self->quit(exit_reason::user_defined);
+                self->quit(exit_reason::user_shutdown);
                 return;
             }
             // receive protobuf data

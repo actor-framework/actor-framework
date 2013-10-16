@@ -69,6 +69,9 @@ struct optional_variant_copy_helper {
     inline void operator()() const {
         lhs = unit;
     }
+    inline void operator()(const none_t&) const {
+        lhs = none;
+    }
 };
 
 template<typename T>
@@ -448,7 +451,7 @@ make_optional_variant(T value, Ts&&... args) {
 
 template<typename... Ts>
 inline optional_variant<Ts...> make_optional_variant(optional_variant<Ts...> value) {
-    return std::move(value);
+    return value;
 }
 
 } // namespace cppa

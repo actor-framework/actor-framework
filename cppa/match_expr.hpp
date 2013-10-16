@@ -501,7 +501,7 @@ Result unroll_expr(PPFPs& fs,
     /* recursively evaluate sub expressions */ {
         Result res = unroll_expr<Result>(fs, bitmask, long_constant<N-1>{},
                                          type_token, is_dynamic, ptr, tup);
-        if (res) return std::move(res);
+        if (res) return res;
     }
     if ((bitmask & (0x01 << N)) == 0) return none;
     auto& f = get<N>(fs);
@@ -520,8 +520,8 @@ Result unroll_expr(PPFPs& fs,
 }
 
 // PPFP = projection_partial_function_pair
-template<class PPFPs, class Tuple>
-inline bool can_unroll_expr(PPFPs&, minus1l, const std::type_info&, const Tuple&) {
+template<class PPFPs, class T>
+inline bool can_unroll_expr(PPFPs&, minus1l, const std::type_info&, const T&) {
     return false;
 }
 
@@ -597,7 +597,7 @@ inline any_tuple& detach_if_needed(any_tuple& tup, std::true_type) {
 inline any_tuple detach_if_needed(const any_tuple& tup, std::true_type) {
     any_tuple cpy{tup};
     cpy.force_detach();
-    return std::move(cpy);
+    return cpy;
 }
 
 inline const any_tuple& detach_if_needed(const any_tuple& tup, std::false_type) {
@@ -906,21 +906,40 @@ match_expr_collect(const T& arg, const Ts&... args) {
 
 namespace detail {
 
-typedef std::true_type  with_timeout;
-typedef std::false_type without_timeout;
-
-// with timeout
+//typedef std::true_type  with_timeout;
+//typedef std::false_type without_timeout;
 
 // end of recursion
+template<class Data, class Token>
+behavior_impl_ptr concat_rec(const Data& data, Token) {
+    typedef typename match_expr_from_type_list<Token>::type combined_type;
+    auto lvoid = [] { };
+    typedef default_behavior_impl<combined_type, decltype(lvoid)> impl_type;
+    return new impl_type(data, util::duration{}, lvoid);
+}
+
+// end of recursion with nothing but a partial function
+inline behavior_impl_ptr concat_rec(const tdata<>&,
+                                    util::empty_type_list,
+                                    const partial_function& pfun) {
+    return extract(pfun);
+}
+
+// end of recursion with timeout
 template<class Data, class Token, typename F>
-behavior_impl* concat_rec(const Data& data, Token, const timeout_definition<F>& arg) {
+behavior_impl_ptr concat_rec(const Data& data,
+                             Token,
+                             const timeout_definition<F>& arg) {
     typedef typename match_expr_from_type_list<Token>::type combined_type;
     return new default_behavior_impl<combined_type, F>{data, arg};
 }
 
 // recursive concatenation function
 template<class Data, class Token, typename T, typename... Ts>
-behavior_impl* concat_rec(const Data& data, Token, const T& arg, const Ts&... args) {
+behavior_impl_ptr concat_rec(const Data& data,
+                             Token,
+                             const T& arg,
+                             const Ts&... args) {
     typedef typename util::tl_concat<
             Token,
             typename T::cases_list
@@ -938,57 +957,41 @@ behavior_impl* concat_rec(const Data& data, Token, const T& arg, const Ts&... ar
     return concat_rec(next_data, next_token, args...);
 }
 
-template<typename F>
-behavior_impl* concat_expr(with_timeout, const timeout_definition<F>& arg) {
-    typedef default_behavior_impl<dummy_match_expr, F> impl_type;
-    return new impl_type(dummy_match_expr{}, arg);
+// handle partial functions at end of recursion
+template<class Data, class Token>
+behavior_impl_ptr concat_rec(const Data& data,
+                             Token token,
+                             const partial_function& pfun) {
+    return combine(concat_rec(data, token), pfun);
 }
 
-template<typename T, typename... Ts>
-behavior_impl* concat_expr(with_timeout, const T& arg, const Ts&... args) {
-    typename tdata_from_type_list<
-            typename util::tl_map<
-                typename T::cases_list,
-                gref_wrapped
-            >::type
-        >::type
-        wrapper;
-    detail::rebind_tdata(wrapper, arg.cases());
-    return concat_rec(wrapper, typename T::cases_list{}, args...);
+// handle partial functions in between
+template<class Data, class Token, typename T, typename... Ts>
+behavior_impl_ptr concat_rec(const Data& data,
+                             Token token,
+                             const partial_function& pfun,
+                             const T& arg,
+                             const Ts&... args) {
+    auto lhs = concat_rec(data, token);
+    detail::tdata<> dummy;
+    auto rhs = concat_rec(dummy, util::empty_type_list{}, arg, args...);
+    return combine(lhs, pfun)->or_else(rhs);
 }
 
-// without timeout
-
+// handle partial functions at recursion start
 template<typename T, typename... Ts>
-behavior_impl* concat_expr(without_timeout, const T& arg, const Ts&... args) {
-    typename tdata_from_type_list<
-        typename util::tl_map<
-            typename util::tl_concat<
-                typename T::cases_list,
-                typename Ts::cases_list...
-            >::type,
-            gref_wrapped
-        >::type
-    >::type
-    all_cases;
-    typedef typename match_expr_from_type_list<
-                typename util::tl_concat<
-                    typename T::cases_list,
-                    typename Ts::cases_list...
-                >::type
-            >::type
-            combined_type;
-    auto lvoid = [] { };
-    typedef default_behavior_impl<combined_type, decltype(lvoid)> impl_type;
-    rebind_tdata(all_cases, arg.cases(), args.cases()...);
-    return new impl_type(all_cases, util::duration{}, lvoid);
+behavior_impl_ptr concat_rec(const tdata<>& data,
+                             util::empty_type_list token,
+                             const partial_function& pfun,
+                             const T& arg,
+                             const Ts&... args) {
+    return combine(pfun, concat_rec(data, token, arg, args...));
 }
 
 template<typename T, typename... Ts>
 behavior_impl_ptr match_expr_concat(const T& arg, const Ts&... args) {
-    std::integral_constant<bool, util::disjunction<T::may_have_timeout, Ts::may_have_timeout...>::value> token;
-    // use static call dispatch to select correct function
-    return concat_expr(token, arg, args...);
+    detail::tdata<> dummy;
+    return concat_rec(dummy, util::empty_type_list{}, arg, args...);
 }
 
 } // namespace detail

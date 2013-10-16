@@ -108,7 +108,7 @@ inline void assert_types() {
 
 template<typename T>
 struct lifted_result_type {
-    typedef util::type_list<T> type;
+    typedef util::type_list<typename detail::implicit_conversions<T>::type> type;
 };
 
 template<typename... Ts>

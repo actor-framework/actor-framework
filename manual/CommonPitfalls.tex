@@ -25,13 +25,12 @@ Related functions, e.g., \lstinline^sync_send(...).then(...)^, behave the same, 
 \begin{itemize}
 
 \item
-\lstinline^send(self->last_sender(), ...)^ is \textbf{not} equal to \lstinline^reply(...)^.
-The two functions \lstinline^receive_response^ and \lstinline^handle_response^ will only recognize messages send via either \lstinline^reply^ or \lstinline^reply_tuple^.
+\lstinline^send(self->last_sender(), ...)^ does \textbf{not} send a response message.
 
 \item
 A handle returned by \lstinline^sync_send^ represents \emph{exactly one} response message.
 Therefore, it is not possible to receive more than one response message.
-Calling \lstinline^reply^ more than once will result in lost messages and calling \lstinline^handle_response^ or \lstinline^receive_response^ more than once on a future will throw an exception.
+%Calling \lstinline^reply^ more than once will result in lost messages and calling \lstinline^handle_response^ or \lstinline^receive_response^ more than once on a future will throw an exception.
 
 \item
 The future returned by \lstinline^sync_send^ is bound to the calling actor.

@@ -39,65 +39,7 @@
 namespace cppa {
 
 template<typename... Signatures>
-class typed_actor_ptr;
-
-// functions that need access to typed_actor_ptr::unbox()
-template<spawn_options Options, typename... Ts>
-typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
-spawn_typed(const match_expr<Ts...>&);
-
-template<typename... Ts>
-void send_exit(const typed_actor_ptr<Ts...>&, std::uint32_t);
-
-template<typename... Signatures, typename... Ts>
-void send(const typed_actor_ptr<Signatures...>&, Ts&&...);
-
-template<typename... Ts, typename... Us>
-typed_message_future<
-    typename detail::deduce_output_type<
-        util::type_list<Ts...>,
-        util::type_list<
-            typename detail::implicit_conversions<
-                typename util::rm_const_and_ref<
-                    Us
-                >::type
-            >::type...
-        >
-    >::type
->
-sync_send(const typed_actor_ptr<Ts...>&, Us&&...);
-
-template<typename... Signatures>
 class typed_actor_ptr {
-
-    template<typename... OtherSignatures>
-    friend class typed_actor_ptr;
-
-    template<spawn_options Options, typename... Ts>
-    friend typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
-           spawn_typed(const match_expr<Ts...>&);
-
-    template<typename... Ts>
-    friend void send_exit(const typed_actor_ptr<Ts...>&, std::uint32_t);
-
-    template<typename... Sigs, typename... Ts>
-    friend void send(const typed_actor_ptr<Sigs...>&, Ts&&...);
-
-
-    template<typename... Ts, typename... Us>
-    friend typed_message_future<
-               typename detail::deduce_output_type<
-                   util::type_list<Ts...>,
-                   util::type_list<
-                       typename detail::implicit_conversions<
-                           typename util::rm_const_and_ref<
-                               Us
-                           >::type
-                       >::type...
-                   >
-               >::type
-           >
-           sync_send(const typed_actor_ptr<Ts...>&, Us&&...);
 
  public:
 
@@ -111,21 +53,38 @@ class typed_actor_ptr {
 
     template<typename... Others>
     typed_actor_ptr(typed_actor_ptr<Others...> other) {
-        static_assert(util::tl_is_strict_subset<
-                          util::type_list<Signatures...>,
-                          util::type_list<Others...>
-                      >::value,
-                      "'this' must be a strict subset of 'other'");
-        m_ptr = std::move(other.m_ptr);
+        set(std::move(other));
     }
+
+    template<typename... Others>
+    typed_actor_ptr& operator=(typed_actor_ptr<Others...> other) {
+        set(std::move(other));
+        return *this;
+    }
+
+    /** @cond PRIVATE */
+    static typed_actor_ptr cast_from(actor_ptr from) {
+        return {std::move(from)};
+    }
+    const actor_ptr& type_erased() const { return m_ptr; }
+    actor_ptr& type_erased() { return m_ptr; }
+    /** @endcond */
 
  private:
 
-    /** @cond PRIVATE */
-    const actor_ptr& unbox() const { return m_ptr; }
-    /** @endcond */
-
     typed_actor_ptr(actor_ptr ptr) : m_ptr(std::move(ptr)) { }
+
+    template<class ListA, class ListB>
+    inline void check_signatures() {
+        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
+                      "'this' must be a strict subset of 'other'");
+    }
+
+    template<typename... Others>
+    inline void set(typed_actor_ptr<Others...> other) {
+        check_signatures<signatures, util::type_list<Others...>>();
+        m_ptr = std::move(other.type_erased());
+    }
 
     actor_ptr m_ptr;
 

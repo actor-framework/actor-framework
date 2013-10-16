@@ -1,2 +1,77 @@
 \section{Strongly Typed Actors}
 
+Strongly typed actors provide a convenient way of defining type-safe messaging interfaces.
+Unlike ``dynamic actors'', typed actors are not allowed to change their behavior at runtime, neither are typed actors allowed to use guard expressions.
+When calling \lstinline^become^ in a strongly typed actor, the actor will be killed with exit reason \lstinline^unallowed_function_call^.
+
+Typed actors use \lstinline^typed_actor_ptr<...>^ instead of \lstinline^actor_ptr^, whereas the template parameters hold the messaging interface.
+For example, an actor responding to two integers with a dobule would use the type \lstinline^typed_actor_ptr<replies_to<int, int>::with<double>>^.
+
+All functions for message passing, linking and monitoring are overloaded to accept both types of actors.
+As of version 0.8, strongly typed actors cannot be published and do not support message priorities (those are planned feature for future releases).
+
+\subsection{Spawning Typed Actors}
+\label{sec:strong:spawn}
+
+Actors are spawned using the function \lstinline^spawn_typed^.
+The argument to this function call \emph{must} be a match expression as shown in the example below, because the runtime of libcppa needs to evaluate the signature of each message handler.
+
+\begin{lstlisting}
+auto p0 = spawn_typed(
+  on_arg_match >> [](int a, int b) {
+   return static_cast<double>(a) * b;
+  },
+  on_arg_match >> [](double a, double b) {
+    return make_cow_tuple(a * b, a / b);
+  }
+);
+// assign to identical type
+using full_type = typed_actor_ptr<
+                    replies_to<int, int>::with<double>,
+                    replies_to<double, double>::with<double, double>
+                  >;
+full_type p1 = p0;
+// assign to subtype
+using subtype1 = typed_actor_ptr<
+                   replies_to<int, int>::with<double>
+                 >;
+subtype1 p2 = p0;
+// assign to another subtype
+using subtype2 = typed_actor_ptr<
+                   replies_to<double, double>::with<double, double>
+                 >;
+subtype2 p3 = p0;
+\end{lstlisting}
+
+\clearpage
+\subsection{Class-based Typed Actors}
+
+Typed actors can be implemented using a class by inheriting from \lstinline^typed_actor<...>^, whereas the template parameter pack denotes the messaging interface.
+Derived classes have to implemented the pure virtual member function \lstinline^make_behavior^, as shown in the example below.
+
+\begin{lstlisting}
+// implementation
+class typed_testee : public typed_actor<replies_to<int>::with<bool>> {
+
+ protected:
+
+  behavior_type make_behavior() final {
+    // returning a non-matching expression 
+    // results in a compile-time error
+    return (
+      on_arg_match >> [](int value) {
+        return value == 42;
+      }
+    );
+  }
+
+};
+
+// instantiation
+auto testee = spawn_typed<typed_testee>();
+\end{lstlisting}
+
+It is worth mentioning that \lstinline^typed_actor^ implements the member function \lstinline^init()^ using the \lstinline^final^ qualifier.
+Hence, derived classes are not allowed to override \lstinline^init()^.
+However, typed actors are allowed to override other member functions such as \lstinline^on_exit()^.
+The return type of \lstinline^make_behavior^ is \lstinline^typed_behavior<...>^, which is aliased as \lstinline^behavior_type^ for convenience.

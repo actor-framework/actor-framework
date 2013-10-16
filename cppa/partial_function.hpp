@@ -65,7 +65,7 @@ class partial_function {
 
     typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
 
-    inline auto as_behavior_impl() const -> const impl_ptr&;
+    inline auto as_behavior_impl() const -> impl_ptr;
 
     partial_function(impl_ptr ptr);
 
@@ -142,7 +142,7 @@ match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
 template<typename... Cases>
 partial_function operator,(const match_expr<Cases...>& mexpr,
                            const partial_function& pfun) {
-    return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl);
+    return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl());
 }
 
 /******************************************************************************
@@ -177,7 +177,7 @@ partial_function::or_else(Ts&&... args) const {
     return m_impl->or_else(tmp.as_behavior_impl());
 }
 
-inline auto partial_function::as_behavior_impl() const -> const impl_ptr& {
+inline auto partial_function::as_behavior_impl() const -> impl_ptr {
     return m_impl;
 }
 

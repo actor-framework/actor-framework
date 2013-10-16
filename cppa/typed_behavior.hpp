@@ -28,53 +28,66 @@
 \******************************************************************************/
 
 
-#include "cppa/send.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
+#ifndef TYPED_BEHAVIOR_HPP
+#define TYPED_BEHAVIOR_HPP
+
+#include "cppa/behavior.hpp"
+#include "cppa/match_expr.hpp"
+
+#include "cppa/detail/typed_actor_util.hpp"
 
 namespace cppa {
 
-message_future sync_send_tuple(actor_destination dest, any_tuple what) {
-    if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
-    auto req = self->new_request_id();
-    message_header hdr{self, std::move(dest.receiver), req, dest.priority};
-    if (self->chaining_enabled()) {
-        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
-            self->chained_actor(hdr.receiver.downcast<actor>());
-        }
+template<typename... Signatures>
+class typed_actor;
+
+template<typename... Signatures>
+class typed_behavior {
+
+    template<typename... OtherSignatures>
+    friend class typed_actor;
+
+    typed_behavior() = delete;
+
+ public:
+
+    typed_behavior(typed_behavior&&) = default;
+    typed_behavior(const typed_behavior&) = default;
+    typed_behavior& operator=(typed_behavior&&) = default;
+    typed_behavior& operator=(const typed_behavior&) = default;
+
+    typedef util::type_list<Signatures...> signatures;
+
+    template<typename... Cs>
+    typed_behavior(match_expr<Cs...> expr) {
+        set(std::move(expr));
     }
-    else hdr.deliver(std::move(what));
-    return req.response_id();
-}
 
-void delayed_send_tuple(channel_destination dest,
-                        const util::duration& rtime,
-                        any_tuple data) {
-    if (dest.receiver) {
-        message_header hdr{self, std::move(dest.receiver), dest.priority};
-        get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
+    template<typename... Cs>
+    typed_behavior& operator=(match_expr<Cs...> expr) {
+        set(std::move(expr));
+        return *this;
     }
-}
 
-message_future timed_sync_send_tuple(actor_destination dest,
-                                     const util::duration& rtime,
-                                     any_tuple what) {
-    auto mf = sync_send_tuple(std::move(dest), std::move(what));
-    message_header hdr{self, self, mf.id()};
-    auto tmp = make_any_tuple(atom("TIMEOUT"));
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(tmp));
-    return mf;
-}
+ private:
 
-void delayed_reply_tuple(const util::duration& rtime,
-                         message_id mid,
-                         any_tuple data) {
-    message_header hdr{self, self->last_sender(), mid};
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
-}
+    behavior& unbox() { return m_bhvr; }
 
-void delayed_reply_tuple(const util::duration& rel_time, any_tuple data) {
-    delayed_reply_tuple(rel_time, self->get_response_id(), std::move(data));
-}
+    template<typename... Cs>
+    void set(match_expr<Cs...>&& expr) {
+        m_bhvr = std::move(expr);
+        using input = util::type_list<
+                          typename detail::deduce_signature<Cs>::type...
+                      >;
+        // check whether the signature is an exact match
+        static_assert(util::tl_equal<signatures, input>::value,
+                      "'expr' does not match given signature");
+    }
+
+    behavior m_bhvr;
+
+};
 
 } // namespace cppa
+
+#endif // TYPED_BEHAVIOR_HPP

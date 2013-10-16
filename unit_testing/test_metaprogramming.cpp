@@ -29,8 +29,6 @@ int main() {
 
     CPPA_TEST(test_metaprogramming);
 
-    CPPA_PRINT("test type_list");
-
     typedef type_list<int, float, std::string> l1;
     typedef typename tl_reverse<l1>::type r1;
 
@@ -52,8 +50,6 @@ int main() {
     CPPA_CHECK_EQUAL((util::tl_count<l1, is_int>::value), 1);
     CPPA_CHECK_EQUAL((util::tl_count<l2, is_int>::value), 2);
 
-    CPPA_PRINT("test int_list");
-
     typedef int_list<0, 1, 2, 3, 4, 5> il0;
     typedef int_list<4, 5> il1;
     typedef typename il_right<il0, 2>::type il2;
@@ -67,6 +63,7 @@ int main() {
         CPPA_CHECK((tl_is_strict_subset<list_a, list_b>::value));
         CPPA_CHECK(!(tl_is_strict_subset<list_b, list_a>::value));
         CPPA_CHECK((tl_is_strict_subset<list_a, list_a>::value));
+        CPPA_CHECK((tl_is_strict_subset<list_b, list_b>::value));
     }
 
     return CPPA_TEST_RESULT();

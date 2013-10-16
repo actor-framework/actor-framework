@@ -77,9 +77,11 @@ default_peer::default_peer(default_protocol* parent,
     m_meta_msg = uniform_typeid<any_tuple>();
 }
 
-void default_peer::io_failed() {
-    CPPA_LOG_TRACE("node = " << (m_node ? to_string(*m_node) : "nullptr"));
-    if (m_node) {
+void default_peer::io_failed(event_bitmask mask) {
+    CPPA_LOG_TRACE("node = " << (m_node ? to_string(*m_node) : "nullptr")
+                   << " mask = " << mask);
+    // make sure this code is executed only once by filtering for read failure
+    if (mask == event::read && m_node) {
         // kill all proxies
         auto& children = m_parent->addressing()->proxies(*m_node);
         for (auto& kvp : children) {

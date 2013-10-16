@@ -35,6 +35,8 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
+#include "cppa/io/event.hpp"
+
 namespace cppa { namespace io {
 
 /**
@@ -102,9 +104,11 @@ class continuable {
 
     /**
      * @brief Called from middleman before it removes this object
-     *        due to an IO failure.
+     *        due to an IO failure, can be called twice
+     *        (for read and for write error).
+     * @param bitmask Either @p read or @p write.
      */
-     virtual void io_failed() = 0;
+     virtual void io_failed(event_bitmask bitmask) = 0;
 
  protected:
 
@@ -121,7 +125,6 @@ class continuable {
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/
-
 
 inline native_socket_type continuable::read_handle() const {
     return m_rd;

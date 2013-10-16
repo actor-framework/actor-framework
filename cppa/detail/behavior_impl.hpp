@@ -31,6 +31,7 @@
 #ifndef BEHAVIOR_IMPL_HPP
 #define BEHAVIOR_IMPL_HPP
 
+#include "cppa/atom.hpp"
 #include "cppa/optional.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
@@ -43,18 +44,29 @@
 
 namespace cppa {
 
+class partial_function;
 typedef optional<any_tuple> bhvr_invoke_result;
 
 } // namespace cppa
 
 namespace cppa { namespace detail {
 
+template<class T> struct is_message_id_wrapper {
+    template<class U> static char (&test(typename U::message_id_wrapper_tag))[1];
+    template<class U> static char (&test(...))[2];
+    static constexpr bool value = sizeof(test<T>(0)) == 1;
+};
+
 struct optional_any_tuple_visitor {
     inline bhvr_invoke_result operator()() const { return any_tuple{}; }
     inline bhvr_invoke_result operator()(const none_t&) const { return none; }
     template<typename T>
-    inline bhvr_invoke_result operator()(T& value) const {
+    inline bhvr_invoke_result operator()(T& value, typename std::enable_if<not is_message_id_wrapper<T>::value>::type* = 0) const {
         return make_any_tuple(std::move(value));
+    }
+    template<typename T>
+    inline bhvr_invoke_result operator()(T& value, typename std::enable_if<is_message_id_wrapper<T>::value>::type* = 0) const {
+        return make_any_tuple(atom("MESSAGE_ID"), value.get_message_id().integer_value());
     }
     template<typename... Ts>
     inline bhvr_invoke_result operator()(cow_tuple<Ts...>& value) const {
@@ -168,7 +180,7 @@ class default_behavior_impl : public behavior_impl {
     }
 
     typename behavior_impl::pointer copy(const generic_timeout_definition& tdef) const {
-        return new default_behavior_impl<MatchExpr, std::function<void()> >(m_expr, tdef);
+        return new default_behavior_impl<MatchExpr, std::function<void()>>(m_expr, tdef);
     }
 
     void handle_timeout() { m_fun(); }
@@ -212,6 +224,11 @@ default_behavior_impl<dummy_match_expr, F>* new_default_behavior(util::duration 
 }
 
 typedef intrusive_ptr<behavior_impl> behavior_impl_ptr;
+
+// implemented in partial_function.cpp
+behavior_impl_ptr combine(behavior_impl_ptr, const partial_function&);
+behavior_impl_ptr combine(const partial_function&, behavior_impl_ptr);
+behavior_impl_ptr extract(const partial_function&);
 
 } } // namespace cppa::detail
 

@@ -28,53 +28,33 @@
 \******************************************************************************/
 
 
-#include "cppa/send.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
+#ifndef EVENT_HPP
+#define EVENT_HPP
 
-namespace cppa {
+namespace cppa { namespace io {
 
-message_future sync_send_tuple(actor_destination dest, any_tuple what) {
-    if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
-    auto req = self->new_request_id();
-    message_header hdr{self, std::move(dest.receiver), req, dest.priority};
-    if (self->chaining_enabled()) {
-        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
-            self->chained_actor(hdr.receiver.downcast<actor>());
-        }
-    }
-    else hdr.deliver(std::move(what));
-    return req.response_id();
+typedef int event_bitmask;
+
+namespace event { namespace {
+
+constexpr event_bitmask none  = 0x00;
+constexpr event_bitmask read  = 0x01;
+constexpr event_bitmask write = 0x02;
+constexpr event_bitmask both  = 0x03;
+constexpr event_bitmask error = 0x04;
+
+} } // namespace <anonymous>::event
+
+template<unsigned InputEvent, unsigned OutputEvent, unsigned ErrorEvent>
+inline event_bitmask from_int_bitmask(unsigned mask) {
+    event_bitmask result = event::none;
+    // read/write as long as possible
+    if (mask & InputEvent) result = event::read;
+    if (mask & OutputEvent) result |= event::write;
+    if (result == event::none && mask & ErrorEvent) result = event::error;
+    return result;
 }
 
-void delayed_send_tuple(channel_destination dest,
-                        const util::duration& rtime,
-                        any_tuple data) {
-    if (dest.receiver) {
-        message_header hdr{self, std::move(dest.receiver), dest.priority};
-        get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
-    }
-}
+} } // namespace cppa::io
 
-message_future timed_sync_send_tuple(actor_destination dest,
-                                     const util::duration& rtime,
-                                     any_tuple what) {
-    auto mf = sync_send_tuple(std::move(dest), std::move(what));
-    message_header hdr{self, self, mf.id()};
-    auto tmp = make_any_tuple(atom("TIMEOUT"));
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(tmp));
-    return mf;
-}
-
-void delayed_reply_tuple(const util::duration& rtime,
-                         message_id mid,
-                         any_tuple data) {
-    message_header hdr{self, self->last_sender(), mid};
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
-}
-
-void delayed_reply_tuple(const util::duration& rel_time, any_tuple data) {
-    delayed_reply_tuple(rel_time, self->get_response_id(), std::move(data));
-}
-
-} // namespace cppa
+#endif // EVENT_HPP

@@ -24,7 +24,7 @@ behavior ping_behavior(size_t num_pings) {
             if (++s_pongs >= num_pings) {
                 CPPA_LOGF_INFO("reached maximum, send {'EXIT', user_defined} "
                                << "to last sender and quit with normal reason");
-                send_exit(self->last_sender(), exit_reason::user_defined);
+                send_exit(self->last_sender(), exit_reason::user_shutdown);
                 self->quit();
             }
             return {atom("ping"), value};
@@ -32,7 +32,7 @@ behavior ping_behavior(size_t num_pings) {
         others() >> [] {
             CPPA_LOGF_ERROR("unexpected message; "
                             << to_string(self->last_dequeued()));
-            self->quit(exit_reason::user_defined);
+            self->quit(exit_reason::user_shutdown);
         }
     );
 }
@@ -46,7 +46,7 @@ behavior pong_behavior() {
         others() >> [] {
             CPPA_LOGF_ERROR("unexpected message; "
                             << to_string(self->last_dequeued()));
-            self->quit(exit_reason::user_defined);
+            self->quit(exit_reason::user_shutdown);
         }
     );
 }

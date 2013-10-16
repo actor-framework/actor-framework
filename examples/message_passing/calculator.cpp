@@ -55,7 +55,7 @@ void tester(const actor_ptr& testee) {
     // will be invoked if we receive an unexpected response message
     self->on_sync_failure([] {
         aout << "AUT (actor under test) failed" << endl;
-        self->quit(exit_reason::user_defined);
+        self->quit(exit_reason::user_shutdown);
     });
     // first test: 2 + 1 = 3
     sync_send(testee, atom("plus"), 2, 1).then(

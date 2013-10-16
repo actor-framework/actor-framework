@@ -115,7 +115,7 @@ inline actor_ptr fwd_aptr(const self_type& s) {
 }
 
 inline actor_ptr fwd_aptr(actor_ptr ptr) {
-    return std::move(ptr);
+    return ptr;
 }
 
 struct oss_wr {

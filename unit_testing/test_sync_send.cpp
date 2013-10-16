@@ -104,12 +104,13 @@ struct D : popular_actor {
     void init() {
         become (
             others() >> [=] {
+                /*
                 response_handle handle = make_response_handle();
                 sync_send_tuple(buddy(), last_dequeued()).then([=] {
                     reply_to(handle, last_dequeued());
                     quit();
                 });
-                /*/
+                //*/
                 return sync_send_tuple(buddy(), last_dequeued()).then([=]() -> any_tuple {
                     quit();
                     return last_dequeued();
@@ -138,7 +139,7 @@ struct D : popular_actor {
 struct server : event_based_actor {
 
     void init() {
-        auto die = [=] { quit(exit_reason::user_defined); };
+        auto die = [=] { quit(exit_reason::user_shutdown); };
         become (
             on(atom("idle")) >> [=] {
                 auto worker = last_sender();
@@ -201,10 +202,10 @@ int main() {
         );
         CPPA_CHECK_EQUAL(sync_failure_called, true);
         CPPA_CHECK_EQUAL(int_handler_called, false);
-        self->quit(exit_reason::user_defined);
+        self->quit(exit_reason::user_shutdown);
     });
     receive (
-        on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     auto mirror = spawn<sync_mirror>();
@@ -214,7 +215,7 @@ int main() {
     .continue_with([&] { continuation_called = true; });
     self->exec_behavior_stack();
     CPPA_CHECK_EQUAL(continuation_called, true);
-    send_exit(mirror, exit_reason::user_defined);
+    send_exit(mirror, exit_reason::user_shutdown);
     await_all_others_done();
     CPPA_CHECKPOINT();
     auto await_success_message = [&] {
@@ -245,7 +246,11 @@ int main() {
     int i = 0;
     receive_for(i, 3) (
         on(atom("DOWN"), exit_reason::normal) >> CPPA_CHECKPOINT_CB(),
-        on(atom("NoWay")) >> CPPA_CHECKPOINT_CB(),
+        on(atom("NoWay")) >> [] {
+            CPPA_CHECKPOINT();
+            CPPA_PRINT("trigger \"actor did not reply to a "
+                       "synchronous request message\"");
+        },
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
@@ -270,7 +275,7 @@ int main() {
     sync_send(c, atom("gogo")).then(CPPA_CHECKPOINT_CB())
                               .continue_with(CPPA_CHECKPOINT_CB());
     self->exec_behavior_stack();
-    send_exit(c, exit_reason::user_defined);
+    send_exit(c, exit_reason::user_shutdown);
     await_all_others_done();
     CPPA_CHECKPOINT();
 
@@ -300,11 +305,11 @@ int main() {
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         send(s, "Ever danced with the devil in the pale moonlight?");
-        // response: {'EXIT', exit_reason::user_defined}
+        // response: {'EXIT', exit_reason::user_shutdown}
         receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
     receive (
-        on(atom("DOWN"), exit_reason::user_defined) >> CPPA_CHECKPOINT_CB(),
+        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     await_all_others_done();

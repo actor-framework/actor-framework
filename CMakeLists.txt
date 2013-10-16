@@ -3,7 +3,7 @@ project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
-set(LIBCPPA_VERSION_PATCH 0)
+set(LIBCPPA_VERSION_PATCH 1)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -24,7 +24,7 @@ if (CMAKE_CXX_FLAGS)
 else (CMAKE_CXX_FLAGS)
   set(CXXFLAGS_PROVIDED false)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
-  set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g -ftemplate-backtrace-limit=0")
+  set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")

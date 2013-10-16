@@ -785,7 +785,7 @@ class utim_impl : public uniform_type_info_map {
         res.reserve(m_builtin_types.size() + m_user_types.size());
         res.insert(res.end(), m_builtin_types.begin(), m_builtin_types.end());
         res.insert(res.end(), m_user_types.begin(), m_user_types.end());
-        return std::move(res);
+        return res;
     }
 
     pointer insert(std::unique_ptr<uniform_type_info> uti) {

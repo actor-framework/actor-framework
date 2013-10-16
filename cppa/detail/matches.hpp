@@ -141,7 +141,7 @@ struct matcher<wildcard_position::in_between, Tuple, T...> {
     static constexpr size_t wc_pos = static_cast<size_t>(signed_wc_pos);
 
     static_assert(   signed_wc_pos > 0
-                  && signed_wc_pos < (sizeof...(T) - 1),
+                  && wc_pos < (sizeof...(T) - 1),
                   "illegal wildcard position");
 
     static inline bool tmatch(const Tuple& tup) {

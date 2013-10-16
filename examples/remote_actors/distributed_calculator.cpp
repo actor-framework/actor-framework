@@ -46,7 +46,7 @@ inline string trim(std::string s) {
     s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
     // trim right
     s.erase(find_if(s.rbegin(), s.rend(), not_space).base(), s.end());
-    return std::move(s);
+    return s;
 }
 
 void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
@@ -112,7 +112,7 @@ void client_repl(const string& host, uint16_t port) {
         line = trim(std::move(line)); // ignore leading and trailing whitespaces
         if (line == "quit") {
             // force client to quit
-            send_exit(client, exit_reason::user_defined);
+            send_exit(client, exit_reason::user_shutdown);
             return;
         }
         // the STL way of line.starts_with("connect")

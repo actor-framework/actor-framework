@@ -49,7 +49,7 @@ inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
                    << " of type " << detail::demangle(typeid(*ptr)));
     if (has_monitor_flag(opts)) self->monitor(ptr);
     if (has_link_flag(opts)) self->link_to(ptr);
-    return std::move(ptr);
+    return ptr;
 }
 
 /** @endcond */
@@ -126,35 +126,43 @@ actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Options, typename... Ts>
 actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
     auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
     ptr->join(grp);
     return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
 }
 
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
+    static_assert(util::tl_is_distinct<typename Impl::signatures>::value,
+                  "typed actors are not allowed to define "
+                  "multiple patterns with identical signature");
+    auto p = make_counted<Impl>(std::forward<Ts>(args)...);
+    using result_type = typename Impl::typed_pointer_type;
+    return result_type::cast_from(
+        eval_sopts(Options, get_scheduler()->exec(Options, std::move(p)))
+    );
+}
+
 template<spawn_options Options, typename... Ts>
 typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
 spawn_typed(const match_expr<Ts...>& me) {
-
     static_assert(util::conjunction<
                       detail::match_expr_has_no_guard<Ts>::value...
                   >::value,
                   "typed actors are not allowed to use guard expressions");
-
-    typedef util::type_list<
-                typename detail::deduce_signature<Ts>::arg_types...
-            >
-            args;
-
-    static_assert(util::tl_is_distinct<args>::value,
-                  "typed actors are not allowed to define multiple patterns "
-                  "with identical signature");
-
-    auto ptr = make_counted<typed_actor<match_expr<Ts...>>>(me);
-
-    return {eval_sopts(Options, get_scheduler()->exec(Options, std::move(ptr)))};
-
+    static_assert(util::tl_is_distinct<
+                      util::type_list<
+                          typename detail::deduce_signature<Ts>::arg_types...
+                      >
+                  >::value,
+                  "typed actors are not allowed to define "
+                  "multiple patterns with identical signature");
+    using impl = detail::default_typed_actor<
+                     typename detail::deduce_signature<Ts>::type...
+                 >;
+    return spawn_typed<impl, Options>(me);
 }
 
 template<typename... Ts>

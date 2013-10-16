@@ -232,7 +232,9 @@ class middleman_overseer : public continuable {
         return read_continue_later;
     }
 
-    void io_failed() { CPPA_CRITICAL("IO on pipe failed"); }
+    void io_failed(event_bitmask) override {
+        CPPA_CRITICAL("IO on pipe failed");
+    }
 
  private:
 
@@ -305,8 +307,10 @@ void middleman_loop(middleman_impl* impl) {
                 case event::write: {
                     CPPA_LOGF_DEBUG("handle event::write for " << io);
                     switch (io->continue_writing()) {
+                        case read_failure:
+                            io->io_failed(event::write);
+                            // fall through
                         case write_closed:
-                        case write_failure:
                             impl->stop_writer(io);
                             CPPA_LOGF_DEBUG("writer removed because of error");
                             break;
@@ -322,8 +326,10 @@ void middleman_loop(middleman_impl* impl) {
                 case event::read: {
                     CPPA_LOGF_DEBUG("handle event::read for " << io);
                     switch (io->continue_reading()) {
-                        case read_closed:
                         case read_failure:
+                            io->io_failed(event::read);
+                            // fall through
+                        case read_closed:
                             impl->stop_reader(io);
                             CPPA_LOGF_DEBUG("remove peer");
                             break;
@@ -333,7 +339,8 @@ void middleman_loop(middleman_impl* impl) {
                 }
                 case event::error: {
                     CPPA_LOGF_DEBUG("event::error; remove peer " << io);
-                    io->io_failed();
+                    io->io_failed(event::write);
+                    io->io_failed(event::read);
                     impl->stop_reader(io);
                     impl->stop_writer(io);
                 }
@@ -354,8 +361,10 @@ void middleman_loop(middleman_impl* impl) {
             switch (mask) {
                 case event::write:
                     switch (io->continue_writing()) {
-                        case write_closed:
                         case write_failure:
+                            io->io_failed(event::write);
+                            // fall through
+                        case write_closed:
                         case write_done:
                             handler->erase_later(io, event::write);
                             break;
@@ -363,7 +372,8 @@ void middleman_loop(middleman_impl* impl) {
                     }
                     break;
                 case event::error:
-                    io->io_failed();
+                    io->io_failed(event::write);
+                    io->io_failed(event::read);
                     handler->erase_later(io, event::both);
                     break;
                 default:

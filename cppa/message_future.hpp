@@ -47,6 +47,8 @@
 
 namespace cppa {
 
+namespace detail { struct optional_any_tuple_visitor; }
+
 /**
  * @brief Provides the @p continue_with member function as used in
  *        <tt>sync_send(...).then(...).continue_with(...)</tt>.
@@ -55,18 +57,31 @@ class continue_helper {
 
  public:
 
+    typedef int message_id_wrapper_tag;
+
     inline continue_helper(message_id mid) : m_mid(mid) { }
 
     template<typename F>
-    void continue_with(F fun) {
+    continue_helper& continue_with(F fun) {
+        return continue_with(behavior::continuation_fun{partial_function{
+            on(any_vals, arg_match) >> fun
+        }});
+    }
+
+    inline continue_helper& continue_with(behavior::continuation_fun fun) {
         auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
         if (ref_opt) {
             auto& ref = *ref_opt;
             // copy original behavior
             behavior cpy = ref;
-            ref = cpy.add_continuation(on(any_vals, arg_match) >> fun);
+            ref = cpy.add_continuation(std::move(fun));
         }
         else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
+        return *this;
+    }
+
+    inline message_id get_message_id() const {
+        return m_mid;
     }
 
  private:
@@ -175,14 +190,22 @@ class typed_continue_helper {
 
  public:
 
+    typedef int message_id_wrapper_tag;
+
     typedef typename detail::lifted_result_type<R>::type result_types;
 
     typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
 
     template<typename F>
-    void continue_with(F fun) {
+    typed_continue_helper<typename util::get_callable_trait<F>::result_type>
+    continue_with(F fun) {
         detail::assert_types<result_types, F>();
         m_ch.continue_with(std::move(fun));
+        return {m_ch};
+    }
+
+    inline message_id get_message_id() const {
+        return m_ch.get_message_id();
     }
 
  private:
@@ -190,6 +213,37 @@ class typed_continue_helper {
     continue_helper m_ch;
 
 };
+
+/*
+template<>
+class typed_continue_helper<void> {
+
+ public:
+
+    typedef int message_id_wrapper_tag;
+
+    typedef util::type_list<void> result_types;
+
+    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
+
+    template<typename F>
+    void continue_with(F fun) {
+        using arg_types = typename util::get_callable_trait<F>::arg_types;
+        static_assert(std::is_same<util::empty_type_list, arg_types>::value,
+                      "functor takes too much arguments");
+        m_ch.continue_with(std::move(fun));
+    }
+
+    inline message_id get_message_id() const {
+        return m_ch.get_message_id();
+    }
+
+ private:
+
+    continue_helper m_ch;
+
+};
+*/
 
 template<typename OutputList>
 class typed_message_future {

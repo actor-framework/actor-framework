@@ -39,55 +39,59 @@ struct printer : sb_actor<printer> {
 
 Note that \lstinline^sb_actor^ uses the Curiously Recurring Template Pattern. Thus, the derived class must be given as template parameter.
 This technique allows \lstinline^sb_actor^ to access the \lstinline^init_state^ member of a derived class.
-
 The following example illustrates a more advanced state-based actor that implements a stack with a fixed maximum number of elements.
-Note that this example uses non-static member initialization and thus might not compile with some compilers.
 
 \clearpage
 \begin{lstlisting}
 class fixed_stack : public sb_actor<fixed_stack> {
 
-	// grant access to the private init_state member
     friend class sb_actor<fixed_stack>;
 
-    static constexpr size_t max_size = 10;
+    size_t max_size = 10;
 
-    std::vector<int> data;
+    vector<int> data;
 
-    behavior empty = (
-        on(atom("push"), arg_match) >> [=](int what) {
-            data.push_back(what);
-            become(filled);
-        },
-        on(atom("pop")) >> [=]() {
-            reply(atom("failure"));
-        }
-    );
-
-    behavior filled = (
-        on(atom("push"), arg_match) >> [=](int what) {
-            data.push_back(what);
-            if (data.size() == max_size)
-                become(full);
-        },
-        on(atom("pop")) >> [=]() {
-            reply(atom("ok"), data.back());
-            data.pop_back();
-            if (data.empty())
-                become(empty);
-        }
-    );
-
-    behavior full = (
-        on(atom("push"), arg_match) >> [=](int) { },
-        on(atom("pop")) >> [=]() {
-            reply(atom("ok"), data.back());
-            data.pop_back();
-            become(filled);
-        }
-    );
+    behavior full;
+    behavior filled;
+    behavior empty;
 
     behavior& init_state = empty;
+
+ public:
+
+    fixed_stack(size_t max) : max_size(max)  {
+        full = (
+            on(atom("push"), arg_match) >> [=](int) { /* discard */ },
+            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+                auto result = data.back();
+                data.pop_back();
+                become(filled);
+                return {atom("ok"), result};
+            }
+        );
+        filled = (
+            on(atom("push"), arg_match) >> [=](int what) {
+                data.push_back(what);
+                if (data.size() == max_size) become(full);
+            },
+            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+                auto result = data.back();
+                data.pop_back();
+                if (data.empty()) become(empty);
+                return {atom("ok"), result};
+            }
+        );
+        empty = (
+            on(atom("push"), arg_match) >> [=](int what) {
+                data.push_back(what);
+                become(filled);
+            },
+            on(atom("pop")) >> [=] {
+                return atom("failure");
+            }
+        );
+
+    }
 
 };
 \end{lstlisting}

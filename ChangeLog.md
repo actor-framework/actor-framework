@@ -1,3 +1,13 @@
+Version 0.8.1
+-------------
+
+__2013_10_16__
+
+- GCC 4.7 compatibility
+- Fixed handling of partial functions in `match_expr_concat`
+- Serialize floating points as IEEE 754
+- Removed ftemplate-backtrace-limit option (causes build error in GCC 4.7)
+
 Version 0.8
 -----------
 
@@ -5,6 +15,15 @@ __2013_10_01__
 
 - Added support for typed actors
 - Added `brokers`: actors that encapsulate networking
+- timed_* function family now correctly handles priorities
+- Fixed monitoring of remote actors
+- Added new exit reason `user_shutdown`
+- Deprecated `reply` function and recommend returning values instead
+- Provide operator-> for optional
+- New class `optional_variant` with visitor-based API
+- Added manual to Git repository
+- Added new libCURL example
+- Bugfixes
 
 Version 0.7.2
 -------------

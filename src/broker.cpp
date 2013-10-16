@@ -113,8 +113,8 @@ class broker::servant : public continuable {
     : super{std::forward<Ts>(args)...}, m_disconnected{false}
     , m_parent{move(parent)} { }
 
-    void io_failed() override {
-        disconnect();
+    void io_failed(event_bitmask mask) override {
+        if (mask == event::read) disconnect();
     }
 
     void dispose() override {
@@ -422,7 +422,7 @@ local_actor_ptr init_and_launch(broker_ptr ptr) {
                 mm->continue_reader(kvp.second.get());
         });
     }
-    return move(ptr);
+    return ptr;
 }
 
 broker_ptr broker::from_impl(std::function<void (broker*)> fun,

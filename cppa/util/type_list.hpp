@@ -1053,6 +1053,17 @@ struct tl_is_strict_subset {
 };
 
 /**
+ * @brief Tests whether ListA equal to ListB.
+ */
+template<class ListA, class ListB>
+struct tl_equal {
+    static constexpr bool value =
+           tl_is_strict_subset<ListA, ListB>::value
+        && tl_is_strict_subset<ListB, ListA>::value;
+};
+
+
+/**
  * @}
  */
 

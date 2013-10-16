@@ -407,8 +407,24 @@ void check_wildcards() {
     }
 }
 
-void check_move_ops() {
+void check_move_optional() {
     CPPA_PRINT(__func__);
+    optional<expensive_copy_struct> opt{expensive_copy_struct{}};
+    opt->value = 23;
+    auto opt2 = std::move(opt);
+    auto move_fun = [](expensive_copy_struct& value) -> optional<expensive_copy_struct> {
+        return std::move(value);
+    };
+    auto opt3 = move_fun(*opt2);
+    CPPA_CHECK(opt3.valid());
+    CPPA_CHECK_EQUAL(opt->value, 23);
+    CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
+}
+
+void check_move_ops() {
+    check_move_optional();
+    CPPA_PRINT(__func__);
+    CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
     send(spawn<dummy_receiver>(), expensive_copy_struct());
     receive (
         on_arg_match >> [&](expensive_copy_struct& ecs) {

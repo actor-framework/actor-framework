@@ -71,7 +71,7 @@ class default_peer : public extend<continuable>::with<buffered_writing> {
 
     void dispose() override;
 
-    void io_failed() override;
+    void io_failed(event_bitmask mask) override;
 
     void enqueue(const message_header& hdr, const any_tuple& msg);
 

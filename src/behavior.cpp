@@ -39,9 +39,11 @@ class continuation_decorator : public detail::behavior_impl {
 
  public:
 
+    typedef behavior::continuation_fun continuation_fun;
+
     typedef typename behavior_impl::pointer pointer;
 
-    continuation_decorator(const partial_function& fun, pointer ptr)
+    continuation_decorator(continuation_fun fun, pointer ptr)
     : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
         CPPA_REQUIRE(m_decorated != nullptr);
     }
@@ -73,15 +75,15 @@ class continuation_decorator : public detail::behavior_impl {
 
  private:
 
-    partial_function m_fun;
+    continuation_fun m_fun;
     pointer m_decorated;
 
 };
 
 behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
 
-behavior behavior::add_continuation(const partial_function& fun) {
-    return {new continuation_decorator(fun, m_impl)};
+behavior behavior::add_continuation(continuation_fun fun) {
+    return {new continuation_decorator(std::move(fun), m_impl)};
 }
 
 

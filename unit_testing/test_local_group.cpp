@@ -31,7 +31,7 @@ void testee(int current_value, int final_result) {
         },
         after(std::chrono::seconds(2)) >> [] {
             CPPA_UNEXPECTED_TOUT();
-            self->quit(exit_reason::user_defined);
+            self->quit(exit_reason::user_shutdown);
         }
     );
 }

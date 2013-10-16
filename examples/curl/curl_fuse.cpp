@@ -394,7 +394,7 @@ int main() {
     while (!shutdown_flag) { sleep(1); }
     aout << color::cyan << "received CTRL+C" << color::reset_endl;
     // shutdown actors
-    send_exit(master, exit_reason::user_defined);
+    send_exit(master, exit_reason::user_shutdown);
     // await actors
     act.sa_handler = [](int) { abort(); };
     set_sighandler();
