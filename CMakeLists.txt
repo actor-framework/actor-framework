@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa CXX)
+project(cppa C CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
