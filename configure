@@ -123,9 +123,9 @@ configure ()
     cd $workdir
 
     if [ -n "$5" ]; then
-        cmake -G "$5" $CMakeCacheEntries $sourcedir
+        cmake -G "$5" "$CMakeCacheEntries" "$sourcedir"
     else
-        cmake $CMakeCacheEntries $sourcedir
+        cmake "$CMakeCacheEntries" "$sourcedir"
     fi
 
     echo "# This is the command used to configure this build" > config.status
@@ -271,7 +271,7 @@ else
         compiler=$gcc
     fi
 
-    configure $compiler "" $bindir $libdir $CMakeGenerator
+    configure "$compiler" "" "$bindir" "$libdir" "$CMakeGenerator"
 fi
 
 printf "DIRS := %s\n\n" "$workdirs" > $sourcedir/Makefile

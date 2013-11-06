@@ -92,6 +92,14 @@ else ()
   message(FATAL_ERROR "This platform is not supported by libcppa")
 endif()
 
+file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
+                       "cppa/detail/*.hpp"
+                       "cppa/intrusive/*.hpp"
+                       "cppa/io/*.hpp"
+                       "cppa/opencl/*.hpp"
+                       "cppa/qtsupport/*.hpp"
+                       "cppa/util/*.hpp")
+
 set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
     src/abstract_tuple.cpp
@@ -239,7 +247,7 @@ endif ()
 
 # bulid shared library only if not comiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcppa SHARED ${LIBCPPA_SRC})
+  add_library(libcppa SHARED ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
   target_link_libraries(libcppa ${LD_FLAGS})
   set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
   set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
@@ -253,7 +261,7 @@ endif ()
 
 # build static library if --build-static or --build-static-only was set
 if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcppaStatic STATIC ${LIBCPPA_SRC})
+  add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
   set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
   install(TARGETS libcppaStatic ARCHIVE DESTINATION lib)
 endif ()
