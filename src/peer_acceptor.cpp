@@ -28,44 +28,68 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_ACCEPTOR_HPP
-#define IPV4_PEER_ACCEPTOR_HPP
+#include <iostream>
+#include <exception>
 
-#include "cppa/actor.hpp"
+#include "cppa/logging.hpp"
+#include "cppa/to_string.hpp"
+#include "cppa/process_information.hpp"
 
-#include "cppa/io/ipv4_acceptor.hpp"
-#include "cppa/io/continuable.hpp"
+#include "cppa/io/peer.hpp"
+#include "cppa/io/peer_acceptor.hpp"
+
+#include "cppa/detail/demangle.hpp"
+
+using namespace std;
 
 namespace cppa { namespace io {
 
-class default_protocol;
+peer_acceptor::peer_acceptor(middleman* parent,
+                             acceptor_uptr aur,
+                             const actor_ptr& pa)
+: super(aur->file_handle()), m_parent(parent), m_ptr(std::move(aur)), m_pa(pa) { }
 
-class default_peer_acceptor : public continuable {
+continue_reading_result peer_acceptor::continue_reading() {
+    CPPA_LOG_TRACE("");
+    for (;;) {
+        optional<stream_ptr_pair> opt{none};
+        try { opt = m_ptr->try_accept_connection(); }
+        catch (exception& e) {
+            CPPA_LOG_ERROR(to_verbose_string(e));
+            static_cast<void>(e); // keep compiler happy
+            return read_failure;
+        }
+        if (opt) {
+            auto& pair = *opt;
+            auto& pself = process_information::get();
+            uint32_t process_id = pself->process_id();
+            try {
+                actor_id aid = published_actor()->id();
+                pair.second->write(&aid, sizeof(actor_id));
+                pair.second->write(&process_id, sizeof(uint32_t));
+                pair.second->write(pself->node_id().data(),
+                                   pself->node_id().size());
+                m_parent->new_peer(pair.first, pair.second);
+            }
+            catch (exception& e) {
+                CPPA_LOG_ERROR(to_verbose_string(e));
+                cerr << "*** exception while sending actor and process id; "
+                     << to_verbose_string(e)
+                     << endl;
+            }
+        }
+        else return read_continue_later;
+   }
+}
 
-    typedef continuable super;
+void peer_acceptor::io_failed(event_bitmask) {
+    CPPA_LOG_INFO("removed peer_acceptor "
+                  << this << " due to an IO failure");
+}
 
- public:
+void peer_acceptor::dispose() {
+    m_parent->del_acceptor(this);
+    delete this;
+}
 
-    continue_reading_result continue_reading() override;
-
-    default_peer_acceptor(default_protocol* parent,
-                          acceptor_uptr ptr,
-                          const actor_ptr& published_actor);
-
-    inline const actor_ptr& published_actor() const { return m_pa; }
-
-    void dispose() override;
-
-    void io_failed(event_bitmask) override;
-
- private:
-
-    default_protocol* m_parent;
-    acceptor_uptr m_ptr;
-    actor_ptr m_pa;
-
-};
-
-} } // namespace cppa::detail
-
-#endif // IPV4_PEER_ACCEPTOR_HPP
+} } // namespace cppa::network

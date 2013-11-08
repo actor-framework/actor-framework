@@ -25,35 +25,26 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#include <cstdint>
+#include <utility>
 
 #include "cppa/logging.hpp"
-#include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/deserializer.hpp"
-#include "cppa/primitive_variant.hpp"
+#include "cppa/actor_namespace.hpp"
+#include "cppa/process_information.hpp"
 
-#include "cppa/io/default_actor_proxy.hpp"
-#include "cppa/io/default_actor_addressing.hpp"
+#include "cppa/io/middleman.hpp"
+#include "cppa/io/remote_actor_proxy.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 
-using namespace std;
+namespace cppa {
 
-namespace cppa { namespace io {
-
-default_actor_addressing::default_actor_addressing(default_protocol* parent)
-: m_parent(parent), m_pinf(process_information::get()) { }
-
-atom_value default_actor_addressing::technology_id() const {
-    return atom("DEFAULT");
-}
-
-void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
+void actor_namespace::write(serializer* sink, const actor_ptr& ptr) {
     CPPA_REQUIRE(sink != nullptr);
     if (ptr == nullptr) {
         CPPA_LOG_DEBUG("serialize nullptr");
@@ -65,9 +56,9 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
         if (!ptr->is_proxy()) {
             get_actor_registry()->put(ptr->id(), ptr);
         }
-        auto pinf = m_pinf;
+        auto pinf = process_information::get();
         if (ptr->is_proxy()) {
-            auto dptr = ptr.downcast<default_actor_proxy>();
+            auto dptr = ptr.downcast<io::remote_actor_proxy>();
             if (dptr) pinf = dptr->process_info();
             else CPPA_LOG_ERROR("downcast failed");
         }
@@ -77,8 +68,8 @@ void default_actor_addressing::write(serializer* sink, const actor_ptr& ptr) {
                         pinf->node_id().data());
     }
 }
-
-actor_ptr default_actor_addressing::read(deserializer* source) {
+    
+actor_ptr actor_namespace::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
     process_information::node_id_type nid;
     auto aid = source->read<uint32_t>();
@@ -93,82 +84,78 @@ actor_ptr default_actor_addressing::read(deserializer* source) {
         return get_actor_registry()->get(aid);
     }
     else {
-        process_information tmp{pid, nid};
+        process_information_ptr tmp = new process_information{pid, nid};
         return get_or_put(tmp, aid);
     }
+    return nullptr;
 }
 
-size_t default_actor_addressing::count_proxies(const process_information& inf) {
-    auto i = m_proxies.find(inf);
+size_t actor_namespace::count_proxies(const process_information& node) {
+    auto i = m_proxies.find(node);
     return (i != m_proxies.end()) ? i->second.size() : 0;
 }
 
-actor_ptr default_actor_addressing::get(const process_information& inf,
-                                        actor_id aid) {
-    auto& submap = m_proxies[inf];
+actor_ptr actor_namespace::get(const process_information& node, actor_id aid) {
+    auto& submap = m_proxies[node];
     auto i = submap.find(aid);
     if (i != submap.end()) {
         auto result = i->second.promote();
-        CPPA_LOGMF_IF(!result, CPPA_INFO, self, "proxy instance expired; "
-                      << CPPA_TARG(inf, to_string) << ", "<< CPPA_ARG(aid));
+        CPPA_LOG_INFO_IF(!result, "proxy instance expired; "
+                         << CPPA_TARG(node, to_string)
+                         << ", "<< CPPA_ARG(aid));
         if (!result) submap.erase(i);
         return result;
     }
     return nullptr;
 }
-
-void default_actor_addressing::put(const process_information& node,
-                                   actor_id aid,
-                                   const actor_proxy_ptr& proxy) {
-    auto& submap = m_proxies[node];
-    auto i = submap.find(aid);
-    if (i == submap.end()) {
-        submap.insert(make_pair(aid, proxy));
-        m_parent->enqueue(node,
-                          {nullptr, nullptr},
-                          make_any_tuple(atom("MONITOR"),
-                                         process_information::get(),
-                                         aid));
-    }
-    else {
-        CPPA_LOGMF(CPPA_ERROR, self, "proxy for " << aid << ":"
-                   << to_string(node) << " already exists");
-    }
-}
-
-actor_ptr default_actor_addressing::get_or_put(const process_information& inf,
-                                               actor_id aid) {
-    auto result = get(inf, aid);
-    if (result == nullptr) {
-        CPPA_LOGMF(CPPA_INFO, self, "created new proxy instance; "
-                   << CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
-        if (m_parent == nullptr) {
-            CPPA_LOG_ERROR("m_parent == nullptr (cannot create proxy without MM)");
-        }
-        else {
-            auto ptr = make_counted<default_actor_proxy>(aid, new process_information(inf), m_parent);
-            put(inf, aid, ptr);
-            result = ptr;
-        }
+    
+actor_ptr actor_namespace::get_or_put(process_information_ptr node, actor_id aid) {
+    auto result = get(*node, aid);
+    if (result == nullptr && m_factory) {
+        auto ptr = m_factory(aid, node);
+        put(*node, aid, ptr);
+        result = ptr;
     }
     return result;
 }
 
-auto default_actor_addressing::proxies(process_information& i) -> proxy_map& {
-    return m_proxies[i];
+void actor_namespace::put(const process_information& node,
+                          actor_id aid,
+                          const actor_proxy_ptr& proxy) {
+    auto& submap = m_proxies[node];
+    auto i = submap.find(aid);
+    if (i == submap.end()) {
+        submap.insert(std::make_pair(aid, proxy));
+        if (m_new_element_callback) m_new_element_callback(aid, node);
+        /*if (m_parent) {
+            m_parent->enqueue(node,
+                              {nullptr, nullptr},
+                              make_any_tuple(atom("MONITOR"),
+                                             process_information::get(),
+                                             aid));
+        }*/
+    }
+    else {
+        CPPA_LOG_ERROR("proxy for " << aid << ":"
+                       << to_string(node) << " already exists");
+    }
 }
 
-void default_actor_addressing::erase(process_information& inf) {
+auto actor_namespace::proxies(process_information& node) -> proxy_map& {
+    return m_proxies[node];
+}
+    
+void actor_namespace::erase(process_information& inf) {
     CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string));
     m_proxies.erase(inf);
 }
 
-void default_actor_addressing::erase(process_information& inf, actor_id aid) {
+void actor_namespace::erase(process_information& inf, actor_id aid) {
     CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
     auto i = m_proxies.find(inf);
     if (i != m_proxies.end()) {
         i->second.erase(aid);
     }
 }
-
-} } // namespace cppa::network
+    
+} // namespace cppa

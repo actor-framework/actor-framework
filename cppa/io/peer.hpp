@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DEFAULT_PEER_IMPL_HPP
-#define CPPA_DEFAULT_PEER_IMPL_HPP
+#ifndef CPPA_peer_IMPL_HPP
+#define CPPA_peer_IMPL_HPP
 
 #include <map>
 #include <cstdint>
@@ -50,20 +50,20 @@
 
 namespace cppa { namespace io {
 
-class default_protocol;
-
-class default_peer : public extend<continuable>::with<buffered_writing> {
+class middleman_impl;
+    
+class peer : public extend<continuable>::with<buffered_writing> {
 
     typedef combined_type super;
 
-    friend class default_protocol;
+    friend class middleman_impl;
 
  public:
 
-    default_peer(default_protocol* parent,
-                 const input_stream_ptr& in,
-                 const output_stream_ptr& out,
-                 process_information_ptr peer_ptr = nullptr);
+    peer(middleman* parent,
+         const input_stream_ptr& in,
+         const output_stream_ptr& out,
+         process_information_ptr peer_ptr = nullptr);
 
     continue_reading_result continue_reading() override;
 
@@ -94,7 +94,6 @@ class default_peer : public extend<continuable>::with<buffered_writing> {
         read_message
     };
 
-    default_protocol* m_parent;
     input_stream_ptr m_in;
     read_state m_state;
     process_information_ptr m_node;
@@ -146,4 +145,4 @@ class default_peer : public extend<continuable>::with<buffered_writing> {
 
 } } // namespace cppa::network
 
-#endif // CPPA_DEFAULT_PEER_IMPL_HPP
+#endif // CPPA_peer_IMPL_HPP

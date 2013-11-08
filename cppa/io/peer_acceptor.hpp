@@ -28,10 +28,44 @@
 \******************************************************************************/
 
 
-#include"cppa/actor_addressing.hpp"
+#ifndef IPV4_PEER_ACCEPTOR_HPP
+#define IPV4_PEER_ACCEPTOR_HPP
 
-namespace cppa {
+#include "cppa/actor.hpp"
 
-actor_addressing::~actor_addressing() { }
+#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/continuable.hpp"
 
-} // namespace cppa
+namespace cppa { namespace io {
+
+class default_protocol;
+
+class peer_acceptor : public continuable {
+
+    typedef continuable super;
+
+ public:
+
+    continue_reading_result continue_reading() override;
+
+    peer_acceptor(middleman* parent,
+                          acceptor_uptr ptr,
+                          const actor_ptr& published_actor);
+
+    inline const actor_ptr& published_actor() const { return m_pa; }
+
+    void dispose() override;
+
+    void io_failed(event_bitmask) override;
+
+ private:
+
+    middleman*    m_parent;
+    acceptor_uptr m_ptr;
+    actor_ptr     m_pa;
+
+};
+
+} } // namespace cppa::detail
+
+#endif // IPV4_PEER_ACCEPTOR_HPP

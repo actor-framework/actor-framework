@@ -39,7 +39,7 @@
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
-#include "cppa/actor_addressing.hpp"
+#include "cppa/actor_namespace.hpp"
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/algorithm.hpp"
@@ -164,15 +164,15 @@ inline void serialize_impl(const unit_t&, serializer*) { }
 inline void deserialize_impl(unit_t&, deserializer*) { }
 
 void serialize_impl(const actor_ptr& ptr, serializer* sink) {
-    auto impl = sink->addressing();
-    if (impl) impl->write(sink, ptr);
+    auto ns = sink->get_namespace();
+    if (ns) ns->write(sink, ptr);
     else throw std::runtime_error("unable to serialize actor_ptr: "
                                   "no actor addressing defined");
 }
 
 void deserialize_impl(actor_ptr& ptrref, deserializer* source) {
-    auto impl = source->addressing();
-    if (impl) ptrref = impl->read(source);
+    auto ns = source->get_namespace();
+    if (ns) ptrref = ns->read(source);
     else throw std::runtime_error("unable to deserialize actor_ptr: "
                                   "no actor addressing defined");
 }

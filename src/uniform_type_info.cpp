@@ -48,7 +48,6 @@
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/actor_addressing.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/duration.hpp"

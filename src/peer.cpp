@@ -51,21 +51,19 @@
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
+#include "cppa/io/peer.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/default_peer.hpp"
-#include "cppa/io/default_protocol.hpp"
 
 using namespace std;
 
 namespace cppa { namespace io {
 
-default_peer::default_peer(default_protocol* parent,
-                           const input_stream_ptr& in,
-                           const output_stream_ptr& out,
-                           process_information_ptr peer_ptr)
-: super(parent->parent(), out, in->read_handle(), out->write_handle())
-, m_parent(parent), m_in(in)
-, m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
+peer::peer(middleman* parent,
+           const input_stream_ptr& in,
+           const output_stream_ptr& out,
+           process_information_ptr peer_ptr)
+: super(parent, out, in->read_handle(), out->write_handle())
+, m_in(in), m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
 , m_node(peer_ptr) {
     m_rd_buf.final_size( m_state == wait_for_process_info
                        ? sizeof(uint32_t) + process_information::node_id_size
@@ -77,24 +75,24 @@ default_peer::default_peer(default_protocol* parent,
     m_meta_msg = uniform_typeid<any_tuple>();
 }
 
-void default_peer::io_failed(event_bitmask mask) {
+void peer::io_failed(event_bitmask mask) {
     CPPA_LOG_TRACE("node = " << (m_node ? to_string(*m_node) : "nullptr")
                    << " mask = " << mask);
     // make sure this code is executed only once by filtering for read failure
     if (mask == event::read && m_node) {
         // kill all proxies
-        auto& children = m_parent->addressing()->proxies(*m_node);
+        auto& children = parent()->get_namespace().proxies(*m_node);
         for (auto& kvp : children) {
             auto ptr = kvp.second.promote();
             if (ptr) ptr->enqueue(nullptr,
                                   make_any_tuple(atom("KILL_PROXY"),
                                       exit_reason::remote_link_unreachable));
         }
-        m_parent->addressing()->erase(*m_node);
+        parent()->get_namespace().erase(*m_node);
     }
 }
 
-continue_reading_result default_peer::continue_reading() {
+continue_reading_result peer::continue_reading() {
     CPPA_LOG_TRACE("");
     for (;;) {
         try { m_rd_buf.append_from(m_in.get()); }
@@ -119,7 +117,7 @@ continue_reading_result default_peer::continue_reading() {
                     return read_failure;
                 }
                 CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
-                m_parent->register_peer(*m_node, this);
+                parent()->register_peer(*m_node, this);
                 // initialization done
                 m_state = wait_for_msg_size;
                 m_rd_buf.clear();
@@ -140,7 +138,7 @@ continue_reading_result default_peer::continue_reading() {
                 message_header hdr;
                 any_tuple msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size(),
-                                       m_parent->addressing(), &m_incoming_types);
+                                       &(parent()->get_namespace()), &m_incoming_types);
                 try {
                     m_meta_hdr->deserialize(&hdr, &bd);
                     m_meta_msg->deserialize(&msg, &bd);
@@ -190,7 +188,7 @@ continue_reading_result default_peer::continue_reading() {
     }
 }
 
-void default_peer::monitor(const actor_ptr&,
+void peer::monitor(const actor_ptr&,
                            const process_information_ptr& node,
                            actor_id aid) {
     CPPA_LOG_TRACE(CPPA_MARG(node, get) << ", " << CPPA_ARG(aid));
@@ -221,20 +219,20 @@ void default_peer::monitor(const actor_ptr&,
     }
     else {
         CPPA_LOGMF(CPPA_DEBUG, self, "attach functor to " << entry.first.get());
-        default_protocol* proto = m_parent;
+        auto mm = parent();
         entry.first->attach_functor([=](uint32_t reason) {
-            proto->run_later([=] {
-                CPPA_LOGC_TRACE("cppa::io::default_peer",
+            mm->run_later([=] {
+                CPPA_LOGC_TRACE("cppa::io::peer",
                                 "monitor$kill_proxy_helper",
                                 "reason = " << reason);
-                auto p = proto->get_peer(*node);
+                auto p = mm->get_peer(*node);
                 if (p) p->enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, reason));
             });
         });
     }
 }
 
-void default_peer::kill_proxy(const actor_ptr& sender,
+void peer::kill_proxy(const actor_ptr& sender,
                               const process_information_ptr& node,
                               actor_id aid,
                               std::uint32_t reason) {
@@ -250,7 +248,7 @@ void default_peer::kill_proxy(const actor_ptr& sender,
         CPPA_LOGMF(CPPA_ERROR, self, "sender != nullptr");
         return;
     }
-    auto proxy = m_parent->addressing()->get(*node, aid);
+    auto proxy = parent()->get_namespace().get(*node, aid);
     if (proxy) {
         CPPA_LOGMF(CPPA_DEBUG, self, "received KILL_PROXY for " << aid
                        << ":" << to_string(*node));
@@ -263,7 +261,7 @@ void default_peer::kill_proxy(const actor_ptr& sender,
     }
 }
 
-void default_peer::deliver(const message_header& hdr, any_tuple msg) {
+void peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
     if (hdr.sender && hdr.sender->is_proxy()) {
         hdr.sender.downcast<actor_proxy>()->deliver(hdr, std::move(msg));
@@ -271,7 +269,7 @@ void default_peer::deliver(const message_header& hdr, any_tuple msg) {
     else hdr.deliver(std::move(msg));
 }
 
-void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
+void peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
     // this message is sent from default_actor_proxy in link_to and
     // establish_backling to cause the original actor (sender) to establish
     // a link to ptr as well
@@ -292,7 +290,7 @@ void default_peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
     }
 }
 
-void default_peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
+void peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
     CPPA_LOG_TRACE(CPPA_MARG(sender, get)
                    << ", " << CPPA_MARG(ptr, get));
     CPPA_LOG_ERROR_IF(!sender, "received 'UNLINK' from invalid sender");
@@ -307,7 +305,7 @@ void default_peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
     else sender->unlink_from(ptr);
 }
 
-continue_writing_result default_peer::continue_writing() {
+continue_writing_result peer::continue_writing() {
     CPPA_LOG_TRACE("");
     auto result = super::continue_writing();
     while (result == write_done && !queue().empty()) {
@@ -316,14 +314,14 @@ continue_writing_result default_peer::continue_writing() {
         result = super::continue_writing();
     }
     if (result == write_done && erase_on_last_proxy_exited() && !has_unwritten_data()) {
-        if (m_parent->addressing()->count_proxies(*m_node) == 0) {
-            m_parent->last_proxy_exited(this);
+        if (parent()->get_namespace().count_proxies(*m_node) == 0) {
+            parent()->last_proxy_exited(this);
         }
     }
     return result;
 }
 
-void default_peer::add_type_if_needed(const std::string& tname) {
+void peer::add_type_if_needed(const std::string& tname) {
     if (m_outgoing_types.id_of(tname) == 0) {
         auto id = m_outgoing_types.max_id() + 1;
         auto imap = get_uniform_type_info_map();
@@ -333,19 +331,19 @@ void default_peer::add_type_if_needed(const std::string& tname) {
     }
 }
 
-void default_peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
+void peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
     auto tname = msg.tuple_type_names();
     add_type_if_needed((tname) ? *tname : detail::get_tuple_type_names(*msg.vals()));
     uint32_t size = 0;
     auto& wbuf = write_buffer();
     auto before = wbuf.size();
-    binary_serializer bs(&wbuf, m_parent->addressing(), &m_outgoing_types);
+    binary_serializer bs(&wbuf, &(parent()->get_namespace()), &m_outgoing_types);
     wbuf.write(sizeof(uint32_t), &size);
     try { bs << hdr << msg; }
     catch (exception& e) {
         CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
-        cerr << "*** exception in default_peer::enqueue; "
+        cerr << "*** exception in peer::enqueue; "
              << to_verbose_string(e)
              << endl;
         return;
@@ -356,13 +354,13 @@ void default_peer::enqueue_impl(const message_header& hdr, const any_tuple& msg)
     memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));
 }
 
-void default_peer::enqueue(const message_header& hdr, const any_tuple& msg) {
+void peer::enqueue(const message_header& hdr, const any_tuple& msg) {
     enqueue_impl(hdr, msg);
     register_for_writing();
 }
 
-void default_peer::dispose() {
-    m_parent->del_peer(this);
+void peer::dispose() {
+    parent()->get_namespace().erase(*m_node);
     delete this;
 }
 

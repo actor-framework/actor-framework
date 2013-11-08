@@ -43,12 +43,11 @@
 #include "cppa/singletons.hpp"
 #include "cppa/from_string.hpp"
 #include "cppa/deserializer.hpp"
+#include "cppa/actor_namespace.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/algorithm.hpp"
-
-#include "cppa/io/default_actor_addressing.hpp"
 
 #include "cppa/detail/uniform_type_info_map.hpp"
 
@@ -70,7 +69,7 @@ class string_serializer : public serializer {
     typedef serializer super;
 
     ostream& out;
-    io::default_actor_addressing m_addressing;
+    actor_namespace m_namespace;
 
     struct pt_writer {
 
@@ -124,7 +123,7 @@ class string_serializer : public serializer {
  public:
 
     string_serializer(ostream& mout)
-    : super(&m_addressing), out(mout), m_after_value(false)
+    : super(&m_namespace), out(mout), m_after_value(false)
     , m_obj_just_opened(false) { }
 
     void begin_object(const uniform_type_info* uti) {
@@ -207,7 +206,7 @@ class string_deserializer : public deserializer {
     //size_t m_obj_count;
     stack<bool> m_obj_had_left_parenthesis;
     stack<string> m_open_objects;
-    io::default_actor_addressing m_addressing;
+    actor_namespace m_namespace;
 
     void skip_space_and_comma() {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
@@ -275,7 +274,7 @@ class string_deserializer : public deserializer {
 
  public:
 
-    string_deserializer(string str) : super(&m_addressing), m_str(move(str)) {
+    string_deserializer(string str) : super(&m_namespace), m_str(move(str)) {
         m_pos = m_str.begin();
     }
 

@@ -31,8 +31,10 @@
 #include "cppa/to_string.hpp"
 
 #include "cppa/logging.hpp"
+
+#include "cppa/io/peer.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/default_actor_proxy.hpp"
+#include "cppa/io/remote_actor_proxy.hpp"
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -49,37 +51,37 @@ inline sync_request_info* new_req_info(actor_ptr sptr, message_id id) {
 sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
 : next(nullptr), sender(std::move(sptr)), mid(id) { }
 
-default_actor_proxy::default_actor_proxy(actor_id mid,
-                                         const process_information_ptr& pinfo,
-                                         default_protocol* parent)
+remote_actor_proxy::remote_actor_proxy(actor_id mid,
+                                       const process_information_ptr& pinfo,
+                                       middleman* parent)
 : super(mid), m_parent(parent), m_pinf(pinfo) {
     CPPA_REQUIRE(parent != nullptr);
     CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(pinfo, to_string)
                   << "protocol = " << detail::demangle(typeid(*parent)));
 }
 
-default_actor_proxy::~default_actor_proxy() {
+remote_actor_proxy::~remote_actor_proxy() {
     auto aid = m_id;
     auto node = m_pinf;
-    auto proto = m_parent;
+    auto mm = m_parent;
     CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(m_pinf)
                    << ", protocol = " << detail::demangle(typeid(*m_parent)));
-    proto->run_later([aid, node, proto] {
-        CPPA_LOGC_TRACE("cppa::io::default_actor_proxy",
-                        "~default_actor_proxy$run_later",
+    mm->run_later([aid, node, mm] {
+        CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
+                        "~remote_actor_proxy$run_later",
                         "node = " << to_string(*node) << ", aid " << aid
                         << ", proto = " << to_string(proto->identifier()));
-        proto->addressing()->erase(*node, aid);
-        auto p = proto->get_peer(*node);
+        mm->get_namespace().erase(*node, aid);
+        auto p = mm->get_peer(*node);
         if (p && p->erase_on_last_proxy_exited()) {
-            if (proto->addressing()->count_proxies(*node) == 0) {
-                proto->last_proxy_exited(p);
+            if (mm->get_namespace().count_proxies(*node) == 0) {
+                mm->last_proxy_exited(p);
             }
         }
     });
 }
 
-void default_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
     // this member function is exclusively called from default_peer from inside
     // the middleman's thread, therefore we can safely access
     // m_pending_requests here
@@ -93,7 +95,7 @@ void default_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
     hdr.deliver(std::move(msg));
 }
 
-void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_ARG(m_id) << ", " << CPPA_TSARG(hdr)
                    << ", " << CPPA_TSARG(msg));
     if (hdr.receiver != this) {
@@ -107,7 +109,7 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
             case intrusive::queue_closed: {
                 auto rsn = exit_reason();
                 m_parent->run_later([rsn, hdr] {
-                    CPPA_LOGC_TRACE("cppa::io::default_actor_proxy",
+                    CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                                     "forward_msg$bouncer",
                                     "bounce message for reason " << rsn);
                     detail::sync_request_bouncer f{rsn};
@@ -119,16 +121,16 @@ void default_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) 
         }
     }
     auto node = m_pinf;
-    auto proto = m_parent;
-    m_parent->run_later([hdr, msg, node, proto] {
-        CPPA_LOGC_TRACE("cppa::io::default_actor_proxy",
+    auto mm = m_parent;
+    m_parent->run_later([hdr, msg, node, mm] {
+        CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                         "forward_msg$forwarder",
                         "");
-        proto->enqueue(*node, hdr, msg);
+        mm->deliver(*node, hdr, msg);
     });
 }
 
-void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2
@@ -136,10 +138,10 @@ void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
         && msg.get_as<atom_value>(0) == atom("KILL_PROXY")
         && msg.type_at(1) == arr[1]) {
         CPPA_LOG_DEBUG("received KILL_PROXY message");
-        intrusive_ptr<default_actor_proxy> _this{this};
+        intrusive_ptr<remote_actor_proxy> _this{this};
         auto reason = msg.get_as<uint32_t>(1);
         m_parent->run_later([_this, reason] {
-            CPPA_LOGC_TRACE("cppa::io::default_actor_proxy",
+            CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                             "enqueue$kill_proxy_helper",
                             "KILL_PROXY with exit reason " << reason);
             _this->cleanup(reason);
@@ -152,7 +154,7 @@ void default_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
     else forward_msg(hdr, move(msg));
 }
 
-void default_actor_proxy::link_to(const intrusive_ptr<actor>& other) {
+void remote_actor_proxy::link_to(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (link_to_impl(other)) {
         // causes remote actor to link to (proxy of) other
@@ -161,7 +163,7 @@ void default_actor_proxy::link_to(const intrusive_ptr<actor>& other) {
     }
 }
 
-void default_actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
+void remote_actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (unlink_from_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -169,7 +171,7 @@ void default_actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
     }
 }
 
-bool default_actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) {
+bool remote_actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (super::establish_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -179,7 +181,7 @@ bool default_actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) 
     return false;
 }
 
-bool default_actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
+bool remote_actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     if (super::remove_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -189,12 +191,12 @@ bool default_actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
     return false;
 }
 
-void default_actor_proxy::local_link_to(const intrusive_ptr<actor>& other) {
+void remote_actor_proxy::local_link_to(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     link_to_impl(other);
 }
 
-void default_actor_proxy::local_unlink_from(const intrusive_ptr<actor>& other) {
+void remote_actor_proxy::local_unlink_from(const intrusive_ptr<actor>& other) {
     CPPA_LOG_TRACE(CPPA_MARG(other, get));
     unlink_from_impl(other);
 }

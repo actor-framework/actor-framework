@@ -104,7 +104,7 @@ set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
     src/abstract_tuple.cpp
     src/actor.cpp
-    src/actor_addressing.cpp
+    src/actor_namespace.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
     src/algorithm.cpp
@@ -121,11 +121,9 @@ set(LIBCPPA_SRC
     src/context_switching_actor.cpp
     src/continuable.cpp
     src/decorated_tuple.cpp
-    src/default_actor_addressing.cpp
-    src/default_actor_proxy.cpp
-    src/default_peer.cpp
-    src/default_peer_acceptor.cpp
-    src/default_protocol.cpp
+    src/actor_proxy.cpp
+    src/peer.cpp
+    src/peer_acceptor.cpp
     src/demangle.cpp
     src/deserializer.cpp
     src/duration.cpp
@@ -158,8 +156,8 @@ set(LIBCPPA_SRC
     src/partial_function.cpp
     src/primitive_variant.cpp
     src/process_information.cpp
-    src/protocol.cpp
     src/ref_counted.cpp
+    src/remote_actor_proxy.cpp
     src/response_handle.cpp
     src/ripemd_160.cpp
     src/scheduled_actor.cpp
@@ -247,7 +245,7 @@ endif ()
 
 # bulid shared library only if not comiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcppa SHARED ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
+  add_library(libcppa SHARED ${LIBCPPA_SRC} ${LIBCPPA_HDRS})
   target_link_libraries(libcppa ${LD_FLAGS})
   set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
   set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})

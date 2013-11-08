@@ -25,62 +25,112 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#ifndef CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
-#define CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#ifndef CPPA_ACTOR_NAMESPACE_HPP
+#define CPPA_ACTOR_NAMESPACE_HPP
 
 #include <map>
-#include <cstdint>
+#include <utility>
+#include <functional>
 
 #include "cppa/actor_proxy.hpp"
-#include "cppa/actor_addressing.hpp"
 #include "cppa/process_information.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
 
-class default_protocol;
+class serializer;
+class deserializer;
 
-class default_actor_addressing : public actor_addressing {
+namespace io { class middleman; }
+
+/**
+ * @brief Groups a (distributed) set of actors and allows actors
+ *        in the same namespace to exchange messages.
+ */
+class actor_namespace {
 
  public:
+    
+    typedef std::function<actor_proxy_ptr(actor_id, process_information_ptr)>
+            factory_fun;
 
-    default_actor_addressing(default_protocol* parent = nullptr);
+    typedef std::function<void(actor_id, const process_information&)>
+            new_element_callback;
 
-    typedef std::map<actor_id, weak_actor_proxy_ptr> proxy_map;
-
-    atom_value technology_id() const;
-
+    inline void set_proxy_factory(factory_fun fun);
+    
+    inline void set_new_element_callback(new_element_callback fun);
+    
     void write(serializer* sink, const actor_ptr& ptr);
-
+    
     actor_ptr read(deserializer* source);
 
-    // returns the number of proxy instances for given parent
-    size_t count_proxies(const process_information& parent);
+    /**
+     * @brief A map that stores weak actor proxy pointers by actor ids.
+     */
+    typedef std::map<actor_id, weak_actor_proxy_ptr> proxy_map;
+    
+    /**
+     * @brief Returns the number of proxies for @p node.
+     */
+    size_t count_proxies(const process_information& node);
+    
+    /**
+     * @brief Returns the proxy instance identified by @p node and @p aid
+     *        or @p nullptr if the actor is unknown.
+     */
+    actor_ptr get(const process_information& node, actor_id aid);
 
-    actor_ptr get(const process_information& parent, actor_id aid);
-
-    actor_ptr get_or_put(const process_information& parent, actor_id aid);
-
+    /**
+     * @brief Returns the proxy instance identified by @p node and @p aid
+     *        or creates a new (default) proxy instance.
+     */
+    actor_ptr get_or_put(process_information_ptr node, actor_id aid);
+    
+    /**
+     * @brief Stores @p proxy in the list of known actor proxies.
+     */
     void put(const process_information& parent,
              actor_id aid,
              const actor_proxy_ptr& proxy);
-
-    proxy_map& proxies(process_information& from);
-
-    void erase(process_information& info);
-
-    void erase(process_information& info, actor_id aid);
-
+    
+    /**
+     * @brief Returns the map of known actors for @p node.
+     */
+    proxy_map& proxies(process_information& node);
+    
+    /**
+     * @brief Deletes all proxies for @p node.
+     */
+    void erase(process_information& node);
+    
+    /**
+     * @brief Deletes the proxy with id @p aid for @p node.
+     */
+    void erase(process_information& node, actor_id aid);
+    
  private:
-
-    default_protocol* m_parent;
-    process_information_ptr m_pinf;
+    
+    factory_fun m_factory;
+    
+    new_element_callback m_new_element_callback;
+    
+    process_information_ptr m_node;
+    
     std::map<process_information, proxy_map> m_proxies;
-
+    
 };
 
-} } // namespace cppa::network
+inline void actor_namespace::set_proxy_factory(factory_fun fun) {
+    m_factory = std::move(fun);
+}
+    
+inline void actor_namespace::set_new_element_callback(new_element_callback fun) {
+    m_new_element_callback = std::move(fun);
+}
+    
+} // namespace cppa
 
-#endif // CPPA_DEFAULT_ACTOR_ADDRESSING_HPP
+#endif

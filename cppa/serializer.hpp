@@ -39,7 +39,7 @@
 
 namespace cppa {
 
-class actor_addressing;
+class actor_namespace;
 class primitive_variant;
 class type_lookup_table;
 
@@ -57,7 +57,7 @@ class serializer {
     /**
      * @note @p addressing must be guaranteed to outlive the serializer
      */
-    serializer(actor_addressing* addressing = nullptr,
+    serializer(actor_namespace* addressing = nullptr,
                type_lookup_table* outgoing_types = nullptr);
 
     virtual ~serializer();
@@ -104,8 +104,8 @@ class serializer {
      */
     virtual void write_tuple(size_t num, const primitive_variant* values) = 0;
 
-    inline actor_addressing* addressing() {
-        return m_addressing;
+    inline actor_namespace* get_namespace() {
+        return m_namespace;
     }
 
     inline type_lookup_table* outgoing_types() {
@@ -114,7 +114,7 @@ class serializer {
 
  private:
 
-    actor_addressing* m_addressing;
+    actor_namespace* m_namespace;
     type_lookup_table* m_outgoing_types;
 
 };

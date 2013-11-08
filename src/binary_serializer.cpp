@@ -121,9 +121,9 @@ class binary_writer {
 } // namespace <anonymous>
 
 binary_serializer::binary_serializer(util::buffer* buf,
-                                     actor_addressing* aa,
+                                     actor_namespace* ns,
                                      type_lookup_table* tbl)
-: super(aa, tbl), m_sink(buf) { }
+: super(ns, tbl), m_sink(buf) { }
 
 void binary_serializer::begin_object(const uniform_type_info* uti) {
     CPPA_REQUIRE(uti != nullptr);

@@ -50,7 +50,7 @@ class buffered_writing : public Base {
 
     template<typename... Ts>
     buffered_writing(middleman* mm, output_stream_ptr out, Ts&&... args)
-    : super{std::forward<Ts>(args)...}, m_middleman{mm}, m_out{out}
+    : super{std::forward<Ts>(args)...}, m_parent{mm}, m_out{out}
     , m_has_unwritten_data{false} { }
 
     continue_writing_result continue_writing() override {
@@ -105,7 +105,7 @@ class buffered_writing : public Base {
         if (!m_has_unwritten_data) {
             CPPA_LOG_DEBUG("register for writing");
             m_has_unwritten_data = true;
-            m_middleman->continue_writer(this);
+            m_parent->continue_writer(this);
         }
     }
 
@@ -115,11 +115,15 @@ class buffered_writing : public Base {
 
  protected:
 
+    inline middleman* parent() {
+        return m_parent;
+    }
+    
     typedef buffered_writing combined_type;
 
  private:
 
-    middleman* m_middleman;
+    middleman* m_parent;
     output_stream_ptr m_out;
     bool m_has_unwritten_data;
     util::buffer m_buf;

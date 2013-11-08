@@ -36,17 +36,36 @@
 #include <memory>
 #include <functional>
 
-#include "cppa/io/continuable.hpp"
+#include "cppa/cppa_fwd.hpp"
+#include "cppa/actor_namespace.hpp"
+#include "cppa/process_information.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 
+namespace cppa {
+
+class actor_proxy;
+typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
+typedef weak_intrusive_ptr<actor_proxy> weak_actor_proxy_ptr;
+
+} // namespace cppa
+
 namespace cppa { namespace io {
 
-class protocol;
-class middleman_impl;
+class peer;
+class continuable;
+class input_stream;
+class peer_acceptor;
+class output_stream;
+class middleman_event_handler;
 
+typedef intrusive_ptr<input_stream> input_stream_ptr;
+typedef intrusive_ptr<output_stream> output_stream_ptr;
+    
 /**
  * @brief Multiplexes asynchronous IO.
+ * @note No member function except for @p run_later is safe to call from
+ *       outside the event loop.
  */
 class middleman {
 
@@ -55,26 +74,20 @@ class middleman {
  public:
 
     virtual ~middleman();
-
+    
     /**
-     * @brief Returns the networking protocol in use.
+     * @brief Runs @p fun in the event loop of the middleman.
+     * @note This member function is thread-safe.
      */
-    protocol* get_protocol();
-
-    /**
-     * @brief Runs @p fun in the middleman's event loop.
-     */
-    void run_later(std::function<void()> fun);
+    virtual void run_later(std::function<void()> fun) = 0;
 
     /**
      * @brief Removes @p ptr from the list of active writers.
-     * @warning This member function is not thread-safe.
      */
     void stop_writer(continuable* ptr);
 
     /**
      * @brief Adds @p ptr to the list of active writers.
-     * @warning This member function is not thread-safe.
      */
     void continue_writer(continuable* ptr);
 
@@ -102,30 +115,84 @@ class middleman {
      */
     bool has_reader(continuable* ptr);
 
+    /**
+     * @brief Registers a new peer, i.e., a new node in the network.
+     */
+    virtual void register_peer(const process_information& node, peer* ptr) = 0;
+    
+    /**
+     * @brief Returns the peer associated with given node id.
+     */
+    virtual peer* get_peer(const process_information& node) = 0;
+    
+    /**
+     * @brief This callback is used by peer_acceptor implementations to
+     *        invoke cleanup code when disposed.
+     */
+    virtual void del_acceptor(peer_acceptor* ptr) = 0;
+    
+    /**
+     * @brief Delivers a message to given node.
+     */
+    virtual void deliver(const process_information& node,
+                         const message_header& hdr,
+                         any_tuple msg                  ) = 0;
+    
+    /**
+     * @brief This callback is invoked by {@link peer} implementations
+     *        and causes the middleman to disconnect from the node.
+     */
+    virtual void last_proxy_exited(peer* ptr) = 0;
+    
+    /**
+     *
+     */
+    virtual void new_peer(const input_stream_ptr& in,
+                          const output_stream_ptr& out,
+                          const process_information_ptr& node = nullptr) = 0;
+
+    /**
+     * @brief Adds a new acceptor for incoming connections to @p pa
+     *        to the event loop of the middleman.
+     * @note This member function is thread-safe.
+     */
+    virtual void register_acceptor(const actor_ptr& pa, peer_acceptor* ptr) = 0;
+    
+    /**
+     * @brief Returns the namespace that contains all remote actors
+     *        connected to this middleman.
+     */
+    inline actor_namespace& get_namespace();
+    
  protected:
-
-    // destroys singleton
-    void destroy();
-
-    // initializes singletons
-    void initialize();
-
- private:
-
-    // sets m_impl and binds implementation to given protocol
-    void set_pimpl(std::unique_ptr<protocol>&&);
-
-    // creates a middleman using io::default_protocol
+    
+    // creates a middleman instance
     static middleman* create_singleton();
-
+    
     // destroys uninitialized instances
     inline void dispose() { delete this; }
+    
+    // destroys an initialized singleton
+    virtual void destroy() = 0;
 
-    // pointer to implementation
-    std::unique_ptr<middleman_impl> m_impl;
+    // initializes a singleton
+    virtual void initialize() = 0;
 
+    // each middleman defines its own namespace
+    actor_namespace m_namespace;
+    
+    // the node id of this middleman
+    process_information_ptr m_node;
+    
+    // 
+    std::unique_ptr<middleman_event_handler> m_handler;
+    
 };
 
-} } // namespace cppa::detail
+inline actor_namespace& middleman::get_namespace() {
+    return m_namespace;
+}
+    
+} } // namespace cppa::io
 
 #endif // MIDDLEMAN_HPP

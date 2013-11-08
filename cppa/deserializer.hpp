@@ -40,7 +40,7 @@
 namespace cppa {
 
 class object;
-class actor_addressing;
+class actor_namespace;
 class type_lookup_table;
 
 namespace util { class buffer; }
@@ -56,7 +56,7 @@ class deserializer {
 
  public:
 
-    deserializer(actor_addressing* addressing = nullptr,
+    deserializer(actor_namespace* ns = nullptr,
                  type_lookup_table* incoming_types = nullptr);
 
     virtual ~deserializer();
@@ -123,8 +123,8 @@ class deserializer {
      */
     virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
-    inline actor_addressing* addressing() {
-        return m_addressing;
+    inline actor_namespace* get_namespace() {
+        return m_namespace;
     }
 
     inline type_lookup_table* incoming_types() {
@@ -135,7 +135,7 @@ class deserializer {
 
  private:
 
-    actor_addressing* m_addressing;
+    actor_namespace* m_namespace;
     type_lookup_table* m_incoming_types;
 
 };

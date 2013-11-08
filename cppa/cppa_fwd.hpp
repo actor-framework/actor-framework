@@ -42,6 +42,7 @@ class channel;
 class behavior;
 class any_tuple;
 class self_type;
+class actor_proxy;
 class message_header;
 class partial_function;
 class uniform_type_info;
@@ -58,12 +59,17 @@ enum class atom_value : std::uint64_t;
 // class templates
 template<typename> class optional;
 template<typename> class intrusive_ptr;
+template<typename> class weak_intrusive_ptr;
 
-// typedefs
+// intrusive pointer typedefs
 typedef intrusive_ptr<actor>               actor_ptr;
 typedef intrusive_ptr<group>               group_ptr;
 typedef intrusive_ptr<channel>             channel_ptr;
+typedef intrusive_ptr<actor_proxy>         actor_proxy_ptr;
 typedef intrusive_ptr<process_information> process_information_ptr;
+
+// weak intrusive pointer typedefs
+typedef weak_intrusive_ptr<actor_proxy>    weak_actor_proxy_ptr;
 
 } // namespace cppa
 

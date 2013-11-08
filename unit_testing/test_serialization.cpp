@@ -38,6 +38,7 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/primitive_type.hpp"
+#include "cppa/actor_namespace.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
@@ -48,8 +49,6 @@
 #include "cppa/util/algorithm.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
-
-#include "cppa/io/default_actor_addressing.hpp"
 
 #include "cppa/detail/ieee_754.hpp"
 #include "cppa/detail/object_array.hpp"
@@ -169,7 +168,7 @@ int main() {
 
     announce(typeid(raw_struct), create_unique<raw_struct_type_info>());
 
-    io::default_actor_addressing addressing;
+    actor_namespace addressing;
 
     cout << "process id: " << to_string(process_information::get()) << endl;
 

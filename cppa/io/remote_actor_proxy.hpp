@@ -28,52 +28,89 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_PROXY_CACHE_HPP
-#define CPPA_ACTOR_PROXY_CACHE_HPP
+#ifndef REMOTE_ACTOR_PROXY_HPP
+#define REMOTE_ACTOR_PROXY_HPP
 
-#include "cppa/atom.hpp"
-#include "cppa/actor.hpp"
-#include "cppa/ref_counted.hpp"
+#include "cppa/extend.hpp"
+#include "cppa/actor_proxy.hpp"
+#include "cppa/memory_cached.hpp"
+#include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa {
+namespace cppa { namespace detail {
 
-class serializer;
-class deserializer;
+class memory;
+class instance_wrapper;
+template<typename>
+class basic_memory_cache;
 
-/**
- * @brief Different serialization protocols have different representations
- *        for actors. This class encapsulates a technology-specific
- *        actor addressing.
- */
-class actor_addressing {
+} } // namespace cppa::detail
+
+namespace cppa { namespace io {
+
+class middleman;
+    
+class sync_request_info : public extend<memory_managed>::with<memory_cached> {
+
+    friend class detail::memory;
 
  public:
 
-    virtual ~actor_addressing();
+    typedef sync_request_info* pointer;
 
-    /**
-     * @brief Returns the technology identifier of the implementation.
-     * @note All-uppercase identifiers are reserved for libcppa's
-     *       builtin implementations.
-     */
-    virtual atom_value technology_id() const = 0;
+    pointer      next;   // intrusive next pointer
+    actor_ptr    sender; // points to the sender of the message
+    message_id mid;    // sync message ID
 
-    /**
-     * @brief Serializes @p ptr to @p sink according
-     *        to the implemented addressing.
-     * @warning Not thread-safe
-     */
-    virtual void write(serializer* sink, const actor_ptr& ptr) = 0;
+ private:
 
-    /**
-     * @brief Deserializes an actor from @p source according
-     *        to the implemented addressing.
-     * @warning Not thread-safe
-     */
-     virtual actor_ptr read(deserializer* source) = 0;
+    sync_request_info(actor_ptr sptr, message_id id);
 
 };
 
-} // namespace cppa::detail
+class remote_actor_proxy : public actor_proxy {
 
-#endif // CPPA_ACTOR_PROXY_CACHE_HPP
+    typedef actor_proxy super;
+
+ public:
+
+    remote_actor_proxy(actor_id mid,
+                       const process_information_ptr& pinfo,
+                       middleman* parent);
+
+    void enqueue(const message_header& hdr, any_tuple msg) override;
+
+    void link_to(const actor_ptr& other) override;
+
+    void unlink_from(const actor_ptr& other) override;
+
+    bool remove_backlink(const actor_ptr& to) override;
+
+    bool establish_backlink(const actor_ptr& to) override;
+
+    void local_link_to(const actor_ptr& other) override;
+
+    void local_unlink_from(const actor_ptr& other) override;
+
+    void deliver(const message_header& hdr, any_tuple msg) override;
+
+    inline const process_information_ptr& process_info() const {
+        return m_pinf;
+    }
+
+ protected:
+
+    ~remote_actor_proxy();
+
+ private:
+
+    void forward_msg(const message_header& hdr, any_tuple msg);
+
+    middleman*              m_parent;
+    process_information_ptr m_pinf;
+    intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
+
+};
+
+} } // namespace cppa::network
+
+#endif // remote_actor_proxy_HPP

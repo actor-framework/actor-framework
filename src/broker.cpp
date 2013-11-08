@@ -111,23 +111,23 @@ class broker::servant : public continuable {
     template<typename... Ts>
     servant(broker_ptr parent, Ts&&... args)
     : super{std::forward<Ts>(args)...}, m_disconnected{false}
-    , m_parent{move(parent)} { }
+    , m_broker{move(parent)} { }
 
     void io_failed(event_bitmask mask) override {
         if (mask == event::read) disconnect();
     }
 
     void dispose() override {
-        parent().erase_io(read_handle());
-        if (parent().m_io.empty() && parent().m_accept.empty()) {
+        m_broker->erase_io(read_handle());
+        if (m_broker->m_io.empty() && m_broker->m_accept.empty()) {
             // release implicit reference count held by middleman
             // in caes no reader/writer is left for this broker
-            parent().deref();
+            m_broker->deref();
         }
     }
 
-    void set_parent(broker_ptr new_parent) {
-        if (!m_disconnected) m_parent = std::move(new_parent);
+    void set_broker(broker_ptr new_broker) {
+        if (!m_disconnected) m_broker = std::move(new_broker);
     }
 
  protected:
@@ -135,21 +135,17 @@ class broker::servant : public continuable {
     void disconnect() {
         if (!m_disconnected) {
             m_disconnected = true;
-            if (parent().exit_reason() == exit_reason::not_exited) {
-                parent().invoke_message(nullptr, disconnect_message());
+            if (m_broker->exit_reason() == exit_reason::not_exited) {
+                m_broker->invoke_message(nullptr, disconnect_message());
             }
         }
     }
 
     virtual any_tuple disconnect_message() = 0;
 
-    broker& parent() const { return *m_parent; }
-
     bool m_disconnected;
 
- private:
-
-    broker_ptr m_parent;
+    broker_ptr m_broker;
 
 };
 
@@ -184,7 +180,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
         });
         for (;;) {
             // stop reading if actor finished execution
-            if (parent().exit_reason() != exit_reason::not_exited) {
+            if (m_broker->exit_reason() != exit_reason::not_exited) {
                 return read_closed;
             }
             auto& buf = get_ref<2>(m_read_msg);
@@ -211,7 +207,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
                || m_policy == broker::exactly
                || m_policy == broker::at_most) {
                 CPPA_LOG_DEBUG("invoke io actor");
-                parent().invoke_message(nullptr, m_read_msg);
+                m_broker->invoke_message(nullptr, m_read_msg);
                 CPPA_LOG_INFO_IF(!m_read_msg.vals()->unique(), "detached buffer");
                 get_ref<2>(m_read_msg).clear();
             }
@@ -266,9 +262,9 @@ class broker::doorman : public broker::servant {
             if (opt) {
                 using namespace std;
                 auto& p = *opt;
-                get_ref<2>(m_accept_msg) = parent().add_scribe(move(p.first),
-                                                               move(p.second));
-                parent().invoke_message(nullptr, m_accept_msg);
+                get_ref<2>(m_accept_msg) = m_broker->add_scribe(move(p.first),
+                                                                move(p.second));
+                m_broker->invoke_message(nullptr, m_accept_msg);
             }
             else return read_continue_later;
        }
@@ -465,7 +461,7 @@ actor_ptr broker::fork_impl(std::function<void (broker*)> fun,
     scribe* sptr = i->second.get(); // non-owning pointer
     auto result = make_counted<default_broker>(move(fun), move(i->second));
     init_and_launch(result);
-    sptr->set_parent(result); // set new parent
+    sptr->set_broker(result); // set new broker
     m_io.erase(i);
     return result;
 }

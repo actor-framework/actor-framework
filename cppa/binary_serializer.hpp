@@ -55,7 +55,7 @@ class binary_serializer : public serializer {
      * @warning @p write_buffer must be guaranteed to outlive @p this
      */
     binary_serializer(util::buffer* write_buffer,
-                      actor_addressing* addressing = nullptr,
+                      actor_namespace* ns = nullptr,
                       type_lookup_table* lookup_table = nullptr);
 
     void begin_object(const uniform_type_info*) override;

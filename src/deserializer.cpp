@@ -40,8 +40,8 @@
 
 namespace cppa {
 
-deserializer::deserializer(actor_addressing* aa, type_lookup_table* ot)
-: m_addressing{aa}, m_incoming_types{ot} { }
+deserializer::deserializer(actor_namespace* ns, type_lookup_table* ot)
+: m_namespace{ns}, m_incoming_types{ot} { }
 
 deserializer::~deserializer() { }
 

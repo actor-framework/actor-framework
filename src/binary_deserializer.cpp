@@ -158,14 +158,14 @@ struct pt_reader {
 } // namespace <anonmyous>
 
 binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
-                                         actor_addressing* addressing,
+                                         actor_namespace* ns,
                                          type_lookup_table* tbl)
-: super(addressing, tbl), m_pos(buf), m_end(advanced(buf, buf_size)) { }
+: super(ns, tbl), m_pos(buf), m_end(advanced(buf, buf_size)) { }
 
 binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
-                                         actor_addressing* addressing,
+                                         actor_namespace* ns,
                                          type_lookup_table* tbl)
-: super(addressing, tbl), m_pos(bbegin), m_end(bend) { }
+: super(ns, tbl), m_pos(bbegin), m_end(bend) { }
 
 const uniform_type_info* binary_deserializer::begin_object() {
     std::uint8_t flag;
