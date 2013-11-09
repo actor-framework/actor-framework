@@ -62,7 +62,7 @@ void fiber::swap(fiber&, fiber&) {
 
 namespace cppa { namespace util {
 
-class fiber_impl;
+struct fiber_impl;
 void fiber_trampoline(intptr_t iptr);
 
 namespace {
@@ -122,9 +122,7 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
 
 } // namespace <anonymous>
 
-class fiber_impl {
-
- public:
+struct fiber_impl {
 
     fiber_impl() : m_ctx() { }
 
@@ -136,24 +134,18 @@ class fiber_impl {
         fc_jump(m_ctx, to->m_ctx, to);
     }
 
- protected:
-
     fc_member m_ctx;
 
 };
 
 // a fiber representing a thread ('converts' the thread to a fiber)
-class converted_fiber : public fiber_impl {
-
- public:
+struct converted_fiber : fiber_impl {
 
     converted_fiber() {
 #       if BOOST_VERSION > 105100
         m_ctx = &m_ctx_obj;
 #       endif
     }
-
- private:
 
 #   if BOOST_VERSION > 105100
     ctx::fcontext_t m_ctx_obj;
@@ -162,9 +154,7 @@ class converted_fiber : public fiber_impl {
 };
 
 // a fiber executing a function
-class fun_fiber : public fiber_impl {
-
- public:
+struct fun_fiber : fiber_impl {
 
     fun_fiber(void (*fun)(void*), void* arg) : m_arg(arg), m_fun(fun) {
         fc_make(m_ctx, m_alloc, m_vgm);
@@ -177,9 +167,6 @@ class fun_fiber : public fiber_impl {
     virtual void run() {
         m_fun(m_arg);
     }
-
-
- private:
 
     void* m_arg;
     void (*m_fun)(void*);

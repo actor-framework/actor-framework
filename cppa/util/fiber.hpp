@@ -33,11 +33,9 @@
 
 namespace cppa { namespace util {
 
-class fiber_impl;
+struct fiber_impl;
 
-class fiber {
-
- public:
+struct fiber {
 
     fiber();
 
@@ -46,8 +44,6 @@ class fiber {
     ~fiber();
 
     static void swap(fiber& from, fiber& to);
-
- private:
 
     fiber_impl* m_impl;
 
