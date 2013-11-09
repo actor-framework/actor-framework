@@ -41,13 +41,13 @@
 #include "cppa/match.hpp"
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 #include "cppa/thread_mapped_actor.hpp"
 #include "cppa/binary_deserializer.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/util/buffer.hpp"
 
@@ -130,14 +130,14 @@ class middleman_impl : public middleman {
 
     middleman_impl() : m_done(false) {
         m_handler = middleman_event_handler::create();
-        m_namespace.set_proxy_factory([=](actor_id aid, process_information_ptr ptr) {
+        m_namespace.set_proxy_factory([=](actor_id aid, node_id_ptr ptr) {
             return make_counted<remote_actor_proxy>(aid, std::move(ptr), this);
         });
-        m_namespace.set_new_element_callback([=](actor_id aid, const process_information& node) {
+        m_namespace.set_new_element_callback([=](actor_id aid, const node_id& node) {
             deliver(node,
                     {nullptr, nullptr},
                     make_any_tuple(atom("MONITOR"),
-                                   process_information::get(),
+                                   node_id::get(),
                                    aid));
         });
     }
@@ -150,7 +150,7 @@ class middleman_impl : public middleman {
         static_cast<void>(::write(m_pipe_write, &dummy, sizeof(dummy)));
     }
 
-    void register_peer(const process_information& node, peer* ptr) override {
+    void register_peer(const node_id& node, peer* ptr) override {
         CPPA_LOG_TRACE("node = " << to_string(node) << ", ptr = " << ptr);
         auto& entry = m_peers[node];
         if (entry.impl == nullptr) {
@@ -169,7 +169,7 @@ class middleman_impl : public middleman {
         }
     }
     
-    peer* get_peer(const process_information& node) override {
+    peer* get_peer(const node_id& node) override {
         CPPA_LOG_TRACE("n = " << to_string(n));
         auto i = m_peers.find(node);
         if (i != m_peers.end()) {
@@ -193,7 +193,7 @@ class middleman_impl : public middleman {
         }
     }
     
-    void deliver(const process_information& node,
+    void deliver(const node_id& node,
                  const message_header& hdr,
                  any_tuple msg                  ) override {
         auto& entry = m_peers[node];
@@ -230,7 +230,7 @@ class middleman_impl : public middleman {
 
     void new_peer(const input_stream_ptr& in,
                   const output_stream_ptr& out,
-                  const process_information_ptr& node = nullptr) override {
+                  const node_id_ptr& node = nullptr) override {
         CPPA_LOG_TRACE("");
         auto ptr = new peer(this, in, out, node);
         continue_reader(ptr);
@@ -289,7 +289,7 @@ class middleman_impl : public middleman {
     };
     
     std::map<actor_ptr, std::vector<peer_acceptor*>> m_acceptors;
-    std::map<process_information, peer_entry> m_peers;
+    std::map<node_id, peer_entry> m_peers;
     
 };
 
@@ -355,7 +355,7 @@ void middleman_loop(middleman_impl* impl) {
     middleman_event_handler* handler = impl->m_handler.get();
     CPPA_LOGF_TRACE("run middleman loop");
     CPPA_LOGF_INFO("middleman runs at "
-                   << to_string(*process_information::get()));
+                   << to_string(*node_id::get()));
     handler->init();
     impl->continue_reader(new middleman_overseer(impl->m_pipe_read, impl->m_queue));
     handler->update();

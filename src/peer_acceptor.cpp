@@ -32,8 +32,8 @@
 #include <exception>
 
 #include "cppa/logging.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/io/peer.hpp"
 #include "cppa/io/peer_acceptor.hpp"
@@ -61,14 +61,14 @@ continue_reading_result peer_acceptor::continue_reading() {
         }
         if (opt) {
             auto& pair = *opt;
-            auto& pself = process_information::get();
+            auto& pself = node_id::get();
             uint32_t process_id = pself->process_id();
             try {
                 actor_id aid = published_actor()->id();
                 pair.second->write(&aid, sizeof(actor_id));
                 pair.second->write(&process_id, sizeof(uint32_t));
-                pair.second->write(pself->node_id().data(),
-                                   pself->node_id().size());
+                pair.second->write(pself->host_id().data(),
+                                   pself->host_id().size());
                 m_parent->new_peer(pair.first, pair.second);
             }
             catch (exception& e) {

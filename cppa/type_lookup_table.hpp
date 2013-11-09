@@ -45,9 +45,9 @@ namespace cppa {
  *
  *  1: {atom_value}
  *  2: {atom_value, uint32_t}
- *  3: {atom_value, process_information}
- *  4: {atom_value, process_information, uint32_t}
- *  5: {atom_value, process_information, uint32_t, uint32_t}
+ *  3: {atom_value, node_id}
+ *  4: {atom_value, node_id, uint32_t}
+ *  5: {atom_value, node_id, uint32_t, uint32_t}
  *  6: {atom_value, actor_ptr}
  *  7: {atom_value, uint32_t, string}
  *

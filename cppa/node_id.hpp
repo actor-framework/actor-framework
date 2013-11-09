@@ -46,8 +46,7 @@ class serializer;
 /**
  * @brief Identifies a process.
  */
-class process_information : public ref_counted
-                          , util::comparable<process_information> {
+class node_id : public ref_counted, util::comparable<node_id> {
 
     typedef ref_counted super;
 
@@ -56,31 +55,31 @@ class process_information : public ref_counted
     /**
      * @brief @c libcppa uses 160 bit hashes (20 bytes).
      */
-    static constexpr size_t node_id_size = 20;
+    static constexpr size_t host_id_size = 20;
 
     /**
      * @brief Represents a 160 bit hash.
      */
-    typedef std::array<std::uint8_t, node_id_size> node_id_type;
+    typedef std::array<std::uint8_t, host_id_size> host_id_type;
 
     /**
      * @brief Copy constructor.
      */
-    process_information(const process_information&);
+    node_id(const node_id&);
 
     /**
      * @brief Creates @c this from @p process_id and @p hash.
      * @param process_id System-wide unique process identifier.
      * @param hash Unique node id as hexadecimal string representation.
      */
-    process_information(std::uint32_t process_id, const std::string& hash);
+    node_id(std::uint32_t process_id, const std::string& hash);
 
     /**
      * @brief Creates @c this from @p process_id and @p hash.
      * @param process_id System-wide unique process identifier.
      * @param hash Unique node id.
      */
-    process_information(std::uint32_t process_id, const node_id_type& node_id);
+    node_id(std::uint32_t process_id, const host_id_type& node_id);
 
     /**
      * @brief Identifies the running process.
@@ -93,18 +92,18 @@ class process_information : public ref_counted
      * @returns A hash build from the MAC address of the first network device
      *          and the UUID of the root partition (mounted in "/" or "C:").
      */
-    inline const node_id_type& node_id() const { return m_node_id; }
+    inline const host_id_type& host_id() const { return m_host_id; }
 
     /**
      * @brief Returns the proccess_information for the running process.
      * @returns A pointer to the singleton of this process.
      */
-    static const intrusive_ptr<process_information>& get();
+    static const intrusive_ptr<node_id>& get();
 
     /** @cond PRIVATE */
 
-    // "inherited" from comparable<process_information>
-    int compare(const process_information& other) const;
+    // "inherited" from comparable<node_id>
+    int compare(const node_id& other) const;
 
     static void serialize_invalid(serializer*);
 
@@ -113,46 +112,46 @@ class process_information : public ref_counted
  private:
 
     std::uint32_t m_process_id;
-    node_id_type m_node_id;
+    host_id_type m_host_id;
 
 };
 
-void node_id_from_string(const std::string& hash,
-                         process_information::node_id_type& node_id);
+void host_id_from_string(const std::string& hash,
+                         node_id::host_id_type& node_id);
 
 bool equal(const std::string& hash,
-           const process_information::node_id_type& node_id);
+           const node_id::host_id_type& node_id);
 
-inline bool equal(const process_information::node_id_type& node_id,
+inline bool equal(const node_id::host_id_type& node_id,
                   const std::string& hash) {
     return equal(hash, node_id);
 }
 
 /**
  * @brief A smart pointer type that manages instances of
- *        {@link process_information}.
- * @relates process_information
+ *        {@link node_id}.
+ * @relates node_id
  */
-typedef intrusive_ptr<process_information> process_information_ptr;
+typedef intrusive_ptr<node_id> node_id_ptr;
 
 /**
- * @relates process_information
+ * @relates node_id
  */
-std::string to_string(const process_information& what);
+std::string to_string(const node_id& what);
 
 /**
- * @relates process_information
+ * @relates node_id
  */
-std::string to_string(const process_information_ptr& what);
+std::string to_string(const node_id_ptr& what);
 
 /**
- * @brief Converts a {@link process_information::node_id_type node_id}
+ * @brief Converts a {@link node_id::host_id_type node_id}
  *        to a hexadecimal string.
  * @param node_id A unique node identifier.
  * @returns A hexadecimal representation of @p node_id.
- * @relates process_information
+ * @relates node_id
  */
-std::string to_string(const process_information::node_id_type& node_id);
+std::string to_string(const node_id::host_id_type& node_id);
 
 } // namespace cppa
 

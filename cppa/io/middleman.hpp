@@ -36,9 +36,9 @@
 #include <memory>
 #include <functional>
 
+#include "cppa/node_id.hpp"
 #include "cppa/cppa_fwd.hpp"
 #include "cppa/actor_namespace.hpp"
-#include "cppa/process_information.hpp"
 
 namespace cppa { namespace detail { class singleton_manager; } }
 
@@ -118,12 +118,12 @@ class middleman {
     /**
      * @brief Registers a new peer, i.e., a new node in the network.
      */
-    virtual void register_peer(const process_information& node, peer* ptr) = 0;
+    virtual void register_peer(const node_id& node, peer* ptr) = 0;
     
     /**
      * @brief Returns the peer associated with given node id.
      */
-    virtual peer* get_peer(const process_information& node) = 0;
+    virtual peer* get_peer(const node_id& node) = 0;
     
     /**
      * @brief This callback is used by peer_acceptor implementations to
@@ -134,7 +134,7 @@ class middleman {
     /**
      * @brief Delivers a message to given node.
      */
-    virtual void deliver(const process_information& node,
+    virtual void deliver(const node_id& node,
                          const message_header& hdr,
                          any_tuple msg                  ) = 0;
     
@@ -149,7 +149,7 @@ class middleman {
      */
     virtual void new_peer(const input_stream_ptr& in,
                           const output_stream_ptr& out,
-                          const process_information_ptr& node = nullptr) = 0;
+                          const node_id_ptr& node = nullptr) = 0;
 
     /**
      * @brief Adds a new acceptor for incoming connections to @p pa
@@ -182,7 +182,7 @@ class middleman {
     actor_namespace m_namespace;
     
     // the node id of this middleman
-    process_information_ptr m_node;
+    node_id_ptr m_node;
     
     // 
     std::unique_ptr<middleman_event_handler> m_handler;

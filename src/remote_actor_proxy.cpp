@@ -52,7 +52,7 @@ sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
 : next(nullptr), sender(std::move(sptr)), mid(id) { }
 
 remote_actor_proxy::remote_actor_proxy(actor_id mid,
-                                       const process_information_ptr& pinfo,
+                                       const node_id_ptr& pinfo,
                                        middleman* parent)
 : super(mid), m_parent(parent), m_pinf(pinfo) {
     CPPA_REQUIRE(parent != nullptr);

@@ -278,7 +278,7 @@ class local_group_module : public group::module {
  public:
 
     local_group_module()
-    : super("local"), m_process(process_information::get())
+    : super("local"), m_process(node_id::get())
     , m_actor_utype(uniform_typeid<actor_ptr>()){ }
 
     group_ptr get(const string& identifier) {
@@ -333,13 +333,13 @@ class local_group_module : public group::module {
         m_actor_utype->serialize(&ptr->broker(), sink);
     }
 
-    inline const process_information& process() const {
+    inline const node_id& process() const {
         return *m_process;
     }
 
  private:
 
-    process_information_ptr m_process;
+    node_id_ptr m_process;
     const uniform_type_info* m_actor_utype;
     util::shared_spinlock m_instances_mtx;
     map<string, local_group_ptr> m_instances;

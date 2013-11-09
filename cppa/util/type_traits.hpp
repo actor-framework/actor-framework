@@ -167,7 +167,7 @@ struct is_builtin {
                                        actor_ptr,
                                        group_ptr,
                                        channel_ptr,
-                                       process_information_ptr
+                                       node_id_ptr
                                    >::value;
 };
 

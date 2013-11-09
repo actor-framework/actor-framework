@@ -89,14 +89,14 @@ int main() {
         "@actor",                    // actor_ptr
         "@group",                    // group_ptr
         "@channel",                  // channel_ptr
-        "@proc",                     // intrusive_ptr<process_information>
+        "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration
         "@buffer",                   // util::buffer
         // default announced cpap tuples
         "@<>+@atom",                 // {atom_value}
         "@<>+@atom+@actor",          // {atom_value, actor_ptr}
-        "@<>+@atom+@proc",           // {atom_value, process_information}
-        "@<>+@atom+@proc+@u32+@u32", // {atom_value, process_information, uint32_t, uint32_t}
+        "@<>+@atom+@proc",           // {atom_value, node_id}
+        "@<>+@atom+@proc+@u32+@u32", // {atom_value, node_id, uint32_t, uint32_t}
         "@<>+@atom+@u32",            // {atom_value, uint32_t}
         "@<>+@atom+@u32+@str"        // {atom_value, uint32_t, std::string}
     };
@@ -135,7 +135,7 @@ int main() {
                     float, double,
                     atom_value, any_tuple, message_header,
                     actor_ptr, group_ptr,
-                    channel_ptr, process_information_ptr
+                    channel_ptr, node_id_ptr
                  >::arr;
 
     CPPA_CHECK(sarr.is_pure());
@@ -160,7 +160,7 @@ int main() {
         uniform_typeid<actor_ptr>(),
         uniform_typeid<group_ptr>(),
         uniform_typeid<channel_ptr>(),
-        uniform_typeid<process_information_ptr>()
+        uniform_typeid<node_id_ptr>()
     };
 
     for (size_t i = 0; i < sarr.size; ++i) {

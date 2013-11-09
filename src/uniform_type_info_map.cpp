@@ -63,7 +63,7 @@ namespace cppa { namespace detail {
     { "cppa::intrusive_ptr<cppa::actor>",               "@actor" },
     { "cppa::intrusive_ptr<cppa::channel>",             "@channel" },
     { "cppa::intrusive_ptr<cppa::group>",               "@group" },
-    { "cppa::intrusive_ptr<cppa::process_information>", "@proc"},
+    { "cppa::intrusive_ptr<cppa::node_id>", "@proc"},
     { "cppa::io::accept_handle",                        "@ac_hdl" },
     { "cppa::io::connection_handle",                    "@cn_hdl" },
     { "cppa::message_header",                           "@header" },
@@ -292,26 +292,26 @@ void deserialize_impl(message_header& hdr, deserializer* source) {
     hdr.id = message_id::from_integer_value(source->read<std::uint64_t>());
 }
 
-void serialize_impl(const process_information_ptr& ptr, serializer* sink) {
+void serialize_impl(const node_id_ptr& ptr, serializer* sink) {
     if (ptr == nullptr) {
-        process_information::serialize_invalid(sink);
+        node_id::serialize_invalid(sink);
     }
     else {
         sink->write_value(ptr->process_id());
-        sink->write_raw(ptr->node_id().size(), ptr->node_id().data());
+        sink->write_raw(ptr->host_id().size(), ptr->host_id().data());
     }
 }
 
-void deserialize_impl(process_information_ptr& ptr, deserializer* source) {
-    process_information::node_id_type nid;
+void deserialize_impl(node_id_ptr& ptr, deserializer* source) {
+    node_id::host_id_type nid;
     auto pid = source->read<uint32_t>();
-    source->read_raw(process_information::node_id_size, nid.data());
+    source->read_raw(node_id::host_id_size, nid.data());
     auto is_zero = [](uint8_t value) { return value == 0; };
     if (pid == 0 && std::all_of(nid.begin(), nid.end(), is_zero)) {
         // invalid process information (nullptr)
         ptr.reset();
     }
-    else ptr.reset(new process_information{pid, nid});
+    else ptr.reset(new node_id{pid, nid});
 }
 
 inline void serialize_impl(const atom_value& val, serializer* sink) {
@@ -753,9 +753,9 @@ class utim_impl : public uniform_type_info_map {
         // insert default hints
         push_hint<atom_value>(this);
         push_hint<atom_value, std::uint32_t>(this);
-        push_hint<atom_value, process_information_ptr>(this);
+        push_hint<atom_value, node_id_ptr>(this);
         push_hint<atom_value, actor_ptr>(this);
-        push_hint<atom_value, process_information_ptr, std::uint32_t, std::uint32_t>(this);
+        push_hint<atom_value, node_id_ptr, std::uint32_t, std::uint32_t>(this);
         push_hint<atom_value, std::uint32_t, std::string>(this);
     }
 
@@ -819,7 +819,7 @@ class utim_impl : public uniform_type_info_map {
 
     typedef std::map<std::string, std::string> strmap;
 
-    uti_impl<process_information_ptr>       m_type_proc;
+    uti_impl<node_id_ptr>       m_type_proc;
     uti_impl<io::accept_handle>             m_ac_hdl;
     uti_impl<io::connection_handle>         m_cn_hdl;
     uti_impl<channel_ptr>                   m_type_channel;

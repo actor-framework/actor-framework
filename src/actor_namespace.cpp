@@ -31,11 +31,11 @@
 #include <utility>
 
 #include "cppa/logging.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/actor_namespace.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/io/middleman.hpp"
 #include "cppa/io/remote_actor_proxy.hpp"
@@ -49,14 +49,14 @@ void actor_namespace::write(serializer* sink, const actor_ptr& ptr) {
     if (ptr == nullptr) {
         CPPA_LOG_DEBUG("serialize nullptr");
         sink->write_value(static_cast<actor_id>(0));
-        process_information::serialize_invalid(sink);
+        node_id::serialize_invalid(sink);
     }
     else {
         // local actor?
         if (!ptr->is_proxy()) {
             get_actor_registry()->put(ptr->id(), ptr);
         }
-        auto pinf = process_information::get();
+        auto pinf = node_id::get();
         if (ptr->is_proxy()) {
             auto dptr = ptr.downcast<io::remote_actor_proxy>();
             if (dptr) pinf = dptr->process_info();
@@ -64,38 +64,38 @@ void actor_namespace::write(serializer* sink, const actor_ptr& ptr) {
         }
         sink->write_value(ptr->id());
         sink->write_value(pinf->process_id());
-        sink->write_raw(process_information::node_id_size,
-                        pinf->node_id().data());
+        sink->write_raw(node_id::host_id_size,
+                        pinf->host_id().data());
     }
 }
     
 actor_ptr actor_namespace::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
-    process_information::node_id_type nid;
+    node_id::host_id_type nid;
     auto aid = source->read<uint32_t>();
     auto pid = source->read<uint32_t>();
-    source->read_raw(process_information::node_id_size, nid.data());
+    source->read_raw(node_id::host_id_size, nid.data());
     // local actor?
-    auto pinf = process_information::get();
+    auto pinf = node_id::get();
     if (aid == 0 && pid == 0) {
         return nullptr;
     }
-    else if (pid == pinf->process_id() && nid == pinf->node_id()) {
+    else if (pid == pinf->process_id() && nid == pinf->host_id()) {
         return get_actor_registry()->get(aid);
     }
     else {
-        process_information_ptr tmp = new process_information{pid, nid};
+        node_id_ptr tmp = new node_id{pid, nid};
         return get_or_put(tmp, aid);
     }
     return nullptr;
 }
 
-size_t actor_namespace::count_proxies(const process_information& node) {
+size_t actor_namespace::count_proxies(const node_id& node) {
     auto i = m_proxies.find(node);
     return (i != m_proxies.end()) ? i->second.size() : 0;
 }
 
-actor_ptr actor_namespace::get(const process_information& node, actor_id aid) {
+actor_ptr actor_namespace::get(const node_id& node, actor_id aid) {
     auto& submap = m_proxies[node];
     auto i = submap.find(aid);
     if (i != submap.end()) {
@@ -109,7 +109,7 @@ actor_ptr actor_namespace::get(const process_information& node, actor_id aid) {
     return nullptr;
 }
     
-actor_ptr actor_namespace::get_or_put(process_information_ptr node, actor_id aid) {
+actor_ptr actor_namespace::get_or_put(node_id_ptr node, actor_id aid) {
     auto result = get(*node, aid);
     if (result == nullptr && m_factory) {
         auto ptr = m_factory(aid, node);
@@ -119,7 +119,7 @@ actor_ptr actor_namespace::get_or_put(process_information_ptr node, actor_id aid
     return result;
 }
 
-void actor_namespace::put(const process_information& node,
+void actor_namespace::put(const node_id& node,
                           actor_id aid,
                           const actor_proxy_ptr& proxy) {
     auto& submap = m_proxies[node];
@@ -131,7 +131,7 @@ void actor_namespace::put(const process_information& node,
             m_parent->enqueue(node,
                               {nullptr, nullptr},
                               make_any_tuple(atom("MONITOR"),
-                                             process_information::get(),
+                                             node_id::get(),
                                              aid));
         }*/
     }
@@ -141,16 +141,16 @@ void actor_namespace::put(const process_information& node,
     }
 }
 
-auto actor_namespace::proxies(process_information& node) -> proxy_map& {
+auto actor_namespace::proxies(node_id& node) -> proxy_map& {
     return m_proxies[node];
 }
     
-void actor_namespace::erase(process_information& inf) {
+void actor_namespace::erase(node_id& inf) {
     CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string));
     m_proxies.erase(inf);
 }
 
-void actor_namespace::erase(process_information& inf, actor_id aid) {
+void actor_namespace::erase(node_id& inf, actor_id aid) {
     CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
     auto i = m_proxies.find(inf);
     if (i != m_proxies.end()) {

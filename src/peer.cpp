@@ -61,12 +61,12 @@ namespace cppa { namespace io {
 peer::peer(middleman* parent,
            const input_stream_ptr& in,
            const output_stream_ptr& out,
-           process_information_ptr peer_ptr)
+           node_id_ptr peer_ptr)
 : super(parent, out, in->read_handle(), out->write_handle())
 , m_in(in), m_state((peer_ptr) ? wait_for_msg_size : wait_for_process_info)
 , m_node(peer_ptr) {
     m_rd_buf.final_size( m_state == wait_for_process_info
-                       ? sizeof(uint32_t) + process_information::node_id_size
+                       ? sizeof(uint32_t) + node_id::host_id_size
                        : sizeof(uint32_t));
     // state == wait_for_msg_size iff peer was created using remote_peer()
     // in this case, this peer must be erased if no proxy of it remains
@@ -105,12 +105,12 @@ continue_reading_result peer::continue_reading() {
                 //DEBUG("peer_connection::continue_reading: "
                 //      "wait_for_process_info");
                 uint32_t process_id;
-                process_information::node_id_type node_id;
+                node_id::host_id_type host_id;
                 memcpy(&process_id, m_rd_buf.data(), sizeof(uint32_t));
-                memcpy(node_id.data(), m_rd_buf.offset_data(sizeof(uint32_t)),
-                       process_information::node_id_size);
-                m_node.reset(new process_information(process_id, node_id));
-                if (*process_information::get() == *m_node) {
+                memcpy(host_id.data(), m_rd_buf.offset_data(sizeof(uint32_t)),
+                       node_id::host_id_size);
+                m_node.reset(new node_id(process_id, host_id));
+                if (*node_id::get() == *m_node) {
                     std::cerr << "*** middleman warning: "
                                  "incoming connection from self"
                               << std::endl;
@@ -154,10 +154,10 @@ continue_reading_result peer::continue_reading() {
                     // monitor messages are sent automatically whenever
                     // actor_proxy_cache creates a new proxy
                     // note: aid is the *original* actor id
-                    on(atom("MONITOR"), arg_match) >> [&](const process_information_ptr& node, actor_id aid) {
+                    on(atom("MONITOR"), arg_match) >> [&](const node_id_ptr& node, actor_id aid) {
                         monitor(hdr.sender, node, aid);
                     },
-                    on(atom("KILL_PROXY"), arg_match) >> [&](const process_information_ptr& node, actor_id aid, std::uint32_t reason) {
+                    on(atom("KILL_PROXY"), arg_match) >> [&](const node_id_ptr& node, actor_id aid, std::uint32_t reason) {
                         kill_proxy(hdr.sender, node, aid, reason);
                     },
                     on(atom("LINK"), arg_match) >> [&](const actor_ptr& ptr) {
@@ -189,7 +189,7 @@ continue_reading_result peer::continue_reading() {
 }
 
 void peer::monitor(const actor_ptr&,
-                           const process_information_ptr& node,
+                           const node_id_ptr& node,
                            actor_id aid) {
     CPPA_LOG_TRACE(CPPA_MARG(node, get) << ", " << CPPA_ARG(aid));
     if (!node) {
@@ -197,7 +197,7 @@ void peer::monitor(const actor_ptr&,
         return;
     }
     auto entry = get_actor_registry()->get_entry(aid);
-    auto pself = process_information::get();
+    auto pself = node_id::get();
 
     if (*node == *pself) {
         CPPA_LOGMF(CPPA_ERROR, self, "received 'MONITOR' from pself");
@@ -233,7 +233,7 @@ void peer::monitor(const actor_ptr&,
 }
 
 void peer::kill_proxy(const actor_ptr& sender,
-                              const process_information_ptr& node,
+                              const node_id_ptr& node,
                               actor_id aid,
                               std::uint32_t reason) {
     CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)

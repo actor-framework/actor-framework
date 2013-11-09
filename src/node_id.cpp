@@ -36,9 +36,9 @@
 #include <sys/types.h>
 
 #include "cppa/config.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/primitive_variant.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/util/algorithm.hpp"
 #include "cppa/util/ripemd_160.hpp"
@@ -47,17 +47,17 @@
 
 namespace {
 
-cppa::process_information* compute_proc_info() {
+cppa::node_id* compute_proc_info() {
     using namespace cppa::util;
     auto macs = get_mac_addresses();
     auto hd_serial_and_mac_addr = join(macs.begin(), macs.end())
                                 + get_root_uuid();
-    cppa::process_information::node_id_type node_id;
+    cppa::node_id::host_id_type node_id;
     ripemd_160(node_id, hd_serial_and_mac_addr);
-    return new cppa::process_information(getpid(), node_id);
+    return new cppa::node_id(getpid(), node_id);
 }
 
-cppa::process_information_ptr s_pinfo;
+cppa::node_id_ptr s_pinfo;
 
 struct pinfo_manager {
     pinfo_manager() {
@@ -87,8 +87,8 @@ std::uint8_t hex_char_value(char c) {
 
 namespace cppa {
 
-void node_id_from_string(const std::string& hash,
-                         process_information::node_id_type& node_id) {
+void host_id_from_string(const std::string& hash,
+                         node_id::host_id_type& node_id) {
     if (hash.size() != (node_id.size() * 2)) {
         throw std::invalid_argument("string argument is not a node id hash");
     }
@@ -102,7 +102,7 @@ void node_id_from_string(const std::string& hash,
 }
 
 bool equal(const std::string& hash,
-           const process_information::node_id_type& node_id) {
+           const node_id::host_id_type& node_id) {
     if (hash.size() != (node_id.size() * 2)) {
         return false;
     }
@@ -124,36 +124,36 @@ bool equal(const std::string& hash,
     return true;
 }
 
-process_information::process_information(const process_information& other)
-: super(), m_process_id(other.process_id()), m_node_id(other.node_id()) { }
+node_id::node_id(const node_id& other)
+: super(), m_process_id(other.process_id()), m_host_id(other.host_id()) { }
 
-process_information::process_information(std::uint32_t a, const std::string& b)
+node_id::node_id(std::uint32_t a, const std::string& b)
 : m_process_id(a) {
-    node_id_from_string(b, m_node_id);
+    host_id_from_string(b, m_host_id);
 }
 
-process_information::process_information(std::uint32_t a, const node_id_type& b)
-: m_process_id(a), m_node_id(b) { }
+node_id::node_id(std::uint32_t a, const host_id_type& b)
+: m_process_id(a), m_host_id(b) { }
 
-std::string to_string(const process_information::node_id_type& node_id) {
+std::string to_string(const node_id::host_id_type& node_id) {
     std::ostringstream oss;
     oss << std::hex;
     oss.fill('0');
-    for (size_t i = 0; i < process_information::node_id_size; ++i) {
+    for (size_t i = 0; i < node_id::host_id_size; ++i) {
         oss.width(2);
         oss << static_cast<std::uint32_t>(node_id[i]);
     }
     return oss.str();
 }
 
-const intrusive_ptr<process_information>& process_information::get() {
+const intrusive_ptr<node_id>& node_id::get() {
     return s_pinfo;
 }
 
-int process_information::compare(const process_information& other) const {
-    int tmp = strncmp(reinterpret_cast<const char*>(node_id().data()),
-                      reinterpret_cast<const char*>(other.node_id().data()),
-                      node_id_size);
+int node_id::compare(const node_id& other) const {
+    int tmp = strncmp(reinterpret_cast<const char*>(host_id().data()),
+                      reinterpret_cast<const char*>(other.host_id().data()),
+                      host_id_size);
     if (tmp == 0) {
         if (m_process_id < other.process_id()) return -1;
         else if (m_process_id == other.process_id()) return 0;
@@ -162,20 +162,20 @@ int process_information::compare(const process_information& other) const {
     return tmp;
 }
 
-void process_information::serialize_invalid(serializer* sink) {
+void node_id::serialize_invalid(serializer* sink) {
     sink->write_value(static_cast<uint32_t>(0));
-    process_information::node_id_type zero;
+    node_id::host_id_type zero;
     std::fill(zero.begin(), zero.end(), 0);
-    sink->write_raw(process_information::node_id_size, zero.data());
+    sink->write_raw(node_id::host_id_size, zero.data());
 }
 
-std::string to_string(const process_information& what) {
+std::string to_string(const node_id& what) {
     std::ostringstream oss;
-    oss << what.process_id() << "@" << to_string(what.node_id());
+    oss << what.process_id() << "@" << to_string(what.host_id());
     return oss.str();
 }
 
-std::string to_string(const process_information_ptr& what) {
+std::string to_string(const node_id_ptr& what) {
     std::ostringstream oss;
     oss << "@process_info(";
     if (!what) oss << "null";

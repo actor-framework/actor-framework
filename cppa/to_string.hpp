@@ -38,11 +38,11 @@
 #include "cppa/group.hpp"
 #include "cppa/object.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
-#include "cppa/process_information.hpp"
 #include "cppa/message_header.hpp"
 
 namespace std { class exception; }
@@ -80,11 +80,11 @@ inline std::string to_string(const channel_ptr& what) {
     return detail::to_string_impl(what);
 }
 
-// implemented in process_information.cpp
-std::string to_string(const process_information& what);
+// implemented in node_id.cpp
+std::string to_string(const node_id& what);
 
-// implemented in process_information.cpp
-std::string to_string(const process_information_ptr& what);
+// implemented in node_id.cpp
+std::string to_string(const node_id_ptr& what);
 
 inline std::string to_string(const object& what) {
     return detail::to_string_impl(what.value(), what.type());

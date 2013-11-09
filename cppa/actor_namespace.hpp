@@ -35,8 +35,8 @@
 #include <utility>
 #include <functional>
 
+#include "cppa/node_id.hpp"
 #include "cppa/actor_proxy.hpp"
-#include "cppa/process_information.hpp"
 
 namespace cppa {
 
@@ -53,10 +53,10 @@ class actor_namespace {
 
  public:
     
-    typedef std::function<actor_proxy_ptr(actor_id, process_information_ptr)>
+    typedef std::function<actor_proxy_ptr(actor_id, node_id_ptr)>
             factory_fun;
 
-    typedef std::function<void(actor_id, const process_information&)>
+    typedef std::function<void(actor_id, const node_id&)>
             new_element_callback;
 
     inline void set_proxy_factory(factory_fun fun);
@@ -75,41 +75,41 @@ class actor_namespace {
     /**
      * @brief Returns the number of proxies for @p node.
      */
-    size_t count_proxies(const process_information& node);
+    size_t count_proxies(const node_id& node);
     
     /**
      * @brief Returns the proxy instance identified by @p node and @p aid
      *        or @p nullptr if the actor is unknown.
      */
-    actor_ptr get(const process_information& node, actor_id aid);
+    actor_ptr get(const node_id& node, actor_id aid);
 
     /**
      * @brief Returns the proxy instance identified by @p node and @p aid
      *        or creates a new (default) proxy instance.
      */
-    actor_ptr get_or_put(process_information_ptr node, actor_id aid);
+    actor_ptr get_or_put(node_id_ptr node, actor_id aid);
     
     /**
      * @brief Stores @p proxy in the list of known actor proxies.
      */
-    void put(const process_information& parent,
+    void put(const node_id& parent,
              actor_id aid,
              const actor_proxy_ptr& proxy);
     
     /**
      * @brief Returns the map of known actors for @p node.
      */
-    proxy_map& proxies(process_information& node);
+    proxy_map& proxies(node_id& node);
     
     /**
      * @brief Deletes all proxies for @p node.
      */
-    void erase(process_information& node);
+    void erase(node_id& node);
     
     /**
      * @brief Deletes the proxy with id @p aid for @p node.
      */
-    void erase(process_information& node, actor_id aid);
+    void erase(node_id& node, actor_id aid);
     
  private:
     
@@ -117,9 +117,9 @@ class actor_namespace {
     
     new_element_callback m_new_element_callback;
     
-    process_information_ptr m_node;
+    node_id_ptr m_node;
     
-    std::map<process_information, proxy_map> m_proxies;
+    std::map<node_id, proxy_map> m_proxies;
     
 };
 

@@ -35,11 +35,11 @@
 #include <cstdint>
 
 #include "cppa/extend.hpp"
+#include "cppa/node_id.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/type_lookup_table.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
-#include "cppa/process_information.hpp"
 
 #include "cppa/util/buffer.hpp"
 
@@ -63,7 +63,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
     peer(middleman* parent,
          const input_stream_ptr& in,
          const output_stream_ptr& out,
-         process_information_ptr peer_ptr = nullptr);
+         node_id_ptr peer_ptr = nullptr);
 
     continue_reading_result continue_reading() override;
 
@@ -79,7 +79,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
         return m_erase_on_last_proxy_exited;
     }
 
-    inline const process_information& node() const {
+    inline const node_id& node() const {
         return *m_node;
     }
 
@@ -96,7 +96,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     input_stream_ptr m_in;
     read_state m_state;
-    process_information_ptr m_node;
+    node_id_ptr m_node;
 
     const uniform_type_info* m_meta_hdr;
     const uniform_type_info* m_meta_msg;
@@ -123,9 +123,9 @@ class peer : public extend<continuable>::with<buffered_writing> {
     type_lookup_table m_incoming_types;
     type_lookup_table m_outgoing_types;
 
-    void monitor(const actor_ptr& sender, const process_information_ptr& node, actor_id aid);
+    void monitor(const actor_ptr& sender, const node_id_ptr& node, actor_id aid);
 
-    void kill_proxy(const actor_ptr& sender, const process_information_ptr& node, actor_id aid, std::uint32_t reason);
+    void kill_proxy(const actor_ptr& sender, const node_id_ptr& node, actor_id aid, std::uint32_t reason);
 
     void link(const actor_ptr& sender, const actor_ptr& ptr);
 

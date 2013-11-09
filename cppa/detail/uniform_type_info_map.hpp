@@ -42,7 +42,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/unit.hpp"
 #include "cppa/none.hpp"
-#include "cppa/process_information.hpp"
+#include "cppa/node_id.hpp"
 
 #include "cppa/util/buffer.hpp"
 #include "cppa/util/duration.hpp"
@@ -65,7 +65,7 @@ using mapped_type_list = util::type_list<
     actor_ptr,
     channel_ptr,
     group_ptr,
-    process_information_ptr,
+    node_id_ptr,
     io::accept_handle,
     io::connection_handle,
     message_header,

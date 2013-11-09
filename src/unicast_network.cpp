@@ -80,18 +80,18 @@ void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
 
 actor_ptr remote_actor(stream_ptr_pair io) {
     CPPA_LOG_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
-    auto pinf = process_information::get();
+    auto pinf = node_id::get();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
     io.second->write(&process_id, sizeof(std::uint32_t));
-    io.second->write(pinf->node_id().data(), pinf->node_id().size());
+    io.second->write(pinf->host_id().data(), pinf->host_id().size());
     actor_id remote_aid;
     std::uint32_t peer_pid;
-    process_information::node_id_type peer_node_id;
+    node_id::host_id_type peer_node_id;
     io.first->read(&remote_aid, sizeof(actor_id));
     io.first->read(&peer_pid, sizeof(std::uint32_t));
     io.first->read(peer_node_id.data(), peer_node_id.size());
-    auto pinfptr = make_counted<process_information>(peer_pid, peer_node_id);
+    auto pinfptr = make_counted<node_id>(peer_pid, peer_node_id);
     if (*pinf == *pinfptr) {
         // this is a local actor, not a remote actor
         CPPA_LOGF_WARNING("remote_actor() called to access a local actor");

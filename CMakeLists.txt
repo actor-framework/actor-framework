@@ -167,13 +167,13 @@ set(LIBCPPA_SRC
     src/message_header.cpp
     src/middleman.cpp
     src/middleman_event_handler.cpp
+    src/node_id.cpp
     src/object.cpp
     src/object_array.cpp
     src/on.cpp
     src/opt.cpp
     src/partial_function.cpp
     src/primitive_variant.cpp
-    src/process_information.cpp
     src/ref_counted.cpp
     src/remote_actor_proxy.cpp
     src/response_handle.cpp
