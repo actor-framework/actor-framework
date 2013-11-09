@@ -3,6 +3,7 @@ Doxyfile
 cppa.creator.user*
 html/
 build/*
+cli_build/*
 build-clang/*
 build-gcc/*
 Makefile

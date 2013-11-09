@@ -14,6 +14,21 @@ endif ()
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
+# set binary output path
+if ("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
+  set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+endif ()
+
+# set library output path
+if ("${LIBRARY_OUTPUT_PATH}" STREQUAL "")
+  set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+endif ()
+
+# set library output path to binary output path for Xcode projects
+if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
+  set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
+endif ()
+
 # check if the user provided CXXFLAGS on the command line
 if (CMAKE_CXX_FLAGS)
   set(CXXFLAGS_PROVIDED true)
@@ -92,6 +107,8 @@ else ()
   message(FATAL_ERROR "This platform is not supported by libcppa")
 endif()
 
+# get header files; only needed by CMake generators,
+# e.g., for creating proper Xcode projects
 file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/detail/*.hpp"
                        "cppa/intrusive/*.hpp"
@@ -100,6 +117,7 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/qtsupport/*.hpp"
                        "cppa/util/*.hpp")
 
+# list cpp files including platform-dependent files
 set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
     src/abstract_tuple.cpp
@@ -217,6 +235,7 @@ else (DISABLE_CONTEXT_SWITCHING)
   find_package(Boost 1.51.0 COMPONENTS context)
   # without REQUIRED, find_package(Boost...) returns with Boost_FOUND=FALSE
   if (NOT Boost_FOUND)
+    # disable implicitly
     set(DISABLE_CONTEXT_SWITCHING true)
   else (NOT Boost_FOUND)
     if (${Boost_VERSION} LESS 105400)
@@ -243,7 +262,7 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-# bulid shared library only if not comiling static only
+# bulid shared library if not comiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
   add_library(libcppa SHARED ${LIBCPPA_SRC} ${LIBCPPA_HDRS})
   target_link_libraries(libcppa ${LD_FLAGS})
@@ -257,7 +276,7 @@ if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
   install(TARGETS libcppa LIBRARY DESTINATION lib)
 endif ()
 
-# build static library if --build-static or --build-static-only was set
+# build static library only if --build-static or --build-static-only was set
 if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
   add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
   set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
@@ -280,15 +299,6 @@ add_custom_target(uninstall
                   COMMAND ${CMAKE_COMMAND} -P
                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-if (LIBRARY_OUTPUT_PATH)
-  set (CPPA_LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH})
-  set (CPPA_LIBRARY_PATH ${LIBRARY_OUTPUT_PATH})
-else ()
-  set (CPPA_LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
-  set (CPPA_LIBRARY_PATH ${CPPA_LIBRARY_OUTPUT_PATH})
-  set (LIBRARY_OUTPUT_PATH ${CPPA_LIBRARY_OUTPUT_PATH} CACHE PATH "Single directory for all libraries")
-endif ()
-
 # setting path to cppa headers and libcppa
 set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
 set (CPPA_INCLUDE ${CPPA_INCLUDE_PATH})
@@ -297,17 +307,17 @@ if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
   set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa_static.a ${LD_FLAGS})
 else ()
   if (APPLE)
-    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
+    if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
+      set (CPPA_LIBRARY "-lcppa")
+    else ()
+      set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
+    endif ()
+    #set (CPPA_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcppa)
   elseif (UNIX)
     set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
   else ()
     message (SEND_FATAL "Host platform not supported ...")
   endif ()
-endif ()
-
-if (EXECUTABLE_OUTPUT_PATH)
-else ()
-  set (EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin CACHE PATH "Single directory for all executables")
 endif ()
 
 # set up subdirectories

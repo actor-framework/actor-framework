@@ -93,18 +93,18 @@ configure ()
     if [ -n "$2" ]; then
         workdir="$builddir-$2"
     else
-        workdir=$builddir
+        workdir="$builddir"
     fi
     workdirs="$workdirs $workdir"
 
     if [ -n "$3" ]; then
-        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH $3
+        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$3"
     else
         append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$workdir/bin"
     fi
 
     if [ -n "$4" ]; then
-        append_cache_entry LIBRARY_OUTPUT_PATH PATH $4
+        append_cache_entry LIBRARY_OUTPUT_PATH PATH "$4"
     else
         append_cache_entry LIBRARY_OUTPUT_PATH PATH "$workdir/lib"
     fi
