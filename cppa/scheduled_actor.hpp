@@ -88,7 +88,7 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based, threadle
      *                 set in case of chaining.
      * @note This member function is called from the scheduler's worker threads.
      */
-    virtual resume_result resume(util::fiber* from, actor_ptr& next_job) = 0;
+    virtual resume_result resume(util::fiber* from) = 0;
 
     /**
      * @brief Called once by the scheduler after actor is initialized,
@@ -110,17 +110,13 @@ class scheduled_actor : public extend<local_actor>::with<mailbox_based, threadle
 
     /**
      * @brief Returns @p true if this actor is ignored by
-     *        {@link await_all_others_done()}, false otherwise.
+     *        {@link await_all_actors_done()}, false otherwise.
      */
     inline bool is_hidden() const;
 
     virtual void run_detached();
 
     void enqueue(const message_header&, any_tuple) override;
-
-    bool chained_enqueue(const message_header&, any_tuple) override;
-
-    void unchain() override;
 
  protected:
 

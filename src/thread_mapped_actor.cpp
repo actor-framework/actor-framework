@@ -33,7 +33,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include "cppa/self.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/exit_reason.hpp"

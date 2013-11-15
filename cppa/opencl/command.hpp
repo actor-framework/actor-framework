@@ -37,9 +37,9 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/actor.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/opencl/global.hpp"
+#include "cppa/abstract_actor.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/util/scope_guard.hpp"

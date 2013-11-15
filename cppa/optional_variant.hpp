@@ -31,7 +31,7 @@
 #ifndef OPTIONAL_VARIANT_HPP
 #define OPTIONAL_VARIANT_HPP
 
-#include <iosfwd>
+#include <ostream>
 #include <stdexcept>
 #include <type_traits>
 

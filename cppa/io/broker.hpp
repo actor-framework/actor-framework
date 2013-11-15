@@ -45,8 +45,6 @@
 #include "cppa/io/accept_handle.hpp"
 #include "cppa/io/connection_handle.hpp"
 
-#include "cppa/detail/fwd.hpp"
-
 namespace cppa { namespace io {
 
 class broker;
@@ -108,7 +106,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
         return from_impl(std::bind(std::move(fun),
                                    std::placeholders::_1,
                                    hdl,
-                                   detail::fwd<Ts>(args)...),
+                                   std::forward<Ts>(args)...),
                          std::move(in),
                          std::move(out));
     }
@@ -119,19 +117,17 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
     static broker_ptr from(F fun, acceptor_uptr in, T0&& arg0, Ts&&... args) {
         return from(std::bind(std::move(fun),
                               std::placeholders::_1,
-                              detail::fwd<T0>(arg0),
-                              detail::fwd<Ts>(args)...),
+                              std::forward<T0>(arg0),
+                              std::forward<Ts>(args)...),
                     std::move(in));
     }
 
     template<typename F, typename... Ts>
-    actor_ptr fork(F fun,
-                   connection_handle hdl,
-                   Ts&&... args) {
+    actor fork(F fun, connection_handle hdl, Ts&&... args) {
         return this->fork_impl(std::bind(std::move(fun),
                                          std::placeholders::_1,
                                          hdl,
-                                         detail::fwd<Ts>(args)...),
+                                         std::forward<Ts>(args)...),
                                hdl);
     }
 
@@ -160,7 +156,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
  private:
 
-    actor_ptr fork_impl(std::function<void (broker*)> fun,
+    actor_addr fork_impl(std::function<void (broker*)> fun,
                         connection_handle hdl);
 
     static broker_ptr from_impl(std::function<void (broker*)> fun,

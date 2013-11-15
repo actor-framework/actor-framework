@@ -379,7 +379,7 @@ class receive_policy {
                                << " did not reply to a "
                                   "synchronous request message");
                     auto fhdl = fetch_response_handle(client, hdl);
-                    if (fhdl.valid()) fhdl.apply(atom("VOID"));
+                    if (fhdl.valid()) fhdl.apply(make_any_tuple(atom("VOID")));
                 }
             } else {
                 if (   matches<atom_value, std::uint64_t>(*res)

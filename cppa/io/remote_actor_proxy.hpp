@@ -57,13 +57,13 @@ class sync_request_info : public extend<memory_managed>::with<memory_cached> {
 
     typedef sync_request_info* pointer;
 
-    pointer      next;   // intrusive next pointer
-    actor_ptr    sender; // points to the sender of the message
+    pointer    next;   // intrusive next pointer
+    actor_addr sender; // points to the sender of the message
     message_id mid;    // sync message ID
 
  private:
 
-    sync_request_info(actor_ptr sptr, message_id id);
+    sync_request_info(actor_addr sptr, message_id id);
 
 };
 
@@ -79,17 +79,17 @@ class remote_actor_proxy : public actor_proxy {
 
     void enqueue(const message_header& hdr, any_tuple msg) override;
 
-    void link_to(const actor_ptr& other) override;
+    void link_to(const actor_addr& other) override;
 
-    void unlink_from(const actor_ptr& other) override;
+    void unlink_from(const actor_addr& other) override;
 
-    bool remove_backlink(const actor_ptr& to) override;
+    bool remove_backlink(const actor_addr& to) override;
 
-    bool establish_backlink(const actor_ptr& to) override;
+    bool establish_backlink(const actor_addr& to) override;
 
-    void local_link_to(const actor_ptr& other) override;
+    void local_link_to(const actor_addr& other) override;
 
-    void local_unlink_from(const actor_ptr& other) override;
+    void local_unlink_from(const actor_addr& other) override;
 
     void deliver(const message_header& hdr, any_tuple msg) override;
 

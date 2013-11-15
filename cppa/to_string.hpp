@@ -68,7 +68,7 @@ inline std::string to_string(const message_header& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const actor_ptr& what) {
+inline std::string to_string(const actor& what) {
     return detail::to_string_impl(what);
 }
 
@@ -76,7 +76,7 @@ inline std::string to_string(const group_ptr& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const channel_ptr& what) {
+inline std::string to_string(const channel& what) {
     return detail::to_string_impl(what);
 }
 

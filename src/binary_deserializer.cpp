@@ -38,7 +38,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/type_lookup_table.hpp"
 #include "cppa/binary_deserializer.hpp"

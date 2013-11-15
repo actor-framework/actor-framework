@@ -401,7 +401,7 @@ int main() {
     aout << color::cyan
          << "await CURL; this may take a while (press CTRL+C again to abort)"
          << color::reset_endl;
-    await_all_others_done();
+    await_all_actors_done();
     // shutdown libcppa
     shutdown();
     // shutdown CURL

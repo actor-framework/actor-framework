@@ -42,12 +42,12 @@ namespace {
 
 class down_observer : public attachable {
 
-    actor_ptr m_observer;
-    actor_ptr m_observed;
+    actor_addr m_observer;
+    actor_addr m_observed;
 
  public:
 
-    down_observer(actor_ptr observer, actor_ptr observed)
+    down_observer(actor_addr observer, actor_addr observed)
     : m_observer(std::move(observer)), m_observed(std::move(observed)) {
         CPPA_REQUIRE(m_observer != nullptr);
         CPPA_REQUIRE(m_observed != nullptr);
@@ -55,7 +55,8 @@ class down_observer : public attachable {
 
     void actor_exited(std::uint32_t reason) {
         if (m_observer) {
-            message_header hdr{m_observed, m_observer, message_priority::high};
+            auto ptr = detail::actor_addr_cast<abstract_actor>(m_observer);
+            message_header hdr{m_observed, ptr, message_priority::high};
             hdr.deliver(make_any_tuple(atom("DOWN"), reason));
         }
     }
@@ -63,7 +64,7 @@ class down_observer : public attachable {
     bool matches(const attachable::token& match_token) {
         if (match_token.subtype == typeid(down_observer)) {
             auto ptr = reinterpret_cast<const local_actor*>(match_token.ptr);
-            return m_observer == ptr;
+            return m_observer == ptr->address();
         }
         return false;
     }
@@ -75,7 +76,7 @@ constexpr const char* s_default_debug_name = "actor";
 } // namespace <anonymous>
 
 local_actor::local_actor(bool sflag)
-: m_chaining(sflag), m_trap_exit(false)
+: m_trap_exit(false)
 , m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node)
 , m_planned_exit_reason(exit_reason::not_exited) {
 #   ifdef CPPA_DEBUG_MODE
@@ -107,13 +108,17 @@ void local_actor::debug_name(std::string str) {
 #   endif // CPPA_DEBUG_MODE
 }
 
-void local_actor::monitor(const actor_ptr& whom) {
-    if (whom) whom->attach(attachable_ptr{new down_observer(this, whom)});
+void local_actor::monitor(const actor_addr& whom) {
+    if (!whom) return;
+    auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
+    ptr->attach(attachable_ptr{new down_observer(address(), whom)});
 }
 
-void local_actor::demonitor(const actor_ptr& whom) {
+void local_actor::demonitor(const actor_addr& whom) {
+    if (!whom) return;
+    auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
     attachable::token mtoken{typeid(down_observer), this};
-    if (whom) whom->detach(mtoken);
+    ptr->detach(mtoken);
 }
 
 void local_actor::on_exit() { }
@@ -139,43 +144,35 @@ std::vector<group_ptr> local_actor::joined_groups() const {
 }
 
 void local_actor::reply_message(any_tuple&& what) {
-    auto& whom = last_sender();
-    if (whom == nullptr) {
-        return;
-    }
+    auto& whom = m_current_node->sender;
+    if (!whom) return;
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_tuple(whom, std::move(what));
+        send_tuple(detail::actor_addr_cast<abstract_actor>(whom), std::move(what));
     }
     else if (!id.is_answered()) {
-        if (chaining_enabled()) {
-            if (whom->chained_enqueue({this, whom, id.response_id()}, std::move(what))) {
-                chained_actor(whom);
-            }
-        }
-        else whom->enqueue({this, whom, id.response_id()}, std::move(what));
+        auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
+        ptr->enqueue({address(), ptr, id.response_id()}, std::move(what));
         id.mark_as_answered();
     }
 }
 
-void local_actor::forward_message(const actor_ptr& dest, message_priority p) {
-    if (dest == nullptr) return;
+void local_actor::forward_message(const actor& dest, message_priority p) {
+    if (!dest) return;
     auto& id = m_current_node->mid;
-    dest->enqueue({last_sender(), dest, id, p}, m_current_node->msg);
+    dest.m_ptr->enqueue({m_current_node->sender, dest.m_ptr, id, p}, m_current_node->msg);
     // treat this message as asynchronous message from now on
     id = message_id{};
 }
 
+/* TODO:
 response_handle local_actor::make_response_handle() {
     auto n = m_current_node;
     response_handle result{this, n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
     return result;
 }
-
-void local_actor::exec_behavior_stack() {
-    // default implementation does nothing
-}
+*/
 
 void local_actor::cleanup(std::uint32_t reason) {
     m_subscriptions.clear();

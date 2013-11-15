@@ -28,18 +28,36 @@
 \******************************************************************************/
 
 
+#include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 
 namespace cppa {
 
-channel::~channel() { }
-
-bool channel::chained_enqueue(const message_header& hdr, any_tuple msg) {
-    enqueue(hdr, std::move(msg));
-    return false;
+intptr_t channel::compare(const abstract_channel* lhs, const abstract_channel* rhs) {
+    return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 
-void channel::unchain() { }
+channel::channel(abstract_channel* ptr) : m_ptr(ptr) { }
+
+channel::operator bool() const {
+    return static_cast<bool>(m_ptr);
+}
+
+bool channel::operator!() const {
+    return !m_ptr;
+}
+
+void channel::enqueue(const message_header& hdr, any_tuple msg) const {
+    if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
+}
+
+intptr_t channel::compare(const channel& other) const {
+    return compare(m_ptr.get(), other.m_ptr.get());
+}
+
+intptr_t channel::compare(const actor& other) const {
+    return compare(m_ptr.get(), other.m_ptr.get());
+}
 
 } // namespace cppa

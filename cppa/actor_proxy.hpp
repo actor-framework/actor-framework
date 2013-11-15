@@ -31,8 +31,9 @@
 #ifndef CPPA_ACTOR_PROXY_HPP
 #define CPPA_ACTOR_PROXY_HPP
 
-#include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/abstract_actor.hpp"
+#include "cppa/abstract_actor.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/enable_weak_ptr.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
@@ -45,7 +46,7 @@ class actor_proxy_cache;
  * @brief Represents a remote actor.
  * @extends actor
  */
-class actor_proxy : public extend<actor>::with<enable_weak_ptr> {
+class actor_proxy : public extend<abstract_actor>::with<enable_weak_ptr> {
 
     typedef combined_type super;
 
@@ -55,12 +56,12 @@ class actor_proxy : public extend<actor>::with<enable_weak_ptr> {
      * @brief Establishes a local link state that's not synchronized back
      *        to the remote instance.
      */
-    virtual void local_link_to(const intrusive_ptr<actor>& other) = 0;
+    virtual void local_link_to(const actor_addr& other) = 0;
 
     /**
      * @brief Removes a local link state.
      */
-    virtual void local_unlink_from(const actor_ptr& other) = 0;
+    virtual void local_unlink_from(const actor_addr& other) = 0;
 
     /**
      * @brief Delivers given message via this proxy instance.

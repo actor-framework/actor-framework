@@ -62,7 +62,7 @@ class context_switching_actor : public extend<scheduled_actor, context_switching
      */
     context_switching_actor(std::function<void()> fun);
 
-    resume_result resume(util::fiber* from, actor_ptr& next_job);
+    resume_result resume(util::fiber* from);
 
     scheduled_actor_type impl_type();
 

@@ -50,8 +50,8 @@ class response_handle {
     response_handle& operator=(response_handle&&) = default;
     response_handle& operator=(const response_handle&) = default;
 
-    response_handle(const actor_ptr&    from,
-                    const actor_ptr&    to,
+    response_handle(const actor_addr& from,
+                    const actor_addr& to,
                     const message_id& response_id);
 
     /**
@@ -78,17 +78,17 @@ class response_handle {
     /**
      * @brief Returns the actor that is going send the response message.
      */
-    inline const actor_ptr& sender() const { return m_from; }
+    inline const actor_addr& sender() const { return m_from; }
 
     /**
      * @brief Returns the actor that is waiting for the response message.
      */
-    inline const actor_ptr& receiver() const { return m_to; }
+    inline const actor_addr& receiver() const { return m_to; }
 
  private:
 
-    actor_ptr    m_from;
-    actor_ptr    m_to;
+    actor_addr m_from;
+    actor_addr m_to;
     message_id m_id;
 
 };

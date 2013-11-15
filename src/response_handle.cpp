@@ -30,7 +30,6 @@
 
 #include <utility>
 
-#include "cppa/self.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/response_handle.hpp"
 
@@ -38,8 +37,8 @@ using std::move;
 
 namespace cppa {
 
-response_handle::response_handle(const actor_ptr&    from,
-                                 const actor_ptr&    to,
+response_handle::response_handle(const actor_addr& from,
+                                 const actor_addr& to,
                                  const message_id& id)
 : m_from(from), m_to(to), m_id(id) {
     CPPA_REQUIRE(id.is_response() || !id.valid());
@@ -55,14 +54,8 @@ bool response_handle::synchronous() const {
 
 void response_handle::apply(any_tuple msg) const {
     if (valid()) {
-        local_actor* sptr = self.unchecked();
-        bool use_chaining = sptr && sptr == m_from && sptr->chaining_enabled();
-        if (use_chaining) {
-            if (m_to->chained_enqueue({m_from, m_to, m_id}, move(msg))) {
-                sptr->chained_actor(m_to);
-            }
-        }
-        else m_to->enqueue({m_from, m_to, m_id}, move(msg));
+        auto ptr = detail::actor_addr_cast<abstract_actor>(m_to);
+        ptr->enqueue({m_from, ptr, m_id}, move(msg));
     }
 }
 

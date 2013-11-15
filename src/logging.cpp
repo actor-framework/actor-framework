@@ -72,11 +72,11 @@ class logging_impl : public logging {
 
     void initialize() {
         m_thread = thread([this] { (*this)(); });
-        log("TRACE", "logging", "run", __FILE__, __LINE__, nullptr, "ENTRY");
+        log("TRACE", "logging", "run", __FILE__, __LINE__, invalid_actor_addr, "ENTRY");
     }
 
     void destroy() {
-        log("TRACE", "logging", "run", __FILE__, __LINE__, nullptr, "EXIT");
+        log("TRACE", "logging", "run", __FILE__, __LINE__, invalid_actor_addr, "EXIT");
         // an empty string means: shut down
         m_queue.push_back(new log_event{0, ""});
         m_thread.join();
@@ -103,7 +103,7 @@ class logging_impl : public logging {
              const char* function_name,
              const char* c_full_file_name,
              int line_num,
-             const actor_ptr& from,
+             actor_addr from,
              const std::string& msg) {
         string class_name = c_class_name;
         replace_all(class_name, "::", ".");
@@ -118,6 +118,7 @@ class logging_impl : public logging {
         }
         else file_name = move(full_file_name);
         auto print_from = [&](ostream& oss) -> ostream& {
+            /*TODO:
             if (!from) {
                 if (strcmp(c_class_name, "logging") == 0) oss << "logging";
                 else oss << "null";
@@ -130,6 +131,7 @@ class logging_impl : public logging {
                 oss << from->id() << "@local";
 #               endif // CPPA_DEBUG_MODE
             }
+            */
             return oss;
         };
         ostringstream line;
@@ -158,7 +160,7 @@ logging::trace_helper::trace_helper(std::string class_name,
                                     const char* fun_name,
                                     const char* file_name,
                                     int line_num,
-                                    actor_ptr ptr,
+                                    actor_addr ptr,
                                     const std::string& msg)
 : m_class(std::move(class_name)), m_fun_name(fun_name)
 , m_file_name(file_name), m_line_num(line_num), m_self(std::move(ptr)) {

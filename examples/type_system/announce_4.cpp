@@ -129,7 +129,7 @@ int main(int, char**) {
     auto t = spawn(testee, 2);
     send(t, bar{foo{1, 2}, 3});
     send(t, baz{foo{1, 2}, bar{foo{3, 4}, 5}});
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -137,7 +137,7 @@ class middleman {
     virtual void deliver(const node_id& node,
                          const message_header& hdr,
                          any_tuple msg                  ) = 0;
-    
+
     /**
      * @brief This callback is invoked by {@link peer} implementations
      *        and causes the middleman to disconnect from the node.
@@ -156,7 +156,7 @@ class middleman {
      *        to the event loop of the middleman.
      * @note This member function is thread-safe.
      */
-    virtual void register_acceptor(const actor_ptr& pa, peer_acceptor* ptr) = 0;
+    virtual void register_acceptor(const actor_addr& pa, peer_acceptor* ptr) = 0;
     
     /**
      * @brief Returns the namespace that contains all remote actors

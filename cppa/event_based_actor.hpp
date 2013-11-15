@@ -57,17 +57,23 @@ class event_based_actor : public extend<scheduled_actor>::with<stackless> {
 
  public:
 
-    resume_result resume(util::fiber*, actor_ptr&);
+    resume_result resume(util::fiber*);
 
     /**
      * @brief Initializes the actor.
      */
-    virtual void init() = 0;
+    virtual behavior make_behavior() = 0;
 
     scheduled_actor_type impl_type();
 
     static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
 
+    static intrusive_ptr<event_based_actor> from(std::function<behavior()> fun);
+
+    static intrusive_ptr<event_based_actor> from(std::function<void(event_based_actor*)> fun);
+    
+    static intrusive_ptr<event_based_actor> from(std::function<behavior(event_based_actor*)> fun);
+    
  protected:
 
     event_based_actor(actor_state st = actor_state::blocked);

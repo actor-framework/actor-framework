@@ -31,7 +31,9 @@
 #ifndef CPPA_THREADLESS_HPP
 #define CPPA_THREADLESS_HPP
 
-#include "cppa/send.hpp"
+#include "cppa/atom.hpp"
+#include "cppa/behavior.hpp"
+#include "cppa/util/duration.hpp"
 
 namespace cppa {
 
@@ -67,11 +69,11 @@ class threadless : public Base {
             auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
             if (d.is_zero()) {
                 // immediately enqueue timeout message if duration == 0s
-                this->enqueue(this, std::move(msg));
+                this->enqueue({this->address(), this}, std::move(msg));
                 //auto e = this->new_mailbox_element(this, std::move(msg));
                 //this->m_mailbox.enqueue(e);
             }
-            else delayed_send_tuple(this, d, std::move(msg));
+            else this->delayed_send_tuple(this, d, std::move(msg));
             m_has_pending_tout = true;
         }
     }

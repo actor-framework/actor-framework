@@ -44,16 +44,9 @@ void scheduled_actor::attach_to_scheduler(scheduler* sched, bool hidden) {
     CPPA_REQUIRE(sched != nullptr);
     m_scheduler = sched;
     m_hidden = hidden;
-    // init is called by the spawning actor, manipulate self to
-    // point to this actor
-    scoped_self_setter sss{this};
     // initialize this actor
     try { init(); }
     catch (...) { }
-    // check whether init() did send a chained message
-    actor_ptr ca;
-    ca.swap(m_chained_actor);
-    if (ca) ca->unchain();
 }
 
 bool scheduled_actor::initialized() const {
@@ -134,18 +127,6 @@ actor_state scheduled_actor::compare_exchange_state(actor_state expected,
 
 void scheduled_actor::enqueue(const message_header& hdr, any_tuple msg) {
     enqueue_impl(actor_state::ready, hdr, std::move(msg));
-}
-
-bool scheduled_actor::chained_enqueue(const message_header& hdr, any_tuple msg) {
-    return enqueue_impl(actor_state::pending, hdr, std::move(msg));
-}
-
-void scheduled_actor::unchain() {
-    auto state = actor_state::pending;
-    if (m_state.compare_exchange_weak(state, actor_state::ready)) {
-        CPPA_REQUIRE(m_scheduler != nullptr);
-        m_scheduler->enqueue(this);
-    }
 }
 
 } // namespace cppa

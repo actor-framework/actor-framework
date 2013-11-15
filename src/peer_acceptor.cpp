@@ -46,7 +46,7 @@ namespace cppa { namespace io {
 
 peer_acceptor::peer_acceptor(middleman* parent,
                              acceptor_uptr aur,
-                             const actor_ptr& pa)
+                             const actor_addr& pa)
 : super(aur->file_handle()), m_parent(parent), m_ptr(std::move(aur)), m_pa(pa) { }
 
 continue_reading_result peer_acceptor::continue_reading() {
@@ -64,7 +64,7 @@ continue_reading_result peer_acceptor::continue_reading() {
             auto& pself = node_id::get();
             uint32_t process_id = pself->process_id();
             try {
-                actor_id aid = published_actor()->id();
+                actor_id aid = published_actor().id();
                 pair.second->write(&aid, sizeof(actor_id));
                 pair.second->write(&process_id, sizeof(uint32_t));
                 pair.second->write(pself->host_id().data(),

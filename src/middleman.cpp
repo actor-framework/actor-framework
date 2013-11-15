@@ -135,7 +135,7 @@ class middleman_impl : public middleman {
         });
         m_namespace.set_new_element_callback([=](actor_id aid, const node_id& node) {
             deliver(node,
-                    {nullptr, nullptr},
+                    {invalid_actor_addr, nullptr},
                     make_any_tuple(atom("MONITOR"),
                                    node_id::get(),
                                    aid));
@@ -237,7 +237,7 @@ class middleman_impl : public middleman {
         if (node) register_peer(*node, ptr);
     }
     
-    void register_acceptor(const actor_ptr& whom, peer_acceptor* ptr) override {
+    void register_acceptor(const actor_addr& whom, peer_acceptor* ptr) override {
         run_later([=] {
             CPPA_LOGC_TRACE("cppa::io::middleman",
                             "register_acceptor$lambda", "");
@@ -288,9 +288,9 @@ class middleman_impl : public middleman {
         default_message_queue_ptr queue;
     };
     
-    std::map<actor_ptr, std::vector<peer_acceptor*>> m_acceptors;
+    std::map<actor_addr, std::vector<peer_acceptor*>> m_acceptors;
     std::map<node_id, peer_entry> m_peers;
-    
+
 };
 
 class middleman_overseer : public continuable {
@@ -349,7 +349,6 @@ middleman::~middleman() { }
 void middleman_loop(middleman_impl* impl) {
 #   ifdef CPPA_LOG_LEVEL
     auto mself = make_counted<thread_mapped_actor>();
-    scoped_self_setter sss(mself.get());
     CPPA_SET_DEBUG_NAME("middleman");
 #   endif
     middleman_event_handler* handler = impl->m_handler.get();

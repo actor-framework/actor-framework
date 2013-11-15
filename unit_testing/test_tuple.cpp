@@ -463,7 +463,7 @@ int main() {
     check_wildcards();
     check_move_ops();
     check_drop();
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return CPPA_TEST_RESULT();
 }

@@ -25,30 +25,55 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/actor_addr.hpp"
+#include "cppa/local_actor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
-scheduled_actor_dummy::scheduled_actor_dummy()
-: scheduled_actor(actor_state::blocked, false) { }
+namespace {
+intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
+    return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
+}
+} // namespace <anonymous>
 
-void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) { }
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
+actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) { }
+
+actor_addr::operator bool() const {
+    return static_cast<bool>(m_ptr);
 }
 
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
+bool actor_addr::operator!() const {
+    return !m_ptr;
 }
 
-} } // namespace cppa::detail
+intptr_t actor_addr::compare(const actor& other) const {
+    return compare_impl(m_ptr.get(), other.m_ptr.get());
+}
+
+intptr_t actor_addr::compare(const actor_addr& other) const {
+    return compare_impl(m_ptr.get(), other.m_ptr.get());
+}
+
+intptr_t actor_addr::compare(const local_actor* other) const {
+    return compare_impl(m_ptr.get(), other);
+}
+
+actor_id actor_addr::id() const {
+    return m_ptr->id();
+}
+
+const node_id& actor_addr::node() const {
+    return m_ptr ? m_ptr->node() : *node_id::get();
+}
+
+bool actor_addr::is_remote() const {
+    return m_ptr ? m_ptr->is_proxy() : false;
+}
+    
+} // namespace cppa

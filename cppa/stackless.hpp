@@ -31,19 +31,51 @@
 #ifndef CPPA_STACKLESS_HPP
 #define CPPA_STACKLESS_HPP
 
+#include "cppa/util/dptr.hpp"
+
 #include "cppa/detail/receive_policy.hpp"
+#include "cppa/detail/behavior_stack.hpp"
 
 namespace cppa {
 
+#ifdef CPPA_DOCUMENTATION
+
 /**
- * @brief An actor that uses the non-blocking API of @p libcppa and
- *        does not has its own stack.
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        discard the current behavior.
+ * @relates local_actor
  */
+constexpr auto discard_behavior;
+
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        keep the current behavior available.
+ * @relates local_actor
+ */
+constexpr auto keep_behavior;
+
+#else
+
+template<bool DiscardBehavior>
+struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
+
+template<typename T>
+struct is_behavior_policy : std::false_type { };
+
+template<bool DiscardBehavior>
+struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { };
+
+typedef behavior_policy<false> keep_behavior_t;
+typedef behavior_policy<true > discard_behavior_t;
+
+constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
+
+constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
+
+#endif
+
 template<class Base, class Subtype>
 class stackless : public Base {
-
-    friend class detail::receive_policy;
-    friend class detail::behavior_stack;
 
  protected:
 
@@ -60,15 +92,30 @@ class stackless : public Base {
         return this->m_bhvr_stack.empty() == false;
     }
 
- protected:
-
-    void do_become(behavior&& bhvr, bool discard_old) {
-        this->reset_timeout();
-        this->request_timeout(bhvr.timeout());
-        if (discard_old) this->m_bhvr_stack.pop_async_back();
-        this->m_bhvr_stack.push_back(std::move(bhvr));
+    void unbecome() {
+        this->m_bhvr_stack.pop_async_back();
     }
 
+    /**
+     * @brief Sets the actor's behavior and discards the previous behavior
+     *        unless {@link keep_behavior} is given as first argument.
+     */
+    template<typename T, typename... Ts>
+    inline typename std::enable_if<
+        !is_behavior_policy<typename util::rm_const_and_ref<T>::type>::value,
+        void
+    >::type
+    become(T&& arg, Ts&&... args) {
+        do_become(match_expr_convert(std::forward<T>(arg),
+                                     std::forward<Ts>(args)...),
+                  true);
+    }
+    
+    template<bool Discard, typename... Ts>
+    inline void become(behavior_policy<Discard>, Ts&&... args) {
+        do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
+    }
+    
     void become_waiting_for(behavior bhvr, message_id mf) {
         if (bhvr.timeout().valid()) {
             this->reset_timeout();
@@ -76,16 +123,23 @@ class stackless : public Base {
         }
         this->m_bhvr_stack.push_back(std::move(bhvr), mf);
     }
+    
+    void do_become(behavior&& bhvr, bool discard_old) {
+        this->reset_timeout();
+        this->request_timeout(bhvr.timeout());
+        if (discard_old) this->m_bhvr_stack.pop_async_back();
+        this->m_bhvr_stack.push_back(std::move(bhvr));
+    }
 
     inline bool has_behavior() const {
         return this->m_bhvr_stack.empty() == false;
     }
-
+    
     inline behavior& get_behavior() {
         CPPA_REQUIRE(this->m_bhvr_stack.empty() == false);
         return this->m_bhvr_stack.back();
     }
-
+    
     inline void handle_timeout(behavior& bhvr) {
         CPPA_REQUIRE(bhvr.timeout().valid());
         this->reset_timeout();
@@ -95,44 +149,18 @@ class stackless : public Base {
         }
     }
 
-    // provoke compiler errors for usage of receive() and related functions
-
-    /**
-     * @brief Provokes a compiler error to ensure that a stackless actor
-     *        does not accidently uses receive() instead of become().
-     */
-    template<typename... Ts>
-    void receive(Ts&&...) {
-        // this asssertion always fails
-        static_assert((sizeof...(Ts) + 1) < 1,
-                      "You shall not use receive in an event-based actor. "
-                      "Use become() instead.");
+    void exec_bhvr_stack() {
+        while (!m_bhvr_stack.empty()) {
+            m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
+        }
     }
 
-    /**
-     * @brief Provokes a compiler error.
-     */
-    template<typename... Ts>
-    void receive_loop(Ts&&... args) {
-        receive(std::forward<Ts>(args)...);
-    }
+ protected:
 
-    /**
-     * @brief Provokes a compiler error.
-     */
-    template<typename... Ts>
-    void receive_while(Ts&&... args) {
-        receive(std::forward<Ts>(args)...);
-    }
+    // allows actors to keep previous behaviors and enables unbecome()
+    detail::behavior_stack m_bhvr_stack;
 
-    /**
-     * @brief Provokes a compiler error.
-     */
-    template<typename... Ts>
-    void do_receive(Ts&&... args) {
-        receive(std::forward<Ts>(args)...);
-    }
-
+    // used for message handling in subclasses
     detail::receive_policy m_recv_policy;
 
 };

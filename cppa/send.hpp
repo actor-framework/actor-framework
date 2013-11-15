@@ -31,13 +31,11 @@
 #ifndef CPPA_SEND_HPP
 #define CPPA_SEND_HPP
 
-#include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/message_future.hpp"
-#include "cppa/typed_actor_ptr.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -48,25 +46,9 @@ namespace cppa {
  * @{
  */
 
-/**
- * @brief Stores sender, receiver, and message priority.
- */
-template<typename T = channel_ptr>
-struct destination_header {
-    T receiver;
-    message_priority priority;
-    template<typename U>
-    destination_header(U&& dest, message_priority mp = message_priority::normal)
-    : receiver(std::forward<U>(dest)), priority(mp) { }
-    destination_header(destination_header&&) = default;
-    destination_header(const destination_header&) = default;
-    destination_header& operator=(destination_header&&) = default;
-    destination_header& operator=(const destination_header&) = default;
-};
+using channel_destination = destination_header<channel>;
 
-using channel_destination = destination_header<channel_ptr>;
-
-using actor_destination = destination_header<actor_ptr>;
+using actor_destination = destination_header<abstract_actor_ptr>;
 
 /**
  * @brief Sends @p what to the receiver specified in @p hdr.

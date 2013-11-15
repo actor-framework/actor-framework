@@ -34,16 +34,20 @@
 #include <cstdint>
 #include <functional>
 
-#include "cppa/group.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/group.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
+#include "cppa/typed_actor.hpp"
 #include "cppa/memory_cached.hpp"
+#include "cppa/message_future.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/abstract_actor.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/message_priority.hpp"
@@ -56,61 +60,90 @@
 namespace cppa {
 
 // forward declarations
-class self_type;
 class scheduler;
 class message_future;
 class local_scheduler;
 class sync_handle_helper;
 
-#ifdef CPPA_DOCUMENTATION
-
-/**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *        discard the current behavior.
- * @relates local_actor
- */
-constexpr auto discard_behavior;
-
-/**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *        keep the current behavior available.
- * @relates local_actor
- */
-constexpr auto keep_behavior;
-
-#else
-
-template<bool DiscardBehavior>
-struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
-
-template<typename T>
-struct is_behavior_policy : std::false_type { };
-
-template<bool DiscardBehavior>
-struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { };
-
-typedef behavior_policy<false> keep_behavior_t;
-typedef behavior_policy<true > discard_behavior_t;
-
-constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
-
-constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
-
-#endif
+namespace detail { class receive_policy; }
 
 /**
  * @brief Base class for local running Actors.
  * @extends actor
  */
-class local_actor : public extend<actor>::with<memory_cached> {
+class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
-    friend class self_type;
+    friend class detail::receive_policy;
 
     typedef combined_type super;
 
  public:
 
     ~local_actor();
+
+    /**
+     * @brief Sends @p what to the receiver specified in @p dest.
+     */
+    void send_tuple(const channel& dest, any_tuple what);
+
+    /**
+     * @brief Sends <tt>{what...}</tt> to the receiver specified in @p hdr.
+     * @pre <tt>sizeof...(Ts) > 0</tt>
+     */
+    template<typename... Ts>
+    void send(const channel& whom, Ts&&... what) {
+        send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends @p what as a synchronous message to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message content as tuple.
+     * @returns A handle identifying a future to the response of @p whom.
+     * @warning The returned handle is actor specific and the response to the sent
+     *          message cannot be received by another actor.
+     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+     */
+    message_future sync_send_tuple(const actor& dest, any_tuple what);
+
+    message_future timed_sync_send_tuple(const util::duration& rtime,
+                                         const actor& dest,
+                                         any_tuple what);
+
+    /**
+     * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @returns A handle identifying a future to the response of @p whom.
+     * @warning The returned handle is actor specific and the response to the sent
+     *          message cannot be received by another actor.
+     * @pre <tt>sizeof...(Ts) > 0</tt>
+     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+     */
+    template<typename... Ts>
+    inline message_future sync_send(const actor& dest, Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "no message to send");
+        return sync_send_tuple(dest, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    template<typename... Ts>
+    message_future timed_sync_send(const util::duration& rtime,
+                                   const actor& dest,
+                                   Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "no message to send");
+        return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends a message to @p whom that is delayed by @p rel_time.
+     * @param whom Receiver of the message.
+     * @param rtime Relative time duration to delay the message in
+     *              microseconds, milliseconds, seconds or minutes.
+     * @param data Message content as a tuple.
+     */
+    void delayed_send_tuple(const channel& dest,
+                            const util::duration& rtime,
+                            any_tuple data);
 
     /**
      * @brief Causes this actor to subscribe to the group @p what.
@@ -165,16 +198,6 @@ class local_actor : public extend<actor>::with<memory_cached> {
     inline void trap_exit(bool new_value);
 
     /**
-     * @brief Checks whether this actor uses the "chained send" optimization.
-     */
-    inline bool chaining() const;
-
-    /**
-     * @brief Enables or disables chained send.
-     */
-    inline void chaining(bool new_value);
-
-    /**
      * @brief Returns the last message that was dequeued
      *        from the actor's mailbox.
      * @warning Only set during callback invocation.
@@ -182,10 +205,10 @@ class local_actor : public extend<actor>::with<memory_cached> {
     inline any_tuple& last_dequeued();
 
     /**
-     * @brief Returns the sender of the last dequeued message.
-     * @warning Only set during callback invocation.
+     * @brief Returns the address of the last sender of the
+     *        last dequeued message.
      */
-    inline actor_ptr& last_sender();
+    inline actor_addr& last_sender();
 
     /**
      * @brief Adds a unidirectional @p monitor to @p whom.
@@ -194,13 +217,21 @@ class local_actor : public extend<actor>::with<memory_cached> {
      * @param whom The actor that should be monitored by this actor.
      * @note Each call to @p monitor creates a new, independent monitor.
      */
-    void monitor(const actor_ptr& whom);
+    void monitor(const actor_addr& whom);
 
+    inline void monitor(const actor& whom) {
+        monitor(whom.address());
+    }
+    
     /**
      * @brief Removes a monitor from @p whom.
      * @param whom A monitored actor.
      */
-    void demonitor(const actor_ptr& whom);
+    void demonitor(const actor_addr& whom);
+
+    inline void demonitor(const actor& whom) {
+        demonitor(whom.address());
+    }
 
     /**
      * @brief Can be overridden to initialize an actor before any
@@ -223,16 +254,6 @@ class local_actor : public extend<actor>::with<memory_cached> {
      * @brief Returns all joined groups of this actor.
      */
     std::vector<group_ptr> joined_groups() const;
-
-    /**
-     * @ingroup BlockingAPI
-     * @brief Executes an actor's behavior stack until it is empty.
-     *
-     * This member function allows thread-based and context-switching actors
-     * to make use of the nonblocking behavior API of libcppa.
-     * Calling this member function in an event-based actor does nothing.
-     */
-    virtual void exec_behavior_stack();
 
     /**
      * @brief Creates a {@link response_handle} to allow actors to response
@@ -304,7 +325,7 @@ class local_actor : public extend<actor>::with<memory_cached> {
     inline bool chaining_enabled();
 
     message_id send_timed_sync_message(message_priority mp,
-                                       const actor_ptr& whom,
+                                       const actor& whom,
                                        const util::duration& rel_time,
                                        any_tuple&& what);
 
@@ -314,11 +335,7 @@ class local_actor : public extend<actor>::with<memory_cached> {
 
     void reply_message(any_tuple&& what);
 
-    void forward_message(const actor_ptr& new_receiver, message_priority prio);
-
-    inline const actor_ptr& chained_actor();
-
-    inline void chained_actor(const actor_ptr& value);
+    void forward_message(const actor& new_receiver, message_priority prio);
 
     inline bool awaits(message_id response_id);
 
@@ -349,17 +366,11 @@ class local_actor : public extend<actor>::with<memory_cached> {
     // used *only* when compiled in debug mode
     union { std::string m_debug_name; };
 
-    // true if this actor uses the chained_send optimization
-    bool m_chaining;
-
     // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
 
     // true if this actor takes part in cooperative scheduling
     bool m_is_scheduled;
-
-    // pointer to the actor that is marked as successor due to a chained send
-    actor_ptr m_chained_actor;
 
     // identifies the ID of the last sent synchronous request
     message_id m_last_request_id;
@@ -423,19 +434,11 @@ inline void local_actor::trap_exit(bool new_value) {
     m_trap_exit = new_value;
 }
 
-inline bool local_actor::chaining() const {
-    return m_chaining;
-}
-
-inline void local_actor::chaining(bool new_value) {
-    m_chaining = m_is_scheduled && new_value;
-}
-
 inline any_tuple& local_actor::last_dequeued() {
     return m_current_node->msg;
 }
 
-inline actor_ptr& local_actor::last_sender() {
+inline actor_addr& local_actor::last_sender() {
     return m_current_node->sender;
 }
 
@@ -443,21 +446,9 @@ inline void local_actor::do_unbecome() {
     m_bhvr_stack.pop_async_back();
 }
 
-inline bool local_actor::chaining_enabled() {
-    return m_chaining && !m_chained_actor;
-}
-
 inline message_id local_actor::get_response_id() {
     auto id = m_current_node->mid;
     return (id.is_request()) ? id.response_id() : message_id();
-}
-
-inline const actor_ptr& local_actor::chained_actor() {
-    return m_chained_actor;
-}
-
-inline void local_actor::chained_actor(const actor_ptr& value) {
-    m_chained_actor = value;
 }
 
 inline bool local_actor::awaits(message_id response_id) {

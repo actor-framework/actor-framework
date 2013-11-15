@@ -37,6 +37,7 @@
 #include "cppa/channel.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/ref_counted.hpp"
+#include "cppa/abstract_channel.hpp"
 
 namespace cppa { namespace detail {
 
@@ -53,7 +54,7 @@ class deserializer;
 /**
  * @brief A multicast group.
  */
-class group : public channel {
+class group : public abstract_channel {
 
     friend class detail::group_manager;
     friend class detail::peer_connection; // needs access to remote_enqueue
@@ -77,7 +78,7 @@ class group : public channel {
 
         subscription() = default;
         subscription(subscription&&) = default;
-        subscription(const channel_ptr& s, const intrusive_ptr<group>& g);
+        subscription(const channel& s, const intrusive_ptr<group>& g);
 
         ~subscription();
 
@@ -85,7 +86,7 @@ class group : public channel {
 
      private:
 
-        channel_ptr m_subscriber;
+        channel m_subscriber;
         intrusive_ptr<group> m_group;
 
     };
@@ -146,7 +147,7 @@ class group : public channel {
      * @returns A {@link subscription} object that unsubscribes @p who
      *         if the lifetime of @p who ends.
      */
-    virtual subscription subscribe(const channel_ptr& who) = 0;
+    virtual subscription subscribe(const channel& who) = 0;
 
     /**
      * @brief Get a pointer to the group associated with
@@ -181,7 +182,7 @@ class group : public channel {
 
     group(module_ptr module, std::string group_id);
 
-    virtual void unsubscribe(const channel_ptr& who) = 0;
+    virtual void unsubscribe(const channel& who) = 0;
 
     module_ptr m_module;
     std::string m_identifier;

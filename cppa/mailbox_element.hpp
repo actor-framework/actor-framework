@@ -33,9 +33,9 @@
 
 #include <cstdint>
 
-#include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/memory_cached.hpp"
@@ -57,7 +57,7 @@ class mailbox_element : public extend<memory_managed>::with<memory_cached> {
 
     pointer    next;   // intrusive next pointer
     bool       marked; // denotes if this node is currently processed
-    actor_ptr  sender; // points to the sender of msg
+    actor_addr sender;
     any_tuple  msg;    // 'content field'
     message_id mid;
 

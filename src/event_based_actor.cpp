@@ -32,7 +32,6 @@
 #include "cppa/to_string.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/event_based_actor.hpp"
 
@@ -46,34 +45,13 @@ class default_scheduled_actor : public event_based_actor {
 
  public:
 
-    typedef std::function<void()> fun_type;
+    typedef std::function<behavior(event_based_actor*)> fun_type;
 
     default_scheduled_actor(fun_type&& fun)
-    : super(actor_state::ready), m_fun(std::move(fun)), m_initialized(false) { }
+    : super(actor_state::ready), m_fun(std::move(fun)) { }
 
-    void init() { }
-
-    resume_result resume(util::fiber* f, actor_ptr& next) {
-        if (!m_initialized) {
-            scoped_self_setter sss{this};
-            m_initialized = true;
-            m_fun();
-            if (m_bhvr_stack.empty()) {
-                if (exit_reason() == exit_reason::not_exited) {
-                    quit(exit_reason::normal);
-                }
-                else {
-                    set_state(actor_state::done);
-                    m_bhvr_stack.clear();
-                    m_bhvr_stack.cleanup();
-                    on_exit();
-                    next.swap(m_chained_actor);
-                    set_state(actor_state::done);
-                }
-                return resume_result::actor_done;
-            }
-        }
-        return event_based_actor::resume(f, next);
+    behavior make_behavior() override {
+        return m_fun(this);
     }
 
     scheduled_actor_type impl_type() {
@@ -83,21 +61,39 @@ class default_scheduled_actor : public event_based_actor {
  private:
 
     fun_type m_fun;
-    bool m_initialized;
 
 };
 
-intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> fun) {
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<behavior()> fun) {
+    return make_counted<default_scheduled_actor>([=](event_based_actor*) -> behavior { return fun(); });
+}
+
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<behavior(event_based_actor*)> fun) {
     return make_counted<default_scheduled_actor>(std::move(fun));
+}
+
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void(event_based_actor*)> fun) {
+    auto result = make_counted<default_scheduled_actor>([=](event_based_actor* self) -> behavior {
+        return (
+            on(atom("INIT")) >> [=] {
+                fun(self);
+            }
+        );
+    });
+    result->enqueue({result->address(), result}, make_any_tuple(atom("INIT")));
+    return result;
+}
+
+intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> fun) {
+    return from([=](event_based_actor*) { fun(); });
 }
 
 event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
 
-resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
+resume_result event_based_actor::resume(util::fiber*) {
     CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
     CPPA_REQUIRE(   state() == actor_state::ready
                  || state() == actor_state::pending);
-    scoped_self_setter sss{this};
     auto done_cb = [&]() -> bool {
         CPPA_LOG_TRACE("");
         if (exit_reason() == exit_reason::not_exited) {
@@ -116,7 +112,6 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
         m_bhvr_stack.cleanup();
         on_exit();
         CPPA_REQUIRE(next_job == nullptr);
-        next_job.swap(m_chained_actor);
         return true;
     };
     CPPA_REQUIRE(next_job == nullptr);
@@ -127,7 +122,6 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
             if (e == nullptr) {
                 CPPA_REQUIRE(next_job == nullptr);
                 CPPA_LOGMF(CPPA_DEBUG, self, "no more element in mailbox; going to block");
-                next_job.swap(m_chained_actor);
                 set_state(actor_state::about_to_block);
                 std::atomic_thread_fence(std::memory_order_seq_cst);
                 if (this->m_mailbox.can_fetch_more() == false) {
@@ -137,7 +131,6 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
                             // interrupted by arriving message
                             // restore members
                             CPPA_REQUIRE(m_chained_actor == nullptr);
-                            next_job.swap(m_chained_actor);
                             CPPA_LOGMF(CPPA_DEBUG, self, "switched back to ready: "
                                            "interrupted by arriving message");
                             break;
@@ -155,7 +148,6 @@ resume_result event_based_actor::resume(util::fiber*, actor_ptr& next_job) {
                                    "mailbox can fetch more");
                     set_state(actor_state::ready);
                     CPPA_REQUIRE(m_chained_actor == nullptr);
-                    next_job.swap(m_chained_actor);
                 }
             }
             else {

@@ -68,7 +68,7 @@ class default_broker : public broker {
     : broker{std::forward<Ts>(args)...}, m_fun{move(fun)} { }
 
     void init() override {
-        enqueue(nullptr, make_any_tuple(atom("INITMSG")));
+        enqueue({invalid_actor_addr, this}, make_any_tuple(atom("INITMSG")));
         become(
             on(atom("INITMSG")) >> [=] {
                 unbecome();
@@ -136,7 +136,7 @@ class broker::servant : public continuable {
         if (!m_disconnected) {
             m_disconnected = true;
             if (m_broker->exit_reason() == exit_reason::not_exited) {
-                m_broker->invoke_message(nullptr, disconnect_message());
+                //TODO: m_broker->invoke_message(nullptr, disconnect_message());
             }
         }
     }
@@ -207,7 +207,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
                || m_policy == broker::exactly
                || m_policy == broker::at_most) {
                 CPPA_LOG_DEBUG("invoke io actor");
-                m_broker->invoke_message(nullptr, m_read_msg);
+                m_broker->invoke_message({invalid_actor_addr, nullptr}, m_read_msg);
                 CPPA_LOG_INFO_IF(!m_read_msg.vals()->unique(), "detached buffer");
                 get_ref<2>(m_read_msg).clear();
             }
@@ -264,7 +264,7 @@ class broker::doorman : public broker::servant {
                 auto& p = *opt;
                 get_ref<2>(m_accept_msg) = m_broker->add_scribe(move(p.first),
                                                                 move(p.second));
-                m_broker->invoke_message(nullptr, m_accept_msg);
+                m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
             }
             else return read_continue_later;
        }
@@ -298,7 +298,6 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     m_dummy_node.mid = hdr.id;
     try {
         using detail::receive_policy;
-        scoped_self_setter sss{this};
         auto bhvr = m_bhvr_stack.back();
         switch (m_recv_policy.handle_message(this,
                                              &m_dummy_node,
@@ -335,7 +334,7 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
         quit(exit_reason::unhandled_exception);
     }
     // restore dummy node
-    m_dummy_node.sender.reset();
+    m_dummy_node.sender = actor_addr{};
     m_dummy_node.msg.reset();
 }
 
@@ -397,7 +396,6 @@ void broker::write(const connection_handle& hdl, util::buffer&& buf) {
 }
 
 local_actor_ptr init_and_launch(broker_ptr ptr) {
-    scoped_self_setter sss{ptr.get()};
     ptr->init();
     // continue reader only if not inherited from default_broker_impl
     CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
@@ -454,8 +452,8 @@ accept_handle broker::add_doorman(acceptor_uptr ptr) {
     return id;
 }
 
-actor_ptr broker::fork_impl(std::function<void (broker*)> fun,
-                            connection_handle hdl) {
+actor_addr broker::fork_impl(std::function<void (broker*)> fun,
+                             connection_handle hdl) {
     auto i = m_io.find(hdl);
     if (i == m_io.end()) throw std::invalid_argument("invalid handle");
     scribe* sptr = i->second.get(); // non-owning pointer
@@ -463,7 +461,7 @@ actor_ptr broker::fork_impl(std::function<void (broker*)> fun,
     init_and_launch(result);
     sptr->set_broker(result); // set new broker
     m_io.erase(i);
-    return result;
+    return {result};
 }
 
 void broker::receive_policy(const connection_handle& hdl,

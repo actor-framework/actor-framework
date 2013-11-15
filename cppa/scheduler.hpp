@@ -44,17 +44,15 @@
 #include "cppa/attachable.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/spawn_options.hpp"
-//#include "cppa/scheduled_actor.hpp"
 
 #include "cppa/util/duration.hpp"
-
-#include "cppa/detail/fwd.hpp"
 
 namespace cppa {
 
 class self_type;
 class scheduled_actor;
 class scheduler_helper;
+class event_based_actor;
 typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
 namespace detail { class singleton_manager; } // namespace detail
 
@@ -86,9 +84,9 @@ class scheduler {
  public:
 
     typedef std::function<void(local_actor*)> init_callback;
-    typedef std::function<void()>             void_function;
+    typedef std::function<behavior(local_actor*)> actor_fun;
 
-    const actor_ptr& printer() const;
+    const actor& printer() const;
 
     virtual void enqueue(scheduled_actor*) = 0;
 
@@ -115,7 +113,7 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper()->enqueue(nullptr, std::move(tup));
+        //TODO: delayed_send_helper()->enqueue(nullptr, std::move(tup));
     }
 
     template<typename Duration, typename... Data>
@@ -127,7 +125,7 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper()->enqueue(nullptr, std::move(tup));
+        //TODO: delayed_send_helper()->enqueue(nullptr, std::move(tup));
     }
 
     /**
@@ -141,14 +139,13 @@ class scheduler {
      *        in this scheduler.
      */
     virtual local_actor_ptr exec(spawn_options opts,
-                           init_callback init_cb,
-                           void_function actor_behavior) = 0;
+                                 init_callback init_cb,
+                                 actor_fun actor_behavior) = 0;
 
     template<typename F, typename T, typename... Ts>
     local_actor_ptr exec(spawn_options opts, init_callback cb,
                          F f, T&& a0, Ts&&... as) {
-        return this->exec(opts, cb, std::bind(f, detail::fwd<T>(a0),
-                                                 detail::fwd<Ts>(as)...));
+        return this->exec(opts, cb, std::bind(f, std::forward<T>(a0), std::forward<Ts>(as)...));
     }
 
  private:
@@ -157,7 +154,7 @@ class scheduler {
 
     inline void dispose() { delete this; }
 
-    const actor_ptr& delayed_send_helper();
+    actor& delayed_send_helper();
 
     scheduler_helper* m_helper;
 

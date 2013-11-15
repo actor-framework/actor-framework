@@ -118,7 +118,7 @@ int main(int, char**) {
     // send t a foo_pair2
     send(t, foo_pair2{3, 4});
 
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -47,7 +47,7 @@ class thread_pool_scheduler : public scheduler {
  public:
 
     using scheduler::init_callback;
-    using scheduler::void_function;
+    using scheduler::actor_fun;
 
     struct worker;
 
@@ -63,7 +63,7 @@ class thread_pool_scheduler : public scheduler {
 
     local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) override;
 
-    local_actor_ptr exec(spawn_options opts, init_callback init_cb, void_function f) override;
+    local_actor_ptr exec(spawn_options opts, init_callback init_cb, actor_fun f) override;
 
  private:
 

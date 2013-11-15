@@ -79,7 +79,7 @@ int main(int, char**) {
 
     // spawn a new testee and send it a foo
     send(spawn(testee), foo{1, 2});
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

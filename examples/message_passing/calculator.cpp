@@ -74,7 +74,7 @@ void tester(const actor_ptr& testee) {
 
 int main() {
     spawn(tester, spawn(calculator));
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

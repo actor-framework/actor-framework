@@ -32,7 +32,6 @@
 #include <limits>
 #include <stdexcept>
 
-#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
@@ -62,7 +61,7 @@ actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     return {nullptr, exit_reason::not_exited};
 }
 
-void actor_registry::put(actor_id key, const actor_ptr& value) {
+void actor_registry::put(actor_id key, const abstract_actor_ptr& value) {
     bool add_attachable = false;
     if (value != nullptr) {
         shared_guard guard(m_instances_mtx);

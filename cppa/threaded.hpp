@@ -35,6 +35,7 @@
 #include <chrono>
 #include <condition_variable>
 
+#include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/util/dptr.hpp"
@@ -93,10 +94,6 @@ class threaded : public Base {
             // init() did indeed call quit() for some reason
             dthis->on_exit();
         }
-        while (!dthis->m_bhvr_stack.empty()) {
-            dthis->m_bhvr_stack.exec(dthis->m_recv_policy, dthis);
-            dthis->on_exit();
-        }
         auto rsn = dthis->planned_exit_reason();
         dthis->cleanup(rsn == exit_reason::not_exited ? exit_reason::normal : rsn);
     }
@@ -135,11 +132,6 @@ class threaded : public Base {
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
         enqueue_impl(this->m_mailbox, hdr, std::move(msg));
-    }
-
-    bool chained_enqueue(const message_header& hdr, any_tuple msg) override {
-        enqueue(hdr, std::move(msg));
-        return false;
     }
 
     timeout_type init_timeout(const util::duration& rel_time) {

@@ -58,7 +58,7 @@ int main(int, char**) {
                   make_pair(&foo::b, &foo::set_b));
     auto t = spawn(testee);
     send(t, foo{1, 2});
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

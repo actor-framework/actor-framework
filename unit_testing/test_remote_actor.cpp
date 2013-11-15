@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
         }
     );
     // wait until separate process (in sep. thread) finished execution
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     if (run_remote_actor) child.join();
     CPPA_CHECKPOINT();

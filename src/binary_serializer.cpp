@@ -36,6 +36,7 @@
 #include <cstring>
 #include <type_traits>
 
+#include "cppa/config.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/type_lookup_table.hpp"

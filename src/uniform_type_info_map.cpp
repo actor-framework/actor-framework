@@ -57,23 +57,24 @@ namespace cppa { namespace detail {
 // maps demangled names to libcppa names
 // WARNING: this map is sorted, insert new elements *in sorted order* as well!
 /* extern */ const char* mapped_type_names[][2] = {
-    { "bool",                                           "bool" },
-    { "cppa::any_tuple",                                "@tuple" },
-    { "cppa::atom_value",                               "@atom" },
-    { "cppa::intrusive_ptr<cppa::actor>",               "@actor" },
-    { "cppa::intrusive_ptr<cppa::channel>",             "@channel" },
-    { "cppa::intrusive_ptr<cppa::group>",               "@group" },
-    { "cppa::intrusive_ptr<cppa::node_id>", "@proc"},
-    { "cppa::io::accept_handle",                        "@ac_hdl" },
-    { "cppa::io::connection_handle",                    "@cn_hdl" },
-    { "cppa::message_header",                           "@header" },
-    { "cppa::nullptr_t",                                "@null" },
-    { "cppa::unit_t",                                   "@0" },
-    { "cppa::util::buffer",                             "@buffer" },
+    { "cppa::actor",                                    "@actor"    },
+    { "cppa::actor_addr",                               "@addr"     },
+    { "bool",                                           "bool"      },
+    { "cppa::any_tuple",                                "@tuple"    },
+    { "cppa::atom_value",                               "@atom"     },
+    { "cppa::intrusive_ptr<cppa::channel>",             "@channel"  },
+    { "cppa::intrusive_ptr<cppa::group>",               "@group"    },
+    { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"     },
+    { "cppa::io::accept_handle",                        "@ac_hdl"   },
+    { "cppa::io::connection_handle",                    "@cn_hdl"   },
+    { "cppa::message_header",                           "@header"   },
+    { "cppa::nullptr_t",                                "@null"     },
+    { "cppa::unit_t",                                   "@0"        },
+    { "cppa::util::buffer",                             "@buffer"   },
     { "cppa::util::duration",                           "@duration" },
-    { "double",                                         "double" },
-    { "float",                                          "float" },
-    { "long double",                                    "@ldouble" },
+    { "double",                                         "double"    },
+    { "float",                                          "float"     },
+    { "long double",                                    "@ldouble"  },
     // std::u16string
     { "std::basic_string<@i16,std::char_traits<@i16>,std::allocator<@i16>>",
       "@u16str" },
@@ -163,18 +164,28 @@ inline void serialize_impl(const unit_t&, serializer*) { }
 
 inline void deserialize_impl(unit_t&, deserializer*) { }
 
-void serialize_impl(const actor_ptr& ptr, serializer* sink) {
+void serialize_impl(const actor_addr& addr, serializer* sink) {
     auto ns = sink->get_namespace();
-    if (ns) ns->write(sink, ptr);
+    if (ns) ns->write(sink, addr);
     else throw std::runtime_error("unable to serialize actor_ptr: "
                                   "no actor addressing defined");
 }
 
-void deserialize_impl(actor_ptr& ptrref, deserializer* source) {
+void deserialize_impl(actor_addr& addr, deserializer* source) {
     auto ns = source->get_namespace();
-    if (ns) ptrref = ns->read(source);
+    if (ns) addr = ns->read(source);
     else throw std::runtime_error("unable to deserialize actor_ptr: "
                                   "no actor addressing defined");
+}
+
+void serialize_impl(const actor& ptr, serializer* sink) {
+    serialize_impl(ptr.address(), sink);
+}
+
+void deserialize_impl(actor& ptr, deserializer* source) {
+    actor_addr addr;
+    deserialize_impl(addr, source);
+    ptr = detail::actor_addr_cast<abstract_actor>(addr);
 }
 
 void serialize_impl(const group_ptr& ptr, serializer* sink) {
@@ -195,7 +206,7 @@ void deserialize_impl(group_ptr& ptrref, deserializer* source) {
     else ptrref = group::get_module(modname)->deserialize(source);
 }
 
-void serialize_impl(const channel_ptr& ptr, serializer* sink) {
+void serialize_impl(const channel& ptr, serializer* sink) {
     // channel is an abstract base class that's either an actor or a group
     // to indicate that, we write a flag first, that is
     //     0 if ptr == nullptr
@@ -207,11 +218,11 @@ void serialize_impl(const channel_ptr& ptr, serializer* sink) {
     };
     if (ptr == nullptr) wr_nullptr();
     else {
-        auto aptr = ptr.downcast<actor>();
+        auto aptr = ptr.downcast<abstract_actor>();
         if (aptr != nullptr) {
             flag = 1;
             sink->write_value(flag);
-            serialize_impl(aptr, sink);
+            serialize_impl(actor{aptr}, sink);
         }
         else {
             auto gptr = ptr.downcast<group>();
@@ -228,7 +239,7 @@ void serialize_impl(const channel_ptr& ptr, serializer* sink) {
     }
 }
 
-void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
+void deserialize_impl(channel& ptrref, deserializer* source) {
     auto flag = source->read<uint8_t>();
     switch (flag) {
         case 0: {
@@ -236,9 +247,9 @@ void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
             break;
         }
         case 1: {
-            actor_ptr tmp;
+            actor tmp;
             deserialize_impl(tmp, source);
-            ptrref = tmp;
+            ptrref = detail::actor_addr_cast<abstract_actor>(tmp);
             break;
         }
         case 2: {
@@ -248,7 +259,7 @@ void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
             break;
         }
         default: {
-            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel_ptr'");
+            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel'");
             throw std::runtime_error("invalid flag");
         }
     }
@@ -416,7 +427,7 @@ class uti_impl : public uti_base<T> {
 
  protected:
 
-    void serialize(const void *instance, serializer *sink) const {
+    void serialize(const void* instance, serializer* sink) const {
         serialize_impl(super::deref(instance), sink);
     }
 
@@ -701,6 +712,7 @@ class utim_impl : public uniform_type_info_map {
         m_builtin_types[i++] = &m_type_unit;            // @0
         m_builtin_types[i++] = &m_ac_hdl;               // @ac_hdl
         m_builtin_types[i++] = &m_type_actor;           // @actor
+        m_builtin_types[i++] = &m_type_actor_addr;      // @actor_addr
         m_builtin_types[i++] = &m_type_atom;            // @atom
         m_builtin_types[i++] = &m_type_buffer;          // @buffer
         m_builtin_types[i++] = &m_type_channel;         // @channel
@@ -754,7 +766,7 @@ class utim_impl : public uniform_type_info_map {
         push_hint<atom_value>(this);
         push_hint<atom_value, std::uint32_t>(this);
         push_hint<atom_value, node_id_ptr>(this);
-        push_hint<atom_value, actor_ptr>(this);
+        push_hint<atom_value, actor>(this);
         push_hint<atom_value, node_id_ptr, std::uint32_t, std::uint32_t>(this);
         push_hint<atom_value, std::uint32_t, std::string>(this);
     }
@@ -819,12 +831,13 @@ class utim_impl : public uniform_type_info_map {
 
     typedef std::map<std::string, std::string> strmap;
 
-    uti_impl<node_id_ptr>       m_type_proc;
+    uti_impl<node_id_ptr>                   m_type_proc;
     uti_impl<io::accept_handle>             m_ac_hdl;
     uti_impl<io::connection_handle>         m_cn_hdl;
-    uti_impl<channel_ptr>                   m_type_channel;
+    uti_impl<channel>                   m_type_channel;
     buffer_type_info_impl                   m_type_buffer;
-    uti_impl<actor_ptr>                     m_type_actor;
+    uti_impl<actor>                         m_type_actor;
+    uti_impl<actor_addr>                    m_type_actor_addr;
     uti_impl<group_ptr>                     m_type_group;
     uti_impl<any_tuple>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
@@ -849,7 +862,7 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 28> m_builtin_types;
+    std::array<pointer, 29> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
     mutable util::shared_spinlock m_lock;
 

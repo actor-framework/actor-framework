@@ -37,7 +37,6 @@
 #include <type_traits>
 
 #include "cppa/get.hpp"
-#include "cppa/actor.hpp"
 #include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 

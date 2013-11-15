@@ -203,7 +203,7 @@ string behavior_test(actor_ptr et) {
         }
     );
     send_exit(et, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
     return result;
 }
 
@@ -386,7 +386,7 @@ void test_serial_reply() {
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     send_exit(master, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
 
 }
 
@@ -411,7 +411,7 @@ void test_or_else() {
             CPPA_CHECK_EQUAL(i, 3);
         });
         send_exit(testee, exit_reason::user_shutdown);
-        await_all_others_done();
+        await_all_actors_done();
     });
     run_testee(
         spawn([=] {
@@ -461,7 +461,7 @@ void test_continuation() {
             }
         );
     });
-    await_all_others_done();
+    await_all_actors_done();
 }
 
 int main() {
@@ -476,7 +476,7 @@ int main() {
     spawn<slave>(m);
     spawn<slave>(m);
     send(m, atom("done"));
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test send()");
@@ -508,7 +508,7 @@ int main() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_others_done();
+        await_all_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -524,7 +524,7 @@ int main() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_others_done();
+        await_all_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -541,7 +541,7 @@ int main() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_others_done();
+        await_all_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -552,7 +552,7 @@ int main() {
         on("hello echo") >> [] { },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test delayed_send()");
@@ -565,11 +565,11 @@ int main() {
     CPPA_CHECKPOINT();
 
     spawn(testee1);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     spawn_event_testee2();
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     auto cstk = spawn<chopstick>();
@@ -580,7 +580,7 @@ int main() {
             send(cstk, atom("break"));
         }
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     auto factory = factory::event_based([&](int* i, float*, string*) {
@@ -611,7 +611,7 @@ int main() {
             CPPA_CHECK_EQUAL(value, 42);
         }
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     auto st = spawn<fixed_stack>(10);
@@ -641,7 +641,7 @@ int main() {
     }
     // terminate st
     send_exit(st, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     auto sync_testee1 = spawn<blocking_api>([] {
@@ -679,7 +679,7 @@ int main() {
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(0)) >> [] { }
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test sync send with factory spawned actor");
@@ -727,7 +727,7 @@ int main() {
             CPPA_CHECK_EQUAL(self->last_sender(), sync_testee);
         }
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     sync_send(sync_testee, "!?").await(
@@ -759,7 +759,7 @@ int main() {
     auto poison_pill = make_any_tuple(atom("done"));
     joe << poison_pill;
     bob << poison_pill;
-    await_all_others_done();
+    await_all_actors_done();
 
     function<actor_ptr (const string&, const actor_ptr&)> spawn_next;
     auto kr34t0r = factory::event_based(
@@ -786,7 +786,7 @@ int main() {
     };
     auto joe_the_second = kr34t0r.spawn("Joe");
     send(joe_the_second, atom("done"));
-    await_all_others_done();
+    await_all_actors_done();
 
     int zombie_init_called = 0;
     int zombie_on_exit_called = 0;
@@ -839,7 +839,7 @@ int main() {
     );
     send_exit(a1, exit_reason::user_shutdown);
     send_exit(a2, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
 
     factory::event_based([](int* i) {
         become(
@@ -849,7 +849,7 @@ int main() {
 
         );
     }).spawn();
-    await_all_others_done();
+    await_all_actors_done();
 
     auto res1 = behavior_test<testee_actor>(spawn<blocking_api>(testee_actor{}));
     CPPA_CHECK_EQUAL("wait4int", res1);
@@ -865,7 +865,7 @@ int main() {
         become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
     send_exit(legion, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     self->trap_exit(true);
     auto ping_actor = spawn<monitored+blocking_api>(ping, 10);
@@ -904,16 +904,16 @@ int main() {
         }
     );
     // wait for termination of all spawned actors
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECK_EQUAL(flags, 0x0F);
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 10);
     CPPA_CHECKPOINT();
     spawn<priority_aware>(high_priority_testee);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     spawn<high_priority_testee_class, priority_aware>();
-    await_all_others_done();
+    await_all_actors_done();
     // don't try this at home, kids
     send(self, atom("check"));
     try {

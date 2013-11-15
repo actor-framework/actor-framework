@@ -28,27 +28,72 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#ifndef CPPA_TYPED_ACTOR_HPP
+#define CPPA_TYPED_ACTOR_HPP
+
+#include "cppa/replies_to.hpp"
+#include "cppa/typed_behavior.hpp"
+#include "cppa/message_future.hpp"
+#include "cppa/event_based_actor.hpp"
+
+#include "cppa/detail/typed_actor_util.hpp"
+
+namespace cppa {
+
+template<typename... Signatures>
+class typed_actor_ptr;
+
+template<typename... Signatures>
+class typed_actor : public event_based_actor {
+
+ public:
+
+    using signatures = util::type_list<Signatures...>;
+
+    using behavior_type = typed_behavior<Signatures...>;
+
+    using typed_pointer_type = typed_actor_ptr<Signatures...>;
+
+ protected:
+
+    virtual behavior_type make_behavior() = 0;
+
+    void init() final {
+        auto bhvr = make_behavior();
+        m_bhvr_stack.push_back(std::move(bhvr.unbox()));
+    }
+
+    void do_become(behavior&&, bool) final {
+        CPPA_LOG_ERROR("typed actors are not allowed to call become()");
+        quit(exit_reason::unallowed_function_call);
+    }
+
+};
+
+} // namespace cppa
 
 namespace cppa { namespace detail {
 
-scheduled_actor_dummy::scheduled_actor_dummy()
-: scheduled_actor(actor_state::blocked, false) { }
+template<typename... Signatures>
+class default_typed_actor : public typed_actor<Signatures...> {
 
-void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+ public:
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
-}
+    template<typename... Cases>
+    default_typed_actor(match_expr<Cases...> expr) : m_bhvr(std::move(expr)) { }
 
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
-}
+ protected:
+
+    typed_behavior<Signatures...> make_behavior() override {
+        return m_bhvr;
+    }
+
+ private:
+
+    typed_behavior<Signatures...> m_bhvr;
+
+};
 
 } } // namespace cppa::detail
+
+#endif // CPPA_TYPED_ACTOR_HPP

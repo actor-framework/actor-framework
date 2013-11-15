@@ -120,8 +120,11 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
 # list cpp files including platform-dependent files
 set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
+    src/abstract_actor.cpp
+    src/abstract_channel.cpp
     src/abstract_tuple.cpp
     src/actor.cpp
+    src/actor_addr.cpp
     src/actor_namespace.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
@@ -149,7 +152,6 @@ set(LIBCPPA_SRC
     src/event_based_actor.cpp
     src/exception.cpp
     src/exit_reason.cpp
-    src/factory.cpp
     src/fd_util.cpp
     src/fiber.cpp
     src/get_root_uuid.cpp
@@ -181,8 +183,7 @@ set(LIBCPPA_SRC
     src/scheduled_actor.cpp
     src/scheduled_actor_dummy.cpp
     src/scheduler.cpp
-    src/send.cpp
-    src/self.cpp
+    src/scoped_actor.cpp
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp

@@ -67,23 +67,23 @@ class local_group : public group {
 
  public:
 
-    void send_all_subscribers(const actor_ptr& sender, const any_tuple& msg) {
+    void send_all_subscribers(const message_header& hdr, const any_tuple& msg) {
         CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
-            send_tuple_as(sender, s, msg);
+            s.enqueue(hdr, msg);
         }
     }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
         CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
-        send_all_subscribers(hdr.sender, msg);
-        m_broker->enqueue(hdr, move(msg));
+        send_all_subscribers(hdr, msg);
+        m_broker.enqueue(hdr, msg);
     }
 
-    pair<bool, size_t> add_subscriber(const channel_ptr& who) {
+    pair<bool, size_t> add_subscriber(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         if (m_subscribers.insert(who).second) {
@@ -92,14 +92,14 @@ class local_group : public group {
         return {false, m_subscribers.size()};
     }
 
-    pair<bool, size_t> erase_subscriber(const channel_ptr& who) {
+    pair<bool, size_t> erase_subscriber(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         auto success = m_subscribers.erase(who) > 0;
         return {success, m_subscribers.size()};
     }
 
-    group::subscription subscribe(const channel_ptr& who) {
+    group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         if (add_subscriber(who).first) {
             return {who, this};
@@ -107,14 +107,14 @@ class local_group : public group {
         return {};
     }
 
-    void unsubscribe(const channel_ptr& who) {
+    void unsubscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         erase_subscriber(who);
     }
 
     void serialize(serializer* sink);
 
-    const actor_ptr& broker() const {
+    const actor& broker() const {
         return m_broker;
     }
 
@@ -123,8 +123,8 @@ class local_group : public group {
  protected:
 
     util::shared_spinlock m_mtx;
-    set<channel_ptr> m_subscribers;
-    actor_ptr m_broker;
+    set<channel> m_subscribers;
+    actor m_broker;
 
 };
 
@@ -136,16 +136,16 @@ class local_broker : public event_based_actor {
 
     local_broker(local_group_ptr g) : m_group(move(g)) { }
 
-    void init() {
-        become (
-            on(atom("JOIN"), arg_match) >> [=](const actor_ptr& other) {
+    behavior make_behavior() {
+        return (
+            on(atom("JOIN"), arg_match) >> [=](const actor_addr& other) {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$JOIN",
                                 CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.insert(other).second) {
                     monitor(other);
                 }
             },
-            on(atom("LEAVE"), arg_match) >> [=](const actor_ptr& other) {
+            on(atom("LEAVE"), arg_match) >> [=](const actor_addr& other) {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$LEAVE",
                                 CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.erase(other) > 0) {
@@ -156,15 +156,16 @@ class local_broker : public event_based_actor {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$FORWARD",
                                 CPPA_TARG(what, to_string));
                 // local forwarding
-                m_group->send_all_subscribers(last_sender(), what);
+                message_header hdr{last_sender(), nullptr};
+                m_group->send_all_subscribers(hdr, what);
                 // forward to all acquaintances
                 send_to_acquaintances(what);
             },
             on(atom("DOWN"), arg_match) >> [=](uint32_t) {
-                actor_ptr other = last_sender();
+                auto sender = last_sender();
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
                                 CPPA_TARG(other, to_string));
-                if (other) m_acquaintances.erase(other);
+                if (sender) m_acquaintances.erase(sender);
             },
             others() >> [=] {
                 auto msg = last_dequeued();
@@ -184,12 +185,13 @@ class local_broker : public event_based_actor {
                        << " acquaintances; " << CPPA_TSARG(sender)
                        << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            acquaintance->enqueue({sender, acquaintance}, what);
+            auto ptr = detail::actor_addr_cast<abstract_actor>(acquaintance);
+            ptr->enqueue({sender, ptr}, what);
         }
     }
 
     local_group_ptr m_group;
-    set<actor_ptr> m_acquaintances;
+    set<actor_addr> m_acquaintances;
 
 };
 
@@ -206,7 +208,7 @@ class local_group_proxy : public local_group {
  public:
 
     template<typename... Ts>
-    local_group_proxy(actor_ptr remote_broker, Ts&&... args)
+    local_group_proxy(actor remote_broker, Ts&&... args)
     : super(false, forward<Ts>(args)...) {
         CPPA_REQUIRE(m_broker == nullptr);
         CPPA_REQUIRE(remote_broker != nullptr);
@@ -215,7 +217,7 @@ class local_group_proxy : public local_group {
         m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
 
-    group::subscription subscribe(const channel_ptr& who) {
+    group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = add_subscriber(who);
         if (res.first) {
@@ -228,7 +230,7 @@ class local_group_proxy : public local_group {
         return {};
     }
 
-    void unsubscribe(const channel_ptr& who) {
+    void unsubscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = erase_subscriber(who);
         if (res.first && res.second == 0) {
@@ -240,12 +242,12 @@ class local_group_proxy : public local_group {
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
         // forward message to the broker
-        m_broker->enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
+        m_broker.enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
     }
 
  private:
 
-    actor_ptr m_proxy_broker;
+    actor m_proxy_broker;
 
 };
 
@@ -257,10 +259,11 @@ class proxy_broker : public event_based_actor {
 
     proxy_broker(local_group_proxy_ptr grp) : m_group(move(grp)) { }
 
-    void init() {
-        become (
+    behavior make_behavior() {
+        return (
             others() >> [=] {
-                m_group->send_all_subscribers(last_sender(), last_dequeued());
+                message_header hdr{last_sender(), nullptr};
+                m_group->send_all_subscribers(hdr, last_dequeued());
             }
         );
     }
@@ -279,7 +282,7 @@ class local_group_module : public group::module {
 
     local_group_module()
     : super("local"), m_process(node_id::get())
-    , m_actor_utype(uniform_typeid<actor_ptr>()){ }
+    , m_actor_utype(uniform_typeid<actor>()){ }
 
     group_ptr get(const string& identifier) {
         shared_guard guard(m_instances_mtx);
@@ -302,11 +305,10 @@ class local_group_module : public group::module {
         // deserialize {identifier, process_id, node_id}
         auto identifier = source->read<string>();
         // deserialize broker
-        actor_ptr broker;
+        actor broker;
         m_actor_utype->deserialize(&broker, source);
-        CPPA_REQUIRE(broker != nullptr);
         if (!broker) return nullptr;
-        if (!broker->is_proxy()) {
+        if (!broker.is_remote()) {
             return this->get(identifier);
         }
         else {
@@ -344,7 +346,7 @@ class local_group_module : public group::module {
     util::shared_spinlock m_instances_mtx;
     map<string, local_group_ptr> m_instances;
     util::shared_spinlock m_proxies_mtx;
-    map<actor_ptr, local_group_ptr> m_proxies;
+    map<actor, local_group_ptr> m_proxies;
 
 };
 
@@ -357,12 +359,12 @@ class remote_group : public group {
     remote_group(group::module_ptr parent, string id, local_group_ptr decorated)
     : super(parent, move(id)), m_decorated(decorated) { }
 
-    group::subscription subscribe(const channel_ptr& who) {
+    group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));
         return m_decorated->subscribe(who);
     }
 
-    void unsubscribe(const channel_ptr&) {
+    void unsubscribe(const channel&) {
         CPPA_LOG_ERROR("should never be called");
     }
 
@@ -376,7 +378,7 @@ class remote_group : public group {
     void group_down() {
         CPPA_LOG_TRACE("");
         group_ptr _this{this};
-        m_decorated->send_all_subscribers(nullptr,
+        m_decorated->send_all_subscribers({invalid_actor_addr, nullptr},
                                           make_any_tuple(atom("GROUP_DOWN"),
                                                          _this));
     }
@@ -430,7 +432,7 @@ class shared_map : public ref_counted {
         m_cond.notify_all();
     }
 
-    actor_ptr m_worker;
+    actor m_worker;
 
  private:
 
@@ -452,15 +454,15 @@ class remote_group_module : public group::module {
         auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
-        auto worker = spawn<blocking_api+hidden>([_this, sm] {
+        m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
                             "remote_group_module$worker",
                             "");
-            typedef map<string, pair<actor_ptr, vector<pair<string, remote_group_ptr>>>>
+            typedef map<string, pair<actor, vector<pair<string, remote_group_ptr>>>>
                     peer_map;
-            peer_map peers;
-            receive_loop (
-                on(atom("FETCH"), arg_match) >> [_this, sm, &peers](const string& key) {
+            auto peers = std::make_shared<peer_map>();
+            return (
+                on(atom("FETCH"), arg_match) >> [=](const string& key) {
                     // format is group@host:port
                     auto pos1 = key.find('@');
                     auto pos2 = key.find(':');
@@ -469,9 +471,9 @@ class remote_group_module : public group::module {
                     if (pos1 != last && pos2 != last && pos1 < pos2) {
                         auto name = key.substr(0, pos1);
                         authority = key.substr(pos1 + 1);
-                        auto i = peers.find(authority);
-                        actor_ptr nameserver;
-                        if (i != peers.end()) {
+                        auto i = peers->find(authority);
+                        actor nameserver;
+                        if (i != peers->end()) {
                             nameserver = i->second.first;
                         }
                         else {
@@ -483,7 +485,7 @@ class remote_group_module : public group::module {
                                 try {
                                     nameserver = remote_actor(host, port);
                                     self->monitor(nameserver);
-                                    peers[authority].first = nameserver;
+                                    (*peers)[authority].first = nameserver;
                                 }
                                 catch (exception&) {
                                     sm->put(key, nullptr);
@@ -491,13 +493,13 @@ class remote_group_module : public group::module {
                                 }
                             }
                         }
-                        sync_send(nameserver, atom("GET_GROUP"), name).await (
+                        self->timed_sync_send(chrono::seconds(10), nameserver, atom("GET_GROUP"), name).then (
                             on(atom("GROUP"), arg_match) >> [&](const group_ptr& g) {
                                 auto gg = dynamic_cast<local_group*>(g.get());
                                 if (gg) {
                                     auto rg = make_counted<remote_group>(_this, key, gg);
                                     sm->put(key, rg);
-                                    peers[authority].second.push_back(make_pair(key, rg));
+                                    (*peers)[authority].second.push_back(make_pair(key, rg));
                                 }
                                 else {
                                     cerr << "*** WARNING: received a non-local "
@@ -509,7 +511,7 @@ class remote_group_module : public group::module {
                                     sm->put(key, nullptr);
                                 }
                             },
-                            after(chrono::seconds(10)) >> [sm, &key] {
+                            on(atom("TIMEOUT")) >> [sm, &key] {
                                 sm->put(key, nullptr);
                             }
                         );
@@ -518,22 +520,21 @@ class remote_group_module : public group::module {
                 on<atom("DOWN"), std::uint32_t>() >> [&] {
                     auto who = self->last_sender();
                     auto find_peer = [&] {
-                        return find_if(begin(peers), end(peers), [&](const peer_map::value_type& kvp) {
+                        return find_if(begin(*peers), end(*peers), [&](const peer_map::value_type& kvp) {
                             return kvp.second.first == who;
                         });
                     };
-                    for (auto i = find_peer(); i != peers.end(); i = find_peer()) {
+                    for (auto i = find_peer(); i != peers->end(); i = find_peer()) {
                         for (auto& kvp: i->second.second) {
                             sm->put(kvp.first, nullptr);
                             kvp.second->group_down();
                         }
-                        peers.erase(i);
+                        peers->erase(i);
                     }
                 },
                 others() >> [] { }
             );
         });
-        sm->m_worker = worker;
     }
 
     intrusive_ptr<group> get(const std::string& group_name) {

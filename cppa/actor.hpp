@@ -31,226 +31,59 @@
 #ifndef CPPA_ACTOR_HPP
 #define CPPA_ACTOR_HPP
 
-#include <mutex>
-#include <atomic>
-#include <memory>
-#include <vector>
 #include <cstdint>
 #include <type_traits>
 
-#include "cppa/group.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/cppa_fwd.hpp"
-#include "cppa/attachable.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_actor.hpp"
 
-#include "cppa/util/type_traits.hpp"
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-class actor;
-class self_type;
-class serializer;
-class deserializer;
+class channel;
+class any_tuple;
+class actor_addr;
+class local_actor;
+class message_header;
 
 /**
- * @brief A unique actor ID.
- * @relates actor
+ * @brief Identifies an untyped actor.
  */
-typedef std::uint32_t actor_id;
+class actor : util::comparable<actor> {
 
-/**
- * @brief A smart pointer type that manages instances of {@link actor}.
- * @relates actor
- */
-typedef intrusive_ptr<actor> actor_ptr;
-
-/**
- * @brief Base class for all actor implementations.
- */
-class actor : public channel {
+    friend class channel;
+    friend class actor_addr;
+    friend class local_actor;
 
  public:
 
-    /**
-     * @brief Attaches @p ptr to this actor.
-     *
-     * The actor will call <tt>ptr->detach(...)</tt> on exit, or immediately
-     * if it already finished execution.
-     * @param ptr A callback object that's executed if the actor finishes
-     *            execution.
-     * @returns @c true if @p ptr was successfully attached to the actor;
-     *          otherwise (actor already exited) @p false.
-     * @warning The actor takes ownership of @p ptr.
-     */
-    bool attach(attachable_ptr ptr);
+    actor() = default;
 
-    /**
-     * @brief Convenience function that attaches the functor
-     *        or function @p f to this actor.
-     *
-     * The actor executes <tt>f()</tt> on exit, or immediatley
-     * if it already finished execution.
-     * @param f A functor, function or lambda expression that's executed
-     *             if the actor finishes execution.
-     * @returns @c true if @p f was successfully attached to the actor;
-     *          otherwise (actor already exited) @p false.
-     */
-    template<typename F>
-    bool attach_functor(F&& f);
+    template<typename T>
+    actor(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_actor, T>::value>::type* = 0) : m_ptr(ptr) { }
 
-    /**
-     * @brief Detaches the first attached object that matches @p what.
-     */
-    void detach(const attachable::token& what);
+    actor(abstract_actor*);
 
-    /**
-     * @brief Links this actor to @p other.
-     * @param other Actor instance that whose execution is coupled to the
-     *              execution of this Actor.
-     */
-    virtual void link_to(const actor_ptr& other);
+    actor_id id() const;
 
-    /**
-     * @brief Unlinks this actor from @p other.
-     * @param other Linked Actor.
-     * @note Links are automatically removed if the actor finishes execution.
-     */
-    virtual void unlink_from(const actor_ptr& other);
+    actor_addr address() const;
 
-    /**
-     * @brief Establishes a link relation between this actor and @p other.
-     * @param other Actor instance that wants to link against this Actor.
-     * @returns @c true if this actor is running and added @p other to its
-     *          list of linked actors; otherwise @c false.
-     */
-    virtual bool establish_backlink(const actor_ptr& other);
+    explicit operator bool() const;
 
-    /**
-     * @brief Removes a link relation between this actor and @p other.
-     * @param other Actor instance that wants to unlink from this Actor.
-     * @returns @c true if this actor is running and removed @p other
-     *          from its list of linked actors; otherwise @c false.
-     */
-    virtual bool remove_backlink(const actor_ptr& other);
+    bool operator!() const;
 
-    /**
-     * @brief Gets an integer value that uniquely identifies this Actor in
-     *        the process it's executed in.
-     * @returns The unique identifier of this actor.
-     */
-    inline actor_id id() const;
+    void enqueue(const message_header& hdr, any_tuple msg) const;
 
-    /**
-     * @brief Checks if this actor is running on a remote node.
-     * @returns @c true if this actor represents a remote actor;
-     *          otherwise @c false.
-     */
-    inline bool is_proxy() const;
+    bool is_remote() const;
 
-
- protected:
-
-    actor();
-
-    actor(actor_id aid);
-
-    /**
-     * @brief Should be overridden by subtypes and called upon termination.
-     * @note Default implementation sets 'exit_reason' accordingly.
-     * @note Overridden functions should always call super::cleanup().
-     */
-    virtual void cleanup(std::uint32_t reason);
-
-    /**
-     * @brief The default implementation for {@link link_to()}.
-     */
-    bool link_to_impl(const actor_ptr& other);
-
-    /**
-     * @brief The default implementation for {@link unlink_from()}.
-     */
-    bool unlink_from_impl(const actor_ptr& other);
-
-    /**
-     * @brief Returns the actor's exit reason of
-     *        <tt>exit_reason::not_exited</tt> if it's still alive.
-     */
-    inline std::uint32_t exit_reason() const;
-
-    /**
-     * @brief Returns <tt>exit_reason() != exit_reason::not_exited</tt>.
-     */
-    inline bool exited() const;
-
-    // cannot be changed after construction
-    const actor_id m_id;
-
-    // you're either a proxy or you're not
-    const bool m_is_proxy;
+    intptr_t compare(const actor& other) const;
 
  private:
 
-    // initially exit_reason::not_exited
-    std::atomic<std::uint32_t> m_exit_reason;
-
-    // guards access to m_exit_reason, m_attachables, and m_links
-    std::mutex m_mtx;
-
-    // links to other actors
-    std::vector<actor_ptr> m_links;
-
-    // attached functors that are executed on cleanup
-    std::vector<attachable_ptr> m_attachables;
+    intrusive_ptr<abstract_actor> m_ptr;
 
 };
-
-// undocumented, because self_type is hidden in documentation
-bool operator==(const actor_ptr&, const self_type&);
-bool operator!=(const self_type&, const actor_ptr&);
-
-/******************************************************************************
- *             inline and template member function implementations            *
- ******************************************************************************/
-
-inline std::uint32_t actor::id() const {
-    return m_id;
-}
-
-inline bool actor::is_proxy() const {
-    return m_is_proxy;
-}
-
-inline std::uint32_t actor::exit_reason() const {
-    return m_exit_reason;
-}
-
-inline bool actor::exited() const {
-    return exit_reason() != exit_reason::not_exited;
-}
-
-template<class F>
-struct functor_attachable : attachable {
-
-    F m_functor;
-
-    template<typename T>
-    inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
-
-    void actor_exited(std::uint32_t reason) { m_functor(reason); }
-
-    bool matches(const attachable::token&) { return false; }
-
-};
-
-template<typename F>
-bool actor::attach_functor(F&& f) {
-    typedef typename util::rm_const_and_ref<F>::type f_type;
-    typedef functor_attachable<f_type> impl;
-    return attach(attachable_ptr{new impl(std::forward<F>(f))});
-}
 
 } // namespace cppa
 

@@ -37,7 +37,7 @@ int main() {
     // create another actor that calls 'hello_world(mirror_actor)'
     spawn(hello_world, mirror_actor);
     // wait until all other actors we have spawned are done
-    await_all_others_done();
+    await_all_actors_done();
     // run cleanup code before exiting main
     shutdown();
 }

@@ -32,7 +32,7 @@
 #include <cstdint>
 
 #include "cppa/on.hpp"
-#include "cppa/send.hpp"
+#include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/match.hpp"
 #include "cppa/logging.hpp"
@@ -84,9 +84,7 @@ void peer::io_failed(event_bitmask mask) {
         auto& children = parent()->get_namespace().proxies(*m_node);
         for (auto& kvp : children) {
             auto ptr = kvp.second.promote();
-            if (ptr) ptr->enqueue(nullptr,
-                                  make_any_tuple(atom("KILL_PROXY"),
-                                      exit_reason::remote_link_unreachable));
+            send_as(ptr, ptr, atom("KILL_PROXY"), exit_reason::remote_link_unreachable);
         }
         parent()->get_namespace().erase(*m_node);
     }
@@ -160,10 +158,10 @@ continue_reading_result peer::continue_reading() {
                     on(atom("KILL_PROXY"), arg_match) >> [&](const node_id_ptr& node, actor_id aid, std::uint32_t reason) {
                         kill_proxy(hdr.sender, node, aid, reason);
                     },
-                    on(atom("LINK"), arg_match) >> [&](const actor_ptr& ptr) {
+                    on(atom("LINK"), arg_match) >> [&](const actor_addr& ptr) {
                         link(hdr.sender, ptr);
                     },
-                    on(atom("UNLINK"), arg_match) >> [&](const actor_ptr& ptr) {
+                    on(atom("UNLINK"), arg_match) >> [&](const actor_addr& ptr) {
                         unlink(hdr.sender, ptr);
                     },
                     on(atom("ADD_TYPE"), arg_match) >> [&](std::uint32_t id, const std::string& name) {
@@ -188,9 +186,9 @@ continue_reading_result peer::continue_reading() {
     }
 }
 
-void peer::monitor(const actor_ptr&,
-                           const node_id_ptr& node,
-                           actor_id aid) {
+void peer::monitor(const actor_addr&,
+                   const node_id_ptr& node,
+                   actor_id aid) {
     CPPA_LOG_TRACE(CPPA_MARG(node, get) << ", " << CPPA_ARG(aid));
     if (!node) {
         CPPA_LOGMF(CPPA_ERROR, self, "received MONITOR from invalid peer");
@@ -232,10 +230,10 @@ void peer::monitor(const actor_ptr&,
     }
 }
 
-void peer::kill_proxy(const actor_ptr& sender,
-                              const node_id_ptr& node,
-                              actor_id aid,
-                              std::uint32_t reason) {
+void peer::kill_proxy(const actor_addr& sender,
+                      const node_id_ptr& node,
+                      actor_id aid,
+                      std::uint32_t reason) {
     CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)
                    << ", " << CPPA_MARG(node, get)
                    << ", " << CPPA_ARG(aid)
@@ -250,9 +248,9 @@ void peer::kill_proxy(const actor_ptr& sender,
     }
     auto proxy = parent()->get_namespace().get(*node, aid);
     if (proxy) {
-        CPPA_LOGMF(CPPA_DEBUG, self, "received KILL_PROXY for " << aid
+        CPPA_LOG_DEBUG("received KILL_PROXY for " << aid
                        << ":" << to_string(*node));
-        send_as(nullptr, proxy, atom("KILL_PROXY"), reason);
+        send_as(proxy, proxy, atom("KILL_PROXY"), reason);
     }
     else {
         CPPA_LOG_INFO("received KILL_PROXY message but "
@@ -263,46 +261,62 @@ void peer::kill_proxy(const actor_ptr& sender,
 
 void peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
-    if (hdr.sender && hdr.sender->is_proxy()) {
-        hdr.sender.downcast<actor_proxy>()->deliver(hdr, std::move(msg));
+    if (hdr.sender && hdr.sender.is_remote()) {
+        auto ptr = detail::actor_addr_cast<actor_proxy>(hdr.sender);
+        ptr->deliver(hdr, std::move(msg));
     }
     else hdr.deliver(std::move(msg));
 }
 
-void peer::link(const actor_ptr& sender, const actor_ptr& ptr) {
+void peer::link(const actor_addr& sender, const actor_addr& receiver) {
     // this message is sent from default_actor_proxy in link_to and
     // establish_backling to cause the original actor (sender) to establish
     // a link to ptr as well
     CPPA_LOG_TRACE(CPPA_MARG(sender, get)
                    << ", " << CPPA_MARG(ptr, get));
     CPPA_LOG_ERROR_IF(!sender, "received 'LINK' from invalid sender");
-    CPPA_LOG_ERROR_IF(!ptr, "received 'LINK' with invalid target");
-    if (!sender || !ptr) return;
-    CPPA_LOG_ERROR_IF(sender->is_proxy(),
-                      "received 'LINK' for a non-local actor");
-    if (ptr->is_proxy()) {
-        // make sure to not send a needless 'LINK' message back
-        ptr.downcast<actor_proxy>()->local_link_to(sender);
-    }
-    else sender->link_to(ptr);
-    if (ptr && sender && sender->is_proxy()) {
-        sender.downcast<actor_proxy>()->local_link_to(ptr);
+    CPPA_LOG_ERROR_IF(!receiver, "received 'LINK' with invalid receiver");
+    if (!sender || !receiver) return;
+    auto locally_link_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
+        detail::actor_addr_cast<actor_proxy>(lhs)->local_link_to(rhs);
+    };
+    switch ((sender.is_remote() ? 0x10 : 0x00) | (receiver.is_remote() ? 0x01 : 0x00)) {
+        case 0x00: // both local
+        case 0x11: // both remote
+            detail::actor_addr_cast<abstract_actor>(sender)->link_to(receiver);
+            break;
+        case 0x10: // sender is remote
+            locally_link_proxy(sender, receiver);
+            break;
+        case 0x01: // receiver is remote
+            locally_link_proxy(receiver, sender);
+            break;
+        default: CPPA_LOG_ERROR("logic error");
     }
 }
 
-void peer::unlink(const actor_ptr& sender, const actor_ptr& ptr) {
+void peer::unlink(const actor_addr& sender, const actor_addr& receiver) {
     CPPA_LOG_TRACE(CPPA_MARG(sender, get)
                    << ", " << CPPA_MARG(ptr, get));
     CPPA_LOG_ERROR_IF(!sender, "received 'UNLINK' from invalid sender");
-    CPPA_LOG_ERROR_IF(!ptr, "received 'UNLINK' with invalid target");
-    if (!sender || !ptr) return;
-    CPPA_LOG_ERROR_IF(sender->is_proxy(),
-                      "received 'UNLINK' for a non-local actor");
-    if (ptr->is_proxy()) {
-        // make sure to not send a needles 'UNLINK' message back
-        ptr.downcast<actor_proxy>()->local_unlink_from(sender);
+    CPPA_LOG_ERROR_IF(!receiver, "received 'UNLINK' with invalid target");
+    if (!sender || !receiver) return;
+    auto locally_unlink_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
+        detail::actor_addr_cast<actor_proxy>(lhs)->local_unlink_from(rhs);
+    };
+    switch ((sender.is_remote() ? 0x10 : 0x00) | (receiver.is_remote() ? 0x01 : 0x00)) {
+        case 0x00: // both local
+        case 0x11: // both remote
+            detail::actor_addr_cast<abstract_actor>(sender)->unlink_from(receiver);
+            break;
+        case 0x10: // sender is remote
+            locally_unlink_proxy(sender, receiver);
+            break;
+        case 0x01: // receiver is remote
+            locally_unlink_proxy(receiver, sender);
+            break;
+        default: CPPA_LOG_ERROR("logic error");
     }
-    else sender->unlink_from(ptr);
 }
 
 continue_writing_result peer::continue_writing() {
@@ -327,7 +341,7 @@ void peer::add_type_if_needed(const std::string& tname) {
         auto imap = get_uniform_type_info_map();
         auto uti = imap->by_uniform_name(tname);
         m_outgoing_types.emplace(id, uti);
-        enqueue_impl({nullptr}, make_any_tuple(atom("ADD_TYPE"), id, tname));
+        enqueue_impl({invalid_actor_addr, nullptr}, make_any_tuple(atom("ADD_TYPE"), id, tname));
     }
 }
 

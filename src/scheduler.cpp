@@ -34,8 +34,6 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
-#include "cppa/self.hpp"
-#include "cppa/receive.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
@@ -107,23 +105,23 @@ class scheduler_helper {
 
     void stop() {
         auto msg = make_any_tuple(atom("DIE"));
-        m_timer->enqueue(nullptr, msg);
-        m_printer->enqueue(nullptr, msg);
+        m_timer.enqueue({invalid_actor_addr, nullptr}, msg);
+        m_printer.enqueue({invalid_actor_addr, nullptr}, msg);
         m_timer_thread.join();
         m_printer_thread.join();
     }
 
-    actor_ptr m_timer;
+    actor m_timer;
     std::thread m_timer_thread;
 
-    actor_ptr m_printer;
+    actor m_printer;
     std::thread m_printer_thread;
 
  private:
 
-    static void timer_loop(ptr_type m_self);
+    static void timer_loop(thread_mapped_actor* self);
 
-    static void printer_loop(ptr_type m_self);
+    static void printer_loop(thread_mapped_actor* self);
 
 };
 
@@ -138,9 +136,8 @@ inline void insert_dmsg(Map& storage,
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
+void scheduler_helper::timer_loop(thread_mapped_actor* self) {
     // setup & local variables
-    self.set(m_self.get());
     bool done = false;
     std::unique_ptr<mailbox_element, detail::disposer> msg_ptr;
     auto tout = hrc::now();
@@ -166,7 +163,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     // loop
     while (!done) {
         while (!msg_ptr) {
-            if (messages.empty()) msg_ptr.reset(m_self->pop());
+            if (messages.empty()) msg_ptr.reset(self->pop());
             else {
                 tout = hrc::now();
                 // handle timeouts (send messages)
@@ -178,7 +175,7 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
                 }
                 // wait for next message or next timeout
                 if (it != messages.end()) {
-                    msg_ptr.reset(m_self->try_pop(it->first));
+                    msg_ptr.reset(self->try_pop(it->first));
                 }
             }
         }
@@ -187,10 +184,9 @@ void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
     }
 }
 
-void scheduler_helper::printer_loop(ptr_type m_self) {
-    self.set(m_self.get());
-    std::map<actor_ptr, std::string> out;
-    auto flush_output = [&out](const actor_ptr& s) {
+void scheduler_helper::printer_loop(thread_mapped_actor* self) {
+    std::map<actor, std::string> out;
+    auto flush_output = [&out](const actor& s) {
         auto i = out.find(s);
         if (i != out.end()) {
             auto& line = i->second;
@@ -207,7 +203,7 @@ void scheduler_helper::printer_loop(ptr_type m_self) {
         }
     };
     bool running = true;
-    receive_while (gref(running)) (
+    self->receive_while (gref(running)) (
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
             if (!str.empty() && s != nullptr) {
@@ -261,7 +257,7 @@ scheduler::~scheduler() {
     delete m_helper;
 }
 
-const actor_ptr& scheduler::delayed_send_helper() {
+actor& scheduler::delayed_send_helper() {
     return m_helper->m_timer;
 }
 
@@ -291,7 +287,7 @@ scheduler* scheduler::create_singleton() {
     return new detail::thread_pool_scheduler;
 }
 
-const actor_ptr& scheduler::printer() const {
+const actor& scheduler::printer() const {
     return m_helper->m_printer;
 }
 

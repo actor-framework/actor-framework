@@ -38,18 +38,15 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/scheduled_actor.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
 
 /** @cond PRIVATE */
 
-inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
-    CPPA_LOGF_INFO("spawned new local actor with ID " << ptr->id()
-                   << " of type " << detail::demangle(typeid(*ptr)));
-    if (has_monitor_flag(opts)) self->monitor(ptr);
-    if (has_link_flag(opts)) self->link_to(ptr);
-    return ptr;
+constexpr bool unbound_spawn_options(spawn_options opts) {
+    return !has_monitor_flag(opts) && !has_link_flag(opts);
 }
 
 /** @endcond */
@@ -63,15 +60,16 @@ inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
  * @brief Spawns a new {@link actor} that evaluates given arguments.
  * @param args A functor followed by its arguments.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns An {@link actor} to the spawned {@link actor}.
  */
 template<spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn(Ts&&... args) {
+actor spawn(Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    return eval_sopts(Options,
-                      get_scheduler()->exec(Options,
-                                            scheduler::init_callback{},
-                                            std::forward<Ts>(args)...));
+    static_assert(unbound_spawn_options(Options),
+                  "top-level spawns cannot have monitor or link flag");
+    return get_scheduler()->exec(Options,
+                                 scheduler::init_callback{},
+                                 std::forward<Ts>(args)...);
 }
 
 /**
@@ -79,12 +77,14 @@ actor_ptr spawn(Ts&&... args) {
  * @param args Constructor arguments.
  * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns An {@link actor} to the spawned {@link actor}.
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn(Ts&&... args) {
+actor spawn(Ts&&... args) {
     static_assert(std::is_base_of<event_based_actor, Impl>::value,
                   "Impl is not a derived type of event_based_actor");
+    static_assert(unbound_spawn_options(Options),
+                  "top-level spawns cannot have monitor or link flag");
     scheduled_actor_ptr ptr;
     if (has_priority_aware_flag(Options)) {
         using derived = typename extend<Impl>::template with<threaded, prioritizing>;
@@ -95,7 +95,7 @@ actor_ptr spawn(Ts&&... args) {
         ptr = make_counted<derived>(std::forward<Ts>(args)...);
     }
     else ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    return eval_sopts(Options, get_scheduler()->exec(Options, std::move(ptr)));
+    return get_scheduler()->exec(Options, std::move(ptr));
 }
 
 /**
@@ -103,11 +103,11 @@ actor_ptr spawn(Ts&&... args) {
  *        immediately joins @p grp.
  * @param args A functor followed by its arguments.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
 template<spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     auto init_cb = [=](local_actor* ptr) {
         ptr->join(grp);
@@ -123,11 +123,11 @@ actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @param args Constructor arguments.
  * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
 template<class Impl, spawn_options Options, typename... Ts>
-actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
     ptr->join(grp);
     return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
@@ -145,8 +145,9 @@ typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
     );
 }
 
+/*TODO:
 template<spawn_options Options, typename... Ts>
-typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
+typed_actor<typename detail::deduce_signature<Ts>::type...>
 spawn_typed(const match_expr<Ts...>& me) {
     static_assert(util::conjunction<
                       detail::match_expr_has_no_guard<Ts>::value...
@@ -166,7 +167,7 @@ spawn_typed(const match_expr<Ts...>& me) {
 }
 
 template<typename... Ts>
-typed_actor_ptr<typename detail::deduce_signature<Ts>::type...>
+typed_actor<typename detail::deduce_signature<Ts>::type...>
 spawn_typed(const match_expr<Ts...>& me) {
     return spawn_typed<no_spawn_options>(me);
 }
@@ -180,6 +181,7 @@ auto spawn_typed(T0&& v0, T1&& v1, Ts&&... vs)
                                           std::forward<T1>(v1),
                                           std::forward<Ts>(vs)...));
 }
+*/
 
 /** @} */
 

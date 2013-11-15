@@ -25,30 +25,22 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#ifndef CPPA_UNTYPED_ACTOR_HPP
+#define CPPA_UNTYPED_ACTOR_HPP
 
-namespace cppa { namespace detail {
+#include "cppa/extend.hpp"
+#include "cppa/stackless.hpp"
+#include "cppa/local_actor.hpp"
 
-scheduled_actor_dummy::scheduled_actor_dummy()
-: scheduled_actor(actor_state::blocked, false) { }
+namespace cppa {
 
-void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
+class untyped_actor : extend<local_actor>::with<stackless> {
 
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
-}
+};
 
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
-}
+} // namespace cppa
 
-} } // namespace cppa::detail
+#endif // CPPA_UNTYPED_ACTOR_HPP

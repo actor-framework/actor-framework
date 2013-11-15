@@ -91,7 +91,7 @@ class any_tuple {
      * @brief Creates a tuple from a set of values.
      */
     template<typename T, typename... Ts>
-    any_tuple(T v0, Ts&&... vs)
+    explicit any_tuple(T v0, Ts&&... vs)
     : m_vals(make_cow_tuple(std::move(v0), std::forward<Ts>(vs)...).vals()) { }
 
     /**

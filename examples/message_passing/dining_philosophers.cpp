@@ -184,7 +184,7 @@ int main(int, char**) {
         spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
     }
     // real philosophers are never done
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

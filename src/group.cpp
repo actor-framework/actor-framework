@@ -58,7 +58,7 @@ group::module_ptr group::get_module(const std::string& module_name) {
     return get_group_manager()->get_module(module_name);
 }
 
-group::subscription::subscription(const channel_ptr& s,
+group::subscription::subscription(const channel& s,
                                   const intrusive_ptr<group>& g)
 : m_subscriber(s), m_group(g) { }
 
@@ -88,8 +88,8 @@ const std::string& group::module_name() const {
 }
 
 struct group_nameserver : event_based_actor {
-    void init() {
-        become (
+    behavior make_behavior() override {
+        return (
             on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
                 return make_cow_tuple(atom("GROUP"), group::get("local", name));
             },
@@ -106,7 +106,7 @@ void publish_local_groups_at(std::uint16_t port, const char* addr) {
         publish(gn, port, addr);
     }
     catch (std::exception&) {
-        gn->enqueue(nullptr, make_any_tuple(atom("SHUTDOWN")));
+        gn.enqueue({invalid_actor_addr, nullptr}, make_any_tuple(atom("SHUTDOWN")));
         throw;
     }
 }

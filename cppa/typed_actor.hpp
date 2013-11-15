@@ -25,75 +25,33 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
 #ifndef CPPA_TYPED_ACTOR_HPP
 #define CPPA_TYPED_ACTOR_HPP
 
-#include "cppa/replies_to.hpp"
-#include "cppa/typed_behavior.hpp"
-#include "cppa/message_future.hpp"
-#include "cppa/event_based_actor.hpp"
-
-#include "cppa/detail/typed_actor_util.hpp"
+#include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_actor.hpp"
 
 namespace cppa {
 
-template<typename... Signatures>
-class typed_actor_ptr;
+class local_actor;
 
-template<typename... Signatures>
-class typed_actor : public event_based_actor {
+/**
+ * @brief Identifies an untyped actor.
+ */
+template<typename Interface>
+class typed_actor {
 
- public:
+    friend class local_actor;
 
-    using signatures = util::type_list<Signatures...>;
+ private:
 
-    using behavior_type = typed_behavior<Signatures...>;
-
-    using typed_pointer_type = typed_actor_ptr<Signatures...>;
-
- protected:
-
-    virtual behavior_type make_behavior() = 0;
-
-    void init() final {
-        auto bhvr = make_behavior();
-        m_bhvr_stack.push_back(std::move(bhvr.unbox()));
-    }
-
-    void do_become(behavior&&, bool) final {
-        CPPA_LOG_ERROR("typed actors are not allowed to call become()");
-        quit(exit_reason::unallowed_function_call);
-    }
+    intrusive_ptr<abstract_actor> m_ptr;
 
 };
 
 } // namespace cppa
-
-namespace cppa { namespace detail {
-
-template<typename... Signatures>
-class default_typed_actor : public typed_actor<Signatures...> {
-
- public:
-
-    template<typename... Cases>
-    default_typed_actor(match_expr<Cases...> expr) : m_bhvr(std::move(expr)) { }
-
- protected:
-
-    typed_behavior<Signatures...> make_behavior() override {
-        return m_bhvr;
-    }
-
- private:
-
-    typed_behavior<Signatures...> m_bhvr;
-
-};
-
-} } // namespace cppa::detail
 
 #endif // CPPA_TYPED_ACTOR_HPP

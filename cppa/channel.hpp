@@ -25,7 +25,7 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
 #ifndef CPPA_CHANNEL_HPP
@@ -33,18 +33,16 @@
 
 #include <type_traits>
 
-#include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_channel.hpp"
+
+#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-// forward declarations
 class actor;
-class group;
 class any_tuple;
 class message_header;
-
-typedef intrusive_ptr<actor> actor_ptr;
 
 /**
  * @brief Interface for all message receivers.
@@ -52,49 +50,36 @@ typedef intrusive_ptr<actor> actor_ptr;
  * This interface describes an entity that can receive messages
  * and is implemented by {@link actor} and {@link group}.
  */
-class channel : public ref_counted {
-
-    friend class actor;
-    friend class group;
-
+class channel : util::comparable<channel>
+              , util::comparable<channel, actor> {
+    
  public:
+    
+    channel() = default;
+    
+    template<typename T>
+    channel(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_channel, T>::value>::type* = 0) : m_ptr(ptr) { }
+    
+    channel(abstract_channel*);
+    
+    explicit operator bool() const;
+    
+    bool operator!() const;
+    
+    void enqueue(const message_header& hdr, any_tuple msg) const;
+    
+    intptr_t compare(const channel& other) const;
 
-    /**
-     * @brief Enqueues @p msg to the list of received messages.
-     */
-    virtual void enqueue(const message_header& hdr, any_tuple msg) = 0;
+    intptr_t compare(const actor& other) const;
 
+    static intptr_t compare(const abstract_channel* lhs, const abstract_channel* rhs);
 
-    /**
-     * @brief Enqueues @p msg to the list of received messages and returns
-     *        true if this is an scheduled actor that successfully changed
-     *        its state to @p pending in response to the enqueue operation.
-     */
-    virtual bool chained_enqueue(const message_header& hdr, any_tuple msg);
-
-    /**
-     * @brief Sets the state from @p pending to @p ready.
-     */
-    virtual void unchain();
-
- protected:
-
-    virtual ~channel();
-
+ private:
+    
+    intrusive_ptr<abstract_channel> m_ptr;
+    
 };
-
-/**
- * @brief A smart pointer type that manages instances of {@link channel}.
- * @relates channel
- */
-typedef intrusive_ptr<channel> channel_ptr;
-
-/**
- * @brief Convenience alias.
- */
-template<typename T, typename R = void>
-using enable_if_channel = std::enable_if<std::is_base_of<channel, T>::value, R>;
-
+    
 } // namespace cppa
 
 #endif // CPPA_CHANNEL_HPP

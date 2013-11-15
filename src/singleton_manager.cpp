@@ -75,13 +75,6 @@ std::atomic<logging*> s_logger;
 } // namespace <anonymous>
 
 void singleton_manager::shutdown() {
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "prepare to shutdown");
-    if (self.unchecked() != nullptr) {
-        try { self.unchecked()->quit(exit_reason::normal); }
-        catch (actor_exited&) { }
-    }
-    //auto rptr = s_actor_registry.load();
-    //if (rptr) rptr->await_running_count_equal(0);
     CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown scheduler");
     destroy(s_scheduler);
     CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown middleman");

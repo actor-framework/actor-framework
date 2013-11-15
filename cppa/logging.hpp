@@ -36,7 +36,6 @@
 #include <execinfo.h>
 #include <type_traits>
 
-#include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/local_actor.hpp"
@@ -70,7 +69,7 @@ class logging {
                      const char* function_name,
                      const char* file_name,
                      int line_num,
-                     const actor_ptr& from,
+                     actor_addr from,
                      const std::string& msg    ) = 0;
 
     class trace_helper {
@@ -81,7 +80,7 @@ class logging {
                      const char* fun_name,
                      const char* file_name,
                      int line_num,
-                     actor_ptr aptr,
+                     actor_addr aptr,
                      const std::string& msg);
 
         ~trace_helper();
@@ -92,7 +91,7 @@ class logging {
         const char* m_fun_name;
         const char* m_file_name;
         int         m_line_num;
-        actor_ptr   m_self;
+        actor_addr  m_self;
 
     };
 
@@ -109,14 +108,6 @@ class logging {
     inline void dispose() { delete this; }
 
 };
-
-inline actor_ptr fwd_aptr(const self_type& s) {
-    return s.unchecked();
-}
-
-inline actor_ptr fwd_aptr(actor_ptr ptr) {
-    return ptr;
-}
 
 struct oss_wr {
 

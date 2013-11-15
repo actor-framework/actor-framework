@@ -201,7 +201,7 @@ int main() {
     tvec.push_back(t0);
     send(t, tvec);
 
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

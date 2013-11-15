@@ -216,7 +216,7 @@ int main() {
     self->exec_behavior_stack();
     CPPA_CHECK_EQUAL(continuation_called, true);
     send_exit(mirror, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     auto await_success_message = [&] {
         receive (
@@ -231,11 +231,11 @@ int main() {
     send(spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_others_done();
+    await_all_actors_done();
     send(spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
         on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
@@ -276,7 +276,7 @@ int main() {
                               .continue_with(CPPA_CHECKPOINT_CB());
     self->exec_behavior_stack();
     send_exit(c, exit_reason::user_shutdown);
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
 
     // test use case 3
@@ -312,7 +312,7 @@ int main() {
         on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    await_all_others_done();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     shutdown();
     return CPPA_TEST_RESULT();

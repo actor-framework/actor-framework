@@ -28,7 +28,6 @@
 \******************************************************************************/
 
 
-#include "cppa/send.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
 

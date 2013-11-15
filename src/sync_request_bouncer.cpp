@@ -25,32 +25,32 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#ifndef FWD_HPP
-#define FWD_HPP
-
-#include "cppa/self.hpp"
+#include "cppa/atom.hpp"
+#include "cppa/config.hpp"
+#include "cppa/message_id.hpp"
+#include "cppa/exit_reason.hpp"
+#include "cppa/mailbox_element.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
 
 namespace cppa { namespace detail {
 
-template<typename T>
-struct is_self {
-    typedef typename util::rm_const_and_ref<T>::type plain_type;
-    static constexpr bool value = std::is_same<plain_type, self_type>::value;
-};
+sync_request_bouncer::sync_request_bouncer(std::uint32_t r)
+: rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
 
-template<typename T, typename U>
-auto fwd(U& arg, typename std::enable_if<!is_self<T>::value>::type* = 0)
--> decltype(std::forward<T>(arg)) {
-    return std::forward<T>(arg);
+void sync_request_bouncer::operator()(const actor_addr& sender, const message_id& mid) const {
+    CPPA_REQUIRE(rsn != exit_reason::not_exited);
+    if (sender && mid.is_request()) {
+        auto ptr = detail::actor_addr_cast<abstract_actor>(sender);
+        ptr->enqueue({nullptr, ptr, mid.response_id(),
+                     make_any_tuple(atom("EXITED"), rsn));
+    }
 }
-template<typename T, typename U>
-local_actor* fwd(U& arg, typename std::enable_if<is_self<T>::value>::type* = 0){
-    return arg;
+
+void sync_request_bouncer::operator()(const mailbox_element& e) const {
+    (*this)(e.sender, e.mid);
 }
 
 } } // namespace cppa::detail
-
-#endif // FWD_HPP

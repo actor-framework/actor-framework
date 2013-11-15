@@ -63,9 +63,9 @@ class actor_namespace {
     
     inline void set_new_element_callback(new_element_callback fun);
     
-    void write(serializer* sink, const actor_ptr& ptr);
+    void write(serializer* sink, const actor_addr& ptr);
     
-    actor_ptr read(deserializer* source);
+    actor_addr read(deserializer* source);
 
     /**
      * @brief A map that stores weak actor proxy pointers by actor ids.
@@ -81,13 +81,13 @@ class actor_namespace {
      * @brief Returns the proxy instance identified by @p node and @p aid
      *        or @p nullptr if the actor is unknown.
      */
-    actor_ptr get(const node_id& node, actor_id aid);
+    actor_proxy_ptr get(const node_id& node, actor_id aid);
 
     /**
      * @brief Returns the proxy instance identified by @p node and @p aid
      *        or creates a new (default) proxy instance.
      */
-    actor_ptr get_or_put(node_id_ptr node, actor_id aid);
+    actor_proxy_ptr get_or_put(node_id_ptr node, actor_id aid);
     
     /**
      * @brief Stores @p proxy in the list of known actor proxies.

@@ -25,55 +25,86 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
-\******************************************************************************/
+ \******************************************************************************/
 
 
-#ifndef CPPA_FACTORY_HPP
-#define CPPA_FACTORY_HPP
+#ifndef CPPA_ACTOR_ADDR_HPP
+#define CPPA_ACTOR_ADDR_HPP
 
-#include "cppa/detail/event_based_actor_factory.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
 
-namespace cppa { namespace factory {
+#include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_actor.hpp"
+#include "cppa/util/comparable.hpp"
 
-void default_cleanup();
+namespace cppa {
 
-/**
- * @brief Returns a factory for event-based actors using @p fun as
- *        implementation for {@link cppa::event_based_actor::init() init()}.
- *
- * @p fun must take pointer arguments only. The factory creates an event-based
- * actor implementation with member variables according to the functor's
- * signature, as shown in the example below.
- *
- * @code
- * auto f = factory::event_based([](int* a, int* b) { ... });
- * auto actor1 = f.spawn();
- * auto actor2 = f.spawn(1);
- * auto actor3 = f.spawn(1, 2);
- * @endcode
- *
- * The arguments @p a and @p b will point to @p int member variables of the
- * actor. All member variables are initialized using the default constructor
- * unless an initial value is passed to @p spawn.
- */
-template<typename InitFun>
-inline typename detail::ebaf_from_functor<InitFun, void (*)()>::type
-event_based(InitFun init) {
-    return {std::move(init), default_cleanup};
+class actor;
+class node_id;
+class actor_addr;
+class local_actor;
+
+namespace detail { template<typename T> T* actor_addr_cast(const actor_addr&); }
+
+constexpr struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } } invalid_actor_addr;
+
+class actor_addr : util::comparable<actor_addr>
+                 , util::comparable<actor_addr, actor>
+                 , util::comparable<actor_addr, local_actor*> {
+
+    friend class abstract_actor;
+
+    template<typename T>
+    friend T* detail::actor_addr_cast(const actor_addr&);
+
+ public:
+
+    actor_addr() = default;
+    actor_addr(actor_addr&&) = default;
+    actor_addr(const actor_addr&) = default;
+    actor_addr& operator=(actor_addr&&) = default;
+    actor_addr& operator=(const actor_addr&) = default;
+
+    actor_addr(const actor&);
+
+    actor_addr(const invalid_actor_addr_t&);
+
+    explicit operator bool() const;
+    bool operator!() const;
+
+    intptr_t compare(const actor& other) const;
+    intptr_t compare(const actor_addr& other) const;
+    intptr_t compare(const local_actor* other) const;
+
+    actor_id id() const;
+
+    const node_id& node() const;
+
+    /**
+     * @brief Returns whether this is an address of a
+     *        remote actor.
+     */
+    bool is_remote() const;
+
+ private:
+
+    explicit actor_addr(abstract_actor*);
+
+    abstract_actor_ptr m_ptr;
+
+};
+
+namespace detail {
+
+template<typename T>
+T* actor_addr_cast(const actor_addr& addr) {
+    return static_cast<T*>(addr.m_ptr.get());
 }
 
-/**
- * @brief Returns a factory for event-based actors using @p fun0 as
- *        implementation for {@link cppa::event_based_actor::init() init()}
- *        and @p fun1 as implementation for
- *        {@link cppa::event_based_actor::on_exit() on_exit()}.
- */
-template<typename InitFun, typename OnExitFun>
-inline typename detail::ebaf_from_functor<InitFun, OnExitFun>::type
-event_based(InitFun init, OnExitFun on_exit) {
-    return {std::move(init), on_exit};
-}
+} // namespace detail
 
-} } // namespace cppa::factory
+} // namespace cppa
 
-#endif // CPPA_FACTORY_HPP
+#endif // CPPA_ACTOR_ADDR_HPP

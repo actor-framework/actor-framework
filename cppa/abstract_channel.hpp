@@ -28,81 +28,38 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
-#define CPPA_RECEIVE_LOOP_HELPER_HPP
+#ifndef CPPA_ABSTRACT_CHANNEL_HPP
+#define CPPA_ABSTRACT_CHANNEL_HPP
 
-#include <new>
+#include "cppa/ref_counted.hpp"
 
-#include "cppa/self.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/match_expr.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/partial_function.hpp"
+namespace cppa {
 
-#include "cppa/util/type_list.hpp"
+// forward declarations
+class any_tuple;
+class message_header;
 
-namespace cppa { namespace detail {
-
-template<typename Statement>
-struct receive_while_helper {
-    Statement m_stmt;
-
-    template<typename S>
-    receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt)) { }
-
-    template<typename... Ts>
-    void operator()(Ts&&... args) {
-        static_assert(sizeof...(Ts) > 0,
-                      "operator() requires at least one argument");
-        behavior tmp = match_expr_convert(std::forward<Ts>(args)...);
-        local_actor* sptr = self;
-        while (m_stmt()) sptr->dequeue(tmp);
-    }
-
-};
-
-template<typename T>
-class receive_for_helper {
-
-    T& begin;
-    T end;
+/**
+ * @brief Interface for all message receivers.
+ *
+ * This interface describes an entity that can receive messages
+ * and is implemented by {@link actor} and {@link group}.
+ */
+class abstract_channel : public ref_counted {
 
  public:
 
-    receive_for_helper(T& first, const T& last) : begin(first), end(last) { }
+    /**
+     * @brief Enqueues @p msg to the list of received messages.
+     */
+    virtual void enqueue(const message_header& hdr, any_tuple msg) = 0;
 
-    template<typename... Ts>
-    void operator()(Ts&&... args) {
-        auto tmp = match_expr_convert(std::forward<Ts>(args)...);
-        local_actor* sptr = self;
-        for ( ; begin != end; ++begin) sptr->dequeue(tmp);
-    }
+ protected:
 
-};
-
-class do_receive_helper {
-
-    behavior m_bhvr;
-
- public:
-
-    inline do_receive_helper(behavior&& bhvr) : m_bhvr(std::move(bhvr)) { }
-
-    do_receive_helper(do_receive_helper&&) = default;
-
-    template<typename Statement>
-    void until(Statement&& stmt) {
-        static_assert(std::is_same<bool, decltype(stmt())>::value,
-                      "functor or function does not return a boolean");
-        local_actor* sptr = self;
-        do {
-            sptr->dequeue(m_bhvr);
-        }
-        while (stmt() == false);
-    }
+    virtual ~abstract_channel();
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
-#endif // CPPA_RECEIVE_LOOP_HELPER_HPP
+#endif // CPPA_ABSTRACT_CHANNEL_HPP

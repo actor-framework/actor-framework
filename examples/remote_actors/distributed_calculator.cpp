@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
         if (host.empty()) host = "localhost";
         client_repl(host, port);
     }
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

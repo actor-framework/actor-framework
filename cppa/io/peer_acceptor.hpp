@@ -49,10 +49,10 @@ class peer_acceptor : public continuable {
     continue_reading_result continue_reading() override;
 
     peer_acceptor(middleman* parent,
-                          acceptor_uptr ptr,
-                          const actor_ptr& published_actor);
+                  acceptor_uptr ptr,
+                  const actor_addr& published_actor);
 
-    inline const actor_ptr& published_actor() const { return m_pa; }
+    inline const actor_addr& published_actor() const { return m_pa; }
 
     void dispose() override;
 
@@ -62,7 +62,7 @@ class peer_acceptor : public continuable {
 
     middleman*    m_parent;
     acceptor_uptr m_ptr;
-    actor_ptr     m_pa;
+    actor_addr    m_pa;
 
 };
 

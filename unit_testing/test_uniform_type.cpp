@@ -88,7 +88,7 @@ int main() {
         "@header",                   // message_header
         "@actor",                    // actor_ptr
         "@group",                    // group_ptr
-        "@channel",                  // channel_ptr
+        "@channel",                  // channel
         "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration
         "@buffer",                   // util::buffer
@@ -135,7 +135,7 @@ int main() {
                     float, double,
                     atom_value, any_tuple, message_header,
                     actor_ptr, group_ptr,
-                    channel_ptr, node_id_ptr
+                    channel, node_id_ptr
                  >::arr;
 
     CPPA_CHECK(sarr.is_pure());
@@ -159,7 +159,7 @@ int main() {
         uniform_typeid<message_header>(),
         uniform_typeid<actor_ptr>(),
         uniform_typeid<group_ptr>(),
-        uniform_typeid<channel_ptr>(),
+        uniform_typeid<channel>(),
         uniform_typeid<node_id_ptr>()
     };
 

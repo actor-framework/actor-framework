@@ -73,7 +73,7 @@ void dancing_kirby() {
 
 int main() {
     spawn(dancing_kirby);
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

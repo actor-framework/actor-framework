@@ -28,27 +28,10 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#include "cppa/abstract_channel.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
 
-scheduled_actor_dummy::scheduled_actor_dummy()
-: scheduled_actor(actor_state::blocked, false) { }
+abstract_channel::~abstract_channel() { }
 
-void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
-
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
-}
-
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
-}
-
-} } // namespace cppa::detail
+} // namespace cppa

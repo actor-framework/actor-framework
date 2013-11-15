@@ -93,7 +93,7 @@ constexpr spawn_options detached         = spawn_options::detach_flag;
 
 /**
  * @brief Causes the runtime to ignore the new actor in
- *        {@link await_all_others_done()}.
+ *        {@link await_all_actors_done()}.
  */
 constexpr spawn_options hidden           = spawn_options::hide_flag;
 

@@ -38,7 +38,7 @@ namespace cppa { namespace detail {
 struct scheduled_actor_dummy : scheduled_actor {
     scheduled_actor_dummy();
     void enqueue(const message_header&, any_tuple) override;
-    resume_result resume(util::fiber*, actor_ptr&) override;
+    resume_result resume(util::fiber*) override;
     void quit(std::uint32_t) override;
     void dequeue(behavior&) override;
     void dequeue_response(behavior&, message_id) override;
