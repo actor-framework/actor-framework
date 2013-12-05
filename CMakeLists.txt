@@ -139,6 +139,7 @@ set(LIBCPPA_SRC
     src/broker.cpp
     src/buffer.cpp
     src/channel.cpp
+    src/common_actor_ops.cpp
     src/context_switching_actor.cpp
     src/continuable.cpp
     src/decorated_tuple.cpp
@@ -188,6 +189,7 @@ set(LIBCPPA_SRC
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
     src/string_serialization.cpp
+    src/sync_request_bouncer.cpp
     src/thread_mapped_actor.cpp
     src/thread_pool_scheduler.cpp
     src/to_uniform_name.cpp

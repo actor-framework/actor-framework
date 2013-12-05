@@ -68,7 +68,7 @@ class default_broker : public broker {
     : broker{std::forward<Ts>(args)...}, m_fun{move(fun)} { }
 
     void init() override {
-        enqueue({invalid_actor_addr, this}, make_any_tuple(atom("INITMSG")));
+        enqueue({invalid_actor_addr, channel{this}}, make_any_tuple(atom("INITMSG")));
         become(
             on(atom("INITMSG")) >> [=] {
                 unbecome();
@@ -347,7 +347,9 @@ bool broker::initialized() const {
 }
 
 void broker::quit(std::uint32_t reason) {
-    cleanup(reason);
+    //cleanup(reason);
+    m_bhvr_stack.clear();
+    super::quit(reason);
 }
 
 void broker::init_broker() {

@@ -78,9 +78,13 @@ class message_future {
 
     message_future() = delete;
 
-    continue_helper then(const partial_function& pfun);
+    inline continue_helper then(const partial_function& pfun) {
+        
+    }
 
-    continue_helper await(const partial_function& pfun);
+    inline continue_helper await(const partial_function& pfun) {
+        
+    }
 
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
@@ -140,7 +144,7 @@ class message_future {
 
     partial_function fs2bhvr(partial_function pf);
     
-    void check_consistency();
+    inline void check_consistency() { }
 
 };
 

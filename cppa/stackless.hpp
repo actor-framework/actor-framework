@@ -123,7 +123,7 @@ class stackless : public Base {
         }
         this->m_bhvr_stack.push_back(std::move(bhvr), mf);
     }
-    
+
     void do_become(behavior&& bhvr, bool discard_old) {
         this->reset_timeout();
         this->request_timeout(bhvr.timeout());
@@ -153,6 +153,14 @@ class stackless : public Base {
         while (!m_bhvr_stack.empty()) {
             m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
         }
+    }
+
+    inline detail::behavior_stack& bhvr_stack() {
+        return m_bhvr_stack;
+    }
+
+    inline optional<behavior&> sync_handler(message_id msg_id) {
+        return m_bhvr_stack.sync_handler(msg_id);
     }
 
  protected:

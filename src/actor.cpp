@@ -37,26 +37,14 @@
 
 namespace cppa {
 
-actor::actor(abstract_actor* ptr) : m_ptr(ptr) { }
-
-actor_id actor::id() const {
-    return (m_ptr) ? m_ptr->id() : 0;
-}
-
-actor_addr actor::address() const {
-    return m_ptr ? m_ptr->address() : actor_addr{};
-}
+actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
 
 void actor::enqueue(const message_header& hdr, any_tuple msg) const {
-    if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
-}
-
-bool actor::is_remote() const {
-    return m_ptr ? m_ptr->is_proxy() : false;
+    if (m_ops.m_ptr) m_ops.m_ptr->enqueue(hdr, std::move(msg));
 }
 
 intptr_t actor::compare(const actor& other) const {
-    return channel::compare(m_ptr.get(), other.m_ptr.get());
+    return channel::compare(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
 }
 
 } // namespace cppa

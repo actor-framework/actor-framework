@@ -64,7 +64,7 @@ class scheduler_helper;
  * @extends local_actor
  */
 class thread_mapped_actor : public extend<local_actor, thread_mapped_actor>::
-                                   with<mailbox_based, stacked, threaded> {
+                                   with<stacked, threaded> {
 
     typedef combined_type super;
 

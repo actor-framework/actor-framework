@@ -34,8 +34,7 @@ const char* cppa_strip_path(const char* fname) {
 }
 
 void cppa_unexpected_message(const char* fname, size_t line_num) {
-    CPPA_PRINTERRC(fname, line_num,
-                   "unexpected message: " << to_string(self->last_dequeued()));
+    CPPA_PRINTERRC(fname, line_num, "unexpected message");
 }
 
 void cppa_unexpected_timeout(const char* fname, size_t line_num) {

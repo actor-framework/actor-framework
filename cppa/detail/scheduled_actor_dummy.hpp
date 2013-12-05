@@ -42,8 +42,6 @@ struct scheduled_actor_dummy : scheduled_actor {
     void quit(std::uint32_t) override;
     void dequeue(behavior&) override;
     void dequeue_response(behavior&, message_id) override;
-    void do_become(behavior&&, bool) override;
-    void become_waiting_for(behavior, message_id) override;
     bool has_behavior() override;
     scheduled_actor_type impl_type() override;
 };

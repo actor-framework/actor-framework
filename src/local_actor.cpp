@@ -36,6 +36,8 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/message_future.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 namespace cppa {
 
 namespace {
@@ -160,7 +162,7 @@ void local_actor::reply_message(any_tuple&& what) {
 void local_actor::forward_message(const actor& dest, message_priority p) {
     if (!dest) return;
     auto& id = m_current_node->mid;
-    dest.m_ptr->enqueue({m_current_node->sender, dest.m_ptr, id, p}, m_current_node->msg);
+    detail::raw_access::get(dest)->enqueue({m_current_node->sender, detail::raw_access::get(dest), id, p}, m_current_node->msg);
     // treat this message as asynchronous message from now on
     id = message_id{};
 }
@@ -173,6 +175,28 @@ response_handle local_actor::make_response_handle() {
     return result;
 }
 */
+
+void local_actor::send_tuple(const channel& dest, any_tuple what) {
+    //TODO:
+}
+
+void local_actor::remove_handler(message_id) {
+    
+}
+
+void local_actor::delayed_send_tuple(const channel&, const util::duration&, cppa::any_tuple) {
+    
+}
+
+message_future local_actor::timed_sync_send_tuple(const util::duration& rtime,
+                                                  const actor& dest,
+                                                  any_tuple what) {
+    
+}
+
+response_handle local_actor::make_response_handle() {
+    return {};
+}
 
 void local_actor::cleanup(std::uint32_t reason) {
     m_subscriptions.clear();
@@ -193,7 +217,6 @@ void local_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::unallowed_function_call) {
         // this is the only reason that causes an exception
         cleanup(reason);
-        m_bhvr_stack.clear();
         CPPA_LOG_WARNING("actor tried to use a blocking function");
         // when using receive(), the non-blocking nature of event-based
         // actors breaks any assumption the user has about his code,
@@ -203,7 +226,6 @@ void local_actor::quit(std::uint32_t reason) {
                 "use receive()\n";
         throw actor_exited(reason);
     }
-    m_bhvr_stack.clear();
     planned_exit_reason(reason);
 }
 

@@ -49,7 +49,7 @@
 
 namespace cppa {
 
-class self_type;
+class untyped_actor;
 class scheduled_actor;
 class scheduler_helper;
 class event_based_actor;
@@ -84,7 +84,7 @@ class scheduler {
  public:
 
     typedef std::function<void(local_actor*)> init_callback;
-    typedef std::function<behavior(local_actor*)> actor_fun;
+    typedef std::function<behavior(untyped_actor*)> actor_fun;
 
     const actor& printer() const;
 
@@ -95,7 +95,7 @@ class scheduler {
      *        (a thread that acts as actor).
      * @note Calls <tt>what->attach(...)</tt>.
      */
-    virtual void register_converted_context(actor* what);
+    virtual void register_converted_context(abstract_actor* what);
 
     /**
      * @brief Informs the scheduler about a hidden (non-actor)

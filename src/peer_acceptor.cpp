@@ -64,7 +64,7 @@ continue_reading_result peer_acceptor::continue_reading() {
             auto& pself = node_id::get();
             uint32_t process_id = pself->process_id();
             try {
-                actor_id aid = published_actor().id();
+                actor_id aid = published_actor()->id();
                 pair.second->write(&aid, sizeof(actor_id));
                 pair.second->write(&process_id, sizeof(uint32_t));
                 pair.second->write(pself->host_id().data(),

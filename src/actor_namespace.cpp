@@ -40,6 +40,7 @@
 #include "cppa/io/middleman.hpp"
 #include "cppa/io/remote_actor_proxy.hpp"
 
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
 namespace cppa {
@@ -53,11 +54,11 @@ void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
     }
     else {
         // register locally running actors to be able to deserialize them later
-        if (!ptr.is_remote()) {
-            get_actor_registry()->put(ptr.id(), detail::actor_addr_cast<abstract_actor>(ptr));
+        if (!ptr->is_remote()) {
+            get_actor_registry()->put(ptr->id(), detail::actor_addr_cast<abstract_actor>(ptr));
         }
-        auto& pinf = ptr.node();
-        sink->write_value(ptr.id());
+        auto& pinf = ptr->node();
+        sink->write_value(ptr->id());
         sink->write_value(pinf.process_id());
         sink->write_raw(node_id::host_id_size, pinf.host_id().data());
     }

@@ -40,12 +40,15 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
+#include "cppa/untyped_actor.hpp"
+#include "cppa/message_header.hpp"
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/io/middleman.hpp"
+
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/group_manager.hpp"
-#include "cppa/message_header.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -308,7 +311,7 @@ class local_group_module : public group::module {
         actor broker;
         m_actor_utype->deserialize(&broker, source);
         if (!broker) return nullptr;
-        if (!broker.is_remote()) {
+        if (!broker->is_remote()) {
             return this->get(identifier);
         }
         else {
@@ -454,7 +457,7 @@ class remote_group_module : public group::module {
         auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
-        m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
+        m_map->m_worker = spawn<hidden>([=](untyped_actor* self) -> behavior {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
                             "remote_group_module$worker",
                             "");

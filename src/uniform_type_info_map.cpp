@@ -48,6 +48,7 @@
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
@@ -179,7 +180,7 @@ void deserialize_impl(actor_addr& addr, deserializer* source) {
 }
 
 void serialize_impl(const actor& ptr, serializer* sink) {
-    serialize_impl(ptr.address(), sink);
+    serialize_impl(ptr->address(), sink);
 }
 
 void deserialize_impl(actor& ptr, deserializer* source) {
@@ -218,14 +219,15 @@ void serialize_impl(const channel& ptr, serializer* sink) {
     };
     if (ptr == nullptr) wr_nullptr();
     else {
-        auto aptr = ptr.downcast<abstract_actor>();
+        auto rptr = detail::raw_access::get(ptr);
+        auto aptr = dynamic_cast<abstract_actor*>(rptr);
         if (aptr != nullptr) {
             flag = 1;
             sink->write_value(flag);
             serialize_impl(actor{aptr}, sink);
         }
         else {
-            auto gptr = ptr.downcast<group>();
+            auto gptr = group_ptr{dynamic_cast<group*>(rptr)};
             if (gptr != nullptr) {
                 flag = 2;
                 sink->write_value(flag);
@@ -243,7 +245,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
     auto flag = source->read<uint8_t>();
     switch (flag) {
         case 0: {
-            ptrref.reset();
+            ptrref = channel{}; //ptrref.reset();
             break;
         }
         case 1: {

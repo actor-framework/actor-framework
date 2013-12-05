@@ -47,6 +47,7 @@
 #include "cppa/util/algorithm.hpp"
 
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
@@ -218,7 +219,7 @@ void peer::monitor(const actor_addr&,
     else {
         CPPA_LOGMF(CPPA_DEBUG, self, "attach functor to " << entry.first.get());
         auto mm = parent();
-        entry.first->attach_functor([=](uint32_t reason) {
+        entry.first->address()->attach_functor([=](uint32_t reason) {
             mm->run_later([=] {
                 CPPA_LOGC_TRACE("cppa::io::peer",
                                 "monitor$kill_proxy_helper",
@@ -261,7 +262,7 @@ void peer::kill_proxy(const actor_addr& sender,
 
 void peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
-    if (hdr.sender && hdr.sender.is_remote()) {
+    if (hdr.sender && hdr.sender->is_remote()) {
         auto ptr = detail::actor_addr_cast<actor_proxy>(hdr.sender);
         ptr->deliver(hdr, std::move(msg));
     }
@@ -280,7 +281,7 @@ void peer::link(const actor_addr& sender, const actor_addr& receiver) {
     auto locally_link_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
         detail::actor_addr_cast<actor_proxy>(lhs)->local_link_to(rhs);
     };
-    switch ((sender.is_remote() ? 0x10 : 0x00) | (receiver.is_remote() ? 0x01 : 0x00)) {
+    switch ((sender->is_remote() ? 0x10 : 0x00) | (receiver->is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
             detail::actor_addr_cast<abstract_actor>(sender)->link_to(receiver);
@@ -304,7 +305,7 @@ void peer::unlink(const actor_addr& sender, const actor_addr& receiver) {
     auto locally_unlink_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
         detail::actor_addr_cast<actor_proxy>(lhs)->local_unlink_from(rhs);
     };
-    switch ((sender.is_remote() ? 0x10 : 0x00) | (receiver.is_remote() ? 0x01 : 0x00)) {
+    switch ((sender->is_remote() ? 0x10 : 0x00) | (receiver->is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
             detail::actor_addr_cast<abstract_actor>(sender)->unlink_from(receiver);

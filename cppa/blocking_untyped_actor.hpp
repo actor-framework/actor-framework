@@ -36,11 +36,14 @@
 #include "cppa/local_actor.hpp"
 
 namespace cppa {
-    
-class untyped_actor : extend<local_actor>::with<stacked> {
+
+/**
+ * @extends local_actor
+ */
+class blocking_untyped_actor : public extend<local_actor>::with<stacked> {
     
 };
-    
+
 } // namespace cppa
 
 #endif // CPPA_BLOCKING_UNTYPED_ACTOR_HPP

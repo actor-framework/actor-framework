@@ -36,55 +36,60 @@
 
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/common_actor_ops.hpp"
 
 #include "cppa/util/comparable.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
-class channel;
-class any_tuple;
-class actor_addr;
-class local_actor;
-class message_header;
+namespace detail { class raw_access; }
 
 /**
  * @brief Identifies an untyped actor.
  */
 class actor : util::comparable<actor> {
 
-    friend class channel;
-    friend class actor_addr;
-    friend class local_actor;
+    friend class detail::raw_access;
 
  public:
 
     actor() = default;
 
     template<typename T>
-    actor(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_actor, T>::value>::type* = 0) : m_ptr(ptr) { }
+    actor(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_actor, T>::value>::type* = 0) : m_ops(ptr) { }
 
     actor(abstract_actor*);
 
-    actor_id id() const;
+    explicit inline operator bool() const;
 
-    actor_addr address() const;
-
-    explicit operator bool() const;
-
-    bool operator!() const;
+    inline bool operator!() const;
 
     void enqueue(const message_header& hdr, any_tuple msg) const;
 
-    bool is_remote() const;
+    inline common_actor_ops* operator->() const {
+        // this const cast is safe, because common_actor_ops cannot be
+        // modified anyways and the offered operations are intended to
+        // be called on const elements
+        return const_cast<common_actor_ops*>(&m_ops);
+    }
 
     intptr_t compare(const actor& other) const;
 
  private:
 
-    intrusive_ptr<abstract_actor> m_ptr;
+    common_actor_ops m_ops;
 
 };
 
+inline actor::operator bool() const {
+    return static_cast<bool>(m_ops.m_ptr);
+}
+
+inline bool actor::operator!() const {
+    return !static_cast<bool>(*this);
+}
+    
 } // namespace cppa
 
 #endif // CPPA_ACTOR_HPP

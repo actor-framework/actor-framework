@@ -44,11 +44,13 @@ class behavior;
 class any_tuple;
 class self_type;
 class actor_proxy;
+class untyped_actor;
 class abstract_actor;
 class message_header;
 class partial_function;
 class uniform_type_info;
 class primitive_variant;
+class blocking_untyped_actor;
 
 // structs
 struct anything;

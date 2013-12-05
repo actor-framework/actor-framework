@@ -44,6 +44,7 @@
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/typed_actor.hpp"
+#include "cppa/mailbox_based.hpp"
 #include "cppa/memory_cached.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/message_header.hpp"
@@ -71,7 +72,7 @@ namespace detail { class receive_policy; }
  * @brief Base class for local running Actors.
  * @extends actor
  */
-class local_actor : public extend<abstract_actor>::with<memory_cached> {
+class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_based> {
 
     friend class detail::receive_policy;
 
@@ -100,8 +101,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param what Message content as tuple.
      * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the sent
-     *          message cannot be received by another actor.
+     * @warning The returned handle is actor specific and the response to the
+     *          sent message cannot be received by another actor.
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
     message_future sync_send_tuple(const actor& dest, any_tuple what);
@@ -115,8 +116,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param what Message elements.
      * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the sent
-     *          message cannot be received by another actor.
+     * @warning The returned handle is actor specific and the response to the
+     *          sent message cannot be received by another actor.
      * @pre <tt>sizeof...(Ts) > 0</tt>
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
@@ -220,7 +221,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void monitor(const actor_addr& whom);
 
     inline void monitor(const actor& whom) {
-        monitor(whom.address());
+        monitor(whom->address());
     }
     
     /**
@@ -230,7 +231,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void demonitor(const actor_addr& whom);
 
     inline void demonitor(const actor& whom) {
-        demonitor(whom.address());
+        demonitor(whom->address());
     }
 
     /**
@@ -341,13 +342,13 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     inline void mark_arrived(message_id response_id);
 
-    virtual void become_waiting_for(behavior, message_id) = 0;
+    //virtual void become_waiting_for(behavior, message_id) = 0;
 
-    inline detail::behavior_stack& bhvr_stack();
+    //inline detail::behavior_stack& bhvr_stack();
 
-    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
+    //virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
 
-    inline void do_become(const behavior& bhvr, bool discard_old);
+    //inline void do_become(const behavior& bhvr, bool discard_old);
 
     const char* debug_name() const;
 
@@ -359,7 +360,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
  protected:
 
-    inline void remove_handler(message_id id);
+    void remove_handler(message_id id);
 
     void cleanup(std::uint32_t reason);
 
@@ -389,7 +390,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     std::map<group_ptr, group::subscription> m_subscriptions;
 
     // allows actors to keep previous behaviors and enables unbecome()
-    detail::behavior_stack m_bhvr_stack;
+    //detail::behavior_stack m_bhvr_stack;
 
     // set by quit
     std::uint32_t m_planned_exit_reason;
@@ -442,9 +443,9 @@ inline actor_addr& local_actor::last_sender() {
     return m_current_node->sender;
 }
 
-inline void local_actor::do_unbecome() {
-    m_bhvr_stack.pop_async_back();
-}
+//inline void local_actor::do_unbecome() {
+//    m_bhvr_stack.pop_async_back();
+//}
 
 inline message_id local_actor::get_response_id() {
     auto id = m_current_node->mid;
@@ -466,18 +467,18 @@ inline void local_actor::mark_arrived(message_id response_id) {
     if (i != last) m_pending_responses.erase(i);
 }
 
-inline detail::behavior_stack& local_actor::bhvr_stack() {
-    return m_bhvr_stack;
-}
+//inline detail::behavior_stack& local_actor::bhvr_stack() {
+//    return m_bhvr_stack;
+//}
 
-inline void local_actor::do_become(const behavior& bhvr, bool discard_old) {
-    behavior copy{bhvr};
-    do_become(std::move(copy), discard_old);
-}
+//inline void local_actor::do_become(const behavior& bhvr, bool discard_old) {
+//    behavior copy{bhvr};
+//    do_become(std::move(copy), discard_old);
+//}
 
-inline void local_actor::remove_handler(message_id id) {
-    m_bhvr_stack.erase(id);
-}
+//inline void local_actor::remove_handler(message_id id) {
+//    m_bhvr_stack.erase(id);
+//}
 
 inline std::uint32_t local_actor::planned_exit_reason() const {
     return m_planned_exit_reason;

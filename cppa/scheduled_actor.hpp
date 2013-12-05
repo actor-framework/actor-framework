@@ -69,7 +69,7 @@ class scheduled_actor;
  * @brief A base class for cooperatively scheduled actors.
  * @extends local_actor
  */
-class scheduled_actor : public extend<local_actor>::with<mailbox_based, threadless> {
+class scheduled_actor : public extend<local_actor>::with<threadless> {
 
     typedef combined_type super;
 

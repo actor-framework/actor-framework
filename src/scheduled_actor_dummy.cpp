@@ -39,8 +39,6 @@ void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
 void scheduled_actor_dummy::quit(std::uint32_t) { }
 void scheduled_actor_dummy::dequeue(behavior&) { }
 void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-void scheduled_actor_dummy::do_become(behavior&&, bool) { }
-void scheduled_actor_dummy::become_waiting_for(behavior, message_id) { }
 bool scheduled_actor_dummy::has_behavior() { return false; }
 
 resume_result scheduled_actor_dummy::resume(util::fiber*) {

@@ -28,70 +28,21 @@
  \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_ADDR_HPP
-#define CPPA_ACTOR_ADDR_HPP
-
-#include <cstddef>
-#include <cstdint>
-#include <type_traits>
-
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/abstract_actor.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/common_actor_ops.hpp"
-
-#include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
-class actor;
-class local_actor;
-namespace detail { class raw_access; }
+actor_addr common_actor_ops::address() const {
+    return m_ptr ? m_ptr->address() : actor_addr{};
+}
 
-struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } };
+const node_id& common_actor_ops::node() const {
+    return m_ptr ? m_ptr->node() : *node_id::get();
+}
 
-constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
-
-class actor_addr : util::comparable<actor_addr>
-                 , util::comparable<actor_addr, actor>
-                 , util::comparable<actor_addr, local_actor*> {
-
-    friend class abstract_actor;
-    friend class detail::raw_access;
-
- public:
-
-    actor_addr() = default;
-    actor_addr(actor_addr&&) = default;
-    actor_addr(const actor_addr&) = default;
-    actor_addr& operator=(actor_addr&&) = default;
-    actor_addr& operator=(const actor_addr&) = default;
-
-    actor_addr(const actor&);
-
-    actor_addr(const invalid_actor_addr_t&);
-
-    explicit operator bool() const;
-    bool operator!() const;
-
-    intptr_t compare(const actor& other) const;
-    intptr_t compare(const actor_addr& other) const;
-    intptr_t compare(const local_actor* other) const;
-
-    inline common_actor_ops* operator->() const {
-        // this const cast is safe, because common_actor_ops cannot be
-        // modified anyways and the offered operations are intended to
-        // be called on const elements
-        return const_cast<common_actor_ops*>(&m_ops);
-    }
-
- private:
-
-    explicit actor_addr(abstract_actor*);
-
-    common_actor_ops m_ops;
-
-};
+bool common_actor_ops::is_remote() const {
+    return m_ptr ? m_ptr->is_proxy() : false;
+}
 
 } // namespace cppa
-
-#endif // CPPA_ACTOR_ADDR_HPP

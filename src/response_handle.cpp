@@ -33,6 +33,8 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/response_handle.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 using std::move;
 
 namespace cppa {

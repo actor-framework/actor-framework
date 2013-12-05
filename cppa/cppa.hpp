@@ -58,11 +58,13 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/untyped_actor.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/scheduled_actor.hpp"
 #include "cppa/event_based_actor.hpp"
+#include "cppa/blocking_untyped_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
 
@@ -434,22 +436,18 @@
 
 namespace cppa {
 
-template<typename T, typename... Ts>
-typename std::enable_if<std::is_base_of<channel, T>::value>::type
-send_tuple_as(const actor& from, const intrusive_ptr<T>& to, any_tuple msg) {
-    to->enqueue({from.address(), to}, std::move(msg));
+template<typename... Ts>
+void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
+    to.enqueue({from->address(), to}, std::move(msg));
 }
 
-template<typename T, typename... Ts>
-typename std::enable_if<std::is_base_of<channel, T>::value>::type
-send_as(const actor& from, const intrusive_ptr<T>& to, Ts&&... args) {
+template<typename... Ts>
+void send_as(const actor& from, channel& to, Ts&&... args) {
     send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
 }
 
-void send_tuple_as(const actor& from, const actor& to, any_tuple msg);
-
 template<typename... Ts>
-void send_as(const actor& from, const actor& to, Ts&&... args) {
+void send_as(const actor& from, const channel& to, Ts&&... args) {
     send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
 }
 /**
@@ -632,7 +630,7 @@ namespace std {
 template<>
 struct hash<cppa::actor> {
     inline size_t operator()(const cppa::actor& ref) const {
-        return static_cast<size_t>(ref.id());
+        return static_cast<size_t>(ref->id());
     }
 };
 // provide convenience overlaods for aout; implemented in logging.cpp

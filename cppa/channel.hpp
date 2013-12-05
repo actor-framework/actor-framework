@@ -31,6 +31,7 @@
 #ifndef CPPA_CHANNEL_HPP
 #define CPPA_CHANNEL_HPP
 
+#include <cstddef>
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
@@ -41,8 +42,7 @@
 namespace cppa {
 
 class actor;
-class any_tuple;
-class message_header;
+namespace detail { class raw_access; }
 
 /**
  * @brief Interface for all message receivers.
@@ -51,16 +51,23 @@ class message_header;
  * and is implemented by {@link actor} and {@link group}.
  */
 class channel : util::comparable<channel>
-              , util::comparable<channel, actor> {
-    
+              , util::comparable<channel, actor>
+              , util::comparable<channel, abstract_channel*> {
+
+    friend class detail::raw_access;
+
  public:
     
     channel() = default;
-    
+
+    channel(const actor&);
+
+    channel(const std::nullptr_t&);
+
     template<typename T>
     channel(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_channel, T>::value>::type* = 0) : m_ptr(ptr) { }
-    
-    channel(abstract_channel*);
+
+    channel(abstract_channel* ptr);
     
     explicit operator bool() const;
     
@@ -71,6 +78,8 @@ class channel : util::comparable<channel>
     intptr_t compare(const channel& other) const;
 
     intptr_t compare(const actor& other) const;
+
+    intptr_t compare(const abstract_channel* other) const;
 
     static intptr_t compare(const abstract_channel* lhs, const abstract_channel* rhs);
 

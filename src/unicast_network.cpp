@@ -48,6 +48,8 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 #include "cppa/intrusive/single_reader_queue.hpp"
 #include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
@@ -68,7 +70,7 @@ void publish(actor whom, std::unique_ptr<acceptor> aptr) {
                    << ", args.size() = " << args.size());
     if (!whom) return;
     CPPA_REQUIRE(args.size() == 0);
-    get_actor_registry()->put(whom.id(), detail::actor_addr_cast<abstract_actor>(whom));
+    get_actor_registry()->put(whom->id(), detail::actor_addr_cast<abstract_actor>(whom));
     auto mm = get_middleman();
     mm->register_acceptor(whom, new peer_acceptor(mm, move(aptr), whom));
 }

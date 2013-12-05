@@ -85,20 +85,6 @@ class abstract_actor : public abstract_channel {
     bool attach(attachable_ptr ptr);
 
     /**
-     * @brief Convenience function that attaches the functor
-     *        or function @p f to this actor.
-     *
-     * The actor executes <tt>f()</tt> on exit, or immediatley
-     * if it already finished execution.
-     * @param f A functor, function or lambda expression that's executed
-     *             if the actor finishes execution.
-     * @returns @c true if @p f was successfully attached to the actor;
-     *          otherwise (actor already exited) @p false.
-     */
-    template<typename F>
-    bool attach_functor(F&& f);
-
-    /**
      * @brief Returns the address of this actor.
      */
     actor_addr address() const;
@@ -234,27 +220,6 @@ inline std::uint32_t abstract_actor::exit_reason() const {
 
 inline bool abstract_actor::exited() const {
     return exit_reason() != exit_reason::not_exited;
-}
-
-template<class F>
-struct functor_attachable : attachable {
-
-    F m_functor;
-
-    template<typename T>
-    inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
-
-    void actor_exited(std::uint32_t reason) { m_functor(reason); }
-
-    bool matches(const attachable::token&) { return false; }
-
-};
-
-template<typename F>
-bool abstract_actor::attach_functor(F&& f) {
-    typedef typename util::rm_const_and_ref<F>::type f_type;
-    typedef functor_attachable<f_type> impl;
-    return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }
 
 inline const node_id& abstract_actor::node() const {

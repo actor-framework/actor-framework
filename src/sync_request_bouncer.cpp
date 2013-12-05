@@ -33,6 +33,8 @@
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
+
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
 namespace cppa { namespace detail {
@@ -44,7 +46,7 @@ void sync_request_bouncer::operator()(const actor_addr& sender, const message_id
     CPPA_REQUIRE(rsn != exit_reason::not_exited);
     if (sender && mid.is_request()) {
         auto ptr = detail::actor_addr_cast<abstract_actor>(sender);
-        ptr->enqueue({nullptr, ptr, mid.response_id(),
+        ptr->enqueue({invalid_actor_addr, ptr, mid.response_id()},
                      make_any_tuple(atom("EXITED"), rsn));
     }
 }

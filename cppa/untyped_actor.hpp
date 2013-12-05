@@ -34,10 +34,14 @@
 #include "cppa/extend.hpp"
 #include "cppa/stackless.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/mailbox_based.hpp"
 
 namespace cppa {
 
-class untyped_actor : extend<local_actor>::with<stackless> {
+/**
+ * @extends local_actor
+ */
+class untyped_actor : public extend<local_actor>::with<stackless> {
 
 };
 

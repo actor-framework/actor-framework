@@ -211,7 +211,7 @@ class optional<T&> {
 
     typedef T type;
 
-    optional() : m_value(nullptr) { }
+    optional(const none_t& = none) : m_value(nullptr) { }
 
     optional(T& value) : m_value(&value) { }
 
@@ -267,7 +267,7 @@ class optional<void> {
 
     optional(const unit_t&) : m_valid(true) { }
 
-    optional(const none_t&) : m_valid(false) { }
+    optional(const none_t& = none) : m_valid(false) { }
 
     inline bool valid() const { return m_valid; }
 

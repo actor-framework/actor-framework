@@ -386,7 +386,7 @@ class receive_policy {
                     && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
                     auto id = res->template get_as<std::uint64_t>(1);
                     auto msg_id = message_id::from_integer_value(id);
-                    auto ref_opt = client->bhvr_stack().sync_handler(msg_id);
+                    auto ref_opt = client->sync_handler(msg_id);
                     // calls client->response_handle() if hdl is a dummy
                     // argument, forwards hdl otherwise to reply to the
                     // original request message

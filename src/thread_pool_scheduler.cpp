@@ -62,7 +62,7 @@ struct thread_pool_scheduler::worker {
     worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) { }
 
     void start() {
-        m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
+        //m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
     }
 
     worker(const worker&) = delete;
@@ -179,6 +179,7 @@ void thread_pool_scheduler::enqueue(scheduled_actor* what) {
 }
 
 void exec_as_thread(bool is_hidden, intrusive_ptr<untyped_actor> ptr) {
+    /*TODO:
     if (!is_hidden) get_actor_registry()->inc_running();
     std::thread([=] {
         try { ptr->exec_bhvr_stack(); }
@@ -188,13 +189,15 @@ void exec_as_thread(bool is_hidden, intrusive_ptr<untyped_actor> ptr) {
             get_actor_registry()->dec_running();
         }
     }).detach();
+    */
 }
 
 local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
+    /*TODO:
     CPPA_REQUIRE(p != nullptr);
     bool is_hidden = has_hide_flag(os);
     if (has_detach_flag(os)) {
-        exec_as_thread(is_hidden, [p] {
+        exec_as_thread(is_hidden, p [p] {
             p->run_detached();
         });
         return p;
@@ -207,6 +210,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_pt
     }
     else p->on_exit();
     return p;
+    */
 }
 
 local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
@@ -221,6 +225,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
     if (has_priority_aware_flag(os)) {
         using impl = extend<local_actor>::with<stackless, threaded, prioritizing>;
         set_result(make_counted<impl>());
+        /*TODO:
         exec_as_thread(has_hide_flag(os), [result, f] {
             try {
                 f();
@@ -238,6 +243,7 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
             }
             result->on_exit();
         });
+        */
     }
     else if (has_blocking_api_flag(os)) {
 #       ifndef CPPA_DISABLE_CONTEXT_SWITCHING
@@ -249,18 +255,22 @@ local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
         else
 #       endif
         /* else tree */ {
-            auto p = make_counted<thread_mapped_actor>(std::move(f));
-            set_result(p);
+            //auto p = make_counted<thread_mapped_actor>(std::move(f));
+            //set_result(p);
+            /*TODO:
             exec_as_thread(has_hide_flag(os), [p] {
                 p->run();
                 p->on_exit();
             });
+            */
         }
     }
     else {
+        /*TODO:
         auto p = event_based_actor::from(std::move(f));
         set_result(p);
         exec(os, p);
+        */
     }
     CPPA_REQUIRE(result != nullptr);
     return result;

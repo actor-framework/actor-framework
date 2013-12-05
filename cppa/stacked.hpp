@@ -207,6 +207,12 @@ class stacked : public Base {
         m_behavior = std::move(fun);
     }
 
+    inline optional<behavior&> sync_handler(message_id msg_id) {
+        auto i = m_sync_handler.find(msg_id);
+        if (i != m_sync_handler.end()) return i->second;
+        return none;
+    }
+
  protected:
 
     template<typename... Ts>
@@ -220,6 +226,8 @@ class stacked : public Base {
     detail::receive_policy m_recv_policy;
 
  private:
+
+    std::map<message_id, behavior> m_sync_handler;
 
     std::function<void(behavior&)> make_dequeue_callback() {
         return [=](behavior& bhvr) { dequeue(bhvr); };

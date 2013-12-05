@@ -96,8 +96,8 @@ class scheduler_helper {
         auto mt = make_counted<thread_mapped_actor>();
         auto mp = make_counted<thread_mapped_actor>();
         // launch threads
-        m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt};
-        m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp};
+        m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt.get()};
+        m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp.get()};
         // set member variables
         m_timer = std::move(mt);
         m_printer = std::move(mp);
@@ -185,8 +185,8 @@ void scheduler_helper::timer_loop(thread_mapped_actor* self) {
 }
 
 void scheduler_helper::printer_loop(thread_mapped_actor* self) {
-    std::map<actor, std::string> out;
-    auto flush_output = [&out](const actor& s) {
+    std::map<actor_addr, std::string> out;
+    auto flush_output = [&out](const actor_addr& s) {
         auto i = out.find(s);
         if (i != out.end()) {
             auto& line = i->second;
@@ -261,10 +261,10 @@ actor& scheduler::delayed_send_helper() {
     return m_helper->m_timer;
 }
 
-void scheduler::register_converted_context(actor* what) {
+void scheduler::register_converted_context(abstract_actor* what) {
     if (what) {
         get_actor_registry()->inc_running();
-        what->attach(attachable_ptr{new exit_observer});
+        what->address()->attach(attachable_ptr{new exit_observer});
     }
 }
 

@@ -28,70 +28,41 @@
  \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_ADDR_HPP
-#define CPPA_ACTOR_ADDR_HPP
+#ifndef CPPA_RAW_ACCESS_HPP
+#define CPPA_RAW_ACCESS_HPP
 
-#include <cstddef>
-#include <cstdint>
-#include <type_traits>
-
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/channel.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/common_actor_ops.hpp"
+#include "cppa/abstract_channel.hpp"
 
-#include "cppa/util/comparable.hpp"
+namespace cppa { namespace detail {
 
-namespace cppa {
-
-class actor;
-class local_actor;
-namespace detail { class raw_access; }
-
-struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } };
-
-constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
-
-class actor_addr : util::comparable<actor_addr>
-                 , util::comparable<actor_addr, actor>
-                 , util::comparable<actor_addr, local_actor*> {
-
-    friend class abstract_actor;
-    friend class detail::raw_access;
+class raw_access {
 
  public:
 
-    actor_addr() = default;
-    actor_addr(actor_addr&&) = default;
-    actor_addr(const actor_addr&) = default;
-    actor_addr& operator=(actor_addr&&) = default;
-    actor_addr& operator=(const actor_addr&) = default;
-
-    actor_addr(const actor&);
-
-    actor_addr(const invalid_actor_addr_t&);
-
-    explicit operator bool() const;
-    bool operator!() const;
-
-    intptr_t compare(const actor& other) const;
-    intptr_t compare(const actor_addr& other) const;
-    intptr_t compare(const local_actor* other) const;
-
-    inline common_actor_ops* operator->() const {
-        // this const cast is safe, because common_actor_ops cannot be
-        // modified anyways and the offered operations are intended to
-        // be called on const elements
-        return const_cast<common_actor_ops*>(&m_ops);
+    static abstract_actor* get(const actor& hdl) {
+        return hdl.m_ops.m_ptr.get();
     }
 
- private:
+    static abstract_actor* get(const actor_addr& hdl) {
+        return hdl.m_ops.m_ptr.get();
+    }
 
-    explicit actor_addr(abstract_actor*);
-
-    common_actor_ops m_ops;
+    static abstract_channel* get(const channel& hdl) {
+        return hdl.m_ptr.get();
+    }
 
 };
 
-} // namespace cppa
+// utility function to get raw access + cast to a related type in one call
+template<typename T>
+T* actor_addr_cast(const actor_addr& hdl) {
+    return static_cast<T*>(raw_access::get(hdl));
+}
 
-#endif // CPPA_ACTOR_ADDR_HPP
+} } // namespace cppa::detail
+
+#endif // CPPA_RAW_ACCESS_HPP
