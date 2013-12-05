@@ -44,23 +44,46 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
+#include "cppa/policy/invoke_policy_base.hpp"
+
 namespace cppa { namespace detail { class receive_policy; } }
 
-namespace cppa {
+namespace cppa { namespace policy {
 
-template<class Base, class Subtype>
-class threaded : public Base {
-
-    friend class detail::receive_policy;
+class nestable_invoke : public invoke_policy_base<nestable_invoke> {
 
     typedef std::unique_lock<std::mutex> lock_type;
 
  public:
 
+     static inline bool hm_should_skip(pointer) {
+        return false;
+    }
+
+    template<class Client>
+    static inline pointer hm_begin(Client* client, pointer node) {
+        auto previous = client->m_current_node;
+        client->m_current_node = node;
+        return previous;
+    }
+
+    template<class Client>
+    static inline void hm_cleanup(Client* client, pointer /*previous*/) {
+        client->m_current_node = &(client->m_dummy_node);
+        if (client->has_behavior()) {
+            client->request_timeout(client->get_behavior().timeout());
+        }
+        else client->reset_timeout();
+    }
+
+    template<class Client>
+    static inline void hm_revert(Client* client, pointer previous) {
+        client->m_current_node = previous;
+    }
+
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
-    template<typename... Ts>
-    threaded(Ts&&... args) : Base(std::forward<Ts>(args)...), m_initialized(false) { }
+    nestable_invoke() : m_initialized(false) { }
 
     inline void reset_timeout() { }
 
@@ -181,6 +204,6 @@ class threaded : public Base {
 
 };
 
-} // namespace cppa
+} } // namespace cppa::policy
 
 #endif // CPPA_THREADED_HPP

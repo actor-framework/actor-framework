@@ -28,68 +28,59 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
-#define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#ifndef PRIORITIZING_HPP
+#define PRIORITIZING_HPP
 
-#include <stack>
+#include <iostream>
 
-#include "cppa/config.hpp"
-#include "cppa/extend.hpp"
-#include "cppa/stacked.hpp"
-#include "cppa/scheduled_actor.hpp"
-
-#include "cppa/detail/receive_policy.hpp"
-#include "cppa/detail/behavior_stack.hpp"
-#include "cppa/detail/yield_interface.hpp"
+#include "cppa/mailbox_element.hpp"
+#include "cppa/message_priority.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
 
 namespace cppa {
 
-/**
- * @brief Context-switching actor implementation.
- * @extends scheduled_actor
- */
-class context_switching_actor : public extend<scheduled_actor, context_switching_actor>::with<stacked> {
-
-    friend class detail::behavior_stack;
-    friend class detail::receive_policy;
-
-    typedef combined_type super;
+class prioritizing {
 
  public:
 
-    /**
-     * @brief Creates a context-switching actor running @p fun.
-     */
-    context_switching_actor(std::function<void()> fun);
+    mailbox_element* try_pop() override {
+        auto result = m_high_priority_mailbox.try_pop();
+        return (result) ? result : this->m_mailbox.try_pop();
+    }
 
-    resume_result resume(util::fiber* from);
-
-    scheduled_actor_type impl_type();
+    template<typename... Ts>
+    prioritizing(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
  protected:
 
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+    typedef prioritizing combined_type;
 
-    timeout_type init_timeout(const util::duration& rel_time);
-
-    mailbox_element* await_message();
-
-    mailbox_element* await_message(const timeout_type& abs_time);
-
-    inline mailbox_element* try_pop() {
-        return m_mailbox.try_pop();
+    void cleanup(std::uint32_t reason) override {
+        detail::sync_request_bouncer f{reason};
+        m_high_priority_mailbox.close(f);
+        Base::cleanup(reason);
     }
 
- private:
+    bool mailbox_empty() override {
+        return    m_high_priority_mailbox.empty()
+               && this->m_mailbox.empty();
+    }
 
-    // required by util::fiber
-    static void trampoline(void* _this);
+    void enqueue(const message_header& hdr, any_tuple msg) override {
+        typename Base::mailbox_type* mbox = nullptr;
+        if (hdr.priority == message_priority::high) {
+            mbox = &m_high_priority_mailbox;
+        }
+        else {
+            mbox = &this->m_mailbox;
+        }
+        this->enqueue_impl(*mbox, hdr, std::move(msg));
+    }
 
-    // members
-    util::fiber m_fiber;
+    typename Base::mailbox_type m_high_priority_mailbox;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#endif // PRIORITIZING_HPP

@@ -92,30 +92,30 @@ void middleman::continue_writer(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->add_later(ptr, event::write);
 }
-    
+
 void middleman::stop_writer(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->erase_later(ptr, event::write);
 }
-    
+
 bool middleman::has_writer(continuable* ptr) {
     return m_handler->has_writer(ptr);
 }
-    
+
 void middleman::continue_reader(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->add_later(ptr, event::read);
 }
-    
+
 void middleman::stop_reader(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->erase_later(ptr, event::read);
 }
-    
+
 bool middleman::has_reader(continuable* ptr) {
     return m_handler->has_reader(ptr);
 }
-    
+
 typedef intrusive::single_reader_queue<middleman_event> middleman_queue;
 
 /*
@@ -168,7 +168,7 @@ class middleman_impl : public middleman {
                              "multiple calls to remote_actor()?");
         }
     }
-    
+
     peer* get_peer(const node_id& node) override {
         CPPA_LOG_TRACE("n = " << to_string(n));
         auto i = m_peers.find(node);
@@ -179,7 +179,7 @@ class middleman_impl : public middleman {
         CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
         return nullptr;
     }
-    
+
     void del_acceptor(peer_acceptor* ptr) override {
         auto i = m_acceptors.begin();
         auto e = m_acceptors.end();
@@ -192,7 +192,7 @@ class middleman_impl : public middleman {
             else i = m_acceptors.erase(i);
         }
     }
-    
+
     void deliver(const node_id& node,
                  const message_header& hdr,
                  any_tuple msg                  ) override {
@@ -226,7 +226,7 @@ class middleman_impl : public middleman {
             }
         }
     }
-    
+
 
     void new_peer(const input_stream_ptr& in,
                   const output_stream_ptr& out,
@@ -236,7 +236,7 @@ class middleman_impl : public middleman {
         continue_reader(ptr);
         if (node) register_peer(*node, ptr);
     }
-    
+
     void register_acceptor(const actor_addr& whom, peer_acceptor* ptr) override {
         run_later([=] {
             CPPA_LOGC_TRACE("cppa::io::middleman",
@@ -245,7 +245,7 @@ class middleman_impl : public middleman {
             continue_reader(ptr);
         });
     }
-    
+
  protected:
 
     void initialize() override {
@@ -287,7 +287,7 @@ class middleman_impl : public middleman {
         peer* impl;
         default_message_queue_ptr queue;
     };
-    
+
     std::map<actor_addr, std::vector<peer_acceptor*>> m_acceptors;
     std::map<node_id, peer_entry> m_peers;
 
@@ -349,7 +349,6 @@ middleman::~middleman() { }
 void middleman_loop(middleman_impl* impl) {
 #   ifdef CPPA_LOG_LEVEL
     auto mself = make_counted<thread_mapped_actor>();
-    CPPA_SET_DEBUG_NAME("middleman");
 #   endif
     middleman_event_handler* handler = impl->m_handler.get();
     CPPA_LOGF_TRACE("run middleman loop");

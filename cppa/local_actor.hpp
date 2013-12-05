@@ -223,7 +223,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     inline void monitor(const actor& whom) {
         monitor(whom->address());
     }
-    
+
     /**
      * @brief Removes a monitor from @p whom.
      * @param whom A monitored actor.
@@ -309,16 +309,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
         else quit(exit_reason::unhandled_sync_failure);
     }
 
-    virtual void dequeue(behavior& bhvr);
-
-    inline void dequeue(behavior&& bhvr);
-
-    virtual void dequeue_response(behavior&, message_id);
-
-    inline void dequeue_response(behavior&&, message_id);
-
-    inline void do_unbecome();
-
     local_actor(bool is_scheduled = false);
 
     virtual bool initialized() const = 0;
@@ -350,10 +340,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
 
     //inline void do_become(const behavior& bhvr, bool discard_old);
 
-    const char* debug_name() const;
-
-    void debug_name(std::string str);
-
     inline std::uint32_t planned_exit_reason() const;
 
     inline void planned_exit_reason(std::uint32_t value);
@@ -363,9 +349,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     void remove_handler(message_id id);
 
     void cleanup(std::uint32_t reason);
-
-    // used *only* when compiled in debug mode
-    union { std::string m_debug_name; };
 
     // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
@@ -442,10 +425,6 @@ inline any_tuple& local_actor::last_dequeued() {
 inline actor_addr& local_actor::last_sender() {
     return m_current_node->sender;
 }
-
-//inline void local_actor::do_unbecome() {
-//    m_bhvr_stack.pop_async_back();
-//}
 
 inline message_id local_actor::get_response_id() {
     auto id = m_current_node->mid;

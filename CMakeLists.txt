@@ -140,7 +140,7 @@ set(LIBCPPA_SRC
     src/buffer.cpp
     src/channel.cpp
     src/common_actor_ops.cpp
-    src/context_switching_actor.cpp
+    src/context_switching_resume.cpp
     src/continuable.cpp
     src/decorated_tuple.cpp
     src/actor_proxy.cpp

@@ -65,7 +65,6 @@ void verbose_terminate() {
 }
 
 void set_default_test_settings() {
-    CPPA_SET_DEBUG_NAME("main");
     set_terminate(verbose_terminate);
     cout.unsetf(ios_base::unitbuf);
 }

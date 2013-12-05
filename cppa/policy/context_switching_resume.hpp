@@ -28,58 +28,54 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
-
-#include <tuple>
-#include <stack>
-#include <memory>
-#include <vector>
+#ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 
 #include "cppa/config.hpp"
-#include "cppa/extend.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/stackless.hpp"
-#include "cppa/scheduled_actor.hpp"
-#include "cppa/detail/receive_policy.hpp"
+#include "cppa/mailbox_element.hpp"
 
-namespace cppa {
+namespace cppa { namespace policy {
 
 /**
- * @brief Base class for all event-based actor implementations.
+ * @brief Context-switching actor implementation.
  * @extends scheduled_actor
  */
-class event_based_actor : public extend<scheduled_actor>::with<stackless> {
-
-    friend class detail::receive_policy;
-
-    typedef combined_type super;
+class context_switching_resume {
 
  public:
 
-    resume_result resume(util::fiber*);
-
     /**
-     * @brief Initializes the actor.
+     * @brief Creates a context-switching actor running @p fun.
      */
-    virtual behavior make_behavior() = 0;
+    //context_switching_resume(std::function<void()> fun);
 
-    scheduled_actor_type impl_type();
+    resume_result resume(abstract_actor*, util::fiber* from);
 
-    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
+    typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
-    static intrusive_ptr<event_based_actor> from(std::function<behavior()> fun);
+    mailbox_element* next_message();
 
-    static intrusive_ptr<event_based_actor> from(std::function<void(event_based_actor*)> fun);
-    
-    static intrusive_ptr<event_based_actor> from(std::function<behavior(event_based_actor*)> fun);
-    
- protected:
+    inline mailbox_element* next_message(int) {
+        // we don't use the dummy element returned by init_timeout
+        return next_message();
+    }
 
-    event_based_actor(actor_state st = actor_state::blocked);
+    int init_timeout(const util::duration& rel_time);
+
+    inline mailbox_element* try_pop() {
+        return m_mailbox.try_pop();
+    }
+
+ private:
+
+    // required by util::fiber
+    static void trampoline(void* _this);
+
+    // members
+    util::fiber m_fiber;
 
 };
 
-} // namespace cppa
+} } // namespace cppa::policy
 
-#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP

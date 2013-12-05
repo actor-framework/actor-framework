@@ -181,17 +181,17 @@ void local_actor::send_tuple(const channel& dest, any_tuple what) {
 }
 
 void local_actor::remove_handler(message_id) {
-    
+
 }
 
 void local_actor::delayed_send_tuple(const channel&, const util::duration&, cppa::any_tuple) {
-    
+
 }
 
 message_future local_actor::timed_sync_send_tuple(const util::duration& rtime,
                                                   const actor& dest,
                                                   any_tuple what) {
-    
+
 }
 
 response_handle local_actor::make_response_handle() {
@@ -201,14 +201,6 @@ response_handle local_actor::make_response_handle() {
 void local_actor::cleanup(std::uint32_t reason) {
     m_subscriptions.clear();
     super::cleanup(reason);
-}
-
-void local_actor::dequeue(behavior&) {
-    quit(exit_reason::unallowed_function_call);
-}
-
-void local_actor::dequeue_response(behavior&, message_id) {
-    quit(exit_reason::unallowed_function_call);
 }
 
 void local_actor::quit(std::uint32_t reason) {

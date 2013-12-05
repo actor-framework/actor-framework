@@ -90,17 +90,17 @@ intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> f
 
 event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
 
-resume_result event_based_actor::resume(util::fiber*) {
-    CPPA_LOG_TRACE("id = " << id() << ", state = " << static_cast<int>(state()));
-    CPPA_REQUIRE(   state() == actor_state::ready
-                 || state() == actor_state::pending);
+resume_result event_based_resume::resume(local_actor* self, util::fiber*) {
+    CPPA_LOG_TRACE("id = " << self->id() << ", state = " << static_cast<int>(state()));
+    CPPA_REQUIRE(   self->state() == actor_state::ready
+                 || self->state() == actor_state::pending);
     auto done_cb = [&]() -> bool {
         CPPA_LOG_TRACE("");
-        if (exit_reason() == exit_reason::not_exited) {
-            if (planned_exit_reason() == exit_reason::not_exited) {
-                planned_exit_reason(exit_reason::normal);
+        if (self->exit_reason() == self->exit_reason::not_exited) {
+            if (self->planned_exit_reason() == self->exit_reason::not_exited) {
+                self->planned_exit_reason(exit_reason::normal);
             }
-            on_exit();
+            self->on_exit();
             if (!m_bhvr_stack.empty()) {
                 planned_exit_reason(exit_reason::not_exited);
                 return false; // on_exit did set a new behavior

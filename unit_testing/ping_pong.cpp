@@ -58,28 +58,24 @@ size_t pongs() {
 }
 
 void ping(size_t num_pings) {
-    CPPA_SET_DEBUG_NAME("ping");
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
     receive_loop(ping_behavior(num_pings));
 }
 
 void event_based_ping(size_t num_pings) {
-    CPPA_SET_DEBUG_NAME("event_based_ping");
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
     become(ping_behavior(num_pings));
 }
 
 void pong(actor_ptr ping_actor) {
-    CPPA_SET_DEBUG_NAME("pong");
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
     send(ping_actor, atom("pong"), 0); // kickoff
     receive_loop(pong_behavior());
 }
 
 void event_based_pong(actor_ptr ping_actor) {
-    CPPA_SET_DEBUG_NAME("event_based_pong");
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
     CPPA_REQUIRE(ping_actor != nullptr);
     send(ping_actor, atom("pong"), 0); // kickoff

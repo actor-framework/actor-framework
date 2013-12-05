@@ -33,28 +33,47 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/behavior.hpp"
+
 #include "cppa/util/duration.hpp"
 
-namespace cppa {
+#include "cppa/policy/invoke_policy_base.hpp"
+
+namespace cppa { namespace policy {
 
 /**
  * @brief An actor that is scheduled or otherwise managed.
  */
-template<class Base, class Subtype>
-class threadless : public Base {
-
- protected:
-
-    typedef threadless combined_type;
+class sequential_invoke : public invoke_policy_base<sequential_invoke> {
 
  public:
 
-    static constexpr bool has_blocking_receive = false;
+    sequential_invoke() : m_has_pending_tout(false), m_pending_tout(0) { }
 
-    template<typename... Ts>
-    threadless(Ts&&... args) : Base(std::forward<Ts>(args)...)
-                             , m_has_pending_tout(false)
-                             , m_pending_tout(0) { }
+    static inline bool hm_should_skip(pointer node) {
+        return node->marked;
+    }
+
+    template<class Client>
+    static inline pointer hm_begin(Client* client, pointer node) {
+        auto previous = client->m_current_node;
+        client->m_current_node = node;
+        client->push_timeout();
+        node->marked = true;
+        return previous;
+    }
+
+    template<class Client>
+    static inline void hm_cleanup(Client* client, pointer previous) {
+        client->m_current_node->marked = false;
+        client->m_current_node = previous;
+    }
+
+    template<class Client>
+    static inline void hm_revert(Client* client, pointer previous) {
+        client->m_current_node->marked = false;
+        client->m_current_node = previous;
+        client->pop_timeout();
+    }
 
     inline void reset_timeout() {
         if (m_has_pending_tout) {
@@ -107,6 +126,6 @@ class threadless : public Base {
 
 };
 
-} // namespace cppa
+} } // namespace cppa::policy
 
 #endif // CPPA_THREADLESS_HPP

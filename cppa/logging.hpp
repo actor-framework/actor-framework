@@ -152,13 +152,6 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_DEBUG    3
 #define CPPA_TRACE    4
 
-#ifdef CPPA_DEBUG_MODE
-#   define CPPA_SET_DEBUG_NAME(strstr)                                            \
-        self->debug_name((::cppa::oss_wr{} << strstr).str());
-#else
-#   define CPPA_SET_DEBUG_NAME(unused)
-#endif
-
 #define CPPA_LVL_NAME0() "ERROR"
 #define CPPA_LVL_NAME1() "WARN "
 #define CPPA_LVL_NAME2() "INFO "

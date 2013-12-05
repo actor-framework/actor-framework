@@ -28,7 +28,7 @@
 \******************************************************************************/
 
 
-#include "cppa/context_switching_actor.hpp"
+#include "cppa/policy/context_switching_resume.hpp"
 #ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 
 #include <iostream>
@@ -36,26 +36,28 @@
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
 
-namespace cppa {
+namespace cppa { namespace policy {
 
-context_switching_actor::context_switching_actor(std::function<void()> fun)
+/*
+context_switching_resume::context_switching_resume(std::function<void()> fun)
 : super(actor_state::ready, true)
 , m_fiber(&context_switching_actor::trampoline, this) {
     set_behavior(std::move(fun));
 }
+*/
 
-auto context_switching_actor::init_timeout(const util::duration& tout) -> timeout_type {
+int context_switching_actor::init_timeout(const util::duration& tout) {
     // request explicit timeout message
     request_timeout(tout);
-    return {};
+    return 0;
 }
 
-mailbox_element* context_switching_actor::await_message(const timeout_type&) {
-    // receives requested timeout message if timeout occured
+mailbox_element* context_switching_actor::next_message(const timeout_type&) {
+
     return await_message();
 }
 
-mailbox_element* context_switching_actor::await_message() {
+mailbox_element* context_switching_actor::next_message() {
     auto e = m_mailbox.try_pop();
     while (e == nullptr) {
         if (m_mailbox.can_fetch_more() == false) {
@@ -73,7 +75,7 @@ mailbox_element* context_switching_actor::await_message() {
     return e;
 }
 
-void context_switching_actor::trampoline(void* this_ptr) {
+void context_switching_resume::trampoline(void* this_ptr) {
     auto _this = reinterpret_cast<context_switching_actor*>(this_ptr);
     bool cleanup_called = false;
     try { _this->run(); }
@@ -91,11 +93,7 @@ void context_switching_actor::trampoline(void* this_ptr) {
     detail::yield(detail::yield_state::done);
 }
 
-scheduled_actor_type context_switching_actor::impl_type() {
-    return context_switching_impl;
-}
-
-resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next_job) {
+resume_result context_switching_resume::resume(util::fiber* from) {
     CPPA_LOGMF(CPPA_TRACE, this, "state = " << static_cast<int>(state()));
     CPPA_REQUIRE(from != nullptr);
     CPPA_REQUIRE(next_job == nullptr);
@@ -140,7 +138,7 @@ resume_result context_switching_actor::resume(util::fiber* from, actor_ptr& next
     }
 }
 
-} // namespace cppa
+} } // namespace cppa::policy
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
 

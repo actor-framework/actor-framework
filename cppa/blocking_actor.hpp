@@ -39,18 +39,9 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/util/dptr.hpp"
-
-#include "cppa/detail/receive_policy.hpp"
-
 namespace cppa {
 
-/**
- * @brief An actor that uses the blocking API of @p libcppa and thus needs
- *        its own stack.
- */
-template<class Base, class Subtype>
-class stacked : public Base {
+class blocking_actor : public local_actor {
 
     friend class detail::receive_policy;
     friend class detail::behavior_stack;
@@ -80,30 +71,30 @@ class stacked : public Base {
 
     template<typename T>
     struct receive_for_helper {
-        
+
         std::function<void(behavior&)> m_dq;
         T& begin;
         T end;
-        
+
         template<typename... Ts>
         void operator()(Ts&&... args) {
             behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
             for ( ; begin != end; ++begin) m_dq(bhvr);
         }
-        
+
     };
 
     struct do_receive_helper {
-        
+
         std::function<void(behavior&)> m_dq;
         behavior m_bhvr;
-        
+
         template<typename Statement>
         void until(Statement stmt) {
             do { m_dq(m_bhvr); }
             while (stmt() == false);
         }
-        
+
     };
 
     /**
@@ -115,7 +106,7 @@ class stacked : public Base {
         static_assert(sizeof...(Ts), "receive() requires at least one argument");
         dequeue(match_expr_convert(std::forward<Ts>(args)...));
     }
-    
+
     /**
      * @brief Receives messages in an endless loop.
      *        Semantically equal to: <tt>for (;;) { receive(...); }</tt>
@@ -125,7 +116,7 @@ class stacked : public Base {
         behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
         for (;;) dequeue(bhvr);
     }
-    
+
     /**
      * @brief Receives messages as in a range-based loop.
      *
@@ -147,7 +138,7 @@ class stacked : public Base {
     receive_for_helper<T> receive_for(T& begin, const T& end) {
         return {make_dequeue_callback(), begin, end};
     }
-    
+
     /**
      * @brief Receives messages as long as @p stmt returns true.
      *
@@ -171,7 +162,7 @@ class stacked : public Base {
                       "functor or function does not return a boolean");
         return {make_dequeue_callback(), stmt};
     }
-    
+
     /**
      * @brief Receives messages until @p stmt returns true.
      *

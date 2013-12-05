@@ -28,60 +28,58 @@
 \******************************************************************************/
 
 
-#ifndef PRIORITIZING_HPP
-#define PRIORITIZING_HPP
+#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
-#include <iostream>
+#include <tuple>
+#include <stack>
+#include <memory>
+#include <vector>
 
-#include "cppa/mailbox_element.hpp"
-#include "cppa/message_priority.hpp"
-#include "cppa/detail/sync_request_bouncer.hpp"
+#include "cppa/config.hpp"
+#include "cppa/extend.hpp"
+#include "cppa/behavior.hpp"
+#include "cppa/stackless.hpp"
+#include "cppa/scheduled_actor.hpp"
+#include "cppa/detail/receive_policy.hpp"
 
-namespace cppa {
+namespace cppa { namespace policy {
 
-template<class Base, class Subtype>
-class prioritizing : public Base {
+/**
+ * @brief Base class for all event-based actor implementations.
+ * @extends scheduled_actor
+ */
+class event_based_resume {
+
+    friend class detail::receive_policy;
+
+    typedef combined_type super;
 
  public:
 
-    mailbox_element* try_pop() override {
-        auto result = m_high_priority_mailbox.try_pop();
-        return (result) ? result : this->m_mailbox.try_pop();
-    }
+    resume_result resume(untyped_actor*, util::fiber*);
 
-    template<typename... Ts>
-    prioritizing(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    /**
+     * @brief Initializes the actor.
+     */
+    virtual behavior make_behavior() = 0;
+
+    scheduled_actor_type impl_type();
+
+    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
+
+    static intrusive_ptr<event_based_actor> from(std::function<behavior()> fun);
+
+    static intrusive_ptr<event_based_actor> from(std::function<void(event_based_actor*)> fun);
+
+    static intrusive_ptr<event_based_actor> from(std::function<behavior(event_based_actor*)> fun);
 
  protected:
 
-    typedef prioritizing combined_type;
-
-    void cleanup(std::uint32_t reason) override {
-        detail::sync_request_bouncer f{reason};
-        m_high_priority_mailbox.close(f);
-        Base::cleanup(reason);
-    }
-
-    bool mailbox_empty() override {
-        return    m_high_priority_mailbox.empty()
-               && this->m_mailbox.empty();
-    }
-
-    void enqueue(const message_header& hdr, any_tuple msg) override {
-        typename Base::mailbox_type* mbox = nullptr;
-        if (hdr.priority == message_priority::high) {
-            mbox = &m_high_priority_mailbox;
-        }
-        else {
-            mbox = &this->m_mailbox;
-        }
-        this->enqueue_impl(*mbox, hdr, std::move(msg));
-    }
-
-    typename Base::mailbox_type m_high_priority_mailbox;
+    event_based_actor(actor_state st = actor_state::blocked);
 
 };
 
-} // namespace cppa
+} } // namespace cppa::policy
 
-#endif // PRIORITIZING_HPP
+#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP

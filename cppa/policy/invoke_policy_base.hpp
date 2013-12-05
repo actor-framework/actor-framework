@@ -50,7 +50,7 @@
 
 #include "cppa/util/scope_guard.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa { namespace policy {
 
 enum receive_policy_flag {
     // receives can be nested
@@ -62,7 +62,7 @@ enum receive_policy_flag {
 template<receive_policy_flag X>
 struct rp_flag { typedef std::integral_constant<receive_policy_flag, X> type; };
 
-class receive_policy {
+class invoke_policy_base {
 
  public:
 
@@ -280,72 +280,6 @@ class receive_policy {
         return ordinary_message;
     }
 
-
-    // the workflow of handle_message (hm) is as follows:
-    // - should_skip? if yes: return hm_skip_msg
-    // - msg is ordinary message? if yes:
-    //   - begin(...) -> prepares a client for message handling
-    //   - client could process message?
-    //     - yes: cleanup()
-    //     - no: revert(...) -> set client back to state it had before begin()
-
-
-    // workflow implementation for nestable receive policy
-
-    static inline bool hm_should_skip(pointer node, nestable) {
-        return node->marked;
-    }
-
-    template<class Client>
-    static inline pointer hm_begin(Client* client, pointer node, nestable) {
-        auto previous = client->m_current_node;
-        client->m_current_node = node;
-        client->push_timeout();
-        node->marked = true;
-        return previous;
-    }
-
-    template<class Client>
-    static inline void hm_cleanup(Client* client, pointer previous, nestable) {
-        client->m_current_node->marked = false;
-        client->m_current_node = previous;
-    }
-
-    template<class Client>
-    static inline void hm_revert(Client* client, pointer previous, nestable) {
-        client->m_current_node->marked = false;
-        client->m_current_node = previous;
-        client->pop_timeout();
-    }
-
-
-    // workflow implementation for sequential receive policy
-
-    static inline bool hm_should_skip(pointer, sequential) {
-        return false;
-    }
-
-    template<class Client>
-    static inline pointer hm_begin(Client* client, pointer node, sequential) {
-        auto previous = client->m_current_node;
-        client->m_current_node = node;
-        return previous;
-    }
-
-    template<class Client>
-    static inline void hm_cleanup(Client* client, pointer /*previous*/, sequential) {
-        client->m_current_node = &(client->m_dummy_node);
-        if (client->has_behavior()) {
-            client->request_timeout(client->get_behavior().timeout());
-        }
-        else client->reset_timeout();
-    }
-
-    template<class Client>
-    static inline void hm_revert(Client* client, pointer previous, sequential) {
-        client->m_current_node = previous;
-    }
-
  public:
 
     template<class Client>
@@ -432,7 +366,13 @@ class receive_policy {
         return none;
     }
 
-    // workflow 'template'
+    // the workflow of handle_message (hm) is as follows:
+    // - should_skip? if yes: return hm_skip_msg
+    // - msg is ordinary message? if yes:
+    //   - begin(...) -> prepares a client for message handling
+    //   - client could process message?
+    //     - yes: cleanup()
+    //     - no: revert(...) -> set client back to state it had before begin()
 
     template<class Client, class Fun, class Policy>
     handle_message_result handle_message(Client* client,
@@ -441,7 +381,7 @@ class receive_policy {
                                          message_id awaited_response,
                                          Policy policy                 ) {
         bool handle_sync_failure_on_mismatch = true;
-        if (hm_should_skip(node, policy)) {
+        if (Derived::hm_should_skip(node, policy)) {
             return hm_skip_msg;
         }
         switch (this->filter_msg(client, node)) {
@@ -479,7 +419,7 @@ class receive_policy {
             }
             case sync_response: {
                 if (awaited_response.valid() && node->mid == awaited_response) {
-                    auto previous_node = hm_begin(client, node, policy);
+                    auto previous_node = Derived::hm_begin(client, node, policy);
                     auto res = invoke_fun(client,
                                           node->msg,
                                           node->mid,
@@ -493,24 +433,24 @@ class receive_policy {
                     }
                     client->mark_arrived(awaited_response);
                     client->remove_handler(awaited_response);
-                    hm_cleanup(client, previous_node, policy);
+                    Derived::hm_cleanup(client, previous_node, policy);
                     return hm_msg_handled;
                 }
                 return hm_cache_msg;
             }
             case ordinary_message: {
                 if (!awaited_response.valid()) {
-                    auto previous_node = hm_begin(client, node, policy);
+                    auto previous_node = Derived::hm_begin(client, node, policy);
                     auto res = invoke_fun(client,
                                           node->msg,
                                           node->mid,
                                           fun);
                     if (res) {
-                        hm_cleanup(client, previous_node, policy);
+                        Derived::hm_cleanup(client, previous_node, policy);
                         return hm_msg_handled;
                     }
                     // no match (restore client members)
-                    hm_revert(client, previous_node, policy);
+                    Derived::hm_revert(client, previous_node, policy);
                 }
                 return hm_cache_msg;
             }

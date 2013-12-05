@@ -21,7 +21,6 @@ typedef std::pair<std::string, std::string> string_pair;
 typedef vector<actor_ptr> actor_vector;
 
 void reflector() {
-    CPPA_SET_DEBUG_NAME("reflector" << self->id());
     become (
         others() >> [=] {
             CPPA_LOGF_INFO("reflect and quit");
@@ -96,7 +95,6 @@ void spawn5_server_impl(actor_ptr client, group_ptr grp) {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(actor_ptr client, bool inverted) {
-    CPPA_SET_DEBUG_NAME("spawn5_server");
     if (!inverted) spawn5_server_impl(client, group::get("local", "foobar"));
     else {
         CPPA_LOGF_INFO("request group");
@@ -109,7 +107,6 @@ void spawn5_server(actor_ptr client, bool inverted) {
 }
 
 void spawn5_client() {
-    CPPA_SET_DEBUG_NAME("spawn5_client");
     become (
         on(atom("GetGroup")) >> []() -> group_ptr {
             CPPA_LOGF_INFO("received {'GetGroup'}");
@@ -154,7 +151,6 @@ class client : public event_based_actor {
     client(actor_ptr server) : m_server(std::move(server)) { }
 
     void init() {
-        CPPA_SET_DEBUG_NAME("client");
         spawn_ping();
     }
 
@@ -233,7 +229,6 @@ class server : public event_based_actor {
  public:
 
     void init() {
-        CPPA_SET_DEBUG_NAME("server");
         await_spawn_ping();
     }
 
