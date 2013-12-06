@@ -108,7 +108,8 @@ class middleman_impl {
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
         // ignore result; write error only means middleman already exited
-        static_cast<void>(write(m_pipe_write, &dummy, sizeof(dummy)));
+		auto unused_ret = write(m_pipe_write, &dummy, sizeof(dummy));
+		static_cast<void>(unused_ret);
     }
 
     void continue_writer(continuable* ptr) {
