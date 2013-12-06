@@ -90,7 +90,7 @@ intrusive_ptr<event_based_actor> event_based_actor::from(std::function<void()> f
 
 event_based_actor::event_based_actor(actor_state st) : super(st, true) { }
 
-resume_result event_based_resume::resume(local_actor* self, util::fiber*) {
+resume_result event_based_resume::resume(untyped_actor* self, util::fiber*) {
     CPPA_LOG_TRACE("id = " << self->id() << ", state = " << static_cast<int>(state()));
     CPPA_REQUIRE(   self->state() == actor_state::ready
                  || self->state() == actor_state::pending);

@@ -400,16 +400,6 @@ typedef intrusive_ptr<local_actor> local_actor_ptr;
 
 /** @cond PRIVATE */
 
-inline void local_actor::dequeue(behavior&& bhvr) {
-    behavior tmp{std::move(bhvr)};
-    dequeue(tmp);
-}
-
-inline void local_actor::dequeue_response(behavior&& bhvr, message_id id) {
-    behavior tmp{std::move(bhvr)};
-    dequeue_response(tmp, id);
-}
-
 inline bool local_actor::trap_exit() const {
     return m_trap_exit;
 }

@@ -62,12 +62,13 @@ enum receive_policy_flag {
 template<receive_policy_flag X>
 struct rp_flag { typedef std::integral_constant<receive_policy_flag, X> type; };
 
+template<class Derived>
 class invoke_policy_base {
 
  public:
 
     typedef mailbox_element* pointer;
-    typedef std::unique_ptr<mailbox_element, disposer> smart_pointer;
+    typedef std::unique_ptr<mailbox_element, detail::disposer> smart_pointer;
 
     enum handle_message_result {
         hm_timeout_msg,
@@ -213,7 +214,7 @@ class invoke_policy_base {
 
  private:
 
-    std::list<std::unique_ptr<mailbox_element, disposer> > m_cache;
+    std::list<std::unique_ptr<mailbox_element, detail::disposer> > m_cache;
 
     template<class Client>
     inline void handle_timeout(Client* client, behavior& bhvr) {
@@ -316,7 +317,7 @@ class invoke_policy_base {
                     if (fhdl.valid()) fhdl.apply(make_any_tuple(atom("VOID")));
                 }
             } else {
-                if (   matches<atom_value, std::uint64_t>(*res)
+                if (   detail::matches<atom_value, std::uint64_t>(*res)
                     && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
                     auto id = res->template get_as<std::uint64_t>(1);
                     auto msg_id = message_id::from_integer_value(id);
@@ -459,6 +460,6 @@ class invoke_policy_base {
 
 };
 
-} } // namespace cppa::detail
+} } // namespace cppa::policy
 
 #endif // CPPA_NESTABLE_RECEIVE_POLICY_HPP

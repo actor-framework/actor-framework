@@ -28,38 +28,45 @@
 \******************************************************************************/
 
 
-#include "cppa/policy/context_switching_resume.hpp"
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#ifndef CPPA_PRIORITY_POLICY_HPP
+#define CPPA_PRIORITY_POLICY_HPP
 
-#include <iostream>
-
-#include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
+namespace cppa { class mailbox_element; }
 
 namespace cppa { namespace policy {
 
-void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<context_switching_resume*>(this_ptr);
-    bool cleanup_called = false;
-    try { _this->run(); }
-    catch (actor_exited&) {
-        // cleanup already called by scheduled_actor::quit
-        cleanup_called = true;
-    }
-    catch (...) {
-        _this->cleanup(exit_reason::unhandled_exception);
-        cleanup_called = true;
-    }
-    if (!cleanup_called) _this->cleanup(exit_reason::normal);
-    _this->on_exit();
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    detail::yield(detail::yield_state::done);
-}
+/**
+ * @brief The priority_policy <b>concept</b> class. Please note that this
+ *        class is <b>not</b> implemented. It only explains the all
+ *        required member function and their behavior for any priority policy.
+ */
+class priority_policy {
+
+ public:
+
+    /**
+     * @brief Returns the next message from the list of cached elements or
+     *        @p nullptr. The latter indicates only that there is no element
+     *        left in the cache.
+     */
+    template<class Actor>
+    mailbox_element* next_message(Actor* self);
+
+    /**
+     * @brief Fetches new messages from the actor's mailbox. The member
+     *        function returns @p false if no message was read,
+     *        @p true otherwise.
+     *
+     * This member function calls {@link scheduling_policy::fetch_messages},
+     * so a returned @p false value indicates that the client must prepare
+     * for re-scheduling.
+     */
+    template<class Actor, typename F>
+    bool fetch_messages(Actor* self);
+
+
+};
 
 } } // namespace cppa::policy
 
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-
-namespace cppa { int keep_compiler_happy_function() { return 42; } }
-
-#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // CPPA_PRIORITY_POLICY_HPP

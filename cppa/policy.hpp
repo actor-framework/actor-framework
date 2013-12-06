@@ -28,38 +28,15 @@
 \******************************************************************************/
 
 
+#ifndef CPPA_POLICY_HPP
+#define CPPA_POLICY_HPP
+
+#include "cppa/policy/no_resume.hpp"
+#include "cppa/policy/prioritizing.hpp"
+#include "cppa/policy/nestable_invoke.hpp"
+#include "cppa/policy/sequential_invoke.hpp"
+#include "cppa/policy/event_based_resume.hpp"
+#include "cppa/policy/invoke_policy_base.hpp"
 #include "cppa/policy/context_switching_resume.hpp"
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
 
-#include <iostream>
-
-#include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
-
-namespace cppa { namespace policy {
-
-void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<context_switching_resume*>(this_ptr);
-    bool cleanup_called = false;
-    try { _this->run(); }
-    catch (actor_exited&) {
-        // cleanup already called by scheduled_actor::quit
-        cleanup_called = true;
-    }
-    catch (...) {
-        _this->cleanup(exit_reason::unhandled_exception);
-        cleanup_called = true;
-    }
-    if (!cleanup_called) _this->cleanup(exit_reason::normal);
-    _this->on_exit();
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    detail::yield(detail::yield_state::done);
-}
-
-} } // namespace cppa::policy
-
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-
-namespace cppa { int keep_compiler_happy_function() { return 42; } }
-
-#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // CPPA_POLICY_HPP

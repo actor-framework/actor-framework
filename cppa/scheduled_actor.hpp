@@ -52,10 +52,7 @@ namespace cppa {
 class scheduler;
 namespace util { struct fiber; }
 
-enum class resume_result {
-    actor_blocked,
-    actor_done
-};
+
 
 enum scheduled_actor_type {
     context_switching_impl,  // enqueued to the job queue on startup

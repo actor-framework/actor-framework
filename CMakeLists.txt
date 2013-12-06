@@ -150,7 +150,7 @@ set(LIBCPPA_SRC
     src/deserializer.cpp
     src/duration.cpp
     src/empty_tuple.cpp
-    src/event_based_actor.cpp
+    src/event_based_resume.cpp
     src/exception.cpp
     src/exit_reason.cpp
     src/fd_util.cpp

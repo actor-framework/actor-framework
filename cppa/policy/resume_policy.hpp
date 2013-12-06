@@ -28,38 +28,60 @@
 \******************************************************************************/
 
 
-#include "cppa/policy/context_switching_resume.hpp"
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#ifndef CPPA_RESUME_POLICY_HPP
+#define CPPA_RESUME_POLICY_HPP
 
-#include <iostream>
+// this header consists all type definitions needed to
+// implement the resume_policy trait
 
-#include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
+namespace cppa { namespace util { class duration; } }
 
 namespace cppa { namespace policy {
 
-void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<context_switching_resume*>(this_ptr);
-    bool cleanup_called = false;
-    try { _this->run(); }
-    catch (actor_exited&) {
-        // cleanup already called by scheduled_actor::quit
-        cleanup_called = true;
-    }
-    catch (...) {
-        _this->cleanup(exit_reason::unhandled_exception);
-        cleanup_called = true;
-    }
-    if (!cleanup_called) _this->cleanup(exit_reason::normal);
-    _this->on_exit();
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    detail::yield(detail::yield_state::done);
-}
+enum class resume_result {
+    actor_blocked,
+    actor_done
+};
+
+/**
+ * @brief The resume_policy <b>concept</b> class. Please note that this
+ *        class is <b>not</b> implemented. It only explains the all
+ *        required member function and their behavior for any resume policy.
+ */
+class resume_policy {
+
+ public:
+
+    /**
+     * @brief Resumes the actor by reading a new message <tt>msg</tt> and then
+     *        calling <tt>self->invoke(msg)</tt>. This process is repeated
+     *        until either no message is left in the actor's mailbox or the
+     *        actor finishes execution.
+     */
+    template<class Actor>
+    resume_result resume(Actor* self, util::fiber* from);
+
+    /**
+     * @brief Waits unconditionally until a new message arrives.
+     * @note This member function must raise a compiler error if the resume
+     *       strategy cannot be used to implement blocking actors.
+     */
+    template<class Actor>
+    bool await_data(Actor* self);
+
+    /**
+     * @brief Waits until either a new message arrives, or a timeout occurs.
+     *        The @p abs_time argument is the return value of
+     *        {@link scheduling_policy::init_timeout}. Returns true if a
+     *        message arrived in time, otherwise false.
+     * @note This member function must raise a compiler error if the resume
+     *       strategy cannot be used to implement blocking actors.
+     */
+    template<class Actor, typename AbsTimeout>
+    bool await_data(Actor* self, const AbsTimeout& abs_time);
+
+};
 
 } } // namespace cppa::policy
 
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-
-namespace cppa { int keep_compiler_happy_function() { return 42; } }
-
-#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // CPPA_RESUME_POLICY_HPP

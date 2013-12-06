@@ -33,13 +33,12 @@
 
 #include <type_traits>
 
-#include "cppa/threaded.hpp"
+#include "cppa/policy.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/typed_actor.hpp"
-#include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
-#include "cppa/scheduled_actor.hpp"
-#include "cppa/event_based_actor.hpp"
+
+#include "cppa/detail/proper_actor.hpp"
 
 namespace cppa {
 
@@ -57,22 +56,6 @@ constexpr bool unbound_spawn_options(spawn_options opts) {
  */
 
 /**
- * @brief Spawns a new {@link actor} that evaluates given arguments.
- * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor} to the spawned {@link actor}.
- */
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    static_assert(unbound_spawn_options(Options),
-                  "top-level spawns cannot have monitor or link flag");
-    return get_scheduler()->exec(Options,
-                                 scheduler::init_callback{},
-                                 std::forward<Ts>(args)...);
-}
-
-/**
  * @brief Spawns an actor of type @p Impl.
  * @param args Constructor arguments.
  * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
@@ -85,6 +68,39 @@ actor spawn(Ts&&... args) {
                   "Impl is not a derived type of event_based_actor");
     static_assert(unbound_spawn_options(Options),
                   "top-level spawns cannot have monitor or link flag");
+    static_assert(unbound_spawn_options(Options),
+                  "top-level spawns cannot have monitor or link flag");
+    using scheduling_policy = typename std::conditional<
+                                  has_detach_flag(Options),
+                                  policy::no_scheduling,
+                                  policy::cooperative_scheduling
+                              >::type;
+    using priority_policy = typename std::conditional<
+                                has_priority_aware_flag(Options),
+                                policy::prioritizing,
+                                policy::not_prioritizing
+                            >::type;
+    using resume_policy = typename std::conditional<
+                              has_blocking_api_flag(Options),
+                              typename std::conditional<
+                                  has_detach_flag(Options),
+                                  policy::no_resume,
+                                  policy::context_switching_resume
+                              >::type,
+                              policy::event_based_resume
+                          >::type;
+    using invoke_policy = typename std::conditional<
+                              has_blocking_api_flag(Options),
+                              policy::nestable_invoke,
+                              policy::sequential_invoke
+                          >::type;
+    using proper_impl = detail::proper_actor<Impl,
+                                             scheduling_policy,
+                                             priority_policy,
+                                             resume_policy,
+                                             invoke_policy>;
+    auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
+    /*
     scheduled_actor_ptr ptr;
     if (has_priority_aware_flag(Options)) {
         using derived = typename extend<Impl>::template with<threaded, prioritizing>;
@@ -96,6 +112,30 @@ actor spawn(Ts&&... args) {
     }
     else ptr = make_counted<Impl>(std::forward<Ts>(args)...);
     return get_scheduler()->exec(Options, std::move(ptr));
+    */
+}
+
+/**
+ * @brief Spawns a new {@link actor} that evaluates given arguments.
+ * @param args A functor followed by its arguments.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor} to the spawned {@link actor}.
+ */
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn(Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+    using base_class = typename std::conditional<
+                           has_blocking_api_flag(Options),
+                           detail::functor_based_blocking_actor,
+                           detail::functor_based_actor
+                       >::type;
+    return spawn<base_class>(std::forward<Ts>(args)...);
+    using impl = detail::proper_actor<untyped_actor,
+                                      scheduling_policy,
+                                      priority_policy,
+                                      resume_policy,
+                                      invoke_policy>;
+    return make_counted<impl>();
 }
 
 /**
@@ -106,6 +146,7 @@ actor spawn(Ts&&... args) {
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
+/*
 template<spawn_options Options = no_spawn_options, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
@@ -117,6 +158,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
                                             init_cb,
                                             std::forward<Ts>(args)...));
 }
+*/
 
 /**
  * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
@@ -126,6 +168,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
+/*
 template<class Impl, spawn_options Options, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
@@ -144,6 +187,7 @@ typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
         eval_sopts(Options, get_scheduler()->exec(Options, std::move(p)))
     );
 }
+*/
 
 /*TODO:
 template<spawn_options Options, typename... Ts>

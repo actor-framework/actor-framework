@@ -28,38 +28,83 @@
 \******************************************************************************/
 
 
-#include "cppa/policy/context_switching_resume.hpp"
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#ifndef CPPA_NO_SCHEDULING_HPP
+#define CPPA_NO_SCHEDULING_HPP
 
-#include <iostream>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
 
-#include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
+#include "cppa/detail/sync_request_bouncer.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 namespace cppa { namespace policy {
 
-void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<context_switching_resume*>(this_ptr);
-    bool cleanup_called = false;
-    try { _this->run(); }
-    catch (actor_exited&) {
-        // cleanup already called by scheduled_actor::quit
-        cleanup_called = true;
+class no_scheduling {
+
+    typedef std::unique_lock<std::mutex> lock_type;
+
+ public:
+
+    template<class Actor>
+    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+        auto ptr = self->new_mailbox_element(hdr, std::move(msg));
+        switch (self->mailbox().enqueue(ptr)) {
+            case intrusive::first_enqueued: {
+                lock_type guard(m_mtx);
+                m_cv.notify_one();
+                break;
+            }
+            default: break;
+            case intrusive::queue_closed:
+                if (hdr.id.valid()) {
+                    detail::sync_request_bouncer f{self->exit_reason()};
+                    f(hdr.sender, hdr.id);
+                }
+                break;
+        }
     }
-    catch (...) {
-        _this->cleanup(exit_reason::unhandled_exception);
-        cleanup_called = true;
+
+    template<class Actor>
+    void launch(Actor* self) {
+        std::thread([=] {
+            auto rr = resume_result::actor_blocked;
+            while (rr != resume_result::actor_done) {
+                wait_for_data();
+                self->resume();
+            }
+
+        }).detach();
     }
-    if (!cleanup_called) _this->cleanup(exit_reason::normal);
-    _this->on_exit();
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    detail::yield(detail::yield_state::done);
-}
+
+ private:
+
+    bool timed_wait_for_data(const timeout_type& abs_time) {
+        CPPA_REQUIRE(not this->m_mailbox.closed());
+        if (mailbox_empty()) {
+            lock_type guard(m_mtx);
+            while (mailbox_empty()) {
+                if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void wait_for_data() {
+        if (mailbox_empty()) {
+            lock_type guard(m_mtx);
+            while (mailbox_empty()) m_cv.wait(guard);
+        }
+    }
+
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
+
+};
 
 } } // namespace cppa::policy
 
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-
-namespace cppa { int keep_compiler_happy_function() { return 42; } }
-
-#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // CPPA_NO_SCHEDULING_HPP

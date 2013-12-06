@@ -28,29 +28,25 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
-#define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
-
-#include "cppa/config.hpp"
-#include "cppa/mailbox_element.hpp"
-
-#include "cppa/util/fiber.hpp"
-#include "cppa/detail/yield_interface.hpp"
-
-namespace cppa { class local_actor; }
+#ifndef CPPA_COOPERATIVE_SCHEDULING_HPP
+#define CPPA_COOPERATIVE_SCHEDULING_HPP
 
 namespace cppa { namespace policy {
 
-/**
- * @brief Context-switching actor implementation.
- * @extends scheduled_actor
- */
-class context_switching_resume {
+class cooperative_scheduling {
 
  public:
 
+    using timeout_type = int;
 
+    template<class Actor>
+    timeout_type init_timeout(Actor* self, const util::duration& rel_time) {
+        // request explicit timeout message
+        self->request_timeout(rel_time);
+        return 0; // return some dummy value
+    }
 
+    // this does return nullptr
     template<class Actor, typename F>
     void fetch_messages(Actor* self, F cb) {
         auto e = self->m_mailbox.try_pop();
@@ -74,66 +70,14 @@ class context_switching_resume {
     }
 
     template<class Actor, typename F>
-    void try_fetch_messages(Actor* self, F cb) {
-        auto e = self->m_mailbox.try_pop();
-        while (e) {
-            cb(e);
-            e = self->m_mailbox.try_pop();
-        }
+    inline void fetch_messages(Actor* self, F cb, timeout_type) {
+        // a call to this call is always preceded by init_timeout,
+        // which will trigger a timeout message
+        fetch_messages(self, cb);
     }
-
-    template<class Actor>
-    resume_result resume(Actor* self, util::fiber* from) {
-        CPPA_LOG_TRACE("state = " << static_cast<int>(self->state()));
-        CPPA_REQUIRE(from != nullptr);
-        CPPA_REQUIRE(next_job == nullptr);
-        using namespace detail;
-        for (;;) {
-            switch (call(&m_fiber, from)) {
-                case yield_state::done: {
-                    CPPA_REQUIRE(next_job == nullptr);
-                    return resume_result::actor_done;
-                }
-                case yield_state::ready: {
-                    break;
-                }
-                case yield_state::blocked: {
-                    CPPA_REQUIRE(next_job == nullptr);
-                    CPPA_REQUIRE(m_chained_actor == nullptr);
-                    switch (compare_exchange_state(actor_state::about_to_block,
-                                                   actor_state::blocked)) {
-                        case actor_state::ready: {
-                            // restore variables
-                            CPPA_REQUIRE(next_job == nullptr);
-                            break;
-                        }
-                        case actor_state::blocked: {
-                            // wait until someone re-schedules that actor
-                            return resume_result::actor_blocked;
-                        }
-                        default: {
-                            CPPA_CRITICAL("illegal yield result");
-                        }
-                    }
-                    break;
-                }
-                default: {
-                    CPPA_CRITICAL("illegal state");
-                }
-            }
-        }
-    }
-
- private:
-
-    // required by util::fiber
-    static void trampoline(void* _this);
-
-    // members
-    util::fiber m_fiber;
 
 };
 
 } } // namespace cppa::policy
 
-#endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#endif // CPPA_COOPERATIVE_SCHEDULING_HPP

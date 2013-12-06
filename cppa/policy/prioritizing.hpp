@@ -37,13 +37,19 @@
 #include "cppa/message_priority.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
-namespace cppa {
+namespace cppa { namespace policy {
 
 class prioritizing {
 
  public:
 
-    mailbox_element* try_pop() override {
+    template<typename Actor>
+    mailbox_element* next_message(Actor* self) {
+        return self->m_mailbox.try_pop();
+    }
+
+    /*
+    mailbox_element* try_pop() {
         auto result = m_high_priority_mailbox.try_pop();
         return (result) ? result : this->m_mailbox.try_pop();
     }
@@ -55,18 +61,18 @@ class prioritizing {
 
     typedef prioritizing combined_type;
 
-    void cleanup(std::uint32_t reason) override {
+    void cleanup(std::uint32_t reason) {
         detail::sync_request_bouncer f{reason};
         m_high_priority_mailbox.close(f);
         Base::cleanup(reason);
     }
 
-    bool mailbox_empty() override {
+    bool mailbox_empty() {
         return    m_high_priority_mailbox.empty()
                && this->m_mailbox.empty();
     }
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(const message_header& hdr, any_tuple msg) {
         typename Base::mailbox_type* mbox = nullptr;
         if (hdr.priority == message_priority::high) {
             mbox = &m_high_priority_mailbox;
@@ -78,9 +84,10 @@ class prioritizing {
     }
 
     typename Base::mailbox_type m_high_priority_mailbox;
+    */
 
 };
 
-} // namespace cppa
+} } // namespace cppa::policy
 
 #endif // PRIORITIZING_HPP

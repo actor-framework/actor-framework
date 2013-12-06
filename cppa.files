@@ -331,3 +331,10 @@ unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
 cppa/detail/proper_actor.hpp
 cppa/policy/no_resume.hpp
+cppa/policy.hpp
+cppa/detail/functor_based_actor.hpp
+cppa/policy/no_scheduling.hpp
+cppa/policy/resume_policy.hpp
+cppa/policy/cooperative_scheduling.hpp
+cppa/policy/scheduling_policy.hpp
+cppa/policy/priority_policy.hpp
