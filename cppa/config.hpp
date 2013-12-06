@@ -93,6 +93,11 @@
 #ifdef CPPA_WINDOWS
 #else
 #   include <unistd.h>
+
+#	include <linux/version.h>
+#	if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
+#		define CPPA_POLL_IMPL
+#	endif // LINUX_VERSION
 #endif
 
 namespace cppa {
