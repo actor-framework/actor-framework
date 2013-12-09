@@ -28,6 +28,10 @@
 \******************************************************************************/
 
 
+#include "cppa/config.hpp"
+
+#if !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)
+
 #include <poll.h>
 #include "cppa/io/middleman_event_handler.hpp"
 
@@ -154,4 +158,10 @@ std::unique_ptr<middleman_event_handler> middleman_event_handler::create() {
     return std::unique_ptr<middleman_event_handler>{new middleman_event_handler_impl};
 }
 
-} } // namespace cppa::network
+} } // namespace cppa::io
+
+#else // !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)
+
+int keep_compiler_happy_for_poll_impl() { return 42; }
+
+#endif // !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)

@@ -50,7 +50,7 @@
 namespace cppa {
 
 class scheduler;
-namespace util { class fiber; }
+namespace util { struct fiber; }
 
 enum class resume_result {
     actor_blocked,

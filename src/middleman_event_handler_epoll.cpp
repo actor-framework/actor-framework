@@ -27,6 +27,11 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
+
+#include "cppa/config.hpp"
+
+#if defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
+
 #include <ios>
 #include <string>
 #include <vector>
@@ -171,4 +176,10 @@ std::unique_ptr<middleman_event_handler> middleman_event_handler::create() {
     return std::unique_ptr<middleman_event_handler>{new middleman_event_handler_impl};
 }
 
-} } // namespace cppa::network
+} } // namespace cppa::io
+
+#else // defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
+
+int keep_compiler_happy_for_epoll_impl() { return 42; }
+
+#endif // defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)

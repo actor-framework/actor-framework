@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa CXX)
+project(cppa C CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
@@ -84,14 +84,6 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
-else ()
-  message(FATAL_ERROR "This platform is not supported by libcppa")
-endif()
-
 set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
     src/abstract_tuple.cpp
@@ -143,6 +135,8 @@ set(LIBCPPA_SRC
     src/message_header.cpp
     src/middleman.cpp
     src/middleman_event_handler.cpp
+    src/middleman_event_handler_epoll.cpp
+    src/middleman_event_handler_poll.cpp
     src/object.cpp
     src/object_array.cpp
     src/on.cpp
