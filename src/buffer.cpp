@@ -28,10 +28,12 @@
 \******************************************************************************/
 
 
+#include <atomic>
 #include <ios>      // std::ios_base::failure
 #include <cstring>
 #include <utility>
 
+#include "cppa/cppa.hpp"
 #include "cppa/util/buffer.hpp"
 #include "cppa/io/input_stream.hpp"
 
@@ -40,13 +42,12 @@ namespace cppa { namespace util {
 namespace {
 
 const size_t default_chunk_size = 512;
-const size_t default_max_size   = 16 * 1024 * 1024;
 
 } // namespace anonymous
 
 buffer::buffer()
 : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
-, m_chunk_size(default_chunk_size), m_max_buffer_size(default_max_size) { }
+, m_chunk_size(default_chunk_size), m_max_buffer_size(max_msg_size()) { }
 
 buffer::buffer(size_t chunk_size, size_t max_buffer_size)
 : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
@@ -62,7 +63,7 @@ buffer::buffer(buffer&& other)
 
 buffer::buffer(const buffer& other)
 : m_data(nullptr), m_written(0), m_allocated(0), m_final_size(0)
-, m_chunk_size(default_chunk_size), m_max_buffer_size(default_max_size) {
+, m_chunk_size(default_chunk_size), m_max_buffer_size(max_msg_size()) {
     write(other, grow_if_needed);
 }
 
