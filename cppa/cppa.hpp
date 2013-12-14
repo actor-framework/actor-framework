@@ -446,6 +446,18 @@ namespace cppa {
  */
 
 /**
+ * @brief Sets the maximum size of a message.
+ * @param size The maximum number of bytes a message may occupy.
+ */
+void max_msg_size(size_t size);
+
+/**
+ * @brief Retrieves the maximum size of messages.
+ * @returns The number maximum number of bytes a message may occupy.
+ */
+size_t max_msg_size();
+
+/**
  * @brief Sends a message to @p whom.
  *
  * <b>Usage example:</b>
