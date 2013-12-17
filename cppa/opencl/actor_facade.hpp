@@ -79,7 +79,8 @@ class actor_facade<Ret(Args...)> : public actor {
                                               result_mapping map_result,
                                               const dim_vec& global_dims,
                                               const dim_vec& offsets,
-                                              const dim_vec& local_dims) {
+                                              const dim_vec& local_dims,
+                                              size_t result_size) {
         if (global_dims.empty()) {
             auto str = "OpenCL kernel needs at least 1 global dimension.";
             CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
@@ -107,13 +108,20 @@ class actor_facade<Ret(Args...)> : public actor {
             CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
             throw std::runtime_error(oss.str());
         }
+        if (result_size == 0) {
+            result_size = std::accumulate(global_dims.begin(),
+                                          global_dims.end(),
+                                          1,
+                                          std::multiplies<size_t>{});
+        }
         return new actor_facade<Ret (Args...)>{prog,
                                                kernel,
                                                global_dims,
                                                offsets,
                                                local_dims,
                                                std::move(map_args),
-                                               std::move(map_result)};
+                                               std::move(map_result),
+                                               result_size};
     }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
@@ -130,7 +138,8 @@ class actor_facade<Ret(Args...)> : public actor {
                  const dim_vec& global_offsets,
                  const dim_vec& local_dimensions,
                  arg_mapping map_args,
-                 result_mapping map_result)
+                 result_mapping map_result,
+                 size_t result_size)
       : m_kernel(kernel)
       , m_program(prog.m_program)
       , m_context(prog.m_context)
@@ -140,6 +149,7 @@ class actor_facade<Ret(Args...)> : public actor {
       , m_local_dimensions(local_dimensions)
       , m_map_args(std::move(map_args))
       , m_map_result(std::move(map_result))
+      , m_result_size(result_size)
     {
         CPPA_LOG_TRACE("id: " << this->id());
     }
@@ -152,12 +162,9 @@ class actor_facade<Ret(Args...)> : public actor {
         auto opt = m_map_args(std::move(msg));
         if (opt) {
             response_handle handle{this, sender, id.response_id()};
-            size_t ret_size = std::accumulate(m_global_dimensions.begin(),
-                                              m_global_dimensions.end(),
-                                              1, std::multiplies<size_t>{});
             std::vector<mem_ptr> arguments;
             add_arguments_to_kernel<Ret>(arguments,
-                                         ret_size,
+                                         m_result_size,
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command<actor_facade, Ret>>(handle,
                                                                 this,
@@ -178,6 +185,7 @@ class actor_facade<Ret(Args...)> : public actor {
     dim_vec m_local_dimensions;
     arg_mapping m_map_args;
     result_mapping m_map_result;
+    size_t m_result_size;
 
     void add_arguments_to_kernel_rec(args_vec& arguments) {
         cl_int err{0};

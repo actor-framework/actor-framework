@@ -122,10 +122,11 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
                           const char* fname,
                           const opencl::dim_vec& dims,
                           const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+                          const opencl::dim_vec& local_dims = {},
+                          size_t result_size = 0) {
     using std::move;
     detail::cl_spawn_helper<Signature> f;
-    return f(prog, fname, dims, offset, local_dims);
+    return f(prog, fname, dims, offset, local_dims, result_size);
 }
 
 /**
@@ -140,13 +141,15 @@ inline actor_ptr spawn_cl(const char* source,
                           const char* fname,
                           const opencl::dim_vec& dims,
                           const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+                          const opencl::dim_vec& local_dims = {},
+                          size_t result_size = 0) {
     using std::move;
     return spawn_cl<Signature, Ts...>(opencl::program::create(source),
                                       fname,
                                       dims,
                                       offset,
-                                      local_dims);
+                                      local_dims,
+                                      result_size);
 }
 
 /**
@@ -165,7 +168,8 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
                           MapResult map_result,
                           const opencl::dim_vec& dims,
                           const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+                          const opencl::dim_vec& local_dims = {},
+                          size_t result_size = 0) {
     using std::move;
     typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
     typedef typename util::get_callable_trait<MapResult>::fun_type f1;
@@ -176,7 +180,8 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
              fname,
              dims,
              offset,
-             local_dims);
+             local_dims,
+             result_size);
 }
 
 /**
@@ -195,7 +200,8 @@ inline actor_ptr spawn_cl(const char* source,
                           MapResult map_result,
                           const opencl::dim_vec& dims,
                           const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+                          const opencl::dim_vec& local_dims = {},
+                          size_t result_size = 0) {
     using std::move;
     return spawn_cl(opencl::program::create(source),
                     fun_name,
@@ -203,7 +209,8 @@ inline actor_ptr spawn_cl(const char* source,
                     move(map_result),
                     dims,
                     offset,
-                    local_dims);
+                    local_dims,
+                    result_size);
 }
 
 } // namespace cppa
