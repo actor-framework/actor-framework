@@ -31,6 +31,7 @@
 #ifndef CPPA_CONTEXT_HPP
 #define CPPA_CONTEXT_HPP
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 
@@ -42,9 +43,10 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
+#include "cppa/actor_state.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/typed_actor.hpp"
-#include "cppa/mailbox_based.hpp"
+#include "cppa/spawn_options.hpp"
 #include "cppa/memory_cached.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/message_header.hpp"
@@ -58,6 +60,8 @@
 
 #include "cppa/detail/behavior_stack.hpp"
 
+#include "cppa/intrusive/single_reader_queue.hpp"
+
 namespace cppa {
 
 // forward declarations
@@ -66,21 +70,68 @@ class message_future;
 class local_scheduler;
 class sync_handle_helper;
 
-namespace detail { class receive_policy; }
+namespace util {
+struct fiber;
+} // namespace util
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn(Ts&&... args);
+
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn(Ts&&... args);
 
 /**
  * @brief Base class for local running Actors.
  * @extends actor
  */
-class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_based> {
-
-    friend class detail::receive_policy;
+class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     typedef combined_type super;
 
  public:
 
+    typedef detail::disposer del;
+
+    typedef intrusive::single_reader_queue<mailbox_element, del> mailbox_type;
+
     ~local_actor();
+
+    inline actor eval_opts(spawn_options opts, actor res) {
+        if (has_monitor_flag(opts)) {
+            monitor(res);
+        }
+        if (has_link_flag(opts)) {
+            link_to(res);
+        }
+        return res;
+    }
+
+
+    template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+    actor spawn(Ts&&... args) {
+        auto res = cppa::spawn<Impl, make_unbound(Options)>(std::forward<Ts>(args)...);
+        return eval_opts(Options, std::move(res));
+    }
+
+    template<spawn_options Options = no_spawn_options, typename... Ts>
+    actor spawn(Ts&&... args) {
+        auto res = cppa::spawn<make_unbound(Options)>(std::forward<Ts>(args)...);
+        return eval_opts(Options, std::move(res));
+    }
+
+    /**
+     * @brief Sends @p what to the receiver specified in @p dest.
+     */
+    void send_tuple(message_priority prio, const channel& dest, any_tuple what);
+
+    /**
+     * @brief Sends <tt>{what...}</tt> to the receiver specified in @p hdr.
+     * @pre <tt>sizeof...(Ts) > 0</tt>
+     */
+    template<typename... Ts>
+    void send(message_priority prio, const channel& whom, Ts&&... what) {
+        send_tuple(prio, whom, make_any_tuple(std::forward<Ts>(what)...));
+    }
 
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
@@ -95,6 +146,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     void send(const channel& whom, Ts&&... what) {
         send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
     }
+
+    void send_exit(const actor_addr& whom, std::uint32_t reason);
 
     /**
      * @brief Sends @p what as a synchronous message to @p whom.
@@ -128,8 +181,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     }
 
     template<typename... Ts>
-    message_future timed_sync_send(const util::duration& rtime,
-                                   const actor& dest,
+    message_future timed_sync_send(const actor& dest,
+                                   const util::duration& rtime,
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
@@ -145,6 +198,12 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     void delayed_send_tuple(const channel& dest,
                             const util::duration& rtime,
                             any_tuple data);
+
+    template<typename... Ts>
+    void delayed_send(const channel& dest, const util::duration& rtime,
+                      Ts&&... args) {
+        delayed_send_tuple(dest, rtime, make_any_tuple(std::forward<Ts>(args)...));
+    }
 
     /**
      * @brief Causes this actor to subscribe to the group @p what.
@@ -235,15 +294,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     }
 
     /**
-     * @brief Can be overridden to initialize an actor before any
-     *        message is handled.
-     * @warning Must not call blocking functions such as
-     *          {@link cppa::receive receive}.
-     * @note Calling {@link become} to set an initial behavior is supported.
-     */
-    virtual void init();
-
-    /**
      * @brief Can be overridden to perform cleanup code after an actor
      *        finished execution.
      * @warning Must not call any function manipulating the actor's state such
@@ -309,9 +359,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
         else quit(exit_reason::unhandled_sync_failure);
     }
 
-    local_actor(bool is_scheduled = false);
-
-    virtual bool initialized() const = 0;
+    local_actor();
 
     inline bool chaining_enabled();
 
@@ -332,19 +380,31 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
 
     inline void mark_arrived(message_id response_id);
 
-    //virtual void become_waiting_for(behavior, message_id) = 0;
-
-    //inline detail::behavior_stack& bhvr_stack();
-
-    //virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
-
-    //inline void do_become(const behavior& bhvr, bool discard_old);
-
     inline std::uint32_t planned_exit_reason() const;
 
     inline void planned_exit_reason(std::uint32_t value);
 
+    actor_state cas_state(actor_state expected, actor_state desired) {
+        auto e = expected;
+        do { if (m_state.compare_exchange_weak(e, desired)) return desired; }
+        while (e == expected);
+        return e;
+    }
+
+    inline void set_state(actor_state new_value) {
+        m_state.store(new_value);
+    }
+
+    inline actor_state state() const {
+        return m_state;
+    }
+
  protected:
+
+    template<typename... Ts>
+    inline mailbox_element* new_mailbox_element(Ts&&... args) {
+        return mailbox_element::create(std::forward<Ts>(args)...);
+    }
 
     void remove_handler(message_id id);
 
@@ -352,9 +412,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
 
     // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;
-
-    // true if this actor takes part in cooperative scheduling
-    bool m_is_scheduled;
 
     // identifies the ID of the last sent synchronous request
     message_id m_last_request_id;
@@ -372,11 +429,11 @@ class local_actor : public extend<abstract_actor>::with<memory_cached, mailbox_b
     // {group => subscription} map of all joined groups
     std::map<group_ptr, group::subscription> m_subscriptions;
 
-    // allows actors to keep previous behaviors and enables unbecome()
-    //detail::behavior_stack m_bhvr_stack;
-
     // set by quit
     std::uint32_t m_planned_exit_reason;
+
+    // the state of the (possibly cooperatively scheduled) actor
+    std::atomic<actor_state> m_state;
 
     /** @endcond */
 

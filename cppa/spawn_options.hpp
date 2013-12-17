@@ -173,6 +173,21 @@ constexpr bool has_blocking_api_flag(spawn_options opts) {
 
 /** @} */
 
+/** @cond PRIVATE */
+
+constexpr bool is_unbound(spawn_options opts) {
+    return !has_monitor_flag(opts) && !has_link_flag(opts);
+}
+
+constexpr spawn_options make_unbound(spawn_options opts) {
+    return static_cast<spawn_options>(
+                (static_cast<int>(opts)
+                 & ~static_cast<int>(spawn_options::link_flag))
+                & ~static_cast<int>(spawn_options::monitor_flag));
+}
+
+/** @endcond */
+
 } // namespace cppa
 
 #endif // CPPA_SPAWN_OPTIONS_HPP

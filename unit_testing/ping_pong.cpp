@@ -15,21 +15,21 @@ namespace {
 
 size_t s_pongs = 0;
 
-behavior ping_behavior(size_t num_pings) {
+behavior ping_behavior(local_actor* self, size_t num_pings) {
     return  (
-        on(atom("pong"), arg_match) >> [num_pings](int value) -> any_tuple {
+        on(atom("pong"), arg_match) >> [=](int value) -> any_tuple {
             CPPA_LOGF_ERROR_IF(!self->last_sender(), "last_sender() == nullptr");
             CPPA_LOGF_INFO("received {'pong', " << value << "}");
             //cout << to_string(self->last_dequeued()) << endl;
             if (++s_pongs >= num_pings) {
                 CPPA_LOGF_INFO("reached maximum, send {'EXIT', user_defined} "
                                << "to last sender and quit with normal reason");
-                send_exit(self->last_sender(), exit_reason::user_shutdown);
+                self->send_exit(self->last_sender(), exit_reason::user_shutdown);
                 self->quit();
             }
-            return {atom("ping"), value};
+            return make_any_tuple(atom("ping"), value);
         },
-        others() >> [] {
+        others() >> [=] {
             CPPA_LOGF_ERROR("unexpected message; "
                             << to_string(self->last_dequeued()));
             self->quit(exit_reason::user_shutdown);
@@ -37,13 +37,13 @@ behavior ping_behavior(size_t num_pings) {
     );
 }
 
-behavior pong_behavior() {
+behavior pong_behavior(local_actor* self) {
     return  (
         on(atom("ping"), arg_match) >> [](int value) -> any_tuple {
             CPPA_LOGF_INFO("received {'ping', " << value << "}");
-            return {atom("pong"), value + 1};
+            return make_any_tuple(atom("pong"), value + 1);
         },
-        others() >> [] {
+        others() >> [=] {
             CPPA_LOGF_ERROR("unexpected message; "
                             << to_string(self->last_dequeued()));
             self->quit(exit_reason::user_shutdown);
@@ -57,27 +57,27 @@ size_t pongs() {
     return s_pongs;
 }
 
-void ping(size_t num_pings) {
+void ping(blocking_untyped_actor* self, size_t num_pings) {
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
-    receive_loop(ping_behavior(num_pings));
+    self->receive_loop(ping_behavior(self, num_pings));
 }
 
-void event_based_ping(size_t num_pings) {
+void event_based_ping(untyped_actor* self, size_t num_pings) {
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
-    become(ping_behavior(num_pings));
+    self->become(ping_behavior(self, num_pings));
 }
 
-void pong(actor_ptr ping_actor) {
+void pong(blocking_untyped_actor* self, actor ping_actor) {
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
-    send(ping_actor, atom("pong"), 0); // kickoff
-    receive_loop(pong_behavior());
+    self->send(ping_actor, atom("pong"), 0); // kickoff
+    self->receive_loop(pong_behavior(self));
 }
 
-void event_based_pong(actor_ptr ping_actor) {
+void event_based_pong(untyped_actor* self, actor ping_actor) {
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
     CPPA_REQUIRE(ping_actor != nullptr);
-    send(ping_actor, atom("pong"), 0); // kickoff
-    become(pong_behavior());
+    self->send(ping_actor, atom("pong"), 0); // kickoff
+    self->become(pong_behavior(self));
 }

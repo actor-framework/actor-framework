@@ -46,7 +46,6 @@
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/uniform_type_info.hpp"
-#include "cppa/thread_mapped_actor.hpp"
 #include "cppa/binary_deserializer.hpp"
 
 #include "cppa/util/buffer.hpp"
@@ -347,9 +346,6 @@ class middleman_overseer : public continuable {
 middleman::~middleman() { }
 
 void middleman_loop(middleman_impl* impl) {
-#   ifdef CPPA_LOG_LEVEL
-    auto mself = make_counted<thread_mapped_actor>();
-#   endif
     middleman_event_handler* handler = impl->m_handler.get();
     CPPA_LOGF_TRACE("run middleman loop");
     CPPA_LOGF_INFO("middleman runs at "

@@ -10,9 +10,9 @@ void ping(cppa::blocking_untyped_actor*, size_t num_pings);
 
 void event_based_ping(cppa::untyped_actor*, size_t num_pings);
 
-void pong(cppa::blocking_untyped_actor*, cppa::actor_ptr ping_actor);
+void pong(cppa::blocking_untyped_actor*, cppa::actor ping_actor);
 
-void event_based_pong(cppa::untyped_actor*, cppa::actor_ptr ping_actor);
+void event_based_pong(cppa::untyped_actor*, cppa::actor ping_actor);
 
 // returns the number of messages ping received
 size_t pongs();

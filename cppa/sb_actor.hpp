@@ -35,7 +35,7 @@
 #include <type_traits>
 
 #include "cppa/util/dptr.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "cppa/untyped_actor.hpp"
 
 namespace cppa {
 
@@ -45,11 +45,11 @@ namespace cppa {
  *        to initialize the derived actor with its @p init_state member.
  * @tparam Derived Direct subclass of @p sb_actor.
  */
-template<class Derived, class Base = event_based_actor>
+template<class Derived, class Base = untyped_actor>
 class sb_actor : public Base {
 
-    static_assert(std::is_base_of<event_based_actor, Base>::value,
-                  "Base must be either event_based_actor or a derived type");
+    static_assert(std::is_base_of<untyped_actor, Base>::value,
+                  "Base must be either untyped_actor or a derived type");
 
  protected:
 
@@ -58,11 +58,11 @@ class sb_actor : public Base {
  public:
 
     /**
-     * @brief Overrides {@link event_based_actor::init()} and sets
+     * @brief Overrides {@link untyped_actor::init()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
-    void init() override {
-        become(util::dptr<Derived>(this)->init_state);
+    behavior make_behavior() override {
+        return util::dptr<Derived>(this)->init_state;
     }
 
  protected:

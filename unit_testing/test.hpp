@@ -60,6 +60,10 @@ inline std::string cppa_stream_arg(const cppa::actor& ptr) {
     return cppa::to_string(ptr);
 }
 
+inline std::string cppa_stream_arg(const cppa::actor_addr& ptr) {
+    return cppa::to_string(ptr);
+}
+
 inline std::string cppa_stream_arg(const bool& value) {
     return value ? "true" : "false";
 }

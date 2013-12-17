@@ -39,16 +39,10 @@
 #include "cppa/spawn_options.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
+#include "cppa/detail/functor_based_actor.hpp"
+#include "cppa/detail/functor_based_blocking_actor.hpp"
 
 namespace cppa {
-
-/** @cond PRIVATE */
-
-constexpr bool unbound_spawn_options(spawn_options opts) {
-    return !has_monitor_flag(opts) && !has_link_flag(opts);
-}
-
-/** @endcond */
 
 /**
  * @ingroup ActorCreation
@@ -58,17 +52,21 @@ constexpr bool unbound_spawn_options(spawn_options opts) {
 /**
  * @brief Spawns an actor of type @p Impl.
  * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Options, typename... Ts>
 actor spawn(Ts&&... args) {
-    static_assert(std::is_base_of<event_based_actor, Impl>::value,
-                  "Impl is not a derived type of event_based_actor");
-    static_assert(unbound_spawn_options(Options),
+    static_assert(std::is_base_of<untyped_actor, Impl>::value ||
+                  (std::is_base_of<blocking_untyped_actor, Impl>::value &&
+                   has_blocking_api_flag(Options)),
+                  "Impl is not a derived type of untyped_actor or "
+                  "is a derived type of blocking_untyped_actor but "
+                  "blocking_api_flag is missing");
+    static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
-    static_assert(unbound_spawn_options(Options),
+    static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
     using scheduling_policy = typename std::conditional<
                                   has_detach_flag(Options),
@@ -100,6 +98,8 @@ actor spawn(Ts&&... args) {
                                              resume_policy,
                                              invoke_policy>;
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
+    ptr->launch();
+    return ptr;
     /*
     scheduled_actor_ptr ptr;
     if (has_priority_aware_flag(Options)) {
@@ -121,7 +121,8 @@ actor spawn(Ts&&... args) {
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-template<spawn_options Options = no_spawn_options, typename... Ts>
+//template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Options, typename... Ts>
 actor spawn(Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     using base_class = typename std::conditional<
@@ -129,13 +130,7 @@ actor spawn(Ts&&... args) {
                            detail::functor_based_blocking_actor,
                            detail::functor_based_actor
                        >::type;
-    return spawn<base_class>(std::forward<Ts>(args)...);
-    using impl = detail::proper_actor<untyped_actor,
-                                      scheduling_policy,
-                                      priority_policy,
-                                      resume_policy,
-                                      invoke_policy>;
-    return make_counted<impl>();
+    return spawn<base_class, Options>(std::forward<Ts>(args)...);
 }
 
 /**
@@ -163,7 +158,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
 /**
  * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
  * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.

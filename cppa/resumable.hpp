@@ -28,87 +28,32 @@
 \******************************************************************************/
 
 
-#include "cppa/cppa.hpp"
-#include "cppa/group.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-#include "cppa/util/upgrade_lock_guard.hpp"
-
-#include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#ifndef CPPA_RESUMABLE_HPP
+#define CPPA_RESUMABLE_HPP
 
 namespace cppa {
 
-intrusive_ptr<group> group::get(const std::string& arg0,
-                                const std::string& arg1) {
-    return get_group_manager()->get(arg0, arg1);
-}
+namespace util {
+struct fiber;
+} // namespace util
 
-intrusive_ptr<group> group::anonymous() {
-    return get_group_manager()->anonymous();
-}
+struct resumable {
 
-void group::add_module(group::unique_module_ptr ptr) {
-    get_group_manager()->add_module(std::move(ptr));
-}
+    enum resume_result {
+        resume_later,
+        done
+    };
 
-group::module_ptr group::get_module(const std::string& module_name) {
-    return get_group_manager()->get_module(module_name);
-}
+    // intrusive next pointer needed to use
+    // 'resumable' with 'single_reader_queue'
+    resumable* next;
 
-group::subscription::subscription(const channel& s,
-                                  const intrusive_ptr<group>& g)
-: m_subscriber(s), m_group(g) { }
+    virtual ~resumable();
 
-group::subscription::~subscription() {
-    if (valid()) m_group->unsubscribe(m_subscriber);
-}
+    virtual resume_result resume(util::fiber*) = 0;
 
-group::module::module(std::string name) : m_name(std::move(name)) { }
-
-const std::string& group::module::name() {
-    return m_name;
-}
-
-group::group(group::module_ptr mod, std::string id)
-: m_module(mod), m_identifier(std::move(id)) { }
-
-const std::string& group::identifier() const {
-    return m_identifier;
-}
-
-group::module_ptr group::get_module() const {
-    return m_module;
-}
-
-const std::string& group::module_name() const {
-    return get_module()->name();
-}
-
-struct group_nameserver : untyped_actor {
-    behavior make_behavior() override {
-        return (
-            on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), group::get("local", name));
-            },
-            on(atom("SHUTDOWN")) >> [=] {
-                quit();
-            }
-        );
-    }
 };
 
-void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn<group_nameserver, hidden>();
-    try {
-        publish(gn, port, addr);
-    }
-    catch (std::exception&) {
-        gn.enqueue({invalid_actor_addr, nullptr}, make_any_tuple(atom("SHUTDOWN")));
-        throw;
-    }
-}
-
 } // namespace cppa
+
+#endif // CPPA_RESUMABLE_HPP

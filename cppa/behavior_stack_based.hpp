@@ -28,12 +28,9 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_STACKLESS_HPP
-#define CPPA_STACKLESS_HPP
+#ifndef CPPA_BEHAVIOR_STACK_BASED_HPP
+#define CPPA_BEHAVIOR_STACK_BASED_HPP
 
-#include "cppa/util/dptr.hpp"
-
-#include "cppa/detail/receive_policy.hpp"
 #include "cppa/detail/behavior_stack.hpp"
 
 namespace cppa {
@@ -41,14 +38,14 @@ namespace cppa {
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Policy tag that causes {@link event_based_actor::become} to
+ * @brief Policy tag that causes {@link untyped_actor::become} to
  *        discard the current behavior.
  * @relates local_actor
  */
 constexpr auto discard_behavior;
 
 /**
- * @brief Policy tag that causes {@link event_based_actor::become} to
+ * @brief Policy tag that causes {@link untyped_actor::become} to
  *        keep the current behavior available.
  * @relates local_actor
  */
@@ -75,25 +72,14 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 #endif
 
 template<class Base, class Subtype>
-class stackless : public Base {
-
- protected:
-
-    typedef stackless combined_type;
+class behavior_stack_based : public Base {
 
  public:
 
-    template<typename... Ts>
-    stackless(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    typedef behavior_stack_based combined_type;
 
-    static constexpr auto receive_flag = detail::rp_sequential;
-
-    bool has_behavior() {
-        return this->m_bhvr_stack.empty() == false;
-    }
-
-    void unbecome() {
-        this->m_bhvr_stack.pop_async_back();
+    inline void unbecome() {
+        m_bhvr_stack.pop_async_back();
     }
 
     /**
@@ -110,49 +96,35 @@ class stackless : public Base {
                                      std::forward<Ts>(args)...),
                   true);
     }
-    
+
     template<bool Discard, typename... Ts>
     inline void become(behavior_policy<Discard>, Ts&&... args) {
         do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
     }
-    
+
     void become_waiting_for(behavior bhvr, message_id mf) {
         if (bhvr.timeout().valid()) {
-            this->reset_timeout();
-            this->request_timeout(bhvr.timeout());
+            //FIXME
         }
-        this->m_bhvr_stack.push_back(std::move(bhvr), mf);
+        m_bhvr_stack.push_back(std::move(bhvr), mf);
     }
 
     void do_become(behavior&& bhvr, bool discard_old) {
-        this->reset_timeout();
-        this->request_timeout(bhvr.timeout());
-        if (discard_old) this->m_bhvr_stack.pop_async_back();
-        this->m_bhvr_stack.push_back(std::move(bhvr));
+        if (discard_old) m_bhvr_stack.pop_async_back();
+        m_bhvr_stack.push_back(std::move(bhvr));
     }
 
     inline bool has_behavior() const {
-        return this->m_bhvr_stack.empty() == false;
-    }
-    
-    inline behavior& get_behavior() {
-        CPPA_REQUIRE(this->m_bhvr_stack.empty() == false);
-        return this->m_bhvr_stack.back();
-    }
-    
-    inline void handle_timeout(behavior& bhvr) {
-        CPPA_REQUIRE(bhvr.timeout().valid());
-        this->reset_timeout();
-        bhvr.handle_timeout();
-        if (this->m_bhvr_stack.empty() == false) {
-            this->request_timeout(get_behavior().timeout());
-        }
+        return m_bhvr_stack.empty() == false;
     }
 
-    void exec_bhvr_stack() {
-        while (!m_bhvr_stack.empty()) {
-            m_bhvr_stack.exec(m_recv_policy, util::dptr<Subtype>(this));
-        }
+    inline behavior& get_behavior() {
+        CPPA_REQUIRE(m_bhvr_stack.empty() == false);
+        return m_bhvr_stack.back();
+    }
+
+    inline void handle_timeout(behavior& bhvr) {
+        bhvr.handle_timeout();
     }
 
     inline detail::behavior_stack& bhvr_stack() {
@@ -168,11 +140,8 @@ class stackless : public Base {
     // allows actors to keep previous behaviors and enables unbecome()
     detail::behavior_stack m_bhvr_stack;
 
-    // used for message handling in subclasses
-    detail::receive_policy m_recv_policy;
-
 };
 
 } // namespace cppa
 
-#endif // CPPA_STACKLESS_HPP
+#endif // CPPA_BEHAVIOR_STACK_BASED_HPP

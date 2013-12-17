@@ -25,7 +25,7 @@
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
- \******************************************************************************/
+\******************************************************************************/
 
 
 #include <utility>
@@ -38,6 +38,8 @@
 namespace cppa {
 
 actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
+
+actor::actor(const invalid_actor_t&) : m_ops(nullptr) { }
 
 void actor::enqueue(const message_header& hdr, any_tuple msg) const {
     if (m_ops.m_ptr) m_ops.m_ptr->enqueue(hdr, std::move(msg));

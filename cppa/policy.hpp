@@ -33,10 +33,14 @@
 
 #include "cppa/policy/no_resume.hpp"
 #include "cppa/policy/prioritizing.hpp"
+#include "cppa/policy/no_scheduling.hpp"
+#include "cppa/policy/invoke_policy.hpp"
 #include "cppa/policy/nestable_invoke.hpp"
+#include "cppa/policy/not_prioritizing.hpp"
 #include "cppa/policy/sequential_invoke.hpp"
 #include "cppa/policy/event_based_resume.hpp"
-#include "cppa/policy/invoke_policy_base.hpp"
+#include "cppa/policy/middleman_scheduling.hpp"
+#include "cppa/policy/cooperative_scheduling.hpp"
 #include "cppa/policy/context_switching_resume.hpp"
 
 #endif // CPPA_POLICY_HPP

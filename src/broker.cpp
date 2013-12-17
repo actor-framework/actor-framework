@@ -49,7 +49,8 @@ using std::cout;
 using std::endl;
 using std::move;
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 namespace {
 
@@ -57,31 +58,20 @@ constexpr size_t default_max_buffer_size = 65535;
 
 } // namespace <anonymous>
 
-class default_broker : public broker {
+default_broker::default_broker(input_stream_ptr in,
+                               output_stream_ptr out,
+                               function_type f)
+    : broker(std::move(in), std::move(out)), m_fun(std::move(f)) { }
 
- public:
-
-    typedef std::function<void (broker*)> function_type;
-
-    template<typename... Ts>
-    default_broker(function_type&& fun, Ts&&... args)
-    : broker{std::forward<Ts>(args)...}, m_fun{move(fun)} { }
-
-    void init() override {
-        enqueue({invalid_actor_addr, channel{this}}, make_any_tuple(atom("INITMSG")));
-        become(
-            on(atom("INITMSG")) >> [=] {
-                unbecome();
-                m_fun(this);
-            }
-        );
-    }
-
- private:
-
-    function_type m_fun;
-
-};
+behavior default_broker::make_behavior() {
+    enqueue({invalid_actor_addr, channel{this}}, make_any_tuple(atom("INITMSG")));
+    return (
+        on(atom("INITMSG")) >> [=] {
+            unbecome();
+            m_fun(this);
+        }
+    );
+}
 
 class broker::continuation {
 
@@ -299,24 +289,23 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     try {
         using detail::receive_policy;
         auto bhvr = m_bhvr_stack.back();
-        switch (m_recv_policy.handle_message(this,
-                                             &m_dummy_node,
-                                             bhvr,
-                                             m_bhvr_stack.back_id(),
-                                             receive_policy::sequential{})) {
-            case receive_policy::hm_msg_handled: {
+        switch (m_invoke.handle_message(this,
+                                        &m_dummy_node,
+                                        bhvr,
+                                        m_bhvr_stack.back_id())) {
+            case policy::hm_msg_handled: {
                 if  ( not m_bhvr_stack.empty()
                    && bhvr.as_behavior_impl() == m_bhvr_stack.back().as_behavior_impl()) {
-                   m_recv_policy.invoke_from_cache(this, bhvr, m_bhvr_stack.back_id());
+                   m_invoke.invoke_from_cache(this, bhvr, m_bhvr_stack.back_id());
                 }
                 break;
             }
-            case receive_policy::hm_drop_msg:
+            case policy::hm_drop_msg:
                 break;
-            case receive_policy::hm_skip_msg:
-            case receive_policy::hm_cache_msg: {
+            case policy::hm_skip_msg:
+            case policy::hm_cache_msg: {
                 auto e = mailbox_element::create(hdr, move(m_dummy_node.msg));
-                m_recv_policy.add_to_cache(e);
+                m_invoke.add_to_cache(e);
                 break;
             }
             default: CPPA_CRITICAL("illegal result of handle_message");
@@ -398,7 +387,7 @@ void broker::write(const connection_handle& hdl, util::buffer&& buf) {
 }
 
 local_actor_ptr init_and_launch(broker_ptr ptr) {
-    ptr->init();
+    //ptr->init();
     // continue reader only if not inherited from default_broker_impl
     CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
     auto mm = get_middleman();
@@ -421,6 +410,7 @@ local_actor_ptr init_and_launch(broker_ptr ptr) {
     return ptr;
 }
 
+/*
 broker_ptr broker::from_impl(std::function<void (broker*)> fun,
                              input_stream_ptr in,
                              output_stream_ptr out) {
@@ -430,6 +420,7 @@ broker_ptr broker::from_impl(std::function<void (broker*)> fun,
 broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
     return make_counted<default_broker>(move(fun), move(in));
 }
+*/
 
 
 void broker::erase_io(int id) {
@@ -454,16 +445,19 @@ accept_handle broker::add_doorman(acceptor_uptr ptr) {
     return id;
 }
 
-actor_addr broker::fork_impl(std::function<void (broker*)> fun,
-                             connection_handle hdl) {
+actor broker::fork_impl(std::function<void (broker*)> fun,
+                        connection_handle hdl) {
     auto i = m_io.find(hdl);
     if (i == m_io.end()) throw std::invalid_argument("invalid handle");
+    /*FIXME
     scribe* sptr = i->second.get(); // non-owning pointer
     auto result = make_counted<default_broker>(move(fun), move(i->second));
     init_and_launch(result);
     sptr->set_broker(result); // set new broker
     m_io.erase(i);
     return {result};
+    */
+    return nullptr;
 }
 
 void broker::receive_policy(const connection_handle& hdl,
@@ -473,4 +467,5 @@ void broker::receive_policy(const connection_handle& hdl,
     if (i != m_io.end()) i->second->receive_policy(policy, buffer_size);
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa

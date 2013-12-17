@@ -42,7 +42,6 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/untyped_actor.hpp"
 #include "cppa/message_header.hpp"
-#include "cppa/event_based_actor.hpp"
 
 #include "cppa/io/middleman.hpp"
 
@@ -133,13 +132,13 @@ class local_group : public group {
 
 typedef intrusive_ptr<local_group> local_group_ptr;
 
-class local_broker : public event_based_actor {
+class local_broker : public untyped_actor {
 
  public:
 
     local_broker(local_group_ptr g) : m_group(move(g)) { }
 
-    behavior make_behavior() {
+    behavior make_behavior() override {
         return (
             on(atom("JOIN"), arg_match) >> [=](const actor_addr& other) {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$JOIN",
@@ -256,7 +255,7 @@ class local_group_proxy : public local_group {
 
 typedef intrusive_ptr<local_group_proxy> local_group_proxy_ptr;
 
-class proxy_broker : public event_based_actor {
+class proxy_broker : public untyped_actor {
 
  public:
 
@@ -496,7 +495,7 @@ class remote_group_module : public group::module {
                                 }
                             }
                         }
-                        self->timed_sync_send(chrono::seconds(10), nameserver, atom("GET_GROUP"), name).then (
+                        self->timed_sync_send(nameserver, chrono::seconds(10), atom("GET_GROUP"), name).then (
                             on(atom("GROUP"), arg_match) >> [&](const group_ptr& g) {
                                 auto gg = dynamic_cast<local_group*>(g.get());
                                 if (gg) {

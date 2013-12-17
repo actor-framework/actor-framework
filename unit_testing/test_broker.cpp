@@ -135,7 +135,8 @@ int main(int argc, char** argv) {
                 CPPA_CHECKPOINT();
                 auto p = spawn(ping, 10);
                 CPPA_CHECKPOINT();
-                auto cl = spawn_io(peer, "localhost", port, p);
+                //FIXME auto cl = spawn_io(peer, "localhost", port, p);
+                actor cl;
                 CPPA_CHECKPOINT();
                 send_as(nullptr, p, atom("kickoff"), cl);
                 CPPA_CHECKPOINT();
@@ -154,7 +155,7 @@ int main(int argc, char** argv) {
     uint16_t port = 4242;
     for (;;) {
         try {
-            spawn_io_server(peer_acceptor, port, p);
+            //FIXME: spawn_io_server(peer_acceptor, port, p);
             CPPA_CHECKPOINT();
             ostringstream oss;
             oss << app_path << " mode=client port=" << port << " &>/dev/null";

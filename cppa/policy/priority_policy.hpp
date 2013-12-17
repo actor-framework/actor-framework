@@ -62,7 +62,7 @@ class priority_policy {
      * for re-scheduling.
      */
     template<class Actor, typename F>
-    bool fetch_messages(Actor* self);
+    bool fetch_messages(Actor* self, F cb);
 
 
 };

@@ -46,7 +46,6 @@
 #include "cppa/behavior.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/sb_actor.hpp"
-#include "cppa/threaded.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
@@ -56,14 +55,12 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/prioritizing.hpp"
+#include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/untyped_actor.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/response_handle.hpp"
-#include "cppa/scheduled_actor.hpp"
-#include "cppa/event_based_actor.hpp"
 #include "cppa/blocking_untyped_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
@@ -79,7 +76,6 @@
 #include "cppa/io/connection_handle.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/get_behavior.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
 /**
@@ -436,8 +432,7 @@
 
 namespace cppa {
 
-template<typename... Ts>
-void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
+inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
     to.enqueue({from->address(), to}, std::move(msg));
 }
 
@@ -450,6 +445,23 @@ template<typename... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... args) {
     send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
 }
+
+inline void anon_send_tuple(const channel& to, any_tuple msg) {
+    to.enqueue({invalid_actor_addr, to}, std::move(msg));
+}
+
+/**
+ * @brief Anonymously sends a message to @p receiver;
+ */
+template<typename... Ts>
+inline void anon_send(const channel& receiver, Ts&&... args) {
+    anon_send_tuple(receiver, make_any_tuple(std::forward<Ts>(args)...));
+}
+
+inline void anon_send_exit(const actor_addr&, std::uint32_t) {
+
+}
+
 /**
  * @brief Blocks execution of this actor until all
  *        other actors finished execution.
@@ -517,10 +529,16 @@ template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor spawn_io(io::input_stream_ptr in,
                io::output_stream_ptr out,
                Ts&&... args) {
-    using namespace io;
-    using namespace std;
-    auto ptr = make_counted<Impl>(move(in), move(out), forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+    using namespace policy;
+    using proper_impl = detail::proper_actor<Impl,
+                                             middleman_scheduling,
+                                             not_prioritizing,
+                                             no_resume,
+                                             cooperative_scheduling>;
+    auto ptr = make_counted<proper_impl>(std::move(in), std::move(out),
+                                         std::forward<Ts>(args)...);
+    ptr->launch();
+    return ptr;
 }
 
 /**
@@ -530,16 +548,12 @@ actor spawn_io(io::input_stream_ptr in,
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>,
-         typename... Ts>
+         typename F = std::function<void (io::broker*)>>
 actor spawn_io(F fun,
                io::input_stream_ptr in,
-               io::output_stream_ptr out,
-               Ts&&... args) {
-    using namespace std;
-    auto ptr = io::broker::from(move(fun), move(in), move(out),
-                                forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+               io::output_stream_ptr out) {
+    return spawn_io<io::default_broker>(std::move(fun), std::move(in),
+                                        std::move(out));
 }
 
 /*
@@ -551,21 +565,17 @@ actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
 */
 
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>,
-         typename... Ts>
-actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
+         typename F = std::function<void (io::broker*)>>
+actor spawn_io(F fun, const std::string& host, uint16_t port) {
     auto ptr = io::ipv4_io_stream::connect_to(host.c_str(), port);
-    return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
+    return spawn_io(std::move(fun), ptr, ptr);
 }
 
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>,
-         typename... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+         typename F = std::function<void (io::broker*)>>
+actor spawn_io_server(F fun, uint16_t port) {
     using namespace std;
-    auto ptr = io::broker::from(move(fun), io::ipv4_acceptor::create(port),
-                                forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+    return spawn_io(move(fun), io::ipv4_acceptor::create(port));
 }
 
 /**

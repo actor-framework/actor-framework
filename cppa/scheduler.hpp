@@ -41,8 +41,8 @@
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/cow_tuple.hpp"
+#include "cppa/resumable.hpp"
 #include "cppa/attachable.hpp"
-#include "cppa/local_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -52,7 +52,7 @@ namespace cppa {
 class untyped_actor;
 class scheduled_actor;
 class scheduler_helper;
-class event_based_actor;
+class untyped_actor;
 typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
 namespace detail { class singleton_manager; } // namespace detail
 
@@ -83,12 +83,9 @@ class scheduler {
 
  public:
 
-    typedef std::function<void(local_actor*)> init_callback;
-    typedef std::function<behavior(untyped_actor*)> actor_fun;
+    actor printer() const;
 
-    const actor& printer() const;
-
-    virtual void enqueue(scheduled_actor*) = 0;
+    virtual void enqueue(resumable*) = 0;
 
     /**
      * @brief Informs the scheduler about a converted context
@@ -128,33 +125,13 @@ class scheduler {
         //TODO: delayed_send_helper()->enqueue(nullptr, std::move(tup));
     }
 
-    /**
-     * @brief Executes @p ptr in this scheduler.
-     */
-    virtual local_actor_ptr exec(spawn_options opts,
-                                 scheduled_actor_ptr ptr) = 0;
-
-    /**
-     * @brief Creates a new actor from @p actor_behavior and executes it
-     *        in this scheduler.
-     */
-    virtual local_actor_ptr exec(spawn_options opts,
-                                 init_callback init_cb,
-                                 actor_fun actor_behavior) = 0;
-
-    template<typename F, typename T, typename... Ts>
-    local_actor_ptr exec(spawn_options opts, init_callback cb,
-                         F f, T&& a0, Ts&&... as) {
-        return this->exec(opts, cb, std::bind(f, std::forward<T>(a0), std::forward<Ts>(as)...));
-    }
-
  private:
 
     static scheduler* create_singleton();
 
     inline void dispose() { delete this; }
 
-    actor& delayed_send_helper();
+    actor delayed_send_helper();
 
     scheduler_helper* m_helper;
 

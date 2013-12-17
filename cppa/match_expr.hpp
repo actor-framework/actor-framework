@@ -64,7 +64,7 @@ template<typename T1, typename T2>
 inline const T2& deduce_const(const T1&, T2& rhs) { return rhs; }
 
 template<class FilteredPattern>
-struct invoke_policy_base {
+struct invoke_util_base {
     typedef FilteredPattern filtered_pattern;
     typedef typename pseudo_tuple_from_type_list<filtered_pattern>::type
             tuple_type;
@@ -72,9 +72,9 @@ struct invoke_policy_base {
 
 // covers wildcard_position::multiple and wildcard_position::in_between
 template<wildcard_position, class Pattern, class FilteredPattern>
-struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
+struct invoke_util_impl : invoke_util_base<FilteredPattern> {
 
-    typedef invoke_policy_base<FilteredPattern> super;
+    typedef invoke_util_base<FilteredPattern> super;
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& type_token,
@@ -113,12 +113,12 @@ struct invoke_policy_impl : invoke_policy_base<FilteredPattern> {
 };
 
 template<>
-struct invoke_policy_impl<wildcard_position::nil,
+struct invoke_util_impl<wildcard_position::nil,
                           util::empty_type_list,
                           util::empty_type_list  >
-: invoke_policy_base<util::empty_type_list> {
+: invoke_util_base<util::empty_type_list> {
 
-    typedef invoke_policy_base<util::empty_type_list> super;
+    typedef invoke_util_base<util::empty_type_list> super;
 
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type&,
@@ -137,12 +137,12 @@ struct invoke_policy_impl<wildcard_position::nil,
 };
 
 template<class Pattern, typename... Ts>
-struct invoke_policy_impl<wildcard_position::nil,
+struct invoke_util_impl<wildcard_position::nil,
                           Pattern,
                           util::type_list<Ts...>>
-: invoke_policy_base<util::type_list<Ts...>> {
+: invoke_util_base<util::type_list<Ts...>> {
 
-    typedef invoke_policy_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<util::type_list<Ts...>> super;
 
     typedef typename super::tuple_type tuple_type;
 
@@ -242,12 +242,12 @@ struct invoke_policy_impl<wildcard_position::nil,
 };
 
 template<>
-struct invoke_policy_impl<wildcard_position::leading,
+struct invoke_util_impl<wildcard_position::leading,
                           util::type_list<anything>,
                           util::empty_type_list>
-: invoke_policy_base<util::empty_type_list> {
+: invoke_util_base<util::empty_type_list> {
 
-    typedef invoke_policy_base<util::empty_type_list> super;
+    typedef invoke_util_base<util::empty_type_list> super;
 
     template<class Tuple>
     static inline bool can_invoke(const std::type_info&, const Tuple&) {
@@ -266,12 +266,12 @@ struct invoke_policy_impl<wildcard_position::leading,
 };
 
 template<class Pattern, typename... Ts>
-struct invoke_policy_impl<wildcard_position::trailing,
+struct invoke_util_impl<wildcard_position::trailing,
                           Pattern,
                           util::type_list<Ts...>>
-: invoke_policy_base<util::type_list<Ts...>> {
+: invoke_util_base<util::type_list<Ts...>> {
 
-    typedef invoke_policy_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<util::type_list<Ts...>> super;
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types,
@@ -308,12 +308,12 @@ struct invoke_policy_impl<wildcard_position::trailing,
 };
 
 template<class Pattern, typename... Ts>
-struct invoke_policy_impl<wildcard_position::leading,
+struct invoke_util_impl<wildcard_position::leading,
                           Pattern,
                           util::type_list<Ts...>>
-: invoke_policy_base<util::type_list<Ts...>> {
+: invoke_util_base<util::type_list<Ts...>> {
 
-    typedef invoke_policy_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<util::type_list<Ts...>> super;
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types,
@@ -352,8 +352,8 @@ struct invoke_policy_impl<wildcard_position::leading,
 };
 
 template<class Pattern>
-struct invoke_policy
-        : invoke_policy_impl<
+struct invoke_util
+        : invoke_util_impl<
             get_wildcard_position<Pattern>(),
             Pattern,
             typename util::tl_filter_not_type<Pattern, anything>::type> {
@@ -507,7 +507,7 @@ Result unroll_expr(PPFPs& fs,
     auto& f = get<N>(fs);
     typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
-    typedef detail::invoke_policy<pattern_type> policy;
+    typedef detail::invoke_util<pattern_type> policy;
     typename policy::tuple_type targs;
     if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
         auto is = util::get_indices(targs);
@@ -536,7 +536,7 @@ inline bool can_unroll_expr(PPFPs& fs,
     auto& f = get<N>(fs);
     typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
-    typedef detail::invoke_policy<pattern_type> policy;
+    typedef detail::invoke_util<pattern_type> policy;
     return policy::can_invoke(arg_types, tup);
 }
 
@@ -556,7 +556,7 @@ inline std::uint64_t calc_bitmask(PPFPs& fs,
     auto& f = get<N>(fs);
     typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
-    typedef detail::invoke_policy<pattern_type> policy;
+    typedef detail::invoke_util<pattern_type> policy;
     std::uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
     return result | calc_bitmask(fs, long_constant<N-1l>(), tinf, tup);
 }

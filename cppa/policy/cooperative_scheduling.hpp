@@ -31,6 +31,17 @@
 #ifndef CPPA_COOPERATIVE_SCHEDULING_HPP
 #define CPPA_COOPERATIVE_SCHEDULING_HPP
 
+#include <atomic>
+
+#include "cppa/any_tuple.hpp"
+#include "cppa/resumable.hpp"
+#include "cppa/actor_state.hpp"
+#include "cppa/message_header.hpp"
+
+#include "cppa/detail/yield_interface.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
+
 namespace cppa { namespace policy {
 
 class cooperative_scheduling {
@@ -49,12 +60,12 @@ class cooperative_scheduling {
     // this does return nullptr
     template<class Actor, typename F>
     void fetch_messages(Actor* self, F cb) {
-        auto e = self->m_mailbox.try_pop();
+        auto e = self->mailbox().try_pop();
         while (e == nullptr) {
-            if (self->m_mailbox.can_fetch_more() == false) {
+            if (self->mailbox().can_fetch_more() == false) {
                 self->set_state(actor_state::about_to_block);
                 // make sure mailbox is empty
-                if (self->m_mailbox.can_fetch_more()) {
+                if (self->mailbox().can_fetch_more()) {
                     // someone preempt us => continue
                     self->set_state(actor_state::ready);
                 }
@@ -65,7 +76,7 @@ class cooperative_scheduling {
         // ok, we have at least one message
         while (e) {
             cb(e);
-            e = self->m_mailbox.try_pop();
+            e = self->mailbox().try_pop();
         }
     }
 
@@ -75,6 +86,59 @@ class cooperative_scheduling {
         // which will trigger a timeout message
         fetch_messages(self, cb);
     }
+
+    template<class Actor>
+    inline void launch(Actor*) {
+        static_cast<void>(m_hidden);
+    }
+
+    template<class Actor>
+    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+        auto e = self->new_mailbox_element(hdr, std::move(msg));
+        switch (self->mailbox().enqueue(e)) {
+            case intrusive::first_enqueued: {
+                auto state = self->state();
+                auto set_ready = [&]() -> bool {
+                    auto s = self->cas_state(state, actor_state::ready);
+                    return s == actor_state::ready;
+                };
+                for (;;) {
+                    switch (state) {
+                        case actor_state::blocked: {
+                            if (set_ready()) {
+                                CPPA_REQUIRE(m_scheduler != nullptr);
+                                //m_scheduler->enqueue(this);
+                                return;
+                            }
+                            break;
+                        }
+                        case actor_state::about_to_block: {
+                            if (set_ready()) {
+                                return;
+                            }
+                            break;
+                        }
+                        default: return;
+                    }
+                }
+                break;
+            }
+            case intrusive::queue_closed: {
+                if (hdr.id.is_request()) {
+                    //FIXME
+                    //detail::sync_request_bouncer f{exit_reason()};
+                    //f(hdr.sender, hdr.id);
+                }
+                break;
+            }
+            default: break;
+        }
+    }
+
+ private:
+
+    // denotes whether this actor is ignored by await_all_actors_done()
+    bool m_hidden;
 
 };
 

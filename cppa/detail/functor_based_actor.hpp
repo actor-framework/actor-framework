@@ -31,13 +31,100 @@
 #ifndef CPPA_FUNCTOR_BASED_ACTOR_HPP
 #define CPPA_FUNCTOR_BASED_ACTOR_HPP
 
+#include <type_traits>
+
 #include "cppa/untyped_actor.hpp"
 
 namespace cppa { namespace detail {
 
 class functor_based_actor : public untyped_actor {
 
+ public:
 
+    typedef std::function<behavior(untyped_actor*)> make_behavior_fun;
+
+    typedef std::function<void(untyped_actor*)> void_fun;
+
+    template<typename F, typename... Ts>
+    functor_based_actor(F f, Ts&&... vs) {
+        untyped_actor* dummy = nullptr;
+        create(dummy, f, std::forward<Ts>(vs)...);
+    }
+
+    behavior make_behavior() override;
+
+ private:
+
+    void create(untyped_actor*, void_fun);
+
+    template<class Actor, typename F, typename... Ts>
+    auto create(Actor*, F f, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_convertible<
+            decltype(f(std::forward<Ts>(vs)...)),
+            behavior
+        >::value
+    >::type {
+        auto fun = std::bind(f, std::forward<Ts>(vs)...);
+        m_make_behavior = [fun](Actor*) -> behavior { return fun(); };
+    }
+
+    template<class Actor, typename F, typename... Ts>
+    auto create(Actor* dummy, F f, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_convertible<
+            decltype(f(dummy, std::forward<Ts>(vs)...)),
+            behavior
+        >::value
+    >::type {
+        auto fun = std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...);
+        m_make_behavior = [fun](Actor* self) -> behavior { return fun(self); };
+    }
+
+    template<class Actor, typename F, typename... Ts>
+    auto create(Actor*, F f, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_same<
+            decltype(f(std::forward<Ts>(vs)...)),
+            void
+        >::value
+    >::type {
+        std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
+        m_make_behavior = [fun](Actor*) -> behavior {
+            fun();
+            return behavior{};
+        };
+    }
+
+    template<class Actor, typename F, typename... Ts>
+    auto create(Actor* dummy, F f, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_same<
+            decltype(f(dummy, std::forward<Ts>(vs)...)),
+            void
+        >::value
+    >::type {
+        std::function<void(Actor*)> fun = std::bind(f, std::placeholders::_1,
+                                                    std::forward<Ts>(vs)...);
+        m_make_behavior = [fun](Actor* self) -> behavior {
+            fun(self);
+            return behavior{};
+        };
+    }
+
+    /*
+    template<class Actor, typename F, typename T0, typename... Ts>
+    void create(void*, F, T0&&, Ts&&...) {
+        // this overload acts as 'catch-all' rule to
+        // give the user a clear hint at what's wrong
+        // with the provided functor
+        static_assert(sizeof...(Ts) != sizeof...(Ts),
+                      "spawn: provided functor must either return 'void'' "
+                      "or 'cppa::behavior'");
+    }
+    */
+
+    make_behavior_fun m_make_behavior;
 
 };
 

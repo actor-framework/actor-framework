@@ -45,6 +45,10 @@ namespace cppa {
 
 namespace detail { class raw_access; }
 
+struct invalid_actor_t { constexpr invalid_actor_t() { } };
+
+constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
+
 /**
  * @brief Identifies an untyped actor.
  */
@@ -64,6 +68,8 @@ class actor : util::comparable<actor> {
     explicit inline operator bool() const;
 
     inline bool operator!() const;
+
+    actor(const invalid_actor_t&);
 
     void enqueue(const message_header& hdr, any_tuple msg) const;
 
@@ -89,7 +95,7 @@ inline actor::operator bool() const {
 inline bool actor::operator!() const {
     return !static_cast<bool>(*this);
 }
-    
+
 } // namespace cppa
 
 #endif // CPPA_ACTOR_HPP

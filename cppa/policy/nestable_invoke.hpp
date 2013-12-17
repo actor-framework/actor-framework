@@ -44,13 +44,13 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-#include "cppa/policy/invoke_policy_base.hpp"
+#include "cppa/policy/invoke_policy.hpp"
 
 namespace cppa { namespace detail { class receive_policy; } }
 
 namespace cppa { namespace policy {
 
-class nestable_invoke : public invoke_policy_base<nestable_invoke> {
+class nestable_invoke : public invoke_policy<nestable_invoke> {
 
     typedef std::unique_lock<std::mutex> lock_type;
 
@@ -62,34 +62,32 @@ class nestable_invoke : public invoke_policy_base<nestable_invoke> {
 
     template<class Client>
     static inline pointer hm_begin(Client* client, pointer node) {
-        auto previous = client->m_current_node;
-        client->m_current_node = node;
+        auto previous = client->current_node();
+        client->current_node(node);
         return previous;
     }
 
     template<class Client>
     static inline void hm_cleanup(Client* client, pointer /*previous*/) {
-        client->m_current_node = &(client->m_dummy_node);
-        if (client->has_behavior()) {
-            client->request_timeout(client->get_behavior().timeout());
-        }
-        else client->reset_timeout();
+        client->current_node(&(client->m_dummy_node));
     }
 
     template<class Client>
     static inline void hm_revert(Client* client, pointer previous) {
-        client->m_current_node = previous;
+        client->current_node(previous);
     }
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
-    nestable_invoke() : m_initialized(false) { }
-
     inline void reset_timeout() { }
 
-    inline void request_timeout(const util::duration&) { }
+    template<class Actor>
+    inline void request_timeout(Actor*, const util::duration&) { }
 
-    inline void handle_timeout(behavior& bhvr) { bhvr.handle_timeout(); }
+    template<class Actor>
+    inline void handle_timeout(Actor*, behavior& bhvr) {
+        bhvr.handle_timeout();
+    }
 
     inline void pop_timeout() { }
 
@@ -97,19 +95,7 @@ class nestable_invoke : public invoke_policy_base<nestable_invoke> {
 
     inline bool waits_for_timeout(std::uint32_t) { return false; }
 
-    virtual mailbox_element* try_pop() {
-        return this->m_mailbox.try_pop();
-    }
-
-    mailbox_element* pop() {
-        wait_for_data();
-        return try_pop();
-    }
-
-    inline mailbox_element* try_pop(const timeout_type& abs_time) {
-        return (timed_wait_for_data(abs_time)) ? try_pop() : nullptr;
-    }
-
+    /*
     void run_detached() {
         auto dthis = util::dptr<Subtype>(this);
         dthis->init();
@@ -120,87 +106,7 @@ class nestable_invoke : public invoke_policy_base<nestable_invoke> {
         auto rsn = dthis->planned_exit_reason();
         dthis->cleanup(rsn == exit_reason::not_exited ? exit_reason::normal : rsn);
     }
-
-    inline void initialized(bool value) {
-        m_initialized = value;
-    }
-
-    bool initialized() const override {
-        return m_initialized;
-    }
-
- protected:
-
-    typedef threaded combined_type;
-
-    void enqueue_impl(typename Base::mailbox_type& mbox,
-                      const message_header& hdr,
-                      any_tuple&& msg) {
-        auto ptr = this->new_mailbox_element(hdr, std::move(msg));
-        switch (mbox.enqueue(ptr)) {
-            case intrusive::first_enqueued: {
-                lock_type guard(m_mtx);
-                m_cv.notify_one();
-                break;
-            }
-            default: break;
-            case intrusive::queue_closed:
-                if (hdr.id.valid()) {
-                    detail::sync_request_bouncer f{this->exit_reason()};
-                    f(hdr.sender, hdr.id);
-                }
-                break;
-        }
-    }
-
-    void enqueue(const message_header& hdr, any_tuple msg) override {
-        enqueue_impl(this->m_mailbox, hdr, std::move(msg));
-    }
-
-    timeout_type init_timeout(const util::duration& rel_time) {
-        auto result = std::chrono::high_resolution_clock::now();
-        result += rel_time;
-        return result;
-    }
-
-    mailbox_element* await_message() {
-        return pop();
-    }
-
-    mailbox_element* await_message(const timeout_type& abs_time) {
-        return try_pop(abs_time);
-    }
-
-    virtual bool mailbox_empty() {
-        return this->m_mailbox.empty();
-    }
-
-    bool timed_wait_for_data(const timeout_type& abs_time) {
-        CPPA_REQUIRE(not this->m_mailbox.closed());
-        if (mailbox_empty()) {
-            lock_type guard(m_mtx);
-            while (mailbox_empty()) {
-                if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    void wait_for_data() {
-        if (mailbox_empty()) {
-            lock_type guard(m_mtx);
-            while (mailbox_empty()) m_cv.wait(guard);
-        }
-    }
-
-    std::mutex m_mtx;
-    std::condition_variable m_cv;
-
- private:
-
-    bool m_initialized;
+    */
 
 };
 

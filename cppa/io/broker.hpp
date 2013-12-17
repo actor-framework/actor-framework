@@ -33,9 +33,9 @@
 
 #include <map>
 
-#include "cppa/stackless.hpp"
-#include "cppa/threadless.hpp"
+#include "cppa/extend.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/behavior_stack_based.hpp"
 
 #include "cppa/util/buffer.hpp"
 
@@ -45,7 +45,10 @@
 #include "cppa/io/accept_handle.hpp"
 #include "cppa/io/connection_handle.hpp"
 
-namespace cppa { namespace io {
+#include "cppa/policy/sequential_invoke.hpp"
+
+namespace cppa {
+namespace io {
 
 class broker;
 
@@ -58,7 +61,9 @@ local_actor_ptr init_and_launch(broker_ptr);
  *        and other components in the network.
  * @extends local_actor
  */
-class broker : public extend<local_actor>::with<threadless, stackless> {
+class broker : public extend<local_actor>::with<behavior_stack_based> {
+
+    friend class policy::sequential_invoke;
 
     typedef combined_type super;
 
@@ -97,6 +102,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     void write(const connection_handle& hdl, util::buffer&& buf);
 
+    /*
     template<typename F, typename... Ts>
     static broker_ptr from(F fun,
                            input_stream_ptr in,
@@ -121,6 +127,7 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
                               std::forward<Ts>(args)...),
                     std::move(in));
     }
+    */
 
     template<typename F, typename... Ts>
     actor fork(F fun, connection_handle hdl, Ts&&... args) {
@@ -154,14 +161,16 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
 
     explicit broker(scribe_pointer);
 
+    virtual behavior make_behavior() = 0;
+
  private:
 
-    actor_addr fork_impl(std::function<void (broker*)> fun,
-                        connection_handle hdl);
+    actor fork_impl(std::function<void (broker*)> fun,
+                    connection_handle hdl);
 
-    static broker_ptr from_impl(std::function<void (broker*)> fun,
-                                input_stream_ptr in,
-                                output_stream_ptr out);
+    //static broker_ptr from_impl(std::function<void (broker*)> fun,
+    //                            input_stream_ptr in,
+    //                            output_stream_ptr out);
 
     void invoke_message(const message_header& hdr, any_tuple msg);
 
@@ -178,10 +187,27 @@ class broker : public extend<local_actor>::with<threadless, stackless> {
     std::map<accept_handle, doorman_pointer> m_accept;
     std::map<connection_handle, scribe_pointer> m_io;
 
+    policy::sequential_invoke m_invoke;
+
 };
 
-//typedef intrusive_ptr<broker> broker_ptr;
+class default_broker : public broker {
 
-} } // namespace cppa::network
+ public:
+
+    typedef std::function<void (broker*)> function_type;
+
+    default_broker(input_stream_ptr in, output_stream_ptr out, function_type f);
+
+    behavior make_behavior() override;
+
+ private:
+
+    function_type m_fun;
+
+};
+
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_BROKER_HPP

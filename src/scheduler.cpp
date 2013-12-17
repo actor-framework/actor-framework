@@ -39,8 +39,7 @@
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/thread_mapped_actor.hpp"
-#include "cppa/context_switching_actor.hpp"
+#include "cppa/scoped_actor.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -90,38 +89,31 @@ class scheduler_helper {
 
  public:
 
-    typedef intrusive_ptr<thread_mapped_actor> ptr_type;
-
     void start() {
-        auto mt = make_counted<thread_mapped_actor>();
-        auto mp = make_counted<thread_mapped_actor>();
         // launch threads
-        m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt.get()};
-        m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp.get()};
-        // set member variables
-        m_timer = std::move(mt);
-        m_printer = std::move(mp);
+        m_timer_thread = std::thread{&scheduler_helper::timer_loop, m_timer.get()};
+        m_printer_thread = std::thread{&scheduler_helper::printer_loop, m_printer.get()};
     }
 
     void stop() {
         auto msg = make_any_tuple(atom("DIE"));
-        m_timer.enqueue({invalid_actor_addr, nullptr}, msg);
-        m_printer.enqueue({invalid_actor_addr, nullptr}, msg);
+        m_timer->enqueue({invalid_actor_addr, nullptr}, msg);
+        m_printer->enqueue({invalid_actor_addr, nullptr}, msg);
         m_timer_thread.join();
         m_printer_thread.join();
     }
 
-    actor m_timer;
+    scoped_actor m_timer;
     std::thread m_timer_thread;
 
-    actor m_printer;
+    scoped_actor m_printer;
     std::thread m_printer_thread;
 
  private:
 
-    static void timer_loop(thread_mapped_actor* self);
+    static void timer_loop(blocking_untyped_actor* self);
 
-    static void printer_loop(thread_mapped_actor* self);
+    static void printer_loop(blocking_untyped_actor* self);
 
 };
 
@@ -136,7 +128,7 @@ inline void insert_dmsg(Map& storage,
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-void scheduler_helper::timer_loop(thread_mapped_actor* self) {
+void scheduler_helper::timer_loop(blocking_untyped_actor* self) {
     // setup & local variables
     bool done = false;
     std::unique_ptr<mailbox_element, detail::disposer> msg_ptr;
@@ -163,7 +155,7 @@ void scheduler_helper::timer_loop(thread_mapped_actor* self) {
     // loop
     while (!done) {
         while (!msg_ptr) {
-            if (messages.empty()) msg_ptr.reset(self->pop());
+            if (messages.empty()) msg_ptr.reset(self->dequeue());
             else {
                 tout = hrc::now();
                 // handle timeouts (send messages)
@@ -175,7 +167,7 @@ void scheduler_helper::timer_loop(thread_mapped_actor* self) {
                 }
                 // wait for next message or next timeout
                 if (it != messages.end()) {
-                    msg_ptr.reset(self->try_pop(it->first));
+                    msg_ptr.reset(self->try_dequeue(it->first));
                 }
             }
         }
@@ -184,7 +176,7 @@ void scheduler_helper::timer_loop(thread_mapped_actor* self) {
     }
 }
 
-void scheduler_helper::printer_loop(thread_mapped_actor* self) {
+void scheduler_helper::printer_loop(blocking_untyped_actor* self) {
     std::map<actor_addr, std::string> out;
     auto flush_output = [&out](const actor_addr& s) {
         auto i = out.find(s);
@@ -257,8 +249,8 @@ scheduler::~scheduler() {
     delete m_helper;
 }
 
-actor& scheduler::delayed_send_helper() {
-    return m_helper->m_timer;
+actor scheduler::delayed_send_helper() {
+    return m_helper->m_timer.get();
 }
 
 void scheduler::register_converted_context(abstract_actor* what) {
@@ -287,8 +279,8 @@ scheduler* scheduler::create_singleton() {
     return new detail::thread_pool_scheduler;
 }
 
-const actor& scheduler::printer() const {
-    return m_helper->m_printer;
+actor scheduler::printer() const {
+    return m_helper->m_printer.get();
 }
 
 } // namespace cppa

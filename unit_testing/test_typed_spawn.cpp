@@ -41,6 +41,7 @@ bool operator==(const my_request& lhs, const my_request& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b;
 }
 
+/*
 typed_actor_ptr<replies_to<my_request>::with<bool>>
 spawn_typed_server() {
     return spawn_typed(
@@ -63,10 +64,11 @@ class typed_testee : public typed_actor<replies_to<my_request>::with<bool>> {
     }
 
 };
+*/
 
 int main() {
     CPPA_TEST(test_typed_spawn);
-
+/*
     announce<my_request>(&my_request::a, &my_request::b);
     auto sptr = spawn_typed_server();
     sync_send(sptr, my_request{2, 2}).await(
@@ -176,5 +178,6 @@ int main() {
     await_all_actors_done();
     CPPA_CHECKPOINT();
     shutdown();
+*/
     return CPPA_TEST_RESULT();
 }

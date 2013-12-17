@@ -26,15 +26,15 @@ using namespace cppa;
 using namespace cppa::placeholders;
 
 // our "service"
-void calculator() {
-    become (
+void calculator(untyped_actor* self) {
+    self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) -> any_tuple {
-            return {atom("result"), a + b};
+            return make_any_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) -> any_tuple {
-            return {atom("result"), a - b};
+            return make_any_tuple(atom("result"), a - b);
         },
-        on(atom("quit")) >> [=]() {
+        on(atom("quit")) >> [=] {
             self->quit();
         }
     );
@@ -49,12 +49,12 @@ inline string trim(std::string s) {
     return s;
 }
 
-void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
+void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const actor& server) {
     // recover from sync failures by trying to reconnect to server
     if (!self->has_sync_failure_handler()) {
         self->on_sync_failure([=] {
             aout << "*** lost connection to " << host << ":" << port << endl;
-            client_bhvr(host, port, nullptr);
+            client_bhvr(self, host, port, nullptr);
         });
     }
     // connect to server if needed
@@ -64,17 +64,17 @@ void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
             auto new_serv = remote_actor(host, port);
             self->monitor(new_serv);
             aout << "reconnection succeeded" << endl;
-            client_bhvr(host, port, new_serv);
+            client_bhvr(self, host, port, new_serv);
             return;
         }
         catch (exception&) {
             aout << "connection failed, try again in 3s" << endl;
-            delayed_send(self, chrono::seconds(3), atom("reconnect"));
+            self->delayed_send(self, chrono::seconds(3), atom("reconnect"));
         }
     }
-    become (
+    self->become (
         on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != nullptr) >> [=](atom_value op, int lhs, int rhs) {
-            sync_send_tuple(server, self->last_dequeued()).then(
+            self->sync_send_tuple(server, self->last_dequeued()).then(
                 on(atom("result"), arg_match) >> [=](int result) {
                     aout << lhs << " "
                          << to_string(op) << " "
@@ -85,14 +85,14 @@ void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
         },
         on(atom("DOWN"), arg_match) >> [=](uint32_t) {
             aout << "*** server down, try to reconnect ..." << endl;
-            client_bhvr(host, port, nullptr);
+            client_bhvr(self, host, port, nullptr);
         },
         on(atom("rebind"), arg_match) >> [=](const string& host, uint16_t port) {
             aout << "*** rebind to new server: " << host << ":" << port << endl;
-            client_bhvr(host, port, nullptr);
+            client_bhvr(self, host, port, nullptr);
         },
         on(atom("reconnect")) >> [=] {
-            client_bhvr(host, port, nullptr);
+            client_bhvr(self, host, port, nullptr);
         }
     );
 }
@@ -112,7 +112,7 @@ void client_repl(const string& host, uint16_t port) {
         line = trim(std::move(line)); // ignore leading and trailing whitespaces
         if (line == "quit") {
             // force client to quit
-            send_exit(client, exit_reason::user_shutdown);
+            anon_send_exit(client, exit_reason::user_shutdown);
             return;
         }
         // the STL way of line.starts_with("connect")
@@ -123,7 +123,7 @@ void client_repl(const string& host, uint16_t port) {
                         auto lport = std::stoul(sport);
                         if (lport < std::numeric_limits<uint16_t>::max()) {
                             auto port = static_cast<uint16_t>(lport);
-                            send(client, atom("rebind"), move(host), port);
+                            anon_send(client, atom("rebind"), move(host), port);
                         }
                         else {
                             aout << lport << " is not a valid port" << endl;
@@ -159,7 +159,7 @@ void client_repl(const string& host, uint16_t port) {
                 auto rhs = toint(rsub);
                 if (lhs && rhs) {
                     auto op = (*pos == '+') ? atom("plus") : atom("minus");
-                    send(client, op, *lhs, *rhs);
+                    anon_send(client, op, *lhs, *rhs);
                 }
             }
             else if (!success) {

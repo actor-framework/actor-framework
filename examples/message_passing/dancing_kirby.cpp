@@ -53,20 +53,20 @@ void draw_kirby(const animation_step& animation) {
 }
 
 // uses a message-based loop to iterate over all animation steps
-void dancing_kirby() {
+void dancing_kirby(untyped_actor* self) {
     // let's get it started
-    send(self, atom("Step"), size_t{0});
-    become (
-        on(atom("Step"), array_size(animation_steps)) >> [] {
+    self->send(self, atom("Step"), size_t{0});
+    self->become (
+        on(atom("Step"), array_size(animation_steps)) >> [=] {
             // we've printed all animation steps (done)
             cout << endl;
             self->quit();
         },
-        on(atom("Step"), arg_match) >> [](size_t step) {
+        on(atom("Step"), arg_match) >> [=](size_t step) {
             // print given step
             draw_kirby(animation_steps[step]);
             // animate next step in 150ms
-            delayed_send(self, std::chrono::milliseconds(150), atom("Step"), step + 1);
+            self->delayed_send(self, std::chrono::milliseconds(150), atom("Step"), step + 1);
         }
     );
 }

@@ -28,24 +28,64 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SCHEDULED_ACTOR_DUMMY_HPP
-#define CPPA_SCHEDULED_ACTOR_DUMMY_HPP
+#ifndef FUNCTOR_BASED_BLOCKING_ACTOR_HPP
+#define FUNCTOR_BASED_BLOCKING_ACTOR_HPP
 
-#include "cppa/scheduled_actor.hpp"
+#include "cppa/blocking_untyped_actor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
-struct scheduled_actor_dummy : scheduled_actor {
-    scheduled_actor_dummy();
-    void enqueue(const message_header&, any_tuple) override;
-    resume_result resume(util::fiber*) override;
-    void quit(std::uint32_t) override;
-    void dequeue(behavior&) override;
-    void dequeue_response(behavior&, message_id) override;
-    bool has_behavior() override;
-    scheduled_actor_type impl_type() override;
+class functor_based_blocking_actor : public blocking_untyped_actor {
+
+ public:
+
+    typedef std::function<void (blocking_untyped_actor*)> act_fun;
+
+    template<typename F, typename... Ts>
+    functor_based_blocking_actor(F f, Ts&&... vs) {
+        blocking_untyped_actor* dummy = nullptr;
+        create(dummy, f, std::forward<Ts>(vs)...);
+    }
+
+ protected:
+
+    void act() override;
+
+ private:
+
+    void create(blocking_untyped_actor*, act_fun);
+
+    template<class Actor, typename F, typename T0, typename... Ts>
+    auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_same<
+            decltype(f(dummy, std::forward<T0>(v0), std::forward<Ts>(vs)...)),
+            void
+        >::value
+    >::type {
+        create(dummy, std::bind(f, std::placeholders::_1,
+                                std::forward<T0>(v0), std::forward<Ts>(vs)...));
+    }
+
+    template<class Actor, typename F, typename T0, typename... Ts>
+    auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs) ->
+    typename std::enable_if<
+        std::is_same<
+            decltype(f(std::forward<T0>(v0), std::forward<Ts>(vs)...)),
+            void
+        >::value
+    >::type {
+        std::function<void()> fun = std::bind(f, std::forward<T0>(v0),
+                                              std::forward<Ts>(vs)...);
+        create(dummy, [fun](Actor*) { fun(); });
+    }
+
+    act_fun m_act;
+
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
-#endif // CPPA_SCHEDULED_ACTOR_DUMMY_HPP
+#endif // FUNCTOR_BASED_BLOCKING_ACTOR_HPP

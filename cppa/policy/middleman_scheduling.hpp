@@ -28,64 +28,81 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_THREAD_BASED_ACTOR_HPP
-#define CPPA_THREAD_BASED_ACTOR_HPP
+#ifndef CPPA_POLICY_MIDDLEMAN_SCHEDULING_HPP
+#define CPPA_POLICY_MIDDLEMAN_SCHEDULING_HPP
 
-#include "cppa/config.hpp"
-
-#include <map>
-#include <list>
-#include <mutex>
-#include <stack>
-#include <atomic>
-#include <vector>
-#include <memory>
-#include <cstdint>
-
-#include "cppa/atom.hpp"
-#include "cppa/extend.hpp"
-#include "cppa/stacked.hpp"
-#include "cppa/threaded.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/exit_reason.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/mailbox_based.hpp"
-#include "cppa/mailbox_element.hpp"
 
-#include "cppa/detail/receive_policy.hpp"
+#include "cppa/io/middleman.hpp"
+
+#include "cppa/policy/cooperative_scheduling.hpp"
 
 namespace cppa {
+namespace policy {
 
-class self_type;
-class scheduler_helper;
-
-/**
- * @brief An actor using the blocking API running in its own thread.
- * @extends local_actor
- */
-class thread_mapped_actor : public extend<local_actor, thread_mapped_actor>::
-                                   with<stacked, threaded> {
-
-    typedef combined_type super;
+// Actor must implement invoke_message
+class middleman_scheduling {
 
  public:
 
-    thread_mapped_actor();
+    template<class Actor>
+    class continuation {
 
-    thread_mapped_actor(std::function<void()> fun);
+     public:
 
-    inline void initialized(bool value) { m_initialized = value; }
+        typedef intrusive_ptr<Actor> pointer;
 
-    bool initialized() const override;
+        continuation(pointer ptr, const message_header& hdr, any_tuple&& msg)
+        : m_self(std::move(ptr)), m_hdr(hdr), m_data(std::move(msg)) { }
 
- private:
+        inline void operator()() const {
+            m_self->invoke_message(m_hdr, move(m_data));
+        }
 
-    bool m_initialized;
+     private:
+
+        pointer        m_self;
+        message_header m_hdr;
+        any_tuple      m_data;
+
+    };
+
+    using timeout_type = int;
+
+    template<class Actor>
+    timeout_type init_timeout(Actor* self, const util::duration& rel_time) {
+        // request explicit timeout message
+        self->request_timeout(rel_time);
+        return 0; // return some dummy value
+    }
+
+    // this does return nullptr
+    template<class Actor, typename F>
+    inline void fetch_messages(Actor*, F) {
+        // clients cannot fetch messages
+    }
+
+    template<class Actor, typename F>
+    inline void fetch_messages(Actor* self, F cb, timeout_type) {
+        // a call to this call is always preceded by init_timeout,
+        // which will trigger a timeout message
+        fetch_messages(self, cb);
+    }
+
+    template<class Actor>
+    inline void launch(Actor*) {
+        // nothing to do
+    }
+
+    template<class Actor>
+    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+        get_middleman()->run_later(continuation<Actor>{self, hdr, std::move(msg)});
+    }
 
 };
 
-typedef intrusive_ptr<thread_mapped_actor> thread_mapped_actor_ptr;
-
+} // namespace policy
 } // namespace cppa
 
-#endif // CPPA_THREAD_BASED_ACTOR_HPP
+#endif // CPPA_POLICY_MIDDLEMAN_SCHEDULING_HPP

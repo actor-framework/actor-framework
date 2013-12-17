@@ -77,38 +77,12 @@ constexpr const char* s_default_debug_name = "actor";
 
 } // namespace <anonymous>
 
-local_actor::local_actor(bool sflag)
+local_actor::local_actor()
 : m_trap_exit(false)
-, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node)
-, m_planned_exit_reason(exit_reason::not_exited) {
-#   ifdef CPPA_DEBUG_MODE
-    new (&m_debug_name) std::string (std::to_string(m_id) + "@local");
-#   endif // CPPA_DEBUG_MODE
-}
+, m_dummy_node(), m_current_node(&m_dummy_node)
+, m_planned_exit_reason(exit_reason::not_exited) { }
 
-local_actor::~local_actor() {
-    using std::string;
-#   ifdef CPPA_DEBUG_MODE
-    m_debug_name.~string();
-#   endif // CPPA_DEBUG_MODE
-}
-
-const char* local_actor::debug_name() const {
-#   ifdef CPPA_DEBUG_MODE
-    return m_debug_name.c_str();
-#   else // CPPA_DEBUG_MODE
-    return s_default_debug_name;
-#   endif // CPPA_DEBUG_MODE
-}
-
-void local_actor::debug_name(std::string str) {
-#   ifdef CPPA_DEBUG_MODE
-    m_debug_name = std::move(str);
-#   else // CPPA_DEBUG_MODE
-    CPPA_LOG_WARNING("unable to set debug name to " << str
-                     << " (compiled without debug mode enabled)");
-#   endif // CPPA_DEBUG_MODE
-}
+local_actor::~local_actor() { }
 
 void local_actor::monitor(const actor_addr& whom) {
     if (!whom) return;
@@ -124,8 +98,6 @@ void local_actor::demonitor(const actor_addr& whom) {
 }
 
 void local_actor::on_exit() { }
-
-void local_actor::init() { }
 
 void local_actor::join(const group_ptr& what) {
     if (what && m_subscriptions.count(what) == 0) {
@@ -180,6 +152,10 @@ void local_actor::send_tuple(const channel& dest, any_tuple what) {
     //TODO:
 }
 
+void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
+
+}
+
 void local_actor::remove_handler(message_id) {
 
 }
@@ -191,6 +167,14 @@ void local_actor::delayed_send_tuple(const channel&, const util::duration&, cppa
 message_future local_actor::timed_sync_send_tuple(const util::duration& rtime,
                                                   const actor& dest,
                                                   any_tuple what) {
+
+}
+
+void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
+
+}
+
+message_future local_actor::sync_send_tuple(const actor& dest, any_tuple what) {
 
 }
 

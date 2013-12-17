@@ -138,6 +138,7 @@ set(LIBCPPA_SRC
     src/binary_serializer.cpp
     src/broker.cpp
     src/buffer.cpp
+    src/blocking_untyped_actor.cpp
     src/channel.cpp
     src/common_actor_ops.cpp
     src/context_switching_resume.cpp
@@ -150,11 +151,12 @@ set(LIBCPPA_SRC
     src/deserializer.cpp
     src/duration.cpp
     src/empty_tuple.cpp
-    src/event_based_resume.cpp
     src/exception.cpp
     src/exit_reason.cpp
     src/fd_util.cpp
     src/fiber.cpp
+    src/functor_based_actor.cpp
+    src/functor_based_blocking_actor.cpp
     src/get_root_uuid.cpp
     src/get_mac_addresses.cpp
     src/group.cpp
@@ -178,11 +180,10 @@ set(LIBCPPA_SRC
     src/partial_function.cpp
     src/primitive_variant.cpp
     src/ref_counted.cpp
+    src/resumable.cpp
     src/remote_actor_proxy.cpp
     src/response_handle.cpp
     src/ripemd_160.cpp
-    src/scheduled_actor.cpp
-    src/scheduled_actor_dummy.cpp
     src/scheduler.cpp
     src/scoped_actor.cpp
     src/serializer.cpp
@@ -190,13 +191,13 @@ set(LIBCPPA_SRC
     src/singleton_manager.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
-    src/thread_mapped_actor.cpp
     src/thread_pool_scheduler.cpp
     src/to_uniform_name.cpp
     src/type_lookup_table.cpp
     src/unicast_network.cpp
     src/uniform_type_info.cpp
     src/uniform_type_info_map.cpp
+    src/untyped_actor.cpp
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 

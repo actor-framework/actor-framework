@@ -134,7 +134,7 @@ int main() {
                     std::string, std::u16string, std::u32string,
                     float, double,
                     atom_value, any_tuple, message_header,
-                    actor_ptr, group_ptr,
+                    actor, group_ptr,
                     channel, node_id_ptr
                  >::arr;
 
@@ -157,7 +157,7 @@ int main() {
         uniform_typeid<atom_value>(),
         uniform_typeid<any_tuple>(),
         uniform_typeid<message_header>(),
-        uniform_typeid<actor_ptr>(),
+        uniform_typeid<actor>(),
         uniform_typeid<group_ptr>(),
         uniform_typeid<channel>(),
         uniform_typeid<node_id_ptr>()

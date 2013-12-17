@@ -34,7 +34,9 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "cppa/on.hpp"
 #include "cppa/match_expr.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/partial_function.hpp"
 
 namespace cppa {
@@ -56,8 +58,10 @@ class continue_helper {
     inline continue_helper(message_id mid) : m_mid(mid) { }
 
     template<typename F>
-    continue_helper& continue_with(F fun);
-    
+    continue_helper& continue_with(F) {
+
+    }
+
     inline message_id get_message_id() const {
         return m_mid;
     }
@@ -78,12 +82,14 @@ class message_future {
 
     message_future() = delete;
 
-    inline continue_helper then(const partial_function& pfun) {
-        
+    inline continue_helper then(const behavior&) {
+        //FIXME
+        return message_id{};
     }
 
-    inline continue_helper await(const partial_function& pfun) {
-        
+    inline continue_helper await(const behavior&) {
+        //FIXME
+        return message_id{};
     }
 
     /**
@@ -113,7 +119,7 @@ class message_future {
         continue_helper
     >::type
     then(Fs... fs) {
-        return then(fs2bhvr(std::move(fs)...));
+        return then(partial_function{(on_arg_match >> std::move(fs))...});
     }
 
     /**
@@ -124,7 +130,7 @@ class message_future {
     template<typename... Fs>
     typename std::enable_if<util::all_callable<Fs...>::value>::type
     await(Fs... fs) {
-        await(fs2bhvr({std::move(fs)...}));
+        await(partial_function{(on_arg_match >> std::move(fs))...});
     }
 
     /**
@@ -142,8 +148,6 @@ class message_future {
     message_id m_mid;
     local_actor* self;
 
-    partial_function fs2bhvr(partial_function pf);
-    
     inline void check_consistency() { }
 
 };
@@ -190,17 +194,6 @@ class sync_receive_helper {
  * @relates message_future
  */
 inline sync_handle_helper handle_response(const message_future& f) {
-    return {f};
-}
-
-/**
- * @brief Handles a synchronous response message in an event-based way.
- * @param handle A future for a synchronous response.
- * @throws std::logic_error if @p handle is not valid or if the actor
- *                          already received the response for @p handle
- * @relates message_future
- */
-inline sync_receive_helper receive_response(const message_future& f) {
     return {f};
 }
 

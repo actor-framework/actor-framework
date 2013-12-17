@@ -13,9 +13,9 @@ using std::endl;
 using namespace cppa;
 
 // implementation using the blocking API
-void blocking_math_fun() {
+void blocking_math_fun(blocking_untyped_actor* self) {
     bool done = false;
-    do_receive (
+    self->do_receive (
         // "arg_match" matches the parameter types of given lambda expression
         // thus, it's equal to
         // - on<atom("plus"), int, int>()
@@ -34,38 +34,38 @@ void blocking_math_fun() {
     ).until(gref(done));
 }
 
-void calculator() {
+void calculator(untyped_actor* self) {
     // execute this behavior until actor terminates
-    become (
+    self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) {
             return make_cow_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) {
             return make_cow_tuple(atom("result"), a - b);
         },
-        on(atom("quit")) >> [] {
+        on(atom("quit")) >> [=] {
             // terminate actor with normal exit reason
             self->quit();
         }
     );
 }
 
-void tester(const actor_ptr& testee) {
+void tester(untyped_actor* self, const actor& testee) {
     self->link_to(testee);
     // will be invoked if we receive an unexpected response message
-    self->on_sync_failure([] {
+    self->on_sync_failure([=] {
         aout << "AUT (actor under test) failed" << endl;
         self->quit(exit_reason::user_shutdown);
     });
     // first test: 2 + 1 = 3
-    sync_send(testee, atom("plus"), 2, 1).then(
+    self->sync_send(testee, atom("plus"), 2, 1).then(
         on(atom("result"), 3) >> [=] {
             // second test: 2 - 1 = 1
-            sync_send(testee, atom("minus"), 2, 1).then(
+            self->sync_send(testee, atom("minus"), 2, 1).then(
                 on(atom("result"), 1) >> [=] {
                     // both tests succeeded
                     aout << "AUT (actor under test) seems to be ok" << endl;
-                    send(testee, atom("quit"));
+                    self->send(testee, atom("quit"));
                 }
             );
         }
@@ -78,4 +78,3 @@ int main() {
     shutdown();
     return 0;
 }
-

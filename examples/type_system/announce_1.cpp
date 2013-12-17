@@ -42,12 +42,12 @@ bool operator==( const foo2& lhs, const foo2& rhs ) {
 }
 
 // receives `remaining` messages
-void testee(size_t remaining) {
+void testee(untyped_actor* self, size_t remaining) {
     auto set_next_behavior = [=] {
-        if (remaining > 1) testee(remaining - 1);
+        if (remaining > 1) testee(self, remaining - 1);
         else self->quit();
     };
-    become (
+    self->become (
         // note: we sent a foo_pair2, but match on foo_pair
         // that's safe because both are aliases for std::pair<int, int>
         on<foo_pair>() >> [=](const foo_pair& val) {
@@ -113,11 +113,13 @@ int main(int, char**) {
 
     // spawn a testee that receives two messages
     auto t = spawn(testee, 2);
-    // send t a foo
-    send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
-    // send t a foo_pair2
-    send(t, foo_pair2{3, 4});
-
+    {
+        scoped_actor self;
+        // send t a foo
+        self->send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
+        // send t a foo_pair2
+        self->send(t, foo_pair2{3, 4});
+    }
     await_all_actors_done();
     shutdown();
     return 0;

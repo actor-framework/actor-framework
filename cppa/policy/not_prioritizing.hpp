@@ -28,29 +28,31 @@
 \******************************************************************************/
 
 
-#include <chrono>
-#include <memory>
-#include <iostream>
-#include <algorithm>
+#ifndef NOT_PRIORITIZING_HPP
+#define NOT_PRIORITIZING_HPP
 
-#include "cppa/to_string.hpp"
-#include "cppa/exception.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/thread_mapped_actor.hpp"
+#include "cppa/mailbox_element.hpp"
 
-#include "cppa/detail/matches.hpp"
+#include "cppa/policy/priority_policy.hpp"
 
 namespace cppa {
+namespace policy {
 
-thread_mapped_actor::thread_mapped_actor() : m_initialized(true) { }
+struct not_prioritizing {
 
-thread_mapped_actor::thread_mapped_actor(std::function<void()> fun)
-: m_initialized(false) {
-    set_behavior(std::move(fun));
-}
+    template<class Actor>
+    mailbox_element* next_message(Actor* self) {
+        return self->mailbox().try_pop();
+    }
 
-bool thread_mapped_actor::initialized() const {
-    return m_initialized;
-}
+    template<class Actor, typename F>
+    bool fetch_messages(Actor*, F) {
+        //FIXME
+    }
 
-} // namespace cppa::detail
+};
+
+} // namespace policy
+} // namespace cppa
+
+#endif // NOT_PRIORITIZING_HPP

@@ -28,87 +28,21 @@
 \******************************************************************************/
 
 
-#include "cppa/cppa.hpp"
-#include "cppa/group.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-#include "cppa/util/upgrade_lock_guard.hpp"
-
-#include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/detail/functor_based_actor.hpp"
 
 namespace cppa {
+namespace detail {
 
-intrusive_ptr<group> group::get(const std::string& arg0,
-                                const std::string& arg1) {
-    return get_group_manager()->get(arg0, arg1);
+void functor_based_actor::create(untyped_actor*, void_fun fun) {
+    m_make_behavior = [=](untyped_actor* self) -> behavior {
+        fun(self);
+        return behavior{};
+    };
 }
 
-intrusive_ptr<group> group::anonymous() {
-    return get_group_manager()->anonymous();
+behavior functor_based_actor::make_behavior() {
+    return m_make_behavior(this);
 }
 
-void group::add_module(group::unique_module_ptr ptr) {
-    get_group_manager()->add_module(std::move(ptr));
-}
-
-group::module_ptr group::get_module(const std::string& module_name) {
-    return get_group_manager()->get_module(module_name);
-}
-
-group::subscription::subscription(const channel& s,
-                                  const intrusive_ptr<group>& g)
-: m_subscriber(s), m_group(g) { }
-
-group::subscription::~subscription() {
-    if (valid()) m_group->unsubscribe(m_subscriber);
-}
-
-group::module::module(std::string name) : m_name(std::move(name)) { }
-
-const std::string& group::module::name() {
-    return m_name;
-}
-
-group::group(group::module_ptr mod, std::string id)
-: m_module(mod), m_identifier(std::move(id)) { }
-
-const std::string& group::identifier() const {
-    return m_identifier;
-}
-
-group::module_ptr group::get_module() const {
-    return m_module;
-}
-
-const std::string& group::module_name() const {
-    return get_module()->name();
-}
-
-struct group_nameserver : untyped_actor {
-    behavior make_behavior() override {
-        return (
-            on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), group::get("local", name));
-            },
-            on(atom("SHUTDOWN")) >> [=] {
-                quit();
-            }
-        );
-    }
-};
-
-void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn<group_nameserver, hidden>();
-    try {
-        publish(gn, port, addr);
-    }
-    catch (std::exception&) {
-        gn.enqueue({invalid_actor_addr, nullptr}, make_any_tuple(atom("SHUTDOWN")));
-        throw;
-    }
-}
-
+} // namespace detail
 } // namespace cppa

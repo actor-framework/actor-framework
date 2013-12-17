@@ -34,7 +34,7 @@
 #include "cppa/replies_to.hpp"
 #include "cppa/typed_behavior.hpp"
 #include "cppa/message_future.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "cppa/untyped_actor.hpp"
 
 #include "cppa/detail/typed_actor_util.hpp"
 
@@ -44,7 +44,7 @@ template<typename... Signatures>
 class typed_actor_ptr;
 
 template<typename... Signatures>
-class typed_actor : public event_based_actor {
+class typed_actor : public untyped_actor {
 
  public:
 

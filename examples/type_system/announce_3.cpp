@@ -46,9 +46,9 @@ typedef int (foo::*foo_getter)() const;
 // a member function pointer to set an attribute of foo
 typedef void (foo::*foo_setter)(int);
 
-void testee() {
-    become (
-        on<foo>() >> [](const foo& val) {
+void testee(untyped_actor* self) {
+    self->become (
+        on<foo>() >> [=](const foo& val) {
             aout << "foo("
                  << val.a() << ", "
                  << val.b() << ")"
@@ -78,7 +78,10 @@ int main(int, char**) {
                             static_cast<foo_setter>(&foo::b)));
 
     // spawn a new testee and send it a foo
-    send(spawn(testee), foo{1, 2});
+    {
+        scoped_actor self;
+        self->send(spawn(testee), foo{1, 2});
+    }
     await_all_actors_done();
     shutdown();
     return 0;

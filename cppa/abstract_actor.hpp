@@ -143,6 +143,12 @@ class abstract_actor : public abstract_channel {
      */
     inline const node_id& node() const;
 
+    /**
+     * @brief Returns the actor's exit reason of
+     *        <tt>exit_reason::not_exited</tt> if it's still alive.
+     */
+    inline std::uint32_t exit_reason() const;
+
  protected:
 
     abstract_actor();
@@ -165,12 +171,6 @@ class abstract_actor : public abstract_channel {
      * @brief The default implementation for {@link unlink_from()}.
      */
     bool unlink_from_impl(const actor_addr& other);
-
-    /**
-     * @brief Returns the actor's exit reason of
-     *        <tt>exit_reason::not_exited</tt> if it's still alive.
-     */
-    inline std::uint32_t exit_reason() const;
 
     /**
      * @brief Returns <tt>exit_reason() != exit_reason::not_exited</tt>.

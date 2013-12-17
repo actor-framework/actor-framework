@@ -39,9 +39,9 @@ bool operator==(const foo& lhs, const foo& rhs) {
            && lhs.b() == rhs.b();
 }
 
-void testee() {
-    become (
-        on<foo>() >> [](const foo& val) {
+void testee(untyped_actor* self) {
+    self->become (
+        on<foo>() >> [=](const foo& val) {
             aout << "foo("
                  << val.a() << ", "
                  << val.b() << ")"
@@ -56,8 +56,11 @@ int main(int, char**) {
     // we pass those to the announce function as { getter, setter } pairs.
     announce<foo>(make_pair(&foo::a, &foo::set_a),
                   make_pair(&foo::b, &foo::set_b));
-    auto t = spawn(testee);
-    send(t, foo{1, 2});
+    {
+        scoped_actor self;
+        auto t = spawn(testee);
+        self->send(t, foo{1, 2});
+    }
     await_all_actors_done();
     shutdown();
     return 0;

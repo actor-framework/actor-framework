@@ -36,12 +36,13 @@
 #include "cppa/cppa.hpp"
 #include "cppa/self.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<context_switching_resume*>(this_ptr);
+    auto _this = reinterpret_cast<blocking_untyped_actor*>(this_ptr);
     bool cleanup_called = false;
-    try { _this->run(); }
+    try { _this->act(); }
     catch (actor_exited&) {
         // cleanup already called by scheduled_actor::quit
         cleanup_called = true;
@@ -56,9 +57,20 @@ void context_switching_resume::trampoline(void* this_ptr) {
     detail::yield(detail::yield_state::done);
 }
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+
+namespace cppa {
+namespace policy {
+
+void context_switching_resume::trampoline(void*) {
+    throw std::logic_error("context_switching_resume::trampoline called");
+}
+
+} // namespace policy
+} // namespace cppa
 
 namespace cppa { int keep_compiler_happy_function() { return 42; } }
 

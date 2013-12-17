@@ -27,19 +27,26 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-
 #ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 #define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 
 #include "cppa/config.hpp"
+#include "cppa/resumable.hpp"
+#include "cppa/actor_state.hpp"
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/util/fiber.hpp"
+
+#include "cppa/policy/resume_policy.hpp"
+
 #include "cppa/detail/yield_interface.hpp"
 
-namespace cppa { class local_actor; }
+namespace cppa {
+class local_actor;
+}
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 /**
  * @brief Context-switching actor implementation.
@@ -49,9 +56,57 @@ class context_switching_resume {
 
  public:
 
+    // required by util::fiber
+    static void trampoline(void* _this);
 
+    // Base must be a mailbox-based actor
+    template<class Base>
+    struct mixin : Base, resumable {
 
-    template<class Actor, typename F>
+        template<typename... Ts>
+        mixin(Ts&&... args)
+            : Base(std::forward<Ts>(args)...)
+            , m_fiber(context_switching_resume::trampoline,
+                      static_cast<blocking_untyped_actor*>(this)) { }
+
+        resumable::resume_result resume(util::fiber* from) override {
+            CPPA_REQUIRE(from != nullptr);
+            using namespace detail;
+            for (;;) {
+                switch (call(&m_fiber, from)) {
+                    case yield_state::done: {
+                        CPPA_REQUIRE(next_job == nullptr);
+                        return resumable::done;
+                    }
+                    case yield_state::ready: { break; }
+                    case yield_state::blocked: {
+                        CPPA_REQUIRE(next_job == nullptr);
+                        CPPA_REQUIRE(m_chained_actor == nullptr);
+                        switch (this->cas_state(actor_state::about_to_block,
+                                                actor_state::blocked)) {
+                            case actor_state::ready: {
+                                // restore variables
+                                CPPA_REQUIRE(next_job == nullptr);
+                                break;
+                            }
+                            case actor_state::blocked: {
+                                // wait until someone re-schedules that actor
+                                return resumable::resume_later;
+                            }
+                            default: { CPPA_CRITICAL("illegal yield result"); }
+                        }
+                        break;
+                    }
+                    default: { CPPA_CRITICAL("illegal state"); }
+                }
+            }
+        }
+
+        util::fiber m_fiber;
+
+    };
+
+    template <class Actor, typename F>
     void fetch_messages(Actor* self, F cb) {
         auto e = self->m_mailbox.try_pop();
         while (e == nullptr) {
@@ -63,7 +118,8 @@ class context_switching_resume {
                     self->set_state(actor_state::ready);
                 }
                 // wait until actor becomes rescheduled
-                else detail::yield(detail::yield_state::blocked);
+                else
+                    detail::yield(detail::yield_state::blocked);
             }
         }
         // ok, we have at least one message
@@ -73,7 +129,7 @@ class context_switching_resume {
         }
     }
 
-    template<class Actor, typename F>
+    template <class Actor, typename F>
     void try_fetch_messages(Actor* self, F cb) {
         auto e = self->m_mailbox.try_pop();
         while (e) {
@@ -83,57 +139,33 @@ class context_switching_resume {
     }
 
     template<class Actor>
-    resume_result resume(Actor* self, util::fiber* from) {
-        CPPA_LOG_TRACE("state = " << static_cast<int>(self->state()));
-        CPPA_REQUIRE(from != nullptr);
-        CPPA_REQUIRE(next_job == nullptr);
-        using namespace detail;
-        for (;;) {
-            switch (call(&m_fiber, from)) {
-                case yield_state::done: {
-                    CPPA_REQUIRE(next_job == nullptr);
-                    return resume_result::actor_done;
-                }
-                case yield_state::ready: {
-                    break;
-                }
-                case yield_state::blocked: {
-                    CPPA_REQUIRE(next_job == nullptr);
-                    CPPA_REQUIRE(m_chained_actor == nullptr);
-                    switch (compare_exchange_state(actor_state::about_to_block,
-                                                   actor_state::blocked)) {
-                        case actor_state::ready: {
-                            // restore variables
-                            CPPA_REQUIRE(next_job == nullptr);
-                            break;
-                        }
-                        case actor_state::blocked: {
-                            // wait until someone re-schedules that actor
-                            return resume_result::actor_blocked;
-                        }
-                        default: {
-                            CPPA_CRITICAL("illegal yield result");
-                        }
-                    }
-                    break;
-                }
-                default: {
-                    CPPA_CRITICAL("illegal state");
-                }
+    void await_data(Actor* self) {
+        while (self->m_mailbox.can_fetch_more() == false) {
+            self->set_state(actor_state::about_to_block);
+            // make sure mailbox is empty
+            if (self->m_mailbox.can_fetch_more()) {
+                // someone preempt us => continue
+                self->set_state(actor_state::ready);
             }
+            // wait until actor becomes rescheduled
+            else detail::yield(detail::yield_state::blocked);
         }
     }
 
- private:
+    template<class Actor, typename AbsTimeout>
+    bool await_data(Actor* self, const AbsTimeout&) {
+        await_data(self);
+        return true;
+    }
 
-    // required by util::fiber
-    static void trampoline(void* _this);
+ private:
 
     // members
     util::fiber m_fiber;
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
 
 #endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP

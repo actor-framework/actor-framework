@@ -36,12 +36,8 @@
 
 #include "cppa/on.hpp"
 #include "cppa/logging.hpp"
-#include "cppa/prioritizing.hpp"
-#include "cppa/untyped_actor.hpp"
-#include "cppa/event_based_actor.hpp"
-#include "cppa/thread_mapped_actor.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
-#include "cppa/context_switching_actor.hpp"
+
+#include "cppa/util/fiber.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -51,9 +47,13 @@ using std::endl;
 
 namespace cppa { namespace detail {
 
+resumable::resume_result thread_pool_scheduler::dummy::resume(util::fiber*) {
+    throw std::logic_error("thread_pool_scheduler::dummy::resume");
+}
+
 struct thread_pool_scheduler::worker {
 
-    typedef scheduled_actor* job_ptr;
+    typedef resumable* job_ptr;
 
     job_queue* m_job_queue;
     job_ptr m_dummy;
@@ -109,11 +109,11 @@ struct thread_pool_scheduler::worker {
                 return;                      // and say goodbye
             }
             CPPA_LOG_DEBUG("resume actor with ID " << job->id());
-            if (job->resume(&fself) == resume_result::actor_done) {
+            if (job->resume(&fself) == resumable::done) {
                 CPPA_LOGMF(CPPA_DEBUG, self, "actor is done");
-                bool hidden = job->is_hidden();
+                /*FIXME bool hidden = job->is_hidden();
                 job->deref();
-                if (!hidden) get_actor_registry()->dec_running();
+                if (!hidden)*/ get_actor_registry()->dec_running();
             }
             job = nullptr;
         }
@@ -134,7 +134,7 @@ thread_pool_scheduler::thread_pool_scheduler(size_t num_worker_threads) {
 }
 
 void thread_pool_scheduler::supervisor_loop(job_queue* jqueue,
-                                            scheduled_actor* dummy,
+                                            resumable* dummy,
                                             size_t num_threads) {
     std::vector<std::unique_ptr<thread_pool_scheduler::worker> > workers;
     for (size_t i = 0; i < num_threads; ++i) {
@@ -164,116 +164,18 @@ void thread_pool_scheduler::destroy() {
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {
-            bool hidden = ptr->is_hidden();
+            /*FIXME bool hidden = ptr->is_hidden();
             ptr->deref();
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            if (!hidden) get_actor_registry()->dec_running();
+            if (!hidden)*/ get_actor_registry()->dec_running();
         }
         ptr = m_queue.try_pop();
     }
     super::destroy();
 }
 
-void thread_pool_scheduler::enqueue(scheduled_actor* what) {
+void thread_pool_scheduler::enqueue(resumable* what) {
     m_queue.push_back(what);
-}
-
-void exec_as_thread(bool is_hidden, intrusive_ptr<untyped_actor> ptr) {
-    /*TODO:
-    if (!is_hidden) get_actor_registry()->inc_running();
-    std::thread([=] {
-        try { ptr->exec_bhvr_stack(); }
-        catch (...) { }
-        if (!is_hidden) {
-            std::atomic_thread_fence(std::memory_order_seq_cst);
-            get_actor_registry()->dec_running();
-        }
-    }).detach();
-    */
-}
-
-local_actor_ptr thread_pool_scheduler::exec(spawn_options os, scheduled_actor_ptr p) {
-    /*TODO:
-    CPPA_REQUIRE(p != nullptr);
-    bool is_hidden = has_hide_flag(os);
-    if (has_detach_flag(os)) {
-        exec_as_thread(is_hidden, p [p] {
-            p->run_detached();
-        });
-        return p;
-    }
-    p->attach_to_scheduler(this, is_hidden);
-    if (p->has_behavior() || p->impl_type() == default_event_based_impl) {
-        if (!is_hidden) get_actor_registry()->inc_running();
-        p->ref(); // implicit reference that's released if actor dies
-        if (p->impl_type() != event_based_impl) m_queue.push_back(p.get());
-    }
-    else p->on_exit();
-    return p;
-    */
-}
-
-local_actor_ptr thread_pool_scheduler::exec(spawn_options os,
-                                            init_callback cb,
-                                            actor_fun f) {
-    local_actor_ptr result;
-    auto set_result = [&](local_actor_ptr value) {
-        CPPA_REQUIRE(result == nullptr && value != nullptr);
-        result = std::move(value);
-        if (cb) cb(result.get());
-    };
-    if (has_priority_aware_flag(os)) {
-        using impl = extend<local_actor>::with<stackless, threaded, prioritizing>;
-        set_result(make_counted<impl>());
-        /*TODO:
-        exec_as_thread(has_hide_flag(os), [result, f] {
-            try {
-                f();
-            }
-            catch (actor_exited& e) { }
-            catch (std::exception& e) {
-                CPPA_LOGF_ERROR("actor with ID " << result->id()
-                                << " terminated due to an unhandled exception; "
-                                << detail::demangle(typeid(e)) << ": "
-                                << e.what());
-            }
-            catch (...) {
-                CPPA_LOGF_ERROR("actor with ID " << result->id()
-                                << " terminated due to an unknown exception");
-            }
-            result->on_exit();
-        });
-        */
-    }
-    else if (has_blocking_api_flag(os)) {
-#       ifndef CPPA_DISABLE_CONTEXT_SWITCHING
-        if (!has_detach_flag(os)) {
-            auto p = make_counted<context_switching_actor>(std::move(f));
-            set_result(p);
-            exec(os, std::move(p));
-        }
-        else
-#       endif
-        /* else tree */ {
-            //auto p = make_counted<thread_mapped_actor>(std::move(f));
-            //set_result(p);
-            /*TODO:
-            exec_as_thread(has_hide_flag(os), [p] {
-                p->run();
-                p->on_exit();
-            });
-            */
-        }
-    }
-    else {
-        /*TODO:
-        auto p = event_based_actor::from(std::move(f));
-        set_result(p);
-        exec(os, p);
-        */
-    }
-    CPPA_REQUIRE(result != nullptr);
-    return result;
 }
 
 } } // namespace cppa::detail

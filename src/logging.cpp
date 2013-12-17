@@ -103,7 +103,7 @@ class logging_impl : public logging {
              const char* function_name,
              const char* c_full_file_name,
              int line_num,
-             actor_addr from,
+             actor_addr,
              const std::string& msg) {
         string class_name = c_class_name;
         replace_all(class_name, "::", ".");

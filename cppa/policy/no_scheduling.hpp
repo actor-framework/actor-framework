@@ -33,7 +33,13 @@
 
 #include <mutex>
 #include <thread>
+#include <chrono>
 #include <condition_variable>
+
+#include "cppa/util/fiber.hpp"
+#include "cppa/util/duration.hpp"
+
+#include "cppa/policy/scheduling_policy.hpp"
 
 #include "cppa/detail/sync_request_bouncer.hpp"
 
@@ -46,6 +52,43 @@ class no_scheduling {
     typedef std::unique_lock<std::mutex> lock_type;
 
  public:
+
+    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+
+    template<class Actor>
+    inline timeout_type init_timeout(Actor*, const util::duration& rel_time) {
+        auto result = std::chrono::high_resolution_clock::now();
+        result += rel_time;
+        return result;
+    }
+
+    template<class Actor, typename F>
+    bool fetch_messages(Actor* self, F cb) {
+        await_data(self);
+        fetch_messages_impl(self, cb);
+    }
+
+    template<class Actor, typename F>
+    bool try_fetch_messages(Actor* self, F cb) {
+        auto next = [&] { return self->mailbox().try_pop(); };
+        auto e = next();
+        if (!e) return false;
+        do {
+            cb(e);
+            e = next();
+        }
+        while (e);
+        return true;
+    }
+
+    template<class Actor, typename F>
+    timed_fetch_result fetch_messages(Actor* self, F cb, timeout_type abs_time) {
+        if (!await_data(self, abs_time)) {
+            return timed_fetch_result::no_message;
+        }
+        fetch_messages_impl(self, cb);
+        return timed_fetch_result::success;
+    }
 
     template<class Actor>
     void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
@@ -69,22 +112,29 @@ class no_scheduling {
     template<class Actor>
     void launch(Actor* self) {
         std::thread([=] {
-            auto rr = resume_result::actor_blocked;
-            while (rr != resume_result::actor_done) {
-                wait_for_data();
-                self->resume();
+            util::fiber fself;
+            auto rr = resumable::resume_later;
+            while (rr != resumable::done) {
+                await_data(self);
+                self->resume(&fself);
             }
-
         }).detach();
     }
 
- private:
-
-    bool timed_wait_for_data(const timeout_type& abs_time) {
-        CPPA_REQUIRE(not this->m_mailbox.closed());
-        if (mailbox_empty()) {
+    template<class Actor>
+    void await_data(Actor* self) {
+        if (self->mailbox().empty()) {
             lock_type guard(m_mtx);
-            while (mailbox_empty()) {
+            while (self->mailbox().empty()) m_cv.wait(guard);
+        }
+    }
+
+    template<class Actor>
+    bool await_data(Actor* self, const timeout_type& abs_time) {
+        CPPA_REQUIRE(!self->mailbox().closed());
+        if (self->mailbox().empty()) {
+            lock_type guard(m_mtx);
+            while (self->mailbox().empty()) {
                 if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {
                     return false;
                 }
@@ -93,11 +143,15 @@ class no_scheduling {
         return true;
     }
 
-    void wait_for_data() {
-        if (mailbox_empty()) {
-            lock_type guard(m_mtx);
-            while (mailbox_empty()) m_cv.wait(guard);
+ private:
+
+    template<class Actor, typename F>
+    void fetch_messages_impl(Actor* self, F cb) {
+        auto next = [&] { return self->mailbox().try_pop(); };
+        for (auto e = next(); e != nullptr; e = next()) {
+            cb(e);
         }
+
     }
 
     std::mutex m_mtx;

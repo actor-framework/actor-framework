@@ -13,7 +13,6 @@ cppa/attachable.hpp
 cppa/behavior.hpp
 cppa/binary_deserializer.hpp
 cppa/binary_serializer.hpp
-cppa/blocking_actor.hpp
 cppa/blocking_untyped_actor.hpp
 cppa/channel.hpp
 cppa/common_actor_ops.hpp
@@ -37,7 +36,6 @@ cppa/detail/demangle.hpp
 cppa/detail/disablable_delete.hpp
 cppa/detail/empty_tuple.hpp
 cppa/detail/fd_util.hpp
-cppa/detail/get_behavior.hpp
 cppa/detail/group_manager.hpp
 cppa/detail/handle.hpp
 cppa/detail/ieee_754.hpp
@@ -53,7 +51,6 @@ cppa/detail/projection.hpp
 cppa/detail/pseudo_tuple.hpp
 cppa/detail/ptype_to_type.hpp
 cppa/detail/raw_access.hpp
-cppa/detail/scheduled_actor_dummy.hpp
 cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
 cppa/detail/singleton_mixin.hpp
@@ -105,7 +102,6 @@ cppa/io/remote_actor_proxy.hpp
 cppa/io/stream.hpp
 cppa/local_actor.hpp
 cppa/logging.hpp
-cppa/mailbox_based.hpp
 cppa/mailbox_element.hpp
 cppa/match.hpp
 cppa/match_expr.hpp
@@ -117,7 +113,6 @@ cppa/message_header.hpp
 cppa/message_id.hpp
 cppa/message_priority.hpp
 cppa/node_id.hpp
-cppa/nonblocking_actor.hpp
 cppa/none.hpp
 cppa/object.hpp
 cppa/on.hpp
@@ -133,7 +128,7 @@ cppa/opt.hpp
 cppa/optional.hpp
 cppa/optional_variant.hpp
 cppa/partial_function.hpp
-cppa/policy/invoke_policy_base.hpp
+cppa/policy/invoke_policy.hpp
 cppa/policy/nestable_invoke.hpp
 cppa/policy/prioritizing.hpp
 cppa/policy/sequential_invoke.hpp
@@ -144,7 +139,6 @@ cppa/ref_counted.hpp
 cppa/replies_to.hpp
 cppa/response_handle.hpp
 cppa/sb_actor.hpp
-cppa/scheduled_actor.hpp
 cppa/scheduler.hpp
 cppa/scoped_actor.hpp
 cppa/send.hpp
@@ -152,7 +146,6 @@ cppa/serializer.hpp
 cppa/singletons.hpp
 cppa/spawn.hpp
 cppa/spawn_options.hpp
-cppa/thread_mapped_actor.hpp
 cppa/timeout_definition.hpp
 cppa/to_string.hpp
 cppa/tpartial_function.hpp
@@ -245,7 +238,6 @@ src/demangle.cpp
 src/deserializer.cpp
 src/duration.cpp
 src/empty_tuple.cpp
-src/event_based_resume.cpp
 src/exception.cpp
 src/exit_reason.cpp
 src/factory.cpp
@@ -286,8 +278,6 @@ src/ref_counted.cpp
 src/remote_actor_proxy.cpp
 src/response_handle.cpp
 src/ripemd_160.cpp
-src/scheduled_actor.cpp
-src/scheduled_actor_dummy.cpp
 src/scheduler.cpp
 src/scoped_actor.cpp
 src/send.cpp
@@ -296,7 +286,6 @@ src/shared_spinlock.cpp
 src/singleton_manager.cpp
 src/string_serialization.cpp
 src/sync_request_bouncer.cpp
-src/thread_mapped_actor.cpp
 src/thread_pool_scheduler.cpp
 src/to_uniform_name.cpp
 src/type_lookup_table.cpp
@@ -338,3 +327,14 @@ cppa/policy/resume_policy.hpp
 cppa/policy/cooperative_scheduling.hpp
 cppa/policy/scheduling_policy.hpp
 cppa/policy/priority_policy.hpp
+cppa/policy/not_prioritizing.hpp
+cppa/detail/functor_based_blocking_actor.hpp
+src/functor_based_actor.cpp
+cppa/mailbox_based.hpp
+cppa/behavior_stack_based.hpp
+cppa/resumable.hpp
+src/resumable.cpp
+cppa/policy/middleman_scheduling.hpp
+src/untyped_actor.cpp
+src/functor_based_blocking_actor.cpp
+src/blocking_untyped_actor.cpp

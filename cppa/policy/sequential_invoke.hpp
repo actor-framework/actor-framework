@@ -36,14 +36,14 @@
 
 #include "cppa/util/duration.hpp"
 
-#include "cppa/policy/invoke_policy_base.hpp"
+#include "cppa/policy/invoke_policy.hpp"
 
 namespace cppa { namespace policy {
 
 /**
  * @brief An actor that is scheduled or otherwise managed.
  */
-class sequential_invoke : public invoke_policy_base<sequential_invoke> {
+class sequential_invoke : public invoke_policy<sequential_invoke> {
 
  public:
 
@@ -53,26 +53,26 @@ class sequential_invoke : public invoke_policy_base<sequential_invoke> {
         return node->marked;
     }
 
-    template<class Client>
-    static inline pointer hm_begin(Client* client, pointer node) {
-        auto previous = client->m_current_node;
-        client->m_current_node = node;
-        client->push_timeout();
+    template<class Actor>
+    inline pointer hm_begin(Actor* self, pointer node) {
+        auto previous = self->m_current_node;
+        self->m_current_node = node;
+        push_timeout();
         node->marked = true;
         return previous;
     }
 
-    template<class Client>
-    static inline void hm_cleanup(Client* client, pointer previous) {
-        client->m_current_node->marked = false;
-        client->m_current_node = previous;
+    template<class Actor>
+    inline void hm_cleanup(Actor* self, pointer previous) {
+        self->m_current_node->marked = false;
+        self->m_current_node = previous;
     }
 
-    template<class Client>
-    static inline void hm_revert(Client* client, pointer previous) {
-        client->m_current_node->marked = false;
-        client->m_current_node = previous;
-        client->pop_timeout();
+    template<class Actor>
+    inline void hm_revert(Actor* self, pointer previous) {
+        self->m_current_node->marked = false;
+        self->m_current_node = previous;
+        pop_timeout();
     }
 
     inline void reset_timeout() {
@@ -82,22 +82,24 @@ class sequential_invoke : public invoke_policy_base<sequential_invoke> {
         }
     }
 
-    void request_timeout(const util::duration& d) {
+    template<class Actor>
+    void request_timeout(Actor* self, const util::duration& d) {
         if (!d.valid()) m_has_pending_tout = false;
         else {
             auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
             if (d.is_zero()) {
                 // immediately enqueue timeout message if duration == 0s
-                this->enqueue({this->address(), this}, std::move(msg));
+                self->enqueue({self->address(), self}, std::move(msg));
                 //auto e = this->new_mailbox_element(this, std::move(msg));
                 //this->m_mailbox.enqueue(e);
             }
-            else this->delayed_send_tuple(this, d, std::move(msg));
+            else self->delayed_send_tuple(self, d, std::move(msg));
             m_has_pending_tout = true;
         }
     }
 
-    inline void handle_timeout(behavior& bhvr) {
+    template<class Actor>
+    inline void handle_timeout(Actor*, behavior& bhvr) {
         bhvr.handle_timeout();
         reset_timeout();
     }

@@ -72,6 +72,10 @@ inline std::string to_string(const actor& what) {
     return detail::to_string_impl(what);
 }
 
+inline std::string to_string(const actor_addr& what) {
+    return detail::to_string_impl(what);
+}
+
 inline std::string to_string(const group_ptr& what) {
     return detail::to_string_impl(what);
 }

@@ -28,25 +28,18 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/scheduled_actor_dummy.hpp"
+#include "cppa/detail/functor_based_blocking_actor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
-scheduled_actor_dummy::scheduled_actor_dummy()
-: scheduled_actor(actor_state::blocked, false) { }
-
-void scheduled_actor_dummy::enqueue(const message_header&, any_tuple) { }
-void scheduled_actor_dummy::quit(std::uint32_t) { }
-void scheduled_actor_dummy::dequeue(behavior&) { }
-void scheduled_actor_dummy::dequeue_response(behavior&, message_id) { }
-bool scheduled_actor_dummy::has_behavior() { return false; }
-
-resume_result scheduled_actor_dummy::resume(util::fiber*) {
-    return resume_result::actor_blocked;
+void functor_based_blocking_actor::create(blocking_untyped_actor*, act_fun fun) {
+    m_act = fun;
 }
 
-scheduled_actor_type scheduled_actor_dummy::impl_type() {
-    return event_based_impl;
+void functor_based_blocking_actor::act() {
+    m_act(this);
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
