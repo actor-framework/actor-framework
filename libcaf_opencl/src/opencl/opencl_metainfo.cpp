@@ -93,12 +93,20 @@ void opencl_metainfo::initialize()
         throw runtime_error(oss.str());
     }
 
+    auto pfn_notify = [](const char *errinfo,
+                         const void *,
+                         size_t,
+                         void *) {
+        CPPA_LOG_ERROR("\n##### Error message via pfn_notify #####\n" +
+                       string(errinfo) +
+                       "\n########################################");
+    };
 
     // create a context
     m_context.adopt(clCreateContext(0,
                                     devices.size(),
                                     devices.data(),
-                                    nullptr,
+                                    pfn_notify,
                                     nullptr,
                                     &err));
     if (err != CL_SUCCESS) {
