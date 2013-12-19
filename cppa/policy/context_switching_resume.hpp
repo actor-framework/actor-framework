@@ -75,18 +75,14 @@ class context_switching_resume {
             for (;;) {
                 switch (call(&m_fiber, from)) {
                     case yield_state::done: {
-                        CPPA_REQUIRE(next_job == nullptr);
                         return resumable::done;
                     }
                     case yield_state::ready: { break; }
                     case yield_state::blocked: {
-                        CPPA_REQUIRE(next_job == nullptr);
-                        CPPA_REQUIRE(m_chained_actor == nullptr);
                         switch (this->cas_state(actor_state::about_to_block,
                                                 actor_state::blocked)) {
                             case actor_state::ready: {
                                 // restore variables
-                                CPPA_REQUIRE(next_job == nullptr);
                                 break;
                             }
                             case actor_state::blocked: {

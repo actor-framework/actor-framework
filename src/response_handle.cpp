@@ -55,9 +55,11 @@ bool response_handle::synchronous() const {
 }
 
 void response_handle::apply(any_tuple msg) const {
+    std::cout << "response_handle::apply\n";
     if (valid()) {
         auto ptr = detail::actor_addr_cast<abstract_actor>(m_to);
         ptr->enqueue({m_from, ptr, m_id}, move(msg));
+        std::cout << "response_handle::apply: after ptr->enqueue\n";
     }
 }
 

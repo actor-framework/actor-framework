@@ -343,6 +343,14 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     /** @cond PRIVATE */
 
+    inline void current_node(mailbox_element* ptr) {
+        this->m_current_node = ptr;
+    }
+
+    inline mailbox_element* current_node() {
+        return this->m_current_node;
+    }
+
     inline message_id new_request_id() {
         auto result = ++m_last_request_id;
         m_pending_responses.push_back(result.response_id());

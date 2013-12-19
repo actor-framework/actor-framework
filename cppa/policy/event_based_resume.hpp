@@ -57,6 +57,9 @@ class event_based_resume {
         template<typename... Ts>
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
+        // implemented in detail::proper_actor
+        virtual bool invoke(mailbox_element* msg) = 0;
+
         resumable::resume_result resume(util::fiber*) override {
             CPPA_LOG_TRACE("id = " << this->id()
                            << ", state = " << static_cast<int>(this->state()));
@@ -81,13 +84,11 @@ class event_based_resume {
                 this->on_exit();
                 return true;
             };
-            CPPA_REQUIRE(next_job == nullptr);
             try {
                 //auto e = m_mailbox.try_pop();
                 for (auto e = this->m_mailbox.try_pop(); ; e = this->m_mailbox.try_pop()) {
                     //e = m_mailbox.try_pop();
                     if (e == nullptr) {
-                        CPPA_REQUIRE(next_job == nullptr);
                         CPPA_LOGMF(CPPA_DEBUG, self, "no more element in mailbox; going to block");
                         this->set_state(actor_state::about_to_block);
                         std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -97,9 +98,9 @@ class event_based_resume {
                                 case actor_state::ready:
                                     // interrupted by arriving message
                                     // restore members
-                                    CPPA_REQUIRE(m_chained_actor == nullptr);
-                                    CPPA_LOGMF(CPPA_DEBUG, self, "switched back to ready: "
-                                                   "interrupted by arriving message");
+                                    CPPA_LOG_DEBUG("switched back to ready: "
+                                                   "interrupted by "
+                                                   "arriving message");
                                     break;
                                 case actor_state::blocked:
                                     CPPA_LOGMF(CPPA_DEBUG, self, "set state successfully to blocked");
@@ -116,21 +117,19 @@ class event_based_resume {
                             this->set_state(actor_state::ready);
                         }
                     }
-                    /*
                     else {
-                        if (this->bhvr_stack().invoke(m_recv_policy, this, e)) {
+                        if (this->invoke(e)) {
                             CPPA_LOG_DEBUG_IF(m_chained_actor,
                                               "set actor with ID "
                                               << m_chained_actor->id()
                                               << " as successor");
                             if (this->bhvr_stack().empty() && done_cb()) {
                                 CPPA_LOGMF(CPPA_DEBUG, self, "behavior stack empty");
-                                return resume_result::actor_done;
+                                return resume_result::done;
                             }
                             this->bhvr_stack().cleanup();
                         }
                     }
-                    */
                 }
             }
             catch (actor_exited& what) {

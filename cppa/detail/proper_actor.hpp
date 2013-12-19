@@ -22,9 +22,8 @@ template<class Base,
          class SchedulingPolicy,
          class PriorityPolicy,
          class ResumePolicy,
-         class InvokePolicy,
-         bool OverrideDequeue = std::is_base_of<blocking_untyped_actor, Base>::value>
-class proper_actor : public ResumePolicy::template mixin<Base> {
+         class InvokePolicy>
+class proper_actor_base : public ResumePolicy::template mixin<Base> {
 
     friend SchedulingPolicy;
     friend PriorityPolicy;
@@ -36,20 +35,14 @@ class proper_actor : public ResumePolicy::template mixin<Base> {
  public:
 
     template <typename... Ts>
-    proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+    proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
         m_scheduling_policy.enqueue(this, hdr, msg);
     }
 
-    inline void launch() { m_scheduling_policy.launch(this); }
-
     inline mailbox_element* next_message() {
         return m_priority_policy.next_message(this);
-    }
-
-    inline void invoke(mailbox_element* msg) {
-        m_invoke_policy.invoke(this, msg);
     }
 
     // grant access to the actor's mailbox
@@ -67,15 +60,9 @@ class proper_actor : public ResumePolicy::template mixin<Base> {
         m_scheduling_policy.push_timeout();
     }
 
-    inline void current_node(mailbox_element* ptr) {
-        this->m_current_node = ptr;
-    }
-
     inline void request_timeout(const util::duration& rel_timeout) {
         m_invoke_policy.request_timeout(this, rel_timeout);
     }
-
-    inline mailbox_element* current_node() { return this->m_current_node; }
 
     detail::behavior_stack& bhvr_stack() { return this->m_bhvr_stack; }
 
@@ -88,22 +75,59 @@ class proper_actor : public ResumePolicy::template mixin<Base> {
 
 };
 
-// for blocking actors, there's one more member function to implement
-template <class Base, class SchedulingPolicy, class PriorityPolicy,
-          class ResumePolicy, class InvokePolicy>
-class proper_actor<
-    Base, SchedulingPolicy, PriorityPolicy, ResumePolicy, InvokePolicy,
-    true> final : public proper_actor<Base, SchedulingPolicy, PriorityPolicy,
-                                      ResumePolicy, InvokePolicy, false> {
+template<class Base,
+         class SchedulingPolicy,
+         class PriorityPolicy,
+         class ResumePolicy,
+         class InvokePolicy,
+         bool OverrideDequeue = std::is_base_of<blocking_untyped_actor, Base>::value>
+class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
+                                              PriorityPolicy, ResumePolicy,
+                                              InvokePolicy> {
 
-    typedef proper_actor<Base, SchedulingPolicy, PriorityPolicy,
-                         ResumePolicy, InvokePolicy, false>
+    typedef proper_actor_base<Base, SchedulingPolicy, PriorityPolicy,
+                              ResumePolicy, InvokePolicy>
             super;
 
  public:
 
     template <typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+
+    detail::behavior_stack& bhvr_stack() { return this->m_bhvr_stack; }
+
+    inline void launch() {
+        this->bhvr_stack().push_back(this->make_behavior());
+        this->m_scheduling_policy.launch(this);
+    }
+
+    bool invoke(mailbox_element* msg) {
+        return this->m_invoke_policy.invoke(this, msg, bhvr_stack().back());
+    }
+
+};
+
+// for blocking actors, there's one more member function to implement
+template <class Base, class SchedulingPolicy, class PriorityPolicy,
+          class ResumePolicy, class InvokePolicy>
+class proper_actor<
+    Base, SchedulingPolicy, PriorityPolicy, ResumePolicy, InvokePolicy,
+    true> final : public proper_actor_base<Base, SchedulingPolicy,
+                                           PriorityPolicy, ResumePolicy,
+                                           InvokePolicy> {
+
+    typedef proper_actor_base<Base, SchedulingPolicy, PriorityPolicy,
+                              ResumePolicy, InvokePolicy>
+            super;
+
+ public:
+
+    template <typename... Ts>
+    proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+
+    inline void launch() {
+        this->m_scheduling_policy.launch(this);
+    }
 
     void dequeue(behavior& bhvr) override {
         if (bhvr.timeout().valid()) {

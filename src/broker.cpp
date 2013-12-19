@@ -32,7 +32,7 @@
 
 #include "cppa/config.hpp"
 
-#include "cppa/cppa.hpp"
+//#include "cppa/cppa.hpp"
 #include "cppa/singletons.hpp"
 
 #include "cppa/util/scope_guard.hpp"
@@ -287,7 +287,6 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     m_dummy_node.msg = move(msg);
     m_dummy_node.mid = hdr.id;
     try {
-        using detail::receive_policy;
         auto bhvr = m_bhvr_stack.back();
         switch (m_invoke.handle_message(this,
                                         &m_dummy_node,

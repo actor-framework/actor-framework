@@ -102,7 +102,7 @@ struct C : sb_actor<C> {
 struct D : popular_actor {
     D(const actor& buddy) : popular_actor(buddy) { }
     behavior make_behavior() override {
-        become (
+        return (
             others() >> [=] {
                 /*
                 response_handle handle = make_response_handle();
@@ -140,7 +140,7 @@ struct server : untyped_actor {
 
     behavior make_behavior() override {
         auto die = [=] { quit(exit_reason::user_shutdown); };
-        become (
+        return (
             on(atom("idle"), arg_match) >> [=](actor worker) {
                 become (
                     keep_behavior,

@@ -106,7 +106,6 @@ class cooperative_scheduling {
                     switch (state) {
                         case actor_state::blocked: {
                             if (set_ready()) {
-                                CPPA_REQUIRE(m_scheduler != nullptr);
                                 //m_scheduler->enqueue(this);
                                 return;
                             }

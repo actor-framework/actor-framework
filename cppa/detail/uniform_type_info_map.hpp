@@ -60,16 +60,16 @@ namespace cppa { namespace detail {
 // ordered according to demangled type name (see uniform_type_info_map.cpp)
 using mapped_type_list = util::type_list<
     bool,
+    actor,
+    actor_addr,
     any_tuple,
     atom_value,
-    actor,
     channel,
     group_ptr,
     node_id_ptr,
     io::accept_handle,
     io::connection_handle,
     message_header,
-    std::nullptr_t,
     unit_t,
     util::buffer,
     util::duration,

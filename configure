@@ -123,9 +123,9 @@ configure ()
     cd $workdir
 
     if [ -n "$5" ]; then
-        cmake -G "$5" "$CMakeCacheEntries" "$sourcedir"
+        cmake -G "$5" $CMakeCacheEntries $sourcedir
     else
-        cmake "$CMakeCacheEntries" "$sourcedir"
+        cmake $CMakeCacheEntries $sourcedir
     fi
 
     echo "# This is the command used to configure this build" > config.status
@@ -136,7 +136,6 @@ configure ()
 # Set defaults.
 builddir="$sourcedir/build"
 CMakeCacheEntries=""
-append_cache_entry CMAKE_BUILD_TYPE            STRING RelWithDebInfo
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry ENABLE_DEBUG                BOOL   false
 append_cache_entry DISABLE_CONTEXT_SWITCHING   BOOL   false

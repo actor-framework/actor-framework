@@ -56,25 +56,30 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 
  public:
 
-     static inline bool hm_should_skip(pointer) {
-        return false;
+    static inline bool hm_should_skip(pointer node) {
+        return node->marked;
     }
 
-    template<class Client>
-    static inline pointer hm_begin(Client* client, pointer node) {
-        auto previous = client->current_node();
-        client->current_node(node);
+    template<class Actor>
+    inline pointer hm_begin(Actor* self, pointer node) {
+        auto previous = self->m_current_node;
+        self->m_current_node = node;
+        push_timeout();
+        node->marked = true;
         return previous;
     }
 
-    template<class Client>
-    static inline void hm_cleanup(Client* client, pointer /*previous*/) {
-        client->current_node(&(client->m_dummy_node));
+    template<class Actor>
+    inline void hm_cleanup(Actor* self, pointer previous) {
+        self->m_current_node->marked = false;
+        self->m_current_node = previous;
     }
 
-    template<class Client>
-    static inline void hm_revert(Client* client, pointer previous) {
-        client->current_node(previous);
+    template<class Actor>
+    inline void hm_revert(Actor* self, pointer previous) {
+        self->m_current_node->marked = false;
+        self->m_current_node = previous;
+        pop_timeout();
     }
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;

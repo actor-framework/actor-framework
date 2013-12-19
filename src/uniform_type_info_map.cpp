@@ -58,18 +58,17 @@ namespace cppa { namespace detail {
 // maps demangled names to libcppa names
 // WARNING: this map is sorted, insert new elements *in sorted order* as well!
 /* extern */ const char* mapped_type_names[][2] = {
+    { "bool",                                           "bool"      },
     { "cppa::actor",                                    "@actor"    },
     { "cppa::actor_addr",                               "@addr"     },
-    { "bool",                                           "bool"      },
     { "cppa::any_tuple",                                "@tuple"    },
     { "cppa::atom_value",                               "@atom"     },
-    { "cppa::intrusive_ptr<cppa::channel>",             "@channel"  },
+    { "cppa::channel",                                  "@channel"  },
     { "cppa::intrusive_ptr<cppa::group>",               "@group"    },
     { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"     },
     { "cppa::io::accept_handle",                        "@ac_hdl"   },
     { "cppa::io::connection_handle",                    "@cn_hdl"   },
     { "cppa::message_header",                           "@header"   },
-    { "cppa::nullptr_t",                                "@null"     },
     { "cppa::unit_t",                                   "@0"        },
     { "cppa::util::buffer",                             "@buffer"   },
     { "cppa::util::duration",                           "@duration" },

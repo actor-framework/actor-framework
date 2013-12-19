@@ -88,11 +88,14 @@ endif ()
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DCPPA_DEBUG_MODE)
+message(STATUS "----- configured using --enable-debug")
 endif (ENABLE_DEBUG)
 
 if (CPPA_LOG_LEVEL)
   add_definitions(-DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL})
 endif(CPPA_LOG_LEVEL)
+
+message(STATUS "BLUBB: ${CMAKE_BUILD_TYPE}")
 
 # set build default build type if not set
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")

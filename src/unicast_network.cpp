@@ -69,7 +69,6 @@ void publish(actor whom, std::unique_ptr<acceptor> aptr) {
     CPPA_LOG_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(ptr, get)
                    << ", args.size() = " << args.size());
     if (!whom) return;
-    CPPA_REQUIRE(args.size() == 0);
     get_actor_registry()->put(whom->id(), detail::actor_addr_cast<abstract_actor>(whom));
     auto mm = get_middleman();
     mm->register_acceptor(whom, new peer_acceptor(mm, move(aptr), whom));
@@ -115,7 +114,7 @@ actor remote_actor(stream_ptr_pair io) {
     CPPA_LOGF_DEBUG("result = " << result->value.get());
     return result->value;
 }
-    
+
 actor remote_actor(const char* host, std::uint16_t port) {
     auto io = ipv4_io_stream::connect_to(host, port);
     return remote_actor(stream_ptr_pair(io, io));

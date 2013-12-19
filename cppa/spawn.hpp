@@ -68,11 +68,14 @@ actor spawn(Ts&&... args) {
                   "top-level spawns cannot have monitor or link flag");
     static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
+    /*
     using scheduling_policy = typename std::conditional<
                                   has_detach_flag(Options),
                                   policy::no_scheduling,
                                   policy::cooperative_scheduling
                               >::type;
+    */
+    using scheduling_policy = policy::no_scheduling;
     using priority_policy = typename std::conditional<
                                 has_priority_aware_flag(Options),
                                 policy::prioritizing,
@@ -100,19 +103,6 @@ actor spawn(Ts&&... args) {
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
     ptr->launch();
     return ptr;
-    /*
-    scheduled_actor_ptr ptr;
-    if (has_priority_aware_flag(Options)) {
-        using derived = typename extend<Impl>::template with<threaded, prioritizing>;
-        ptr = make_counted<derived>(std::forward<Ts>(args)...);
-    }
-    else if (has_detach_flag(Options)) {
-        using derived = typename extend<Impl>::template with<threaded>;
-        ptr = make_counted<derived>(std::forward<Ts>(args)...);
-    }
-    else ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    return get_scheduler()->exec(Options, std::move(ptr));
-    */
 }
 
 /**

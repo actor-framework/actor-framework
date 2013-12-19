@@ -148,12 +148,16 @@ response_handle local_actor::make_response_handle() {
 }
 */
 
+void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
+    dest.enqueue({address(), dest, prio}, std::move(what));
+}
+
 void local_actor::send_tuple(const channel& dest, any_tuple what) {
-    //TODO:
+    send_tuple(message_priority::normal, dest, std::move(what));
 }
 
 void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
-
+    send(detail::raw_access::get(whom), atom("EXIT"), reason);
 }
 
 void local_actor::remove_handler(message_id) {
@@ -170,16 +174,15 @@ message_future local_actor::timed_sync_send_tuple(const util::duration& rtime,
 
 }
 
-void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
-
-}
-
 message_future local_actor::sync_send_tuple(const actor& dest, any_tuple what) {
 
 }
 
 response_handle local_actor::make_response_handle() {
-    return {};
+    auto n = m_current_node;
+    response_handle result{address(), n->sender, n->mid.response_id()};
+    n->mid.mark_as_answered();
+    return result;
 }
 
 void local_actor::cleanup(std::uint32_t reason) {

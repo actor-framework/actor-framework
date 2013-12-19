@@ -49,30 +49,25 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 
     sequential_invoke() : m_has_pending_tout(false), m_pending_tout(0) { }
 
-    static inline bool hm_should_skip(pointer node) {
-        return node->marked;
+    static inline bool hm_should_skip(pointer) {
+        return false;
     }
 
     template<class Actor>
-    inline pointer hm_begin(Actor* self, pointer node) {
-        auto previous = self->m_current_node;
-        self->m_current_node = node;
-        push_timeout();
-        node->marked = true;
+    static inline pointer hm_begin(Actor* self, pointer node) {
+        auto previous = self->current_node();
+        self->current_node(node);
         return previous;
     }
 
     template<class Actor>
-    inline void hm_cleanup(Actor* self, pointer previous) {
-        self->m_current_node->marked = false;
-        self->m_current_node = previous;
+    static inline void hm_cleanup(Actor* self, pointer) {
+        self->current_node(&(self->m_dummy_node));
     }
 
     template<class Actor>
-    inline void hm_revert(Actor* self, pointer previous) {
-        self->m_current_node->marked = false;
-        self->m_current_node = previous;
-        pop_timeout();
+    static inline void hm_revert(Actor* self, pointer previous) {
+        self->current_node(previous);
     }
 
     inline void reset_timeout() {

@@ -59,7 +59,8 @@ class continue_helper {
 
     template<typename F>
     continue_helper& continue_with(F) {
-
+        //FIXME
+        throw std::logic_error("not implemented yet");
     }
 
     inline message_id get_message_id() const {

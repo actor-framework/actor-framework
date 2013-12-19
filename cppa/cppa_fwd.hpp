@@ -43,6 +43,7 @@ class node_id;
 class behavior;
 class any_tuple;
 class self_type;
+class actor_addr;
 class actor_proxy;
 class untyped_actor;
 class abstract_actor;

@@ -92,15 +92,20 @@ class no_scheduling {
 
     template<class Actor>
     void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+std::cout << "enqueue\n";
         auto ptr = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(ptr)) {
+            default:
+std::cout << "enqueue: default case (do nothing)\n";
+                break;
             case intrusive::first_enqueued: {
+std::cout << "enqueue: first enqueue -> notify\n";
                 lock_type guard(m_mtx);
                 m_cv.notify_one();
                 break;
             }
-            default: break;
             case intrusive::queue_closed:
+std::cout << "enqueue: mailbox closed!\n";
                 if (hdr.id.valid()) {
                     detail::sync_request_bouncer f{self->exit_reason()};
                     f(hdr.sender, hdr.id);
@@ -115,15 +120,18 @@ class no_scheduling {
             util::fiber fself;
             auto rr = resumable::resume_later;
             while (rr != resumable::done) {
+std::cout << "before await_data\n";
                 await_data(self);
-                self->resume(&fself);
+std::cout << "before resume\n";
+                rr = self->resume(&fself);
+std::cout << "after resume\n";
             }
         }).detach();
     }
 
     template<class Actor>
     void await_data(Actor* self) {
-        if (self->mailbox().empty()) {
+        while (self->mailbox().empty()) {
             lock_type guard(m_mtx);
             while (self->mailbox().empty()) m_cv.wait(guard);
         }
@@ -132,7 +140,7 @@ class no_scheduling {
     template<class Actor>
     bool await_data(Actor* self, const timeout_type& abs_time) {
         CPPA_REQUIRE(!self->mailbox().closed());
-        if (self->mailbox().empty()) {
+        while (self->mailbox().empty()) {
             lock_type guard(m_mtx);
             while (self->mailbox().empty()) {
                 if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {

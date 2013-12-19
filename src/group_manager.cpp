@@ -214,7 +214,6 @@ class local_group_proxy : public local_group {
     : super(false, forward<Ts>(args)...) {
         CPPA_REQUIRE(m_broker == nullptr);
         CPPA_REQUIRE(remote_broker != nullptr);
-        CPPA_REQUIRE(remote_broker->is_proxy());
         m_broker = move(remote_broker);
         m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }

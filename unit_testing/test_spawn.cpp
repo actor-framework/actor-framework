@@ -458,6 +458,24 @@ void test_continuation() {
 void test_spawn() {
     scoped_actor self;
 
+    auto s = spawn([](untyped_actor* self) -> behavior {
+        return (
+            others() >> [=]() -> any_tuple {
+                cout << "received: " << to_string(self->last_dequeued()) << endl;
+                return self->last_dequeued();
+            }
+        );
+    });
+    cout << "spawned actor, waiting for response" << endl;
+    self->send(s, atom("hello"));
+    self->receive(
+        others() >> [&] {
+            cout << "received: " << to_string(self->last_dequeued()) << endl;
+        }
+    );
+    self->await_all_other_actors_done();
+    return;
+
     test_serial_reply();
     test_or_else();
     test_continuation();

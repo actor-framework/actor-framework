@@ -46,8 +46,11 @@ struct not_prioritizing {
     }
 
     template<class Actor, typename F>
-    bool fetch_messages(Actor*, F) {
-        //FIXME
+    bool fetch_messages(Actor* self, F cb) {
+        auto fetch = [self] { return self->mailbox().try_pop(); };
+        for (auto e = fetch(); e != nullptr; e = fetch()) {
+            cb(e);
+        }
     }
 
 };
