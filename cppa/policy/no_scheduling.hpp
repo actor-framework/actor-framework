@@ -36,11 +36,18 @@
 #include <chrono>
 #include <condition_variable>
 
+#include "cppa/logging.hpp"
+#include "cppa/singletons.hpp"
+#include "cppa/actor_state.hpp"
+#include "cppa/exit_reason.hpp"
+
 #include "cppa/util/fiber.hpp"
 #include "cppa/util/duration.hpp"
+#include "cppa/util/scope_guard.hpp"
 
 #include "cppa/policy/scheduling_policy.hpp"
 
+#include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
@@ -92,20 +99,17 @@ class no_scheduling {
 
     template<class Actor>
     void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
-std::cout << "enqueue\n";
         auto ptr = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(ptr)) {
             default:
-std::cout << "enqueue: default case (do nothing)\n";
                 break;
             case intrusive::first_enqueued: {
-std::cout << "enqueue: first enqueue -> notify\n";
                 lock_type guard(m_mtx);
+                self->set_state(actor_state::ready);
                 m_cv.notify_one();
                 break;
             }
             case intrusive::queue_closed:
-std::cout << "enqueue: mailbox closed!\n";
                 if (hdr.id.valid()) {
                     detail::sync_request_bouncer f{self->exit_reason()};
                     f(hdr.sender, hdr.id);
@@ -116,15 +120,27 @@ std::cout << "enqueue: mailbox closed!\n";
 
     template<class Actor>
     void launch(Actor* self) {
+        CPPA_PUSH_AID(self->id());
+        get_actor_registry()->inc_running();
         std::thread([=] {
+            CPPA_PUSH_AID(self->id());
+            CPPA_LOG_TRACE("");
+            auto guard = util::make_scope_guard([] {
+                get_actor_registry()->dec_running();
+            });
             util::fiber fself;
-            auto rr = resumable::resume_later;
-            while (rr != resumable::done) {
-std::cout << "before await_data\n";
+            for (;;) {
                 await_data(self);
-std::cout << "before resume\n";
-                rr = self->resume(&fself);
-std::cout << "after resume\n";
+                if (self->resume(&fself) == resumable::done) {
+                    CPPA_LOG_DEBUG("resume returned resumable::done");
+                    self->planned_exit_reason(exit_reason::normal);
+                }
+                auto per = self->planned_exit_reason();
+                if (per != exit_reason::not_exited) {
+                    CPPA_LOG_DEBUG("planned exit reason: " << per);
+                    self->cleanup(per);
+                    return;
+                }
             }
         }).detach();
     }

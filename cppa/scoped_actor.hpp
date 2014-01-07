@@ -70,6 +70,7 @@ class scoped_actor {
 
  private:
 
+    actor_id m_prev;
     intrusive_ptr<blocking_untyped_actor> m_self;
 
 };

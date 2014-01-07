@@ -169,13 +169,13 @@ class middleman_impl : public middleman {
     }
 
     peer* get_peer(const node_id& node) override {
-        CPPA_LOG_TRACE("n = " << to_string(n));
+        CPPA_LOG_TRACE(CPPA_TARG(node, to_string));
         auto i = m_peers.find(node);
         if (i != m_peers.end()) {
             CPPA_LOG_DEBUG("result = " << i->second.impl);
             return i->second.impl;
         }
-        CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
+        CPPA_LOG_DEBUG("result = nullptr");
         return nullptr;
     }
 
@@ -310,21 +310,21 @@ class middleman_overseer : public continuable {
         static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
-        CPPA_LOGMF(CPPA_DEBUG, self, "read " << read_result << " messages from queue");
+        CPPA_LOG_DEBUG("read " << read_result << " messages from queue");
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
                 return read_continue_later;
             }
             else {
-                CPPA_LOGMF(CPPA_ERROR, self, "cannot read from pipe");
+                CPPA_LOG_ERROR("cannot read from pipe");
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
         for (int i = 0; i < read_result; ++i) {
             unique_ptr<middleman_event> msg(m_queue.try_pop());
             if (!msg) {
-                CPPA_LOGMF(CPPA_ERROR, self, "nullptr dequeued");
+                CPPA_LOG_ERROR("nullptr dequeued");
                 CPPA_CRITICAL("nullptr dequeued");
             }
             CPPA_LOGF_DEBUG("execute run_later functor");

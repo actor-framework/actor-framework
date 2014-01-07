@@ -40,10 +40,12 @@
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/resumable.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/message_header.hpp"
 
 #include "cppa/util/duration.hpp"
 

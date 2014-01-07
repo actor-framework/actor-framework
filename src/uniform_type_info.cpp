@@ -59,8 +59,6 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
 
-#include "cppa/message_header.hpp"
-
 namespace cppa {
 
 namespace { inline detail::uniform_type_info_map& uti_map() {

@@ -239,6 +239,16 @@ class optional<T&> {
         return *m_value;
     }
 
+    inline T* operator->() {
+        CPPA_REQUIRE(valid());
+        return m_value;
+    }
+
+    inline const T* operator->() const {
+        CPPA_REQUIRE(valid());
+        return m_value;
+    }
+
     inline T& get() {
         CPPA_REQUIRE(valid());
         return *m_value;

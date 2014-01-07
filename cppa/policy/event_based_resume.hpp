@@ -65,6 +65,7 @@ class event_based_resume {
                            << ", state = " << static_cast<int>(this->state()));
             CPPA_REQUIRE(   this->state() == actor_state::ready
                          || this->state() == actor_state::pending);
+            CPPA_PUSH_AID(this->id());
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
                 if (this->exit_reason() == exit_reason::not_exited) {
@@ -89,7 +90,7 @@ class event_based_resume {
                 for (auto e = this->m_mailbox.try_pop(); ; e = this->m_mailbox.try_pop()) {
                     //e = m_mailbox.try_pop();
                     if (e == nullptr) {
-                        CPPA_LOGMF(CPPA_DEBUG, self, "no more element in mailbox; going to block");
+                        CPPA_LOG_DEBUG("no more element in mailbox; going to block");
                         this->set_state(actor_state::about_to_block);
                         std::atomic_thread_fence(std::memory_order_seq_cst);
                         if (this->m_mailbox.can_fetch_more() == false) {
@@ -103,28 +104,24 @@ class event_based_resume {
                                                    "arriving message");
                                     break;
                                 case actor_state::blocked:
-                                    CPPA_LOGMF(CPPA_DEBUG, self, "set state successfully to blocked");
+                                    CPPA_LOG_DEBUG("set state successfully to blocked");
                                     // done setting actor to blocked
                                     return resumable::resume_later;
                                 default:
-                                    CPPA_LOGMF(CPPA_ERROR, self, "invalid state");
+                                    CPPA_LOG_ERROR("invalid state");
                                     CPPA_CRITICAL("invalid state");
                             };
                         }
                         else {
-                            CPPA_LOGMF(CPPA_DEBUG, self, "switched back to ready: "
+                            CPPA_LOG_DEBUG("switched back to ready: "
                                            "mailbox can fetch more");
                             this->set_state(actor_state::ready);
                         }
                     }
                     else {
                         if (this->invoke(e)) {
-                            CPPA_LOG_DEBUG_IF(m_chained_actor,
-                                              "set actor with ID "
-                                              << m_chained_actor->id()
-                                              << " as successor");
                             if (this->bhvr_stack().empty() && done_cb()) {
-                                CPPA_LOGMF(CPPA_DEBUG, self, "behavior stack empty");
+                                CPPA_LOG_DEBUG("behavior stack empty");
                                 return resume_result::done;
                             }
                             this->bhvr_stack().cleanup();

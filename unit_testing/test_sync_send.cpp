@@ -105,7 +105,7 @@ struct D : popular_actor {
         return (
             others() >> [=] {
                 /*
-                response_handle handle = make_response_handle();
+                response_promise handle = make_response_promise();
                 sync_send_tuple(buddy(), last_dequeued()).then([=] {
                     reply_to(handle, last_dequeued());
                     quit();

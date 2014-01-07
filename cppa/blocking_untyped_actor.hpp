@@ -31,7 +31,9 @@
 #ifndef CPPA_BLOCKING_UNTYPED_ACTOR_HPP
 #define CPPA_BLOCKING_UNTYPED_ACTOR_HPP
 
+#include "cppa/on.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
@@ -44,6 +46,113 @@ namespace cppa {
 class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
 
  public:
+
+    class response_future {
+
+     public:
+
+        response_future() = delete;
+
+        void await(behavior&);
+
+        inline void await(behavior&& bhvr) {
+            behavior arg{std::move(bhvr)};
+            await(arg);
+        }
+
+        /**
+         * @brief Blocks until the response arrives and then executes @p mexpr.
+         */
+        template<typename... Cs, typename... Ts>
+        void await(const match_expr<Cs...>& arg, const Ts&... args) {
+            await(match_expr_convert(arg, args...));
+        }
+
+        /**
+         * @brief Blocks until the response arrives and then executes @p @p fun,
+         *        calls <tt>self->handle_sync_failure()</tt> if the response
+         *        message is an 'EXITED' or 'VOID' message.
+         */
+        template<typename... Fs>
+        typename std::enable_if<util::all_callable<Fs...>::value>::type
+        await(Fs... fs) {
+            await(behavior{(on_arg_match >> std::move(fs))...});
+        }
+
+        /**
+         * @brief Returns the awaited response ID.
+         */
+        inline const message_id& id() const { return m_mid; }
+
+        response_future(const response_future&) = default;
+        response_future& operator=(const response_future&) = default;
+
+        inline response_future(const message_id& from,
+                               blocking_untyped_actor* self)
+            : m_mid(from), m_self(self) { }
+
+     private:
+
+        message_id m_mid;
+        blocking_untyped_actor* m_self;
+
+    };
+
+    class sync_receive_helper {
+
+     public:
+
+        inline sync_receive_helper(const response_future& mf) : m_mf(mf) { }
+
+        template<typename... Ts>
+        inline void operator()(Ts&&... args) {
+            m_mf.await(std::forward<Ts>(args)...);
+        }
+
+     private:
+
+        response_future m_mf;
+
+    };
+
+    /**
+     * @brief Sends @p what as a synchronous message to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message content as tuple.
+     * @returns A handle identifying a future to the response of @p whom.
+     * @warning The returned handle is actor specific and the response to the
+     *          sent message cannot be received by another actor.
+     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+     */
+    response_future sync_send_tuple(const actor& dest, any_tuple what);
+
+    response_future timed_sync_send_tuple(const util::duration& rtime,
+                                          const actor& dest,
+                                          any_tuple what);
+
+    /**
+     * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @returns A handle identifying a future to the response of @p whom.
+     * @warning The returned handle is actor specific and the response to the
+     *          sent message cannot be received by another actor.
+     * @pre <tt>sizeof...(Ts) > 0</tt>
+     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+     */
+    template<typename... Ts>
+    inline response_future sync_send(const actor& dest, Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "no message to send");
+        return sync_send_tuple(dest, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    template<typename... Ts>
+    response_future timed_sync_send(const actor& dest,
+                                   const util::duration& rtime,
+                                   Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "no message to send");
+        return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
+    }
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
@@ -162,9 +271,9 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
      * @param handle A future for a synchronous response.
      * @throws std::logic_error if @p handle is not valid or if the actor
      *                          already received the response for @p handle
-     * @relates message_future
+     * @relates response_future
      */
-    inline sync_receive_helper receive_response(const message_future& f) {
+    inline sync_receive_helper receive_response(const response_future& f) {
         return {f};
     }
 
@@ -203,7 +312,11 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
         dequeue(tmp);
     }
 
-    virtual void dequeue(behavior& bhvr) = 0;
+    inline void dequeue(behavior& bhvr) {
+        dequeue_response(bhvr, message_id::invalid);
+    }
+
+    virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
 
     virtual mailbox_element* dequeue() = 0;
 

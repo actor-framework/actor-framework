@@ -66,8 +66,7 @@ using namespace detail;
 using namespace io;
 
 void publish(actor whom, std::unique_ptr<acceptor> aptr) {
-    CPPA_LOG_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(ptr, get)
-                   << ", args.size() = " << args.size());
+    CPPA_LOGF_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(aptr, get));
     if (!whom) return;
     get_actor_registry()->put(whom->id(), detail::actor_addr_cast<abstract_actor>(whom));
     auto mm = get_middleman();
@@ -80,7 +79,7 @@ void publish(actor whom, std::uint16_t port, const char* addr) {
 }
 
 actor remote_actor(stream_ptr_pair io) {
-    CPPA_LOG_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
+    CPPA_LOGF_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
     auto pinf = node_id::get();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
@@ -111,7 +110,7 @@ actor remote_actor(stream_ptr_pair io) {
         q.push_back(new remote_actor_result{0, res});
     });
     std::unique_ptr<remote_actor_result> result(q.pop());
-    CPPA_LOGF_DEBUG("result = " << result->value.get());
+    CPPA_LOGF_DEBUG(CPPA_MARG(result, get));
     return result->value;
 }
 

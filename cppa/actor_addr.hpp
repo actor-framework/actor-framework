@@ -67,8 +67,10 @@ class actor_addr : util::comparable<actor_addr>
     actor_addr& operator=(const actor_addr&) = default;
 
     actor_addr(const actor&);
+    actor_addr& operator=(const actor&);
 
     actor_addr(const invalid_actor_addr_t&);
+    actor_addr operator=(const invalid_actor_addr_t&);
 
     explicit operator bool() const;
     bool operator!() const;

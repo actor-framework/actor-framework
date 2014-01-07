@@ -44,6 +44,7 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/partial_function.hpp"
+#include "cppa/response_promise.hpp"
 
 #include "cppa/util/dptr.hpp"
 #include "cppa/detail/memory.hpp"
@@ -91,7 +92,7 @@ class invoke_policy {
         auto i = m_cache.begin();
         auto e = m_cache.end();
         while (i != e) {
-            switch (this->handle_message(self, i->get(), fun, awaited_response)) {
+            switch (handle_message(self, i->get(), fun, awaited_response)) {
                 case hm_msg_handled: {
                     m_cache.erase(i);
                     return true;
@@ -123,8 +124,7 @@ class invoke_policy {
                 Fun& fun,
                 message_id awaited_response = message_id()) {
         smart_pointer node(node_ptr);
-        switch (this->handle_message(self, node.get(), fun,
-                                     awaited_response)) {
+        switch (handle_message(self, node.get(), fun, awaited_response)) {
             case hm_msg_handled: {
                 return true;
             }
@@ -283,12 +283,12 @@ class invoke_policy {
  public:
 
     template<class Actor>
-    inline response_handle fetch_response_handle(Actor* cl, int) {
-        return cl->make_response_handle();
+    inline response_promise fetch_response_promise(Actor* cl, int) {
+        return cl->make_response_promise();
     }
 
     template<class Actor>
-    inline response_handle fetch_response_handle(Actor*, response_handle& hdl) {
+    inline response_promise fetch_response_promise(Actor*, response_promise& hdl) {
         return std::move(hdl);
     }
 
@@ -308,23 +308,24 @@ class invoke_policy {
                 // make sure synchronous requests
                 // always receive a response
                 if (mid.is_request() && !mid.is_answered()) {
-                    CPPA_LOGMF(CPPA_WARNING, self,
-                               "actor with ID " << self->id()
-                               << " did not reply to a "
-                                  "synchronous request message");
-                    auto fhdl = fetch_response_handle(self, hdl);
-                    if (fhdl.valid()) fhdl.apply(make_any_tuple(atom("VOID")));
+                    CPPA_LOG_WARNING("actor with ID " << self->id()
+                                     << " did not reply to a "
+                                        "synchronous request message");
+                    auto fhdl = fetch_response_promise(self, hdl);
+                    if (fhdl) fhdl.deliver(make_any_tuple(atom("VOID")));
                 }
             } else {
                 if (   detail::matches<atom_value, std::uint64_t>(*res)
                     && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
+                    CPPA_LOG_DEBUG("message handler returned a "
+                                   "message id wrapper");
                     auto id = res->template get_as<std::uint64_t>(1);
                     auto msg_id = message_id::from_integer_value(id);
                     auto ref_opt = self->sync_handler(msg_id);
-                    // calls self->response_handle() if hdl is a dummy
+                    // calls self->response_promise() if hdl is a dummy
                     // argument, forwards hdl otherwise to reply to the
                     // original request message
-                    auto fhdl = fetch_response_handle(self, hdl);
+                    auto fhdl = fetch_response_promise(self, hdl);
                     if (ref_opt) {
                         auto& ref = *ref_opt;
                         // copy original behavior
@@ -356,8 +357,9 @@ class invoke_policy {
                     res->reset();
                 } else {
                     // respond by using the result of 'fun'
-                    auto fhdl = fetch_response_handle(self, hdl);
-                    if (fhdl.valid()) fhdl.apply(std::move(*res));
+                    CPPA_LOG_DEBUG("respond via response_promise");
+                    auto fhdl = fetch_response_promise(self, hdl);
+                    if (fhdl) fhdl.deliver(std::move(*res));
                 }
             }
             return res;
@@ -384,26 +386,29 @@ class invoke_policy {
         }
         switch (this->filter_msg(self, node)) {
             default: {
+                CPPA_LOG_ERROR("illegal filter result");
                 CPPA_CRITICAL("illegal filter result");
             }
             case normal_exit_signal: {
-                CPPA_LOGMF(CPPA_DEBUG, self, "dropped normal exit signal");
+                CPPA_LOG_DEBUG("dropped normal exit signal");
                 return hm_drop_msg;
             }
             case expired_sync_response: {
-                CPPA_LOGMF(CPPA_DEBUG, self, "dropped expired sync response");
+                CPPA_LOG_DEBUG("dropped expired sync response");
                 return hm_drop_msg;
             }
             case expired_timeout_message: {
-                CPPA_LOGMF(CPPA_DEBUG, self, "dropped expired timeout message");
+                CPPA_LOG_DEBUG("dropped expired timeout message");
                 return hm_drop_msg;
             }
             case non_normal_exit_signal: {
+                CPPA_LOG_DEBUG("handled non-normal exit signal");
                 // this message was handled
                 // by calling self->quit(...)
                 return hm_msg_handled;
             }
             case timeout_message: {
+                CPPA_LOG_DEBUG("handle timeout message");
                 dptr()->handle_timeout(self, fun);
                 if (awaited_response.valid()) {
                     self->mark_arrived(awaited_response);
@@ -416,6 +421,10 @@ class invoke_policy {
                 // fall through
             }
             case sync_response: {
+                CPPA_LOG_DEBUG("handle as synchronous response: "
+                               << CPPA_TARG(node->msg, to_string) << ", "
+                               << CPPA_MARG(node->mid, integer_value) << ", "
+                               << CPPA_MARG(awaited_response, integer_value));
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,
@@ -423,10 +432,8 @@ class invoke_policy {
                                           node->mid,
                                           fun);
                     if (!res && handle_sync_failure_on_mismatch) {
-                        CPPA_LOGMF(CPPA_WARNING,
-                                   self,
-                                   "sync failure occured in actor with ID "
-                                   << self->id());
+                        CPPA_LOG_WARNING("sync failure occured in actor "
+                                         << "with ID " << self->id());
                         self->handle_sync_failure();
                     }
                     self->mark_arrived(awaited_response);
@@ -437,6 +444,8 @@ class invoke_policy {
                 return hm_cache_msg;
             }
             case ordinary_message: {
+                CPPA_LOG_DEBUG("handle as ordinary message: "
+                               << CPPA_TARG(node->msg, to_string));
                 if (!awaited_response.valid()) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,

@@ -34,7 +34,6 @@
 #include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/message_future.hpp"
 
 #include "cppa/detail/raw_access.hpp"
 
@@ -80,7 +79,10 @@ constexpr const char* s_default_debug_name = "actor";
 local_actor::local_actor()
 : m_trap_exit(false)
 , m_dummy_node(), m_current_node(&m_dummy_node)
-, m_planned_exit_reason(exit_reason::not_exited) { }
+, m_planned_exit_reason(exit_reason::not_exited)
+, m_state(actor_state::ready) {
+    m_node = node_id::get();
+}
 
 local_actor::~local_actor() { }
 
@@ -139,15 +141,6 @@ void local_actor::forward_message(const actor& dest, message_priority p) {
     id = message_id{};
 }
 
-/* TODO:
-response_handle local_actor::make_response_handle() {
-    auto n = m_current_node;
-    response_handle result{this, n->sender, n->mid.response_id()};
-    n->mid.mark_as_answered();
-    return result;
-}
-*/
-
 void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
     dest.enqueue({address(), dest, prio}, std::move(what));
 }
@@ -168,19 +161,9 @@ void local_actor::delayed_send_tuple(const channel&, const util::duration&, cppa
 
 }
 
-message_future local_actor::timed_sync_send_tuple(const util::duration& rtime,
-                                                  const actor& dest,
-                                                  any_tuple what) {
-
-}
-
-message_future local_actor::sync_send_tuple(const actor& dest, any_tuple what) {
-
-}
-
-response_handle local_actor::make_response_handle() {
+response_promise local_actor::make_response_promise() {
     auto n = m_current_node;
-    response_handle result{address(), n->sender, n->mid.response_id()};
+    response_promise result{address(), n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
     return result;
 }

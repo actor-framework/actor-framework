@@ -71,6 +71,7 @@ class context_switching_resume {
 
         resumable::resume_result resume(util::fiber* from) override {
             CPPA_REQUIRE(from != nullptr);
+            CPPA_PUSH_AID(this->id());
             using namespace detail;
             for (;;) {
                 switch (call(&m_fiber, from)) {

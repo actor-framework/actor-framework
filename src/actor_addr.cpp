@@ -68,4 +68,14 @@ intptr_t actor_addr::compare(const local_actor* other) const {
     return compare_impl(m_ops.m_ptr.get(), other);
 }
 
+actor_addr& actor_addr::operator=(const actor& other) {
+    m_ops.m_ptr = detail::raw_access::get(other);
+    return *this;
+}
+
+actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
+    m_ops.m_ptr.reset();
+    return *this;
+}
+
 } // namespace cppa

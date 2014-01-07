@@ -74,21 +74,21 @@ std::atomic<logging*> s_logger;
 } // namespace <anonymous>
 
 void singleton_manager::shutdown() {
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown scheduler");
+    CPPA_LOGF_DEBUG("shutdown scheduler");
     destroy(s_scheduler);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown middleman");
+    CPPA_LOGF_DEBUG("shutdown middleman");
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
     // it's safe to delete all other singletons now
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "close OpenCL metainfo");
+    CPPA_LOGF_DEBUG("close OpenCL metainfo");
     destroy(s_opencl_metainfo);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "close actor registry");
+    CPPA_LOGF_DEBUG("close actor registry");
     destroy(s_actor_registry);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "shutdown group manager");
+    CPPA_LOGF_DEBUG("shutdown group manager");
     destroy(s_group_manager);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "destroy empty tuple singleton");
+    CPPA_LOGF_DEBUG("destroy empty tuple singleton");
     destroy(s_empty_tuple);
-    CPPA_LOGF(CPPA_DEBUG, nullptr, "clear type info map");
+    CPPA_LOGF_DEBUG("clear type info map");
     destroy(s_uniform_type_info_map);
     destroy(s_logger);
 }

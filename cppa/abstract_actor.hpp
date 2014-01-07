@@ -197,6 +197,8 @@ class abstract_actor : public abstract_channel {
     // attached functors that are executed on cleanup
     std::vector<attachable_ptr> m_attachables;
 
+ protected:
+
     // identifies the node this actor is running on
     node_id_ptr m_node;
 

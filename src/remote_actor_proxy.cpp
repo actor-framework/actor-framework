@@ -69,8 +69,7 @@ remote_actor_proxy::~remote_actor_proxy() {
     mm->run_later([aid, node, mm] {
         CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                         "~remote_actor_proxy$run_later",
-                        "node = " << to_string(*node) << ", aid " << aid
-                        << ", proto = " << to_string(proto->identifier()));
+                        "node = " << to_string(*node) << ", aid " << aid);
         mm->get_namespace().erase(*node, aid);
         auto p = mm->get_peer(*node);
         if (p && p->erase_on_last_proxy_exited()) {

@@ -33,7 +33,6 @@
 
 #include "cppa/replies_to.hpp"
 #include "cppa/typed_behavior.hpp"
-#include "cppa/message_future.hpp"
 #include "cppa/untyped_actor.hpp"
 
 #include "cppa/detail/typed_actor_util.hpp"

@@ -116,7 +116,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                 tmp.events = to_poll_bitmask(new_bitmask);
                 tmp.revents = 0;
                 m_pollset.insert(iter, tmp);
-                CPPA_LOGMF(CPPA_DEBUG, self, "inserted new element");
+                CPPA_LOG_DEBUG("inserted new element");
                 break;
             }
             case fd_meta_event::erase: {
@@ -124,7 +124,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOGMF(CPPA_DEBUG, self, "erased element");
+                    CPPA_LOG_DEBUG("erased element");
                     m_pollset.erase(iter);
                 }
                 break;
@@ -134,7 +134,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOGMF(CPPA_DEBUG, self, "updated bitmask");
+                    CPPA_LOG_DEBUG("updated bitmask");
                     iter->events = to_poll_bitmask(new_bitmask);
                 }
                 break;

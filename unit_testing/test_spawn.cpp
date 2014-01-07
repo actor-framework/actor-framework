@@ -330,45 +330,49 @@ struct slave : untyped_actor {
 void test_serial_reply() {
     auto mirror_behavior = [=](untyped_actor* self, int num) {
         self->become(others() >> [=]() -> any_tuple {
-            cout << "right back at you from " << num
-                 << "; ID: " << self->id() << endl;
+            CPPA_LOGF_INFO("return self->last_dequeued()");
             return self->last_dequeued();
         });
     };
     auto master = spawn([=](untyped_actor* self) {
         cout << "ID of master: " << self->id() << endl;
-        // produce 5 mirror actors
+        // spawn 5 mirror actors
         auto c0 = self->spawn<linked>(mirror_behavior, 0);
         auto c1 = self->spawn<linked>(mirror_behavior, 1);
         auto c2 = self->spawn<linked>(mirror_behavior, 2);
         auto c3 = self->spawn<linked>(mirror_behavior, 3);
         auto c4 = self->spawn<linked>(mirror_behavior, 4);
         self->become (
-            on(atom("hi there")) >> [=] {
-                // *
-                return self->sync_send(c0, atom("sub0")).then(
-                    on(atom("sub0")) >> [=] {
-                        return self->sync_send(c1, atom("sub1")).then(
-                            on(atom("sub1")) >> [=] {
-                                return self->sync_send(c2, atom("sub2")).then(
-                                    on(atom("sub2")) >> [=] {
-                                        return self->sync_send(c3, atom("sub3")).then(
-                                            on(atom("sub3")) >> [=] {
-                                                return self->sync_send(c4, atom("sub4")).then(
-                                                    on(atom("sub4")) >> [=] {
-                                                        return atom("hiho");
-                                                    }
-                                                );
-                                            }
-                                        );
-                                    }
-                                );
+          on(atom("hi there")) >> [=]() -> continue_helper {
+            CPPA_LOGF_INFO("received 'hi there'");
+            return self->sync_send(c0, atom("sub0")).then(
+              on(atom("sub0")) >> [=]() -> continue_helper {
+                CPPA_LOGF_INFO("received 'sub0'");
+                return self->sync_send(c1, atom("sub1")).then(
+                  on(atom("sub1")) >> [=]() -> continue_helper {
+                    CPPA_LOGF_INFO("received 'sub1'");
+                    return self->sync_send(c2, atom("sub2")).then(
+                      on(atom("sub2")) >> [=]() -> continue_helper {
+                        CPPA_LOGF_INFO("received 'sub2'");
+                        return self->sync_send(c3, atom("sub3")).then(
+                          on(atom("sub3")) >> [=]() -> continue_helper {
+                            CPPA_LOGF_INFO("received 'sub3'");
+                            return self->sync_send(c4, atom("sub4")).then(
+                              on(atom("sub4")) >> [=]() -> atom_value {
+                                CPPA_LOGF_INFO("received 'sub4'");
+                                return atom("hiho");
                             }
-                        );
+                          );
+                        }
+                      );
                     }
-                );
+                  );
+                }
+              );
             }
-        );
+          );
+        }
+      );
     });
     { // lifetime scope of self
         scoped_actor self;
@@ -455,31 +459,34 @@ void test_continuation() {
     await_all_actors_done();
 }
 
-void test_spawn() {
+void test_simple_reply_response() {
     scoped_actor self;
-
     auto s = spawn([](untyped_actor* self) -> behavior {
         return (
             others() >> [=]() -> any_tuple {
-                cout << "received: " << to_string(self->last_dequeued()) << endl;
+                CPPA_CHECK(self->last_dequeued() == make_any_tuple(atom("hello")));
+                self->quit();
                 return self->last_dequeued();
             }
         );
     });
-    cout << "spawned actor, waiting for response" << endl;
     self->send(s, atom("hello"));
     self->receive(
         others() >> [&] {
-            cout << "received: " << to_string(self->last_dequeued()) << endl;
+            CPPA_CHECK(self->last_dequeued() == make_any_tuple(atom("hello")));
         }
     );
     self->await_all_other_actors_done();
-    return;
+}
 
+void test_spawn() {
+    test_simple_reply_response();
     test_serial_reply();
+    return;
     test_or_else();
     test_continuation();
 
+    scoped_actor self;
     // check whether detached actors and scheduled actors interact w/o errors
     auto m = spawn<master, detached>();
     spawn<slave>(m);

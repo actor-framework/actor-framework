@@ -34,7 +34,7 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num);
 #define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
 
 #define CPPA_PRINTERRC(fname, linenum, msg)                                    \
-    CPPA_LOGF(CPPA_ERROR, ::cppa::self, CPPA_STREAMIFY(fname, linenum, msg));  \
+    CPPA_LOGF(CPPA_ERROR, CPPA_STREAMIFY(fname, linenum, msg));                \
     std::cerr << "ERROR: " << CPPA_STREAMIFY(fname, linenum, msg)              \
               << std::endl
 

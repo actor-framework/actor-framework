@@ -29,9 +29,11 @@
 
 
 #include "cppa/policy.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/scoped_actor.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
+#include "cppa/detail/actor_registry.hpp"
 
 namespace cppa {
 
@@ -52,8 +54,14 @@ blocking_untyped_actor* alloc() {
 
 } // namespace <anonymous>
 
-scoped_actor::scoped_actor() : m_self(alloc()) { }
+scoped_actor::scoped_actor() : m_self(alloc()) {
+    m_prev = CPPA_SET_AID(m_self->id());
+    get_actor_registry()->inc_running();
+}
 
-scoped_actor::~scoped_actor() { }
+scoped_actor::~scoped_actor() {
+    get_actor_registry()->dec_running();
+    CPPA_SET_AID(m_prev);
+}
 
 } // namespace cppa

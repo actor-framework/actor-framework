@@ -35,6 +35,7 @@
 #include <atomic>
 #include <stdexcept>
 
+#include "cppa/atom.hpp"
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"

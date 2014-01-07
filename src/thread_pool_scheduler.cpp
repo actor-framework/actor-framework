@@ -101,16 +101,15 @@ struct thread_pool_scheduler::worker {
         job_ptr job = nullptr;
         for (;;) {
             aggressive(job) || moderate(job) || relaxed(job);
-            CPPA_LOGMF(CPPA_DEBUG, self, "dequeued new job");
+            CPPA_LOG_DEBUG("dequeued new job");
             if (job == m_dummy) {
-                CPPA_LOGMF(CPPA_DEBUG, self, "received dummy (quit)");
+                CPPA_LOG_DEBUG("received dummy (quit)");
                 // dummy of doom received ...
                 m_job_queue->push_back(job); // kill the next guy
                 return;                      // and say goodbye
             }
-            CPPA_LOG_DEBUG("resume actor with ID " << job->id());
             if (job->resume(&fself) == resumable::done) {
-                CPPA_LOGMF(CPPA_DEBUG, self, "actor is done");
+                CPPA_LOG_DEBUG("actor is done");
                 /*FIXME bool hidden = job->is_hidden();
                 job->deref();
                 if (!hidden)*/ get_actor_registry()->dec_running();
@@ -156,11 +155,11 @@ void thread_pool_scheduler::initialize() {
 void thread_pool_scheduler::destroy() {
     CPPA_LOG_TRACE("");
     m_queue.push_back(&m_dummy);
-    CPPA_LOGMF(CPPA_DEBUG, self, "join supervisor");
+    CPPA_LOG_DEBUG("join supervisor");
     m_supervisor.join();
     // make sure job queue is empty, because destructor of m_queue would
     // otherwise delete elements it shouldn't
-    CPPA_LOGMF(CPPA_DEBUG, self, "flush queue");
+    CPPA_LOG_DEBUG("flush queue");
     auto ptr = m_queue.try_pop();
     while (ptr != nullptr) {
         if (ptr != &m_dummy) {

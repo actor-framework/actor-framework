@@ -63,7 +63,7 @@ void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
         sink->write_raw(node_id::host_id_size, pinf.host_id().data());
     }
 }
-    
+
 actor_addr actor_namespace::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
     node_id::host_id_type nid;
@@ -102,7 +102,7 @@ actor_proxy_ptr actor_namespace::get(const node_id& node, actor_id aid) {
     }
     return nullptr;
 }
-    
+
 actor_proxy_ptr actor_namespace::get_or_put(node_id_ptr node, actor_id aid) {
     auto result = get(*node, aid);
     if (result == nullptr && m_factory) {
@@ -131,9 +131,9 @@ void actor_namespace::put(const node_id& node,
 auto actor_namespace::proxies(node_id& node) -> proxy_map& {
     return m_proxies[node];
 }
-    
+
 void actor_namespace::erase(node_id& inf) {
-    CPPA_LOGMF(CPPA_TRACE, self, CPPA_TARG(inf, to_string));
+    CPPA_LOG_TRACE(CPPA_TARG(inf, to_string));
     m_proxies.erase(inf);
 }
 
@@ -144,5 +144,5 @@ void actor_namespace::erase(node_id& inf, actor_id aid) {
         i->second.erase(aid);
     }
 }
-    
+
 } // namespace cppa

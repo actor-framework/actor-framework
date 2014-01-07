@@ -185,7 +185,7 @@ set(LIBCPPA_SRC
     src/ref_counted.cpp
     src/resumable.cpp
     src/remote_actor_proxy.cpp
-    src/response_handle.cpp
+    src/response_promise.cpp
     src/ripemd_160.cpp
     src/scheduler.cpp
     src/scoped_actor.cpp

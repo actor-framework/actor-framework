@@ -108,7 +108,6 @@ cppa/match_expr.hpp
 cppa/match_hint.hpp
 cppa/memory_cached.hpp
 cppa/memory_managed.hpp
-cppa/message_future.hpp
 cppa/message_header.hpp
 cppa/message_id.hpp
 cppa/message_priority.hpp
@@ -137,7 +136,7 @@ cppa/primitive_variant.hpp
 cppa/qtsupport/actor_widget_mixin.hpp
 cppa/ref_counted.hpp
 cppa/replies_to.hpp
-cppa/response_handle.hpp
+cppa/response_promise.hpp
 cppa/sb_actor.hpp
 cppa/scheduler.hpp
 cppa/scoped_actor.hpp
@@ -276,7 +275,7 @@ src/primitive_variant.cpp
 src/protocol.cpp
 src/ref_counted.cpp
 src/remote_actor_proxy.cpp
-src/response_handle.cpp
+src/response_promise.cpp
 src/ripemd_160.cpp
 src/scheduler.cpp
 src/scoped_actor.cpp

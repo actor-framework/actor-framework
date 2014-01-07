@@ -70,7 +70,7 @@ class local_group : public group {
  public:
 
     void send_all_subscribers(const message_header& hdr, const any_tuple& msg) {
-        CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+        CPPA_LOG_TRACE(CPPA_TARG(hdr.sender, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
@@ -166,7 +166,7 @@ class local_broker : public untyped_actor {
             on(atom("DOWN"), arg_match) >> [=](uint32_t) {
                 auto sender = last_sender();
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
-                                CPPA_TARG(other, to_string));
+                                CPPA_TARG(sender, to_string));
                 if (sender) m_acquaintances.erase(sender);
             },
             others() >> [=] {

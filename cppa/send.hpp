@@ -35,7 +35,6 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/message_header.hpp"
-#include "cppa/message_future.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -126,7 +125,7 @@ inline void send_as(actor_ptr from, channel_destination dest, Ts&&... what) {
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-message_future sync_send_tuple(actor_destination dest, any_tuple what);
+response_future sync_send_tuple(actor_destination dest, any_tuple what);
 
 /**
  * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -139,7 +138,7 @@ message_future sync_send_tuple(actor_destination dest, any_tuple what);
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
 template<typename... Ts>
-inline message_future sync_send(actor_destination dest, Ts&&... what) {
+inline response_future sync_send(actor_destination dest, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     return sync_send_tuple(std::move(dest),
                            make_any_tuple(std::forward<Ts>(what)...));
@@ -156,7 +155,7 @@ inline message_future sync_send(actor_destination dest, Ts&&... what) {
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
 template<typename... Signatures, typename... Ts>
-typed_message_future<
+typed_response_future<
     typename detail::deduce_output_type<
         util::type_list<Signatures...>,
         util::type_list<
@@ -216,7 +215,7 @@ void delayed_reply_tuple(const util::duration& rel_time, any_tuple data);
  *          message cannot be received by another actor.
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
-message_future timed_sync_send_tuple(actor_destination dest,
+response_future timed_sync_send_tuple(actor_destination dest,
                                      const util::duration& rtime,
                                      any_tuple what);
 
@@ -235,7 +234,7 @@ message_future timed_sync_send_tuple(actor_destination dest,
  * @throws std::invalid_argument if <tt>whom == nullptr</tt>
  */
 template<typename... Ts>
-message_future timed_sync_send(actor_destination whom,
+response_future timed_sync_send(actor_destination whom,
                                const util::duration& rtime,
                                Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -265,7 +264,7 @@ CPPA_DEPRECATED inline void reply(Ts&&... what) {
  * @brief Sends a message as reply to @p handle.
  */
 template<typename... Ts>
-inline void reply_to(const response_handle& handle, Ts&&... what) {
+inline void reply_to(const response_promise& handle, Ts&&... what) {
     if (handle.valid()) {
         handle.apply(make_any_tuple(std::forward<Ts>(what)...));
     }
@@ -276,7 +275,7 @@ inline void reply_to(const response_handle& handle, Ts&&... what) {
  * @param handle Identifies a previously received request.
  * @param what Response message.
  */
-inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
+inline void reply_tuple_to(const response_promise& handle, any_tuple what) {
     handle.apply(std::move(what));
 }
 

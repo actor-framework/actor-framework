@@ -48,11 +48,10 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/memory_cached.hpp"
-#include "cppa/message_future.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/mailbox_element.hpp"
-#include "cppa/response_handle.hpp"
+#include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
 #include "cppa/partial_function.hpp"
 
@@ -66,7 +65,7 @@ namespace cppa {
 
 // forward declarations
 class scheduler;
-class message_future;
+class response_future;
 class local_scheduler;
 class sync_handle_helper;
 
@@ -148,45 +147,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     }
 
     void send_exit(const actor_addr& whom, std::uint32_t reason);
-
-    /**
-     * @brief Sends @p what as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message content as tuple.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    message_future sync_send_tuple(const actor& dest, any_tuple what);
-
-    message_future timed_sync_send_tuple(const util::duration& rtime,
-                                         const actor& dest,
-                                         any_tuple what);
-
-    /**
-     * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message elements.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    template<typename... Ts>
-    inline message_future sync_send(const actor& dest, Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return sync_send_tuple(dest, make_any_tuple(std::forward<Ts>(what)...));
-    }
-
-    template<typename... Ts>
-    message_future timed_sync_send(const actor& dest,
-                                   const util::duration& rtime,
-                                   Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
-    }
 
     /**
      * @brief Sends a message to @p whom that is delayed by @p rel_time.
@@ -307,10 +267,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     std::vector<group_ptr> joined_groups() const;
 
     /**
-     * @brief Creates a {@link response_handle} to allow actors to response
+     * @brief Creates a {@link response_promise} to allow actors to response
      *        to a request later on.
      */
-    response_handle make_response_handle();
+    response_promise make_response_promise();
 
     /**
      * @brief Sets the handler for unexpected synchronous response messages.

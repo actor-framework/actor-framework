@@ -28,72 +28,34 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RESPONSE_HANDLE_HPP
-#define CPPA_RESPONSE_HANDLE_HPP
+#include <utility>
 
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/message_id.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/response_promise.hpp"
+
+#include "cppa/detail/raw_access.hpp"
+
+using std::move;
 
 namespace cppa {
 
-/**
- * @brief Denotes an outstanding response.
- */
-class response_handle {
+response_promise::response_promise(const actor_addr& from,
+                                   const actor_addr& to,
+                                   const message_id& id)
+: m_from(from), m_to(to), m_id(id) {
+    CPPA_REQUIRE(id.is_response() || !id.valid());
+}
 
- public:
+response_promise::operator bool() const {
+    return m_to != nullptr;
+}
 
-    response_handle() = default;
-    response_handle(response_handle&&) = default;
-    response_handle(const response_handle&) = default;
-    response_handle& operator=(response_handle&&) = default;
-    response_handle& operator=(const response_handle&) = default;
-
-    response_handle(const actor_addr& from,
-                    const actor_addr& to,
-                    const message_id& response_id);
-
-    /**
-     * @brief Queries whether response message is still outstanding.
-     */
-    bool valid() const;
-
-    /**
-     * @brief Queries whether this is a response
-     *        handle for a synchronous request.
-     */
-    bool synchronous() const;
-
-    /**
-     * @brief Sends @p response_message and invalidates this handle afterwards.
-     */
-    void apply(any_tuple response_message) const;
-
-    /**
-     * @brief Returns the message id for the response message.
-     */
-    inline const message_id& response_id() const { return m_id; }
-
-    /**
-     * @brief Returns the actor that is going send the response message.
-     */
-    inline const actor_addr& sender() const { return m_from; }
-
-    /**
-     * @brief Returns the actor that is waiting for the response message.
-     */
-    inline const actor_addr& receiver() const { return m_to; }
-
- private:
-
-    actor_addr m_from;
-    actor_addr m_to;
-    message_id m_id;
-
-};
+void response_promise::deliver(any_tuple msg) {
+    if (m_to) {
+        auto ptr = detail::actor_addr_cast<abstract_actor>(m_to);
+        ptr->enqueue({m_from, ptr, m_id}, move(msg));
+        m_to = invalid_actor_addr;
+    }
+}
 
 } // namespace cppa
-
-
-#endif // CPPA_RESPONSE_HANDLE_HPP

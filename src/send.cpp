@@ -33,7 +33,7 @@
 
 namespace cppa {
 
-message_future sync_send_tuple(actor_destination dest, any_tuple what) {
+response_future sync_send_tuple(actor_destination dest, any_tuple what) {
     if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
     auto req = self->new_request_id();
     message_header hdr{self, std::move(dest.receiver), req, dest.priority};
@@ -55,7 +55,7 @@ void delayed_send_tuple(channel_destination dest,
     }
 }
 
-message_future timed_sync_send_tuple(actor_destination dest,
+response_future timed_sync_send_tuple(actor_destination dest,
                                      const util::duration& rtime,
                                      any_tuple what) {
     auto mf = sync_send_tuple(std::move(dest), std::move(what));

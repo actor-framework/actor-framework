@@ -143,7 +143,7 @@ continue_reading_result peer::continue_reading() {
                     m_meta_msg->deserialize(&msg, &bd);
                 }
                 catch (exception& e) {
-                    CPPA_LOGMF(CPPA_ERROR, self, "exception during read_message: "
+                    CPPA_LOG_ERROR("exception during read_message: "
                                    << detail::demangle(typeid(e))
                                    << ", what(): " << e.what());
                     return read_failure;
@@ -192,22 +192,22 @@ void peer::monitor(const actor_addr&,
                    actor_id aid) {
     CPPA_LOG_TRACE(CPPA_MARG(node, get) << ", " << CPPA_ARG(aid));
     if (!node) {
-        CPPA_LOGMF(CPPA_ERROR, self, "received MONITOR from invalid peer");
+        CPPA_LOG_ERROR("received MONITOR from invalid peer");
         return;
     }
     auto entry = get_actor_registry()->get_entry(aid);
     auto pself = node_id::get();
 
     if (*node == *pself) {
-        CPPA_LOGMF(CPPA_ERROR, self, "received 'MONITOR' from pself");
+        CPPA_LOG_ERROR("received 'MONITOR' from pself");
     }
     else if (entry.first == nullptr) {
         if (entry.second == exit_reason::not_exited) {
-            CPPA_LOGMF(CPPA_ERROR, self, "received MONITOR for unknown "
+            CPPA_LOG_ERROR("received MONITOR for unknown "
                            "actor id: " << aid);
         }
         else {
-            CPPA_LOGMF(CPPA_DEBUG, self, "received MONITOR for an actor "
+            CPPA_LOG_DEBUG("received MONITOR for an actor "
                            "that already finished "
                            "execution; reply KILL_PROXY");
             // this actor already finished execution;
@@ -217,7 +217,7 @@ void peer::monitor(const actor_addr&,
         }
     }
     else {
-        CPPA_LOGMF(CPPA_DEBUG, self, "attach functor to " << entry.first.get());
+        CPPA_LOG_DEBUG("attach functor to " << entry.first.get());
         auto mm = parent();
         entry.first->address()->attach_functor([=](uint32_t reason) {
             mm->run_later([=] {
@@ -240,11 +240,11 @@ void peer::kill_proxy(const actor_addr& sender,
                    << ", " << CPPA_ARG(aid)
                    << ", " << CPPA_ARG(reason));
     if (!node) {
-        CPPA_LOGMF(CPPA_ERROR, self, "node = nullptr");
+        CPPA_LOG_ERROR("node = nullptr");
         return;
     }
     if (sender != nullptr) {
-        CPPA_LOGMF(CPPA_ERROR, self, "sender != nullptr");
+        CPPA_LOG_ERROR("sender != nullptr");
         return;
     }
     auto proxy = parent()->get_namespace().get(*node, aid);
@@ -273,8 +273,8 @@ void peer::link(const actor_addr& sender, const actor_addr& receiver) {
     // this message is sent from default_actor_proxy in link_to and
     // establish_backling to cause the original actor (sender) to establish
     // a link to ptr as well
-    CPPA_LOG_TRACE(CPPA_MARG(sender, get)
-                   << ", " << CPPA_MARG(ptr, get));
+    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+                   << CPPA_TARG(receiver, to_string));
     CPPA_LOG_ERROR_IF(!sender, "received 'LINK' from invalid sender");
     CPPA_LOG_ERROR_IF(!receiver, "received 'LINK' with invalid receiver");
     if (!sender || !receiver) return;
@@ -297,8 +297,8 @@ void peer::link(const actor_addr& sender, const actor_addr& receiver) {
 }
 
 void peer::unlink(const actor_addr& sender, const actor_addr& receiver) {
-    CPPA_LOG_TRACE(CPPA_MARG(sender, get)
-                   << ", " << CPPA_MARG(ptr, get));
+    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
+                   << CPPA_TARG(receiver, to_string));
     CPPA_LOG_ERROR_IF(!sender, "received 'UNLINK' from invalid sender");
     CPPA_LOG_ERROR_IF(!receiver, "received 'UNLINK' with invalid target");
     if (!sender || !receiver) return;
@@ -357,13 +357,13 @@ void peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
     wbuf.write(sizeof(uint32_t), &size);
     try { bs << hdr << msg; }
     catch (exception& e) {
-        CPPA_LOGMF(CPPA_ERROR, self, to_verbose_string(e));
+        CPPA_LOG_ERROR(to_verbose_string(e));
         cerr << "*** exception in peer::enqueue; "
              << to_verbose_string(e)
              << endl;
         return;
     }
-    CPPA_LOGMF(CPPA_DEBUG, self, "serialized: " << to_string(hdr) << " " << to_string(msg));
+    CPPA_LOG_DEBUG("serialized: " << to_string(hdr) << " " << to_string(msg));
     size = (wbuf.size() - before) - sizeof(std::uint32_t);
     // update size in buffer
     memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));

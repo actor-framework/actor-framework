@@ -3,6 +3,7 @@
 
 #include <type_traits>
 
+#include "cppa/logging.hpp"
 #include "cppa/resumable.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/blocking_untyped_actor.hpp"
@@ -38,6 +39,9 @@ class proper_actor_base : public ResumePolicy::template mixin<Base> {
     proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
+        CPPA_PUSH_AID(this->id());
+        CPPA_LOG_DEBUG(CPPA_TARG(hdr, to_string)
+                       << ", " << CPPA_TARG(msg, to_string));
         m_scheduling_policy.enqueue(this, hdr, msg);
     }
 
@@ -97,12 +101,14 @@ class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
     detail::behavior_stack& bhvr_stack() { return this->m_bhvr_stack; }
 
     inline void launch() {
-        this->bhvr_stack().push_back(this->make_behavior());
+        auto bhvr = this->make_behavior();
+        if (bhvr) this->bhvr_stack().push_back(std::move(bhvr));
         this->m_scheduling_policy.launch(this);
     }
 
     bool invoke(mailbox_element* msg) {
-        return this->m_invoke_policy.invoke(this, msg, bhvr_stack().back());
+        return this->m_invoke_policy.invoke(this, msg, bhvr_stack().back(),
+                                            bhvr_stack().back_id());
     }
 
 };
@@ -129,7 +135,7 @@ class proper_actor<
         this->m_scheduling_policy.launch(this);
     }
 
-    void dequeue(behavior& bhvr) override {
+    void dequeue_response(behavior& bhvr, message_id mid) override {
         if (bhvr.timeout().valid()) {
             auto tout =
                 this->m_scheduling_policy.init_timeout(this, bhvr.timeout());
@@ -143,14 +149,14 @@ class proper_actor<
                     // must not return nullptr, because await_data guarantees
                     // at least one message in our mailbox
                     CPPA_REQUIRE(msg != nullptr);
-                    done = this->m_invoke_policy.invoke(this, msg, bhvr);
+                    done = this->m_invoke_policy.invoke(this, msg, bhvr, mid);
                 }
             }
         } else {
             for (;;) {
                 auto msg = this->m_priority_policy.next_message(this);
                 while (msg) {
-                    if (this->m_invoke_policy.invoke(this, msg, bhvr)) {
+                    if (this->m_invoke_policy.invoke(this, msg, bhvr, mid)) {
                         // we're done
                         return;
                     }

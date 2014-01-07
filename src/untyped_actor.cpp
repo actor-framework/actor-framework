@@ -28,12 +28,44 @@
 \******************************************************************************/
 
 
+#include "cppa/scheduler.hpp"
+#include "cppa/singletons.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/untyped_actor.hpp"
 
 namespace cppa {
 
+continue_helper& continue_helper::continue_with(behavior::continuation_fun fun) {
+    auto ref_opt = m_self->bhvr_stack().sync_handler(m_mid);
+    if (ref_opt) {
+        auto& ref = *ref_opt;
+        // copy original behavior
+        behavior cpy = ref;
+        ref = cpy.add_continuation(std::move(fun));
+    }
+    else CPPA_LOG_ERROR("failed to add continuation");
+    return *this;
+}
+
+
 void untyped_actor::forward_to(const actor&) {
 
+}
+
+untyped_actor::response_future untyped_actor::sync_send_tuple(const actor& dest,
+                                                              any_tuple what) {
+    auto nri = new_request_id();
+    dest.enqueue({address(), dest, nri}, std::move(what));
+    return {nri.response_id(), this};
+}
+
+untyped_actor::response_future
+untyped_actor::timed_sync_send_tuple(const util::duration& rtime,
+                                     const actor& dest,
+                                     any_tuple what) {
+    auto nri = new_request_id();
+    get_scheduler()->delayed_send({address(), dest, nri}, rtime, std::move(what));
+    return {nri.response_id(), this};
 }
 
 } // namespace cppa
