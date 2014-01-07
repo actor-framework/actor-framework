@@ -40,7 +40,7 @@
 #include "cppa/logging.hpp"
 #include "cppa/opencl/global.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/response_handle.hpp"
+#include "cppa/response_promise.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/util/scope_guard.hpp"
 
@@ -51,7 +51,7 @@ class command : public ref_counted {
 
  public:
 
-    command(response_handle handle,
+    command(response_promise handle,
             intrusive_ptr<T> actor_facade,
             std::vector<mem_ptr> arguments)
         : m_number_of_values(std::accumulate(actor_facade->m_global_dimensions.begin(),
@@ -107,7 +107,7 @@ class command : public ref_counted {
  private:
 
     int m_number_of_values;
-    response_handle m_handle;
+    response_promise m_handle;
     intrusive_ptr<T> m_actor_facade;
     event_ptr m_kernel_event;
     command_queue_ptr m_queue;

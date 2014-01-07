@@ -139,7 +139,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
                       util::int_list<Is...>) {
         auto opt = m_map_args(std::move(msg));
         if (opt) {
-            response_handle handle{ this, sender, id.response_id() };
+            response_promise handle{ this, sender, id.response_id() };
             size_t ret_size = std::accumulate(m_global_dimensions.begin(),
                                               m_global_dimensions.end(), 1,
                                               std::multiplies<size_t>{});
