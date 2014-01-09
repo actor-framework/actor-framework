@@ -98,8 +98,6 @@ class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
     template <typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
-    detail::behavior_stack& bhvr_stack() { return this->m_bhvr_stack; }
-
     inline void launch() {
         auto bhvr = this->make_behavior();
         if (bhvr) this->bhvr_stack().push_back(std::move(bhvr));
@@ -107,8 +105,30 @@ class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
     }
 
     bool invoke(mailbox_element* msg) {
-        return this->m_invoke_policy.invoke(this, msg, bhvr_stack().back(),
-                                            bhvr_stack().back_id());
+        return this->m_invoke_policy.invoke(this, msg, this->bhvr_stack().back(),
+                                            this->bhvr_stack().back_id());
+    }
+
+    void become_waiting_for(behavior bhvr, message_id mf) override {
+        if (bhvr.timeout().valid()) {
+            if (bhvr.timeout().valid()) {
+                this->invoke_policy().reset_timeout();
+                this->invoke_policy().request_timeout(this, bhvr.timeout());
+            }
+            this->bhvr_stack().push_back(std::move(bhvr), mf);
+        }
+        this->bhvr_stack().push_back(std::move(bhvr), mf);
+    }
+
+    void do_become(behavior&& bhvr, bool discard_old) override {
+        //if (discard_old) m_bhvr_stack.pop_async_back();
+        //m_bhvr_stack.push_back(std::move(bhvr));
+        this->invoke_policy().reset_timeout();
+        if (bhvr.timeout().valid()) {
+            this->invoke_policy().request_timeout(this, bhvr.timeout());
+        }
+        if (discard_old) this->m_bhvr_stack.pop_async_back();
+        this->m_bhvr_stack.push_back(std::move(bhvr));
     }
 
 };

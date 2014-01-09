@@ -89,6 +89,8 @@ class scheduler_helper {
 
  public:
 
+    scheduler_helper() : m_timer(true), m_printer(true) { }
+
     void start() {
         // launch threads
         m_timer_thread = std::thread{&scheduler_helper::timer_loop, m_timer.get()};

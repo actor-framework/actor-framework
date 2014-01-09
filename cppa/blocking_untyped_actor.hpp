@@ -307,6 +307,9 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
         return none;
     }
 
+    // unused in blocking actors
+    inline void remove_handler(message_id) { }
+
     inline void dequeue(behavior&& bhvr) {
         behavior tmp{std::move(bhvr)};
         dequeue(tmp);
@@ -335,12 +338,6 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
     std::function<void(behavior&)> make_dequeue_callback() {
         return [=](behavior& bhvr) { dequeue(bhvr); };
     }
-
-    /*
-    void dequeue_response(behavior& bhvr, message_id request_id) {
-        m_recv_policy.receive(util::dptr<Subtype>(this), bhvr, request_id);
-    }
-    */
 
 };
 

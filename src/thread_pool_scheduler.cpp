@@ -62,7 +62,7 @@ struct thread_pool_scheduler::worker {
     worker(job_queue* jq, job_ptr dummy) : m_job_queue(jq), m_dummy(dummy) { }
 
     void start() {
-        //m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
+        m_thread = std::thread(&thread_pool_scheduler::worker_loop, this);
     }
 
     worker(const worker&) = delete;

@@ -271,8 +271,10 @@ void serialize_impl(const any_tuple& tup, serializer* sink) {
     auto tname = tup.tuple_type_names();
     auto uti = get_uniform_type_info_map()->by_uniform_name(tname ? *tname : detail::get_tuple_type_names(*tup.vals()));
     if (uti == nullptr) {
-        std::string err = "could not get uniform type info for ";
+        std::string err = "could not get uniform type info for \"";
         err += tname ? *tname : detail::get_tuple_type_names(*tup.vals());
+        err += "\"";
+        CPPA_LOGF_ERROR(err);
         throw std::runtime_error(err);
     }
     sink->begin_object(uti);
@@ -790,7 +792,7 @@ class utim_impl : public uniform_type_info_map {
             result = find_name(m_builtin_types, name);
             result = (result) ? result : find_name(m_user_types, name);
         }
-        if (!result && name.compare(0, 4, "@<>+") == 0) {
+        if (!result && name.compare(0, 3, "@<>") == 0) {
             // create tuple UTI on-the-fly
             result = insert(create_unique<default_meta_tuple>(name));
         }

@@ -130,7 +130,13 @@ class no_scheduling {
             });
             util::fiber fself;
             for (;;) {
-                await_data(self);
+                try { await_data(self); }
+                catch (std::exception& e) {
+                    std::cerr << detail::demangle(typeid(e)) << ", what: "
+                              << e.what() << std::endl;
+                    throw;
+                }
+
                 if (self->resume(&fself) == resumable::done) {
                     CPPA_LOG_DEBUG("resume returned resumable::done");
                     self->planned_exit_reason(exit_reason::normal);

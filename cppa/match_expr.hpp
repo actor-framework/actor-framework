@@ -862,7 +862,7 @@ struct match_expr_from_type_list<util::type_list<Ts...> > {
 
 template<typename... Lhs, typename... Rhs>
 inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
-                                           const match_expr<Rhs...>& rhs) {
+                                            const match_expr<Rhs...>& rhs) {
     return lhs.or_else(rhs);
 }
 

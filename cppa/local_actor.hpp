@@ -374,8 +374,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         return mailbox_element::create(std::forward<Ts>(args)...);
     }
 
-    void remove_handler(message_id id);
-
     void cleanup(std::uint32_t reason);
 
     // true if this actor receives EXIT messages as ordinary messages
@@ -460,19 +458,6 @@ inline void local_actor::mark_arrived(message_id response_id) {
     auto i = std::find(m_pending_responses.begin(), last, response_id);
     if (i != last) m_pending_responses.erase(i);
 }
-
-//inline detail::behavior_stack& local_actor::bhvr_stack() {
-//    return m_bhvr_stack;
-//}
-
-//inline void local_actor::do_become(const behavior& bhvr, bool discard_old) {
-//    behavior copy{bhvr};
-//    do_become(std::move(copy), discard_old);
-//}
-
-//inline void local_actor::remove_handler(message_id id) {
-//    m_bhvr_stack.erase(id);
-//}
 
 inline std::uint32_t local_actor::planned_exit_reason() const {
     return m_planned_exit_reason;

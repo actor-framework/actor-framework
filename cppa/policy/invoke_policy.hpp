@@ -262,9 +262,8 @@ class invoke_policy {
             }
             else if (v0 == atom("SYNC_TOUT")) {
                 CPPA_REQUIRE(!mid.valid());
-                //FIXME
-                //return self->waits_for_timeout(v1) ? timeout_message
-                //                                     : expired_timeout_message;
+                return dptr()->waits_for_timeout(v1) ? timeout_message
+                                                     : expired_timeout_message;
             }
         }
         else if (   msg.size() == 1
@@ -301,6 +300,8 @@ class invoke_policy {
                                    Fun& fun,
                                    MaybeResponseHandle hdl = MaybeResponseHandle{}) {
         auto res = fun(msg); // might change mid
+        CPPA_LOG_DEBUG_IF(res, "actor did consume message");
+        CPPA_LOG_DEBUG_IF(!res, "actor did ignore message");
         if (res) {
             //message_header hdr{self, sender, mid.is_request() ? mid.response_id()
             //                                                    : message_id{}};
@@ -382,7 +383,8 @@ class invoke_policy {
                                          Fun& fun,
                                          message_id awaited_response) {
         bool handle_sync_failure_on_mismatch = true;
-        if (dptr()->hm_should_skip(node)) { return hm_skip_msg;
+        if (dptr()->hm_should_skip(node)) {
+            return hm_skip_msg;
         }
         switch (this->filter_msg(self, node)) {
             default: {
@@ -412,7 +414,7 @@ class invoke_policy {
                 dptr()->handle_timeout(self, fun);
                 if (awaited_response.valid()) {
                     self->mark_arrived(awaited_response);
-                    //FIXME: self->remove_handler(awaited_response);
+                    self->remove_handler(awaited_response);
                 }
                 return hm_msg_handled;
             }
@@ -437,7 +439,7 @@ class invoke_policy {
                         self->handle_sync_failure();
                     }
                     self->mark_arrived(awaited_response);
-                    //FIXME: self->remove_handler(awaited_response);
+                    self->remove_handler(awaited_response);
                     dptr()->hm_cleanup(self, previous_node);
                     return hm_msg_handled;
                 }
@@ -459,6 +461,9 @@ class invoke_policy {
                     // no match (restore self members)
                     dptr()->hm_revert(self, previous_node);
                 }
+                CPPA_LOG_DEBUG_IF(awaited_response.valid(),
+                                  "ignored message; await response: "
+                                  << awaited_response.integer_value());
                 return hm_cache_msg;
             }
         }

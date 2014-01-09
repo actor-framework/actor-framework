@@ -102,17 +102,9 @@ class behavior_stack_based : public Base {
         do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
     }
 
-    void become_waiting_for(behavior bhvr, message_id mf) {
-        if (bhvr.timeout().valid()) {
-            //FIXME
-        }
-        m_bhvr_stack.push_back(std::move(bhvr), mf);
-    }
+    virtual void become_waiting_for(behavior bhvr, message_id mf) = 0;
 
-    void do_become(behavior&& bhvr, bool discard_old) {
-        if (discard_old) m_bhvr_stack.pop_async_back();
-        m_bhvr_stack.push_back(std::move(bhvr));
-    }
+    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
 
     inline bool has_behavior() const {
         return m_bhvr_stack.empty() == false;
@@ -133,6 +125,10 @@ class behavior_stack_based : public Base {
 
     inline optional<behavior&> sync_handler(message_id msg_id) {
         return m_bhvr_stack.sync_handler(msg_id);
+    }
+
+    inline void remove_handler(message_id mid) {
+        m_bhvr_stack.erase(mid);
     }
 
  protected:

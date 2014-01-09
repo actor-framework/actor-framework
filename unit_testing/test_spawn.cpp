@@ -413,11 +413,13 @@ void test_or_else() {
         self->await_all_other_actors_done();
 
     });
+    CPPA_LOGF_INFO("run_testee: handle_a.or_else(handle_b).or_else(handle_c)");
     run_testee(
         spawn([=] {
             return handle_a.or_else(handle_b).or_else(handle_c);
         })
     );
+    CPPA_LOGF_INFO("run_testee: handle_a.or_else(handle_b), on(\"c\") ...");
     run_testee(
         spawn([=] {
             return (
@@ -426,6 +428,7 @@ void test_or_else() {
             );
         })
     );
+    CPPA_LOGF_INFO("run_testee: on(\"a\") ..., handle_b.or_else(handle_c)");
     run_testee(
         spawn([=] {
             return (
@@ -482,7 +485,6 @@ void test_simple_reply_response() {
 void test_spawn() {
     test_simple_reply_response();
     test_serial_reply();
-    return;
     test_or_else();
     test_continuation();
 
@@ -492,18 +494,15 @@ void test_spawn() {
     spawn<slave>(m);
     spawn<slave>(m);
     self->send(m, atom("done"));
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test self->send()");
     self->send(self, 1, 2, 3, true);
     self->receive(on(1, 2, 3, true) >> [] { });
-    self->send(self, any_tuple{});
+    self->send_tuple(self, any_tuple{});
     self->receive(on() >> [] { });
     CPPA_CHECKPOINT();
-
-    self->send(self, any_tuple{});
-    self->receive(on() >> [] { });
 
     CPPA_PRINT("test self->receive with zero timeout");
     self->receive (
@@ -524,7 +523,7 @@ void test_spawn() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_actors_done();
+        self->await_all_other_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -540,7 +539,7 @@ void test_spawn() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_actors_done();
+        self->await_all_other_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -557,7 +556,7 @@ void test_spawn() {
             on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        await_all_actors_done();
+        self->await_all_other_actors_done();
         CPPA_CHECKPOINT();
     }
 
@@ -568,12 +567,13 @@ void test_spawn() {
         on("hello echo") >> [] { },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test delayed_send()");
     self->delayed_send(self, chrono::seconds(1), 1, 2, 3);
     self->receive(on(1, 2, 3) >> [] { });
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test timeout");
@@ -581,11 +581,11 @@ void test_spawn() {
     CPPA_CHECKPOINT();
 
     spawn(testee1);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     spawn_event_testee2();
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     auto cstk = spawn<chopstick>();
@@ -596,7 +596,7 @@ void test_spawn() {
             self->send(cstk, atom("break"));
         }
     );
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     auto st = spawn<fixed_stack>(10);
@@ -626,7 +626,7 @@ void test_spawn() {
     }
     // terminate st
     self->send_exit(st, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     auto sync_testee1 = spawn<blocking_api>([](blocking_untyped_actor* self) {
@@ -664,7 +664,7 @@ void test_spawn() {
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::seconds(0)) >> [] { }
     );
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     CPPA_PRINT("test sync send");
@@ -708,7 +708,7 @@ void test_spawn() {
             CPPA_CHECK_EQUAL(self->last_sender(), sync_testee);
         }
     );
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     self->sync_send(sync_testee, "!?").await(
@@ -738,7 +738,7 @@ void test_spawn() {
     auto poison_pill = make_any_tuple(atom("done"));
     anon_send(joe, poison_pill);
     anon_send(bob, poison_pill);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
 
     function<actor (const string&, const actor&)> spawn_next;
     // it's safe to capture spawn_next as reference here, because
@@ -763,7 +763,7 @@ void test_spawn() {
     };
     auto joe_the_second = spawn(kr34t0r, "Joe", invalid_actor);
     self->send(joe_the_second, atom("done"));
-    await_all_actors_done();
+    self->await_all_other_actors_done();
 
     auto f = [](const string& name) -> behavior {
         return (
@@ -788,7 +788,7 @@ void test_spawn() {
     );
     self->send_exit(a1, exit_reason::user_shutdown);
     self->send_exit(a2, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
 
     auto res1 = behavior_test<testee_actor>(spawn<blocking_api>(testee_actor{}));
     CPPA_CHECK_EQUAL("wait4int", res1);
@@ -804,7 +804,7 @@ void test_spawn() {
         self->become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
     self->send_exit(legion, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     self->trap_exit(true);
     auto ping_actor = self->spawn<monitored+blocking_api>(ping, 10);
@@ -843,16 +843,16 @@ void test_spawn() {
         }
     );
     // wait for termination of all spawned actors
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECK_EQUAL(flags, 0x0F);
     // verify pong messages
     CPPA_CHECK_EQUAL(pongs(), 10);
     CPPA_CHECKPOINT();
     spawn<priority_aware>(high_priority_testee);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     spawn<high_priority_testee_class, priority_aware>();
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     // don't try this at home, kids
     self->send(self, atom("check"));
     self->receive (

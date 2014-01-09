@@ -145,6 +145,12 @@ partial_function operator,(const match_expr<Cases...>& mexpr,
     return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl());
 }
 
+template<typename... Cases>
+partial_function operator,(const partial_function& pfun,
+                           const match_expr<Cases...>& mexpr) {
+    return pfun.as_behavior_impl()->or_else(mexpr.as_behavior_impl());
+}
+
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/

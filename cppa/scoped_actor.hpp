@@ -42,6 +42,8 @@ class scoped_actor {
 
     scoped_actor();
 
+    explicit scoped_actor(bool hidden);
+
     ~scoped_actor();
 
     inline blocking_untyped_actor* operator->() const {
@@ -70,6 +72,9 @@ class scoped_actor {
 
  private:
 
+    void init(bool hidden);
+
+    bool m_hidden;
     actor_id m_prev;
     intrusive_ptr<blocking_untyped_actor> m_self;
 

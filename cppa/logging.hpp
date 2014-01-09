@@ -162,7 +162,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_LVL_NAME4() "TRACE"
 
 #ifndef CPPA_LOG_LEVEL
-#   define CPPA_LOG_IMPL(lvlname, classname, funname, unused, message) {       \
+#   define CPPA_LOG_IMPL(lvlname, classname, funname, message) {       \
         std::cerr << "[" << lvlname << "] " << classname << "::"               \
                   << funname << ": " << message << "\nStack trace:\n";         \
         void *array[10];                                                       \

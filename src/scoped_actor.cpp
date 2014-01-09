@@ -54,14 +54,29 @@ blocking_untyped_actor* alloc() {
 
 } // namespace <anonymous>
 
-scoped_actor::scoped_actor() : m_self(alloc()) {
-    m_prev = CPPA_SET_AID(m_self->id());
-    get_actor_registry()->inc_running();
+void scoped_actor::init(bool hidden) {
+    m_hidden = hidden;
+    m_self.reset(alloc());
+    if (!hidden) {
+        m_prev = CPPA_SET_AID(m_self->id());
+        get_actor_registry()->inc_running();
+    }
+}
+
+
+scoped_actor::scoped_actor() {
+    init(false);
+}
+
+scoped_actor::scoped_actor(bool hidden) {
+    init(hidden);
 }
 
 scoped_actor::~scoped_actor() {
-    get_actor_registry()->dec_running();
-    CPPA_SET_AID(m_prev);
+    if (!m_hidden) {
+        get_actor_registry()->dec_running();
+        CPPA_SET_AID(m_prev);
+    }
 }
 
 } // namespace cppa

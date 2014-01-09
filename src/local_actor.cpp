@@ -153,12 +153,10 @@ void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
     send(detail::raw_access::get(whom), atom("EXIT"), reason);
 }
 
-void local_actor::remove_handler(message_id) {
-
-}
-
-void local_actor::delayed_send_tuple(const channel&, const util::duration&, cppa::any_tuple) {
-
+void local_actor::delayed_send_tuple(const channel& dest,
+                                     const util::duration& rel_time,
+                                     cppa::any_tuple msg) {
+    get_scheduler()->delayed_send({address(), dest}, rel_time, std::move(msg));
 }
 
 response_promise local_actor::make_response_promise() {
