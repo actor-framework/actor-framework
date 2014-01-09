@@ -117,11 +117,10 @@ const char* mapped_name_by_decorated_name(const char* cstr) {
     auto e = end(mapped_type_names);
     auto i = lower_bound(begin(mapped_type_names), e, cstr, cmp);
     if (i != e && strcmp(cstr, (*i)[0]) == 0) return (*i)[1];
-#   if defined(__GNUC__) && !defined(__clang__)
     // for some reason, GCC returns "std::string" as RTTI type name
-    // instead of std::basic_string<...>
+    // instead of std::basic_string<...>, this also affects clang-compiled
+    // code when used with GCC's libstdc++
     if (strcmp("std::string", cstr) == 0) return mapped_name<std::string>();
-#   endif
     return cstr;
 }
 
