@@ -62,30 +62,15 @@ class no_scheduling {
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
-    template<class Actor>
-    inline timeout_type init_timeout(Actor*, const util::duration& rel_time) {
-        auto result = std::chrono::high_resolution_clock::now();
-        result += rel_time;
-        return result;
-    }
-
     template<class Actor, typename F>
     bool fetch_messages(Actor* self, F cb) {
         await_data(self);
-        fetch_messages_impl(self, cb);
+        return fetch_messages_impl(self, cb);
     }
 
     template<class Actor, typename F>
     bool try_fetch_messages(Actor* self, F cb) {
-        auto next = [&] { return self->mailbox().try_pop(); };
-        auto e = next();
-        if (!e) return false;
-        do {
-            cb(e);
-            e = next();
-        }
-        while (e);
-        return true;
+        return fetch_messages_impl(self, cb);
     }
 
     template<class Actor, typename F>
@@ -93,8 +78,8 @@ class no_scheduling {
         if (!await_data(self, abs_time)) {
             return timed_fetch_result::no_message;
         }
-        fetch_messages_impl(self, cb);
-        return timed_fetch_result::success;
+        if (fetch_messages_impl(self, cb)) return timed_fetch_result::success;
+        return timed_fetch_result::no_message;
     }
 
     template<class Actor>
@@ -130,13 +115,8 @@ class no_scheduling {
             });
             util::fiber fself;
             for (;;) {
-                try { await_data(self); }
-                catch (std::exception& e) {
-                    std::cerr << detail::demangle(typeid(e)) << ", what: "
-                              << e.what() << std::endl;
-                    throw;
-                }
-
+                await_data(self);
+                self->set_state(actor_state::ready);
                 if (self->resume(&fself) == resumable::done) {
                     CPPA_LOG_DEBUG("resume returned resumable::done");
                     self->planned_exit_reason(exit_reason::normal);
@@ -153,19 +133,20 @@ class no_scheduling {
 
     template<class Actor>
     void await_data(Actor* self) {
-        while (self->mailbox().empty()) {
+        if (!self->has_next_message()) {
             lock_type guard(m_mtx);
-            while (self->mailbox().empty()) m_cv.wait(guard);
+            while (!self->has_next_message()) m_cv.wait(guard);
         }
     }
 
-    template<class Actor>
-    bool await_data(Actor* self, const timeout_type& abs_time) {
-        CPPA_REQUIRE(!self->mailbox().closed());
-        while (self->mailbox().empty()) {
+    // this additional member function is needed to implement
+    // timer_actor (see scheduler.cpp)
+    template<class Actor, class TimePoint>
+    bool await_data(Actor* self, const TimePoint& tp) {
+        if (!self->has_next_message()) {
             lock_type guard(m_mtx);
-            while (self->mailbox().empty()) {
-                if (m_cv.wait_until(guard, abs_time) == std::cv_status::timeout) {
+            while (!self->has_next_message()) {
+                if (m_cv.wait_until(guard, tp) == std::cv_status::timeout) {
                     return false;
                 }
             }
@@ -176,12 +157,16 @@ class no_scheduling {
  private:
 
     template<class Actor, typename F>
-    void fetch_messages_impl(Actor* self, F cb) {
+    bool fetch_messages_impl(Actor* self, F cb) {
         auto next = [&] { return self->mailbox().try_pop(); };
-        for (auto e = next(); e != nullptr; e = next()) {
-            cb(e);
+        auto e = next();
+        if (e) {
+            for (; e != nullptr; e = next()) {
+                cb(e);
+            }
+            return true;
         }
-
+        return false;
     }
 
     std::mutex m_mtx;

@@ -31,6 +31,7 @@
 #ifndef CPPA_POLICY_HPP
 #define CPPA_POLICY_HPP
 
+#include "cppa/policy/policies.hpp"
 #include "cppa/policy/no_resume.hpp"
 #include "cppa/policy/prioritizing.hpp"
 #include "cppa/policy/no_scheduling.hpp"

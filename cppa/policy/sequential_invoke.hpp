@@ -49,24 +49,24 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 
     sequential_invoke() : m_has_pending_tout(false), m_pending_tout(0) { }
 
-    static inline bool hm_should_skip(pointer) {
+    static inline bool hm_should_skip(mailbox_element*) {
         return false;
     }
 
     template<class Actor>
-    static inline pointer hm_begin(Actor* self, pointer node) {
+    static inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
         auto previous = self->current_node();
         self->current_node(node);
         return previous;
     }
 
     template<class Actor>
-    static inline void hm_cleanup(Actor* self, pointer) {
-        self->current_node(&(self->m_dummy_node));
+    static inline void hm_cleanup(Actor* self, mailbox_element*) {
+        self->current_node(self->dummy_node());
     }
 
     template<class Actor>
-    static inline void hm_revert(Actor* self, pointer previous) {
+    static inline void hm_revert(Actor* self, mailbox_element* previous) {
         self->current_node(previous);
     }
 

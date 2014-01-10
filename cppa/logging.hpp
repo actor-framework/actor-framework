@@ -201,7 +201,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
     CPPA_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 
 #if CPPA_LOG_LEVEL < 4
-#       define CPPA_PRINT4(arg0, arg1, arg2, arg3, arg4)
+#       define CPPA_PRINT4(arg0, arg1, arg2, arg3)
 #   else
 #       define CPPA_PRINT4(lvlname, classname, funname, msg)                   \
                ::cppa::logging::trace_helper cppa_trace_helper_ {              \
@@ -211,8 +211,8 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #endif
 
 #if CPPA_LOG_LEVEL < 3
-#       define CPPA_PRINT3(arg0, arg1, arg2, arg3, arg4)
-#       define CPPA_PRINT_IF3(arg0, arg1, arg2, arg3, arg4, arg5)
+#       define CPPA_PRINT3(arg0, arg1, arg2, arg3)
+#       define CPPA_PRINT_IF3(arg0, arg1, arg2, arg3, arg4)
 #   else
 #       define CPPA_PRINT3(lvlname, classname, funname, msg)                   \
                CPPA_PRINT0(lvlname, classname, funname, msg)
@@ -221,8 +221,8 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #endif
 
 #if CPPA_LOG_LEVEL < 2
-#       define CPPA_PRINT2(arg0, arg1, arg2, arg3, arg4)
-#       define CPPA_PRINT_IF2(arg0, arg1, arg2, arg3, arg4, arg5)
+#       define CPPA_PRINT2(arg0, arg1, arg2, arg3)
+#       define CPPA_PRINT_IF2(arg0, arg1, arg2, arg3, arg4)
 #   else
 #       define CPPA_PRINT2(lvlname, classname, funname, msg)                   \
                CPPA_PRINT0(lvlname, classname, funname, msg)

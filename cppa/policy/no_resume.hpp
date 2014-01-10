@@ -2,6 +2,7 @@
 #define NO_RESUME_HPP
 
 #include <chrono>
+#include <utility>
 
 #include "cppa/policy/resume_policy.hpp"
 
@@ -20,7 +21,7 @@ class no_resume {
 
  public:
 
-    template<class Base>
+    template<class Base, class Derived>
     struct mixin : Base {
 
         template<typename... Ts>
@@ -33,13 +34,8 @@ class no_resume {
     };
 
     template<class Actor>
-    void await_data(Actor* self) {
-        self->scheduling_policy().await_data(self);
-    }
-
-    template<class Actor, typename AbsTimeout>
-    bool await_data(Actor* self, const AbsTimeout& abs_time) {
-        return self->scheduling_policy().await_data(self, abs_time);
+    void await_ready(Actor* self) {
+        self->await_data();
     }
 
 };

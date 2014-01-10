@@ -31,6 +31,8 @@
 #ifndef CPPA_POLICY_MIDDLEMAN_SCHEDULING_HPP
 #define CPPA_POLICY_MIDDLEMAN_SCHEDULING_HPP
 
+#include <utility>
+
 #include "cppa/singletons.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
@@ -57,7 +59,7 @@ class middleman_scheduling {
         : m_self(std::move(ptr)), m_hdr(hdr), m_data(std::move(msg)) { }
 
         inline void operator()() const {
-            m_self->invoke_message(m_hdr, move(m_data));
+            m_self->invoke_message(m_hdr, std::move(m_data));
         }
 
      private:
@@ -69,13 +71,6 @@ class middleman_scheduling {
     };
 
     using timeout_type = int;
-
-    template<class Actor>
-    timeout_type init_timeout(Actor* self, const util::duration& rel_time) {
-        // request explicit timeout message
-        self->request_timeout(rel_time);
-        return 0; // return some dummy value
-    }
 
     // this does return nullptr
     template<class Actor, typename F>

@@ -46,10 +46,10 @@ struct impl : blocking_untyped_actor {
 blocking_untyped_actor* alloc() {
     using namespace policy;
     return new detail::proper_actor<impl,
-                                    no_scheduling,
-                                    not_prioritizing,
-                                    no_resume,
-                                    nestable_invoke>;
+                                    policies<no_scheduling,
+                                             not_prioritizing,
+                                             no_resume,
+                                             nestable_invoke>>;
 }
 
 } // namespace <anonymous>

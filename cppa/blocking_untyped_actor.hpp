@@ -321,12 +321,6 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
 
     virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
 
-    virtual mailbox_element* dequeue() = 0;
-
-    virtual mailbox_element* try_dequeue() = 0;
-
-    virtual mailbox_element* try_dequeue(const timeout_type&) = 0;
-
     void await_all_other_actors_done();
 
     virtual void act() = 0;

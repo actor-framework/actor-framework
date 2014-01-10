@@ -82,137 +82,45 @@ class invoke_policy {
 
  public:
 
-    typedef mailbox_element* pointer;
-    typedef std::unique_ptr<mailbox_element, detail::disposer> smart_pointer;
-
+    /**
+     * @note @p node_ptr.release() is called whenever a message was
+     *       handled or dropped.
+     */
     template<class Actor, class Fun>
-    bool invoke_from_cache(Actor* self,
-                           Fun& fun,
-                           message_id awaited_response = message_id{}) {
-        auto i = m_cache.begin();
-        auto e = m_cache.end();
-        while (i != e) {
-            switch (handle_message(self, i->get(), fun, awaited_response)) {
-                case hm_msg_handled: {
-                    m_cache.erase(i);
-                    return true;
-                }
-                case hm_drop_msg: {
-                    i = m_cache.erase(i);
-                    break;
-                }
-                case hm_skip_msg:
-                case hm_cache_msg: {
-                    ++i;
-                    break;
-                }
-                default: {
-                    CPPA_CRITICAL("illegal result of handle_message");
-                }
-            }
-        }
-        return false;
-    }
-
-    inline void add_to_cache(pointer node_ptr) {
-        m_cache.emplace_back(std::move(node_ptr));
-    }
-
-    template<class Actor, class Fun>
-    bool invoke(Actor* self,
-                pointer node_ptr,
-                Fun& fun,
-                message_id awaited_response = message_id()) {
-        smart_pointer node(node_ptr);
-        switch (handle_message(self, node.get(), fun, awaited_response)) {
+    bool invoke_message(Actor* self,
+                        unique_mailbox_element_pointer& node_ptr,
+                        Fun& fun,
+                        message_id awaited_response) {
+        if (!node_ptr) return false;
+        bool result = false;
+        bool reset_pointer = true;
+        switch (handle_message(self, node_ptr.get(), fun, awaited_response)) {
             case hm_msg_handled: {
-                return true;
+                result = true;
+                break;
             }
             case hm_drop_msg: {
                 break;
             }
             case hm_cache_msg: {
-                m_cache.emplace_back(std::move(node));
+                reset_pointer = false;
                 break;
             }
             case hm_skip_msg: {
-                CPPA_CRITICAL("received a marked node");
+                // "received" a marked node
+                reset_pointer = false;
+                break;
             }
             default: {
                 CPPA_CRITICAL("illegal result of handle_message");
             }
         }
-        return false;
-    }
-
-    template<class Actor, class FunOrBehavior>
-    inline void receive_wo_timeout(Actor* self, FunOrBehavior& fun) {
-        if (!invoke_from_cache(self, fun)) {
-            while (!invoke(self, self->await_message(), fun)) { }
-        }
-    }
-
-    template<class Actor>
-    void receive(Actor* self, partial_function& fun) {
-        receive_wo_timeout(self, fun);
-    }
-
-    template<class Actor>
-    void receive(Actor* self, behavior& bhvr) {
-        if (!bhvr.timeout().valid()) {
-            receive_wo_timeout(self, bhvr);
-        }
-        else if (!invoke_from_cache(self, bhvr)) {
-            if (bhvr.timeout().is_zero()) {
-                pointer e = nullptr;
-                while ((e = self->try_pop()) != nullptr) {
-                    CPPA_REQUIRE(e->marked == false);
-                    if (invoke(self, e, bhvr)) {
-                        return; // done
-                    }
-                }
-                dptr()->handle_timeout(self, bhvr);
-            }
-            else {
-                auto timeout = self->init_timeout(bhvr.timeout());
-                pointer e = nullptr;
-                while ((e = self->await_message(timeout)) != nullptr) {
-                    CPPA_REQUIRE(e->marked == false);
-                    if (invoke(self, e, bhvr)) {
-                        return; // done
-                    }
-                }
-                dptr()->handle_timeout(self, bhvr);
-            }
-        }
-    }
-
-    template<class Actor>
-    void receive(Actor* self, behavior& bhvr, message_id mid) {
-        CPPA_REQUIRE(mid.is_response());
-        if (!invoke_from_cache(self, bhvr, mid)) {
-            if (bhvr.timeout().valid()) {
-                CPPA_REQUIRE(bhvr.timeout().is_zero() == false);
-                auto timeout = self->init_timeout(bhvr.timeout());
-                pointer e = nullptr;
-                while ((e = self->await_message(timeout)) != nullptr) {
-                    CPPA_REQUIRE(e->marked == false);
-                    if (invoke(self, e, bhvr, mid)) {
-                        return; // done
-                    }
-                }
-                dptr()->handle_timeout(self, bhvr);
-            }
-            else while (!invoke(self, self->await_message(), bhvr, mid)) { }
-        }
-    }
-
-    template<class Actor>
-    mailbox_element* fetch_message(Actor* self) {
-        return self->await_message();
+        if (reset_pointer) node_ptr.reset();
+        return result;
     }
 
     typedef typename rp_flag<rp_nestable>::type nestable;
+
     typedef typename rp_flag<rp_sequential>::type sequential;
 
  private:
@@ -241,7 +149,7 @@ class invoke_policy {
     // - expired synchronous response messages
 
     template<class Actor>
-    filter_result filter_msg(Actor* self, pointer node) {
+    filter_result filter_msg(Actor* self, mailbox_element* node) {
         const any_tuple& msg = node->msg;
         auto mid = node->mid;
         auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
@@ -328,10 +236,8 @@ class invoke_policy {
                     // original request message
                     auto fhdl = fetch_response_promise(self, hdl);
                     if (ref_opt) {
-                        auto& ref = *ref_opt;
-                        // copy original behavior
-                        behavior cpy = ref;
-                        ref = cpy.add_continuation(
+                        behavior cpy = *ref_opt;
+                        *ref_opt = cpy.add_continuation(
                             [=](any_tuple& intermediate) -> optional<any_tuple> {
                                 if (!intermediate.empty()) {
                                     // do no use lamba expresion type to
@@ -379,7 +285,7 @@ class invoke_policy {
 
     template<class Actor, class Fun>
     handle_message_result handle_message(Actor* self,
-                                         pointer node,
+                                         mailbox_element* node,
                                          Fun& fun,
                                          message_id awaited_response) {
         bool handle_sync_failure_on_mismatch = true;

@@ -60,7 +60,7 @@ class context_switching_resume {
     static void trampoline(void* _this);
 
     // Base must be a mailbox-based actor
-    template<class Base>
+    template<class Base, class Derived>
     struct mixin : Base, resumable {
 
         template<typename... Ts>
@@ -103,6 +103,7 @@ class context_switching_resume {
 
     };
 
+    /*
     template <class Actor, typename F>
     void fetch_messages(Actor* self, F cb) {
         auto e = self->m_mailbox.try_pop();
@@ -134,25 +135,20 @@ class context_switching_resume {
             e = self->m_mailbox.try_pop();
         }
     }
+    */
 
     template<class Actor>
-    void await_data(Actor* self) {
-        while (self->m_mailbox.can_fetch_more() == false) {
+    void await_ready(Actor* self) {
+        while (!self->has_next_message()) {
             self->set_state(actor_state::about_to_block);
-            // make sure mailbox is empty
-            if (self->m_mailbox.can_fetch_more()) {
+            // double-check before going to block
+            if (self->has_next_message()) {
                 // someone preempt us => continue
                 self->set_state(actor_state::ready);
             }
             // wait until actor becomes rescheduled
             else detail::yield(detail::yield_state::blocked);
         }
-    }
-
-    template<class Actor, typename AbsTimeout>
-    bool await_data(Actor* self, const AbsTimeout&) {
-        await_data(self);
-        return true;
     }
 
  private:

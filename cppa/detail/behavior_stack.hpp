@@ -94,44 +94,6 @@ class behavior_stack
         m_erased_elements.clear();
     }
 
-    template<class Policy, class Client>
-    bool invoke(Policy& policy, Client* client, mailbox_element* node) {
-        CPPA_REQUIRE(!empty());
-        CPPA_REQUIRE(client != nullptr);
-        CPPA_REQUIRE(node != nullptr);
-        // use a copy of bhvr, because invoked behavior might change m_elements
-        auto id = m_elements.back().second;
-        auto bhvr = m_elements.back().first;
-        if (policy.invoke(client, node, bhvr, id)) {
-            bool repeat;
-            // try to match cached messages
-            do {
-                // remove synchronous response handler if needed
-                if (id.valid()) {
-                    erase_if([id](const element_type& value) {
-                        return id == value.second;
-                    });
-                }
-                if (!empty()) {
-                    id = m_elements.back().second;
-                    bhvr = m_elements.back().first;
-                    repeat = policy.invoke_from_cache(client, bhvr, id);
-                }
-                else repeat = false;
-            } while (repeat);
-            return true;
-        }
-        return false;
-    }
-
-    template<class Policy, class Client>
-    void exec(Policy& policy, Client* client) {
-        while (!empty()) {
-            invoke(policy, client, policy.fetch_message(client));
-            cleanup();
-        }
-    }
-
  private:
 
     std::vector<element_type> m_elements;

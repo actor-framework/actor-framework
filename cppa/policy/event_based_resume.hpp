@@ -51,50 +51,63 @@ class event_based_resume {
  public:
 
     // Base must be a mailbox-based actor
-    template<class Base>
+    template<class Base, class Derived>
     struct mixin : Base, resumable {
 
         template<typename... Ts>
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
-        // implemented in detail::proper_actor
-        virtual bool invoke(mailbox_element* msg) = 0;
+        inline Derived* dptr() {
+            return static_cast<Derived*>(this);
+        }
 
         resumable::resume_result resume(util::fiber*) override {
-            CPPA_LOG_TRACE("id = " << this->id()
-                           << ", state = " << static_cast<int>(this->state()));
-            CPPA_REQUIRE(   this->state() == actor_state::ready
-                         || this->state() == actor_state::pending);
-            CPPA_PUSH_AID(this->id());
+            auto d = dptr();
+            CPPA_LOG_TRACE("id = " << d->id()
+                           << ", state = " << static_cast<int>(d->state()));
+            CPPA_REQUIRE(   d->state() == actor_state::ready
+                         || d->state() == actor_state::pending);
+            CPPA_PUSH_AID(d->id());
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
-                if (this->exit_reason() == exit_reason::not_exited) {
-                    if (this->planned_exit_reason() == exit_reason::not_exited) {
-                        this->planned_exit_reason(exit_reason::normal);
-                    }
-                    this->on_exit();
-                    if (!this->bhvr_stack().empty()) {
-                        this->planned_exit_reason(exit_reason::not_exited);
-                        return false; // on_exit did set a new behavior
-                    }
-                    this->cleanup(this->planned_exit_reason());
+                if (   d->exit_reason() == exit_reason::not_exited
+                    && d->planned_exit_reason() == exit_reason::not_exited) {
+                    d->planned_exit_reason(exit_reason::normal);
                 }
-                this->set_state(actor_state::done);
-                this->bhvr_stack().clear();
-                this->bhvr_stack().cleanup();
-                this->on_exit();
+                d->on_exit();
+                if (!d->bhvr_stack().empty()) {
+                    d->planned_exit_reason(exit_reason::not_exited);
+                    return false; // on_exit did set a new behavior
+                }
+                d->set_state(actor_state::done);
+                d->bhvr_stack().clear();
+                d->bhvr_stack().cleanup();
+                d->cleanup(d->planned_exit_reason());
                 return true;
             };
             try {
-                //auto e = m_mailbox.try_pop();
-                for (auto e = this->m_mailbox.try_pop(); ; e = this->m_mailbox.try_pop()) {
-                    //e = m_mailbox.try_pop();
-                    if (e == nullptr) {
+                for (;;) {
+                    auto ptr = dptr()->next_message();
+                    if (ptr) {
+                        CPPA_REQUIRE(!dptr()->bhvr_stack().empty());
+                        auto bhvr = dptr()->bhvr_stack().back();
+                        auto mid = dptr()->bhvr_stack().back_id();
+                        if (dptr()->invoke_message(ptr, bhvr, mid)) {
+                            if (dptr()->bhvr_stack().empty() && done_cb()) {
+                                CPPA_LOG_DEBUG("behavior stack empty");
+                                return resume_result::done;
+                            }
+                        }
+                        // add ptr to cache if invoke_message did not
+                        // reset it
+                        if (ptr) dptr()->push_to_cache(std::move(ptr));
+                    }
+                    else {
                         CPPA_LOG_DEBUG("no more element in mailbox; going to block");
-                        this->set_state(actor_state::about_to_block);
+                        d->set_state(actor_state::about_to_block);
                         std::atomic_thread_fence(std::memory_order_seq_cst);
-                        if (this->m_mailbox.can_fetch_more() == false) {
-                            switch (this->cas_state(actor_state::about_to_block,
+                        if (!dptr()->has_next_message()) {
+                            switch (d->cas_state(actor_state::about_to_block,
                                                     actor_state::blocked)) {
                                 case actor_state::ready:
                                     // interrupted by arriving message
@@ -115,16 +128,7 @@ class event_based_resume {
                         else {
                             CPPA_LOG_DEBUG("switched back to ready: "
                                            "mailbox can fetch more");
-                            this->set_state(actor_state::ready);
-                        }
-                    }
-                    else {
-                        if (this->invoke(e)) {
-                            if (this->bhvr_stack().empty() && done_cb()) {
-                                CPPA_LOG_DEBUG("behavior stack empty");
-                                return resume_result::done;
-                            }
-                            this->bhvr_stack().cleanup();
+                            d->set_state(actor_state::ready);
                         }
                     }
                 }
@@ -132,22 +136,22 @@ class event_based_resume {
             catch (actor_exited& what) {
                 CPPA_LOG_INFO("actor died because of exception: actor_exited, "
                               "reason = " << what.reason());
-                if (this->exit_reason() == exit_reason::not_exited) {
-                    this->quit(what.reason());
+                if (d->exit_reason() == exit_reason::not_exited) {
+                    d->quit(what.reason());
                 }
             }
             catch (std::exception& e) {
                 CPPA_LOG_WARNING("actor died because of exception: "
                                  << detail::demangle(typeid(e))
                                  << ", what() = " << e.what());
-                if (this->exit_reason() == exit_reason::not_exited) {
-                    this->quit(exit_reason::unhandled_exception);
+                if (d->exit_reason() == exit_reason::not_exited) {
+                    d->quit(exit_reason::unhandled_exception);
                 }
             }
             catch (...) {
                 CPPA_LOG_WARNING("actor died because of an unknown exception");
-                if (this->exit_reason() == exit_reason::not_exited) {
-                    this->quit(exit_reason::unhandled_exception);
+                if (d->exit_reason() == exit_reason::not_exited) {
+                    d->quit(exit_reason::unhandled_exception);
                 }
             }
             done_cb();
@@ -168,6 +172,7 @@ class event_based_resume {
         static_assert(std::is_same<Actor, Actor>::value == false,
                       "The event-based resume policy cannot be used "
                       "to implement blocking actors");
+        return false;
     }
 
 };

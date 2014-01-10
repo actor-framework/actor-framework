@@ -50,20 +50,22 @@ class priority_policy {
      *        left in the cache.
      */
     template<class Actor>
-    mailbox_element* next_message(Actor* self);
+    unique_mailbox_element_pointer next_message(Actor* self);
 
-    /**
-     * @brief Fetches new messages from the actor's mailbox. The member
-     *        function returns @p false if no message was read,
-     *        @p true otherwise.
-     *
-     * This member function calls {@link scheduling_policy::fetch_messages},
-     * so a returned @p false value indicates that the client must prepare
-     * for re-scheduling.
-     */
-    template<class Actor, typename F>
-    bool fetch_messages(Actor* self, F cb);
+    template<class Actor>
+    bool has_next_message(Actor* self);
 
+    void push_to_cache(unique_mailbox_element_pointer ptr);
+
+    typedef std::vector<unique_mailbox_element_pointer> cache_type;
+
+    typedef cache_type::iterator cache_iterator;
+
+    cache_iterator cache_begin();
+
+    cache_iterator cache_end();
+
+    void cache_erase(cache_iterator iter);
 
 };
 

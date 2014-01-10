@@ -43,10 +43,39 @@ class prioritizing {
 
  public:
 
-    template<typename Actor>
-    mailbox_element* next_message(Actor* self) {
-        return self->m_mailbox.try_pop();
+    typedef std::vector<unique_mailbox_element_pointer> cache_type;
+
+    typedef cache_type::iterator cache_iterator;
+
+    template<class Actor>
+    unique_mailbox_element_pointer next_message(Actor* self) {
+        return unique_mailbox_element_pointer{self->mailbox().try_pop()};
     }
+
+    template<class Actor>
+    inline bool has_next_message(Actor* self) {
+        return self->mailbox().can_fetch_more();
+    }
+
+    inline void push_to_cache(unique_mailbox_element_pointer ptr) {
+        m_cache.push_back(std::move(ptr));
+    }
+
+    inline cache_iterator cache_begin() {
+        return m_cache.begin();
+    }
+
+    inline cache_iterator cache_end() {
+        return m_cache.begin();
+    }
+
+    inline void cache_erase(cache_iterator iter) {
+        m_cache.erase(iter);
+    }
+
+ private:
+
+    cache_type m_cache;
 
     /*
     mailbox_element* try_pop() {

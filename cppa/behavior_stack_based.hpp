@@ -104,7 +104,7 @@ class behavior_stack_based : public Base {
 
     virtual void become_waiting_for(behavior bhvr, message_id mf) = 0;
 
-    virtual void do_become(behavior&& bhvr, bool discard_old) = 0;
+    virtual void do_become(behavior bhvr, bool discard_old) = 0;
 
     inline bool has_behavior() const {
         return m_bhvr_stack.empty() == false;

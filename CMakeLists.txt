@@ -38,7 +38,7 @@ if (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else (CMAKE_CXX_FLAGS)
   set(CXXFLAGS_PROVIDED false)
-  set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+  set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic -fno-omit-frame-pointer -fsanitize=address")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -77,7 +77,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                    "you can override this by defining CMAKE_CXX_FLAGS "
                    "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
 else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "

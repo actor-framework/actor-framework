@@ -60,12 +60,6 @@ class scheduling_policy {
     using timeout_type = int;
 
     /**
-     * @brief Requests a timeout for the next call to @p fetch_message.
-     */
-    template<class Actor>
-    timeout_type init_timeout(Actor* self, const util::duration& rel_time);
-
-    /**
      * @brief Fetches new messages from the actor's mailbox and feeds them
      *        to the given callback. The member function returns @p false if
      *        no message was read, @p true otherwise.

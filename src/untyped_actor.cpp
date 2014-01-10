@@ -38,10 +38,8 @@ namespace cppa {
 continue_helper& continue_helper::continue_with(behavior::continuation_fun fun) {
     auto ref_opt = m_self->bhvr_stack().sync_handler(m_mid);
     if (ref_opt) {
-        auto& ref = *ref_opt;
-        // copy original behavior
-        behavior cpy = ref;
-        ref = cpy.add_continuation(std::move(fun));
+        behavior cpy = *ref_opt;
+        *ref_opt = cpy.add_continuation(std::move(fun));
     }
     else CPPA_LOG_ERROR("failed to add continuation");
     return *this;

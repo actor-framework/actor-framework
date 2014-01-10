@@ -367,14 +367,14 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         return m_state;
     }
 
+    void cleanup(std::uint32_t reason);
+
  protected:
 
     template<typename... Ts>
     inline mailbox_element* new_mailbox_element(Ts&&... args) {
         return mailbox_element::create(std::forward<Ts>(args)...);
     }
-
-    void cleanup(std::uint32_t reason);
 
     // true if this actor receives EXIT messages as ordinary messages
     bool m_trap_exit;

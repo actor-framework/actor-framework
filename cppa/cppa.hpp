@@ -529,11 +529,9 @@ actor spawn_io(io::input_stream_ptr in,
                io::output_stream_ptr out,
                Ts&&... args) {
     using namespace policy;
-    using proper_impl = detail::proper_actor<Impl,
-                                             middleman_scheduling,
-                                             not_prioritizing,
-                                             no_resume,
-                                             cooperative_scheduling>;
+    using ps = policies<middleman_scheduling, not_prioritizing,
+                        no_resume, cooperative_scheduling>;
+    using proper_impl = detail::proper_actor<Impl, ps>;
     auto ptr = make_counted<proper_impl>(std::move(in), std::move(out),
                                          std::forward<Ts>(args)...);
     ptr->launch();

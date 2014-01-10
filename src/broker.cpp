@@ -287,6 +287,7 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     m_dummy_node.msg = move(msg);
     m_dummy_node.mid = hdr.id;
     try {
+        /*TODO:
         auto bhvr = m_bhvr_stack.back();
         switch (m_invoke.handle_message(this,
                                         &m_dummy_node,
@@ -295,7 +296,7 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
             case policy::hm_msg_handled: {
                 if  ( not m_bhvr_stack.empty()
                    && bhvr.as_behavior_impl() == m_bhvr_stack.back().as_behavior_impl()) {
-                   m_invoke.invoke_from_cache(this, bhvr, m_bhvr_stack.back_id());
+                   //TODO: m_invoke.invoke_from_cache(this, bhvr, m_bhvr_stack.back_id());
                 }
                 break;
             }
@@ -304,11 +305,12 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
             case policy::hm_skip_msg:
             case policy::hm_cache_msg: {
                 auto e = mailbox_element::create(hdr, move(m_dummy_node.msg));
-                m_invoke.add_to_cache(e);
+                //TODO: m_invoke.add_to_cache(e);
                 break;
             }
             default: CPPA_CRITICAL("illegal result of handle_message");
         }
+        */
     }
     catch (std::exception& e) {
         CPPA_LOG_ERROR("broker killed due to an unhandled exception: "

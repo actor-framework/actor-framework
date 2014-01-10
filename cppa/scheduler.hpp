@@ -54,7 +54,6 @@ namespace cppa {
 class untyped_actor;
 class scheduled_actor;
 class scheduler_helper;
-class untyped_actor;
 typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
 namespace detail { class singleton_manager; } // namespace detail
 

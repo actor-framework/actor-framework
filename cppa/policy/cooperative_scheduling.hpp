@@ -50,13 +50,6 @@ class cooperative_scheduling {
 
     using timeout_type = int;
 
-    template<class Actor>
-    timeout_type init_timeout(Actor* self, const util::duration& rel_time) {
-        // request explicit timeout message
-        self->request_timeout(rel_time);
-        return 0; // return some dummy value
-    }
-
     // this does return nullptr
     template<class Actor, typename F>
     void fetch_messages(Actor* self, F cb) {

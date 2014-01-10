@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 
+#include "cppa/logging.hpp"
 #include "cppa/io/middleman_event_handler.hpp"
 
 namespace cppa { namespace io {
@@ -139,18 +140,18 @@ class middleman_event_handler_impl : public middleman_event_handler {
             switch (errno) {
                 // supplied file descriptor is already registered
                 case EEXIST: {
-                    CPPA_LOGMF(CPPA_ERROR, self, "file descriptor registered twice");
+                    CPPA_LOG_ERROR("file descriptor registered twice");
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    CPPA_LOGMF(CPPA_ERROR, self, "cannot delete file descriptor "
+                    CPPA_LOG_ERROR("cannot delete file descriptor "
                                    "because it isn't registered");
                     break;
                 }
                 default: {
-                    CPPA_LOGMF(CPPA_ERROR, self, strerror(errno));
+                    CPPA_LOG_ERROR(strerror(errno));
                     perror("epoll_ctl() failed");
                     CPPA_CRITICAL("epoll_ctl() failed");
                 }

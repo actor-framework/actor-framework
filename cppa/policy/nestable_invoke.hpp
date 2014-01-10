@@ -56,29 +56,29 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 
  public:
 
-    static inline bool hm_should_skip(pointer node) {
+    static inline bool hm_should_skip(mailbox_element* node) {
         return node->marked;
     }
 
     template<class Actor>
-    inline pointer hm_begin(Actor* self, pointer node) {
-        auto previous = self->m_current_node;
-        self->m_current_node = node;
+    inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
+        auto previous = self->current_node();
+        self->current_node(node);
         push_timeout();
         node->marked = true;
         return previous;
     }
 
     template<class Actor>
-    inline void hm_cleanup(Actor* self, pointer previous) {
-        self->m_current_node->marked = false;
-        self->m_current_node = previous;
+    inline void hm_cleanup(Actor* self, mailbox_element* previous) {
+        self->current_node()->marked = false;
+        self->current_node(previous);
     }
 
     template<class Actor>
-    inline void hm_revert(Actor* self, pointer previous) {
-        self->m_current_node->marked = false;
-        self->m_current_node = previous;
+    inline void hm_revert(Actor* self, mailbox_element* previous) {
+        self->current_node()->marked = false;
+        self->current_node(previous);
         pop_timeout();
     }
 
@@ -99,19 +99,6 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
     inline void push_timeout() { }
 
     inline bool waits_for_timeout(std::uint32_t) { return false; }
-
-    /*
-    void run_detached() {
-        auto dthis = util::dptr<Subtype>(this);
-        dthis->init();
-        if (dthis->planned_exit_reason() != exit_reason::not_exited) {
-            // init() did indeed call quit() for some reason
-            dthis->on_exit();
-        }
-        auto rsn = dthis->planned_exit_reason();
-        dthis->cleanup(rsn == exit_reason::not_exited ? exit_reason::normal : rsn);
-    }
-    */
 
 };
 

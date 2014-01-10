@@ -70,7 +70,7 @@ optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
         });
         if (i != e) return i->first;
     }
-    return {};
+    return none;
 }
 
 void behavior_stack::pop_async_back() {

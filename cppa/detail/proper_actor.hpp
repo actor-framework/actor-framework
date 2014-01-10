@@ -8,6 +8,8 @@
 #include "cppa/mailbox_element.hpp"
 #include "cppa/blocking_untyped_actor.hpp"
 
+#include "cppa/policy/scheduling_policy.hpp"
+
 #include "cppa/util/duration.hpp"
 
 namespace cppa {
@@ -19,79 +21,144 @@ struct fiber;
 namespace cppa {
 namespace detail {
 
+// 'imports' all member functions from policies to the actor
 template<class Base,
-         class SchedulingPolicy,
-         class PriorityPolicy,
-         class ResumePolicy,
-         class InvokePolicy>
-class proper_actor_base : public ResumePolicy::template mixin<Base> {
+         class Derived,
+         class Policies>
+class proper_actor_base : public Policies::resume_policy::template mixin<Base, Derived> {
 
-    friend SchedulingPolicy;
-    friend PriorityPolicy;
-    friend ResumePolicy;
-    friend InvokePolicy;
-
-    typedef typename ResumePolicy::template mixin<Base> super;
+    typedef typename Policies::resume_policy::template mixin<Base, Derived> super;
 
  public:
 
     template <typename... Ts>
     proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
+    // grant access to the actor's mailbox
+    typename Base::mailbox_type& mailbox() {
+        return this->m_mailbox;
+    }
+
+    mailbox_element* dummy_node() {
+        return &this->m_dummy_node;
+    }
+
+    // member functions from scheduling policy
+
+    typedef typename Policies::scheduling_policy::timeout_type timeout_type;
+
     void enqueue(const message_header& hdr, any_tuple msg) override {
-        CPPA_PUSH_AID(this->id());
+        CPPA_PUSH_AID(dptr()->id());
         CPPA_LOG_DEBUG(CPPA_TARG(hdr, to_string)
                        << ", " << CPPA_TARG(msg, to_string));
-        m_scheduling_policy.enqueue(this, hdr, msg);
+        scheduling_policy().enqueue(dptr(), hdr, msg);
     }
 
-    inline mailbox_element* next_message() {
-        return m_priority_policy.next_message(this);
+    // NOTE: scheduling_policy::launch is 'imported' in proper_actor
+
+    template<typename F>
+    bool fetch_messages(F cb) {
+        return scheduling_policy().fetch_messages(dptr(), cb);
     }
 
-    // grant access to the actor's mailbox
-    typename Base::mailbox_type& mailbox() { return this->m_mailbox; }
-
-    SchedulingPolicy& scheduling_policy() { return m_scheduling_policy; }
-
-    PriorityPolicy& priority_policy() { return m_priority_policy; }
-
-    ResumePolicy& resume_policy() { return m_resume_policy; }
-
-    InvokePolicy& invoke_policy() { return m_invoke_policy; }
-
-    inline void push_timeout() {
-        m_scheduling_policy.push_timeout();
+    template<typename F>
+    bool try_fetch_messages(F cb) {
+        return scheduling_policy().try_fetch_messages(dptr(), cb);
     }
 
-    inline void request_timeout(const util::duration& rel_timeout) {
-        m_invoke_policy.request_timeout(this, rel_timeout);
+    template<typename F>
+    policy::timed_fetch_result fetch_messages(F cb, timeout_type abs_time) {
+        return scheduling_policy().fetch_messages(dptr(), cb, abs_time);
     }
 
-    detail::behavior_stack& bhvr_stack() { return this->m_bhvr_stack; }
+    // member functions from priority policy
+
+    inline unique_mailbox_element_pointer next_message() {
+        return priority_policy().next_message(dptr());
+    }
+
+    inline bool has_next_message() {
+        return priority_policy().has_next_message(dptr());
+    }
+
+    inline void push_to_cache(unique_mailbox_element_pointer ptr) {
+        priority_policy().push_to_cache(std::move(ptr));
+    }
+
+    typedef typename Policies::priority_policy::cache_iterator cache_iterator;
+
+    inline cache_iterator cache_begin() {
+        return priority_policy().cache_begin();
+    }
+
+    inline cache_iterator cache_end(){
+        return priority_policy().cache_end();
+    }
+
+    inline void cache_erase(cache_iterator iter) {
+        priority_policy().cache_erase(iter);
+    }
+
+    // member functions from resume policy
+
+    // NOTE: resume_policy::resume is implemented in the mixin
+
+    // member functions from invoke policy
+
+    template<class PartialFunctionOrBehavior>
+    inline bool invoke_message(unique_mailbox_element_pointer& ptr,
+                               PartialFunctionOrBehavior& fun,
+                               message_id awaited_response) {
+        return invoke_policy().invoke_message(dptr(), ptr, fun,
+                                              awaited_response);
+    }
+
+    inline void reset_timeout() {
+        invoke_policy().reset_timeout();
+    }
+
+    inline void request_timeout(const util::duration& d) {
+        invoke_policy().request_timeout(dptr(), d);
+    }
 
  protected:
 
-    SchedulingPolicy m_scheduling_policy;
-    PriorityPolicy m_priority_policy;
-    ResumePolicy m_resume_policy;
-    InvokePolicy m_invoke_policy;
+    inline typename Policies::scheduling_policy& scheduling_policy() {
+        return m_policies.get_scheduling_policy();
+    }
+
+    inline typename Policies::priority_policy& priority_policy() {
+        return m_policies.get_priority_policy();
+    }
+
+    inline typename Policies::resume_policy& resume_policy() {
+        return m_policies.get_resume_policy();
+    }
+
+    inline typename Policies::invoke_policy& invoke_policy() {
+        return m_policies.get_invoke_policy();
+    }
+
+    inline Derived* dptr() {
+        return static_cast<Derived*>(this);
+    }
+
+ private:
+
+    Policies m_policies;
 
 };
 
 template<class Base,
-         class SchedulingPolicy,
-         class PriorityPolicy,
-         class ResumePolicy,
-         class InvokePolicy,
+         class Policies,
          bool OverrideDequeue = std::is_base_of<blocking_untyped_actor, Base>::value>
-class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
-                                              PriorityPolicy, ResumePolicy,
-                                              InvokePolicy> {
+class proper_actor : public proper_actor_base<Base,
+                                              proper_actor<Base,
+                                                           Policies,
+                                                           false>,
+                                              Policies> {
 
-    typedef proper_actor_base<Base, SchedulingPolicy, PriorityPolicy,
-                              ResumePolicy, InvokePolicy>
-            super;
+    typedef proper_actor_base<Base, proper_actor, Policies> super;
 
  public:
 
@@ -101,31 +168,28 @@ class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
     inline void launch() {
         auto bhvr = this->make_behavior();
         if (bhvr) this->bhvr_stack().push_back(std::move(bhvr));
-        this->m_scheduling_policy.launch(this);
+        this->scheduling_policy().launch(this);
     }
 
-    bool invoke(mailbox_element* msg) {
-        return this->m_invoke_policy.invoke(this, msg, this->bhvr_stack().back(),
-                                            this->bhvr_stack().back_id());
-    }
+    // implement pure virtual functions from behavior_stack_based
 
     void become_waiting_for(behavior bhvr, message_id mf) override {
         if (bhvr.timeout().valid()) {
             if (bhvr.timeout().valid()) {
-                this->invoke_policy().reset_timeout();
-                this->invoke_policy().request_timeout(this, bhvr.timeout());
+                this->reset_timeout();
+                this->request_timeout(bhvr.timeout());
             }
             this->bhvr_stack().push_back(std::move(bhvr), mf);
         }
         this->bhvr_stack().push_back(std::move(bhvr), mf);
     }
 
-    void do_become(behavior&& bhvr, bool discard_old) override {
+    void do_become(behavior bhvr, bool discard_old) override {
         //if (discard_old) m_bhvr_stack.pop_async_back();
         //m_bhvr_stack.push_back(std::move(bhvr));
-        this->invoke_policy().reset_timeout();
+        this->reset_timeout();
         if (bhvr.timeout().valid()) {
-            this->invoke_policy().request_timeout(this, bhvr.timeout());
+            this->request_timeout(bhvr.timeout());
         }
         if (discard_old) this->m_bhvr_stack.pop_async_back();
         this->m_bhvr_stack.push_back(std::move(bhvr));
@@ -134,77 +198,63 @@ class proper_actor : public proper_actor_base<Base, SchedulingPolicy,
 };
 
 // for blocking actors, there's one more member function to implement
-template <class Base, class SchedulingPolicy, class PriorityPolicy,
-          class ResumePolicy, class InvokePolicy>
-class proper_actor<
-    Base, SchedulingPolicy, PriorityPolicy, ResumePolicy, InvokePolicy,
-    true> final : public proper_actor_base<Base, SchedulingPolicy,
-                                           PriorityPolicy, ResumePolicy,
-                                           InvokePolicy> {
+template <class Base, class Policies>
+class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
+                                              proper_actor<Base,
+                                                           Policies,
+                                                           true>,
+                                              Policies> {
 
-    typedef proper_actor_base<Base, SchedulingPolicy, PriorityPolicy,
-                              ResumePolicy, InvokePolicy>
-            super;
+    typedef proper_actor_base<Base, proper_actor, Policies> super;
 
  public:
 
     template <typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
-    inline void launch() {
-        this->m_scheduling_policy.launch(this);
+    // 'import' optional blocking member functions from policies
+
+    inline void await_data() {
+        this->scheduling_policy().await_data(this);
     }
+
+    inline void await_ready() {
+        this->resume_policy().await_ready(this);
+    }
+
+    inline void launch() {
+        this->scheduling_policy().launch(this);
+    }
+
+    // implement blocking_untyped_actor::dequeue_response
 
     void dequeue_response(behavior& bhvr, message_id mid) override {
+        { // try to dequeue from cache first
+            auto i = this->cache_begin();
+            auto e = this->cache_end();
+            for (; i != e; ++i) {
+                if (this->invoke_message(*i, bhvr, mid)) {
+                    this->cache_erase(i);
+                    return;
+                }
+            }
+        }
+        // request timeout if needed
         if (bhvr.timeout().valid()) {
-            auto tout =
-                this->m_scheduling_policy.init_timeout(this, bhvr.timeout());
-            auto done = false;
-            while (!done) {
-                if (!this->m_resume_policy.await_data(this, tout)) {
-                    bhvr.handle_timeout();
-                    done = true;
-                } else {
-                    auto msg = this->m_priority_policy.next_message(this);
-                    // must not return nullptr, because await_data guarantees
-                    // at least one message in our mailbox
-                    CPPA_REQUIRE(msg != nullptr);
-                    done = this->m_invoke_policy.invoke(this, msg, bhvr, mid);
+            this->request_timeout(bhvr.timeout());
+        }
+        // read incoming messages
+        for (;;) {
+            auto msg = this->next_message();
+            if (!msg) this->await_ready();
+            else {
+                if (this->invoke_message(msg, bhvr, mid)) {
+                    // we're done
+                    return;
                 }
-            }
-        } else {
-            for (;;) {
-                auto msg = this->m_priority_policy.next_message(this);
-                while (msg) {
-                    if (this->m_invoke_policy.invoke(this, msg, bhvr, mid)) {
-                        // we're done
-                        return;
-                    }
-                    msg = this->m_priority_policy.next_message(this);
-                }
-                this->m_resume_policy.await_data(this);
+                if (msg) this->push_to_cache(std::move(msg));
             }
         }
-    }
-
-    mailbox_element* dequeue() override {
-        auto e = try_dequeue();
-        if (!e) {
-            this->m_resume_policy.await_data(this);
-            return try_dequeue(); // guaranteed to succeed after await_data
-        }
-        return e;
-    }
-
-    mailbox_element* try_dequeue() override {
-        return this->m_priority_policy.next_message(this);
-    }
-
-    mailbox_element* try_dequeue(const typename Base::timeout_type& tout) override {
-        if (this->m_resume_policy.await_data(this, tout)) {
-            return try_dequeue();
-        }
-        return nullptr;
     }
 
 };

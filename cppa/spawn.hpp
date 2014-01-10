@@ -95,11 +95,11 @@ actor spawn(Ts&&... args) {
                               policy::nestable_invoke,
                               policy::sequential_invoke
                           >::type;
-    using proper_impl = detail::proper_actor<Impl,
-                                             scheduling_policy,
-                                             priority_policy,
-                                             resume_policy,
-                                             invoke_policy>;
+    using policies = policy::policies<scheduling_policy,
+                                      priority_policy,
+                                      resume_policy,
+                                      invoke_policy>;
+    using proper_impl = detail::proper_actor<Impl, policies>;
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
     ptr->launch();
     return ptr;

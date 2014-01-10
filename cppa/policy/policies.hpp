@@ -28,50 +28,49 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RESUME_POLICY_HPP
-#define CPPA_RESUME_POLICY_HPP
-
-#include "cppa/resumable.hpp"
-
-// this header consists all type definitions needed to
-// implement the resume_policy trait
-
-namespace cppa { namespace util { class duration; struct fiber; } }
+#ifndef CPPA_POLICY_POLICIES_HPP
+#define CPPA_POLICY_POLICIES_HPP
 
 namespace cppa {
 namespace policy {
 
-/**
- * @brief The resume_policy <b>concept</b> class. Please note that this
- *        class is <b>not</b> implemented. It only explains the all
- *        required member function and their behavior for any resume policy.
- */
-class resume_policy {
+template<class SchedulingPolicy, class PriorityPolicy,
+         class ResumePolicy, class InvokePolicy>
+class policies {
 
  public:
 
-    /**
-     * @brief Resumes the actor by reading a new message <tt>msg</tt> and then
-     *        calling <tt>self->invoke(msg)</tt>. This process is repeated
-     *        until either no message is left in the actor's mailbox or the
-     *        actor finishes execution.
-     */
-    template<class Actor>
-    resumable::resume_result resume(Actor* self, util::fiber* from);
+    typedef SchedulingPolicy scheduling_policy;
+    typedef PriorityPolicy   priority_policy;
+    typedef ResumePolicy     resume_policy;
+    typedef InvokePolicy     invoke_policy;
 
-    /**
-     * @brief Waits unconditionally until the actor is ready to resume.
-     * @note This member function must raise a compiler error if the resume
-     *       strategy cannot be used to implement blocking actors.
-     *
-     * This member function calls {@link scheduling_policy::await_data}
-     */
-    template<class Actor>
-    bool await_ready(Actor* self);
+    scheduling_policy& get_scheduling_policy() {
+        return m_scheduling_policy;
+    }
+
+    priority_policy& get_priority_policy() {
+        return m_priority_policy;
+    }
+
+    resume_policy& get_resume_policy() {
+        return m_resume_policy;
+    }
+
+    invoke_policy& get_invoke_policy() {
+        return m_invoke_policy;
+    }
+
+ private:
+
+    scheduling_policy m_scheduling_policy;
+    priority_policy   m_priority_policy;
+    resume_policy     m_resume_policy;
+    invoke_policy     m_invoke_policy;
 
 };
 
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_RESUME_POLICY_HPP
+#endif // CPPA_POLICY_POLICIES_HPP
