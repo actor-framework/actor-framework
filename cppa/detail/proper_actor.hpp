@@ -32,7 +32,9 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
  public:
 
     template <typename... Ts>
-    proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+    proper_actor_base(Ts&&... args)
+        : super(std::forward<Ts>(args)...), m_has_pending_tout(false)
+        , m_pending_tout(0) { }
 
     // grant access to the actor's mailbox
     typename Base::mailbox_type& mailbox() {
@@ -113,12 +115,50 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
                                               awaited_response);
     }
 
+    // timeout handling
+
     inline void reset_timeout() {
-        invoke_policy().reset_timeout();
+        if (m_has_pending_tout) {
+            ++m_pending_tout;
+            m_has_pending_tout = false;
+        }
     }
 
-    inline void request_timeout(const util::duration& d) {
-        invoke_policy().request_timeout(dptr(), d);
+    void request_timeout(const util::duration& d) {
+        if (!d.valid()) m_has_pending_tout = false;
+        else {
+            auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
+            if (d.is_zero()) {
+                // immediately enqueue timeout message if duration == 0s
+                dptr()->enqueue({this->address(), this}, std::move(msg));
+                //auto e = this->new_mailbox_element(this, std::move(msg));
+                //this->m_mailbox.enqueue(e);
+            }
+            else dptr()->delayed_send_tuple(this, d, std::move(msg));
+            m_has_pending_tout = true;
+        }
+    }
+
+    inline void handle_timeout(behavior& bhvr) {
+        bhvr.handle_timeout();
+        reset_timeout();
+    }
+
+    inline void pop_timeout() {
+        CPPA_REQUIRE(m_pending_tout > 0);
+        --m_pending_tout;
+    }
+
+    inline void push_timeout() {
+        ++m_pending_tout;
+    }
+
+    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
+        return m_has_pending_tout && m_pending_tout == timeout_id;
+    }
+
+    inline bool has_pending_timeout() const {
+        return m_has_pending_tout;
     }
 
  protected:
@@ -146,6 +186,8 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
  private:
 
     Policies m_policies;
+    bool m_has_pending_tout;
+    std::uint32_t m_pending_tout;
 
 };
 

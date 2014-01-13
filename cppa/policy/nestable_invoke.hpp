@@ -64,7 +64,7 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
     inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
         auto previous = self->current_node();
         self->current_node(node);
-        push_timeout();
+        self->push_timeout();
         node->marked = true;
         return previous;
     }
@@ -79,26 +79,10 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
     inline void hm_revert(Actor* self, mailbox_element* previous) {
         self->current_node()->marked = false;
         self->current_node(previous);
-        pop_timeout();
+        self->pop_timeout();
     }
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
-
-    inline void reset_timeout() { }
-
-    template<class Actor>
-    inline void request_timeout(Actor*, const util::duration&) { }
-
-    template<class Actor>
-    inline void handle_timeout(Actor*, behavior& bhvr) {
-        bhvr.handle_timeout();
-    }
-
-    inline void pop_timeout() { }
-
-    inline void push_timeout() { }
-
-    inline bool waits_for_timeout(std::uint32_t) { return false; }
 
 };
 

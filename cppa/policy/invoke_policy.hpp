@@ -127,8 +127,7 @@ class invoke_policy {
 
     std::list<std::unique_ptr<mailbox_element, detail::disposer> > m_cache;
 
-    template<class Actor>
-    inline void handle_timeout(Actor*, partial_function&) {
+    inline void handle_timeout(partial_function&) {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
@@ -170,8 +169,8 @@ class invoke_policy {
             }
             else if (v0 == atom("SYNC_TOUT")) {
                 CPPA_REQUIRE(!mid.valid());
-                return dptr()->waits_for_timeout(v1) ? timeout_message
-                                                     : expired_timeout_message;
+                return self->waits_for_timeout(v1) ? timeout_message
+                                                   : expired_timeout_message;
             }
         }
         else if (   msg.size() == 1
@@ -317,7 +316,7 @@ class invoke_policy {
             }
             case timeout_message: {
                 CPPA_LOG_DEBUG("handle timeout message");
-                dptr()->handle_timeout(self, fun);
+                self->handle_timeout(fun);
                 if (awaited_response.valid()) {
                     self->mark_arrived(awaited_response);
                     self->remove_handler(awaited_response);

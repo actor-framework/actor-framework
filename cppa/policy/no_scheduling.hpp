@@ -118,13 +118,6 @@ class no_scheduling {
                 await_data(self);
                 self->set_state(actor_state::ready);
                 if (self->resume(&fself) == resumable::done) {
-                    CPPA_LOG_DEBUG("resume returned resumable::done");
-                    self->planned_exit_reason(exit_reason::normal);
-                }
-                auto per = self->planned_exit_reason();
-                if (per != exit_reason::not_exited) {
-                    CPPA_LOG_DEBUG("planned exit reason: " << per);
-                    self->cleanup(per);
                     return;
                 }
             }

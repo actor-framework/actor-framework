@@ -56,19 +56,19 @@ class event_testee : public sb_actor<event_testee> {
 
 // quits after 5 timeouts
 actor spawn_event_testee2() {
-    struct impl : sb_actor<impl> {
+    struct impl : untyped_actor {
         behavior wait4timeout(int remaining) {
+            CPPA_LOG_TRACE(CPPA_ARG(remaining));
             return (
-                after(chrono::milliseconds(50)) >> [=]() {
+                after(chrono::milliseconds(50)) >> [=] {
                     if (remaining == 1) quit();
                     else become(wait4timeout(remaining - 1));
                 }
             );
         }
-
-        behavior init_state;
-
-        impl() : init_state(wait4timeout(5)) { }
+        behavior make_behavior() override {
+            return wait4timeout(5);
+        }
     };
     return spawn<impl>();
 }

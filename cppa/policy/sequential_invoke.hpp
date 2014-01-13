@@ -47,8 +47,6 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 
  public:
 
-    sequential_invoke() : m_has_pending_tout(false), m_pending_tout(0) { }
-
     static inline bool hm_should_skip(mailbox_element*) {
         return false;
     }
@@ -69,57 +67,6 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
     static inline void hm_revert(Actor* self, mailbox_element* previous) {
         self->current_node(previous);
     }
-
-    inline void reset_timeout() {
-        if (m_has_pending_tout) {
-            ++m_pending_tout;
-            m_has_pending_tout = false;
-        }
-    }
-
-    template<class Actor>
-    void request_timeout(Actor* self, const util::duration& d) {
-        if (!d.valid()) m_has_pending_tout = false;
-        else {
-            auto msg = make_any_tuple(atom("SYNC_TOUT"), ++m_pending_tout);
-            if (d.is_zero()) {
-                // immediately enqueue timeout message if duration == 0s
-                self->enqueue({self->address(), self}, std::move(msg));
-                //auto e = this->new_mailbox_element(this, std::move(msg));
-                //this->m_mailbox.enqueue(e);
-            }
-            else self->delayed_send_tuple(self, d, std::move(msg));
-            m_has_pending_tout = true;
-        }
-    }
-
-    template<class Actor>
-    inline void handle_timeout(Actor*, behavior& bhvr) {
-        bhvr.handle_timeout();
-        reset_timeout();
-    }
-
-    inline void pop_timeout() {
-        CPPA_REQUIRE(m_pending_tout > 0);
-        --m_pending_tout;
-    }
-
-    inline void push_timeout() {
-        ++m_pending_tout;
-    }
-
-    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
-        return m_has_pending_tout && m_pending_tout == timeout_id;
-    }
-
-    inline bool has_pending_timeout() const {
-        return m_has_pending_tout;
-    }
-
- private:
-
-    bool m_has_pending_tout;
-    std::uint32_t m_pending_tout;
 
 };
 

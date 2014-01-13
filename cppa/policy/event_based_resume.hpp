@@ -70,43 +70,47 @@ class event_based_resume {
             CPPA_PUSH_AID(d->id());
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
-                if (   d->exit_reason() == exit_reason::not_exited
-                    && d->planned_exit_reason() == exit_reason::not_exited) {
+                d->bhvr_stack().clear();
+                d->bhvr_stack().cleanup();
+                if (d->planned_exit_reason() == exit_reason::not_exited) {
                     d->planned_exit_reason(exit_reason::normal);
                 }
                 d->on_exit();
                 if (!d->bhvr_stack().empty()) {
+                    CPPA_LOG_DEBUG("on_exit did set a new behavior");
                     d->planned_exit_reason(exit_reason::not_exited);
                     return false; // on_exit did set a new behavior
                 }
                 d->set_state(actor_state::done);
-                d->bhvr_stack().clear();
-                d->bhvr_stack().cleanup();
                 d->cleanup(d->planned_exit_reason());
                 return true;
             };
+            auto actor_done = [&] {
+                return    d->bhvr_stack().empty()
+                       || d->planned_exit_reason() != exit_reason::not_exited;
+            };
             try {
                 for (;;) {
-                    auto ptr = dptr()->next_message();
+                    auto ptr = d->next_message();
                     if (ptr) {
-                        CPPA_REQUIRE(!dptr()->bhvr_stack().empty());
-                        auto bhvr = dptr()->bhvr_stack().back();
-                        auto mid = dptr()->bhvr_stack().back_id();
-                        if (dptr()->invoke_message(ptr, bhvr, mid)) {
-                            if (dptr()->bhvr_stack().empty() && done_cb()) {
-                                CPPA_LOG_DEBUG("behavior stack empty");
+                        CPPA_REQUIRE(!d->bhvr_stack().empty());
+                        auto bhvr = d->bhvr_stack().back();
+                        auto mid = d->bhvr_stack().back_id();
+                        if (d->invoke_message(ptr, bhvr, mid)) {
+                            if (actor_done() && done_cb()) {
+                                CPPA_LOG_DEBUG("actor exited");
                                 return resume_result::done;
                             }
                         }
-                        // add ptr to cache if invoke_message did not
-                        // reset it
-                        if (ptr) dptr()->push_to_cache(std::move(ptr));
+                        // add ptr to cache if invoke_message
+                        // did not reset it
+                        if (ptr) d->push_to_cache(std::move(ptr));
                     }
                     else {
                         CPPA_LOG_DEBUG("no more element in mailbox; going to block");
                         d->set_state(actor_state::about_to_block);
                         std::atomic_thread_fence(std::memory_order_seq_cst);
-                        if (!dptr()->has_next_message()) {
+                        if (!d->has_next_message()) {
                             switch (d->cas_state(actor_state::about_to_block,
                                                     actor_state::blocked)) {
                                 case actor_state::ready:
