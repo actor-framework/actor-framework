@@ -53,7 +53,7 @@ vector<string> split(const string& str, char delim, bool keep_empties) {
 }
 
 void verbose_terminate() {
-    try { if (uncaught_exception()) throw; }
+    try { throw; }
     catch (exception& e) {
         CPPA_PRINTERR("terminate called after throwing "
                       << to_verbose_string(e));

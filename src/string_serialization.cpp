@@ -83,6 +83,16 @@ class string_serializer : public serializer {
             out << value;
         }
 
+        // make sure char's are treated as int8_t number, not as character
+        inline void operator()(const char& value) {
+            out << static_cast<int>(value);
+        }
+
+        // make sure char's are treated as int8_t number, not as character
+        inline void operator()(const unsigned char& value) {
+            out << static_cast<unsigned int>(value);
+        }
+
         void operator()(const string& str) {
             if (!suppress_quotes) out << "\"";
             for (char c : str) {
@@ -343,6 +353,18 @@ class string_deserializer : public deserializer {
         void operator()(T& what) {
             istringstream s(str);
             s >> what;
+        }
+        void operator()(char& what) {
+            istringstream s(str);
+            int tmp;
+            s >> tmp;
+            what = static_cast<char>(tmp);
+        }
+        void operator()(unsigned char& what) {
+            istringstream s(str);
+            unsigned int tmp;
+            s >> tmp;
+            what = static_cast<unsigned char>(tmp);
         }
         void operator()(string& what) {
             what = str;

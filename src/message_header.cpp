@@ -35,20 +35,13 @@ namespace cppa {
 
 message_header::message_header(actor_addr source,
                                channel dest,
-                               message_id mid,
-                               message_priority prio)
-: sender(source), receiver(dest), id(mid), priority(prio) { }
-
-message_header::message_header(actor_addr source,
-                               channel dest,
-                               message_priority prio)
-: sender(source), receiver(dest), priority(prio) { }
+                               message_id mid)
+: sender(source), receiver(dest), id(mid) { }
 
 bool operator==(const message_header& lhs, const message_header& rhs) {
     return    lhs.sender == rhs.sender
            && lhs.receiver == rhs.receiver
-           && lhs.id == rhs.id
-           && lhs.priority == rhs.priority;
+           && lhs.id == rhs.id;
 }
 
 bool operator!=(const message_header& lhs, const message_header& rhs) {

@@ -52,11 +52,9 @@ namespace cppa { namespace policy {
 
 class nestable_invoke : public invoke_policy<nestable_invoke> {
 
-    typedef std::unique_lock<std::mutex> lock_type;
-
  public:
 
-    static inline bool hm_should_skip(mailbox_element* node) {
+    inline bool hm_should_skip(mailbox_element* node) {
         return node->marked;
     }
 
@@ -81,8 +79,6 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
         self->current_node(previous);
         self->pop_timeout();
     }
-
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
 };
 

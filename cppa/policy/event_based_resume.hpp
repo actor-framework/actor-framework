@@ -94,16 +94,19 @@ class event_based_resume {
                     auto ptr = d->next_message();
                     if (ptr) {
                         CPPA_REQUIRE(!d->bhvr_stack().empty());
-                        auto bhvr = d->bhvr_stack().back();
-                        auto mid = d->bhvr_stack().back_id();
-                        if (d->invoke_message(ptr, bhvr, mid)) {
+                        bool continue_from_cache = false;
+                        if (d->invoke_message(ptr)) {
+                            continue_from_cache = true;
                             if (actor_done() && done_cb()) {
                                 CPPA_LOG_DEBUG("actor exited");
                                 return resume_result::done;
                             }
+                            while (d->invoke_message_from_cache()) {
+                                // rinse and repeat
+                            }
                         }
                         // add ptr to cache if invoke_message
-                        // did not reset it
+                        // did not reset it (i.e. skipped, but not dropped)
                         if (ptr) d->push_to_cache(std::move(ptr));
                     }
                     else {

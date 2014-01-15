@@ -51,7 +51,6 @@ class message_header {
     actor_addr       sender;
     channel          receiver;
     message_id       id;
-    message_priority priority;
 
     /**
      * @brief An invalid message header without receiver or sender;
@@ -64,14 +63,7 @@ class message_header {
      */
     message_header(actor_addr source,
                    channel dest,
-                   message_id mid = message_id::invalid,
-                   message_priority prio = message_priority::normal);
-
-    /**
-     * @brief Creates a message header with <tt>receiver = dest</tt> and
-     *        <tt>sender = self</tt>.
-     */
-    message_header(actor_addr source, channel dest, message_priority prio);
+                   message_id mid = message_id::invalid);
 
     void deliver(any_tuple msg) const;
 

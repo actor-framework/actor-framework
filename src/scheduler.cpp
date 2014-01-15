@@ -57,12 +57,6 @@ typedef std::chrono::high_resolution_clock hrc;
 
 typedef hrc::time_point time_point;
 
-struct exit_observer : cppa::attachable {
-    ~exit_observer() { get_actor_registry()->dec_running(); }
-    void actor_exited(std::uint32_t) { }
-    bool matches(const token&) { return false; }
-};
-
 typedef policy::policies<policy::no_scheduling, policy::not_prioritizing,
                          policy::no_resume, policy::nestable_invoke>
         timer_actor_policies;
@@ -282,18 +276,6 @@ scheduler::~scheduler() {
 
 actor scheduler::delayed_send_helper() {
     return m_helper->m_timer.get();
-}
-
-void scheduler::register_converted_context(abstract_actor* what) {
-    if (what) {
-        get_actor_registry()->inc_running();
-        what->address()->attach(attachable_ptr{new exit_observer});
-    }
-}
-
-attachable* scheduler::register_hidden_context() {
-    get_actor_registry()->inc_running();
-    return new exit_observer;
 }
 
 void set_scheduler(scheduler* sched) {

@@ -31,6 +31,7 @@
 #ifndef CPPA_LOGGING_HPP
 #define CPPA_LOGGING_HPP
 
+#include <cstring>
 #include <sstream>
 #include <iostream>
 #include <execinfo.h>
@@ -161,19 +162,25 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_LVL_NAME3() "DEBUG"
 #define CPPA_LVL_NAME4() "TRACE"
 
-#ifndef CPPA_LOG_LEVEL
-#   define CPPA_LOG_IMPL(lvlname, classname, funname, message) {       \
+#define CPPA_PRINT_ERROR_IMPL(lvlname, classname, funname, message) {          \
         std::cerr << "[" << lvlname << "] " << classname << "::"               \
                   << funname << ": " << message << "\nStack trace:\n";         \
-        void *array[10];                                                       \
-        size_t size = backtrace(array, 10);                                    \
-        backtrace_symbols_fd(array, size, 2);                                  \
+        void* bt_array[20];                                                    \
+        size_t size = backtrace(bt_array, 20);                                 \
+        backtrace_symbols_fd(bt_array, size, 2);                               \
     } CPPA_VOID_STMT
+
+#ifndef CPPA_LOG_LEVEL
+#   define CPPA_LOG_IMPL(lvlname, classname, funname, message)                 \
+        CPPA_PRINT_ERROR_IMPL(lvlname, classname, funname, message)
 #   define CPPA_PUSH_AID(unused)
 #   define CPPA_SET_AID(unused) 0
 #   define CPPA_LOG_LEVEL 1
 #else
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, message)                 \
+        if (strcmp(lvlname, "ERROR") == 0) {                                   \
+            CPPA_PRINT_ERROR_IMPL(lvlname, classname, funname, message);       \
+        }                                                                      \
         ::cppa::get_logger()->log(lvlname, classname, funname, __FILE__,       \
             __LINE__, (::cppa::oss_wr{} << message).str())
 #   define CPPA_PUSH_AID(aid_arg)                                              \

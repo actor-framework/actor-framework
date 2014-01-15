@@ -34,12 +34,14 @@
 #include <type_traits>
 
 #include "cppa/policy.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/functor_based_actor.hpp"
+#include "cppa/detail/implicit_conversions.hpp"
 #include "cppa/detail/functor_based_blocking_actor.hpp"
 
 namespace cppa {
@@ -49,15 +51,8 @@ namespace cppa {
  * @{
  */
 
-/**
- * @brief Spawns an actor of type @p Impl.
- * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor} to the spawned {@link actor}.
- */
 template<class Impl, spawn_options Options, typename... Ts>
-actor spawn(Ts&&... args) {
+actor spawn_impl(Ts&&... args) {
     static_assert(std::is_base_of<untyped_actor, Impl>::value ||
                   (std::is_base_of<blocking_untyped_actor, Impl>::value &&
                    has_blocking_api_flag(Options)),
@@ -68,6 +63,7 @@ actor spawn(Ts&&... args) {
                   "top-level spawns cannot have monitor or link flag");
     static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
+    CPPA_LOGF_TRACE("spawn " << detail::demangle<Impl>());
     /*
     using scheduling_policy = typename std::conditional<
                                   has_detach_flag(Options),
@@ -86,7 +82,7 @@ actor spawn(Ts&&... args) {
                               typename std::conditional<
                                   has_detach_flag(Options),
                                   policy::no_resume,
-                                  policy::context_switching_resume
+                                  policy::no_resume //policy::context_switching_resume
                               >::type,
                               policy::event_based_resume
                           >::type;
@@ -101,8 +97,40 @@ actor spawn(Ts&&... args) {
                                       invoke_policy>;
     using proper_impl = detail::proper_actor<Impl, policies>;
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
+    CPPA_PUSH_AID(ptr->id());
     ptr->launch();
     return ptr;
+}
+
+template<typename T>
+struct spawn_fwd {
+    static inline T& fwd(T& arg) { return arg; }
+    static inline const T& fwd(const T& arg) { return arg; }
+    static inline T&& fwd(T&& arg) { return std::move(arg); }
+};
+
+template<typename T, typename... Ts>
+struct spawn_fwd<T (Ts...)> {
+    typedef T (*pointer) (Ts...);
+    static inline pointer fwd(pointer arg) { return arg; }
+};
+
+template<>
+struct spawn_fwd<scoped_actor> {
+    template<typename T>
+    static inline actor fwd(T& arg) { return arg; }
+};
+
+/**
+ * @brief Spawns an actor of type @p Impl.
+ * @param args Constructor arguments.
+ * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
+ * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor} to the spawned {@link actor}.
+ */
+template<class Impl, spawn_options Options, typename... Ts>
+actor spawn(Ts&&... args) {
+    return spawn_impl<Impl, Options>(spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(std::forward<Ts>(args))...);
 }
 
 /**

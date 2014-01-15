@@ -106,20 +106,24 @@ class no_scheduling {
     template<class Actor>
     void launch(Actor* self) {
         CPPA_PUSH_AID(self->id());
+        CPPA_LOG_TRACE(CPPA_ARG(self));
+        CPPA_REQUIRE(self != nullptr);
         get_actor_registry()->inc_running();
+        intrusive_ptr<Actor> mself{self};
         std::thread([=] {
-            CPPA_PUSH_AID(self->id());
+            CPPA_PUSH_AID(mself->id());
             CPPA_LOG_TRACE("");
             auto guard = util::make_scope_guard([] {
                 get_actor_registry()->dec_running();
             });
             util::fiber fself;
             for (;;) {
-                await_data(self);
-                self->set_state(actor_state::ready);
-                if (self->resume(&fself) == resumable::done) {
+                mself->set_state(actor_state::ready);
+                if (mself->resume(&fself) == resumable::done) {
                     return;
                 }
+                // await new data before resuming actor
+                await_data(mself.get());
             }
         }).detach();
     }

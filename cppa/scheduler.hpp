@@ -88,21 +88,6 @@ class scheduler {
 
     virtual void enqueue(resumable*) = 0;
 
-    /**
-     * @brief Informs the scheduler about a converted context
-     *        (a thread that acts as actor).
-     * @note Calls <tt>what->attach(...)</tt>.
-     */
-    virtual void register_converted_context(abstract_actor* what);
-
-    /**
-     * @brief Informs the scheduler about a hidden (non-actor)
-     *        context that should be counted by await_others_done().
-     * @returns An {@link attachable} that the hidden context has to destroy
-     *         if his lifetime ends.
-     */
-    virtual attachable* register_hidden_context();
-
     template<typename Duration, typename... Data>
     void delayed_send(message_header hdr,
                       const Duration& rel_time,

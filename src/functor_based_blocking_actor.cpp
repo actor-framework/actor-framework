@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include "cppa/logging.hpp"
 #include "cppa/detail/functor_based_blocking_actor.hpp"
 
 namespace cppa {
@@ -38,6 +39,7 @@ void functor_based_blocking_actor::create(blocking_untyped_actor*, act_fun fun) 
 }
 
 void functor_based_blocking_actor::act() {
+    CPPA_LOG_TRACE("");
     m_act(this);
 }
 

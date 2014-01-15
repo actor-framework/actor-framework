@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
                 }
                 auto c = self->spawn<client, monitored>(serv);
                 self->receive (
-                    on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
+                    on(atom("DOWN"), arg_match) >> [&](uint32_t rsn) {
                         CPPA_CHECK_EQUAL(self->last_sender(), c);
                         CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
                     }

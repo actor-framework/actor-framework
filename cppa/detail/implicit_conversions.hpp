@@ -74,9 +74,8 @@ struct implicit_conversions {
     typedef typename util::replace_type<
                 subtype3,
                 actor,
-                std::is_convertible<T, actor*>,
-                std::is_convertible<T, local_actor*>,
-                std::is_same<self_type, T>
+                std::is_convertible<T, abstract_actor*>,
+                std::is_same<scoped_actor, T>
             >::type
             type;
 

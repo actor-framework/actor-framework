@@ -55,22 +55,27 @@ class event_testee : public sb_actor<event_testee> {
 };
 
 // quits after 5 timeouts
-actor spawn_event_testee2() {
+actor spawn_event_testee2(actor parent) {
     struct impl : untyped_actor {
+        actor parent;
+        impl(actor parent) : parent(parent) { }
         behavior wait4timeout(int remaining) {
             CPPA_LOG_TRACE(CPPA_ARG(remaining));
-            return (
+            return {
                 after(chrono::milliseconds(50)) >> [=] {
-                    if (remaining == 1) quit();
+                    if (remaining == 1) {
+                        send(parent, atom("t2done"));
+                        quit();
+                    }
                     else become(wait4timeout(remaining - 1));
                 }
-            );
+            };
         }
         behavior make_behavior() override {
             return wait4timeout(5);
         }
     };
-    return spawn<impl>();
+    return spawn<impl>(parent);
 }
 
 struct chopstick : public sb_actor<chopstick> {
@@ -153,7 +158,11 @@ class testee_actor {
 
 // self->receives one timeout and quits
 void testee1(untyped_actor* self) {
-    self->become(after(chrono::milliseconds(10)) >> [=] { self->unbecome(); });
+    CPPA_LOGF_TRACE("");
+    self->become(after(chrono::milliseconds(10)) >> [=] {
+        CPPA_LOGF_TRACE("");
+        self->unbecome();
+    });
 }
 
 void testee2(untyped_actor* self, actor other) {
@@ -173,10 +182,10 @@ void testee2(untyped_actor* self, actor other) {
 }
 
 template<class Testee>
-string behavior_test(actor et) {
-    scoped_actor self;
-    string result;
+string behavior_test(scoped_actor& self, actor et) {
     string testee_name = detail::to_uniform_name(typeid(Testee));
+    CPPA_LOGF_TRACE(CPPA_TARG(et, to_string) << ", " << CPPA_ARG(testee_name));
+    string result;
     self->send(et, 1);
     self->send(et, 2);
     self->send(et, 3);
@@ -192,12 +201,12 @@ string behavior_test(actor et) {
             result = str;
         },
         after(chrono::minutes(1)) >> [&]() {
-        //after(chrono::seconds(2)) >> [&]() {
+            CPPA_LOGF_ERROR(testee_name << " does not reply");
             throw runtime_error(testee_name + " does not reply");
         }
     );
     self->send_exit(et, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     return result;
 }
 
@@ -584,17 +593,19 @@ void test_spawn() {
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
-    spawn_event_testee2();
+    spawn_event_testee2(self);
+    self->receive(on(atom("t2done")) >> CPPA_CHECKPOINT_CB());
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     auto cstk = spawn<chopstick>();
     self->send(cstk, atom("take"), self);
     self->receive (
-        on(atom("taken")) >> [&]() {
+        on(atom("taken")) >> [&] {
             self->send(cstk, atom("put"), self);
             self->send(cstk, atom("break"));
-        }
+        },
+        others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
@@ -608,7 +619,7 @@ void test_spawn() {
     {
         int i = 0;
         self->receive_for(i, 10) (
-            on(atom("failure")) >> [] { }
+            on(atom("failure")) >> CPPA_CHECKPOINT_CB()
         );
         CPPA_CHECKPOINT();
     }
@@ -622,7 +633,7 @@ void test_spawn() {
             }
         );
         vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-        CPPA_CHECK_EQUAL(util::join(values, ","), util::join(values, ","));
+        CPPA_CHECK_EQUAL(util::join(values, ","), util::join(expected, ","));
     }
     // terminate st
     self->send_exit(st, exit_reason::user_shutdown);
@@ -677,7 +688,6 @@ void test_spawn() {
                     on_arg_match >> [&](const string& str) -> string {
                         CPPA_CHECK(self->last_sender() != nullptr);
                         CPPA_CHECK_EQUAL(str, "nothing");
-                        self->quit();
                         return "goodbye!";
                     },
                     after(chrono::minutes(1)) >> [] {
@@ -717,7 +727,11 @@ void test_spawn() {
         after(chrono::milliseconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
 
-    auto inflater = [](untyped_actor* self, const string&, actor buddy) {
+    CPPA_CHECKPOINT();
+
+    auto inflater = [](untyped_actor* self, const string& name, actor buddy) {
+        CPPA_LOGF_TRACE(CPPA_ARG(self) << ", " << CPPA_ARG(name)
+                        << ", " << CPPA_TARG(buddy, to_string));
         self->become(
             on_arg_match >> [=](int n, const string& s) {
                 self->send(buddy, n * 2, s);
@@ -736,8 +750,8 @@ void test_spawn() {
     );
     // kill joe and bob
     auto poison_pill = make_any_tuple(atom("done"));
-    anon_send(joe, poison_pill);
-    anon_send(bob, poison_pill);
+    anon_send_tuple(joe, poison_pill);
+    anon_send_tuple(bob, poison_pill);
     self->await_all_other_actors_done();
 
     function<actor (const string&, const actor&)> spawn_next;
@@ -789,10 +803,11 @@ void test_spawn() {
     self->send_exit(a1, exit_reason::user_shutdown);
     self->send_exit(a2, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
+    CPPA_CHECKPOINT();
 
-    auto res1 = behavior_test<testee_actor>(spawn<blocking_api>(testee_actor{}));
+    auto res1 = behavior_test<testee_actor>(self, spawn<blocking_api>(testee_actor{}));
     CPPA_CHECK_EQUAL("wait4int", res1);
-    CPPA_CHECK_EQUAL(behavior_test<event_testee>(spawn<event_testee>()), "wait4int");
+    CPPA_CHECK_EQUAL(behavior_test<event_testee>(self, spawn<event_testee>()), "wait4int");
 
     // create some actors linked to one single actor
     // and kill them all through killing the link

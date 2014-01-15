@@ -132,14 +132,15 @@ class invoke_policy {
     }
 
     enum filter_result {
-        normal_exit_signal,
-        non_normal_exit_signal,
-        expired_timeout_message,
-        expired_sync_response,
-        timeout_message,
-        timeout_response_message,
-        ordinary_message,
-        sync_response
+        normal_exit_signal,       // an exit message with normal exit reason
+        non_normal_exit_signal,   // an exit message with abnormal exit reason
+        expired_timeout_message,  // an 'old & obsolete' timeout
+        inactive_timeout_message, // a currently inactive timeout
+        expired_sync_response,    // a sync response that already timed out
+        timeout_message,          // triggers currently active timeout
+        timeout_response_message, // triggers timeout of a sync message
+        ordinary_message,         // an asynchronous message or sync. request
+        sync_response             // a synchronous response
     };
 
 
@@ -169,7 +170,8 @@ class invoke_policy {
             }
             else if (v0 == atom("SYNC_TOUT")) {
                 CPPA_REQUIRE(!mid.valid());
-                return self->waits_for_timeout(v1) ? timeout_message
+                if (self->is_active_timeout(v1)) return timeout_message;
+                return self->waits_for_timeout(v1) ? inactive_timeout_message
                                                    : expired_timeout_message;
             }
         }
@@ -181,7 +183,7 @@ class invoke_policy {
         }
         if (mid.is_response()) {
             return (self->awaits(mid)) ? sync_response
-                                                : expired_sync_response;
+                                       : expired_sync_response;
         }
         return ordinary_message;
     }
@@ -308,6 +310,10 @@ class invoke_policy {
                 CPPA_LOG_DEBUG("dropped expired timeout message");
                 return hm_drop_msg;
             }
+            case inactive_timeout_message: {
+                CPPA_LOG_DEBUG("skipped inactive timeout message");
+                return hm_skip_msg;
+            }
             case non_normal_exit_signal: {
                 CPPA_LOG_DEBUG("handled non-normal exit signal");
                 // this message was handled
@@ -316,7 +322,8 @@ class invoke_policy {
             }
             case timeout_message: {
                 CPPA_LOG_DEBUG("handle timeout message");
-                self->handle_timeout(fun);
+                auto tid = node->msg.get_as<std::uint32_t>(1);
+                self->handle_timeout(fun, tid);
                 if (awaited_response.valid()) {
                     self->mark_arrived(awaited_response);
                     self->remove_handler(awaited_response);

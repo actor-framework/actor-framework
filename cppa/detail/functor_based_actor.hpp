@@ -112,18 +112,6 @@ class functor_based_actor : public untyped_actor {
         };
     }
 
-    /*
-    template<class Actor, typename F, typename T0, typename... Ts>
-    void create(void*, F, T0&&, Ts&&...) {
-        // this overload acts as 'catch-all' rule to
-        // give the user a clear hint at what's wrong
-        // with the provided functor
-        static_assert(sizeof...(Ts) != sizeof...(Ts),
-                      "spawn: provided functor must either return 'void'' "
-                      "or 'cppa::behavior'");
-    }
-    */
-
     make_behavior_fun m_make_behavior;
 
 };

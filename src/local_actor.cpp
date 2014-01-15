@@ -57,7 +57,7 @@ class down_observer : public attachable {
     void actor_exited(std::uint32_t reason) {
         if (m_observer) {
             auto ptr = detail::actor_addr_cast<abstract_actor>(m_observer);
-            message_header hdr{m_observed, ptr, message_priority::high};
+            message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
             hdr.deliver(make_any_tuple(atom("DOWN"), reason));
         }
     }
@@ -135,14 +135,18 @@ void local_actor::reply_message(any_tuple&& what) {
 
 void local_actor::forward_message(const actor& dest, message_priority p) {
     if (!dest) return;
-    auto& id = m_current_node->mid;
-    detail::raw_access::get(dest)->enqueue({m_current_node->sender, detail::raw_access::get(dest), id, p}, m_current_node->msg);
+    auto id = (p == message_priority::high)
+            ? m_current_node->mid.with_high_priority()
+            : m_current_node->mid.with_normal_priority();
+    detail::raw_access::get(dest)->enqueue({m_current_node->sender, detail::raw_access::get(dest), id}, m_current_node->msg);
     // treat this message as asynchronous message from now on
-    id = message_id{};
+    m_current_node->mid = message_id{};
 }
 
 void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
-    dest.enqueue({address(), dest, prio}, std::move(what));
+    message_id id;
+    if (prio == message_priority::high) id = id.with_high_priority();
+    dest.enqueue({address(), dest, id}, std::move(what));
 }
 
 void local_actor::send_tuple(const channel& dest, any_tuple what) {
@@ -167,6 +171,7 @@ response_promise local_actor::make_response_promise() {
 }
 
 void local_actor::cleanup(std::uint32_t reason) {
+    CPPA_LOG_TRACE(CPPA_ARG(reason));
     m_subscriptions.clear();
     super::cleanup(reason);
 }

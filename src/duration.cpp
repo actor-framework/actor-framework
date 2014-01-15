@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <sstream>
+
 #include "cppa/util/duration.hpp"
 
 namespace {
@@ -43,6 +45,19 @@ namespace cppa { namespace util {
 bool operator==(const duration& lhs, const duration& rhs) {
     return (lhs.unit == rhs.unit ? lhs.count == rhs.count
                                  : ui64_val(lhs) == ui64_val(rhs));
+}
+
+std::string duration::to_string() const {
+    if (unit == time_unit::none) return "-invalid-";
+    std::ostringstream oss;
+    oss << count;
+    switch (unit) {
+        default: oss << "???"; break;
+        case time_unit::seconds: oss << "s"; break;
+        case time_unit::milliseconds: oss << "ms"; break;
+        case time_unit::microseconds: oss << "us"; break;
+    }
+    return oss.str();
 }
 
 } } // namespace cppa::util

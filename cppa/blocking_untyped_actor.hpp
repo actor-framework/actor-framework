@@ -325,6 +325,12 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
 
     virtual void act() = 0;
 
+    /**
+     * @brief Unwinds the stack by throwing an actor_exited exception.
+     * @throws actor_exited
+     */
+    virtual void quit(std::uint32_t reason = exit_reason::normal);
+
  private:
 
     std::map<message_id, behavior> m_sync_handler;

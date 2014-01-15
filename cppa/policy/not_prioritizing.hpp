@@ -31,6 +31,8 @@
 #ifndef NOT_PRIORITIZING_HPP
 #define NOT_PRIORITIZING_HPP
 
+#include <iterator>
+
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/policy/priority_policy.hpp"
@@ -70,6 +72,23 @@ class not_prioritizing {
 
     inline void cache_erase(cache_iterator iter) {
         m_cache.erase(iter);
+    }
+
+    inline bool cache_empty() const {
+        return m_cache.empty();
+    }
+
+    inline unique_mailbox_element_pointer cache_take_first() {
+        auto tmp = std::move(m_cache.front());
+        m_cache.erase(m_cache.begin());
+        return std::move(tmp);
+    }
+
+    template<typename Iterator>
+    inline void cache_prepend(Iterator first, Iterator last) {
+        auto mi = std::make_move_iterator(first);
+        auto me = std::make_move_iterator(last);
+        m_cache.insert(m_cache.begin(), mi, me);
     }
 
  private:

@@ -204,7 +204,7 @@ void abstract_actor::cleanup(std::uint32_t reason) {
     auto msg = make_any_tuple(atom("EXIT"), reason);
     CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size() << " links");
     for (auto& aptr : mlinks) {
-        aptr->enqueue({address(), aptr, message_priority::high}, msg);
+        aptr->enqueue({address(), aptr, message_id{}.with_high_priority()}, msg);
     }
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);

@@ -4,6 +4,8 @@
 #include <chrono>
 #include <utility>
 
+#include "cppa/exception.hpp"
+#include "cppa/exit_reason.hpp"
 #include "cppa/policy/resume_policy.hpp"
 
 namespace cppa {
@@ -28,7 +30,21 @@ class no_resume {
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
         inline resumable::resume_result resume(util::fiber*) {
-            this->act();
+            auto done_cb = [=](std::uint32_t reason) {
+                this->planned_exit_reason(reason);
+                this->on_exit();
+                this->cleanup(reason);
+            };
+            try {
+                this->act();
+                done_cb(exit_reason::normal);
+            }
+            catch (actor_exited& e) {
+                done_cb(e.reason());
+            }
+            catch (...) {
+                done_cb(exit_reason::unhandled_exception);
+            }
             return resumable::done;
         }
     };

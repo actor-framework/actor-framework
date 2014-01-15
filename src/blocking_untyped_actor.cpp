@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/blocking_untyped_actor.hpp"
@@ -59,6 +60,10 @@ blocking_untyped_actor::timed_sync_send_tuple(const util::duration& rtime,
     auto nri = new_request_id();
     get_scheduler()->delayed_send({address(), dest, nri}, rtime, std::move(what));
     return {nri.response_id(), this};
+}
+
+void blocking_untyped_actor::quit(std::uint32_t reason) {
+    throw actor_exited(reason);
 }
 
 } // namespace cppa

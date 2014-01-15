@@ -42,6 +42,8 @@ class scoped_actor {
 
     scoped_actor();
 
+    scoped_actor(const scoped_actor&) = delete;
+
     explicit scoped_actor(bool hidden);
 
     ~scoped_actor();
@@ -70,12 +72,16 @@ class scoped_actor {
         return get()->address();
     }
 
+    inline actor_addr address() const {
+        return get()->address();
+    }
+
  private:
 
     void init(bool hidden);
 
     bool m_hidden;
-    actor_id m_prev;
+    actor_id m_prev; // used for logging/debugging purposes only
     intrusive_ptr<blocking_untyped_actor> m_self;
 
 };

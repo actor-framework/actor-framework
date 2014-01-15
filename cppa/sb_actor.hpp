@@ -49,7 +49,7 @@ template<class Derived, class Base = untyped_actor>
 class sb_actor : public Base {
 
     static_assert(std::is_base_of<untyped_actor, Base>::value,
-                  "Base must be either untyped_actor or a derived type");
+                  "Base must be untyped_actor or a derived type");
 
  protected:
 
@@ -58,7 +58,7 @@ class sb_actor : public Base {
  public:
 
     /**
-     * @brief Overrides {@link untyped_actor::init()} and sets
+     * @brief Overrides {@link untyped_actor::make_behavior()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
     behavior make_behavior() override {

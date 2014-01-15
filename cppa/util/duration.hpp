@@ -31,6 +31,7 @@
 #ifndef CPPA_DURATION_HPP
 #define CPPA_DURATION_HPP
 
+#include <string>
 #include <chrono>
 #include <cstdint>
 
@@ -96,6 +97,8 @@ class duration {
      * @brief Returns true if <tt>count == 0</tt>.
      */
     inline bool is_zero() const { return count == 0; }
+
+    std::string to_string() const;
 
     time_unit unit;
 

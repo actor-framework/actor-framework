@@ -298,16 +298,12 @@ void serialize_impl(const message_header& hdr, serializer* sink) {
     serialize_impl(hdr.sender, sink);
     serialize_impl(hdr.receiver, sink);
     sink->write_value(hdr.id.integer_value());
-    sink->write_value(static_cast<uint32_t>(hdr.priority));
 }
 
 void deserialize_impl(message_header& hdr, deserializer* source) {
     deserialize_impl(hdr.sender, source);
     deserialize_impl(hdr.receiver, source);
     hdr.id = message_id::from_integer_value(source->read<std::uint64_t>());
-    auto prio = source->read<std::uint32_t>();
-    //TODO: check whether integer is actually a valid priority
-    hdr.priority = static_cast<message_priority>(prio);
 }
 
 void serialize_impl(const node_id_ptr& ptr, serializer* sink) {
