@@ -77,6 +77,7 @@ struct B : popular_actor {
 struct C : sb_actor<C> {
     behavior init_state = (
         on(atom("gogo")) >> [=]() -> atom_value {
+            CPPA_CHECKPOINT();
             quit();
             return atom("gogogo");
         }
@@ -206,10 +207,13 @@ void test_sync_send() {
     auto mirror = spawn<sync_mirror>();
     bool continuation_called = false;
     self->sync_send(mirror, 42)
-    .await([](int value) { CPPA_CHECK_EQUAL(value, 42); });
+    .await([&](int value) {
+        continuation_called = true;
+        CPPA_CHECK_EQUAL(value, 42);
+    });
     CPPA_CHECK_EQUAL(continuation_called, true);
     self->send_exit(mirror, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     auto await_success_message = [&] {
         self->receive (
@@ -224,11 +228,11 @@ void test_sync_send() {
     self->send(self->spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     self->send(self->spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     self->timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
         on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
@@ -265,7 +269,7 @@ void test_sync_send() {
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
     self->sync_send(c, atom("gogo")).await(CPPA_CHECKPOINT_CB());
     self->send_exit(c, exit_reason::user_shutdown);
-    await_all_actors_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     // test use case 3
@@ -275,13 +279,16 @@ void test_sync_send() {
             self->become(on(atom("request")) >> []{ return atom("response"); });
         });
         // first 'idle', then 'request'
-        send_as(w, s, atom("idle"));
+        anon_send(s, atom("idle"), w);
         self->sync_send(s, atom("request")).await(
             on(atom("response")) >> [=] {
                 CPPA_CHECKPOINT();
                 CPPA_CHECK_EQUAL(self->last_sender(), w);
             },
-            others() >> CPPA_UNEXPECTED_MSG_CB()
+            others() >> [&] {
+                CPPA_PRINTERR("unexpected message: "
+                              << to_string(self->last_dequeued()));
+            }
         );
         // first 'request', then 'idle'
         auto handle = self->sync_send(s, atom("request"));

@@ -38,6 +38,8 @@
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
 
+#include "cppa/detail/response_future_util.hpp"
+
 namespace cppa {
 
 /**
@@ -76,7 +78,7 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
         template<typename... Fs>
         typename std::enable_if<util::all_callable<Fs...>::value>::type
         await(Fs... fs) {
-            await(behavior{(on_arg_match >> std::move(fs))...});
+            await(detail::fs2bhvr(m_self, fs...));
         }
 
         /**

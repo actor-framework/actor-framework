@@ -185,7 +185,7 @@ void serialize_impl(const actor& ptr, serializer* sink) {
 void deserialize_impl(actor& ptr, deserializer* source) {
     actor_addr addr;
     deserialize_impl(addr, source);
-    ptr = detail::actor_addr_cast<abstract_actor>(addr);
+    ptr = detail::raw_access::unsafe_cast(detail::actor_addr_cast<abstract_actor>(addr));
 }
 
 void serialize_impl(const group_ptr& ptr, serializer* sink) {
@@ -223,7 +223,7 @@ void serialize_impl(const channel& ptr, serializer* sink) {
         if (aptr != nullptr) {
             flag = 1;
             sink->write_value(flag);
-            serialize_impl(actor{aptr}, sink);
+            serialize_impl(detail::raw_access::unsafe_cast(aptr), sink);
         }
         else {
             auto gptr = group_ptr{dynamic_cast<group*>(rptr)};

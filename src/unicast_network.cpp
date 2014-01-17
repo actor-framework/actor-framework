@@ -95,7 +95,8 @@ actor remote_actor(stream_ptr_pair io) {
     if (*pinf == *pinfptr) {
         // this is a local actor, not a remote actor
         CPPA_LOGF_WARNING("remote_actor() called to access a local actor");
-        return get_actor_registry()->get(remote_aid);
+        auto ptr = get_actor_registry()->get(remote_aid);
+        return detail::raw_access::unsafe_cast(ptr.get());
     }
     auto mm = get_middleman();
     struct remote_actor_result { remote_actor_result* next; actor value; };

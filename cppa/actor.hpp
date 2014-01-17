@@ -31,6 +31,7 @@
 #ifndef CPPA_ACTOR_HPP
 #define CPPA_ACTOR_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
@@ -42,6 +43,10 @@
 #include "cppa/util/type_traits.hpp"
 
 namespace cppa {
+
+class actor_proxy;
+class untyped_actor;
+class blocking_untyped_actor;
 
 namespace detail { class raw_access; }
 
@@ -61,15 +66,27 @@ class actor : util::comparable<actor> {
     actor() = default;
 
     template<typename T>
-    actor(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_actor, T>::value>::type* = 0) : m_ops(ptr) { }
+    actor(intrusive_ptr<T> ptr,
+          typename std::enable_if<
+                 std::is_base_of<actor_proxy, T>::value
+              || std::is_base_of<untyped_actor, T>::value
+              || std::is_base_of<blocking_untyped_actor, T>::value
+          >::type* = 0)
+        : m_ops(ptr) { }
 
-    actor(abstract_actor*);
+    actor(const std::nullptr_t&);
+
+    actor(actor_proxy*);
+
+    actor(untyped_actor*);
+
+    actor(blocking_untyped_actor*);
+
+    actor(const invalid_actor_t&);
 
     explicit inline operator bool() const;
 
     inline bool operator!() const;
-
-    actor(const invalid_actor_t&);
 
     void enqueue(const message_header& hdr, any_tuple msg) const;
 
@@ -83,6 +100,8 @@ class actor : util::comparable<actor> {
     intptr_t compare(const actor& other) const;
 
  private:
+
+    actor(abstract_actor*);
 
     common_actor_ops m_ops;
 

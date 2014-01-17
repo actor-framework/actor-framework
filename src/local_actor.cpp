@@ -140,7 +140,7 @@ void local_actor::forward_message(const actor& dest, message_priority p) {
             : m_current_node->mid.with_normal_priority();
     detail::raw_access::get(dest)->enqueue({m_current_node->sender, detail::raw_access::get(dest), id}, m_current_node->msg);
     // treat this message as asynchronous message from now on
-    m_current_node->mid = message_id{};
+    m_current_node->mid = message_id::invalid;
 }
 
 void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
@@ -192,6 +192,19 @@ void local_actor::quit(std::uint32_t reason) {
         throw actor_exited(reason);
     }
     planned_exit_reason(reason);
+}
+
+message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
+                                                   const actor& dest,
+                                                   const util::duration& rtime,
+                                                   any_tuple&& what) {
+    auto nri = new_request_id();
+    if (mp == message_priority::high) nri = nri.with_high_priority();
+    dest.enqueue({address(), dest, nri}, std::move(what));
+    auto rri = nri.response_id();
+    get_scheduler()->delayed_send({address(), this, rri}, rtime,
+                                  make_any_tuple(atom("TIMEOUT")));
+    return rri;
 }
 
 } // namespace cppa

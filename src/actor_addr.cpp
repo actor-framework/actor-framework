@@ -64,7 +64,7 @@ intptr_t actor_addr::compare(const actor_addr& other) const {
     return compare_impl(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
 }
 
-intptr_t actor_addr::compare(const local_actor* other) const {
+intptr_t actor_addr::compare(const abstract_actor* other) const {
     return compare_impl(m_ops.m_ptr.get(), other);
 }
 

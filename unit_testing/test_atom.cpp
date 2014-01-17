@@ -29,12 +29,12 @@ void foo() {
 }
 
 struct mirror {
-    mirror(local_actor* self) : m_self(self) { }
+    mirror(blocking_untyped_actor* self) : m_self(self) { }
     template<typename... Ts>
     void operator()(Ts&&... args) {
-        m_self->send(m_self, make_any_tuple(std::forward<Ts>(args)...));
+        m_self->send(m_self, std::forward<Ts>(args)...);
     }
-    local_actor* m_self;
+    blocking_untyped_actor* m_self;
 };
 
 int main() {

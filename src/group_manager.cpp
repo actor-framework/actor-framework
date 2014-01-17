@@ -140,14 +140,14 @@ class local_broker : public untyped_actor {
 
     behavior make_behavior() override {
         return (
-            on(atom("JOIN"), arg_match) >> [=](const actor_addr& other) {
+            on(atom("JOIN"), arg_match) >> [=](const actor& other) {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$JOIN",
                                 CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.insert(other).second) {
                     monitor(other);
                 }
             },
-            on(atom("LEAVE"), arg_match) >> [=](const actor_addr& other) {
+            on(atom("LEAVE"), arg_match) >> [=](const actor& other) {
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$LEAVE",
                                 CPPA_TARG(other, to_string));
                 if (other && m_acquaintances.erase(other) > 0) {
@@ -167,7 +167,14 @@ class local_broker : public untyped_actor {
                 auto sender = last_sender();
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
                                 CPPA_TARG(sender, to_string));
-                if (sender) m_acquaintances.erase(sender);
+                if (sender) {
+                    auto first = m_acquaintances.begin();
+                    auto last = m_acquaintances.end();
+                    auto i = std::find_if(first, last, [=](const actor& a) {
+                        return a == sender;
+                    });
+                    if (i != last) m_acquaintances.erase(i);
+                }
             },
             others() >> [=] {
                 auto msg = last_dequeued();
@@ -187,13 +194,12 @@ class local_broker : public untyped_actor {
                        << " acquaintances; " << CPPA_TSARG(sender)
                        << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            auto ptr = detail::actor_addr_cast<abstract_actor>(acquaintance);
-            ptr->enqueue({sender, ptr}, what);
+            acquaintance.enqueue({sender, acquaintance}, what);
         }
     }
 
     local_group_ptr m_group;
-    set<actor_addr> m_acquaintances;
+    set<actor> m_acquaintances;
 
 };
 
@@ -228,6 +234,7 @@ class local_group_proxy : public local_group {
             }
             return {who, this};
         }
+        CPPA_LOG_WARNING("channel " << to_string(who) << " already joined");
         return {};
     }
 

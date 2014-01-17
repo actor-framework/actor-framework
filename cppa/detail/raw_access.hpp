@@ -55,6 +55,14 @@ class raw_access {
         return hdl.m_ptr.get();
     }
 
+    static actor unsafe_cast(abstract_actor* ptr) {
+        return {ptr};
+    }
+
+    static actor unsafe_cast(const actor_addr& hdl) {
+        return {get(hdl)};
+    }
+
 };
 
 // utility function to get raw access + cast to a related type in one call

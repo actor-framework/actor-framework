@@ -590,12 +590,12 @@ struct actor_ostream {
     constexpr actor_ostream() { }
 
     inline const actor_ostream& write(std::string arg) const {
-        send_as(nullptr, get_scheduler()->printer(), atom("add"), move(arg));
+        send_as(invalid_actor, get_scheduler()->printer(), atom("add"), move(arg));
         return *this;
     }
 
     inline const actor_ostream& flush() const {
-        send_as(nullptr, get_scheduler()->printer(), atom("flush"));
+        send_as(invalid_actor, get_scheduler()->printer(), atom("flush"));
         return *this;
     }
 

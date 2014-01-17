@@ -85,7 +85,10 @@ void peer::io_failed(event_bitmask mask) {
         auto& children = parent()->get_namespace().proxies(*m_node);
         for (auto& kvp : children) {
             auto ptr = kvp.second.promote();
-            send_as(ptr, ptr, atom("KILL_PROXY"), exit_reason::remote_link_unreachable);
+            if (ptr) {
+                send_as(ptr, ptr, atom("KILL_PROXY"),
+                        exit_reason::remote_link_unreachable);
+            }
         }
         parent()->get_namespace().erase(*m_node);
     }
@@ -236,7 +239,7 @@ void peer::kill_proxy(const actor_addr& sender,
                       actor_id aid,
                       std::uint32_t reason) {
     CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)
-                   << ", " << CPPA_MARG(node, get)
+                   << ", node = " << (node ? to_string(*node) : "-invalid-")
                    << ", " << CPPA_ARG(aid)
                    << ", " << CPPA_ARG(reason));
     if (!node) {

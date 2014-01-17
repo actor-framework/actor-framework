@@ -458,7 +458,7 @@ actor broker::fork_impl(std::function<void (broker*)> fun,
     m_io.erase(i);
     return {result};
     */
-    return nullptr;
+    return invalid_actor;
 }
 
 void broker::receive_policy(const connection_handle& hdl,

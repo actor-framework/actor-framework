@@ -49,22 +49,23 @@ inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
 }
 
 sync_request_info::sync_request_info(actor_addr sptr, message_id id)
-: next(nullptr), sender(std::move(sptr)), mid(id) { }
+        : next(nullptr), sender(std::move(sptr)), mid(id) {
+}
 
 remote_actor_proxy::remote_actor_proxy(actor_id mid,
-                                       const node_id_ptr& pinfo,
+                                       node_id_ptr pinfo,
                                        middleman* parent)
-: super(mid), m_parent(parent), m_pinf(pinfo) {
+        : super(mid), m_parent(parent) {
     CPPA_REQUIRE(parent != nullptr);
-    CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(pinfo, to_string)
-                  << "protocol = " << detail::demangle(typeid(*parent)));
+    CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(*pinfo, to_string));
+    m_node = std::move(pinfo);
 }
 
 remote_actor_proxy::~remote_actor_proxy() {
     auto aid = m_id;
-    auto node = m_pinf;
+    auto node = m_node;
     auto mm = m_parent;
-    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(m_pinf)
+    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(*m_node)
                    << ", protocol = " << detail::demangle(typeid(*m_parent)));
     mm->run_later([aid, node, mm] {
         CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
@@ -119,7 +120,7 @@ void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
             default: break;
         }
     }
-    auto node = m_pinf;
+    auto node = m_node;
     auto mm = m_parent;
     m_parent->run_later([hdr, msg, node, mm] {
         CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
@@ -142,7 +143,8 @@ void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
         m_parent->run_later([_this, reason] {
             CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                             "enqueue$kill_proxy_helper",
-                            "KILL_PROXY with exit reason " << reason);
+                            "KILL_PROXY " << to_string(_this->address())
+                            << " with exit reason " << reason);
             _this->cleanup(reason);
             detail::sync_request_bouncer f{reason};
             _this->m_pending_requests.close([&](const sync_request_info& e) {

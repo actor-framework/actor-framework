@@ -84,6 +84,7 @@ int main() {
         "@ac_hdl",                   // io::accept_handle
         "@cn_hdl",                   // io::connection_handle
         "@atom",                     // atom_value
+        "@addr",                     // actor address
         "@tuple",                    // any_tuple
         "@header",                   // message_header
         "@actor",                    // actor_ptr
@@ -117,13 +118,25 @@ int main() {
         CPPA_CHECK(expected_equals_found);
     }
     if (!expected_equals_found) {
-        CPPA_PRINT("found:");
-        for (const std::string& tname : found) {
-            CPPA_PRINT("    - " << tname);
-        }
-        CPPA_PRINT("expected: ");
-        for (const std::string& tname : expected) {
-            CPPA_PRINT("    - " << tname);
+        std::string(41, ' ');
+        std::ostringstream oss(std::string(41, ' '));
+        oss.seekp(0);
+        oss << "found (" << found.size() << ")";
+        oss.seekp(22);
+        oss << "expected (" << found.size() << ")";
+        std::string lhs;
+        std::string rhs;
+        CPPA_PRINT(oss.str());
+        CPPA_PRINT(std::string(41, '-'));
+        auto fi = found.begin();
+        auto fe = found.end();
+        auto ei = expected.begin();
+        auto ee = expected.end();
+        while (fi != fe || ei != ee) {
+            if (fi != fe) lhs = *fi++; else lhs.clear();
+            if (ei != ee) rhs = *ei++; else rhs.clear();
+            lhs.resize(20, ' ');
+            CPPA_PRINT(lhs << "| " << rhs);
         }
     }
 

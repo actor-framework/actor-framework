@@ -172,15 +172,14 @@ class proper_actor : public proper_actor_base<Base,
         : super(std::forward<Ts>(args)...), m_has_timeout(false)
         , m_timeout_id(0) { }
 
-    inline void launch() {
+    inline void launch(bool is_hidden) {
         CPPA_LOG_TRACE("");
         auto bhvr = this->make_behavior();
-        CPPA_LOG_DEBUG_IF(!bhvr, "make_behavior() returned an empty behavior");
         if (bhvr) this->become(std::move(bhvr));
         CPPA_LOG_WARNING_IF(this->bhvr_stack().empty(),
                             "actor did not set a behavior");
         if (!this->bhvr_stack().empty()) {
-            this->scheduling_policy().launch(this);
+            this->scheduling_policy().launch(this, is_hidden);
         }
     }
 
@@ -299,8 +298,8 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
         this->resume_policy().await_ready(this);
     }
 
-    inline void launch() {
-        this->scheduling_policy().launch(this);
+    inline void launch(bool is_hidden) {
+        this->scheduling_policy().launch(this, is_hidden);
     }
 
     // implement blocking_untyped_actor::dequeue_response

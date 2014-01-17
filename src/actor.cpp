@@ -33,9 +33,20 @@
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/actor_addr.hpp"
+#include "cppa/actor_proxy.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/untyped_actor.hpp"
+#include "cppa/blocking_untyped_actor.hpp"
 
 namespace cppa {
+
+actor::actor(const std::nullptr_t&) : m_ops(nullptr) { }
+
+actor::actor(actor_proxy* ptr) : m_ops(ptr) { }
+
+actor::actor(untyped_actor* ptr) : m_ops(ptr) { }
+
+actor::actor(blocking_untyped_actor* ptr) : m_ops(ptr) { }
 
 actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
 

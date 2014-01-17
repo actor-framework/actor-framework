@@ -206,6 +206,8 @@ void abstract_actor::cleanup(std::uint32_t reason) {
     for (auto& aptr : mlinks) {
         aptr->enqueue({address(), aptr, message_id{}.with_high_priority()}, msg);
     }
+    CPPA_LOGM_DEBUG("cppa::actor", "run " << mattachables.size()
+                                   << "attachables");
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);
     }

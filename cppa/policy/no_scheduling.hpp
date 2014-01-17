@@ -104,17 +104,17 @@ class no_scheduling {
     }
 
     template<class Actor>
-    void launch(Actor* self) {
+    void launch(Actor* self, bool is_hidden) {
         CPPA_PUSH_AID(self->id());
-        CPPA_LOG_TRACE(CPPA_ARG(self));
+        CPPA_LOG_TRACE(CPPA_ARG(self) << ", " << CPPA_ARG(is_hidden));
         CPPA_REQUIRE(self != nullptr);
-        get_actor_registry()->inc_running();
+        if (!is_hidden) get_actor_registry()->inc_running();
         intrusive_ptr<Actor> mself{self};
         std::thread([=] {
             CPPA_PUSH_AID(mself->id());
             CPPA_LOG_TRACE("");
-            auto guard = util::make_scope_guard([] {
-                get_actor_registry()->dec_running();
+            auto guard = util::make_scope_guard([is_hidden] {
+                if (!is_hidden) get_actor_registry()->dec_running();
             });
             util::fiber fself;
             for (;;) {

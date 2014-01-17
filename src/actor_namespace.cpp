@@ -48,9 +48,11 @@ namespace cppa {
 void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
     CPPA_REQUIRE(sink != nullptr);
     if (!ptr) {
-        CPPA_LOG_DEBUG("serialize nullptr");
-        sink->write_value(static_cast<actor_id>(0));
-        node_id::serialize_invalid(sink);
+        node_id::host_id_type zero;
+        std::fill(zero.begin(), zero.end(), 0);
+        sink->write_value(static_cast<uint32_t>(0));         // actor id
+        sink->write_value(static_cast<uint32_t>(0));         // process id
+        sink->write_raw(node_id::host_id_size, zero.data()); // host id
     }
     else {
         // register locally running actors to be able to deserialize them later
@@ -58,29 +60,31 @@ void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
             get_actor_registry()->put(ptr->id(), detail::actor_addr_cast<abstract_actor>(ptr));
         }
         auto& pinf = ptr->node();
-        sink->write_value(ptr->id());
-        sink->write_value(pinf.process_id());
-        sink->write_raw(node_id::host_id_size, pinf.host_id().data());
+        sink->write_value(ptr->id());                                  // actor id
+        sink->write_value(pinf.process_id());                          // process id
+        sink->write_raw(node_id::host_id_size, pinf.host_id().data()); // host id
     }
 }
 
 actor_addr actor_namespace::read(deserializer* source) {
     CPPA_REQUIRE(source != nullptr);
-    node_id::host_id_type nid;
-    auto aid = source->read<uint32_t>();
-    auto pid = source->read<uint32_t>();
-    source->read_raw(node_id::host_id_size, nid.data());
-    // local actor?
-    auto pinf = node_id::get();
+    node_id::host_id_type hid;
+    auto aid = source->read<uint32_t>();                 // actor id
+    auto pid = source->read<uint32_t>();                 // process id
+    source->read_raw(node_id::host_id_size, hid.data()); // host id
+    auto this_node = node_id::get();
     if (aid == 0 && pid == 0) {
+        // 0:0 identifies an invalid actor
         return invalid_actor_addr;
     }
-    else if (pid == pinf->process_id() && nid == pinf->host_id()) {
-        return actor{get_actor_registry()->get(aid)};
+    else if (pid == this_node->process_id() && hid == this_node->host_id()) {
+        // identifies this exact process on this host, ergo: local actor
+        return get_actor_registry()->get(aid)->address();
     }
     else {
-        node_id_ptr tmp = new node_id{pid, nid};
-        return actor{get_or_put(tmp, aid)};
+        // identifies a remote actor; create proxy if needed
+        node_id_ptr tmp = new node_id{pid, hid};
+        return get_or_put(tmp, aid)->address();
     }
 }
 

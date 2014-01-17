@@ -45,6 +45,8 @@ namespace cppa {
 
 class actor;
 class local_actor;
+class actor_namespace;
+
 namespace detail { class raw_access; }
 
 struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } };
@@ -53,7 +55,8 @@ constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 class actor_addr : util::comparable<actor_addr>
                  , util::comparable<actor_addr, actor>
-                 , util::comparable<actor_addr, local_actor*> {
+                 , util::comparable<actor_addr, abstract_actor*>
+                 , util::comparable<actor_addr, abstract_actor_ptr> {
 
     friend class abstract_actor;
     friend class detail::raw_access;
@@ -77,7 +80,11 @@ class actor_addr : util::comparable<actor_addr>
 
     intptr_t compare(const actor& other) const;
     intptr_t compare(const actor_addr& other) const;
-    intptr_t compare(const local_actor* other) const;
+    intptr_t compare(const abstract_actor* other) const;
+
+    inline intptr_t compare(const abstract_actor_ptr& other) const {
+        return compare(other.get());
+    }
 
     inline common_actor_ops* operator->() const {
         // this const cast is safe, because common_actor_ops cannot be

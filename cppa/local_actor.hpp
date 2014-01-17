@@ -40,6 +40,7 @@
 #include "cppa/extend.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/cppa_fwd.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
@@ -73,11 +74,20 @@ namespace util {
 struct fiber;
 } // namespace util
 
+// prototype definitions of the spawn function famility;
+// implemented in spawn.hpp (this header is included there)
+
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args);
 
 template<spawn_options Options = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args);
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn_in_group(const group_ptr&, Ts&&... args);
+
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn_in_group(const group_ptr&, Ts&&... args);
 
 /**
  * @brief Base class for local running Actors.
@@ -115,6 +125,18 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     template<spawn_options Options = no_spawn_options, typename... Ts>
     actor spawn(Ts&&... args) {
         auto res = cppa::spawn<make_unbound(Options)>(std::forward<Ts>(args)...);
+        return eval_opts(Options, std::move(res));
+    }
+
+    template<spawn_options Options = no_spawn_options, typename... Ts>
+    actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+        auto res = cppa::spawn_in_group<make_unbound(Options)>(grp, std::forward<Ts>(args)...);
+        return eval_opts(Options, std::move(res));
+    }
+
+    template<class Impl, spawn_options Options, typename... Ts>
+    actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+        auto res = cppa::spawn_in_group<Impl, make_unbound(Options)>(grp, std::forward<Ts>(args)...);
         return eval_opts(Options, std::move(res));
     }
 
@@ -331,10 +353,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     inline bool chaining_enabled();
 
-    message_id send_timed_sync_message(message_priority mp,
-                                       const actor& whom,
-                                       const util::duration& rel_time,
-                                       any_tuple&& what);
+    message_id timed_sync_send_tuple_impl(message_priority mp,
+                                          const actor& whom,
+                                          const util::duration& rel_time,
+                                          any_tuple&& what);
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise

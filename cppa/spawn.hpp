@@ -36,6 +36,7 @@
 #include "cppa/policy.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/local_actor.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
@@ -51,8 +52,8 @@ namespace cppa {
  * @{
  */
 
-template<class Impl, spawn_options Options, typename... Ts>
-actor spawn_impl(Ts&&... args) {
+template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
+actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
     static_assert(std::is_base_of<untyped_actor, Impl>::value ||
                   (std::is_base_of<blocking_untyped_actor, Impl>::value &&
                    has_blocking_api_flag(Options)),
@@ -98,7 +99,8 @@ actor spawn_impl(Ts&&... args) {
     using proper_impl = detail::proper_actor<Impl, policies>;
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
     CPPA_PUSH_AID(ptr->id());
-    ptr->launch();
+    before_launch_fun(ptr.get());
+    ptr->launch(has_hide_flag(Options));
     return ptr;
 }
 
@@ -121,6 +123,14 @@ struct spawn_fwd<scoped_actor> {
     static inline actor fwd(T& arg) { return arg; }
 };
 
+template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
+actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
+    return spawn_impl<Impl, Options>(
+            before_launch_fun,
+            spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
+                    std::forward<Ts>(args))...);
+}
+
 /**
  * @brief Spawns an actor of type @p Impl.
  * @param args Constructor arguments.
@@ -130,7 +140,9 @@ struct spawn_fwd<scoped_actor> {
  */
 template<class Impl, spawn_options Options, typename... Ts>
 actor spawn(Ts&&... args) {
-    return spawn_impl<Impl, Options>(spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(std::forward<Ts>(args))...);
+    return spawn_fwd_args<Impl, Options>(
+            [](local_actor*) { /* no-op as BeforeLaunch callback */ },
+            std::forward<Ts>(args)...);
 }
 
 /**
@@ -159,19 +171,18 @@ actor spawn(Ts&&... args) {
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-/*
-template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Options, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    auto init_cb = [=](local_actor* ptr) {
-        ptr->join(grp);
-    };
-    return eval_sopts(Options,
-                      get_scheduler()->exec(Options,
-                                            init_cb,
-                                            std::forward<Ts>(args)...));
+    using base_class = typename std::conditional<
+                           has_blocking_api_flag(Options),
+                           detail::functor_based_blocking_actor,
+                           detail::functor_based_actor
+                       >::type;
+    return spawn_fwd_args<base_class, Options>(
+            [&](local_actor* ptr) { ptr->join(grp); },
+            std::forward<Ts>(args)...);
 }
-*/
 
 /**
  * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
@@ -181,14 +192,14 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-/*
 template<class Impl, spawn_options Options, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
-    ptr->join(grp);
-    return eval_sopts(Options, get_scheduler()->exec(Options, ptr));
+    return spawn_fwd_args<Impl, Options>(
+            [&](local_actor* ptr) { ptr->join(grp); },
+            std::forward<Ts>(args)...);
 }
 
+/*
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
 typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
     static_assert(util::tl_is_distinct<typename Impl::signatures>::value,

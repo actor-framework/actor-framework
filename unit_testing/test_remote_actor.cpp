@@ -11,6 +11,8 @@
 #include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 using namespace std;
 using namespace cppa;
 
@@ -33,8 +35,8 @@ void reflector(untyped_actor* self) {
 void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
     CPPA_LOGF_TRACE(CPPA_TARG(client, to_string)
                     << ", " << CPPA_TARG(grp, to_string));
-    //FIXME spawn_in_group(grp, reflector);
-    //FIXME spawn_in_group(grp, reflector);
+    self->spawn_in_group(grp, reflector);
+    self->spawn_in_group(grp, reflector);
     CPPA_LOGF_INFO("send {'Spawn5'} and await {'ok', actor_vector}");
     self->sync_send(client, atom("Spawn5"), grp).then(
         on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
@@ -80,6 +82,8 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
                         },
                         after(chrono::seconds(2)) >> [=] {
                             CPPA_UNEXPECTED_TOUT();
+                            CPPA_LOGF_ERROR("did only receive " << *downs
+                                            << " down messages");
                             self->quit(exit_reason::unhandled_exception);
                         }
                     );
@@ -87,6 +91,8 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
             },
             after(std::chrono::seconds(2)) >> [=] {
                 CPPA_UNEXPECTED_TOUT();
+                CPPA_LOGF_ERROR("did only receive " << *replies
+                                << " responses to 'Hello reflectors!'");
                 self->quit(exit_reason::unhandled_exception);
             }
         );
@@ -112,11 +118,11 @@ void spawn5_client(untyped_actor* self) {
             CPPA_LOGF_INFO("received {'GetGroup'}");
             return group::get("local", "foobar");
         },
-        on(atom("Spawn5"), arg_match) >> [=](const group_ptr&) -> any_tuple {
+        on(atom("Spawn5"), arg_match) >> [=](const group_ptr& grp) -> any_tuple {
             CPPA_LOGF_INFO("received {'Spawn5'}");
             actor_vector vec;
             for (int i = 0; i < 5; ++i) {
-                //FIXME vec.push_back(spawn_in_group(grp, reflector));
+                vec.push_back(spawn_in_group(grp, reflector));
             }
             return make_any_tuple(atom("ok"), std::move(vec));
         },
@@ -130,9 +136,8 @@ void spawn5_client(untyped_actor* self) {
 } // namespace <anonymous>
 
 template<typename F>
-void await_down(actor, F) {
-    /*
-    become (
+void await_down(untyped_actor* self, actor ptr, F continuation) {
+    self->become (
         on(atom("DOWN"), arg_match) >> [=](uint32_t) -> bool {
             if (self->last_sender() == ptr) {
                 continuation();
@@ -141,7 +146,6 @@ void await_down(actor, F) {
             return false; // not the 'DOWN' message we are waiting for
         }
     );
-    */
 }
 
 static constexpr size_t num_pings = 10;
@@ -164,7 +168,7 @@ class client : public untyped_actor {
         return (
             on(atom("PingPtr"), arg_match) >> [=](const actor& ping) {
                 auto pptr = spawn<monitored+detached+blocking_api>(pong, ping);
-                await_down(pptr, [=] {
+                await_down(this, pptr, [=] {
                     send_sync_msg();
                 });
             }
@@ -199,7 +203,7 @@ class client : public untyped_actor {
         sync_send(m_server, atom("GClient")).then(
             on(atom("GClient"), arg_match) >> [=](actor gclient) {
                 auto s5a = spawn<monitored>(spawn5_server, gclient, false);
-                await_down(s5a, [=]{
+                await_down(this, s5a, [=]{
                     test_group_comm_inverted();
                 });
             }
@@ -213,7 +217,7 @@ class client : public untyped_actor {
                 auto cptr = last_sender();
                 auto s5c = spawn<monitored>(spawn5_client);
                 // set next behavior
-                await_down(s5c, [=] {
+                await_down(this, s5c, [=] {
                     CPPA_CHECKPOINT();
                     quit();
                 });
@@ -246,7 +250,7 @@ class server : public untyped_actor {
                 CPPA_LOGF_INFO("spawn event-based ping actor");
                 auto pptr = spawn<monitored>(event_based_ping, num_pings);
                 CPPA_LOGF_INFO("wait until spawned ping actor is done");
-                await_down(pptr, [=] {
+                await_down(this, pptr, [=] {
                     CPPA_CHECK_EQUAL(pongs(), num_pings);
                     await_sync_msg();
                 });
@@ -286,10 +290,12 @@ class server : public untyped_actor {
         CPPA_PRINT("test group communication via network");
         become (
             on(atom("GClient")) >> [=]() -> any_tuple {
+                CPPA_CHECKPOINT();
                 auto cptr = last_sender();
                 auto s5c = spawn<monitored>(spawn5_client);
-                await_down(s5c, [=] {
-                    //test_group_comm_inverted(cptr);
+                await_down(this, s5c, [=] {
+                    CPPA_CHECKPOINT();
+                    test_group_comm_inverted(detail::raw_access::unsafe_cast(cptr));
                 });
                 return make_any_tuple(atom("GClient"), s5c);
             }
@@ -300,7 +306,7 @@ class server : public untyped_actor {
         CPPA_PRINT("test group communication via network (inverted setup)");
         sync_send(cptr, atom("GClient")).then (
             on(atom("GClient"), arg_match) >> [=](actor gclient) {
-                await_down(spawn<monitored>(spawn5_server, gclient, true), [=] {
+                await_down(this, spawn<monitored>(spawn5_server, gclient, true), [=] {
                     CPPA_CHECKPOINT();
                     quit();
                 });

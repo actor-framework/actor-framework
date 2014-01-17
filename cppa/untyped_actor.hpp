@@ -38,6 +38,8 @@
 #include "cppa/mailbox_based.hpp"
 #include "cppa/behavior_stack_based.hpp"
 
+#include "cppa/detail/response_future_util.hpp"
+
 namespace cppa {
 
 class untyped_actor;
@@ -115,7 +117,7 @@ class untyped_actor : public extend<local_actor>::with<mailbox_based,
             continue_helper
         >::type
         then(Fs... fs) {
-            return then(behavior{(on_arg_match >> std::move(fs))...});
+            return then(detail::fs2bhvr(m_self, fs...));
         }
 
         response_future(const response_future&) = default;

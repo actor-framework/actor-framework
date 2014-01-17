@@ -74,7 +74,7 @@ class remote_actor_proxy : public actor_proxy {
  public:
 
     remote_actor_proxy(actor_id mid,
-                       const node_id_ptr& pinfo,
+                       node_id_ptr pinfo,
                        middleman* parent);
 
     void enqueue(const message_header& hdr, any_tuple msg) override;
@@ -93,10 +93,6 @@ class remote_actor_proxy : public actor_proxy {
 
     void deliver(const message_header& hdr, any_tuple msg) override;
 
-    inline const node_id_ptr& process_info() const {
-        return m_pinf;
-    }
-
  protected:
 
     ~remote_actor_proxy();
@@ -105,8 +101,7 @@ class remote_actor_proxy : public actor_proxy {
 
     void forward_msg(const message_header& hdr, any_tuple msg);
 
-    middleman*              m_parent;
-    node_id_ptr m_pinf;
+    middleman*  m_parent;
     intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
 
 };
