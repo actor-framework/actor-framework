@@ -35,16 +35,37 @@ namespace cppa { namespace util {
 
 struct fiber_impl;
 
+/**
+ * @brief A 'lightweight thread' supporting manual context switching.
+ */
 struct fiber {
 
+    /**
+     * @brief Queries whether libcppa was compiled without
+     *        fiber support on this platform.
+     */
+    static bool is_disabled_feature();
+
+    /**
+     * @brief Creates a new fiber that describes stores the context
+     *        of the calling (kernel) thread.
+     */
     fiber();
 
+    /**
+     * @brief Creates a fiber that executes the given function @p func
+     *        using the argument @p arg1.
+     */
     fiber(void (*func)(void*), void* arg1);
 
     ~fiber();
 
-    static void swap(fiber& from, fiber& to);
+    /**
+     * @brief Swaps the context from @p source to @p target.
+     */
+    static void swap(fiber& source, fiber& target);
 
+    // pimpl
     fiber_impl* m_impl;
 
 };

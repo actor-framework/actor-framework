@@ -40,6 +40,8 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
+#include "cppa/util/fiber.hpp"
+
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/functor_based_actor.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
@@ -65,6 +67,15 @@ actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
     static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
     CPPA_LOGF_TRACE("spawn " << detail::demangle<Impl>());
+    // runtime check wheter context_switching_resume can be used,
+    // i.e., add the detached flag if libcppa compiled without fiber support
+    // when using the blocking API
+    if (has_blocking_api_flag(Options)
+            && !has_detach_flag(Options)
+            && util::fiber::is_disabled_feature()) {
+        return spawn_impl<Impl, Options + detached>(before_launch_fun,
+                                                    std::forward<Ts>(args)...);
+    }
     /*
     using scheduling_policy = typename std::conditional<
                                   has_detach_flag(Options),
@@ -83,7 +94,7 @@ actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
                               typename std::conditional<
                                   has_detach_flag(Options),
                                   policy::no_resume,
-                                  policy::no_resume //policy::context_switching_resume
+                                  policy::context_switching_resume
                               >::type,
                               policy::event_based_resume
                           >::type;

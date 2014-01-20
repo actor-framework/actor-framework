@@ -47,6 +47,10 @@ void fiber::swap(fiber&, fiber&) {
                            "CPPA_DISABLE_CONTEXT_SWITCHING");
 }
 
+bool fiber::is_disabled_feature() {
+    return true;
+}
+
 } } // namespace cppa::util
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
@@ -190,6 +194,10 @@ void fiber::swap(fiber& from, fiber& to) {
 
 fiber::~fiber() {
     delete m_impl;
+}
+
+bool fiber::is_disabled_feature() {
+    return false;
 }
 
 } } // namespace cppa::util
