@@ -59,8 +59,8 @@ void scoped_actor::init(bool hidden) {
     m_self.reset(alloc());
     if (!m_hidden) {
         get_actor_registry()->inc_running();
+        m_prev = CPPA_SET_AID(m_self->id());
     }
-    m_prev = CPPA_SET_AID(m_self->id());
 }
 
 
@@ -75,8 +75,8 @@ scoped_actor::scoped_actor(bool hidden) {
 scoped_actor::~scoped_actor() {
     if (!m_hidden) {
         get_actor_registry()->dec_running();
+        CPPA_SET_AID(m_prev);
     }
-    CPPA_SET_AID(m_prev);
 }
 
 } // namespace cppa

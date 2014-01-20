@@ -45,7 +45,10 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
             if (vec.size() != 5) {
                 CPPA_PRINTERR("remote client did not spawn five reflectors!");
             }
-            for (auto& a : vec) self->monitor(a);
+            for (auto& a : vec) {
+                CPPA_PRINT("monitor actor: " << to_string(a));
+                self->monitor(a);
+            }
         },
         others() >> [=] {
             CPPA_UNEXPECTED_MSG();
@@ -78,13 +81,13 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
                         },
                         others() >> [=] {
                             CPPA_UNEXPECTED_MSG();
-                            self->quit(exit_reason::unhandled_exception);
+                            //self->quit(exit_reason::unhandled_exception);
                         },
                         after(chrono::seconds(2)) >> [=] {
                             CPPA_UNEXPECTED_TOUT();
                             CPPA_LOGF_ERROR("did only receive " << *downs
                                             << " down messages");
-                            self->quit(exit_reason::unhandled_exception);
+                            //self->quit(exit_reason::unhandled_exception);
                         }
                     );
                 }
@@ -93,7 +96,7 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
                 CPPA_UNEXPECTED_TOUT();
                 CPPA_LOGF_ERROR("did only receive " << *replies
                                 << " responses to 'Hello reflectors!'");
-                self->quit(exit_reason::unhandled_exception);
+                //self->quit(exit_reason::unhandled_exception);
             }
         );
     });
@@ -322,10 +325,16 @@ int main(int argc, char** argv) {
     announce_tuple<atom_value, atom_value, int>();
     string app_path = argv[0];
     bool run_remote_actor = true;
+    bool run_as_server = false;
     if (argc > 1) {
         if (strcmp(argv[1], "run_remote_actor=false") == 0) {
             CPPA_LOGF_INFO("don't run remote actor");
             run_remote_actor = false;
+        }
+        else if (strcmp(argv[1], "run_as_server") == 0) {
+            CPPA_LOGF_INFO("don't run remote actor");
+            run_remote_actor = false;
+            run_as_server = true;
         }
         else {
             run_client_part(get_kv_pairs(argc, argv), [](uint16_t port) {
@@ -351,8 +360,6 @@ int main(int argc, char** argv) {
             return CPPA_TEST_RESULT();
         }
     }
-    CPPA_TEST(test_remote_actor);
-    thread child;
     { // lifetime scope of self
         scoped_actor self;
         auto serv = self->spawn<server, monitored>();
@@ -370,34 +377,40 @@ int main(int argc, char** argv) {
             }
         }
         while (!success);
-        ostringstream oss;
-        if (run_remote_actor) {
-            oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
-            // execute client_part() in a separate process,
-            // connected via localhost socket
-            child = thread([&oss]() {
-                CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
-                string cmdstr = oss.str();
-                if (system(cmdstr.c_str()) != 0) {
-                    CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-                    abort();
+        do {
+            CPPA_TEST(test_remote_actor);
+            thread child;
+                ostringstream oss;
+                if (run_remote_actor) {
+                    oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
+                    // execute client_part() in a separate process,
+                    // connected via localhost socket
+                    child = thread([&oss]() {
+                        CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
+                        string cmdstr = oss.str();
+                        if (system(cmdstr.c_str()) != 0) {
+                            CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
+                            abort();
+                        }
+                    });
                 }
-            });
+                else { CPPA_PRINT("actor published at port " << port); }
+                CPPA_CHECKPOINT();
+                self->receive (
+                    on(atom("DOWN"), arg_match) >> [&](uint32_t rsn) {
+                        CPPA_CHECK_EQUAL(self->last_sender(), serv);
+                        CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
+                    }
+                );
+            // wait until separate process (in sep. thread) finished execution
+            CPPA_CHECKPOINT();
+            if (run_remote_actor) child.join();
+            CPPA_CHECKPOINT();
+            self->await_all_other_actors_done();
         }
-        else { CPPA_PRINT("actor published at port " << port); }
-        CPPA_CHECKPOINT();
-        self->receive (
-            on(atom("DOWN"), arg_match) >> [&](uint32_t rsn) {
-                CPPA_CHECK_EQUAL(self->last_sender(), serv);
-                CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
-            }
-        );
+        while (run_as_server);
     } // lifetime scope of self
-    // wait until separate process (in sep. thread) finished execution
     await_all_actors_done();
-    CPPA_CHECKPOINT();
-    if (run_remote_actor) child.join();
-    CPPA_CHECKPOINT();
     shutdown();
     return CPPA_TEST_RESULT();
 }

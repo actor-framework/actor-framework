@@ -177,7 +177,8 @@ actor_addr abstract_actor::address() const {
 
 void abstract_actor::cleanup(std::uint32_t reason) {
     // log as 'actor'
-    CPPA_LOGM_TRACE("cppa::actor", CPPA_ARG(m_id) << ", " << CPPA_ARG(reason));
+    CPPA_LOGM_TRACE("cppa::actor", CPPA_ARG(m_id) << ", " << CPPA_ARG(reason)
+                    << ", " << CPPA_ARG(m_is_proxy));
     CPPA_REQUIRE(reason != exit_reason::not_exited);
     // move everyhting out of the critical section before processing it
     decltype(m_links) mlinks;
@@ -207,7 +208,7 @@ void abstract_actor::cleanup(std::uint32_t reason) {
         aptr->enqueue({address(), aptr, message_id{}.with_high_priority()}, msg);
     }
     CPPA_LOGM_DEBUG("cppa::actor", "run " << mattachables.size()
-                                   << "attachables");
+                                   << " attachables");
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);
     }

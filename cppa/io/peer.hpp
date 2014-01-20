@@ -51,7 +51,7 @@
 namespace cppa { namespace io {
 
 class middleman_impl;
-    
+
 class peer : public extend<continuable>::with<buffered_writing> {
 
     typedef combined_type super;
@@ -107,6 +107,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
     default_message_queue_ptr m_queue;
 
     inline default_message_queue& queue() {
+        CPPA_REQUIRE(m_queue != nullptr);
         return *m_queue;
     }
 

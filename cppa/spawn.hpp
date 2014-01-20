@@ -49,10 +49,7 @@
 
 namespace cppa {
 
-/**
- * @ingroup ActorCreation
- * @{
- */
+namespace detail {
 
 template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
 actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
@@ -134,6 +131,8 @@ struct spawn_fwd<scoped_actor> {
     static inline actor fwd(T& arg) { return arg; }
 };
 
+// forwards the arguments to spawn_impl, replacing pointers
+// to actors with instances of 'actor'
 template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
 actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
     return spawn_impl<Impl, Options>(
@@ -141,6 +140,13 @@ actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
             spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
                     std::forward<Ts>(args))...);
 }
+
+} // namespace detail
+
+/**
+ * @ingroup ActorCreation
+ * @{
+ */
 
 /**
  * @brief Spawns an actor of type @p Impl.
@@ -151,7 +157,7 @@ actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
  */
 template<class Impl, spawn_options Options, typename... Ts>
 actor spawn(Ts&&... args) {
-    return spawn_fwd_args<Impl, Options>(
+    return detail::spawn_fwd_args<Impl, Options>(
             [](local_actor*) { /* no-op as BeforeLaunch callback */ },
             std::forward<Ts>(args)...);
 }
@@ -190,7 +196,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
                            detail::functor_based_blocking_actor,
                            detail::functor_based_actor
                        >::type;
-    return spawn_fwd_args<base_class, Options>(
+    return detail::spawn_fwd_args<base_class, Options>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }
@@ -205,7 +211,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
  */
 template<class Impl, spawn_options Options, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    return spawn_fwd_args<Impl, Options>(
+    return detail::spawn_fwd_args<Impl, Options>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }

@@ -48,7 +48,7 @@ class basic_memory_cache;
 namespace cppa { namespace io {
 
 class middleman;
-    
+
 class sync_request_info : public extend<memory_managed>::with<memory_cached> {
 
     friend class detail::memory;
@@ -101,7 +101,7 @@ class remote_actor_proxy : public actor_proxy {
 
     void forward_msg(const message_header& hdr, any_tuple msg);
 
-    middleman*  m_parent;
+    middleman* m_parent;
     intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;
 
 };

@@ -257,9 +257,10 @@ void peer::kill_proxy(const actor_addr& sender,
         send_as(proxy, proxy, atom("KILL_PROXY"), reason);
     }
     else {
-        CPPA_LOG_INFO("received KILL_PROXY message but "
-                      "didn't found a matching instance "
-                      "in proxy cache");
+        CPPA_LOG_INFO("received KILL_PROXY for " << aid
+                      << ":" << to_string(*node)
+                      << "but didn't found a matching instance "
+                      << "in proxy cache");
     }
 }
 
@@ -378,7 +379,9 @@ void peer::enqueue(const message_header& hdr, const any_tuple& msg) {
 }
 
 void peer::dispose() {
+    CPPA_LOG_TRACE(CPPA_ARG(this));
     parent()->get_namespace().erase(*m_node);
+    parent()->del_peer(this);
     delete this;
 }
 

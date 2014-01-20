@@ -94,20 +94,27 @@ class event_based_resume {
                     auto ptr = d->next_message();
                     if (ptr) {
                         CPPA_REQUIRE(!d->bhvr_stack().empty());
-                        bool continue_from_cache = false;
                         if (d->invoke_message(ptr)) {
-                            continue_from_cache = true;
                             if (actor_done() && done_cb()) {
                                 CPPA_LOG_DEBUG("actor exited");
                                 return resume_result::done;
                             }
+                            // continue from cache if current message was
+                            // handled, because the actor might have changed
+                            // its behavior to match 'old' messages now
                             while (d->invoke_message_from_cache()) {
-                                // rinse and repeat
+                                if (actor_done() && done_cb()) {
+                                    CPPA_LOG_DEBUG("actor exited");
+                                    return resume_result::done;
+                                }
                             }
                         }
                         // add ptr to cache if invoke_message
                         // did not reset it (i.e. skipped, but not dropped)
-                        if (ptr) d->push_to_cache(std::move(ptr));
+                        if (ptr) {
+                            CPPA_LOG_DEBUG("add message to cache");
+                            d->push_to_cache(std::move(ptr));
+                        }
                     }
                     else {
                         CPPA_LOG_DEBUG("no more element in mailbox; going to block");

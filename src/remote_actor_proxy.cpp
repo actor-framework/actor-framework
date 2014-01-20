@@ -131,6 +131,7 @@ void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
 }
 
 void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
+    CPPA_REQUIRE(m_parent != nullptr);
     CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2

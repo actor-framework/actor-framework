@@ -67,7 +67,7 @@ class not_prioritizing {
     }
 
     inline cache_iterator cache_end() {
-        return m_cache.begin();
+        return m_cache.end();
     }
 
     inline void cache_erase(cache_iterator iter) {

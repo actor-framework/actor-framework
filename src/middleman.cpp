@@ -145,8 +145,9 @@ class middleman_impl : public middleman {
         m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
+        auto res = ::write(m_pipe_write, &dummy, sizeof(dummy));
         // ignore result; write error only means middleman already exited
-        static_cast<void>(::write(m_pipe_write, &dummy, sizeof(dummy)));
+        static_cast<void>(res);
     }
 
     void register_peer(const node_id& node, peer* ptr) override {
@@ -172,6 +173,7 @@ class middleman_impl : public middleman {
         CPPA_LOG_TRACE(CPPA_TARG(node, to_string));
         auto i = m_peers.find(node);
         if (i != m_peers.end()) {
+            CPPA_REQUIRE(i->second.impl != nullptr);
             CPPA_LOG_DEBUG("result = " << i->second.impl);
             return i->second.impl;
         }
@@ -210,22 +212,14 @@ class middleman_impl : public middleman {
 
     void last_proxy_exited(peer* pptr) override {
         CPPA_REQUIRE(pptr != nullptr);
+        CPPA_REQUIRE(pptr->m_queue != nullptr);
         CPPA_LOG_TRACE(CPPA_ARG(pptr)
                        << ", pptr->node() = " << to_string(pptr->node()));
         if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
             stop_reader(pptr);
-            auto i = m_peers.find(pptr->node());
-            if (i != m_peers.end()) {
-                CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
-                                  "node " << to_string(pptr->node())
-                                  << " does not exist in m_peers");
-                if (i->second.impl == pptr) {
-                    m_peers.erase(i);
-                }
-            }
+            del_peer(pptr);
         }
     }
-
 
     void new_peer(const input_stream_ptr& in,
                   const output_stream_ptr& out,
@@ -234,6 +228,19 @@ class middleman_impl : public middleman {
         auto ptr = new peer(this, in, out, node);
         continue_reader(ptr);
         if (node) register_peer(*node, ptr);
+    }
+
+    void del_peer(peer* pptr) override {
+        CPPA_LOG_TRACE(CPPA_ARG(pptr));
+        auto i = m_peers.find(pptr->node());
+        if (i != m_peers.end()) {
+            CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
+                              "node " << to_string(pptr->node())
+                              << " does not exist in m_peers");
+            if (i->second.impl == pptr) {
+                m_peers.erase(i);
+            }
+        }
     }
 
     void register_acceptor(const actor_addr& whom, peer_acceptor* ptr) override {

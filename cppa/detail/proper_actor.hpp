@@ -186,15 +186,19 @@ class proper_actor : public proper_actor_base<Base,
     // required by event_based_resume::mixin::resume
 
     bool invoke_message(unique_mailbox_element_pointer& ptr) {
+        CPPA_LOG_TRACE("");
         auto bhvr = this->bhvr_stack().back();
         auto mid = this->bhvr_stack().back_id();
         return this->invoke_policy().invoke_message(this, ptr, bhvr, mid);
     }
 
     bool invoke_message_from_cache() {
+        CPPA_LOG_TRACE("");
         auto bhvr = this->bhvr_stack().back();
         auto mid = this->bhvr_stack().back_id();
         auto e = this->cache_end();
+        CPPA_LOG_DEBUG(std::distance(this->cache_begin(), e)
+                       << " elements in cache");
         for (auto i = this->cache_begin(); i != e; ++i) {
             if (this->invoke_policy().invoke_message(this, *i, bhvr, mid)) {
                 this->cache_erase(i);
@@ -207,6 +211,7 @@ class proper_actor : public proper_actor_base<Base,
     // implement pure virtual functions from behavior_stack_based
 
     void become_waiting_for(behavior bhvr, message_id mf) override {
+        CPPA_LOG_TRACE(CPPA_MARG(mf, integer_value));
         if (bhvr.timeout().valid()) {
             if (bhvr.timeout().valid()) {
                 this->reset_timeout();
@@ -218,6 +223,7 @@ class proper_actor : public proper_actor_base<Base,
     }
 
     void do_become(behavior bhvr, bool discard_old) override {
+        CPPA_LOG_TRACE(CPPA_ARG(discard_old));
         //if (discard_old) m_bhvr_stack.pop_async_back();
         //m_bhvr_stack.push_back(std::move(bhvr));
         if (discard_old) this->m_bhvr_stack.pop_async_back();
