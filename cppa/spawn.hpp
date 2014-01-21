@@ -61,8 +61,6 @@ actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
                   "blocking_api_flag is missing");
     static_assert(is_unbound(Options),
                   "top-level spawns cannot have monitor or link flag");
-    static_assert(is_unbound(Options),
-                  "top-level spawns cannot have monitor or link flag");
     CPPA_LOGF_TRACE("spawn " << detail::demangle<Impl>());
     // runtime check wheter context_switching_resume can be used,
     // i.e., add the detached flag if libcppa compiled without fiber support

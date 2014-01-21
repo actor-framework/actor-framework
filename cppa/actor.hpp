@@ -48,7 +48,13 @@ class actor_proxy;
 class untyped_actor;
 class blocking_untyped_actor;
 
-namespace detail { class raw_access; }
+namespace io {
+class broker;
+} // namespace io
+
+namespace detail {
+class raw_access;
+} // namespace detail
 
 struct invalid_actor_t { constexpr invalid_actor_t() { } };
 
@@ -68,7 +74,8 @@ class actor : util::comparable<actor> {
     template<typename T>
     actor(intrusive_ptr<T> ptr,
           typename std::enable_if<
-                 std::is_base_of<actor_proxy, T>::value
+                 std::is_base_of<io::broker, T>::value
+              || std::is_base_of<actor_proxy, T>::value
               || std::is_base_of<untyped_actor, T>::value
               || std::is_base_of<blocking_untyped_actor, T>::value
           >::type* = 0)

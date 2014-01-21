@@ -42,6 +42,8 @@
 namespace cppa {
 
 class actor;
+struct invalid_actor_t;
+
 namespace detail { class raw_access; }
 
 /**
@@ -57,24 +59,26 @@ class channel : util::comparable<channel>
     friend class detail::raw_access;
 
  public:
-    
+
     channel() = default;
 
     channel(const actor&);
 
     channel(const std::nullptr_t&);
 
+    channel(const invalid_actor_t&);
+
     template<typename T>
     channel(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_channel, T>::value>::type* = 0) : m_ptr(ptr) { }
 
     channel(abstract_channel* ptr);
-    
+
     explicit operator bool() const;
-    
+
     bool operator!() const;
-    
+
     void enqueue(const message_header& hdr, any_tuple msg) const;
-    
+
     intptr_t compare(const channel& other) const;
 
     intptr_t compare(const actor& other) const;
@@ -84,11 +88,11 @@ class channel : util::comparable<channel>
     static intptr_t compare(const abstract_channel* lhs, const abstract_channel* rhs);
 
  private:
-    
+
     intrusive_ptr<abstract_channel> m_ptr;
-    
+
 };
-    
+
 } // namespace cppa
 
 #endif // CPPA_CHANNEL_HPP

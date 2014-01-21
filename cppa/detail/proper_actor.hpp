@@ -39,10 +39,6 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
         return this->m_mailbox;
     }
 
-    mailbox_element* dummy_node() {
-        return &this->m_dummy_node;
-    }
-
     // member functions from scheduling policy
 
     typedef typename Policies::scheduling_policy::timeout_type timeout_type;
@@ -167,10 +163,15 @@ class proper_actor : public proper_actor_base<Base,
 
  public:
 
+    static_assert(std::is_base_of<local_actor, Base>::value,
+                  "Base is not derived from local_actor");
+
+    // this is the nonblocking version of proper_actor; it assumes
+    // that Base is derived from local_actor and uses the
+    // behavior_stack_based mixin
+
     template <typename... Ts>
-    proper_actor(Ts&&... args)
-        : super(std::forward<Ts>(args)...), m_has_timeout(false)
-        , m_timeout_id(0) { }
+    proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
     inline void launch(bool is_hidden) {
         CPPA_LOG_TRACE("");
@@ -200,81 +201,16 @@ class proper_actor : public proper_actor_base<Base,
         CPPA_LOG_DEBUG(std::distance(this->cache_begin(), e)
                        << " elements in cache");
         for (auto i = this->cache_begin(); i != e; ++i) {
-            if (this->invoke_policy().invoke_message(this, *i, bhvr, mid)) {
+            auto res = this->invoke_policy().invoke_message(this, *i, bhvr, mid);
+            if (res || !*i) {
                 this->cache_erase(i);
-                return true;
+                if (res) return true;
+                // start anew, because we have invalidated our iterators now
+                return invoke_message_from_cache();
             }
         }
         return false;
     }
-
-    // implement pure virtual functions from behavior_stack_based
-
-    void become_waiting_for(behavior bhvr, message_id mf) override {
-        CPPA_LOG_TRACE(CPPA_MARG(mf, integer_value));
-        if (bhvr.timeout().valid()) {
-            if (bhvr.timeout().valid()) {
-                this->reset_timeout();
-                this->request_timeout(bhvr.timeout());
-            }
-            this->bhvr_stack().push_back(std::move(bhvr), mf);
-        }
-        this->bhvr_stack().push_back(std::move(bhvr), mf);
-    }
-
-    void do_become(behavior bhvr, bool discard_old) override {
-        CPPA_LOG_TRACE(CPPA_ARG(discard_old));
-        //if (discard_old) m_bhvr_stack.pop_async_back();
-        //m_bhvr_stack.push_back(std::move(bhvr));
-        if (discard_old) this->m_bhvr_stack.pop_async_back();
-        this->reset_timeout();
-        if (bhvr.timeout().valid()) {
-            CPPA_LOG_DEBUG("request timeout: " << bhvr.timeout().to_string());
-            this->request_timeout(bhvr.timeout());
-        }
-        this->m_bhvr_stack.push_back(std::move(bhvr));
-    }
-
-    // timeout handling
-
-    void request_timeout(const util::duration& d) {
-        if (d.valid()) {
-            m_has_timeout = true;
-            auto tid = ++m_timeout_id;
-            auto msg = make_any_tuple(atom("SYNC_TOUT"), tid);
-            if (d.is_zero()) {
-                // immediately enqueue timeout message if duration == 0s
-                this->enqueue({this->address(), this}, std::move(msg));
-                //auto e = this->new_mailbox_element(this, std::move(msg));
-                //this->m_mailbox.enqueue(e);
-            }
-            else this->delayed_send_tuple(this, d, std::move(msg));
-        }
-        else m_has_timeout = false;
-    }
-
-    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
-        return m_has_timeout && m_timeout_id == timeout_id;
-    }
-
-    inline bool is_active_timeout(std::uint32_t tid) const {
-        return waits_for_timeout(tid);
-    }
-
-    inline void reset_timeout() {
-        m_has_timeout = false;
-    }
-
-    inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
-        CPPA_REQUIRE(m_timeout_id == timeout_id);
-        m_has_timeout = false;
-        bhvr.handle_timeout();
-    }
-
- private:
-
-    bool m_has_timeout;
-    std::uint32_t m_timeout_id;
 
 };
 

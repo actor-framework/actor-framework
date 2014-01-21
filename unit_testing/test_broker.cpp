@@ -40,9 +40,11 @@ using namespace cppa;
 namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
 
 void ping(cppa::untyped_actor* self, size_t num_pings) {
+    CPPA_CHECKPOINT();
     auto count = std::make_shared<size_t>(0);
     self->become (
         on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
+            CPPA_CHECKPOINT();
             self->send(pong, atom("ping"), 1);
             self->become (
                 on(atom("pong"), arg_match)
@@ -58,9 +60,11 @@ void ping(cppa::untyped_actor* self, size_t num_pings) {
 }
 
 void pong(cppa::untyped_actor* self) {
+    CPPA_CHECKPOINT();
     self->become  (
         on(atom("ping"), arg_match)
         >> [=](int value) -> cow_tuple<atom_value, int> {
+            CPPA_CHECKPOINT();
             self->monitor(self->last_sender());
             // set next behavior
             self->become (
@@ -80,17 +84,20 @@ void pong(cppa::untyped_actor* self) {
 }
 
 void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
+    CPPA_CHECKPOINT();
     self->monitor(buddy);
     if (self->num_connections() == 0) {
         cout << "num_connections() != 1" << endl;
         throw std::logic_error("num_connections() != 1");
     }
     auto write = [=](atom_value type, int value) {
+        CPPA_LOGF_DEBUG("write: " << value);
         self->write(hdl, sizeof(type), &type);
         self->write(hdl, sizeof(value), &value);
     };
     self->become (
         on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
+            CPPA_LOGF_INFO("received IO_closed");
             self->quit();
         },
         on(atom("IO_read"), arg_match) >> [=](io::connection_handle, const util::buffer& buf) {
@@ -114,6 +121,7 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
 }
 
 void peer_acceptor(io::broker* self, const actor& buddy) {
+    CPPA_CHECKPOINT();
     self->become (
         on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
             CPPA_CHECKPOINT();
@@ -135,8 +143,7 @@ int main(int argc, char** argv) {
                 CPPA_CHECKPOINT();
                 auto p = spawn(ping, 10);
                 CPPA_CHECKPOINT();
-                //FIXME auto cl = spawn_io(peer, "localhost", port, p);
-                actor cl;
+                auto cl = spawn_io(peer, "localhost", port, p);
                 CPPA_CHECKPOINT();
                 send_as(nullptr, p, atom("kickoff"), cl);
                 CPPA_CHECKPOINT();
@@ -155,7 +162,7 @@ int main(int argc, char** argv) {
     uint16_t port = 4242;
     for (;;) {
         try {
-            //FIXME: spawn_io_server(peer_acceptor, port, p);
+            spawn_io_server(peer_acceptor, port, p);
             CPPA_CHECKPOINT();
             ostringstream oss;
             oss << app_path << " mode=client port=" << port << " &>/dev/null";
@@ -173,11 +180,11 @@ int main(int argc, char** argv) {
             await_all_actors_done();
             CPPA_CHECKPOINT();
             shutdown();
-            return CPPA_TEST_RESULT();
         }
         catch (bind_failure&) {
             // try next port
             ++port;
         }
     }
+    return CPPA_TEST_RESULT();
 }

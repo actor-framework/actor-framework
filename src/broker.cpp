@@ -32,7 +32,7 @@
 
 #include "cppa/config.hpp"
 
-//#include "cppa/cppa.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/singletons.hpp"
 
 #include "cppa/util/scope_guard.hpp"
@@ -58,13 +58,22 @@ constexpr size_t default_max_buffer_size = 65535;
 
 } // namespace <anonymous>
 
-default_broker::default_broker(input_stream_ptr in,
-                               output_stream_ptr out,
-                               function_type f)
+default_broker::default_broker(function_type f,
+                               input_stream_ptr in,
+                               output_stream_ptr out)
     : broker(std::move(in), std::move(out)), m_fun(std::move(f)) { }
 
+default_broker::default_broker(function_type f, scribe_pointer ptr)
+    : broker(std::move(ptr)), m_fun(std::move(f)) { }
+
+default_broker::default_broker(function_type f, acceptor_uptr ptr)
+    : broker(std::move(ptr)), m_fun(std::move(f)) { }
+
 behavior default_broker::make_behavior() {
-    enqueue({invalid_actor_addr, channel{this}}, make_any_tuple(atom("INITMSG")));
+    CPPA_PUSH_AID(id());
+    CPPA_LOG_TRACE("");
+    enqueue({invalid_actor_addr, channel{this}},
+            make_any_tuple(atom("INITMSG")));
     return (
         on(atom("INITMSG")) >> [=] {
             unbecome();
@@ -81,6 +90,8 @@ class broker::continuation {
     : m_self(move(ptr)), m_hdr(hdr), m_data(move(msg)) { }
 
     inline void operator()() {
+        CPPA_PUSH_AID(m_self->id());
+        CPPA_LOG_TRACE("");
         m_self->invoke_message(m_hdr, move(m_data));
     }
 
@@ -126,7 +137,8 @@ class broker::servant : public continuable {
         if (!m_disconnected) {
             m_disconnected = true;
             if (m_broker->exit_reason() == exit_reason::not_exited) {
-                //TODO: m_broker->invoke_message(nullptr, disconnect_message());
+                m_broker->invoke_message({invalid_actor_addr, invalid_actor},
+                                         disconnect_message());
             }
         }
     }
@@ -275,7 +287,11 @@ class broker::doorman : public broker::servant {
 };
 
 void broker::invoke_message(const message_header& hdr, any_tuple msg) {
-    if (exit_reason() != exit_reason::not_exited || m_bhvr_stack.empty()) {
+    CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
+    if (planned_exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
+        CPPA_LOG_DEBUG("actor already finished execution"
+                       << ", planned_exit_reason = " << planned_exit_reason()
+                       << ", bhvr_stack().empty() = " << bhvr_stack().empty());
         if (hdr.id.valid()) {
             detail::sync_request_bouncer srb{exit_reason()};
             srb(hdr.sender, hdr.id);
@@ -287,30 +303,30 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     m_dummy_node.msg = move(msg);
     m_dummy_node.mid = hdr.id;
     try {
-        /*TODO:
-        auto bhvr = m_bhvr_stack.back();
-        switch (m_invoke.handle_message(this,
-                                        &m_dummy_node,
-                                        bhvr,
-                                        m_bhvr_stack.back_id())) {
+        auto bhvr = bhvr_stack().back();
+        auto mid = bhvr_stack().back_id();
+        switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
             case policy::hm_msg_handled: {
-                if  ( not m_bhvr_stack.empty()
-                   && bhvr.as_behavior_impl() == m_bhvr_stack.back().as_behavior_impl()) {
-                   //TODO: m_invoke.invoke_from_cache(this, bhvr, m_bhvr_stack.back_id());
+                CPPA_LOG_DEBUG("handle_message returned hm_msg_handled");
+                while (   !bhvr_stack().empty()
+                       && planned_exit_reason() == exit_reason::not_exited
+                       && invoke_message_from_cache()) {
+                    // rinse and repeat
                 }
                 break;
             }
             case policy::hm_drop_msg:
+                CPPA_LOG_DEBUG("handle_message returned hm_drop_msg");
                 break;
             case policy::hm_skip_msg:
             case policy::hm_cache_msg: {
+                CPPA_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
                 auto e = mailbox_element::create(hdr, move(m_dummy_node.msg));
-                //TODO: m_invoke.add_to_cache(e);
+                m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
                 break;
             }
             default: CPPA_CRITICAL("illegal result of handle_message");
         }
-        */
     }
     catch (std::exception& e) {
         CPPA_LOG_ERROR("broker killed due to an unhandled exception: "
@@ -326,6 +342,33 @@ void broker::invoke_message(const message_header& hdr, any_tuple msg) {
     // restore dummy node
     m_dummy_node.sender = actor_addr{};
     m_dummy_node.msg.reset();
+    // cleanup if needed
+    if (planned_exit_reason() != exit_reason::not_exited) {
+        cleanup(planned_exit_reason());
+    }
+    else if (bhvr_stack().empty()) {
+        CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
+        quit(exit_reason::normal);
+        cleanup(planned_exit_reason());
+    }
+}
+
+bool broker::invoke_message_from_cache() {
+    CPPA_LOG_TRACE("");
+    auto bhvr = bhvr_stack().back();
+    auto mid = bhvr_stack().back_id();
+    auto e = m_priority_policy.cache_end();
+    CPPA_LOG_DEBUG(std::distance(m_priority_policy.cache_begin(), e)
+                   << " elements in cache");
+    for (auto i = m_priority_policy.cache_begin(); i != e; ++i) {
+        auto res = m_invoke_policy.invoke_message(this, *i, bhvr, mid);
+        if (res || !*i) {
+            m_priority_policy.cache_erase(i);
+            if (res) return true;
+            return invoke_message_from_cache();
+        }
+    }
+    return false;
 }
 
 void broker::enqueue(const message_header& hdr, any_tuple msg) {
@@ -334,12 +377,6 @@ void broker::enqueue(const message_header& hdr, any_tuple msg) {
 
 bool broker::initialized() const {
     return true;
-}
-
-void broker::quit(std::uint32_t reason) {
-    //cleanup(reason);
-    m_bhvr_stack.clear();
-    super::quit(reason);
 }
 
 void broker::init_broker() {
@@ -387,31 +424,32 @@ void broker::write(const connection_handle& hdl, util::buffer&& buf) {
     buf.clear();
 }
 
-local_actor_ptr init_and_launch(broker_ptr ptr) {
-    //ptr->init();
+broker_ptr init_and_launch(broker_ptr ptr) {
+    CPPA_PUSH_AID(ptr->id());
+    CPPA_LOGF_TRACE("init and launch actor with id " << ptr->id());
     // continue reader only if not inherited from default_broker_impl
-    CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
     auto mm = get_middleman();
-    if (ptr->has_behavior()) {
-        mm->run_later([=] {
-            CPPA_LOGC_TRACE("NONE", "init_and_launch::run_later_functor", "");
-            CPPA_LOGF_WARNING_IF(ptr->m_io.empty() && ptr->m_accept.empty(),
-                                 "both m_io and m_accept are empty");
-            // 'launch' all backends
-            CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
-                            "add " << ptr->m_io.size() << " IO servants");
-            for (auto& kvp : ptr->m_io)
-                mm->continue_reader(kvp.second.get());
-            CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
-                            "add " << ptr->m_accept.size() << " acceptors");
-            for (auto& kvp : ptr->m_accept)
-                mm->continue_reader(kvp.second.get());
-        });
-    }
+    mm->run_later([=] {
+        CPPA_LOGC_TRACE("NONE", "init_and_launch::run_later_functor", "");
+        CPPA_LOGF_WARNING_IF(ptr->m_io.empty() && ptr->m_accept.empty(),
+                             "both m_io and m_accept are empty");
+        // 'launch' all backends
+        CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
+                        "add " << ptr->m_io.size() << " IO servants");
+        for (auto& kvp : ptr->m_io)
+            mm->continue_reader(kvp.second.get());
+        CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
+                        "add " << ptr->m_accept.size() << " acceptors");
+        for (auto& kvp : ptr->m_accept)
+            mm->continue_reader(kvp.second.get());
+    });
+    // exec initialization code
+    auto bhvr = ptr->make_behavior();
+    if (bhvr) ptr->become(std::move(bhvr));
+    CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
     return ptr;
 }
 
-/*
 broker_ptr broker::from_impl(std::function<void (broker*)> fun,
                              input_stream_ptr in,
                              output_stream_ptr out) {
@@ -421,8 +459,6 @@ broker_ptr broker::from_impl(std::function<void (broker*)> fun,
 broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
     return make_counted<default_broker>(move(fun), move(in));
 }
-*/
-
 
 void broker::erase_io(int id) {
     m_io.erase(connection_handle::from_int(id));
@@ -448,17 +484,18 @@ accept_handle broker::add_doorman(acceptor_uptr ptr) {
 
 actor broker::fork_impl(std::function<void (broker*)> fun,
                         connection_handle hdl) {
+    CPPA_LOG_TRACE(CPPA_MARG(hdl, id));
     auto i = m_io.find(hdl);
-    if (i == m_io.end()) throw std::invalid_argument("invalid handle");
-    /*FIXME
+    if (i == m_io.end()) {
+        CPPA_LOG_ERROR("invalid handle");
+        throw std::invalid_argument("invalid handle");
+    }
     scribe* sptr = i->second.get(); // non-owning pointer
     auto result = make_counted<default_broker>(move(fun), move(i->second));
     init_and_launch(result);
     sptr->set_broker(result); // set new broker
     m_io.erase(i);
     return {result};
-    */
-    return invalid_actor;
 }
 
 void broker::receive_policy(const connection_handle& hdl,
@@ -466,6 +503,10 @@ void broker::receive_policy(const connection_handle& hdl,
                             size_t buffer_size) {
     auto i = m_io.find(hdl);
     if (i != m_io.end()) i->second->receive_policy(policy, buffer_size);
+}
+
+broker::~broker() {
+    CPPA_LOG_TRACE("");
 }
 
 } // namespace io

@@ -38,6 +38,8 @@ namespace cppa {
 
 channel::channel(const std::nullptr_t&) : m_ptr(nullptr) { }
 
+channel::channel(const invalid_actor_t&) : m_ptr(nullptr) { }
+
 channel::channel(const actor& other) : m_ptr(detail::raw_access::get(other)) { }
 
 intptr_t channel::compare(const abstract_channel* lhs, const abstract_channel* rhs) {
@@ -65,7 +67,7 @@ intptr_t channel::compare(const channel& other) const {
 intptr_t channel::compare(const actor& other) const {
     return compare(m_ptr.get(), detail::raw_access::get(other));
 }
-    
+
 intptr_t channel::compare(const abstract_channel* other) const {
     return compare(m_ptr.get(), other);
 }

@@ -337,7 +337,7 @@ struct slave : untyped_actor {
 };
 
 void test_serial_reply() {
-    auto mirror_behavior = [=](untyped_actor* self, int num) {
+    auto mirror_behavior = [=](untyped_actor* self) {
         self->become(others() >> [=]() -> any_tuple {
             CPPA_LOGF_INFO("return self->last_dequeued()");
             return self->last_dequeued();
@@ -346,11 +346,11 @@ void test_serial_reply() {
     auto master = spawn([=](untyped_actor* self) {
         cout << "ID of master: " << self->id() << endl;
         // spawn 5 mirror actors
-        auto c0 = self->spawn<linked>(mirror_behavior, 0);
-        auto c1 = self->spawn<linked>(mirror_behavior, 1);
-        auto c2 = self->spawn<linked>(mirror_behavior, 2);
-        auto c3 = self->spawn<linked>(mirror_behavior, 3);
-        auto c4 = self->spawn<linked>(mirror_behavior, 4);
+        auto c0 = self->spawn<linked>(mirror_behavior);
+        auto c1 = self->spawn<linked>(mirror_behavior);
+        auto c2 = self->spawn<linked>(mirror_behavior);
+        auto c3 = self->spawn<linked>(mirror_behavior);
+        auto c4 = self->spawn<linked>(mirror_behavior);
         self->become (
           on(atom("hi there")) >> [=]() -> continue_helper {
             CPPA_LOGF_INFO("received 'hi there'");

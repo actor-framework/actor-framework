@@ -31,6 +31,8 @@
 #ifndef CPPA_BEHAVIOR_STACK_BASED_HPP
 #define CPPA_BEHAVIOR_STACK_BASED_HPP
 
+#include "cppa/message_id.hpp"
+
 #include "cppa/detail/behavior_stack.hpp"
 
 namespace cppa {
@@ -74,9 +76,16 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 template<class Base, class Subtype>
 class behavior_stack_based : public Base {
 
+    typedef Base super;
+
  public:
 
     typedef behavior_stack_based combined_type;
+
+    template <typename... Ts>
+    behavior_stack_based(Ts&&... args)
+        : super(std::forward<Ts>(args)...), m_has_timeout(false)
+        , m_timeout_id(0) { }
 
     inline void unbecome() {
         m_bhvr_stack.pop_async_back();
@@ -102,10 +111,6 @@ class behavior_stack_based : public Base {
         do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
     }
 
-    virtual void become_waiting_for(behavior bhvr, message_id mf) = 0;
-
-    virtual void do_become(behavior bhvr, bool discard_old) = 0;
-
     inline bool has_behavior() const {
         return m_bhvr_stack.empty() == false;
     }
@@ -113,10 +118,6 @@ class behavior_stack_based : public Base {
     inline behavior& get_behavior() {
         CPPA_REQUIRE(m_bhvr_stack.empty() == false);
         return m_bhvr_stack.back();
-    }
-
-    inline void handle_timeout(behavior& bhvr) {
-        bhvr.handle_timeout();
     }
 
     inline detail::behavior_stack& bhvr_stack() {
@@ -131,10 +132,74 @@ class behavior_stack_based : public Base {
         m_bhvr_stack.erase(mid);
     }
 
+    void become_waiting_for(behavior bhvr, message_id mf) {
+        //CPPA_LOG_TRACE(CPPA_MARG(mf, integer_value));
+        if (bhvr.timeout().valid()) {
+            if (bhvr.timeout().valid()) {
+                this->reset_timeout();
+                this->request_timeout(bhvr.timeout());
+            }
+            this->bhvr_stack().push_back(std::move(bhvr), mf);
+        }
+        this->bhvr_stack().push_back(std::move(bhvr), mf);
+    }
+
+    void do_become(behavior bhvr, bool discard_old) {
+        //CPPA_LOG_TRACE(CPPA_ARG(discard_old));
+        //if (discard_old) m_bhvr_stack.pop_async_back();
+        //m_bhvr_stack.push_back(std::move(bhvr));
+        if (discard_old) this->m_bhvr_stack.pop_async_back();
+        this->reset_timeout();
+        if (bhvr.timeout().valid()) {
+            //CPPA_LOG_DEBUG("request timeout: " << bhvr.timeout().to_string());
+            this->request_timeout(bhvr.timeout());
+        }
+        this->m_bhvr_stack.push_back(std::move(bhvr));
+    }
+
+    // timeout handling
+
+    void request_timeout(const util::duration& d) {
+        if (d.valid()) {
+            m_has_timeout = true;
+            auto tid = ++m_timeout_id;
+            auto msg = make_any_tuple(atom("SYNC_TOUT"), tid);
+            if (d.is_zero()) {
+                // immediately enqueue timeout message if duration == 0s
+                this->enqueue({this->address(), this}, std::move(msg));
+                //auto e = this->new_mailbox_element(this, std::move(msg));
+                //this->m_mailbox.enqueue(e);
+            }
+            else this->delayed_send_tuple(this, d, std::move(msg));
+        }
+        else m_has_timeout = false;
+    }
+
+    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
+        return m_has_timeout && m_timeout_id == timeout_id;
+    }
+
+    inline bool is_active_timeout(std::uint32_t tid) const {
+        return waits_for_timeout(tid);
+    }
+
+    inline void reset_timeout() {
+        m_has_timeout = false;
+    }
+
+    inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
+        CPPA_REQUIRE(m_timeout_id == timeout_id);
+        m_has_timeout = false;
+        bhvr.handle_timeout();
+    }
+
  protected:
 
     // allows actors to keep previous behaviors and enables unbecome()
     detail::behavior_stack m_bhvr_stack;
+
+    bool m_has_timeout;
+    std::uint32_t m_timeout_id;
 
 };
 

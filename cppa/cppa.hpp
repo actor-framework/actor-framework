@@ -525,17 +525,9 @@ actor remote_actor(io::stream_ptr_pair connection);
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_io(io::input_stream_ptr in,
-               io::output_stream_ptr out,
-               Ts&&... args) {
-    using namespace policy;
-    using ps = policies<middleman_scheduling, not_prioritizing,
-                        no_resume, cooperative_scheduling>;
-    using proper_impl = detail::proper_actor<Impl, ps>;
-    auto ptr = make_counted<proper_impl>(std::move(in), std::move(out),
-                                         std::forward<Ts>(args)...);
-    ptr->launch();
-    return ptr;
+actor spawn_io(Ts&&... args) {
+    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    return {io::init_and_launch(std::move(ptr))};
 }
 
 /**
@@ -545,12 +537,15 @@ actor spawn_io(io::input_stream_ptr in,
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>>
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
 actor spawn_io(F fun,
                io::input_stream_ptr in,
-               io::output_stream_ptr out) {
-    return spawn_io<io::default_broker>(std::move(fun), std::move(in),
-                                        std::move(out));
+               io::output_stream_ptr out,
+               Ts&&... args) {
+    auto ptr = io::broker::from(std::move(fun), std::move(in), std::move(out),
+                                std::forward<Ts>(args)...);
+    return {io::init_and_launch(std::move(ptr))};
 }
 
 /*
@@ -562,17 +557,26 @@ actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
 */
 
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>>
-actor spawn_io(F fun, const std::string& host, uint16_t port) {
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
+actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
     auto ptr = io::ipv4_io_stream::connect_to(host.c_str(), port);
-    return spawn_io(std::move(fun), ptr, ptr);
+    return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
 }
 
 template<spawn_options Options = no_spawn_options,
-         typename F = std::function<void (io::broker*)>>
-actor spawn_io_server(F fun, uint16_t port) {
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
+actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+    static_assert(!has_detach_flag(Options),
+                  "brokers cannot be detached");
+    static_assert(is_unbound(Options),
+                  "top-level spawns cannot have monitor or link flag");
     using namespace std;
-    return spawn_io(move(fun), io::ipv4_acceptor::create(port));
+    auto ptr = io::broker::from(move(fun),
+                                io::ipv4_acceptor::create(port),
+                                forward<Ts>(args)...);
+    return {io::init_and_launch(move(ptr))};
 }
 
 /**

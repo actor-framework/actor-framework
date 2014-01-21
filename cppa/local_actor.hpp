@@ -391,6 +391,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     void cleanup(std::uint32_t reason);
 
+    mailbox_element* dummy_node() {
+        return &m_dummy_node;
+    }
+
  protected:
 
     template<typename... Ts>

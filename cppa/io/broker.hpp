@@ -45,6 +45,7 @@
 #include "cppa/io/accept_handle.hpp"
 #include "cppa/io/connection_handle.hpp"
 
+#include "cppa/policy/not_prioritizing.hpp"
 #include "cppa/policy/sequential_invoke.hpp"
 
 namespace cppa {
@@ -54,7 +55,7 @@ class broker;
 
 typedef intrusive_ptr<broker> broker_ptr;
 
-local_actor_ptr init_and_launch(broker_ptr);
+broker_ptr init_and_launch(broker_ptr);
 
 /**
  * @brief A broker mediates between a libcppa-based actor system
@@ -78,19 +79,19 @@ class broker : public extend<local_actor>::with<behavior_stack_based> {
     friend class doorman;
     friend class continuation;
 
-    friend local_actor_ptr init_and_launch(broker_ptr);
+    friend broker_ptr init_and_launch(broker_ptr);
 
     broker() = delete;
 
  public:
+
+    ~broker();
 
     enum policy_flag { at_least, at_most, exactly };
 
     void enqueue(const message_header& hdr, any_tuple msg);
 
     bool initialized() const;
-
-    void quit(std::uint32_t reason = exit_reason::normal) override;
 
     void receive_policy(const connection_handle& hdl,
                         broker::policy_flag policy,
@@ -102,7 +103,6 @@ class broker : public extend<local_actor>::with<behavior_stack_based> {
 
     void write(const connection_handle& hdl, util::buffer&& buf);
 
-    /*
     template<typename F, typename... Ts>
     static broker_ptr from(F fun,
                            input_stream_ptr in,
@@ -127,7 +127,6 @@ class broker : public extend<local_actor>::with<behavior_stack_based> {
                               std::forward<Ts>(args)...),
                     std::move(in));
     }
-    */
 
     template<typename F, typename... Ts>
     actor fork(F fun, connection_handle hdl, Ts&&... args) {
@@ -168,11 +167,13 @@ class broker : public extend<local_actor>::with<behavior_stack_based> {
     actor fork_impl(std::function<void (broker*)> fun,
                     connection_handle hdl);
 
-    //static broker_ptr from_impl(std::function<void (broker*)> fun,
-    //                            input_stream_ptr in,
-    //                            output_stream_ptr out);
+    static broker_ptr from_impl(std::function<void (broker*)> fun,
+                                input_stream_ptr in,
+                                output_stream_ptr out);
 
     void invoke_message(const message_header& hdr, any_tuple msg);
+
+    bool invoke_message_from_cache();
 
     void erase_io(int id);
 
@@ -187,7 +188,8 @@ class broker : public extend<local_actor>::with<behavior_stack_based> {
     std::map<accept_handle, doorman_pointer> m_accept;
     std::map<connection_handle, scribe_pointer> m_io;
 
-    policy::sequential_invoke m_invoke;
+    policy::not_prioritizing  m_priority_policy;
+    policy::sequential_invoke m_invoke_policy;
 
 };
 
@@ -197,7 +199,11 @@ class default_broker : public broker {
 
     typedef std::function<void (broker*)> function_type;
 
-    default_broker(input_stream_ptr in, output_stream_ptr out, function_type f);
+    default_broker(function_type f, input_stream_ptr in, output_stream_ptr out);
+
+    default_broker(function_type f, scribe_pointer ptr);
+
+    default_broker(function_type f, acceptor_uptr ptr);
 
     behavior make_behavior() override;
 
