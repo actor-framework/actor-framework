@@ -188,9 +188,10 @@ class behavior_stack_based : public Base {
     }
 
     inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
-        CPPA_REQUIRE(m_timeout_id == timeout_id);
-        m_has_timeout = false;
-        bhvr.handle_timeout();
+        if (timeout_id == m_timeout_id) {
+            m_has_timeout = false;
+            bhvr.handle_timeout();
+        }
     }
 
  protected:

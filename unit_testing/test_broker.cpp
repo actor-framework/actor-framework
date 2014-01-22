@@ -180,11 +180,11 @@ int main(int argc, char** argv) {
             await_all_actors_done();
             CPPA_CHECKPOINT();
             shutdown();
+            return CPPA_TEST_RESULT();
         }
         catch (bind_failure&) {
             // try next port
             ++port;
         }
     }
-    return CPPA_TEST_RESULT();
 }

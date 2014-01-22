@@ -119,11 +119,12 @@ class broker::servant : public continuable {
     }
 
     void dispose() override {
-        m_broker->erase_io(read_handle());
-        if (m_broker->m_io.empty() && m_broker->m_accept.empty()) {
+        auto ptr = m_broker;
+        ptr->erase_io(read_handle());
+        if (ptr->m_io.empty() && ptr->m_accept.empty()) {
             // release implicit reference count held by middleman
             // in caes no reader/writer is left for this broker
-            m_broker->deref();
+            ptr->deref();
         }
     }
 
