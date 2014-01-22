@@ -103,40 +103,6 @@ class context_switching_resume {
 
     };
 
-    /*
-    template <class Actor, typename F>
-    void fetch_messages(Actor* self, F cb) {
-        auto e = self->m_mailbox.try_pop();
-        while (e == nullptr) {
-            if (self->m_mailbox.can_fetch_more() == false) {
-                self->set_state(actor_state::about_to_block);
-                // make sure mailbox is empty
-                if (self->m_mailbox.can_fetch_more()) {
-                    // someone preempt us => continue
-                    self->set_state(actor_state::ready);
-                }
-                // wait until actor becomes rescheduled
-                else
-                    detail::yield(detail::yield_state::blocked);
-            }
-        }
-        // ok, we have at least one message
-        while (e) {
-            cb(e);
-            e = self->m_mailbox.try_pop();
-        }
-    }
-
-    template <class Actor, typename F>
-    void try_fetch_messages(Actor* self, F cb) {
-        auto e = self->m_mailbox.try_pop();
-        while (e) {
-            cb(e);
-            e = self->m_mailbox.try_pop();
-        }
-    }
-    */
-
     template<class Actor>
     void await_ready(Actor* self) {
         while (!self->has_next_message()) {

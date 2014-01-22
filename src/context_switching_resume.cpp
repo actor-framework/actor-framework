@@ -34,25 +34,30 @@
 #include <iostream>
 
 #include "cppa/cppa.hpp"
-#include "cppa/self.hpp"
+#include "cppa/exception.hpp"
 
 namespace cppa {
 namespace policy {
 
 void context_switching_resume::trampoline(void* this_ptr) {
     auto _this = reinterpret_cast<blocking_untyped_actor*>(this_ptr);
-    bool cleanup_called = false;
-    try { _this->act(); }
-    catch (actor_exited&) {
-        // cleanup already called by scheduled_actor::quit
-        cleanup_called = true;
+    auto shut_actor_down = [_this](std::uint32_t reason) {
+        if (_this->planned_exit_reason() == exit_reason::not_exited) {
+            _this->planned_exit_reason(reason);
+        }
+        _this->on_exit();
+        _this->cleanup(_this->planned_exit_reason());
+    };
+    try {
+        _this->act();
+        shut_actor_down(exit_reason::normal);
+    }
+    catch (actor_exited& e) {
+        shut_actor_down(e.reason());
     }
     catch (...) {
-        _this->cleanup(exit_reason::unhandled_exception);
-        cleanup_called = true;
+        shut_actor_down(exit_reason::unhandled_exception);
     }
-    if (!cleanup_called) _this->cleanup(exit_reason::normal);
-    _this->on_exit();
     std::atomic_thread_fence(std::memory_order_seq_cst);
     detail::yield(detail::yield_state::done);
 }

@@ -63,6 +63,7 @@ blocking_untyped_actor::timed_sync_send_tuple(const util::duration& rtime,
 }
 
 void blocking_untyped_actor::quit(std::uint32_t reason) {
+    planned_exit_reason(reason);
     throw actor_exited(reason);
 }
 

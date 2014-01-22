@@ -734,7 +734,7 @@ void test_spawn() {
                         << ", " << CPPA_TARG(buddy, to_string));
         self->become(
             on_arg_match >> [=](int n, const string& s) {
-                self->send(buddy, n * 2, s);
+                self->send(buddy, n * 2, s + " from " + name);
             },
             on(atom("done")) >> [=] {
                 self->quit();
@@ -745,7 +745,7 @@ void test_spawn() {
     auto bob = spawn(inflater, "Bob", joe);
     self->send(bob, 1, "hello actor");
     self->receive (
-        on(4, "hello actor") >> CPPA_CHECKPOINT_CB(),
+        on(4, "hello actor from Bob from Joe") >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     // kill joe and bob
