@@ -251,6 +251,18 @@ else (DISABLE_CONTEXT_SWITCHING)
     set(DISABLE_CONTEXT_SWITCHING true)
   else (NOT Boost_FOUND)
     if (${Boost_VERSION} LESS 105400)
+      set(LD_FLAGS ${LD_FLAGS} ${Boost_CONTEXT_LIBRARY})
+      # nothing to do in this case
+    else ()
+      # for boost >= 1.54, we need coroutines as well
+      message(STATUS "Detected Boost >= 1.54.0, check for coroutines & system")
+      find_package(Boost 1.51.0 COMPONENTS system context coroutine)
+      if (Boost_FOUND)
+        set(LD_FLAGS ${LD_FLAGS} ${Boost_COROUTINE_LIBRARY} ${Boost_CONTEXT_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+      endif ()
+    endif ()
+    # check again, as second find_package might set this to false
+    if (Boost_FOUND)
       # This hack fixes a problem when the linker search path is the same as
       # the one provided by the compiler. In this case, CMake replaces the absolute
       # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
@@ -260,10 +272,9 @@ else (DISABLE_CONTEXT_SWITCHING)
       set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
       set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
       set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
-      set(LD_FLAGS ${LD_FLAGS} ${Boost_CONTEXT_LIBRARY})
       set(DISABLE_CONTEXT_SWITCHING false)
     else ()
-      message(WARNING "Boost >= 1.54 is not supported due the unstable API of Boost.Coroutines")
+      # disable implicitly
       set(DISABLE_CONTEXT_SWITCHING true)
     endif ()
   endif (NOT Boost_FOUND)
