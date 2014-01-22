@@ -88,14 +88,19 @@ endif ()
 if (ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DCPPA_DEBUG_MODE)
-message(STATUS "----- configured using --enable-debug")
+  message(STATUS "Enable libcppa's debug mode")
 endif (ENABLE_DEBUG)
+
+if (ENABLE_ADDRESS_SANITIZER)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  message(STATUS "Enable address sanitizer")
+endif (ENABLE_ADDRESS_SANITIZER)
 
 if (CPPA_LOG_LEVEL)
   add_definitions(-DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL})
 endif(CPPA_LOG_LEVEL)
 
-message(STATUS "BLUBB: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # set build default build type if not set
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
