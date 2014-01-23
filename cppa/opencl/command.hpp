@@ -60,13 +60,14 @@ class command : public ref_counted {
         , m_handle(handle)
         , m_actor_facade(actor_facade)
         , m_queue(actor_facade->m_queue)
-        , m_arguments(move(arguments)) { }
+        , m_arguments(move(arguments))
+        , m_result(m_number_of_values) { }
 
     void enqueue () {
         CPPA_LOG_TRACE("command::enqueue()");
         this->ref(); // reference held by the OpenCL comand queue
         cl_int err{0};
-        auto event = m_kernel_event.get();
+        auto event_k = m_kernel_event.get();
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
@@ -79,28 +80,46 @@ class command : public ref_counted {
                                      data_or_nullptr(m_actor_facade->m_local_dimensions),
                                      0,
                                      nullptr,
-                                     &event);
+                                     &event_k);
         if (err != CL_SUCCESS) {
             CPPA_LOGMF(CPPA_ERROR, self, "clEnqueueNDRangeKernel: "
                                          << get_opencl_error(err));
+            this->deref(); // or can anything actually happen?
         }
+        else {
+            auto event_r = m_read_event.get();
+            err = clEnqueueReadBuffer(m_queue.get(),
+                                      m_arguments[0].get(),
+                                      CL_FALSE,
+                                      0,
+                                      sizeof(typename R::value_type) * m_number_of_values,
+                                      m_result.data(),
+                                      1,
+                                      &event_k,
+                                      &event_r);
+            if (err != CL_SUCCESS) {
+                throw std::runtime_error("clEnqueueReadBuffer: "
+                                         + get_opencl_error(err));
+                this->deref(); // failed to enqueue command
+            }
+            err = clSetEventCallback(event_r,
+                                     CL_COMPLETE,
+                                     [](cl_event, cl_int, void* data) {
+                                         auto cmd = reinterpret_cast<command*>(data);
+                                         cmd->handle_results();
+                                         cmd->deref();
+                                     },
+                                     this);
+            if (err != CL_SUCCESS) {
+                CPPA_LOGMF(CPPA_ERROR, self, "clSetEventCallback: "
+                                             << get_opencl_error(err));
+                this->deref(); // callback is not set
+            }
 
-        err = clSetEventCallback(event,
-                                 CL_COMPLETE,
-                                 [](cl_event, cl_int, void* data) {
-                                     auto cmd = reinterpret_cast<command*>(data);
-                                     cmd->handle_results();
-                                     cmd->deref();
-                                 },
-                                 this);
-        if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, self, "clSetEventCallback: "
-                                         << get_opencl_error(err));
-        }
-
-        err = clFlush(m_queue.get());
-        if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, self, "clFlush: " << get_opencl_error(err));
+            err = clFlush(m_queue.get());
+            if (err != CL_SUCCESS) {
+                CPPA_LOGMF(CPPA_ERROR, self, "clFlush: " << get_opencl_error(err));
+            }
         }
     }
 
@@ -110,26 +129,13 @@ class command : public ref_counted {
     response_handle m_handle;
     intrusive_ptr<T> m_actor_facade;
     event_ptr m_kernel_event;
+    event_ptr m_read_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
+    R m_result;
 
     void handle_results () {
-        cl_int err{0};
-        R result(m_number_of_values);
-        err = clEnqueueReadBuffer(m_queue.get(),
-                                  m_arguments[0].get(),
-                                  CL_TRUE,
-                                  0,
-                                  sizeof(typename R::value_type) * m_number_of_values,
-                                  result.data(),
-                                  0,
-                                  nullptr,
-                                  nullptr);
-        if (err != CL_SUCCESS) {
-            throw std::runtime_error("clEnqueueReadBuffer: "
-                                     + get_opencl_error(err));
-        }
-        reply_tuple_to(m_handle, m_actor_facade->m_map_result(result));
+        reply_tuple_to(m_handle, m_actor_facade->m_map_result(m_result));
     }
 };
 
