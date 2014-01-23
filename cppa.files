@@ -15,7 +15,7 @@ cppa/binary_deserializer.hpp
 cppa/binary_serializer.hpp
 cppa/blocking_untyped_actor.hpp
 cppa/channel.hpp
-cppa/common_actor_ops.hpp
+cppa/untyped_actor_handle.hpp
 cppa/config.hpp
 cppa/policy/context_switching_resume.hpp
 cppa/cow_ptr.hpp
@@ -228,7 +228,7 @@ src/binary_serializer.cpp
 src/broker.cpp
 src/buffer.cpp
 src/channel.cpp
-src/common_actor_ops.cpp
+src/untyped_actor_handle.cpp
 src/context_switching_resume.cpp
 src/continuable.cpp
 src/decorated_tuple.cpp

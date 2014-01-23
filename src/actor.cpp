@@ -52,7 +52,7 @@ actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
 
 actor::actor(const invalid_actor_t&) : m_ops(nullptr) { }
 
-void actor::ops::enqueue(const message_header& hdr, any_tuple msg) const {
+void actor::handle::enqueue(const message_header& hdr, any_tuple msg) const {
     if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
 }
 

@@ -37,7 +37,7 @@
 
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/common_actor_ops.hpp"
+#include "cppa/untyped_actor_handle.hpp"
 
 #include "cppa/util/comparable.hpp"
 
@@ -90,18 +90,18 @@ class actor_addr : util::comparable<actor_addr>
         return compare(other.get());
     }
 
-    inline common_actor_ops* operator->() const {
-        // this const cast is safe, because common_actor_ops cannot be
+    inline untyped_actor_handle* operator->() const {
+        // this const cast is safe, because untyped_actor_handle cannot be
         // modified anyways and the offered operations are intended to
         // be called on const elements
-        return const_cast<common_actor_ops*>(&m_ops);
+        return const_cast<untyped_actor_handle*>(&m_ops);
     }
 
  private:
 
     explicit actor_addr(abstract_actor*);
 
-    common_actor_ops m_ops;
+    untyped_actor_handle m_ops;
 
 };
 

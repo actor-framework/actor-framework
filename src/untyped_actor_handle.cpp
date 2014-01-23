@@ -29,19 +29,19 @@
 
 
 #include "cppa/actor_addr.hpp"
-#include "cppa/common_actor_ops.hpp"
+#include "cppa/untyped_actor_handle.hpp"
 
 namespace cppa {
 
-actor_addr common_actor_ops::address() const {
+actor_addr untyped_actor_handle::address() const {
     return m_ptr ? m_ptr->address() : actor_addr{};
 }
 
-const node_id& common_actor_ops::node() const {
+const node_id& untyped_actor_handle::node() const {
     return m_ptr ? m_ptr->node() : *node_id::get();
 }
 
-bool common_actor_ops::is_remote() const {
+bool untyped_actor_handle::is_remote() const {
     return m_ptr ? m_ptr->is_proxy() : false;
 }
 

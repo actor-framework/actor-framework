@@ -37,7 +37,7 @@
 
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/common_actor_ops.hpp"
+#include "cppa/untyped_actor_handle.hpp"
 
 #include "cppa/util/comparable.hpp"
 #include "cppa/util/type_traits.hpp"
@@ -69,22 +69,23 @@ class actor : util::comparable<actor> {
 
  public:
 
-    // common_actor_ops does not provide a virtual destructor -> no new members
-    class ops : public common_actor_ops {
+    // untyped_actor_handle does not provide a virtual destructor
+    // -> no new members
+    class handle : public untyped_actor_handle {
 
         friend class actor;
 
-        typedef common_actor_ops super;
+        typedef untyped_actor_handle super;
 
      public:
 
-        ops() = default;
+        handle() = default;
 
         void enqueue(const message_header& hdr, any_tuple msg) const;
 
      private:
 
-        inline ops(abstract_actor_ptr ptr) : super(std::move(ptr)) { }
+        inline handle(abstract_actor_ptr ptr) : super(std::move(ptr)) { }
 
     };
 
@@ -114,11 +115,11 @@ class actor : util::comparable<actor> {
 
     inline bool operator!() const;
 
-    inline ops* operator->() const {
-        // this const cast is safe, because common_actor_ops cannot be
+    inline const handle* operator->() const {
+        // this const cast is safe, because untyped_actor_handle cannot be
         // modified anyways and the offered operations are intended to
         // be called on const elements
-        return const_cast<ops*>(&m_ops);
+        return &m_ops;
     }
 
     intptr_t compare(const actor& other) const;
@@ -127,7 +128,7 @@ class actor : util::comparable<actor> {
 
     actor(abstract_actor*);
 
-    ops m_ops;
+    handle m_ops;
 
 };
 

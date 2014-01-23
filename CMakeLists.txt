@@ -149,7 +149,6 @@ set(LIBCPPA_SRC
     src/buffer.cpp
     src/blocking_untyped_actor.cpp
     src/channel.cpp
-    src/common_actor_ops.cpp
     src/context_switching_resume.cpp
     src/continuable.cpp
     src/decorated_tuple.cpp
@@ -206,6 +205,7 @@ set(LIBCPPA_SRC
     src/unicast_network.cpp
     src/uniform_type_info.cpp
     src/uniform_type_info_map.cpp
+    src/untyped_actor_handle.cpp
     src/untyped_actor.cpp
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)

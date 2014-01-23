@@ -43,7 +43,7 @@ namespace detail { class raw_access; }
  * @brief Encapsulates actor operations that are valid for both {@link actor}
  *        and {@link actor_addr} handles.
  */
-class common_actor_ops {
+class untyped_actor_handle {
 
     friend class actor;
     friend class actor_addr;
@@ -51,7 +51,7 @@ class common_actor_ops {
 
  public:
 
-    common_actor_ops() = default;
+    untyped_actor_handle() = default;
 
     inline bool attach(attachable_ptr ptr);
 
@@ -83,7 +83,7 @@ class common_actor_ops {
 
  protected:
 
-    inline common_actor_ops(abstract_actor_ptr ptr) : m_ptr(std::move(ptr)) { }
+    inline untyped_actor_handle(abstract_actor_ptr ptr) : m_ptr(std::move(ptr)) { }
 
     abstract_actor_ptr m_ptr;
 
@@ -104,17 +104,17 @@ struct functor_attachable : attachable {
 };
 
 template<typename F>
-bool common_actor_ops::attach_functor(F&& f) {
+bool untyped_actor_handle::attach_functor(F&& f) {
     typedef typename util::rm_const_and_ref<F>::type f_type;
     typedef functor_attachable<f_type> impl;
     return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }
 
-inline actor_id common_actor_ops::id() const {
+inline actor_id untyped_actor_handle::id() const {
     return (m_ptr) ? m_ptr->id() : 0;
 }
 
-inline bool common_actor_ops::attach(attachable_ptr ptr) {
+inline bool untyped_actor_handle::attach(attachable_ptr ptr) {
     return m_ptr ? m_ptr->attach(std::move(ptr)) : false;
 }
 
