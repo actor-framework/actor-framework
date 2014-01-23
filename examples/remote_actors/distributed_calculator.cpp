@@ -83,7 +83,7 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
                 }
             );
         },
-        on(atom("DOWN"), arg_match) >> [=](uint32_t) {
+        on_arg_match >> [=](const down_msg&) {
             aout << "*** server down, try to reconnect ..." << endl;
             client_bhvr(self, host, port, nullptr);
         },

@@ -32,6 +32,7 @@
 #define CPPA_BEHAVIOR_STACK_BASED_HPP
 
 #include "cppa/message_id.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
 
@@ -163,7 +164,7 @@ class behavior_stack_based : public Base {
         if (d.valid()) {
             m_has_timeout = true;
             auto tid = ++m_timeout_id;
-            auto msg = make_any_tuple(atom("SYNC_TOUT"), tid);
+            auto msg = make_any_tuple(timeout_msg{tid});
             if (d.is_zero()) {
                 // immediately enqueue timeout message if duration == 0s
                 this->enqueue({this->address(), this}, std::move(msg));

@@ -201,7 +201,9 @@ void test_sync_send() {
         self->quit(exit_reason::user_shutdown);
     });
     self->receive (
-        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     auto mirror = spawn<sync_mirror>();
@@ -219,9 +221,12 @@ void test_sync_send() {
         self->receive (
             on(atom("success")) >> CPPA_CHECKPOINT_CB(),
             on(atom("failure")) >> CPPA_FAILURE_CB("A didn't receive sync response"),
-            on(atom("DOWN"), arg_match).when(_x2 != exit_reason::normal)
-            >> [&](uint32_t err) {
-                CPPA_FAILURE("A exited for reason " << err);
+            on_arg_match >> [&](const down_msg& dm) -> match_hint {
+                if (dm.reason != exit_reason::normal) {
+                    CPPA_FAILURE("A exited for reason " << dm.reason);
+                    return match_hint::handle;
+                }
+                return match_hint::skip;
             }
         );
     };
@@ -235,14 +240,16 @@ void test_sync_send() {
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     self->timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
-        on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
+        on<sync_timeout_msg>() >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     // we should have received two DOWN messages with normal exit reason
     // plus 'NoWay'
     int i = 0;
     self->receive_for(i, 3) (
-        on(atom("DOWN"), exit_reason::normal) >> CPPA_CHECKPOINT_CB(),
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
+        },
         on(atom("NoWay")) >> [] {
             CPPA_CHECKPOINT();
             CPPA_PRINT("trigger \"actor did not reply to a "
@@ -305,7 +312,9 @@ void test_sync_send() {
         self->receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
     self->receive (
-        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }

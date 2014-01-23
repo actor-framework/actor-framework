@@ -59,6 +59,7 @@
 #include "cppa/spawn_options.hpp"
 #include "cppa/untyped_actor.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/system_messages.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/blocking_untyped_actor.hpp"
 

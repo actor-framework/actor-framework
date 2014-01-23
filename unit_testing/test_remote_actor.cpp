@@ -69,8 +69,8 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
                     CPPA_PRINT("wait for DOWN messages");
                     auto downs = std::make_shared<int>(0);
                     self->become (
-                        on(atom("DOWN"), arg_match) >> [=](std::uint32_t reason) {
-                            if (reason != exit_reason::normal) {
+                        on_arg_match >> [=](const down_msg& dm) {
+                            if (dm.reason != exit_reason::normal) {
                                 CPPA_PRINTERR("reflector exited for non-normal exit reason!");
                             }
                             if (++*downs == 5) {
@@ -141,8 +141,8 @@ void spawn5_client(untyped_actor* self) {
 template<typename F>
 void await_down(untyped_actor* self, actor ptr, F continuation) {
     self->become (
-        on(atom("DOWN"), arg_match) >> [=](uint32_t) -> bool {
-            if (self->last_sender() == ptr) {
+        on_arg_match >> [=](const down_msg& dm) -> bool {
+            if (dm.source == ptr) {
                 continuation();
                 return true;
             }
@@ -351,9 +351,9 @@ int main(int argc, char** argv) {
                 }
                 auto c = self->spawn<client, monitored>(serv);
                 self->receive (
-                    on(atom("DOWN"), arg_match) >> [&](uint32_t rsn) {
-                        CPPA_CHECK_EQUAL(self->last_sender(), c);
-                        CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
+                    on_arg_match >> [&](const down_msg& dm) {
+                        CPPA_CHECK_EQUAL(dm.source, c);
+                        CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
                     }
                 );
             });
@@ -397,9 +397,9 @@ int main(int argc, char** argv) {
                 else { CPPA_PRINT("actor published at port " << port); }
                 CPPA_CHECKPOINT();
                 self->receive (
-                    on(atom("DOWN"), arg_match) >> [&](uint32_t rsn) {
-                        CPPA_CHECK_EQUAL(self->last_sender(), serv);
-                        CPPA_CHECK_EQUAL(rsn, exit_reason::normal);
+                    on_arg_match >> [&](const down_msg& dm) {
+                        CPPA_CHECK_EQUAL(dm.source, serv);
+                        CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
                     }
                 );
             // wait until separate process (in sep. thread) finished execution

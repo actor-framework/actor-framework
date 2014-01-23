@@ -71,8 +71,8 @@ void pong(cppa::untyped_actor* self) {
                 on(atom("ping"), arg_match) >> [](int value) {
                     return make_cow_tuple(atom("pong"), value);
                 },
-                on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
-                    self->quit(reason);
+                on_arg_match >> [=](const down_msg& dm) {
+                    self->quit(dm.reason);
                 },
                 others() >> CPPA_UNEXPECTED_MSG_CB()
             );
@@ -113,8 +113,8 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
         on(atom("pong"), arg_match) >> [=](int value) {
             write(atom("pong"), value);
         },
-        on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
-            if (self->last_sender() == buddy) self->quit(reason);
+        on_arg_match >> [=](const down_msg& dm) {
+            if (dm.source == buddy) self->quit(dm.reason);
         },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );

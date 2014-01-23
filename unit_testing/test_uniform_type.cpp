@@ -93,7 +93,11 @@ int main() {
         "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration
         "@buffer",                   // util::buffer
-        // default announced cpap tuples
+        "@down",                     // down_msg
+        "@exit",                     // exit_msg
+        "@timeout",                  // timeout_msg
+        "@sync_timeout",             // sync_timeout_msg
+        // default announced cppa tuples
         "@<>+@atom",                 // {atom_value}
         "@<>+@atom+@actor",          // {atom_value, actor_ptr}
         "@<>+@atom+@proc",           // {atom_value, node_id}

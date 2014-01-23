@@ -163,7 +163,7 @@ class local_broker : public untyped_actor {
                 // forward to all acquaintances
                 send_to_acquaintances(what);
             },
-            on(atom("DOWN"), arg_match) >> [=](uint32_t) {
+            on_arg_match >> [=](const down_msg&) {
                 auto sender = last_sender();
                 CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
                                 CPPA_TARG(sender, to_string));
@@ -519,13 +519,13 @@ class remote_group_module : public group::module {
                                     sm->put(key, nullptr);
                                 }
                             },
-                            on(atom("TIMEOUT")) >> [sm, &key] {
+                            on<sync_timeout_msg>() >> [sm, &key] {
                                 sm->put(key, nullptr);
                             }
                         );
                     }
                 },
-                on<atom("DOWN"), std::uint32_t>() >> [&] {
+                on_arg_match >> [&](const down_msg&) {
                     auto who = self->last_sender();
                     auto find_peer = [&] {
                         return find_if(begin(*peers), end(*peers), [&](const peer_map::value_type& kvp) {

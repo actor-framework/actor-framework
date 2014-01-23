@@ -529,7 +529,12 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+            on_arg_match >> [&](const down_msg& dm) {
+                if (dm.reason == exit_reason::user_shutdown) {
+                    CPPA_CHECKPOINT();
+                }
+                else { CPPA_UNEXPECTED_MSG(); }
+            },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         self->await_all_other_actors_done();
@@ -545,7 +550,12 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+            on_arg_match >> [&](const down_msg& dm) {
+                if (dm.reason == exit_reason::user_shutdown) {
+                    CPPA_CHECKPOINT();
+                }
+                else { CPPA_UNEXPECTED_MSG(); }
+            },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         self->await_all_other_actors_done();
@@ -562,7 +572,12 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+            on_arg_match >> [&](const down_msg& dm) {
+                if (dm.reason == exit_reason::user_shutdown) {
+                    CPPA_CHECKPOINT();
+                }
+                else { CPPA_UNEXPECTED_MSG(); }
+            },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
         self->await_all_other_actors_done();
@@ -714,8 +729,9 @@ void test_spawn() {
         after(std::chrono::seconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     self->receive (
-        on(atom("DOWN"), exit_reason::normal) >> [&] {
-            CPPA_CHECK_EQUAL(self->last_sender(), sync_testee);
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
+            CPPA_CHECK_EQUAL(dm.source, sync_testee);
         }
     );
     self->await_all_other_actors_done();
@@ -830,20 +846,19 @@ void test_spawn() {
     self->delayed_send(self, chrono::seconds(1), atom("FooBar"));
     // wait for DOWN and EXIT messages of pong
     self->receive_for(i, 4) (
-        on(atom("EXIT"), arg_match) >> [&](uint32_t reason) {
-            CPPA_CHECK_EQUAL(exit_reason::user_shutdown, reason);
-            CPPA_CHECK(self->last_sender() == pong_actor);
+        on_arg_match >> [&](const exit_msg& em) {
+            CPPA_CHECK_EQUAL(em.source, pong_actor);
+            CPPA_CHECK_EQUAL(em.reason, exit_reason::user_shutdown);
             flags |= 0x01;
         },
-        on(atom("DOWN"), arg_match) >> [&](uint32_t reason) {
-            auto who = self->last_sender();
-            if (who == pong_actor) {
+        on_arg_match >> [&](const down_msg& dm) {
+            if (dm.source == pong_actor) {
                 flags |= 0x02;
-                CPPA_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+                CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
             }
-            else if (who == ping_actor) {
+            else if (dm.source == ping_actor) {
                 flags |= 0x04;
-                CPPA_CHECK_EQUAL(reason, exit_reason::normal);
+                CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
             }
         },
         on_arg_match >> [&](const atom_value& val) {

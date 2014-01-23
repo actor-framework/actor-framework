@@ -104,8 +104,8 @@ void protobuf_io(broker* thisptr, connection_handle hdl, const actor_ptr& buddy)
             p.mutable_pong()->set_id(i);
             write(p);
         },
-        on(atom("DOWN"), arg_match) >> [=](uint32_t rsn) {
-            if (self->last_sender() == buddy) self->quit(rsn);
+        on_arg_match >> [=](const down_msg& dm) {
+            if (dm.source == buddy) self->quit(dm.reason);
         },
         others() >> [=] {
             cout << "unexpected: " << to_string(self->last_dequeued()) << endl;

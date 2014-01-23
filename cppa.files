@@ -140,7 +140,6 @@ cppa/response_promise.hpp
 cppa/sb_actor.hpp
 cppa/scheduler.hpp
 cppa/scoped_actor.hpp
-cppa/send.hpp
 cppa/serializer.hpp
 cppa/singletons.hpp
 cppa/spawn.hpp
@@ -279,7 +278,6 @@ src/response_promise.cpp
 src/ripemd_160.cpp
 src/scheduler.cpp
 src/scoped_actor.cpp
-src/send.cpp
 src/serializer.cpp
 src/shared_spinlock.cpp
 src/singleton_manager.cpp
@@ -339,3 +337,4 @@ src/functor_based_blocking_actor.cpp
 src/blocking_untyped_actor.cpp
 cppa/policy/policies.hpp
 cppa/detail/response_future_util.hpp
+cppa/system_messages.hpp

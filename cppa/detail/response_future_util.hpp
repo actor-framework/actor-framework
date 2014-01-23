@@ -33,6 +33,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/match_hint.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/util/type_traits.hpp"
 
@@ -46,7 +47,7 @@ behavior fs2bhvr(Actor* self, Fs... fs) {
         return match_hint::skip;
     };
     return behavior{
-        on(atom("TIMEOUT")) >> handle_sync_timeout,
+        on<sync_timeout_msg>() >> handle_sync_timeout,
         on(atom("VOID")) >> skip_message,
         on(atom("EXITED")) >> skip_message,
         (on(any_vals, arg_match) >> std::move(fs))...

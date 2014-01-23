@@ -28,52 +28,65 @@
 \******************************************************************************/
 
 
-#include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
+#ifndef CPPA_SYSTEM_MESSAGES_HPP
+#define CPPA_SYSTEM_MESSAGES_HPP
+
+#include <cstdint>
+
+#include "cppa/actor_addr.hpp"
 
 namespace cppa {
 
-response_future sync_send_tuple(actor_destination dest, any_tuple what) {
-    if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
-    auto req = self->new_request_id();
-    message_header hdr{self, std::move(dest.receiver), req, dest.priority};
-    if (self->chaining_enabled()) {
-        if (hdr.receiver->chained_enqueue(hdr, std::move(what))) {
-            self->chained_actor(hdr.receiver.downcast<actor>());
-        }
-    }
-    else hdr.deliver(std::move(what));
-    return req.response_id();
-}
+/**
+ * @brief Sent to all links when an actor is terminated.
+ * @note This message can be handled manually by calling
+ *       {@link local_actor::trap_exit(true) local_actor::trap_exit(bool)}
+ *       and is otherwise handled implicitly by the runtime system.
+ */
+struct exit_msg {
+    /**
+     * @brief The source of this message, i.e., the terminated actor.
+     */
+    actor_addr source;
+    /**
+     * @brief The exit reason of the terminated actor.
+     */
+    std::uint32_t reason;
+};
 
-void delayed_send_tuple(channel_destination dest,
-                        const util::duration& rtime,
-                        any_tuple data) {
-    if (dest.receiver) {
-        message_header hdr{self, std::move(dest.receiver), dest.priority};
-        get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
-    }
-}
+/**
+ * @brief Sent to all actors monitoring an actor when it is terminated.
+ */
+struct down_msg {
+    /**
+     * @brief The source of this message, i.e., the terminated actor.
+     */
+    actor_addr source;
+    /**
+     * @brief The exit reason of the terminated actor.
+     */
+    std::uint32_t reason;
+};
 
-response_future timed_sync_send_tuple(actor_destination dest,
-                                     const util::duration& rtime,
-                                     any_tuple what) {
-    auto mf = sync_send_tuple(std::move(dest), std::move(what));
-    message_header hdr{self, self, mf.id()};
-    auto tmp = make_any_tuple(atom("TIMEOUT"));
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(tmp));
-    return mf;
-}
+/**
+ * @brief Sent whenever a timeout occurs during a synchronous send.
+ *
+ * This system message does not have any fields, because the message ID
+ * sent alongside this message identifies the matching request that timed out.
+ */
+struct sync_timeout_msg { };
 
-void delayed_reply_tuple(const util::duration& rtime,
-                         message_id mid,
-                         any_tuple data) {
-    message_header hdr{self, self->last_sender(), mid};
-    get_scheduler()->delayed_send(std::move(hdr), rtime, std::move(data));
-}
-
-void delayed_reply_tuple(const util::duration& rel_time, any_tuple data) {
-    delayed_reply_tuple(rel_time, self->get_response_id(), std::move(data));
-}
+/**
+ * @brief Signalizes a timeout event.
+ * @note This message is handled implicitly by the runtime system.
+ */
+struct timeout_msg {
+    /**
+     * @brief Actor-specific timeout ID.
+     */
+    std::uint32_t timeout_id;
+};
 
 } // namespace cppa
+
+#endif // CPPA_SYSTEM_MESSAGES_HPP

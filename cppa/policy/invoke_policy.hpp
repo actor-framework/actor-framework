@@ -43,6 +43,7 @@
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
+#include "cppa/system_messages.hpp"
 #include "cppa/partial_function.hpp"
 #include "cppa/response_promise.hpp"
 
@@ -152,34 +153,32 @@ class invoke_policy {
     filter_result filter_msg(Actor* self, mailbox_element* node) {
         const any_tuple& msg = node->msg;
         auto mid = node->mid;
-        auto& arr = detail::static_types_array<atom_value, std::uint32_t>::arr;
-        if (   msg.size() == 2
-            && msg.type_at(0) == arr[0]
-            && msg.type_at(1) == arr[1]) {
-            auto v0 = msg.get_as<atom_value>(0);
-            auto v1 = msg.get_as<std::uint32_t>(1);
-            if (v0 == atom("EXIT")) {
+        auto& arr = detail::static_types_array<exit_msg,
+                                               timeout_msg,
+                                               sync_timeout_msg>::arr;
+        if (msg.size() == 1) {
+            if (msg.type_at(0) == arr[0]) {
+                auto& em = msg.get_as<exit_msg>(0);
                 CPPA_REQUIRE(!mid.valid());
                 if (self->trap_exit() == false) {
-                    if (v1 != exit_reason::normal) {
-                        self->quit(v1);
+                    if (em.reason != exit_reason::normal) {
+                        self->quit(em.reason);
                         return non_normal_exit_signal;
                     }
                     return normal_exit_signal;
                 }
             }
-            else if (v0 == atom("SYNC_TOUT")) {
+            else if (msg.type_at(0) == arr[1]) {
+                auto& tm = msg.get_as<timeout_msg>(0);
+                auto tid = tm.timeout_id;
                 CPPA_REQUIRE(!mid.valid());
-                if (self->is_active_timeout(v1)) return timeout_message;
-                return self->waits_for_timeout(v1) ? inactive_timeout_message
-                                                   : expired_timeout_message;
+                if (self->is_active_timeout(tid)) return timeout_message;
+                return self->waits_for_timeout(tid) ? inactive_timeout_message
+                                                    : expired_timeout_message;
             }
-        }
-        else if (   msg.size() == 1
-                 && msg.type_at(0) == arr[0]
-                 && msg.get_as<atom_value>(0) == atom("TIMEOUT")
-                 && mid.is_response()) {
-            return timeout_response_message;
+            else if (msg.type_at(0) == arr[2] && mid.is_response()) {
+                return timeout_response_message;
+            }
         }
         if (mid.is_response()) {
             return (self->awaits(mid)) ? sync_response
@@ -322,8 +321,8 @@ class invoke_policy {
             }
             case timeout_message: {
                 CPPA_LOG_DEBUG("handle timeout message");
-                auto tid = node->msg.get_as<std::uint32_t>(1);
-                self->handle_timeout(fun, tid);
+                auto& tm = node->msg.get_as<timeout_msg>(0);
+                self->handle_timeout(fun, tm.timeout_id);
                 if (awaited_response.valid()) {
                     self->mark_arrived(awaited_response);
                     self->remove_handler(awaited_response);

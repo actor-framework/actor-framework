@@ -43,6 +43,7 @@
 #include "cppa/unit.hpp"
 #include "cppa/none.hpp"
 #include "cppa/node_id.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/util/buffer.hpp"
 #include "cppa/util/duration.hpp"
@@ -65,11 +66,15 @@ using mapped_type_list = util::type_list<
     any_tuple,
     atom_value,
     channel,
+    down_msg,
+    exit_msg,
     group_ptr,
     node_id_ptr,
     io::accept_handle,
     io::connection_handle,
     message_header,
+    sync_timeout_msg,
+    timeout_msg,
     unit_t,
     util::buffer,
     util::duration,

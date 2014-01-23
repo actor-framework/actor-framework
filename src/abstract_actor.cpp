@@ -43,6 +43,7 @@
 #include "cppa/actor_addr.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -71,7 +72,8 @@ bool abstract_actor::link_to_impl(const actor_addr& other) {
         auto ptr = detail::actor_addr_cast<abstract_actor>(other);
         // send exit message if already exited
         if (exited()) {
-            ptr->enqueue({address(), ptr}, make_any_tuple(atom("EXIT"), exit_reason()));
+            ptr->enqueue({address(), ptr},
+                         make_any_tuple(exit_msg{address(), exit_reason()}));
         }
         // add link if not already linked to other
         // (checked by establish_backlink)
@@ -152,7 +154,9 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
     }
     // send exit message without lock
     if (reason != exit_reason::not_exited) {
-        //send_as(this, other, make_any_tuple(atom("EXIT"), reason));
+        auto ptr = detail::raw_access::unsafe_cast(other);
+        ptr.enqueue({address(), ptr},
+                     make_any_tuple(exit_msg{address(), exit_reason()}));
     }
     return false;
 }
@@ -202,7 +206,7 @@ void abstract_actor::cleanup(std::uint32_t reason) {
                       << " attached functors; exit reason = " << reason
                       << ", class = " << detail::demangle(typeid(*this)));
     // send exit messages
-    auto msg = make_any_tuple(atom("EXIT"), reason);
+    auto msg = make_any_tuple(exit_msg{address(), reason});
     CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size() << " links");
     for (auto& aptr : mlinks) {
         aptr->enqueue({address(), aptr, message_id{}.with_high_priority()}, msg);

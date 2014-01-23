@@ -298,7 +298,7 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
     std::uint32_t request_timeout(const util::duration& d) {
         CPPA_REQUIRE(d.valid());
         auto tid = ++m_next_timeout_id;
-        auto msg = make_any_tuple(atom("SYNC_TOUT"), tid);
+        auto msg = make_any_tuple(timeout_msg{tid});
         if (d.is_zero()) {
             // immediately enqueue timeout message if duration == 0s
             this->enqueue({this->address(), this}, std::move(msg));

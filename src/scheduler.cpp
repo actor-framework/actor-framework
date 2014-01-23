@@ -41,6 +41,7 @@
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scoped_actor.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -241,7 +242,7 @@ void scheduler_helper::printer_loop(blocking_untyped_actor* self) {
         on(atom("flush")) >> [&] {
             flush_output(self->last_sender());
         },
-        on(atom("DOWN"), any_vals) >> [&] {
+        on_arg_match >> [&](const down_msg&) {
             auto s = self->last_sender();
             flush_output(s);
             out.erase(s);

@@ -58,7 +58,7 @@ class down_observer : public attachable {
         if (m_observer) {
             auto ptr = detail::actor_addr_cast<abstract_actor>(m_observer);
             message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
-            hdr.deliver(make_any_tuple(atom("DOWN"), reason));
+            hdr.deliver(make_any_tuple(down_msg{m_observed, reason}));
         }
     }
 
@@ -154,7 +154,7 @@ void local_actor::send_tuple(const channel& dest, any_tuple what) {
 }
 
 void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
-    send(detail::raw_access::get(whom), atom("EXIT"), reason);
+    send(detail::raw_access::get(whom), exit_msg{address(), reason});
 }
 
 void local_actor::delayed_send_tuple(const channel& dest,
@@ -203,7 +203,7 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
     dest.enqueue({address(), dest, nri}, std::move(what));
     auto rri = nri.response_id();
     get_scheduler()->delayed_send({address(), this, rri}, rtime,
-                                  make_any_tuple(atom("TIMEOUT")));
+                                  make_any_tuple(sync_timeout_msg{}));
     return rri;
 }
 
