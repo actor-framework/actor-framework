@@ -69,6 +69,25 @@ class actor : util::comparable<actor> {
 
  public:
 
+    // common_actor_ops does not provide a virtual destructor -> no new members
+    class ops : public common_actor_ops {
+
+        friend class actor;
+
+        typedef common_actor_ops super;
+
+     public:
+
+        ops() = default;
+
+        void enqueue(const message_header& hdr, any_tuple msg) const;
+
+     private:
+
+        inline ops(abstract_actor_ptr ptr) : super(std::move(ptr)) { }
+
+    };
+
     actor() = default;
 
     template<typename T>
@@ -95,13 +114,11 @@ class actor : util::comparable<actor> {
 
     inline bool operator!() const;
 
-    void enqueue(const message_header& hdr, any_tuple msg) const;
-
-    inline common_actor_ops* operator->() const {
+    inline ops* operator->() const {
         // this const cast is safe, because common_actor_ops cannot be
         // modified anyways and the offered operations are intended to
         // be called on const elements
-        return const_cast<common_actor_ops*>(&m_ops);
+        return const_cast<ops*>(&m_ops);
     }
 
     intptr_t compare(const actor& other) const;
@@ -110,7 +127,7 @@ class actor : util::comparable<actor> {
 
     actor(abstract_actor*);
 
-    common_actor_ops m_ops;
+    ops m_ops;
 
 };
 

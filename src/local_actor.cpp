@@ -187,8 +187,8 @@ void local_actor::quit(std::uint32_t reason) {
         // actors breaks any assumption the user has about his code,
         // in particular, receive_loop() is a deadlock when not throwing
         // an exception here
-        aout << "*** warning: event-based actor killed because it tried to "
-                "use receive()\n";
+        aout(this) << "*** warning: event-based actor killed because it tried "
+                      "to use receive()\n";
         throw actor_exited(reason);
     }
     planned_exit_reason(reason);
@@ -200,7 +200,7 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
                                                    any_tuple&& what) {
     auto nri = new_request_id();
     if (mp == message_priority::high) nri = nri.with_high_priority();
-    dest.enqueue({address(), dest, nri}, std::move(what));
+    dest->enqueue({address(), dest, nri}, std::move(what));
     auto rri = nri.response_id();
     get_scheduler()->delayed_send({address(), this, rri}, rtime,
                                   make_any_tuple(sync_timeout_msg{}));

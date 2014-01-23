@@ -86,16 +86,16 @@ void testee(untyped_actor* self, size_t remaining) {
     };
     self->become (
        on<bar>() >> [=](const bar& val) {
-            aout << "bar(foo("
-                 << val.f.a() << ", "
-                 << val.f.b() << "), "
-                 << val.i << ")"
-                 << endl;
+            aout(self) << "bar(foo("
+                       << val.f.a() << ", "
+                       << val.f.b() << "), "
+                       << val.i << ")"
+                       << endl;
             set_next_behavior();
         },
         on<baz>() >> [=](const baz& val) {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
-            aout << to_string(object::from(val)) << endl;
+            aout(self) << to_string(object::from(val)) << endl;
             set_next_behavior();
         }
     );

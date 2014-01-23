@@ -224,7 +224,7 @@ void scheduler_helper::printer_loop(blocking_untyped_actor* self) {
     self->receive_while (gref(running)) (
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
-            if (!str.empty() && s != nullptr) {
+            if (!str.empty() && s.valid()) {
                 auto i = out.find(s);
                 if (i == out.end()) {
                     i = out.insert(make_pair(s, move(str))).first;
@@ -242,18 +242,17 @@ void scheduler_helper::printer_loop(blocking_untyped_actor* self) {
         on(atom("flush")) >> [&] {
             flush_output(self->last_sender());
         },
-        on_arg_match >> [&](const down_msg&) {
-            auto s = self->last_sender();
-            flush_output(s);
-            out.erase(s);
+        on_arg_match >> [&](const down_msg& dm) {
+            flush_output(dm.source);
+            out.erase(dm.source);
         },
         on(atom("DIE")) >> [&] {
             running = false;
         },
-        others() >> [] {
-            //cout << "*** unexpected: "
-            //     << to_string(self->last_dequeued())
-            //     << endl;
+        others() >> [self] {
+            std::cerr << "*** unexpected: "
+                      << to_string(self->last_dequeued())
+                      << std::endl;
         }
     );
 }

@@ -52,7 +52,7 @@ void untyped_actor::forward_to(const actor& whom) {
 untyped_actor::response_future untyped_actor::sync_send_tuple(const actor& dest,
                                                               any_tuple what) {
     auto nri = new_request_id();
-    dest.enqueue({address(), dest, nri}, std::move(what));
+    dest->enqueue({address(), dest, nri}, std::move(what));
     return {nri.response_id(), this};
 }
 

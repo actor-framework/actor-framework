@@ -54,7 +54,7 @@ void tester(untyped_actor* self, const actor& testee) {
     self->link_to(testee);
     // will be invoked if we receive an unexpected response message
     self->on_sync_failure([=] {
-        aout << "AUT (actor under test) failed" << endl;
+        aout(self) << "AUT (actor under test) failed" << endl;
         self->quit(exit_reason::user_shutdown);
     });
     // first test: 2 + 1 = 3
@@ -64,7 +64,8 @@ void tester(untyped_actor* self, const actor& testee) {
             self->sync_send(testee, atom("minus"), 2, 1).then(
                 on(atom("result"), 1) >> [=] {
                     // both tests succeeded
-                    aout << "AUT (actor under test) seems to be ok" << endl;
+                    aout(self) << "AUT (actor under test) seems to be ok"
+                               << endl;
                     self->send(testee, atom("quit"));
                 }
             );

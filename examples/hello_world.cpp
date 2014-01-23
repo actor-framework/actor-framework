@@ -11,7 +11,7 @@ behavior mirror(untyped_actor* self) {
         // invoke this lambda expression if we receive a string
         on_arg_match >> [=](const string& what) -> string {
             // prints "Hello World!" via aout (thread-safe cout wrapper)
-            aout << what << endl;
+            aout(self) << what << endl;
             // terminates this actor ('become' otherwise loops forever)
             self->quit();
             // reply "!dlroW olleH"
@@ -26,7 +26,7 @@ void hello_world(untyped_actor* self, const actor& buddy) {
         // ... and wait for a response
         on_arg_match >> [=](const string& what) {
             // prints "!dlroW olleH"
-            aout << what << endl;
+            aout(self) << what << endl;
         }
     );
 }

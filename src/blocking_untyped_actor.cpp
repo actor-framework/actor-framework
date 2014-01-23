@@ -49,7 +49,7 @@ void blocking_untyped_actor::await_all_other_actors_done() {
 blocking_untyped_actor::response_future
 blocking_untyped_actor::sync_send_tuple(const actor& dest, any_tuple what) {
     auto nri = new_request_id();
-    dest.enqueue({address(), dest, nri}, std::move(what));
+    dest->enqueue({address(), dest, nri}, std::move(what));
     return {nri.response_id(), this};
 }
 

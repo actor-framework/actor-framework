@@ -109,10 +109,6 @@ constexpr size_t num_curl_workers = 10;
 constexpr int min_req_interval =  10;
 constexpr int max_req_interval = 300;
 
-const actor_ostream& print(const char* color_code, const char* actor_name) {
-    return aout << color_code << actor_name;// << " (id = " << self->id() << "): ";
-}
-
 } // namespace <anonymous>
 
 // provides print utility and each base_actor has a parent
@@ -123,10 +119,11 @@ class base_actor : public untyped_actor {
     base_actor(actor parent, std::string name, std::string color_code)
     : m_parent(std::move(parent))
     , m_name(std::move(name))
-    , m_color(std::move(color_code)) { }
+    , m_color(std::move(color_code))
+    , m_out(this) { }
 
-    inline const actor_ostream& print() const {
-        return ::print(m_color.c_str(), m_name.c_str());
+    inline actor_ostream& print() {
+        return m_out << m_color << m_name << " (id = " << id() << "): ";
     }
 
     void on_exit() override {
@@ -137,8 +134,9 @@ class base_actor : public untyped_actor {
 
  private:
 
-    std::string m_name;
-    std::string m_color;
+    std::string   m_name;
+    std::string   m_color;
+    actor_ostream m_out;
 
 };
 
@@ -388,21 +386,25 @@ int main() {
     set_sighandler();
     // initialize CURL
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    // spawn client and curl_master
-    auto master = spawn<curl_master, detached>();
-    spawn<client, detached>(master);
-    // poll CTRL+C flag every second
-    while (!shutdown_flag) { sleep(1); }
-    aout << color::cyan << "received CTRL+C" << color::reset_endl;
-    // shutdown actors
-    anon_send_exit(master, exit_reason::user_shutdown);
-    // await actors
-    act.sa_handler = [](int) { abort(); };
-    set_sighandler();
-    aout << color::cyan
-         << "await CURL; this may take a while (press CTRL+C again to abort)"
-         << color::reset_endl;
-    await_all_actors_done();
+    { // lifetime scope of self
+        scoped_actor self;
+        // spawn client and curl_master
+        auto master = self->spawn<curl_master, detached>();
+        self->spawn<client, detached>(master);
+        // poll CTRL+C flag every second
+        while (!shutdown_flag) { sleep(1); }
+        aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
+        // shutdown actors
+        anon_send_exit(master, exit_reason::user_shutdown);
+        // await actors
+        act.sa_handler = [](int) { abort(); };
+        set_sighandler();
+        aout(self) << color::cyan
+                   << "await CURL; this may take a while "
+                      "(press CTRL+C again to abort)"
+                   << color::reset_endl;
+        self->await_all_other_actors_done();
+    }
     // shutdown libcppa
     shutdown();
     // shutdown CURL

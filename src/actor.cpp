@@ -52,8 +52,8 @@ actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
 
 actor::actor(const invalid_actor_t&) : m_ops(nullptr) { }
 
-void actor::enqueue(const message_header& hdr, any_tuple msg) const {
-    if (m_ops.m_ptr) m_ops.m_ptr->enqueue(hdr, std::move(msg));
+void actor::ops::enqueue(const message_header& hdr, any_tuple msg) const {
+    if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
 }
 
 intptr_t actor::compare(const actor& other) const {

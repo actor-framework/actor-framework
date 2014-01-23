@@ -88,12 +88,12 @@ struct philosopher : untyped_actor {
     behavior waiting_for(const actor& what) {
         return (
             on(atom("taken"), what) >> [=] {
-                aout << name
-                     << " has picked up chopsticks with IDs "
-                     << left->id()
-                     << " and "
-                     << right->id()
-                     << " and starts to eat\n";
+                aout(this) << name
+                           << " has picked up chopsticks with IDs "
+                           << left->id()
+                           << " and "
+                           << right->id()
+                           << " and starts to eat\n";
                 // eat some time
                 delayed_send(this, seconds(5), atom("think"));
                 become(eating);
@@ -146,8 +146,8 @@ struct philosopher : untyped_actor {
                 send(left, atom("put"), this);
                 send(right, atom("put"), this);
                 delayed_send(this, seconds(5), atom("eat"));
-                aout << name
-                     << " puts down his chopsticks and starts to think\n";
+                aout(this) << name
+                           << " puts down his chopsticks and starts to think\n";
                 become(thinking);
             }
         );
@@ -159,7 +159,7 @@ struct philosopher : untyped_actor {
         // philosophers start to think after receiving {think}
         return (
             on(atom("think")) >> [=] {
-                aout << name << " starts to think\n";
+                aout(this) << name << " starts to think\n";
                 delayed_send(this, seconds(5), atom("eat"));
                 become(thinking);
             }
@@ -168,21 +168,26 @@ struct philosopher : untyped_actor {
 
 };
 
-int main(int, char**) {
+void dining_philosophers() {
+    scoped_actor self;
     // create five chopsticks
-    aout << "chopstick ids are:";
+    aout(self) << "chopstick ids are:";
     std::vector<actor> chopsticks;
     for (size_t i = 0; i < 5; ++i) {
         chopsticks.push_back(spawn(chopstick));
-        aout << " " << chopsticks.back()->id();
+        aout(self) << " " << chopsticks.back()->id();
     }
-    aout << endl;
+    aout(self) << endl;
     // spawn five philosophers
     std::vector<std::string> names { "Plato", "Hume", "Kant",
                                      "Nietzsche", "Descartes" };
     for (size_t i = 0; i < 5; ++i) {
         spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
     }
+}
+
+int main(int, char**) {
+    dining_philosophers();
     // real philosophers are never done
     await_all_actors_done();
     shutdown();

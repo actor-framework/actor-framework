@@ -78,6 +78,10 @@ class actor_addr : util::comparable<actor_addr>
     explicit operator bool() const;
     bool operator!() const;
 
+    inline bool valid() const {
+        return static_cast<bool>(*this);
+    }
+
     intptr_t compare(const actor& other) const;
     intptr_t compare(const actor_addr& other) const;
     intptr_t compare(const abstract_actor* other) const;

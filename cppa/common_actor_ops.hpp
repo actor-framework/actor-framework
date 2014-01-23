@@ -70,7 +70,7 @@ class common_actor_ops {
     bool attach_functor(F&& f);
 
     inline actor_id id() const;
-    
+
     actor_addr address() const;
 
     const node_id& node() const;
@@ -81,9 +81,9 @@ class common_actor_ops {
      */
     bool is_remote() const;
 
- private:
+ protected:
 
-    common_actor_ops(abstract_actor_ptr ptr) : m_ptr(std::move(ptr)) { }
+    inline common_actor_ops(abstract_actor_ptr ptr) : m_ptr(std::move(ptr)) { }
 
     abstract_actor_ptr m_ptr;
 
@@ -91,16 +91,16 @@ class common_actor_ops {
 
 template<class F>
 struct functor_attachable : attachable {
-    
+
     F m_functor;
-    
+
     template<typename T>
     inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
-    
+
     void actor_exited(std::uint32_t reason) { m_functor(reason); }
-    
+
     bool matches(const attachable::token&) { return false; }
-    
+
 };
 
 template<typename F>

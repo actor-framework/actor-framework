@@ -49,10 +49,10 @@ typedef void (foo::*foo_setter)(int);
 void testee(untyped_actor* self) {
     self->become (
         on<foo>() >> [=](const foo& val) {
-            aout << "foo("
-                 << val.a() << ", "
-                 << val.b() << ")"
-                 << endl;
+            aout(self) << "foo("
+                       << val.a() << ", "
+                       << val.b() << ")"
+                       << endl;
             self->quit();
         }
     );

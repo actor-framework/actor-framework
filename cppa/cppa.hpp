@@ -57,6 +57,7 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/actor_ostream.hpp"
 #include "cppa/untyped_actor.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/system_messages.hpp"
@@ -588,66 +589,22 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
  */
 void shutdown(); // note: implemented in singleton_manager.cpp
 
-struct actor_ostream {
-
-    typedef const actor_ostream& (*fun_type)(const actor_ostream&);
-
-    constexpr actor_ostream() { }
-
-    inline const actor_ostream& write(std::string arg) const {
-        send_as(invalid_actor, get_scheduler()->printer(), atom("add"), move(arg));
-        return *this;
-    }
-
-    inline const actor_ostream& flush() const {
-        send_as(invalid_actor, get_scheduler()->printer(), atom("flush"));
-        return *this;
-    }
-
-};
-
-namespace { constexpr actor_ostream aout; }
-
-inline const actor_ostream& operator<<(const actor_ostream& o, std::string arg) {
-    return o.write(move(arg));
-}
-
-inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& arg) {
-    return o.write(cppa::to_string(arg));
-}
-
-// disambiguate between conversion to string and to any_tuple
-inline const actor_ostream& operator<<(const actor_ostream& o, const char* arg) {
-    return o << std::string{arg};
-}
-
-template<typename T>
-inline typename std::enable_if<
-       !std::is_convertible<T, std::string>::value
-    && !std::is_convertible<T, any_tuple>::value,
-    const actor_ostream&
->::type
-operator<<(const actor_ostream& o, T&& arg) {
-    return o.write(std::to_string(std::forward<T>(arg)));
-}
-
-inline const actor_ostream& operator<<(const actor_ostream& o, actor_ostream::fun_type f) {
-    return f(o);
-}
-
 } // namespace cppa
 
 namespace std {
-// allow actor_ptr to be used in hash maps
+// allow actor and actor_addr to be used in hash maps
 template<>
 struct hash<cppa::actor> {
     inline size_t operator()(const cppa::actor& ref) const {
         return static_cast<size_t>(ref->id());
     }
 };
-// provide convenience overlaods for aout; implemented in logging.cpp
-const cppa::actor_ostream& endl(const cppa::actor_ostream& o);
-const cppa::actor_ostream& flush(const cppa::actor_ostream& o);
+template<>
+struct hash<cppa::actor_addr> {
+    inline size_t operator()(const cppa::actor_addr& ref) const {
+        return static_cast<size_t>(ref->id());
+    }
+};
 } // namespace std
 
 #endif // CPPA_HPP

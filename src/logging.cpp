@@ -171,15 +171,3 @@ logging::~logging() { }
 logging* logging::create_singleton() { return new logging_impl; }
 
 } // namespace cppa
-
-namespace std {
-
-const cppa::actor_ostream& endl(const cppa::actor_ostream& o) {
-    return o.write("\n");
-}
-
-const cppa::actor_ostream& flush(const cppa::actor_ostream& o) {
-    return o.flush();
-}
-
-} // namespace std

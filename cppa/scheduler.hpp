@@ -96,7 +96,7 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper().enqueue(message_header{}, std::move(tup));
+        delayed_send_helper()->enqueue(message_header{}, std::move(tup));
     }
 
     template<typename Duration, typename... Data>
@@ -108,7 +108,7 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper().enqueue(message_header{}, std::move(tup));
+        delayed_send_helper()->enqueue(message_header{}, std::move(tup));
     }
 
  private:

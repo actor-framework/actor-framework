@@ -53,22 +53,23 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
     // recover from sync failures by trying to reconnect to server
     if (!self->has_sync_failure_handler()) {
         self->on_sync_failure([=] {
-            aout << "*** lost connection to " << host << ":" << port << endl;
+            aout(self) << "*** lost connection to " << host
+                       << ":" << port << endl;
             client_bhvr(self, host, port, nullptr);
         });
     }
     // connect to server if needed
     if (!server) {
-        aout << "*** try to connect to " << host << ":" << port << endl;
+        aout(self) << "*** try to connect to " << host << ":" << port << endl;
         try {
             auto new_serv = remote_actor(host, port);
             self->monitor(new_serv);
-            aout << "reconnection succeeded" << endl;
+            aout(self) << "reconnection succeeded" << endl;
             client_bhvr(self, host, port, new_serv);
             return;
         }
         catch (exception&) {
-            aout << "connection failed, try again in 3s" << endl;
+            aout(self) << "connection failed, try again in 3s" << endl;
             self->delayed_send(self, chrono::seconds(3), atom("reconnect"));
         }
     }
@@ -76,19 +77,20 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
         on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != nullptr) >> [=](atom_value op, int lhs, int rhs) {
             self->sync_send_tuple(server, self->last_dequeued()).then(
                 on(atom("result"), arg_match) >> [=](int result) {
-                    aout << lhs << " "
-                         << to_string(op) << " "
-                         << rhs << " = "
-                         << result << endl;
+                    aout(self) << lhs << " "
+                               << to_string(op) << " "
+                               << rhs << " = "
+                               << result << endl;
                 }
             );
         },
         on_arg_match >> [=](const down_msg&) {
-            aout << "*** server down, try to reconnect ..." << endl;
+            aout(self) << "*** server down, try to reconnect ..." << endl;
             client_bhvr(self, host, port, nullptr);
         },
         on(atom("rebind"), arg_match) >> [=](const string& host, uint16_t port) {
-            aout << "*** rebind to new server: " << host << ":" << port << endl;
+            aout(self) << "*** rebind to new server: "
+                       << host << ":" << port << endl;
             client_bhvr(self, host, port, nullptr);
         },
         on(atom("reconnect")) >> [=] {
@@ -99,7 +101,7 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
 
 void client_repl(const string& host, uint16_t port) {
     // keeps track of requests and tries to reconnect on server failures
-    aout << "Usage:\n"
+    cout << "Usage:\n"
             "quit                   Quit the program\n"
             "<x> + <y>              Calculate <x>+<y> and print result\n"
             "<x> - <y>              Calculate <x>-<y> and print result\n"
@@ -126,16 +128,16 @@ void client_repl(const string& host, uint16_t port) {
                             anon_send(client, atom("rebind"), move(host), port);
                         }
                         else {
-                            aout << lport << " is not a valid port" << endl;
+                            cout << lport << " is not a valid port" << endl;
                         }
                     }
                     catch (std::exception& e) {
-                        aout << "\"" << sport << "\" is not an unsigned integer"
+                        cout << "\"" << sport << "\" is not an unsigned integer"
                              << endl;
                     }
                 },
                 others() >> [] {
-                    aout << "*** usage: connect <host> <port>" << endl;
+                    cout << "*** usage: connect <host> <port>" << endl;
                 }
             );
         }
@@ -143,7 +145,7 @@ void client_repl(const string& host, uint16_t port) {
             auto toint = [](const string& str) -> optional<int> {
                 try { return {std::stoi(str)}; }
                 catch (std::exception&) {
-                    aout << "\"" << str << "\" is not an integer" << endl;
+                    cout << "\"" << str << "\" is not an integer" << endl;
                     return none;
                 }
             };
@@ -163,7 +165,7 @@ void client_repl(const string& host, uint16_t port) {
                 }
             }
             else if (!success) {
-                aout << "*** invalid format; usage: <x> [+|-] <y>" << endl;
+                cout << "*** invalid format; usage: <x> [+|-] <y>" << endl;
             }
         }
     }

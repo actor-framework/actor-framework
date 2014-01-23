@@ -338,3 +338,5 @@ src/blocking_untyped_actor.cpp
 cppa/policy/policies.hpp
 cppa/detail/response_future_util.hpp
 cppa/system_messages.hpp
+cppa/actor_ostream.hpp
+src/actor_ostream.cpp

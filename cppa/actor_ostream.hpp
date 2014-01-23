@@ -28,87 +28,82 @@
 \******************************************************************************/
 
 
-#include "cppa/cppa.hpp"
-#include "cppa/group.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-#include "cppa/util/upgrade_lock_guard.hpp"
+#ifndef CPPA_ACTOR_OSTREAM_HPP
+#define CPPA_ACTOR_OSTREAM_HPP
 
-#include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "cppa/actor.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/to_string.hpp"
 
 namespace cppa {
 
-intrusive_ptr<group> group::get(const std::string& arg0,
-                                const std::string& arg1) {
-    return get_group_manager()->get(arg0, arg1);
-}
+class local_actor;
+class scoped_actor;
 
-intrusive_ptr<group> group::anonymous() {
-    return get_group_manager()->anonymous();
-}
+class actor_ostream {
 
-void group::add_module(group::unique_module_ptr ptr) {
-    get_group_manager()->add_module(std::move(ptr));
-}
+ public:
 
-group::module_ptr group::get_module(const std::string& module_name) {
-    return get_group_manager()->get_module(module_name);
-}
+    typedef actor_ostream& (*fun_type)(actor_ostream&);
 
-group::subscription::subscription(const channel& s,
-                                  const intrusive_ptr<group>& g)
-: m_subscriber(s), m_group(g) { }
+    actor_ostream(actor_ostream&&) = default;
+    actor_ostream(const actor_ostream&) = default;
 
-group::subscription::~subscription() {
-    if (valid()) m_group->unsubscribe(m_subscriber);
-}
+    actor_ostream& operator=(actor_ostream&&) = default;
+    actor_ostream& operator=(const actor_ostream&) = default;
 
-group::module::module(std::string name) : m_name(std::move(name)) { }
+    explicit actor_ostream(local_actor* self);
 
-const std::string& group::module::name() {
-    return m_name;
-}
+    actor_ostream& write(std::string arg);
 
-group::group(group::module_ptr mod, std::string id)
-: m_module(mod), m_identifier(std::move(id)) { }
+    actor_ostream& flush();
 
-const std::string& group::identifier() const {
-    return m_identifier;
-}
-
-group::module_ptr group::get_module() const {
-    return m_module;
-}
-
-const std::string& group::module_name() const {
-    return get_module()->name();
-}
-
-struct group_nameserver : untyped_actor {
-    behavior make_behavior() override {
-        return (
-            on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), group::get("local", name));
-            },
-            on(atom("SHUTDOWN")) >> [=] {
-                quit();
-            }
-        );
+    inline actor_ostream& operator<<(std::string arg) {
+        return write(move(arg));
     }
+
+    inline actor_ostream& operator<<(const any_tuple& arg) {
+        return write(cppa::to_string(arg));
+    }
+
+    // disambiguate between conversion to string and to any_tuple
+    inline actor_ostream& operator<<(const char* arg) {
+        return *this << std::string{arg};
+    }
+
+    template<typename T>
+    inline typename std::enable_if<
+           !std::is_convertible<T, std::string>::value
+        && !std::is_convertible<T, any_tuple>::value,
+        actor_ostream&
+    >::type
+    operator<<(T&& arg) {
+        return write(std::to_string(std::forward<T>(arg)));
+    }
+
+    inline actor_ostream& operator<<(actor_ostream::fun_type f) {
+        return f(*this);
+    }
+
+ private:
+
+    local_actor* m_self;
+    actor m_printer;
+
 };
 
-void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn<group_nameserver, hidden>();
-    try {
-        publish(gn, port, addr);
-    }
-    catch (std::exception&) {
-        gn->enqueue({invalid_actor_addr, nullptr}, make_any_tuple(atom("SHUTDOWN")));
-        throw;
-    }
+inline actor_ostream aout(local_actor* self) {
+    return actor_ostream{self};
 }
 
+actor_ostream aout(scoped_actor& self);
+
 } // namespace cppa
+
+namespace std {
+// provide convenience overlaods for aout; implemented in logging.cpp
+cppa::actor_ostream& endl(cppa::actor_ostream& o);
+cppa::actor_ostream& flush(cppa::actor_ostream& o);
+} // namespace std
+
+#endif // CPPA_ACTOR_OSTREAM_HPP

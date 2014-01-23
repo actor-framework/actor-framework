@@ -82,7 +82,7 @@ class local_group : public group {
         CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
         send_all_subscribers(hdr, msg);
-        m_broker.enqueue(hdr, msg);
+        m_broker->enqueue(hdr, msg);
     }
 
     pair<bool, size_t> add_subscriber(const channel& who) {
@@ -194,7 +194,7 @@ class local_broker : public untyped_actor {
                        << " acquaintances; " << CPPA_TSARG(sender)
                        << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            acquaintance.enqueue({sender, acquaintance}, what);
+            acquaintance->enqueue({sender, acquaintance}, what);
         }
     }
 
@@ -250,7 +250,7 @@ class local_group_proxy : public local_group {
 
     void enqueue(const message_header& hdr, any_tuple msg) override {
         // forward message to the broker
-        m_broker.enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
+        m_broker->enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
     }
 
  private:

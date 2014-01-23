@@ -155,7 +155,7 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
     // send exit message without lock
     if (reason != exit_reason::not_exited) {
         auto ptr = detail::raw_access::unsafe_cast(other);
-        ptr.enqueue({address(), ptr},
+        ptr->enqueue({address(), ptr},
                      make_any_tuple(exit_msg{address(), exit_reason()}));
     }
     return false;
