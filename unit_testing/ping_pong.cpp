@@ -57,27 +57,27 @@ size_t pongs() {
     return s_pongs;
 }
 
-void ping(blocking_untyped_actor* self, size_t num_pings) {
+void ping(blocking_actor* self, size_t num_pings) {
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
     self->receive_loop(ping_behavior(self, num_pings));
 }
 
-void event_based_ping(untyped_actor* self, size_t num_pings) {
+void event_based_ping(event_based_actor* self, size_t num_pings) {
     CPPA_LOGF_TRACE("num_pings = " << num_pings);
     s_pongs = 0;
     self->become(ping_behavior(self, num_pings));
 }
 
-void pong(blocking_untyped_actor* self, actor ping_actor) {
+void pong(blocking_actor* self, actor ping_actor) {
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
     self->send(ping_actor, atom("pong"), 0); // kickoff
     self->receive_loop(pong_behavior(self));
 }
 
-void event_based_pong(untyped_actor* self, actor ping_actor) {
+void event_based_pong(event_based_actor* self, actor ping_actor) {
     CPPA_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
-    CPPA_REQUIRE(ping_actor != nullptr);
+    CPPA_REQUIRE(ping_actor != invalid_actor);
     self->send(ping_actor, atom("pong"), 0); // kickoff
     self->become(pong_behavior(self));
 }

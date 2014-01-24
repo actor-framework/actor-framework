@@ -40,16 +40,16 @@ namespace cppa {
 namespace policy {
 
 void context_switching_resume::trampoline(void* this_ptr) {
-    auto _this = reinterpret_cast<blocking_untyped_actor*>(this_ptr);
-    auto shut_actor_down = [_this](std::uint32_t reason) {
-        if (_this->planned_exit_reason() == exit_reason::not_exited) {
-            _this->planned_exit_reason(reason);
+    auto self = reinterpret_cast<blocking_actor*>(this_ptr);
+    auto shut_actor_down = [self](std::uint32_t reason) {
+        if (self->planned_exit_reason() == exit_reason::not_exited) {
+            self->planned_exit_reason(reason);
         }
-        _this->on_exit();
-        _this->cleanup(_this->planned_exit_reason());
+        self->on_exit();
+        self->cleanup(self->planned_exit_reason());
     };
     try {
-        _this->act();
+        self->act();
         shut_actor_down(exit_reason::normal);
     }
     catch (actor_exited& e) {
@@ -76,7 +76,5 @@ void context_switching_resume::trampoline(void*) {
 
 } // namespace policy
 } // namespace cppa
-
-namespace cppa { int keep_compiler_happy_function() { return 42; } }
 
 #endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING

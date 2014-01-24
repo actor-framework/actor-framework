@@ -35,22 +35,19 @@
 #include "cppa/actor_addr.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/untyped_actor.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
+#include "cppa/event_based_actor.hpp"
+#include "cppa/blocking_actor.hpp"
 
 namespace cppa {
 
-actor::actor(const std::nullptr_t&) : m_ops(nullptr) { }
-
-actor::actor(actor_proxy* ptr) : m_ops(ptr) { }
-
-actor::actor(untyped_actor* ptr) : m_ops(ptr) { }
-
-actor::actor(blocking_untyped_actor* ptr) : m_ops(ptr) { }
+actor::actor(const invalid_actor_t&) : m_ops(nullptr) { }
 
 actor::actor(abstract_actor* ptr) : m_ops(ptr) { }
 
-actor::actor(const invalid_actor_t&) : m_ops(nullptr) { }
+actor& actor::operator=(const invalid_actor_t&) {
+    m_ops.m_ptr.reset();
+    return *this;
+}
 
 void actor::handle::enqueue(const message_header& hdr, any_tuple msg) const {
     if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
@@ -58,6 +55,18 @@ void actor::handle::enqueue(const message_header& hdr, any_tuple msg) const {
 
 intptr_t actor::compare(const actor& other) const {
     return channel::compare(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
+}
+
+intptr_t actor::compare(const invalid_actor_t&) const {
+    return valid() ? 1 : 0;
+}
+
+intptr_t actor::compare(const actor_addr& other) const {
+    return m_ops.compare(*other);
+}
+
+void actor::swap(actor& other) {
+    m_ops.m_ptr.swap(other.m_ops.m_ptr);
 }
 
 } // namespace cppa

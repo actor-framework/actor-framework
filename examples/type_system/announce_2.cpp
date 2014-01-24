@@ -39,7 +39,7 @@ bool operator==(const foo& lhs, const foo& rhs) {
            && lhs.b() == rhs.b();
 }
 
-void testee(untyped_actor* self) {
+void testee(event_based_actor* self) {
     self->become (
         on<foo>() >> [=](const foo& val) {
             aout(self) << "foo("

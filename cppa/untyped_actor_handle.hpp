@@ -33,6 +33,8 @@
 
 #include "cppa/abstract_actor.hpp"
 
+#include "cppa/util/comparable.hpp"
+
 namespace cppa {
 
 class actor;
@@ -41,9 +43,9 @@ namespace detail { class raw_access; }
 
 /**
  * @brief Encapsulates actor operations that are valid for both {@link actor}
- *        and {@link actor_addr} handles.
+ *        and {@link actor_addr}.
  */
-class untyped_actor_handle {
+class untyped_actor_handle : util::comparable<untyped_actor_handle> {
 
     friend class actor;
     friend class actor_addr;
@@ -53,7 +55,7 @@ class untyped_actor_handle {
 
     untyped_actor_handle() = default;
 
-    inline bool attach(attachable_ptr ptr);
+    inline bool attach(attachable_ptr ptr) const;
 
     /**
      * @brief Convenience function that attaches the functor
@@ -67,7 +69,7 @@ class untyped_actor_handle {
      *          otherwise (actor already exited) @p false.
      */
     template<typename F>
-    bool attach_functor(F&& f);
+    bool attach_functor(F&& f) const;
 
     inline actor_id id() const;
 
@@ -80,6 +82,12 @@ class untyped_actor_handle {
      *        remote actor.
      */
     bool is_remote() const;
+
+    inline bool valid() const {
+        return static_cast<bool>(m_ptr);
+    }
+
+    intptr_t compare(const untyped_actor_handle& other) const;
 
  protected:
 
@@ -104,7 +112,7 @@ struct functor_attachable : attachable {
 };
 
 template<typename F>
-bool untyped_actor_handle::attach_functor(F&& f) {
+bool untyped_actor_handle::attach_functor(F&& f) const {
     typedef typename util::rm_const_and_ref<F>::type f_type;
     typedef functor_attachable<f_type> impl;
     return attach(attachable_ptr{new impl(std::forward<F>(f))});
@@ -114,7 +122,7 @@ inline actor_id untyped_actor_handle::id() const {
     return (m_ptr) ? m_ptr->id() : 0;
 }
 
-inline bool untyped_actor_handle::attach(attachable_ptr ptr) {
+inline bool untyped_actor_handle::attach(attachable_ptr ptr) const {
     return m_ptr ? m_ptr->attach(std::move(ptr)) : false;
 }
 

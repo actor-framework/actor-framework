@@ -13,7 +13,7 @@ using std::endl;
 using namespace cppa;
 
 // implementation using the blocking API
-void blocking_math_fun(blocking_untyped_actor* self) {
+void blocking_math_fun(blocking_actor* self) {
     bool done = false;
     self->do_receive (
         // "arg_match" matches the parameter types of given lambda expression
@@ -34,7 +34,7 @@ void blocking_math_fun(blocking_untyped_actor* self) {
     ).until(gref(done));
 }
 
-void calculator(untyped_actor* self) {
+void calculator(event_based_actor* self) {
     // execute this behavior until actor terminates
     self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) {
@@ -50,7 +50,7 @@ void calculator(untyped_actor* self) {
     );
 }
 
-void tester(untyped_actor* self, const actor& testee) {
+void tester(event_based_actor* self, const actor& testee) {
     self->link_to(testee);
     // will be invoked if we receive an unexpected response message
     self->on_sync_failure([=] {

@@ -13,7 +13,7 @@ cppa/attachable.hpp
 cppa/behavior.hpp
 cppa/binary_deserializer.hpp
 cppa/binary_serializer.hpp
-cppa/blocking_untyped_actor.hpp
+cppa/blocking_actor.hpp
 cppa/channel.hpp
 cppa/untyped_actor_handle.hpp
 cppa/config.hpp
@@ -155,7 +155,7 @@ cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
-cppa/untyped_actor.hpp
+cppa/event_based_actor.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/algorithm.hpp
 cppa/util/arg_match_t.hpp
@@ -332,9 +332,9 @@ cppa/behavior_stack_based.hpp
 cppa/resumable.hpp
 src/resumable.cpp
 cppa/policy/middleman_scheduling.hpp
-src/untyped_actor.cpp
+src/event_based_actor.cpp
 src/functor_based_blocking_actor.cpp
-src/blocking_untyped_actor.cpp
+src/blocking_actor.cpp
 cppa/policy/policies.hpp
 cppa/detail/response_future_util.hpp
 cppa/system_messages.hpp

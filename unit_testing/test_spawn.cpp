@@ -56,7 +56,7 @@ class event_testee : public sb_actor<event_testee> {
 
 // quits after 5 timeouts
 actor spawn_event_testee2(actor parent) {
-    struct impl : untyped_actor {
+    struct impl : event_based_actor {
         actor parent;
         impl(actor parent) : parent(parent) { }
         behavior wait4timeout(int remaining) {
@@ -114,7 +114,7 @@ struct chopstick : public sb_actor<chopstick> {
 
 class testee_actor {
 
-    void wait4string(blocking_untyped_actor* self) {
+    void wait4string(blocking_actor* self) {
         bool string_received = false;
         self->do_receive (
             on<string>() >> [&] {
@@ -127,7 +127,7 @@ class testee_actor {
         .until(gref(string_received));
     }
 
-    void wait4float(blocking_untyped_actor* self) {
+    void wait4float(blocking_actor* self) {
         bool float_received = false;
         self->do_receive (
             on<float>() >> [&] {
@@ -143,7 +143,7 @@ class testee_actor {
 
  public:
 
-    void operator()(blocking_untyped_actor* self) {
+    void operator()(blocking_actor* self) {
         self->receive_loop (
             on<int>() >> [&] {
                 wait4float(self);
@@ -157,7 +157,7 @@ class testee_actor {
 };
 
 // self->receives one timeout and quits
-void testee1(untyped_actor* self) {
+void testee1(event_based_actor* self) {
     CPPA_LOGF_TRACE("");
     self->become(after(chrono::milliseconds(10)) >> [=] {
         CPPA_LOGF_TRACE("");
@@ -165,7 +165,7 @@ void testee1(untyped_actor* self) {
     });
 }
 
-void testee2(untyped_actor* self, actor other) {
+void testee2(event_based_actor* self, actor other) {
     self->link_to(other);
     self->send(other, uint32_t(1));
     self->become (
@@ -262,7 +262,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
 };
 
-behavior echo_actor(untyped_actor* self) {
+behavior echo_actor(event_based_actor* self) {
     return (
         others() >> [=]() -> any_tuple {
             self->quit(exit_reason::normal);
@@ -282,7 +282,7 @@ struct simple_mirror : sb_actor<simple_mirror> {
 
 };
 
-behavior high_priority_testee(untyped_actor* self) {
+behavior high_priority_testee(event_based_actor* self) {
     self->send(self, atom("b"));
     self->send(message_priority::high, self, atom("a"));
     // 'a' must be self->received before 'b'
@@ -305,13 +305,13 @@ behavior high_priority_testee(untyped_actor* self) {
     );
 }
 
-struct high_priority_testee_class : untyped_actor {
+struct high_priority_testee_class : event_based_actor {
     behavior make_behavior() override {
         return high_priority_testee(this);
     }
 };
 
-struct master : untyped_actor {
+struct master : event_based_actor {
     behavior make_behavior() override {
         return (
             on(atom("done")) >> [=] {
@@ -321,7 +321,7 @@ struct master : untyped_actor {
     }
 };
 
-struct slave : untyped_actor {
+struct slave : event_based_actor {
 
     slave(actor master) : master{master} { }
 
@@ -337,13 +337,13 @@ struct slave : untyped_actor {
 };
 
 void test_serial_reply() {
-    auto mirror_behavior = [=](untyped_actor* self) {
+    auto mirror_behavior = [=](event_based_actor* self) {
         self->become(others() >> [=]() -> any_tuple {
             CPPA_LOGF_INFO("return self->last_dequeued()");
             return self->last_dequeued();
         });
     };
-    auto master = spawn([=](untyped_actor* self) {
+    auto master = spawn([=](event_based_actor* self) {
         cout << "ID of master: " << self->id() << endl;
         // spawn 5 mirror actors
         auto c0 = self->spawn<linked>(mirror_behavior);
@@ -450,7 +450,7 @@ void test_or_else() {
 
 void test_continuation() {
     auto mirror = spawn<simple_mirror>();
-    spawn([=](untyped_actor* self) {
+    spawn([=](event_based_actor* self) {
         self->sync_send(mirror, 42).then(
             on(42) >> [] {
                 return "fourty-two";
@@ -473,7 +473,7 @@ void test_continuation() {
 
 void test_simple_reply_response() {
     scoped_actor self;
-    auto s = spawn([](untyped_actor* self) -> behavior {
+    auto s = spawn([](event_based_actor* self) -> behavior {
         return (
             others() >> [=]() -> any_tuple {
                 CPPA_CHECK(self->last_dequeued() == make_any_tuple(atom("hello")));
@@ -655,7 +655,7 @@ void test_spawn() {
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
-    auto sync_testee1 = spawn<blocking_api>([](blocking_untyped_actor* self) {
+    auto sync_testee1 = spawn<blocking_api>([](blocking_actor* self) {
         self->receive (
             on(atom("get")) >> [] {
                 return make_cow_tuple(42, 2);
@@ -696,7 +696,7 @@ void test_spawn() {
     CPPA_PRINT("test sync send");
 
     CPPA_CHECKPOINT();
-    auto sync_testee = spawn<blocking_api>([](blocking_untyped_actor* self) {
+    auto sync_testee = spawn<blocking_api>([](blocking_actor* self) {
         self->receive (
             on("hi", arg_match) >> [&](actor from) {
                 self->sync_send(from, "whassup?", self).await(
@@ -745,7 +745,7 @@ void test_spawn() {
 
     CPPA_CHECKPOINT();
 
-    auto inflater = [](untyped_actor* self, const string& name, actor buddy) {
+    auto inflater = [](event_based_actor* self, const string& name, actor buddy) {
         CPPA_LOGF_TRACE(CPPA_ARG(self) << ", " << CPPA_ARG(name)
                         << ", " << CPPA_TARG(buddy, to_string));
         self->become(
@@ -776,7 +776,7 @@ void test_spawn() {
     // - the lambda is always executed in the current actor's thread
     // but using spawn_next in a message handler could
     // still cause undefined behavior!
-    auto kr34t0r = [&spawn_next](untyped_actor* self, const string& name, actor pal) {
+    auto kr34t0r = [&spawn_next](event_based_actor* self, const string& name, actor pal) {
         if (name == "Joe" && !pal) {
             pal = spawn_next("Bob", self);
         }
@@ -827,7 +827,7 @@ void test_spawn() {
 
     // create some actors linked to one single actor
     // and kill them all through killing the link
-    auto legion = spawn([](untyped_actor* self) {
+    auto legion = spawn([](event_based_actor* self) {
         CPPA_LOGF_INFO("spawn 1, 000 actors");
         for (int i = 0; i < 1000; ++i) {
             self->spawn<event_testee, linked>();

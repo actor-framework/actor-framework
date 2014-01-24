@@ -28,43 +28,42 @@
 \******************************************************************************/
 
 
-#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
-
-#include "cppa/detail/actor_registry.hpp"
+#include "cppa/message_id.hpp"
+#include "cppa/event_based_actor.hpp"
 
 namespace cppa {
 
-void blocking_untyped_actor::response_future::await(behavior& bhvr) {
-    m_self->dequeue_response(bhvr, m_mid);
+continue_helper&
+continue_helper::continue_with(behavior::continuation_fun fun) {
+    auto ref_opt = m_self->bhvr_stack().sync_handler(m_mid);
+    if (ref_opt) {
+        behavior cpy = *ref_opt;
+        *ref_opt = cpy.add_continuation(std::move(fun));
+    }
+    else { CPPA_LOG_ERROR("failed to add continuation"); }
+    return *this;
 }
 
-
-void blocking_untyped_actor::await_all_other_actors_done() {
-    get_actor_registry()->await_running_count_equal(1);
+void event_based_actor::forward_to(const actor& whom) {
+    forward_message(whom, message_priority::normal);
 }
 
-blocking_untyped_actor::response_future
-blocking_untyped_actor::sync_send_tuple(const actor& dest, any_tuple what) {
+event_based_actor::response_future
+event_based_actor::sync_send_tuple(const actor& dest, any_tuple what) {
     auto nri = new_request_id();
     dest->enqueue({address(), dest, nri}, std::move(what));
     return {nri.response_id(), this};
 }
 
-blocking_untyped_actor::response_future
-blocking_untyped_actor::timed_sync_send_tuple(const util::duration& rtime,
-                                              const actor& dest,
-                                              any_tuple what) {
+event_based_actor::response_future
+event_based_actor::timed_sync_send_tuple(const util::duration& rtime,
+                                         const actor& dest,
+                                         any_tuple what) {
     return {timed_sync_send_tuple_impl(message_priority::normal, dest, rtime,
                                        std::move(what)),
             this};
-}
-
-void blocking_untyped_actor::quit(std::uint32_t reason) {
-    planned_exit_reason(reason);
-    throw actor_exited(reason);
 }
 
 } // namespace cppa

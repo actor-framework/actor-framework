@@ -40,8 +40,8 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/deserializer.hpp"
-#include "cppa/untyped_actor.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/event_based_actor.hpp"
 
 #include "cppa/io/middleman.hpp"
 
@@ -132,7 +132,7 @@ class local_group : public group {
 
 typedef intrusive_ptr<local_group> local_group_ptr;
 
-class local_broker : public untyped_actor {
+class local_broker : public event_based_actor {
 
  public:
 
@@ -218,8 +218,8 @@ class local_group_proxy : public local_group {
     template<typename... Ts>
     local_group_proxy(actor remote_broker, Ts&&... args)
     : super(false, forward<Ts>(args)...) {
-        CPPA_REQUIRE(m_broker == nullptr);
-        CPPA_REQUIRE(remote_broker != nullptr);
+        CPPA_REQUIRE(m_broker == invalid_actor);
+        CPPA_REQUIRE(remote_broker != invalid_actor);
         m_broker = move(remote_broker);
         m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
@@ -230,7 +230,7 @@ class local_group_proxy : public local_group {
         if (res.first) {
             if (res.second == 1) {
                 // join the remote source
-                send_as(nullptr, m_broker, atom("JOIN"), m_proxy_broker);
+                anon_send(m_broker, atom("JOIN"), m_proxy_broker);
             }
             return {who, this};
         }
@@ -244,7 +244,7 @@ class local_group_proxy : public local_group {
         if (res.first && res.second == 0) {
             // leave the remote source,
             // because there's no more subscriber on this node
-            send_as(nullptr, m_broker, atom("LEAVE"), m_proxy_broker);
+            anon_send(m_broker, atom("LEAVE"), m_proxy_broker);
         }
     }
 
@@ -261,7 +261,7 @@ class local_group_proxy : public local_group {
 
 typedef intrusive_ptr<local_group_proxy> local_group_proxy_ptr;
 
-class proxy_broker : public untyped_actor {
+class proxy_broker : public event_based_actor {
 
  public:
 
@@ -339,7 +339,7 @@ class local_group_module : public group::module {
     void serialize(local_group* ptr, serializer* sink) {
         // serialize identifier & broker
         sink->write_value(ptr->identifier());
-        CPPA_REQUIRE(ptr->broker() != nullptr);
+        CPPA_REQUIRE(ptr->broker() != invalid_actor);
         m_actor_utype->serialize(&ptr->broker(), sink);
     }
 
@@ -411,7 +411,7 @@ class shared_map : public ref_counted {
             lock_type guard(m_mtx);
             auto i = m_instances.find(key);
             if (i == m_instances.end()) {
-                send_as(nullptr, m_worker, atom("FETCH"), key);
+                anon_send(m_worker, atom("FETCH"), key);
                 do {
                     m_cond.wait(guard);
                 } while ((i = m_instances.find(key)) == m_instances.end());
@@ -462,7 +462,7 @@ class remote_group_module : public group::module {
         auto sm = make_counted<shared_map>();
         group::module_ptr _this = this;
         m_map = sm;
-        m_map->m_worker = spawn<hidden>([=](untyped_actor* self) -> behavior {
+        m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
                             "remote_group_module$worker",
                             "");

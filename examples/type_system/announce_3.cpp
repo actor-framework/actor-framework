@@ -46,7 +46,7 @@ typedef int (foo::*foo_getter)() const;
 // a member function pointer to set an attribute of foo
 typedef void (foo::*foo_setter)(int);
 
-void testee(untyped_actor* self) {
+void testee(event_based_actor* self) {
     self->become (
         on<foo>() >> [=](const foo& val) {
             aout(self) << "foo("

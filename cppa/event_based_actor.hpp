@@ -42,7 +42,7 @@
 
 namespace cppa {
 
-class untyped_actor;
+class event_based_actor;
 
 class continue_helper {
 
@@ -50,8 +50,8 @@ class continue_helper {
 
     typedef int message_id_wrapper_tag;
 
-    inline continue_helper(message_id mid, untyped_actor* self)
-        : m_mid(mid), m_self(self) { }
+    inline continue_helper(message_id mid, event_based_actor* self)
+            : m_mid(mid), m_self(self) { }
 
     template<typename F>
     continue_helper& continue_with(F fun) {
@@ -69,15 +69,15 @@ class continue_helper {
  private:
 
     message_id m_mid;
-    untyped_actor* m_self;
+    event_based_actor* m_self;
 
 };
 
 /**
  * @extends local_actor
  */
-class untyped_actor : public extend<local_actor>::with<mailbox_based,
-                                                       behavior_stack_based> {
+class event_based_actor : public extend<local_actor>::
+                                 with<mailbox_based, behavior_stack_based> {
 
  protected:
 
@@ -124,13 +124,13 @@ class untyped_actor : public extend<local_actor>::with<mailbox_based,
 
         response_future& operator=(const response_future&) = default;
 
-        inline response_future(const message_id& from, untyped_actor* self)
-            : m_mid(from), m_self(self) { }
+        inline response_future(const message_id& from, event_based_actor* self)
+                : m_mid(from), m_self(self) { }
 
      private:
 
         message_id m_mid;
-        untyped_actor* m_self;
+        event_based_actor* m_self;
 
         inline void check_consistency() { }
 
@@ -173,7 +173,8 @@ class untyped_actor : public extend<local_actor>::with<mailbox_based,
                                    const util::duration& rtime,
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
-        return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
+        return timed_sync_send_tuple(rtime, dest,
+                                     make_any_tuple(std::forward<Ts>(what)...));
     }
 
 };

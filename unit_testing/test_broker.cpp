@@ -39,7 +39,7 @@ using namespace cppa;
 
 namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
 
-void ping(cppa::untyped_actor* self, size_t num_pings) {
+void ping(cppa::event_based_actor* self, size_t num_pings) {
     CPPA_CHECKPOINT();
     auto count = std::make_shared<size_t>(0);
     self->become (
@@ -59,7 +59,7 @@ void ping(cppa::untyped_actor* self, size_t num_pings) {
     );
 }
 
-void pong(cppa::untyped_actor* self) {
+void pong(cppa::event_based_actor* self) {
     CPPA_CHECKPOINT();
     self->become  (
         on(atom("ping"), arg_match)
@@ -85,9 +85,11 @@ void pong(cppa::untyped_actor* self) {
 
 void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
     CPPA_CHECKPOINT();
+    CPPA_CHECK(self != nullptr);
+    CPPA_CHECK(buddy != invalid_actor);
     self->monitor(buddy);
     if (self->num_connections() == 0) {
-        cout << "num_connections() != 1" << endl;
+        cerr << "num_connections() != 1" << endl;
         throw std::logic_error("num_connections() != 1");
     }
     auto write = [=](atom_value type, int value) {
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
                 CPPA_CHECKPOINT();
                 auto cl = spawn_io(peer, "localhost", port, p);
                 CPPA_CHECKPOINT();
-                send_as(nullptr, p, atom("kickoff"), cl);
+                anon_send(p, atom("kickoff"), cl);
                 CPPA_CHECKPOINT();
             });
             CPPA_CHECKPOINT();

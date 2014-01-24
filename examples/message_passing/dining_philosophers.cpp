@@ -17,7 +17,7 @@ using namespace std;
 using namespace cppa;
 
 // either taken by a philosopher or available
-void chopstick(untyped_actor* self) {
+void chopstick(event_based_actor* self) {
     self->become(
         on(atom("take"), arg_match) >> [=](const actor& philos) {
             // tell philosopher it took this chopstick
@@ -71,7 +71,7 @@ void chopstick(untyped_actor* self) {
  * [ X = right => Y = left  ]
  */
 
-struct philosopher : untyped_actor {
+struct philosopher : event_based_actor {
 
     std::string name; // the name of this philosopher
     actor left;   // left chopstick

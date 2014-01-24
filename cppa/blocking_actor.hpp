@@ -45,7 +45,7 @@ namespace cppa {
 /**
  * @extends local_actor
  */
-class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
+class blocking_actor : public extend<local_actor>::with<mailbox_based> {
 
  public:
 
@@ -89,14 +89,13 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
         response_future(const response_future&) = default;
         response_future& operator=(const response_future&) = default;
 
-        inline response_future(const message_id& from,
-                               blocking_untyped_actor* self)
-            : m_mid(from), m_self(self) { }
+        inline response_future(const message_id& from, blocking_actor* self)
+                : m_mid(from), m_self(self) { }
 
      private:
 
         message_id m_mid;
-        blocking_untyped_actor* m_self;
+        blocking_actor* m_self;
 
     };
 
@@ -153,7 +152,8 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
                                    const util::duration& rtime,
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
-        return timed_sync_send_tuple(rtime, dest, make_any_tuple(std::forward<Ts>(what)...));
+        return timed_sync_send_tuple(rtime, dest,
+                                     make_any_tuple(std::forward<Ts>(what)...));
     }
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
@@ -207,7 +207,7 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
      */
     template<typename... Ts>
     void receive(Ts&&... args) {
-        static_assert(sizeof...(Ts), "receive() requires at least one argument");
+        static_assert(sizeof...(Ts), "at least one argument required");
         dequeue(match_expr_convert(std::forward<Ts>(args)...));
     }
 
@@ -282,7 +282,8 @@ class blocking_untyped_actor : public extend<local_actor>::with<mailbox_based> {
     /**
      * @brief Receives messages until @p stmt returns true.
      *
-     * Semantically equal to: <tt>do { receive(...); } while (stmt() == false);</tt>
+     * Semantically equal to:
+     * <tt>do { receive(...); } while (stmt() == false);</tt>
      *
      * <b>Usage example:</b>
      * @code

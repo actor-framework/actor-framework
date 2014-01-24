@@ -33,21 +33,21 @@
 
 #include <type_traits>
 
-#include "cppa/untyped_actor.hpp"
+#include "cppa/event_based_actor.hpp"
 
 namespace cppa { namespace detail {
 
-class functor_based_actor : public untyped_actor {
+class functor_based_actor : public event_based_actor {
 
  public:
 
-    typedef std::function<behavior(untyped_actor*)> make_behavior_fun;
+    typedef std::function<behavior(event_based_actor*)> make_behavior_fun;
 
-    typedef std::function<void(untyped_actor*)> void_fun;
+    typedef std::function<void(event_based_actor*)> void_fun;
 
     template<typename F, typename... Ts>
     functor_based_actor(F f, Ts&&... vs) {
-        untyped_actor* dummy = nullptr;
+        event_based_actor* dummy = nullptr;
         create(dummy, f, std::forward<Ts>(vs)...);
     }
 
@@ -55,7 +55,7 @@ class functor_based_actor : public untyped_actor {
 
  private:
 
-    void create(untyped_actor*, void_fun);
+    void create(event_based_actor*, void_fun);
 
     template<class Actor, typename F, typename... Ts>
     auto create(Actor*, F f, Ts&&... vs) ->

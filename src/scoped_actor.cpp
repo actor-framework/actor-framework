@@ -39,11 +39,11 @@ namespace cppa {
 
 namespace {
 
-struct impl : blocking_untyped_actor {
+struct impl : blocking_actor {
     void act() override { }
 };
 
-blocking_untyped_actor* alloc() {
+blocking_actor* alloc() {
     using namespace policy;
     return new detail::proper_actor<impl,
                                     policies<no_scheduling,

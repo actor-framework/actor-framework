@@ -57,7 +57,7 @@ void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
     else {
         // register locally running actors to be able to deserialize them later
         if (!ptr->is_remote()) {
-            get_actor_registry()->put(ptr->id(), detail::actor_addr_cast<abstract_actor>(ptr));
+            get_actor_registry()->put(ptr->id(), detail::raw_access::get(ptr));
         }
         auto& pinf = ptr->node();
         sink->write_value(ptr->id());                                  // actor id

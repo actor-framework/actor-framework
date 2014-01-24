@@ -51,50 +51,50 @@ namespace cppa {
 
 namespace detail {
 
-template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
+template<class Impl, spawn_options Opts, typename BeforeLaunch, typename... Ts>
 actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
-    static_assert(std::is_base_of<untyped_actor, Impl>::value ||
-                  (std::is_base_of<blocking_untyped_actor, Impl>::value &&
-                   has_blocking_api_flag(Options)),
-                  "Impl is not a derived type of untyped_actor or "
-                  "is a derived type of blocking_untyped_actor but "
+    static_assert(std::is_base_of<event_based_actor, Impl>::value ||
+                  (std::is_base_of<blocking_actor, Impl>::value &&
+                   has_blocking_api_flag(Opts)),
+                  "Impl is not a derived type of event_based_actor or "
+                  "is a derived type of blocking_actor but "
                   "blocking_api_flag is missing");
-    static_assert(is_unbound(Options),
+    static_assert(is_unbound(Opts),
                   "top-level spawns cannot have monitor or link flag");
     CPPA_LOGF_TRACE("spawn " << detail::demangle<Impl>());
     // runtime check wheter context_switching_resume can be used,
     // i.e., add the detached flag if libcppa compiled without fiber support
     // when using the blocking API
-    if (has_blocking_api_flag(Options)
-            && !has_detach_flag(Options)
+    if (has_blocking_api_flag(Opts)
+            && !has_detach_flag(Opts)
             && util::fiber::is_disabled_feature()) {
-        return spawn_impl<Impl, Options + detached>(before_launch_fun,
+        return spawn_impl<Impl, Opts + detached>(before_launch_fun,
                                                     std::forward<Ts>(args)...);
     }
     /*
     using scheduling_policy = typename std::conditional<
-                                  has_detach_flag(Options),
+                                  has_detach_flag(Opts),
                                   policy::no_scheduling,
                                   policy::cooperative_scheduling
                               >::type;
     */
     using scheduling_policy = policy::no_scheduling;
     using priority_policy = typename std::conditional<
-                                has_priority_aware_flag(Options),
+                                has_priority_aware_flag(Opts),
                                 policy::prioritizing,
                                 policy::not_prioritizing
                             >::type;
     using resume_policy = typename std::conditional<
-                              has_blocking_api_flag(Options),
+                              has_blocking_api_flag(Opts),
                               typename std::conditional<
-                                  has_detach_flag(Options),
+                                  has_detach_flag(Opts),
                                   policy::no_resume,
                                   policy::context_switching_resume
                               >::type,
                               policy::event_based_resume
                           >::type;
     using invoke_policy = typename std::conditional<
-                              has_blocking_api_flag(Options),
+                              has_blocking_api_flag(Opts),
                               policy::nestable_invoke,
                               policy::sequential_invoke
                           >::type;
@@ -106,7 +106,7 @@ actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
     CPPA_PUSH_AID(ptr->id());
     before_launch_fun(ptr.get());
-    ptr->launch(has_hide_flag(Options));
+    ptr->launch(has_hide_flag(Opts));
     return ptr;
 }
 
@@ -131,9 +131,9 @@ struct spawn_fwd<scoped_actor> {
 
 // forwards the arguments to spawn_impl, replacing pointers
 // to actors with instances of 'actor'
-template<class Impl, spawn_options Options, typename BeforeLaunch, typename... Ts>
+template<class Impl, spawn_options Opts, typename BeforeLaunch, typename... Ts>
 actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
-    return spawn_impl<Impl, Options>(
+    return spawn_impl<Impl, Opts>(
             before_launch_fun,
             spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
                     std::forward<Ts>(args))...);
@@ -149,13 +149,13 @@ actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
 /**
  * @brief Spawns an actor of type @p Impl.
  * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Opts Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-template<class Impl, spawn_options Options, typename... Ts>
+template<class Impl, spawn_options Opts, typename... Ts>
 actor spawn(Ts&&... args) {
-    return detail::spawn_fwd_args<Impl, Options>(
+    return detail::spawn_fwd_args<Impl, Opts>(
             [](local_actor*) { /* no-op as BeforeLaunch callback */ },
             std::forward<Ts>(args)...);
 }
@@ -163,38 +163,38 @@ actor spawn(Ts&&... args) {
 /**
  * @brief Spawns a new {@link actor} that evaluates given arguments.
  * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Opts Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-//template<spawn_options Options = no_spawn_options, typename... Ts>
-template<spawn_options Options, typename... Ts>
+//template<spawn_options Opts = no_spawn_options, typename... Ts>
+template<spawn_options Opts, typename... Ts>
 actor spawn(Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     using base_class = typename std::conditional<
-                           has_blocking_api_flag(Options),
+                           has_blocking_api_flag(Opts),
                            detail::functor_based_blocking_actor,
                            detail::functor_based_actor
                        >::type;
-    return spawn<base_class, Options>(std::forward<Ts>(args)...);
+    return spawn<base_class, Opts>(std::forward<Ts>(args)...);
 }
 
 /**
  * @brief Spawns a new actor that evaluates given arguments and
  *        immediately joins @p grp.
  * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Opts Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-template<spawn_options Options, typename... Ts>
+template<spawn_options Opts, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     using base_class = typename std::conditional<
-                           has_blocking_api_flag(Options),
+                           has_blocking_api_flag(Opts),
                            detail::functor_based_blocking_actor,
                            detail::functor_based_actor
                        >::type;
-    return detail::spawn_fwd_args<base_class, Options>(
+    return detail::spawn_fwd_args<base_class, Opts>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }
@@ -202,20 +202,20 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
 /**
  * @brief Spawns an actor of type @p Impl that immediately joins @p grp.
  * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link untyped_actor} or {@link sb_actor}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Opts Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-template<class Impl, spawn_options Options, typename... Ts>
+template<class Impl, spawn_options Opts, typename... Ts>
 actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
-    return detail::spawn_fwd_args<Impl, Options>(
+    return detail::spawn_fwd_args<Impl, Opts>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }
 
 /*
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Opts = no_spawn_options, typename... Ts>
 typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
     static_assert(util::tl_is_distinct<typename Impl::signatures>::value,
                   "typed actors are not allowed to define "
@@ -223,13 +223,13 @@ typename Impl::typed_pointer_type spawn_typed(Ts&&... args) {
     auto p = make_counted<Impl>(std::forward<Ts>(args)...);
     using result_type = typename Impl::typed_pointer_type;
     return result_type::cast_from(
-        eval_sopts(Options, get_scheduler()->exec(Options, std::move(p)))
+        eval_sopts(Opts, get_scheduler()->exec(Opts, std::move(p)))
     );
 }
 */
 
 /*TODO:
-template<spawn_options Options, typename... Ts>
+template<spawn_options Opts, typename... Ts>
 typed_actor<typename detail::deduce_signature<Ts>::type...>
 spawn_typed(const match_expr<Ts...>& me) {
     static_assert(util::conjunction<
@@ -246,7 +246,7 @@ spawn_typed(const match_expr<Ts...>& me) {
     using impl = detail::default_typed_actor<
                      typename detail::deduce_signature<Ts>::type...
                  >;
-    return spawn_typed<impl, Options>(me);
+    return spawn_typed<impl, Opts>(me);
 }
 
 template<typename... Ts>

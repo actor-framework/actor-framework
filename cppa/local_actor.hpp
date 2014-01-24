@@ -170,6 +170,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     void send_exit(const actor_addr& whom, std::uint32_t reason);
 
+    inline void send_exit(const actor& whom, std::uint32_t reason) {
+        send_exit(whom->address(), reason);
+    }
+
     /**
      * @brief Sends a message to @p whom that is delayed by @p rel_time.
      * @param whom Receiver of the message.

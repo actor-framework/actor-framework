@@ -21,7 +21,7 @@ using std::endl;
 using std::string;
 using namespace cppa;
 
-void testee(untyped_actor* self, int current_value, int final_result) {
+void testee(event_based_actor* self, int current_value, int final_result) {
     self->become(
         on_arg_match >> [=](int result) {
             auto next = result + current_value;

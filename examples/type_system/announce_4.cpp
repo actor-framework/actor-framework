@@ -79,7 +79,7 @@ bool operator==(const baz& lhs, const baz& rhs) {
 }
 
 // receives `remaining` messages
-void testee(untyped_actor* self, size_t remaining) {
+void testee(event_based_actor* self, size_t remaining) {
     auto set_next_behavior = [=] {
         if (remaining > 1) testee(self, remaining - 1);
         else self->quit();

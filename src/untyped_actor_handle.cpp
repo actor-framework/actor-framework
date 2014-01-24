@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include "cppa/channel.hpp"
 #include "cppa/actor_addr.hpp"
 #include "cppa/untyped_actor_handle.hpp"
 
@@ -44,5 +45,10 @@ const node_id& untyped_actor_handle::node() const {
 bool untyped_actor_handle::is_remote() const {
     return m_ptr ? m_ptr->is_proxy() : false;
 }
+
+intptr_t untyped_actor_handle::compare(const untyped_actor_handle& other) const {
+    return channel::compare(m_ptr.get(), other.m_ptr.get());
+}
+
 
 } // namespace cppa

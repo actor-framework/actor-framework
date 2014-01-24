@@ -5,8 +5,8 @@
 
 #include "cppa/logging.hpp"
 #include "cppa/resumable.hpp"
+#include "cppa/blocking_actor.hpp"
 #include "cppa/mailbox_element.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
 
 #include "cppa/policy/scheduling_policy.hpp"
 
@@ -152,7 +152,7 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
 template<class Base,
          class Policies,
-         bool OverrideDequeue = std::is_base_of<blocking_untyped_actor, Base>::value>
+         bool OverrideDequeue = std::is_base_of<blocking_actor, Base>::value>
 class proper_actor : public proper_actor_base<Base,
                                               proper_actor<Base,
                                                            Policies,
@@ -201,10 +201,10 @@ class proper_actor : public proper_actor_base<Base,
         CPPA_LOG_DEBUG(std::distance(this->cache_begin(), e)
                        << " elements in cache");
         for (auto i = this->cache_begin(); i != e; ++i) {
-            auto res = this->invoke_policy().invoke_message(this, *i, bhvr, mid);
-            if (res || !*i) {
+            auto im = this->invoke_policy().invoke_message(this, *i, bhvr, mid);
+            if (im || !*i) {
                 this->cache_erase(i);
-                if (res) return true;
+                if (im) return true;
                 // start anew, because we have invalidated our iterators now
                 return invoke_message_from_cache();
             }
@@ -244,7 +244,7 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
         this->scheduling_policy().launch(this, is_hidden);
     }
 
-    // implement blocking_untyped_actor::dequeue_response
+    // implement blocking_actor::dequeue_response
 
     void dequeue_response(behavior& bhvr, message_id mid) override {
         // try to dequeue from cache first

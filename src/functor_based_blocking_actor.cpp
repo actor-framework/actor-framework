@@ -34,7 +34,7 @@
 namespace cppa {
 namespace detail {
 
-void functor_based_blocking_actor::create(blocking_untyped_actor*, act_fun fun) {
+void functor_based_blocking_actor::create(blocking_actor*, act_fun fun) {
     m_act = fun;
 }
 

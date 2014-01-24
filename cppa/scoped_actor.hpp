@@ -32,10 +32,13 @@
 #define CPPA_SCOPED_ACTOR_HPP
 
 #include "cppa/behavior.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
+#include "cppa/blocking_actor.hpp"
 
 namespace cppa {
 
+/**
+ * @brief A scoped handle to a blocking actor.
+ */
 class scoped_actor {
 
  public:
@@ -48,15 +51,15 @@ class scoped_actor {
 
     ~scoped_actor();
 
-    inline blocking_untyped_actor* operator->() const {
+    inline blocking_actor* operator->() const {
         return m_self.get();
     }
 
-    inline blocking_untyped_actor& operator*() const {
+    inline blocking_actor& operator*() const {
         return *m_self;
     }
 
-    inline blocking_untyped_actor* get() const {
+    inline blocking_actor* get() const {
         return m_self.get();
     }
 
@@ -82,7 +85,7 @@ class scoped_actor {
 
     bool m_hidden;
     actor_id m_prev; // used for logging/debugging purposes only
-    intrusive_ptr<blocking_untyped_actor> m_self;
+    intrusive_ptr<blocking_actor> m_self;
 
 };
 

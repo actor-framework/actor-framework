@@ -60,6 +60,7 @@ class deserializer;
  */
 typedef std::uint32_t actor_id;
 
+class actor;
 class abstract_actor;
 
 typedef intrusive_ptr<abstract_actor> abstract_actor_ptr;
@@ -100,6 +101,9 @@ class abstract_actor : public abstract_channel {
      *              execution of this Actor.
      */
     virtual void link_to(const actor_addr& other);
+
+    void link_to(const actor& whom);
+
 
     /**
      * @brief Unlinks this actor from @p other.

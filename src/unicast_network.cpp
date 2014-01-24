@@ -68,9 +68,10 @@ using namespace io;
 void publish(actor whom, std::unique_ptr<acceptor> aptr) {
     CPPA_LOGF_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(aptr, get));
     if (!whom) return;
-    get_actor_registry()->put(whom->id(), detail::actor_addr_cast<abstract_actor>(whom));
+    get_actor_registry()->put(whom->id(), detail::raw_access::get(whom));
     auto mm = get_middleman();
-    mm->register_acceptor(whom, new peer_acceptor(mm, move(aptr), whom));
+    auto addr = whom->address();
+    mm->register_acceptor(addr, new peer_acceptor(mm, move(aptr), addr));
 }
 
 void publish(actor whom, std::uint16_t port, const char* addr) {

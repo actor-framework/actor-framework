@@ -42,7 +42,7 @@ any_tuple split_line(const line& l) {
     return any_tuple::view(std::move(result));
 }
 
-void client(untyped_actor* self, const string& name) {
+void client(event_based_actor* self, const string& name) {
     self->become (
         on(atom("broadcast"), arg_match) >> [=](const string& message) {
             for(auto& dest : self->joined_groups()) {

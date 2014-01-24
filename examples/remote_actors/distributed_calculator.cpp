@@ -26,7 +26,7 @@ using namespace cppa;
 using namespace cppa::placeholders;
 
 // our "service"
-void calculator(untyped_actor* self) {
+void calculator(event_based_actor* self) {
     self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) -> any_tuple {
             return make_any_tuple(atom("result"), a + b);
@@ -49,13 +49,13 @@ inline string trim(std::string s) {
     return s;
 }
 
-void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const actor& server) {
+void client_bhvr(event_based_actor* self, const string& host, uint16_t port, const actor& server) {
     // recover from sync failures by trying to reconnect to server
     if (!self->has_sync_failure_handler()) {
         self->on_sync_failure([=] {
             aout(self) << "*** lost connection to " << host
                        << ":" << port << endl;
-            client_bhvr(self, host, port, nullptr);
+            client_bhvr(self, host, port, invalid_actor);
         });
     }
     // connect to server if needed
@@ -74,7 +74,7 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
         }
     }
     self->become (
-        on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != nullptr) >> [=](atom_value op, int lhs, int rhs) {
+        on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != invalid_actor) >> [=](atom_value op, int lhs, int rhs) {
             self->sync_send_tuple(server, self->last_dequeued()).then(
                 on(atom("result"), arg_match) >> [=](int result) {
                     aout(self) << lhs << " "
@@ -86,15 +86,15 @@ void client_bhvr(untyped_actor* self, const string& host, uint16_t port, const a
         },
         on_arg_match >> [=](const down_msg&) {
             aout(self) << "*** server down, try to reconnect ..." << endl;
-            client_bhvr(self, host, port, nullptr);
+            client_bhvr(self, host, port, invalid_actor);
         },
         on(atom("rebind"), arg_match) >> [=](const string& host, uint16_t port) {
             aout(self) << "*** rebind to new server: "
                        << host << ":" << port << endl;
-            client_bhvr(self, host, port, nullptr);
+            client_bhvr(self, host, port, invalid_actor);
         },
         on(atom("reconnect")) >> [=] {
-            client_bhvr(self, host, port, nullptr);
+            client_bhvr(self, host, port, invalid_actor);
         }
     );
 }
@@ -108,7 +108,7 @@ void client_repl(const string& host, uint16_t port) {
             "connect <host> <port>  Reconfigure server"
          << endl << endl;
     string line;
-    auto client = spawn(client_bhvr, host, port, nullptr);
+    auto client = spawn(client_bhvr, host, port, invalid_actor);
     const char connect[] = "connect ";
     while (getline(cin, line)) {
         line = trim(std::move(line)); // ignore leading and trailing whitespaces

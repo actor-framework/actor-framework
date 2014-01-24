@@ -52,7 +52,7 @@ response_promise::operator bool() const {
 
 void response_promise::deliver(any_tuple msg) {
     if (m_to) {
-        auto ptr = detail::actor_addr_cast<abstract_actor>(m_to);
+        auto ptr = detail::raw_access::get(m_to);
         ptr->enqueue({m_from, ptr, m_id}, move(msg));
         m_to = invalid_actor_addr;
     }

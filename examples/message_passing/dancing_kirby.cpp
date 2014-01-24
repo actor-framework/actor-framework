@@ -53,7 +53,7 @@ void draw_kirby(const animation_step& animation) {
 }
 
 // uses a message-based loop to iterate over all animation steps
-void dancing_kirby(untyped_actor* self) {
+void dancing_kirby(event_based_actor* self) {
     // let's get it started
     self->send(self, atom("Step"), size_t{0});
     self->become (

@@ -31,20 +31,20 @@
 #ifndef FUNCTOR_BASED_BLOCKING_ACTOR_HPP
 #define FUNCTOR_BASED_BLOCKING_ACTOR_HPP
 
-#include "cppa/blocking_untyped_actor.hpp"
+#include "cppa/blocking_actor.hpp"
 
 namespace cppa {
 namespace detail {
 
-class functor_based_blocking_actor : public blocking_untyped_actor {
+class functor_based_blocking_actor : public blocking_actor {
 
  public:
 
-    typedef std::function<void (blocking_untyped_actor*)> act_fun;
+    typedef std::function<void (blocking_actor*)> act_fun;
 
     template<typename F, typename... Ts>
     functor_based_blocking_actor(F f, Ts&&... vs) {
-        blocking_untyped_actor* dummy = nullptr;
+        blocking_actor* dummy = nullptr;
         create(dummy, f, std::forward<Ts>(vs)...);
     }
 
@@ -54,7 +54,7 @@ class functor_based_blocking_actor : public blocking_untyped_actor {
 
  private:
 
-    void create(blocking_untyped_actor*, act_fun);
+    void create(blocking_actor*, act_fun);
 
     template<class Actor, typename F, typename T0, typename... Ts>
     auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs) ->

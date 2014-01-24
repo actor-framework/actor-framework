@@ -95,7 +95,7 @@ inline void insert_dmsg(Map& storage, const util::duration& d,
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final : public detail::proper_actor<blocking_untyped_actor,
+class timer_actor final : public detail::proper_actor<blocking_actor,
                                                       timer_actor_policies> {
 
  public:
@@ -194,7 +194,7 @@ class scheduler_helper {
 
     static void timer_loop(timer_actor* self);
 
-    static void printer_loop(blocking_untyped_actor* self);
+    static void printer_loop(blocking_actor* self);
 
 };
 
@@ -202,7 +202,7 @@ void scheduler_helper::timer_loop(timer_actor* self) {
     self->act();
 }
 
-void scheduler_helper::printer_loop(blocking_untyped_actor* self) {
+void scheduler_helper::printer_loop(blocking_actor* self) {
     std::map<actor_addr, std::string> out;
     auto flush_output = [&out](const actor_addr& s) {
         auto i = out.find(s);

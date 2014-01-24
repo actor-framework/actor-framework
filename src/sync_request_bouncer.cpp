@@ -42,10 +42,11 @@ namespace cppa { namespace detail {
 sync_request_bouncer::sync_request_bouncer(std::uint32_t r)
 : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
 
-void sync_request_bouncer::operator()(const actor_addr& sender, const message_id& mid) const {
+void sync_request_bouncer::operator()(const actor_addr& sender,
+                                      const message_id& mid) const {
     CPPA_REQUIRE(rsn != exit_reason::not_exited);
     if (sender && mid.is_request()) {
-        auto ptr = detail::actor_addr_cast<abstract_actor>(sender);
+        auto ptr = detail::raw_access::get(sender);
         ptr->enqueue({invalid_actor_addr, ptr, mid.response_id()},
                      make_any_tuple(atom("EXITED"), rsn));
     }

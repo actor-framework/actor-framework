@@ -51,7 +51,7 @@
 
 namespace cppa {
 
-class untyped_actor;
+class event_based_actor;
 class scheduled_actor;
 class scheduler_helper;
 typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;

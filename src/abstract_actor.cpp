@@ -66,10 +66,14 @@ abstract_actor::abstract_actor()
 : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
 , m_exit_reason(exit_reason::not_exited) { }
 
+void abstract_actor::link_to(const actor& whom) {
+    link_to(whom->address());
+}
+
 bool abstract_actor::link_to_impl(const actor_addr& other) {
     if (other && other != this) {
         guard_type guard{m_mtx};
-        auto ptr = detail::actor_addr_cast<abstract_actor>(other);
+        auto ptr = detail::raw_access::get(other);
         // send exit message if already exited
         if (exited()) {
             ptr->enqueue({address(), ptr},
@@ -147,7 +151,7 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
         if (reason == exit_reason::not_exited) {
             auto i = std::find(m_links.begin(), m_links.end(), other);
             if (i == m_links.end()) {
-                m_links.push_back(detail::actor_addr_cast<abstract_actor>(other));
+                m_links.push_back(detail::raw_access::get(other));
                 return true;
             }
         }
@@ -165,7 +169,7 @@ bool abstract_actor::unlink_from_impl(const actor_addr& other) {
     if (!other) return false;
     guard_type guard{m_mtx};
     // remove_backlink returns true if this actor is linked to other
-    auto ptr = detail::actor_addr_cast<abstract_actor>(other);
+    auto ptr = detail::raw_access::get(other);
     if (!exited() && ptr->remove_backlink(address())) {
         auto i = std::find(m_links.begin(), m_links.end(), ptr);
         CPPA_REQUIRE(i != m_links.end());

@@ -45,13 +45,13 @@ class any_tuple;
 class actor_addr;
 class actor_proxy;
 class scoped_actor;
-class untyped_actor;
 class abstract_actor;
+class blocking_actor;
 class message_header;
 class partial_function;
 class uniform_type_info;
+class event_based_actor;
 class primitive_variant;
-class blocking_untyped_actor;
 
 // structs
 struct anything;

@@ -67,7 +67,7 @@ class context_switching_resume {
         mixin(Ts&&... args)
             : Base(std::forward<Ts>(args)...)
             , m_fiber(context_switching_resume::trampoline,
-                      static_cast<blocking_untyped_actor*>(this)) { }
+                      static_cast<blocking_actor*>(this)) { }
 
         resumable::resume_result resume(util::fiber* from) override {
             CPPA_REQUIRE(from != nullptr);

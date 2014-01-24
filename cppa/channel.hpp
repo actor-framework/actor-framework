@@ -47,10 +47,7 @@ struct invalid_actor_t;
 namespace detail { class raw_access; }
 
 /**
- * @brief Interface for all message receivers.
- *
- * This interface describes an entity that can receive messages
- * and is implemented by {@link actor} and {@link group}.
+ * @brief A handle to instances of {@link abstract_channel}.
  */
 class channel : util::comparable<channel>
               , util::comparable<channel, actor>
@@ -64,12 +61,14 @@ class channel : util::comparable<channel>
 
     channel(const actor&);
 
-    channel(const std::nullptr_t&);
-
     channel(const invalid_actor_t&);
 
     template<typename T>
-    channel(intrusive_ptr<T> ptr, typename std::enable_if<std::is_base_of<abstract_channel, T>::value>::type* = 0) : m_ptr(ptr) { }
+    channel(intrusive_ptr<T> ptr,
+            typename std::enable_if<
+                std::is_base_of<abstract_channel, T>::value
+            >::type* = 0)
+        : m_ptr(ptr) { }
 
     channel(abstract_channel* ptr);
 
@@ -85,7 +84,8 @@ class channel : util::comparable<channel>
 
     intptr_t compare(const abstract_channel* other) const;
 
-    static intptr_t compare(const abstract_channel* lhs, const abstract_channel* rhs);
+    static intptr_t compare(const abstract_channel* lhs,
+                            const abstract_channel* rhs);
 
  private:
 

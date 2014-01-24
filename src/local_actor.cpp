@@ -55,11 +55,9 @@ class down_observer : public attachable {
     }
 
     void actor_exited(std::uint32_t reason) {
-        if (m_observer) {
-            auto ptr = detail::actor_addr_cast<abstract_actor>(m_observer);
-            message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
-            hdr.deliver(make_any_tuple(down_msg{m_observed, reason}));
-        }
+        auto ptr = detail::raw_access::get(m_observer);
+        message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
+        hdr.deliver(make_any_tuple(down_msg{m_observed, reason}));
     }
 
     bool matches(const attachable::token& match_token) {
@@ -72,15 +70,13 @@ class down_observer : public attachable {
 
 };
 
-constexpr const char* s_default_debug_name = "actor";
-
 } // namespace <anonymous>
 
 local_actor::local_actor()
-: m_trap_exit(false)
-, m_dummy_node(), m_current_node(&m_dummy_node)
-, m_planned_exit_reason(exit_reason::not_exited)
-, m_state(actor_state::ready) {
+        : m_trap_exit(false)
+        , m_dummy_node(), m_current_node(&m_dummy_node)
+        , m_planned_exit_reason(exit_reason::not_exited)
+        , m_state(actor_state::ready) {
     m_node = node_id::get();
 }
 
@@ -88,13 +84,13 @@ local_actor::~local_actor() { }
 
 void local_actor::monitor(const actor_addr& whom) {
     if (!whom) return;
-    auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
+    auto ptr = detail::raw_access::get(whom);
     ptr->attach(attachable_ptr{new down_observer(address(), whom)});
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
     if (!whom) return;
-    auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
+    auto ptr = detail::raw_access::get(whom);
     attachable::token mtoken{typeid(down_observer), this};
     ptr->detach(mtoken);
 }
@@ -124,10 +120,10 @@ void local_actor::reply_message(any_tuple&& what) {
     if (!whom) return;
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_tuple(detail::actor_addr_cast<abstract_actor>(whom), std::move(what));
+        send_tuple(detail::raw_access::get(whom), std::move(what));
     }
     else if (!id.is_answered()) {
-        auto ptr = detail::actor_addr_cast<abstract_actor>(whom);
+        auto ptr = detail::raw_access::get(whom);
         ptr->enqueue({address(), ptr, id.response_id()}, std::move(what));
         id.mark_as_answered();
     }
@@ -205,6 +201,12 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
     get_scheduler()->delayed_send({address(), this, rri}, rtime,
                                   make_any_tuple(sync_timeout_msg{}));
     return rri;
+}
+
+void anon_send_exit(const actor_addr& whom, std::uint32_t reason) {
+    auto ptr = detail::raw_access::get(whom);
+    ptr->enqueue({invalid_actor_addr, ptr, message_id{}.with_high_priority()},
+                 make_any_tuple(exit_msg{invalid_actor_addr, reason}));
 }
 
 } // namespace cppa

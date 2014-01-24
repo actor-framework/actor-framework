@@ -41,14 +41,14 @@ namespace cppa {
 #ifdef CPPA_DOCUMENTATION
 
 /**
- * @brief Policy tag that causes {@link untyped_actor::become} to
+ * @brief Policy tag that causes {@link event_based_actor::become} to
  *        discard the current behavior.
  * @relates local_actor
  */
 constexpr auto discard_behavior;
 
 /**
- * @brief Policy tag that causes {@link untyped_actor::become} to
+ * @brief Policy tag that causes {@link event_based_actor::become} to
  *        keep the current behavior available.
  * @relates local_actor
  */

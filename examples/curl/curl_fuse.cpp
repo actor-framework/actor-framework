@@ -112,7 +112,7 @@ constexpr int max_req_interval = 300;
 } // namespace <anonymous>
 
 // provides print utility and each base_actor has a parent
-class base_actor : public untyped_actor {
+class base_actor : public event_based_actor {
 
  protected:
 
@@ -308,7 +308,7 @@ class curl_master : public base_actor {
 
  public:
 
-    curl_master() : base_actor(nullptr, "curl_master", color::magenta) { }
+    curl_master() : base_actor(invalid_actor, "curl_master", color::magenta) { }
 
  protected:
 

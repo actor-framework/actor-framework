@@ -87,7 +87,7 @@ const std::string& group::module_name() const {
     return get_module()->name();
 }
 
-struct group_nameserver : untyped_actor {
+struct group_nameserver : event_based_actor {
     behavior make_behavior() override {
         return (
             on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {

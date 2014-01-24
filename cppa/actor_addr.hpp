@@ -43,18 +43,23 @@
 
 namespace cppa {
 
-class actor;
 class local_actor;
 class actor_namespace;
 
 namespace detail { class raw_access; }
 
+/**
+ * @brief Identifies an invalid {@link actor_addr}.
+ * @relates actor_addr
+ */
 struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } };
 
 constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
+/**
+ * @brief Stores the address of typed as well as untyped actors.
+ */
 class actor_addr : util::comparable<actor_addr>
-                 , util::comparable<actor_addr, actor>
                  , util::comparable<actor_addr, abstract_actor*>
                  , util::comparable<actor_addr, abstract_actor_ptr> {
 
@@ -64,37 +69,45 @@ class actor_addr : util::comparable<actor_addr>
  public:
 
     actor_addr() = default;
+
     actor_addr(actor_addr&&) = default;
+
     actor_addr(const actor_addr&) = default;
+
     actor_addr& operator=(actor_addr&&) = default;
+
     actor_addr& operator=(const actor_addr&) = default;
 
-    actor_addr(const actor&);
-    actor_addr& operator=(const actor&);
-
     actor_addr(const invalid_actor_addr_t&);
+
     actor_addr operator=(const invalid_actor_addr_t&);
 
-    explicit operator bool() const;
-    bool operator!() const;
-
-    inline bool valid() const {
-        return static_cast<bool>(*this);
+    inline explicit operator bool() const {
+        return valid();
     }
 
-    intptr_t compare(const actor& other) const;
+    inline bool operator!() const {
+        return !valid();
+    }
+
+    inline bool valid() const {
+        return m_ops.valid();
+    }
+
     intptr_t compare(const actor_addr& other) const;
+
     intptr_t compare(const abstract_actor* other) const;
 
     inline intptr_t compare(const abstract_actor_ptr& other) const {
         return compare(other.get());
     }
 
-    inline untyped_actor_handle* operator->() const {
-        // this const cast is safe, because untyped_actor_handle cannot be
-        // modified anyways and the offered operations are intended to
-        // be called on const elements
-        return const_cast<untyped_actor_handle*>(&m_ops);
+    inline const untyped_actor_handle* operator->() const {
+        return &m_ops;
+    }
+
+    inline const untyped_actor_handle& operator*() const {
+        return m_ops;
     }
 
  private:

@@ -87,7 +87,7 @@ optional<int> str2int(const std::string& str) {
         CPPA_FAILURE(#FunName " erroneously invoked");                         \
     } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
 
-struct dummy_receiver : untyped_actor {
+struct dummy_receiver : event_based_actor {
     behavior make_behavior() override {
         return (
             on_arg_match >> [=](expensive_copy_struct& ecs) -> expensive_copy_struct {

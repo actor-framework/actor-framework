@@ -162,7 +162,8 @@ class middleman {
      *        to the event loop of the middleman.
      * @note This member function is thread-safe.
      */
-    virtual void register_acceptor(const actor_addr& pa, peer_acceptor* ptr) = 0;
+    virtual void register_acceptor(const actor_addr& pa,
+                                   peer_acceptor* ptr) = 0;
 
     /**
      * @brief Returns the namespace that contains all remote actors

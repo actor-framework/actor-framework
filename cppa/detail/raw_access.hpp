@@ -65,12 +65,6 @@ class raw_access {
 
 };
 
-// utility function to get raw access + cast to a related type in one call
-template<typename T>
-T* actor_addr_cast(const actor_addr& hdl) {
-    return static_cast<T*>(raw_access::get(hdl));
-}
-
 } } // namespace cppa::detail
 
 #endif // CPPA_RAW_ACCESS_HPP

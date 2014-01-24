@@ -190,7 +190,7 @@ void serialize_impl(const actor& ptr, serializer* sink) {
 void deserialize_impl(actor& ptr, deserializer* source) {
     actor_addr addr;
     deserialize_impl(addr, source);
-    ptr = detail::raw_access::unsafe_cast(detail::actor_addr_cast<abstract_actor>(addr));
+    ptr = detail::raw_access::unsafe_cast(addr);
 }
 
 void serialize_impl(const group_ptr& ptr, serializer* sink) {
@@ -255,7 +255,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
         case 1: {
             actor tmp;
             deserialize_impl(tmp, source);
-            ptrref = detail::actor_addr_cast<abstract_actor>(tmp);
+            ptrref = detail::raw_access::get(tmp);
             break;
         }
         case 2: {
@@ -273,7 +273,10 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
 
 void serialize_impl(const any_tuple& tup, serializer* sink) {
     auto tname = tup.tuple_type_names();
-    auto uti = get_uniform_type_info_map()->by_uniform_name(tname ? *tname : detail::get_tuple_type_names(*tup.vals()));
+    auto uti = get_uniform_type_info_map()
+               ->by_uniform_name(tname
+                                ? *tname
+                                : detail::get_tuple_type_names(*tup.vals()));
     if (uti == nullptr) {
         std::string err = "could not get uniform type info for \"";
         err += tname ? *tname : detail::get_tuple_type_names(*tup.vals());
@@ -520,7 +523,8 @@ class int_tinfo : public abstract_int_tinfo {
 
     bool equals(const std::type_info& ti) const {
         auto tptr = &ti;
-        return std::any_of(m_natives.begin(), m_natives.end(), [tptr](const std::type_info* ptr) {
+        return std::any_of(m_natives.begin(), m_natives.end(),
+                           [tptr](const std::type_info* ptr) {
             return types_equal(ptr, tptr);
         });
     }
@@ -787,21 +791,21 @@ class utim_impl : public uniform_type_info_map {
         auto cmp = [](pointer lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         };
-        if (!std::is_sorted(m_builtin_types.begin(), m_builtin_types.end(), cmp)) {
-            std::cerr << "FATAL: uniform type map not sorted" << std::endl;
-
-            std::cerr << "order is:" << std::endl;
-            for (auto ptr : m_builtin_types) std::cerr << ptr->name() << std::endl;
-
-            std::sort(m_builtin_types.begin(), m_builtin_types.end(), cmp);
-            std::cerr << "\norder should be:" << std::endl;
-            for (auto ptr : m_builtin_types) std::cerr << ptr->name() << std::endl;
+        auto& arr = m_builtin_types;
+        if (!std::is_sorted(arr.begin(), arr.end(), cmp)) {
+            std::cerr << "FATAL: uniform type map not sorted" << std::endl
+                      << "order is:" << std::endl;
+            for (auto ptr : arr) std::cerr << ptr->name() << std::endl;
+            std::sort(arr.begin(), arr.end(), cmp);
+            std::cerr << std::endl << "order should be:" << std::endl;
+            for (auto ptr : arr) std::cerr << ptr->name() << std::endl;
             abort();
         }
         auto cmp2 = [](const char** lhs, const char** rhs) {
             return strcmp(lhs[0], rhs[0]) < 0;
         };
-        if (!std::is_sorted(std::begin(mapped_type_names), std::end(mapped_type_names), cmp2)) {
+        if (!std::is_sorted(std::begin(mapped_type_names),
+                            std::end(mapped_type_names), cmp2)) {
             std::cerr << "FATAL: mapped_type_names not sorted" << std::endl;
             abort();
         }
@@ -847,7 +851,8 @@ class utim_impl : public uniform_type_info_map {
     pointer insert(std::unique_ptr<uniform_type_info> uti) {
         std::unique_lock<util::shared_spinlock> guard(m_lock);
         auto e = m_user_types.end();
-        auto i = std::lower_bound(m_user_types.begin(), e, uti.get(), [](uniform_type_info* lhs, pointer rhs) {
+        auto i = std::lower_bound(m_user_types.begin(), e, uti.get(),
+                                  [](uniform_type_info* lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         });
         if (i == e) {
@@ -934,7 +939,8 @@ class utim_impl : public uniform_type_info_map {
     pointer find_name(const Container& c, const std::string& name) const {
         auto e = c.end();
         // both containers are sorted
-        auto i = std::lower_bound(c.begin(), e, name, [](pointer p, const std::string& n) {
+        auto i = std::lower_bound(c.begin(), e, name,
+                                  [](pointer p, const std::string& n) {
             return p->name() < n;
         });
         return (i != e && (*i)->name() == name) ? *i : nullptr;

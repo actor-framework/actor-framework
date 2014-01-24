@@ -5,7 +5,7 @@
 using namespace std;
 using namespace cppa;
 
-behavior mirror(untyped_actor* self) {
+behavior mirror(event_based_actor* self) {
     // wait for messages
     return (
         // invoke this lambda expression if we receive a string
@@ -20,7 +20,7 @@ behavior mirror(untyped_actor* self) {
     );
 }
 
-void hello_world(untyped_actor* self, const actor& buddy) {
+void hello_world(event_based_actor* self, const actor& buddy) {
     // send "Hello World!" to our buddy ...
     self->sync_send(buddy, "Hello World!").then(
         // ... and wait for a response

@@ -19,7 +19,7 @@ struct float_or_int : sb_actor<float_or_int> {
     );
 };
 
-struct popular_actor : untyped_actor { // popular actors have a buddy
+struct popular_actor : event_based_actor { // popular actors have a buddy
     actor m_buddy;
     popular_actor(const actor& buddy) : m_buddy(buddy) { }
     inline const actor& buddy() const { return m_buddy; }
@@ -137,7 +137,7 @@ struct D : popular_actor {
  *                  X                                                         *
 \******************************************************************************/
 
-struct server : untyped_actor {
+struct server : event_based_actor {
 
     behavior make_behavior() override {
         auto die = [=] { quit(exit_reason::user_shutdown); };
@@ -165,7 +165,7 @@ void test_sync_send() {
     self->on_sync_failure([&] {
         CPPA_FAILURE("received: " << to_string(self->last_dequeued()));
     });
-    self->spawn<monitored + blocking_api>([](blocking_untyped_actor* self) {
+    self->spawn<monitored + blocking_api>([](blocking_actor* self) {
         CPPA_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << self->id());
         int invocations = 0;
         auto foi = self->spawn<float_or_int, linked>();
@@ -280,9 +280,9 @@ void test_sync_send() {
     CPPA_CHECKPOINT();
 
     // test use case 3
-    self->spawn<monitored + blocking_api>([](blocking_untyped_actor* self) { // client
+    self->spawn<monitored + blocking_api>([](blocking_actor* self) { // client
         auto s = self->spawn<server, linked>();                        // server
-        auto w = self->spawn<linked>([](untyped_actor* self) {         // worker
+        auto w = self->spawn<linked>([](event_based_actor* self) {         // worker
             self->become(on(atom("request")) >> []{ return atom("response"); });
         });
         // first 'idle', then 'request'

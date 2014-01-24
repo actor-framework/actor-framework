@@ -42,23 +42,9 @@ intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
 }
 } // namespace <anonymous>
 
-actor_addr::actor_addr(const actor& other) : m_ops(detail::raw_access::get(other)) { }
-
 actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ops(nullptr) { }
 
 actor_addr::actor_addr(abstract_actor* ptr) : m_ops(ptr) { }
-
-actor_addr::operator bool() const {
-    return static_cast<bool>(m_ops.m_ptr);
-}
-
-bool actor_addr::operator!() const {
-    return !(m_ops.m_ptr);
-}
-
-intptr_t actor_addr::compare(const actor& other) const {
-    return compare_impl(m_ops.m_ptr.get(), detail::raw_access::get(other));
-}
 
 intptr_t actor_addr::compare(const actor_addr& other) const {
     return compare_impl(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
@@ -66,11 +52,6 @@ intptr_t actor_addr::compare(const actor_addr& other) const {
 
 intptr_t actor_addr::compare(const abstract_actor* other) const {
     return compare_impl(m_ops.m_ptr.get(), other);
-}
-
-actor_addr& actor_addr::operator=(const actor& other) {
-    m_ops.m_ptr = detail::raw_access::get(other);
-    return *this;
 }
 
 actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {

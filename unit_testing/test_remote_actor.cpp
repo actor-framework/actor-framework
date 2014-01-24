@@ -22,7 +22,7 @@ typedef std::pair<std::string, std::string> string_pair;
 
 typedef vector<actor> actor_vector;
 
-void reflector(untyped_actor* self) {
+void reflector(event_based_actor* self) {
     self->become (
         others() >> [=] {
             CPPA_LOGF_INFO("reflect and quit");
@@ -32,7 +32,7 @@ void reflector(untyped_actor* self) {
     );
 }
 
-void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
+void spawn5_server_impl(event_based_actor* self, actor client, group_ptr grp) {
     CPPA_LOGF_TRACE(CPPA_TARG(client, to_string)
                     << ", " << CPPA_TARG(grp, to_string));
     self->spawn_in_group(grp, reflector);
@@ -103,7 +103,7 @@ void spawn5_server_impl(untyped_actor* self, actor client, group_ptr grp) {
 }
 
 // receive seven reply messages (2 local, 5 remote)
-void spawn5_server(untyped_actor* self, actor client, bool inverted) {
+void spawn5_server(event_based_actor* self, actor client, bool inverted) {
     if (!inverted) spawn5_server_impl(self, client, group::get("local", "foobar"));
     else {
         CPPA_LOGF_INFO("request group");
@@ -115,7 +115,7 @@ void spawn5_server(untyped_actor* self, actor client, bool inverted) {
     }
 }
 
-void spawn5_client(untyped_actor* self) {
+void spawn5_client(event_based_actor* self) {
     self->become (
         on(atom("GetGroup")) >> []() -> group_ptr {
             CPPA_LOGF_INFO("received {'GetGroup'}");
@@ -139,7 +139,7 @@ void spawn5_client(untyped_actor* self) {
 } // namespace <anonymous>
 
 template<typename F>
-void await_down(untyped_actor* self, actor ptr, F continuation) {
+void await_down(event_based_actor* self, actor ptr, F continuation) {
     self->become (
         on_arg_match >> [=](const down_msg& dm) -> bool {
             if (dm.source == ptr) {
@@ -153,7 +153,7 @@ void await_down(untyped_actor* self, actor ptr, F continuation) {
 
 static constexpr size_t num_pings = 10;
 
-class client : public untyped_actor {
+class client : public event_based_actor {
 
  public:
 
@@ -233,7 +233,7 @@ class client : public untyped_actor {
 
 };
 
-class server : public untyped_actor {
+class server : public event_based_actor {
 
  public:
 

@@ -147,7 +147,7 @@ set(LIBCPPA_SRC
     src/binary_serializer.cpp
     src/broker.cpp
     src/buffer.cpp
-    src/blocking_untyped_actor.cpp
+    src/blocking_actor.cpp
     src/channel.cpp
     src/context_switching_resume.cpp
     src/continuable.cpp
@@ -159,6 +159,7 @@ set(LIBCPPA_SRC
     src/deserializer.cpp
     src/duration.cpp
     src/empty_tuple.cpp
+    src/event_based_actor.cpp
     src/exception.cpp
     src/exit_reason.cpp
     src/fd_util.cpp
@@ -206,7 +207,6 @@ set(LIBCPPA_SRC
     src/uniform_type_info.cpp
     src/uniform_type_info_map.cpp
     src/untyped_actor_handle.cpp
-    src/untyped_actor.cpp
     src/weak_ptr_anchor.cpp
     src/yield_interface.cpp)
 

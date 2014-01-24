@@ -33,6 +33,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
@@ -44,9 +45,12 @@
 
 namespace cppa {
 
+class actor_addr;
 class actor_proxy;
-class untyped_actor;
-class blocking_untyped_actor;
+class blocking_actor;
+class event_based_actor;
+
+struct invalid_actor_addr_t;
 
 namespace io {
 class broker;
@@ -58,20 +62,36 @@ class raw_access;
 
 struct invalid_actor_t { constexpr invalid_actor_t() { } };
 
+/**
+ * @brief Identifies an invalid {@link actor}.
+ * @relates actor
+ */
 constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 /**
  * @brief Identifies an untyped actor.
+ *
+ * Can be used with derived types of {@link event_based_actor},
+ * {@link blocking_actor}, {@link actor_proxy}, or
+ * {@link io::broker}.
  */
-class actor : util::comparable<actor> {
+class actor : util::comparable<actor>
+            , util::comparable<actor, actor_addr>
+            , util::comparable<actor, invalid_actor_t>
+            , util::comparable<actor, invalid_actor_addr_t> {
 
     friend class detail::raw_access;
 
  public:
 
-    // untyped_actor_handle does not provide a virtual destructor
-    // -> no new members
+    /**
+     * @brief Extends {@link untyped_actor_handle} to grant
+     *        access to the enqueue member function.
+     */
     class handle : public untyped_actor_handle {
+
+        // untyped_actor_handle does not provide a virtual destructor
+        // -> no new members
 
         friend class actor;
 
@@ -81,6 +101,9 @@ class actor : util::comparable<actor> {
 
         handle() = default;
 
+        /**
+         * @brief Enqueues @p msg to the receiver specified in @p hdr.
+         */
         void enqueue(const message_header& hdr, any_tuple msg) const;
 
      private:
@@ -91,54 +114,113 @@ class actor : util::comparable<actor> {
 
     actor() = default;
 
+    actor(actor&&) = default;
+
+    actor(const actor&) = default;
+
     template<typename T>
     actor(intrusive_ptr<T> ptr,
           typename std::enable_if<
                  std::is_base_of<io::broker, T>::value
               || std::is_base_of<actor_proxy, T>::value
-              || std::is_base_of<untyped_actor, T>::value
-              || std::is_base_of<blocking_untyped_actor, T>::value
+              || std::is_base_of<blocking_actor, T>::value
+              || std::is_base_of<event_based_actor, T>::value
+          >::type* = 0)
+        : m_ops(std::move(ptr)) { }
+
+    template<typename T>
+    actor(T* ptr,
+          typename std::enable_if<
+                 std::is_base_of<io::broker, T>::value
+              || std::is_base_of<actor_proxy, T>::value
+              || std::is_base_of<event_based_actor, T>::value
+              || std::is_base_of<blocking_actor, T>::value
           >::type* = 0)
         : m_ops(ptr) { }
 
-    actor(const std::nullptr_t&);
-
-    actor(actor_proxy*);
-
-    actor(untyped_actor*);
-
-    actor(blocking_untyped_actor*);
-
     actor(const invalid_actor_t&);
 
-    explicit inline operator bool() const;
+    actor& operator=(actor&&) = default;
 
-    inline bool operator!() const;
+    actor& operator=(const actor&) = default;
 
+    template<typename T>
+    typename std::enable_if<
+           std::is_base_of<io::broker, T>::value
+        || std::is_base_of<actor_proxy, T>::value
+        || std::is_base_of<event_based_actor, T>::value
+        || std::is_base_of<blocking_actor, T>::value,
+        actor&
+    >::type
+    operator=(intrusive_ptr<T> ptr) {
+        actor tmp{std::move(ptr)};
+        swap(tmp);
+        return *this;
+    }
+
+    template<typename T>
+    typename std::enable_if<
+           std::is_base_of<io::broker, T>::value
+        || std::is_base_of<actor_proxy, T>::value
+        || std::is_base_of<event_based_actor, T>::value
+        || std::is_base_of<blocking_actor, T>::value,
+        actor&
+    >::type
+    operator=(T* ptr) {
+        actor tmp{ptr};
+        swap(tmp);
+        return *this;
+    }
+
+    actor& operator=(const invalid_actor_t&);
+
+    inline operator bool() const {
+        return static_cast<bool>(m_ops.m_ptr);
+    }
+
+    inline bool operator!() const {
+        return !static_cast<bool>(m_ops.m_ptr);
+    }
+
+    /**
+     * @brief Queries whether this handle is valid, i.e., points
+     *        to an instance of an untyped actor.
+     */
+    inline bool valid() const {
+        return static_cast<bool>(m_ops.m_ptr);
+    }
+
+    /**
+     * @brief Returns a handle that grants access to
+     *        actor operations such as enqueue.
+     */
     inline const handle* operator->() const {
-        // this const cast is safe, because untyped_actor_handle cannot be
-        // modified anyways and the offered operations are intended to
-        // be called on const elements
         return &m_ops;
+    }
+
+    inline const handle& operator*() const {
+        return m_ops;
     }
 
     intptr_t compare(const actor& other) const;
 
+    intptr_t compare(const invalid_actor_t&) const;
+
+    intptr_t compare(const actor_addr&) const;
+
+    inline intptr_t compare(const invalid_actor_addr_t&) const {
+        return compare(invalid_actor);
+    }
+
  private:
+
+    void swap(actor& other);
 
     actor(abstract_actor*);
 
     handle m_ops;
 
 };
-
-inline actor::operator bool() const {
-    return static_cast<bool>(m_ops.m_ptr);
-}
-
-inline bool actor::operator!() const {
-    return !static_cast<bool>(*this);
-}
 
 } // namespace cppa
 

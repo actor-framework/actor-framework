@@ -58,11 +58,11 @@
 #include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/actor_ostream.hpp"
-#include "cppa/untyped_actor.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/blocking_actor.hpp"
 #include "cppa/system_messages.hpp"
 #include "cppa/response_promise.hpp"
-#include "cppa/blocking_untyped_actor.hpp"
+#include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
 
@@ -459,9 +459,14 @@ inline void anon_send(const channel& receiver, Ts&&... args) {
     anon_send_tuple(receiver, make_any_tuple(std::forward<Ts>(args)...));
 }
 
-inline void anon_send_exit(const actor_addr&, std::uint32_t) {
+// implemented in local_actor.cpp
+void anon_send_exit(const actor_addr& whom, std::uint32_t reason);
 
+inline void anon_send_exit(const actor& whom, std::uint32_t reason) {
+    whom->enqueue({invalid_actor_addr, whom, message_id{}.with_high_priority()},
+                  make_any_tuple(exit_msg{invalid_actor_addr, reason}));
 }
+
 
 /**
  * @brief Blocks execution of this actor until all

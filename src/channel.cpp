@@ -36,8 +36,6 @@
 
 namespace cppa {
 
-channel::channel(const std::nullptr_t&) : m_ptr(nullptr) { }
-
 channel::channel(const invalid_actor_t&) : m_ptr(nullptr) { }
 
 channel::channel(const actor& other) : m_ptr(detail::raw_access::get(other)) { }

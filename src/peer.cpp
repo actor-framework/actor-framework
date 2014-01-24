@@ -267,58 +267,65 @@ void peer::kill_proxy(const actor_addr& sender,
 void peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
     if (hdr.sender && hdr.sender->is_remote()) {
-        auto ptr = detail::actor_addr_cast<actor_proxy>(hdr.sender);
+        // is_remote() is guaranteed to return true if and only if
+        // the actor is derived from actor_proxy, hence we do not
+        // need to use a dynamic_cast here
+        auto ptr = static_cast<actor_proxy*>(detail::raw_access::get(hdr.sender));
         ptr->deliver(hdr, std::move(msg));
     }
     else hdr.deliver(std::move(msg));
 }
 
-void peer::link(const actor_addr& sender, const actor_addr& receiver) {
+void peer::link(const actor_addr& lhs, const actor_addr& rhs) {
     // this message is sent from default_actor_proxy in link_to and
     // establish_backling to cause the original actor (sender) to establish
     // a link to ptr as well
-    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
-                   << CPPA_TARG(receiver, to_string));
-    CPPA_LOG_ERROR_IF(!sender, "received 'LINK' from invalid sender");
-    CPPA_LOG_ERROR_IF(!receiver, "received 'LINK' with invalid receiver");
-    if (!sender || !receiver) return;
-    auto locally_link_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
-        detail::actor_addr_cast<actor_proxy>(lhs)->local_link_to(rhs);
+    CPPA_LOG_TRACE(CPPA_TARG(lhs, to_string) << ", "
+                   << CPPA_TARG(rhs, to_string));
+    CPPA_LOG_ERROR_IF(!lhs, "received 'LINK' from invalid sender");
+    CPPA_LOG_ERROR_IF(!rhs, "received 'LINK' with invalid receiver");
+    if (!lhs || !rhs) return;
+    auto locally_link_proxy = [](const actor_addr& proxy, const actor_addr& addr) {
+        // again, no need to to use a dynamic_cast here
+        auto ptr = static_cast<actor_proxy*>(detail::raw_access::get(proxy));
+        ptr->local_link_to(addr);
     };
-    switch ((sender->is_remote() ? 0x10 : 0x00) | (receiver->is_remote() ? 0x01 : 0x00)) {
+    switch ((lhs->is_remote() ? 0x10 : 0x00) | (rhs->is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
-            detail::actor_addr_cast<abstract_actor>(sender)->link_to(receiver);
+            detail::raw_access::get(lhs)->link_to(rhs);
             break;
         case 0x10: // sender is remote
-            locally_link_proxy(sender, receiver);
+            locally_link_proxy(lhs, rhs);
             break;
         case 0x01: // receiver is remote
-            locally_link_proxy(receiver, sender);
+            locally_link_proxy(rhs, lhs);
             break;
         default: CPPA_LOG_ERROR("logic error");
     }
 }
 
-void peer::unlink(const actor_addr& sender, const actor_addr& receiver) {
-    CPPA_LOG_TRACE(CPPA_TARG(sender, to_string) << ", "
-                   << CPPA_TARG(receiver, to_string));
-    CPPA_LOG_ERROR_IF(!sender, "received 'UNLINK' from invalid sender");
-    CPPA_LOG_ERROR_IF(!receiver, "received 'UNLINK' with invalid target");
-    if (!sender || !receiver) return;
-    auto locally_unlink_proxy = [](const actor_addr& lhs, const actor_addr& rhs) {
-        detail::actor_addr_cast<actor_proxy>(lhs)->local_unlink_from(rhs);
+void peer::unlink(const actor_addr& lhs, const actor_addr& rhs) {
+    CPPA_LOG_TRACE(CPPA_TARG(lhs, to_string) << ", "
+                   << CPPA_TARG(rhs, to_string));
+    CPPA_LOG_ERROR_IF(!lhs, "received 'UNLINK' from invalid sender");
+    CPPA_LOG_ERROR_IF(!rhs, "received 'UNLINK' with invalid target");
+    if (!lhs || !rhs) return;
+    auto locally_unlink_proxy = [](const actor_addr& proxy, const actor_addr& addr) {
+        // again, no need to to use a dynamic_cast here
+        auto ptr = static_cast<actor_proxy*>(detail::raw_access::get(proxy));
+        ptr->local_unlink_from(addr);
     };
-    switch ((sender->is_remote() ? 0x10 : 0x00) | (receiver->is_remote() ? 0x01 : 0x00)) {
+    switch ((lhs->is_remote() ? 0x10 : 0x00) | (rhs->is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
-            detail::actor_addr_cast<abstract_actor>(sender)->unlink_from(receiver);
+            detail::raw_access::get(lhs)->unlink_from(rhs);
             break;
         case 0x10: // sender is remote
-            locally_unlink_proxy(sender, receiver);
+            locally_unlink_proxy(lhs, rhs);
             break;
         case 0x01: // receiver is remote
-            locally_unlink_proxy(receiver, sender);
+            locally_unlink_proxy(rhs, lhs);
             break;
         default: CPPA_LOG_ERROR("logic error");
     }
