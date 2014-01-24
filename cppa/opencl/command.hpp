@@ -53,15 +53,14 @@ class command : public ref_counted {
 
     command(response_handle handle,
             intrusive_ptr<T> actor_facade,
-            std::vector<mem_ptr> arguments)
-        : m_number_of_values(std::accumulate(actor_facade->m_global_dimensions.begin(),
-                                             actor_facade->m_global_dimensions.end(),
-                                             1, std::multiplies<size_t>{}))
+            std::vector<mem_ptr> arguments,
+            size_t result_size)
+        : m_result_size(result_size)
         , m_handle(handle)
         , m_actor_facade(actor_facade)
         , m_queue(actor_facade->m_queue)
         , m_arguments(move(arguments))
-        , m_result(m_number_of_values) { }
+        , m_result(m_result_size) { }
 
     void enqueue () {
         CPPA_LOG_TRACE("command::enqueue()");
@@ -92,7 +91,7 @@ class command : public ref_counted {
                                       m_arguments[0].get(),
                                       CL_FALSE,
                                       0,
-                                      sizeof(typename R::value_type) * m_number_of_values,
+                                      sizeof(typename R::value_type) * m_result_size,
                                       m_result.data(),
                                       1,
                                       &event_k,
@@ -125,7 +124,7 @@ class command : public ref_counted {
 
  private:
 
-    int m_number_of_values;
+    int m_result_size;
     response_handle m_handle;
     intrusive_ptr<T> m_actor_facade;
     event_ptr m_kernel_event;
