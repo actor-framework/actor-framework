@@ -18,7 +18,12 @@ namespace {
 using ivec = vector<int>;
 
 constexpr size_t matrix_size = 4;
+constexpr size_t array_size = 32;
+
 constexpr const char* kernel_name = "matrix_square";
+constexpr const char* kernel_name_compiler_flag = "compiler_flag";
+
+constexpr const char* compiler_flag = "-D OPENCL_CPPA_TEST_FLAG";
 
 constexpr const char* kernel_source = R"__(
     __kernel void matrix_square(__global int* matrix,
@@ -35,8 +40,20 @@ constexpr const char* kernel_source = R"__(
 )__";
 
 constexpr const char* kernel_source_error = R"__(
-    __kernel void matrix_square(__global int*) {
+    __kernel void missing(__global int*) {
         size_t semicolon
+    }
+)__";
+
+constexpr const char* kernel_source_compiler_flag = R"__(
+    __kernel void compiler_flag(__global int* input,
+                                __global int* output) {
+        size_t x = get_global_id(0);
+#ifdef OPENCL_CPPA_TEST_FLAG
+        output[x] = input[x];
+#else
+        output[x] = 0;
+#endif
     }
 )__";
 
@@ -108,7 +125,7 @@ int main() {
     announce<ivec>();
     announce<matrix_type>();
 
-    const ivec expected1{ 56, 62, 68, 74
+    const ivec expected1{  56,  62,  68,  74
                         , 152, 174, 196, 218
                         , 248, 286, 324, 362
                         , 344, 398, 452, 506};
@@ -117,7 +134,7 @@ int main() {
                                          kernel_name,
                                          {matrix_size, matrix_size});
     ivec m1(matrix_size * matrix_size);
-    iota(m1.begin(), m1.end(), 0);
+    iota(begin(m1), end(m1), 0);
     send(worker1, move(m1));
     receive (
         on_arg_match >> [&] (const ivec& result) {
@@ -129,7 +146,7 @@ int main() {
                                          kernel_name,
                                          {matrix_size, matrix_size});
     ivec m2(matrix_size * matrix_size);
-    iota(m2.begin(), m2.end(), 0);
+    iota(begin(m2), end(m2), 0);
     send(worker2, move(m2));
     receive (
         on_arg_match >> [&] (const ivec& result) {
@@ -184,6 +201,20 @@ int main() {
         cout << exc.what() << endl;
         CPPA_CHECK_EQUAL("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what());
     }
+
+    ivec arr5(array_size);
+    iota(begin(arr5), end(arr5), 0);
+    auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
+    auto worker5 = spawn_cl<ivec(ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
+    send(worker5, move(arr5));
+
+    ivec expected3(array_size);
+    iota(begin(expected3), end(expected3), 0);
+    receive (
+        on_arg_match >> [&] (const ivec& result) {
+            CPPA_CHECK(equal(begin(expected3), end(expected3), begin(result)));
+        }
+    );
 
     cppa::await_all_others_done();
     cppa::shutdown();

@@ -57,7 +57,7 @@ class program {
      *        from a given @p kernel_source.
      * @returns A program object.
      */
-    static program create(const char* kernel_source, uint32_t device_id = 0);
+    static program create(const char* kernel_source, const char* options = nullptr, uint32_t device_id = 0);
 
  private:
 
