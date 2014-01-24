@@ -45,7 +45,7 @@ namespace cppa { namespace opencl {
 program::program(context_ptr context, command_queue_ptr queue, program_ptr program)
 : m_context(move(context)), m_program(move(program)), m_queue(move(queue)) { }
 
-program program::create(const char* kernel_source, uint32_t device_id) {
+program program::create(const char* kernel_source, const char* options, uint32_t device_id) {
     auto metainfo = get_opencl_metainfo();
     auto devices  = metainfo->get_devices();
     auto context  = metainfo->m_context;
@@ -77,7 +77,7 @@ program program::create(const char* kernel_source, uint32_t device_id) {
 
     // build programm from program object
     auto dev_tmp = devices[device_id].m_device.get();
-    err = clBuildProgram(pptr.get(), 1, &dev_tmp, nullptr, nullptr, nullptr);
+    err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clBuildProgram: " << get_opencl_error(err);
