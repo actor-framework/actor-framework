@@ -447,6 +447,18 @@ void send_as(const actor& from, const channel& to, Ts&&... args) {
     send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
 }
 
+/**
+ * @brief Sets the maximum size of a message.
+ * @param size The maximum number of bytes a message may occupy.
+ */
+void max_msg_size(size_t size);
+
+/**
+ * @brief Retrieves the maximum size of messages.
+ * @returns The number maximum number of bytes a message may occupy.
+ */
+size_t max_msg_size();
+
 inline void anon_send_tuple(const channel& to, any_tuple msg) {
     to.enqueue({invalid_actor_addr, to}, std::move(msg));
 }
