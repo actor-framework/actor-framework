@@ -36,23 +36,19 @@
 
 namespace cppa {
 
+channel::channel(const actor& other) : m_ptr(detail::raw_access::get(other)) { }
+
+channel::channel(const group& other) : m_ptr(detail::raw_access::get(other)) { }
+
 channel::channel(const invalid_actor_t&) : m_ptr(nullptr) { }
 
-channel::channel(const actor& other) : m_ptr(detail::raw_access::get(other)) { }
+channel::channel(const invalid_group_t&) : m_ptr(nullptr) { }
 
 intptr_t channel::compare(const abstract_channel* lhs, const abstract_channel* rhs) {
     return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 
 channel::channel(abstract_channel* ptr) : m_ptr(ptr) { }
-
-channel::operator bool() const {
-    return static_cast<bool>(m_ptr);
-}
-
-bool channel::operator!() const {
-    return !m_ptr;
-}
 
 void channel::enqueue(const message_header& hdr, any_tuple msg) const {
     if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));

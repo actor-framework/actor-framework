@@ -37,7 +37,7 @@ namespace cppa {
 
 // classes
 class actor;
-class abstract_group;
+class group;
 class channel;
 class node_id;
 class behavior;
@@ -46,6 +46,7 @@ class actor_addr;
 class actor_proxy;
 class scoped_actor;
 class abstract_actor;
+class abstract_group;
 class blocking_actor;
 class message_header;
 class partial_function;
@@ -66,7 +67,7 @@ template<typename> class intrusive_ptr;
 template<typename> class weak_intrusive_ptr;
 
 // intrusive pointer typedefs
-typedef intrusive_ptr<abstract_group>               group_ptr;
+typedef intrusive_ptr<abstract_group>      abstract_group_ptr;
 typedef intrusive_ptr<actor_proxy>         actor_proxy_ptr;
 typedef intrusive_ptr<node_id>             node_id_ptr;
 

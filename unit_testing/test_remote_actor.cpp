@@ -32,9 +32,10 @@ void reflector(event_based_actor* self) {
     );
 }
 
-void spawn5_server_impl(event_based_actor* self, actor client, group_ptr grp) {
+void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
     CPPA_LOGF_TRACE(CPPA_TARG(client, to_string)
                     << ", " << CPPA_TARG(grp, to_string));
+    CPPA_CHECK(grp != invalid_group);
     self->spawn_in_group(grp, reflector);
     self->spawn_in_group(grp, reflector);
     CPPA_LOGF_INFO("send {'Spawn5'} and await {'ok', actor_vector}");
@@ -104,11 +105,11 @@ void spawn5_server_impl(event_based_actor* self, actor client, group_ptr grp) {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(event_based_actor* self, actor client, bool inverted) {
-    if (!inverted) spawn5_server_impl(self, client, abstract_group::get("local", "foobar"));
+    if (!inverted) spawn5_server_impl(self, client, group::get("local", "foobar"));
     else {
         CPPA_LOGF_INFO("request group");
         self->sync_send(client, atom("GetGroup")).then (
-            [=](const group_ptr& remote_group) {
+            [=](const group& remote_group) {
                 spawn5_server_impl(self, client, remote_group);
             }
         );
@@ -117,11 +118,11 @@ void spawn5_server(event_based_actor* self, actor client, bool inverted) {
 
 void spawn5_client(event_based_actor* self) {
     self->become (
-        on(atom("GetGroup")) >> []() -> group_ptr {
+        on(atom("GetGroup")) >> []() -> group {
             CPPA_LOGF_INFO("received {'GetGroup'}");
-            return abstract_group::get("local", "foobar");
+            return group::get("local", "foobar");
         },
-        on(atom("Spawn5"), arg_match) >> [=](const group_ptr& grp) -> any_tuple {
+        on(atom("Spawn5"), arg_match) >> [=](const group& grp) -> any_tuple {
             CPPA_LOGF_INFO("received {'Spawn5'}");
             actor_vector vec;
             for (int i = 0; i < 5; ++i) {
@@ -205,6 +206,7 @@ class client : public event_based_actor {
         CPPA_PRINT("test group communication via network");
         sync_send(m_server, atom("GClient")).then(
             on(atom("GClient"), arg_match) >> [=](actor gclient) {
+                CPPA_CHECKPOINT();
                 auto s5a = spawn<monitored>(spawn5_server, gclient, false);
                 await_down(this, s5a, [=]{
                     test_group_comm_inverted();
@@ -217,6 +219,7 @@ class client : public event_based_actor {
         CPPA_PRINT("test group communication via network (inverted setup)");
         become (
             on(atom("GClient")) >> [=]() -> any_tuple {
+                CPPA_CHECKPOINT();
                 auto cptr = last_sender();
                 auto s5c = spawn<monitored>(spawn5_client);
                 // set next behavior

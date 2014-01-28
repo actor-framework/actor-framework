@@ -165,7 +165,7 @@ struct is_builtin {
                                        any_tuple,
                                        message_header,
                                        actor,
-                                       group_ptr,
+                                       group,
                                        channel,
                                        node_id_ptr
                                    >::value;

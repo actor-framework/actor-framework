@@ -41,23 +41,6 @@
 
 namespace cppa {
 
-intrusive_ptr<abstract_group> abstract_group::get(const std::string& arg0,
-                                const std::string& arg1) {
-    return get_group_manager()->get(arg0, arg1);
-}
-
-intrusive_ptr<abstract_group> abstract_group::anonymous() {
-    return get_group_manager()->anonymous();
-}
-
-void abstract_group::add_module(abstract_group::unique_module_ptr ptr) {
-    get_group_manager()->add_module(std::move(ptr));
-}
-
-abstract_group::module_ptr abstract_group::get_module(const std::string& module_name) {
-    return get_group_manager()->get_module(module_name);
-}
-
 abstract_group::subscription::subscription(const channel& s,
                                   const intrusive_ptr<abstract_group>& g)
 : m_subscriber(s), m_group(g) { }
@@ -91,7 +74,7 @@ struct group_nameserver : event_based_actor {
     behavior make_behavior() override {
         return (
             on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), abstract_group::get("local", name));
+                return make_cow_tuple(atom("GROUP"), group::get("local", name));
             },
             on(atom("SHUTDOWN")) >> [=] {
                 quit();

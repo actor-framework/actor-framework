@@ -36,6 +36,7 @@
 #include <condition_variable>
 
 #include "cppa/cppa.hpp"
+#include "cppa/group.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/serializer.hpp"
@@ -292,11 +293,11 @@ class local_group_module : public abstract_group::module {
     : super("local"), m_process(node_id::get())
     , m_actor_utype(uniform_typeid<actor>()){ }
 
-    group_ptr get(const string& identifier) {
+    group get(const string& identifier) override {
         shared_guard guard(m_instances_mtx);
         auto i = m_instances.find(identifier);
         if (i != m_instances.end()) {
-            return i->second;
+            return {i->second};
         }
         else {
             auto tmp = make_counted<local_group>(true, this, identifier);
@@ -304,18 +305,18 @@ class local_group_module : public abstract_group::module {
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(make_pair(identifier, tmp));
                 // someone might preempt us
-                return p.first->second;
+                return {p.first->second};
             }
         }
     }
 
-    intrusive_ptr<abstract_group> deserialize(deserializer* source) {
+    group deserialize(deserializer* source) override {
         // deserialize {identifier, process_id, node_id}
         auto identifier = source->read<string>();
         // deserialize broker
         actor broker;
         m_actor_utype->deserialize(&broker, source);
-        if (!broker) return nullptr;
+        if (!broker) return invalid_group;
         if (!broker->is_remote()) {
             return this->get(identifier);
         }
@@ -323,15 +324,15 @@ class local_group_module : public abstract_group::module {
             shared_guard guard(m_proxies_mtx);
             auto i = m_proxies.find(broker);
             if (i != m_proxies.end()) {
-                return i->second;
+                return {i->second};
             }
             else {
-                local_group_ptr tmp(new local_group_proxy(broker, this,
-                                                          identifier));
+                local_group_ptr tmp{new local_group_proxy{broker, this,
+                                                          identifier}};
                 upgrade_guard uguard(guard);
                 auto p = m_proxies.insert(make_pair(broker, tmp));
                 // someone might preempt us
-                return p.first->second;
+                return {p.first->second};
             }
         }
     }
@@ -385,10 +386,10 @@ class remote_group : public abstract_group {
 
     void group_down() {
         CPPA_LOG_TRACE("");
-        group_ptr _this{this};
+        group this_group{this};
         m_decorated->send_all_subscribers({invalid_actor_addr, nullptr},
                                           make_any_tuple(atom("GROUP_DOWN"),
-                                                         _this));
+                                                         this_group));
     }
 
  private:
@@ -425,13 +426,13 @@ class shared_map : public ref_counted {
         return result;
     }
 
-    group_ptr peek(const string& key) {
+    group peek(const string& key) {
         lock_type guard(m_mtx);
         auto i = m_instances.find(key);
         if (i != m_instances.end()) {
-            return i->second;
+            return {i->second};
         }
-        return nullptr;
+        return invalid_group;
     }
 
     void put(const string& key, const remote_group_ptr& ptr) {
@@ -460,10 +461,10 @@ class remote_group_module : public abstract_group::module {
 
     remote_group_module() : super("remote") {
         auto sm = make_counted<shared_map>();
-        abstract_group::module_ptr _this = this;
+        abstract_group::module_ptr this_group{this};
         m_map = sm;
         m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
-            CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
+            CPPA_LOGC_TRACE(detail::demangle(typeid(*this_group)),
                             "remote_group_module$worker",
                             "");
             typedef map<string, pair<actor, vector<pair<string, remote_group_ptr>>>>
@@ -502,10 +503,10 @@ class remote_group_module : public abstract_group::module {
                             }
                         }
                         self->timed_sync_send(nameserver, chrono::seconds(10), atom("GET_GROUP"), name).then (
-                            on(atom("GROUP"), arg_match) >> [&](const group_ptr& g) {
-                                auto gg = dynamic_cast<local_group*>(g.get());
+                            on(atom("GROUP"), arg_match) >> [&](const group& g) {
+                                auto gg = dynamic_cast<local_group*>(detail::raw_access::get(g));
                                 if (gg) {
-                                    auto rg = make_counted<remote_group>(_this, key, gg);
+                                    auto rg = make_counted<remote_group>(this_group, key, gg);
                                     sm->put(key, rg);
                                     (*peers)[authority].second.push_back(make_pair(key, rg));
                                 }
@@ -545,11 +546,11 @@ class remote_group_module : public abstract_group::module {
         });
     }
 
-    intrusive_ptr<abstract_group> get(const std::string& group_name) {
-        return m_map->get(group_name);
+    group get(const std::string& group_name) {
+        return {m_map->get(group_name)};
     }
 
-    intrusive_ptr<abstract_group> deserialize(deserializer* source) {
+    group deserialize(deserializer* source) {
         return get(source->read<string>());
     }
 
@@ -593,14 +594,14 @@ group_manager::group_manager() {
     m_mmap.insert(make_pair(string("remote"), move(ptr)));
 }
 
-intrusive_ptr<abstract_group> group_manager::anonymous() {
+group group_manager::anonymous() {
     string id = "__#";
     id += std::to_string(++m_ad_hoc_id);
     return get_module("local")->get(id);
 }
 
-intrusive_ptr<abstract_group> group_manager::get(const string& module_name,
-                                        const string& group_identifier) {
+group group_manager::get(const string& module_name,
+                         const string& group_identifier) {
     auto mod = get_module(module_name);
     if (mod) {
         return mod->get(group_identifier);

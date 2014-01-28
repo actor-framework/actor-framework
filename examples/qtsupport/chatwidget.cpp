@@ -15,7 +15,7 @@ using namespace cppa;
 ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 : super(parent, f), m_input(nullptr), m_output(nullptr) {
     set_message_handler (
-        on(atom("join"), arg_match) >> [=](const group_ptr& what) {
+        on(atom("join"), arg_match) >> [=](const group& what) {
             if (m_chatroom) {
                 send(m_chatroom, m_name + " has left the chatroom");
                 self->leave(m_chatroom);
@@ -51,7 +51,7 @@ void ChatWidget::sendChatMessage() {
     if (line.startsWith('/')) {
         match_split(line.midRef(1).toUtf8().constData(), ' ') (
             on("join", arg_match) >> [=](const string& mod, const string& g) {
-                group_ptr gptr;
+                group gptr;
                 try { gptr = abstract_group::get(mod, g); }
                 catch (exception& e) {
                     print("*** exception: " + QString::fromUtf8((e.what())));
@@ -108,7 +108,7 @@ void ChatWidget::joinGroup() {
     }
     string mod = gname.left(pos).toUtf8().constData();
     string gid = gname.midRef(pos+1).toUtf8().constData();
-    group_ptr gptr;
+    group gptr;
     try {
         auto gptr = abstract_group::get(mod, gid);
         send_as(as_actor(), as_actor(), atom("join"), gptr);

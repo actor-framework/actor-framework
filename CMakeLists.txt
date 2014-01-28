@@ -169,6 +169,7 @@ set(LIBCPPA_SRC
     src/functor_based_blocking_actor.cpp
     src/get_root_uuid.cpp
     src/get_mac_addresses.cpp
+    src/group.cpp
     src/group_manager.cpp
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp

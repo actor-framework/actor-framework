@@ -82,6 +82,7 @@ cppa/exit_reason.hpp
 cppa/extend.hpp
 cppa/from_string.hpp
 cppa/get.hpp
+cppa/group.hpp
 cppa/guard_expr.hpp
 cppa/intrusive/blocking_single_reader_queue.hpp
 cppa/intrusive/single_reader_queue.hpp
@@ -267,6 +268,7 @@ src/functor_based_actor.cpp
 src/functor_based_blocking_actor.cpp
 src/get_mac_addresses.cpp
 src/get_root_uuid.cpp
+src/group.cpp
 src/group_manager.cpp
 src/ipv4_acceptor.cpp
 src/ipv4_io_stream.cpp

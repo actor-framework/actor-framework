@@ -35,11 +35,12 @@
 #include <algorithm>
 #include <type_traits>
 
-#include "cppa/abstract_group.hpp"
+#include "cppa/group.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/actor_namespace.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -67,7 +68,7 @@ namespace cppa { namespace detail {
     { "cppa::channel",                                  "@channel"            },
     { "cppa::down_msg",                                 "@down"               },
     { "cppa::exit_msg",                                 "@exit"               },
-    { "cppa::intrusive_ptr<cppa::group>",               "@group"              },
+    { "cppa::group",                                    "@group"              },
     { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"               },
     { "cppa::io::accept_handle",                        "@ac_hdl"             },
     { "cppa::io::connection_handle",                    "@cn_hdl"             },
@@ -193,25 +194,26 @@ void deserialize_impl(actor& ptr, deserializer* source) {
     ptr = detail::raw_access::unsafe_cast(addr);
 }
 
-void serialize_impl(const group_ptr& ptr, serializer* sink) {
-    if (ptr == nullptr) {
+void serialize_impl(const group& gref, serializer* sink) {
+    if (!gref) {
+        CPPA_LOGF_DEBUG("serialized an invalid group");
         // write an empty string as module name
         std::string empty_string;
         sink->write_value(empty_string);
     }
     else {
-        sink->write_value(ptr->module_name());
-        ptr->serialize(sink);
+        sink->write_value(gref->module_name());
+        gref->serialize(sink);
     }
 }
 
-void deserialize_impl(group_ptr& ptrref, deserializer* source) {
+void deserialize_impl(group& gref, deserializer* source) {
     auto modname = source->read<std::string>();
-    if (modname.empty()) ptrref.reset();
-    else ptrref = abstract_group::get_module(modname)->deserialize(source);
+    if (modname.empty()) gref = invalid_group;
+    else gref = group::get_module(modname)->deserialize(source);
 }
 
-void serialize_impl(const channel& ptr, serializer* sink) {
+void serialize_impl(const channel& chref, serializer* sink) {
     // channel is an abstract base class that's either an actor or a group
     // to indicate that, we write a flag first, that is
     //     0 if ptr == nullptr
@@ -221,9 +223,14 @@ void serialize_impl(const channel& ptr, serializer* sink) {
     auto wr_nullptr = [&] {
         sink->write_value(flag);
     };
-    if (ptr == nullptr) wr_nullptr();
+    if (!chref) {
+        // invalid channel
+        wr_nullptr();
+    }
     else {
-        auto rptr = detail::raw_access::get(ptr);
+        // raw pointer
+        auto rptr = detail::raw_access::get(chref);
+        // raw actor pointer
         auto aptr = dynamic_cast<abstract_actor*>(rptr);
         if (aptr != nullptr) {
             flag = 1;
@@ -231,11 +238,12 @@ void serialize_impl(const channel& ptr, serializer* sink) {
             serialize_impl(detail::raw_access::unsafe_cast(aptr), sink);
         }
         else {
-            auto gptr = group_ptr{dynamic_cast<abstract_group*>(rptr)};
-            if (gptr != nullptr) {
+            // get raw group pointer and store it inside a group handle
+            group tmp{dynamic_cast<abstract_group*>(rptr)};
+            if (tmp) {
                 flag = 2;
                 sink->write_value(flag);
-                serialize_impl(gptr, sink);
+                serialize_impl(tmp, sink);
             }
             else {
                 CPPA_LOGF_ERROR("ptr is neither an actor nor a group");
@@ -259,7 +267,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
             break;
         }
         case 2: {
-            group_ptr tmp;
+            group tmp;
             deserialize_impl(tmp, source);
             ptrref = tmp;
             break;
@@ -890,7 +898,7 @@ class utim_impl : public uniform_type_info_map {
     buffer_type_info_impl                   m_type_buffer;
     uti_impl<actor>                         m_type_actor;
     uti_impl<actor_addr>                    m_type_actor_addr;
-    uti_impl<group_ptr>                     m_type_group;
+    uti_impl<group>                         m_type_group;
 
     // 10-19
     uti_impl<any_tuple>                     m_type_tuple;

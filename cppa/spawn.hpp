@@ -187,7 +187,7 @@ actor spawn(Ts&&... args) {
  * @note The spawned has joined the group before this function returns.
  */
 template<spawn_options Opts, typename... Ts>
-actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+actor spawn_in_group(const group& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     using base_class = typename std::conditional<
                            has_blocking_api_flag(Opts),
@@ -208,7 +208,7 @@ actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
  * @note The spawned has joined the group before this function returns.
  */
 template<class Impl, spawn_options Opts, typename... Ts>
-actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+actor spawn_in_group(const group& grp, Ts&&... args) {
     return detail::spawn_fwd_args<Impl, Opts>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);

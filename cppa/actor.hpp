@@ -179,15 +179,7 @@ class actor : util::comparable<actor>
     }
 
     inline bool operator!() const {
-        return !static_cast<bool>(m_ops.m_ptr);
-    }
-
-    /**
-     * @brief Queries whether this handle is valid, i.e., points
-     *        to an instance of an untyped actor.
-     */
-    inline bool valid() const {
-        return static_cast<bool>(m_ops.m_ptr);
+        return !m_ops.m_ptr;
     }
 
     /**
@@ -204,9 +196,11 @@ class actor : util::comparable<actor>
 
     intptr_t compare(const actor& other) const;
 
-    intptr_t compare(const invalid_actor_t&) const;
-
     intptr_t compare(const actor_addr&) const;
+
+    inline intptr_t compare(const invalid_actor_t&) const {
+        return m_ops.m_ptr ? 1 : 0;
+    }
 
     inline intptr_t compare(const invalid_actor_addr_t&) const {
         return compare(invalid_actor);

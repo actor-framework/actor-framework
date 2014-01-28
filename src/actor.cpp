@@ -57,10 +57,6 @@ intptr_t actor::compare(const actor& other) const {
     return channel::compare(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
 }
 
-intptr_t actor::compare(const invalid_actor_t&) const {
-    return valid() ? 1 : 0;
-}
-
 intptr_t actor::compare(const actor_addr& other) const {
     return m_ops.compare(*other);
 }

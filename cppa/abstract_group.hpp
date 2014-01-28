@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_GROUP_HPP
-#define CPPA_GROUP_HPP
+#ifndef CPPA_ABSTRACT_GROUP_HPP
+#define CPPA_ABSTRACT_GROUP_HPP
 
 #include <string>
 #include <memory>
@@ -48,6 +48,7 @@ class peer_connection;
 
 namespace cppa {
 
+class group;
 class serializer;
 class deserializer;
 
@@ -116,9 +117,9 @@ class abstract_group : public abstract_channel {
          *        the name @p group_name.
          * @threadsafe
          */
-        virtual intrusive_ptr<abstract_group> get(const std::string& group_name) = 0;
+        virtual group get(const std::string& group_name) = 0;
 
-        virtual intrusive_ptr<abstract_group> deserialize(deserializer* source) = 0;
+        virtual group deserialize(deserializer* source) = 0;
 
     };
 
@@ -149,35 +150,6 @@ class abstract_group : public abstract_channel {
      */
     virtual subscription subscribe(const channel& who) = 0;
 
-    /**
-     * @brief Get a pointer to the group associated with
-     *        @p group_identifier from the module @p module_name.
-     * @threadsafe
-     */
-    static intrusive_ptr<abstract_group> get(const std::string& module_name,
-                                    const std::string& group_identifier);
-
-    /**
-     * @brief Returns an anonymous group.
-     *
-     * Each calls to this member function returns a new instance
-     * of an anonymous group. Anonymous groups can be used whenever
-     * a set of actors wants to communicate using an exclusive channel.
-     */
-    static intrusive_ptr<abstract_group> anonymous();
-
-    /**
-     * @brief Add a new group module to the libcppa group management.
-     * @threadsafe
-     */
-    static void add_module(unique_module_ptr);
-
-    /**
-     * @brief Returns the module associated with @p module_name.
-     * @threadsafe
-     */
-    static module_ptr get_module(const std::string& module_name);
-
  protected:
 
     abstract_group(module_ptr module, std::string group_id);
@@ -193,7 +165,7 @@ class abstract_group : public abstract_channel {
  * @brief A smart pointer type that manages instances of {@link group}.
  * @relates group
  */
-typedef intrusive_ptr<abstract_group> group_ptr;
+typedef intrusive_ptr<abstract_group> abstract_group_ptr;
 
 /**
  * @brief Makes *all* local groups accessible via network on address @p addr
@@ -205,4 +177,4 @@ void publish_local_groups(std::uint16_t port, const char* addr = nullptr);
 
 } // namespace cppa
 
-#endif // CPPA_GROUP_HPP
+#endif // CPPA_ABSTRACT_GROUP_HPP

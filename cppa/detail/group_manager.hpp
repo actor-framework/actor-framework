@@ -48,10 +48,10 @@ class group_manager : public singleton_mixin<group_manager> {
 
  public:
 
-    intrusive_ptr<abstract_group> get(const std::string& module_name,
-                             const std::string& group_identifier);
+    group get(const std::string& module_name,
+              const std::string& group_identifier);
 
-    intrusive_ptr<abstract_group> anonymous();
+    group anonymous();
 
     void add_module(abstract_group::unique_module_ptr);
 

@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
     );
 
-    group_ptr gptr;
+    group gptr;
     // evaluate group parameter
     if (!group_id.empty()) {
         auto p = group_id.find(':');

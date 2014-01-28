@@ -88,7 +88,7 @@ int main() {
         "@tuple",                    // any_tuple
         "@header",                   // message_header
         "@actor",                    // actor_ptr
-        "@group",                    // group_ptr
+        "@group",                    // group
         "@channel",                  // channel
         "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration
@@ -151,7 +151,7 @@ int main() {
                     std::string, std::u16string, std::u32string,
                     float, double,
                     atom_value, any_tuple, message_header,
-                    actor, group_ptr,
+                    actor, group,
                     channel, node_id_ptr
                  >::arr;
 
@@ -175,7 +175,7 @@ int main() {
         uniform_typeid<any_tuple>(),
         uniform_typeid<message_header>(),
         uniform_typeid<actor>(),
-        uniform_typeid<group_ptr>(),
+        uniform_typeid<group>(),
         uniform_typeid<channel>(),
         uniform_typeid<node_id_ptr>()
     };

@@ -35,15 +35,16 @@
 
 #include "cppa/atom.hpp" // included for to_string(atom_value)
 #include "cppa/actor.hpp"
-#include "cppa/abstract_group.hpp"
+#include "cppa/group.hpp"
 #include "cppa/object.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/node_id.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/uniform_type_info.hpp"
 
 namespace std { class exception; }
 
@@ -76,7 +77,7 @@ inline std::string to_string(const actor_addr& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const group_ptr& what) {
+inline std::string to_string(const group& what) {
     return detail::to_string_impl(what);
 }
 

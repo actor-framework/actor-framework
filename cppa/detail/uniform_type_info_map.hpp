@@ -68,7 +68,7 @@ using mapped_type_list = util::type_list<
     channel,
     down_msg,
     exit_msg,
-    group_ptr,
+    group,
     node_id_ptr,
     io::accept_handle,
     io::connection_handle,

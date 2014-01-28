@@ -84,10 +84,10 @@ template<spawn_options Options = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args);
 
 template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group_ptr&, Ts&&... args);
+actor spawn_in_group(const group&, Ts&&... args);
 
 template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group_ptr&, Ts&&... args);
+actor spawn_in_group(const group&, Ts&&... args);
 
 /**
  * @brief Base class for local running Actors.
@@ -129,13 +129,13 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     }
 
     template<spawn_options Options = no_spawn_options, typename... Ts>
-    actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+    actor spawn_in_group(const group& grp, Ts&&... args) {
         auto res = cppa::spawn_in_group<make_unbound(Options)>(grp, std::forward<Ts>(args)...);
         return eval_opts(Options, std::move(res));
     }
 
     template<class Impl, spawn_options Options, typename... Ts>
-    actor spawn_in_group(const group_ptr& grp, Ts&&... args) {
+    actor spawn_in_group(const group& grp, Ts&&... args) {
         auto res = cppa::spawn_in_group<Impl, make_unbound(Options)>(grp, std::forward<Ts>(args)...);
         return eval_opts(Options, std::move(res));
     }
@@ -197,7 +197,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * The group will be unsubscribed if the actor finishes execution.
      * @param what Group instance that should be joined.
      */
-    void join(const group_ptr& what);
+    void join(const group& what);
 
     /**
      * @brief Causes this actor to leave the group @p what.
@@ -205,7 +205,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @note Groups are leaved automatically if the Actor finishes
      *       execution.
      */
-    void leave(const group_ptr& what);
+    void leave(const group& what);
 
     /**
      * @brief Finishes execution of this actor after any currently running
@@ -290,7 +290,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /**
      * @brief Returns all joined groups of this actor.
      */
-    std::vector<group_ptr> joined_groups() const;
+    std::vector<group> joined_groups() const;
 
     /**
      * @brief Creates a {@link response_promise} to allow actors to response
@@ -423,7 +423,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     mailbox_element* m_current_node;
 
     // {group => subscription} map of all joined groups
-    std::map<group_ptr, abstract_group::subscription> m_subscriptions;
+    std::map<group, abstract_group::subscription> m_subscriptions;
 
     // set by quit
     std::uint32_t m_planned_exit_reason;

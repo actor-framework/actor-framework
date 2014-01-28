@@ -97,18 +97,20 @@ void local_actor::demonitor(const actor_addr& whom) {
 
 void local_actor::on_exit() { }
 
-void local_actor::join(const group_ptr& what) {
+void local_actor::join(const group& what) {
+    CPPA_LOG_TRACE(CPPA_TSARG(what));
     if (what && m_subscriptions.count(what) == 0) {
+        CPPA_LOG_DEBUG("join group: " << to_string(what));
         m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
     }
 }
 
-void local_actor::leave(const group_ptr& what) {
+void local_actor::leave(const group& what) {
     if (what) m_subscriptions.erase(what);
 }
 
-std::vector<group_ptr> local_actor::joined_groups() const {
-    std::vector<group_ptr> result;
+std::vector<group> local_actor::joined_groups() const {
+    std::vector<group> result;
     for (auto& kvp : m_subscriptions) {
         result.emplace_back(kvp.first);
     }

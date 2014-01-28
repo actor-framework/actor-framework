@@ -28,83 +28,118 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CHANNEL_HPP
-#define CPPA_CHANNEL_HPP
-
-#include <cstddef>
-#include <type_traits>
+#ifndef CPPA_GROUP_HPP
+#define CPPA_GROUP_HPP
 
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/abstract_channel.hpp"
+#include "cppa/abstract_group.hpp"
 
 #include "cppa/util/comparable.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
-class actor;
-class group;
+class channel;
+class any_tuple;
+class message_header;
 
-struct invalid_actor_t;
-struct invalid_group_t;
+struct invalid_group_t { constexpr invalid_group_t() { } };
 
-namespace detail { class raw_access; }
+namespace detail {
+class raw_access;
+} // namespace detail
 
 /**
- * @brief A handle to instances of {@link abstract_channel}.
+ * @brief Identifies an invalid {@link group}.
+ * @relates group
  */
-class channel : util::comparable<channel>
-              , util::comparable<channel, actor>
-              , util::comparable<channel, abstract_channel*> {
+constexpr invalid_group_t invalid_group = invalid_group_t{};
+
+class group : util::comparable<group>
+            , util::comparable<group, invalid_group_t> {
 
     friend class detail::raw_access;
 
  public:
 
-    channel() = default;
+    group() = default;
 
-    channel(const actor&);
+    group(group&&) = default;
 
-    channel(const group&);
+    group(const group&) = default;
 
-    channel(const invalid_actor_t&);
+    group(const invalid_group_t&);
 
-    channel(const invalid_group_t&);
+    group& operator=(group&&) = default;
 
-    template<typename T>
-    channel(intrusive_ptr<T> ptr,
-            typename std::enable_if<
-                std::is_base_of<abstract_channel, T>::value
-            >::type* = 0)
-        : m_ptr(ptr) { }
+    group& operator=(const group&) = default;
 
-    channel(abstract_channel* ptr);
+    group& operator=(const invalid_group_t&);
+
+    group(intrusive_ptr<abstract_group> ptr);
 
     inline explicit operator bool() const {
         return static_cast<bool>(m_ptr);
     }
 
     inline bool operator!() const {
-        return !m_ptr;
+        return !static_cast<bool>(m_ptr);
     }
 
+    /**
+     * @brief Returns a handle that grants access to
+     *        actor operations such as enqueue.
+     */
+    inline abstract_group* operator->() const {
+        return m_ptr.get();
+    }
 
-    void enqueue(const message_header& hdr, any_tuple msg) const;
+    inline abstract_group& operator*() const {
+        return *m_ptr;
+    }
 
-    intptr_t compare(const channel& other) const;
+    intptr_t compare(const group& other) const;
 
-    intptr_t compare(const actor& other) const;
+    inline intptr_t compare(const invalid_actor_t&) const {
+        return m_ptr ? 1 : 0;
+    }
 
-    intptr_t compare(const abstract_channel* other) const;
+    /**
+     * @brief Get a pointer to the group associated with
+     *        @p group_identifier from the module @p module_name.
+     * @threadsafe
+     */
+    static group get(const std::string& module_name,
+                     const std::string& group_identifier);
 
-    static intptr_t compare(const abstract_channel* lhs,
-                            const abstract_channel* rhs);
+    /**
+     * @brief Returns an anonymous group.
+     *
+     * Each calls to this member function returns a new instance
+     * of an anonymous group. Anonymous groups can be used whenever
+     * a set of actors wants to communicate using an exclusive channel.
+     */
+    static group anonymous();
+
+    /**
+     * @brief Add a new group module to the libcppa group management.
+     * @threadsafe
+     */
+    static void add_module(abstract_group::unique_module_ptr);
+
+    /**
+     * @brief Returns the module associated with @p module_name.
+     * @threadsafe
+     */
+    static abstract_group::module_ptr get_module(const std::string& module_name);
+
 
  private:
 
-    intrusive_ptr<abstract_channel> m_ptr;
+    abstract_group_ptr m_ptr;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_CHANNEL_HPP
+#endif // CPPA_GROUP_HPP

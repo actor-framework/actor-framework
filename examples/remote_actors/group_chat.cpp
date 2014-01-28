@@ -49,7 +49,7 @@ void client(event_based_actor* self, const string& name) {
                 self->send(dest, name + ": " + message);
             }
         },
-        on(atom("join"), arg_match) >> [=](const group_ptr& what) {
+        on(atom("join"), arg_match) >> [=](const group& what) {
             for (auto g : self->joined_groups()) {
                 cout << "*** leave " << to_string(g) << endl;
                 self->send(self, g, name + " has left the chatroom");
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
         }
         else {
             try {
-                auto g = abstract_group::get(group_id.substr(0, p),
+                auto g = group::get(group_id.substr(0, p),
                                     group_id.substr(p + 1));
                 anon_send(client_actor, atom("join"), g);
             }
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     match_each (lines, eof, split_line) (
         on("/join", arg_match) >> [&](const string& mod, const string& id) {
             try {
-                anon_send(client_actor, atom("join"), abstract_group::get(mod, id));
+                anon_send(client_actor, atom("join"), group::get(mod, id));
             }
             catch (exception& e) {
                 cerr << "*** exception: " << to_verbose_string(e) << endl;

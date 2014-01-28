@@ -51,6 +51,6 @@ class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
     QLineEdit* m_input;
     QTextEdit* m_output;
     std::string m_name;
-    cppa::group_ptr m_chatroom;
+    cppa::group m_chatroom;
 
 };
