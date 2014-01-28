@@ -222,7 +222,7 @@ void peer::monitor(const actor_addr&,
     else {
         CPPA_LOG_DEBUG("attach functor to " << entry.first.get());
         auto mm = parent();
-        entry.first->address()->attach_functor([=](uint32_t reason) {
+        entry.first->attach_functor([=](uint32_t reason) {
             mm->run_later([=] {
                 CPPA_LOGC_TRACE("cppa::io::peer",
                                 "monitor$kill_proxy_helper",
@@ -266,7 +266,7 @@ void peer::kill_proxy(const actor_addr& sender,
 
 void peer::deliver(const message_header& hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
-    if (hdr.sender && hdr.sender->is_remote()) {
+    if (hdr.sender && hdr.sender.is_remote()) {
         // is_remote() is guaranteed to return true if and only if
         // the actor is derived from actor_proxy, hence we do not
         // need to use a dynamic_cast here
@@ -290,7 +290,7 @@ void peer::link(const actor_addr& lhs, const actor_addr& rhs) {
         auto ptr = static_cast<actor_proxy*>(detail::raw_access::get(proxy));
         ptr->local_link_to(addr);
     };
-    switch ((lhs->is_remote() ? 0x10 : 0x00) | (rhs->is_remote() ? 0x01 : 0x00)) {
+    switch ((lhs.is_remote() ? 0x10 : 0x00) | (rhs.is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
             detail::raw_access::get(lhs)->link_to(rhs);
@@ -316,7 +316,7 @@ void peer::unlink(const actor_addr& lhs, const actor_addr& rhs) {
         auto ptr = static_cast<actor_proxy*>(detail::raw_access::get(proxy));
         ptr->local_unlink_from(addr);
     };
-    switch ((lhs->is_remote() ? 0x10 : 0x00) | (rhs->is_remote() ? 0x01 : 0x00)) {
+    switch ((lhs.is_remote() ? 0x10 : 0x00) | (rhs.is_remote() ? 0x01 : 0x00)) {
         case 0x00: // both local
         case 0x11: // both remote
             detail::raw_access::get(lhs)->unlink_from(rhs);

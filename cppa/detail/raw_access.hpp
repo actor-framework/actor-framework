@@ -46,11 +46,11 @@ class raw_access {
  public:
 
     static abstract_actor* get(const actor& hdl) {
-        return hdl.m_ops.m_ptr.get();
+        return hdl.m_ptr.get();
     }
 
     static abstract_actor* get(const actor_addr& hdl) {
-        return hdl.m_ops.m_ptr.get();
+        return hdl.m_ptr.get();
     }
 
     static abstract_channel* get(const channel& hdl) {

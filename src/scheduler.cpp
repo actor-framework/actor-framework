@@ -224,7 +224,7 @@ void scheduler_helper::printer_loop(blocking_actor* self) {
     self->receive_while (gref(running)) (
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
-            if (!str.empty() && s.valid()) {
+            if (!str.empty() && s) {
                 auto i = out.find(s);
                 if (i == out.end()) {
                     i = out.insert(make_pair(s, move(str))).first;

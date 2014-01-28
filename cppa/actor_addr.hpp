@@ -37,12 +37,12 @@
 
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/untyped_actor_handle.hpp"
 
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
 
+class actor;
 class local_actor;
 class actor_namespace;
 
@@ -63,6 +63,7 @@ class actor_addr : util::comparable<actor_addr>
                  , util::comparable<actor_addr, abstract_actor*>
                  , util::comparable<actor_addr, abstract_actor_ptr> {
 
+    friend class actor;
     friend class abstract_actor;
     friend class detail::raw_access;
 
@@ -83,15 +84,11 @@ class actor_addr : util::comparable<actor_addr>
     actor_addr operator=(const invalid_actor_addr_t&);
 
     inline explicit operator bool() const {
-        return valid();
+        return static_cast<bool>(m_ptr);
     }
 
     inline bool operator!() const {
-        return !valid();
-    }
-
-    inline bool valid() const {
-        return m_ops.valid();
+        return !m_ptr;
     }
 
     intptr_t compare(const actor_addr& other) const;
@@ -102,19 +99,21 @@ class actor_addr : util::comparable<actor_addr>
         return compare(other.get());
     }
 
-    inline const untyped_actor_handle* operator->() const {
-        return &m_ops;
-    }
+    actor_id id() const;
 
-    inline const untyped_actor_handle& operator*() const {
-        return m_ops;
-    }
+    const node_id& node() const;
+
+    /**
+     * @brief Returns whether this is an address of a
+     *        remote actor.
+     */
+    bool is_remote() const;
 
  private:
 
     explicit actor_addr(abstract_actor*);
 
-    untyped_actor_handle m_ops;
+    abstract_actor_ptr m_ptr;
 
 };
 

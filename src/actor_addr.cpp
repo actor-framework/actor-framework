@@ -42,21 +42,33 @@ intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
 }
 } // namespace <anonymous>
 
-actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ops(nullptr) { }
+actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) { }
 
-actor_addr::actor_addr(abstract_actor* ptr) : m_ops(ptr) { }
+actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) { }
 
 intptr_t actor_addr::compare(const actor_addr& other) const {
-    return compare_impl(m_ops.m_ptr.get(), other.m_ops.m_ptr.get());
+    return compare_impl(m_ptr.get(), other.m_ptr.get());
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const {
-    return compare_impl(m_ops.m_ptr.get(), other);
+    return compare_impl(m_ptr.get(), other);
 }
 
 actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
-    m_ops.m_ptr.reset();
+    m_ptr.reset();
     return *this;
+}
+
+actor_id actor_addr::id() const {
+    return (m_ptr) ? m_ptr->id() : 0;
+}
+
+const node_id& actor_addr::node() const {
+    return m_ptr ? m_ptr->node() : *node_id::get();
+}
+
+bool actor_addr::is_remote() const {
+    return m_ptr ? m_ptr->is_proxy() : false;
 }
 
 } // namespace cppa

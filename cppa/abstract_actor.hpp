@@ -56,7 +56,7 @@ class deserializer;
 
 /**
  * @brief A unique actor ID.
- * @relates actor
+ * @relates abstract_actor
  */
 typedef std::uint32_t actor_id;
 
@@ -86,6 +86,20 @@ class abstract_actor : public abstract_channel {
     bool attach(attachable_ptr ptr);
 
     /**
+     * @brief Convenience function that attaches the functor
+     *        or function @p f to this actor.
+     *
+     * The actor executes <tt>f()</tt> on exit, or immediatley
+     * if it already finished execution.
+     * @param f A functor, function or lambda expression that's executed
+     *             if the actor finishes execution.
+     * @returns @c true if @p f was successfully attached to the actor;
+     *          otherwise (actor already exited) @p false.
+     */
+    template<typename F>
+    bool attach_functor(F&& f);
+
+    /**
      * @brief Returns the address of this actor.
      */
     actor_addr address() const;
@@ -96,21 +110,28 @@ class abstract_actor : public abstract_channel {
     void detach(const attachable::token& what);
 
     /**
-     * @brief Links this actor to @p other.
+     * @brief Links this actor to @p whom.
      * @param other Actor instance that whose execution is coupled to the
      *              execution of this Actor.
      */
-    virtual void link_to(const actor_addr& other);
-
-    void link_to(const actor& whom);
-
+    virtual void link_to(const actor_addr& whom);
 
     /**
-     * @brief Unlinks this actor from @p other.
+     * @copydoc abstract_actor::link_to(const actor_addr&)
+     */
+    void link_to(const actor& whom);
+
+    /**
+     * @brief Unlinks this actor from @p whom.
      * @param other Linked Actor.
      * @note Links are automatically removed if the actor finishes execution.
      */
-    virtual void unlink_from(const actor_addr& other);
+    virtual void unlink_from(const actor_addr& whom);
+
+    /**
+     * @copydoc abstract_actor::unlink_from(const actor_addr&)
+     */
+    void unlink_from(const actor& whom);
 
     /**
      * @brief Establishes a link relation between this actor and @p other.
@@ -230,6 +251,27 @@ inline bool abstract_actor::exited() const {
 
 inline const node_id& abstract_actor::node() const {
     return *m_node;
+}
+
+template<class F>
+struct functor_attachable : attachable {
+
+    F m_functor;
+
+    template<typename T>
+    inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
+
+    void actor_exited(std::uint32_t reason) { m_functor(reason); }
+
+    bool matches(const attachable::token&) { return false; }
+
+};
+
+template<typename F>
+bool abstract_actor::attach_functor(F&& f) {
+    typedef typename util::rm_const_and_ref<F>::type f_type;
+    typedef functor_attachable<f_type> impl;
+    return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }
 
 } // namespace cppa

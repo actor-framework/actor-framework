@@ -185,7 +185,7 @@ void deserialize_impl(actor_addr& addr, deserializer* source) {
 }
 
 void serialize_impl(const actor& ptr, serializer* sink) {
-    serialize_impl(ptr->address(), sink);
+    serialize_impl(ptr.address(), sink);
 }
 
 void deserialize_impl(actor& ptr, deserializer* source) {

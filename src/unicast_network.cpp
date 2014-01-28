@@ -70,7 +70,7 @@ void publish(actor whom, std::unique_ptr<acceptor> aptr) {
     if (!whom) return;
     get_actor_registry()->put(whom->id(), detail::raw_access::get(whom));
     auto mm = get_middleman();
-    auto addr = whom->address();
+    auto addr = whom.address();
     mm->register_acceptor(addr, new peer_acceptor(mm, move(aptr), addr));
 }
 

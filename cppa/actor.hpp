@@ -38,7 +38,6 @@
 
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/untyped_actor_handle.hpp"
 
 #include "cppa/util/comparable.hpp"
 #include "cppa/util/type_traits.hpp"
@@ -68,6 +67,14 @@ struct invalid_actor_t { constexpr invalid_actor_t() { } };
  */
 constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
+template<typename T>
+struct is_convertible_to_actor {
+    static constexpr bool value =    std::is_base_of<io::broker, T>::value
+                                  || std::is_base_of<actor_proxy, T>::value
+                                  || std::is_base_of<blocking_actor, T>::value
+                                  || std::is_base_of<event_based_actor, T>::value;
+};
+
 /**
  * @brief Identifies an untyped actor.
  *
@@ -84,34 +91,6 @@ class actor : util::comparable<actor>
 
  public:
 
-    /**
-     * @brief Extends {@link untyped_actor_handle} to grant
-     *        access to the enqueue member function.
-     */
-    class handle : public untyped_actor_handle {
-
-        // untyped_actor_handle does not provide a virtual destructor
-        // -> no new members
-
-        friend class actor;
-
-        typedef untyped_actor_handle super;
-
-     public:
-
-        handle() = default;
-
-        /**
-         * @brief Enqueues @p msg to the receiver specified in @p hdr.
-         */
-        void enqueue(const message_header& hdr, any_tuple msg) const;
-
-     private:
-
-        inline handle(abstract_actor_ptr ptr) : super(std::move(ptr)) { }
-
-    };
-
     actor() = default;
 
     actor(actor&&) = default;
@@ -120,23 +99,13 @@ class actor : util::comparable<actor>
 
     template<typename T>
     actor(intrusive_ptr<T> ptr,
-          typename std::enable_if<
-                 std::is_base_of<io::broker, T>::value
-              || std::is_base_of<actor_proxy, T>::value
-              || std::is_base_of<blocking_actor, T>::value
-              || std::is_base_of<event_based_actor, T>::value
-          >::type* = 0)
-        : m_ops(std::move(ptr)) { }
+          typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
+            : m_ptr(std::move(ptr)) { }
 
     template<typename T>
     actor(T* ptr,
-          typename std::enable_if<
-                 std::is_base_of<io::broker, T>::value
-              || std::is_base_of<actor_proxy, T>::value
-              || std::is_base_of<event_based_actor, T>::value
-              || std::is_base_of<blocking_actor, T>::value
-          >::type* = 0)
-        : m_ops(ptr) { }
+          typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
+                : m_ptr(ptr) { }
 
     actor(const invalid_actor_t&);
 
@@ -145,13 +114,7 @@ class actor : util::comparable<actor>
     actor& operator=(const actor&) = default;
 
     template<typename T>
-    typename std::enable_if<
-           std::is_base_of<io::broker, T>::value
-        || std::is_base_of<actor_proxy, T>::value
-        || std::is_base_of<event_based_actor, T>::value
-        || std::is_base_of<blocking_actor, T>::value,
-        actor&
-    >::type
+    typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
     operator=(intrusive_ptr<T> ptr) {
         actor tmp{std::move(ptr)};
         swap(tmp);
@@ -159,13 +122,7 @@ class actor : util::comparable<actor>
     }
 
     template<typename T>
-    typename std::enable_if<
-           std::is_base_of<io::broker, T>::value
-        || std::is_base_of<actor_proxy, T>::value
-        || std::is_base_of<event_based_actor, T>::value
-        || std::is_base_of<blocking_actor, T>::value,
-        actor&
-    >::type
+    typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
     operator=(T* ptr) {
         actor tmp{ptr};
         swap(tmp);
@@ -175,23 +132,23 @@ class actor : util::comparable<actor>
     actor& operator=(const invalid_actor_t&);
 
     inline operator bool() const {
-        return static_cast<bool>(m_ops.m_ptr);
+        return static_cast<bool>(m_ptr);
     }
 
     inline bool operator!() const {
-        return !m_ops.m_ptr;
+        return !m_ptr;
     }
 
     /**
      * @brief Returns a handle that grants access to
      *        actor operations such as enqueue.
      */
-    inline const handle* operator->() const {
-        return &m_ops;
+    inline abstract_actor* operator->() const {
+        return m_ptr.get();
     }
 
-    inline const handle& operator*() const {
-        return m_ops;
+    inline abstract_actor& operator*() const {
+        return *m_ptr;
     }
 
     intptr_t compare(const actor& other) const;
@@ -199,12 +156,17 @@ class actor : util::comparable<actor>
     intptr_t compare(const actor_addr&) const;
 
     inline intptr_t compare(const invalid_actor_t&) const {
-        return m_ops.m_ptr ? 1 : 0;
+        return m_ptr ? 1 : 0;
     }
 
     inline intptr_t compare(const invalid_actor_addr_t&) const {
         return compare(invalid_actor);
     }
+
+    /**
+     * @brief Queries the address of the stored actor.
+     */
+    actor_addr address() const;
 
  private:
 
@@ -212,7 +174,7 @@ class actor : util::comparable<actor>
 
     actor(abstract_actor*);
 
-    handle m_ops;
+    abstract_actor_ptr m_ptr;
 
 };
 

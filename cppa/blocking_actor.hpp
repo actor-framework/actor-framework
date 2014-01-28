@@ -38,7 +38,7 @@
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/detail/response_future_util.hpp"
+#include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
 
@@ -49,11 +49,11 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
 
  public:
 
-    class response_future {
+    class response_handle {
 
      public:
 
-        response_future() = delete;
+        response_handle() = delete;
 
         void await(behavior&);
 
@@ -86,10 +86,10 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
          */
         inline const message_id& id() const { return m_mid; }
 
-        response_future(const response_future&) = default;
-        response_future& operator=(const response_future&) = default;
+        response_handle(const response_handle&) = default;
+        response_handle& operator=(const response_handle&) = default;
 
-        inline response_future(const message_id& from, blocking_actor* self)
+        inline response_handle(const message_id& from, blocking_actor* self)
                 : m_mid(from), m_self(self) { }
 
      private:
@@ -103,7 +103,7 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
 
      public:
 
-        inline sync_receive_helper(const response_future& mf) : m_mf(mf) { }
+        inline sync_receive_helper(const response_handle& mf) : m_mf(mf) { }
 
         template<typename... Ts>
         inline void operator()(Ts&&... args) {
@@ -112,7 +112,7 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
 
      private:
 
-        response_future m_mf;
+        response_handle m_mf;
 
     };
 
@@ -125,9 +125,9 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      *          sent message cannot be received by another actor.
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
-    response_future sync_send_tuple(const actor& dest, any_tuple what);
+    response_handle sync_send_tuple(const actor& dest, any_tuple what);
 
-    response_future timed_sync_send_tuple(const util::duration& rtime,
+    response_handle timed_sync_send_tuple(const util::duration& rtime,
                                           const actor& dest,
                                           any_tuple what);
 
@@ -142,13 +142,13 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
     template<typename... Ts>
-    inline response_future sync_send(const actor& dest, Ts&&... what) {
+    inline response_handle sync_send(const actor& dest, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return sync_send_tuple(dest, make_any_tuple(std::forward<Ts>(what)...));
     }
 
     template<typename... Ts>
-    response_future timed_sync_send(const actor& dest,
+    response_handle timed_sync_send(const actor& dest,
                                    const util::duration& rtime,
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -273,9 +273,9 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      * @param handle A future for a synchronous response.
      * @throws std::logic_error if @p handle is not valid or if the actor
      *                          already received the response for @p handle
-     * @relates response_future
+     * @relates response_handle
      */
-    inline sync_receive_helper receive_response(const response_future& f) {
+    inline sync_receive_helper receive_response(const response_handle& f) {
         return {f};
     }
 

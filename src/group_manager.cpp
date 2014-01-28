@@ -317,7 +317,7 @@ class local_group_module : public abstract_group::module {
         actor broker;
         m_actor_utype->deserialize(&broker, source);
         if (!broker) return invalid_group;
-        if (!broker->is_remote()) {
+        if (!broker->is_proxy()) {
             return this->get(identifier);
         }
         else {
@@ -365,8 +365,9 @@ class remote_group : public abstract_group {
 
  public:
 
-    remote_group(abstract_group::module_ptr parent, string id, local_group_ptr decorated)
-    : super(parent, move(id)), m_decorated(decorated) { }
+    remote_group(abstract_group::module_ptr parent, string id,
+                 local_group_ptr decorated)
+            : super(parent, move(id)), m_decorated(decorated) { }
 
     abstract_group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));

@@ -55,7 +55,7 @@ cppa/detail/proper_actor.hpp
 cppa/detail/pseudo_tuple.hpp
 cppa/detail/ptype_to_type.hpp
 cppa/detail/raw_access.hpp
-cppa/detail/response_future_util.hpp
+cppa/detail/response_handle_util.hpp
 cppa/detail/serialize_tuple.hpp
 cppa/detail/singleton_manager.hpp
 cppa/detail/singleton_mixin.hpp
@@ -175,7 +175,6 @@ cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
-cppa/untyped_actor_handle.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/algorithm.hpp
 cppa/util/arg_match_t.hpp
@@ -315,7 +314,6 @@ src/type_lookup_table.cpp
 src/unicast_network.cpp
 src/uniform_type_info.cpp
 src/uniform_type_info_map.cpp
-src/untyped_actor_handle.cpp
 src/weak_ptr_anchor.cpp
 src/yield_interface.cpp
 unit_testing/ping_pong.cpp

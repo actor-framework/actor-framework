@@ -66,7 +66,7 @@ namespace cppa {
 
 // forward declarations
 class scheduler;
-class response_future;
+class response_handle;
 class local_scheduler;
 class sync_handle_helper;
 
@@ -91,7 +91,7 @@ actor spawn_in_group(const group&, Ts&&... args);
 
 /**
  * @brief Base class for local running Actors.
- * @extends actor
+ * @extends abstract_actor
  */
 class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
@@ -171,7 +171,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void send_exit(const actor_addr& whom, std::uint32_t reason);
 
     inline void send_exit(const actor& whom, std::uint32_t reason) {
-        send_exit(whom->address(), reason);
+        send_exit(whom.address(), reason);
     }
 
     /**
@@ -266,7 +266,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void monitor(const actor_addr& whom);
 
     inline void monitor(const actor& whom) {
-        monitor(whom->address());
+        monitor(whom.address());
     }
 
     /**
@@ -276,7 +276,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void demonitor(const actor_addr& whom);
 
     inline void demonitor(const actor& whom) {
-        demonitor(whom->address());
+        demonitor(whom.address());
     }
 
     /**

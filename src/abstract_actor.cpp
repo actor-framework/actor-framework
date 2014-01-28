@@ -67,7 +67,11 @@ abstract_actor::abstract_actor()
 , m_exit_reason(exit_reason::not_exited) { }
 
 void abstract_actor::link_to(const actor& whom) {
-    link_to(whom->address());
+    link_to(whom.address());
+}
+
+void abstract_actor::unlink_from(const actor& whom) {
+    unlink_from(whom.address());
 }
 
 bool abstract_actor::link_to_impl(const actor_addr& other) {

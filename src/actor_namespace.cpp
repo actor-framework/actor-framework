@@ -45,9 +45,9 @@
 
 namespace cppa {
 
-void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
+void actor_namespace::write(serializer* sink, const actor_addr& addr) {
     CPPA_REQUIRE(sink != nullptr);
-    if (!ptr) {
+    if (!addr) {
         node_id::host_id_type zero;
         std::fill(zero.begin(), zero.end(), 0);
         sink->write_value(static_cast<uint32_t>(0));         // actor id
@@ -56,11 +56,11 @@ void actor_namespace::write(serializer* sink, const actor_addr& ptr) {
     }
     else {
         // register locally running actors to be able to deserialize them later
-        if (!ptr->is_remote()) {
-            get_actor_registry()->put(ptr->id(), detail::raw_access::get(ptr));
+        if (!addr.is_remote()) {
+            get_actor_registry()->put(addr.id(), detail::raw_access::get(addr));
         }
-        auto& pinf = ptr->node();
-        sink->write_value(ptr->id());                                  // actor id
+        auto& pinf = addr.node();
+        sink->write_value(addr.id());                                  // actor id
         sink->write_value(pinf.process_id());                          // process id
         sink->write_raw(node_id::host_id_size, pinf.host_id().data()); // host id
     }

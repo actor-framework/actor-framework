@@ -44,7 +44,7 @@ class actor_proxy_cache;
 
 /**
  * @brief Represents a remote actor.
- * @extends actor
+ * @extends abstract_actor
  */
 class actor_proxy : public extend<abstract_actor>::with<enable_weak_ptr> {
 

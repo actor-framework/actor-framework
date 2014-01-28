@@ -433,52 +433,60 @@
 
 namespace cppa {
 
+/**
+ * @brief Sends @p to a message under the identity of @p from.
+ */
 inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
-    to.enqueue({from->address(), to}, std::move(msg));
+    to.enqueue({from.address(), to}, std::move(msg));
 }
 
-template<typename... Ts>
-void send_as(const actor& from, channel& to, Ts&&... args) {
-    send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
-}
-
+/**
+ * @brief Sends @p to a message under the identity of @p from.
+ */
 template<typename... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... args) {
     send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
 }
 
 /**
- * @brief Sets the maximum size of a message.
+ * @brief Anonymously sends @p to a message.
+ */
+inline void anon_send_tuple(const channel& to, any_tuple msg) {
+    send_tuple_as(invalid_actor, to, std::move(msg));
+}
+
+/**
+ * @brief Anonymously sends @p to a message.
+ */
+template<typename... Ts>
+inline void anon_send(const channel& to, Ts&&... args) {
+    send_as(invalid_actor, to, std::forward<Ts>(args)...);
+}
+
+/**
+ * @brief Sets the maximum size of a message over network.
  * @param size The maximum number of bytes a message may occupy.
  */
 void max_msg_size(size_t size);
 
 /**
- * @brief Retrieves the maximum size of messages.
+ * @brief Queries the maximum size of messages over network.
  * @returns The number maximum number of bytes a message may occupy.
  */
 size_t max_msg_size();
 
-inline void anon_send_tuple(const channel& to, any_tuple msg) {
-    to.enqueue({invalid_actor_addr, to}, std::move(msg));
-}
-
-/**
- * @brief Anonymously sends a message to @p receiver;
- */
-template<typename... Ts>
-inline void anon_send(const channel& receiver, Ts&&... args) {
-    anon_send_tuple(receiver, make_any_tuple(std::forward<Ts>(args)...));
-}
-
 // implemented in local_actor.cpp
+/**
+ * @brief Anonymously sends @p whom an exit message.
+ */
 void anon_send_exit(const actor_addr& whom, std::uint32_t reason);
 
+/**
+ * @brief Anonymously sends @p whom an exit message.
+ */
 inline void anon_send_exit(const actor& whom, std::uint32_t reason) {
-    whom->enqueue({invalid_actor_addr, whom, message_id{}.with_high_priority()},
-                  make_any_tuple(exit_msg{invalid_actor_addr, reason}));
+    anon_send_exit(whom.address(), reason);
 }
-
 
 /**
  * @brief Blocks execution of this actor until all
@@ -528,7 +536,7 @@ inline actor remote_actor(const std::string& host, std::uint16_t port) {
 }
 
 /**
- * @brief Establish a new connection to the actor via given @p connection.
+ * @brief Establish a new connection to a remote actor via @p connection.
  * @param connection A connection to another libcppa process described by a pair
  *                   of input and output stream.
  * @returns An {@link actor_ptr} to the proxy instance
@@ -550,10 +558,13 @@ actor spawn_io(Ts&&... args) {
 }
 
 /**
- * @brief Spawns a new {@link actor} that evaluates given arguments.
- * @param args A functor followed by its arguments.
+ * @brief Spawns a new, function-based IO actor.
+ * @param fun  A functor implementing the actor's behavior.
+ * @param in   The actor's input stream.
+ * @param out  The actor's output stream.
+ * @param args Optional arguments for @p fun.
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns A {@link actor handle} to the spawned actor.
  */
 template<spawn_options Options = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
@@ -566,14 +577,6 @@ actor spawn_io(F fun,
                                 std::forward<Ts>(args)...);
     return {io::init_and_launch(std::move(ptr))};
 }
-
-/*
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
-    auto ptr = io::ipv4_io_stream::connect_to(host, port);
-    return spawn_io<Impl>(ptr, ptr, std::forward<Ts>(args)...);
-}
-*/
 
 template<spawn_options Options = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
@@ -619,7 +622,7 @@ struct hash<cppa::actor> {
 template<>
 struct hash<cppa::actor_addr> {
     inline size_t operator()(const cppa::actor_addr& ref) const {
-        return static_cast<size_t>(ref->id());
+        return static_cast<size_t>(ref.id());
     }
 };
 } // namespace std
