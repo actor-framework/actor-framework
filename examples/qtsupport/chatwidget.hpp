@@ -4,7 +4,7 @@
 #include <QLineEdit>
 #include <QTextEdit>
 
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/qtsupport/actor_widget_mixin.hpp"
 
 class ChatWidget : public cppa::actor_widget_mixin<QWidget> {

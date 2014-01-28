@@ -130,6 +130,7 @@ set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
     src/abstract_actor.cpp
     src/abstract_channel.cpp
+    src/abstract_group.cpp
     src/abstract_tuple.cpp
     src/actor.cpp
     src/actor_addr.cpp
@@ -168,7 +169,6 @@ set(LIBCPPA_SRC
     src/functor_based_blocking_actor.cpp
     src/get_root_uuid.cpp
     src/get_mac_addresses.cpp
-    src/group.cpp
     src/group_manager.cpp
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp

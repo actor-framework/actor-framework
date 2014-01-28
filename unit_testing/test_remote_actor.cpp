@@ -104,7 +104,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group_ptr grp) {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(event_based_actor* self, actor client, bool inverted) {
-    if (!inverted) spawn5_server_impl(self, client, group::get("local", "foobar"));
+    if (!inverted) spawn5_server_impl(self, client, abstract_group::get("local", "foobar"));
     else {
         CPPA_LOGF_INFO("request group");
         self->sync_send(client, atom("GetGroup")).then (
@@ -119,7 +119,7 @@ void spawn5_client(event_based_actor* self) {
     self->become (
         on(atom("GetGroup")) >> []() -> group_ptr {
             CPPA_LOGF_INFO("received {'GetGroup'}");
-            return group::get("local", "foobar");
+            return abstract_group::get("local", "foobar");
         },
         on(atom("Spawn5"), arg_match) >> [=](const group_ptr& grp) -> any_tuple {
             CPPA_LOGF_INFO("received {'Spawn5'}");

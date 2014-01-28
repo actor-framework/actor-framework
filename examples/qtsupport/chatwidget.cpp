@@ -52,7 +52,7 @@ void ChatWidget::sendChatMessage() {
         match_split(line.midRef(1).toUtf8().constData(), ' ') (
             on("join", arg_match) >> [=](const string& mod, const string& g) {
                 group_ptr gptr;
-                try { gptr = group::get(mod, g); }
+                try { gptr = abstract_group::get(mod, g); }
                 catch (exception& e) {
                     print("*** exception: " + QString::fromUtf8((e.what())));
                 }
@@ -110,7 +110,7 @@ void ChatWidget::joinGroup() {
     string gid = gname.midRef(pos+1).toUtf8().constData();
     group_ptr gptr;
     try {
-        auto gptr = group::get(mod, gid);
+        auto gptr = abstract_group::get(mod, gid);
         send_as(as_actor(), as_actor(), atom("join"), gptr);
     }
     catch (exception& e) {

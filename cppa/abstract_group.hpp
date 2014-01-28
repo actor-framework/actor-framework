@@ -54,7 +54,7 @@ class deserializer;
 /**
  * @brief A multicast group.
  */
-class group : public abstract_channel {
+class abstract_group : public abstract_channel {
 
     friend class detail::group_manager;
     friend class detail::peer_connection; // needs access to remote_enqueue
@@ -69,7 +69,7 @@ class group : public abstract_channel {
     // unsubscribes its channel from the group on destruction
     class subscription {
 
-        friend class group;
+        friend class abstract_group;
 
         subscription(const subscription&) = delete;
         subscription& operator=(const subscription&) = delete;
@@ -78,7 +78,7 @@ class group : public abstract_channel {
 
         subscription() = default;
         subscription(subscription&&) = default;
-        subscription(const channel& s, const intrusive_ptr<group>& g);
+        subscription(const channel& s, const intrusive_ptr<abstract_group>& g);
 
         ~subscription();
 
@@ -87,7 +87,7 @@ class group : public abstract_channel {
      private:
 
         channel m_subscriber;
-        intrusive_ptr<group> m_group;
+        intrusive_ptr<abstract_group> m_group;
 
     };
 
@@ -116,9 +116,9 @@ class group : public abstract_channel {
          *        the name @p group_name.
          * @threadsafe
          */
-        virtual intrusive_ptr<group> get(const std::string& group_name) = 0;
+        virtual intrusive_ptr<abstract_group> get(const std::string& group_name) = 0;
 
-        virtual intrusive_ptr<group> deserialize(deserializer* source) = 0;
+        virtual intrusive_ptr<abstract_group> deserialize(deserializer* source) = 0;
 
     };
 
@@ -154,7 +154,7 @@ class group : public abstract_channel {
      *        @p group_identifier from the module @p module_name.
      * @threadsafe
      */
-    static intrusive_ptr<group> get(const std::string& module_name,
+    static intrusive_ptr<abstract_group> get(const std::string& module_name,
                                     const std::string& group_identifier);
 
     /**
@@ -164,7 +164,7 @@ class group : public abstract_channel {
      * of an anonymous group. Anonymous groups can be used whenever
      * a set of actors wants to communicate using an exclusive channel.
      */
-    static intrusive_ptr<group> anonymous();
+    static intrusive_ptr<abstract_group> anonymous();
 
     /**
      * @brief Add a new group module to the libcppa group management.
@@ -180,7 +180,7 @@ class group : public abstract_channel {
 
  protected:
 
-    group(module_ptr module, std::string group_id);
+    abstract_group(module_ptr module, std::string group_id);
 
     virtual void unsubscribe(const channel& who) = 0;
 
@@ -193,7 +193,7 @@ class group : public abstract_channel {
  * @brief A smart pointer type that manages instances of {@link group}.
  * @relates group
  */
-typedef intrusive_ptr<group> group_ptr;
+typedef intrusive_ptr<abstract_group> group_ptr;
 
 /**
  * @brief Makes *all* local groups accessible via network on address @p addr
@@ -201,7 +201,7 @@ typedef intrusive_ptr<group> group_ptr;
  * @throws bind_failure
  * @throws network_error
  */
-void publish_local_groups_at(std::uint16_t port, const char* addr = nullptr);
+void publish_local_groups(std::uint16_t port, const char* addr = nullptr);
 
 } // namespace cppa
 

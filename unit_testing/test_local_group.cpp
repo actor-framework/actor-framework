@@ -11,7 +11,7 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 

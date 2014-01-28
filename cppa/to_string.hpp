@@ -35,7 +35,7 @@
 
 #include "cppa/atom.hpp" // included for to_string(atom_value)
 #include "cppa/actor.hpp"
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/object.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/node_id.hpp"

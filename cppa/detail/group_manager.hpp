@@ -35,7 +35,7 @@
 #include <mutex>
 #include <thread>
 
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
@@ -48,18 +48,18 @@ class group_manager : public singleton_mixin<group_manager> {
 
  public:
 
-    intrusive_ptr<group> get(const std::string& module_name,
+    intrusive_ptr<abstract_group> get(const std::string& module_name,
                              const std::string& group_identifier);
 
-    intrusive_ptr<group> anonymous();
+    intrusive_ptr<abstract_group> anonymous();
 
-    void add_module(group::unique_module_ptr);
+    void add_module(abstract_group::unique_module_ptr);
 
-    group::module_ptr get_module(const std::string& module_name);
+    abstract_group::module_ptr get_module(const std::string& module_name);
 
  private:
 
-    typedef std::map<std::string, group::unique_module_ptr> modules_map;
+    typedef std::map<std::string, abstract_group::unique_module_ptr> modules_map;
 
     modules_map m_mmap;
     std::mutex m_mmap_mtx;

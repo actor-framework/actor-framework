@@ -35,7 +35,7 @@
 #include <algorithm>
 #include <type_traits>
 
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
@@ -208,7 +208,7 @@ void serialize_impl(const group_ptr& ptr, serializer* sink) {
 void deserialize_impl(group_ptr& ptrref, deserializer* source) {
     auto modname = source->read<std::string>();
     if (modname.empty()) ptrref.reset();
-    else ptrref = group::get_module(modname)->deserialize(source);
+    else ptrref = abstract_group::get_module(modname)->deserialize(source);
 }
 
 void serialize_impl(const channel& ptr, serializer* sink) {
@@ -231,7 +231,7 @@ void serialize_impl(const channel& ptr, serializer* sink) {
             serialize_impl(detail::raw_access::unsafe_cast(aptr), sink);
         }
         else {
-            auto gptr = group_ptr{dynamic_cast<group*>(rptr)};
+            auto gptr = group_ptr{dynamic_cast<abstract_group*>(rptr)};
             if (gptr != nullptr) {
                 flag = 2;
                 sink->write_value(flag);

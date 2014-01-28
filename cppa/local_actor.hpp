@@ -36,7 +36,7 @@
 #include <functional>
 
 #include "cppa/actor.hpp"
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
@@ -423,7 +423,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     mailbox_element* m_current_node;
 
     // {group => subscription} map of all joined groups
-    std::map<group_ptr, group::subscription> m_subscriptions;
+    std::map<group_ptr, abstract_group::subscription> m_subscriptions;
 
     // set by quit
     std::uint32_t m_planned_exit_reason;

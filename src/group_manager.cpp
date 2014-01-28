@@ -65,7 +65,7 @@ typedef util::upgrade_lock_guard<util::shared_spinlock> upgrade_guard;
 class local_broker;
 class local_group_module;
 
-class local_group : public group {
+class local_group : public abstract_group {
 
  public:
 
@@ -101,7 +101,7 @@ class local_group : public group {
         return {success, m_subscribers.size()};
     }
 
-    group::subscription subscribe(const channel& who) {
+    abstract_group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         if (add_subscriber(who).first) {
             return {who, this};
@@ -224,7 +224,7 @@ class local_group_proxy : public local_group {
         m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
 
-    group::subscription subscribe(const channel& who) {
+    abstract_group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));
         auto res = add_subscriber(who);
         if (res.first) {
@@ -282,9 +282,9 @@ class proxy_broker : public event_based_actor {
 
 };
 
-class local_group_module : public group::module {
+class local_group_module : public abstract_group::module {
 
-    typedef group::module super;
+    typedef abstract_group::module super;
 
  public:
 
@@ -309,7 +309,7 @@ class local_group_module : public group::module {
         }
     }
 
-    intrusive_ptr<group> deserialize(deserializer* source) {
+    intrusive_ptr<abstract_group> deserialize(deserializer* source) {
         // deserialize {identifier, process_id, node_id}
         auto identifier = source->read<string>();
         // deserialize broker
@@ -358,16 +358,16 @@ class local_group_module : public group::module {
 
 };
 
-class remote_group : public group {
+class remote_group : public abstract_group {
 
-    typedef group super;
+    typedef abstract_group super;
 
  public:
 
-    remote_group(group::module_ptr parent, string id, local_group_ptr decorated)
+    remote_group(abstract_group::module_ptr parent, string id, local_group_ptr decorated)
     : super(parent, move(id)), m_decorated(decorated) { }
 
-    group::subscription subscribe(const channel& who) {
+    abstract_group::subscription subscribe(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TSARG(who));
         return m_decorated->subscribe(who);
     }
@@ -452,15 +452,15 @@ class shared_map : public ref_counted {
 
 typedef intrusive_ptr<shared_map> shared_map_ptr;
 
-class remote_group_module : public group::module {
+class remote_group_module : public abstract_group::module {
 
-    typedef group::module super;
+    typedef abstract_group::module super;
 
  public:
 
     remote_group_module() : super("remote") {
         auto sm = make_counted<shared_map>();
-        group::module_ptr _this = this;
+        abstract_group::module_ptr _this = this;
         m_map = sm;
         m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*_this)),
@@ -545,15 +545,15 @@ class remote_group_module : public group::module {
         });
     }
 
-    intrusive_ptr<group> get(const std::string& group_name) {
+    intrusive_ptr<abstract_group> get(const std::string& group_name) {
         return m_map->get(group_name);
     }
 
-    intrusive_ptr<group> deserialize(deserializer* source) {
+    intrusive_ptr<abstract_group> deserialize(deserializer* source) {
         return get(source->read<string>());
     }
 
-    void serialize(group* ptr, serializer* sink) {
+    void serialize(abstract_group* ptr, serializer* sink) {
         sink->write_value(ptr->identifier());
     }
 
@@ -566,7 +566,7 @@ class remote_group_module : public group::module {
 local_group::local_group(bool spawn_local_broker,
                          local_group_module* mod,
                          string id)
-: group(mod, move(id)) {
+: abstract_group(mod, move(id)) {
     if (spawn_local_broker) m_broker = spawn<local_broker, hidden>(this);
 }
 
@@ -587,19 +587,19 @@ atomic<size_t> m_ad_hoc_id;
 namespace cppa { namespace detail {
 
 group_manager::group_manager() {
-    group::unique_module_ptr ptr(new local_group_module);
+    abstract_group::unique_module_ptr ptr(new local_group_module);
     m_mmap.insert(make_pair(string("local"), move(ptr)));
     ptr.reset(new remote_group_module);
     m_mmap.insert(make_pair(string("remote"), move(ptr)));
 }
 
-intrusive_ptr<group> group_manager::anonymous() {
+intrusive_ptr<abstract_group> group_manager::anonymous() {
     string id = "__#";
     id += std::to_string(++m_ad_hoc_id);
     return get_module("local")->get(id);
 }
 
-intrusive_ptr<group> group_manager::get(const string& module_name,
+intrusive_ptr<abstract_group> group_manager::get(const string& module_name,
                                         const string& group_identifier) {
     auto mod = get_module(module_name);
     if (mod) {
@@ -611,7 +611,7 @@ intrusive_ptr<group> group_manager::get(const string& module_name,
     throw logic_error(error_msg);
 }
 
-void group_manager::add_module(unique_ptr<group::module> mptr) {
+void group_manager::add_module(unique_ptr<abstract_group::module> mptr) {
     if (!mptr) return;
     const string& mname = mptr->name();
     { // lifetime scope of guard
@@ -626,7 +626,7 @@ void group_manager::add_module(unique_ptr<group::module> mptr) {
     throw logic_error(error_msg);
 }
 
-group::module* group_manager::get_module(const string& module_name) {
+abstract_group::module* group_manager::get_module(const string& module_name) {
     lock_guard<mutex> guard(m_mmap_mtx);
     auto i = m_mmap.find(module_name);
     return  (i != m_mmap.end()) ? i->second.get() : nullptr;

@@ -29,7 +29,7 @@
 
 
 #include "cppa/cppa.hpp"
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/util/shared_spinlock.hpp"
@@ -41,49 +41,49 @@
 
 namespace cppa {
 
-intrusive_ptr<group> group::get(const std::string& arg0,
+intrusive_ptr<abstract_group> abstract_group::get(const std::string& arg0,
                                 const std::string& arg1) {
     return get_group_manager()->get(arg0, arg1);
 }
 
-intrusive_ptr<group> group::anonymous() {
+intrusive_ptr<abstract_group> abstract_group::anonymous() {
     return get_group_manager()->anonymous();
 }
 
-void group::add_module(group::unique_module_ptr ptr) {
+void abstract_group::add_module(abstract_group::unique_module_ptr ptr) {
     get_group_manager()->add_module(std::move(ptr));
 }
 
-group::module_ptr group::get_module(const std::string& module_name) {
+abstract_group::module_ptr abstract_group::get_module(const std::string& module_name) {
     return get_group_manager()->get_module(module_name);
 }
 
-group::subscription::subscription(const channel& s,
-                                  const intrusive_ptr<group>& g)
+abstract_group::subscription::subscription(const channel& s,
+                                  const intrusive_ptr<abstract_group>& g)
 : m_subscriber(s), m_group(g) { }
 
-group::subscription::~subscription() {
+abstract_group::subscription::~subscription() {
     if (valid()) m_group->unsubscribe(m_subscriber);
 }
 
-group::module::module(std::string name) : m_name(std::move(name)) { }
+abstract_group::module::module(std::string name) : m_name(std::move(name)) { }
 
-const std::string& group::module::name() {
+const std::string& abstract_group::module::name() {
     return m_name;
 }
 
-group::group(group::module_ptr mod, std::string id)
+abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
 : m_module(mod), m_identifier(std::move(id)) { }
 
-const std::string& group::identifier() const {
+const std::string& abstract_group::identifier() const {
     return m_identifier;
 }
 
-group::module_ptr group::get_module() const {
+abstract_group::module_ptr abstract_group::get_module() const {
     return m_module;
 }
 
-const std::string& group::module_name() const {
+const std::string& abstract_group::module_name() const {
     return get_module()->name();
 }
 
@@ -91,7 +91,7 @@ struct group_nameserver : event_based_actor {
     behavior make_behavior() override {
         return (
             on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), group::get("local", name));
+                return make_cow_tuple(atom("GROUP"), abstract_group::get("local", name));
             },
             on(atom("SHUTDOWN")) >> [=] {
                 quit();
@@ -100,7 +100,7 @@ struct group_nameserver : event_based_actor {
     }
 };
 
-void publish_local_groups_at(std::uint16_t port, const char* addr) {
+void publish_local_groups(std::uint16_t port, const char* addr) {
     auto gn = spawn<group_nameserver, hidden>();
     try {
         publish(gn, port, addr);
