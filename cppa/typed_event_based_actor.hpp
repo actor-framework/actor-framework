@@ -28,71 +28,35 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_HPP
-#define CPPA_TYPED_ACTOR_HPP
+#ifndef CPPA_TYPED_EVENT_BASED_ACTOR_HPP
+#define CPPA_TYPED_EVENT_BASED_ACTOR_HPP
 
 #include "cppa/replies_to.hpp"
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/typed_event_based_actor.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/mailbox_based.hpp"
+#include "cppa/typed_behavior.hpp"
+#include "cppa/typed_behavior_stack_based.hpp"
 
 namespace cppa {
 
 template<typename... Signatures>
-class typed_actor {
+class typed_event_based_actor : public typed_behavior_stack_based<
+                                           extend<local_actor>::template
+                                           with<mailbox_based>,
+                                           Signatures...> {
 
  public:
 
-    typedef typed_event_based_actor<Signatures...> actor_type;
-
     typedef util::type_list<Signatures...> signatures;
 
-    typed_actor() = default;
-    typed_actor(typed_actor&&) = default;
-    typed_actor(const typed_actor&) = default;
-    typed_actor& operator=(typed_actor&&) = default;
-    typed_actor& operator=(const typed_actor&) = default;
+    typedef typed_behavior<Signatures...> behavior_type;
 
-    template<typename... OtherSignatures>
-    typed_actor(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
-    }
+ protected:
 
-    template<typename... OtherSignatures>
-    typed_actor& operator=(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
-        return *this;
-    }
-
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    typed_actor(intrusive_ptr<Impl<OtherSignatures...>> other) {
-        set(other);
-    }
-
- private:
-
-    template<class ListA, class ListB>
-    inline void check_signatures() {
-        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
-                      "'this' must be a strict subset of 'other'");
-    }
-
-    template<typename... OtherSignatures>
-    inline void set(const typed_actor<OtherSignatures...>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = other.m_ptr;
-    }
-
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    inline void set(intrusive_ptr<Impl<OtherSignatures...>>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = std::move(other);
-    }
-
-    abstract_actor_ptr m_ptr;
+    virtual behavior_type make_behavior() = 0;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_TYPED_ACTOR_HPP
+#endif // CPPA_TYPED_EVENT_BASED_ACTOR_HPP

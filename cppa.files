@@ -13,6 +13,7 @@ cppa/anything.hpp
 cppa/atom.hpp
 cppa/attachable.hpp
 cppa/behavior.hpp
+cppa/behavior_policy.hpp
 cppa/behavior_stack_based.hpp
 cppa/binary_deserializer.hpp
 cppa/binary_serializer.hpp
@@ -160,6 +161,7 @@ cppa/sb_actor.hpp
 cppa/scheduler.hpp
 cppa/scoped_actor.hpp
 cppa/serializer.hpp
+cppa/single_timeout.hpp
 cppa/singletons.hpp
 cppa/spawn.hpp
 cppa/spawn_options.hpp
@@ -173,6 +175,8 @@ cppa/typed_actor.hpp
 cppa/typed_actor_base.hpp
 cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
+cppa/typed_behavior_stack_based.hpp
+cppa/typed_event_based_actor.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
 cppa/util/abstract_uniform_type_info.hpp

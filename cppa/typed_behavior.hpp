@@ -38,6 +38,9 @@
 
 namespace cppa {
 
+template<class, typename...>
+class typed_behavior_stack_based;
+
 template<typename... Signatures>
 class typed_actor;
 
@@ -46,6 +49,9 @@ class typed_behavior {
 
     template<typename... OtherSignatures>
     friend class typed_actor;
+
+    template<class, typename...>
+    friend class typed_behavior_stack_based;
 
     typed_behavior() = delete;
 
@@ -60,18 +66,54 @@ class typed_behavior {
 
     template<typename... Cs>
     typed_behavior(match_expr<Cs...> expr) {
+        static_asserts(expr);
         set(std::move(expr));
     }
 
     template<typename... Cs>
     typed_behavior& operator=(match_expr<Cs...> expr) {
+        static_asserts(expr);
         set(std::move(expr));
         return *this;
+    }
+
+    explicit operator bool() const {
+        return static_cast<bool>(m_bhvr);
+    }
+
+   /**
+     * @brief Invokes the timeout callback.
+     */
+    inline void handle_timeout() {
+        m_bhvr.handle_timeout();
+    }
+
+    /**
+     * @brief Returns the duration after which receives using
+     *        this behavior should time out.
+     */
+    inline const util::duration& timeout() const {
+        return m_bhvr.timeout();
     }
 
  private:
 
     behavior& unbox() { return m_bhvr; }
+
+    template<typename... Cs>
+    void static_asserts(const match_expr<Cs...>&) {
+        static_assert(util::conjunction<
+                          detail::match_expr_has_no_guard<Cs>::value...
+                      >::value,
+                      "typed actors are not allowed to use guard expressions");
+        static_assert(util::tl_is_distinct<
+                          util::type_list<
+                              typename detail::deduce_signature<Cs>::arg_types...
+                          >
+                      >::value,
+                      "typed actors are not allowed to define "
+                      "multiple patterns with identical signature");
+    }
 
     template<typename... Cs>
     void set(match_expr<Cs...>&& expr) {

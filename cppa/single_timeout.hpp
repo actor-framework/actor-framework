@@ -28,71 +28,75 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_HPP
-#define CPPA_TYPED_ACTOR_HPP
+#ifndef CPPA_SINGLE_TIMEOUT_HPP
+#define CPPA_SINGLE_TIMEOUT_HPP
 
-#include "cppa/replies_to.hpp"
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/typed_event_based_actor.hpp"
+#include "cppa/any_tuple.hpp"
+#include "cppa/system_messages.hpp"
+
+#include "cppa/util/duration.hpp"
 
 namespace cppa {
 
-template<typename... Signatures>
-class typed_actor {
+/**
+ * @brief Mixin for actors using a non-nestable message processing.
+ */
+template<class Base, class Subtype>
+class single_timeout : public Base {
+
+    typedef Base super;
 
  public:
 
-    typedef typed_event_based_actor<Signatures...> actor_type;
+    typedef single_timeout combined_type;
 
-    typedef util::type_list<Signatures...> signatures;
+    template <typename... Ts>
+    single_timeout(Ts&&... args)
+            : super(std::forward<Ts>(args)...), m_has_timeout(false)
+            , m_timeout_id(0) { }
 
-    typed_actor() = default;
-    typed_actor(typed_actor&&) = default;
-    typed_actor(const typed_actor&) = default;
-    typed_actor& operator=(typed_actor&&) = default;
-    typed_actor& operator=(const typed_actor&) = default;
-
-    template<typename... OtherSignatures>
-    typed_actor(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
+    void request_timeout(const util::duration& d) {
+        if (d.valid()) {
+            m_has_timeout = true;
+            auto tid = ++m_timeout_id;
+            auto msg = make_any_tuple(timeout_msg{tid});
+            if (d.is_zero()) {
+                // immediately enqueue timeout message if duration == 0s
+                this->enqueue({this->address(), this}, std::move(msg));
+                //auto e = this->new_mailbox_element(this, std::move(msg));
+                //this->m_mailbox.enqueue(e);
+            }
+            else this->delayed_send_tuple(this, d, std::move(msg));
+        }
+        else m_has_timeout = false;
     }
 
-    template<typename... OtherSignatures>
-    typed_actor& operator=(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
-        return *this;
+    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
+        return m_has_timeout && m_timeout_id == timeout_id;
     }
 
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    typed_actor(intrusive_ptr<Impl<OtherSignatures...>> other) {
-        set(other);
+    inline bool is_active_timeout(std::uint32_t tid) const {
+        return waits_for_timeout(tid);
     }
 
- private:
-
-    template<class ListA, class ListB>
-    inline void check_signatures() {
-        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
-                      "'this' must be a strict subset of 'other'");
+    inline void reset_timeout() {
+        m_has_timeout = false;
     }
 
-    template<typename... OtherSignatures>
-    inline void set(const typed_actor<OtherSignatures...>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = other.m_ptr;
+    inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
+        if (timeout_id == m_timeout_id) {
+            m_has_timeout = false;
+            bhvr.handle_timeout();
+        }
     }
 
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    inline void set(intrusive_ptr<Impl<OtherSignatures...>>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = std::move(other);
-    }
+ protected:
 
-    abstract_actor_ptr m_ptr;
+    bool m_has_timeout;
+    std::uint32_t m_timeout_id;
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_TYPED_ACTOR_HPP
+#endif // CPPA_SINGLE_TIMEOUT_HPP

@@ -39,10 +39,13 @@
 #include "cppa/local_actor.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/typed_event_based_actor.hpp"
 
 #include "cppa/util/fiber.hpp"
+#include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
+#include "cppa/detail/typed_actor_util.hpp"
 #include "cppa/detail/functor_based_actor.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 #include "cppa/detail/functor_based_blocking_actor.hpp"
@@ -52,12 +55,10 @@ namespace cppa {
 namespace detail {
 
 template<class Impl, spawn_options Opts, typename BeforeLaunch, typename... Ts>
-actor spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
-    static_assert(std::is_base_of<event_based_actor, Impl>::value ||
-                  (std::is_base_of<blocking_actor, Impl>::value &&
-                   has_blocking_api_flag(Opts)),
-                  "Impl is not a derived type of event_based_actor or "
-                  "is a derived type of blocking_actor but "
+intrusive_ptr<Impl> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
+    static_assert(!std::is_base_of<blocking_actor, Impl>::value ||
+                  has_blocking_api_flag(Opts),
+                  "Impl is derived type of blocking_actor but "
                   "blocking_api_flag is missing");
     static_assert(is_unbound(Opts),
                   "top-level spawns cannot have monitor or link flag");
@@ -132,7 +133,7 @@ struct spawn_fwd<scoped_actor> {
 // forwards the arguments to spawn_impl, replacing pointers
 // to actors with instances of 'actor'
 template<class Impl, spawn_options Opts, typename BeforeLaunch, typename... Ts>
-actor spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
+intrusive_ptr<Impl> spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
     return spawn_impl<Impl, Opts>(
             before_launch_fun,
             spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
@@ -212,6 +213,71 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
     return detail::spawn_fwd_args<Impl, Opts>(
             [&](local_actor* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
+}
+
+namespace detail {
+
+template<typename... Sigs>
+class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
+
+    typedef typed_event_based_actor<Sigs...> super;
+
+ public:
+
+    typedef functor_based_typed_actor* pointer;
+    typedef typename super::behavior_type behavior_type;
+
+    typedef std::function<typed_behavior<Sigs...> ()> no_arg_fun;
+    typedef std::function<typed_behavior<Sigs...> (pointer)> one_arg_fun;
+
+    functor_based_typed_actor(one_arg_fun fun) : m_fun(std::move(fun)) { }
+
+    functor_based_typed_actor(no_arg_fun fun) {
+        m_fun = [fun](pointer) { return fun(); };
+    }
+
+ protected:
+
+    behavior_type make_behavior() override {
+        return m_fun(this);
+    }
+
+ private:
+
+    one_arg_fun m_fun;
+
+};
+
+template<typename TypedBehavior>
+struct actor_type_from_typed_behavior;
+
+template<typename... Signatures>
+struct actor_type_from_typed_behavior<typed_behavior<Signatures...>> {
+    typedef functor_based_typed_actor<Signatures...> type;
+};
+
+template<typename TypedBehavior>
+struct actor_handle_from_typed_behavior;
+
+template<typename... Signatures>
+struct actor_handle_from_typed_behavior<typed_behavior<Signatures...>> {
+    typedef typed_actor<Signatures...> type;
+};
+
+} // namespace detail
+
+template<spawn_options Options = no_spawn_options, typename F>
+typename detail::actor_handle_from_typed_behavior<
+    typename util::get_callable_trait<F>::result_type
+>::type
+spawn_typed(F fun) {
+    typedef typename detail::actor_type_from_typed_behavior<
+                typename util::get_callable_trait<F>::result_type
+            >::type
+            impl;
+    return detail::spawn_fwd_args<impl, Options>(
+            [&](impl*) { },
+            std::move(fun));
 }
 
 /*

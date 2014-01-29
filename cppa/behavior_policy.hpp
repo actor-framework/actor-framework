@@ -28,71 +28,37 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_HPP
-#define CPPA_TYPED_ACTOR_HPP
-
-#include "cppa/replies_to.hpp"
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/typed_event_based_actor.hpp"
+#ifndef CPPA_BEHAVIOR_POLICY_HPP
+#define CPPA_BEHAVIOR_POLICY_HPP
 
 namespace cppa {
 
-template<typename... Signatures>
-class typed_actor {
+template<bool DiscardBehavior>
+struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
 
- public:
+template<typename T>
+struct is_behavior_policy : std::false_type { };
 
-    typedef typed_event_based_actor<Signatures...> actor_type;
+template<bool DiscardBehavior>
+struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { };
 
-    typedef util::type_list<Signatures...> signatures;
+typedef behavior_policy<false> keep_behavior_t;
+typedef behavior_policy<true > discard_behavior_t;
 
-    typed_actor() = default;
-    typed_actor(typed_actor&&) = default;
-    typed_actor(const typed_actor&) = default;
-    typed_actor& operator=(typed_actor&&) = default;
-    typed_actor& operator=(const typed_actor&) = default;
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        discard the current behavior.
+ * @relates local_actor
+ */
+constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
 
-    template<typename... OtherSignatures>
-    typed_actor(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
-    }
-
-    template<typename... OtherSignatures>
-    typed_actor& operator=(const typed_actor<OtherSignatures...>& other) {
-        set(std::move(other));
-        return *this;
-    }
-
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    typed_actor(intrusive_ptr<Impl<OtherSignatures...>> other) {
-        set(other);
-    }
-
- private:
-
-    template<class ListA, class ListB>
-    inline void check_signatures() {
-        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
-                      "'this' must be a strict subset of 'other'");
-    }
-
-    template<typename... OtherSignatures>
-    inline void set(const typed_actor<OtherSignatures...>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = other.m_ptr;
-    }
-
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    inline void set(intrusive_ptr<Impl<OtherSignatures...>>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
-        m_ptr = std::move(other);
-    }
-
-    abstract_actor_ptr m_ptr;
-
-};
+/**
+ * @brief Policy tag that causes {@link event_based_actor::become} to
+ *        keep the current behavior available.
+ * @relates local_actor
+ */
+constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 
 } // namespace cppa
 
-#endif // CPPA_TYPED_ACTOR_HPP
+#endif // CPPA_BEHAVIOR_POLICY_HPP
