@@ -34,6 +34,8 @@
 #include <memory>
 #include <iostream>
 
+#include <arpa/inet.h>
+
 #include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/singletons.hpp"
